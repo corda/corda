@@ -17,6 +17,7 @@ import net.corda.nodeapi.internal.protonwrapper.messages.MessageStatus
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPClient
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPConfiguration
 import net.corda.nodeapi.internal.protonwrapper.netty.ProxyConfig
+import org.apache.activemq.artemis.api.core.ActiveMQObjectClosedException
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient.DEFAULT_ACK_BATCH_SIZE
 import org.apache.activemq.artemis.api.core.client.ClientConsumer
@@ -24,6 +25,8 @@ import org.apache.activemq.artemis.api.core.client.ClientMessage
 import org.apache.activemq.artemis.api.core.client.ClientSession
 import org.slf4j.MDC
 import rx.Subscription
+import java.lang.Exception
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 
@@ -96,7 +99,7 @@ open class AMQPBridgeManager(config: MutualSslConfiguration,
                              val targets: List<NetworkHostAndPort>,
                              val legalNames: Set<CordaX500Name>,
                              private val amqpConfig: AMQPConfiguration,
-                             sharedEventGroup: EventLoopGroup,
+                             private val sharedEventGroup: EventLoopGroup,
                              private val artemis: ArtemisSessionProvider,
                              private val bridgeMetricsService: BridgeMetricsService?) {
         companion object {
@@ -132,6 +135,7 @@ open class AMQPBridgeManager(config: MutualSslConfiguration,
         private var session: ClientSession? = null
         private var consumer: ClientConsumer? = null
         private var connectedSubscription: Subscription? = null
+        private var messagesReceived: Boolean = false
 
         fun start() {
             logInfoWithMDC("Create new AMQP bridge")
@@ -164,9 +168,25 @@ open class AMQPBridgeManager(config: MutualSslConfiguration,
 
         private fun onSocketConnected(connected: Boolean) {
             lock.withLock {
+                messagesReceived = false
                 synchronized(artemis) {
                     if (connected) {
                         logInfoWithMDC("Bridge Connected")
+                        sharedEventGroup.schedule({ // during testing we found that kill -9 can fail to replay messages into the consumer until the session is restarted/remade
+                            if(!messagesReceived) { // we only make bridges if there is at least one message to process, so if none arrive hit artemis with a hammer
+                                synchronized(artemis) {
+                                    logInfoWithMDC("No messages received on new bridge. Restarting Artemis session")
+                                    try {
+                                        this.session?.apply {
+                                            stop()
+                                            start()
+                                        }
+                                    } catch(ex: Exception) {
+                                        log.error("Restart artemis session error", ex)
+                                    }
+                                }
+                            }
+                        }, 1000L, TimeUnit.MILLISECONDS)
                         bridgeMetricsService?.bridgeConnected(targets, legalNames)
                         val sessionFactory = artemis.started!!.sessionFactory
                         val session = sessionFactory.createSession(NODE_P2P_USER, NODE_P2P_USER, false, true, true, false, DEFAULT_ACK_BATCH_SIZE)
@@ -201,13 +221,18 @@ open class AMQPBridgeManager(config: MutualSslConfiguration,
         }
 
         private fun clientArtemisMessageHandler(artemisMessage: ClientMessage) {
+            messagesReceived = true
             if (artemisMessage.bodySize > amqpConfig.maxMessageSize) {
                 val msg = "Message exceeds maxMessageSize network parameter, maxMessageSize: [${amqpConfig.maxMessageSize}], message size: [${artemisMessage.bodySize}], " +
                         "dropping message, uuid: ${artemisMessage.getObjectProperty("_AMQ_DUPL_ID")}"
                 logWarnWithMDC(msg)
                 bridgeMetricsService?.packetDropEvent(artemisMessage, msg)
                 // Ack the message to prevent same message being sent to us again.
-                artemisMessage.individualAcknowledge()
+                try {
+                    artemisMessage.individualAcknowledge()
+                } catch(ex: ActiveMQObjectClosedException) {
+                    log.warn("Artemis message was closed")
+                }
                 return
             }
             val properties = HashMap<String, Any?>()
@@ -229,7 +254,11 @@ open class AMQPBridgeManager(config: MutualSslConfiguration,
                 logDebugWithMDC { "Bridge ACK ${sendableMessage.onComplete.get()}" }
                 lock.withLock {
                     if (sendableMessage.onComplete.get() == MessageStatus.Acknowledged) {
-                        artemisMessage.individualAcknowledge()
+                        try {
+                            artemisMessage.individualAcknowledge()
+                        } catch(ex: ActiveMQObjectClosedException) {
+                            log.warn("Artemis message was closed")
+                        }
                     } else {
                         logInfoWithMDC("Rollback rejected message uuid: ${artemisMessage.getObjectProperty("_AMQ_DUPL_ID")}")
                         // We need to commit any acknowledged messages before rolling back the failed
