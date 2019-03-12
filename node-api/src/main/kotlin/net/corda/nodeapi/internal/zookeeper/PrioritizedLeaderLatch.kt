@@ -318,7 +318,7 @@ internal class PrioritizedLeaderLatch(private val client: CuratorFramework,
         fun release() {
             lockHandlingExecutor.submit {
                 leaderLock.release()
-            }
+            }.get()
         }
 
         fun asyncAcquire(onComplete: () -> Unit) {
