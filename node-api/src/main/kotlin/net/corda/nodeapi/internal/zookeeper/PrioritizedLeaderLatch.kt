@@ -324,7 +324,9 @@ internal class PrioritizedLeaderLatch(private val client: CuratorFramework,
         fun asyncAcquire(onComplete: () -> Unit) {
             lockHandlingExecutor.submit {
                 try {
+                    log.info("Acquiring leader lock...")
                     leaderLock.acquire()
+                    log.info("Leader lock acquired. Becoming the new leader...")
                 } catch (e: IOException) {
                     log.warn("Client closed while trying to acquire leader lock.")
                 } catch (e: IllegalStateException) {
