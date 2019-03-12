@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/local/bin/python
 
 #-------------------------------------------------------------------------------
 #
@@ -95,16 +95,20 @@ JIRA_MAX_RESULTS = 50
 # For a given user (provide via the command line) authenticate with Jira and
 # return an interface object instance
 #
-def jiraLogin(user) :
-    password = keyring.get_password ('jira', user) if not disableKeyring else None
+def jiraLogin(args_) :
+    if not args_.resetPassword :
+        password = keyring.get_password ('jira', args_.jiraUser) if not disableKeyring else None
+    else :
+        password = None
 
     if not password:
         password = getpass.getpass("Please enter your JIRA password, " +
                 "it will be stored in your OS Keyring: ")
-        if not disableKeyring :
-            keyring.set_password ('jira', user, password)
 
-    return JIRA(R3_JIRA_ADDR, auth=(user, password))
+        if not disableKeyring :
+            keyring.set_password ('jira', args_.jiraUser, password)
+
+    return JIRA(R3_JIRA_ADDR, auth=(args_.jiraUser, password))
 
 #-------------------------------------------------------------------------------
 
@@ -148,7 +152,7 @@ def issueToRST(issue) :
 # is returned for reuse.
 #
 def getJirasFromJira(args_, jira_ = None) :
-    jira = jiraLogin(args_.jiraUser) if jira_ == None else jira_
+    jira = jiraLogin(args_) if jira_ == None else jira_
 
     return jiraQuery(jira, \
             'project in (Corda, Ent) And fixVersion in ("%s") and status in (Done)' % (args_.jiraTag)) \
@@ -157,7 +161,7 @@ def getJirasFromJira(args_, jira_ = None) :
 #-------------------------------------------------------------------------------
 
 def getJiraIdsFromJira(args_, jira_ = None) :
-    jira = jiraLogin(args_.jiraUser) if jira_ == None else jira_
+    jira = jiraLogin(args_) if jira_ == None else jira_
 
     jirasFromJira, _ = jiraQuery(jira, \
             'project in (Corda, Ent) And fixVersion in ("%s") and status in (Done)' % (args_.jiraTag)) \
@@ -196,7 +200,9 @@ def rst (args_) :
     # to get access to their summary
     #
     extraJiras = set(jiraIdsFromCommits).difference(jiraIdsFromJira)
-    jirasFromJira += jiraQuery(jiraObj, "key in (%s)" % (", ".join(extraJiras)))
+
+    if extraJiras != set() :
+        jirasFromJira += jiraQuery(jiraObj, "key in (%s)" % (", ".join(extraJiras)))
 
     for jira in jirasFromJira :
         print issueToRST(jira)
@@ -232,6 +238,8 @@ if __name__ == "__main__" :
     parser.add_argument("oldTag", help="The previous release tag")
     parser.add_argument("jiraTag", help="The current Jira release")
     parser.add_argument("jiraUser", help="Who to authenticate with Jira as")
+    parser.add_argument("--resetPassword", help="Set flag to allow resetting of password in the keyring",
+            action='store_true')
 
     args = parser.parse_args()
 
