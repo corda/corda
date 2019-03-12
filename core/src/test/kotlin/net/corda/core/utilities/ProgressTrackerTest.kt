@@ -130,7 +130,7 @@ class ProgressTrackerTest {
 
         // Assert no structure changes and proper steps propagation.
         assertThat(stepsIndexNotifications).containsExactlyElementsOf(listOf(1, 2, 4, 6))
-        assertThat(stepsTreeNotification).isEmpty()
+        assertThat(stepsTreeNotification).hasSize(1) // One entry per child progress tracker set
     }
 
     @Test
@@ -165,7 +165,7 @@ class ProgressTrackerTest {
 
         // Assert no structure changes and proper steps propagation.
         assertThat(stepsIndexNotifications).containsExactlyElementsOf(listOf(1, 4, 7))
-        assertThat(stepsTreeNotification).isEmpty()
+        assertThat(stepsTreeNotification).hasSize(2) // One entry per child progress tracker set
     }
     
     @Test
@@ -179,9 +179,9 @@ class ProgressTrackerTest {
         }
 
         // Put current state as a first change for simplicity when asserting.
-        val stepsTreeNotification = mutableListOf(pt.allStepsLabels)
+        val stepsTreeNotification = mutableListOf<List<Pair<Int, String>>>()
         pt.stepsTreeChanges.subscribe {
-            stepsTreeNotification += it
+            stepsTreeNotification += (it)
         }
 
         fun assertCurrentStepsTree(index:Int, step: ProgressTracker.Step) {
@@ -202,7 +202,7 @@ class ProgressTrackerTest {
 
         // Assert no structure changes and proper steps propagation.
         assertThat(stepsIndexNotifications).containsExactlyElementsOf(listOf(2, 7, 10))
-        assertThat(stepsTreeNotification).hasSize(2) // 1 change + 1 our initial state
+        assertThat(stepsTreeNotification).hasSize(2) // One state per child progress tracker set
     }
 
     @Test
@@ -216,7 +216,7 @@ class ProgressTrackerTest {
         }
 
         // Put current state as a first change for simplicity when asserting.
-        val stepsTreeNotification = mutableListOf(pt.allStepsLabels)
+        val stepsTreeNotification = mutableListOf<List<Pair<Int, String>>>()
         pt.stepsTreeChanges.subscribe {
             stepsTreeNotification += it
         }
@@ -237,7 +237,7 @@ class ProgressTrackerTest {
 
         // Assert no structure changes and proper steps propagation.
         assertThat(stepsIndexNotifications).containsExactlyElementsOf(listOf(2, 5, 3))
-        assertThat(stepsTreeNotification).hasSize(2) // 1 change + 1 our initial state.
+        assertThat(stepsTreeNotification).hasSize(2) // One state per child progress tracker set
     }
 
     @Test
@@ -263,5 +263,38 @@ class ProgressTrackerTest {
         pt2.currentStep = ChildSteps.AYY
 
         assertThat(stepsIndexNotifications).containsExactlyElementsOf(listOf(1, 2, 3))
+    }
+
+    @Test
+    fun `all step changes seen if subscribed mid flow`() {
+        val steps = mutableListOf<String>()
+        pt.nextStep()
+        pt.nextStep()
+        pt.nextStep()
+        pt.changes.subscribe { steps.add(it.toString())}
+        pt.nextStep()
+        pt.nextStep()
+        pt.nextStep()
+        assertEquals(listOf("Starting", "one", "two", "three", "four", "Done"), steps)
+    }
+
+    @Test
+    fun `all tree changes seen if subscribed mid flow`() {
+        val stepTreeNotifications = mutableListOf<List<Pair<Int, String>>>()
+        pt.setChildProgressTracker(SimpleSteps.TWO, pt2)
+
+        pt.currentStep = SimpleSteps.ONE
+        pt.currentStep = SimpleSteps.TWO
+
+        pt.setChildProgressTracker(SimpleSteps.TWO, pt3)
+        pt.stepsTreeChanges.subscribe { stepTreeNotifications.add(it)}
+
+        fun assertStepsTree(index: Int, step: ProgressTracker.Step) {
+            assertEquals(step.label, stepTreeNotifications[index][pt.stepsTreeIndex].second)
+        }
+        pt2.currentStep = ChildSteps.AYY
+        pt3.currentStep = BabySteps.UNOS
+        assertStepsTree(0, ChildSteps.AYY)
+        assertStepsTree(1, BabySteps.UNOS)
     }
 }
