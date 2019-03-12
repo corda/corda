@@ -530,6 +530,8 @@ fun <K, V> createSimpleCache(maxSize: Int, onEject: (MutableMap.MutableEntry<K, 
 fun <K, V> MutableMap<K, V>.toSynchronised(): MutableMap<K, V> = Collections.synchronizedMap(this)
 /** @see Collections.synchronizedSet */
 fun <E> MutableSet<E>.toSynchronised(): MutableSet<E> = Collections.synchronizedSet(this)
+/** @see Collections.synchronizedList */
+fun <E> MutableList<E>.toSynchronised(): MutableList<E> = Collections.synchronizedList(this)
 
 /**
  * List implementation that applies the expensive [transform] function only when the element is accessed and caches calculated values.

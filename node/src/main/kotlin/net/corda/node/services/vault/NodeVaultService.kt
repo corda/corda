@@ -632,9 +632,8 @@ class NodeVaultService(
             }
             val snapshotResults = _queryBy(criteria, paging, sorting, contractStateType)
             val snapshotStatesRefs = snapshotResults.statesMetadata.map { it.ref }.toSet()
-            val snapshotConsumedStatesRefs = snapshotResults.statesMetadata.filter { it.consumedTime != null }
-                    .map { it.ref }.toSet()
-            val filteredUpdates = updates.filter { it.containsType(contractStateType, snapshotResults.stateTypes) }
+            val snapshotConsumedStatesRefs = snapshotResults.statesMetadata.filter { it.consumedTime != null }.map { it.ref }.toSet()
+            val filteredUpdates = updates.filter { it.containsType(contractStateType, Vault.StateStatus.ALL) }
                     .map { filterContractStates(it, contractStateType) }
                     .filter { !hasBeenSeen(it, snapshotStatesRefs, snapshotConsumedStatesRefs) }
 

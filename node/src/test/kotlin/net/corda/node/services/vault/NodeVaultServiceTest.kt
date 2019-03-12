@@ -9,6 +9,7 @@ import net.corda.core.identity.*
 import net.corda.core.internal.NotaryChangeTransactionBuilder
 import net.corda.core.internal.cordapp.CordappResolver
 import net.corda.core.internal.packageName
+import net.corda.core.internal.toSynchronised
 import net.corda.core.node.NotaryInfo
 import net.corda.core.node.StatesToRecord
 import net.corda.core.node.services.*
@@ -47,14 +48,19 @@ import java.util.*
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import javax.persistence.PersistenceException
+import kotlin.collections.ArrayList
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class NodeVaultServiceTest {
     private companion object {
-        val cordappPackages = listOf("net.corda.finance.contracts.asset", CashSchemaV1::class.packageName, "net.corda.testing.contracts",
-                "net.corda.testing.internal.vault")
+        val cordappPackages = listOf(
+                "net.corda.finance.contracts.asset",
+                CashSchemaV1::class.packageName,
+                "net.corda.testing.contracts",
+                "net.corda.testing.internal.vault"
+        )
         val dummyCashIssuer = TestIdentity(CordaX500Name("Snake Oil Issuer", "London", "GB"), 10)
         val DUMMY_CASH_ISSUER = dummyCashIssuer.ref(1)
         val bankOfCorda = TestIdentity(BOC_NAME)
@@ -77,6 +83,7 @@ class NodeVaultServiceTest {
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
+
     private lateinit var services: MockServices
     private lateinit var vaultFiller: VaultFiller
     private lateinit var identity: PartyAndCertificate
@@ -93,7 +100,9 @@ class NodeVaultServiceTest {
                 cordappPackages,
                 makeTestIdentityService(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, DUMMY_CASH_ISSUER_IDENTITY, DUMMY_NOTARY_IDENTITY),
                 megaCorp,
-                parameters)
+                parameters,
+                dummyNotary.keyPair
+        )
         database = databaseAndServices.first
         services = databaseAndServices.second
         vaultFiller = VaultFiller(services, dummyNotary)
@@ -905,6 +914,29 @@ class NodeVaultServiceTest {
         }
 
         // We should never see 2 or 7.
+    }
+
+    @Test
+    fun `trackBy updates shows both consumed and produced states`() {
+        val vaultUpdates = ArrayList<Vault.Update<Cash.State>>().toSynchronised()
+        vaultService.trackBy<Cash.State>().updates.subscribe { vaultUpdates += it }
+
+        database.transaction {
+            vaultFiller.fillWithSomeTestCash(100.DOLLARS, services, 1, MEGA_CORP.ref(123), owner = MEGA_CORP)
+            vaultFiller.consumeCash(100.DOLLARS, to = MINI_CORP)
+        }
+
+        val expectedIssuedCash = Cash.State(100.DOLLARS.issuedBy(MEGA_CORP.ref(123)), owner = MEGA_CORP)
+
+        assertThat(vaultUpdates).hasSize(2)
+        vaultUpdates[0].apply {
+            assertThat(consumed).isEmpty()
+            assertThat(produced.single().state.data).isEqualTo(expectedIssuedCash)
+        }
+        vaultUpdates[1].apply {
+            assertThat(consumed.single().state.data).isEqualTo(expectedIssuedCash)
+            assertThat(produced).isEmpty()
+        }
     }
 
     @Test
