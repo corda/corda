@@ -4,14 +4,6 @@ Changelog
 Here's a summary of what's changed in each Corda release. For guidance on how to upgrade code from the previous
 release, see :doc:`app-upgrade-notes`.
 
-.. _changelog_v4.1:
-
-Version 4.1
------------
-
-* When tracking flows via RPC, events that occurred in the flow before observables are subscribed to will be replayed to the subscriber on subscription.
-Previously, these events would be lost.
-
 .. _changelog_v4.0:
 
 Version 4.0

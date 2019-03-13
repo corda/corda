@@ -193,6 +193,7 @@ class FlowFrameworkTests {
         assertThat(receivingFiber.state).isEqualTo(Strand.State.WAITING)
         assertThat((erroringFlow.get().stateMachine as FlowStateMachineImpl).state).isEqualTo(Strand.State.WAITING)
         assertThat(erroringFlowSteps.get()).containsExactly(
+                Notification.createOnNext(ProgressTracker.STARTING),
                 Notification.createOnNext(ExceptionFlow.START_STEP),
                 Notification.createOnError(erroringFlow.get().exceptionThrown)
         )
@@ -413,6 +414,7 @@ class FlowFrameworkTests {
         erroringFlowFuture.getOrThrow()
         val flowSteps = erroringFlowSteps.get()
         assertThat(flowSteps).containsExactly(
+                Notification.createOnNext(ProgressTracker.STARTING),
                 Notification.createOnNext(ExceptionFlow.START_STEP),
                 Notification.createOnError(erroringFlowFuture.get().exceptionThrown)
         )
