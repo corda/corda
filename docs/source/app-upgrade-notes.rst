@@ -475,6 +475,20 @@ Corda 4 adds several new APIs that help you build applications. Why not explore:
 
 Please also read the :doc:`CorDapp Upgradeability Guarantees <cordapp-upgradeability>` associated with CorDapp upgrading.
 
+Step 14. Possibly update your checked in quasar.jar
+---------------------------------------------------
+
+If your project is based on one of the official cordapp templates, it is likely you have a ``lib/quasar.jar`` checked in.  It is worth noting
+that you only use this if you use the JUnit runner in IntelliJ.  In the latest release of the cordapp templates, this directory has
+been removed.
+
+You have some choices here:
+
+* Upgrade your ``quasar.jar`` to the version consistent with your Corda version
+* Delete your ``lib`` directory and switch to using the Gradle test runner
+
+Instructions for both options can be found in :ref:`Running tests in Intellij <tutorial_cordapp_running_tests_intellij>`.
+
 Upgrading from Corda Open Source
 --------------------------------
 

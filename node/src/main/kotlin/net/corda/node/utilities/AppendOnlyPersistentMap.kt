@@ -58,28 +58,31 @@ abstract class AppendOnlyPersistentMapBase<K, V, E, out EK>(
     private fun set(key: K, value: V, logWarning: Boolean, store: (K, V) -> V?): Boolean {
         // Will be set to true if store says it isn't in the database.
         var isUnique = false
-        cache.asMap().compute(key) { _, oldValue ->
+        cache.asMap().compute(key) { _, oldValueInCache ->
             // Always write to the database, unless we can see it's already committed.
-            when (oldValue) {
+            when (oldValueInCache) {
                 is Transactional.InFlight<*, V> -> {
                     // Someone else is writing, so store away!
-                    isUnique = (store(key, value) == null)
-                    oldValue.apply { alsoWrite(value) }
+                    val oldValueInDB = store(key, value)
+                    isUnique = (oldValueInDB == null)
+                    oldValueInCache.apply { alsoWrite(value) }
                 }
-                is Transactional.Committed<V> -> oldValue // The value is already globally visible and cached.  So do nothing since the values are always the same.
+                is Transactional.Committed<V> -> oldValueInCache // The value is already globally visible and cached.  So do nothing since the values are always the same.
                 is Transactional.Unknown<*, V> -> {
-                    if (oldValue.isResolved && oldValue.isPresent) {
-                        Transactional.Committed(oldValue.value)
+                    if (oldValueInCache.isResolved && oldValueInCache.isPresent) {
+                        Transactional.Committed(oldValueInCache.value)
                     } else {
                         // Unknown.  Store away!
-                        isUnique = (store(key, value) == null)
-                        transactionalForStoreResult(isUnique, key, value)
+                        val oldValueInDB = store(key, value)
+                        isUnique = (oldValueInDB == null)
+                        transactionalForStoreResult(key, value, oldValueInDB)
                     }
                 }
                 else -> {
                     // Missing or null.  Store away!
-                    isUnique = (store(key, value) == null)
-                    transactionalForStoreResult(isUnique, key, value)
+                    val oldValueInDB = store(key, value)
+                    isUnique = (oldValueInDB == null)
+                    transactionalForStoreResult(key, value, oldValueInDB)
                 }
             }
         }
@@ -89,10 +92,10 @@ abstract class AppendOnlyPersistentMapBase<K, V, E, out EK>(
         return isUnique
     }
 
-    private fun transactionalForStoreResult(isUnique: Boolean, key: K, value: V): Transactional<V> {
-        return if (!isUnique && !weAreWriting(key)) {
+    private fun transactionalForStoreResult(key: K, value: V, oldValue: V?): Transactional<V> {
+        return if ( (oldValue != null) && !weAreWriting(key)) {
             // If we found a value already in the database, and we were not already writing, then it's already committed but got evicted.
-            Transactional.Committed(value)
+            Transactional.Committed(oldValue)
         } else {
             // Some database transactions, including us, writing, with readers seeing whatever is in the database and writers seeing the (in memory) value.
             Transactional.InFlight(this, key, _readerValueLoader = { loadValue(key) }).apply { alsoWrite(value) }

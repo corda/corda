@@ -5,7 +5,6 @@ import net.corda.core.internal.STRUCTURAL_STEP_PREFIX
 import net.corda.core.serialization.CordaSerializable
 import rx.Observable
 import rx.Subscription
-import rx.subjects.PublishSubject
 import rx.subjects.ReplaySubject
 import java.util.*
 
@@ -91,8 +90,8 @@ class ProgressTracker(vararg inputSteps: Step) {
     private var _allStepsCache: List<Pair<Int, Step>> = _allSteps()
 
     // This field won't be serialized.
-    private val _changes by transient { PublishSubject.create<Change>() }
-    private val _stepsTreeChanges by transient { PublishSubject.create<List<Pair<Int, String>>>() }
+    private val _changes by transient { ReplaySubject.create<Change>() }
+    private val _stepsTreeChanges by transient { ReplaySubject.create<List<Pair<Int, String>>>() }
     private val _stepsTreeIndexChanges by transient { ReplaySubject.create<Int>() }
 
     var currentStep: Step
