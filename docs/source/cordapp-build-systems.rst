@@ -62,6 +62,16 @@ The current versions used are as follows:
     ext.quasar_version = '|quasar_version|'
     ext.kotlin_version = '|kotlin_version|'
 
+Please note that Corda Enterprise 4 uses patched releases of Quasar and Caffeine to work around shortcomings identified in
+these libraries while a proper fix is under way. In order to get hold of the patched versions of these libraries,
+``corda-dependencies`` needs to be added to your list of gradle repositories. This repository is required for any project
+referencing Corda Enterprise 4 packages to provide transitive dependencies::
+
+    repositories {
+        // ... other dependencies
+        maven { url "https://ci-artifactory.corda.r3cev.com/artifactory/corda-dependencies" } // access to the patched Quasar and Caffeine version
+    }
+
 In certain cases, you may also wish to build against the unstable Master branch. See :doc:`building-against-master`.
 
 Corda dependencies

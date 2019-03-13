@@ -25,8 +25,15 @@ you.
 
 Connecting to a node via RPC
 ----------------------------
-To use `CordaRPCClient`_, you must add ``net.corda:corda-rpc:$corda_release_version`` as a ``cordaCompile`` dependency
-in your client's ``build.gradle`` file.
+To use `CordaRPCClient`_, you must add ``com.r3.corda:corda-rpc:$corda_release_version`` as a ``compile`` dependency
+in your client's ``build.gradle`` file. As the RPC library has a transitive dependency on a patched version of Caffeine in Corda
+Enterprise 4.0, you also need to add ``corda-dependencies`` to the list of repositories for your project in order to resolve
+this dependency::
+
+    repositories {
+        // ... other dependencies
+        maven { url "https://ci-artifactory.corda.r3cev.com/artifactory/corda-dependencies" } // access to the patched Caffeine version
+    }
 
 `CordaRPCClient`_ has a ``start`` method that takes the node's RPC address and returns a `CordaRPCConnection`_.
 `CordaRPCConnection`_ has a ``proxy`` method that takes an RPC username and password and returns a `CordaRPCOps`_
