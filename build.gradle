@@ -434,7 +434,8 @@ bintrayConfig {
             'corda-tools-cliutils',
             'corda-notary-jpa',
             'corda-common-configuration-parsing',
-            'corda-common-validation'
+            'corda-common-validation',
+            'pinger'
     ]
     license {
         name = 'Apache-2.0'
