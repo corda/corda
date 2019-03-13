@@ -11,8 +11,10 @@ import net.corda.client.jackson.JacksonSupport
 import net.corda.client.jackson.StringToMethodCallParser
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCClientConfiguration
-import net.corda.client.rpc.CordaRPCConnection
 import net.corda.client.rpc.PermissionException
+import net.corda.client.rpc.internal.ReconnectingCordaRPCOps
+import net.corda.client.rpc.internal.ReconnectingObservable
+import net.corda.client.rpc.internal.asReconnectingWithInitialValues
 import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.UniqueIdentifier
@@ -71,9 +73,9 @@ import kotlin.concurrent.thread
 
 object InteractiveShell {
     private val log = LoggerFactory.getLogger(javaClass)
-    private lateinit var rpcOps: (username: String, credentials: String) -> CordaRPCOps
+    private lateinit var rpcOps: (username: String, password: String) -> CordaRPCOps
     private lateinit var ops: CordaRPCOps
-    private lateinit var connection: CordaRPCConnection
+    private lateinit var rpcConn: AutoCloseable
     private var shell: Shell? = null
     private var classLoader: ClassLoader? = null
     private lateinit var shellConfiguration: ShellConfiguration
@@ -87,20 +89,23 @@ object InteractiveShell {
         YAML
     }
 
-    /**
-     * Starts an interactive shell connected to the local terminal. This shell gives administrator access to the node
-     * internals.
-     */
-    fun startShell(configuration: ShellConfiguration, classLoader: ClassLoader? = null) {
-        rpcOps = { username: String, credentials: String ->
-            val client = CordaRPCClient(hostAndPort = configuration.hostAndPort,
-                    configuration = CordaRPCClientConfiguration.DEFAULT.copy(
-                            maxReconnectAttempts = 1
-                    ),
-                    sslConfiguration = configuration.ssl,
-                    classLoader = classLoader)
-            this.connection = client.start(username, credentials)
-            connection.proxy
+    fun startShell(configuration: ShellConfiguration, classLoader: ClassLoader? = null, standalone: Boolean = false) {
+        rpcOps = { username: String, password: String ->
+            if (standalone) {
+                ReconnectingCordaRPCOps(configuration.hostAndPort, username, password, configuration.ssl, classLoader).also {
+                    rpcConn = it
+                }
+            } else {
+                val client = CordaRPCClient(hostAndPort = configuration.hostAndPort,
+                        configuration = CordaRPCClientConfiguration.DEFAULT.copy(
+                                maxReconnectAttempts = 1
+                        ),
+                        sslConfiguration = configuration.ssl,
+                        classLoader = classLoader)
+                val connection = client.start(username, password)
+                rpcConn = connection
+                connection.proxy
+            }
         }
         _startShell(configuration, classLoader)
     }
@@ -457,7 +462,11 @@ object InteractiveShell {
         val (stateMachines, stateMachineUpdates) = proxy.stateMachinesFeed()
         val currentStateMachines = stateMachines.map { StateMachineUpdate.Added(it) }
         val subscriber = FlowWatchPrintingSubscriber(out)
-        stateMachineUpdates.startWith(currentStateMachines).subscribe(subscriber)
+        if (stateMachineUpdates is ReconnectingObservable<*>) {
+            stateMachineUpdates.asReconnectingWithInitialValues(currentStateMachines).subscribe(subscriber::onNext)
+        } else {
+            stateMachineUpdates.startWith(currentStateMachines).subscribe(subscriber)
+        }
         var result: Any? = subscriber.future
         if (result is Future<*>) {
             if (!result.isDone) {
@@ -561,7 +570,7 @@ object InteractiveShell {
                     },
                     // When completed.
                     {
-                        connection.forceClose()
+                        rpcConn.close()
                         // This will only show up in the standalone Shell, because the embedded one is killed as part of a node's shutdown.
                         display { println("...done, quitting the shell now.") }
                         onExit.invoke()
