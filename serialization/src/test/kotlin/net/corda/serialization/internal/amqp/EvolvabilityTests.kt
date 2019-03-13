@@ -753,7 +753,7 @@ class EvolvabilityTests {
         }
 
         // Set DISABLE-CORDA-2707 = true
-        FeatureFlag.withSet(FeatureFlag::DISABLE_CORDA_2707) {
+        FeatureFlag.withSet(FeatureFlag::DISABLE_CORDA_2707 to true) {
             // We need a new factory, as the old one will have cached
             val sf2 = testDefaultFactory()
 

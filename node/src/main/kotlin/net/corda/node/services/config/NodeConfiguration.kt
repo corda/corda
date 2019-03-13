@@ -4,6 +4,7 @@ import com.typesafe.config.Config
 import net.corda.common.configuration.parsing.internal.Configuration
 import net.corda.common.validation.internal.Validated
 import net.corda.core.context.AuthServiceId
+import net.corda.core.context.FeatureFlag
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.TimedFlow
 import net.corda.core.internal.notary.NotaryServiceFlow
@@ -84,6 +85,8 @@ interface NodeConfiguration {
     val cordappSignerKeyFingerprintBlacklist: List<String>
 
     val networkParameterAcceptanceSettings: NetworkParameterAcceptanceSettings
+
+    val featureFlags: FeatureFlags?
 
     companion object {
         // default to at least 8MB and a bit extra for larger heap sizes
@@ -309,5 +312,19 @@ data class SecurityConfiguration(val authService: SecurityConfiguration.AuthServ
                                     passwordEncryption = encryption),
                             id = AuthServiceId("NODE_CONFIG"))
         }
+    }
+}
+
+/**
+ * Configuration for [FeatureFlag]s.
+ */
+data class FeatureFlags(val disableCorda2707: Boolean = false) {
+    /**
+     * Apply this configuration to the global [FeatureFlag]s.
+     */
+    fun applyConfiguration() {
+        FeatureFlag.configure(
+                FeatureFlag::DISABLE_CORDA_2707 to disableCorda2707
+        )
     }
 }

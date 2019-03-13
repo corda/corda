@@ -308,6 +308,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     }
 
     open fun start(): S {
+        configuration.featureFlags?.applyConfiguration()
         check(started == null) { "Node has already been started" }
 
         if (configuration.devMode) {
