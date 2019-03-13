@@ -32,11 +32,21 @@ configuration for PostgreSQL:
 
 Note that:
 
-* Database schema name can be set in JDBC URL string e.g. currentSchema=myschema
+* Database schema name can be set in JDBC URL string e.g. *currentSchema=my_schema*
 * Database schema name must either match the ``dataSource.user`` value to end up
   on the standard schema search path according to the
   `PostgreSQL documentation <https://www.postgresql.org/docs/9.3/static/ddl-schemas.html#DDL-SCHEMAS-PATH>`_, or
   the schema search path must be set explicitly for the user.
+* If a database already contains a schema for the other Corda node,
+  then you need create a ``hibernate_sequence`` sequence object manually while creating a schema for a new Corda node.
+  Run the DDL statement and replace *my_schema* with your schema namespace:
+
+  .. sourcecode:: groovy
+
+    CREATE SEQUENCE my_schema.hibernate_sequence INCREMENT BY 1 MINVALUE 1 MAXVALUE 9223372036854775807 START 8 CACHE 1 NO CYCLE;
+
+  Hibernate may skip to create a sequence object for some configurations,
+  if other schema within the same database already contains a sequence with the same name.
 
 SQLServer
 ---------
