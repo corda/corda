@@ -115,7 +115,7 @@ object BankOfCordaClientApi {
                 throw secEx
             } catch (ex: RPCException) {
                 logger.info("Exception upon attempt to establish connection: " + ex.message)
-                null    // force retry are sleep
+                null    // force retry after sleep
             }
             // Could not connect this time round - pause before giving another try.
             Thread.sleep(retryInterval.toMillis())

@@ -382,6 +382,10 @@ the error handler upon subscription to an ``Observable``. The call to this ``onE
 point the client will terminate its existing subscription, close its RPC connection and recursively call ``performRpcReconnect``,
 which will re-subscribe once the RPC connection is re-established.
 
+Within the body of the ``subscribe`` function itself, the client code receives instances of ``StateMachineInfo``. Upon re-connecting, this code receives
+*all* the instances of ``StateMachineInfo``, some of which may already been delivered to the client code prior to previous disconnect.
+It is the responsibility of the client code to handle potential duplicated instances of ``StateMachineInfo`` as appropriate.
+
 Wire security
 -------------
 If TLS communications to the RPC endpoint are required the node should be configured with ``rpcSettings.useSSL=true`` see :doc:`corda-configuration-file`.
