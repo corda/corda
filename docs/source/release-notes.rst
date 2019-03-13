@@ -6,17 +6,17 @@ Release notes
 Release 3.4
 -----------
 
-In response to the recently released [`Corda 4.0 <https://docs.corda.net/releases/release-V4.0/release-notes.html>`_] Corda 3.4 brings a number of fixes
-that address several interoperability issues we've discovered between nodes. These should make the deployment of mixed version networks far smoother
-and the upgrade path from 3 to 4 easier.
+In response to the recently released [`Corda 4.0 <https://docs.corda.net/releases/release-V4.0/release-notes.html>`_] Corda 3.4 brings a
+number of fixes that address several interoperability issues we've discovered between nodes. These should make the deployment of mixed
+version networks far smoother and the upgrade path from 3 to 4 easier.
 
-The majoritythese fixes surround the serialization and class synthesis frameworks where receiving states and messages from newer (Version 4) nodes highlighted
-a few edge cases, bugs, and performant enhancements we could make.
+The majority of these fixes surround the serialization and class synthesis frameworks where receiving states and messages from newer (Version 4) nodes highlighted
+a few edge cases, bugs, and performance enhancements we could make.
 
 Issues Fixed
 ~~~~~~~~~~~~
 
-* Don't fail deserialization with carpentry errors IFF the carpented types would be discarded through evolution [`CORDA-2704 <https://r3-cev.atlassian.net/browse/CORDA-2704>`_]
+* Don't fail deserialization with carpentry errors if the carpented types would be discarded through evolution [`CORDA-2704 <https://r3-cev.atlassian.net/browse/CORDA-2704>`_]
 * RPC Vault query incompatibility between Corda 3.3 and Corda 4 [`CORDA-2687 <https://r3-cev.atlassian.net/browse/CORDA-2687>`_]
 * V3 node unable to record finalised transaction containing a V3 FungibleAsset state created by a V4 node [`CORDA-2422 <https://r3-cev.atlassian.net/browse/CORDA-2422>`_]
 * V3 node is unable to evolve serialised type that has introduced a property that is of an unknown type [`CORDA-2314 <https://r3-cev.atlassian.net/browse/CORDA-2314>`_]

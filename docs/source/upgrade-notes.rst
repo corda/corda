@@ -33,7 +33,7 @@ v3.3 to v3.4
 
 * Update the Corda Release version
 
-  The ``corda_release_version`` identifier in your projects gradle file will need changing as follows:
+  The ``corda_release_version`` identifier in your project's gradle file will need changing as follows:
 
   .. sourcecode:: shell
 
