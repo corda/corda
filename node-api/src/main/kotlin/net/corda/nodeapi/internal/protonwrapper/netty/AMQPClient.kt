@@ -103,7 +103,7 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
 
     private val connectListener = ChannelFutureListener { future ->
         if (!future.isSuccess) {
-            log.info("Failed to connect to $currentTarget")
+            log.info("Failed to connect to $currentTarget. Proxy: ${configuration.proxyConfig?.proxyAddress}")
 
             if (!stopping) {
                 workerGroup?.schedule({
