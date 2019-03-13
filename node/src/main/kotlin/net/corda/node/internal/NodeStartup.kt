@@ -37,6 +37,7 @@ import java.io.RandomAccessFile
 import java.lang.management.ManagementFactory
 import java.net.InetAddress
 import java.nio.channels.UnresolvedAddressException
+import java.io.File
 import java.nio.file.Path
 import java.time.DayOfWeek
 import java.time.ZonedDateTime
@@ -53,7 +54,7 @@ abstract class NodeCliCommand(alias: String, description: String, val startup: N
         const val LOGS_DIRECTORY_NAME = "logs"
     }
 
-    override fun initLogging() = this.initLogging(cmdLineOptions.baseDirectory)
+    override fun initLogging(): Boolean = this.initLogging(cmdLineOptions.baseDirectory)
 
     @Mixin
     val cmdLineOptions = SharedNodeCmdLineOptions()
@@ -71,7 +72,7 @@ open class NodeStartupCli : CordaCliWrapper("corda", "Runs a Corda Node") {
     private val initialRegistrationCli by lazy { InitialRegistrationCli(startup) }
     private val validateConfigurationCli by lazy { ValidateConfigurationCli() }
 
-    override fun initLogging() = this.initLogging(cmdLineOptions.baseDirectory)
+    override fun initLogging():Boolean = this.initLogging(cmdLineOptions.baseDirectory)
 
     override fun additionalSubCommands() = setOf(networkCacheCli, justGenerateNodeInfoCli, justGenerateRpcSslCertsCli, initialRegistrationCli, validateConfigurationCli)
 
@@ -126,6 +127,7 @@ open class NodeStartup : NodeStartupLogging {
 
     fun initialiseAndRun(cmdLineOptions: SharedNodeCmdLineOptions, afterNodeInitialisation: RunAfterNodeInitialisation): Int {
         this.cmdLineOptions = cmdLineOptions
+        println("initialise and run")
 
         // Step 1. Check for supported Java version.
         if (isInvalidJavaVersion()) return ExitCodes.FAILURE
@@ -267,6 +269,7 @@ open class NodeStartup : NodeStartupLogging {
         // exists, we try to take the file lock first before replacing it and if that fails it means we're being started
         // twice with the same directory: that's a user error and we should bail out.
         val pidFile = (baseDirectory / "process-id").toFile()
+        println("about to create pid file")
         try {
             pidFile.createNewFile()
             val pidFileRw = RandomAccessFile(pidFile, "rw")
@@ -437,14 +440,23 @@ interface NodeStartupLogging {
     }
 }
 
-fun CliWrapperBase.initLogging(baseDirectory: Path) {
+fun CliWrapperBase.initLogging(baseDirectory: Path) : Boolean {
     System.setProperty("defaultLogLevel", specifiedLogLevel) // These properties are referenced from the XML config file.
     if (verbose) {
         System.setProperty("consoleLoggingEnabled", "true")
         System.setProperty("consoleLogLevel", specifiedLogLevel)
         Node.renderBasicInfoToConsole = false
     }
+
+    //Test for access to the logging path and shutdown if we are unable to reach it.
+    val logPath = File((baseDirectory / NodeCliCommand.LOGS_DIRECTORY_NAME).toString())
+    if(!logPath.mkdirs() && !logPath.exists()) {
+        println("Unable to access logging directory ${logPath.getAbsolutePath()}. Node will now shutdown.")
+        return false
+    }
+
     System.setProperty("log-path", (baseDirectory / NodeCliCommand.LOGS_DIRECTORY_NAME).toString())
     SLF4JBridgeHandler.removeHandlersForRootLogger() // The default j.u.l config adds a ConsoleHandler.
     SLF4JBridgeHandler.install()
+    return true
 }
