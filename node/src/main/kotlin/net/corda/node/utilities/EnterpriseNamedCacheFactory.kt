@@ -38,6 +38,7 @@ class EnterpriseNamedCacheFactory private constructor(private val tracingConfig:
                 name == "NodeAttachmentService_attachmentContent" -> caffeine.maximumWeight(defaultAttachmentCacheBound(this))
                 name == "NodeAttachmentService_attachmentPresence" -> caffeine.maximumSize(defaultAttachmentPresenceCacheBound(this))
                 name == "P2PMessageDeduplicator_senderUUIDSeqNoHWM" -> caffeine.expireAfterAccess(7, TimeUnit.DAYS)
+                name == "FlowLogicRefFactoryImpl_constructorCache" -> caffeine.maximumSize(defaultCacheSize)
                 else -> super.configuredForNamed(caffeine, name)
             }
         }

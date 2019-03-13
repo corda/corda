@@ -15,9 +15,7 @@ import net.corda.core.utilities.loggerFor
 import net.corda.node.VersionInfo
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.RelayConfiguration
-import net.corda.node.services.statemachine.MultiThreadedStateMachineExecutor
-import net.corda.node.services.statemachine.MultiThreadedStateMachineManager
-import net.corda.node.services.statemachine.StateMachineManager
+import net.corda.node.services.statemachine.*
 import net.corda.node.utilities.EnterpriseNamedCacheFactory
 import net.corda.node.utilities.profiling.getTracingConfig
 import org.fusesource.jansi.Ansi
@@ -207,4 +205,6 @@ D""".trimStart()
             return super.makeStateMachineManager()
         }
     }
+
+    override fun makeFlowLogicRefFactoryImpl(): FlowLogicRefFactoryImpl = EnterpriseFlowLogicRefFactoryImpl(cordappLoader.appClassLoader, cacheFactory)
 }
