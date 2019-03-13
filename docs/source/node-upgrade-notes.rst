@@ -37,54 +37,85 @@ It's always a good idea to make a backup of your data before upgrading any serve
 You can simply make a copy of the node's data directory to enable this. If you use an external non-H2 database please consult your database
 user guide to learn how to make backups.
 
-We provide some :ref:`backup recommendations <backup-recommendations>` if you'd like more detail.
+Please see :ref:`Backup recommendations <backup-recommendations>` for a detailed explanation of Corda backup and recovery guarantees.
 
 Step 3. Update database
 -----------------------
+.. |jar_name| replace:: corda-tools-database-manager-|version|.jar
 
-The database schema of Corda 3.X require an update to Corda 4.
-Follow the steps described in :doc:`node-operations-database-schema-setup` page.
-That page describes the procedure for both the initial database setup
-and an existing database update as the steps are essentially the same.
+Upgrading to Corda 4 from Corda 3.x requires both schema and data updates.
 
-Depending on you deployment process the database update can be performed as:
+If using the development **H2** database, there is no need to perform any explicit upgrade steps if schema changes are additive (e.g. new tables, columns, indexes).
+Simply restart the node with the upgraded ``corda.jar`` and the H2 database will be updated automatically.
+However, if schema changes are non-additive (e.g. modification or removal of tables, columns) the user is responsible for manually adjusting
+the H2 schema to reflect these changes (and perform any data copying as required).
 
-* Automatic update by a Corda node upon startup
+Schema update
+~~~~~~~~~~~~~
 
-  Follow the steps described :ref:`here <db_setup_auto-upgrade_ref>`.
+If using an Enterprise grade **commercial** database you have two options:
 
-* Automatic update by a database administrator using Corda Database Migration Tool
+1. Use the Corda :ref:`Database management tool <migration-tool>` to generate and execute SQL upgrade scripts.
 
-  The ``corda-database-migration-tool-4.0.jar`` tool can be accesses from
-  `Corda Artifactory site <https://ci-artifactory.corda.r3cev.com/artifactory/webapp/#/artifacts/browse/simple/General/corda/net/corda/corda-node>`_.
-  Ensure to use the same version of the tool as the Corda node version to be deployed.
-  Follow the steps described :ref:`here <db-setup-database-management-direct-execution_ref>`.
-  This release does require data rows migration, therefore ``myLegalName`` needs to be set and the tool needs to have access to node's CorDapps:
+   Generate the scripts by running the following command:
 
-  - Ensure ``myLegalName`` is set correctly in a configuration file provided for Database Migration Tool.
+   .. parsed-literal::
+> java -jar |jar_name| --base-directory /path/to/node --dry-run
 
-  - If you are not reusing a node base directory, copy any CorDapps from the node being upgraded to *cordapps* subdirectory accessed by the tool.
+   The generated scripts should then be applied by your database administrator using their tooling of choice or by executing the following command:
 
-* DDL script execution and automatic data update by a database administrator using Corda Database Migration Tool
+   .. parsed-literal::
+> java -jar |jar_name| --base-directory /path/to/node --execute-migration
+
+   Restart the node with the upgraded ``corda.jar``.
+
+   .. note:: This is the recommended best practice in strictly controlled UAT, staging and production environments.
+
+   .. warning:: Ensure you use the same version of the :ref:`Database management tool <migration-tool>` as the Corda Node it wil be used against.
+
+2. Configure the node to automatically execute all database SQL scripts upon startup.
+   This requires setting the following flag in the node's associated ``node.conf`` configuration file:
+
+   .. sourcecode:: none
+
+      database.runMigration = true
+
+   .. note:: This is only recommended for rapid prototyping and test environments.
+
+.. warning:: It is always recommended to take backups of your database before executing any upgrade steps.
+
+See :ref:`Backup Recommendations <backup-recommendations>` for further information.
+
+Please refer to :doc:`node-operations-database-schema-setup` for detailed instructions.
+
+Data update
+~~~~~~~~~~~
+
+This release requires some data migration to populate new entities.
+
+* DDL script execution and automatic data update by a database administrator using the Corda :ref:`Database management tool <migration-tool>`.
 
   Follow the steps described :ref:`here <db-setup-database-management-ddl-execution_ref>`.
-  This upgrade procedure is a mix of running the DDL script for schema update
-  and running Database Migration Tool for non-schema alteration changes.
+  This upgrade procedure is a mix of running the DDL script for schema update and running :ref:`Database management tool <migration-tool>` for non-schema alteration changes.
   All steps of this procedure except the first one needed to be run:
-  *Extract DDL script using Database Migration Tool*,
-  *Apply DDL scripts on a database*, *Apply remaining data upgrades on a database.*
-  Especially the last step is required because Corda 4 contains new columns/tables
-  which needed to be populated based on your existing data,
-  and these migration can't be expressed in DDL script.
-  Data rows migration requires the ``myLegalName`` option to be set and the tool needs to have access to node's CorDapps:
 
-   - Ensure ``myLegalName`` is set correctly in a configuration file provided for Database Migration Tool.
+  *Extract DDL script using :ref:`Database management tool <migration-tool>`*
+  *Apply DDL scripts on a database*
+  *Apply remaining data upgrades on a database.*
+
+  Note the last step is important because Corda 4 contains new columns/tables which needed to be populated based on your existing data,
+  and these migration can't be expressed in DDL script.
+
+  Specifically, the ``vault_states`` table adds the following:
+
+     * ``relevancy_status`` column
+     * referenced ``state_party`` table (and new fields)
+
+  and uses some custom migration code (executed as a custom change set by Liquibase) to achieve this. In order to determine if a state is relevant
+  for a node, the migration code needs to know the nodes name, which it obtains from ``myLegalName`` (set in the :ref:`Database management tool <migration-tool>` configuration file).
+  The migration code also requires access to the node's CorDapps in order to understand which custom ``MappedSchema`` objects to process.
 
    - If you are not reusing a node base directory, copy any CorDapps from a node being upgraded to *cordapps* subdirectory accessed by the tool.
-
-  The ``corda-database-migration-tool-4.0.jar`` tool can be accesses from
-  `Corda Artifactory site <https://ci-artifactory.corda.r3cev.com/artifactory/webapp/#/artifacts/browse/simple/General/corda/net/corda/corda-node>`_.
-  Ensure to use the same version of the tool as the Corda node version to be deployed.
 
 Step 4. Replace ``corda.jar`` with the new version
 --------------------------------------------------
@@ -109,3 +140,7 @@ You may now do any checks that you wish to perform, read the logs, and so on. Wh
 ``run setFlowsDrainingModeEnabled enabled: false``
 
 Your upgrade is complete.
+
+.. warning:: if upgrading from Corda Enterprise 3.x, please ensure your node has been upgraded to the latest point release of that
+   distribution. See `Upgrade a Corda 3.X Enterprise Node <https://docs.corda.r3.com/releases/3.3/node-operations-upgrading.html#upgrading-a-corda-enterprise-node>`_
+   for information on upgrading Corda 3.x versions.

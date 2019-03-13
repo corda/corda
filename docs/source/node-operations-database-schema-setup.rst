@@ -219,7 +219,7 @@ Script for PostgreSQL:
 Corda is not released with a separate set of DDL scripts, instead you can use
 :ref:`Corda Database Management Tool <database-management-tool-ref>` to output the DDL scripts.
 The DDL scripts contain the history of database evolution - a series of table alterations leading to the current state.
-This follows the functionality of `Liquibase <http://www.liquibase.org>_ used by Corda to for the database schema management.
+This follows the functionality of `Liquibase <http://www.liquibase.org>`_ used by Corda to for the database schema management.
 The scripts will not contain some data rows upgrades (which are run separately in the 3rd step).
 The tool needs the access to a running database and takes the required database URL/credentials
 from ``node.conf`` file. Follow the same configuration as described in
@@ -232,7 +232,7 @@ After configuring the tool run:
 
         java -jar tools-database-manager-RELEASE-VERSION.jar dry-run -b .
 
-The option ``-b`` points to the directory contains the `node.conf`` file
+The option ``-b`` points to the directory contains the ``node.conf`` file
 and both subdirectories *drivers* and *cordapps*.
 
 The command will not update any tables, except two control tables if they are not present (see the first step).

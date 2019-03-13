@@ -76,7 +76,7 @@ Key new features and components
   It delivers operational compatibility with open-source Corda:
 
   - Can be used in networks seamlessly transacting with nodes running Corda 3.x and future versions.
-  - Can run CorDapps developed on Corda 3.x and future versions. Note that some database changes may be required to achieve this. See :doc:`node-operations-upgrading` for more information.
+  - Can run CorDapps developed on Corda 3.x and future versions. Note that some database changes may be required to achieve this. See :doc:`node-upgrade-notes` for more information.
   - Is compatible with ledger data created using Corda 3.x and future versions.
 
   Furthermore, the RPC client-server communications transport protocol is now fully AMQP based.
