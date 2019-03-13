@@ -1,6 +1,7 @@
 package net.corda.node.internal.subcommands
 
 import net.corda.cliutils.CliWrapperBase
+import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.createFile
 import net.corda.core.internal.div
 import net.corda.core.internal.exists
@@ -12,10 +13,14 @@ import net.corda.node.internal.NodeStartupLogging.Companion.logger
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
 import net.corda.node.utilities.registration.NodeRegistrationHelper
+import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import picocli.CommandLine.Mixin
 import picocli.CommandLine.Option
 import java.io.File
+import java.lang.IllegalStateException
 import java.nio.file.Path
+import java.sql.DriverManager
+import java.sql.SQLException
 import java.util.function.Consumer
 
 class InitialRegistrationCli(val startup: NodeStartup): CliWrapperBase("initial-registration", "Start initial node registration with Corda network to obtain certificate from the permissioning server.") {
@@ -58,7 +63,12 @@ class InitialRegistration(val baseDirectory: Path, private val networkRootTrustS
 
     private val nodeRegistration = NodeRegistrationOption(networkRootTrustStorePath, networkRootTrustStorePassword)
 
-    private fun registerWithNetwork(conf: NodeConfiguration) {
+    private val EXISTING_STATE_GENERIC_WARNING = "Please ensure there is no state from previous runs, before initiating registration of a node."
+
+    @VisibleForTesting
+    fun registerWithNetwork(conf: NodeConfiguration) {
+        verifyNoStateFromPreviousRuns(conf)
+
         val versionInfo = startup.getVersionInfo()
 
         println("\n" +
@@ -82,10 +92,35 @@ class InitialRegistration(val baseDirectory: Path, private val networkRootTrustS
         println("Corda node will now terminate.")
     }
 
+    private fun verifyNoStateFromPreviousRuns(conf: NodeConfiguration) {
+        val artemisDirectory = baseDirectory / "artemis"
+        check(!artemisDirectory.exists()) { "The node folder contains an artemis directory. $EXISTING_STATE_GENERIC_WARNING" }
+        val brokersDirectory = baseDirectory / "brokers"
+        check(!brokersDirectory.exists()) { "There node folder contains a brokers directory. $EXISTING_STATE_GENERIC_WARNING" }
+
+        val datasourceProps = conf.dataSourceProperties
+        if (datasourceProps.isEmpty) throw IllegalStateException("There must be a database configured.")
+        val datasourceUrl = datasourceProps.getProperty("dataSource.url")
+        val datasourceUser = datasourceProps.getProperty("dataSource.user")
+        val datasourcePassword = datasourceProps.getProperty("dataSource.password")
+
+        try {
+            val connection = DriverManager.getConnection(datasourceUrl, datasourceUser, datasourcePassword)
+            val connectionMetadata = connection.metaData
+            // Accounting for different case-sensitivity behaviours (i.e. H2 creates tables in upper-case in some cases)
+            val tablesLowerCaseResultSet = connectionMetadata.getTables(null, null, "$NODE_DATABASE_PREFIX%", null)
+            val tablesUpperCaseResultSet = connectionMetadata.getTables(null, null, "${NODE_DATABASE_PREFIX.toUpperCase()}%", null)
+            check(!tablesLowerCaseResultSet.first() && !tablesUpperCaseResultSet.first()) {
+                "The database contains Corda-specific tables, while it should be empty. $EXISTING_STATE_GENERIC_WARNING"
+            }
+        } catch (exception: SQLException) {
+            throw Exception("An error occurred whilst connecting to \"$datasourceUrl\". ", exception)
+        }
+    }
+
     private fun initialRegistration(config: NodeConfiguration) {
         // Null checks for [compatibilityZoneURL], [rootTruststorePath] and [rootTruststorePassword] has been done in [CmdLineOptions.loadConfig]
-        attempt { registerWithNetwork(config) }.doOnFailure(Consumer(this::handleRegistrationError)) as Try.Success
-        // At this point the node registration was successful. We can delete the marker file.
+        attempt { registerWithNetwork(config) }.doOnFailure(Consumer(this::handleRegistrationError))
         deleteNodeRegistrationMarker(baseDirectory)
     }
 
