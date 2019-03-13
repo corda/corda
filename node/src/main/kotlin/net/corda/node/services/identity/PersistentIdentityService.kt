@@ -120,7 +120,7 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
             principalToParties.addWithDuplicatesAllowed(it.name, key, false)
         }
         confidentialIdentities.forEach {
-            principalToParties.addWithDuplicatesAllowed(it.name, mapToKey(it), false)
+            keyToParties.addWithDuplicatesAllowed(mapToKey(it), it, false)
         }
         log.debug("Identities loaded")
     }
@@ -138,17 +138,18 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
     }
 
     override fun registerIdentity(identity: PartyAndCertificate, isNewRandomIdentity: Boolean): PartyAndCertificate? {
-        val identityCertChain = identity.certPath.x509Certificates
         log.debug { "Registering identity $identity" }
+        val identityCertChain = identity.certPath.x509Certificates
         val key = mapToKey(identity)
+
         if (isNewRandomIdentity) {
             // Because this is supposed to be new and random, there's no way we have it in the database already, so skip the pessimistic check.
             keyToParties[key] = identity
         } else {
             keyToParties.addWithDuplicatesAllowed(key, identity)
+            principalToParties.addWithDuplicatesAllowed(identity.name, key, false)
         }
-        // Always keep the first party we registered, as that's the well known identity
-        principalToParties.addWithDuplicatesAllowed(identity.name, key, false)
+
         val parentId = mapToKey(identityCertChain[1].publicKey)
         return keyToParties[parentId]
     }

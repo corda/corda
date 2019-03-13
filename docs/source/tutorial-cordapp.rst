@@ -481,6 +481,8 @@ Integration tests
 ~~~~~~~~~~~~~~~~~
 You can run the CorDapp's integration tests by running the ``Run Integration Tests - Kotlin`` run configuration.
 
+.. _tutorial_cordapp_running_tests_intellij:
+
 Running tests in IntelliJ
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 

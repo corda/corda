@@ -78,7 +78,6 @@ abstract class ANSIProgressRenderer {
 
         flowProgressHandle?.apply {
             stepsTreeIndexFeed?.apply {
-                treeIndex = snapshot
                 treeIndexProcessed.add(snapshot)
                 subscriptionIndex = updates.subscribe({
                     treeIndex = it
@@ -87,7 +86,6 @@ abstract class ANSIProgressRenderer {
                 }, { done(it) }, { done(null) })
             }
             stepsTreeFeed?.apply {
-                tree = snapshot
                 subscriptionTree = updates.subscribe({
                     remapIndices(it)
                     tree = it
