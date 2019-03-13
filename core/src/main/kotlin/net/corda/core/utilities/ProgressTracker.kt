@@ -233,9 +233,23 @@ class ProgressTracker(vararg inputSteps: Step) {
         recalculateStepsTreeIndex()
     }
 
+    private fun getStepIndexAtLevel(level: Int): Int {
+        return if (level > 0) {
+            if (stepIndex - 2 >= 0) stepIndex - 2 else 0
+        } else {
+            stepIndex
+        }
+    }
+
+    private fun getCurrentStepTreeIndex(level: Int = 0): Int {
+        val newLevel = level + 1
+        val indexAtLevel = getStepIndexAtLevel(level)
+        val additionalIndex = getChildProgressTracker(currentStep)?.getCurrentStepTreeIndex(newLevel) ?: 0
+        return indexAtLevel + additionalIndex
+    }
+
     private fun recalculateStepsTreeIndex() {
-        val step = currentStepRecursiveWithoutUnstarted()
-        stepsTreeIndex = _allStepsCache.indexOfFirst { it.second == step }
+        stepsTreeIndex = getCurrentStepTreeIndex()
     }
 
     private fun _allSteps(level: Int = 0): List<Pair<Int, Step>> {

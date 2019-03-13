@@ -17,8 +17,12 @@ import org.fusesource.jansi.Ansi.Attribute
 import org.fusesource.jansi.AnsiConsole
 import org.fusesource.jansi.AnsiOutputStream
 import rx.Subscription
+import java.util.*
 import java.util.stream.IntStream
 import kotlin.streams.toList
+
+// Each element in the tree is an integer indicating the step level, the step label, and the index of the parent step if present.
+typealias StepsTree = List<Triple<Int, String, Int?>>
 
 abstract class ANSIProgressRenderer {
 
@@ -31,7 +35,7 @@ abstract class ANSIProgressRenderer {
 
     protected var treeIndex: Int = 0
     protected var treeIndexProcessed: MutableSet<Int> = mutableSetOf()
-    protected var tree: List<Pair<Int,String>> = listOf()
+    protected var tree: StepsTree = listOf()
 
     private var installedYet = false
 
@@ -87,15 +91,50 @@ abstract class ANSIProgressRenderer {
             }
             stepsTreeFeed?.apply {
                 subscriptionTree = updates.subscribe({
-                    remapIndices(it)
-                    tree = it
+                    val newTree = transformTree(it)
+                    remapIndices(newTree)
+                    tree = newTree
                     draw(true)
                 }, { done(it) }, { done(null) })
             }
         }
     }
 
-    private fun remapIndices(newTree: List<Pair<Int, String>>) {
+    // Attempt to uniquely identify a step by also identifying the step's parent.
+    private fun transformTree(inputTree: List<Pair<Int, String>>): StepsTree {
+        if (inputTree.isEmpty()) {
+            return listOf()
+        }
+        val stack = Stack<Pair<Int, Pair<Int, String>>>()
+        stack.push(Pair(0, inputTree[0]))
+        // The algorithm here:
+        //  - Check the top of stack.
+        //    - If the level is the same as the current step's level, then remove it. The parent is now at the top.
+        //    - If the level is less than the current step's level, the top of the stack is the parent step.
+        //    - If the level is greater than the current step's level, then this step is after a set of sub steps. The parent is two
+        //      levels down.
+        //  - The top of stack is now the parent, so get its index. Push the current step on top of the stack.
+        //  - If at any point the stack is empty, there is no parent, so set it to null.
+        return inputTree.mapIndexed { index, step ->
+            val parentIndex = try {
+                val top = stack.peek()
+                when {
+                    top.second.first == step.first -> stack.pop()
+                    top.second.first < step.first -> {
+                    } // The top is the current parent, so do nothing.
+                    top.second.first > step.first -> repeat(2) { stack.pop() }
+                }
+                stack.peek().first
+            } catch (e: EmptyStackException) {
+                // If there is nothing on the stack at any point, it implies that this step is at the top level and has no parent.
+                null
+            }
+            stack.push(Pair(index, step))
+            Triple(step.first, step.second, parentIndex)
+        }
+    }
+
+    private fun remapIndices(newTree: StepsTree) {
         val newIndices = newTree.filter {
             treeIndexProcessed.contains(tree.indexOf(it))
         }.map {

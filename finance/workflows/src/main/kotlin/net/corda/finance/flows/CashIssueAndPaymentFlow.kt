@@ -37,9 +37,18 @@ class CashIssueAndPaymentFlow(val amount: Amount<Currency>,
 
     constructor(request: IssueAndPaymentRequest) : this(request.amount, request.issueRef, request.recipient, request.anonymous, request.notary, ProgressTracker())
 
+    companion object {
+        val ISSUING_CASH = ProgressTracker.Step("Issuing cash")
+        val PAYING_RECIPIENT = ProgressTracker.Step("Paying recipient")
+
+        fun tracker() = ProgressTracker(ISSUING_CASH, PAYING_RECIPIENT)
+    }
+
     @Suspendable
     override fun call(): Result {
+        progressTracker.currentStep = ISSUING_CASH
         subFlow(CashIssueFlow(amount, issueRef, notary))
+        progressTracker.currentStep = PAYING_RECIPIENT
         return subFlow(CashPaymentFlow(amount, recipient, anonymous, notary))
     }
 
