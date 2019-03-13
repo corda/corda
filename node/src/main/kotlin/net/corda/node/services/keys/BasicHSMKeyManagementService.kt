@@ -83,7 +83,7 @@ class BasicHSMKeyManagementService(cacheFactory: NamedCacheFactory, val identity
     }
 
     override fun filterMyKeys(candidateKeys: Iterable<PublicKey>): Iterable<PublicKey> = database.transaction {
-        (identityService.stripNotOurKeys(candidateKeys) + candidateKeys.filter { containsPublicKey(it) }).toSet()
+        candidateKeys.filter { containsPublicKey(it) }
     }
 
     // Unlike initial keys, freshkey() is related confidential keys and it utilises platform's software key generation

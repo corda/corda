@@ -67,7 +67,7 @@ class NodeVaultService(
          */
         fun isRelevant(state: ContractState, myKeys: Set<PublicKey>): Boolean {
             val keysToCheck = when (state) {
-                is OwnableState -> listOf(state.owner.owningKey)
+                is OwnableState -> listOf(state.owner.owningKey, state.owner.host.owningKey)
                 else -> state.participants.map {participant ->
                     if (participant.owningKey == participant.host.owningKey){
                         listOf(participant.owningKey)
@@ -141,7 +141,13 @@ class NodeVaultService(
             // * it's more complicated for CorDapp developers
             //
             // Adding a new column in the "VaultStates" table was considered the best approach.
-            val keys = stateOnly.participants.map { it.owningKey }
+            val keys = stateOnly.participants.map { participant ->
+                if (participant.owningKey == participant.host.owningKey) {
+                    listOf(participant.owningKey)
+                } else {
+                    listOf(participant.owningKey, participant.host.owningKey)
+                }
+            }.flatten()
             val persistentStateRef = PersistentStateRef(stateAndRef.key)
             // This check is done to set the "relevancyStatus". When one performs a vault query, it is possible to return ALL states, ONLY
             // RELEVANT states or NOT relevant states.
@@ -233,8 +239,11 @@ class NodeVaultService(
         fun makeUpdate(tx: WireTransaction): Vault.Update<ContractState>? {
             val ourNewStates = when (statesToRecord) {
                 StatesToRecord.NONE -> throw AssertionError("Should not reach here")
-                StatesToRecord.ONLY_RELEVANT -> tx.outputs.withIndex().filter {
-                    isRelevant(it.value.data, keyManagementService.filterMyKeys(tx.outputs.flatMap { it.data.participants.map { it.owningKey } }).toSet())
+                StatesToRecord.ONLY_RELEVANT -> tx.outputs.withIndex().filter {indexedOutput ->
+                    //keys that are involved with the the outputs in this TX
+                    val participantKeys = tx.outputs.flatMap { output -> output.data.participants.flatMap { listOf(it.owningKey, it.host.owningKey) } }
+                    val filteredKeys = keyManagementService.filterMyKeys(participantKeys)
+                    isRelevant(indexedOutput.value.data, filteredKeys.toSet())
                 }
                 StatesToRecord.ALL_VISIBLE -> tx.outputs.withIndex()
             }.map { tx.outRef<ContractState>(it.index) }
