@@ -63,16 +63,6 @@ open class EnterpriseNode(configuration: NodeConfiguration,
             // This line makes sure ANSI escapes work on Windows, where they aren't supported out of the box.
             AnsiConsole.systemInstall()
 
-            val logo = """
-R   ______               __       B  _____ _   _ _____ _____ ____  ____  ____  ___ ____  _____
-R  / ____/     _________/ /___ _  B | ____| \ | |_   _| ____|  _ \|  _ \|  _ \|_ _/ ___|| ____|
-R / /     __  / ___/ __  / __ `/  B |  _| |  \| | | | |  _| | |_) | |_) | |_) || |\___ \|  _|
-R/ /___  /_/ / /  / /_/ / /_/ /   B | |___| |\  | | | | |___|  _ <|  __/|  _ < | | ___) | |___
-R\____/     /_/   \__,_/\__,_/    B |_____|_| \_| |_| |_____|_| \_\_|   |_| \_\___|____/|_____|
-
-W${generateVersionString(versionInfo)}
-D""".trimStart()
-
             val license = """
 *************************************************************************************************************************************
 *  All rights reserved.                                                                                                             *
@@ -81,29 +71,23 @@ D""".trimStart()
 *  IF YOU DO NOT HAVE A VALID WRITTEN LICENSE WITH R3, DO NOT USE THIS SOFTWARE.                                                    *
 *************************************************************************************************************************************
 """
+            val logo = """
+R   ______               __       B  _____ _   _ _____ _____ ____  ____  ____  ___ ____  _____
+R  / ____/     _________/ /___ _  B | ____| \ | |_   _| ____|  _ \|  _ \|  _ \|_ _/ ___|| ____|
+R / /     __  / ___/ __  / __ `/  B |  _| |  \| | | | |  _| | |_) | |_) | |_) || |\___ \|  _|
+R/ /___  /_/ / /  / /_/ / /_/ /   B | |___| |\  | | | | |___|  _ <|  __/|  _ < | | ___) | |___
+R\____/     /_/   \__,_/\__,_/    B |_____|_| \_| |_| |_____|_| \_\_|   |_| \_\___|____/|_____|
+D""".trimStart()
 
-            // Now replace the R, B and W letters with their colour code escapes to make the banner prettier.
+            val version = generateVersionString(versionInfo) + System.lineSeparator()
+            val tipPrefix = if (Emoji.hasEmojiTerminal) "${Emoji.CODE_LIGHTBULB}  " else "Tip: "
+
+            println(license)
+
             if (Ansi.isEnabled()) {
-                val red = Ansi.ansi().fgBrightRed().toString()
-                val blue = Ansi.ansi().fgBrightBlue().toString()
-                val white = Ansi.ansi().reset().fgBrightDefault().toString()
-                val default = Ansi.ansi().reset().toString()
-                val colourLogo = logo.replace("R", red).replace("B", blue).replace("W", white).replace("D", default)
-                val banner =
-                        colourLogo +
-                                System.lineSeparator() +
-                                (
-                                        if (Emoji.hasEmojiTerminal)
-                                            "${Emoji.CODE_LIGHTBULB}  "
-                                        else
-                                            "Tip: "
-                                        ) +
-                                Ansi.ansi().bold().a(tip).reset()
-
-                println(banner)
-                println(license)
+                drawColourful(logo, version, tipPrefix)
             } else {
-                println(logo.replace("R", "").replace("B", "").replace("W", "").replace("D", ""))
+                drawPlain(logo, version, tipPrefix)
             }
         }
 
@@ -112,6 +96,31 @@ D""".trimStart()
             // Make sure the version string is padded to be the same length as the logo
             val paddingLength = Math.max(93 - versionString.length, 0)
             return versionString + "-".repeat(paddingLength)
+        }
+
+        private fun drawColourful(logo: String, version: String, tipPrefix: String) {
+            val colourLogo = addColours(logo)
+            val banner = colourLogo +
+                    System.lineSeparator() +
+                    Ansi.ansi().fgBrightDefault().bold().a(version).reset() +
+                    System.lineSeparator() +
+                    tipPrefix + Ansi.ansi().bold().a(tip).reset() +
+                    System.lineSeparator()
+            println(banner)
+        }
+
+        private fun addColours(logo: String): String {
+            // Replace the R and B letters with their colour code escapes to make the banner prettier.
+            val red = Ansi.ansi().fgBrightRed().toString()
+            val blue = Ansi.ansi().fgBrightBlue().toString()
+            val default = Ansi.ansi().reset().toString()
+            return logo.replace("R", red).replace("B", blue).replace("D", default)
+        }
+
+        private fun drawPlain(logo: String, version: String, tipPrefix: String) {
+            println(logo.replace("R", "").replace("B", "").replace("D", ""))
+            println(version)
+            println(tipPrefix + tip)
         }
 
         private val tip: String
