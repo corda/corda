@@ -589,6 +589,7 @@ class RPCStabilityTests {
                     is RPCApi.ClientToServer.RpcRequest -> {
                         val reply = RPCApi.ServerToClient.RpcReply(request.replyId, Try.Success(1000), "server")
                         val message = session.createMessage(false)
+                        reply.preSerializePayload(SerializationDefaults.RPC_SERVER_CONTEXT)
                         reply.writeToClientMessage(SerializationDefaults.RPC_SERVER_CONTEXT, message)
                         message.putLongProperty(RPCApi.DEDUPLICATION_SEQUENCE_NUMBER_FIELD_NAME, dedupeId.getAndIncrement())
                         producer.send(request.clientAddress, message)

@@ -86,27 +86,91 @@ class RPCServer<OPS : RPCOps>(
 ) {
     private companion object {
         private val log = contextLogger()
+    }
 
-        /*
-         * We construct an observable context on each RPC request. If subsequently a nested Observable is encountered this
-         * same context is propagated by serialization context. This way all observations rooted in a single RPC will be
-         * muxed correctly. Note that the context construction itself is quite cheap.
-         */
-        class ObservableContext(
-                override val observableMap: ObservableSubscriptionMap,
-                override val clientAddressToObservables: ConcurrentHashMap<SimpleString, HashSet<InvocationId>>,
-                override val deduplicationIdentity: String,
-                override val clientAddress: SimpleString,
-                private val sendJobQueue: BlockingQueue<RpcSendJob>
-        ) : ObservableContextInterface {
-            private val serializationContextWithObservableContext = RpcServerObservableSerializer.createContext(
-                    observableContext = this,
-                    serializationContext = SerializationDefaults.RPC_SERVER_CONTEXT)
+    /**
+     * We construct an observable context on each RPC request. If subsequently a nested Observable is encountered this
+     * same context is propagated by serialization context. This way all observations rooted in a single RPC will be
+     * muxed correctly. Note that the context construction itself is quite cheap.
+     */
+    private class ObservableContext(
+            override val observableMap: ObservableSubscriptionMap,
+            override val clientAddressToObservables: ConcurrentHashMap<SimpleString, HashSet<InvocationId>>,
+            override val deduplicationIdentity: String,
+            override val clientAddress: SimpleString,
+            private val globalSendJobQueue: BlockingQueue<RpcSendJob>,
+            private val responseMessageBuffer: ConcurrentHashMap<SimpleString, BufferOrNone>,
+            private val executor: ScheduledExecutorService
+    ) : ObservableContextInterface {
+        private val serializationContextWithObservableContext = RpcServerObservableSerializer.createContext(
+                observableContext = this,
+                serializationContext = SerializationDefaults.RPC_SERVER_CONTEXT)
 
-            override fun sendMessage(serverToClient: RPCApi.ServerToClient) {
-                sendJobQueue.put(RpcSendJob.Send(contextDatabaseOrNull, clientAddress,
-                        serializationContextWithObservableContext, serverToClient))
+        private val localSendJobQueue: BlockingQueue<RpcSendJob.Send> = LinkedBlockingQueue<RpcSendJob.Send>()
+
+        @Synchronized
+        fun rawSendMessage(serverToClient: RPCApi.ServerToClient) {
+            // We must form a queue here as any encountered Observables may already have events, which would
+            // trigger more sends. We must make sure that the root of the Observables (e.g. the RPC reply) is sent
+            // before any child observations for this context.
+            val job = RpcSendJob.Send(contextDatabaseOrNull, clientAddress, serializationContextWithObservableContext, serverToClient)
+
+            // If there is nothing in the queue, immediately serialize, otherwise queue up within the context to maintain ordering.
+            if (localSendJobQueue.isEmpty()) {
+                localSendJobQueue.put(job)
+                parallelSerializeAndSubmit(job)
+            } else {
+                localSendJobQueue.put(job)
             }
+        }
+
+        // Seralize the contexts in parallel.  When finished with this job, submit the next job for this context, if there is one.
+        private fun parallelSerializeAndSubmit(job: RpcSendJob.Send) {
+            executor.execute {
+                job.message.preSerializePayload(serializationContextWithObservableContext)
+                // Ready to send to Artemis.
+                globalSendJobQueue.put(job)
+                // See if there's anything queued.
+                popNext()
+            }
+        }
+
+        @Synchronized
+        private fun popNext() {
+            // Remove us.
+            localSendJobQueue.poll()
+            // And peek the next.
+            val nextJob = localSendJobQueue.peek()
+            if(nextJob != null) {
+                parallelSerializeAndSubmit(nextJob)
+            }
+        }
+
+        override fun sendMessage(serverToClient: RPCApi.ServerToClient) {
+            val buffered = bufferIfQueueNotBound(clientAddress, serverToClient, this)
+            if (!buffered) rawSendMessage(serverToClient)
+        }
+
+        /**
+         * Buffer the message if the queue at [clientAddress] is not yet bound.
+         *
+         * This can happen after server restart when the client consumer session initiates failover,
+         * but the client queue is not yet set up. We buffer the messages and flush the buffer only once
+         * we receive a notification that the client queue bindings were added.
+         */
+        private fun bufferIfQueueNotBound(clientAddress: SimpleString, message: RPCApi.ServerToClient, context: ObservableContext): Boolean {
+            val clientBuffer = responseMessageBuffer.compute(clientAddress, { _, value ->
+                when (value) {
+                    null -> BufferOrNone.Buffer(ArrayList()).apply {
+                        container.add(MessageAndContext(message, context))
+                    }
+                    is BufferOrNone.Buffer -> value.apply {
+                        container.add(MessageAndContext(message, context))
+                    }
+                    is BufferOrNone.None -> value
+                }
+            })
+            return clientBuffer is BufferOrNone.Buffer
         }
     }
 
@@ -121,7 +185,7 @@ class RPCServer<OPS : RPCOps>(
         object None : BufferOrNone()
     }
 
-    private data class MessageAndContext(val message: RPCApi.ServerToClient.RpcReply, val context: ObservableContext)
+    private data class MessageAndContext(val message: RPCApi.ServerToClient, val context: ObservableContext)
 
     private val lifeCycle = LifeCycle(State.UNSTARTED)
     /** The methodname->Method map to use for dispatching. */
@@ -147,7 +211,7 @@ class RPCServer<OPS : RPCOps>(
     private var serverControl: ActiveMQServerControl? = null
 
     private val responseMessageBuffer = ConcurrentHashMap<SimpleString, BufferOrNone>()
-    private val sendJobQueue = LinkedBlockingQueue<RpcSendJob>()
+    private val sendJobQueue = ArrayBlockingQueue<RpcSendJob>(rpcConfiguration.rpcThreadPoolSize)
 
     private val deduplicationChecker = DeduplicationChecker(rpcConfiguration.deduplicationCacheExpiry, cacheFactory = cacheFactory)
     private var deduplicationIdentity: String? = null
@@ -257,9 +321,6 @@ class RPCServer<OPS : RPCOps>(
             if (job.database != null) {
                 contextDatabase = job.database
             }
-            // We must do the serialisation here as any encountered Observables may already have events, which would
-            // trigger more sends. We must make sure that the root of the Observables (e.g. the RPC reply) is sent
-            // before any child observations.
             job.message.writeToClientMessage(job.serializationContext, artemisMessage)
             artemisMessage.putLongProperty(RPCApi.DEDUPLICATION_SEQUENCE_NUMBER_FIELD_NAME, sequenceNumber)
             rpcProducer!!.send(job.clientAddress, artemisMessage)
@@ -273,11 +334,13 @@ class RPCServer<OPS : RPCOps>(
     }
 
     fun close(queueDrainTimeout: Duration = 5.seconds) {
+        // Shutdown first to stop putting into sendJobQueue
+        rpcExecutor?.shutdownNow()
         // Putting Stop message onto the queue will eventually make senderThread to stop.
-        sendJobQueue.put(RpcSendJob.Stop)
+        // However, because it is blocking, if it's not being drained just give up.
+        sendJobQueue.offer(RpcSendJob.Stop, queueDrainTimeout.toMillis(), TimeUnit.MILLISECONDS)
         senderThread?.join(queueDrainTimeout.toMillis())
         reaperScheduledFuture?.cancel(false)
-        rpcExecutor?.shutdownNow()
         reaperExecutor?.shutdownNow()
         securityManager.close()
         sessionFactory?.close()
@@ -318,7 +381,7 @@ class RPCServer<OPS : RPCOps>(
 
     private fun drainBuffer(buffer: BufferOrNone.Buffer) {
         buffer.container.forEach {
-            it.context.sendMessage(it.message)
+            it.context.rawSendMessage(it.message)
         }
     }
 
@@ -419,34 +482,14 @@ class RPCServer<OPS : RPCOps>(
                 clientAddressToObservables,
                 deduplicationIdentity!!,
                 clientAddress,
-                sendJobQueue
+                sendJobQueue,
+                responseMessageBuffer,
+                rpcExecutor!!
         )
 
-        val buffered = bufferIfQueueNotBound(clientAddress, reply, observableContext)
-        if (!buffered) observableContext.sendMessage(reply)
+       observableContext.sendMessage(reply)
     }
 
-    /**
-     * Buffer the message if the queue at [clientAddress] is not yet bound.
-     *
-     * This can happen after server restart when the client consumer session initiates failover,
-     * but the client queue is not yet set up. We buffer the messages and flush the buffer only once
-     * we receive a notification that the client queue bindings were added.
-     */
-    private fun bufferIfQueueNotBound(clientAddress: SimpleString, message: RPCApi.ServerToClient.RpcReply, context: ObservableContext): Boolean {
-        val clientBuffer = responseMessageBuffer.compute(clientAddress, { _, value ->
-            when (value) {
-                null -> BufferOrNone.Buffer(ArrayList()).apply {
-                    container.add(MessageAndContext(message, context))
-                }
-                is BufferOrNone.Buffer -> value.apply {
-                    container.add(MessageAndContext(message, context))
-                }
-                is BufferOrNone.None -> value
-            }
-        })
-        return clientBuffer is BufferOrNone.Buffer
-    }
 
     private fun reapSubscriptions() {
         observableMap.cleanUp()

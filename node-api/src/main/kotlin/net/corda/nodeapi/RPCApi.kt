@@ -178,7 +178,20 @@ object RPCApi {
             OBSERVATION
         }
 
+        /**
+         * This holds the pre-serialized response ready for [writeToClientMessage].
+         */
+        protected var payload: ByteArray? = null
+
+        /**
+         * Must call [preSerializePayload] before calling this.
+         */
         abstract fun writeToClientMessage(context: SerializationContext, message: ClientMessage)
+
+        /**
+         * Serialize the response message.
+         */
+        abstract fun preSerializePayload(context: SerializationContext)
 
         /** The identity used to identify the deduplication ID sequence. This should be unique per server JVM run */
         abstract val deduplicationIdentity: String
@@ -195,7 +208,11 @@ object RPCApi {
                 message.putIntProperty(TAG_FIELD_NAME, Tag.RPC_REPLY.ordinal)
                 message.putStringProperty(DEDUPLICATION_IDENTITY_FIELD_NAME, deduplicationIdentity)
                 id.mapTo(message, RPC_ID_FIELD_NAME, RPC_ID_TIMESTAMP_FIELD_NAME)
-                message.bodyBuffer.writeBytes(result.safeSerialize(context) { Try.Failure<Any>(it) }.bytes)
+                message.bodyBuffer.writeBytes(payload)
+            }
+
+            override fun preSerializePayload(context: SerializationContext) {
+                payload = result.safeSerialize(context) { Try.Failure<Any>(it) }.bytes
             }
         }
 
@@ -208,7 +225,11 @@ object RPCApi {
                 message.putIntProperty(TAG_FIELD_NAME, Tag.OBSERVATION.ordinal)
                 message.putStringProperty(DEDUPLICATION_IDENTITY_FIELD_NAME, deduplicationIdentity)
                 id.mapTo(message, OBSERVABLE_ID_FIELD_NAME, OBSERVABLE_ID_TIMESTAMP_FIELD_NAME)
-                message.bodyBuffer.writeBytes(content.safeSerialize(context) { Notification.createOnError<Void?>(it) }.bytes)
+                message.bodyBuffer.writeBytes(payload)
+            }
+
+            override fun preSerializePayload(context: SerializationContext) {
+                payload = content.safeSerialize(context) { Notification.createOnError<Void?>(it) }.bytes
             }
         }
 
