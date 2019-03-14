@@ -105,8 +105,8 @@
             </DefaultRolloverStrategy>
 
         </RollingRandomAccessFile>
-		
-		<!-- Will generate up to 100 log files for a given day. During every rollover it will delete
+
+        <!-- Will generate up to 100 log files for a given day. During every rollover it will delete
              those that are older than 60 days, but keep the most recent 10 GB -->
         <RollingRandomAccessFile name="Diagnostic-RollingFile-Appender"
                      fileName="${log-path}/${diagnostic-log-name}.log"
