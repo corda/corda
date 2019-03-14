@@ -102,7 +102,7 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
     override val trustAnchor: TrustAnchor get() = _trustAnchor
 
     /** Stores notary identities obtained from the network parameters, for which we don't need to perform a database lookup. */
-    private lateinit var notaryIdentityCache: Set<Party>
+    private val notaryIdentityCache = HashSet<Party>()
 
     // CordaPersistence is not a c'tor parameter to work around the cyclic dependency
     lateinit var database: CordaPersistence
@@ -114,7 +114,7 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
         _trustRoot = trustRoot
         _trustAnchor = TrustAnchor(trustRoot, null)
         _caCertStore = CertStore.getInstance("Collection", CollectionCertStoreParameters(caCertificates.toSet() + trustRoot))
-        notaryIdentityCache = HashSet<Party>(notaryIdentities)
+        notaryIdentityCache.addAll(notaryIdentities)
     }
 
     fun loadIdentities(identities: Collection<PartyAndCertificate> = emptySet(), confidentialIdentities: Collection<PartyAndCertificate> = emptySet()) {
