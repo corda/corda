@@ -127,7 +127,6 @@ open class NodeStartup : NodeStartupLogging {
 
     fun initialiseAndRun(cmdLineOptions: SharedNodeCmdLineOptions, afterNodeInitialisation: RunAfterNodeInitialisation): Int {
         this.cmdLineOptions = cmdLineOptions
-        println("initialise and run")
 
         // Step 1. Check for supported Java version.
         if (isInvalidJavaVersion()) return ExitCodes.FAILURE
@@ -269,7 +268,6 @@ open class NodeStartup : NodeStartupLogging {
         // exists, we try to take the file lock first before replacing it and if that fails it means we're being started
         // twice with the same directory: that's a user error and we should bail out.
         val pidFile = (baseDirectory / "process-id").toFile()
-        println("about to create pid file")
         try {
             pidFile.createNewFile()
             val pidFileRw = RandomAccessFile(pidFile, "rw")
