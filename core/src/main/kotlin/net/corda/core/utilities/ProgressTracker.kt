@@ -206,15 +206,6 @@ class ProgressTracker(vararg inputSteps: Step) {
     var parent: ProgressTracker? = null
         private set
 
-    /** Walks up the tree to find the top level tracker. If this is the top level tracker, returns 'this' */
-    @Suppress("unused") // TODO: Review by EOY2016 if this property is useful anywhere.
-    val topLevelTracker: ProgressTracker
-        get() {
-            var cursor: ProgressTracker = this
-            while (cursor.parent != null) cursor = cursor.parent!!
-            return cursor
-        }
-
     private fun rebuildStepsTree() {
         _allStepsCache = _allSteps()
         _stepsTreeChanges.onNext(allStepsLabels)
