@@ -100,6 +100,9 @@ class ProgressTracker(vararg inputSteps: Step) {
             check((value === DONE && hasEnded) || !hasEnded) {
                 "Cannot rewind a progress tracker once it has ended"
             }
+            check(steps.contains(value)) {
+                "Trying to assign a step that is not part of this progress tracker"
+            }
             if (currentStep == value) return
 
             val index = steps.indexOf(value)
@@ -233,18 +236,16 @@ class ProgressTracker(vararg inputSteps: Step) {
         recalculateStepsTreeIndex()
     }
 
-    private fun getStepIndexAtLevel(level: Int): Int {
-        return if (level > 0) {
-            if (stepIndex - 2 >= 0) stepIndex - 2 else 0
-        } else {
-            stepIndex
-        }
+    private fun getStepIndexAtLevel(): Int {
+        // This gets the index of the current step in the context of this progress tracker, so it will always be at the top level in
+        // the allStepsCache.
+        val index = _allStepsCache.indexOf(Pair(0, currentStep))
+        return if (index >= 0) index else 0
     }
 
-    private fun getCurrentStepTreeIndex(level: Int = 0): Int {
-        val newLevel = level + 1
-        val indexAtLevel = getStepIndexAtLevel(level)
-        val additionalIndex = getChildProgressTracker(currentStep)?.getCurrentStepTreeIndex(newLevel) ?: 0
+    private fun getCurrentStepTreeIndex(): Int {
+        val indexAtLevel = getStepIndexAtLevel()
+        val additionalIndex = getChildProgressTracker(currentStep)?.getCurrentStepTreeIndex() ?: 0
         return indexAtLevel + additionalIndex
     }
 

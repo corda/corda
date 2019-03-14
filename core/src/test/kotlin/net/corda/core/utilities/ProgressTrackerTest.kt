@@ -256,7 +256,7 @@ class ProgressTrackerTest {
         pt.currentStep = SimpleSteps.TWO
 
         val stepsIndexNotifications = LinkedList<Int>()
-        pt.stepsTreeIndexChanges.subscribe() {
+        pt.stepsTreeIndexChanges.subscribe {
             stepsIndexNotifications += it
         }
 
