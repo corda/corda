@@ -5,6 +5,7 @@ import net.corda.cliutils.CliWrapperBase
 import net.corda.cliutils.CordaCliWrapper
 import net.corda.cliutils.CordaVersionProvider
 import net.corda.cliutils.ExitCodes
+import net.corda.cliutils.ShellConstants
 import net.corda.core.contracts.HashAttachmentConstraint
 import net.corda.core.crypto.Crypto
 import net.corda.core.internal.*
@@ -453,15 +454,15 @@ fun CliWrapperBase.initLogging(baseDirectory: Path) : Boolean {
         logPath.createDirectories()
     }
     catch(e: IOException){        
-        println("Unable to create logging directory ${logPath.toString()}. Node will now shutdown.")
+        println(ShellConstants.RED + "Unable to create logging directory ${logPath.toString()}. Node will now shutdown." + ShellConstants.RESET)
         return false
     }
     catch(e: SecurityException){
-        println("Current user is unable to access logging directory ${logPath.toString()}. Node will now shutdown.")
+        println(ShellConstants.RED + "Current user is unable to access logging directory ${logPath.toString()}. Node will now shutdown." + ShellConstants.RESET)
         return false
     }
     if(!logPath.exists()) {
-        println("Unable to access logging directory ${logPath.toString()}. Node will now shutdown.")
+        println(ShellConstants.RED + "Unable to access logging directory ${logPath.toString()}. Node will now shutdown." + ShellConstants.RESET)
         return false
     }
 
