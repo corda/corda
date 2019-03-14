@@ -16,6 +16,7 @@ import org.fusesource.jansi.Ansi
 import org.fusesource.jansi.Ansi.Attribute
 import org.fusesource.jansi.AnsiConsole
 import org.fusesource.jansi.AnsiOutputStream
+import rx.Observable.combineLatest
 import rx.Subscription
 import java.util.*
 import java.util.stream.IntStream
@@ -26,15 +27,14 @@ typealias StepsTree = List<Triple<Int, String, Int?>>
 
 abstract class ANSIProgressRenderer {
 
-    private var subscriptionIndex: Subscription? = null
-    private var subscriptionTree: Subscription? = null
+    private var updatesSubscription: Subscription? = null
 
     protected var usingANSI = false
     protected var checkEmoji = false
     private val usingUnicode = !SystemUtils.IS_OS_WINDOWS
 
-    protected var treeIndex: Int = 0
-    protected var treeIndexProcessed: MutableSet<Int> = mutableSetOf()
+    private var treeIndex: Int = 0
+    private var treeIndexProcessed: MutableSet<Int> = mutableSetOf()
     protected var tree: StepsTree = listOf()
 
     private var installedYet = false
@@ -47,14 +47,14 @@ abstract class ANSIProgressRenderer {
     protected var prevLinesDrawn = 0
 
     private fun done(error: Throwable?) {
-        if (error == null) _render(null)
+        if (error == null) renderInternal(null)
         draw(true, error)
         onDone()
     }
 
     fun render(flowProgressHandle: FlowProgressHandle<*>, onDone: () -> Unit = {}) {
         this.onDone = onDone
-        _render(flowProgressHandle)
+        renderInternal(flowProgressHandle)
     }
 
     protected abstract fun printLine(line:String)
@@ -63,9 +63,8 @@ abstract class ANSIProgressRenderer {
 
     protected abstract fun setup()
 
-    private fun _render(flowProgressHandle: FlowProgressHandle<*>?) {
-        subscriptionIndex?.unsubscribe()
-        subscriptionTree?.unsubscribe()
+    private fun renderInternal(flowProgressHandle: FlowProgressHandle<*>?) {
+        updatesSubscription?.unsubscribe()
         treeIndex = 0
         treeIndexProcessed.clear()
         tree = listOf()
@@ -79,50 +78,44 @@ abstract class ANSIProgressRenderer {
         prevLinesDrawn = 0
         draw(true)
 
+        val treeUpdates = flowProgressHandle?.stepsTreeFeed?.updates
+        val indexUpdates = flowProgressHandle?.stepsTreeIndexFeed?.updates
 
-        flowProgressHandle?.apply {
-            stepsTreeIndexFeed?.apply {
-                treeIndexProcessed.add(snapshot)
-                subscriptionIndex = updates.subscribe({
-                    treeIndex = it
-                    treeIndexProcessed.add(it)
-                    draw(true)
-                }, { done(it) }, { done(null) })
-            }
-            stepsTreeFeed?.apply {
-                subscriptionTree = updates.subscribe({
-                    val newTree = transformTree(it)
+        if (treeUpdates == null || indexUpdates == null) {
+            renderInBold("Cannot print progress for this flow as the required data is missing", Ansi())
+        } else {
+            // By combining the two observables, a race condition where both emit items at roughly the same time is avoided. This could
+            // result in steps being incorrectly marked as skipped. Instead, whenever either observable emits an item, a pair of the
+            // last index and last tree is returned, which ensures that updates to either are processed in series.
+            updatesSubscription = combineLatest(treeUpdates, indexUpdates) {tree, index -> Pair(tree, index)}.subscribe({
+                val newTree = transformTree(it.first)
+                if (newTree != tree) {
                     remapIndices(newTree)
                     tree = newTree
-                    draw(true)
-                }, { done(it) }, { done(null) })
-            }
+                }
+                treeIndex = it.second
+                treeIndexProcessed.add(it.second)
+                draw(true)
+            }, { done(it) }, {done(null)})
         }
     }
 
-    // Attempt to uniquely identify a step by also identifying the step's parent.
+    // Create a new tree of steps that also holds a reference to the parent of each step. This is required to uniquely identify each step
+    // (assuming that each step label is unique at a given level).
     private fun transformTree(inputTree: List<Pair<Int, String>>): StepsTree {
         if (inputTree.isEmpty()) {
             return listOf()
         }
         val stack = Stack<Pair<Int, Pair<Int, String>>>()
         stack.push(Pair(0, inputTree[0]))
-        // The algorithm here:
-        //  - Check the top of stack.
-        //    - If the level is the same as the current step's level, then remove it. The parent is now at the top.
-        //    - If the level is less than the current step's level, the top of the stack is the parent step.
-        //    - If the level is greater than the current step's level, then this step is after a set of sub steps. The parent is two
-        //      levels down.
-        //  - The top of stack is now the parent, so get its index. Push the current step on top of the stack.
-        //  - If at any point the stack is empty, there is no parent, so set it to null.
         return inputTree.mapIndexed { index, step ->
             val parentIndex = try {
                 val top = stack.peek()
-                when {
-                    top.second.first == step.first -> stack.pop()
-                    top.second.first < step.first -> {
-                    } // The top is the current parent, so do nothing.
-                    top.second.first > step.first -> repeat(2) { stack.pop() }
+                val levelDifference = top.second.first - step.first
+                if (levelDifference >= 0) {
+                    // The top of the stack is at the same or lower level than the current step. Remove items from the top until the topmost
+                    // item is at a higher level - this is the parent step.
+                    repeat(levelDifference + 1) { stack.pop() }
                 }
                 stack.peek().first
             } catch (e: EmptyStackException) {

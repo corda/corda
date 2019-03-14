@@ -94,6 +94,10 @@ class ProgressTracker(vararg inputSteps: Step) {
     private val _stepsTreeChanges by transient { ReplaySubject.create<List<Pair<Int, String>>>() }
     private val _stepsTreeIndexChanges by transient { ReplaySubject.create<Int>() }
 
+    /**
+     * Reading returns the value of steps[stepIndex], writing moves the position of the current tracker. Once moved to
+     * the [DONE] state, this tracker is finished and the current step cannot be moved again.
+     */
     var currentStep: Step
         get() = steps[stepIndex]
         set(value) {
@@ -101,7 +105,7 @@ class ProgressTracker(vararg inputSteps: Step) {
                 "Cannot rewind a progress tracker once it has ended"
             }
             check(steps.contains(value)) {
-                "Trying to assign a step that is not part of this progress tracker"
+                "Trying to assign step ${value.label} that is not part of this progress tracker (steps: $steps)"
             }
             if (currentStep == value) return
 
@@ -137,6 +141,9 @@ class ProgressTracker(vararg inputSteps: Step) {
         steps.forEach {
             configureChildTrackerForStep(it)
         }
+        // Immediately update the step tree observable to ensure the first update the client receives is the initial state of the progress
+        // tracker.
+        _stepsTreeChanges.onNext(allStepsLabels)
         this.currentStep = UNSTARTED
     }
 
@@ -161,27 +168,6 @@ class ProgressTracker(vararg inputSteps: Step) {
                 _stepsTreeIndexChanges.onNext(value)
             }
         }
-
-    /**
-     * Reading returns the value of steps[stepIndex], writing moves the position of the current tracker. Once moved to
-     * the [DONE] state, this tracker is finished and the current step cannot be moved again.
-     */
-
-    /** Returns the current step, descending into children to find the deepest step we are up to. */
-    val currentStepRecursive: Step
-        get() = getChildProgressTracker(currentStep)?.currentStepRecursive ?: currentStep
-
-    /** Returns the current step, descending into children to find the deepest started step we are up to. */
-    private val currentStartedStepRecursive: Step
-        get() {
-            val step = getChildProgressTracker(currentStep)?.currentStartedStepRecursive ?: currentStep
-            return if (step == UNSTARTED) currentStep else step
-        }
-
-    private fun currentStepRecursiveWithoutUnstarted(): Step {
-        val stepRecursive = getChildProgressTracker(currentStep)?.currentStartedStepRecursive
-        return if (stepRecursive == null || stepRecursive == UNSTARTED) currentStep else stepRecursive
-    }
 
     fun getChildProgressTracker(step: Step): ProgressTracker? = childProgressTrackers[step]?.tracker
 
