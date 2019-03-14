@@ -1,9 +1,9 @@
 plugins {
     id 'com.github.johnrengelman.shadow'
+    id 'net.corda.plugins.publish-utils'
+    id 'com.jfrog.artifactory'
+    id 'idea'
 }
-apply plugin: 'net.corda.plugins.publish-utils'
-apply plugin: 'com.jfrog.artifactory'
-apply plugin: 'idea'
 
 description 'Corda deterministic JVM sandbox'
 
