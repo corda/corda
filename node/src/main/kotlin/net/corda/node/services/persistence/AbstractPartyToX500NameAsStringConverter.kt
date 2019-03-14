@@ -8,8 +8,8 @@ import javax.persistence.AttributeConverter
 import javax.persistence.Converter
 
 /**
- * Converter to persist a party as its' well known identity (where resolvable).
- * Completely anonymous parties are stored as null (to preserve privacy).
+ * Converter to persist a party as its well known identity (where resolvable).
+ * Completely anonymous parties are stored as *null* (to preserve privacy).
  */
 @Converter(autoApply = true)
 class AbstractPartyToX500NameAsStringConverter(private val wellKnownPartyFromX500Name: (CordaX500Name) -> Party?,
@@ -24,7 +24,7 @@ class AbstractPartyToX500NameAsStringConverter(private val wellKnownPartyFromX50
             if (partyName != null) return partyName
             log.warn("Identity service unable to resolve AbstractParty: $party")
         }
-        return null // non resolvable anonymous parties
+        return null // non resolvable anonymous parties are stored as nulls
     }
 
     override fun convertToEntityAttribute(dbData: String?): AbstractParty? {
