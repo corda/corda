@@ -451,14 +451,14 @@ fun CliWrapperBase.initLogging(baseDirectory: Path): Boolean {
     try {
         logPath.createDirectories()
     } catch (e: IOException) {
-        println("$ShellConstants.RED Unable to create logging directory ${logPath.toString()}. Node will now shutdown.$ShellConstants.RESET")
+        println("${ShellConstants.RED}Unable to create logging directory ${logPath.toString()}. Node will now shutdown.$ShellConstants.RESET")
         return false
     } catch (e: SecurityException) {
-        println("$ShellConstants.RED Current user is unable to access logging directory ${logPath.toString()}. Node will now shutdown.$ShellConstants.RESET")
+        println("${ShellConstants.RED}Current user is unable to access logging directory ${logPath.toString()}. Node will now shutdown.$ShellConstants.RESET")
         return false
     }
     if (!logPath.isDirectory()) {
-        println("$ShellConstants.RED Unable to access logging directory ${logPath.toString()}. Node will now shutdown.$ShellConstants.RESET")
+        println("${ShellConstants.RED}Unable to access logging directory ${logPath.toString()}. Node will now shutdown.$ShellConstants.RESET")
         return false
     }
 
