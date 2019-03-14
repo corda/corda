@@ -166,6 +166,12 @@ class ProgressTracker(vararg inputSteps: Step) {
             }
         }
 
+    /** Returns the current step, descending into children to find the deepest step we are up to. */
+    @Deprecated("currentStepRecursive should not be used by external clients")
+    @Suppress("unused")
+    val currentStepRecursive: Step
+        get() = getChildProgressTracker(currentStep)?.currentStepRecursive ?: currentStep
+
     fun getChildProgressTracker(step: Step): ProgressTracker? = childProgressTrackers[step]?.tracker
 
     fun setChildProgressTracker(step: ProgressTracker.Step, childProgressTracker: ProgressTracker) {
@@ -202,6 +208,18 @@ class ProgressTracker(vararg inputSteps: Step) {
     /** The parent of this tracker: set automatically by the parent when a tracker is added as a child */
     var parent: ProgressTracker? = null
         private set
+
+    /** Walks up the tree to find the top level tracker. If this is the top level tracker, returns 'this'.
+     *  Required for API compatibility.
+     */
+    @Deprecated("topLevelTracker is not expected to be used by external clients.")
+    @Suppress("unused") // TODO: Review by EOY2016 if this property is useful anywhere.
+    val topLevelTracker: ProgressTracker
+        get() {
+            var cursor: ProgressTracker = this
+            while (cursor.parent != null) cursor = cursor.parent!!
+            return cursor
+        }
 
     private fun rebuildStepsTree() {
         _allStepsCache = _allSteps()
