@@ -315,4 +315,9 @@ class ProgressTrackerTest {
 
         assertEquals(listOf(0, 1, 2, 3, 4, 5, 6), stepIndexNotifications)
     }
+
+    @Test
+    fun `cannot assign step not belonging to this progress tracker`() {
+        assertFails { pt.currentStep = BabySteps.UNOS }
+    }
 }

@@ -104,9 +104,6 @@ class ProgressTracker(vararg inputSteps: Step) {
             check((value === DONE && hasEnded) || !hasEnded) {
                 "Cannot rewind a progress tracker once it has ended"
             }
-            check(steps.contains(value)) {
-                "Trying to assign step ${value.label} that is not part of this progress tracker (steps: $steps)"
-            }
             if (currentStep == value) return
 
             val index = steps.indexOf(value)
