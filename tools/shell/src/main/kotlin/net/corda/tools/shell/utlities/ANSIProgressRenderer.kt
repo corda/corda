@@ -89,12 +89,16 @@ abstract class ANSIProgressRenderer {
             // last index and last tree is returned, which ensures that updates to either are processed in series.
             updatesSubscription = combineLatest(treeUpdates, indexUpdates) {tree, index -> Pair(tree, index)}.subscribe({
                 val newTree = transformTree(it.first)
+                // Process indices first, as if the tree has changed the associated index with this update is for the old tree. Note that
+                // the one case where this isn't true is the very first update, but in this case the index should be 0 (as this update is
+                // for the initial state). The remapping on a new tree assumes the step at index 0 is always at least current, so this case
+                // is handled there.
+                treeIndex = it.second
+                treeIndexProcessed.add(it.second)
                 if (newTree != tree) {
                     remapIndices(newTree)
                     tree = newTree
                 }
-                treeIndex = it.second
-                treeIndexProcessed.add(it.second)
                 draw(true)
             }, { done(it) }, {done(null)})
         }
