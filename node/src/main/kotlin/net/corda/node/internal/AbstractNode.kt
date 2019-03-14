@@ -54,6 +54,9 @@ import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.BasicHSMKeyManagementService
 import net.corda.node.services.keys.KeyManagementServiceInternal
 import net.corda.node.services.keys.cryptoservice.BCCryptoService
+import net.corda.node.services.keys.cryptoservice.azure.AzureKeyVaultCryptoService
+import net.corda.node.services.keys.cryptoservice.gemalto.GemaltoLunaCryptoService
+import net.corda.node.services.keys.cryptoservice.utimaco.UtimacoCryptoService
 import net.corda.node.services.messaging.DeduplicationHandler
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.network.NetworkMapClient
@@ -977,6 +980,12 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
         val identityCertPath = listOf(identityCert) + nodeCaCertPath
         signingCertificateStore.setCertPathOnly(alias, identityCertPath)
+        when(cryptoService) {
+            is GemaltoLunaCryptoService -> log.info("Private key '$alias' stored in Gemalto HSM. Certificate-chain stored in node keystore.")
+            is AzureKeyVaultCryptoService -> log.info("Private key '$alias' stored in Azure KeyVault. Certificate-chain stored in node keystore.")
+            is UtimacoCryptoService -> log.info("Private key '$alias' stored in Utimaco HSM.  Certificate-chain stored in node keystore.")
+            else -> log.info("Private key '$alias' and its certificate-chain stored successfully.")
+        }
         return PartyAndCertificate(X509Utilities.buildCertPath(identityCertPath))
     }
 
