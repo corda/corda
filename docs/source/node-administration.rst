@@ -10,7 +10,8 @@ Logging
 By default the node log files are stored to the ``logs`` subdirectory of the working directory and are rotated from time
 to time. You can have logging printed to the console as well by passing the ``--log-to-console`` command line flag.
 The default logging level is ``INFO`` which can be adjusted by the ``--logging-level`` command line argument. This configuration
-option will affect all modules.
+option will affect all modules. Hibernate specific log messages of level ``WARN`` and above will be logged to the diagnostic log
+file, which is stored in the same location as other log files (``logs`` subdirectory by default).
 
 It may be the case that you require to amend the log level of a particular subset of modules (e.g., if you'd like to take a
 closer look at hibernate activity). So, for more bespoke logging configuration, the logger settings can be completely overridden
