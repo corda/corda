@@ -124,7 +124,7 @@ abstract class CliWrapperBase(val alias: String, val description: String) : Call
 
     // This needs to be called before loggers (See: NodeStartup.kt:51 logger called by lazy, initLogging happens before).
     // Node's logging is more rich. In corda configurations two properties, defaultLoggingLevel and consoleLogLevel, are usually used.
-    open fun initLogging() : Boolean {
+    open fun initLogging(): Boolean {
         System.setProperty("defaultLogLevel", specifiedLogLevel) // These properties are referenced from the XML config file.
         if (verbose) {
             System.setProperty("consoleLogLevel", specifiedLogLevel)
@@ -143,7 +143,9 @@ abstract class CliWrapperBase(val alias: String, val description: String) : Call
         return runProgram()
     }
 
-    val specifiedLogLevel: String by lazy { System.getProperty("log4j2.level")?.toLowerCase(Locale.ENGLISH) ?: loggingLevel.name.toLowerCase(Locale.ENGLISH) }
+    val specifiedLogLevel: String by lazy {
+        System.getProperty("log4j2.level")?.toLowerCase(Locale.ENGLISH) ?: loggingLevel.name.toLowerCase(Locale.ENGLISH)
+    }
 }
 
 /**
@@ -180,7 +182,7 @@ abstract class CordaCliWrapper(alias: String, description: String) : CliWrapperB
     }
 
     override fun call(): Int {
-        if(!initLogging()){
+        if (!initLogging()) {
             return ExitCodes.FAILURE
         }
         logger.info("Application Args: ${args.joinToString(" ")}")
@@ -189,12 +191,10 @@ abstract class CordaCliWrapper(alias: String, description: String) : CliWrapperB
     }
 
     fun printHelp() = cmd.usage(System.out)
-
 }
 
 fun printWarning(message: String) = System.err.println("${ShellConstants.YELLOW}$message${ShellConstants.RESET}")
 fun printError(message: String) = System.err.println("${ShellConstants.RED}$message${ShellConstants.RESET}")
-
 
 /**
  * Useful commonly used constants applicable to many CLI tools

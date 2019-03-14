@@ -72,7 +72,7 @@ open class NodeStartupCli : CordaCliWrapper("corda", "Runs a Corda Node") {
     private val initialRegistrationCli by lazy { InitialRegistrationCli(startup) }
     private val validateConfigurationCli by lazy { ValidateConfigurationCli() }
 
-    override fun initLogging():Boolean = this.initLogging(cmdLineOptions.baseDirectory)
+    override fun initLogging(): Boolean = this.initLogging(cmdLineOptions.baseDirectory)
 
     override fun additionalSubCommands() = setOf(networkCacheCli, justGenerateNodeInfoCli, justGenerateRpcSslCertsCli, initialRegistrationCli, validateConfigurationCli)
 
@@ -438,7 +438,7 @@ interface NodeStartupLogging {
     }
 }
 
-fun CliWrapperBase.initLogging(baseDirectory: Path) : Boolean {
+fun CliWrapperBase.initLogging(baseDirectory: Path): Boolean {
     System.setProperty("defaultLogLevel", specifiedLogLevel) // These properties are referenced from the XML config file.
     if (verbose) {
         System.setProperty("consoleLoggingEnabled", "true")
@@ -448,19 +448,17 @@ fun CliWrapperBase.initLogging(baseDirectory: Path) : Boolean {
 
     //Test for access to the logging path and shutdown if we are unable to reach it.
     val logPath = baseDirectory / NodeCliCommand.LOGS_DIRECTORY_NAME
-    try{
+    try {
         logPath.createDirectories()
-    }
-    catch(e: IOException){        
-        println(ShellConstants.RED + "Unable to create logging directory ${logPath.toString()}. Node will now shutdown." + ShellConstants.RESET)
+    } catch (e: IOException) {
+        println("$ShellConstants.RED Unable to create logging directory ${logPath.toString()}. Node will now shutdown.$ShellConstants.RESET")
+        return false
+    } catch (e: SecurityException) {
+        println("$ShellConstants.RED Current user is unable to access logging directory ${logPath.toString()}. Node will now shutdown.$ShellConstants.RESET")
         return false
     }
-    catch(e: SecurityException){
-        println(ShellConstants.RED + "Current user is unable to access logging directory ${logPath.toString()}. Node will now shutdown." + ShellConstants.RESET)
-        return false
-    }
-    if(!logPath.exists()) {
-        println(ShellConstants.RED + "Unable to access logging directory ${logPath.toString()}. Node will now shutdown." + ShellConstants.RESET)
+    if (!logPath.isDirectory()) {
+        println("$ShellConstants.RED Unable to access logging directory ${logPath.toString()}. Node will now shutdown.$ShellConstants.RESET")
         return false
     }
 
