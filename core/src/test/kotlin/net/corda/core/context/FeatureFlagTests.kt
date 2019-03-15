@@ -45,5 +45,5 @@ class FeatureFlagTests {
         assertFalse(falseFuture.get())
         assertTrue(trueFuture.get())
     }
-    
+
 }
