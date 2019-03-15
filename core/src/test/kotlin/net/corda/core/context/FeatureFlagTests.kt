@@ -41,11 +41,9 @@ class FeatureFlagTests {
 
         // Release both threads at once; one has DISABLE_CORDA_2707=true in its thread local, the other does not.
         semaphore.release(2)
-        
+
         assertFalse(falseFuture.get())
         assertTrue(trueFuture.get())
     }
-
-
-
+    
 }
