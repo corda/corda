@@ -2,7 +2,7 @@ package net.corda.djvm.assertions
 
 import net.corda.djvm.messages.MessageCollection
 import net.corda.djvm.messages.Severity
-import org.assertj.core.api.Assertions
+import org.assertj.core.api.Assertions.*
 
 @Suppress("unused")
 class AssertiveMessages(private val messages: MessageCollection) {
@@ -14,7 +14,7 @@ class AssertiveMessages(private val messages: MessageCollection) {
     }
 
     fun hasErrorCount(count: Int): AssertiveMessages {
-        Assertions.assertThat(messages.statistics[Severity.ERROR])
+        assertThat(messages.statistics[Severity.ERROR])
                 .`as`("Number of errors")
                 .withFailMessage(formatMessages(Severity.ERROR, count))
                 .isEqualTo(count)
@@ -22,7 +22,7 @@ class AssertiveMessages(private val messages: MessageCollection) {
     }
 
     fun hasWarningCount(count: Int): AssertiveMessages {
-        Assertions.assertThat(messages.statistics[Severity.WARNING])
+        assertThat(messages.statistics[Severity.WARNING])
                 .`as`("Number of warnings")
                 .withFailMessage(formatMessages(Severity.WARNING, count))
                 .isEqualTo(count)
@@ -30,7 +30,7 @@ class AssertiveMessages(private val messages: MessageCollection) {
     }
 
     fun hasInfoCount(count: Int): AssertiveMessages {
-        Assertions.assertThat(messages.statistics[Severity.INFORMATIONAL])
+        assertThat(messages.statistics[Severity.INFORMATIONAL])
                 .`as`("Number of informational messages")
                 .withFailMessage(formatMessages(Severity.INFORMATIONAL, count))
                 .isEqualTo(count)
@@ -38,7 +38,7 @@ class AssertiveMessages(private val messages: MessageCollection) {
     }
 
     fun hasTraceCount(count: Int): AssertiveMessages {
-        Assertions.assertThat(messages.statistics[Severity.TRACE])
+        assertThat(messages.statistics[Severity.TRACE])
                 .`as`("Number of trace messages")
                 .withFailMessage(formatMessages(Severity.TRACE, count))
                 .isEqualTo(count)
@@ -46,10 +46,10 @@ class AssertiveMessages(private val messages: MessageCollection) {
     }
 
     fun withMessage(message: String): AssertiveMessages {
-        Assertions.assertThat(messages.sorted())
+        assertThat(messages.sorted())
                 .`as`("Has message: $message")
                 .anySatisfy {
-                    Assertions.assertThat(it.message).contains(message)
+                    assertThat(it.message).contains(message)
                 }
         return this
     }

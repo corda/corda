@@ -10,8 +10,7 @@ import net.corda.djvm.references.ClassHierarchy
 import net.corda.djvm.references.Member
 import net.corda.djvm.references.ReferenceMap
 import net.corda.djvm.rewiring.LoadedClass
-import org.assertj.core.api.Assertions
-import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.*
 import org.assertj.core.api.IterableAssert
 import org.assertj.core.api.ListAssert
 import org.assertj.core.api.ThrowableAssertAlternative
@@ -67,7 +66,7 @@ object AssertionExtensions {
     fun ListAssert<Message>.withMessage(message: String): ListAssert<Message> = this
             .`as`("HasMessage($message)")
             .anySatisfy {
-                Assertions.assertThat(it.message).contains(message)
+                assertThat(it.message).contains(message)
             }
 
 }

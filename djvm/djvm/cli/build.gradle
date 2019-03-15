@@ -1,4 +1,5 @@
 plugins {
+    id 'org.jetbrains.kotlin.jvm'
     id 'com.github.johnrengelman.shadow'
     id 'net.corda.plugins.publish-utils'
     id 'com.jfrog.artifactory'
@@ -14,6 +15,7 @@ dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
     implementation "org.jetbrains.kotlin:kotlin-reflect"
     implementation "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
+    implementation "org.apache.logging.log4j:log4j-core:$log4j_version"
     implementation "com.jcabi:jcabi-manifests:$jcabi_manifests_version"
 
     implementation "info.picocli:picocli:$picocli_version"
@@ -23,8 +25,8 @@ dependencies {
 jar.enabled = false
 
 shadowJar {
-    baseName = djvmName
-    classifier = ''
+    archiveBaseName = djvmName
+    archiveClassifier = ''
     manifest {
         attributes(
             'Automatic-Module-Name': 'net.corda.djvm.cli',
@@ -36,8 +38,8 @@ shadowJar {
 }
 
 task shadowZip(type: Zip) {
-    baseName = djvmName
-    classifier = ''
+    archiveBaseName = djvmName
+    archiveClassifier = ''
 
     from(shadowJar) {
         rename "$djvmName-(.*).jar", "${djvmName}.jar"

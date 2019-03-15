@@ -5,7 +5,6 @@ import foo.bar.sandbox.testClock
 import foo.bar.sandbox.toNumber
 import net.corda.djvm.TestBase
 import net.corda.djvm.analysis.Whitelist.Companion.MINIMAL
-import net.corda.djvm.Utilities
 import net.corda.djvm.Utilities.throwRuleViolationError
 import net.corda.djvm.Utilities.throwThresholdViolationError
 import net.corda.djvm.assertions.AssertionExtensions.withProblem
@@ -36,9 +35,7 @@ class SandboxExecutorTest : TestBase() {
     }
 
     @Test
-    fun `can load and execute contract`() = sandbox(DEFAULT,
-            pinnedClasses = setOf(Transaction::class.java, Utilities::class.java)
-    ) {
+    fun `can load and execute contract`() = sandbox(DEFAULT, pinnedClasses = setOf(Transaction::class.java)) {
         val contractExecutor = DeterministicSandboxExecutor<Transaction, Unit>(configuration)
         val tx = Transaction(1)
         assertThatExceptionOfType(SandboxException::class.java)
