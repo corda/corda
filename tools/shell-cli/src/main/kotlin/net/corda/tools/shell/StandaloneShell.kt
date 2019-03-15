@@ -60,6 +60,7 @@ class StandaloneShell : CordaCliWrapper("corda-shell", "The Corda standalone she
         super.initLogging()
         SLF4JBridgeHandler.removeHandlersForRootLogger() // The default j.u.l config adds a ConsoleHandler.
         SLF4JBridgeHandler.install()
+        return true
     }
 
     override fun runProgram(): Int {

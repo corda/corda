@@ -1,6 +1,7 @@
 package net.corda.node.internal
 
 import io.netty.channel.unix.Errors
+import net.corda.cliutils.printError
 import net.corda.cliutils.CliWrapperBase
 import net.corda.cliutils.CordaCliWrapper
 import net.corda.cliutils.CordaVersionProvider
@@ -451,14 +452,14 @@ fun CliWrapperBase.initLogging(baseDirectory: Path): Boolean {
     try {
         logPath.createDirectories()
     } catch (e: IOException) {
-        println("${ShellConstants.RED}Unable to create logging directory ${logPath.toString()}. Node will now shutdown.$ShellConstants.RESET")
+        printError("Unable to create logging directory ${logPath.toString()}. Node will now shutdown.")
         return false
     } catch (e: SecurityException) {
-        println("${ShellConstants.RED}Current user is unable to access logging directory ${logPath.toString()}. Node will now shutdown.$ShellConstants.RESET")
+        printError("Current user is unable to access logging directory ${logPath.toString()}. Node will now shutdown.")
         return false
     }
     if (!logPath.isDirectory()) {
-        println("${ShellConstants.RED}Unable to access logging directory ${logPath.toString()}. Node will now shutdown.$ShellConstants.RESET")
+        printError("Unable to access logging directory ${logPath.toString()}. Node will now shutdown.")
         return false
     }
 
