@@ -92,7 +92,7 @@ class DriverTests {
                 systemProperties = mapOf("log4j.configurationFile" to logConfigFile.toString())
         )) {
             val baseDirectory = startNode(providedName = DUMMY_BANK_A_NAME).getOrThrow().baseDirectory
-            val logFile = (baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME).list { it.sorted().findFirst().get() }
+            val logFile = (baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME).list { it.filter { a -> a.isRegularFile() && a.fileName.toString().startsWith("node") }.findFirst().get() }
             val debugLinesPresent = logFile.readLines { lines -> lines.anyMatch { line -> line.startsWith("[DEBUG]") } }
             assertThat(debugLinesPresent).isTrue()
         }
