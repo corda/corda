@@ -2,16 +2,23 @@
 
 file="${BASH_SOURCE[0]}"
 base_dir="$(cd "$(dirname "$file")/" && pwd)"
-version="$(cat $base_dir/../../constants.properties | sed -n 's/^[ ]*cordaVersion[ =]*\(.*\).*$/\1/p')"
 
 # Build DJVM module and CLI
 cd "$base_dir/.."
-../gradlew shadowJar
+if !(../gradlew shadowJar); then
+    echo "Failed to build DJVM"
+    exit 1
+fi
+
+djvm_cli_jar=$(ls -1 $base_dir/../cli/build/libs/corda-djvm-cli-*.jar)
 
 # Generate auto-completion file for Bash and ZSH
 cd "$base_dir"
-java -cp "$base_dir/../cli/build/libs/corda-djvm-$version-cli.jar" \
-    picocli.AutoComplete -n djvm net.corda.djvm.tools.cli.Commands -f
+if !(java -cp $djvm_cli_jar \
+    picocli.AutoComplete -n djvm net.corda.djvm.tools.cli.Commands -f); then
+    echo "Failed to generate auto-completion file"
+    exit 1
+fi
 
 # Create a symbolic link to the `djvm` utility
 sudo ln -sf "$base_dir/djvm" /usr/local/bin/djvm
