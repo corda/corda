@@ -300,7 +300,7 @@ Open your terminal and navigate to the ``djvm`` directory in the Corda source tr
 
 ::
 
-  $ ./shell/install
+  $ djvm/shell/install
 
 
 This will build the DJVM tool and install a shortcut on Bash-enabled systems. It will also generate a Bash completion
