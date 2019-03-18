@@ -177,7 +177,6 @@ class ProgressTracker(vararg inputSteps: Step) {
     /**
      * Returns the current step, descending into children to find the deepest step we are up to.
      */
-    @Deprecated("The current step should be obtained by subscribing to the progress observable")
     @Suppress("unused")
     val currentStepRecursive: Step
         get() = getChildProgressTracker(currentStep)?.currentStepRecursive ?: currentStep
@@ -225,7 +224,6 @@ class ProgressTracker(vararg inputSteps: Step) {
      * Walks up the tree to find the top level tracker. If this is the top level tracker, returns 'this'.
      * Required for API compatibility.
      */
-    @Deprecated("Obtaining tracker tree structure information should be done using the stepsTreeChanges observable")
     @Suppress("unused")
     val topLevelTracker: ProgressTracker
         get() {
