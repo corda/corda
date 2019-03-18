@@ -32,7 +32,7 @@ internal class ValidateConfigurationCli : CliWrapperBase("validate-configuration
     @Mixin
     private val cmdLineOptions = SharedNodeCmdLineOptions()
 
-    override fun initLogging() = initLogging(cmdLineOptions.baseDirectory)
+    override fun initLogging(): Boolean = initLogging(cmdLineOptions.baseDirectory)
 
     override fun runProgram(): Int {
         val rawConfig = cmdLineOptions.rawConfiguration().doOnErrors(cmdLineOptions::logRawConfigurationErrors).optional ?: return ExitCodes.FAILURE
