@@ -154,11 +154,12 @@ class FirewallStartup: CordaCliWrapper("corda-firewall", "The Corda Firewall app
         return hostName
     }
 
-    override fun initLogging() {
+    override fun initLogging(): Boolean {
         super.initLogging()
         System.setProperty("log-path", (cmdLineOptions.baseDirectory / LOGS_DIRECTORY_NAME).toString())
         SLF4JBridgeHandler.removeHandlersForRootLogger() // The default j.u.l config adds a ConsoleHandler.
         SLF4JBridgeHandler.install()
+        return true
     }
 
     private fun startFirewall(conf: FirewallConfiguration, versionInfo: FirewallVersionInfo, startTime: Long): FirewallInstance {
