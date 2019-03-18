@@ -9,6 +9,6 @@ features in this release: future releases may add enhanced monitoring and audit 
 .. toctree::
 
    corda-firewall-component
-   firewall-configuration-file
+   corda-firewall-configuration-file
    corda-firewall-cookbook
    corda-firewall-upgrade

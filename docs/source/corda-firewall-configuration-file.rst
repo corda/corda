@@ -1,4 +1,4 @@
-Firewall configuration
+Firewall Configuration
 **********************
 
 .. contents::
@@ -550,7 +550,7 @@ Given two configuration files above, in order to produce node keystores the foll
 This call will process ``node.conf`` files and for each legal name performs Doorman registration. Depending on Corda Network configuration this process may require manual approval
 and the program will poll for for Certification Signing Request(CSR) completion. For more information see :doc:`joining-a-compatibility-zone`.
 
-After successful execution this will produce two directories ``Entity_A/certificates`` and ``Entity_B/certificates`` containing the following files:
+After successful execution this will produce two directories ``entityA/certificates`` and ``entityB/certificates`` containing the following files:
 
 1. ``truststore.jks``, the network/zone operator's root certificate in keystore with a locally configurable password as protection against certain attacks;
 
@@ -572,7 +572,7 @@ Also, file called ``network-parameters`` will be produced which represents globa
 
         -Dcapsule.jvm.args="-Dhttp.proxyHost=10.0.0.100 -Dhttp.proxyPort=8800 -Dhttps.proxyHost=10.0.0.100 -Dhttps.proxyPort=8800"
 
-Copy file ``network-parameters`` and directories ``certificates`` into ``entityA`` and ``entityB`` sub-directories so that they will look as follows:
+Copy the ``network-parameters`` file and the artemis certificates into the ``entityA`` and ``entityB`` sub-directories which will then look as follows:
 
 .. parsed-literal::
 
