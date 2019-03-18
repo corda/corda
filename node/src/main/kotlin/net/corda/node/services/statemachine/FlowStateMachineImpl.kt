@@ -157,7 +157,6 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                 val continuation = processEvent(transitionExecutor, nextEvent)
                 when (continuation) {
                     is FlowContinuation.Resume -> {
-                        openThreadLocalWormhole()
                         return continuation.result
                     }
                     is FlowContinuation.Throw -> {
@@ -170,6 +169,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             }
         } finally {
             checkDbTransaction(isDbTransactionOpenOnExit)
+            openThreadLocalWormhole()
         }
     }
 
@@ -215,7 +215,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         val threadLocal = getTransientField(TransientValues::database).hikariPoolThreadLocal
         if (threadLocal != null) {
             val valueFromThread = swappedOutThreadLocalValue(threadLocal)
-            if (valueFromThread != null) threadLocal.set(valueFromThread)
+            threadLocal.set(valueFromThread)
         }
     }
 
