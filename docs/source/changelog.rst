@@ -8,6 +8,11 @@ release, see :doc:`app-upgrade-notes`.
 
 Version 4.0
 -----------
+* If a type is mentioned in a serialised message, but not used in the creation of a deserialised value, then it is not necessary for that
+  type to exist on the receiver's classpath (or be synthesized by the class carpenter). Deserialisation will only fail if a
+  non-deserialisable type is used to construct a deserialised value. This behaviour can be switched off by setting
+  `featureFlags.disableCorda2707 = true` in node configuration, in which case a `ClassNotFoundException` will be thrown if a type cannot
+  be found or synthesized.
 
 * Fixed race condition between ``NodeVaultService.trackBy`` and ``NodeVaultService.notifyAll``, where there could be states that were not reflected
   in the data feed returned from ``trackBy`` (either in the query's result snapshot or the observable).

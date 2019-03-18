@@ -545,6 +545,18 @@ verfierType
 
   *Default:* InMemory
 
+
+featureFlags
+  Feature flags provide the option to disable new features if they are found to affect compatibility.
+
+  disableCorda2707
+    The CORDA-2707 feature prevents unnecessary `ClassNotFoundException` errors when a type is mentioned in a serialised message, but not
+    used when constructing the deserialised value. Usually this will be because a property of that type has been removed, so that the
+    receiver no longer has the type on its classpath, nor any use for the value supplied for that property. If this flag is enabled, and the
+    class carpenter is disabled, then a `ClassNotFoundException` will be thrown for every "missing" type, irrespective of whether the type
+    is used in deserialisation.
+
+
 Reference.conf
 --------------
 A set of default configuration options are loaded from the built-in resource file ``/node/src/main/resources/reference.conf``.
