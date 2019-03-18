@@ -46,12 +46,12 @@ class TransitionExecutorImpl(
                     // error as that may result in an infinite loop, e.g. error propagation fails -> record error -> propagate fails again.
                     // Instead we just keep around the old error state and wait for a new schedule, perhaps
                     // triggered from a flow hospital
-                    log.error("Error while executing $action during transition to errored state, aborting transition", exception)
+                    log.warn("Error while executing $action during transition to errored state, aborting transition", exception)
                     return Pair(FlowContinuation.Abort, previousState.copy(isFlowResumed = false))
                 } else {
                     // Otherwise error the state manually keeping the old flow state and schedule a DoRemainingWork
                     // to trigger error propagation
-                    log.error("Error while executing $action, erroring state", exception)
+                    log.info("Error while executing $action, erroring state", exception)
                     val newState = previousState.copy(
                             checkpoint = previousState.checkpoint.copy(
                                     errorState = previousState.checkpoint.errorState.addErrors(

@@ -56,10 +56,11 @@ class StandaloneShell : CordaCliWrapper("corda-shell", "The Corda standalone she
 
     private fun getManifestEntry(key: String) = if (Manifests.exists(key)) Manifests.read(key) else "Unknown"
 
-    override fun initLogging() {
+    override fun initLogging() : Boolean {
         super.initLogging()
         SLF4JBridgeHandler.removeHandlersForRootLogger() // The default j.u.l config adds a ConsoleHandler.
         SLF4JBridgeHandler.install()
+        return true
     }
 
     override fun runProgram(): Int {

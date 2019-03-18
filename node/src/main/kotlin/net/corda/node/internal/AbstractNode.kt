@@ -346,7 +346,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         X509Utilities.validateCertPath(trustRoot, identity.certPath)
 
         val nodeCa = configuration.signingCertificateStore.get()[CORDA_CLIENT_CA]
-        identityService.start(trustRoot, listOf(identity.certificate, nodeCa))
+        identityService.start(trustRoot, listOf(identity.certificate, nodeCa), netParams.notaries.map { it.identity })
 
         val mutualExclusionConfiguration = configuration.enterpriseConfiguration.mutualExclusionConfiguration
         if (mutualExclusionConfiguration.on) {

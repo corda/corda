@@ -101,16 +101,20 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
     private lateinit var _trustAnchor: TrustAnchor
     override val trustAnchor: TrustAnchor get() = _trustAnchor
 
+    /** Stores notary identities obtained from the network parameters, for which we don't need to perform a database lookup. */
+    private val notaryIdentityCache = HashSet<Party>()
+
     // CordaPersistence is not a c'tor parameter to work around the cyclic dependency
     lateinit var database: CordaPersistence
 
     private val keyToParties = createPKMap(cacheFactory)
     private val principalToParties = createX500Map(cacheFactory)
 
-    fun start(trustRoot: X509Certificate, caCertificates: List<X509Certificate> = emptyList()) {
+    fun start(trustRoot: X509Certificate, caCertificates: List<X509Certificate> = emptyList(), notaryIdentities: List<Party> = emptyList()) {
         _trustRoot = trustRoot
         _trustAnchor = TrustAnchor(trustRoot, null)
         _caCertStore = CertStore.getInstance("Collection", CollectionCertStoreParameters(caCertificates.toSet() + trustRoot))
+        notaryIdentityCache.addAll(notaryIdentities)
     }
 
     fun loadIdentities(identities: Collection<PartyAndCertificate> = emptySet(), confidentialIdentities: Collection<PartyAndCertificate> = emptySet()) {
@@ -170,7 +174,16 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
 
     override fun wellKnownPartyFromX500Name(name: CordaX500Name): Party? = certificateFromCordaX500Name(name)?.party
 
-    override fun wellKnownPartyFromAnonymous(party: AbstractParty): Party? = database.transaction { super.wellKnownPartyFromAnonymous(party) }
+    override fun wellKnownPartyFromAnonymous(party: AbstractParty): Party? {
+        // Skip database lookup if the party is a notary identity.
+        // This also prevents an issue where the notary identity can't be resolved if it's not in the network map cache. The node obtains
+        // a trusted list of notary identities from the network parameters automatically.
+        return if (party is Party && party in notaryIdentityCache) {
+            party
+        } else {
+            database.transaction { super.wellKnownPartyFromAnonymous(party) }
+        }
+    }
 
     override fun partiesFromName(query: String, exactMatch: Boolean): Set<Party> {
         return database.transaction {
@@ -194,5 +207,4 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
     fun stripNotOurKeys(keys: Iterable<PublicKey>): Iterable<PublicKey> {
         return keys.filter { certificateFromKey(it)?.name in ourNames }
     }
-
 }
