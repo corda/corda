@@ -22,9 +22,6 @@ import java.util.*
 import java.util.stream.IntStream
 import kotlin.streams.toList
 
-// Each element in the tree is an integer indicating the step level, the step label, and the index of the parent step if present.
-typealias StepsTree = List<Triple<Int, String, Int?>>
-
 abstract class ANSIProgressRenderer {
 
     private var updatesSubscription: Subscription? = null
@@ -35,7 +32,7 @@ abstract class ANSIProgressRenderer {
 
     private var treeIndex: Int = 0
     private var treeIndexProcessed: MutableSet<Int> = mutableSetOf()
-    protected var tree: StepsTree = listOf()
+    protected var tree: List<ProgressStep> = listOf()
 
     private var installedYet = false
 
@@ -45,6 +42,9 @@ abstract class ANSIProgressRenderer {
     private var prevMessagePrinted: String? = null
     // prevLinesDraw is just for ANSI mode.
     protected var prevLinesDrawn = 0
+
+    data class ProgressStep(val level: Int, val description: String, val parentIndex: Int?)
+    data class InputTreeStep(val level: Int, val description: String)
 
     private fun done(error: Throwable?) {
         if (error == null) renderInternal(null)
@@ -87,35 +87,39 @@ abstract class ANSIProgressRenderer {
             // By combining the two observables, a race condition where both emit items at roughly the same time is avoided. This could
             // result in steps being incorrectly marked as skipped. Instead, whenever either observable emits an item, a pair of the
             // last index and last tree is returned, which ensures that updates to either are processed in series.
-            updatesSubscription = combineLatest(treeUpdates, indexUpdates) {tree, index -> Pair(tree, index)}.subscribe({
-                val newTree = transformTree(it.first)
-                // Process indices first, as if the tree has changed the associated index with this update is for the old tree. Note that
-                // the one case where this isn't true is the very first update, but in this case the index should be 0 (as this update is
-                // for the initial state). The remapping on a new tree assumes the step at index 0 is always at least current, so this case
-                // is handled there.
-                treeIndex = it.second
-                treeIndexProcessed.add(it.second)
-                if (newTree != tree) {
-                    remapIndices(newTree)
-                    tree = newTree
-                }
-                draw(true)
-            }, { done(it) }, {done(null)})
+            updatesSubscription = combineLatest(treeUpdates, indexUpdates) { tree, index -> Pair(tree, index) }.subscribe(
+                {
+                    val newTree = transformTree(it.first.map { elem -> InputTreeStep(elem.first, elem.second) })
+                    // Process indices first, as if the tree has changed the associated index with this update is for the old tree. Note
+                    // that the one case where this isn't true is the very first update, but in this case the index should be 0 (as this
+                    // update is for the initial state). The remapping on a new tree assumes the step at index 0 is always at least current,
+                    // so this case is handled there.
+                    treeIndex = it.second
+                    treeIndexProcessed.add(it.second)
+                    if (newTree != tree) {
+                        remapIndices(newTree)
+                        tree = newTree
+                    }
+                    draw(true)
+                },
+                { done(it) },
+                { done(null) }
+            )
         }
     }
 
     // Create a new tree of steps that also holds a reference to the parent of each step. This is required to uniquely identify each step
     // (assuming that each step label is unique at a given level).
-    private fun transformTree(inputTree: List<Pair<Int, String>>): StepsTree {
+    private fun transformTree(inputTree: List<InputTreeStep>): List<ProgressStep> {
         if (inputTree.isEmpty()) {
             return listOf()
         }
-        val stack = Stack<Pair<Int, Pair<Int, String>>>()
+        val stack = Stack<Pair<Int, InputTreeStep>>()
         stack.push(Pair(0, inputTree[0]))
         return inputTree.mapIndexed { index, step ->
             val parentIndex = try {
                 val top = stack.peek()
-                val levelDifference = top.second.first - step.first
+                val levelDifference = top.second.level - step.level
                 if (levelDifference >= 0) {
                     // The top of the stack is at the same or lower level than the current step. Remove items from the top until the topmost
                     // item is at a higher level - this is the parent step.
@@ -127,11 +131,11 @@ abstract class ANSIProgressRenderer {
                 null
             }
             stack.push(Pair(index, step))
-            Triple(step.first, step.second, parentIndex)
+            ProgressStep(step.level, step.description, parentIndex)
         }
     }
 
-    private fun remapIndices(newTree: StepsTree) {
+    private fun remapIndices(newTree: List<ProgressStep>) {
         val newIndices = newTree.filter {
             treeIndexProcessed.contains(tree.indexOf(it))
         }.map {
@@ -144,7 +148,7 @@ abstract class ANSIProgressRenderer {
     @Synchronized protected fun draw(moveUp: Boolean, error: Throwable? = null) {
 
         if (!usingANSI) {
-            val currentMessage = tree.getOrNull(treeIndex)?.second
+            val currentMessage = tree.getOrNull(treeIndex)?.description
             if (currentMessage != null && currentMessage != prevMessagePrinted) {
                 printLine(currentMessage)
                 prevMessagePrinted = currentMessage
@@ -218,13 +222,13 @@ abstract class ANSIProgressRenderer {
                     error -> if (usingUnicode) "${Emoji.noEntry} " else "ERROR: "
                     else -> "    "   // Not reached yet.
                 }
-                a("    ".repeat(step.first))
+                a("    ".repeat(step.level))
                 a(marker)
 
                 when {
-                    activeStep -> renderInBold(step.second, ansi)
-                    skippedStep -> renderInFaint(step.second, ansi)
-                    else -> a(step.second)
+                    activeStep -> renderInBold(step.description, ansi)
+                    skippedStep -> renderInFaint(step.description, ansi)
+                    else -> a(step.description)
                 }
 
                 eraseLine(Ansi.Erase.FORWARD)
