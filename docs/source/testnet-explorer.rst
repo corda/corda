@@ -40,13 +40,7 @@ couple of resources.
 
 #. Download the Resources:
 
-   Download the finance CorDapp and database manager to your VM instance:
-
-   .. code:: bash
-
-       wget http://downloads.corda.net/cordapps/net/corda/finance/ENT-<version>/corda-finance-<version>.jar \
-            http://downloads.corda.net/cordapps/net/corda/finance/ENT-<version>/corda-finance-<version>-sources.jar \
-            http://downloads.corda.net/tools/database-manager/corda-tools-database-manager-<version>.jar
+   Download the finance CorDapp and database manager to your VM instance.
 
    Copy the downloads from ``/home/<USER>/`` to ``/opt/corda/cordapps/``.
 
