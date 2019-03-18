@@ -5,11 +5,17 @@
                    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd">
 
     <changeSet author="R3.Corda" id="1511451595465-1.1" dbms="h2">
+        <preConditions onFail="MARK_RAN">
+            <not><sequenceExists sequenceName="hibernate_sequence"/></not>
+        </preConditions>
         <createSequence sequenceName="hibernate_sequence"/>
     </changeSet>
 
    <changeSet author="R3.Corda" id="1511451595465-1.3" onValidationFail="MARK_RAN">
-       <preConditions onFail="MARK_RAN" onSqlOutput="TEST">  <not> <dbms type="h2"/> </not> </preConditions>
+        <preConditions onFail="MARK_RAN" onSqlOutput="TEST">
+            <not><sequenceExists sequenceName="hibernate_sequence"/></not>
+            <not><dbms type="h2"/></not>
+        </preConditions>
         <createSequence sequenceName="hibernate_sequence" minValue="1"/>
     </changeSet>
 
