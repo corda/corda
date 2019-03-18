@@ -118,11 +118,24 @@ abstract class PortAllocation {
     /**
      * An implementation of [PortAllocation] which allocates ports sequentially
      */
-    open class Incremental(startingPort: Int) : PortAllocation() {
+    open class Incremental(private val startingPort: Int) : PortAllocation() {
+        private companion object {
+            private const val FIRST_EPHEMERAL_PORT = 49152
+        }
+
         /** The backing [AtomicInteger] used to keep track of the currently allocated port */
         val portCounter = AtomicInteger(startingPort)
 
-        override fun nextPort() = portCounter.andIncrement
+        override fun nextPort(): Int {
+            return portCounter.getAndUpdate { i ->
+                val next = i + 1
+                if (next >= FIRST_EPHEMERAL_PORT) {
+                    startingPort
+                } else {
+                    next
+                }
+            }
+        }
     }
 }
 

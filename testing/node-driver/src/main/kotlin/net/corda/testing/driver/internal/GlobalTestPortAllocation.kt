@@ -12,8 +12,8 @@ fun incrementalPortAllocation(startingPortIfNoEnv: Int): PortAllocation {
 
 private object GlobalTestPortAllocation : PortAllocation.Incremental(startingPort = startingPort())
 
-private const val enablingEnvVar = "CORDA_TEST_GLOBAL_PORT_ALLOCATION_ENABLED"
-private const val startingPortEnvVariable = "CORDA_TEST_GLOBAL_PORT_ALLOCATION_STARTING_PORT"
+private const val enablingEnvVar = "TESTING_GLOBAL_PORT_ALLOCATION_ENABLED"
+private const val startingPortEnvVariable = "TESTING_GLOBAL_PORT_ALLOCATION_STARTING_PORT"
 private val enablingSystemProperty = enablingEnvVar.toLowerCase().replace("_", ".")
 private val startingPortSystemProperty = startingPortEnvVariable.toLowerCase().replace("_", ".")
 private const val startingPortDefaultValue = 5000
