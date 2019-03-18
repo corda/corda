@@ -209,6 +209,9 @@ tasks.withType(JavaCompile) {
 task integrationTest(type: Test) {
     testClassesDirs = sourceSets.integrationTest.output.classesDirs
     classpath = sourceSets.integrationTest.runtimeClasspath
+
+    systemProperty 'testing.global.port.allocation.enabled', true
+    systemProperty 'testing.global.port.allocation.starting.port', 10000
 }
 
 jar {
