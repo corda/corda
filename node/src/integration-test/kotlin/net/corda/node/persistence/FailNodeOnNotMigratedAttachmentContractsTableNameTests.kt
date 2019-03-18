@@ -14,7 +14,6 @@ import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.driver.internal.RandomFree
 import net.corda.testing.node.User
-import org.assertj.core.api.Assertions
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
 import java.nio.file.Path
@@ -36,19 +35,19 @@ class FailNodeOnNotMigratedAttachmentContractsTableNameTests {
         val user = User("mark", "dadada", setOf(Permissions.startFlow<SendMessageFlow>(), Permissions.invokeRpc("vaultQuery")))
         val message = Message("Hello world!")
         val baseDir: Path = driver(DriverParameters(startNodesInProcess = true, portAllocation = RandomFree, extraCordappPackagesToScan = listOf(MessageState::class.packageName))) {
-            // Just start a node to make this test less flaky.
-            startNode(rpcUsers = listOf(user)).getOrThrow()
-
-            val (nodeName, baseDir) = {
+            val (nodeName, baseDir) = run {
                 defaultNotaryNode.getOrThrow()
                 val nodeHandle = startNode(rpcUsers = listOf(user)).getOrThrow()
-                val nodeName = nodeHandle.nodeInfo.singleIdentity().name
-                CordaRPCClient(nodeHandle.rpcAddress).start(user.username, user.password).use {
-                    it.proxy.startFlow(::SendMessageFlow, message, defaultNotaryIdentity).returnValue.getOrThrow()
+                val nodeName = try {
+                    CordaRPCClient(nodeHandle.rpcAddress).start(user.username, user.password).use {
+                        it.proxy.startFlow(::SendMessageFlow, message, defaultNotaryIdentity).returnValue.getOrThrow()
+                    }
+                    nodeHandle.nodeInfo.singleIdentity().name
+                } finally {
+                    nodeHandle.stop()
                 }
-                nodeHandle.stop()
                 Pair(nodeName, nodeHandle.baseDirectory)
-            }()
+            }
 
             // replace the correct table name with one from the former release
             DriverManager.getConnection("jdbc:h2:file://$baseDir/persistence", "sa", "").use {
