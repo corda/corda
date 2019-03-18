@@ -44,9 +44,9 @@ couple of resources.
 
    .. code:: bash
 
-       wget http://downloads.corda.net/cordapps/net/corda/finance/ENT-3.1/corda-finance-3.1.jar \
-            http://downloads.corda.net/cordapps/net/corda/finance/ENT-3.1/corda-finance-3.1-sources.jar \
-            http://downloads.corda.net/tools/database-manager/corda-tools-database-manager-3.1.jar
+       wget http://downloads.corda.net/cordapps/net/corda/finance/ENT-<version>/corda-finance-<version>.jar \
+            http://downloads.corda.net/cordapps/net/corda/finance/ENT-<version>/corda-finance-<version>-sources.jar \
+            http://downloads.corda.net/tools/database-manager/corda-tools-database-manager-<version>.jar
 
    Copy the downloads from ``/home/<USER>/`` to ``/opt/corda/cordapps/``.
 
@@ -68,13 +68,13 @@ couple of resources.
    .. code:: bash
    
        cd /opt/corda
-       sudo java -jar /home/<USER>/corda-tools-database-manager-3.0.jar --base-directory /opt/corda --execute-migration
+       sudo java -jar /home/<USER>/corda-tools-database-manager-<version>.jar --base-directory /opt/corda --execute-migration
 
 #. Run the following to create a config file for the finance CorDapp:
 
    .. code:: bash
 
-       echo "issuableCurrencies = [ USD ]" > /opt/corda/cordapps/config/corda-finance-<VERSION>-corda.conf
+       echo "issuableCurrencies = [ USD ]" > /opt/corda/cordapps/config/corda-finance-workflows-<VERSION>.conf
 
 #. Restart the Corda node:
 
@@ -91,7 +91,7 @@ couple of resources.
 
    .. code:: bash
 
-       wget http://downloads.corda.net/tools/explorer/ENT-3.1/corda-tools-explorer-3.1.jar
+       wget http://downloads.corda.net/tools/explorer/ENT-<version>/corda-tools-explorer-<version>.jar
 
    .. warning:: The Enterprise Node Explorer is incompatible with open source versions of Corda and vice versa as they currently
       use different serialisation schemes (Kryo vs AMQP).
@@ -100,7 +100,7 @@ couple of resources.
 
    .. code:: bash
 
-       java -jar corda-tools-explorer-3.1.jar
+       java -jar corda-tools-explorer-<version>.jar
 
    .. image:: resources/explorer-login.png
 
