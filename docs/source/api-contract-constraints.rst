@@ -133,7 +133,7 @@ Issues when using the HashAttachmentConstraint
 When setting up a new network, it is possible to encounter errors when states are issued with the ``HashAttachmentConstraint``,
 but not all nodes have that same version of the CorDapp installed locally.
 
-In this case, flows will fail with a ``ContractConstraintRejection``, and the failed flow will be sent to the flow hospital.
+In this case, flows will fail with a ``ContractConstraintRejection``, and the failed flow will be sent to the :doc:`node-flow-hospital`.
 From there it's suspended waiting to be retried on node restart.
 This gives the node operator the opportunity to recover from those errors, which in the case of constraint violations means
 adding the right cordapp jar to the ``cordapps`` folder.

@@ -548,7 +548,7 @@ As of Corda 4, CorDapp Contract JARs must be installed on a node by a trusted up
 ``>>> run uploadAttachment jar: path/to/the/file.jar``
 
 Contract attachments that are received from a peer over the p2p network are considered **untrusted** and will throw a `UntrustedAttachmentsException` exception
-when processed by a listening flow that cannot resolve that attachment from its local attachment storage. The flow will be aborted and sent to the nodes flow hospital for recovery and retry.
+when processed by a listening flow that cannot resolve that attachment from its local attachment storage. The flow will be suspended and sent to the nodes :doc:`node-flow-hospital` for recovery and retry.
 The untrusted attachment JAR will be stored in the nodes local attachment store for review by a node operator. It can be downloaded for viewing using the following CRaSH shell command:
 
 ``>>> run openAttachment id: <hash of untrusted attachment given by `UntrustedAttachmentsException` exception``
