@@ -14,7 +14,7 @@ import kotlin.test.assertFailsWith
 
 class VaultUpdateTests {
     private companion object {
-        const val DUMMY_PROGRAM_ID = "net.corda.core.node.VaultUpdateTests.DummyContract"
+        const val DUMMY_PROGRAM_ID = "net.corda.core.node.VaultUpdateTests\$DummyContract"
         val DUMMY_NOTARY = TestIdentity(DUMMY_NOTARY_NAME, 20).party
         val emptyUpdate = Vault.Update(emptySet(), emptySet(), type = Vault.UpdateType.GENERAL, references = emptySet())
     }
@@ -25,6 +25,7 @@ class VaultUpdateTests {
         }
     }
 
+    @BelongsToContract(DummyContract::class)
     private class DummyState : ContractState {
         override val participants: List<AbstractParty> = emptyList()
     }
