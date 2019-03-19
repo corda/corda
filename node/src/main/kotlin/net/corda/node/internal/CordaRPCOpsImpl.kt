@@ -136,7 +136,7 @@ internal class CordaRPCOpsImpl(
         return snapshot
     }
 
-    override fun killFlow(id: StateMachineRunId) = smm.killFlow(id)
+    override fun killFlow(id: StateMachineRunId): Boolean = if (smm.killFlow(id)) true else smm.flowHospital.dropSessionInit(id.uuid)
 
     override fun stateMachinesFeed(): DataFeed<List<StateMachineInfo>, StateMachineUpdate> {
         val (allStateMachines, changes) = smm.track()
