@@ -1,91 +1,120 @@
-plugins {
-    id 'com.github.johnrengelman.shadow'
+buildscript {
+    ext {
+        corda_djvm_version = '5.0-SNAPSHOT'
+        artifactory_contextUrl = 'https://ci-artifactory.corda.r3cev.com/artifactory'
+    }
+
+    repositories {
+        mavenCentral()
+    }
+
+    dependencies {
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+    }
 }
+
+plugins {
+    id 'net.corda.plugins.publish-utils' version '4.0.42' apply false
+    id 'com.github.johnrengelman.shadow' version '5.0.0' apply false
+    id 'com.jfrog.artifactory' version '4.7.3' apply false
+    id 'com.jfrog.bintray' version '1.4' apply false
+    id 'com.gradle.build-scan' version '2.2.1'
+}
+
+import static org.gradle.api.JavaVersion.*
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
+subprojects {
+    group 'net.corda'
+    version corda_djvm_version
+
+    repositories {
+        mavenCentral()
+        jcenter()
+    }
+
+    tasks.withType(JavaCompile) {
+        sourceCompatibility = VERSION_1_8
+        targetCompatibility = VERSION_1_8
+        options.encoding = 'UTF-8'
+    }
+
+    tasks.withType(KotlinCompile) {
+        kotlinOptions {
+            languageVersion = '1.2'
+            apiVersion = '1.2'
+            jvmTarget = VERSION_1_8
+            javaParameters = true   // Useful for reflection.
+            freeCompilerArgs = ['-Xjvm-default=enable']
+        }
+    }
+
+    tasks.withType(Jar) { task ->
+        manifest {
+            attributes('Corda-Vendor': 'Corda Open Source')
+            attributes('Automatic-Module-Name': "net.corda.${task.project.name.replaceAll('-', '.')}")
+        }
+    }
+
+    tasks.withType(Test) {
+        // Prevent the project from creating temporary files outside of the build directory.
+        systemProperty 'java.io.tmpdir', buildDir.absolutePath
+    }
+}
+
 apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'com.jfrog.artifactory'
-apply plugin: 'idea'
 
-description 'Corda deterministic JVM sandbox'
-
-ext {
-    // Shaded version of ASM to avoid conflict with root project.
-    asm_version = '6.2.1'
-}
-
-repositories {
-    maven {
-        url "$artifactory_contextUrl/corda-dev"
+bintrayConfig {
+    user = System.getenv('CORDA_BINTRAY_USER')
+    key = System.getenv('CORDA_BINTRAY_KEY')
+    repo = 'corda'
+    org = 'r3'
+    licenses = ['Apache-2.0']
+    vcsUrl = 'https://github.com/corda/corda'
+    projectUrl = 'https://github.com/corda/corda'
+    gpgSign = true
+    gpgPassphrase = System.getenv('CORDA_BINTRAY_GPG_PASSPHRASE')
+    publications = [
+        'corda-djvm',
+        'corda-djvm-cli'
+    ]
+    license {
+        name = 'Apache-2.0'
+        url = 'https://www.apache.org/licenses/LICENSE-2.0'
+        distribution = 'repo'
+    }
+    developer {
+        id = 'R3'
+        name = 'R3'
+        email = 'dev@corda.net'
     }
 }
 
-configurations {
-    testImplementation.extendsFrom shadow
-    jdkRt.resolutionStrategy {
-        // Always check the repository for a newer SNAPSHOT.
-        cacheChangingModulesFor 0, 'seconds'
+artifactory {
+    publish {
+        contextUrl = artifactory_contextUrl
+        repository {
+            repoKey = 'corda-dev'
+            username = System.getenv('CORDA_ARTIFACTORY_USERNAME')
+            password = System.getenv('CORDA_ARTIFACTORY_PASSWORD')
+        }
+
+        defaults {
+            // The root project has applied 'publish-utils' but has nothing to publish.
+            if (project != rootProject) {
+                publications(project.extensions.publish.name())
+            }
+        }
     }
 }
 
-dependencies {
-    shadow "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
-    shadow "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
-    shadow "org.slf4j:slf4j-api:$slf4j_version"
-
-    // ASM: byte code manipulation library
-    implementation "org.ow2.asm:asm:$asm_version"
-    implementation "org.ow2.asm:asm-commons:$asm_version"
-
-    // ClassGraph: classpath scanning
-    shadow "io.github.classgraph:classgraph:$class_graph_version"
-
-    // Test utilities
-    testImplementation "junit:junit:$junit_version"
-    testImplementation "org.assertj:assertj-core:$assertj_version"
-    testImplementation "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
-    jdkRt "net.corda:deterministic-rt:latest.integration"
+wrapper {
+    gradleVersion = "5.2.1"
+    distributionType = Wrapper.DistributionType.ALL
 }
 
-jar.enabled = false
-
-shadowJar {
-    baseName 'corda-djvm'
-    classifier ''
-    relocate 'org.objectweb.asm', 'djvm.org.objectweb.asm'
-
-    // These particular classes are only needed to "bootstrap"
-    // the compilation of the other sandbox classes. At runtime,
-    // we will generate better versions from deterministic-rt.jar.
-    exclude 'sandbox/java/lang/Appendable.class'
-    exclude 'sandbox/java/lang/CharSequence.class'
-    exclude 'sandbox/java/lang/Character\$Subset.class'
-    exclude 'sandbox/java/lang/Character\$Unicode*.class'
-    exclude 'sandbox/java/lang/Comparable.class'
-    exclude 'sandbox/java/lang/Enum.class'
-    exclude 'sandbox/java/lang/Iterable.class'
-    exclude 'sandbox/java/lang/StackTraceElement.class'
-    exclude 'sandbox/java/lang/StringBuffer.class'
-    exclude 'sandbox/java/lang/StringBuilder.class'
-    exclude 'sandbox/java/nio/**'
-    exclude 'sandbox/java/util/**'
-}
-assemble.dependsOn shadowJar
-
-tasks.withType(Test) {
-    systemProperty 'deterministic-rt.path', configurations.jdkRt.asPath
-}
-
-artifacts {
-    publish shadowJar
-}
-
-publish {
-    dependenciesFrom configurations.shadow
-    name shadowJar.baseName
-}
-
-idea {
-    module {
-        downloadJavadoc = true
-        downloadSources = true
-    }
+buildScan {
+    termsOfServiceUrl = 'https://gradle.com/terms-of-service'
+    termsOfServiceAgree = 'yes'
 }

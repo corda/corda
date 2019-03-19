@@ -76,7 +76,7 @@ class DefaultEvolutionSerializerFactory(
             val localClass = localProperty.type.observedType.asClass()
             val remoteClass = remoteProperty.type.typeIdentifier.getLocalType(classLoader).asClass()
 
-            if (!localClass.isAssignableFrom(remoteClass)) {
+            if (!localClass.isAssignableFrom(remoteClass) && remoteClass != localClass.kotlin.javaPrimitiveType) {
                 throw EvolutionSerializationException(this,
                         "Local type $localClass of property $name is not assignable from remote type $remoteClass")
             }

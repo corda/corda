@@ -401,7 +401,6 @@ bintrayConfig {
             'corda-core',
             'corda-core-deterministic',
             'corda-deterministic-verifier',
-            'corda-djvm',
             'corda',
             'corda-finance-workflows',
             'corda-node',

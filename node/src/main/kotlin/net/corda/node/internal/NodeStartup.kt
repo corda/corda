@@ -1,10 +1,12 @@
 package net.corda.node.internal
 
 import io.netty.channel.unix.Errors
+import net.corda.cliutils.printError
 import net.corda.cliutils.CliWrapperBase
 import net.corda.cliutils.CordaCliWrapper
 import net.corda.cliutils.CordaVersionProvider
 import net.corda.cliutils.ExitCodes
+import net.corda.cliutils.ShellConstants
 import net.corda.core.contracts.HashAttachmentConstraint
 import net.corda.core.crypto.Crypto
 import net.corda.core.internal.*
@@ -54,7 +56,7 @@ abstract class NodeCliCommand(alias: String, description: String, val startup: N
         const val LOGS_DIRECTORY_NAME = "logs"
     }
 
-    override fun initLogging() = this.initLogging(cmdLineOptions.baseDirectory)
+    override fun initLogging(): Boolean = this.initLogging(cmdLineOptions.baseDirectory)
 
     @Mixin
     val cmdLineOptions = SharedNodeCmdLineOptions()
@@ -72,7 +74,7 @@ open class NodeStartupCli : CordaCliWrapper("corda", "Runs a Corda Node") {
     private val initialRegistrationCli by lazy { InitialRegistrationCli(startup) }
     private val validateConfigurationCli by lazy { ValidateConfigurationCli() }
 
-    override fun initLogging() = this.initLogging(cmdLineOptions.baseDirectory)
+    override fun initLogging(): Boolean = this.initLogging(cmdLineOptions.baseDirectory)
 
     override fun additionalSubCommands() = setOf(networkCacheCli, justGenerateNodeInfoCli, justGenerateRpcSslCertsCli, initialRegistrationCli, validateConfigurationCli)
 
@@ -447,14 +449,32 @@ interface NodeStartupLogging {
     }
 }
 
-fun CliWrapperBase.initLogging(baseDirectory: Path) {
+fun CliWrapperBase.initLogging(baseDirectory: Path): Boolean {
     System.setProperty("defaultLogLevel", specifiedLogLevel) // These properties are referenced from the XML config file.
     if (verbose) {
         System.setProperty("consoleLoggingEnabled", "true")
         System.setProperty("consoleLogLevel", specifiedLogLevel)
         Node.renderBasicInfoToConsole = false
     }
+
+    //Test for access to the logging path and shutdown if we are unable to reach it.
+    val logPath = baseDirectory / NodeCliCommand.LOGS_DIRECTORY_NAME
+    try {
+        logPath.createDirectories()
+    } catch (e: IOException) {
+        printError("Unable to create logging directory ${logPath.toString()}. Node will now shutdown.")
+        return false
+    } catch (e: SecurityException) {
+        printError("Current user is unable to access logging directory ${logPath.toString()}. Node will now shutdown.")
+        return false
+    }
+    if (!logPath.isDirectory()) {
+        printError("Unable to access logging directory ${logPath.toString()}. Node will now shutdown.")
+        return false
+    }
+
     System.setProperty("log-path", (baseDirectory / NodeCliCommand.LOGS_DIRECTORY_NAME).toString())
     SLF4JBridgeHandler.removeHandlersForRootLogger() // The default j.u.l config adds a ConsoleHandler.
     SLF4JBridgeHandler.install()
+    return true
 }

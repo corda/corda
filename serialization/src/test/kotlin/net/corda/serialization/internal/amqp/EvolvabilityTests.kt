@@ -711,4 +711,31 @@ class EvolvabilityTests {
 
         assertEquals("dronf", deserialized.fnord)
     }
+
+    // Container class
+    data class ParameterizedContainer(val parameterized: Parameterized<Int, Int>?)
+    // Class as it was serialized
+    // data class Parameterized<A, B>(val a: A, val b: Set<B>)
+
+    // Marker interface to force evolution
+    interface ForceEvolution
+
+    // Class after evolution
+    data class Parameterized<A, B>(val a: A, val b: Set<B>) : ForceEvolution
+
+    // See CORDA-2742
+    @Test
+    fun evolutionWithPrimitives() {
+        val resource = "EvolvabilityTests.evolutionWithPrimitives"
+        val sf = testDefaultFactory()
+        // Uncomment to recreate
+        // File(URI("$localPath/$resource")).writeBytes(SerializationOutput(sf).serialize(ParameterizedContainer(Parameterized(10, setOf(20)))).bytes)
+
+        val url = EvolvabilityTests::class.java.getResource(resource)
+
+        val sc2 = url.readBytes()
+        val deserialized = DeserializationInput(sf).deserialize(SerializedBytes<ParameterizedContainer>(sc2))
+
+        assertEquals(10, deserialized.parameterized?.a)
+    }
 }
