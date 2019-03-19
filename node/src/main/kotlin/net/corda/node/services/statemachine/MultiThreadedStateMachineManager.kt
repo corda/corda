@@ -520,6 +520,7 @@ class MultiThreadedStateMachineManager(
             isStartIdempotent: Boolean
     ): CordaFuture<FlowStateMachine<A>> {
         val flowId = StateMachineRunId.createRandom()
+        logger.info("StartFlow(logic=$flowLogic;flow-id=${flowId.uuid})")
 
         // Before we construct the state machine state by freezing the FlowLogic we need to make sure that lazy properties
         // have access to the fiber (and thereby the service hub)

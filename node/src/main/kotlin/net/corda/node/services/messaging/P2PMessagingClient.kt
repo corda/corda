@@ -468,6 +468,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
     }
 
     private fun deliver(msg: ReceivedMessage, artemisMessage: ClientMessage) {
+        log.info("ReceiveMessage(size=${artemisMessage.encodeSize};id=${msg.uniqueMessageId.toString};platformVersion=${msg.platformVersion};from=${msg.peer})")
         state.checkNotLocked()
         val deliverTo = handlers[msg.topic]
         if (deliverTo != null) {
@@ -569,6 +570,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
     @Suspendable
     override fun send(message: Message, target: MessageRecipients, sequenceKey: Any) {
         requireMessageSize(message.data.size, maxMessageSize)
+        log.info("SendMessage(size=${message.data.size};id=${message.uniqueMessageId.toString})")
         messagingExecutor!!.send(message, target)
     }
 
