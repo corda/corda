@@ -1,9 +1,22 @@
 Platform support matrix
 =======================
 
-Our supported Operating System platforms are a subset of those supported by Java `8u172 <http://www.oracle.com/technetwork/java/javase/certconfig-2095354.html>`_. Production use of Corda Enterprise 3.0 is only supported on Linux OS, see details below.
+Our supported Operating System platforms are a subset of those supported by `Java <http://www.oracle.com/technetwork/java/javase/certconfig-2095354.html>`_.
 
-.. warning:: On all platforms listed below, only the **Oracle JDK 8 JVM 8u171\+** is supported. OpenJDK is not currently supported.
+Production use of |release| is only supported on Linux OS, see details below.
+
+JDK support
+~~~~~~~~~~~
+|release| has been tested and verified to work with **Oracle JDK 8 JVM 8u171\+** and **Azul Zulu Enterprise 8**, downloadable from
+`Azul Systems <https://www.azul.com/downloads/azure-only/zulu/>`_.
+
+.. note:: On previous versions of Corda only the **Oracle JDK 8 JVM 8u171\+** is supported.
+
+Other distributions of the `OpenJDK <https://openjdk.java.net/>`_ are not officially supported but should be compatible with |release|.
+
+.. warning:: In accordance with the `Oracle Java SE Support Roadmap <https://www.oracle.com/technetwork/java/java-se-support-roadmap.html>`_
+   which outlines the end of public updates of Java SE 8 for commercial use, please ensure you have the correct Java support contract in place
+   for your deployment needs.
 
 Operating systems supported in production
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
