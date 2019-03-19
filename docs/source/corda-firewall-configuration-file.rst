@@ -285,6 +285,9 @@ To facilitate High Availability requirement deployment is split onto two data ce
     of organisation's IT infrastructure according to best practices/policies for outbound Internet connectivity. Other types of proxies are also supported
     as well as no proxy at all. For more information please see `proxyConfig`_ parameter above.
 
+
+.. _firewall_keystore_generation_ref:
+
 Keystores generation
 --------------------
 
