@@ -122,6 +122,7 @@ open class NodeStartup : NodeStartupLogging {
         private val logger by lazy { loggerFor<Node>() } // I guess this is lazy to allow for logging init, but why Node?
         const val LOGS_DIRECTORY_NAME = "logs"
         const val LOGS_CAN_BE_FOUND_IN_STRING = "Logs can be found in"
+        const val CERTIFICATES_DIRECTORY_NAME = "certificates"
     }
 
     lateinit var cmdLineOptions: SharedNodeCmdLineOptions
@@ -149,17 +150,20 @@ open class NodeStartup : NodeStartupLogging {
         // Step 5. Load and validate node configuration.
         val rawConfig = cmdLineOptions.rawConfiguration().doOnErrors(cmdLineOptions::logRawConfigurationErrors).optional ?: return ExitCodes.FAILURE
         val configuration = cmdLineOptions.parseConfiguration(rawConfig).doIfValid { logRawConfig(rawConfig) }.doOnErrors(::logConfigurationErrors).optional ?: return ExitCodes.FAILURE
+       
+        // Step 6. Check if we can access the certificates directory
+        if (!canReadCertificatesDirectory(cmdLineOptions.baseDirectory, configuration.devMode)) return ExitCodes.FAILURE
 
-        // Step 6. Configuring special serialisation requirements, i.e., bft-smart relies on Java serialization.
+        // Step 7. Configuring special serialisation requirements, i.e., bft-smart relies on Java serialization.
         if (attempt { banJavaSerialisation(configuration) }.doOnFailure(Consumer { error -> error.logAsUnexpected("Exception while configuring serialisation") }) !is Try.Success) return ExitCodes.FAILURE
 
-        // Step 7. Any actions required before starting up the Corda network layer.
+        // Step 8. Any actions required before starting up the Corda network layer.
         if (attempt { preNetworkRegistration(configuration) }.doOnFailure(Consumer(::handleRegistrationError)) !is Try.Success) return ExitCodes.FAILURE
 
-        // Step 8. Log startup info.
+        // Step 9. Log startup info.
         logStartupInfo(versionInfo, configuration)
 
-        // Step 9. Start node: create the node, check for other command-line options, add extra logging etc.
+        // Step 10. Start node: create the node, check for other command-line options, add extra logging etc.
         if (attempt {
                     cmdLineOptions.baseDirectory.createDirectories()
                     afterNodeInitialisation.run(createNode(configuration, versionInfo))
@@ -292,6 +296,19 @@ open class NodeStartup : NodeStartupLogging {
             val appUser = System.getProperty("user.name")
             println("Application user '$appUser' does not have necessary permissions for Node base directory '$baseDirectory'.")
             println("Corda Node process in now exiting. Please check directory permissions and try starting the Node again.")
+            return false
+        }
+        return true
+    }
+
+    private fun canReadCertificatesDirectory(baseDirectory: Path, devMode: Boolean): Boolean {
+        //Test for access to the certificates path and shutdown if we are unable to reach it.
+        //We don't do this if devMode==true because the certificates would be created anyway
+        if(devMode) return true
+
+        val certPath = baseDirectory / CERTIFICATES_DIRECTORY_NAME
+        if (!certPath.isDirectory()) {
+            printError("Unable to access certificates directory ${certPath.toString()}. Node will now shutdown.")
             return false
         }
         return true
