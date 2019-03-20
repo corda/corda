@@ -63,7 +63,7 @@ class InitialRegistration(val baseDirectory: Path, private val networkRootTrustS
 
     private val nodeRegistration = NodeRegistrationOption(networkRootTrustStorePath, networkRootTrustStorePassword)
 
-    private val EXISTING_STATE_GENERIC_WARNING = "Please ensure there is no state from previous runs, before initiating registration of a node."
+    private val EXISTING_STATE_GENERIC_WARNING = "Initial registration can only be run on a new, clean node."
 
     @VisibleForTesting
     fun registerWithNetwork(conf: NodeConfiguration) {
@@ -96,17 +96,11 @@ class InitialRegistration(val baseDirectory: Path, private val networkRootTrustS
         val artemisDirectory = baseDirectory / "artemis"
         check(!artemisDirectory.exists()) { "The node folder contains an artemis directory. $EXISTING_STATE_GENERIC_WARNING" }
         val brokersDirectory = baseDirectory / "brokers"
-        check(!brokersDirectory.exists()) { "There node folder contains a brokers directory. $EXISTING_STATE_GENERIC_WARNING" }
-
-        val datasourceProps = conf.dataSourceProperties
-        if (datasourceProps.isEmpty) throw IllegalStateException("There must be a database configured.")
-        val datasourceUrl = datasourceProps.getProperty("dataSource.url")
-        val datasourceUser = datasourceProps.getProperty("dataSource.user")
-        val datasourcePassword = datasourceProps.getProperty("dataSource.password")
+        check(!brokersDirectory.exists()) { "The node folder contains a brokers directory. $EXISTING_STATE_GENERIC_WARNING" }
 
         try {
-            val connection = DriverManager.getConnection(datasourceUrl, datasourceUser, datasourcePassword)
-            val connectionMetadata = connection.metaData
+            val datasource = DataSourceFactory.createDataSource(conf.dataSourceProperties, false)
+            val connectionMetadata = datasource.connection.metaData
             // Accounting for different case-sensitivity behaviours (i.e. H2 creates tables in upper-case in some cases)
             val tablesLowerCaseResultSet = connectionMetadata.getTables(null, null, "$NODE_DATABASE_PREFIX%", null)
             val tablesUpperCaseResultSet = connectionMetadata.getTables(null, null, "${NODE_DATABASE_PREFIX.toUpperCase()}%", null)
@@ -114,7 +108,7 @@ class InitialRegistration(val baseDirectory: Path, private val networkRootTrustS
                 "The database contains Corda-specific tables, while it should be empty. $EXISTING_STATE_GENERIC_WARNING"
             }
         } catch (exception: SQLException) {
-            throw Exception("An error occurred whilst connecting to \"$datasourceUrl\". ", exception)
+            throw Exception("An error occurred whilst connecting to \"${conf.dataSourceProperties.getProperty("dataSource.url")}\". ", exception)
         }
     }
 
