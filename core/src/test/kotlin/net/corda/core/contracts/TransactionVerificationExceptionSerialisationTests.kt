@@ -24,6 +24,7 @@ class TransactionVerificationExceptionSerialisationTests {
     private val context get() = AMQP_RPC_CLIENT_CONTEXT
 
     private val txid = SecureHash.allOnesHash
+    private val attachmentHash = SecureHash.allOnesHash
     private val factory = defaultFactory()
 
     @Test
@@ -122,5 +123,56 @@ class TransactionVerificationExceptionSerialisationTests {
         assertEquals(exception.message, exception2.message)
         assertEquals(exception.cause?.message, exception2.cause?.message)
         assertEquals(exception.txId, exception2.txId)
+    }
+
+    @Test
+    fun overlappingAttachmentsExceptionTest() {
+        val exc = TransactionVerificationException.OverlappingAttachmentsException(txid, "foo/bar/baz")
+        val exc2 = DeserializationInput(factory).deserialize(
+                SerializationOutput(factory).serialize(exc, context),
+                context)
+
+        assertEquals(exc.message, exc2.message)
+    }
+
+    @Test
+    fun packageOwnershipExceptionTest() {
+        val exc = TransactionVerificationException.PackageOwnershipException(
+                txid,
+                attachmentHash,
+                "InvalidClass",
+                "com.invalid")
+
+        val exc2 = DeserializationInput(factory).deserialize(
+                SerializationOutput(factory).serialize(exc, context),
+                context)
+
+        assertEquals(exc.message, exc2.message)
+    }
+
+    @Test
+    fun invalidAttachmentExceptionTest() {
+        val exc = TransactionVerificationException.InvalidAttachmentException(
+                txid,
+                attachmentHash)
+
+        val exc2 = DeserializationInput(factory).deserialize(
+                SerializationOutput(factory).serialize(exc, context),
+                context)
+
+        assertEquals(exc.message, exc2.message)
+    }
+
+    @Test
+    fun untrustedAttachmentsExceptionTest() {
+        val exc = TransactionVerificationException.UntrustedAttachmentsException(
+                txid,
+                listOf(attachmentHash))
+
+        val exc2 = DeserializationInput(factory).deserialize(
+                SerializationOutput(factory).serialize(exc, context),
+                context)
+
+        assertEquals(exc.message, exc2.message)
     }
 }
