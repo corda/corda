@@ -43,11 +43,6 @@ class AttachmentResolutionException(val hash: SecureHash) : FlowException("Attac
  * is expressed using a subclass. TransactionVerificationException is a [FlowException] and thus when thrown inside
  * a flow, the details of the failure will be serialised, propagated to the peer and rethrown.
  *
- * If you add a new class extending [TransactionVerificationException], please add a test in `TransactionVerificationExceptionSerializationTests`
- * proving that it can actually be serialised. As a rule, exceptions intended to be serialised _must_ have a corresponding readable property
- * for every named constructor parameter - so make your constructor parameters `val`s even if nothing other than the serializer is ever
- * going to read them.
- *
  * @property txId the Merkle root hash (identifier) of the transaction that failed verification.
  */
 @Suppress("MemberVisibilityCanBePrivate")
@@ -300,4 +295,11 @@ abstract class TransactionVerificationException(val txId: SecureHash, message: S
                     "At this time these are not loadable because the DJVM sandbox has not yet been integrated. " +
                     "You will need to install that app version yourself, to whitelist it for use. " +
                     "Please follow the operational steps outlined in https://docs.corda.net/cordapp-build-systems.html#cordapp-contract-attachments to learn more and continue.")
+
+    /*
+    If you add a new class extending [TransactionVerificationException], please add a test in `TransactionVerificationExceptionSerializationTests`
+    proving that it can actually be serialised. As a rule, exceptions intended to be serialised _must_ have a corresponding readable property
+    for every named constructor parameter - so make your constructor parameters `val`s even if nothing other than the serializer is ever
+    going to read them.
+    */
 }
