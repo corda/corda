@@ -122,7 +122,6 @@ open class NodeStartup : NodeStartupLogging {
         private val logger by lazy { loggerFor<Node>() } // I guess this is lazy to allow for logging init, but why Node?
         const val LOGS_DIRECTORY_NAME = "logs"
         const val LOGS_CAN_BE_FOUND_IN_STRING = "Logs can be found in"
-        const val CERTIFICATES_DIRECTORY_NAME = "certificates"
     }
 
     lateinit var cmdLineOptions: SharedNodeCmdLineOptions
@@ -152,7 +151,7 @@ open class NodeStartup : NodeStartupLogging {
         val configuration = cmdLineOptions.parseConfiguration(rawConfig).doIfValid { logRawConfig(rawConfig) }.doOnErrors(::logConfigurationErrors).optional ?: return ExitCodes.FAILURE
        
         // Step 6. Check if we can access the certificates directory
-        if (!canReadCertificatesDirectory(cmdLineOptions.baseDirectory, configuration.devMode)) return ExitCodes.FAILURE
+        if (!canReadCertificatesDirectory(configuration.certificatesDirectory, configuration.devMode)) return ExitCodes.FAILURE
 
         // Step 7. Configuring special serialisation requirements, i.e., bft-smart relies on Java serialization.
         if (attempt { banJavaSerialisation(configuration) }.doOnFailure(Consumer { error -> error.logAsUnexpected("Exception while configuring serialisation") }) !is Try.Success) return ExitCodes.FAILURE
@@ -301,14 +300,13 @@ open class NodeStartup : NodeStartupLogging {
         return true
     }
 
-    private fun canReadCertificatesDirectory(baseDirectory: Path, devMode: Boolean): Boolean {
+    private fun canReadCertificatesDirectory(certDirectory: Path, devMode: Boolean): Boolean {
         //Test for access to the certificates path and shutdown if we are unable to reach it.
         //We don't do this if devMode==true because the certificates would be created anyway
         if (devMode) return true
 
-        val certPath = baseDirectory / CERTIFICATES_DIRECTORY_NAME
-        if (!certPath.isDirectory()) {
-            printError("Unable to access certificates directory ${certPath.toString()}. Node will now shutdown.")
+        if (!certDirectory.isDirectory()) {
+            printError("Unable to access certificates directory ${certDirectory.toString()}. This could be because the node has not been registered with the Identity Operator. Node will now shutdown.")
             return false
         }
         return true
