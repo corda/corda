@@ -304,7 +304,7 @@ open class NodeStartup : NodeStartupLogging {
     private fun canReadCertificatesDirectory(baseDirectory: Path, devMode: Boolean): Boolean {
         //Test for access to the certificates path and shutdown if we are unable to reach it.
         //We don't do this if devMode==true because the certificates would be created anyway
-        if(devMode) return true
+        if (devMode) return true
 
         val certPath = baseDirectory / CERTIFICATES_DIRECTORY_NAME
         if (!certPath.isDirectory()) {
