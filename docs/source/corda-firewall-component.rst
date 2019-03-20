@@ -244,7 +244,22 @@ Adding new nodes to existing shared Bridge
 Most of the HA components are agnostic to the node, with exception of the bridge which need to have access to the node's SSL key in order to establish TLS connection to the counterparty nodes.
 
 The bridge's SSL keystore will need to be updated when adding new node to the shared HA infrastructure. This can be done by using any keytool or by using :doc:`HA Utilities <ha-utilities>`,
-the `SSL key copier` is tailored to import multiple node's SSL keys into the bridge's keystore. For more information, please see :doc:`Cookbook <corda-firewall-cookbook>`.
+the `SSL key copier` is tailored to import multiple node's SSL keys into the bridge's keystore.
+
+A simple procedure for adding a new node might look like the following:
+
+  1. Backup and shutdown all Corda components - Nodes, Bridges, Artemis broker and Float.
+
+  2. Register your new entities with the network operator. See :doc:`joining-a-compatibility-zone`.
+
+  3. Locate the SSL keystore file in node's certificate folder. e.g. ``<node base directory>/certificates/sslkeystore.jks``
+
+  4. Copy the SSL keystores generated from the registration process to Bridge if they are on a different host.
+
+  5. Using the :doc:`HA Utilities <ha-utilities>`, copy the newly acquired legal entity's SSL key to the bridge's SSL keystore.
+     ``ha-utilities import-ssl-key --node-keystores <<Node keystore path>> --node-keystore-passwords=<<Node keystore password>> --bridge-keystore=<<Bridge keystore path>> --bridge-keystore-password=<<Bridge keystore password>>``
+
+  6. Start the Bridge and other nodes.
 
 
 Standalone Artemis server
