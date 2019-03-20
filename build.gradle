@@ -162,9 +162,9 @@ allprojects {
         suppressionFile = '.ci/dependency-checker/suppressedLibraries.xml'
         cveValidForHours = 1
         format = 'ALL'
-        failOnError = project.getProperty('owasp.failOnError')
+        failOnError = project.property('owasp.failOnError')
         // by default CVSS is '11' which passes everything. Set between 0-10 to catch vulnerable deps
-        failBuildOnCVSS = project.getProperty('owasp.failBuildOnCVSS').toFloat()
+        failBuildOnCVSS = project.property('owasp.failBuildOnCVSS').toFloat()
 
         analyzers {
             assemblyEnabled = false
@@ -180,7 +180,7 @@ allprojects {
         options.encoding = 'UTF-8'
     }
 
-    tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
+    tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile) {
         kotlinOptions {
             languageVersion = "1.2"
             apiVersion = "1.2"
@@ -208,8 +208,12 @@ allprojects {
         // Prevent the project from creating temporary files outside of the build directory.
         systemProperty 'java.io.tmpdir', buildDir.absolutePath
 
+        if (project.hasProperty('test.parallel') && project.property('test.parallel').toBoolean()) {
+            maxParallelForks = Runtime.runtime.availableProcessors().intdiv(2) as int ?: 1
+        }
+
         if (System.getProperty("test.maxParallelForks") != null) {
-            maxParallelForks = Integer.valueOf(System.getProperty("test.maxParallelForks"))
+            maxParallelForks = Integer.getInteger('test.maxParallelForks')
             logger.debug("System property test.maxParallelForks found - setting max parallel forks to $maxParallelForks for $project")
         }
 
@@ -269,14 +273,6 @@ allprojects {
         runtime {
             // We never want isolated.jar on classPath, since we want to test jar being dynamically loaded as an attachment
             exclude module: 'isolated'
-        }
-    }
-}
-
-subprojects {
-    tasks.withType(Test) {
-        if (project.getProperty('test.parallel').toBoolean()) {
-            maxParallelForks = Runtime.runtime.availableProcessors().intdiv(2) ?: 1
         }
     }
 }
