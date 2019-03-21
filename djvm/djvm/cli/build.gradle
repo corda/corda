@@ -25,8 +25,8 @@ dependencies {
 jar.enabled = false
 
 shadowJar {
-    archiveBaseName = djvmName
-    archiveClassifier = ''
+    baseName djvmName
+    classifier ''
     manifest {
         attributes(
             'Automatic-Module-Name': 'net.corda.djvm.cli',
