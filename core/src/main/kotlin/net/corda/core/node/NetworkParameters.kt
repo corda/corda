@@ -123,6 +123,30 @@ data class NetworkParameters(
         )
     }
 
+    /**
+     * This is to address backwards compatibility of the API, invariant to package ownership
+     * addresses bug CORDA-2769
+     */
+    fun copy(minimumPlatformVersion: Int = this.minimumPlatformVersion,
+             notaries: List<NotaryInfo> = this.notaries,
+             maxMessageSize: Int = this.maxMessageSize,
+             maxTransactionSize: Int = this.maxTransactionSize,
+             modifiedTime: Instant = this.modifiedTime,
+             epoch: Int = this.epoch,
+             whitelistedContractImplementations: Map<String, List<AttachmentId>> = this.whitelistedContractImplementations
+    ): NetworkParameters {
+        return NetworkParameters(
+                minimumPlatformVersion = minimumPlatformVersion,
+                notaries = notaries,
+                maxMessageSize = maxMessageSize,
+                maxTransactionSize = maxTransactionSize,
+                modifiedTime = modifiedTime,
+                epoch = epoch,
+                whitelistedContractImplementations = whitelistedContractImplementations,
+                eventHorizon = eventHorizon
+        )
+    }
+
     override fun toString(): String {
         return """NetworkParameters {
       minimumPlatformVersion=$minimumPlatformVersion
