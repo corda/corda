@@ -305,7 +305,9 @@ open class NodeStartup : NodeStartupLogging {
         if (devMode) return true
 
         if (!certDirectory.isDirectory()) {
-            printError("Unable to access certificates directory ${certDirectory.toString()}. This could be because the node has not been registered with the Identity Operator. Node will now shutdown.")
+            printError("Unable to access certificates directory ${certDirectory}. This could be because the node has not been registered with the Identity Operator.")
+            printError("Please see https://docs.corda.net/joining-a-compatibility-zone.html for more information.")
+            printError("Node will now shutdown.")
             return false
         }
         return true
