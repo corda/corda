@@ -8,7 +8,6 @@ import net.corda.djvm.references.ClassModule
 import net.corda.djvm.references.Member
 import net.corda.djvm.references.MemberModule
 import net.corda.djvm.references.MethodBody
-import net.corda.djvm.source.AbstractSourceClassLoader
 import net.corda.djvm.source.BootstrapClassLoader
 import net.corda.djvm.source.SourceClassLoader
 import org.objectweb.asm.Opcodes.*
@@ -48,7 +47,7 @@ class AnalysisConfiguration private constructor(
         val classModule: ClassModule,
         val memberModule: MemberModule,
         private val bootstrapClassLoader: BootstrapClassLoader?,
-        val supportingClassLoader: AbstractSourceClassLoader,
+        val supportingClassLoader: SourceClassLoader,
         private val isRootConfiguration: Boolean
 ) : Closeable {
 
@@ -299,7 +298,7 @@ class AnalysisConfiguration private constructor(
             classModule: ClassModule = ClassModule(),
             memberModule: MemberModule = MemberModule(),
             bootstrapClassLoader: BootstrapClassLoader? = null,
-            sourceClassLoaderFactory: (ClassResolver, BootstrapClassLoader?) -> AbstractSourceClassLoader = { classResolver, bootstrapCL ->
+            sourceClassLoaderFactory: (ClassResolver, BootstrapClassLoader?) -> SourceClassLoader = { classResolver, bootstrapCL ->
                 SourceClassLoader(emptyList(), classResolver, bootstrapCL)
             }
         ): AnalysisConfiguration {

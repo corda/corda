@@ -16,6 +16,8 @@ public class SandboxExecutorJavaTest extends TestBase {
 
     @Test
     public void testTransaction() {
+        //TODO: Transaction should not be a pinned class! It needs
+        //      to be marshalled into and out of the sandbox.
         Set<Class<?>> pinnedClasses = singleton(Transaction.class);
         sandbox(new Object[0], pinnedClasses, WARNING, true, ctx -> {
             SandboxExecutor<Transaction, Void> contractExecutor = new DeterministicSandboxExecutor<>(ctx.getConfiguration());
