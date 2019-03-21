@@ -117,10 +117,12 @@ class VaultSoftLockManagerTest {
 
     private abstract class ParticipantState(override val participants: List<AbstractParty>) : ContractState
 
+    @BelongsToContract(ContractImpl::class)
     private class PlainOldState(participants: List<AbstractParty>) : ParticipantState(participants) {
         constructor(nodePair: NodePair) : this(listOf(nodePair.client.info.singleIdentity()))
     }
 
+    @BelongsToContract(ContractImpl::class)
     private class FungibleAssetImpl(participants: List<AbstractParty>) : ParticipantState(participants), FungibleAsset<Unit> {
         constructor(nodePair: NodePair) : this(listOf(nodePair.client.info.singleIdentity()))
 

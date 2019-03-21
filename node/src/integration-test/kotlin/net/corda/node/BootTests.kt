@@ -6,6 +6,7 @@ import net.corda.core.CordaRuntimeException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.internal.div
+import net.corda.core.internal.isRegularFile
 import net.corda.core.internal.list
 import net.corda.core.internal.readLines
 import net.corda.core.messaging.startFlow
@@ -66,7 +67,7 @@ class BootTests : IntegrationTest() {
         driver(DriverParameters(notarySpecs = emptyList())) {
             val alice = startNode(providedName = ALICE_NAME).get()
             val logFolder = alice.baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME
-            val logFile = logFolder.list { it.filter { it.fileName.toString().endsWith(".log") }.findAny().get() }
+            val logFile = logFolder.list { it.filter { a -> a.isRegularFile() && a.fileName.toString().startsWith("node") }.findFirst().get() }
             // Start second Alice, should fail
             assertThatThrownBy {
                 startNode(providedName = ALICE_NAME).getOrThrow()
