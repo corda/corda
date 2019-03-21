@@ -149,19 +149,21 @@ open class NodeStartup : NodeStartupLogging {
         // Step 5. Load and validate node configuration.
         val rawConfig = cmdLineOptions.rawConfiguration().doOnErrors(cmdLineOptions::logRawConfigurationErrors).optional ?: return ExitCodes.FAILURE
         val configuration = cmdLineOptions.parseConfiguration(rawConfig).doIfValid { logRawConfig(rawConfig) }.doOnErrors(::logConfigurationErrors).optional ?: return ExitCodes.FAILURE
+       
+        // Step 6. Check if we can access the certificates directory
+        if (!canReadCertificatesDirectory(configuration.certificatesDirectory, configuration.devMode)) return ExitCodes.FAILURE
 
-        // Step 6. Configuring special serialisation requirements, i.e., bft-smart relies on Java serialization.
+        // Step 7. Configuring special serialisation requirements, i.e., bft-smart relies on Java serialization.
         if (attempt { banJavaSerialisation(configuration) }.doOnFailure(Consumer { error -> error.logAsUnexpected("Exception while configuring serialisation") }) !is Try.Success) return ExitCodes.FAILURE
 
-        // Step 7. Any actions required before starting up the Corda network layer.
+        // Step 8. Any actions required before starting up the Corda network layer.
         if (attempt { preNetworkRegistration(configuration) }.doOnFailure(Consumer(::handleRegistrationError)) !is Try.Success) return ExitCodes.FAILURE
 
-        // Step 8. Log startup info.
+        // Step 9. Log startup info.
         logStartupInfo(versionInfo, configuration)
 
-        // Step 9. Start node: create the node, check for other command-line options, add extra logging etc.
+        // Step 10. Start node: create the node, check for other command-line options, add extra logging etc.
         if (attempt {
-                    cmdLineOptions.baseDirectory.createDirectories()
                     afterNodeInitialisation.run(createNode(configuration, versionInfo))
                 }.doOnFailure(Consumer(::handleStartError)) !is Try.Success) return ExitCodes.FAILURE
 
@@ -292,6 +294,20 @@ open class NodeStartup : NodeStartupLogging {
             val appUser = System.getProperty("user.name")
             println("Application user '$appUser' does not have necessary permissions for Node base directory '$baseDirectory'.")
             println("Corda Node process in now exiting. Please check directory permissions and try starting the Node again.")
+            return false
+        }
+        return true
+    }
+
+    private fun canReadCertificatesDirectory(certDirectory: Path, devMode: Boolean): Boolean {
+        //Test for access to the certificates path and shutdown if we are unable to reach it.
+        //We don't do this if devMode==true because the certificates would be created anyway
+        if (devMode) return true
+
+        if (!certDirectory.isDirectory()) {
+            printError("Unable to access certificates directory ${certDirectory}. This could be because the node has not been registered with the Identity Operator.")
+            printError("Please see https://docs.corda.net/joining-a-compatibility-zone.html for more information.")
+            printError("Node will now shutdown.")
             return false
         }
         return true
