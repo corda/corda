@@ -134,8 +134,8 @@ where this is the only available option:
      :scale: 100%
      :align: center
 
-Node + Bridge (no float, no DMZ)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Node + Combined Bridge/Float (no DMZ)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Prerequisites
 """""""""""""
 * Java runtime
@@ -151,9 +151,22 @@ and to run a single combined firewall process. This might be suitable for a test
             the embedded Artemis P2P broker can be set to listen on a different port rather than the advertised ``p2paddress`` port.
             Then configure an all-in-one bridge to point at this node's ``messagingServerAddress``:
 
-.. image:: resources/bridge/simple_bridge.png
+.. image:: resources/bridge/node_bridge/simple_bridge.png
      :scale: 100%
      :align: center
+
+node.conf
+"""""""""
+
+.. literalinclude:: resources/bridge/node_bridge/node.conf
+    :language: javascript
+
+bridge.conf
+"""""""""""
+
+.. literalinclude:: resources/bridge/node_bridge/bridge.conf
+    :language: javascript
+
 
 DMZ ready (node + bridge + float)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -173,9 +186,27 @@ The diagram below shows such a non-HA deployment. This would not be recommended 
            key, the tunnel link should use a private set of link specific keys and certificates. The float will be provisioned
            dynamically with the official TLS key when activated via the tunnel and this key will never be stored in the DMZ:
 
-.. image:: resources/bridge/bridge_and_float.png
+.. image:: resources/bridge/node_bridge_float/node_bridge_float.png
      :scale: 100%
      :align: center
+
+node.conf
+"""""""""
+
+.. literalinclude:: resources/bridge/node_bridge_float/node.conf
+    :language: javascript
+
+bridge.conf
+"""""""""""
+
+.. literalinclude:: resources/bridge/node_bridge_float/bridge.conf
+    :language: javascript
+
+float.conf
+""""""""""
+
+.. literalinclude:: resources/bridge/node_bridge_float/float.conf
+    :language: javascript
 
 DMZ ready with outbound SOCKS
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -190,9 +221,27 @@ Some organisations require dynamic outgoing connections to operate via a SOCKS p
 by adding extra information to the ``outboundConfig`` section of the bridge process. An simplified example deployment is shown here
 to highlight the option:
 
-.. image:: resources/bridge/bridge_with_socks.png
+.. image:: resources/bridge/socks_proxy/socks_proxy.png
      :scale: 100%
      :align: center
+
+node.conf
+"""""""""
+
+.. literalinclude:: resources/bridge/socks_proxy/node.conf
+    :language: javascript
+
+bridge.conf
+"""""""""""
+
+.. literalinclude:: resources/bridge/socks_proxy/bridge.conf
+    :language: javascript
+
+float.conf
+""""""""""
+
+.. literalinclude:: resources/bridge/socks_proxy/float.conf
+    :language: javascript
 
 Full production HA DMZ ready mode (hot/cold node, hot/warm bridge)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -211,9 +260,27 @@ Highlighted in the diagram is the addition of the ``haConfig`` section to point 
 addresses in the ``alternateArtemisAddresses`` to allow node failover and in the ``floatAddresses`` to point at a
 pool of DMZ float processes.:
 
-.. image:: resources/bridge/ha_bridge_float.png
+.. image:: resources/bridge/ha_nodes/ha_nodes.png
      :scale: 100%
      :align: center
+
+node.conf
+"""""""""
+
+.. literalinclude:: resources/bridge/ha_nodes/node.conf
+    :language: javascript
+
+bridge.conf
+"""""""""""
+
+.. literalinclude:: resources/bridge/ha_nodes/bridge.conf
+    :language: javascript
+
+float.conf
+""""""""""
+
+.. literalinclude:: resources/bridge/ha_nodes/float.conf
+    :language: javascript
 
 
 Operating modes of shared Bridge and Float
@@ -233,10 +300,27 @@ It is possible to allow two or more Corda nodes (HA and/or non-HA) handle outgoi
 and external Artemis messaging broker which can be easily configured using the ha-tool. For more information, please see :doc:`HA Utilities <ha-utilities>`. While this example is the simplest deployment
 possible with a shared bridge, any other configuration previously presented can be created.
 
-.. image:: resources/bridge/shared_bridge_simple.png
-    :scale: 100%
-    :align: center
+.. image:: resources/bridge/multiple_non_ha_nodes/multiple_nodes_no_ha.png
+     :scale: 100%
+     :align: center
 
+bank-a-node.conf
+""""""""""""""""
+
+.. literalinclude:: resources/bridge/multiple_non_ha_nodes/bank-a-node.conf
+    :language: javascript
+
+bank-b-node.conf
+""""""""""""""""
+
+.. literalinclude:: resources/bridge/multiple_non_ha_nodes/bank-b-node.conf
+    :language: javascript
+
+bridge.conf
+"""""""""""
+
+.. literalinclude:: resources/bridge/multiple_non_ha_nodes/bridge.conf
+    :language: javascript
 
 Adding new nodes to existing shared Bridge
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -266,7 +350,10 @@ Standalone Artemis server
 -------------------------
 The Corda node can be configured to use a external Artemis broker instead of embedded broker to provide messaging layer HA capability in enterprise environment.
 
-Detailed setup instruction for Apache Artemis can be found in `Apache Artemis documentation <https://activemq.apache.org/artemis/docs/latest/index.html>`_. Also see :doc:`HA Utilities <ha-utilities>` for Artemis server configuration tool.
+Detailed setup instruction for Apache Artemis can be found in `Apache Artemis documentation <https://activemq.apache.org/artemis/docs/latest/index.html>`_. Also see
+:doc:`HA Utilities <ha-utilities>` for Artemis server configuration tool, which you can use to build a local, configured for Corda, Apache Artemis directory.
+
+.. note:: To run Apache Artemis you can use: ``cd artemis && bin/artemis run``
 
 We have tested Corda against Apache Artemis v2.6.2 and RedHat amq broker v7.2.2, it is recommended to use these Artemis versions with Corda.
 
