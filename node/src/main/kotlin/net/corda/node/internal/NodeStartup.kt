@@ -164,7 +164,6 @@ open class NodeStartup : NodeStartupLogging {
 
         // Step 10. Start node: create the node, check for other command-line options, add extra logging etc.
         if (attempt {
-                    cmdLineOptions.baseDirectory.createDirectories()
                     afterNodeInitialisation.run(createNode(configuration, versionInfo))
                 }.doOnFailure(Consumer(::handleStartError)) !is Try.Success) return ExitCodes.FAILURE
 
