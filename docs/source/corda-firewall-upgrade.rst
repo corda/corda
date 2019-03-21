@@ -285,12 +285,12 @@ Full production HA DMZ ready (hot/cold node, hot/warm bridge)
 +----------------------------------------------------------------------------------+----------------------------------------------------------------------------------+
 
 
-Evolve
-======
+Reconfiguring to the shared Corda Firewall Architecture
+=======================================================
 
 In 4.x, it is possible to for multiple nodes representing multiple identities to reside behind the same Corda Firewall.
 To achieve this, the nodes can be configured to use an external Artemis server. Furthermore, the Artemis server can be run
-in HA mode with replication and failback. Evolving a node and bridge to use external artemis does not affect the float configuration,
+in HA mode with replication and failback. Reconfiguring a node and bridge to use external artemis does not affect the float configuration,
 therefore it will not be discussed.
 
 Client connections to external Artemis require separate SSL key and trust stores. These can be created using the *ha-utilities* tool

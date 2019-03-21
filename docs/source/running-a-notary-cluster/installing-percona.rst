@@ -130,26 +130,34 @@ Create the Database and Tables
 .. code:: sql
 
   CREATE DATABASE corda;
- 
-  CREATE TABLE IF NOT EXISTS corda.notary_committed_states (
-                                issue_transaction_id BINARY(32) NOT NULL,
-                                issue_transaction_output_id INT UNSIGNED NOT NULL,
-                                consuming_transaction_id BINARY(32) NOT NULL,
-                                CONSTRAINT id PRIMARY KEY (issue_transaction_id, issue_transaction_output_id)
-                                );
-         
+
+  CREATE TABLE IF NOT EXISTS corda.notary_committed_states(
+    issue_transaction_id BINARY(32) NOT NULL,
+    issue_transaction_output_id INT UNSIGNED NOT NULL,
+    consuming_transaction_id BINARY(32) NOT NULL,
+    CONSTRAINT id PRIMARY KEY (issue_transaction_id, issue_transaction_output_id)
+  );
+
   GRANT SELECT, INSERT ON corda.notary_committed_states TO 'corda';
-         
-  CREATE TABLE IF NOT EXISTS corda.notary_request_log (
-                                consuming_transaction_id BINARY(32) NOT NULL,
-                                requesting_party_name TEXT NOT NULL,
-                                request_signature BLOB NOT NULL,
-                                request_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                                request_id INT UNSIGNED NOT NULL AUTO_INCREMENT,
-                                CONSTRAINT rid PRIMARY KEY (request_id)
-                                );
-         
+
+  CREATE TABLE IF NOT EXISTS corda.notary_request_log(
+    consuming_transaction_id BINARY(32) NOT NULL,
+    requesting_party_name TEXT NOT NULL,
+    request_signature BLOB NOT NULL,
+    request_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    request_id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    CONSTRAINT rid PRIMARY KEY (request_id)
+  );
+
   GRANT INSERT ON corda.notary_request_log TO 'corda';
+
+  CREATE TABLE IF NOT EXISTS corda.notary_committed_transactions(
+    transaction_id BINARY(32) NOT NULL,
+    CONSTRAINT tid PRIMARY KEY (transaction_id)
+  );
+
+  GRANT SELECT, INSERT ON corda.notary_committed_transactions TO 'corda';
+
 
 Create the SST User
 ~~~~~~~~~~~~~~~~~~~

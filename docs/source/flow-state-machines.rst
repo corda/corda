@@ -523,7 +523,7 @@ Future features
 The flow framework is a key part of the platform and will be extended in major ways in future. Here are some of
 the features we have planned:
 
-* Exception management, with a "flow hospital" tool to manually provide solutions to unavoidable
+* Exception management, with an improved :doc:`node-flow-hospital` facility to manually provide solutions to unavoidable
   problems (e.g. the other side doesn't know the trade)
 * Being able to interact with people, either via some sort of external ticketing system, or email, or a custom UI.
   For example to implement human transaction authorisations

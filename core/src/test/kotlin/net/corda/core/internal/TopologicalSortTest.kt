@@ -1,9 +1,7 @@
 package net.corda.core.internal
 
 import net.corda.client.mock.Generator
-import net.corda.core.contracts.ContractState
-import net.corda.core.contracts.StateRef
-import net.corda.core.contracts.TransactionState
+import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.crypto.TransactionSignature
@@ -30,11 +28,12 @@ class TopologicalSortTest {
             override val references: List<StateRef> = emptyList()
     ) : CoreTransaction() {
         override val outputs: List<TransactionState<ContractState>> = (1..numberOfOutputs).map {
-            TransactionState(DummyState(), "", notary)
+            TransactionState(DummyState(), Contract::class.java.name, notary)
         }
         override val networkParametersHash: SecureHash? = testNetworkParameters().serialize().hash
     }
 
+    @BelongsToContract(Contract::class)
     class DummyState : ContractState {
         override val participants: List<AbstractParty> = emptyList()
     }

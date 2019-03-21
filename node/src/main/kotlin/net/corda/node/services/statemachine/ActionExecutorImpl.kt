@@ -168,11 +168,13 @@ class ActionExecutorImpl(
 
     @Suspendable
     private fun executeSendInitial(action: Action.SendInitial) {
+        log.info("SendInitial(initiatorFlow=${action.initialise.initiatorFlowClassName};id=${action.deduplicationId.deduplicationId.toString};appName=${action.initialise.appName};flowVersion=${action.initialise.flowVersion};recipient=${action.party})")
         flowMessaging.sendSessionMessage(action.party, action.initialise, action.deduplicationId)
     }
 
     @Suspendable
     private fun executeSendExisting(action: Action.SendExisting) {
+        log.info("SendExisting(message=${action.message::class.simpleName};id=${action.deduplicationId.deduplicationId.toString};recipient=${action.peerParty})")
         flowMessaging.sendSessionMessage(action.peerParty, action.message, action.deduplicationId)
     }
 
@@ -193,6 +195,7 @@ class ActionExecutorImpl(
 
     @Suspendable
     private fun executeRemoveFlow(action: Action.RemoveFlow) {
+        log.info("RemoveFlow(reason=${action.removalReason})")
         stateMachineManager.removeFlow(action.flowId, action.removalReason, action.lastState)
     }
 
@@ -206,6 +209,7 @@ class ActionExecutorImpl(
 
     @Suspendable
     private fun executeRollbackTransaction() {
+        log.info("RollbackTransaction()")
         contextTransactionOrNull?.close()
     }
 
@@ -233,6 +237,8 @@ class ActionExecutorImpl(
     }
 
     private fun executeRetryFlowFromSafePoint(action: Action.RetryFlowFromSafePoint) {
+        val checkpoint = action.currentState.checkpoint
+        log.info("RetryFromSafePoint(flow=${action.currentState.flowLogic};subFlows=[${checkpoint.subFlowStack.joinToString { it.flowClass.simpleName }}];state=${checkpoint.flowState::class.simpleName};error=${checkpoint.errorState::class.simpleName};suspends=${checkpoint.numberOfSuspends})")
         stateMachineManager.retryFlowFromSafePoint(action.currentState)
     }
 

@@ -75,8 +75,7 @@ In addition to the configuration, the node needs to access binaries provided by 
 Gemalto Luna
 ------------
 
-Corda Enterprise nodes can be configured to store their legal identity keys in `Gemalto Luna <
-https://safenet.gemalto.com/data-encryption/hardware-security-modules-hsms/safenet-network-hsm>`_ HSMs running firmware version 7.3.
+Corda Enterprise nodes can be configured to store their legal identity keys in `Gemalto Luna <https://safenet.gemalto.com/data-encryption/hardware-security-modules-hsms/safenet-network-hsm>`_ HSMs running firmware version 7.3.
 
 In the ``node.conf``, the ``cryptoServiceName`` needs to be set to "GEMALTO_LUNA", and ``cryptoServiceConf`` should contain the path to a configuration file, the content of which is explained further down.
 

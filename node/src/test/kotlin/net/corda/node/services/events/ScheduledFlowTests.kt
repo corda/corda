@@ -40,6 +40,7 @@ class ScheduledFlowTests {
     private lateinit var alice: Party
     private lateinit var bob: Party
 
+    @BelongsToContract(DummyContract::class)
     data class ScheduledState(val creationTime: Instant,
                               val source: Party,
                               val destination: Party,

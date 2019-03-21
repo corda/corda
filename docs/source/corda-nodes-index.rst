@@ -17,3 +17,4 @@ Nodes
    clientrpc
    generating-a-node
    running-a-node
+   node-flow-hospital

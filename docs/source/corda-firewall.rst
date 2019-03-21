@@ -10,5 +10,4 @@ features in this release: future releases may add enhanced monitoring and audit 
 
    corda-firewall-component
    corda-firewall-configuration-file
-   corda-firewall-cookbook
    corda-firewall-upgrade

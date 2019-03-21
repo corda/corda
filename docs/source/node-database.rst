@@ -595,6 +595,8 @@ Do not change the default isolation for this database (*READ_COMMITTED*) as the 
 Place Oracle JDBC driver *ojdbc6.jar* for 11g RC2 or *ojdbc8.jar* for Oracle 12c in the node directory ``drivers`` described in :ref:`Common Configuration Steps <db_setup_step_3_ref>`.
 Database schema name can be set in JDBC URL string e.g. currentSchema=my_schema.
 
+.. _oracle_wallet_ref:
+
 Oracle Wallet
 """""""""""""
 

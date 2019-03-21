@@ -25,7 +25,6 @@ import org.apache.activemq.artemis.api.core.client.ClientMessage
 import org.apache.activemq.artemis.api.core.client.ClientSession
 import org.slf4j.MDC
 import rx.Subscription
-import java.lang.Exception
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
@@ -84,6 +83,7 @@ open class AMQPBridgeManager(config: MutualSslConfiguration,
 
     companion object {
         private const val NUM_BRIDGE_THREADS = 0 // Default sized pool
+        private const val ARTEMIS_RETRY_TIME = 60000L
     }
 
     /**
@@ -186,7 +186,7 @@ open class AMQPBridgeManager(config: MutualSslConfiguration,
                                     }
                                 }
                             }
-                        }, 1000L, TimeUnit.MILLISECONDS)
+                        }, ARTEMIS_RETRY_TIME, TimeUnit.MILLISECONDS)
                         bridgeMetricsService?.bridgeConnected(targets, legalNames)
                         val sessionFactory = artemis.started!!.sessionFactory
                         val session = sessionFactory.createSession(NODE_P2P_USER, NODE_P2P_USER, false, true, true, false, DEFAULT_ACK_BATCH_SIZE)
