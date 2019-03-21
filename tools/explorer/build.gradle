@@ -5,12 +5,6 @@ apply plugin: 'application'
 sourceCompatibility = 1.8
 mainClassName = 'net.corda.explorer.Main'
 
-// Use manual resource copying of log4j2.xml rather than source sets.
-// This prevents problems in IntelliJ with regard to duplicate source roots.
-processResources {
-    from file("$rootDir/config/dev/log4j2.xml")
-}
-
 dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
@@ -21,7 +15,6 @@ dependencies {
 
     // Corda Core: Data structures and basic types needed to work with Corda.
     compile project(':core')
-    compile project(':tools:cliutils')
     compile project(':client:jfx')
     compile project(':finance:contracts')
     compile project(':finance:workflows')
