@@ -71,7 +71,7 @@ fun CordaCliWrapper.start(args: Array<String>) {
             Help.Ansi.AUTO
         }
         val results = cmd.parseWithHandlers(RunLast().useOut(System.out).useAnsi(defaultAnsiMode),
-                DefaultExceptionHandler<List<Any>>().useErr(System.err).useAnsi(defaultAnsiMode),
+                DefaultExceptionHandler<List<Any>>().useErr(System.err).useAnsi(defaultAnsiMode).andExit(ExitCodes.FAILURE),
                 *args)
         // If an error code has been returned, use this and exit
         results?.firstOrNull()?.let {
