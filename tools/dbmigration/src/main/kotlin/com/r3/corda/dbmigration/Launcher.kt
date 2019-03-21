@@ -3,6 +3,7 @@
 package com.r3.corda.dbmigration
 
 import com.typesafe.config.Config
+import liquibase.exception.MigrationFailedException
 import net.corda.cliutils.*
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.Emoji
@@ -32,6 +33,7 @@ val migrationLogger: Logger by lazy { LoggerFactory.getLogger("migration.tool") 
 val errorLogger: Logger by lazy { LoggerFactory.getLogger("errors") }
 
 fun main(args: Array<String>) {
+    disableQuasarWarning()
     DbManagementTool().start(args)
 }
 
@@ -123,13 +125,14 @@ abstract class DbManagerConfiguration(private val cmdLineOptions: SharedDbManage
 
         return try {
             withDatasource(createDatasourceFromDriverJarFolders(config.dataSourceProperties, classLoader, driversFolder + jarDirs))
-        } catch (e: CheckpointsException) {
-            error(e)
         } catch (e: Exception) {
-            wrappedError("""Failed to create datasource.
+            when (e) {
+                is CheckpointsException, is MigrationFailedException -> error(e)
+                else -> wrappedError("""Failed to create datasource.
                 |Please check that the correct JDBC driver is installed in one of the following folders:
                 |${(driversFolder + jarDirs).joinToString("\n\t - ", "\t - ")}
                 |Caused By $e""".trimMargin(), e)
+            }
         }
     }
 
@@ -165,4 +168,12 @@ fun printWarning(message: String) {
         printInRed("${Emoji.warningSign} ATTENTION: $message")
     }
     errorLogger.warn(message)
+}
+
+/**
+ * Quasar gets pulled in via Corda dependencies and prints warnings that the agent is not running.
+ * Since the agent isn't needed for the purposes of this tool, we disable all Quasar warnings.
+ */
+private fun disableQuasarWarning() {
+    System.setProperty("co.paralleluniverse.fibers.disableAgentWarning", "true")
 }

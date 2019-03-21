@@ -12,7 +12,15 @@ class ExecuteMigrationsCli : CliWrapperBase(EXECUTE_MIGRATION, "This option will
     override fun runProgram(): Int {
         val db = cmdLineOptions.toConfig()
         migrationLogger.info("Running the database migration on ${cmdLineOptions.baseDirectory}")
-        db.runMigrationCommand(db.schemas) { migration, dataSource -> migration.runMigration(dataSource.connection.use { DBCheckpointStorage().getCheckpointCount(it) != 0L }) }
+        db.runMigrationCommand(db.schemas) { migration, dataSource ->
+            migration.runMigration(
+                    dataSource.connection.use {
+                        DBCheckpointStorage().getCheckpointCount(it) != 0L
+                    },
+                    migrationLogger
+            )
+        }
+        migrationLogger.info("Migration completed successfully")
         return ExitCodes.SUCCESS
     }
 }

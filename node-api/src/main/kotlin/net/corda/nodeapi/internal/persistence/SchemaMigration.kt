@@ -7,24 +7,25 @@ import liquibase.Liquibase
 import liquibase.database.Database
 import liquibase.database.DatabaseFactory
 import liquibase.database.core.MSSQLDatabase
+import liquibase.database.core.PostgresDatabase
 import liquibase.database.jvm.JdbcConnection
 import liquibase.lockservice.LockServiceFactory
 import liquibase.resource.ClassLoaderResourceAccessor
-import net.corda.core.identity.CordaX500Name
-import net.corda.nodeapi.internal.MigrationHelpers.getMigrationResource
-import net.corda.core.schemas.MappedSchema
-import net.corda.core.utilities.contextLogger
-import net.corda.nodeapi.internal.cordapp.CordappLoader
-import java.io.ByteArrayInputStream
-import java.io.InputStream
-import java.nio.file.Path
-import java.sql.Statement
-import javax.sql.DataSource
-import liquibase.database.core.PostgresDatabase
 import liquibase.structure.DatabaseObject
 import liquibase.structure.core.Schema
+import net.corda.core.identity.CordaX500Name
+import net.corda.core.schemas.MappedSchema
+import net.corda.core.utilities.contextLogger
+import net.corda.nodeapi.internal.MigrationHelpers.getMigrationResource
+import net.corda.nodeapi.internal.cordapp.CordappLoader
+import org.slf4j.Logger
+import java.io.ByteArrayInputStream
+import java.io.InputStream
 import java.io.Writer
+import java.nio.file.Path
+import java.sql.Statement
 import java.util.concurrent.locks.ReentrantLock
+import javax.sql.DataSource
 import kotlin.concurrent.withLock
 
 // Migrate the database to the current version, using liquibase.
@@ -73,7 +74,7 @@ class SchemaMigration(
     /**
      * Will run the Liquibase migration on the actual database.
      */
-    fun runMigration(existingCheckpoints: Boolean) = doRunMigration(run = true, outputWriter = null, check = false, existingCheckpoints = existingCheckpoints)
+    fun runMigration(existingCheckpoints: Boolean, statusLogger: Logger? = null) = doRunMigration(run = true, outputWriter = null, check = false, existingCheckpoints = existingCheckpoints, statusLogger = statusLogger)
 
     /**
      * Will write the migration to a [Writer].
@@ -111,8 +112,13 @@ class SchemaMigration(
         }
     }
 
-    private fun doRunMigration(run: Boolean, outputWriter: Writer?, check: Boolean, existingCheckpoints: Boolean? = null) {
-
+    private fun doRunMigration(
+            run: Boolean,
+            outputWriter: Writer?,
+            check: Boolean,
+            existingCheckpoints: Boolean? = null,
+            statusLogger: Logger? = null
+    ) {
         // Virtual file name of the changelog that includes all schemas.
         val dynamicInclude = "master.changelog.json"
 
@@ -171,6 +177,12 @@ class SchemaMigration(
                             it.id == "nullability" ||                         // Changes column constraint on checkpoint table
                             it.id == "column_host_name" ||                    // Node was previously running version prior to ENT3.2
                             it.id == "create-external-id-to-state-party-view" // Node was previously running a version prior to ENT4.0
+                }
+
+                if (unRunChanges.isNotEmpty()) {
+                    statusLogger?.info("Changesets to run (${unRunChanges.size}):\n${unRunChanges.joinToString("\n")}")
+                } else {
+                    statusLogger?.info("Database is up to date.")
                 }
 
                 when {
