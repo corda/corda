@@ -53,7 +53,7 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
         executeExistingDelayedTasksAfterShutdownPolicy = false
     }
     private var newNetworkParameters: Pair<ParametersUpdate, SignedNetworkParameters>? = null
-    private val fileWatcherSubscription = AtomicReference<Subscription>()
+    private val fileWatcherSubscription = AtomicReference<Subscription?>()
     private var autoAcceptNetworkParameters: Boolean = true
     private lateinit var trustRoot: X509Certificate
     private lateinit var currentParametersHash: SecureHash
@@ -64,9 +64,11 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
     private lateinit var excludedAutoAcceptNetworkParameters: Set<String>
 
     override fun close() {
-        fileWatcherSubscription.updateAndGet {
-            if (it != null && !it.isUnsubscribed) {
-                it.unsubscribe()
+        fileWatcherSubscription.updateAndGet { subscription ->
+            subscription?.apply {
+                if (!isUnsubscribed) {
+                    unsubscribe()
+                }
             }
             null // sets the atomic ref to null
         }
