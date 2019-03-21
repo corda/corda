@@ -4,10 +4,10 @@
     <Properties>
         <Property name="log-path">${sys:log-path:-logs}</Property>
         <Property name="log-name">node-${hostName}</Property>
-        <Property name="diagnostic-log-name">diagnostic-${hostName}</Property>
         <Property name="archive">${log-path}/archive</Property>
         <Property name="defaultLogLevel">${sys:defaultLogLevel:-info}</Property>
         <Property name="consoleLogLevel">${sys:consoleLogLevel:-error}</Property>
+        <Property name="detailLogLevel">${sys:detailLogLevel:-trace}</Property>
     </Properties>
 
     <Appenders>
@@ -70,23 +70,10 @@
              those that are older than 60 days, but keep the most recent 10 GB -->
         <RollingRandomAccessFile name="RollingFile-Appender"
                      fileName="${log-path}/${log-name}.log"
-                     filePattern="${archive}/${log-name}.%date{yyyy-MM-dd}-%i.log.gz">
+                     filePattern="${archive}/${log-name}.%date{yyyy-MM-dd}-%i.log.gz"
+                     immediateFlush="false">
 
-            <PatternLayout>
-                <ScriptPatternSelector defaultPattern="[%-5level] %date{ISO8601}{UTC}Z [%t] %c{2}.%method - %msg%n">
-                    <Script name="MDCSelector" language="javascript"><![CDATA[
-                    result = null;
-                    if (!logEvent.getContextData().size() == 0) {
-                        result = "WithMDC";
-                    } else {
-                        result = null;
-                    }
-                    result;
-               ]]>
-                    </Script>
-                    <PatternMatch key="WithMDC" pattern="[%-5level] %date{ISO8601}{UTC}Z [%t] %c{2}.%method - %msg %X%n"/>
-                </ScriptPatternSelector>
-            </PatternLayout>
+            <PatternLayout pattern="[%-5level] %date{ISO8601}{UTC}Z [%t] %c{2}.%method - %msg %X%n"/>
 
             <Policies>
                 <TimeBasedTriggeringPolicy/>
@@ -109,24 +96,11 @@
         <!-- Will generate up to 100 log files for a given day. During every rollover it will delete
              those that are older than 60 days, but keep the most recent 10 GB -->
         <RollingRandomAccessFile name="Diagnostic-RollingFile-Appender"
-                     fileName="${log-path}/${diagnostic-log-name}.log"
-                     filePattern="${archive}/${diagnostic-log-name}.%date{yyyy-MM-dd}-%i.log.gz">
+                                 fileName="${log-path}/diagnostic-${log-name}.log"
+                                 filePattern="${archive}/diagnostic-${log-name}.%date{yyyy-MM-dd}-%i.log.gz"
+                                 immediateFlush="false">
 
-            <PatternLayout>
-                <ScriptPatternSelector defaultPattern="[%-5level] %date{ISO8601}{UTC}Z [%t] %c{2}.%method - %msg%n">
-                    <Script name="MDCSelector" language="javascript"><![CDATA[
-                    result = null;
-                    if (!logEvent.getContextData().size() == 0) {
-                        result = "WithMDC";
-                    } else {
-                        result = null;
-                    }
-                    result;
-               ]]>
-                    </Script>
-                    <PatternMatch key="WithMDC" pattern="[%-5level] %date{ISO8601}{UTC}Z [%t] %c{2}.%method - %msg %X%n"/>
-                </ScriptPatternSelector>
-            </PatternLayout>
+            <PatternLayout pattern="[%-5level] %date{ISO8601}{UTC}Z [%t] %c{2}.%method - %msg %X%n"/>
 
             <Policies>
                 <TimeBasedTriggeringPolicy/>
@@ -136,6 +110,33 @@
             <DefaultRolloverStrategy min="1" max="100">
                 <Delete basePath="${archive}" maxDepth="1">
                     <IfFileName glob="${log-name}*.log.gz"/>
+                    <IfLastModified age="60d">
+                        <IfAny>
+                            <IfAccumulatedFileSize exceeds="10 GB"/>
+                        </IfAny>
+                    </IfLastModified>
+                </Delete>
+            </DefaultRolloverStrategy>
+
+        </RollingRandomAccessFile>
+
+        <!-- Will generate up to 100 log files for a given day. During every rollover it will delete
+             those that are older than 60 days, but keep the most recent 10 GB -->
+        <RollingRandomAccessFile name="Detailed-RollingFile-Appender"
+                                 fileName="${log-path}/details-${log-name}.log"
+                                 filePattern="${archive}/details-${log-name}.%date{yyyy-MM-dd}-%i.log.gz"
+                                 immediateFlush="false">
+
+            <PatternLayout pattern="[%-5level] %date{ISO8601}{UTC}Z %msg%n" />
+
+            <Policies>
+                <TimeBasedTriggeringPolicy/>
+                <SizeBasedTriggeringPolicy size="100MB"/>
+            </Policies>
+
+            <DefaultRolloverStrategy min="1" max="100">
+                <Delete basePath="${archive}" maxDepth="1">
+                    <IfFileName glob="details-${log-name}*.log.gz"/>
                     <IfLastModified age="60d">
                         <IfAny>
                             <IfAccumulatedFileSize exceeds="10 GB"/>
@@ -189,6 +190,9 @@
         <Logger name="org.jolokia" additivity="true" level="warn">
             <AppenderRef ref="Console-ErrorCode-Appender-Println"/>
             <AppenderRef ref="RollingFile-ErrorCode-Appender"/>
+        </Logger>
+        <Logger name="DetailedInfo" additivity="false" level="${detailLogLevel}">
+            <AppenderRef ref="Detailed-RollingFile-Appender"/>
         </Logger>
     </Loggers>
 </Configuration>

@@ -30,6 +30,7 @@ import net.corda.node.services.statemachine.DeduplicationId
 import net.corda.node.services.statemachine.ExternalEvent
 import net.corda.node.services.statemachine.SenderDeduplicationId
 import net.corda.node.utilities.AffinityExecutor
+import net.corda.node.utilities.currentFlowId
 import net.corda.nodeapi.internal.ArtemisMessagingComponent
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.*
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.BRIDGE_CONTROL
@@ -42,7 +43,6 @@ import net.corda.nodeapi.internal.ArtemisTcpTransport.Companion.p2pConnectorTcpT
 import net.corda.nodeapi.internal.RoundRobinConnectionPolicy
 import net.corda.nodeapi.internal.bridging.BridgeControl
 import net.corda.nodeapi.internal.bridging.BridgeEntry
-import net.corda.nodeapi.internal.config.MessagingServerConnectionConfiguration
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.requireMessageSize
 import net.corda.nodeapi.internal.stillOpen
@@ -99,6 +99,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
 ) : SingletonSerializeAsToken(), MessagingService, AddressToArtemisQueueResolver {
     companion object {
         private val log = contextLogger()
+        private val detailedLogger = detailedLogger()
     }
 
     private class NodeClientMessage(override val topic: String,
@@ -468,7 +469,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
     }
 
     private fun deliver(msg: ReceivedMessage, artemisMessage: ClientMessage) {
-        log.info("ReceiveMessage(size=${artemisMessage.encodeSize};id=${msg.uniqueMessageId.toString};platformVersion=${msg.platformVersion};from=${msg.peer})")
+        detailedLogger.trace { "ReceiveMessage(size=${artemisMessage.encodeSize};id=${msg.uniqueMessageId.toString};platformVersion=${msg.platformVersion};from=${msg.peer})" }
         state.checkNotLocked()
         val deliverTo = handlers[msg.topic]
         if (deliverTo != null) {
@@ -570,7 +571,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
     @Suspendable
     override fun send(message: Message, target: MessageRecipients, sequenceKey: Any) {
         requireMessageSize(message.data.size, maxMessageSize)
-        log.info("SendMessage(size=${message.data.size};id=${message.uniqueMessageId.toString})")
+        detailedLogger.trace { "SendMessage(flowId=$currentFlowId;size=${message.data.size};id=${message.uniqueMessageId.toString})" }
         messagingExecutor!!.send(message, target)
     }
 

@@ -23,10 +23,7 @@ import net.corda.core.serialization.internal.CheckpointSerializationContext
 import net.corda.core.serialization.internal.CheckpointSerializationDefaults
 import net.corda.core.serialization.internal.checkpointDeserialize
 import net.corda.core.serialization.internal.checkpointSerialize
-import net.corda.core.utilities.ProgressTracker
-import net.corda.core.utilities.Try
-import net.corda.core.utilities.contextLogger
-import net.corda.core.utilities.debug
+import net.corda.core.utilities.*
 import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.internal.exceptions.StateMachineStoppedException
 import net.corda.node.services.api.CheckpointStorage
@@ -71,6 +68,7 @@ class MultiThreadedStateMachineManager(
 ) : StateMachineManager, StateMachineManagerInternal {
     companion object {
         private val logger = contextLogger()
+        private val detailedLogger = detailedLogger()
     }
 
     private class Flow(val fiber: FlowStateMachineImpl<*>, val resultFuture: OpenFuture<Any?>)
@@ -520,7 +518,7 @@ class MultiThreadedStateMachineManager(
             isStartIdempotent: Boolean
     ): CordaFuture<FlowStateMachine<A>> {
         val flowId = StateMachineRunId.createRandom()
-        logger.info("StartFlow(logic=$flowLogic;flow-id=${flowId.uuid})")
+        detailedLogger.trace { "StartFlow(logic=$flowLogic;flowId=${flowId.uuid})" }
 
         // Before we construct the state machine state by freezing the FlowLogic we need to make sure that lazy properties
         // have access to the fiber (and thereby the service hub)

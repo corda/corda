@@ -3,8 +3,10 @@ package net.corda.node.services.statemachine
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.detailedLogger
 import net.corda.node.services.statemachine.transitions.FlowContinuation
 import net.corda.node.services.statemachine.transitions.TransitionResult
+import net.corda.node.utilities.currentFlowId
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.contextDatabase
 import net.corda.nodeapi.internal.persistence.contextTransactionOrNull
@@ -25,6 +27,7 @@ class TransitionExecutorImpl(
 
     private companion object {
         val log = contextLogger()
+        private val detailedLogger = detailedLogger()
     }
 
     @Suspendable
@@ -51,7 +54,7 @@ class TransitionExecutorImpl(
                 } else {
                     // Otherwise error the state manually keeping the old flow state and schedule a DoRemainingWork
                     // to trigger error propagation
-                    log.info("PropagateError(action=$action;exception=${exception.message})")
+                    detailedLogger.warn("PropagateError(flowId=$currentFlowId;action=$action;exception=${exception.message})")
                     log.info("Error while executing $action, erroring state", exception)
                     val newState = previousState.copy(
                             checkpoint = previousState.checkpoint.copy(

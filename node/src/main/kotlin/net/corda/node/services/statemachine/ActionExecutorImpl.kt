@@ -4,13 +4,15 @@ import co.paralleluniverse.fibers.Fiber
 import co.paralleluniverse.fibers.Suspendable
 import com.codahale.metrics.*
 import net.corda.core.internal.concurrent.thenMatch
-import net.corda.core.serialization.*
+import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.internal.CheckpointSerializationContext
 import net.corda.core.serialization.internal.checkpointSerialize
 import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.detailedLogger
 import net.corda.core.utilities.trace
 import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.api.ServiceHubInternal
+import net.corda.node.utilities.currentFlowId
 import net.corda.nodeapi.internal.persistence.contextDatabase
 import net.corda.nodeapi.internal.persistence.contextTransaction
 import net.corda.nodeapi.internal.persistence.contextTransactionOrNull
@@ -33,6 +35,7 @@ class ActionExecutorImpl(
 
     private companion object {
         val log = contextLogger()
+        private val detailedLogger = detailedLogger()
     }
 
     /**
@@ -132,6 +135,7 @@ class ActionExecutorImpl(
     private fun executePropagateErrors(action: Action.PropagateErrors) {
         action.errorMessages.forEach { (exception) ->
             log.warn("Propagating error", exception)
+            detailedLogger.trace { "PropagateError(flowId=$currentFlowId,exception=${exception?.message})" }
         }
         for (sessionState in action.sessions) {
             // We cannot propagate if the session isn't live.
@@ -168,13 +172,13 @@ class ActionExecutorImpl(
 
     @Suspendable
     private fun executeSendInitial(action: Action.SendInitial) {
-        log.info("SendInitial(initiatorFlow=${action.initialise.initiatorFlowClassName};id=${action.deduplicationId.deduplicationId.toString};appName=${action.initialise.appName};flowVersion=${action.initialise.flowVersion};recipient=${action.party})")
+        detailedLogger.trace { "SendInitial(flowId=$currentFlowId;initiatorFlow=${action.initialise.initiatorFlowClassName};id=${action.deduplicationId.deduplicationId.toString};appName=${action.initialise.appName};flowVersion=${action.initialise.flowVersion};recipient=${action.party})" }
         flowMessaging.sendSessionMessage(action.party, action.initialise, action.deduplicationId)
     }
 
     @Suspendable
     private fun executeSendExisting(action: Action.SendExisting) {
-        log.info("SendExisting(message=${action.message::class.simpleName};id=${action.deduplicationId.deduplicationId.toString};recipient=${action.peerParty})")
+        detailedLogger.trace { "SendExisting(flowId=$currentFlowId;message=${action.message::class.simpleName};id=${action.deduplicationId.deduplicationId.toString};recipient=${action.peerParty})" }
         flowMessaging.sendSessionMessage(action.peerParty, action.message, action.deduplicationId)
     }
 
@@ -195,7 +199,7 @@ class ActionExecutorImpl(
 
     @Suspendable
     private fun executeRemoveFlow(action: Action.RemoveFlow) {
-        log.info("RemoveFlow(reason=${action.removalReason})")
+        detailedLogger.trace { "RemoveFlow(flowId=$currentFlowId;reason=${action.removalReason})" }
         stateMachineManager.removeFlow(action.flowId, action.removalReason, action.lastState)
     }
 
@@ -209,7 +213,7 @@ class ActionExecutorImpl(
 
     @Suspendable
     private fun executeRollbackTransaction() {
-        log.info("RollbackTransaction()")
+        detailedLogger.trace { "RollbackTransaction(flowId=$currentFlowId)" }
         contextTransactionOrNull?.close()
     }
 
@@ -238,7 +242,7 @@ class ActionExecutorImpl(
 
     private fun executeRetryFlowFromSafePoint(action: Action.RetryFlowFromSafePoint) {
         val checkpoint = action.currentState.checkpoint
-        log.info("RetryFromSafePoint(flow=${action.currentState.flowLogic};subFlows=[${checkpoint.subFlowStack.joinToString { it.flowClass.simpleName }}];state=${checkpoint.flowState::class.simpleName};error=${checkpoint.errorState::class.simpleName};suspends=${checkpoint.numberOfSuspends})")
+        detailedLogger.trace { "RetryFromSafePoint(flowId=$currentFlowId;flow=${action.currentState.flowLogic};subFlows=[${checkpoint.subFlowStack.joinToString { it.flowClass.simpleName }}];state=${checkpoint.flowState::class.simpleName};error=${checkpoint.errorState::class.simpleName};suspends=${checkpoint.numberOfSuspends})" }
         stateMachineManager.retryFlowFromSafePoint(action.currentState)
     }
 
