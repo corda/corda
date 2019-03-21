@@ -76,19 +76,19 @@ absolute path to the firewall's base directory.
 
 :certificatesDirectory: An optional parameter which specifies directory from which SSL keys and Trust store keys will be loaded from. If missing the value is defaulted to ``baseDirectory/certificates``.
 
-:sslKeystore: An optional parameter which specifies the file from which SSL keys stores will be loaded from. If missing the value is defaulted to ``certificatesDirectory/sslkeystore.jks``.
+:sslKeystore: An optional parameter which specifies the file from which SSL keys stores will be loaded from. If missing the value is defaulted to ``<certificatesDirectory>/sslkeystore.jks``.
 
-:trustStoreFile: An optional parameter which specifies the file from which Trust store keys will be loaded from. If missing the value is defaulted to ``certificatesDirectory/truststore.jks``.
+:trustStoreFile: An optional parameter which specifies the file from which Trust store keys will be loaded from. If missing the value is defaulted to ``<certificatesDirectory>/truststore.jks``.
 
 :firewallMode: Determines operating mode of the firewall. See above.
 
-:keyStorePassword: The password to unlock the TLS KeyStore file (``<workspace>/certificates/sslkeystore.jks``) containing the
+:keyStorePassword: The password to unlock the TLS KeyStore file (``<workspace>/<certificatesDirectory>/sslkeystore.jks``) containing the
     node certificate and private key. The private key password must be the same due to limitations in the Artemis libraries.
 
     .. note:: This is the non-secret value for the development certificates automatically generated during the first node run.
         Longer term these keys will be managed in secure hardware devices.
 
-:trustStorePassword: The password to unlock the Trust store file (``<workspace>/certificates/truststore.jks``) containing
+:trustStorePassword: The password to unlock the Trust store file (``<workspace>/<certificatesDirectory>/truststore.jks``) containing
     the Corda network root certificate. This is the non-secret value for the development certificates automatically
     generated during the first node run.
 
@@ -107,8 +107,8 @@ absolute path to the firewall's base directory.
 
    :alternateArtemisBrokerAddresses: Optionally if there are multiple Artemis broker address e.g. for hot-cold node deployment, then additional hosts and ports may be included in a list.
 
-   :artemisSSLConfiguration:  The default behaviour is that the outgoing ``TLS 1.2/AMQP 1.0`` connections present certificate details from (``<workspace>/certificates/sslkeystore.jks``)
-        and validate against (``<workspace>/certificates/truststore.jks``), using the passwords defined in the root config. However, distinct KeyStores may be configured in this section:
+   :artemisSSLConfiguration:  The default behaviour is that the outgoing ``TLS 1.2/AMQP 1.0`` connections present certificate details from (``<workspace>/<certificatesDirectory>/sslkeystore.jks``)
+        and validate against (``<workspace>/<certificatesDirectory>/truststore.jks``), using the passwords defined in the root config. However, distinct KeyStores may be configured in this section:
 
         :keyStorePassword: The password for the TLS KeyStore.
 
@@ -142,8 +142,8 @@ absolute path to the firewall's base directory.
         :listeningAddress: The host and port to bind to as ``TLS 1.2/AMQP 1.0`` listener. This may be a specific network interface on multi-homed machines.
             It may also differ from the externally exposed public ``p2pAddress`` of the port if the firewalls, or load balancers transparently reroute the traffic.
 
-   :customSSLConfiguration:  The default behaviour is that the inbound ``TLS 1.2/AMQP 1.0`` connections present certificate details from (``<workspace>/certificates/sslkeystore.jks``)
-        and validate against (``<workspace>/certificates/truststore.jks``), using the passwords defined in the root config. However, distinct KeyStores may be configured in this section:
+   :customSSLConfiguration:  The default behaviour is that the inbound ``TLS 1.2/AMQP 1.0`` connections present certificate details from (``<workspace>/<certificatesDirectory>/sslkeystore.jks``)
+        and validate against (``<workspace>/<certificatesDirectory>/truststore.jks``), using the passwords defined in the root config. However, distinct KeyStores may be configured in this section:
 
         :keyStorePassword: The password for the TLS KeyStore.
 
@@ -165,8 +165,8 @@ absolute path to the firewall's base directory.
 
         :expectedCertificateSubject: The X500 Subject name that will be presented in client certificates from the remote ``FloatOuter`` instances.
         
-        :tunnelSSLConfiguration:   .. note:: For ease of use the TLS default control tunnel connections present certificate details from (``<workspace>/certificates/sslkeystore.jks``)
-                                             and validate against (``<workspace>/certificates/truststore.jks``), using the passwords defined in the root config.
+        :tunnelSSLConfiguration:   .. note:: For ease of use the TLS default control tunnel connections present certificate details from (``<workspace>/<certificatesDirectory>/sslkeystore.jks``)
+                                             and validate against (``<workspace>/<certificatesDirectory>/truststore.jks``), using the passwords defined in the root config.
                                              However, it is strongly recommended that distinct KeyStores should be configured in this section to use locally valid certificates only, so that compromise of the DMZ machines does not give access to the node's primary TLS keys.
 
             :keyStorePassword: The password for the TLS KeyStore.
@@ -188,8 +188,8 @@ absolute path to the firewall's base directory.
 
         :expectedCertificateSubject: The X500 Subject name that will be presented in client certificates from the ``BridgeInner`` when it connects to this ``FloatOuter`` instance.
 
-        :tunnelSSLConfiguration:   .. note:: For ease of use the TLS default control tunnel connection presents certificate details from (``<workspace>/certificates/sslkeystore.jks``)
-                                             and validate against (``<workspace>/certificates/truststore.jks``), using the passwords defined in the root config.
+        :tunnelSSLConfiguration:   .. note:: For ease of use the TLS default control tunnel connection presents certificate details from (``<workspace>/<certificatesDirectory>/sslkeystore.jks``)
+                                             and validate against (``<workspace>/<certificatesDirectory>/truststore.jks``), using the passwords defined in the root config.
                                              However, it is strongly recommended that distinct KeyStores should be configured in this section to use locally valid certificates only, so that compromise of the DMZ machines does not give access to the node's primary TLS keys.
 
             :keyStorePassword: The password for the TLS KeyStore.
