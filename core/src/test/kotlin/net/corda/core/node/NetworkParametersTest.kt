@@ -4,6 +4,7 @@ import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.internal.getPackageOwnerOf
+import net.corda.core.node.services.AttachmentId
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.days
 import net.corda.core.utilities.getOrThrow
@@ -12,10 +13,7 @@ import net.corda.finance.flows.CashIssueFlow
 import net.corda.node.services.config.NotaryConfig
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.testing.common.internal.testNetworkParameters
-import net.corda.testing.core.ALICE_NAME
-import net.corda.testing.core.BOB_NAME
-import net.corda.testing.core.DUMMY_NOTARY_NAME
-import net.corda.testing.core.singleIdentity
+import net.corda.testing.core.*
 import net.corda.testing.node.MockNetworkNotarySpec
 import net.corda.testing.node.MockNetworkParameters
 import net.corda.testing.node.internal.InternalMockNetwork
@@ -26,6 +24,7 @@ import org.assertj.core.api.Assertions.*
 import org.junit.After
 import org.junit.Test
 import java.nio.file.Path
+import java.time.Duration
 import java.time.Instant
 import kotlin.test.assertEquals
 import kotlin.test.assertFails
@@ -62,6 +61,34 @@ class NetworkParametersTest {
                 minimumPlatformVersion = 1)
         dropParametersToDir(aliceDirectory, netParams)
         alice.start()
+    }
+
+    @Test
+    fun `that we can copy while preserving the event horizon`() {
+        // this is defensive tests in response to CORDA-2769
+        val aliceNotaryParty = TestIdentity(ALICE_NAME).party
+        val aliceNotaryInfo = NotaryInfo(aliceNotaryParty, false)
+        val nm1 = NetworkParameters(
+                minimumPlatformVersion = 1,
+                notaries = listOf(aliceNotaryInfo),
+                maxMessageSize = Int.MAX_VALUE,
+                maxTransactionSize = Int.MAX_VALUE,
+                modifiedTime = Instant.now(),
+                epoch = 1,
+                whitelistedContractImplementations = mapOf("MyClass" to listOf(AttachmentId.allOnesHash)),
+                eventHorizon = Duration.ofDays(1)
+        )
+        val twoDays = Duration.ofDays(2)
+        val nm2 = nm1.copy(minimumPlatformVersion = 2, eventHorizon = twoDays)
+
+        assertEquals(2, nm2.minimumPlatformVersion)
+        assertEquals(nm1.notaries, nm2.notaries)
+        assertEquals(nm1.maxMessageSize, nm2.maxMessageSize)
+        assertEquals(nm1.maxTransactionSize, nm2.maxTransactionSize)
+        assertEquals(nm1.modifiedTime, nm2.modifiedTime)
+        assertEquals(nm1.epoch, nm2.epoch)
+        assertEquals(nm1.whitelistedContractImplementations, nm2.whitelistedContractImplementations)
+        assertEquals(twoDays, nm2.eventHorizon)
     }
 
     // Notaries tests
