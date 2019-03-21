@@ -25,7 +25,12 @@ class LazyStickyPool<A : Any>(
     private val boxes = Array(size) { InstanceBox<A>() }
 
     private fun toIndex(stickTo: Any): Int {
-        return Math.abs(stickTo.hashCode()) % boxes.size
+        return stickTo.hashCode().let { hashCode ->
+            when (hashCode) {
+                Int.MIN_VALUE -> 0
+                else -> Math.abs(hashCode) % boxes.size
+            }
+        }
     }
 
     fun borrow(stickTo: Any): A {
