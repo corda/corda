@@ -102,7 +102,6 @@ data class NetworkParameters(
      * This is to address backwards compatibility of the API, invariant to package ownership
      * addresses bug CORDA-2769
      */
-    @JvmOverloads // to ensure we generate all sensible configurations for Java consumption
     fun copy(minimumPlatformVersion: Int = this.minimumPlatformVersion,
              notaries: List<NotaryInfo> = this.notaries,
              maxMessageSize: Int = this.maxMessageSize,
