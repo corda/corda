@@ -11,17 +11,23 @@ with open("../../constants.properties", "r") as f:
     constants_properties_lines = f.readlines()
 constants_properties_dict = dict([l.strip().split('=') for l in constants_properties_lines if not l.startswith("#") and not l.strip() == ""])
 
-rst_epilog = """
-.. |java_version| replace:: 8u%s
-.. |kotlin_version| replace:: %s
-.. |gradle_plugins_version| replace:: %s
-.. |quasar_version| replace:: %s
-.. |corda_version| replace:: %s
-""" % (constants_properties_dict["java8MinUpdateVersion"],
-       constants_properties_dict["kotlinVersion"],
-       constants_properties_dict["gradlePluginsVersion"],
-       constants_properties_dict["quasarVersion"],
-       constants_properties_dict["cordaVersion"])
+def cordaSourceReadReplace(app, docname, source):
+    result = source[0]
+    for key in app.config.corda_substitutions:
+        result = result.replace(key, app.config.corda_substitutions[key])
+    source[0] = result
+
+corda_substitutions = {
+    "|corda_version|" : constants_properties_dict["cordaVersion"],
+    "|java_version|" : "8u"+constants_properties_dict["java8MinUpdateVersion"],
+    "|kotlin_version|" : constants_properties_dict["kotlinVersion"],
+    "|gradle_plugins_version|" : constants_properties_dict["gradlePluginsVersion"],
+    "|quasar_version|" : constants_properties_dict["quasarVersion"]
+}
+
+def setup(app):
+   app.add_config_value('corda_substitutions', {}, True)
+   app.connect('source-read', cordaSourceReadReplace)
 
 ############################################################################
 

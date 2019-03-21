@@ -37,7 +37,7 @@ Step 2. Adjust the version numbers in your Gradle build files
 
 Alter the versions you depend on in your Gradle file like so:
 
-.. parsed-literal::
+.. code:: groovy
 
     ext.corda_release_version = '|corda_version|'
     ext.corda_gradle_plugins_version = '|gradle_plugins_version|'
