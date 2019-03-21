@@ -32,7 +32,7 @@ this dependency::
 
     repositories {
         // ... other dependencies
-        maven { url "https://ci-artifactory.corda.r3cev.com/artifactory/corda-dependencies" } // access to the patched Caffeine version
+        maven { url "https://software.r3.com/artifactory/corda-dependencies" } // access to the patched Caffeine version
     }
 
 `CordaRPCClient`_ has a ``start`` method that takes the node's RPC address and returns a `CordaRPCConnection`_.

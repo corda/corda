@@ -69,7 +69,7 @@ referencing Corda Enterprise 4 packages to provide transitive dependencies::
 
     repositories {
         // ... other dependencies
-        maven { url "https://ci-artifactory.corda.r3cev.com/artifactory/corda-dependencies" } // access to the patched Quasar and Caffeine version
+        maven { url "https://software.r3.com/artifactory/corda-dependencies" } // access to the patched Quasar and Caffeine version
     }
 
 In certain cases, you may also wish to build against the unstable Master branch. See :doc:`building-against-master`.

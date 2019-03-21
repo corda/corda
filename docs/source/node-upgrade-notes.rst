@@ -120,7 +120,7 @@ This release requires some data migration to populate new entities.
 Step 4. Replace ``corda.jar`` with the new version
 --------------------------------------------------
 
-Download the latest version of Corda from `our Artifactory site <https://ci-artifactory.corda.r3cev.com/artifactory/webapp/#/artifacts/browse/simple/General/corda/net/corda/corda-node>`_.
+Download the latest version of Corda from `our Artifactory site <https://software.r3.com/artifactory/webapp/#/artifacts/browse/simple/General/corda/net/corda/corda-node>`_.
 Make sure it's available on your path, and that you've read the :doc:`release-notes`, in particular to discover what version of Java this
 node requires.
 
