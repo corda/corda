@@ -107,6 +107,30 @@
         </createTable>
     </changeSet>
     <changeSet author="R3.Corda" id="create mutual exclusion">
+        <!-- validCheckSum entries for compatibility between 2 versions of this change set,
+             DDL for adding not null constraints for mutual_exclusion table (which is in Enterprise only)
+             was moved from change set "nullability" from node-core.changelog-v4.xml. -->
+        <!-- md5 hash of the former change set version in Corda 3.x -->
+        <validCheckSum>7:a6e065f282b6b606cd49bc6ebac2aafb</validCheckSum>
+        <!-- md5 hash of this version of the change set
+             It has addNotNullConstraint 3 DDL statements moved from 'nullability' change set.
+             It's compatible will all use cases:
+
+             1) when running on empty database, moved DDL will be run as before,
+                only from within the different change set (this one) form 4.0 onwards
+
+             2) when updating 3.x Enterprise database, the change set doesn't run as it was already applied for 3.x,
+                constraints were already created part of 3.x 'nullablity' change set from node-cord.changelog-v4.xml
+
+             3) when updating 3.x/4.x OS database, the change set is enterprise only,
+                so it will run for the first time adding not null constraints
+
+             Moved DDL statements where not added to a new change set because Liquibase has no way
+             to detect if a constraint is already there (so th use case 2 would fail,
+             as it would be a new change set trying to add constraints which are already there).
+        -->
+        <validCheckSum>7:28fbf75e7cd5e703b56d53ec03be2466</validCheckSum>
+
         <createTable tableName="node_mutual_exclusion">
             <column name="mutual_exclusion_id" type="NCHAR(255)">
                 <constraints nullable="false"/>
@@ -116,6 +140,9 @@
             <column name="MUTUAL_EXCLUSION_TIMESTAMP" type="timestamp"/>
         </createTable>
         <addPrimaryKey columnNames="mutual_exclusion_id" constraintName="node_mutual_exclusion_pkey" tableName="node_mutual_exclusion"/>
+        <addNotNullConstraint tableName="node_mutual_exclusion" columnName="MACHINE_NAME" columnDataType="NVARCHAR(255)"/>
+        <addNotNullConstraint tableName="node_mutual_exclusion" columnName="PID" columnDataType="NVARCHAR(255)"/>
+        <addNotNullConstraint tableName="node_mutual_exclusion" columnName="MUTUAL_EXCLUSION_TIMESTAMP" columnDataType="timestamp"/>
     </changeSet>
     <changeSet author="R3.Corda" id="1511451595465-30">
         <addPrimaryKey columnNames="att_id" constraintName="node_attachments_pkey" tableName="node_attachments"/>
