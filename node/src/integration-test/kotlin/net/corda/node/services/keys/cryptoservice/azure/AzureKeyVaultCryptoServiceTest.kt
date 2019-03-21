@@ -17,18 +17,30 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 
 /*
- * These tests need to be run manually. They require an Amazon KeyVault to be set up and will perform operations that are not free of charge.
+ * These tests need to be run manually. They require an Amazon KeyVault (and the associated service principal) to be set up and will perform operations that are not free of charge.
  * Refer to https://docs.microsoft.com/en-gb/azure/key-vault/
+ *
+ * This can be done using the scripts available under the resources folder.
+ * The only pre-requisites are:
+ * - Install the azure CLI and execute `az login` (See: https://docs.microsoft.com/en-us/cli/azure/install-azure-cli)
+ * - Install jq (See: https://stedolan.github.io/jq)
+ *
+ * To execute the test:
+ * - Navigate to `resources/net/corda/node/services/key/cryptoservice/azure` and execute `setup_resources.sh`, which creates all the necessary resources.
+ * - Replace the variable `clientId` with the value provided in the output of the previous script.
+ * - Run the tests
+ * - In the end, navigate to `resources/net/corda/node/services/key/cryptoservice/azure` and execute `tear_down_resources.sh`, which removes all the created resources.
+ *
  */
 @Ignore
 class AzureKeyVaultCryptoServiceTest {
 
     // you need to change these values to point to your KeyVault
-    private val clientId = "a3d73987-c666-4bc2-9cba-b0b27c63800e"
+    private val clientId = "<the-client-id>"
     // creating hardware-secured keys requires a KeyVault with a Premium subscription
-    private val premiumVault = "https://testkeyvault1261premium.vault.azure.net/"
+    private val premiumVault = "https://premium-corda-keyvault.vault.azure.net/"
     private val path = javaClass.getResource("out.pkcs12").toURI().path
-    private val vaultURL = "https://mytestkeyvault1261.vault.azure.net/"
+    private val vaultURL = "https://standard-corda-keyvault.vault.azure.net/"
 
     @Test
     fun `Generate key with the default legal identity scheme, then sign and verify data`() {
