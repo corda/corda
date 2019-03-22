@@ -392,10 +392,13 @@ object InteractiveShell {
         // For each constructor, attempt to parse the input data as a method call. Use the first that succeeds,
         // and keep track of the reasons we failed so we can print them out if no constructors are usable.
         val parser = StringToMethodCallParser(clazz, om)
+        var allErrors = ArrayList<String>()
         val errors = ArrayList<String>()
+        var constructorFound = false
 
         val classPackage = clazz.packageName
         for (ctor in clazz.constructors) {
+            errors.clear()
             var paramNamesFromConstructor: List<String>? = null
 
             fun getPrototype(): List<String> {
@@ -410,11 +413,10 @@ object InteractiveShell {
             try {
                 // Attempt construction with the given arguments.
                 paramNamesFromConstructor = parser.paramNamesFromConstructor(ctor)
-                val args = parser.parseArguments(clazz.name, paramNamesFromConstructor.zip(ctor.genericParameterTypes), inputData)
-                if (args.size != ctor.genericParameterTypes.size) {
-                    errors.add("${getPrototype()}: Wrong number of arguments (${args.size} provided, ${ctor.genericParameterTypes.size} needed)")
-                    continue
-                }
+                val nameTypeList = paramNamesFromConstructor.zip(ctor.genericParameterTypes)
+                parser.validateIsMatchingCtor(clazz.name, nameTypeList, inputData)
+                constructorFound = true
+                val args = parser.parseArguments(clazz.name, nameTypeList, inputData)
                 return invoke(clazz, args)
             } catch (e: StringToMethodCallParser.UnparseableCallException.MissingParameter) {
                 errors.add("${getPrototype()}: missing parameter ${e.paramName}")
@@ -427,8 +429,15 @@ object InteractiveShell {
                 val argTypes = ctor.genericParameterTypes.map { it.typeName }
                 errors.add("$argTypes: ${e.message}")
             }
+            if (constructorFound) {
+                allErrors = errors
+                break
+            }
+            else {
+                allErrors.addAll(errors)
+            }
         }
-        throw NoApplicableConstructor(errors)
+        throw NoApplicableConstructor(allErrors)
     }
 
     // TODO Filtering on error/success when we will have some sort of flow auditing, for now it doesn't make much sense.
