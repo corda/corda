@@ -1,27 +1,31 @@
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
-
-
-buildscript {
-	repositories {
-		mavenCentral()
-	}
-	dependencies {
-		classpath "org.springframework.boot:spring-boot-gradle-plugin:$springBootVersion"
-		classpath "io.spring.gradle:dependency-management-plugin:1.0.4.RELEASE"
-		classpath "org.jetbrains.kotlin:kotlin-allopen:$kotlin_version"
-		classpath 'com.bmuschko:gradle-docker-plugin:3.2.1'
-		classpath "org.yaml:snakeyaml:1.19"
-	}
-}
-
 import org.yaml.snakeyaml.DumperOptions
 
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath "org.yaml:snakeyaml:1.19"
+    }
+}
+
 plugins {
-	id 'com.craigburke.client-dependencies' version '1.4.0'
+    id 'io.spring.dependency-management'
+    id 'com.bmuschko.docker-remote-api' version '3.2.1'
+    id 'com.craigburke.client-dependencies' version '1.4.0'
 }
 
 group = "${parent.group}.irs-demo"
+
+dependencyManagement {
+    dependencies {
+        dependency "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
+        dependency "org.apache.logging.log4j:log4j-core:$log4j_version"
+        dependency "org.apache.logging.log4j:log4j-api:$log4j_version"
+    }
+}
 
 clientDependencies {
     registry 'realBower', type:'bower', url:'https://registry.bower.io'
@@ -45,9 +49,9 @@ clientDependencies {
 // Spring Boot plugin adds a numerous hardcoded dependencies in the version much lower then Corda expects
 // causing the problems in runtime. Those can be changed by manipulating above properties
 // See https://github.com/spring-gradle-plugins/dependency-management-plugin/blob/master/README.md#changing-the-value-of-a-version-property
-ext['artemis.version'] = "$artemis_version"
-ext['hibernate.version'] = "$hibernate_version"
-ext['jackson.version'] = "$jackson_version"
+ext['artemis.version'] = artemis_version
+ext['hibernate.version'] = hibernate_version
+ext['jackson.version'] = jackson_version
 
 apply plugin: 'kotlin'
 apply plugin: 'kotlin-spring'
@@ -65,19 +69,19 @@ dependencies {
         exclude module: "spring-boot-starter-logging"
         exclude module: "logback-classic"
     }
-	compile('org.springframework.boot:spring-boot-starter-log4j2')
-    runtime("org.apache.logging.log4j:log4j-web:$log4j_version")
+    compile('org.springframework.boot:spring-boot-starter-log4j2')
+    runtimeOnly("org.apache.logging.log4j:log4j-web:$log4j_version")
     compile("com.fasterxml.jackson.module:jackson-module-kotlin:$jackson_version")
     compile project(":client:rpc")
     compile project(":client:jackson")
-	compile project(":finance:workflows")
-	// TODO In the future remove -irs bit from the directory name. Currently it clashes with :finance:workflows (same for contracts).
-	compile project(":samples:irs-demo:cordapp:workflows-irs")
+    compile project(":finance:workflows")
+    // TODO In the future remove -irs bit from the directory name. Currently it clashes with :finance:workflows (same for contracts).
+    compile project(":samples:irs-demo:cordapp:workflows-irs")
 
     testCompile project(":test-utils")
     testCompile project(path: ":samples:irs-demo:cordapp:workflows-irs", configuration: "demoArtifacts")
 
-	// JOpt: for command line flags.
+    // JOpt: for command line flags.
     compile "net.sf.jopt-simple:jopt-simple:$jopt_simple_version"
 
     testCompile('org.springframework.boot:spring-boot-starter-test') {
@@ -116,55 +120,54 @@ artifacts {
 }
 
 task createDockerfile(type: com.bmuschko.gradle.docker.tasks.image.Dockerfile, dependsOn: [bootRepackage]) {
-	destFile = file("$docker_dir/Dockerfile")
+    destFile = file("$docker_dir/Dockerfile")
 
-	from 'azul/zulu-openjdk-alpine:8u152'
-	copyFile jar.archiveName, "/opt/irs/web/"
-	workingDir "/opt/irs/web/"
-	defaultCommand "sh", "-c", "java -Dcorda.host=\$CORDA_HOST -jar ${jar.archiveName}"
+    from 'azul/zulu-openjdk-alpine:8u152'
+    copyFile jar.archiveName, "/opt/irs/web/"
+    workingDir "/opt/irs/web/"
+    defaultCommand "sh", "-c", "java -Dcorda.host=\$CORDA_HOST -jar ${jar.archiveName}"
 }
 
 task prepareDockerDir(type: Copy, dependsOn: [bootRepackage, createDockerfile]) {
-	from jar
-	into docker_dir
+    from jar
+    into docker_dir
 }
 
 task generateDockerCompose(dependsOn: [prepareDockerDir]) {
 
-	def outFile = new File(project.buildDir, "docker-compose.yml")
+    def outFile = new File(project.buildDir, "docker-compose.yml")
 
-	ext['dockerComposePath'] = outFile
+    ext['dockerComposePath'] = outFile
 
-	doLast {
-		def dockerComposeObject = [
-			"version": "3",
-			"services": [
-				"web-a": [
-					"build": "$docker_dir".toString(),
-					"environment": [
-						"CORDA_HOST": "bank-a:10003"
-					],
-					"ports": ["8080"]
-				],
-				"web-b": [
-					"build": "$docker_dir".toString(),
-					"environment": [
-						"CORDA_HOST": "bank-b:10003"
-					],
-					"ports": ["8080"]
-				]
-			]
-		]
+    doLast {
+        def dockerComposeObject = [
+            "version": "3",
+            "services": [
+                "web-a": [
+                    "build": "$docker_dir".toString(),
+                    "environment": [
+                        "CORDA_HOST": "bank-a:10003"
+                    ],
+                    "ports": ["8080"]
+                ],
+                "web-b": [
+                    "build": "$docker_dir".toString(),
+                    "environment": [
+                        "CORDA_HOST": "bank-b:10003"
+                    ],
+                    "ports": ["8080"]
+                ]
+            ]
+        ]
 
+        def options = new org.yaml.snakeyaml.DumperOptions()
+        options.indent = 2
+        options.defaultFlowStyle = DumperOptions.FlowStyle.BLOCK
 
-		def options = new org.yaml.snakeyaml.DumperOptions()
-		options.indent = 2
-		options.defaultFlowStyle = DumperOptions.FlowStyle.BLOCK
+        def dockerComposeContent = new org.yaml.snakeyaml.Yaml(options).dump(dockerComposeObject)
 
-		def dockerComposeContent = new org.yaml.snakeyaml.Yaml(options).dump(dockerComposeObject)
-
-		Files.write(outFile.toPath(), dockerComposeContent.getBytes(StandardCharsets.UTF_8))
-	}
+        Files.write(outFile.toPath(), dockerComposeContent.getBytes(StandardCharsets.UTF_8))
+    }
 
     outputs.file(outFile)
 }
