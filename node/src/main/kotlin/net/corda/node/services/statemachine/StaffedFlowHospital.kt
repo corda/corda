@@ -55,6 +55,11 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val 
         mutex.locked {
             if (outcome != Outcome.UNTREATABLE) {
                 treatableSessionInits[id] = InternalSessionInitRecord(sessionMessage, event, record)
+                log.warn("$sender has sent a flow request for an unknown flow ${sessionMessage.initiatorFlowClassName}. Install the missing " +
+                        "CorDapp this flow belongs to and restart.")
+                log.warn("If you know it's safe to ignore this flow request then it can be deleted permanently using the killFlow RPC and " +
+                        "the UUID $id (from the node shell you can run 'flow kill $id'). BE VERY CAUTIOUS OF THIS SECOND APPROACH AS THE " +
+                        "REQUEST MAY CONTAIN A NOTARISED TRANSACTION THAT NEEDS TO BE RECORDED IN YOUR VAULT.")
             }
             recordsPublisher.onNext(record)
         }
@@ -78,12 +83,13 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val 
      * to send back the relevant session error to the initiator party and acknowledge its receipt from the message broker
      * so that it never gets redelivered.
      */
-    fun dropSessionInit(id: UUID) {
+    fun dropSessionInit(id: UUID): Boolean {
         val (sessionMessage, event, publicRecord) = mutex.locked {
-            requireNotNull(treatableSessionInits.remove(id)) { "$id does not refer to any session init message" }
+            treatableSessionInits.remove(id) ?: return false
         }
         log.info("Errored session-init permanently dropped: $publicRecord")
         sendBackError(publicRecord.error, sessionMessage, publicRecord.sender, event)
+        return true
     }
 
     /**
