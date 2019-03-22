@@ -11,6 +11,7 @@ import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.DUMMY_BANK_B_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.singleIdentity
+import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.node.User
@@ -41,10 +42,13 @@ class BridgeRestartTest(private val enableSNI: Boolean) : IntegrationTest() {
     @Test
     fun restartLongPingPongFlowRandomly() {
         val demoUser = User("demo", "demo", setOf(Permissions.startFlow<Ping>(), Permissions.all()))
-        internalDriver(startNodesInProcess = true, cordappsForAllNodes = cordappsForPackages("net.corda.bridge"), enableSNI = enableSNI) {
-            val bFuture = startNode(providedName = DUMMY_BANK_B_NAME, rpcUsers = listOf(demoUser), customOverrides = mapOf("p2pAddress" to "localhost:40000"))
-            val bridgePort = 20005
-            val brokerPort = 21005
+        internalDriver(startNodesInProcess = true,
+                       cordappsForAllNodes = cordappsForPackages("net.corda.bridge"),
+                       portAllocation = incrementalPortAllocation(20000),
+                       enableSNI = enableSNI) {
+            val bridgePort = portAllocation.nextPort()
+            val brokerPort = portAllocation.nextPort()
+            val bFuture = startNode(providedName = DUMMY_BANK_B_NAME, rpcUsers = listOf(demoUser))
             val aBridgeFuture = startBridge(DUMMY_BANK_A_NAME, bridgePort, brokerPort, mapOf(
                     "outboundConfig" to mapOf(
                             "artemisBrokerAddress" to "localhost:$brokerPort"
@@ -93,10 +97,13 @@ class BridgeRestartTest(private val enableSNI: Boolean) : IntegrationTest() {
     @Test
     fun restartSeveralPingPongFlowsRandomly() {
         val demoUser = User("demo", "demo", setOf(Permissions.startFlow<Ping>(), Permissions.all()))
-        internalDriver(startNodesInProcess = true, cordappsForAllNodes = cordappsForPackages("net.corda.bridge"), enableSNI = enableSNI) {
-            val bFuture = startNode(providedName = DUMMY_BANK_B_NAME, rpcUsers = listOf(demoUser), customOverrides = mapOf("p2pAddress" to "localhost:40000"))
-            val bridgePort = 20005
-            val brokerPort = 21005
+        internalDriver(startNodesInProcess = true,
+                       cordappsForAllNodes = cordappsForPackages("net.corda.bridge"),
+                       portAllocation = incrementalPortAllocation(20000),
+                       enableSNI = enableSNI) {
+            val bridgePort = portAllocation.nextPort()
+            val brokerPort = portAllocation.nextPort()
+            val bFuture = startNode(providedName = DUMMY_BANK_B_NAME, rpcUsers = listOf(demoUser))
             val aBridgeFuture = startBridge(DUMMY_BANK_A_NAME, bridgePort, brokerPort, mapOf(
                     "outboundConfig" to mapOf(
                             "artemisBrokerAddress" to "localhost:$brokerPort"

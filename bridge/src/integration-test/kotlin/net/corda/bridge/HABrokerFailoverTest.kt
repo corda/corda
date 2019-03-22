@@ -118,15 +118,17 @@ class HABrokerFailoverTest : IntegrationTest() {
 
         println(rootDir)
 
+        val brokerPort = portAllocator.nextPort()
+        val altBrokerPort = portAllocator.nextPort()
         val nodeConfiguration = mapOf(
                 "baseDirectory" to "$nodeBaseDir",
                 "p2pAddress" to NetworkHostAndPort("localhost", p2pPort).toString(),
                 "devMode" to false,
                 "messagingServerExternal" to true,
-                "messagingServerAddress" to NetworkHostAndPort("localhost", 10130).toString(),
+                "messagingServerAddress" to NetworkHostAndPort("localhost", brokerPort).toString(),
                 "enterpriseConfiguration" to mapOf(
                         "externalBridge" to true,
-                        "messagingServerBackupAddresses" to listOf("localhost:10131"),
+                        "messagingServerBackupAddresses" to listOf("localhost:$altBrokerPort"),
                         "messagingServerConnectionConfiguration" to "CONTINUOUS_RETRY",
                         "messagingServerSslConfiguration" to mapOf(
                                 "sslKeystore" to "$nodeBaseDir/certificates/sslkeystore.jks",
@@ -138,11 +140,11 @@ class HABrokerFailoverTest : IntegrationTest() {
         internalDriver(notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, validating = false)), portAllocation = portAllocator) {
             val aliceUser = User("alice", "alice", permissions = setOf("ALL"))
 
-            val aBridgeFuture = startBridge(ALICE_NAME, p2pPort, 10130, mapOf(
+            val aBridgeFuture = startBridge(ALICE_NAME, p2pPort, brokerPort, mapOf(
                     "firewallMode" to "SenderReceiver",
                     "outboundConfig" to mapOf(
-                            "artemisBrokerAddress" to "localhost:10130",
-                            "alternateArtemisBrokerAddresses" to listOf("localhost:10131")
+                            "artemisBrokerAddress" to "localhost:$brokerPort",
+                            "alternateArtemisBrokerAddresses" to listOf("localhost:$altBrokerPort")
                     ),
                     "inboundConfig" to mapOf(
                             "listeningAddress" to "0.0.0.0:$p2pPort"
