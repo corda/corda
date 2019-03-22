@@ -601,21 +601,33 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
     private fun installCordaServices() {
         val loadedServices = cordappLoader.cordapps.flatMap { it.services }
-        loadedServices.forEach {
-            try {
-                installCordaService(it)
-            } catch (e: NoSuchMethodException) {
-                log.error("${it.name}, as a Corda service, must have a constructor with a single parameter of type " +
-                        ServiceHub::class.java.name)
-            } catch (e: ServiceInstantiationException) {
-                if (e.cause != null) {
-                    log.error("Corda service ${it.name} failed to instantiate. Reason was: ${e.cause?.rootMessage}", e.cause)
-                } else {
-                    log.error("Corda service ${it.name} failed to instantiate", e)
+
+        // This sets the Cordapp classloader on the contextClassLoader of the current thread, prior to initializing services
+        // Needed because of bug CORDA-2653 - some Corda services can utilise third-party libraries that require access to
+        // the Thread context class loader
+
+        val oldContextClassLoader : ClassLoader? = Thread.currentThread().contextClassLoader
+        try {
+            Thread.currentThread().contextClassLoader = cordappLoader.appClassLoader
+
+            loadedServices.forEach {
+                try {
+                    installCordaService(it)
+                } catch (e: NoSuchMethodException) {
+                    log.error("${it.name}, as a Corda service, must have a constructor with a single parameter of type " +
+                            ServiceHub::class.java.name)
+                } catch (e: ServiceInstantiationException) {
+                    if (e.cause != null) {
+                        log.error("Corda service ${it.name} failed to instantiate. Reason was: ${e.cause?.rootMessage}", e.cause)
+                    } else {
+                        log.error("Corda service ${it.name} failed to instantiate", e)
+                    }
+                } catch (e: Exception) {
+                    log.error("Unable to install Corda service ${it.name}", e)
                 }
-            } catch (e: Exception) {
-                log.error("Unable to install Corda service ${it.name}", e)
             }
+        } finally {
+            Thread.currentThread().contextClassLoader = oldContextClassLoader
         }
     }
 

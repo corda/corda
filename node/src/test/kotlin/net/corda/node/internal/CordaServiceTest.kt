@@ -26,10 +26,7 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import java.util.concurrent.atomic.AtomicInteger
-import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
-import kotlin.test.assertNotEquals
-import kotlin.test.assertTrue
+import kotlin.test.*
 
 class CordaServiceTest {
     private lateinit var mockNet: MockNetwork
@@ -75,6 +72,12 @@ class CordaServiceTest {
     fun `Test flow with progress tracking`() {
         val service = nodeA.services.cordaService(TestCordaService::class.java)
         service.startServiceFlowAndTrack()
+    }
+
+    @Test
+    fun `Corda service can access a non-null thread context classloader`() {
+        val service = nodeA.services.cordaService(CordaServiceThatRequiresThreadContextClassLoader::class.java)
+        service.thatWeCanAccessClassLoader()
     }
 
     /**
@@ -140,6 +143,21 @@ class CordaServiceTest {
         init {
             val criteria = QueryCriteria.VaultQueryCriteria(Vault.StateStatus.UNCONSUMED)
             serviceHub.vaultService.trackBy(ContractState::class.java, criteria)
+        }
+    }
+
+    /**
+     * See: CORDA-2653
+     * This is to check that a corda service is presented with a non-null thread context classloader
+     */
+    @CordaService
+    class CordaServiceThatRequiresThreadContextClassLoader(val serviceHub: AppServiceHub) : SingletonSerializeAsToken() {
+        init {
+            assertNotNull(Thread.currentThread().contextClassLoader, "thread context classloader should not be null during service initialisation")
+        }
+
+        fun thatWeCanAccessClassLoader() {
+            assertNotNull(Thread.currentThread().contextClassLoader, "thread context classloader should not be null during service initialisation")
         }
     }
 }

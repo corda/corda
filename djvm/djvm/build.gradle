@@ -44,8 +44,8 @@ dependencies {
 jar.enabled = false
 
 shadowJar {
-    archiveBaseName = 'corda-djvm'
-    archiveClassifier = ''
+    baseName 'corda-djvm'
+    classifier ''
     relocate 'org.objectweb.asm', 'djvm.org.objectweb.asm'
 
     // These particular classes are only needed to "bootstrap"
