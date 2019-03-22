@@ -5,6 +5,7 @@ import net.corda.core.internal.div
 import net.corda.node.internal.NodeStartup
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.internal.Node
+import net.corda.testing.driver.internal.incrementalPortAllocation
 import org.h2.tools.Server
 import org.junit.AfterClass
 import org.junit.BeforeClass
@@ -32,9 +33,10 @@ class InitialRegistrationCliTest {
         private lateinit var datasourceProperties: Properties
         private lateinit var node: Node
 
-        private val h2jdbcUrl = "jdbc:h2:tcp://localhost:10009/~/node"
+        private val h2jdbcUrl = "jdbc:h2:tcp://localhost:<port>/~/node"
         private val h2User = "sa"
         private val h2Password = ""
+        private var port = 10009
 
         private lateinit var server: Server
 
@@ -48,7 +50,8 @@ class InitialRegistrationCliTest {
             Mockito.`when`(node.configuration).thenReturn(nodeConfiguration)
             Mockito.`when`(nodeConfiguration.dataSourceProperties).thenReturn(datasourceProperties)
 
-            server = Server.createTcpServer("-tcpPort", "10009", "-tcpAllowOthers", "-tcpDaemon").start()
+            port = incrementalPortAllocation(port).nextPort()
+            server = Server.createTcpServer("-tcpPort", port.toString(), "-tcpAllowOthers", "-tcpDaemon").start()
             executeSqlStatement("CREATE TABLE NODE_ATTACHMENTS(USERNAME VARCHAR(20));")
 
             initialRegistration = InitialRegistration(baseDirectory, networkTrustRootFile, networkTrustRootPassword, nodeStartup)
@@ -65,9 +68,13 @@ class InitialRegistrationCliTest {
         }
 
         private fun executeSqlStatement(sqlStatement: String) {
-            val connection = DriverManager.getConnection(h2jdbcUrl, h2User, h2Password)
+            val connection = DriverManager.getConnection(getJdbcUrl(), h2User, h2Password)
             val statement = connection.createStatement()
             statement.execute(sqlStatement)
+        }
+
+        private fun getJdbcUrl(): String {
+            return h2jdbcUrl.replace("<port>", port.toString())
         }
     }
 
@@ -87,7 +94,7 @@ class InitialRegistrationCliTest {
 
     @Test(expected = IllegalStateException::class)
     fun `registration fails when database contains tables`() {
-        datasourceProperties.setProperty("dataSource.url", h2jdbcUrl)
+        datasourceProperties.setProperty("dataSource.url", getJdbcUrl())
         datasourceProperties.setProperty("dataSource.user", h2User)
         datasourceProperties.setProperty("dataSource.password", h2Password)
         Mockito.`when`(nodeConfiguration.dataSourceProperties).thenReturn(datasourceProperties)
