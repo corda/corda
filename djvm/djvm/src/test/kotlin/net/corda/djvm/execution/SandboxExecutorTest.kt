@@ -37,6 +37,7 @@ class SandboxExecutorTest : TestBase() {
     @Test
     fun `can load and execute contract`() = sandbox(DEFAULT, pinnedClasses = setOf(Transaction::class.java)) {
         val contractExecutor = DeterministicSandboxExecutor<Transaction, Unit>(configuration)
+        //TODO: Transaction should not be a pinned class! It needs to be marshalled into and out of the sandbox.
         val tx = Transaction(1)
         assertThatExceptionOfType(SandboxException::class.java)
                 .isThrownBy { contractExecutor.run<Contract>(tx) }

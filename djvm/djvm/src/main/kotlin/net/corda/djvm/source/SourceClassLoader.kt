@@ -1,7 +1,6 @@
 @file:JvmName("SourceClassLoaderTools")
 package net.corda.djvm.source
 
-import net.corda.djvm.analysis.AnalysisConfiguration.Companion.SANDBOX_PREFIX
 import net.corda.djvm.analysis.AnalysisContext
 import net.corda.djvm.analysis.ClassResolver
 import net.corda.djvm.analysis.ExceptionResolver.Companion.getDJVMExceptionOwner
@@ -22,17 +21,51 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import kotlin.streams.toList
 
-abstract class AbstractSourceClassLoader(
+/**
+ * Class loader to manage an optional JAR of replacement Java APIs.
+ * @param bootstrapJar The location of the JAR containing the Java APIs.
+ */
+class BootstrapClassLoader(
+    bootstrapJar: Path
+) : URLClassLoader(resolvePaths(listOf(bootstrapJar)), null) {
+
+    /**
+     * Only search our own jars for the given resource.
+     */
+    override fun getResource(name: String): URL? = findResource(name)
+}
+
+/**
+ * Customizable class loader that allows the user to specify explicitly additional JARs and directories to scan.
+ *
+ * @param paths The directories and explicit JAR files to scan.
+ * @property classResolver The resolver to use to derive the original name of a requested class.
+ * @property bootstrap The [BootstrapClassLoader] containing the Java APIs for the sandbox.
+ */
+class SourceClassLoader private constructor(
     paths: List<Path>,
     private val classResolver: ClassResolver,
+    private val bootstrap: BootstrapClassLoader?,
     parent: ClassLoader?
 ) : URLClassLoader(resolvePaths(paths), parent) {
+    private companion object {
+        private val logger = loggerFor<SourceClassLoader>()
+    }
+
+    constructor(paths: List<Path>, classResolver: ClassResolver, bootstrap: BootstrapClassLoader? = null)
+        :this(paths, classResolver, bootstrap, SourceClassLoader::class.java.classLoader)
+
+    /**
+     * An empty [SourceClassLoader] that can only delegate to its [BootstrapClassLoader].
+     */
+    constructor(classResolver: ClassResolver, bootstrap: BootstrapClassLoader)
+        : this(emptyList(), classResolver, bootstrap, null)
 
     /**
      * Open a [ClassReader] for the provided class name.
      */
     fun classReader(
-            className: String, context: AnalysisContext, origin: String? = null
+        className: String, context: AnalysisContext, origin: String? = null
     ): ClassReader {
         val originalName = classResolver.reverse(className.asResourcePath)
 
@@ -72,70 +105,6 @@ abstract class AbstractSourceClassLoader(
         }
         return loadClass(originalName)
     }
-
-    protected companion object {
-        @JvmStatic
-        protected val logger = loggerFor<SourceClassLoader>()
-    }
-}
-
-/**
- * Class loader to manage an optional JAR of replacement Java APIs.
- * @param bootstrapJar The location of the JAR containing the Java APIs.
- */
-class BootstrapClassLoader(
-    bootstrapJar: Path
-) : URLClassLoader(resolvePaths(listOf(bootstrapJar)), null) {
-
-    /**
-     * Only search our own jars for the given resource.
-     */
-    override fun getResource(name: String): URL? = findResource(name)
-}
-
-/**
- * Class loader that only provides our built-in sandbox classes.
- * @param classResolver The resolver to use to derive the original name of a requested class.
- */
-class SandboxSourceClassLoader(
-    classResolver: ClassResolver,
-    private val bootstrap: BootstrapClassLoader
-) : AbstractSourceClassLoader(emptyList(), classResolver, SandboxSourceClassLoader::class.java.classLoader) {
-
-    /**
-     * Always check the bootstrap classloader first. If we're requesting
-     * built-in sandbox classes then delegate to our parent classloader,
-     * otherwise deny the request.
-     */
-    override fun getResource(name: String): URL? {
-        val resource = bootstrap.findResource(name)
-        if (resource != null) {
-            return resource
-        } else if (isJvmInternal(name)) {
-            logger.error("Denying request for actual {}", name)
-            return null
-        }
-
-        return if (name.startsWith(SANDBOX_PREFIX)) {
-            parent.getResource(name)
-        } else {
-            null
-        }
-    }
-}
-
-/**
- * Customizable class loader that allows the user to explicitly specify additional JARs and directories to scan.
- *
- * @param paths The directories and explicit JAR files to scan.
- * @property classResolver The resolver to use to derive the original name of a requested class.
- * @property bootstrap The [BootstrapClassLoader] containing the Java APIs for the sandbox.
- */
-class SourceClassLoader(
-    paths: List<Path>,
-    classResolver: ClassResolver,
-    private val bootstrap: BootstrapClassLoader? = null
-) : AbstractSourceClassLoader(paths, classResolver, SourceClassLoader::class.java.classLoader) {
 
     /**
      * First check the bootstrap classloader, if we have one.

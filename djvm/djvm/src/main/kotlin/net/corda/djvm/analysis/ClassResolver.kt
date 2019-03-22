@@ -118,7 +118,7 @@ class ClassResolver(
 
     /**
      * Maps a class name to its equivalent class outside the sandbox.
-     * Needed by [net.corda.djvm.source.AbstractSourceClassLoader].
+     * Needed by [net.corda.djvm.source.SourceClassLoader].
      */
     private fun toSource(className: String): String {
         return if (className in pinnedClasses) {

@@ -1,7 +1,7 @@
 package net.corda.djvm.rewiring
 
 import net.corda.djvm.code.asPackagePath
-import net.corda.djvm.source.AbstractSourceClassLoader
+import net.corda.djvm.source.SourceClassLoader
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.ClassWriter.COMPUTE_FRAMES
@@ -23,11 +23,11 @@ import org.objectweb.asm.Type
  */
 open class SandboxClassWriter(
         classReader: ClassReader,
-        private val cloader: AbstractSourceClassLoader,
+        private val cloader: SourceClassLoader,
         flags: Int = COMPUTE_FRAMES or COMPUTE_MAXS
 ) : ClassWriter(classReader, flags) {
 
-    override fun getClassLoader(): AbstractSourceClassLoader = cloader
+    override fun getClassLoader(): SourceClassLoader = cloader
 
     /**
      * Get the common super type of [type1] and [type2].
