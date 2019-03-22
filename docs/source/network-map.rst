@@ -48,8 +48,9 @@ The set of REST end-points for the network map service are as follows.
 | GET            | /network-map/my-hostname                | Retrieve the IP address of the caller (and **not** of the network map).                                                                      |
 +----------------+-----------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------+
 
-The above represent the core of the Network Map protocol. However, the Corda Network (and other compatibility zones deploying the Enterprise Network Manager suite), provide the following enspoints
-for convenience.
+Network maps hosted by R3 or other parties using R3's commercial network management tools typically also provide the following endpoints as a convenience to operators and other users
+
+.. note:: we include them here as they can aid debugging but, for the avoidance of doubt, they are not a formal part of the spec and the node will operate even in their absence.
 
 +----------------+-----------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------+
 | Request method | Path                                    | Description                                                                                                                                  |
