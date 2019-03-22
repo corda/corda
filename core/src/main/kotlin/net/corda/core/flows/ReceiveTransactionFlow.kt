@@ -18,7 +18,8 @@ import java.security.SignatureException
  * [SignedTransaction] and perform the resolution back-and-forth required to check the dependencies and download any missing
  * attachments. The flow will return the [SignedTransaction] after it is resolved and then verified using [SignedTransaction.verify].
  *
- * Please note that it will *not* store the transaction to the vault unless that is explicitly requested.
+ * Please note that it will *not* store the transaction to the vault unless that is explicitly requested and checkSufficientSignatures is true.
+ * Setting statesToRecord to anything else when checkSufficientSignatures is false will *not* update the vault.
  *
  * @property otherSideSession session to the other side which is calling [SendTransactionFlow].
  * @property checkSufficientSignatures if true checks all required signatures are present. See [SignedTransaction.verify].
