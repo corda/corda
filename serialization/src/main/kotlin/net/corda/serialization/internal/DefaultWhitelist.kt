@@ -66,6 +66,6 @@ object DefaultWhitelist : SerializationWhitelist {
                     CRLReason::class.java,
 
                     // used in Vault Query criteria comparators (see QueryCriteriaUtils.Builder)
-                    Comparable::class.java
+                    java.lang.Comparable::class.java
             )
 }
