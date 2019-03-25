@@ -26,7 +26,7 @@ The Cordform task
 -----------------
 Corda provides a gradle plugin called ``Cordform`` that allows you to automatically generate and configure a set of
 nodes for testing and demos. Here is an example ``Cordform`` task called ``deployNodes`` that creates three nodes, defined
-in the `Kotlin CorDapp Template <https://github.com/corda/cordapp-template-kotlin/blob/release-V|platform_version|/build.gradle#L100>`_:
+in the `Kotlin CorDapp Template <https://github.com/corda/cordapp-template-kotlin/blob/release-V|platform_version|/build.gradle#L95>`_:
 
 .. sourcecode:: groovy
 
@@ -251,7 +251,7 @@ following line to each node's ``node.conf`` file:
 
 Where ``2222`` is the port you want to open to SSH into the shell.
 
-Below you can find the example task from the `IRS Demo <https://github.com/corda/corda/blob/release-V|platform_version|/samples/irs-demo/cordapp/build.gradle#L111>`_ included in the samples directory of main Corda GitHub repository:
+Below you can find the example task from the `IRS Demo <https://github.com/corda/corda/blob/release/|platform_version|/samples/irs-demo/cordapp/build.gradle#L111>`_ included in the samples directory of main Corda GitHub repository:
 
 .. sourcecode:: groovy
 
