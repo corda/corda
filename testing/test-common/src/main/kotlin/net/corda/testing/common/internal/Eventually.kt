@@ -45,6 +45,6 @@ inline fun <R> eventually(
 inline fun <R> succeeds(action: () -> R): R =
     try {
         action()
-    } catch (e: Throwable) {
+    } catch (e: Exception) {
         throw AssertionError(e.message)
     }
