@@ -45,10 +45,13 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
     constructor(transaction: SignedTransaction, extraRecipients: Set<Party>, progressTracker: ProgressTracker) : this(
             transaction, extraRecipients, progressTracker, emptyList(), false
     )
+
     @Deprecated(DEPRECATION_MSG)
     constructor(transaction: SignedTransaction, extraRecipients: Set<Party>) : this(transaction, extraRecipients, tracker(), emptyList(), false)
+
     @Deprecated(DEPRECATION_MSG)
     constructor(transaction: SignedTransaction) : this(transaction, emptySet(), tracker(), emptyList(), false)
+
     @Deprecated(DEPRECATION_MSG)
     constructor(transaction: SignedTransaction, progressTracker: ProgressTracker) : this(transaction, emptySet(), progressTracker, emptyList(), false)
 
@@ -139,13 +142,17 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
 
         if (newApi) {
             val sessionParties = sessions.map { it.counterparty }
-            val missingRecipients = externalTxParticipants - sessionParties - oldParticipants
+            val sessionPartyNames = sessionParties.map { it.name }
+            val oldParticipantNames = oldParticipants.map { it.name }
+            val missingRecipients = externalTxParticipants.filter { it.name !in sessionPartyNames && it.name !in  oldParticipantNames}
             require(missingRecipients.isEmpty()) {
                 "Flow sessions were not provided for the following transaction participants: $missingRecipients"
             }
             sessionParties.intersect(oldParticipants).let {
                 require(it.isEmpty()) { "The following parties are specified both in flow sessions and in the oldParticipants list: $it" }
             }
+        } else {
+
         }
 
         val notarised = notariseAndRecord()

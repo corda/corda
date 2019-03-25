@@ -36,4 +36,9 @@ class Party(val name: CordaX500Name, owningKey: PublicKey) : AbstractParty(ownin
     fun anonymise(): AnonymousParty = AnonymousParty(owningKey)
     override fun ref(bytes: OpaqueBytes): PartyAndReference = PartyAndReference(this, bytes)
     override fun toString() = name.toString()
+
+    fun withNewKey(owningKey: PublicKey) : Party{
+        return Party(this.name, owningKey)
+    }
+
 }

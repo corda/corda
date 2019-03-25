@@ -43,10 +43,22 @@ fun groupPublicKeysByWellKnownParty(serviceHub: ServiceHub, publicKeys: Collecti
  */
 @Throws(IllegalArgumentException::class)
 fun groupAbstractPartyByWellKnownParty(serviceHub: ServiceHub, parties: Collection<AbstractParty>, ignoreUnrecognisedParties: Boolean): Map<Party, List<AbstractParty>> {
-    val partyToPublicKey: Iterable<Pair<Party, AbstractParty>> = parties.mapNotNull {
-        (serviceHub.identityService.wellKnownPartyFromAnonymous(it) ?: if (ignoreUnrecognisedParties) return@mapNotNull null else throw IllegalArgumentException("Could not find Party for $it")) to it
+    val wellKnownX500 = parties.filter { it.nameOrNull() != null }.map {
+        val wellKnownPartyFromX500Name = serviceHub.identityService.wellKnownPartyFromX500Name(it.nameOrNull()!!)
+        if (wellKnownPartyFromX500Name == null) {
+            throw IllegalArgumentException("Could not find Party for ${it.nameOrNull()}")
+        }
+        (wellKnownPartyFromX500Name!!) to it
     }
-    return partyToPublicKey.toMultiMap()
+
+    val anonymous = parties.filter { it.nameOrNull() == null }.mapNotNull {
+        val wellKnownPartyFromAnonymous = serviceHub.identityService.wellKnownPartyFromAnonymous(it)
+        (wellKnownPartyFromAnonymous
+                ?: if (ignoreUnrecognisedParties) return@mapNotNull null else throw IllegalArgumentException("Could not find Party for $it")) to it
+    }
+
+    return (wellKnownX500 + anonymous).toMultiMap()
+
 }
 
 /**
