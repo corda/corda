@@ -6,5 +6,7 @@ import net.corda.core.serialization.SerializationWhitelist
  * The DJVM does not need whitelisting, by definition.
  */
 object DefaultWhitelist : SerializationWhitelist {
-    override val whitelist: List<Class<Any>> get() = emptyList()
+    override val whitelist = listOf(
+            java.lang.Comparable::class.java    // required for forwards compatibility with default whitelist
+    )
 }
