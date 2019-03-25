@@ -523,6 +523,13 @@ For a CorDapp that contains flows and/or services we specify the `workflow` tag:
 
 .. note:: It is possible, but *not recommended*, to include everything in a single CorDapp jar and use both the ``contract`` and ``workflow`` Gradle plugin tags.
 
+.. warning:: Contract states may optionally specify a custom schema mapping (by implementing the ``Queryable`` interface) in its *contracts* JAR.
+  However, any associated database schema definition scripts (eg. Liquibase change set XML files) must currently be packaged in the *flows* JAR.
+  This is because the node requires access to these schema definitions upon start-up (*contract* JARs are now loaded in a separate attachments classloader).
+  This split also caters for scenarios where the same *contract* CorDapp may wish to target different database providers (and thus, the associated schema DDL may vary
+  to use native features of a particular database). The finance CorDapp provides an illustration of this packaging convention.
+  Future versions of Corda will de-couple this custom schema dependency to remove this anomaly.
+
 .. _cordapp_contract_attachments_ref:
 
 CorDapp Contract Attachments
