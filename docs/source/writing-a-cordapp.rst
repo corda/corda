@@ -42,7 +42,7 @@ You should base your project on one of the following templates:
 * `Kotlin Template CorDapp <https://github.com/corda/cordapp-template-kotlin>`_ (for CorDapps written in Kotlin)
 
 Please use the branch of the template that corresponds to the major version of Corda you are using. For example,
-someone building a CorDapp on Corda 3.2 should use the ``release-V3`` branch of the template.
+someone building a CorDapp on Corda 4.1 should use the ``release-V4`` branch of the template.
 
 Build system
 ^^^^^^^^^^^^

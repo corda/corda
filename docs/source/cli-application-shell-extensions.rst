@@ -34,7 +34,7 @@ For example, for the Corda node, install the shell extensions using
 
 .. code-block:: shell
 
-   java -jar corda-<version>.jar install-shell-extensions
+   java -jar corda-|corda_version|.jar install-shell-extensions
 
 And then run the node by running:
 
@@ -62,15 +62,11 @@ Once the shell extensions have been installed, you can upgrade them in one of tw
 List of existing CLI applications
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-+----------------------------------------------------------------+--------------------------------------------------------------+--------------------------------+
-| Description                                                    | JAR name                                                     | Alias                          |
-+----------------------------------------------------------------+--------------------------------------------------------------+--------------------------------+
-| :ref:`Corda node<starting-an-individual-corda-node>`           | ``corda-<version>.jar``                                      | ``corda --<option>``           |
-+----------------------------------------------------------------+--------------------------------------------------------------+--------------------------------+
-| :doc:`Network bootstrapper<network-bootstrapper>`              | ``corda-tools-network-bootstrapper-<version>.jar``           | ``bootstrapper --<option>``    |
-+----------------------------------------------------------------+--------------------------------------------------------------+--------------------------------+
-| :ref:`Standalone shell<standalone-shell>`                      | ``corda-tools-shell-cli-<version>.jar``                      | ``corda-shell --<option>``     |
-+----------------------------------------------------------------+--------------------------------------------------------------+--------------------------------+
-| :doc:`Blob inspector<blob-inspector>`                          | ``corda-tools-blob-inspector-<version>.jar``                 | ``blob-inspector --<option>``  |
-+----------------------------------------------------------------+--------------------------------------------------------------+--------------------------------+
-
+=========================================================   ==============================   ==========================================================
+Description                                                 Alias                            JAR Name
+=========================================================   ==============================   ==========================================================
+:ref:`Corda node<starting-an-individual-corda-node>`        ``corda --<option>``             ``corda-|corda_version|.jar``
+:doc:`Network bootstrapper<network-bootstrapper>`           ``bootstrapper --<option>``      ``corda-tools-network-bootstrapper-|corda_version|.jar``
+:ref:`Standalone shell<standalone-shell>`                   ``corda-shell --<option>``       ``corda-tools-shell-cli-|corda_version|.jar``
+:doc:`Blob inspector<blob-inspector>`                       ``blob-inspector --<option>``    ``corda-tools-blob-inspector-|corda_version|.jar``
+=========================================================   ==============================   ==========================================================
