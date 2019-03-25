@@ -11,6 +11,7 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.UntrustworthyData
+import net.corda.core.utilities.seconds
 import org.slf4j.Logger
 import rx.Observable
 import rx.Observer
@@ -413,8 +414,15 @@ inline val Member.isFinal: Boolean get() = Modifier.isFinal(modifiers)
 
 @DeleteForDJVM fun URL.toPath(): Path = toURI().toPath()
 
+val DEFAULT_HTTP_CONNECT_TIMEOUT = 30.seconds.toMillis()
+val DEFAULT_HTTP_READ_TIMEOUT = 30.seconds.toMillis()
+
 @DeleteForDJVM
-fun URL.openHttpConnection(): HttpURLConnection = openConnection() as HttpURLConnection
+fun URL.openHttpConnection(): HttpURLConnection = openConnection().also {
+    // The default values are 0 which means infinite timeout.
+    it.connectTimeout = DEFAULT_HTTP_CONNECT_TIMEOUT.toInt()
+    it.readTimeout = DEFAULT_HTTP_READ_TIMEOUT.toInt()
+} as HttpURLConnection
 
 @DeleteForDJVM
 fun URL.post(serializedData: OpaqueBytes, vararg properties: Pair<String, String>): ByteArray {
