@@ -69,7 +69,7 @@ A normal node would just download the signed jar using the normal process for th
 
 ### Caveats 
 
-###### Someone really wants to issue states with the HashConstraint, and ensure that can never change. 
+#### Someone really wants to issue states with the HashConstraint, and ensure that can never change. 
 
  - As mentioned above the transaction builder could only automatically transition states created pre-v4.  
  
@@ -80,7 +80,7 @@ A normal node would just download the signed jar using the normal process for th
  The option in this case is to force such parties to actually create a new contract (maybe subclass the version they want), own it, and hardcode the check as above.
 
 
-######  Some nodes haven't upgraded all their states by the time a new release is already being used on the network.
+####  Some nodes haven't upgraded all their states by the time a new release is already being used on the network.
 
  - A transaction mixing an original HashConstraint state, and a v2 Signature constraint state will not pass. The only way out is to strongly "encourage" nodes to upgrade before the new release.
   
