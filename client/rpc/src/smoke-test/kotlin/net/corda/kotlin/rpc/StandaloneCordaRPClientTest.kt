@@ -25,6 +25,7 @@ import net.corda.finance.workflows.getCashBalance
 import net.corda.finance.workflows.getCashBalances
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
+import net.corda.finance.schemas.CashSchemaV1
 import net.corda.java.rpc.StandaloneCordaRPCJavaClientTest
 import net.corda.nodeapi.internal.config.User
 import net.corda.smoketesting.NodeConfig
@@ -218,6 +219,13 @@ class StandaloneCordaRPClientTest {
         log.info("Cash Balances: $cashBalances")
         assertEquals(1, cashBalances.size)
         assertEquals(629.POUNDS, cashBalances[Currency.getInstance("GBP")])
+
+        // Check for cash states using a query criteria comparator
+        val logicalExpression = builder { CashSchemaV1.PersistentCashState::pennies.greaterThan(10000L) }
+        val customCriteria = QueryCriteria.VaultCustomQueryCriteria(logicalExpression)
+        val customCriteriaResults = rpcProxy.vaultQueryBy<Cash.State>(customCriteria)
+        assertEquals(1, customCriteriaResults.states.size)
+        assertEquals(customCriteriaResults.states.first().state.data.amount.quantity, 529.POUNDS.quantity)
     }
 
     @Test

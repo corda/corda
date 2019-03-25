@@ -34,7 +34,7 @@ couple of resources.
    .. code:: bash
 
        sudo systemctl stop corda
-       
+
    .. warning:: If this is an HA node, make sure to stop both the hot and cold nodes before proceeding. Any database migration should be performed whilst both nodes are offline.
 
 
@@ -44,9 +44,9 @@ couple of resources.
 
    .. code:: bash
 
-       wget http://downloads.corda.net/cordapps/net/corda/finance/ENT-3.1/corda-finance-3.1.jar \
-            http://downloads.corda.net/cordapps/net/corda/finance/ENT-3.1/corda-finance-3.1-sources.jar \
-            http://downloads.corda.net/tools/database-manager/corda-tools-database-manager-3.1.jar
+       wget https://ci-artifactory.corda.r3cev.com/artifactory/corda-releases/net/corda/corda-finance-contracts-|corda_version|-corda/corda-finance-contracts-|corda_version|-corda.jar
+            https://ci-artifactory.corda.r3cev.com/artifactory/corda-releases/net/corda/corda-finance-workflows-|corda_version|-corda/corda-finance-workflows-|corda_version|-corda.jar
+            http://downloads.corda.net/tools/database-manager/corda-tools-database-manager-|corda_version|.jar
 
    Copy the downloads from ``/home/<USER>/`` to ``/opt/corda/cordapps/``.
 
@@ -62,19 +62,19 @@ couple of resources.
    .. code:: bash
 
        sudo ln -s /opt/corda/drivers /opt/corda/plugins
-    
+
 #. Execute the database migration. This is required so that the node database has the right schema for finance transactions defined in the installed CorDapp.
 
    .. code:: bash
-   
+
        cd /opt/corda
-       sudo java -jar /home/<USER>/corda-tools-database-manager-3.0.jar --base-directory /opt/corda --execute-migration
+       sudo java -jar /home/<USER>/corda-tools-database-manager-|corda_version|.jar --base-directory /opt/corda --execute-migration
 
 #. Run the following to create a config file for the finance CorDapp:
 
    .. code:: bash
 
-       echo "issuableCurrencies = [ USD ]" > /opt/corda/cordapps/config/corda-finance-<VERSION>-corda.conf
+       echo "issuableCurrencies = [ USD ]" > /opt/corda/cordapps/config/corda-finance-|corda_version|-corda.conf
 
 #. Restart the Corda node:
 
@@ -83,7 +83,7 @@ couple of resources.
        sudo systemctl start corda
 
    Your node is now running the Finance Cordapp.
-   
+
    .. note:: You can double-check that the CorDapp is loaded in the log file ``/opt/corda/logs/node-<VM-NAME>.log``. This
       file will list installed apps at startup. Search for ``Loaded CorDapps`` in the logs.
 
@@ -91,7 +91,7 @@ couple of resources.
 
    .. code:: bash
 
-       wget http://downloads.corda.net/tools/explorer/ENT-3.1/corda-tools-explorer-3.1.jar
+       wget http://ci-artifactory.corda.r3cev.com/artifactory/corda-releases/net/corda/corda-tools-explorer/|corda_version|/corda-tools-explorer-|corda_version|.jar
 
    .. warning:: The Enterprise Node Explorer is incompatible with open source versions of Corda and vice versa as they currently
       use different serialisation schemes (Kryo vs AMQP).
@@ -100,7 +100,7 @@ couple of resources.
 
    .. code:: bash
 
-       java -jar corda-tools-explorer-3.1.jar
+       java -jar corda-tools-explorer-|corda_version|.jar
 
    .. image:: resources/explorer-login.png
 
@@ -132,7 +132,7 @@ your node, the Testnet notary and the network map listing all the counterparties
 Test issuance transaction
 -------------------------
 
-Now we are going to try and issue some cash to a 'bank'. Click on the ``Cash`` tab. 
+Now we are going to try and issue some cash to a 'bank'. Click on the ``Cash`` tab.
 
 .. image:: resources/explorer-cash-issue1.png
 

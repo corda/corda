@@ -55,7 +55,7 @@ Corda you're developing against:
 
 The current versions used are as follows:
 
-.. parsed-literal::
+.. code::
 
     ext.corda_release_version = '|corda_version|'
     ext.corda_gradle_plugins_version = '|gradle_plugins_version|'
