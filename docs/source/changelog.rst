@@ -20,7 +20,7 @@ Version 4.0
 * New configuration property ``database.initialiseAppSchema`` with values ``UPDATE``, ``VALIDATE`` and ``NONE``.
   The property controls the behavior of the Hibernate DDL generation. ``UPDATE`` performs an update of CorDapp schemas, while
   ``VALIDATE`` only verifies their integrity.  The property does not affect the node-specific DDL handling and
-   complements ``database.initialiseSchema`` to disable DDL handling altogether.
+  complements ``database.initialiseSchema`` to disable DDL handling altogether.
 
 * ``JacksonSupport.createInMemoryMapper`` was incorrectly marked as deprecated and is no longer so.
 
