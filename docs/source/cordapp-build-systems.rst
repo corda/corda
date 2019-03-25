@@ -113,7 +113,7 @@ Here is an overview of the various Corda dependencies:
 * ``corda-mock`` - A small library of useful mocks. Use if the classes are useful to you
 * ``corda-node`` - The Corda node. Do not depend on. Used only by the Corda fat JAR and indirectly in testing
   frameworks. (If your CorDapp _must_ depend on this for some reason then it should use the ``compileOnly``
-  configuration here - but please _don't_ do this if you can possibly avoid it!)
+  configuration here - but please don't do this if you can possibly avoid it!)
 * ``corda-node-api`` - The node API. Required to bootstrap a local network
 * ``corda-node-driver`` - Testing utility for programmatically starting nodes from JVM languages. Use for tests
 * ``corda-rpc`` - The Corda RPC client library. Used when writing an RPC client
