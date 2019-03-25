@@ -9,6 +9,9 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.ProgressTracker
 import net.corda.finance.contracts.asset.Cash
+import net.corda.finance.internal.CashConfigDataFlow
+import net.corda.finance.flows.CashException
+import net.corda.finance.flows.UnsupportedCurrencyException
 import net.corda.finance.flows.AbstractCashFlow.Companion.FINALISING_TX
 import net.corda.finance.flows.AbstractCashFlow.Companion.GENERATING_TX
 import net.corda.finance.flows.AbstractCashFlow.Companion.SIGNING_TX
@@ -39,6 +42,9 @@ class CashIssueFlow(private val amount: Amount<Currency>,
 
     @Suspendable
     override fun call(): AbstractCashFlow.Result {
+        var cashConfig = subFlow(CashConfigDataFlow())
+        if (!cashConfig.issuableCurrencies.contains(amount.token))
+            throw CashException("Unsupported currency requested", UnsupportedCurrencyException("Unable to issue currency ${amount.token} because the CordApp is not configured to support it."))
         progressTracker.currentStep = GENERATING_TX
         val builder = TransactionBuilder(notary)
         val issuer = ourIdentity.ref(issuerBankPartyRef)
