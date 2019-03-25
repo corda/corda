@@ -158,7 +158,7 @@ For further information about managing dependencies, see
 
 Signing the CorDapp JAR
 ^^^^^^^^^^^^^^^^^^^^^^^
-The ``cordapp`` plugin can sign the generated CorDapp JAR file using `JAR signing and verification tool <https://docs.oracle.com/javase/tutorial/deployment/jar/signing.html>`_.
+The ``cordapp`` plugin can sign the generated CorDapp JAR file using `JAR signing and verification tool <https://docs.oracle.com/javase/tutorial/deployment/jar/signing.html>`__.
 Signing the CorDapp enables its contract classes to use signature constraints instead of other types of the constraints,
 for constraints explanation refer to :doc:`api-contract-constraints`.
 By default the JAR file is signed by Corda development certificate.
@@ -253,7 +253,7 @@ Then the build process can set the value for *custom.sigalg* system property and
 
     ./gradlew -Dcustom.sigalg="SHA256withECDSA" -Dsigning.keystore="/path/to/keystore.jks" -Dsigning.alias="alias" -Dsigning.storepass="password" -Dsigning.keypass="password"
 
-To check if CorDapp is signed use `JAR signing and verification tool <https://docs.oracle.com/javase/tutorial/deployment/jar/verify.html>`_:
+To check if CorDapp is signed use `JAR signing and verification tool <https://docs.oracle.com/javase/tutorial/deployment/jar/verify.html>`__:
 
 .. sourcecode:: shell
 
