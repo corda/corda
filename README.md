@@ -9,7 +9,7 @@ Features
 Smart contracts that can be written in Java and other JVM languages
 Flow framework to manage communication and negotiation between participants
 Peer-to-peer network of nodes
-"Notary" infrastructure to validate uniqueness and sequencing of transactions without global broadcast
+ infrastructure to validate uniqueness and sequencing of transactions without global broadcast
 Enables the development and deployment of distributed apps called CorDapps
 Written in Kotlin, targeting the JVM
 Getting started
