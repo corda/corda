@@ -224,8 +224,8 @@ Building the example CorDapp
       ├── certificates
       ├── corda.jar              // The Corda node runtime
       ├── cordapps               // The node's CorDapps
-      │   ├── corda-finance-contracts-|corda_version|-corda.jar
-      │   ├── corda-finance-workflows-|corda_version|-corda.jar
+      │   ├── corda-finance-contracts-|corda_version|.jar
+      │   ├── corda-finance-workflows-|corda_version|.jar
       │   └── cordapp-example-0.1.jar
       ├── drivers
       ├── logs
