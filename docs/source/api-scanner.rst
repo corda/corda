@@ -36,7 +36,7 @@ broken Corda's API.
 How it works
 ------------
 
-The ``generateApi`` Gradle task writes a summary of Corda's public API into the file ``build/api/api-corda-<version>.txt``.
+The ``generateApi`` Gradle task writes a summary of Corda's public API into the file ``build/api/api-corda-|corda_version|.txt``.
 The ``.ci/check-api-changes.sh`` script then compares this file with the contents of ``.ci/api-current.txt``, which is a
 managed file within the Corda repository.
 

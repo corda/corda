@@ -224,8 +224,8 @@ Building the example CorDapp
       ├── certificates
       ├── corda.jar              // The Corda node runtime
       ├── cordapps               // The node's CorDapps
-      │   ├── corda-finance-contracts-4.0-corda.jar
-      │   ├── corda-finance-workflows-4.0-corda.jar
+      │   ├── corda-finance-contracts-|corda_version|-corda.jar
+      │   ├── corda-finance-workflows-|corda_version|-corda.jar
       │   └── cordapp-example-0.1.jar
       ├── drivers
       ├── logs
@@ -265,14 +265,14 @@ For each node, the ``runnodes`` script creates a node tab/window:
    / /___  /_/ / /  / /_/ / /_/ /          always say "Ah, Interesting!"
    \____/     /_/   \__,_/\__,_/
 
-   --- Corda Open Source corda-3.0 (4157c25) -----------------------------------------------
+   --- Corda Open Source corda-|corda_version| (4157c25) -----------------------------------------------
 
 
    Logs can be found in                    : /Users/joeldudley/Desktop/cordapp-example/workflows-kotlin/build/nodes/PartyA/logs
    Database connection url is              : jdbc:h2:tcp://localhost:59472/node
    Incoming connection address             : localhost:10005
    Listening on port                       : 10005
-   Loaded CorDapps                         : corda-finance-corda-3.0, cordapp-example-0.1, corda-core-corda-3.0
+   Loaded CorDapps                         : corda-finance-corda-|corda_version|, cordapp-example-0.1, corda-core-corda-|corda_version|
    Node for "PartyA" started up and registered in 38.59 sec
 
 
