@@ -35,7 +35,6 @@ Apache 2.0
 
 Acknowledgments: 
 
-
 YourKit supports open source projects with its full-featured Java Profiler.
 
 YourKit, LLC is the creator of YourKit Java Profiler and YourKit .NET Profiler, innovative and intelligent tools for profiling Java and .NET applications.
