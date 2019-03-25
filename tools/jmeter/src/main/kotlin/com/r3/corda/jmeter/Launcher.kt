@@ -56,10 +56,10 @@ class Launcher {
             logger.info("Starting JMeter in capsule mode from $capsuleDir")
             val capsuleDirPath = Paths.get(capsuleDir)
             // Add all JMeter and Corda jars onto the JMeter search_paths, adding any search paths given by the user
-            val searchPath = Files.list(capsuleDirPath).asSequence().filter {
+            val searchPath = Files.list(capsuleDirPath).asSequence().sorted().filter {
                 val filename = it.fileName.toString()
                 filename.endsWith(".jar") && (filename.contains("corda") || filename.contains("jmeter", true))
-            }.plus(listOf(cmdLine.additionalSearchPaths).filter { !it.isBlank() }).joinToString(";")
+            }.plus(listOf(cmdLine.additionalSearchPaths).filter(String::isNotBlank)).joinToString(";")
             logger.info("Generated search_paths = $searchPath")
 
             // Set the JMeter home as a property rather than command line arg, due to inconsistent code in JMeter.
