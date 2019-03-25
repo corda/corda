@@ -22,7 +22,8 @@ corda_substitutions = {
     "|java_version|" : "8u"+constants_properties_dict["java8MinUpdateVersion"],
     "|kotlin_version|" : constants_properties_dict["kotlinVersion"],
     "|gradle_plugins_version|" : constants_properties_dict["gradlePluginsVersion"],
-    "|quasar_version|" : constants_properties_dict["quasarVersion"]
+    "|quasar_version|" : constants_properties_dict["quasarVersion"],
+    "|platform_version|" : constants_properties_dict["platformVersion"]
 }
 
 def setup(app):

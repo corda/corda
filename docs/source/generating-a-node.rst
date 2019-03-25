@@ -9,13 +9,13 @@ A node can be created manually by creating a folder that contains the following 
 
 * The Corda Enterprise JAR
 
-    * The binary ``corda-VERSION_NUMBER.jar`` provided to your organisation.
+    * The binary ``corda-|corda_version|.jar`` provided to your organisation.
 
 * A node configuration file entitled ``node.conf``, configured as per :doc:`corda-configuration-file`
 
 * A folder entitled ``cordapps`` containing any CorDapp JARs you want the node to load
 
-* **Optional:** A webserver JAR entitled ``corda-webserver-VERSION_NUMBER.jar`` that will connect to the node via RPC
+* **Optional:** A webserver JAR entitled ``corda-webserver-|corda_version|.jar`` that will connect to the node via RPC
 
     * The (deprecated) default webserver is available to you for testing and should not be used in a production environment.
     * A Spring Boot alternative can be found here: https://github.com/corda/spring-webserver
@@ -26,7 +26,7 @@ The Cordform task
 -----------------
 Corda provides a gradle plugin called ``Cordform`` that allows you to automatically generate and configure a set of
 nodes for testing and demos. Here is an example ``Cordform`` task called ``deployNodes`` that creates three nodes, defined
-in the `Kotlin CorDapp Template <https://github.com/corda/cordapp-template-kotlin/blob/release-V3/build.gradle#L100>`_:
+in the `Kotlin CorDapp Template <https://github.com/corda/cordapp-template-kotlin/blob/release-V|platform_version|/build.gradle#L95>`_:
 
 .. sourcecode:: groovy
 
@@ -251,7 +251,7 @@ following line to each node's ``node.conf`` file:
 
 Where ``2222`` is the port you want to open to SSH into the shell.
 
-Below you can find the example task from the `IRS Demo <https://github.com/corda/corda/blob/release-V3.0/samples/irs-demo/cordapp/build.gradle#L111>`_ included in the samples directory of main Corda GitHub repository:
+Below you can find the example task from the `IRS Demo <https://github.com/corda/corda/blob/release/|platform_version|/samples/irs-demo/cordapp/build.gradle#L111>`_ included in the samples directory of main Corda GitHub repository:
 
 .. sourcecode:: groovy
 
