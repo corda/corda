@@ -6,7 +6,6 @@ import net.corda.cliutils.CliWrapperBase
 import net.corda.cliutils.CordaCliWrapper
 import net.corda.cliutils.CordaVersionProvider
 import net.corda.cliutils.ExitCodes
-import net.corda.cliutils.ShellConstants
 import net.corda.core.contracts.HashAttachmentConstraint
 import net.corda.core.crypto.Crypto
 import net.corda.core.internal.*
@@ -111,7 +110,7 @@ open class NodeStartupCli : CordaCliWrapper("corda", "Runs a Corda Node") {
             else -> startup.initialiseAndRun(cmdLineOptions, object : RunAfterNodeInitialisation {
                 val startupTime = System.currentTimeMillis()
                 override fun run(node: Node) = startup.startNode(node, startupTime)
-            })
+            }, requireCertificates = true)
         }
     }
 }
@@ -126,7 +125,7 @@ open class NodeStartup : NodeStartupLogging {
 
     lateinit var cmdLineOptions: SharedNodeCmdLineOptions
 
-    fun initialiseAndRun(cmdLineOptions: SharedNodeCmdLineOptions, afterNodeInitialisation: RunAfterNodeInitialisation): Int {
+    fun initialiseAndRun(cmdLineOptions: SharedNodeCmdLineOptions, afterNodeInitialisation: RunAfterNodeInitialisation, requireCertificates: Boolean = false): Int {
         this.cmdLineOptions = cmdLineOptions
 
         // Step 1. Check for supported Java version.
@@ -149,9 +148,9 @@ open class NodeStartup : NodeStartupLogging {
         // Step 5. Load and validate node configuration.
         val rawConfig = cmdLineOptions.rawConfiguration().doOnErrors(cmdLineOptions::logRawConfigurationErrors).optional ?: return ExitCodes.FAILURE
         val configuration = cmdLineOptions.parseConfiguration(rawConfig).doIfValid { logRawConfig(rawConfig) }.doOnErrors(::logConfigurationErrors).optional ?: return ExitCodes.FAILURE
-       
+
         // Step 6. Check if we can access the certificates directory
-        if (!canReadCertificatesDirectory(configuration.certificatesDirectory, configuration.devMode)) return ExitCodes.FAILURE
+        if (requireCertificates && !canReadCertificatesDirectory(configuration.certificatesDirectory, configuration.devMode)) return ExitCodes.FAILURE
 
         // Step 7. Configuring special serialisation requirements, i.e., bft-smart relies on Java serialization.
         if (attempt { banJavaSerialisation(configuration) }.doOnFailure(Consumer { error -> error.logAsUnexpected("Exception while configuring serialisation") }) !is Try.Success) return ExitCodes.FAILURE
