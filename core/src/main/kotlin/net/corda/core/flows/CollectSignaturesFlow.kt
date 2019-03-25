@@ -105,6 +105,9 @@ class CollectSignaturesFlow @JvmOverloads constructor(val partiallySignedTx: Sig
         // If the unsigned counterparties list is empty then we don't need to collect any more signatures here.
         if (unsigned.isEmpty()) return partiallySignedTx
 
+//        val sessionToKeyMapping = sessionsToCollectFrom.
+
+
         val partyToKeysMap = groupPublicKeysByWellKnownParty(serviceHub, unsigned)
         // Check that we have a session for all parties.  No more, no less.
         require(sessionsToCollectFrom.map { it.counterparty }.toSet() == partyToKeysMap.keys) {

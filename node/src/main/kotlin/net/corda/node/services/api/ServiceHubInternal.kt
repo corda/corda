@@ -5,6 +5,7 @@ import net.corda.core.context.InvocationContext
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.internal.concurrent.OpenFuture
@@ -15,6 +16,7 @@ import net.corda.core.node.ServiceHub
 import net.corda.core.node.StatesToRecord
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.NetworkMapCacheBase
+import net.corda.core.node.services.PartyInfo
 import net.corda.core.node.services.TransactionStorage
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.contextLogger
@@ -45,6 +47,8 @@ interface NetworkMapCacheInternal : NetworkMapCache, NetworkMapCacheBase {
 
     /** Removes a node from the local cache. */
     fun removeNode(node: NodeInfo)
+
+    fun getPartyInfo(name: CordaX500Name): PartyInfo?
 }
 
 interface ServiceHubInternal : ServiceHub {

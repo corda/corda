@@ -110,6 +110,19 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
         return null
     }
 
+    override fun getPartyInfo(name: CordaX500Name): PartyInfo? {
+        val nodes = getNodesByLegalName(name)
+        val newestNode = nodes.first()
+
+        val allNodesWithIdentical = nodes.filter { it.legalIdentities.first() == newestNode.legalIdentities.first() }
+
+        return if (allNodesWithIdentical.size > 1){
+            PartyInfo.DistributedNode(allNodesWithIdentical.first().legalIdentities.first())
+        }else{
+            PartyInfo.SingleNode(newestNode.legalIdentities.first(), newestNode.addresses)
+        }
+    }
+
     override fun getNodeByLegalName(name: CordaX500Name): NodeInfo? {
         val nodeInfos = getNodesByLegalName(name)
         return when (nodeInfos.size) {
