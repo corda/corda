@@ -1,8 +1,9 @@
 Design Docs
 ===========
 
-.. toctree::
+.. conditional-toctree::
    :maxdepth: 1
+   :if_tag: htmlmode
 
    design-review-process.md
    certificate-hierarchies/design.md
