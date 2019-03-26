@@ -15,3 +15,7 @@ class HostedParty(override val host: AbstractParty, owningKey: PublicKey) : Abst
         return PartyAndReference(this, bytes)
     }
 }
+
+fun AbstractParty.asHostFor(publicKey: PublicKey): HostedParty {
+    return HostedParty(this, publicKey)
+}
