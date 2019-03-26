@@ -142,6 +142,7 @@ class RetryFlowMockTest {
         val alice = TestIdentity(CordaX500Name.parse("L=London,O=Alice Ltd,OU=Trade,C=GB")).party
         val records = nodeA.smm.flowHospital.track().updates.toBlocking().toIterable().iterator()
         val flow: FlowStateMachine<Unit> = nodeA.services.startFlow(FinalityHandler(object : FlowSession() {
+            override val sessionOwningKey = alice.owningKey
             override val counterparty = alice
 
             override fun getCounterpartyFlowInfo(maySkipCheckpoint: Boolean): FlowInfo {
