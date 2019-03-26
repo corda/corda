@@ -10,6 +10,7 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
 import net.corda.core.cordapp.Cordapp
 import net.corda.core.flows.*
+import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
 import net.corda.core.serialization.internal.CheckpointSerializationContext
@@ -200,7 +201,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                 "Transaction context is missing. This might happen if a suspendable method is not annotated with @Suspendable annotation."
             }
         } else {
-            require(contextTransactionOrNull == null){"Transaction is marked as not present, but is not null"}
+            require(contextTransactionOrNull == null) { "Transaction is marked as not present, but is not null" }
         }
     }
 
@@ -240,7 +241,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             suspend(FlowIORequest.WaitForSessionConfirmations, maySkipCheckpoint = true)
             Try.Success(result)
         } catch (t: Throwable) {
-            if(t.isUnrecoverable()) {
+            if (t.isUnrecoverable()) {
                 logger.error("Caught unrecoverable error from flow. Forcibly terminating the JVM, this might leave resources open, and most likely will.", t)
                 Fiber.sleep(Duration.ofSeconds(10).toMillis()) // To allow async logger to flush.
                 Runtime.getRuntime().halt(1)
@@ -326,9 +327,9 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     }
 
     @Suspendable
-    override fun initiateFlow(party: Party): FlowSession {
+    override fun initiateFlow(wellKnown: Party, requested: AbstractParty?): FlowSession {
         val resume = processEventImmediately(
-                Event.InitiateFlow(party),
+                Event.InitiateFlow(wellKnownParty = wellKnown, requestedParty = requested),
                 isDbTransactionOpenOnEntry = true,
                 isDbTransactionOpenOnExit = true
         ) as FlowContinuation.Resume
@@ -412,7 +413,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                     isDbTransactionOpenOnEntry = true,
                     isDbTransactionOpenOnExit = false
             )
-            require(continuation == FlowContinuation.ProcessEvents){"Expected a continuation of type ${FlowContinuation.ProcessEvents}, found $continuation "}
+            require(continuation == FlowContinuation.ProcessEvents) { "Expected a continuation of type ${FlowContinuation.ProcessEvents}, found $continuation " }
             unpark(SERIALIZER_BLOCKER)
         }
         return uncheckedCast(processEventsUntilFlowIsResumed(

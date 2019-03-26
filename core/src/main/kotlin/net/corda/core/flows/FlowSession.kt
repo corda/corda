@@ -4,6 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.DoNotImplement
 import net.corda.core.identity.Party
 import net.corda.core.utilities.UntrustworthyData
+import java.security.PublicKey
 
 /**
  *
@@ -49,6 +50,7 @@ abstract class FlowSession {
      *   [counterparty] is the same Party as the one passed to that function.
      */
     abstract val counterparty: Party
+    abstract val sessionOwningKey: PublicKey
 
     /**
      * Returns a [FlowInfo] object describing the flow [counterparty] is using. With [FlowInfo.flowVersion] it

@@ -7,15 +7,17 @@ import net.corda.core.flows.FlowSession
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowIORequest
 import net.corda.core.internal.FlowStateMachine
+import net.corda.core.internal.checkPayloadIs
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.UntrustworthyData
-import net.corda.core.internal.checkPayloadIs
+import java.security.PublicKey
 
 class FlowSessionImpl(
         override val counterparty: Party,
+        override val sessionOwningKey: PublicKey,
         val sourceSessionId: SessionId
 ) : FlowSession() {
 
