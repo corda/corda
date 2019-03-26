@@ -15,12 +15,14 @@ import net.corda.node.services.FinalityHandler
 import net.corda.node.services.messaging.Message
 import net.corda.node.services.persistence.DBTransactionStorage
 import net.corda.nodeapi.internal.persistence.contextTransaction
+import net.corda.testing.common.internal.eventually
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.node.internal.*
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.hibernate.exception.ConstraintViolationException
 import org.junit.After
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.sql.SQLException
@@ -99,10 +101,10 @@ class RetryFlowMockTest {
         })
         val count = 10000 // Lots of iterations so the flow keeps going long enough
         nodeA.startFlow(KeepSendingFlow(count, partyB))
-        while (messagesSent.size < 1) {
-            Thread.sleep(10)
+        eventually(waitBetween = Duration.ofMillis(10)) {
+            assertTrue(messagesSent.isNotEmpty())
+            assertNotNull(messagesSent.first().senderUUID)
         }
-        assertNotNull(messagesSent.first().senderUUID)
         nodeA = mockNet.restartNode(nodeA)
         // This is a bit racy because restarting the node actually starts it, so we need to make sure there's enough iterations we get here with flow still going.
         nodeA.setMessagingServiceSpy(object : MessagingServiceSpy() {
@@ -113,8 +115,8 @@ class RetryFlowMockTest {
         })
         // Now short circuit the iterations so the flow finishes soon.
         KeepSendingFlow.count.set(count - 2)
-        while (nodeA.smm.allStateMachines.isNotEmpty()) {
-            Thread.sleep(10)
+        eventually(waitBetween = Duration.ofMillis(10)) {
+            assertTrue(nodeA.smm.allStateMachines.isEmpty())
         }
         assertNull(messagesSent.last().senderUUID)
     }
