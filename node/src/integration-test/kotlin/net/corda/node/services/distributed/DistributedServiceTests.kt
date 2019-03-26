@@ -25,6 +25,9 @@ import net.corda.testing.node.internal.DummyClusterSpec
 import net.corda.testing.node.internal.FINANCE_CORDAPPS
 import net.corda.testing.node.internal.cordappWithPackages
 import org.assertj.core.api.Assertions.assertThat
+import org.hamcrest.CoreMatchers.`is`
+import org.hamcrest.CoreMatchers.equalTo
+import org.junit.Assert
 import org.junit.Test
 import rx.Observable
 import java.util.*
@@ -154,7 +157,7 @@ class DistributedServiceTests {
 
         // The distribution of requests should be very close to sg like 16/17/17 as by default artemis does round robin
         println("Notarisation distribution: $notarisationsPerNotary")
-        require(notarisationsPerNotary.size == 3)
+        Assert.assertThat(notarisationsPerNotary.size, `is`(equalTo(3)))
         // We allow some leeway for artemis as it doesn't always produce perfect distribution
         require(notarisationsPerNotary.values.all { it > 10 })
     }

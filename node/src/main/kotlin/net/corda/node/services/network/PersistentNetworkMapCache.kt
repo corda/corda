@@ -114,10 +114,10 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
         val nodes = getNodesByLegalName(name)
         val newestNode = nodes.first()
 
-        val allNodesWithIdentical = nodes.filter { it.legalIdentities.first() == newestNode.legalIdentities.first() }
+        val allNodesWithIdentical = nodes.filter { it.legalIdentities.last() == newestNode.legalIdentities.last() }
 
         return if (allNodesWithIdentical.size > 1){
-            PartyInfo.DistributedNode(allNodesWithIdentical.first().legalIdentities.first())
+            PartyInfo.DistributedNode(newestNode.legalIdentities.last())
         }else{
             PartyInfo.SingleNode(newestNode.legalIdentities.first(), newestNode.addresses)
         }
