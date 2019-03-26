@@ -1,6 +1,11 @@
 Vault
 =====
 
+.. toctree::
+   :maxdepth: 1
+
+   soft-locking.rst
+
 The vault contains data extracted from the ledger that is considered relevant to the node’s owner, stored in a relational model
 that can be easily queried and worked with.
 
