@@ -1,10 +1,8 @@
 package net.corda.serialization.internal.model
 
-import net.corda.core.context.FeatureFlag
+import net.corda.core.internal.context.FeatureFlag
 import net.corda.core.serialization.SerializationContext
 import net.corda.serialization.internal.carpenter.*
-import java.io.NotSerializableException
-import java.lang.ClassCastException
 import java.lang.reflect.Type
 
 /**

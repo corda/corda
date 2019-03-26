@@ -1,4 +1,4 @@
-package net.corda.core.context
+package net.corda.core.internal.context
 
 import net.corda.core.KeepForDJVM
 import net.corda.core.StubOutForDJVM
@@ -98,8 +98,8 @@ object FeatureFlag  {
      * which can wrap either a [ThreadLocal] or a plain value.
      */
     private interface TestValueHolder {
-        operator fun getValue(featureFlagValue: FeatureFlag.FeatureFlagValue, property: KProperty<*>): Boolean?
-        operator fun setValue(featureFlagValue: FeatureFlag.FeatureFlagValue, property: KProperty<*>, b: Boolean?)
+        operator fun getValue(featureFlagValue: FeatureFlagValue, property: KProperty<*>): Boolean?
+        operator fun setValue(featureFlagValue: FeatureFlagValue, property: KProperty<*>, b: Boolean?)
     }
 
     /**
@@ -111,8 +111,8 @@ object FeatureFlag  {
             } catch (e: UnsupportedOperationException) {
                 object : TestValueHolder {
                     private var value: Boolean? = null
-                    override operator fun getValue(featureFlagValue: FeatureFlag.FeatureFlagValue, property: KProperty<*>): Boolean? = value
-                    override operator fun setValue(featureFlagValue: FeatureFlag.FeatureFlagValue, property: KProperty<*>, b: Boolean?) {
+                    override operator fun getValue(featureFlagValue: FeatureFlagValue, property: KProperty<*>): Boolean? = value
+                    override operator fun setValue(featureFlagValue: FeatureFlagValue, property: KProperty<*>, b: Boolean?) {
                         value = b
                     }
                 }
@@ -122,8 +122,8 @@ object FeatureFlag  {
     private fun getThreadLocalTestValueHolder(): TestValueHolder {
         return object : TestValueHolder {
             private var threadLocal = ThreadLocal<Boolean>()
-            override operator fun getValue(featureFlagValue: FeatureFlag.FeatureFlagValue, property: KProperty<*>): Boolean? = threadLocal.get()
-            override operator fun setValue(featureFlagValue: FeatureFlag.FeatureFlagValue, property: KProperty<*>, b: Boolean?) {
+            override operator fun getValue(featureFlagValue: FeatureFlagValue, property: KProperty<*>): Boolean? = threadLocal.get()
+            override operator fun setValue(featureFlagValue: FeatureFlagValue, property: KProperty<*>, b: Boolean?) {
                 threadLocal.set(b)
             }
         }

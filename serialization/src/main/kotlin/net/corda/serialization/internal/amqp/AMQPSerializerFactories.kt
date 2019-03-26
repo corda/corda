@@ -2,7 +2,6 @@
 
 package net.corda.serialization.internal.amqp
 
-import net.corda.core.context.FeatureFlag
 import net.corda.core.serialization.SerializationContext
 import net.corda.serialization.internal.carpenter.ClassCarpenterImpl
 

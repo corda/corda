@@ -1,6 +1,6 @@
 package net.corda.serialization.internal.amqp
 
-import net.corda.core.context.FeatureFlag
+import net.corda.core.internal.context.FeatureFlag
 import net.corda.core.crypto.Crypto.generateKeyPair
 import net.corda.core.crypto.SignedData
 import net.corda.core.crypto.sign
@@ -10,7 +10,6 @@ import net.corda.core.serialization.ConstructorForDeserialization
 import net.corda.core.serialization.DeprecatedConstructorForDeserialization
 import net.corda.core.serialization.SerializableCalculatedProperty
 import net.corda.core.serialization.SerializedBytes
-import net.corda.serialization.internal.AllWhitelist
 import net.corda.serialization.internal.amqp.testutils.*
 import net.corda.testing.common.internal.ProjectStructure.projectRootDir
 import net.corda.testing.core.DUMMY_NOTARY_NAME
@@ -23,7 +22,6 @@ import java.net.URI
 import java.time.Instant
 import kotlin.test.assertEquals
 import net.corda.serialization.internal.amqp.custom.InstantSerializer
-import net.corda.serialization.internal.carpenter.ClassCarpenterImpl
 import org.junit.Assert.fail
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue

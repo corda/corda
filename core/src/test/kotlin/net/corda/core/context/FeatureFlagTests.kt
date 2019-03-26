@@ -1,5 +1,6 @@
 package net.corda.core.context
 
+import net.corda.core.internal.context.FeatureFlag
 import org.junit.Test
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
