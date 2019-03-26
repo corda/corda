@@ -17,7 +17,7 @@ A node can be created manually by creating a folder that contains the following 
 
 * **Optional:** A webserver JAR entitled ``corda-webserver-|corda_version|.jar`` that will connect to the node via RPC
 
-    * The (deprecated) default webserver can be downloaded from http://r3.bintray.com/corda/net/corda/corda-webserver/ (under /|corda_version|/corda-webserver-|corda_version|.jar)
+    * The (deprecated) default webserver is available to you for testing and should not be used in a production environment.
     * A Spring Boot alternative can be found here: https://github.com/corda/spring-webserver
 
 The remaining files and folders described in :doc:`node-structure` will be generated at runtime.

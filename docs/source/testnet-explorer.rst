@@ -54,6 +54,19 @@ couple of resources.
 
        sudo cp /home/<USER>/corda-finance-*-|corda_version|.jar /opt/corda/cordapps/
 
+#. Create a symbolic link to the shared database driver folder
+
+   .. code:: bash
+
+       sudo ln -s /opt/corda/drivers /opt/corda/plugins
+
+#. Execute the database migration. This is required so that the node database has the right schema for finance transactions defined in the installed CorDapp.
+
+   .. code:: bash
+
+       cd /opt/corda
+       sudo java -jar /home/<USER>/corda-tools-database-manager-|corda_version|.jar --base-directory /opt/corda --execute-migration
+
 #. Run the following to create a config file for the finance CorDapp:
 
    .. code:: bash
