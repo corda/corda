@@ -317,6 +317,7 @@ open class Node(configuration: NodeConfiguration,
         network.closeOnStop()
         // Due to how Artemis treats HA client connections, special behaviour is required if using an HA locator (i.e. at least one back-up address)
         var retry: Boolean
+        var delay = 1000L
         do {
             retry = false
             try {
@@ -332,9 +333,11 @@ open class Node(configuration: NodeConfiguration,
                     is ActiveMQNotConnectedException -> {
                         if (configuration.enterpriseConfiguration.messagingServerBackupAddresses.isNotEmpty() &&
                                 configuration.enterpriseConfiguration.messagingServerConnectionConfiguration == MessagingServerConnectionConfiguration.CONTINUOUS_RETRY) {
-                            log.warn("Failed to connect to any messaging servers. Retrying.", e)
+                            log.warn("Failed to connect to any messaging servers. Retrying.")
                             // Clean-up any created bits before retry-ing
                             network.stop()
+                            Thread.sleep(delay)
+                            delay = Math.min(2L * delay, 60000L)
                             retry = true
                         } else { throw e } // Preserve old behaviour
                     }
