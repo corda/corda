@@ -63,9 +63,6 @@ object DefaultWhitelist : SerializationWhitelist {
 
                     // Implementation of X509Certificate.
                     X509CertImpl::class.java,
-                    CRLReason::class.java,
-
-                    // used in Vault Query criteria comparators (see QueryCriteriaUtils.Builder)
-                    java.lang.Comparable::class.java
+                    CRLReason::class.java
             )
 }

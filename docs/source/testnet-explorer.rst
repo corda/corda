@@ -44,18 +44,15 @@ couple of resources.
 
    .. code:: bash
 
-       wget https://ci-artifactory.corda.r3cev.com/artifactory/corda-releases/net/corda/corda-finance-contracts-|corda_version|-corda/corda-finance-contracts-|corda_version|-corda.jar
-            https://ci-artifactory.corda.r3cev.com/artifactory/corda-releases/net/corda/corda-finance-workflows-|corda_version|-corda/corda-finance-workflows-|corda_version|-corda.jar
-            http://downloads.corda.net/tools/database-manager/corda-tools-database-manager-|corda_version|.jar
-
-   Copy the downloads from ``/home/<USER>/`` to ``/opt/corda/cordapps/``.
+       wget https://ci-artifactory.corda.r3cev.com/artifactory/corda-releases/net/corda/corda-finance-contracts/|corda_version|/corda-finance-contracts-|corda_version|.jar
+       wget https://ci-artifactory.corda.r3cev.com/artifactory/corda-releases/net/corda/corda-finance-workflows/|corda_version|/corda-finance-workflows-|corda_version|.jar
 
    This is required to run some flows to check your connections, and to issue/transfer cash to counterparties. Copy it to
    the Corda installation location:
 
    .. code:: bash
 
-       sudo cp /home/<USER>/corda-finance-*.jar /opt/corda/cordapps/
+       sudo cp /home/<USER>/corda-finance-*-|corda_version|.jar /opt/corda/cordapps/
 
 #. Create a symbolic link to the shared database driver folder
 
@@ -74,7 +71,7 @@ couple of resources.
 
    .. code:: bash
 
-       echo "issuableCurrencies = [ USD ]" > /opt/corda/cordapps/config/corda-finance-|corda_version|-corda.conf
+       echo "issuableCurrencies = [ USD ]" > /opt/corda/cordapps/config/corda-finance-|corda_version|.conf
 
 #. Restart the Corda node:
 
@@ -91,7 +88,7 @@ couple of resources.
 
    .. code:: bash
 
-       wget http://ci-artifactory.corda.r3cev.com/artifactory/corda-releases/net/corda/corda-tools-explorer/|corda_version|/corda-tools-explorer-|corda_version|.jar
+       http://ci-artifactory.corda.r3cev.com/artifactory/corda-releases/net/corda/corda-tools-explorer/|corda_version|/corda-tools-explorer-|corda_version|.jar
 
    .. warning:: The Enterprise Node Explorer is incompatible with open source versions of Corda and vice versa as they currently
       use different serialisation schemes (Kryo vs AMQP).
