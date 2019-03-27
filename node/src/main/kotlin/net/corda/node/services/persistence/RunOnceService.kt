@@ -169,9 +169,11 @@ class RunOnceService(private val database: CordaPersistence, private val machine
             if (machineName == mutualExclusion.machineName) {
                 log.error("$machineName PID: $pid failed mutual exclusion update. Check if another node is running")
             } else {
-                log.error("$machineName PID: $pid failed to become the master node. " +
-                        "Check if ${mutualExclusion.machineName}, PID: ${mutualExclusion.pid} is still running. " +
-                        "Try again in ${Duration.ofMillis(waitInterval)}")
+                log.warn("$machineName PID: $pid failed to become the master node as an already running master node has been detected. " +
+                        "This node should not be started while there is an already running master node. " +
+                        "${mutualExclusion.machineName}, PID: ${mutualExclusion.pid} is the detected master node. " +
+                        "You may check if the master node is still running. " +
+                        "Try again in ${Duration.ofMillis(waitInterval).seconds} seconds.")
             }
             throw RunOnceServiceWaitIntervalSleepException()
         }
