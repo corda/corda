@@ -684,6 +684,7 @@ class MultiThreadedStateMachineManager(
     ): Flow {
         val flowState = checkpoint.flowState
         val resultFuture = openFuture<Any?>()
+        traceWithCheckpoint("CreateFlowFromCheckpoint", id, checkpoint)
         val fiber = when (flowState) {
             is FlowState.Unstarted -> {
                 val logic = flowState.frozenFlowLogic.checkpointDeserialize(context = checkpointSerializationContext!!)
@@ -745,6 +746,7 @@ class MultiThreadedStateMachineManager(
             val flowLogic = flow.fiber.logic
             if (flowLogic.isEnabledTimedFlow()) scheduleTimeout(id)
             flow.fiber.scheduleEvent(Event.DoRemainingWork)
+            traceWithCheckpoint("AddAndStartFlow", id, checkpoint)
             when (checkpoint.flowState) {
                 is FlowState.Unstarted -> {
                     flow.fiber.start()
@@ -848,5 +850,9 @@ class MultiThreadedStateMachineManager(
                 }
             }
         }
+    }
+
+    private fun traceWithCheckpoint(action: String, id: StateMachineRunId, checkpoint: Checkpoint) {
+        detailedLogger.trace { "$action(flowId=${id.uuid};flowState=${checkpoint.flowState};session=${checkpoint.sessions};subFlowStack=${checkpoint.subFlowStack};errorState=${checkpoint.errorState};numberOfSuspends=${checkpoint.numberOfSuspends})" }
     }
 }
