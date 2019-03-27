@@ -98,9 +98,9 @@ language = None
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns = []
+exclude_patterns = ['./design/README.md']
 if tags.has('pdfmode'):
-    exclude_patterns = ['./design']
+    exclude_patterns = ['./design', './design/README.md']
 
 # The reST default role (used for this markup: `text`) to use for all
 # documents.

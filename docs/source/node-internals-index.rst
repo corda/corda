@@ -5,5 +5,4 @@ Node internals
    :maxdepth: 1
 
    node-services
-   vault
    messaging

@@ -87,7 +87,7 @@ formats for accessing MBeans, and provides client libraries to work with that pr
 
 Here are a few ways to build dashboards and extract monitoring data for a node:
 
-* `hawtio <http://hawt.io>`_ is a web based console that connects directly to JVM's that have been instrumented with a
+* `Hawtio <http://hawt.io>`_ is a web based console that connects directly to JVM's that have been instrumented with a
   jolokia agent. This tool provides a nice JMX dashboard very similar to the traditional JVisualVM / JConsole MBbeans original.
 * `JMX2Graphite <https://github.com/logzio/jmx2graphite>`_ is a tool that can be pointed to /monitoring/json and will
   scrape the statistics found there, then insert them into the Graphite monitoring tool on a regular basis. It runs
@@ -135,7 +135,7 @@ When starting Corda nodes using the 'driver DSL', you should see a startup messa
 **Starting out-of-process Node USA Bank Corp, debug port is not enabled, jolokia monitoring port is 7005 {}**
 
 
-The following diagram illustrates Corda flow metrics visualized using `hawtio <https://hawt.io>`_ :
+The following diagram illustrates Corda flow metrics visualized using hawtio:
 
 .. image:: resources/hawtio-jmx.png
 
@@ -178,9 +178,8 @@ Take a simple node config that wishes to protect the node cryptographic stores:
 By delegating to a password store, and using `command substitution` it is possible to ensure that sensitive passwords never appear in plain text.
 The below examples are of loading Corda with the KEY_PASS and TRUST_PASS variables read from a program named ``corporatePasswordStore``.
 
-
 Bash
-~~~~
+++++
 
 .. sourcecode:: shell
 
@@ -188,9 +187,8 @@ Bash
 
 .. warning:: If this approach is taken, the passwords will appear in the shell history.
 
-
 Windows PowerShell
-~~~~~~~~~~~~~~~~~~
+++++++++++++++++++
 
 .. sourcecode:: shell
 
