@@ -119,7 +119,8 @@ data class NetworkParameters(
                 modifiedTime = modifiedTime,
                 epoch = epoch,
                 whitelistedContractImplementations = whitelistedContractImplementations,
-                eventHorizon = eventHorizon
+                eventHorizon = eventHorizon,
+                packageOwnership = packageOwnership
         )
     }
 
@@ -143,7 +144,8 @@ data class NetworkParameters(
                 modifiedTime = modifiedTime,
                 epoch = epoch,
                 whitelistedContractImplementations = whitelistedContractImplementations,
-                eventHorizon = eventHorizon
+                eventHorizon = eventHorizon,
+                packageOwnership = packageOwnership
         )
     }
 
