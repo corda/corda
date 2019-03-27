@@ -73,7 +73,7 @@ class LinearPointer(override val pointer: UniqueIdentifier) : StatePointer {
 }
 ```
 
-#### Bi-directional link
+### Bi-directional link
 
 Symmetrical relationships can be modelled by embedding a `LinearPointer` in the pointed-to `LinearState` which points in the "opposite" direction. **Note:** this can only work if both states are `LinearState`s.
 
@@ -81,7 +81,7 @@ Symmetrical relationships can be modelled by embedding a `LinearPointer` in the 
 
 It is important to note that this design only standardises a pattern which is currently possible with the platform. In other words, this design does not enable anything new.
 
-#### Tokens
+### Tokens
 
 Uncoupling token type definitions from the notion of ownership. Using the `LinearPointer`, `Token` states can include an `Amount` of some pointed-to type. The pointed-to type can evolve independently from the `Token` state which should just be concerned with the question of ownership.
 

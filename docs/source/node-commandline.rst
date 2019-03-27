@@ -1,5 +1,5 @@
 Node command-line options
-====================
+=========================
 
 The node can optionally be started with the following command-line options:
 

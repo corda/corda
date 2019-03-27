@@ -7,7 +7,7 @@ import net.corda.djvm.code.ClassMutator
 import net.corda.djvm.code.EmitterModule
 import net.corda.djvm.code.emptyAsNull
 import net.corda.djvm.references.Member
-import net.corda.djvm.source.AbstractSourceClassLoader
+import net.corda.djvm.source.SourceClassLoader
 import net.corda.djvm.utilities.loggerFor
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassVisitor
@@ -22,7 +22,7 @@ import org.objectweb.asm.MethodVisitor
  */
 open class ClassRewriter(
         private val configuration: SandboxConfiguration,
-        private val classLoader: AbstractSourceClassLoader
+        private val classLoader: SourceClassLoader
 ) {
     private val analysisConfig = configuration.analysisConfiguration
 

@@ -55,7 +55,7 @@ Corda you're developing against:
 
 The current versions used are as follows:
 
-.. parsed-literal::
+.. code::
 
     ext.corda_release_version = '|corda_version|'
     ext.corda_gradle_plugins_version = '|gradle_plugins_version|'
@@ -113,7 +113,7 @@ Here is an overview of the various Corda dependencies:
 * ``corda-mock`` - A small library of useful mocks. Use if the classes are useful to you
 * ``corda-node`` - The Corda node. Do not depend on. Used only by the Corda fat JAR and indirectly in testing
   frameworks. (If your CorDapp _must_ depend on this for some reason then it should use the ``compileOnly``
-  configuration here - but please _don't_ do this if you can possibly avoid it!)
+  configuration here - but please don't do this if you can possibly avoid it!)
 * ``corda-node-api`` - The node API. Required to bootstrap a local network
 * ``corda-node-driver`` - Testing utility for programmatically starting nodes from JVM languages. Use for tests
 * ``corda-rpc`` - The Corda RPC client library. Used when writing an RPC client
@@ -158,7 +158,7 @@ For further information about managing dependencies, see
 
 Signing the CorDapp JAR
 ^^^^^^^^^^^^^^^^^^^^^^^
-The ``cordapp`` plugin can sign the generated CorDapp JAR file using `JAR signing and verification tool <https://docs.oracle.com/javase/tutorial/deployment/jar/signing.html>`_.
+The ``cordapp`` plugin can sign the generated CorDapp JAR file using `JAR signing and verification tool <https://docs.oracle.com/javase/tutorial/deployment/jar/signing.html>`__.
 Signing the CorDapp enables its contract classes to use signature constraints instead of other types of the constraints,
 for constraints explanation refer to :doc:`api-contract-constraints`.
 By default the JAR file is signed by Corda development certificate.
@@ -253,7 +253,7 @@ Then the build process can set the value for *custom.sigalg* system property and
 
     ./gradlew -Dcustom.sigalg="SHA256withECDSA" -Dsigning.keystore="/path/to/keystore.jks" -Dsigning.alias="alias" -Dsigning.storepass="password" -Dsigning.keypass="password"
 
-To check if CorDapp is signed use `JAR signing and verification tool <https://docs.oracle.com/javase/tutorial/deployment/jar/verify.html>`_:
+To check if CorDapp is signed use `JAR signing and verification tool <https://docs.oracle.com/javase/tutorial/deployment/jar/verify.html>`__:
 
 .. sourcecode:: shell
 
@@ -522,6 +522,13 @@ For a CorDapp that contains flows and/or services we specify the `workflow` tag:
         }
 
 .. note:: It is possible, but *not recommended*, to include everything in a single CorDapp jar and use both the ``contract`` and ``workflow`` Gradle plugin tags.
+
+.. warning:: Contract states may optionally specify a custom schema mapping (by implementing the ``Queryable`` interface) in its *contracts* JAR.
+  However, any associated database schema definition scripts (eg. Liquibase change set XML files) must currently be packaged in the *flows* JAR.
+  This is because the node requires access to these schema definitions upon start-up (*contract* JARs are now loaded in a separate attachments classloader).
+  This split also caters for scenarios where the same *contract* CorDapp may wish to target different database providers (and thus, the associated schema DDL may vary
+  to use native features of a particular database). The finance CorDapp provides an illustration of this packaging convention.
+  Future versions of Corda will de-couple this custom schema dependency to remove this anomaly.
 
 .. _cordapp_contract_attachments_ref:
 

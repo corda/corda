@@ -27,6 +27,7 @@ import net.corda.nodeapi.internal.network.NETWORK_PARAMS_UPDATE_FILE_NAME
 import net.corda.nodeapi.internal.network.NodeInfoFilesCopier
 import net.corda.nodeapi.internal.network.SignedNetworkParameters
 import net.corda.nodeapi.internal.network.verifiedNetworkParametersCert
+import net.corda.testing.common.internal.eventually
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.*
 import net.corda.testing.internal.DEV_ROOT_CA
@@ -38,6 +39,7 @@ import net.corda.testing.node.makeTestIdentityService
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.After
+import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -45,6 +47,7 @@ import rx.schedulers.TestScheduler
 import java.io.IOException
 import java.net.URL
 import java.security.KeyPair
+import java.time.Duration
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.*
@@ -126,9 +129,8 @@ class NetworkMapUpdaterTest {
         networkMapClient.publish(signedNodeInfo2)
 
         assertThat(nodeReadyFuture).isNotDone()
-        // TODO: Remove sleep in unit test.
-        Thread.sleep(2L * cacheExpiryMs)
-        verify(networkMapCache, times(2)).addNode(any())
+
+        eventually { verify(networkMapCache, times(2)).addNode(any()) }
         verify(networkMapCache, times(1)).addNode(nodeInfo1)
         verify(networkMapCache, times(1)).addNode(nodeInfo2)
         assertThat(nodeReadyFuture).isDone()
@@ -137,10 +139,9 @@ class NetworkMapUpdaterTest {
         networkMapClient.publish(signedNodeInfo3)
         networkMapClient.publish(signedNodeInfo4)
         advanceTime()
-        // TODO: Remove sleep in unit test.
-        Thread.sleep(2L * cacheExpiryMs)
+
         // 4 node info from network map, and 1 from file.
-        verify(networkMapCache, times(5)).addNode(any())
+        eventually { verify(networkMapCache, times(5)).addNode(any()) }
         verify(networkMapCache, times(1)).addNode(nodeInfo3)
         verify(networkMapCache, times(1)).addNode(nodeInfo4)
         verify(networkMapCache, times(1)).addNode(fileNodeInfoAndSigned.nodeInfo)
@@ -164,20 +165,17 @@ class NetworkMapUpdaterTest {
 
         startUpdater()
         advanceTime()
-        // TODO: Remove sleep in unit test.
-        Thread.sleep(2L * cacheExpiryMs)
 
         // 4 node info from network map, and 1 from file.
-        verify(networkMapCache, times(5)).addNode(any())
+        eventually { verify(networkMapCache, times(5)).addNode(any()) }
         verify(networkMapCache, times(1)).addNode(fileNodeInfoAndSigned.nodeInfo)
 
         // Test remove node.
         listOf(nodeInfo1, nodeInfo2, nodeInfo3, nodeInfo4).forEach {
             server.removeNodeInfo(it)
         }
-        // TODO: Remove sleep in unit test.
-        Thread.sleep(2L * cacheExpiryMs)
-        verify(networkMapCache, times(4)).removeNode(any())
+
+        eventually { verify(networkMapCache, times(4)).removeNode(any()) }
         verify(networkMapCache, times(1)).removeNode(nodeInfo1)
         verify(networkMapCache, times(1)).removeNode(nodeInfo2)
         verify(networkMapCache, times(1)).removeNode(nodeInfo3)
@@ -237,13 +235,12 @@ class NetworkMapUpdaterTest {
         val newParameters = testNetworkParameters(epoch = 314, maxMessageSize = 10485761)
         server.scheduleParametersUpdate(newParameters, "Test update", Instant.MIN)
         startUpdater()
-        // TODO: Remove sleep in unit test.
-        Thread.sleep(2L * cacheExpiryMs)
+
         val newHash = newParameters.serialize().hash
         val updateFile = baseDir / NETWORK_PARAMS_UPDATE_FILE_NAME
-        assert(!updateFile.exists()) { "network parameters should not be auto accepted" }
+        assertNever("network parameters should not be auto accepted") { updateFile.exists() }
         updater!!.acceptNewNetworkParameters(newHash) { it.serialize().sign(ourKeyPair) }
-        verify(networkParametersStorage, times(1)).saveParameters(any())
+        eventually { verify(networkParametersStorage, times(1)).saveParameters(any()) }
         val signedNetworkParams = updateFile.readObject<SignedNetworkParameters>()
         val paramsFromFile = signedNetworkParams.verifiedNetworkParametersCert(DEV_ROOT_CA.certificate)
         assertEquals(newParameters, paramsFromFile)
@@ -258,14 +255,15 @@ class NetworkMapUpdaterTest {
                 whitelistedContractImplementations = mapOf("key" to listOf(SecureHash.randomSHA256())))
         server.scheduleParametersUpdate(newParameters, "Test update", Instant.MIN)
         startUpdater()
-        // TODO: Remove sleep in unit test.
-        Thread.sleep(2L * cacheExpiryMs)
         val newHash = newParameters.serialize().hash
         val updateFile = baseDir / NETWORK_PARAMS_UPDATE_FILE_NAME
-        val signedNetworkParams = updateFile.readObject<SignedNetworkParameters>()
-        val paramsFromFile = signedNetworkParams.verifiedNetworkParametersCert(DEV_ROOT_CA.certificate)
-        assertEquals(newParameters, paramsFromFile)
-        assertEquals(newHash, server.latestParametersAccepted(ourKeyPair.public))
+        eventually {
+            assertTrue(updateFile.exists(), "Update file should be created")
+            val signedNetworkParams = updateFile.readObject<SignedNetworkParameters>()
+            val paramsFromFile = signedNetworkParams.verifiedNetworkParametersCert(DEV_ROOT_CA.certificate)
+            assertEquals(newParameters, paramsFromFile)
+            assertEquals(newHash, server.latestParametersAccepted(ourKeyPair.public))
+        }
     }
 
     @Test
@@ -276,10 +274,9 @@ class NetworkMapUpdaterTest {
                 whitelistedContractImplementations = mapOf("key" to listOf(SecureHash.randomSHA256())))
         server.scheduleParametersUpdate(newParameters, "Test update", Instant.MIN)
         startUpdater(excludedAutoAcceptNetworkParameters = setOf("whitelistedContractImplementations"))
-        // TODO: Remove sleep in unit test.
-        Thread.sleep(2L * cacheExpiryMs)
+
         val updateFile = baseDir / NETWORK_PARAMS_UPDATE_FILE_NAME
-        assert(!updateFile.exists()) { "network parameters should not be auto accepted" }
+        assertNever("network parameters should not be auto accepted") { updateFile.exists() }
     }
 
     @Test
@@ -290,10 +287,9 @@ class NetworkMapUpdaterTest {
                 whitelistedContractImplementations = mapOf("key" to listOf(SecureHash.randomSHA256())))
         server.scheduleParametersUpdate(newParameters, "Test update", Instant.MIN)
         startUpdater(autoAcceptNetworkParameters = false)
-        // TODO: Remove sleep in unit test.
-        Thread.sleep(2L * cacheExpiryMs)
+
         val updateFile = baseDir / NETWORK_PARAMS_UPDATE_FILE_NAME
-        assert(!updateFile.exists()) { "network parameters should not be auto accepted" }
+        assertNever("network parameters should not be auto accepted") { updateFile.exists() }
     }
 
     @Test
@@ -354,17 +350,20 @@ class NetworkMapUpdaterTest {
         startUpdater()
         advanceTime()
         verify(networkMapCache, times(1)).addNode(localNodeInfo)
-        Thread.sleep(2L * cacheExpiryMs)
+
         // Node from file has higher serial than the one from NetworkMapServer
-        assertThat(networkMapCache.allNodeHashes).containsOnly(localSignedNodeInfo.signed.raw.hash)
+        eventually { assertThat(networkMapCache.allNodeHashes).containsOnly(localSignedNodeInfo.signed.raw.hash) }
         val fileName = "${NodeInfoFilesCopier.NODE_INFO_FILE_NAME_PREFIX}${localNodeInfo.legalIdentities[0].name.serialize().hash}"
         (nodeInfoDir / fileName).delete()
         advanceTime()
         verify(networkMapCache, times(1)).removeNode(any())
         verify(networkMapCache).removeNode(localNodeInfo)
-        Thread.sleep(2L * cacheExpiryMs)
-        // Instead of node from file we should have now the one from NetworkMapServer
-        assertThat(networkMapCache.allNodeHashes).containsOnly(serverSignedNodeInfo.raw.hash)
+
+
+        eventually {
+            // Instead of node from file we should have now the one from NetworkMapServer
+            assertThat(networkMapCache.allNodeHashes).containsOnly(serverSignedNodeInfo.raw.hash)
+        }
     }
 
     // Test fix for ENT-1882
@@ -378,8 +377,9 @@ class NetworkMapUpdaterTest {
         networkMapCache.addNode(myInfo) // Simulate behaviour on node startup when our node info is added to cache
         networkMapClient.publish(signedOtherInfo)
         startUpdater(ourNodeInfo = signedMyInfo)
-        Thread.sleep(2L * cacheExpiryMs)
-        verify(networkMapCache, never()).removeNode(myInfo)
+        assertAlways("Node must never be removed") {
+            verify(networkMapCache, never()).removeNode(myInfo)
+        }
         assertThat(server.networkMapHashes()).containsOnly(signedOtherInfo.raw.hash)
         assertThat(networkMapCache.allNodeHashes).containsExactlyInAnyOrder(signedMyInfo.raw.hash, signedOtherInfo.raw.hash)
     }
@@ -402,18 +402,17 @@ class NetworkMapUpdaterTest {
 
         startUpdater()
 
-        // TODO: Remove sleep in unit test.
-        Thread.sleep(2L * cacheExpiryMs)
-        verify(networkMapCache, times(1)).addNode(signedNodeInfo1.verified())
+        eventually { verify(networkMapCache, times(1)).addNode(signedNodeInfo1.verified()) }
         assert(networkMapCache.allNodeHashes.size == 1)
         networkMapClient.publish(signedNodeInfo2)
-        Thread.sleep(2L * cacheExpiryMs)
+
         advanceTime()
 
-        verify(networkMapCache, times(1)).addNode(signedNodeInfo2.verified())
-        verify(networkMapCache, times(1)).removeNode(signedNodeInfo1.verified())
-
-        assert(networkMapCache.allNodeHashes.size == 1)
+        eventually {
+            verify(networkMapCache, times(1)).addNode(signedNodeInfo2.verified())
+            verify(networkMapCache, times(1)).removeNode(signedNodeInfo1.verified())
+        }
+        assertEquals(1, networkMapCache.allNodeHashes.size)
     }
 
     @Test
@@ -470,5 +469,25 @@ class NetworkMapUpdaterTest {
 
     private fun advanceTime() {
         scheduler.advanceTimeBy(10, TimeUnit.SECONDS)
+    }
+
+    private fun assertNever(condition: String, check: () -> Boolean) {
+        val timeoutMillis = 2L * cacheExpiryMs
+        val start = Instant.now()
+        while (Duration.between(start, Instant.now()).toMillis() < timeoutMillis) {
+            Thread.sleep(100)
+            if (check()) fail(condition)
+        }
+    }
+
+    private fun assertAlways(condition: String, check: () -> Unit) {
+        assertNever(condition) {
+            try {
+                check()
+                false
+            } catch (e: Exception) {
+                true
+            }
+        }
     }
 }

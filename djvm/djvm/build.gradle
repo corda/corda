@@ -44,7 +44,7 @@ dependencies {
 jar.enabled = false
 
 shadowJar {
-    baseName'corda-djvm'
+    baseName 'corda-djvm'
     classifier ''
     relocate 'org.objectweb.asm', 'djvm.org.objectweb.asm'
 

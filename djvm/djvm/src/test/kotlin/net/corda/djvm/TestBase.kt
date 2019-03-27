@@ -17,7 +17,7 @@ import net.corda.djvm.rules.Rule
 import net.corda.djvm.rules.implementation.*
 import net.corda.djvm.source.BootstrapClassLoader
 import net.corda.djvm.source.ClassSource
-import net.corda.djvm.source.SandboxSourceClassLoader
+import net.corda.djvm.source.SourceClassLoader
 import net.corda.djvm.utilities.Discovery
 import net.corda.djvm.validation.RuleValidator
 import org.junit.After
@@ -88,7 +88,7 @@ abstract class TestBase {
                 Whitelist.MINIMAL,
                 bootstrapClassLoader = BootstrapClassLoader(DETERMINISTIC_RT),
                 sourceClassLoaderFactory = { classResolver, bootstrapClassLoader ->
-                    SandboxSourceClassLoader(classResolver,  bootstrapClassLoader!!)
+                    SourceClassLoader(classResolver,  bootstrapClassLoader!!)
                 },
                 additionalPinnedClasses = setOf(
                     Utilities::class.java

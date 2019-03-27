@@ -37,7 +37,7 @@ Step 2. Adjust the version numbers in your Gradle build files
 
 Alter the versions you depend on in your Gradle file like so:
 
-.. parsed-literal::
+.. code:: groovy
 
     ext.corda_release_version = '|corda_version|'
     ext.corda_gradle_plugins_version = '|gradle_plugins_version|'
@@ -445,7 +445,7 @@ been removed.
 
 You have some choices here:
 
-* Upgrade your ``quasar.jar`` to the version consistent with your Corda version
+* Upgrade your ``quasar.jar`` to ``|quasar_version|``
 * Delete your ``lib`` directory and switch to using the Gradle test runner
 
 Instructions for both options can be found in :ref:`Running tests in Intellij <tutorial_cordapp_running_tests_intellij>`.

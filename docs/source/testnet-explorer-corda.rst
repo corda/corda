@@ -34,21 +34,21 @@ couple of resources.
 
    .. code:: bash
 
-       wget https://ci-artifactory.corda.r3cev.com/artifactory/corda-releases/net/corda/corda-finance-contracts-/<VERSION>-corda/corda-finance-contracts-<VERSION>-corda.jar
-       wget https://ci-artifactory.corda.r3cev.com/artifactory/corda-releases/net/corda/corda-finance-workflows-/<VERSION>-corda/corda-finance-workflows-<VERSION>-corda.jar
+       wget https://ci-artifactory.corda.r3cev.com/artifactory/corda-releases/net/corda/corda-finance-contracts/|corda_version|/corda-finance-contracts-|corda_version|.jar
+       wget https://ci-artifactory.corda.r3cev.com/artifactory/corda-releases/net/corda/corda-finance-workflows/|corda_version|/corda-finance-workflows-|corda_version|.jar
 
    This is required to run some flows to check your connections, and to issue/transfer cash to counterparties. Copy it to
    the Corda installation location:
 
    .. code:: bash
 
-       sudo cp /home/<USER>/corda-finance-<VERSION>-corda.jar /opt/corda/cordapps/
+       sudo cp /home/<USER>/corda-finance-*-|corda_version|.jar /opt/corda/cordapps/
 
 #. Run the following to create a config file for the finance CorDapp:
 
    .. code:: bash
 
-       echo "issuableCurrencies = [ USD ]" > /opt/corda/cordapps/config/corda-finance-<VERSION>-corda.conf
+       echo "issuableCurrencies = [ USD ]" > /opt/corda/cordapps/config/corda-finance-|corda_version|.conf
 
 #. Restart the Corda node:
 
@@ -70,7 +70,7 @@ couple of resources.
 
    .. code:: bash
 
-       http://ci-artifactory.corda.r3cev.com/artifactory/corda-releases/net/corda/corda-tools-explorer/<VERSION>-corda/corda-tools-explorer-<VERSION>-corda.jar
+       http://ci-artifactory.corda.r3cev.com/artifactory/corda-releases/net/corda/corda-tools-explorer/|corda_version|/corda-tools-explorer-|corda_version|.jar
 
    .. warning:: This Node Explorer is incompatible with the Corda Enterprise distribution and vice versa as they currently
       use different serialisation schemes (Kryo vs AMQP).
@@ -79,7 +79,7 @@ couple of resources.
 
    .. code:: bash
 
-       java -jar corda-tools-explorer-<VERSION>-corda.jar
+       java -jar corda-tools-explorer-|corda_version|.jar
 
    .. image:: resources/explorer-login.png
 
