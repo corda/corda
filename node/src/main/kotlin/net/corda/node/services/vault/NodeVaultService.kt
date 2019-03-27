@@ -270,16 +270,16 @@ class NodeVaultService(
 
         fun makeUpdate(tx: WireTransaction): Vault.Update<ContractState>? {
             val outputs: Map<Int, TransactionState<ContractState>> = tx.deserializableOutputStates()
-            val outputsBitSet = BitSet(tx.outputs.size)
+            val outputsBitSet = BitSet(outputs.size)
             val ourNewStates = when (statesToRecord) {
                 StatesToRecord.NONE -> throw AssertionError("Should not reach here")
-                StatesToRecord.ONLY_RELEVANT -> outputs.filter { (_, value) ->
-                    isRelevant(value.data, keyManagementService.filterMyKeys(outputs.values.flatMap { it.data.participants.map { it.owningKey } }).toSet())
+                StatesToRecord.ONLY_RELEVANT -> outputs.filter {(_, state)->
+                    isRelevant(state.data, keyManagementService.filterMyKeys(outputs.flatMap { it.value.data.participants.map { it.owningKey } }).toSet())
                 }
                 StatesToRecord.ALL_VISIBLE -> outputs
             }.map {
-                outputsBitSet[it.index] = true
-                tx.outRef<ContractState>(it.index)
+                outputsBitSet[it.key] = true
+                tx.outRef<ContractState>(it.key)
             }
             val cachedBitSet = producedStatesMapping.get(tx.id) { outputsBitSet }
             if (cachedBitSet != outputsBitSet) {
