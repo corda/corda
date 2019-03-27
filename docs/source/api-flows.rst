@@ -613,6 +613,21 @@ flow to receive the transaction:
 ``idOfTxWeSigned`` is an optional parameter used to confirm that we got the right transaction. It comes from using ``SignTransactionFlow``
 which is described below.
 
+**Error handling behaviour**
+
+Once a transaction has been notarised and its input states consumed by the flow initiator (eg. sender), should the participant(s) receiving the
+transaction fail to verify it, or the receiving flow (the finality handler) fails due to some other error, we then have a scenario where not
+all parties have the correct up to date view of the ledger (a condition defined as `eventual consistency <https://en.wikipedia.org/wiki/Eventual_consistency>`_
+in distributed systems terminology). To recover from this scenario, the receivers finality handler will automatically be sent to the
+:doc:`node-flow-hospital` where it's suspended and retried from its last checkpoint upon node restart, or according to other conditional retry rules
+explained in :ref:`flow hospital runtime behaviour <flow-hospital-runtime>`. This gives the node operator the opportunity to recover from the error.
+Until the issue is resolved the node will continue to retry the flow on each startup. Upon successful completion by the receivers finality flow,
+the ledger will become fully consistent once again.
+
+.. warning:: It's possible to forcibly terminate the erroring finality handler using the ``killFlow`` RPC but at the risk of an inconsistent view of the ledger.
+
+.. note:: A future release will allow retrying hospitalised flows without restarting the node, i.e. via RPC.
+
 CollectSignaturesFlow/SignTransactionFlow
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 The list of parties who need to sign a transaction is dictated by the transaction's commands. Once we've signed a
