@@ -44,6 +44,7 @@ couple of resources.
 
    * corda-finance-contracts-|corda_version|.jar
    * corda-finance-workflows-|corda_version|.jar
+   * corda-tools-database-manager-|corda_version|.jar
 
    This is required to run some flows to check your connections, and to issue/transfer cash to counterparties. Copy it to
    the Corda installation location:
