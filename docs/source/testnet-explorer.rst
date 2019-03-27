@@ -42,10 +42,9 @@ couple of resources.
 
    Download the finance CorDapp and database manager to your VM instance:
 
-   .. code:: bash
-
-       wget https://ci-artifactory.corda.r3cev.com/artifactory/corda-releases/net/corda/corda-finance-contracts/|corda_version|/corda-finance-contracts-|corda_version|.jar
-       wget https://ci-artifactory.corda.r3cev.com/artifactory/corda-releases/net/corda/corda-finance-workflows/|corda_version|/corda-finance-workflows-|corda_version|.jar
+   * corda-finance-contracts-|corda_version|.jar
+   * corda-finance-workflows-|corda_version|.jar
+   * corda-tools-database-manager-|corda_version|.jar
 
    This is required to run some flows to check your connections, and to issue/transfer cash to counterparties. Copy it to
    the Corda installation location:
