@@ -3,8 +3,8 @@ package net.corda.nodeapi.internal.network
 import net.corda.core.internal.div
 import net.corda.core.internal.list
 import net.corda.core.internal.write
-import net.corda.nodeapi.eventually
 import net.corda.core.internal.NODE_INFO_DIRECTORY
+import net.corda.testing.common.internal.eventually
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Before
 import org.junit.Rule
@@ -63,7 +63,7 @@ class NodeInfoFilesCopierTest {
         nodeInfoFilesCopier.addConfig(node2RootPath)
         advanceTime()
 
-        eventually<AssertionError, Unit>(Duration.ofMinutes(1)) {
+        eventually(Duration.ofMinutes(1)) {
             // Check only one file is copied.
             checkDirectoryContainsSingleFile(node2AdditionalNodeInfoPath, GOOD_NODE_INFO_NAME)
         }
@@ -81,7 +81,7 @@ class NodeInfoFilesCopierTest {
         (node2RootPath / BAD_NODE_INFO_NAME).write(content)
         advanceTime()
 
-        eventually<AssertionError, Unit>(Duration.ofMinutes(1)) {
+        eventually(Duration.ofMinutes(1)) {
             // Check only one file is copied to the other node.
             checkDirectoryContainsSingleFile(node1AdditionalNodeInfoPath, GOOD_NODE_INFO_NAME)
         }
@@ -105,7 +105,7 @@ class NodeInfoFilesCopierTest {
         (node2RootPath / GOOD_NODE_INFO_NAME).write(content)
         advanceTime()
 
-        eventually<AssertionError, Unit>(Duration.ofMinutes(1)) {
+        eventually(Duration.ofMinutes(1)) {
             // Check only one file is copied to the other node.
             checkDirectoryContainsSingleFile(node1AdditionalNodeInfoPath, GOOD_NODE_INFO_NAME)
         }
@@ -124,8 +124,9 @@ class NodeInfoFilesCopierTest {
         (node2RootPath / GOOD_NODE_INFO_NAME_2).write(content)
 
         // Give some time to the filesystem to report the change.
-        Thread.sleep(100)
-        assertThat(node1AdditionalNodeInfoPath.list()).isEmpty()
+        eventually {
+            assertThat(node1AdditionalNodeInfoPath.list()).isEmpty()
+        }
     }
 
     private fun advanceTime() {

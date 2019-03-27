@@ -11,6 +11,7 @@ import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.network.NETWORK_PARAMS_FILE_NAME
 import net.corda.nodeapi.internal.network.NETWORK_PARAMS_UPDATE_FILE_NAME
 import net.corda.nodeapi.internal.network.SignedNetworkParameters
+import net.corda.testing.common.internal.eventually
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.*
 import net.corda.testing.driver.NodeHandle
@@ -116,20 +117,21 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
             )
             val laterHash = laterParams.serialize().hash
             networkMapServer.scheduleParametersUpdate(laterParams, "Another update", Instant.ofEpochMilli(random63BitValue()))
-            Thread.sleep(cacheTimeout.toMillis() * 2)
-            updates.expectEvents(isStrict = false) {
-                sequence(
-                        expect { update: ParametersUpdateInfo ->
-                            assertEquals(update.description, "Next parameters")
-                            assertEquals(update.hash, nextHash)
-                            assertEquals(update.parameters, nextParams)
-                        },
-                        expect { update: ParametersUpdateInfo ->
-                            assertEquals(update.description, "Another update")
-                            assertEquals(update.hash, laterHash)
-                            assertEquals(update.parameters, laterParams)
-                        }
-                )
+            eventually {
+                updates.expectEvents(isStrict = false) {
+                    sequence(
+                            expect { update: ParametersUpdateInfo ->
+                                assertEquals(update.description, "Next parameters")
+                                assertEquals(update.hash, nextHash)
+                                assertEquals(update.parameters, nextParams)
+                            },
+                            expect { update: ParametersUpdateInfo ->
+                                assertEquals(update.description, "Another update")
+                                assertEquals(update.hash, laterHash)
+                                assertEquals(update.parameters, laterParams)
+                            }
+                    )
+                }
             }
             // This should throw, because the nextHash has been replaced by laterHash
             assertThatThrownBy { alice.rpc.acceptNewNetworkParameters(nextHash) }.hasMessageContaining("Refused to accept parameters with hash")
