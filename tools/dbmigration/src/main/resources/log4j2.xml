@@ -2,21 +2,15 @@
 <Configuration status="info">
 
     <Properties>
-        <Property name="consoleLogLevel">${sys:consoleLogLevel:-error}</Property>
+        <Property name="consoleLogLevel">${sys:consoleLogLevel:-info}</Property>
         <Property name="defaultLogLevel">${sys:defaultLogLevel:-info}</Property>
     </Properties>
 
     <ThresholdFilter level="trace"/>
 
     <Appenders>
-        <Console name="Console-Appender" target="SYSTEM_OUT">
-            <PatternLayout pattern="%highlight{[%level{length=5}] %date{HH:mm:ssZ} [%t] %c{2}.%method - %msg%n%throwable{0}}{INFO=yellow,WARN=red,FATAL=bright red}"/>
-        </Console>
-
-
         <Console name="Simple-Console-Appender" target="SYSTEM_OUT">
             <PatternLayout pattern="%msg%n%throwable{0}" />
-            <ThresholdFilter level="info"/>
         </Console>
 
         <File name="File-Appender" fileName="logs/migration.log">
@@ -36,9 +30,8 @@
             <AppenderRef ref="Errors-File-Appender" />
         </Logger>
         <Logger name="migration.tool" >
-            <AppenderRef ref="Simple-Console-Appender" level="INFO"/>
-            <AppenderRef ref="Console-Appender" level="${consoleLogLevel}"/>
-            <AppenderRef ref="File-Appender" />
+            <AppenderRef ref="Simple-Console-Appender" level="${consoleLogLevel}"/>
         </Logger>
     </Loggers>
+
 </Configuration>

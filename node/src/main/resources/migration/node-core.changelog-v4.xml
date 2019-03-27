@@ -9,6 +9,17 @@
     </changeSet>
 
     <changeSet author="R3.Corda" id="nullability">
+        <!-- validCheckSum entries for compatibility between 2 versions of this change set,
+             DDL for mutual_exclusion table (which is in Enterprise only)
+             is moved to change set "create mutual exclusion" in node-core.changelog-init.xml. -->
+        <!-- md5 hash of the former change set version in Corda 3.x.
+             It had changes for mutual_exclusion table. -->
+        <validCheckSum>7:cd85b333df9d207b4a1f1bfc1efb9784</validCheckSum>
+        <!-- md5 hash of this version of the change set.
+             From version 4.0 onward it has no changes for mutual_exclusion table
+             and the change set is compatible between Os and Enterprise. -->
+        <validCheckSum>7:73b3f89cdd2a42efebeb125648c28191</validCheckSum>
+
         <addNotNullConstraint tableName="node_identities" columnName="identity_value" columnDataType="blob" />
 
         <addNotNullConstraint tableName="node_attachments" columnName="content" columnDataType="blob"/>
@@ -33,8 +44,6 @@
 
         <addNotNullConstraint tableName="node_transactions" columnName="transaction_value" columnDataType="blob"/>
 
-        <addNotNullConstraint tableName="node_mutual_exclusion" columnName="MACHINE_NAME" columnDataType="NVARCHAR(255)"/>
-        <addNotNullConstraint tableName="node_mutual_exclusion" columnName="PID" columnDataType="NVARCHAR(255)"/>
-        <addNotNullConstraint tableName="node_mutual_exclusion" columnName="MUTUAL_EXCLUSION_TIMESTAMP" columnDataType="timestamp"/>
-    </changeSet>
+     </changeSet>
+
 </databaseChangeLog>

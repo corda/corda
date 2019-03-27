@@ -9,8 +9,8 @@ import net.corda.djvm.analysis.ExceptionResolver.Companion.isDJVMException
 import net.corda.djvm.code.asPackagePath
 import net.corda.djvm.code.asResourcePath
 import net.corda.djvm.references.ClassReference
-import net.corda.djvm.source.AbstractSourceClassLoader
 import net.corda.djvm.source.ClassSource
+import net.corda.djvm.source.SourceClassLoader
 import net.corda.djvm.utilities.loggerFor
 import net.corda.djvm.validation.RuleValidator
 import org.objectweb.asm.Type
@@ -27,13 +27,13 @@ import org.objectweb.asm.Type
  * @param parent This classloader's parent classloader.
  */
 class SandboxClassLoader private constructor(
-        private val analysisConfiguration: AnalysisConfiguration,
-        private val ruleValidator: RuleValidator,
-        private val supportingClassLoader: AbstractSourceClassLoader,
-        private val rewriter: ClassRewriter,
-        private val context: AnalysisContext,
-        throwableClass: Class<*>?,
-        parent: ClassLoader?
+    private val analysisConfiguration: AnalysisConfiguration,
+    private val ruleValidator: RuleValidator,
+    private val supportingClassLoader: SourceClassLoader,
+    private val rewriter: ClassRewriter,
+    private val context: AnalysisContext,
+    throwableClass: Class<*>?,
+    parent: ClassLoader?
 ) : ClassLoader(parent ?: getSystemClassLoader()) {
 
     /**

@@ -22,16 +22,16 @@ import kotlin.reflect.full.memberProperties
 data class CryptoUserCredentials(val username: String, val password: String)
 
 /**
- * HSM Simulator rule allowing to use the HSM Simulator within the integration tests. It is designed to be used mainly
- * on the TeamCity, but if the required setup is available it can be executed locally as well.
- * It will bind to the simulator to the local port
- * ToDocker engine needs to be installed on the machine
- * 2) Environment variables (AZURE_CR_USER and AZURE_CR_PASS) are available and hold valid credentials to the corda.azurecr.io
- * repository
+ * HSM Simulator rule allowing to use the HSM Simulator within the integration tests.
+ * It is designed to be used mainly on the TeamCity, but if the required setup is available it can be executed locally as well.
+ * It will bind the simulator to the local port.
+ *
+ * To use it locally, the following pre-requisites need to be met:
+ * 1) The Docker engine needs to be installed on the machine.
+ * 2) Environment variables (AZURE_CR_USER and AZURE_CR_PASS) are available and hold valid credentials to the corda.azurecr.io repository.
  * 3) HSM requires Unlimited Strength Jurisdiction extension to be installed on the machine connecting with the HSM box.
- * See http://www.oracle.com/technetwork/java/javase/downloads/jce8-download-2133166.html
- * use it locally, the following pre-requisites need to be met:
- * 1)
+ *    See http://www.oracle.com/technetwork/java/javase/downloads/jce8-download-2133166.html
+ *
  * Since the above setup is not a strong requirement for the integration tests to be executed it is intended that this
  * rule is used together with the assumption mechanism in tests.
  */

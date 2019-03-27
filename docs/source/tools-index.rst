@@ -9,9 +9,6 @@ wish to try the :doc:`blob-inspector`.
 
    network-builder
    network-bootstrapper
-   notary-healthcheck
    demobench
    node-explorer
-   ha-utilities
-   tools-config-obfuscator
 

@@ -226,6 +226,8 @@ from ``node.conf`` file. Follow the same configuration as described in
 :ref:`Database Management Tool creates or upgrades database schema directly <database_migration_tool_minimal_config_ref>` section.
 The only difference is that the ``myLegalName = <Node legal name>`` option is not needed for this step.
 
+.. warning:: It is recommended you do not use floating point types as fields on Persistent States because they might not store correctly on some database management systems (DBMS). We recommend using the "BigDecimal" data type instead.
+
 After configuring the tool run:
 
     .. sourcecode:: shell

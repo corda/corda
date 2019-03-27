@@ -79,6 +79,7 @@ dependencies {
     compile "org.apache.logging.log4j:log4j-core:$log4j_version"
     compile "org.slf4j:jul-to-slf4j:$slf4j_version"
     compile "org.slf4j:jcl-over-slf4j:$slf4j_version"
+    compile "com.lmax:disruptor:$disruptor_version"
 
     // Manifests: for reading stuff from the manifest file
     compile "com.jcabi:jcabi-manifests:1.1"
@@ -103,6 +104,9 @@ dependencies {
 task integrationTest(type: Test) {
     testClassesDirs = sourceSets.integrationTest.output.classesDirs
     classpath = sourceSets.integrationTest.runtimeClasspath
+
+    systemProperty 'testing.global.port.allocation.enabled', true
+    systemProperty 'testing.global.port.allocation.starting.port', 20000
 }
 
 jar {

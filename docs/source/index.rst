@@ -1,14 +1,14 @@
-Corda Enterprise 4.0
-====================
+|release|
+=========
 
-Welcome to the documentation website for **Corda Enterprise 4.0**, based on the Corda 4.0 open source release.
+Welcome to the documentation website for |release|, based on the Corda 4.0 open source release.
 
-Corda Enterprise 4.0 builds on the performance, scalability, high-availability, enhanced DMZ security, and multiple database vendor support
+|release| builds on the performance, scalability, high-availability, enhanced DMZ security, and multiple database vendor support
 introduced in Corda Enterprise 3.0 with the following important new additions:
 
 * **Multiple nodes behind a single firewall**:
   multi-tenancy of Corda Firewall (float and bridge) components enables multiple Corda nodes to multiplex all remote peer-to-peer message traffic
-  through a single Corda Firewall
+  through a single Corda Firewall.
 
 * **Hardware Security Module (HSM) support**:
   for Node CA and Legal Identity signing keys in hardware security modules provides increased security.
@@ -26,7 +26,7 @@ introduced in Corda Enterprise 3.0 with the following important new additions:
   a toolkit to allow customers to test and validate Corda for their infrastructure performance and determine whether or not improvements are needed
   before going live.
 
-Corda Enterprise 4.0 also includes the new features of Corda 4, notably:
+|release| also includes the new features of Corda 4, notably:
 
 * **Reference input states**:
   these allow smart contracts to read data from the ledger without simultaneously updating it.
@@ -43,7 +43,7 @@ Corda Enterprise 4.0 also includes the new features of Corda 4, notably:
   - Sealed JARs are a security upgrade that ensures JARs cannot define classes in each other's packages, thus ensuring Java's package-private
     visibility feature works.
 
-  - BelongsToContract annotation: allows annotating states with which contract governs them.
+  - ``@BelongsToContract`` annotation: allows annotating states with which contract governs them.
 
   - Two-sided ``FinalityFlow`` and ``SwapIdentitiesFlow`` to prevent nodes accepting any finalised transaction, outside of the context of a containing flow.
 
@@ -80,13 +80,14 @@ application development please continue to refer to `the main project documentat
    node-upgrade-notes.rst
    version-compatibility.rst
    platform-support-matrix.rst
+   cheat-sheet.rst
 
 .. conditional-toctree::
    :caption: Contents
    :maxdepth: 2
    :if_tag: pdfmode
 
-   release-notes.rst
+   release-notes-enterprise.rst
    key-concepts.rst
    quickstart-index.rst
    tutorials-index.rst
@@ -115,6 +116,7 @@ application development please continue to refer to `the main project documentat
    sizing-and-performance
    running-a-notary-cluster/toctree
    performance-testing/toc-tree.rst
+   tools-index-enterprise.rst
 
 .. conditional-toctree::
    :caption: Development
@@ -130,7 +132,6 @@ application development please continue to refer to `the main project documentat
    component-library-index.rst
    serialization-index.rst
    json.rst
-   deterministic-modules.rst
    troubleshooting.rst
 
 .. conditional-toctree::
@@ -165,32 +166,3 @@ application development please continue to refer to `the main project documentat
    deterministic-modules.rst
    release-notes-enterprise.rst
    changelog-enterprise.rst
-
-.. conditional-toctree::
-   :caption: Participate
-   :maxdepth: 2
-   :if_tag: htmlmode
-
-   contributing-index.rst
-   deterministic-modules.rst
-   changelog-enterprise.rst
-
-.. conditional-toctree::
-   :caption: Design docs
-   :maxdepth: 2
-   :if_tag: htmlmode
-
-   design/design-review-process.md
-   design/certificate-hierarchies/design.md
-   design/failure-detection-master-election/design.md
-   design/float/design.md
-   design/hadr/design.md
-   design/kafka-notary/design.md
-   design/monitoring-management/design.md
-   design/sgx-integration/design.md
-   design/reference-states/design.md
-   design/sgx-infrastructure/design.md
-   design/threat-model/corda-threat-model.md
-   design/data-model-upgrades/signature-constraints.md
-   design/data-model-upgrades/package-namespace-ownership.md
-   design/targetversion/design.md
