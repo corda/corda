@@ -25,6 +25,7 @@ If you want to upgrade, say, the version of sphinx that we're using, you must:
 
 * Upgrade the version number in requirements.txt
 * Build a new docker image: ``cd docs && docker build -t corda/docs-builder:latest -f docs_builder/Dockerfile .``
+
   * post doing this the build will run using your image locally
   * you can also push this to the docker registry if you have the corda keys
   * you can run ``docker run -it corda/docs-builder /bin/bash`` to interactively look in the build docker image (e.g. to see what is in the
