@@ -109,8 +109,8 @@ dependencies {
     compile "org.bouncycastle:bcprov-jdk15on:${bouncycastle_version}"
     compile "org.bouncycastle:bcpkix-jdk15on:${bouncycastle_version}"
 
-    // JPA 2.1 annotations.
-    compile "org.hibernate.javax.persistence:hibernate-jpa-2.1-api:1.0.0.Final"
+    // JPA 2.2 annotations.
+    compile "javax.persistence:javax.persistence-api:2.2"
 
     // required to use @Type annotation
     compile "org.hibernate:hibernate-core:$hibernate_version"

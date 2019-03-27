@@ -123,7 +123,7 @@ Here is an overview of the various Corda dependencies:
 * ``corda-mock`` - A small library of useful mocks. Use if the classes are useful to you
 * ``corda-node`` - The Corda node. Do not depend on. Used only by the Corda fat JAR and indirectly in testing
   frameworks. (If your CorDapp _must_ depend on this for some reason then it should use the ``compileOnly``
-  configuration here - but please _don't_ do this if you can possibly avoid it!)
+  configuration here - but please don't do this if you can possibly avoid it!)
 * ``corda-node-api`` - The node API. Required to bootstrap a local network
 * ``corda-node-driver`` - Testing utility for programmatically starting nodes from JVM languages. Use for tests
 * ``corda-rpc`` - The Corda RPC client library. Used when writing an RPC client
@@ -168,7 +168,7 @@ For further information about managing dependencies, see
 
 Signing the CorDapp JAR
 ^^^^^^^^^^^^^^^^^^^^^^^
-The ``cordapp`` plugin can sign the generated CorDapp JAR file using `JAR signing and verification tool <https://docs.oracle.com/javase/tutorial/deployment/jar/signing.html>`_.
+The ``cordapp`` plugin can sign the generated CorDapp JAR file using `JAR signing and verification tool <https://docs.oracle.com/javase/tutorial/deployment/jar/signing.html>`__.
 Signing the CorDapp enables its contract classes to use signature constraints instead of other types of the constraints,
 for constraints explanation refer to :doc:`api-contract-constraints`.
 By default the JAR file is signed by Corda development certificate.
@@ -263,7 +263,7 @@ Then the build process can set the value for *custom.sigalg* system property and
 
     ./gradlew -Dcustom.sigalg="SHA256withECDSA" -Dsigning.keystore="/path/to/keystore.jks" -Dsigning.alias="alias" -Dsigning.storepass="password" -Dsigning.keypass="password"
 
-To check if CorDapp is signed use `JAR signing and verification tool <https://docs.oracle.com/javase/tutorial/deployment/jar/verify.html>`_:
+To check if CorDapp is signed use `JAR signing and verification tool <https://docs.oracle.com/javase/tutorial/deployment/jar/verify.html>`__:
 
 .. sourcecode:: shell
 
