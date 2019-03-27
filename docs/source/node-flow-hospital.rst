@@ -6,12 +6,13 @@ Overview
 
 The **flow hospital** refers to a built-in node service that manages flows that have encountered an error.
 
-This service is responsible for recording, tracking, diagnosis, recovery and retry. It determines whether errored flows should be retried
+This service is responsible for recording, tracking, diagnosing, recovering and retrying. It determines whether errored flows should be retried
 from their previous checkpoints or have their errors propagate. Flows may be recoverable under certain scenarios (eg. manual intervention
 may be required to install a missing contract JAR version). For a given errored flow, the flow hospital service determines the next course of
 action towards recovery and retry.
 
-.. note:: The flow hospital will never terminate a flow, but will propagate its error back to the state machine, and ultimately, end user code to handle.
+.. note:: The flow hospital will never terminate a flow, but will propagate its error back to the state machine, and ultimately, end user code to handle
+   if it ultimately proves impossible to resolve automatically.
 
 This concept is analogous to *exception management handling* associated with enterprise workflow software, or
 *retry queues/stores* in enterprise messaging middleware for recovering from failure to deliver a message.
