@@ -17,6 +17,7 @@ import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.cordappsForPackages
 import net.corda.testing.node.internal.internalDriver
+import org.apache.activemq.artemis.core.server.ActiveMQServer
 import org.junit.ClassRule
 import org.junit.Test
 import kotlin.concurrent.thread
@@ -32,6 +33,7 @@ class LoopbackBridgeTest : IntegrationTest() {
     @Test(timeout = 600000)
     fun `Nodes behind one bridge can communicate with each other using loopback bridge - with bridge starts after nodes`() {
         val demoUser = User("demo", "demo", setOf(Permissions.startFlow<Ping>(), Permissions.all()))
+        var artemis: ActiveMQServer? = null
         internalDriver(startNodesInProcess = true, cordappsForAllNodes = cordappsForPackages("net.corda.bridge"), notarySpecs = emptyList(), portAllocation = incrementalPortAllocation(20000)) {
             val artemisPort = portAllocation.nextPort()
             val advertisedP2PPort = portAllocation.nextPort()
@@ -39,8 +41,8 @@ class LoopbackBridgeTest : IntegrationTest() {
             val bankAPath = driverDirectory / DUMMY_BANK_A_NAME.organisation / "node"
             val bankBPath = driverDirectory / DUMMY_BANK_B_NAME.organisation / "node"
 
-            val artemis = createArtemis(driverDirectory, artemisPort)
-            artemis.start()
+            artemis = createArtemis(driverDirectory, artemisPort)
+            artemis!!.start()
             val artemisCertDir = driverDirectory / "artemis"
             val artemisSSLConfig = mapOf(
                     "sslKeystore" to (artemisCertDir / ARTEMIS_KEYSTORE).toString(),
@@ -100,21 +102,22 @@ class LoopbackBridgeTest : IntegrationTest() {
             startBridge(driverDirectory, artemisPort, advertisedP2PPort, bankAPath / "certificates" / "sslkeystore.jks", bankBPath / "certificates" / "sslkeystore.jks").getOrThrow()
 
             testThread.join()
-            artemis.stop(false, true)
         }
+        artemis?.stop(false, true)
     }
 
     // This test will hang if AMQP bridge is being use instead of Loopback bridge.
     @Test(timeout = 600000)
     fun `Nodes behind one bridge can communicate with each other using loopback bridge - with bridge started first`() {
         val demoUser = User("demo", "demo", setOf(Permissions.startFlow<Ping>(), Permissions.all()))
+        var artemis: ActiveMQServer? = null
         internalDriver(startNodesInProcess = true, cordappsForAllNodes = cordappsForPackages("net.corda.bridge"), notarySpecs = emptyList(), portAllocation = incrementalPortAllocation(20000)) {
             val artemisPort = portAllocation.nextPort()
             val advertisedP2PPort = portAllocation.nextPort()
 
             val artemisCertDir = driverDirectory / "artemis"
-            val artemis = createArtemis(driverDirectory, artemisPort)
-            artemis.start()
+            artemis = createArtemis(driverDirectory, artemisPort)
+            artemis!!.start()
             val bankAPath = driverDirectory / DUMMY_BANK_A_NAME.organisation / "node"
             val bankBPath = driverDirectory / DUMMY_BANK_B_NAME.organisation / "node"
 
@@ -171,7 +174,7 @@ class LoopbackBridgeTest : IntegrationTest() {
                 // Loopback flow test.
                 it.proxy.startFlow(::Ping, a.nodeInfo.singleIdentity(), 5).returnValue.getOrThrow()
             }
-            artemis.stop(false, true)
         }
+        artemis?.stop(false, true)
     }
 }

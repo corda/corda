@@ -14,6 +14,7 @@ import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.cordappsForPackages
 import net.corda.testing.node.internal.internalDriver
+import org.apache.activemq.artemis.core.server.ActiveMQServer
 import org.junit.ClassRule
 import org.junit.Test
 
@@ -27,6 +28,7 @@ class SNIBridgeTest : IntegrationTest() {
     @Test
     fun `Nodes behind all in one bridge can communicate with external node`() {
         val demoUser = User("demo", "demo", setOf(Permissions.startFlow<Ping>(), Permissions.all()))
+        var artemis: ActiveMQServer? = null
         internalDriver(startNodesInProcess = true, cordappsForAllNodes = cordappsForPackages("net.corda.bridge"), notarySpecs = emptyList(), portAllocation = incrementalPortAllocation(20000)) {
             val artemisPort = portAllocation.nextPort()
             val advertisedP2PPort = portAllocation.nextPort()
@@ -41,8 +43,8 @@ class SNIBridgeTest : IntegrationTest() {
             createNodeDevCertificates(DUMMY_BANK_C_NAME, bankCPath)
 
             // Start broker
-            val artemis = createArtemis(driverDirectory, artemisPort)
-            artemis.start()
+            artemis = createArtemis(driverDirectory, artemisPort)
+            artemis!!.start()
             val artemisCertDir = driverDirectory / "artemis"
             val artemisSSLConfig = mapOf(
                     "sslKeystore" to (artemisCertDir / ARTEMIS_KEYSTORE).toString(),
@@ -103,7 +105,8 @@ class SNIBridgeTest : IntegrationTest() {
             CordaRPCClient(b.rpcAddress).use(demoUser.username, demoUser.password) {
                 it.proxy.startFlow(::Ping, c.nodeInfo.singleIdentity(), 5).returnValue.getOrThrow()
             }
-            artemis.stop(false, true)
         }
+
+        artemis?.stop(false, true)
     }
 }

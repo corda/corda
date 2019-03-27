@@ -113,6 +113,8 @@ class ExternalBrokertests : IntegrationTest() {
         broker.stop()
     }
 
+    // TODO: un-ignore when node will be changed to no longer die on artemis connection loss
+    @Ignore
     @Test
     fun `node terminates if connection to broker has been lost and cannot be re-established`() {
         val aliceUser = User("alice", "alice", permissions = setOf("ALL"))

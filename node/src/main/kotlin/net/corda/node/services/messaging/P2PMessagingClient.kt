@@ -153,9 +153,11 @@ class P2PMessagingClient(val config: NodeConfiguration,
     private fun failoverCallback(event: FailoverEventType) {
         when (event) {
             FailoverEventType.FAILURE_DETECTED -> {
-                log.warn("Connection to the broker was lost. Trying to reconnect.")
+                log.warn("Connection to the broker was lost. Node is shutting down.")
+                Runtime.getRuntime().halt(1)
             }
             FailoverEventType.FAILOVER_COMPLETED -> {
+                // Currently, this path will never be taken as we die on Artemis connection loss
                 log.info("Connection to broker re-established.")
                 state.locked {
                     enumerateBridges(bridgeSession!!, inboxes.toList())
