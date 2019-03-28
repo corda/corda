@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 echo "Generating PDF document ..."
-make latexpdf
+make latexpdf LATEXMKOPTS="-quiet"
 
 echo "Generating HTML pages ..."
 make html
