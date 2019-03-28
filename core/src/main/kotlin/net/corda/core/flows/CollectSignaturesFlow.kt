@@ -3,12 +3,15 @@ package net.corda.core.flows
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.isFulfilledBy
+import net.corda.core.crypto.toStringShort
+import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.identity.groupPublicKeysByWellKnownParty
 import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.ProgressTracker
+import net.corda.core.utilities.toBase58String
 import net.corda.core.utilities.unwrap
 import java.security.PublicKey
 
@@ -65,7 +68,8 @@ class CollectSignaturesFlow @JvmOverloads constructor(val partiallySignedTx: Sig
                                                       val sessionsToCollectFrom: Collection<FlowSession>,
                                                       val myOptionalKeys: Iterable<PublicKey>?,
                                                       override val progressTracker: ProgressTracker = CollectSignaturesFlow.tracker()) : FlowLogic<SignedTransaction>() {
-    @JvmOverloads constructor(partiallySignedTx: SignedTransaction, sessionsToCollectFrom: Collection<FlowSession>, progressTracker: ProgressTracker = CollectSignaturesFlow.tracker()) : this(partiallySignedTx, sessionsToCollectFrom, null, progressTracker)
+    @JvmOverloads
+    constructor(partiallySignedTx: SignedTransaction, sessionsToCollectFrom: Collection<FlowSession>, progressTracker: ProgressTracker = CollectSignaturesFlow.tracker()) : this(partiallySignedTx, sessionsToCollectFrom, null, progressTracker)
 
     companion object {
         object COLLECTING : ProgressTracker.Step("Collecting signatures from counterparties.")
@@ -105,18 +109,54 @@ class CollectSignaturesFlow @JvmOverloads constructor(val partiallySignedTx: Sig
         // If the unsigned counterparties list is empty then we don't need to collect any more signatures here.
         if (unsigned.isEmpty()) return partiallySignedTx
 
-        val partyToSessionMap = sessionsToCollectFrom.groupBy { it.counterparty }
+        val setOfAllSessionKeys = sessionsToCollectFrom.groupBy { it.sessionOwningKey }.map {
+            require(it.value.size == 1) {"There are multiple sessions initiated for party key ${it.key.toStringShort()}"}
+            it.key to it.value.first()
+        }.toMap()
 
-        val partyToKeysMap = groupPublicKeysByWellKnownParty(serviceHub, unsigned)
-        // Check that we have a session for all parties.  No more, no less.
-        require(sessionsToCollectFrom.map { it.counterparty }.toSet() == partyToKeysMap.keys) {
-            "The Initiator of CollectSignaturesFlow must pass in exactly the sessions required to sign the transaction."
+        val partyToKeysItSignsFor = groupPublicKeysByWellKnownParty(serviceHub, unsigned)
+        val keyToSigningParty = partyToKeysItSignsFor.flatMap { (wellKnown, allKeysItSignsFor) ->
+            allKeysItSignsFor.map { it to wellKnown }
+        }.toMap()
+
+        val unrelatedSessions = sessionsToCollectFrom.filterNot {
+            if (it.sessionOwningKey == it.counterparty.owningKey) {
+                //this session was initiated by a wellKnownParty
+                //the session must have a corresponding unsigned
+                it.counterparty in partyToKeysItSignsFor
+            } else {
+                //this session was not initiated by a wellKnownParty
+                //so must directly exist in the unsigned
+                unsigned.contains(it.sessionOwningKey)
+            }
         }
-        // Collect signatures from all counterparties and append them to the partially signed transaction.
-        val counterpartySignatures = partyToSessionMap.flatMap { (party, sessions)->
-            subFlow(CollectSignatureFlow(partiallySignedTx, sessions.first(), partyToKeysMap[party]!!))
+
+        val keysMissingASession = unsigned.filterNot {
+            //every unsigned key must have a session it can ask
+            if (it in setOfAllSessionKeys) {
+                // the unsigned key exists directly as a sessionKey
+                true
+            } else {
+                //it might be delegated to a wellKnownParty
+                val wellKnownParty: Party? = keyToSigningParty[it]
+                if (wellKnownParty != null) {
+                    //there is a wellKnownParty for this key, check if it has a session
+                    setOfAllSessionKeys[wellKnownParty.owningKey] != null
+                } else {
+                    false
+                }
+            }
         }
-        val stx = partiallySignedTx + counterpartySignatures
+
+//
+//        require(keysNotProvidedBySessions.isEmpty() && sessionsNotRelatedToKeys.isEmpty()) {
+//            "The Initiator of CollectSignaturesFlow must pass in exactly the sessions required to sign the transaction."
+//        }
+//        // Collect signatures from all counterparties and append them to the partially signed transaction.
+//        val counterpartySignatures = unsigned.flatMap { keyToSignWith->
+//            subFlow(CollectSignatureFlow(partiallySignedTx, keyToSessionMap[keyToSignWith]!!, listOf(keyToSignWith)))
+//        }
+        val stx = partiallySignedTx + listOf()
 
         // Verify all but the notary's signature if the transaction requires a notary, otherwise verify all signatures.
         progressTracker.currentStep = VERIFYING
@@ -198,7 +238,7 @@ class CollectSignatureFlow(val partiallySignedTx: SignedTransaction, val session
  * @param otherSideSession The session which is providing you a transaction to sign.
  */
 abstract class SignTransactionFlow @JvmOverloads constructor(val otherSideSession: FlowSession,
-                                   override val progressTracker: ProgressTracker = SignTransactionFlow.tracker()) : FlowLogic<SignedTransaction>() {
+                                                             override val progressTracker: ProgressTracker = SignTransactionFlow.tracker()) : FlowLogic<SignedTransaction>() {
 
     companion object {
         object RECEIVING : ProgressTracker.Step("Receiving transaction proposal for signing.")
