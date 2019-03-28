@@ -22,7 +22,7 @@ dependencies {
     // and without any obviously non-deterministic ones such as Hibernate.
     deterministicLibraries "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     deterministicLibraries "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
-    deterministicLibraries "org.hibernate.javax.persistence:hibernate-jpa-2.1-api:1.0.0.Final"
+    deterministicLibraries "javax.persistence:javax.persistence-api:2.2"
     deterministicLibraries "org.bouncycastle:bcprov-jdk15on:$bouncycastle_version"
     deterministicLibraries "org.bouncycastle:bcpkix-jdk15on:$bouncycastle_version"
     deterministicLibraries "com.google.code.findbugs:jsr305:$jsr305_version"

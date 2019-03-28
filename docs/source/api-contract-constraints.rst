@@ -234,7 +234,7 @@ The same example in Java:
 
 
 Starting a node missing CorDapp(s)
-*********************************
+**********************************
 
 When running the Corda node ensure all CordDapp JARs are placed in ``cordapps`` directory of each node.
 By default Gradle Cordform task ``deployNodes`` copies all JARs if CorDapps to deploy are specified.

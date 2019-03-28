@@ -248,17 +248,38 @@ class NodeVaultService(
     }
 
     private fun makeUpdates(batch: Iterable<CoreTransaction>, statesToRecord: StatesToRecord): List<Vault.Update<ContractState>> {
+
+        fun <T> withValidDeserialization(list: List<T>, txId: SecureHash): Map<Int, T> = (0 until list.size).mapNotNull { idx ->
+            try {
+                idx to list[idx]
+            } catch (e: TransactionDeserialisationException) {
+                // When resolving transaction dependencies we might encounter contracts we haven't installed locally.
+                // This will cause a failure as we can't deserialize such states in the context of the `appClassloader`.
+                // For now we ignore these states.
+                // In the future we will use the AttachmentsClassloader to correctly deserialize and asses the relevancy.
+                log.debug { "Could not deserialize state $idx from transaction $txId. Cause: $e" }
+                null
+            }
+        }.toMap()
+
+        // Returns only output states that can be deserialised successfully.
+        fun WireTransaction.deserializableOutputStates(): Map<Int, TransactionState<ContractState>> = withValidDeserialization(this.outputs, this.id)
+
+        // Returns only reference states that can be deserialised successfully.
+        fun LedgerTransaction.deserializableRefStates(): Map<Int, StateAndRef<ContractState>> = withValidDeserialization(this.references, this.id)
+
         fun makeUpdate(tx: WireTransaction): Vault.Update<ContractState>? {
-            val outputsBitSet = BitSet(tx.outputs.size)
+            val outputs: Map<Int, TransactionState<ContractState>> = tx.deserializableOutputStates()
+            val outputsBitSet = BitSet(outputs.size)
             val ourNewStates = when (statesToRecord) {
                 StatesToRecord.NONE -> throw AssertionError("Should not reach here")
-                StatesToRecord.ONLY_RELEVANT -> tx.outputs.withIndex().filter {
-                    isRelevant(it.value.data, keyManagementService.filterMyKeys(tx.outputs.flatMap { it.data.participants.map { it.owningKey } }).toSet())
+                StatesToRecord.ONLY_RELEVANT -> outputs.filter {(_, state)->
+                    isRelevant(state.data, keyManagementService.filterMyKeys(outputs.flatMap { it.value.data.participants.map { it.owningKey } }).toSet())
                 }
-                StatesToRecord.ALL_VISIBLE -> tx.outputs.withIndex()
+                StatesToRecord.ALL_VISIBLE -> outputs
             }.map {
-                outputsBitSet[it.index] = true
-                tx.outRef<ContractState>(it.index)
+                outputsBitSet[it.key] = true
+                tx.outRef<ContractState>(it.key)
             }
             val cachedBitSet = producedStatesMapping.get(tx.id) { outputsBitSet }
             if (cachedBitSet != outputsBitSet) {
@@ -288,12 +309,14 @@ class NodeVaultService(
             val newReferenceStateAndRefs = if (tx.references.isEmpty()) {
                 emptyList()
             } else {
-                 when (statesToRecord) {
+                when (statesToRecord) {
                     StatesToRecord.NONE -> throw AssertionError("Should not reach here")
                     StatesToRecord.ALL_VISIBLE, StatesToRecord.ONLY_RELEVANT -> {
                         val notSeenReferences = tx.references - loadStatesWithVaultFilter(tx.references).map { it.ref }
                         // TODO: This is expensive - is there another way?
-                        tx.toLedgerTransaction(servicesForResolution).references.filter { it.ref in notSeenReferences }
+                        tx.toLedgerTransaction(servicesForResolution).deserializableRefStates()
+                                .filter { (_, stateAndRef) -> stateAndRef.ref in notSeenReferences }
+                                .values
                     }
                 }
             }

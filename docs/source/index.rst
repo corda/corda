@@ -78,6 +78,7 @@ application development please continue to refer to `the main project documentat
    release-notes-enterprise.rst
    app-upgrade-notes-enterprise.rst
    node-upgrade-notes.rst
+   corda-api.rst
    version-compatibility.rst
    platform-support-matrix.rst
    cheat-sheet.rst
