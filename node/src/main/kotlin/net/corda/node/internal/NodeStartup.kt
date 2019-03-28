@@ -6,6 +6,7 @@ import net.corda.cliutils.CliWrapperBase
 import net.corda.cliutils.CordaCliWrapper
 import net.corda.cliutils.CordaVersionProvider
 import net.corda.cliutils.ExitCodes
+import net.corda.common.logging.CordaVersion
 import net.corda.core.contracts.HashAttachmentConstraint
 import net.corda.core.crypto.Crypto
 import net.corda.core.internal.*
@@ -249,9 +250,9 @@ open class NodeStartup : NodeStartupLogging {
     open fun getVersionInfo(): VersionInfo {
         return VersionInfo(
                 PLATFORM_VERSION,
-                CordaVersionProvider.releaseVersion,
-                CordaVersionProvider.revision,
-                CordaVersionProvider.vendor
+                CordaVersion.releaseVersion,
+                CordaVersion.revision,
+                CordaVersion.vendor
         )
     }
 

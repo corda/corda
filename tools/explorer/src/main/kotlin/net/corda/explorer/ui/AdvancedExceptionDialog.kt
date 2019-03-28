@@ -5,7 +5,7 @@ import impl.org.controlsfx.i18n.Localization.getString
 import impl.org.controlsfx.i18n.Localization.localize
 import javafx.event.ActionEvent
 import javafx.event.EventHandler
-import net.corda.cliutils.errorCodeLocationUrl
+import net.corda.common.logging.errorCodeLocationUrl
 import org.controlsfx.dialog.ProgressDialog
 import javafx.scene.control.*
 import javafx.scene.layout.GridPane

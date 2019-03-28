@@ -6,6 +6,8 @@ import org.apache.logging.log4j.core.appender.rewrite.RewritePolicy
 import org.apache.logging.log4j.core.config.plugins.Plugin
 import org.apache.logging.log4j.core.config.plugins.PluginFactory
 import org.apache.logging.log4j.core.impl.Log4jLogEvent
+import net.corda.common.logging.withErrorCodeFor
+
 
 @Plugin(name = "ErrorCodeRewritePolicy", category = Core.CATEGORY_NAME, elementType = "rewritePolicy", printObject = false)
 class ErrorCodeRewritePolicy : RewritePolicy {
