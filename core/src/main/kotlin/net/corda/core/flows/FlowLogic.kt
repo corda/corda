@@ -123,13 +123,18 @@ abstract class FlowLogic<out T> {
     @Suspendable
     fun initiateFlow(requested: AbstractParty): FlowSession {
         val wellKnown = serviceHub.identityService.wellKnownPartyFromAnonymous(requested)
-
-        if (wellKnown == null){
+        if (wellKnown == null) {
             throw IllegalStateException("could not initiate flow with party $requested as they are not in the node identity service")
         }
-
         return stateMachine.initiateFlow(wellKnown = wellKnown, requested = requested)
     }
+
+    /**
+     * Creates a communication session with [party]. Subsequently you may send/receive using this session object. Note
+     * that this function does not communicate in itself, the counter-flow will be kicked off by the first send/receive.
+     */
+    @Suspendable
+    fun initiateFlow(party: Party): FlowSession = stateMachine.initiateFlow(party)
 
     /**
      * Specifies the identity, with certificate, to use for this flow. This will be one of the multiple identities that
