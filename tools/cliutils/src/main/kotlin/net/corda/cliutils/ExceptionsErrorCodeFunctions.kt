@@ -13,7 +13,7 @@ internal fun Message.withErrorCodeFor(error: Throwable?, level: Level): Message 
     }
 }
 
-private fun Throwable.errorCodeLocationUrl() = "https://errors.corda.net/${CordaVersionProvider.platformEditionCode}/${CordaVersionProvider.semanticVersion}/${errorCode()}"
+fun Throwable.errorCodeLocationUrl() = "https://errors.corda.net/${CordaVersionProvider.platformEditionCode}/${CordaVersionProvider.semanticVersion}/${errorCode()}"
 
 private fun Throwable.errorCode(hashedFields: (Throwable) -> Array<out Any?> = Throwable::defaultHashedFields): String {
 
