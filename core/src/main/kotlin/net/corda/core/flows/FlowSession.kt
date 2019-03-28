@@ -45,12 +45,18 @@ import java.security.PublicKey
  */
 @DoNotImplement
 abstract class FlowSession {
+
+    /**
+     * The current [sessionOwningKey] in the context of this session. It is not guaranteed to be [counterparty.owningKey] as the session
+     * may have been initiated with an [net.corda.core.identity.AnonymousParty] useful for grouping sessions vs signing requests
+     */
+    abstract val sessionOwningKey: PublicKey
+
     /**
      * The [Party] on the other side of this session. In the case of a session created by [FlowLogic.initiateFlow]
      *   [counterparty] is the same Party as the one passed to that function.
      */
     abstract val counterparty: Party
-    abstract val sessionOwningKey: PublicKey
 
     /**
      * Returns a [FlowInfo] object describing the flow [counterparty] is using. With [FlowInfo.flowVersion] it
