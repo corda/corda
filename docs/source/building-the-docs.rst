@@ -4,6 +4,36 @@ Building the documentation
 The documentation is under the ``docs`` folder, and is written in reStructuredText format. Documentation in HTML format
 is pre-generated, as well as code documentation, and this can be done automatically via a provided script.
 
+Building Using the Docker Image
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This is the method used during the build.  If you run:
+
+.. code-block:: shell
+
+    ./gradlew makeDocs
+
+This will download a docker image from docker hub and run the build locally inside that by mounting quite a bit of the docs directory at
+various places inside the image.
+
+This image is pre-built with the dependencies that were in requirements.txt at the time of the docker build.
+
+Changing requirements
+---------------------
+
+If you want to upgrade, say, the version of sphinx that we're using, you must:
+
+* Upgrade the version number in requirements.txt
+* Build a new docker image: ``cd docs && docker build -t corda/docs-builder:latest -f docs_builder/Dockerfile .``
+
+  * post doing this the build will run using your image locally
+  * you can also push this to the docker registry if you have the corda keys
+  * you can run ``docker run -it corda/docs-builder /bin/bash`` to interactively look in the build docker image (e.g. to see what is in the
+    requirements.txt file)
+
+Building from the Command Line (non-docker)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 Requirements
 ------------
 

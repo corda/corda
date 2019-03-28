@@ -58,19 +58,6 @@ class FinalityFlowTests : WithFinality {
     }
 
     @Test
-    fun `prevent use of the old API if the CorDapp target version is 4`() {
-        val bob = createBob()
-        val stx = aliceNode.issuesCashTo(bob)
-        val resultFuture = CordappResolver.withCordapp(targetPlatformVersion = 4) {
-            @Suppress("DEPRECATION")
-            aliceNode.startFlowAndRunNetwork(FinalityFlow(stx)).resultFuture
-        }
-        assertThatIllegalArgumentException().isThrownBy {
-            resultFuture.getOrThrow()
-        }.withMessageContaining("A flow session for each external participant to the transaction must be provided.")
-    }
-
-    @Test
     fun `allow use of the old API if the CorDapp target version is 3`() {
         val oldBob = createBob(cordapps = listOf(tokenOldCordapp()))
         val stx = aliceNode.issuesCashTo(oldBob)

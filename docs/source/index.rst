@@ -34,6 +34,8 @@ We look forward to seeing what you can do with Corda!
    release-notes
    app-upgrade-notes
    node-upgrade-notes
+   corda-api
+   cheat-sheet
 
 .. toctree::
    :caption: Development
@@ -88,24 +90,6 @@ We look forward to seeing what you can do with Corda!
 
    contributing-index.rst
    deterministic-modules.rst
+   design/design-docs-index.rst
    changelog
 
-.. conditional-toctree::
-   :caption: Design docs
-   :maxdepth: 2
-   :if_tag: htmlmode
-
-   design/design-review-process.md
-   design/certificate-hierarchies/design.md
-   design/failure-detection-master-election/design.md
-   design/float/design.md
-   design/hadr/design.md
-   design/kafka-notary/design.md
-   design/monitoring-management/design.md
-   design/sgx-integration/design.md
-   design/reference-states/design.md
-   design/sgx-infrastructure/design.md
-   design/threat-model/corda-threat-model.md
-   design/data-model-upgrades/signature-constraints.md
-   design/data-model-upgrades/package-namespace-ownership.md
-   design/targetversion/design.md

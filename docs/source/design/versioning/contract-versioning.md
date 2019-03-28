@@ -39,7 +39,7 @@ Corda is designed such that the flow that builds the transaction (on its executi
 But because input states are actually output states that are serialised with the previous transaction (built using a potentially different version of the contract), this means that states serialised with a version of the ContractJAR will need to be deserialisable with a different version. 
 
 
-.. image:: resources/tx-chain.png
+.. image:: ../../resources/tx-chain.png
    :scale: 25%
    :align: center
 
@@ -77,7 +77,7 @@ This design is not about:
 
 ### Assumptions and trade-offs made for the current version
 
-##### We assume that ContractStates will never change their semantics in a way that would impact other Contracts or Flows that depend on them.
+#### We assume that ContractStates will never change their semantics in a way that would impact other Contracts or Flows that depend on them.
  
 E.g.: If various contracts depend on Cash, the assumption is that no new field will be added to Cash that would have an influence over the amount or the owner (the fundamental fields of Cash).
 It is always safe to mix new CashStates with older states that depend on it. 
@@ -89,7 +89,7 @@ This is not a very strong definition, so we will have to create more formalised 
 If any contract breaks this assumption, in Corda 4 there will be no platform support the transition to the new version. The burden of coordinating with all the other cordapp developers and nodes is on the original developer.
 
 
-##### Flow to Flow communication could be lossy for objects that are not ContractStates or Commands.
+#### Flow to Flow communication could be lossy for objects that are not ContractStates or Commands.
 
 Explanation: 
 Flows communicate by passing around various objects, and eventually the entire TransactionBuilder.
@@ -99,7 +99,7 @@ The decision was that the node that sends data would decide (if his version is h
 The objects that live on the ledger like ContractStates and Commands that the other party actually has to sign, will not be allowed to lose any data.
  
 
-##### We assume that cordapp developers will correctly understand all implications and handle backwards compatibility themselves.
+#### We assume that cordapp developers will correctly understand all implications and handle backwards compatibility themselves.
 Basically they will have to realise that any version of a flow can talk to any other version, and code accordingly. 
 
 This get particularly tricky when there are reusable inline subflows involved.
@@ -144,9 +144,9 @@ The Cordapp gradle plugin should be amended to differentiate between a "flows" m
 
 In the build.gradle file of the contracts module, there should be a `version` property that needs be incremented for each release.
 
-This `version' will be used for the regular release, and be part of the jar name.
+This `version` will be used for the regular release, and be part of the jar name.
 
-Also, when packaging the contract for release, the `version` should be added by the plugin to the manifest file, together with other properties like `target-platform-version.
+Also, when packaging the contract for release, the `version` should be added by the plugin to the manifest file, together with other properties like `target-platform-version`.
 
 When loading the contractJar in the attachment storage, the version should be saved as a column, so it is easily accessible.
  
@@ -285,7 +285,7 @@ Terminology:
 - Tx1, Tx2 - are transactions between parties.
 
 
-#### Scenario 1 - Spending a state with an older contract. 
+### Scenario 1 - Spending a state with an older contract. 
 - V1: com.megacorp.token.MegaToken(amount: Amount, owner: Party)
 - V2: com.megacorp.token.MegaToken(amount: Amount, owner: Party, accumulatedDebt: Amount? = 0)
 
@@ -299,7 +299,7 @@ Terminology:
 Solution: This was analysed above. It will be solved by the non-downgrade rule and the serialization engine changes.
 
 
-#### Scenario 2: - Running an explicit upgrade  written against an older contract version.
+### Scenario 2: - Running an explicit upgrade  written against an older contract version.
 - V1: com.megacorp.token.MegaToken(amount: Amount, owner: Party)
 - V2: com.megacorp.token.MegaToken(amount: Amount, owner: Party, accumulatedDebt: Amount? = 0)
 - Another company creates a better com.gigacorp.token.GigaToken that is an UpgradedContract designed to replace the MegaToken via an explicit upgrade, but develop against V1 ( as V2 was not released at the time of development).
@@ -313,7 +313,7 @@ Same as before:
 Solution: This attack breaks the assumption we made that contracts will not be adding fields that change it fundamentally.
 
 
-#### Scenario 3 - Flows installed by 2 peers compiled against different contract versions.
+### Scenario 3 - Flows installed by 2 peers compiled against different contract versions.
 - Alice runs V1 of the MegaToken FlowsJAR, while Bob runs V2.
 - Bob builds a new transaction where he transfers a state with accumulatedDebt To Alice.
 - Alice is not able to correctly evaluate the business proposition, as she does not know that there even exists an accumulatedDebt field, but still signs it as if it was debt free.
@@ -321,7 +321,7 @@ Solution: This attack breaks the assumption we made that contracts will not be a
 Solution: Solved by the assumption that peer-to-peer communication can be lossy, and the peer with the higher version is responsible to send the right data
 
 
-#### Scenario 4 - Developer attempts to rename a field from one version to the next. 
+### Scenario 4 - Developer attempts to rename a field from one version to the next. 
 - V1: com.megacorp.token.MegaToken(amount: Amount, owner: Party, accumulatedDebt: Amount )
 - V2: com.megacorp.token.MegaToken(amount: Amount, owner: Party, currentDebt: Amount)
 
@@ -331,7 +331,7 @@ This would break as soon as you try to spend a V1 state with V2, because there i
 Solution: Not possible for now, as it breaks the serialisation evolution rules. Could be added as a new feature in the future.
 
 
-#### Scenario 5 - Contract verification logic becomes more strict in a new version. General concerns.
+### Scenario 5 - Contract verification logic becomes more strict in a new version. General concerns.
 - V1: check that amount > 10
 - V2: check that amount > 12 
 
@@ -349,7 +349,7 @@ The question is how important it is, that amount is >12?
 
 Solution: This is not addressed in the current design doc. It needs to be explored in more depth.
 
-#### Scenario 6 - Contract verification logic becomes more strict in a new version. ???
+### Scenario 6 - Contract verification logic becomes more strict in a new version. ???
 - V1: check that amount > 10
 - V2: check that amount > 12
 
@@ -362,7 +362,7 @@ Solution: This is not addressed in the current design doc. It needs to be explor
 Solution: Same as Scenario 5.
 
 
-#### Scenario 7 - Contract verification logic becomes less strict.
+### Scenario 7 - Contract verification logic becomes less strict.
 - V1: check that amount > 12
 - V2: check that amount > 10 
 
@@ -373,7 +373,7 @@ Because there was no change in the actual structure of the state it means the fl
 Solution: This should not require any change.
 
 
-#### Scenario 8 - Contract depends on another Contract.
+### Scenario 8 - Contract depends on another Contract.
 - V1: com.megacorp.token.MegaToken(amount: Amount, owner: Party)
 - V2: com.megacorp.token.MegaToken(amount: Amount, owner: Party, accumulatedDebt: Amount? = 0)
 
@@ -387,7 +387,7 @@ Alice swaps MegaToken-v2 for SuperToken-v1 with Bob in a transaction. If Alice s
 Solution: Solved by the assumption we made that contracts don't change fundamentally.
 
 
-#### Scenario 9 - A new command is added or removed 
+### Scenario 9 - A new command is added or removed 
 - V1 of com.megacorp.token.MegaToken has 3 Commands: Issue, Move, Exit
 - V2 of com.megacorp.token.MegaToken has 4 Commands: Issue, Move, Exit, AddDebt
 - V3 of com.megacorp.token.MegaToken has 3 Commands: Issue, Move, Exit

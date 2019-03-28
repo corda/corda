@@ -28,12 +28,22 @@ import java.util.function.Predicate
  * - Deserialising the output states.
  *
  * All the above refer to inputs using a (txhash, output index) pair.
+ *
+ * Usage notes:
+ *
+ * [LedgerTransaction] is an abstraction that is meant to be used during the transaction verification stage.
+ * It needs full access to input states that might be in transactions that are encrypted and unavailable for code running outside the secure enclave.
+ * Also, it might need to deserialize states with code that might not be available on the classpath.
+ *
+ * Because of this, trying to create or use a [LedgerTransaction] for any other purpose then transaction verification can result in unexpected exceptions,
+ * which need de be handled.
+ *
+ * [LedgerTransaction]s should never be instantiated directly from client code, but rather via WireTransaction.toLedgerTransaction
  */
 @KeepForDJVM
 @CordaSerializable
 class LedgerTransaction
 @ConstructorForDeserialization
-// LedgerTransaction is not meant to be created directly from client code, but rather via WireTransaction.toLedgerTransaction
 private constructor(
         // DOCSTART 1
         /** The resolved input states which will be consumed/invalidated by the execution of this transaction. */
@@ -67,7 +77,6 @@ private constructor(
     private var serializedReferences: List<SerializedStateAndRef>? = null
 
     init {
-        checkBaseInvariants()
         if (timeWindow != null) check(notary != null) { "Transactions with time-windows must be notarised" }
         checkNotaryWhitelisted()
     }
@@ -133,6 +142,9 @@ private constructor(
         // Switch thread local deserialization context to using a cached attachments classloader. This classloader enforces various rules
         // like no-overlap, package namespace ownership and (in future) deterministic Java.
         return AttachmentsClassLoaderBuilder.withAttachmentsClassloaderContext(this.attachments + extraAttachments, getParamsWithGoo(), id) { transactionClassLoader ->
+            // Create a copy of the outer LedgerTransaction which deserializes all fields inside the [transactionClassLoader].
+            // Only the copy will be used for verification, and the outer shell will be discarded.
+            // This artifice is required to preserve backwards compatibility.
             Verifier(createLtxForVerification(), transactionClassLoader)
         }
     }
@@ -163,12 +175,17 @@ private constructor(
         return FlowLogic.currentTopLevel?.serviceHub?.networkParameters
     }
 
+    /**
+     * Create the [LedgerTransaction] instance that will be used by contract verification.
+     *
+     * This method needs to run in the special transaction attachments classloader context.
+     */
     private fun createLtxForVerification(): LedgerTransaction {
         val serializedInputs = this.serializedInputs
         val serializedReferences = this.serializedReferences
         val componentGroups = this.componentGroups
 
-        return if (serializedInputs != null && serializedReferences != null && componentGroups != null) {
+        val transaction= if (serializedInputs != null && serializedReferences != null && componentGroups != null) {
             // Deserialize all relevant classes in the transaction classloader.
             val deserializedInputs = serializedInputs.map { it.toStateAndRef() }
             val deserializedReferences = serializedReferences.map { it.toStateAndRef() }
@@ -198,6 +215,12 @@ private constructor(
                     "The result of the verify method might not be accurate.")
             this
         }
+
+        // This check accesses input states and must be run in this context.
+        // It must run on the instance that is verified, not on the outer LedgerTransaction shell.
+        transaction.checkBaseInvariants()
+
+        return transaction
     }
 
     /**
