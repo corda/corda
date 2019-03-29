@@ -175,7 +175,6 @@ class NodeAttachmentService(
      * this will provide an additional safety check against user error.
      */
     @VisibleForTesting
-    @CordaSerializable
     class HashCheckingStream(val expected: SecureHash.SHA256,
                              val expectedSize: Int,
                              input: InputStream,

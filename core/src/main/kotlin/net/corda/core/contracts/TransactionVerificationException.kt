@@ -46,7 +46,6 @@ class AttachmentResolutionException(val hash: SecureHash) : FlowException("Attac
  * @property txId the Merkle root hash (identifier) of the transaction that failed verification.
  */
 @Suppress("MemberVisibilityCanBePrivate")
-@CordaSerializable
 abstract class TransactionVerificationException(val txId: SecureHash, message: String, cause: Throwable?)
     : FlowException("$message, transaction: $txId", cause) {
 

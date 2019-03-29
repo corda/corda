@@ -20,7 +20,6 @@ import javax.xml.bind.DatatypeConverter
  * @property offset The start position of the sequence within the byte array.
  * @property size The number of bytes this sequence represents.
  */
-@CordaSerializable
 @KeepForDJVM
 sealed class ByteSequence(private val _bytes: ByteArray, val offset: Int, val size: Int) : Comparable<ByteSequence> {
     /**
@@ -145,6 +144,7 @@ sealed class ByteSequence(private val _bytes: ByteArray, val offset: Int, val si
  * functionality to Java, but it won't arrive for a few years yet!
  */
 @KeepForDJVM
+@CordaSerializable
 open class OpaqueBytes(bytes: ByteArray) : ByteSequence(bytes, 0, bytes.size) {
     companion object {
         /**
