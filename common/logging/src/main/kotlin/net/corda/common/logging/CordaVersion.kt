@@ -2,10 +2,6 @@ package net.corda.common.logging
 
 import com.jcabi.manifests.Manifests
 
-/**
- * Simple version printing when command is called with --version or -V flag. Assuming that we reuse Corda-Release-Version and Corda-Revision
- * in the manifest file.
- */
 class CordaVersion  {
     companion object {
         private const val UNKNOWN = "Unknown"

@@ -4,7 +4,6 @@ import io.netty.channel.unix.Errors
 import net.corda.cliutils.printError
 import net.corda.cliutils.CliWrapperBase
 import net.corda.cliutils.CordaCliWrapper
-import net.corda.cliutils.CordaVersionProvider
 import net.corda.cliutils.ExitCodes
 import net.corda.common.logging.CordaVersion
 import net.corda.core.contracts.HashAttachmentConstraint

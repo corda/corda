@@ -12,4 +12,5 @@ class CordaVersionProvider : CommandLine.IVersionProvider {
 
     override fun getVersion(): Array<String> {
         return version.getVersion()
-    }}
+    }
+}
