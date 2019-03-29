@@ -110,7 +110,7 @@ class CollectSignaturesFlow @JvmOverloads constructor(val partiallySignedTx: Sig
         if (unsigned.isEmpty()) return partiallySignedTx
 
         val setOfAllSessionKeys = sessionsToCollectFrom.groupBy { it.sessionOwningKey }.map {
-            require(it.value.size == 1) {"There are multiple sessions initiated for party key ${it.key.toStringShort()}"}
+            require(it.value.size == 1) { "There are multiple sessions initiated for party key ${it.key.toStringShort()}" }
             it.key to it.value.first()
         }.toMap()
 
@@ -131,22 +131,23 @@ class CollectSignaturesFlow @JvmOverloads constructor(val partiallySignedTx: Sig
             }
         }
 
-        val keysMissingASession = unsigned.filterNot {
-            //every unsigned key must have a session it can ask
+        val keyToSessionMap = unsigned.map {
             if (it in setOfAllSessionKeys) {
-                // the unsigned key exists directly as a sessionKey
-                true
+                // the unsigned key exists directly as a sessionKey, so use that session
+                it to setOfAllSessionKeys[it]
             } else {
                 //it might be delegated to a wellKnownParty
                 val wellKnownParty: Party? = keyToSigningParty[it]
                 if (wellKnownParty != null) {
-                    //there is a wellKnownParty for this key, check if it has a session
-                    setOfAllSessionKeys[wellKnownParty.owningKey] != null
+                    //there is a wellKnownParty for this key, check if it has a session, and if so - use that session
+                    val sessionForWellKnownParty = setOfAllSessionKeys[wellKnownParty.owningKey]
+                            ?: throw IllegalStateException("No session available to request signature for key: ${it.toStringShort()}")
+                    it to sessionForWellKnownParty
                 } else {
-                    false
+                    throw IllegalStateException("Could not find a session or wellKnown party for key ${it.toStringShort()}")
                 }
             }
-        }
+        }.toMap()
 
 //
 //        require(keysNotProvidedBySessions.isEmpty() && sessionsNotRelatedToKeys.isEmpty()) {
