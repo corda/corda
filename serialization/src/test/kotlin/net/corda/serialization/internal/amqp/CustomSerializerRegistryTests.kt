@@ -1,14 +1,13 @@
 package net.corda.serialization.internal.amqp
 
+import net.corda.core.CordaException
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializationContext
 import net.corda.finance.contracts.asset.Cash
 import org.apache.qpid.proton.amqp.Symbol
 import org.apache.qpid.proton.codec.Data
-import org.junit.Ignore
 import org.junit.Test
 import java.lang.reflect.Type
-import java.math.BigDecimal
 import kotlin.test.assertFailsWith
 import kotlin.test.assertSame
 
@@ -54,6 +53,19 @@ class CustomSerializerRegistryTests {
         assertFailsWith<IllegalCustomSerializerException> {
             unit.find(AnnotatedWithCordaSerializable::class.java)
         }
+    }
+
+    @Test
+    fun `exception types can have custom serializers`() {
+        @CordaSerializable
+        class MyCustomException : CordaException("Custom exception annotated with @CordaSerializable")
+
+        val customExceptionSerializer = TestCustomSerializer("a") { type -> type == MyCustomException::class.java }
+        unit.register(customExceptionSerializer)
+
+        assertSame(
+                customExceptionSerializer,
+                unit.find(MyCustomException::class.java))
     }
 
     @Test

@@ -1,5 +1,6 @@
 package net.corda.serialization.internal.amqp
 
+import net.corda.core.CordaThrowable
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.contextLogger
@@ -156,6 +157,7 @@ class CachingCustomSerializerRegistry(
 
     private val Class<*>.isCustomSerializationForbidden: Boolean get() = when {
         AMQPTypeIdentifiers.isPrimitive(this) -> true
+        isSubClassOf(CordaThrowable::class.java) -> false
         isAnnotationPresent(CordaSerializable::class.java) -> true
         else -> false
     }
