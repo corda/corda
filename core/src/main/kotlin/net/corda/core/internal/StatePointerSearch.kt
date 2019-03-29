@@ -43,7 +43,7 @@ class StatePointerSearch(val state: ContractState) {
         val fieldsWithObjects = fields.mapNotNull { field ->
             // Ignore classes which have not been loaded.
             // Assumption: all required state classes are already loaded.
-            val packageName = field.type.`package`?.name
+            val packageName = field.type.packageNameOrNull
             if (packageName == null) {
                 null
             } else {
@@ -72,7 +72,7 @@ class StatePointerSearch(val state: ContractState) {
             is StatePointer<*> -> statePointers.add(obj)
             is Iterable<*> -> handleIterable(obj)
             else -> {
-                val packageName = obj.javaClass.`package`.name
+                val packageName = obj.javaClass.packageNameOrNull?:""
                 val isBlackListed = blackListedPackages.any { packageName.startsWith(it) }
                 if (isBlackListed.not()) fieldQueue.addAllFields(obj)
             }
@@ -85,6 +85,10 @@ class StatePointerSearch(val state: ContractState) {
         handleObject(newObj)
     }
 
+
+    //interesting - this seems to do a graph search of EVERY FIELD IN EVERY STATE in the TX
+    //is this really what should be done? This means that it is impossible to *NOT* attach a statepointer, even if you do not want to
+    //maybe TXbuilder should take a param which disables this behaviour.
     fun search(): Set<StatePointer<*>> {
         while (fieldQueue.isNotEmpty()) {
             val (obj, field) = fieldQueue.pop()
@@ -94,3 +98,14 @@ class StatePointerSearch(val state: ContractState) {
         return statePointers
     }
 }
+
+val Class<*>.packageNameOrNull: String? // This intentionally does not go via `package` as that code path is slow and contended and just ends up doing this.
+    get() {
+        val name = this.getName()
+        val i = name.lastIndexOf('.')
+        if (i != -1) {
+            return name.substring(0, i)
+        } else {
+            return null
+        }
+    }
