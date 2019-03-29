@@ -4,14 +4,13 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.crypto.toStringShort
-import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.identity.groupPublicKeysByWellKnownParty
+import net.corda.core.internal.toMultiMap
 import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.ProgressTracker
-import net.corda.core.utilities.toBase58String
 import net.corda.core.utilities.unwrap
 import java.security.PublicKey
 
@@ -134,7 +133,7 @@ class CollectSignaturesFlow @JvmOverloads constructor(val partiallySignedTx: Sig
         val keyToSessionMap = unsigned.map {
             if (it in setOfAllSessionKeys) {
                 // the unsigned key exists directly as a sessionKey, so use that session
-                it to setOfAllSessionKeys[it]
+                it to setOfAllSessionKeys[it]!!
             } else {
                 //it might be delegated to a wellKnownParty
                 val wellKnownParty: Party? = keyToSigningParty[it]
@@ -147,17 +146,19 @@ class CollectSignaturesFlow @JvmOverloads constructor(val partiallySignedTx: Sig
                     throw IllegalStateException("Could not find a session or wellKnown party for key ${it.toStringShort()}")
                 }
             }
-        }.toMap()
+        }
 
-//
-//        require(keysNotProvidedBySessions.isEmpty() && sessionsNotRelatedToKeys.isEmpty()) {
-//            "The Initiator of CollectSignaturesFlow must pass in exactly the sessions required to sign the transaction."
-//        }
-//        // Collect signatures from all counterparties and append them to the partially signed transaction.
-//        val counterpartySignatures = unsigned.flatMap { keyToSignWith->
-//            subFlow(CollectSignatureFlow(partiallySignedTx, keyToSessionMap[keyToSignWith]!!, listOf(keyToSignWith)))
-//        }
-        val stx = partiallySignedTx + listOf()
+        //now invert the map to find the keys per session
+        val sessionToKeysMap = keyToSessionMap.map { it.second to it.first }.toMultiMap()
+
+        require(unrelatedSessions.isEmpty()) {
+            "The Initiator of CollectSignaturesFlow must pass in exactly the sessions required to sign the transaction."
+        }
+        // Collect signatures from all counterparties and append them to the partially signed transaction.
+        val counterpartySignatures = sessionToKeysMap.flatMap { (session, keys)->
+            subFlow(CollectSignatureFlow(partiallySignedTx, session, keys))
+        }
+        val stx = partiallySignedTx + counterpartySignatures
 
         // Verify all but the notary's signature if the transaction requires a notary, otherwise verify all signatures.
         progressTracker.currentStep = VERIFYING
@@ -290,12 +291,6 @@ abstract class SignTransactionFlow @JvmOverloads constructor(val otherSideSessio
 
     @Suspendable
     private fun checkSignatures(stx: SignedTransaction) {
-        // We set `ignoreUnrecognisedParties` to `true` in `groupPublicKeysByWellKnownParty`. This is because we don't 
-        // need to recognise all keys, but just the initiator's.
-        val signingWellKnownIdentities = groupPublicKeysByWellKnownParty(serviceHub, stx.sigs.map(TransactionSignature::by), true)
-        require(otherSideSession.counterparty in signingWellKnownIdentities) {
-            "The Initiator of CollectSignaturesFlow must have signed the transaction. Found $signingWellKnownIdentities, expected $otherSideSession"
-        }
         val signed = stx.sigs.map { it.by }
         val allSigners = stx.tx.requiredSigningKeys
         val notSigned = allSigners - signed
