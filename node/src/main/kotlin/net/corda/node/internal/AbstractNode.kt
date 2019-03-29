@@ -36,7 +36,10 @@ import net.corda.core.utilities.minutes
 import net.corda.node.CordaClock
 import net.corda.node.VersionInfo
 import net.corda.node.internal.classloading.requireAnnotation
-import net.corda.node.internal.cordapp.*
+import net.corda.node.internal.cordapp.CordappProviderImpl
+import net.corda.node.internal.cordapp.CordappProviderInternal
+import net.corda.node.internal.cordapp.JarScanningCordappLoader
+import net.corda.node.internal.cordapp.VirtualCordapp
 import net.corda.node.internal.rpc.proxies.AuthenticatedRpcOpsProxy
 import net.corda.node.internal.rpc.proxies.ExceptionMaskingRpcOpsProxy
 import net.corda.node.internal.rpc.proxies.ExceptionSerialisingRpcOpsProxy
@@ -175,7 +178,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     val cryptoService = configuration.makeCryptoService()
     @Suppress("LeakingThis")
     val networkParametersStorage = makeNetworkParametersStorage()
-    val cordappProvider = CordappProviderImpl(cordappLoader, CordappConfigFileProvider(configuration.cordappDirectories), attachments).tokenize()
+    val cordappProvider = CordappProviderImpl(cordappLoader, attachments).tokenize()
     @Suppress("LeakingThis")
     val keyManagementService = makeKeyManagementService(identityService).tokenize()
     val servicesForResolution = ServicesForResolutionImpl(identityService, attachments, cordappProvider, networkParametersStorage, transactionStorage).also {

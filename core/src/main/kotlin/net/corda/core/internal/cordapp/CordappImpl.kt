@@ -2,6 +2,7 @@ package net.corda.core.internal.cordapp
 
 import net.corda.core.DeleteForDJVM
 import net.corda.core.cordapp.Cordapp
+import net.corda.core.cordapp.CordappConfig
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.internal.PLATFORM_VERSION
@@ -35,7 +36,8 @@ data class CordappImpl(
         val notaryService: Class<out NotaryService>? = null,
         /** Indicates whether the CorDapp is loaded from external sources, or generated on node startup (virtual). */
         val isLoaded: Boolean = true,
-        private val explicitCordappClasses: List<String> = emptyList()
+        private val explicitCordappClasses: List<String> = emptyList(),
+        override val config: CordappConfig = EmptyCordappConfig
 ) : Cordapp {
     override val name: String = jarName(jarPath)
 
@@ -85,7 +87,8 @@ data class CordappImpl(
                 jarHash = SecureHash.allOnesHash,
                 minimumPlatformVersion = 1,
                 targetPlatformVersion = PLATFORM_VERSION,
-                notaryService = null
+                notaryService = null,
+                config = EmptyCordappConfig
         )
     }
 }

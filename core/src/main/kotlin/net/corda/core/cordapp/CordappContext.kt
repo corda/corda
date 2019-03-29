@@ -3,7 +3,7 @@ package net.corda.core.cordapp
 import net.corda.core.CordaInternal
 import net.corda.core.DeleteForDJVM
 import net.corda.core.crypto.SecureHash
-import java.lang.UnsupportedOperationException
+import net.corda.core.internal.cordapp.EmptyCordappConfig
 
 /**
  * An app context provides information about where an app was loaded from, access to its classloader,
@@ -38,26 +38,4 @@ class CordappContext private constructor(
             attachmentId: SecureHash?,
             classLoader: ClassLoader
     ) : this(cordapp, attachmentId, classLoader, EmptyCordappConfig)
-
-    private object EmptyCordappConfig : CordappConfig {
-        override fun exists(path: String): Boolean {
-            return false
-        }
-
-        override fun get(path: String) = throw CordappConfigException("Cordapp configuration is incorrect", UnsupportedOperationException())
-
-        override fun getInt(path: String) = throw CordappConfigException("Cordapp configuration is incorrect", UnsupportedOperationException())
-
-        override fun getLong(path: String) = throw CordappConfigException("Cordapp configuration is incorrect", UnsupportedOperationException())
-
-        override fun getFloat(path: String) = throw CordappConfigException("Cordapp configuration is incorrect", UnsupportedOperationException())
-
-        override fun getDouble(path: String) = throw CordappConfigException("Cordapp configuration is incorrect", UnsupportedOperationException())
-
-        override fun getNumber(path: String) = throw CordappConfigException("Cordapp configuration is incorrect", UnsupportedOperationException())
-
-        override fun getString(path: String) = throw CordappConfigException("Cordapp configuration is incorrect", UnsupportedOperationException())
-
-        override fun getBoolean(path: String) = throw CordappConfigException("Cordapp configuration is incorrect", UnsupportedOperationException())
-    }
 }

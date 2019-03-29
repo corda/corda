@@ -1,5 +1,6 @@
 package net.corda.node.internal.cordapp
 
+import com.typesafe.config.Config
 import io.github.classgraph.ClassGraph
 import io.github.classgraph.ScanResult
 import net.corda.core.cordapp.Cordapp
@@ -44,7 +45,8 @@ import kotlin.streams.toList
 class JarScanningCordappLoader private constructor(private val cordappJarPaths: List<RestrictedURL>,
                                                    private val versionInfo: VersionInfo = VersionInfo.UNKNOWN,
                                                    extraCordapps: List<CordappImpl>,
-                                                   private val signerKeyFingerprintBlacklist: List<SecureHash.SHA256> = emptyList()) : CordappLoaderTemplate() {
+                                                   private val signerKeyFingerprintBlacklist: List<SecureHash.SHA256> = emptyList(),
+                                                   val cordappConfigProvider: CordappConfigProvider) : CordappLoaderTemplate() {
     init {
         if (cordappJarPaths.isEmpty()) {
             logger.info("No CorDapp paths provided")
@@ -67,13 +69,13 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
          *
          * @param cordappDirs Directories used to scan for CorDapp JARs.
          */
-        fun fromDirectories(cordappDirs: Collection<Path>,
+        fun fromDirectories(cordappDirs: List<Path>,
                             versionInfo: VersionInfo = VersionInfo.UNKNOWN,
                             extraCordapps: List<CordappImpl> = emptyList(),
                             signerKeyFingerprintBlacklist: List<SecureHash.SHA256> = emptyList()): JarScanningCordappLoader {
             logger.info("Looking for CorDapps in ${cordappDirs.distinct().joinToString(", ", "[", "]")}")
             val paths = cordappDirs.distinct().flatMap(this::jarUrlsInDirectory).map { it.restricted() }
-            return JarScanningCordappLoader(paths, versionInfo, extraCordapps, signerKeyFingerprintBlacklist)
+            return JarScanningCordappLoader(paths, versionInfo, extraCordapps, signerKeyFingerprintBlacklist, CordappConfigFileProvider(cordappDirs))
         }
 
         /**
@@ -82,9 +84,10 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
          * @param scanJars Uses the JAR URLs provided for classpath scanning and Cordapp detection.
          */
         fun fromJarUrls(scanJars: List<URL>, versionInfo: VersionInfo = VersionInfo.UNKNOWN, extraCordapps: List<CordappImpl> = emptyList(),
-                        cordappsSignerKeyFingerprintBlacklist: List<SecureHash.SHA256> = emptyList()): JarScanningCordappLoader {
+                        cordappsSignerKeyFingerprintBlacklist: List<SecureHash.SHA256> = emptyList(),
+                        cordappConfigProvider: CordappConfigProvider = CordappConfigFileProvider(emptyList())): JarScanningCordappLoader {
             val paths = scanJars.map { it.restricted() }
-            return JarScanningCordappLoader(paths, versionInfo, extraCordapps, cordappsSignerKeyFingerprintBlacklist)
+            return JarScanningCordappLoader(paths, versionInfo, extraCordapps, cordappsSignerKeyFingerprintBlacklist, cordappConfigProvider)
         }
 
         private fun URL.restricted(rootPackageName: String? = null) = RestrictedURL(this, rootPackageName)
@@ -134,9 +137,11 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
 
     private fun RestrictedScanResult.toCordapp(url: RestrictedURL): CordappImpl {
         val manifest: Manifest? = url.url.openStream().use { JarInputStream(it).manifest }
-        val info = parseCordappInfo(manifest, CordappImpl.jarName(url.url))
+        val name = CordappImpl.jarName(url.url)
+        val info = parseCordappInfo(manifest, name)
         val minPlatformVersion = manifest?.get(CordappImpl.MIN_PLATFORM_VERSION)?.toIntOrNull() ?: 1
         val targetPlatformVersion = manifest?.get(CordappImpl.TARGET_PLATFORM_VERSION)?.toIntOrNull() ?: minPlatformVersion
+        val config = cordappConfigProvider.getConfigByName(name)
         return CordappImpl(
                 findContractClassNames(this),
                 findInitiatedFlows(this),
@@ -144,7 +149,7 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
                 findServiceFlows(this),
                 findSchedulableFlows(this),
                 findServices(this),
-                findWhitelists(url),
+                findWhitelists(url) + configuredGreylist(config),
                 findSerializers(this),
                 findCustomSchemas(this),
                 findAllFlows(this),
@@ -154,8 +159,13 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
                 minPlatformVersion,
                 targetPlatformVersion,
                 findNotaryService(this),
-                explicitCordappClasses = findAllCordappClasses(this)
+                explicitCordappClasses = findAllCordappClasses(this),
+                config = TypesafeCordappConfig(config)
         )
+    }
+
+    private fun configuredGreylist(config: Config): List<SerializationWhitelist> {
+        return emptyList()
     }
 
     private fun parseCordappInfo(manifest: Manifest?, defaultName: String): Cordapp.Info {

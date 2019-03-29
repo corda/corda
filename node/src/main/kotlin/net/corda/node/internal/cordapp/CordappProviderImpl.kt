@@ -12,8 +12,8 @@ import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.contextLogger
-import net.corda.nodeapi.internal.cordapp.CordappLoader
 import net.corda.node.services.persistence.AttachmentStorageInternal
+import net.corda.nodeapi.internal.cordapp.CordappLoader
 import java.net.URL
 import java.util.concurrent.ConcurrentHashMap
 
@@ -21,7 +21,6 @@ import java.util.concurrent.ConcurrentHashMap
  * Cordapp provider and store. For querying CorDapps for their attachment and vice versa.
  */
 open class CordappProviderImpl(val cordappLoader: CordappLoader,
-                               private val cordappConfigProvider: CordappConfigProvider,
                                private val attachmentStorage: AttachmentStorage) : SingletonSerializeAsToken(), CordappProviderInternal {
     companion object {
         private val log = contextLogger()
@@ -98,7 +97,7 @@ open class CordappProviderImpl(val cordappLoader: CordappLoader,
                     cordapp,
                     getCordappAttachmentId(cordapp),
                     cordappLoader.appClassLoader,
-                    TypesafeCordappConfig(cordappConfigProvider.getConfigByName(cordapp.name))
+                    cordapp.config
             )
         }
     }

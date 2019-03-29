@@ -16,15 +16,14 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.nodeapi.internal.cordapp.CordappLoader
 import net.corda.node.internal.cordapp.CordappProviderImpl
 import net.corda.node.internal.cordapp.JarScanningCordappLoader
 import net.corda.nodeapi.internal.AttachmentsClassLoaderStaticContractTests.AttachmentDummyContract.Companion.ATTACHMENT_PROGRAM_ID
+import net.corda.nodeapi.internal.cordapp.CordappLoader
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
-import net.corda.testing.internal.MockCordappConfigProvider
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.internal.cordappWithPackages
 import net.corda.testing.services.MockAttachmentStorage
@@ -75,7 +74,7 @@ class AttachmentsClassLoaderStaticContractTests {
     }
 
     private val serviceHub get() = rigorousMock<ServicesForResolution>().also {
-        val cordappProviderImpl = CordappProviderImpl(cordappLoaderForPackages(listOf("net.corda.nodeapi.internal")), MockCordappConfigProvider(), MockAttachmentStorage())
+        val cordappProviderImpl = CordappProviderImpl(cordappLoaderForPackages(listOf("net.corda.nodeapi.internal")), MockAttachmentStorage())
         cordappProviderImpl.start()
         doReturn(cordappProviderImpl).whenever(it).cordappProvider
         doReturn(networkParametersService).whenever(it).networkParametersService
