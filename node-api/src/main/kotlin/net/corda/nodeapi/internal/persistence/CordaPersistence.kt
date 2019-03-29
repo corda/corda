@@ -236,6 +236,15 @@ class CordaPersistence(
         }
     }
 
+    /**
+     * Executes given statement in the scope of transaction with the transaction level specified at the creation time.
+     * @param statement to be executed in the scope of this transaction.
+     * @param recoverableFailureTolerance number of transaction commit retries for SQL while SQL exception is encountered.
+     */
+    fun <T> transaction(recoverableFailureTolerance: Int, statement: DatabaseTransaction.() -> T): T {
+        return transaction(defaultIsolationLevel, recoverableFailureTolerance, false, statement)
+    }
+
     private fun <T> inTopLevelTransaction(isolationLevel: TransactionIsolationLevel, recoverableFailureTolerance: Int,
                                           recoverAnyNestedSQLException: Boolean, statement: DatabaseTransaction.() -> T): T {
         var recoverableFailureCount = 0

@@ -44,11 +44,13 @@ advertise a minimum platform version of 4 and a target version of 5. These numbe
 
 If this app is loaded into a Corda 6 node, that node may implement backwards compatibility workarounds for your app that make it slower,
 less secure, or less featureful. You can opt-in to getting the full benefits of the upgrade by changing your target version to 6. By doing
-this, you promise that you understood all the changes in Corda 6 and have thoroughly tested your app to prove it works.
+this, you promise that you understood all the changes in Corda 6 and have thoroughly tested your app to prove it works. This testing should
+include ensuring that the app exhibits the correct behaviour on a node running at the new target version, and that the app functions
+correctly in a network of nodes running at the same target version.
 
 Target versioning is one of the mechanisms we have to keep the platform evolving and improving, without being permanently constrained to
 being bug-for-bug compatible with old versions. When no apps are loaded that target old versions, any emulations of older bugs or problems
-can be disabled (in Corda 4, an example of this is the old FinalityFlow handler that would accept any transactions into the vault, context free).
+can be disabled.
 
 Publishing versions in your JAR manifests
 -----------------------------------------

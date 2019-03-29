@@ -114,10 +114,6 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
     @Throws(NotaryException::class)
     override fun call(): SignedTransaction {
         if (!newApi) {
-            require(CordappResolver.currentTargetVersion < 4) {
-                "A flow session for each external participant to the transaction must be provided. If you wish to continue " +
-                        "using this insecure API then specify a target platform version of less than 4 for your CorDapp."
-            }
             logger.warnOnce("The current usage of FinalityFlow is unsafe. Please consider upgrading your CorDapp to use " +
                     "FinalityFlow with FlowSessions. (${CordappResolver.currentCordapp?.info})")
         } else {
