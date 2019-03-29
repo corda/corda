@@ -368,7 +368,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
 
         // Do all of this in a database transaction so anything that might need a connection has one.
-        return database.transaction {
+        return database.transaction(recoverableFailureTolerance = 0) {
             networkParametersStorage.setCurrentParameters(signedNetParams, trustRoot)
             identityService.loadIdentities(nodeInfo.legalIdentitiesAndCerts)
             attachments.start()
