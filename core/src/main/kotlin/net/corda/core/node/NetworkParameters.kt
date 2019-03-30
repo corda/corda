@@ -98,15 +98,20 @@ data class NetworkParameters(
         require(noPackageOverlap(packageOwnership.keys)) { "Multiple packages added to the packageOwnership overlap." }
     }
 
-    fun copy(minimumPlatformVersion: Int,
-             notaries: List<NotaryInfo>,
-             maxMessageSize: Int,
-             maxTransactionSize: Int,
-             modifiedTime: Instant,
-             epoch: Int,
-             whitelistedContractImplementations: Map<String, List<AttachmentId>>
+    /**
+     * This is to address backwards compatibility of the API, invariant to package ownership
+     * addresses bug CORDA-2769
+     */
+    fun copy(minimumPlatformVersion: Int = this.minimumPlatformVersion,
+             notaries: List<NotaryInfo> = this.notaries,
+             maxMessageSize: Int = this.maxMessageSize,
+             maxTransactionSize: Int = this.maxTransactionSize,
+             modifiedTime: Instant = this.modifiedTime,
+             epoch: Int = this.epoch,
+             whitelistedContractImplementations: Map<String, List<AttachmentId>> = this.whitelistedContractImplementations,
+             eventHorizon: Duration = this.eventHorizon
     ): NetworkParameters {
-        return copy(
+        return NetworkParameters(
                 minimumPlatformVersion = minimumPlatformVersion,
                 notaries = notaries,
                 maxMessageSize = maxMessageSize,
@@ -114,20 +119,24 @@ data class NetworkParameters(
                 modifiedTime = modifiedTime,
                 epoch = epoch,
                 whitelistedContractImplementations = whitelistedContractImplementations,
-                eventHorizon = eventHorizon
+                eventHorizon = eventHorizon,
+                packageOwnership = packageOwnership
         )
     }
 
-    fun copy(minimumPlatformVersion: Int,
-             notaries: List<NotaryInfo>,
-             maxMessageSize: Int,
-             maxTransactionSize: Int,
-             modifiedTime: Instant,
-             epoch: Int,
-             whitelistedContractImplementations: Map<String, List<AttachmentId>>,
-             eventHorizon: Duration
+    /**
+     * This is to address backwards compatibility of the API, invariant to package ownership
+     * addresses bug CORDA-2769
+     */
+    fun copy(minimumPlatformVersion: Int = this.minimumPlatformVersion,
+             notaries: List<NotaryInfo> = this.notaries,
+             maxMessageSize: Int = this.maxMessageSize,
+             maxTransactionSize: Int = this.maxTransactionSize,
+             modifiedTime: Instant = this.modifiedTime,
+             epoch: Int = this.epoch,
+             whitelistedContractImplementations: Map<String, List<AttachmentId>> = this.whitelistedContractImplementations
     ): NetworkParameters {
-        return copy(
+        return NetworkParameters(
                 minimumPlatformVersion = minimumPlatformVersion,
                 notaries = notaries,
                 maxMessageSize = maxMessageSize,
@@ -135,7 +144,8 @@ data class NetworkParameters(
                 modifiedTime = modifiedTime,
                 epoch = epoch,
                 whitelistedContractImplementations = whitelistedContractImplementations,
-                eventHorizon = eventHorizon
+                eventHorizon = eventHorizon,
+                packageOwnership = packageOwnership
         )
     }
 
