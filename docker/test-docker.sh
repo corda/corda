@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Tests Corda docker by registering with test doorman
+# Tests Corda docker by registering with a test doorman
 IMAGE=${1:-corda/corda-corretto-4.0}
 
 # Start up test-doorman, if not already running
@@ -39,7 +39,7 @@ docker run -d --name corda-test-${SALT} --network="host" \
         -e CORDA_ARGS="--log-to-console --no-local-shell" \
         $IMAGE  config-generator --generic
 
-# Succesfully registered with http://localhost:8080
+# Succesfully registered (with http://localhost:8080)
 docker logs -f corda-test-${SALT} | grep -q "Succesfully registered"
 if [ ! "$(docker ps -q -f name=corda-test-${SALT})" ]; then
     echo "TEST-DOCKER: FAIL corda-test has exited."
@@ -51,7 +51,7 @@ else
     echo "TEST-DOCKER: SUCCESS : Succesfully registered with http://localhost:8080"
 fi
 
-# Node for "Test-2294" started up and registered in 22.84 sec
+# Node started up and registered
 docker logs -f corda-test-${SALT} | grep -q "started up and registered in"
 if [ ! "$(docker ps -q -f name=corda-test-${SALT})" ]; then
     echo "TEST-DOCKER: FAIL corda-test has exited."
@@ -61,6 +61,7 @@ if [ ! "$(docker ps -q -f name=corda-test-${SALT})" ]; then
     exit 1
 else
     echo "TEST-DOCKER:  SUCCESS : Node started up and registered"
+    echo "TEST-DOCKER:  SUCCESS : tear down"
     rm -f $(pwd)/network-root-truststore.jks
     docker rm -f corda-test-${SALT}
     exit 0
