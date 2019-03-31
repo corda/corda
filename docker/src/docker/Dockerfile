@@ -1,8 +1,6 @@
 FROM azul/zulu-openjdk:8u192
 
-# Add packages and clean cache
-# Create dirs
-# Create corda user
+## Add packages, clean cache, create dirs, create corda user and change ownership
 RUN apt-get update && \
     apt-get -y upgrade && \
     apt-get -y install bash curl unzip && \
@@ -16,7 +14,9 @@ RUN apt-get update && \
     mkdir -p /opt/corda/additional-node-infos && \
     mkdir -p /etc/corda && \
     addgroup corda && \
-    useradd corda -g corda -m -d /opt/corda
+    useradd corda -g corda -m -d /opt/corda && \
+    chown -R corda:corda /opt/corda && \
+    chown -R corda:corda /etc/corda
 
 ENV CORDAPPS_FOLDER="/opt/corda/cordapps" \
     PERSISTENCE_FOLDER="/opt/corda/persistence" \
@@ -31,39 +31,32 @@ ENV CORDAPPS_FOLDER="/opt/corda/cordapps" \
     CORDA_ARGS=""
 
 ##CORDAPPS FOLDER
+VOLUME ["/opt/corda/cordapps"]
 ##PERSISTENCE FOLDER
+VOLUME ["/opt/corda/persistence"]
 ##CERTS FOLDER
+VOLUME ["/opt/corda/certificates"]
 ##OPTIONAL JDBC DRIVERS FOLDER
+VOLUME ["/opt/corda/drivers"]
 ##LOG FOLDER
+VOLUME ["/opt/corda/logs"]
 ##ADDITIONAL NODE INFOS FOLDER
+VOLUME ["/opt/corda/additional-node-infos"]
 ##CONFIG LOCATION
-VOLUME ["/opt/corda/cordapps"] \
-       ["/opt/corda/persistence"] \
-       ["/opt/corda/certificates"] \
-       ["/opt/corda/drivers"] \
-       ["/opt/corda/logs"] \
-       ["/opt/corda/additional-node-infos"] \
-       ["/etc/corda"]
+VOLUME ["/etc/corda"]
 
 ##CORDA JAR
-##CONFIG MANIPULATOR JAR
-##CONFIG GENERATOR SHELL SCRIPT
-##CORDA RUN SCRIPT
-##BASE CONFIG FOR GENERATOR
 COPY --chown=corda:corda corda.jar /opt/corda/bin/corda.jar
+##CONFIG MANIPULATOR JAR
 COPY --chown=corda:corda config-exporter.jar /opt/corda/config-exporter.jar
+##CONFIG GENERATOR SHELL SCRIPT
 COPY --chown=corda:corda generate-config.sh /opt/corda/bin/config-generator
+##CORDA RUN SCRIPT
 COPY --chown=corda:corda run-corda.sh /opt/corda/bin/run-corda
+##BASE CONFIG FOR GENERATOR
 COPY --chown=corda:corda starting-node.conf /opt/corda/starting-node.conf
 
-##CHANGE OWNER TO CORDA
-##SET EXECUTABLE PERMISSIONS
-RUN chown -R corda:corda /opt/corda && \
-    chown -R corda:corda /etc/corda && \
-    chmod +x /opt/corda/bin/config-generator  && \
-    chmod +x /opt/corda/bin/run-corda
-
-WORKDIR /opt/corda
-
 USER "corda"
+EXPOSE ${MY_P2P_PORT} ${MY_RPC_PORT} ${MY_RPC_ADMIN_PORT}
+WORKDIR /opt/corda
 CMD ["run-corda"]
