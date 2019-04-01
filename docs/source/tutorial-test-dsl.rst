@@ -156,7 +156,7 @@ When run, that code produces the following error:
 
     .. sourcecode:: kotlin
 
-        net.corda.core.contracts.TransactionVerificationException$ContractRejection: java.lang.IllegalArgumentException: Failed requirement: the state is propagated
+        "net.corda.core.contracts.TransactionVerificationException$ContractRejection: java.lang.IllegalArgumentException: Failed requirement: the state is propagated"
 
     .. sourcecode:: java
 

@@ -37,7 +37,7 @@ Step 2. Adjust the version numbers in your Gradle build files
 
 Alter the versions you depend on in your Gradle file like so:
 
-.. code:: groovy
+.. code-block:: groovy
 
     ext.corda_release_version = '|corda_version|'
     ext.corda_gradle_plugins_version = '|gradle_plugins_version|'
@@ -49,7 +49,9 @@ Alter the versions you depend on in your Gradle file like so:
    for us to risk an upgrade. Sorry! Future work on app isolation will make it easier for apps to use newer Kotlin versions than
    the node itself uses.
 
-You should also ensure you're using Gradle 4.10 (but not 5). If you use the Gradle wrapper, run::
+You should also ensure you're using Gradle 4.10 (but not 5). If you use the Gradle wrapper, run:
+
+.. code:: shell
 
     ./gradlew wrapper --gradle-version 4.10.3
 
@@ -62,7 +64,9 @@ There are several adjustments that are beneficial to make to your Gradle build f
 as described in step 1.
 
 **Provide app metadata.** This is used by the Corda Gradle build plugin to populate your app JAR with useful information.
-It should look like this::
+It should look like this:
+
+.. code-block:: groovy
 
     cordapp {
         targetPlatformVersion 4

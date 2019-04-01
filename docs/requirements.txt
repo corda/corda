@@ -14,7 +14,7 @@ mistune==0.8.3
 packaging==17.1
 pdfrw==0.4
 Pillow==5.1.0
-Pygments==2.2.0
+Pygments==2.3.1
 pyparsing==2.2.0
 pytz==2016.4
 reportlab==3.4.0

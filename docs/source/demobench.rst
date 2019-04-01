@@ -106,27 +106,23 @@ Developer Notes
 
 Developers wishing to run DemoBench *without* building a new installer each time can install it locally using Gradle:
 
-.. parsed-literal::
+.. code-block:: shell
 
     $ gradlew tools:demobench:installDist
     $ cd tools/demobench/build/install/demobench
     $ bin/demobench
 
-..
-
 Unfortunately, DemoBench's ``$CLASSPATH`` may be too long for the Windows shell . In which case you can still run DemoBench as follows:
 
-.. parsed-literal::
+.. code-block:: shell
 
     > java -Djava.util.logging.config.class=net.corda.demobench.config.LoggingConfig -jar lib/demobench-$version.jar
-
-..
 
 While DemoBench *can* be executed within an IDE, it would be up to the Developer to install all of its runtime
 dependencies beforehand into their correct locations relative to the value of the ``user.dir`` system property (i.e. the
 current working directory of the JVM):
 
-.. parsed-literal::
+.. parsed-literal:: none
 
     corda/
         corda.jar
@@ -136,5 +132,4 @@ current working directory of the JVM):
     cordapps/
         bank-of-corda.jar
 
-..
 

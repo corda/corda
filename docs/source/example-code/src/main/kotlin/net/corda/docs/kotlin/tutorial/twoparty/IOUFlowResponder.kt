@@ -26,9 +26,7 @@ class IOUFlowResponder(val otherPartySession: FlowSession) : FlowLogic<Unit>() {
                 "The IOU's value can't be too high." using (iou.value < 100)
             }
         }
-
         val expectedTxId = subFlow(signTransactionFlow).id
-
         subFlow(ReceiveFinalityFlow(otherPartySession, expectedTxId))
         // DOCEND 01
     }

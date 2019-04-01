@@ -107,7 +107,7 @@ The configuration section is named ``flowOverrides`` and it accepts an array of 
 
 .. container:: codeset
 
-    .. code-block:: json
+    .. code-block:: none
 
         flowOverrides {
             overrides=[

@@ -27,7 +27,7 @@ as ``ValidatingNotaryFlow``, ``NonValidatingNotaryFlow``, or implement your own 
 
 To enable the service, add the following to the node configuration:
 
-.. parsed-literal::
+.. code-block:: none
 
     notary : {
         validating : true # Set to false if your service is non-validating
