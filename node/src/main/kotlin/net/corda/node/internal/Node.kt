@@ -475,6 +475,7 @@ open class Node(configuration: NodeConfiguration,
     }
 
     override fun start(): NodeInfo {
+        registerDefaultExceptionHandler()
         initialiseSerialization()
         val nodeInfo: NodeInfo = super.start()
         nodeReadyFuture.thenMatch({
@@ -491,6 +492,14 @@ open class Node(configuration: NodeConfiguration,
             stop()
         }
         return nodeInfo
+    }
+
+    /**
+     * Register a default exception handler for all threads that terminates the process if the database connection goes away and
+     * cannot be recovered.
+     */
+    private fun registerDefaultExceptionHandler() {
+        Thread.setDefaultUncaughtExceptionHandler(DbExceptionHandler(Thread.getDefaultUncaughtExceptionHandler()))
     }
 
     /**
