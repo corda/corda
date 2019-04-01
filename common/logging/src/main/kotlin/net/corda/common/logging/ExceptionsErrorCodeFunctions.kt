@@ -5,7 +5,6 @@ import org.apache.logging.log4j.message.Message
 import org.apache.logging.log4j.message.SimpleMessage
 import java.util.*
 
-
 fun Message.withErrorCodeFor(error: Throwable?, level: Level): Message {
 
     return when {
