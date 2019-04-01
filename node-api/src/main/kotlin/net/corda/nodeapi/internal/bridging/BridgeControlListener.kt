@@ -15,6 +15,7 @@ import net.corda.nodeapi.internal.ArtemisSessionProvider
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.crypto.x509
 import net.corda.nodeapi.internal.protonwrapper.netty.ProxyConfig
+import org.apache.activemq.artemis.api.core.ActiveMQNonExistentQueueException
 import org.apache.activemq.artemis.api.core.ActiveMQQueueExistsException
 import org.apache.activemq.artemis.api.core.RoutingType
 import org.apache.activemq.artemis.api.core.SimpleString
@@ -139,8 +140,17 @@ class BridgeControlListener(val config: MutualSslConfiguration,
         notifyConsumer?.close()
         notifyConsumer = null
         artemis?.apply {
-            started?.session?.deleteQueue(bridgeControlQueue)
-            started?.session?.deleteQueue(bridgeNotifyQueue)
+            try {
+                started?.session?.deleteQueue(bridgeControlQueue)
+            } catch(e: ActiveMQNonExistentQueueException) {
+                log.warn("Queue $bridgeControlQueue does not exist and it can't be deleted")
+            }
+            try {
+                started?.session?.deleteQueue(bridgeNotifyQueue)
+            } catch(e: ActiveMQNonExistentQueueException) {
+                log.warn("Queue $bridgeNotifyQueue does not exist and it can't be deleted")
+            }
+
             stop()
         }
         artemis = null
