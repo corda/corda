@@ -14,10 +14,10 @@ import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.QueryableState
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.finance.schemas.CashSchemaV1
 import net.corda.finance.contracts.utils.sumCash
 import net.corda.finance.contracts.utils.sumCashOrNull
 import net.corda.finance.contracts.utils.sumCashOrZero
+import net.corda.finance.schemas.CashSchemaV1
 import java.security.PublicKey
 import java.util.*
 
@@ -164,7 +164,7 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
                             (inputAmount == outputAmount + amountExitingLedger)
                 }
 
-                verifyMoveCommand<Commands.Move>(inputs, tx.commands)
+                verifyFlattenedMoveCommand<Commands.Move>(inputs, tx.commands)
             }
         }
     }

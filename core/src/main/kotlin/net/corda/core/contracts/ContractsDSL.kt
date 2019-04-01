@@ -69,6 +69,12 @@ fun <C : CommandData> Collection<CommandWithParties<CommandData>>.requireSingleC
     throw IllegalStateException("Required ${klass.kotlin.qualifiedName} command")   // Better error message.
 }
 
+/** Group commands by instances of the given type. */
+inline fun <reified T : CommandData> Collection<CommandWithParties<CommandData>>.groupCommands() = groupCommands(T::class.java)
+
+/** Group commands by instances of the given type. */
+fun <C : CommandData> Collection<CommandWithParties<CommandData>>.groupCommands(klass: Class<C>) = select(klass).groupBy { it.value }.map { it.key to it.value.flatMap { it.signers }.toSet() }.toMap()
+
 /**
  * Simple functionality for verifying a move command. Verifies that each input has a signature from its owning key.
  *
@@ -88,4 +94,32 @@ inline fun <reified T : MoveCommand> verifyMoveCommand(inputs: List<OwnableState
         "the owning keys are a subset of the signing keys" using keysThatSigned.containsAll(owningPubKeys)
     }
     return command.value
+}
+
+/**
+ * Simple functionality for verifying multiple move commands that differ only by signers. Verifies that each input has a signature from its owning key.
+ *
+ * @param T the type of the move command.
+ */
+@Throws(IllegalArgumentException::class)
+inline fun <reified T : MoveCommand> verifyFlattenedMoveCommand(inputs: List<OwnableState>,
+                                                                commands: List<CommandWithParties<CommandData>>)
+        : MoveCommand {
+    // Now check the digital signatures on the move command. Every input has an owning public key, and we must
+    // see a signature from each of those keys. The actual signatures have been verified against the transaction
+    // data by the platform before execution.
+    val owningPubKeys = inputs.map { it.owner.owningKey }.toSet()
+    val commands = commands.groupCommands<T>()
+    // Does not use requireThat to maintain message compatibility with verifyMoveCommand.
+    if (commands.isEmpty()) {
+        throw IllegalStateException("Required ${T::class.qualifiedName} command")
+    }
+    requireThat {
+        "move commands can only differ by signing keys" using (commands.size == 1)
+    }
+    val keysThatSigned = commands.values.first()
+    requireThat {
+        "the owning keys are a subset of the signing keys" using keysThatSigned.containsAll(owningPubKeys)
+    }
+    return commands.keys.single()
 }
