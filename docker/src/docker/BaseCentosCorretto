@@ -1,9 +1,9 @@
 FROM centos:centos7
 
-RUN curl -O https://d3pxv6yz143wms.cloudfront.net/java-1.8.0-amazon-corretto-devel-1.8.0_192.b12-1.amzn2.x86_64.rpm && \
-    curl -O https://d3pxv6yz143wms.cloudfront.net/java-1.8.0-amazon-corretto-1.8.0_192.b12-1.amzn2.x86_64.rpm && \
+RUN curl -O https://d2znqt9b1bc64u.cloudfront.net/java-1.8.0-amazon-corretto-devel-1.8.0_202.b08-2.x86_64.rpm&& \
     yum localinstall -y java-1.8.0-amazon-corretto*.rpm && \
     yum -y install bash && \
+    yum -y update && \
     yum clean all && \
     rm -rf /var/cache/yum
 

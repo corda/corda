@@ -17,6 +17,7 @@ tidy_up
 
 docker network create --attachable clair-scanning
 docker run --network="${NETWORK_NAME}" -d --name postgres arminc/clair-db:latest
+sleep 10s
 docker run --network="${NETWORK_NAME}" -d --name clair arminc/clair-local-scan:v2.0.6
 
 

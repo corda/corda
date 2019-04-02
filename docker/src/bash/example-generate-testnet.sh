@@ -11,15 +11,15 @@ docker run -ti \
         -e LOCALITY="London" -e COUNTRY="GB" \
         -v $(pwd)/config:/etc/corda \
         -v $(pwd)/certificates:/opt/corda/certificates \
-        entdocker.corda.r3cev.com/corda-utils-4.0-snapshot:latest config-generator --testnet && \
+        entdocker.corda.r3cev.com/corda-enterprise-5.0-snapshot:latest config-generator --testnet && \
 
 docker run -ti \
         -v $(pwd)/config:/etc/corda \
         -v $(pwd)/certificates:/opt/corda/certificates \
         -v $(pwd)/persistence:/opt/corda/persistence \
         -v $(pwd)/logs:/opt/corda/logs \
-        -v $(pwd)/samples/bank-of-corda-demo/build/nodes/BankOfCorda/cordapps:/opt/corda/cordapps \
-        entdocker.corda.r3cev.com/corda-utils-4.0-snapshot:latest db-migrate-create-jars && \
+        -v $(pwd)/cordapps:/opt/corda/cordapps \
+        entdocker.corda.r3cev.com/corda-enterprise-5.0-snapshot:latest db-migrate-execute-migration
 
 docker run --memory=2048m \
         --cpus=2 \
@@ -30,4 +30,6 @@ docker run --memory=2048m \
         -v $(pwd)/samples/bank-of-corda-demo/build/nodes/BankOfCorda/cordapps:/opt/corda/cordapps \
         -p 10200:10200 \
         -p 10201:10201 \
-        entdocker.corda.r3cev.com/corda-enterprise-corretto-4.0-snapshot:latest
+        entdocker.corda.r3cev.com/corda-enterprise-5.0-snapshot:latest
+
+

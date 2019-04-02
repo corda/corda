@@ -3,7 +3,7 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath 'com.spotify:docker-client:8.14.5'
+        classpath 'com.spotify:docker-client:8.15.1'
     }
 }
 
@@ -56,8 +56,6 @@ final String runTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("y
 final String suffix = project.version.toString().toLowerCase().contains("snapshot") ? runTime : "RELEASE"
 
 final String nodeImageBase = "entdocker.corda.r3cev.com/corda-enterprise"
-final String firewallImageBase = "entdocker.corda.r3cev.com/corda-firewall"
-final String utilsImage = "entdocker.corda.r3cev.com/corda-utils"
 
 enum BASE {
     ALPINE_ZULU("alpine-zulu", "DockerfileAlpineZulu"),
@@ -119,29 +117,23 @@ static pushImages(Iterable<CharSequence> tags) {
 def dockerTempDir = new File(project.buildDir, "docker-temp")
 final List<String> tagsBuilt = new ArrayList<String>()
 
-task buildDockerFolder(dependsOn: [":node:capsule:buildCordaJAR", shadowJar, ":tools:dbmigration:shadowJar", ":bridge:bridgecapsule:buildFirewallJar"]) {
+task buildDockerFolder(dependsOn: [":node:capsule:buildCordaJAR", shadowJar, ":tools:dbmigration:shadowJar"]) {
     doLast {
         def outputDir = new File(project.buildDir, "docker-temp")
         def cordaJar = project(":node:capsule").buildCordaJAR.archivePath
         def dbmigrator = project(":tools:dbmigration").shadowJar.archivePath
-        def firewall = project(":bridge:bridgecapsule").buildFirewallJar.archivePath
         project.copy {
             into outputDir
             from "src/bash/run-corda.sh"
-            from "src/bash/run-firewall.sh"
             from "src/bash/db-migrate-create-jars.sh"
             from "src/bash/db-migrate-execute-migration.sh"
             from cordaJar
             from shadowJar.archivePath
             from dbmigrator
-            from firewall
             from "src/config/starting-node.conf"
             from "src/bash/generate-config.sh"
-            from "src/docker/FirewallDockerfileCorretto"
-            from "src/docker/UtilsDockerfile"
             rename(cordaJar.name, "corda.jar")
             rename(dbmigrator.name, "database-manager.jar")
-            rename(firewall.name, "corda-firewall.jar")
             rename(shadowJar.archivePath.name, "config-exporter.jar")
         }
 
@@ -164,12 +156,6 @@ task buildAllImages(dependsOn: [buildDockerFolder]) {
                 (BASE.OFFICIAL):        new Tuple2<>(dockerDirectory, BASE.OFFICIAL.sourceDockerFile)
         ]
         tagsBuilt.addAll(buildImages(nodeImageBase, suffix, project.version.toString().toLowerCase(), nodeTaskMap))
-        tagsBuilt.addAll(buildImages(firewallImageBase, suffix, project.version.toString().toLowerCase(), [
-                (BASE.OFFICIAL): new Tuple2<>(dockerDirectory, "FirewallDockerfileCorretto")
-        ]))
-        tagsBuilt.addAll(buildImages(utilsImage, suffix, project.version.toString().toLowerCase(), [
-                (BASE.OFFICIAL): new Tuple2<>(dockerTempDir.toPath(), "UtilsDockerfile")
-        ]))
     }
 }
 

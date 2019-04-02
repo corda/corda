@@ -42,6 +42,21 @@ VOLUME ["/etc/corda"]
 ADD --chown=corda:corda corda.jar /opt/corda/bin/corda.jar
 ##CORDA RUN SCRIPT
 ADD --chown=corda:corda run-corda.sh /opt/corda/bin/run-corda
+##DB MIGRATION JAR
+ADD --chown=corda:corda database-manager.jar /opt/corda/bin/database-manager.jar
+##CONFIG MANIPULATOR JAR
+ADD --chown=corda:corda config-exporter.jar /opt/corda/config-exporter.jar
+##CONFIG GENERATOR SHELL SCRIPT
+ADD --chown=corda:corda generate-config.sh /opt/corda/bin/config-generator
+##DB MIGRATOR RUN SCRIPT
+ADD --chown=corda:corda db-migrate-create-jars.sh /opt/corda/bin/db-migrate-create-jars
+##DB MIGRATOR RUN SCRIPT
+ADD --chown=corda:corda db-migrate-execute-migration.sh /opt/corda/bin/db-migrate-execute-migration
+##BASE CONFIG FOR GENERATOR
+ADD --chown=corda:corda starting-node.conf /opt/corda/starting-node.conf
+##SET EXECUTABLE PERMISSIONS
+RUN chmod +x /opt/corda/bin/config-generator /opt/corda/bin/db-migrate-create-jars /opt/corda/bin/db-migrate-execute-migration
+
 ##SET EXECUTABLE PERMISSIONS
 RUN chmod +x /opt/corda/bin/run-corda
 
