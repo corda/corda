@@ -31,6 +31,7 @@ import net.corda.node.services.statemachine.ExternalEvent
 import net.corda.node.services.statemachine.SenderDeduplicationId
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.currentFlowId
+import net.corda.node.utilities.errorAndTerminate
 import net.corda.nodeapi.internal.ArtemisMessagingComponent
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.*
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.BRIDGE_CONTROL
@@ -153,8 +154,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
     private fun failoverCallback(event: FailoverEventType) {
         when (event) {
             FailoverEventType.FAILURE_DETECTED -> {
-                log.warn("Connection to the broker was lost. Node is shutting down.")
-                Runtime.getRuntime().halt(1)
+                errorAndTerminate("Connection to the broker was lost. Node is shutting down.", null)
             }
             FailoverEventType.FAILOVER_COMPLETED -> {
                 // Currently, this path will never be taken as we die on Artemis connection loss
@@ -165,9 +165,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
             }
             FailoverEventType.FAILOVER_FAILED -> state.locked {
                 if (running) {
-                    log.error("Could not reconnect to the broker after ${config.enterpriseConfiguration.messagingServerConnectionConfiguration.reconnectAttempts(locator!!.isHA)} attempts. Node is shutting down.")
-                    Thread.sleep(config.enterpriseConfiguration.messagingServerConnectionConfiguration.retryInterval().toMillis())
-                    Runtime.getRuntime().halt(1)
+                    errorAndTerminate("Could not reconnect to the broker after ${config.enterpriseConfiguration.messagingServerConnectionConfiguration.reconnectAttempts(locator!!.isHA)} attempts. Node is shutting down.", null)
                 }
             }
             else -> {
