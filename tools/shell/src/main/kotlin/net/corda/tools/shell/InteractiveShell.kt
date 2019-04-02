@@ -497,15 +497,11 @@ object InteractiveShell {
                     throw e.rootCause
                 }
             }
-        } catch(e: StringToMethodCallParser.UnparseableCallException.FailedParse) {
-            out.println("Failed while parsing arguments.", Color.red)
-            val cause = e.cause
-            if (cause is java.nio.file.NoSuchFileException) {
-                out.println("File not found.")
-            }
         } catch (e: StringToMethodCallParser.UnparseableCallException) {
             out.println(e.message, Color.red)
-            out.println("Please try 'man run' to learn what syntax is acceptable")
+            if (e !is StringToMethodCallParser.UnparseableCallException.NoSuchFile) {
+                out.println("Please try 'man run' to learn what syntax is acceptable")
+            }
         } catch (e: Exception) {
             out.println("RPC failed: ${e.rootCause}", Color.red)
         } finally {
