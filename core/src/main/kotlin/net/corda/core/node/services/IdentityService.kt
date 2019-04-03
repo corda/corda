@@ -100,7 +100,7 @@ interface IdentityService {
         // The original version of this would return the party as-is if it was a Party (rather than AnonymousParty),
         // however that means that we don't verify that we know who owns the key. As such as now enforce turning the key
         // into a party, and from there figure out the well known party.
-        log.info("Attempting to find wellKnownParty for: ${party.owningKey.hash}")
+        log.debug("Attempting to find wellKnownParty for: ${party.owningKey.hash}")
         val candidate = partyFromKey(party.owningKey)
         // TODO: This should be done via the network map cache, which is the authoritative source of well known identities
         return if (candidate != null) {
