@@ -180,7 +180,7 @@ the source CorDapps. In this example, there are two CorDapps provided ``corda-in
             -v /home/user/docker/docker/persistence:/opt/corda/persistence \
             -v /home/user/docker/docker/logs:/opt/corda/logs \
             -v /home/user/corda/samples/bank-of-corda-demo/build/nodes/BankOfCorda/cordapps:/opt/corda/cordapps \
-            entdocker.corda.r3cev.com/corda-enterprise-corretto-4.0-snapshot:latest db-migrate-create-jars
+            entdocker.software.r3.com/corda-enterprise-5.0-snapshot:latest db-migrate-create-jars
 
 After the container has finished executing, there will be two new jars in ``/home/user/corda/samples/bank-of-corda-demo/build/nodes/BankOfCorda/cordapps``: ``migration-corda-insurance.jar`` and ``migration-corda-kyc.jar``.
 These will then be loaded as normal CorDapps by the node on next launch.
@@ -198,7 +198,7 @@ It is also possible to use the image to directly perform the migration of the da
             -v $(pwd)/docker/persistence:/opt/corda/persistence \
             -v $(pwd)/docker/logs:/opt/corda/logs \
             -v $(pwd)/samples/bank-of-corda-demo/build/nodes/BankOfCorda/cordapps:/opt/corda/cordapps \
-            entdocker.corda.r3cev.com/corda-enterprise-corretto-4.0-snapshot:latest db-migrate-execute-migration
+            entdocker.software.r3.com/corda-enterprise-5.0-snapshot:latest db-migrate-execute-migration
 
 
 If the container is launched with the ``db-migrate-execute-migration`` command, the migration is directly applied to the database.

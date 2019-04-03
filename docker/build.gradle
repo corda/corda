@@ -55,7 +55,7 @@ static java.nio.file.Path combineDockerFiles(java.nio.file.Path base, java.nio.f
 final String runTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
 final String suffix = project.version.toString().toLowerCase().contains("snapshot") ? runTime : "RELEASE"
 
-final String nodeImageBase = "entdocker.corda.r3cev.com/corda-enterprise"
+final String nodeImageBase = "entdocker.software.r3.com/corda-enterprise"
 
 enum BASE {
     ALPINE_ZULU("alpine-zulu", "DockerfileAlpineZulu"),
