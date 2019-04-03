@@ -1,6 +1,7 @@
 package net.corda.core.internal
 
 import net.corda.core.DeleteForDJVM
+import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.ContractAttachment
 import net.corda.core.contracts.ContractClassName
 import net.corda.core.flows.DataVendingFlow
@@ -40,6 +41,9 @@ fun checkMinimumPlatformVersion(minimumPlatformVersion: Int, requiredMinPlatform
         )
     }
 }
+
+@Throws(NumberFormatException::class)
+fun getJavaUpdateVersion(javaVersion: String): Long = javaVersion.substringAfter("_").substringBefore("-").toLong()
 
 /** Provide access to internal method for AttachmentClassLoaderTests. */
 @DeleteForDJVM
@@ -106,15 +110,15 @@ fun noPackageOverlap(packages: Collection<String>): Boolean {
 }
 
 /**
- * Scans trusted (installed locally) contract attachments to find all that contain the [className].
+ * Scans trusted (installed locally) attachments to find all that contain the [className].
  * This is required as a workaround until explicit cordapp dependencies are implemented.
  * DO NOT USE IN CLIENT code.
  *
- * @return the contract attachments with the highest version.
+ * @return the attachments with the highest version.
  *
  * TODO: Should throw when the class is found in multiple contract attachments (not different versions).
  */
-fun AttachmentStorage.internalFindTrustedAttachmentForClass(className: String): ContractAttachment?{
+fun AttachmentStorage.internalFindTrustedAttachmentForClass(className: String): Attachment? {
     val allTrusted = queryAttachments(
             AttachmentQueryCriteria.AttachmentsQueryCriteria().withUploader(Builder.`in`(TRUSTED_UPLOADERS)),
             AttachmentSort(listOf(AttachmentSort.AttachmentSortColumn(AttachmentSort.AttachmentSortAttribute.VERSION, Sort.Direction.DESC))))
@@ -122,7 +126,7 @@ fun AttachmentStorage.internalFindTrustedAttachmentForClass(className: String): 
     // TODO - add caching if performance is affected.
     for (attId in allTrusted) {
         val attch = openAttachment(attId)!!
-        if (attch is ContractAttachment && attch.openAsJAR().use { hasFile(it, "$className.class") }) return attch
+        if (attch.openAsJAR().use { hasFile(it, "$className.class") }) return attch
     }
     return null
 }

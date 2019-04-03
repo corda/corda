@@ -74,7 +74,7 @@ Parameter stability
 ~~~~~~~~~~~~~~~~~~~
 
 * Avoid removing parameters. If, for some reason, a parameter needs to be renamed, add a new parameter with the new name and deprecate the old parameter, or alternatively
-keep both versions of the parameter. See :ref:`cli-ux-backwards-compatibility` for more information.
+    keep both versions of the parameter. See :ref:`cli-ux-backwards-compatibility` for more information.
 
 
 Notes for adding a new a command line application

@@ -29,6 +29,7 @@ class ResolveStatePointersTest {
     private val cordapps = listOf("net.corda.testing.contracts")
     private lateinit var services: MockServices
 
+    @BelongsToContract(DummyContract::class)
     private data class Bar(
             override val participants: List<AbstractParty> = listOf(),
             val bar: Int = 0,
@@ -36,6 +37,7 @@ class ResolveStatePointersTest {
             override val linearId: UniqueIdentifier = UniqueIdentifier()
     ) : LinearState
 
+    @BelongsToContract(DummyContract::class)
     private data class Foo<T : LinearState>(val baz: LinearPointer<T>, override val participants: List<AbstractParty>) : ContractState
 
     private val barOne = Bar(listOf(myself.party), 1)

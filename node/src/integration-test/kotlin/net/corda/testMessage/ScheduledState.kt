@@ -45,6 +45,7 @@ class ScheduledResponderFlow(private val otherSide: FlowSession) : FlowLogic<Uni
     }
 }
 
+@BelongsToContract(DummyContract::class)
 data class ScheduledState(val creationTime: Instant,
                           val source: Party,
                           val destination: Party,
@@ -63,6 +64,7 @@ data class ScheduledState(val creationTime: Instant,
     }
 }
 
+@BelongsToContract(DummyContract::class)
 data class SpentState(val identity: String,
                       val source: Party,
                       val destination: Party,

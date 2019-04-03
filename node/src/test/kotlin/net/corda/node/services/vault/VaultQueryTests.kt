@@ -47,6 +47,7 @@ import org.junit.Test
 import org.junit.rules.ExpectedException
 import org.junit.rules.ExternalResource
 import java.time.Duration
+import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
 import java.time.temporal.ChronoUnit
@@ -1541,7 +1542,7 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         database.transaction {
             vaultFiller.fillWithSomeTestCash(100.DOLLARS, notaryServices, 100, DUMMY_CASH_ISSUER)
             @Suppress("EXPECTED_CONDITION")
-            val pagingSpec = PageSpecification(DEFAULT_PAGE_NUM, @Suppress("INTEGER_OVERFLOW") MAX_PAGE_SIZE + 1)  // overflow = -2147483648
+            val pagingSpec = PageSpecification(DEFAULT_PAGE_NUM, @Suppress("INTEGER_OVERFLOW") Integer.MAX_VALUE + 1)  // overflow = -2147483648
             val criteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
             vaultService.queryBy<ContractState>(criteria, paging = pagingSpec)
         }
@@ -1609,7 +1610,12 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
                 println("$index : $any")
             }
             assertThat(results.otherResults.size).isEqualTo(402)
-            assertThat(results.otherResults.last()).isEqualTo(200L)
+            val instants = results.otherResults.filter { it is Instant }.map { it as Instant }
+            assertThat(instants).isSorted
+            val longs = results.otherResults.filter { it is Long }.map { it as Long }
+            assertThat(longs.size).isEqualTo(201)
+            assertThat(instants.size).isEqualTo(201)
+            assertThat(longs.sum()).isEqualTo(20100L)
         }
     }
 

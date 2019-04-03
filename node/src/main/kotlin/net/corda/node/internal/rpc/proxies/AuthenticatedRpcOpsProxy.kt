@@ -39,14 +39,14 @@ internal class AuthenticatedRpcOpsProxy(private val delegate: CordaRPCOps) : Cor
     }
 
     private class PermissionsEnforcingInvocationHandler(override val delegate: CordaRPCOps, private val context: () -> RpcAuthContext) : InvocationHandlerTemplate {
-        override fun invoke(proxy: Any, method: Method, arguments: Array<out Any?>?) = guard(method.name, context, { super.invoke(proxy, method, arguments) })
+        override fun invoke(proxy: Any, method: Method, arguments: Array<out Any?>?) = guard(method.name, context) { super.invoke(proxy, method, arguments) }
     }
 }
 
 private fun <RESULT> guard(methodName: String, context: () -> RpcAuthContext, action: () -> RESULT) = guard(methodName, emptyList(), context, action)
 
 private fun <RESULT> guard(methodName: String, args: List<Class<*>>, context: () -> RpcAuthContext, action: () -> RESULT): RESULT {
-    if (!context().isPermitted(methodName, *(args.map { it.name }.toTypedArray()))) {
+    if (!context().isPermitted(methodName, *(args.map(Class<*>::getName).toTypedArray()))) {
         throw PermissionException("User not authorized to perform RPC call $methodName with target $args")
     } else {
         return action()

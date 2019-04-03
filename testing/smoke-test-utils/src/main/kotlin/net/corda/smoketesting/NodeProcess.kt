@@ -9,6 +9,7 @@ import net.corda.core.node.NotaryInfo
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.DevIdentityGenerator
+import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.testing.common.internal.asContextEnv
 import net.corda.testing.common.internal.checkNotOnClasspath
@@ -33,8 +34,7 @@ class NodeProcess(
         private val log = contextLogger()
     }
 
-    fun connect(): CordaRPCConnection {
-        val user = config.users[0]
+    fun connect(user: User): CordaRPCConnection {
         return client.start(user.username, user.password)
     }
 
@@ -101,7 +101,7 @@ class NodeProcess(
             }
 
             (nodeDir / "node.conf").writeText(config.toText())
-            createNetworkParameters(NotaryInfo(notaryParty!!, false), nodeDir)
+            createNetworkParameters(NotaryInfo(notaryParty!!, true), nodeDir)
 
             val process = startNode(nodeDir)
             val client = CordaRPCClient(NetworkHostAndPort("localhost", config.rpcPort))

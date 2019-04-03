@@ -259,6 +259,8 @@ a drain is complete there should be no outstanding checkpoints or running flows.
 A node can be drained or undrained via RPC using the ``setFlowsDrainingModeEnabled`` method, and via the shell using
 the standard ``run`` command to invoke the RPC. See :doc:`shell` to learn more.
 
+.. _contract_upgrading_ref:
+
 Contract and state versioning
 -----------------------------
 
@@ -269,7 +271,12 @@ There are two types of contract/state upgrade:
 2. *Explicit:* By creating a special *contract upgrade transaction* and getting all participants of a state to sign it
    using the contract upgrade flows
 
-This section of the documentation focuses only on *explicit* upgrades.
+The general recommendation for Corda 4 is to use **implicit** upgrades for the reasons described :ref:`here <implicit_vs_explicit_upgrades>`.
+
+.. _explicit_contract_upgrades_ref:
+
+Performing explicit contract and state upgrades
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 In an explicit upgrade, contracts and states can be changed in arbitrary ways, if and only if all of the state's
 participants agree to the proposed upgrade. The following combinations of upgrades are possible:
@@ -277,9 +284,6 @@ participants agree to the proposed upgrade. The following combinations of upgrad
 * A contract is upgraded while the state definition remains the same
 * A state is upgraded while the contract stays the same
 * The state and the contract are updated simultaneously
-
-Performing explicit contract and state upgrades
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 1. Preserve the existing state and contract definitions
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

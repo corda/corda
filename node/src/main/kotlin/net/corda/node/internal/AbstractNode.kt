@@ -35,7 +35,6 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.minutes
 import net.corda.node.CordaClock
 import net.corda.node.VersionInfo
-import net.corda.nodeapi.internal.cordapp.CordappLoader
 import net.corda.node.internal.classloading.requireAnnotation
 import net.corda.node.internal.cordapp.*
 import net.corda.node.internal.rpc.proxies.AuthenticatedRpcOpsProxy
@@ -74,6 +73,7 @@ import net.corda.node.utilities.*
 import net.corda.nodeapi.internal.NodeInfoAndSigned
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.config.CertificateStore
+import net.corda.nodeapi.internal.cordapp.CordappLoader
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_CLIENT_CA
@@ -184,7 +184,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     @Suppress("LeakingThis")
     val vaultService = makeVaultService(keyManagementService, servicesForResolution, database, cordappLoader).tokenize()
     val nodeProperties = NodePropertiesPersistentStore(StubbedNodeUniqueIdProvider::value, database, cacheFactory)
-    val flowLogicRefFactory = FlowLogicRefFactoryImpl(cordappLoader.appClassLoader)
+    val flowLogicRefFactory = makeFlowLogicRefFactoryImpl()
     // TODO Cancelling parameters updates - if we do that, how we ensure that no one uses cancelled parameters in the transactions?
     val networkMapUpdater = NetworkMapUpdater(
             networkMapCache,
@@ -343,7 +343,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         X509Utilities.validateCertPath(trustRoot, identity.certPath)
 
         val nodeCa = configuration.signingCertificateStore.get()[CORDA_CLIENT_CA]
-        identityService.start(trustRoot, listOf(identity.certificate, nodeCa))
+        identityService.start(trustRoot, listOf(identity.certificate, nodeCa), netParams.notaries.map { it.identity })
 
         val (keyPairs, nodeInfoAndSigned, myNotaryIdentity) = database.transaction {
             updateNodeInfo(identity, identityKeyPair, publish = true)
@@ -368,7 +368,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
 
         // Do all of this in a database transaction so anything that might need a connection has one.
-        return database.transaction {
+        return database.transaction(recoverableFailureTolerance = 0) {
             networkParametersStorage.setCurrentParameters(signedNetParams, trustRoot)
             identityService.loadIdentities(nodeInfo.legalIdentitiesAndCerts)
             attachments.start()
@@ -541,6 +541,9 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         )
     }
 
+    // Extracted into a function to allow overriding in subclasses.
+    protected open fun makeFlowLogicRefFactoryImpl() = FlowLogicRefFactoryImpl(cordappLoader.appClassLoader)
+
     private fun makeCordappLoader(configuration: NodeConfiguration, versionInfo: VersionInfo): CordappLoader {
         val generatedCordapps = mutableListOf(VirtualCordapp.generateCore(versionInfo))
         notaryLoader?.builtInNotary?.let { notaryImpl ->
@@ -572,21 +575,33 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
     private fun installCordaServices() {
         val loadedServices = cordappLoader.cordapps.flatMap { it.services }
-        loadedServices.forEach {
-            try {
-                installCordaService(it)
-            } catch (e: NoSuchMethodException) {
-                log.error("${it.name}, as a Corda service, must have a constructor with a single parameter of type " +
-                        ServiceHub::class.java.name)
-            } catch (e: ServiceInstantiationException) {
-                if (e.cause != null) {
-                    log.error("Corda service ${it.name} failed to instantiate. Reason was: ${e.cause?.rootMessage}", e.cause)
-                } else {
-                    log.error("Corda service ${it.name} failed to instantiate", e)
+
+        // This sets the Cordapp classloader on the contextClassLoader of the current thread, prior to initializing services
+        // Needed because of bug CORDA-2653 - some Corda services can utilise third-party libraries that require access to
+        // the Thread context class loader
+
+        val oldContextClassLoader : ClassLoader? = Thread.currentThread().contextClassLoader
+        try {
+            Thread.currentThread().contextClassLoader = cordappLoader.appClassLoader
+
+            loadedServices.forEach {
+                try {
+                    installCordaService(it)
+                } catch (e: NoSuchMethodException) {
+                    log.error("${it.name}, as a Corda service, must have a constructor with a single parameter of type " +
+                            ServiceHub::class.java.name)
+                } catch (e: ServiceInstantiationException) {
+                    if (e.cause != null) {
+                        log.error("Corda service ${it.name} failed to instantiate. Reason was: ${e.cause?.rootMessage}", e.cause)
+                    } else {
+                        log.error("Corda service ${it.name} failed to instantiate", e)
+                    }
+                } catch (e: Exception) {
+                    log.error("Unable to install Corda service ${it.name}", e)
                 }
-            } catch (e: Exception) {
-                log.error("Unable to install Corda service ${it.name}", e)
             }
+        } finally {
+            Thread.currentThread().contextClassLoader = oldContextClassLoader
         }
     }
 

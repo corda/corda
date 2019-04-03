@@ -8,6 +8,7 @@ import net.corda.serialization.internal.amqp.DeserializationInput
 import net.corda.serialization.internal.amqp.SerializationOutput
 import net.corda.serialization.internal.amqp.SerializerFactoryBuilder
 import net.corda.serialization.internal.amqp.custom.PublicKeySerializer
+import net.corda.serialization.internal.amqp.custom.ThrowableSerializer
 import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.TestIdentity
@@ -18,11 +19,12 @@ class TransactionVerificationExceptionSerialisationTests {
     private fun defaultFactory() = SerializerFactoryBuilder.build(
             AllWhitelist,
             ClassLoader.getSystemClassLoader()
-    )
+    ).apply { register(ThrowableSerializer(this)) }
 
     private val context get() = AMQP_RPC_CLIENT_CONTEXT
 
     private val txid = SecureHash.allOnesHash
+    private val attachmentHash = SecureHash.allOnesHash
     private val factory = defaultFactory()
 
     @Test
@@ -52,7 +54,7 @@ class TransactionVerificationExceptionSerialisationTests {
                 context)
 
         assertEquals(exception.message, exception2.message)
-        assertEquals(exception.cause?.message, exception2.cause?.message)
+        assertEquals("java.lang.Throwable: ${exception.cause?.message}", exception2.cause?.message)
         assertEquals(exception.txId, exception2.txId)
     }
 
@@ -89,7 +91,7 @@ class TransactionVerificationExceptionSerialisationTests {
                 context)
 
         assertEquals(exception.message, exception2.message)
-        assertEquals(exception.cause?.message, exception2.cause?.message)
+        assertEquals("java.lang.Throwable: ${exception.cause?.message}", exception2.cause?.message)
         assertEquals(exception.txId, exception2.txId)
     }
 
@@ -121,5 +123,56 @@ class TransactionVerificationExceptionSerialisationTests {
         assertEquals(exception.message, exception2.message)
         assertEquals(exception.cause?.message, exception2.cause?.message)
         assertEquals(exception.txId, exception2.txId)
+    }
+
+    @Test
+    fun overlappingAttachmentsExceptionTest() {
+        val exc = TransactionVerificationException.OverlappingAttachmentsException(txid, "foo/bar/baz")
+        val exc2 = DeserializationInput(factory).deserialize(
+                SerializationOutput(factory).serialize(exc, context),
+                context)
+
+        assertEquals(exc.message, exc2.message)
+    }
+
+    @Test
+    fun packageOwnershipExceptionTest() {
+        val exc = TransactionVerificationException.PackageOwnershipException(
+                txid,
+                attachmentHash,
+                "InvalidClass",
+                "com.invalid")
+
+        val exc2 = DeserializationInput(factory).deserialize(
+                SerializationOutput(factory).serialize(exc, context),
+                context)
+
+        assertEquals(exc.message, exc2.message)
+    }
+
+    @Test
+    fun invalidAttachmentExceptionTest() {
+        val exc = TransactionVerificationException.InvalidAttachmentException(
+                txid,
+                attachmentHash)
+
+        val exc2 = DeserializationInput(factory).deserialize(
+                SerializationOutput(factory).serialize(exc, context),
+                context)
+
+        assertEquals(exc.message, exc2.message)
+    }
+
+    @Test
+    fun untrustedAttachmentsExceptionTest() {
+        val exc = TransactionVerificationException.UntrustedAttachmentsException(
+                txid,
+                listOf(attachmentHash))
+
+        val exc2 = DeserializationInput(factory).deserialize(
+                SerializationOutput(factory).serialize(exc, context),
+                context)
+
+        assertEquals(exc.message, exc2.message)
     }
 }

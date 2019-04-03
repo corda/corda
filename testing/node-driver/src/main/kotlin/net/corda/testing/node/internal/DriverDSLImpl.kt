@@ -695,7 +695,8 @@ class DriverDSLImpl(
                 Permissions.invokeRpc(CordaRPCOps::internalFindVerifiedTransaction),
                 Permissions.invokeRpc("vaultQueryBy"),
                 Permissions.invokeRpc("vaultTrackBy"),
-                Permissions.invokeRpc(CordaRPCOps::registeredFlows)
+                Permissions.invokeRpc(CordaRPCOps::registeredFlows),
+                Permissions.invokeRpc(CordaRPCOps::killFlow)
         )
 
         private fun <A> oneOf(array: Array<A>) = array[Random().nextInt(array.size)]

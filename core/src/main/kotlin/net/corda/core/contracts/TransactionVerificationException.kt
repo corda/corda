@@ -46,7 +46,6 @@ class AttachmentResolutionException(val hash: SecureHash) : FlowException("Attac
  * @property txId the Merkle root hash (identifier) of the transaction that failed verification.
  */
 @Suppress("MemberVisibilityCanBePrivate")
-@CordaSerializable
 abstract class TransactionVerificationException(val txId: SecureHash, message: String, cause: Throwable?)
     : FlowException("$message, transaction: $txId", cause) {
 
@@ -57,8 +56,8 @@ abstract class TransactionVerificationException(val txId: SecureHash, message: S
      * @property contractClass The fully qualified class name of the failing contract.
      */
     @KeepForDJVM
-    class ContractRejection(txId: SecureHash, val contractClass: String, cause: Throwable) : TransactionVerificationException(txId, "Contract verification failed: ${cause.message}, contract: $contractClass", cause) {
-        constructor(txId: SecureHash, contract: Contract, cause: Throwable) : this(txId, contract.javaClass.name, cause)
+    class ContractRejection internal constructor(txId: SecureHash, val contractClass: String, cause: Throwable?, message: String) : TransactionVerificationException(txId, "Contract verification failed: $message, contract: $contractClass", cause) {
+        internal constructor(txId: SecureHash, contract: Contract, cause: Throwable) : this(txId, contract.javaClass.name, cause, cause.message ?: "")
     }
 
     /**
@@ -121,8 +120,10 @@ abstract class TransactionVerificationException(val txId: SecureHash, message: S
      * @property contractClass The fully qualified class name of the failing contract.
      */
     @KeepForDJVM
-    class ContractCreationError(txId: SecureHash, val contractClass: String, cause: Throwable)
-        : TransactionVerificationException(txId, "Contract verification failed: ${cause.message}, could not create contract class: $contractClass", cause)
+    class ContractCreationError internal constructor(txId: SecureHash, val contractClass: String, cause: Throwable?, message: String)
+        : TransactionVerificationException(txId, "Contract verification failed: $message, could not create contract class: $contractClass", cause) {
+        internal constructor(txId: SecureHash, contractClass: String, cause: Throwable) : this(txId, contractClass, cause, cause.message ?: "")
+    }
 
     /**
      * An output state has a notary that doesn't match the transaction's notary field. It must!
@@ -267,7 +268,7 @@ abstract class TransactionVerificationException(val txId: SecureHash, message: S
      */
     @CordaSerializable
     @KeepForDJVM
-    class OverlappingAttachmentsException(txId: SecureHash, path: String) : TransactionVerificationException(txId, "Multiple attachments define a file at $path.", null)
+    class OverlappingAttachmentsException(txId: SecureHash, val path: String) : TransactionVerificationException(txId, "Multiple attachments define a file at $path.", null)
 
     /**
      * Thrown to indicate that a contract attachment is not signed by the network-wide package owner. Please note that
@@ -275,22 +276,29 @@ abstract class TransactionVerificationException(val txId: SecureHash, message: S
      * and because attachment classloaders are reused this is independent of any particular transaction.
      */
     @CordaSerializable
-    class PackageOwnershipException(txId: SecureHash, val attachmentHash: AttachmentId, val invalidClassName: String, val packageName: String) : TransactionVerificationException(txId,
+    class PackageOwnershipException(txId: SecureHash, @Suppress("unused") val attachmentHash: AttachmentId, @Suppress("unused") val invalidClassName: String, val packageName: String) : TransactionVerificationException(txId,
             """The attachment JAR: $attachmentHash containing the class: $invalidClassName is not signed by the owner of package $packageName specified in the network parameters.
            Please check the source of this attachment and if it is malicious contact your zone operator to report this incident.
            For details see: https://docs.corda.net/network-map.html#network-parameters""".trimIndent(), null)
 
     @CordaSerializable
-    class InvalidAttachmentException(txId: SecureHash, attachmentHash: AttachmentId) : TransactionVerificationException(txId,
+    class InvalidAttachmentException(txId: SecureHash, @Suppress("unused") val attachmentHash: AttachmentId) : TransactionVerificationException(txId,
             "The attachment $attachmentHash is not a valid ZIP or JAR file.".trimIndent(), null)
 
     // TODO: Make this descend from TransactionVerificationException so that untrusted attachments cause flows to be hospitalized.
     /** Thrown during classloading upon encountering an untrusted attachment (eg. not in the [TRUSTED_UPLOADERS] list) */
     @KeepForDJVM
     @CordaSerializable
-    class UntrustedAttachmentsException(txId: SecureHash, val ids: List<SecureHash>) :
+    class UntrustedAttachmentsException(val txId: SecureHash, val ids: List<SecureHash>) :
             CordaException("Attempting to load untrusted transaction attachments: $ids. " +
                     "At this time these are not loadable because the DJVM sandbox has not yet been integrated. " +
                     "You will need to install that app version yourself, to whitelist it for use. " +
                     "Please follow the operational steps outlined in https://docs.corda.net/cordapp-build-systems.html#cordapp-contract-attachments to learn more and continue.")
+
+    /*
+    If you add a new class extending [TransactionVerificationException], please add a test in `TransactionVerificationExceptionSerializationTests`
+    proving that it can actually be serialised. As a rule, exceptions intended to be serialised _must_ have a corresponding readable property
+    for every named constructor parameter - so make your constructor parameters `val`s even if nothing other than the serializer is ever
+    going to read them.
+    */
 }

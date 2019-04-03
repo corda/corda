@@ -53,7 +53,7 @@ task shrink(type: ProGuardTask) {
 
     libraryjars "$javaHome/lib/rt.jar"
     libraryjars "$javaHome/lib/jce.jar"
-    configurations.runtime.forEach {
+    configurations.runtimeClasspath.forEach {
         libraryjars it.path, filter: '!META-INF/versions/**'
     }
 

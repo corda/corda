@@ -29,7 +29,6 @@ import java.util.*
  * signatures required) to satisfy the sub-tree rooted at this node.
  */
 @KeepForDJVM
-@CordaSerializable
 class CompositeKey private constructor(val threshold: Int, children: List<NodeAndWeight>) : PublicKey {
     companion object {
         const val KEY_ALGORITHM = "COMPOSITE"

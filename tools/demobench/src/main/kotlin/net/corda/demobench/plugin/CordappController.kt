@@ -8,10 +8,10 @@ import net.corda.demobench.model.NodeConfigWrapper
 import tornadofx.*
 import java.io.IOException
 import java.nio.file.Path
-import java.nio.file.StandardCopyOption
+import java.nio.file.StandardCopyOption.*
 import kotlin.streams.toList
 
-// TODO This class needs to be revisted. It seems to operate on outdated concepts.
+// TODO This class needs to be revisited. It seems to operate on outdated concepts.
 class CordappController : Controller() {
     companion object {
         const val FINANCE_CONTRACTS_CORDAPP_FILENAME = "corda-finance-contracts"
@@ -20,10 +20,8 @@ class CordappController : Controller() {
 
     private val jvm by inject<JVMConfig>()
     private val cordappDir: Path = jvm.applicationDir / NodeConfig.CORDAPP_DIR_NAME
-    private val cordappJars = setOf(
-            cordappDir / "$FINANCE_CONTRACTS_CORDAPP_FILENAME.jar",
-            cordappDir / "$FINANCE_WORKFLOWS_CORDAPP_FILENAME.jar"
-    )
+    private val cordappJars = setOf(FINANCE_CONTRACTS_CORDAPP_FILENAME, FINANCE_WORKFLOWS_CORDAPP_FILENAME)
+            .map { cordappDir / "$it.jar" }
 
     /**
      * Install any built-in cordapps that this node requires.
@@ -33,10 +31,10 @@ class CordappController : Controller() {
         if (!config.cordappsDir.exists()) {
             config.cordappsDir.createDirectories()
         }
-        cordappJars.forEach { financeCordappJar ->
-            if (financeCordappJar.exists()) {
-                financeCordappJar.copyToDirectory(config.cordappsDir, StandardCopyOption.REPLACE_EXISTING)
-                log.info("Installed 'Finance' cordapp: $financeCordappJar")
+        cordappJars.forEach { cordappJar ->
+            if (cordappJar.exists()) {
+                cordappJar.copyToDirectory(config.cordappsDir, REPLACE_EXISTING)
+                log.info("Installed cordapp: $cordappJar")
             }
         }
     }
@@ -55,5 +53,5 @@ class CordappController : Controller() {
     }
 }
 
-val Path.isCordapp: Boolean get() = this.isReadable && this.fileName.toString().endsWith(".jar")
-val Path.inCordappsDir: Boolean get() = (this.parent != null) && this.parent.endsWith("cordapps/")
+val Path.isCordapp: Boolean get() = isReadable && fileName.toString().endsWith(".jar")
+val Path.inCordappsDir: Boolean get() = (parent != null) && parent.endsWith("cordapps/")

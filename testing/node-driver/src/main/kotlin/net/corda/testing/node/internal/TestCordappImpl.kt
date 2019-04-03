@@ -4,7 +4,8 @@ import io.github.classgraph.ClassGraph
 import net.corda.core.internal.*
 import net.corda.core.utilities.contextLogger
 import net.corda.testing.node.TestCordapp
-import org.apache.commons.lang.SystemUtils
+import org.gradle.tooling.GradleConnector
+import org.gradle.tooling.ProgressEvent
 import java.nio.file.Path
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
@@ -77,23 +78,31 @@ data class TestCordappImpl(val scanPackage: String, override val config: Map<Str
 
         private fun buildCordappJar(projectRoot: Path): Path {
             return projectRootToBuiltJar.computeIfAbsent(projectRoot) {
-                val gradlew = findGradlewDir(projectRoot) / (if (SystemUtils.IS_OS_WINDOWS) "gradlew.bat" else "gradlew")
                 log.info("Generating CorDapp jar from local project in $projectRoot ...")
-                val exitCode = ProcessBuilder(gradlew.toString(), "jar").directory(projectRoot.toFile()).inheritIO().start().waitFor()
-                check(exitCode == 0) { "Unable to generate CorDapp jar from local project in $projectRoot (exit=$exitCode)" }
+                runGradleBuild(projectRoot)
+
                 val libs = projectRoot / "build" / "libs"
                 val jars = libs.list { it.filter { it.toString().endsWith(".jar") }.toList() }.sortedBy { it.attributes().creationTime() }
                 checkNotNull(jars.lastOrNull()) { "No jars were built in $libs" }
             }
         }
 
-        private fun findGradlewDir(path: Path): Path {
-            var current = path
-            while (true) {
-                if ((current / "gradlew").exists() && (current / "gradlew.bat").exists()) {
-                    return current
+        private fun runGradleBuild(projectRoot: Path) {
+            val gradleConnector = GradleConnector.newConnector().apply {
+                useBuildDistribution()
+                forProjectDirectory(projectRoot.toFile())
+            }
+
+            val projectConnection = gradleConnector.connect()
+            projectConnection.use {
+                val build = projectConnection.newBuild().apply {
+                    forTasks("jar")
+                    addProgressListener { event: ProgressEvent ->
+                        log.info(event.description)
+                    }
                 }
-                current = current.parent
+                // Blocks until the build is complete
+                build.run()
             }
         }
     }

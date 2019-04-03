@@ -5,7 +5,6 @@ import net.corda.bank.api.BankOfCordaClientApi
 import net.corda.bank.api.BankOfCordaWebApi
 import net.corda.core.contracts.Amount
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.VisibleForTesting
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.testing.core.BOC_NAME
@@ -48,8 +47,7 @@ object IssueCash {
         }
     }
 
-    @VisibleForTesting
-    fun requestRpcIssue(amount: Amount<Currency>): SignedTransaction {
+    private fun requestRpcIssue(amount: Amount<Currency>): SignedTransaction {
         return BankOfCordaClientApi.requestRPCIssue(NetworkHostAndPort("localhost", BOC_RPC_PORT), createParams(amount, NOTARY_NAME))
     }
 

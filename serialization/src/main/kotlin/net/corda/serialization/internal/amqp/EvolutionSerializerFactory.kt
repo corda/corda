@@ -76,7 +76,7 @@ class DefaultEvolutionSerializerFactory(
             val localClass = localProperty.type.observedType.asClass()
             val remoteClass = remoteProperty.type.typeIdentifier.getLocalType(classLoader).asClass()
 
-            if (!localClass.isAssignableFrom(remoteClass)) {
+            if (!localClass.isAssignableFrom(remoteClass) && remoteClass != localClass.kotlin.javaPrimitiveType) {
                 throw EvolutionSerializationException(this,
                         "Local type $localClass of property $name is not assignable from remote type $remoteClass")
             }
@@ -109,8 +109,9 @@ class DefaultEvolutionSerializerFactory(
         newProperties.forEach { propertyName ->
             if (localProperties[propertyName]!!.mustBeProvided) throw EvolutionSerializationException(
                     this,
-                    "Mandatory property $propertyName of local type is not present in remote type - " +
-                    "did someone remove a property from the schema without considering old clients?")
+                    "Mandatory property $propertyName of local type is not present in remote type. " +
+                    "This implies the type has not evolved in a backwards compatible way. " +
+                    "Consider making $propertyName nullable in the newer version of this type.")
         }
     }
 

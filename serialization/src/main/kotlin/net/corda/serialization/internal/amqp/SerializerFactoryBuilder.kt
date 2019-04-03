@@ -17,10 +17,10 @@ object SerializerFactoryBuilder {
                 whitelist,
                 classCarpenter,
                 DefaultDescriptorBasedSerializerRegistry(),
-                true,
-                null,
-                false,
-                false)
+                allowEvolution = true,
+                overrideFingerPrinter = null,
+                onlyCustomSerializers = false,
+                mustPreserveDataWhenEvolving = false)
     }
 
     @JvmStatic

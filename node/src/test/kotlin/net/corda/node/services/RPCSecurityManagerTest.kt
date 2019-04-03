@@ -7,6 +7,7 @@ import net.corda.node.internal.security.Password
 import net.corda.node.internal.security.RPCSecurityManagerImpl
 import net.corda.node.internal.security.tryAuthenticate
 import net.corda.node.services.Permissions.Companion.invokeRpc
+import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.node.services.config.SecurityConfiguration
 import net.corda.nodeapi.internal.config.User
 import net.corda.testing.internal.TestingNamedCacheFactory
@@ -31,7 +32,7 @@ class RPCSecurityManagerTest {
     @Test
     fun `Generic RPC call authorization`() {
         checkUserActions(
-                permitted = setOf(arrayListOf("nodeInfo"), arrayListOf("notaryIdentities")),
+                permitted = setOf(listOf("nodeInfo"), listOf("notaryIdentities")),
                 permissions = setOf(
                         invokeRpc(CordaRPCOps::nodeInfo),
                         invokeRpc(CordaRPCOps::notaryIdentities)))
@@ -40,41 +41,49 @@ class RPCSecurityManagerTest {
     @Test
     fun `Flow invocation authorization`() {
         checkUserActions(
-            permissions = setOf(Permissions.startFlow<DummyFlow>()),
+            permissions = setOf(startFlow<DummyFlow>()),
             permitted = setOf(
-                arrayListOf("startTrackedFlowDynamic", "net.corda.node.services.RPCSecurityManagerTest\$DummyFlow"),
-                arrayListOf("startFlowDynamic", "net.corda.node.services.RPCSecurityManagerTest\$DummyFlow")))
+                listOf("startTrackedFlowDynamic", DummyFlow::class.java.name),
+                listOf("startFlowDynamic", DummyFlow::class.java.name)))
     }
 
     @Test
     fun `Check startFlow RPC permission implies startFlowDynamic`() {
         checkUserActions(
                 permissions = setOf(invokeRpc("startFlow")),
-                permitted = setOf(arrayListOf("startFlow"), arrayListOf("startFlowDynamic")))
+                permitted = setOf(listOf("startFlow"), listOf("startFlowDynamic")))
     }
 
     @Test
     fun `Check startTrackedFlow RPC permission implies startTrackedFlowDynamic`() {
         checkUserActions(
-                permitted = setOf(arrayListOf("startTrackedFlow"), arrayListOf("startTrackedFlowDynamic")),
+                permitted = setOf(listOf("startTrackedFlow"), listOf("startTrackedFlowDynamic")),
                 permissions = setOf(invokeRpc("startTrackedFlow")))
+    }
+
+    @Test
+    fun `check killFlow RPC permission accepted`() {
+        checkUserActions(
+                permitted = setOf(listOf("killFlow")),
+                permissions = setOf(invokeRpc(CordaRPCOps::killFlow))
+        )
     }
 
     @Test
     fun `Admin authorization`() {
         checkUserActions(
             permissions = setOf("all"),
-            permitted = allActions.map { arrayListOf(it) }.toSet())
+            permitted = allActions.map { listOf(it) }.toSet())
     }
 
     @Test
     fun `flows draining mode permissions`() {
         checkUserActions(
-                permitted = setOf(arrayListOf("setFlowsDrainingModeEnabled")),
+                permitted = setOf(listOf("setFlowsDrainingModeEnabled")),
                 permissions = setOf(invokeRpc(CordaRPCOps::setFlowsDrainingModeEnabled))
         )
         checkUserActions(
-                permitted = setOf(arrayListOf("isFlowsDrainingModeEnabled")),
+                permitted = setOf(listOf("isFlowsDrainingModeEnabled")),
                 permissions = setOf(invokeRpc(CordaRPCOps::isFlowsDrainingModeEnabled))
         )
     }
@@ -134,7 +143,7 @@ class RPCSecurityManagerTest {
                 users = listOf(User(username, "password", setOf())), id = AuthServiceId("TEST"))
     }
 
-    private fun checkUserActions(permissions: Set<String>, permitted: Set<ArrayList<String>>) {
+    private fun checkUserActions(permissions: Set<String>, permitted: Set<List<String>>) {
         val user = User(username = "user", password = "password", permissions = permissions)
         val userRealms = RPCSecurityManagerImpl(SecurityConfiguration.AuthService.fromUsers(listOf(user)), TestingNamedCacheFactory())
         val disabled = allActions.filter { !permitted.contains(listOf(it)) }

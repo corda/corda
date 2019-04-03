@@ -1,6 +1,5 @@
 package net.corda.tools.shell;
 
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import net.corda.client.jackson.StringToMethodCallParser;
@@ -20,14 +19,13 @@ import java.util.Map;
 import java.util.Set;
 
 import static java.util.Comparator.comparing;
-import static java.util.stream.Collectors.joining;
 
 // Note that this class cannot be converted to Kotlin because CRaSH does not understand InvocationContext<Map<?, ?>> which
 // is the closest you can get in Kotlin to raw types.
 
 public class RunShellCommand extends InteractiveShellCommand {
 
-    private static Logger logger = LoggerFactory.getLogger(RunShellCommand.class);
+    private static final Logger logger = LoggerFactory.getLogger(RunShellCommand.class);
 
     @Command
     @Man(
@@ -39,7 +37,7 @@ public class RunShellCommand extends InteractiveShellCommand {
     @Usage("runs a method from the CordaRPCOps interface on the node.")
     public Object main(InvocationContext<Map> context,
                        @Usage("The command to run") @Argument(unquote = false) List<String> command) {
-        logger.info("Executing command \"run {}\",", (command != null) ? command.stream().collect(joining(" ")) : "<no arguments>");
+        logger.info("Executing command \"run {}\",", (command != null) ? String.join(" ", command) : "<no arguments>");
         StringToMethodCallParser<CordaRPCOps> parser = new StringToMethodCallParser<>(CordaRPCOps.class, objectMapper(InteractiveShell.getCordappsClassloader()));
 
         if (command == null) {

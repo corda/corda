@@ -1,14 +1,8 @@
 package net.corda.configsample
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.contracts.CommandData
-import net.corda.core.contracts.Contract
-import net.corda.core.contracts.ContractState
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
-import net.corda.core.identity.AbstractParty
-import net.corda.core.serialization.CordaSerializable
-import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.ProgressTracker
 
 // DOCSTART 1

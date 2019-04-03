@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.google.common.reflect.TypeToken
 import net.corda.serialization.internal.AllWhitelist
 import net.corda.serialization.internal.amqp.asClass
+import net.corda.serialization.internal.amqp.testutils.testSerializationContext
 import net.corda.serialization.internal.carpenter.ClassCarpenterImpl
 import org.junit.Test
 import java.lang.reflect.Type
@@ -12,8 +13,8 @@ import kotlin.test.assertEquals
 class ClassCarpentingTypeLoaderTests {
 
     val carpenter = ClassCarpenterImpl(AllWhitelist)
-    val remoteTypeCarpenter = SchemaBuildingRemoteTypeCarpenter(carpenter)
-    val typeLoader = ClassCarpentingTypeLoader(remoteTypeCarpenter, carpenter.classloader)
+    private val remoteTypeCarpenter = SchemaBuildingRemoteTypeCarpenter(carpenter)
+    private val typeLoader = ClassCarpentingTypeLoader(remoteTypeCarpenter, carpenter.classloader)
 
     @Test
     fun `carpent some related classes`() {
@@ -44,7 +45,9 @@ class ClassCarpentingTypeLoaderTests {
                         "previousAddresses" to listOfAddresses.mandatory
                 ), emptyList(), emptyList())
 
-        val types = typeLoader.load(listOf(personInformation, addressInformation, listOfAddresses))
+        val types = typeLoader.load(listOf(personInformation, addressInformation, listOfAddresses),
+                testSerializationContext)
+
         val addressType = types[addressInformation.typeIdentifier]!!
         val personType = types[personInformation.typeIdentifier]!!
 

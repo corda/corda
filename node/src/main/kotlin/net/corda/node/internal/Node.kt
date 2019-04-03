@@ -17,6 +17,7 @@ import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.internal.div
 import net.corda.core.internal.errors.AddressBindingException
+import net.corda.core.internal.getJavaUpdateVersion
 import net.corda.core.internal.notary.NotaryService
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.RPCOps
@@ -157,7 +158,7 @@ open class Node(configuration: NodeConfiguration,
             // when the ext.java8_minUpdateVersion gradle constant changes, so must this check
             val major = SystemUtils.JAVA_VERSION_FLOAT
             return try {
-                val update = SystemUtils.JAVA_VERSION.substringAfter("_").toLong()
+                val update = getJavaUpdateVersion(SystemUtils.JAVA_VERSION) // To filter out cases like 1.8.0_202-ea
                 major == 1.8F && update >= 171
             } catch (e: NumberFormatException) { // custom JDKs may not have the update version (e.g. 1.8.0-adoptopenjdk)
                 false
@@ -255,7 +256,11 @@ open class Node(configuration: NodeConfiguration,
             startLocalRpcBroker(securityManager)
         }
 
-        val bridgeControlListener = BridgeControlListener(configuration.p2pSslOptions, network.serverAddress, networkParameters.maxMessageSize)
+        val bridgeControlListener = BridgeControlListener(
+                configuration.p2pSslOptions,
+                network.serverAddress,
+                networkParameters.maxMessageSize,
+                configuration.crlCheckSoftFail)
 
         printBasicNodeInfo("Advertised P2P messaging addresses", nodeInfo.addresses.joinToString())
         val rpcServerConfiguration = RPCServerConfiguration.DEFAULT
@@ -415,6 +420,7 @@ open class Node(configuration: NodeConfiguration,
     }
 
     override fun start(): NodeInfo {
+        registerDefaultExceptionHandler()
         initialiseSerialization()
         val nodeInfo: NodeInfo = super.start()
         nodeReadyFuture.thenMatch({
@@ -431,6 +437,14 @@ open class Node(configuration: NodeConfiguration,
             stop()
         }
         return nodeInfo
+    }
+
+    /**
+     * Register a default exception handler for all threads that terminates the process if the database connection goes away and
+     * cannot be recovered.
+     */
+    private fun registerDefaultExceptionHandler() {
+        Thread.setDefaultUncaughtExceptionHandler(DbExceptionHandler(Thread.getDefaultUncaughtExceptionHandler()))
     }
 
     /**

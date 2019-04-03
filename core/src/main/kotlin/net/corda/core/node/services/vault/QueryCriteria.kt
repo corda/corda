@@ -11,6 +11,7 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.node.services.Vault
 import net.corda.core.schemas.StatePersistable
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.DeprecatedConstructorForDeserialization
 import net.corda.core.utilities.OpaqueBytes
 import java.security.PublicKey
 import java.time.Instant
@@ -102,6 +103,7 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
     ) : CommonQueryCriteria() {
         // V3 c'tors
         // These have to be manually specified as @JvmOverloads for some reason causes declaration clashes
+        @DeprecatedConstructorForDeserialization(version = 6)
         constructor(
                 status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
                 contractStateTypes: Set<Class<out ContractState>>? = null,
@@ -110,14 +112,19 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
                 softLockingCondition: SoftLockingCondition? = null,
                 timeCondition: TimeCondition? = null
         ) : this(status, contractStateTypes, stateRefs, notary, softLockingCondition, timeCondition, participants = null)
+        @DeprecatedConstructorForDeserialization(version = 1)
         constructor(status: Vault.StateStatus) : this(status, participants = null)
+        @DeprecatedConstructorForDeserialization(version = 2)
         constructor(status: Vault.StateStatus, contractStateTypes: Set<Class<out ContractState>>?) : this(status, contractStateTypes, participants = null)
+        @DeprecatedConstructorForDeserialization(version = 3)
         constructor(status: Vault.StateStatus, contractStateTypes: Set<Class<out ContractState>>?, stateRefs: List<StateRef>?) : this(
                 status, contractStateTypes, stateRefs, participants = null
         )
+        @DeprecatedConstructorForDeserialization(version = 4)
         constructor(status: Vault.StateStatus, contractStateTypes: Set<Class<out ContractState>>?, stateRefs: List<StateRef>?, notary: List<AbstractParty>?) : this(
                 status, contractStateTypes, stateRefs, notary, participants = null
         )
+        @DeprecatedConstructorForDeserialization(version = 5)
         constructor(status: Vault.StateStatus, contractStateTypes: Set<Class<out ContractState>>?, stateRefs: List<StateRef>?, notary: List<AbstractParty>?, softLockingCondition: SoftLockingCondition?) : this(
                 status, contractStateTypes, stateRefs, notary, softLockingCondition, participants = null
         )
@@ -174,6 +181,7 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
     ) : CommonQueryCriteria() {
         // V3 c'tor
         @JvmOverloads
+        @DeprecatedConstructorForDeserialization(version = 2)
         constructor(
                 participants: List<AbstractParty>? = null,
                 uuid: List<UUID>? = null,
@@ -182,6 +190,7 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
                 contractStateTypes: Set<Class<out ContractState>>? = null
         ) : this(participants, uuid, externalId, status, contractStateTypes, Vault.RelevancyStatus.ALL)
 
+        @DeprecatedConstructorForDeserialization(version = 3)
         constructor(
                 participants: List<AbstractParty>? = null,
                 linearId: List<UniqueIdentifier>? = null,
@@ -191,6 +200,7 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
         ) : this(participants, linearId?.map { it.id }, linearId?.mapNotNull { it.externalId }, status, contractStateTypes, relevancyStatus)
 
         // V3 c'tor
+        @DeprecatedConstructorForDeserialization(version = 1)
         constructor(
                 participants: List<AbstractParty>? = null,
                 linearId: List<UniqueIdentifier>? = null,
@@ -264,6 +274,7 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
             override val relevancyStatus: Vault.RelevancyStatus
     ) : CommonQueryCriteria() {
         @JvmOverloads
+        @DeprecatedConstructorForDeserialization(version = 1)
         constructor(
                 participants: List<AbstractParty>? = null,
                 owner: List<AbstractParty>? = null,
@@ -325,6 +336,7 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
             override val relevancyStatus: Vault.RelevancyStatus = Vault.RelevancyStatus.ALL
     ) : CommonQueryCriteria() {
         @JvmOverloads
+        @DeprecatedConstructorForDeserialization(version = 1)
         constructor(
                 expression: CriteriaExpression<L, Boolean>,
                 status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
@@ -381,10 +393,13 @@ sealed class AttachmentQueryCriteria : GenericQueryCriteria<AttachmentQueryCrite
                                         val isSignedCondition: ColumnPredicate<Boolean>? = null,
                                         val versionCondition: ColumnPredicate<Int>? = null) : AttachmentQueryCriteria() {
         // V3 c'tors
+        @DeprecatedConstructorForDeserialization(version = 3)
         constructor(uploaderCondition: ColumnPredicate<String>? = null,
                     filenameCondition: ColumnPredicate<String>? = null,
                     uploadDateCondition: ColumnPredicate<Instant>? = null) : this(uploaderCondition, filenameCondition, uploadDateCondition, null)
+        @DeprecatedConstructorForDeserialization(version = 1)
         constructor(uploaderCondition: ColumnPredicate<String>?) : this(uploaderCondition, null)
+        @DeprecatedConstructorForDeserialization(version = 2)
         constructor(uploaderCondition: ColumnPredicate<String>?, filenameCondition: ColumnPredicate<String>?) : this(uploaderCondition, filenameCondition, null)
 
         override fun visit(parser: AttachmentsQueryCriteriaParser): Collection<Predicate> {

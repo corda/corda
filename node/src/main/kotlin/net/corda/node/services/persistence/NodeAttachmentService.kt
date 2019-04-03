@@ -41,6 +41,7 @@ import java.nio.file.Paths
 import java.security.PublicKey
 import java.time.Instant
 import java.util.*
+import java.util.jar.JarEntry
 import java.util.jar.JarInputStream
 import javax.annotation.concurrent.ThreadSafe
 import javax.persistence.*
@@ -71,17 +72,41 @@ class NodeAttachmentService(
         // Note that JarInputStream won't throw any kind of error at all if the file stream is in fact not
         // a ZIP! It'll just pretend it's an empty archive, which is kind of stupid but that's how it works.
         // So we have to check to ensure we found at least one item.
-        private fun checkIsAValidJAR(stream: InputStream) {
+        //
+        // For signed Jars add additional checks to close security holes left by the default jarSigner verifier:
+        //  - All entries listed in the Manifest are in the JAR file.
+        //  - No extra files in the JAR that were not listed in the Manifest.
+        // Together with the check that all entries need to be signed by the same signers that is performed when the signers are read,
+        // it should close any possibility of foul play.
+        internal fun checkIsAValidJAR(stream: InputStream) {
             val jar = JarInputStream(stream, true)
             var count = 0
+
+            // Can be null for not-signed JARs.
+            val allManifestEntries = jar.manifest?.entries?.keys?.toMutableList()
+            val extraFilesNotFoundInEntries = mutableListOf<JarEntry>()
+            val manifestHasEntries= allManifestEntries != null && allManifestEntries.isNotEmpty()
+
             while (true) {
                 val cursor = jar.nextJarEntry ?: break
+                if (manifestHasEntries && !allManifestEntries!!.remove(cursor.name)) extraFilesNotFoundInEntries.add(cursor)
                 val entryPath = Paths.get(cursor.name)
                 // Security check to stop zips trying to escape their rightful place.
                 require(!entryPath.isAbsolute) { "Path $entryPath is absolute" }
                 require(entryPath.normalize() == entryPath) { "Path $entryPath is not normalised" }
                 require(!('\\' in cursor.name || cursor.name == "." || cursor.name == "..")) { "Bad character in $entryPath" }
                 count++
+            }
+
+            // Only perform these checks if the JAR was signed.
+            if (manifestHasEntries) {
+                if (allManifestEntries!!.size > 0) {
+                    throw SecurityException("Signed jar has been tampered with. Files ${allManifestEntries} have been removed.")
+                }
+                val extraSignableFiles = extraFilesNotFoundInEntries.filterNot { JarSignatureCollector.isNotSignable(it) }
+                if (extraSignableFiles.size > 0) {
+                    throw SecurityException("Signed jar has been tampered with. Files ${extraSignableFiles} have been added to the JAR.")
+                }
             }
             require(count > 0) { "Stream is either empty or not a JAR/ZIP" }
         }
@@ -150,7 +175,6 @@ class NodeAttachmentService(
      * this will provide an additional safety check against user error.
      */
     @VisibleForTesting
-    @CordaSerializable
     class HashCheckingStream(val expected: SecureHash.SHA256,
                              val expectedSize: Int,
                              input: InputStream,
@@ -311,7 +335,7 @@ class NodeAttachmentService(
         currentDBSession().find(NodeAttachmentService.DBAttachment::class.java, attachmentId.toString()) != null
     }
 
-    private fun verifyVersionUniquenessForSignedAttachments(contractClassNames: List<ContractClassName>, contractVersion: Int, signers: List<PublicKey>?){
+    private fun verifyVersionUniquenessForSignedAttachments(contractClassNames: List<ContractClassName>, contractVersion: Int, signers: List<PublicKey>?) {
         if (signers != null && signers.isNotEmpty()) {
             contractClassNames.forEach {
                 val existingContractsImplementations = queryAttachments(AttachmentQueryCriteria.AttachmentsQueryCriteria(
@@ -327,20 +351,20 @@ class NodeAttachmentService(
         }
     }
 
-    private fun increaseDefaultVersionIfWhitelistedAttachment(contractClassNames: List<ContractClassName>, contractVersionFromFile: Int, attachmentId : AttachmentId) =
-        if (contractVersionFromFile == DEFAULT_CORDAPP_VERSION) {
-            val versions = contractClassNames.mapNotNull { servicesForResolution.networkParameters.whitelistedContractImplementations[it]?.indexOf(attachmentId) }.filter { it >= 0 }.map { it + 1 } // +1 as versions starts from 1 not 0
-            val max = versions.max()
-            if (max != null && max > contractVersionFromFile) {
-                val msg = "Updating version of attachment $attachmentId from '$contractVersionFromFile' to '$max'"
-                if (versions.toSet().size > 1)
-                    log.warn("Several versions based on whitelistedContractImplementations position are available: ${versions.toSet()}. $msg")
-                else
-                    log.debug(msg)
-                max
+    private fun increaseDefaultVersionIfWhitelistedAttachment(contractClassNames: List<ContractClassName>, contractVersionFromFile: Int, attachmentId: AttachmentId) =
+            if (contractVersionFromFile == DEFAULT_CORDAPP_VERSION) {
+                val versions = contractClassNames.mapNotNull { servicesForResolution.networkParameters.whitelistedContractImplementations[it]?.indexOf(attachmentId) }
+                        .filter { it >= 0 }.map { it + 1 } // +1 as versions starts from 1 not 0
+                val max = versions.max()
+                if (max != null && max > contractVersionFromFile) {
+                    val msg = "Updating version of attachment $attachmentId from '$contractVersionFromFile' to '$max'"
+                    if (versions.toSet().size > 1)
+                        log.warn("Several versions based on whitelistedContractImplementations position are available: ${versions.toSet()}. $msg")
+                    else
+                        log.debug(msg)
+                    max
+                } else contractVersionFromFile
             } else contractVersionFromFile
-        }
-        else contractVersionFromFile
 
     // TODO: PLT-147: The attachment should be randomised to prevent brute force guessing and thus privacy leaks.
     private fun import(jar: InputStream, uploader: String?, filename: String?): AttachmentId {
@@ -495,7 +519,7 @@ class NodeAttachmentService(
     private fun makeAttachmentIds(it: Map.Entry<Int, List<DBAttachment>>, contractClassName: String): Pair<Version, AttachmentIds> {
         val signed = it.value.filter { it.signers?.isNotEmpty() ?: false }.map { AttachmentId.parse(it.attId) }
         if (!devMode)
-            check (signed.size <= 1) //sanity check
+            check(signed.size <= 1) //sanity check
         else
             log.warn("(Dev Mode) Multiple signed attachments ${signed.map { it.toString() }} for contract $contractClassName version '${it.key}'.")
         val unsigned = it.value.filter { it.signers?.isEmpty() ?: true }.map { AttachmentId.parse(it.attId) }

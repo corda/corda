@@ -9,7 +9,7 @@ A node can be created manually by creating a folder that contains the following 
 
 * The Corda JAR
 
-    * Can be downloaded from https://r3.bintray.com/corda/net/corda/corda/ (under /VERSION_NUMBER/corda-VERSION_NUMBER.jar)
+    * Can be downloaded from https://r3.bintray.com/corda/net/corda/corda/ (under /|corda_version|/corda-|corda_version|.jar)
 
 * A node configuration file entitled ``node.conf``, configured as per :doc:`corda-configuration-file`
 
@@ -17,7 +17,7 @@ A node can be created manually by creating a folder that contains the following 
 
 * **Optional:** A webserver JAR entitled ``corda-webserver.jar`` that will connect to the node via RPC
 
-    * The (deprecated) default webserver can be downloaded from http://r3.bintray.com/corda/net/corda/corda-webserver/ (under /VERSION_NUMBER/corda-VERSION_NUMBER.jar)
+    * The (deprecated) default webserver can be downloaded from http://r3.bintray.com/corda/net/corda/corda-webserver/ (under /|corda_version|/corda-webserver-|corda_version|.jar)
     * A Spring Boot alternative can be found here: https://github.com/corda/spring-webserver
 
 The remaining files and folders described in :doc:`node-structure` will be generated at runtime.
@@ -26,7 +26,7 @@ The Cordform task
 -----------------
 Corda provides a gradle plugin called ``Cordform`` that allows you to automatically generate and configure a set of
 nodes for testing and demos. Here is an example ``Cordform`` task called ``deployNodes`` that creates three nodes, defined
-in the `Kotlin CorDapp Template <https://github.com/corda/cordapp-template-kotlin/blob/release-V3/build.gradle#L100>`_:
+in the `Kotlin CorDapp Template <https://github.com/corda/cordapp-template-kotlin/blob/release-V|platform_version|/build.gradle#L95>`_:
 
 .. sourcecode:: groovy
 
@@ -251,7 +251,7 @@ following line to each node's ``node.conf`` file:
 
 Where ``2222`` is the port you want to open to SSH into the shell.
 
-Below you can find the example task from the `IRS Demo <https://github.com/corda/corda/blob/release-V3.0/samples/irs-demo/cordapp/build.gradle#L111>`_ included in the samples directory of main Corda GitHub repository:
+Below you can find the example task from the `IRS Demo <https://github.com/corda/corda/blob/release/|platform_version|/samples/irs-demo/cordapp/build.gradle#L111>`_ included in the samples directory of main Corda GitHub repository:
 
 .. sourcecode:: groovy
 

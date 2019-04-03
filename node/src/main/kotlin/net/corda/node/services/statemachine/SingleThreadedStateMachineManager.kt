@@ -44,6 +44,7 @@ import net.corda.node.services.statemachine.interceptors.HospitalisingIntercepto
 import net.corda.node.services.statemachine.interceptors.PrintingInterceptor
 import net.corda.node.services.statemachine.transitions.StateMachine
 import net.corda.node.utilities.AffinityExecutor
+import net.corda.node.utilities.errorAndTerminate
 import net.corda.node.utilities.injectOldProgressTracker
 import net.corda.node.utilities.isEnabledTimedFlow
 import net.corda.nodeapi.internal.persistence.CordaPersistence
@@ -51,7 +52,6 @@ import net.corda.nodeapi.internal.persistence.wrapWithDatabaseTransaction
 import net.corda.serialization.internal.CheckpointSerializeAsTokenContextImpl
 import net.corda.serialization.internal.withTokenContext
 import org.apache.activemq.artemis.utils.ReusableLatch
-import org.apache.logging.log4j.LogManager
 import rx.Observable
 import rx.subjects.PublishSubject
 import java.lang.Integer.min
@@ -148,9 +148,7 @@ class SingleThreadedStateMachineManager(
         metrics.register("Flows.InFlight", Gauge<Int> { mutex.content.flows.size })
         Fiber.setDefaultUncaughtExceptionHandler { fiber, throwable ->
             if (throwable is VirtualMachineError) {
-                (fiber as FlowStateMachineImpl<*>).logger.error("Caught unrecoverable error from flow. Forcibly terminating the JVM, this might leave resources open, and most likely will.", throwable)
-                LogManager.shutdown(true)
-                Runtime.getRuntime().halt(1)
+                errorAndTerminate("Caught unrecoverable error from flow. Forcibly terminating the JVM, this might leave resources open, and most likely will.", throwable)
             } else {
                 (fiber as FlowStateMachineImpl<*>).logger.warn("Caught exception from flow", throwable)
             }
@@ -453,7 +451,8 @@ class SingleThreadedStateMachineManager(
                                 "unknown session $recipientId, discarding..."
                     }
                 } else {
-                    logger.warn("Cannot find flow corresponding to session ID $recipientId.")
+                    // It happens when flows restart and the old sessions messages still arrive from a peer.
+                    logger.info("Cannot find flow corresponding to session ID $recipientId.")
                 }
             } else {
                 val flow = mutex.locked { flows[flowId] }

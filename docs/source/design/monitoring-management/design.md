@@ -113,7 +113,7 @@ Expanding on the first goal identified above, the following requirements have be
    Audit data should include sufficient contextual information to enable optimal off-line analysis.
    Auditing should apply to all Corda node processes (running CorDapps, notaries, oracles).
 
-#### Use Cases
+### Use Cases
 
 It is envisaged that operational management and support teams will use the metrics and information collated from this
 design, either directly or through an integrated enterprise-wide systems management platform, to perform the following:
@@ -177,7 +177,7 @@ There are a number of activities and parts to the solution proposal:
    queue), and exposes key metrics using JMX (using role-based authentication using Artemis's JAAS plug-in support to 
    ensure Artemis cannot be controlled via JMX)..
 
-##### Restrictions
+### Restrictions
 
 As of Corda M11, Java serialisation in the Corda node has been restricted, meaning MBeans access via the JMX port will no longer work.
 
@@ -200,7 +200,7 @@ include:
 | [Collectd](https://collectd.org/)        | OS          | Collector agent (written in C circa 2005). Data acquisition and storage handled by over 90 plugins. |
 | [Telegraf](https://github.com/influxdata/telegraf) | OS          | Collector agent (written in Go, active community) |
 | [Graphite](https://graphiteapp.org/)     | OS          | Monitoring tool that stores, retrieves, shares, and visualizes time-series data. |
-| [StatsD](https://github.com/etsy/statsd) | OS          | Collector daemon that runs on the [Node.js](http://nodejs.org/) platform and listens for statistics, like counters and timers, sent over [UDP](http://en.wikipedia.org/wiki/User_Datagram_Protocol) or [TCP](http://en.wikipedia.org/wiki/Transmission_Control_Protocol) and sends aggregates to one or more pluggable backend services (e.g., [Graphite](http://graphite.readthedocs.org/)). |
+| [StatsD](https://github.com/etsy/statsd) | OS          | Collector daemon that runs on the [Node.js](http://nodejs.org/) platform and listens for statistics, like counters and timers, sent over [UDP](http://en.wikipedia.org/wiki/User_Datagram_Protocol) or [TCP](http://en.wikipedia.org/wiki/Transmission_Control_Protocol) and sends aggregates to one or more pluggable backend services (e.g., Graphite). |
 | [fluentd](https://www.fluentd.org/)      | OS          | Collector daemon which collects data directly from logs and databases. Often used to analyze event logs, application logs, and clickstreams (a series of mouse clicks). |
 | [Prometheus](https://prometheus.io/)     | OS          | End to end monitoring solution using time-series data (eg. metric name and a set of key-value pairs) and includes collection, storage, query and visualization. |
 | [NewRelic](https://newrelic.com/)        | £           | Full stack instrumentation for application monitoring and real-time analytics solution. |
@@ -446,7 +446,6 @@ Primary node services exposed publicly via ServiceHub (SH) or internally by Serv
 | CordaPersistence                         | SHI  | CordaPersistence                   | INFO coverage within `HibernateConfiguration` |
 | CordappProviderInternal                  | SHI  | CordappProviderImpl                | none                                     |
 | VaultServiceInternal                     | SHI  | NodeVaultService                   | see SH                                   |
-|                                          |      |                                    |                                          |
 
 Corda subsystem components:
 
@@ -458,7 +457,6 @@ Corda subsystem components:
 | NotaryService              | RaftNonValidatingNotaryService           | as above                                 |
 | NotaryService              | BFTNonValidatingNotaryService            | Logging coverage (info, debug)           |
 | Doorman                    | DoormanServer (Enterprise only)          | Some logging (info, warn, error), and use of `println` |
-|                            |                                          |                                          |
 
 Corda core flows:
 
@@ -467,19 +465,18 @@ Corda core flows:
 | FinalityFlow                            | none                | NotaryException                          | NOTARISING, BROADCASTING      |
 | NotaryFlow                              | none                | NotaryException (NotaryError types: TimeWindowInvalid, TransactionInvalid, WrongNotary), IllegalStateException, some via `check` assertions | REQUESTING, VALIDATING        |
 | NotaryChangeFlow                        | none                | StateReplacementException                | SIGNING, NOTARY               |
-| SendTransactionFlow                     | none                | FetchDataFlow.HashNotFound (FlowException) |                               |
-| ReceiveTransactionFlow                  | none                | SignatureException, AttachmentResolutionException, TransactionResolutionException, TransactionVerificationException |                               |
-| ResolveTransactionsFlow                 | none                | FetchDataFlow.HashNotFound (FlowException), ExcessivelyLargeTransactionGraph (FlowException) |                               |
-| FetchAttachmentsFlow                    | none                | FetchDataFlow.HashNotFound               |                               |
-| FetchTransactionsFlow                   | none                | FetchDataFlow.HashNotFound               |                               |
-| FetchDataFlow                           | some logging (info) | FetchDataFlow.HashNotFound               |                               |
+| SendTransactionFlow                     | none                | FetchDataFlow.HashNotFound (FlowException) | none                        |
+| ReceiveTransactionFlow                  | none                | SignatureException, AttachmentResolutionException, TransactionResolutionException, TransactionVerificationException | none                              |
+| ResolveTransactionsFlow                 | none                | FetchDataFlow.HashNotFound (FlowException), ExcessivelyLargeTransactionGraph (FlowException) |  none                             |
+| FetchAttachmentsFlow                    | none                | FetchDataFlow.HashNotFound               | none                          |
+| FetchTransactionsFlow                   | none                | FetchDataFlow.HashNotFound               | none                          |
+| FetchDataFlow                           | some logging (info) | FetchDataFlow.HashNotFound               | none                          |
 | AbstractStateReplacementFlow.Instigator | none                | StateReplacementException                | SIGNING, NOTARY               |
 | AbstractStateReplacementFlow.Acceptor   | none                | StateReplacementException                | VERIFYING, APPROVING          |
 | CollectSignaturesFlow                   | none                | IllegalArgumentException via `require` assertions | COLLECTING, VERIFYING         |
-| CollectSignatureFlow                    | none                | as above                                 |                               |
+| CollectSignatureFlow                    | none                | as above                                 | none                          |
 | SignTransactionFlow                     | none                | FlowException, possibly other (general) Exception | RECEIVING, VERIFYING, SIGNING |
-| ContractUpgradeFlow                     | none                | FlowException                            |                               |
-|                                         |                     |                                          |                               |
+| ContractUpgradeFlow                     | none                | FlowException                            | none                          |
 
 Corda finance flows:
 

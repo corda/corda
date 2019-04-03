@@ -145,7 +145,7 @@ dependencies {
     compile "org.postgresql:postgresql:$postgresql_version"
 
     // SQL connection pooling library
-    compile "com.zaxxer:HikariCP:2.5.1"
+    compile "com.zaxxer:HikariCP:${hikari_version}"
 
     // Hibernate: an object relational mapper for writing state objects to the database automatically.
     compile "org.hibernate:hibernate-core:$hibernate_version"
@@ -209,6 +209,9 @@ tasks.withType(JavaCompile) {
 task integrationTest(type: Test) {
     testClassesDirs = sourceSets.integrationTest.output.classesDirs
     classpath = sourceSets.integrationTest.runtimeClasspath
+
+    systemProperty 'testing.global.port.allocation.enabled', true
+    systemProperty 'testing.global.port.allocation.starting.port', 10000
 }
 
 jar {

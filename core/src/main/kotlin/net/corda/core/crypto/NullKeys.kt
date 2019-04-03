@@ -7,7 +7,6 @@ import java.security.PublicKey
 
 @KeepForDJVM
 object NullKeys {
-    @CordaSerializable
     object NullPublicKey : PublicKey, Comparable<PublicKey> {
         override fun getAlgorithm() = "NULL"
         override fun getEncoded() = byteArrayOf(0)

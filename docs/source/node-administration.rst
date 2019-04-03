@@ -10,7 +10,10 @@ Logging
 By default the node log files are stored to the ``logs`` subdirectory of the working directory and are rotated from time
 to time. You can have logging printed to the console as well by passing the ``--log-to-console`` command line flag.
 The default logging level is ``INFO`` which can be adjusted by the ``--logging-level`` command line argument. This configuration
-option will affect all modules.
+option will affect all modules. Hibernate (the JPA provider used by Corda) specific log messages of level ``WARN`` and above 
+will be logged to the diagnostic log file, which is stored in the same location as other log files (``logs`` subdirectory 
+by default). This is because Hibernate may log messages at WARN and ERROR that are handled internally by Corda and do not 
+need operator attention. If they do, they will be logged by Corda itself in the main node log file.
 
 It may be the case that you require to amend the log level of a particular subset of modules (e.g., if you'd like to take a
 closer look at hibernate activity). So, for more bespoke logging configuration, the logger settings can be completely overridden
@@ -84,7 +87,7 @@ formats for accessing MBeans, and provides client libraries to work with that pr
 
 Here are a few ways to build dashboards and extract monitoring data for a node:
 
-* `hawtio <http://hawt.io>`_ is a web based console that connects directly to JVM's that have been instrumented with a
+* `Hawtio <http://hawt.io>`_ is a web based console that connects directly to JVM's that have been instrumented with a
   jolokia agent. This tool provides a nice JMX dashboard very similar to the traditional JVisualVM / JConsole MBbeans original.
 * `JMX2Graphite <https://github.com/logzio/jmx2graphite>`_ is a tool that can be pointed to /monitoring/json and will
   scrape the statistics found there, then insert them into the Graphite monitoring tool on a regular basis. It runs
@@ -132,7 +135,7 @@ When starting Corda nodes using the 'driver DSL', you should see a startup messa
 **Starting out-of-process Node USA Bank Corp, debug port is not enabled, jolokia monitoring port is 7005 {}**
 
 
-The following diagram illustrates Corda flow metrics visualized using `hawtio <https://hawt.io>`_ :
+The following diagram illustrates Corda flow metrics visualized using hawtio:
 
 .. image:: resources/hawtio-jmx.png
 
@@ -175,9 +178,8 @@ Take a simple node config that wishes to protect the node cryptographic stores:
 By delegating to a password store, and using `command substitution` it is possible to ensure that sensitive passwords never appear in plain text.
 The below examples are of loading Corda with the KEY_PASS and TRUST_PASS variables read from a program named ``corporatePasswordStore``.
 
-
 Bash
-~~~~
+++++
 
 .. sourcecode:: shell
 
@@ -185,9 +187,8 @@ Bash
 
 .. warning:: If this approach is taken, the passwords will appear in the shell history.
 
-
 Windows PowerShell
-~~~~~~~~~~~~~~~~~~
+++++++++++++++++++
 
 .. sourcecode:: shell
 
@@ -203,7 +204,7 @@ For launching on Windows without PowerShell, it is not possible to perform comma
 .. warning:: If this approach is taken, the passwords will appear in the windows command prompt history.
 
 
-.. _ref-backup-recommendations:
+.. _backup-recommendations:
 
 Backup recommendations
 ----------------------

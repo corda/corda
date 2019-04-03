@@ -9,7 +9,7 @@ Building and installing a CorDapp
 
 .. contents::
 
-Cordapps run on the Corda platform and integrate with it and each other. This article explains how to build CorDapps.
+CorDapps run on the Corda platform and integrate with it and each other. This article explains how to build CorDapps.
 To learn what a CorDapp is, please read :doc:`cordapp-overview`.
 
 CorDapp format
@@ -25,7 +25,7 @@ JAR will contain:
 
 Build tools
 -----------
-In the instructions that follow, we assume you are using Gradle and the ``cordformation`` plugin to build your
+In the instructions that follow, we assume you are using Gradle and the ``cordapp`` plugin to build your
 CorDapp. You can find examples of building a CorDapp using these tools in the 
 `Kotlin CorDapp Template <https://github.com/corda/cordapp-template-kotlin>`_ and the 
 `Java CorDapp Template <https://github.com/corda/cordapp-template-java>`_.
@@ -45,42 +45,38 @@ Setting your dependencies
 
 Choosing your Corda, Quasar and Kotlin versions
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Several ``ext`` variables are used in a CorDapp's ``build.gradle`` file to define which versions are used to build your CorDapp:
+Several ``ext`` variables are used in a CorDapp's ``build.gradle`` file to define version numbers that should match the version of
+Corda you're developing against:
 
-* ``ext.corda_release_version`` defines the version of Corda
+* ``ext.corda_release_version`` defines the version of Corda itself
 * ``ext.corda_gradle_plugins_version`` defines the version of the Corda Gradle Plugins
-* ``ext.quasar_version`` defines the version of Quasar
+* ``ext.quasar_version`` defines the version of Quasar, a library that we use to implement the flow framework
 * ``ext.kotlin_version`` defines the version of Kotlin (if using Kotlin to write your CorDapp)
 
-``corda_gradle_plugins_versions`` are given in the form ``major.minor.patch``. You should use the same ``major`` and
-``minor`` versions as the Corda version you are using, and the latest ``patch`` version. A list of all the available
-versions can be found here: https://bintray.com/r3/corda/cordapp. If in doubt, you should base yourself on the version
-numbers used in the ``build.gradle`` file of the
-`Kotlin CorDapp Template <https://github.com/corda/cordapp-template-kotlin>`_ and the
-`Java CorDapp Template <https://github.com/corda/cordapp-template-java>`_.
+The current versions used are as follows:
 
-For example, to use version 3.0 of Corda, version 3.0.8 of the Corda gradle plugins, version 0.7.9 of Quasar, and
-version 1.1.60 of Kotlin, you'd write:
+.. code::
 
-.. sourcecode:: groovy
-
-    ext.corda_release_version = 'corda-3.0'
-    ext.corda_gradle_plugins_version = '3.0.8'
-    ext.quasar_version = '0.7.9'
-    ext.kotlin_version = '1.1.60'
+    ext.corda_release_version = '|corda_version|'
+    ext.corda_gradle_plugins_version = '|gradle_plugins_version|'
+    ext.quasar_version = '|quasar_version|'
+    ext.kotlin_version = '|kotlin_version|'
 
 In certain cases, you may also wish to build against the unstable Master branch. See :doc:`building-against-master`.
 
 Corda dependencies
 ^^^^^^^^^^^^^^^^^^
-The ``cordformation`` plugin adds two new gradle configurations:
+The ``cordapp`` plugin adds three new gradle configurations:
 
 * ``cordaCompile``, which extends ``compile``
 * ``cordaRuntime``, which extends ``runtime``
+* ``cordapp``, which extends ``compile``
 
 ``cordaCompile`` and ``cordaRuntime`` indicate dependencies that should not be included in the CorDapp JAR. These
 configurations should be used for any Corda dependency (e.g. ``corda-core``, ``corda-node``) in order to prevent a
-dependency from being included twice (once in the CorDapp JAR and once in the Corda JARs).
+dependency from being included twice (once in the CorDapp JAR and once in the Corda JARs). The ``cordapp`` dependency
+is for declaring a compile-time dependency on a "semi-fat" CorDapp JAR in the same way as ``cordaCompile``, except
+that ``Cordformation`` will only deploy CorDapps contained within the ``cordapp`` configuration.
 
 Here are some guidelines for Corda dependencies:
 
@@ -88,15 +84,17 @@ Here are some guidelines for Corda dependencies:
   ``cordaCompile`` dependency, and ``net.corda:corda:$corda_release_version`` as a ``cordaRuntime`` dependency
 
 * When building an RPC client that communicates with a node (e.g. a webserver), you should include
-  ``net.corda:corda-rpc:$corda_release_version`` as a ``cordaCompile`` dependency
+  ``net.corda:corda-rpc:$corda_release_version`` as a ``cordaCompile`` dependency.
 
 * When you need to use the network bootstrapper to bootstrap a local network (e.g. when using ``Cordformation``), you
-  should include ``net.corda:corda-node-api:$corda_release_version`` as a ``cordaCompile`` dependency
+  should include ``net.corda:corda-node-api:$corda_release_version`` as either a ``cordaRuntime`` or a ``runtimeOnly``
+  dependency. You may also wish to include an implementation of SLF4J as a ``runtimeOnly`` dependency for the network
+  bootstrapper to use.
 
 * To use Corda's test frameworks, add ``net.corda:corda-test-utils:$corda_release_version`` as a ``testCompile``
-  dependency. Never include ``corda-test-utils`` as a ``compile`` or ``cordaCompile`` dependency
+  dependency. Never include ``corda-test-utils`` as a ``compile`` or ``cordaCompile`` dependency.
 
-* Any other Corda dependencies you need should be included as ``cordaCompile`` dependencies
+* Any other Corda dependencies you need should be included as ``cordaCompile`` dependencies.
 
 Here is an overview of the various Corda dependencies:
 
@@ -114,7 +112,8 @@ Here is an overview of the various Corda dependencies:
 * ``corda-jfx`` - JavaFX utilities with some Corda-specific models and utilities. Only use with JavaFX apps
 * ``corda-mock`` - A small library of useful mocks. Use if the classes are useful to you
 * ``corda-node`` - The Corda node. Do not depend on. Used only by the Corda fat JAR and indirectly in testing
-  frameworks
+  frameworks. (If your CorDapp _must_ depend on this for some reason then it should use the ``compileOnly``
+  configuration here - but please don't do this if you can possibly avoid it!)
 * ``corda-node-api`` - The node API. Required to bootstrap a local network
 * ``corda-node-driver`` - Testing utility for programmatically starting nodes from JVM languages. Use for tests
 * ``corda-rpc`` - The Corda RPC client library. Used when writing an RPC client
@@ -159,7 +158,7 @@ For further information about managing dependencies, see
 
 Signing the CorDapp JAR
 ^^^^^^^^^^^^^^^^^^^^^^^
-The ``cordapp`` plugin can sign the generated CorDapp JAR file using `JAR signing and verification tool <https://docs.oracle.com/javase/tutorial/deployment/jar/signing.html>`_.
+The ``cordapp`` plugin can sign the generated CorDapp JAR file using `JAR signing and verification tool <https://docs.oracle.com/javase/tutorial/deployment/jar/signing.html>`__.
 Signing the CorDapp enables its contract classes to use signature constraints instead of other types of the constraints,
 for constraints explanation refer to :doc:`api-contract-constraints`.
 By default the JAR file is signed by Corda development certificate.
@@ -254,7 +253,7 @@ Then the build process can set the value for *custom.sigalg* system property and
 
     ./gradlew -Dcustom.sigalg="SHA256withECDSA" -Dsigning.keystore="/path/to/keystore.jks" -Dsigning.alias="alias" -Dsigning.storepass="password" -Dsigning.keypass="password"
 
-To check if CorDapp is signed use `JAR signing and verification tool <https://docs.oracle.com/javase/tutorial/deployment/jar/verify.html>`_:
+To check if CorDapp is signed use `JAR signing and verification tool <https://docs.oracle.com/javase/tutorial/deployment/jar/verify.html>`__:
 
 .. sourcecode:: shell
 
@@ -319,7 +318,7 @@ Below is a sample CorDapp Gradle dependencies block. When building your own CorD
             cordapp "net.corda:bank-of-corda-demo:1.0"
 
             // Some other dependencies
-            compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
+            compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
             testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
             testCompile "junit:junit:$junit_version"
 
@@ -523,6 +522,13 @@ For a CorDapp that contains flows and/or services we specify the `workflow` tag:
         }
 
 .. note:: It is possible, but *not recommended*, to include everything in a single CorDapp jar and use both the ``contract`` and ``workflow`` Gradle plugin tags.
+
+.. warning:: Contract states may optionally specify a custom schema mapping (by implementing the ``Queryable`` interface) in its *contracts* JAR.
+  However, any associated database schema definition scripts (eg. Liquibase change set XML files) must currently be packaged in the *flows* JAR.
+  This is because the node requires access to these schema definitions upon start-up (*contract* JARs are now loaded in a separate attachments classloader).
+  This split also caters for scenarios where the same *contract* CorDapp may wish to target different database providers (and thus, the associated schema DDL may vary
+  to use native features of a particular database). The finance CorDapp provides an illustration of this packaging convention.
+  Future versions of Corda will de-couple this custom schema dependency to remove this anomaly.
 
 .. _cordapp_contract_attachments_ref:
 

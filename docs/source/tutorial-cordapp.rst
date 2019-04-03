@@ -224,8 +224,8 @@ Building the example CorDapp
       ├── certificates
       ├── corda.jar              // The Corda node runtime
       ├── cordapps               // The node's CorDapps
-      │   ├── corda-finance-contracts-4.0-corda.jar
-      │   ├── corda-finance-workflows-4.0-corda.jar
+      │   ├── corda-finance-contracts-|corda_version|.jar
+      │   ├── corda-finance-workflows-|corda_version|.jar
       │   └── cordapp-example-0.1.jar
       ├── drivers
       ├── logs
@@ -265,14 +265,14 @@ For each node, the ``runnodes`` script creates a node tab/window:
    / /___  /_/ / /  / /_/ / /_/ /          always say "Ah, Interesting!"
    \____/     /_/   \__,_/\__,_/
 
-   --- Corda Open Source corda-3.0 (4157c25) -----------------------------------------------
+   --- Corda Open Source corda-|corda_version| (4157c25) -----------------------------------------------
 
 
    Logs can be found in                    : /Users/joeldudley/Desktop/cordapp-example/workflows-kotlin/build/nodes/PartyA/logs
    Database connection url is              : jdbc:h2:tcp://localhost:59472/node
    Incoming connection address             : localhost:10005
    Listening on port                       : 10005
-   Loaded CorDapps                         : corda-finance-corda-3.0, cordapp-example-0.1, corda-core-corda-3.0
+   Loaded CorDapps                         : corda-finance-corda-|corda_version|, cordapp-example-0.1, corda-core-corda-|corda_version|
    Node for "PartyA" started up and registered in 38.59 sec
 
 
@@ -480,6 +480,47 @@ You can run the CorDapp's flow tests by running the ``Run Flow Tests - Kotlin`` 
 Integration tests
 ~~~~~~~~~~~~~~~~~
 You can run the CorDapp's integration tests by running the ``Run Integration Tests - Kotlin`` run configuration.
+
+.. _tutorial_cordapp_running_tests_intellij:
+
+Running tests in IntelliJ
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+We recommend editing your IntelliJ preferences so that you use the Gradle runner - this means that the quasar utils
+plugin will make sure that some flags (like ``-javaagent`` - see :ref:`below <tutorial_cordapp_alternative_test_runners>`) are
+set for you.
+
+To switch to using the Gradle runner:
+
+* Navigate to ``Build, Execution, Deployment -> Build Tools -> Gradle -> Runner`` (or search for `runner`)
+
+  * Windows: this is in "Settings"
+  * MacOS: this is in "Preferences"
+
+* Set "Delegate IDE build/run actions to gradle" to true
+* Set "Run test using:" to "Gradle Test Runner"
+
+.. _tutorial_cordapp_alternative_test_runners:
+
+If you would prefer to use the built in IntelliJ JUnit test runner, you can add some code to your ``build.gradle`` file and
+it will copy your quasar JAR file to the lib directory. You will also need to specify ``-javaagent:lib/quasar.jar``
+and set the run directory to the project root directory for each test.
+
+Add the following to your ``build.gradle`` file - ideally to a ``build.gradle`` that already contains the quasar-utils plugin line:
+
+.. sourcecode:: groovy
+
+    apply plugin: 'net.corda.plugins.quasar-utils'
+
+    task installQuasar(type: Copy) {
+        destinationDir rootProject.file("lib")
+        from(configurations.quasar) {
+            rename 'quasar-core(.*).jar', 'quasar.jar'
+        }
+    }
+
+
+and then you can run ``gradlew installQuasar``.
 
 Debugging your CorDapp
 ----------------------

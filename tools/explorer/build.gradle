@@ -5,12 +5,6 @@ apply plugin: 'application'
 sourceCompatibility = 1.8
 mainClassName = 'net.corda.explorer.Main'
 
-// Use manual resource copying of log4j2.xml rather than source sets.
-// This prevents problems in IntelliJ with regard to duplicate source roots.
-processResources {
-    from file("$rootDir/config/dev/log4j2.xml")
-}
-
 dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
@@ -22,11 +16,12 @@ dependencies {
     // Corda Core: Data structures and basic types needed to work with Corda.
     compile project(':core')
     compile project(':client:jfx')
-    compile project(':client:mock')
-    compile project(':node-driver')
     compile project(':finance:contracts')
     compile project(':finance:workflows')
     compile project(':tools:worldmap')
+
+    // Log4J: logging framework (with SLF4J bindings)
+    compile "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
 
     // Capsule is a library for building independently executable fat JARs.
     // We only need this dependency to compile our Caplet against.
@@ -60,21 +55,10 @@ tasks.withType(JavaCompile) {
     options.compilerArgs << '-proc:none'
 }
 
-task runDemoNodes(dependsOn: 'classes', type: JavaExec) {
-    main = 'net.corda.explorer.MainKt'
-    classpath = sourceSets.main.runtimeClasspath
-}
-
-task runSimulationNodes(dependsOn: 'classes', type: JavaExec) {
-    main = 'net.corda.explorer.MainKt'
-    classpath = sourceSets.main.runtimeClasspath
-    args '-S'
-}
-
 jar {
     manifest {
         attributes(
-                'Automatic-Module-Name': 'net.corda.tools.explorer'
+            'Automatic-Module-Name': 'net.corda.tools.explorer'
         )
     }
 }

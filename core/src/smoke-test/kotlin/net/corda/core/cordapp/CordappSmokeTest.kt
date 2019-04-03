@@ -38,7 +38,7 @@ import kotlin.streams.toList
 
 class CordappSmokeTest {
     private companion object {
-        val user = User("user1", "test", permissions = setOf("ALL"))
+        val superUser = User("superUser", "test", permissions = setOf("ALL"))
         val port = AtomicInteger(15100)
     }
 
@@ -50,7 +50,7 @@ class CordappSmokeTest {
             rpcPort = port.andIncrement,
             rpcAdminPort = port.andIncrement,
             isNotary = true,
-            users = listOf(user)
+            users = listOf(superUser)
     )
 
     private val aliceConfig = NodeConfig(
@@ -59,7 +59,7 @@ class CordappSmokeTest {
             rpcPort = port.andIncrement,
             rpcAdminPort = port.andIncrement,
             isNotary = false,
-            users = listOf(user)
+            users = listOf(superUser)
     )
 
     private lateinit var notary: NodeProcess
@@ -92,7 +92,7 @@ class CordappSmokeTest {
         createDummyNodeInfo(additionalNodeInfoDir)
 
         factory.create(aliceConfig).use { alice ->
-            alice.connect().use { connectionToAlice ->
+            alice.connect(superUser).use { connectionToAlice ->
                 val aliceIdentity = connectionToAlice.proxy.nodeInfo().legalIdentitiesAndCerts.first().party
                 val future = connectionToAlice.proxy.startFlow(::GatherContextsFlow, aliceIdentity).returnValue
                 val (sessionInitContext, sessionConfirmContext) = future.getOrThrow()

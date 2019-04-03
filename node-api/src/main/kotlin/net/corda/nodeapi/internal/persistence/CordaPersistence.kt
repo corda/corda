@@ -1,6 +1,9 @@
 package net.corda.nodeapi.internal.persistence
 
 import co.paralleluniverse.strands.Strand
+import com.zaxxer.hikari.HikariDataSource
+import com.zaxxer.hikari.pool.HikariPool
+import com.zaxxer.hikari.util.ConcurrentBag
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.utilities.contextLogger
@@ -9,9 +12,10 @@ import rx.Observable
 import rx.Subscriber
 import rx.subjects.UnicastSubject
 import java.io.Closeable
+import java.lang.reflect.Field
 import java.sql.Connection
 import java.sql.SQLException
-import java.util.UUID
+import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicInteger
@@ -159,7 +163,8 @@ class CordaPersistence(
     }
 
     fun onAllOpenTransactionsClosed(callback: () -> Unit) {
-        val allOpen = liveTransactions.values.toList()
+        // Does not use kotlin toList() as that is not safe to use on concurrent collections.
+        val allOpen = ArrayList(liveTransactions.values)
         if (allOpen.isEmpty()) {
             callback()
         } else {
@@ -222,6 +227,15 @@ class CordaPersistence(
         }
     }
 
+    /**
+     * Executes given statement in the scope of transaction with the transaction level specified at the creation time.
+     * @param statement to be executed in the scope of this transaction.
+     * @param recoverableFailureTolerance number of transaction commit retries for SQL while SQL exception is encountered.
+     */
+    fun <T> transaction(recoverableFailureTolerance: Int, statement: DatabaseTransaction.() -> T): T {
+        return transaction(defaultIsolationLevel, recoverableFailureTolerance, false, statement)
+    }
+
     private fun <T> inTopLevelTransaction(isolationLevel: TransactionIsolationLevel, recoverableFailureTolerance: Int,
                                           recoverAnyNestedSQLException: Boolean, statement: DatabaseTransaction.() -> T): T {
         var recoverableFailureCount = 0
@@ -253,6 +267,24 @@ class CordaPersistence(
     override fun close() {
         // DataSource doesn't implement AutoCloseable so we just have to hope that the implementation does so that we can close it
         (_dataSource as? AutoCloseable)?.close()
+    }
+
+    val hikariPoolThreadLocal: ThreadLocal<List<Object>>? by lazy(LazyThreadSafetyMode.PUBLICATION) {
+        val hikariDataSource = dataSource as? HikariDataSource
+        if (hikariDataSource == null) {
+            null
+        } else {
+            val poolField: Field = HikariDataSource::class.java.getDeclaredField("pool")
+            poolField.isAccessible = true
+            val pool: HikariPool = poolField.get(hikariDataSource) as HikariPool
+            val connectionBagField: Field = HikariPool::class.java.getDeclaredField("connectionBag")
+            connectionBagField.isAccessible = true
+            val connectionBag: ConcurrentBag<ConcurrentBag.IConcurrentBagEntry> = connectionBagField.get(pool) as ConcurrentBag<ConcurrentBag.IConcurrentBagEntry>
+            val threadListField: Field = ConcurrentBag::class.java.getDeclaredField("threadList")
+            threadListField.isAccessible = true
+            val threadList: ThreadLocal<List<Object>> = threadListField.get(connectionBag) as ThreadLocal<List<Object>>
+            threadList
+        }
     }
 }
 

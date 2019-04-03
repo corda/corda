@@ -43,7 +43,7 @@ class StatePointerSearch(val state: ContractState) {
         val fieldsWithObjects = fields.mapNotNull { field ->
             // Ignore classes which have not been loaded.
             // Assumption: all required state classes are already loaded.
-            val packageName = field.type.`package`?.name
+            val packageName = field.type.packageNameOrNull
             if (packageName == null) {
                 null
             } else {
@@ -72,7 +72,7 @@ class StatePointerSearch(val state: ContractState) {
             is StatePointer<*> -> statePointers.add(obj)
             is Iterable<*> -> handleIterable(obj)
             else -> {
-                val packageName = obj.javaClass.`package`.name
+                val packageName = obj.javaClass.packageNameOrNull ?: ""
                 val isBlackListed = blackListedPackages.any { packageName.startsWith(it) }
                 if (isBlackListed.not()) fieldQueue.addAllFields(obj)
             }

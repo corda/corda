@@ -7,8 +7,6 @@ import net.corda.core.contracts.*
 import net.corda.core.crypto.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
-import net.corda.core.internal.cordapp.CordappImpl.Companion.DEFAULT_CORDAPP_VERSION
-import net.corda.core.internal.cordapp.CordappResolver
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
@@ -18,6 +16,7 @@ import net.corda.core.node.services.KeyManagementService
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationFactory
 import net.corda.core.utilities.contextLogger
+import java.io.NotSerializableException
 import java.security.PublicKey
 import java.time.Duration
 import java.time.Instant
@@ -172,27 +171,46 @@ open class TransactionBuilder(
         try {
             wireTx.toLedgerTransaction(services).verify()
         } catch (e: NoClassDefFoundError) {
-            val missingClass = e.message
-            requireNotNull(missingClass) { "Transaction is incorrectly formed." }
-
-            val attachment = services.attachments.internalFindTrustedAttachmentForClass(missingClass!!)
-                    ?: throw IllegalArgumentException("Attempted to find dependent attachment for class $missingClass, but could not find a suitable candidate.")
-
-            log.warnOnce("""The transaction currently built is missing an attachment for class: $missingClass.
-                    Automatically attaching contract dependency $attachment.
-                    It is strongly recommended to check that this is the desired attachment, and to manually add it to the transaction builder.
-                """.trimIndent())
-
-            addAttachment(attachment.id)
+            val missingClass = e.message ?: throw e
+            addMissingAttachment(missingClass, services)
             return true
-            // Ignore these exceptions as they will break unit tests.
-            //  The point here is only to detect missing dependencies. The other exceptions are irrelevant.
+        } catch (e: TransactionDeserialisationException) {
+            if (e.cause is NotSerializableException && e.cause.cause is ClassNotFoundException) {
+                val missingClass = e.cause.cause!!.message ?: throw e
+                addMissingAttachment(missingClass.replace(".", "/"), services)
+                return true
+            }
+            return false
+        } catch (e: NotSerializableException) {
+            if (e.cause is ClassNotFoundException) {
+                val missingClass = e.cause!!.message ?: throw e
+                addMissingAttachment(missingClass.replace(".", "/"), services)
+                return true
+            }
+            return false
+        // Ignore these exceptions as they will break unit tests.
+        // The point here is only to detect missing dependencies. The other exceptions are irrelevant.
         } catch (tve: TransactionVerificationException) {
         } catch (tre: TransactionResolutionException) {
         } catch (ise: IllegalStateException) {
         } catch (ise: IllegalArgumentException) {
         }
         return false
+    }
+
+    private fun addMissingAttachment(missingClass: String, services: ServicesForResolution) {
+        val attachment = services.attachments.internalFindTrustedAttachmentForClass(missingClass)
+                ?: throw IllegalArgumentException("""The transaction currently built is missing an attachment for class: $missingClass.
+                        Attempted to find a suitable attachment but could not find any in the storage.
+                        Please contact the developer of the CorDapp for further instructions.
+                    """.trimIndent())
+
+        log.warnOnce("""The transaction currently built is missing an attachment for class: $missingClass.
+                        Automatically attaching contract dependency $attachment.
+                        Please contact the developer of the CorDapp and install the latest version, as this approach might be insecure.
+                    """.trimIndent())
+
+        addAttachment(attachment.id)
     }
 
     /**
@@ -653,15 +671,8 @@ with @BelongsToContract, or supply an explicit contract parameter to addOutputSt
     /** Returns an immutable list of output [TransactionState]s. */
     fun outputStates(): List<TransactionState<*>> = ArrayList(outputs)
 
-    /** Returns an immutable list of [Command]s, grouping by [CommandData] and joining signers (from v4, v3 and below return all commands with duplicates for different signers). */
-    fun commands(): List<Command<*>> {
-        return if (CordappResolver.currentTargetVersion >= CORDA_VERSION_THAT_INTRODUCED_FLATTENED_COMMANDS) {
-            commands.groupBy { cmd -> cmd.value }
-                    .entries.map { (data, cmds) -> Command(data, cmds.flatMap(Command<*>::signers).toSet().toList()) }
-        } else {
-            ArrayList(commands)
-        }
-    }
+    /** Returns an immutable list of [Command]s. */
+    fun commands(): List<Command<*>> = ArrayList(commands)
 
     /**
      * Sign the built transaction and return it. This is an internal function for use by the service hub, please use

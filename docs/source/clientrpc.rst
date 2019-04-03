@@ -70,7 +70,7 @@ RPC users are created by adding them to the ``rpcUsers`` list in the node's ``no
                 username=exampleUser
                 password=examplePass
                 permissions=[]
-            }
+            },
             ...
         ]
 
@@ -93,7 +93,7 @@ You provide an RPC user with the permission to start a specific flow using the s
                     "StartFlow.net.corda.flows.ExampleFlow1",
                     "StartFlow.net.corda.flows.ExampleFlow2"
                 ]
-            }
+            },
             ...
         ]
 
@@ -111,7 +111,7 @@ You can also provide an RPC user with the permission to start any flow using the
                 permissions=[
                     "InvokeRpc.startFlow"
                 ]
-            }
+            },
             ...
         ]
 
@@ -132,7 +132,7 @@ You provide an RPC user with the permission to perform a specific RPC operation 
                     "InvokeRpc.nodeInfo",
                     "InvokeRpc.networkMapSnapshot"
                 ]
-            }
+            },
             ...
         ]
 
@@ -152,7 +152,7 @@ You can provide an RPC user with the permission to perform any RPC operation (in
                 permissions=[
                     "ALL"
                 ]
-            }
+            },
             ...
         ]
 
@@ -182,8 +182,8 @@ passwords in hash-encrypted format and enable in-memory caching of users data:
         security = {
             authService = {
                 dataSource = {
-                    type = "DB",
-                    passwordEncryption = "SHIRO_1_CRYPT",
+                    type = "DB"
+                    passwordEncryption = "SHIRO_1_CRYPT"
                     connection = {
                        jdbcUrl = "<jdbc connection string>"
                        username = "<db username>"
@@ -210,11 +210,11 @@ of ``INMEMORY`` type:
         security = {
             authService = {
                 dataSource = {
-                    type = "INMEMORY",
+                    type = "INMEMORY"
                     users = [
                         {
-                            username = "<username>",
-                            password = "<password>",
+                            username = "<username>"
+                            password = "<password>"
                             permissions = ["<permission 1>", "<permission 2>", ...]
                         },
                         ...
@@ -358,82 +358,33 @@ It is possible to not be able to connect to the server on the first attempt. In 
 method will throw an exception. The following code snippet is an example of how to write a simple retry mechanism for
 such situations:
 
-.. sourcecode:: Kotlin
+.. literalinclude:: ../../samples/bank-of-corda-demo/src/main/kotlin/net/corda/bank/api/BankOfCordaClientApi.kt
+   :language: kotlin
+   :start-after: DOCSTART rpcClientConnectionWithRetry
+   :end-before: DOCEND rpcClientConnectionWithRetry
 
-    fun establishConnectionWithRetry(nodeHostAndPort: NetworkHostAndPort, username: String, password: String): CordaRPCConnection {
-        val retryInterval = 5.seconds
-
-        do {
-            val connection = try {
-                logger.info("Connecting to: $nodeHostAndPort")
-                val client = CordaRPCClient(
-                        nodeHostAndPort,
-                        object : CordaRPCClientConfiguration {
-                            override val connectionMaxRetryInterval = retryInterval
-                        }
-                )
-                val _connection = client.start(username, password)
-                // Check connection is truly operational before returning it.
-                val nodeInfo = _connection.proxy.nodeInfo()
-                require(nodeInfo.legalIdentitiesAndCerts.isNotEmpty())
-                _connection
-            } catch(secEx: ActiveMQSecurityException) {
-                // Happens when incorrect credentials provided - no point to retry connecting.
-                throw secEx
-            }
-            catch(ex: RPCException) {
-                // Deliberately not logging full stack trace as it will be full of internal stacktraces.
-                logger.info("Exception upon establishing connection: " + ex.message)
-                null
-            }
-
-            if(connection != null) {
-                logger.info("Connection successfully established with: $nodeHostAndPort")
-                return connection
-            }
-            // Could not connect this time round - pause before giving another try.
-            Thread.sleep(retryInterval.toMillis())
-        } while (connection == null)
-    }
+.. warning:: The list of ``NetworkHostAndPort`` passed to this function should represent one or more addresses reflecting the number of
+   instances of a node configured to service the client RPC request. See ``haAddressPool`` in `CordaRPCClient`_ for further information on
+   using an RPC Client for load balancing and failover.
 
 After a successful connection, it is possible for the server to become unavailable. In this case, all RPC calls will throw
 an exception and created observables will no longer receive observations. Below is an example of how to reconnect and
 back-fill any data that might have been missed while the connection was down. This is done by using the ``onError`` handler
 on the ``Observable`` returned by ``CordaRPCOps``.
 
-.. sourcecode:: Kotlin
+.. literalinclude:: ../../samples/bank-of-corda-demo/src/main/kotlin/net/corda/bank/api/BankOfCordaClientApi.kt
+   :language: kotlin
+   :start-after: DOCSTART rpcClientConnectionRecovery
+   :end-before: DOCEND rpcClientConnectionRecovery
 
-    fun performRpcReconnect(nodeHostAndPort: NetworkHostAndPort, username: String, password: String) {
-        val connection = establishConnectionWithRetry(nodeHostAndPort, username, password)
-        val proxy = connection.proxy
+In this code snippet it is possible to see that the function ``performRpcReconnect`` creates an RPC connection and implements
+the error handler upon subscription to an ``Observable``. The call to this ``onError`` handler will be triggered upon failover, at which
+point the client will terminate its existing subscription, close its RPC connection and recursively call ``performRpcReconnect``,
+which will re-subscribe once the RPC connection is re-established.
 
-        val (stateMachineInfos, stateMachineUpdatesRaw) = proxy.stateMachinesFeed()
-
-        val retryableStateMachineUpdatesSubscription: AtomicReference<Subscription?> = AtomicReference(null)
-        val subscription: Subscription = stateMachineUpdatesRaw
-                .startWith(stateMachineInfos.map { StateMachineUpdate.Added(it) })
-                .subscribe({ clientCode(it) /* Client code here */ }, {
-                    // Terminate subscription such that nothing gets past this point to downstream Observables.
-                    retryableStateMachineUpdatesSubscription.get()?.unsubscribe()
-                    // It is good idea to close connection to properly mark the end of it. During re-connect we will create a new
-                    // client and a new connection, so no going back to this one. Also the server might be down, so we are
-                    // force closing the connection to avoid propagation of notification to the server side.
-                    connection.forceClose()
-                    // Perform re-connect.
-                    performRpcReconnect(nodeHostAndPort, username, password)
-                })
-
-        retryableStateMachineUpdatesSubscription.set(subscription)
-    }
-
-In this code snippet it is possible to see that function ``performRpcReconnect`` creates an RPC connection and implements
-the error handler upon subscription to an ``Observable``. The call to this ``onError`` handler will be made when failover
-happens then the code will terminate existing subscription, closes RPC connection and recursively calls ``performRpcReconnect``
-which will re-subscribe once RPC connection comes back online.
-
-Client code if fed with instances of ``StateMachineInfo`` using call ``clientCode(it)``. Upon re-connecting, this code receives
-all the items. Some of these items might have already been delivered to client code prior to failover occurred.
-It is down to client code in this case handle those duplicate items as appropriate.
+Within the body of the ``subscribe`` function itself, the client code receives instances of ``StateMachineInfo``. Upon re-connecting, this code receives
+*all* the instances of ``StateMachineInfo``, some of which may already been delivered to the client code prior to previous disconnect.
+It is the responsibility of the client code to handle potential duplicated instances of ``StateMachineInfo`` as appropriate.
 
 Wire security
 -------------

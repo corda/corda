@@ -23,10 +23,12 @@ import net.corda.testing.internal.createNodeInfoAndSigned
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.After
+import org.junit.AfterClass
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.ExpectedException
 import org.junit.rules.TemporaryFolder
+import java.nio.file.Files
 import java.nio.file.Path
 import java.security.PublicKey
 import java.time.Duration
@@ -45,13 +47,28 @@ class NetworkBootstrapperTest {
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
 
-    private val fakeEmbeddedCordaJar = fakeFileBytes()
+    companion object {
+        private val fakeEmbeddedCorda = fakeFileBytes()
+        private val fakeEmbeddedCordaJar = Files.createTempFile("corda", ".jar").write(fakeEmbeddedCorda)
 
-    private val contractsJars = HashMap<Path, TestContractsJar>()
+        private fun fakeFileBytes(writeToFile: Path? = null): ByteArray {
+            val bytes = secureRandomBytes(128)
+            writeToFile?.write(bytes)
+            return bytes
+        }
+
+        @JvmStatic
+        @AfterClass
+        fun cleanUp() {
+            Files.delete(fakeEmbeddedCordaJar)
+        }
+    }
+
+    private val contractsJars = hashMapOf<Path, TestContractsJar>()
 
     private val bootstrapper = NetworkBootstrapper(
             initSerEnv = false,
-            embeddedCordaJar = fakeEmbeddedCordaJar::inputStream,
+            embeddedCordaJar = { fakeEmbeddedCordaJar.toUri().toURL() },
             nodeInfosGenerator = { nodeDirs ->
                 nodeDirs.map { nodeDir ->
                     val name = nodeDir.fakeNodeConfig.myLegalName
@@ -101,7 +118,7 @@ class NetworkBootstrapperTest {
     fun `single node conf file`() {
         createNodeConfFile("node1", bobConfig)
         bootstrap()
-        val networkParameters = assertBootstrappedNetwork(fakeEmbeddedCordaJar, "node1" to bobConfig)
+        val networkParameters = assertBootstrappedNetwork(fakeEmbeddedCorda, "node1" to bobConfig)
         networkParameters.run {
             assertThat(epoch).isEqualTo(1)
             assertThat(notaries).isEmpty()
@@ -121,7 +138,7 @@ class NetworkBootstrapperTest {
     fun `single node directory with just node conf file`() {
         createNodeDir("bob", bobConfig)
         bootstrap()
-        assertBootstrappedNetwork(fakeEmbeddedCordaJar, "bob" to bobConfig)
+        assertBootstrappedNetwork(fakeEmbeddedCorda, "bob" to bobConfig)
     }
 
     @Test
@@ -147,7 +164,7 @@ class NetworkBootstrapperTest {
         createNodeConfFile("alice", aliceConfig)
         createNodeConfFile("notary", notaryConfig)
         bootstrap()
-        val networkParameters = assertBootstrappedNetwork(fakeEmbeddedCordaJar, "alice" to aliceConfig, "notary" to notaryConfig)
+        val networkParameters = assertBootstrappedNetwork(fakeEmbeddedCorda, "alice" to aliceConfig, "notary" to notaryConfig)
         networkParameters.assertContainsNotary("notary")
     }
 
@@ -165,7 +182,7 @@ class NetworkBootstrapperTest {
         createNodeConfFile("alice", aliceConfig)
         createNodeDir("bob", bobConfig)
         bootstrap()
-        assertBootstrappedNetwork(fakeEmbeddedCordaJar, "alice" to aliceConfig, "bob" to bobConfig)
+        assertBootstrappedNetwork(fakeEmbeddedCorda, "alice" to aliceConfig, "bob" to bobConfig)
     }
 
     @Test
@@ -173,7 +190,7 @@ class NetworkBootstrapperTest {
         createNodeConfFile("alice", aliceConfig)
         val cordappBytes = createFakeCordappJar("sample-app", listOf("contract.class"))
         bootstrap()
-        val networkParameters = assertBootstrappedNetwork(fakeEmbeddedCordaJar, "alice" to aliceConfig)
+        val networkParameters = assertBootstrappedNetwork(fakeEmbeddedCorda, "alice" to aliceConfig)
         assertThat(rootDir / "alice" / "cordapps" / "sample-app.jar").hasBinaryContent(cordappBytes)
         assertThat(networkParameters.whitelistedContractImplementations).isEqualTo(mapOf(
                 "contract.class" to listOf(cordappBytes.sha256())
@@ -185,7 +202,7 @@ class NetworkBootstrapperTest {
         createNodeConfFile("alice", aliceConfig)
         val cordappBytes = createFakeCordappJar("sample-app", listOf("contract.class"))
         bootstrap(copyCordapps = CopyCordapps.No)
-        val networkParameters = assertBootstrappedNetwork(fakeEmbeddedCordaJar, "alice" to aliceConfig)
+        val networkParameters = assertBootstrappedNetwork(fakeEmbeddedCorda, "alice" to aliceConfig)
         assertThat(rootDir / "alice" / "cordapps" / "sample-app.jar").doesNotExist()
         assertThat(networkParameters.whitelistedContractImplementations).isEqualTo(mapOf(
                 "contract.class" to listOf(cordappBytes.sha256())
@@ -199,7 +216,7 @@ class NetworkBootstrapperTest {
         val networkParameters1 = (rootDir / "alice").networkParameters
         createNodeConfFile("bob", bobConfig)
         bootstrap()
-        val networkParameters2 = assertBootstrappedNetwork(fakeEmbeddedCordaJar, "alice" to aliceConfig, "bob" to bobConfig)
+        val networkParameters2 = assertBootstrappedNetwork(fakeEmbeddedCorda, "alice" to aliceConfig, "bob" to bobConfig)
         assertThat(networkParameters1).isEqualTo(networkParameters2)
     }
 
@@ -209,7 +226,7 @@ class NetworkBootstrapperTest {
         bootstrap()
         createNodeConfFile("notary", notaryConfig)
         bootstrap()
-        val networkParameters = assertBootstrappedNetwork(fakeEmbeddedCordaJar, "alice" to aliceConfig, "notary" to notaryConfig)
+        val networkParameters = assertBootstrappedNetwork(fakeEmbeddedCorda, "alice" to aliceConfig, "notary" to notaryConfig)
         networkParameters.assertContainsNotary("notary")
         assertThat(networkParameters.epoch).isEqualTo(2)
     }
@@ -225,7 +242,7 @@ class NetworkBootstrapperTest {
                     maxMessageSize = maxMessageSize,
                     maxTransactionSize = maxTransactionSize,
                     eventHorizon = eventHorizon)
-        val networkParameters = assertBootstrappedNetwork(fakeEmbeddedCordaJar, "alice" to aliceConfig)
+        val networkParameters = assertBootstrappedNetwork(fakeEmbeddedCorda, "alice" to aliceConfig)
         assertThat(networkParameters.minimumPlatformVersion).isEqualTo(minimumPlatformVersion)
         assertThat(networkParameters.maxMessageSize).isEqualTo(maxMessageSize)
         assertThat(networkParameters.maxTransactionSize).isEqualTo(maxTransactionSize)
@@ -299,12 +316,6 @@ class NetworkBootstrapperTest {
 
     private val rootDir get() = tempFolder.root.toPath()
 
-    private fun fakeFileBytes(writeToFile: Path? = null): ByteArray {
-        val bytes = secureRandomBytes(128)
-        writeToFile?.write(bytes)
-        return bytes
-    }
-
     private fun bootstrap(copyCordapps: CopyCordapps = CopyCordapps.FirstRunOnly,
                           packageOwnership: Map<String, PublicKey>? = emptyMap(),
                           minimumPlatformVerison: Int? = PLATFORM_VERSION,
@@ -317,7 +328,7 @@ class NetworkBootstrapperTest {
                 maxMessageSize = maxMessageSize,
                 maxTransactionSize = maxTransactionSize,
                 eventHorizon = eventHorizon,
-                packageOwnership = packageOwnership?.map { PackageOwner(it.key, it.value!!) }
+                packageOwnership = packageOwnership?.map { PackageOwner(it.key, it.value) }
         ))
     }
 
@@ -364,7 +375,7 @@ class NetworkBootstrapperTest {
 
     private fun assertBootstrappedNetwork(cordaJar: ByteArray, vararg nodes: Pair<String, FakeNodeConfig>): NetworkParameters {
         val networkParameters = (rootDir / nodes[0].first).networkParameters
-        val allNodeInfoFiles = nodes.map { (rootDir / it.first).nodeInfoFile }.associateBy({ it }, { it.readAll() })
+        val allNodeInfoFiles = nodes.map { (rootDir / it.first).nodeInfoFile }.associateBy({ it }, Path::readAll)
 
         for ((nodeDirName, config) in nodes) {
             val nodeDir = rootDir / nodeDirName

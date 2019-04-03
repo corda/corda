@@ -26,76 +26,37 @@ Running the UI
 Running demo nodes
 ------------------
 
-A demonstration Corda network topology is configured with 5 nodes playing the following roles:
+Node Explorer is included with the :doc:`demobench` application, which allows
+you to create local Corda networks on your desktop. For example:
 
-1. Notary
-2. Issuer nodes, representing two fictional central banks (UK Bank Plc issuer of GBP and USA Bank Corp issuer of USD)
-3. Participant nodes, representing two users (Alice and Bob)
+    * Notary
+    * Bank of Breakfast Tea    (*Issuer node* for GBP)
+    * Bank of Big Apples       (*Issuer node* for USD)
+    * Alice                    (*Participant node*, for user Alice)
+    * Bob                      (*Participant node*, for user Bob)
+
+DemoBench will deploy all nodes with Corda's Finance CorDapp automatically, and
+allow you to launch an instance of Node Explorer for each. You will also be logged
+into the Node Explorer automatically.
 
 When connected to an *Issuer* node, a user can execute cash transaction commands to issue and move cash to itself or other
 parties on the network or to exit cash (for itself only).
 
 When connected to a *Participant* node a user can only execute cash transaction commands to move cash to other parties on the network.
 
-The Demo Nodes can be started in one of two modes:
+The Node Explorer is also available as a stand-alone JavaFX application. It is
+available from the Corda repositories as ``corda-tools-explorer``, and can be
+run as
 
-1. Normal
-
-   Fresh clean environment empty of transactions.
-   Firstly, launch an Explorer instance to login to one of the Issuer nodes and issue some cash to the other participants (Bob and Alice).
-   Then launch another Explorer instance to login to a participant node and start making payments (eg. move cash).
-   You will only be able to exit (eg. redeem from the ledger) cash as an issuer node.
-
-**Windows**::
-
-    gradlew.bat tools:explorer:runDemoNodes
-
-**Other**::
-
-    ./gradlew tools:explorer:runDemoNodes
-
-2. Simulation
-
-   In this mode Nodes will automatically commence executing commands as part of a random generation process.
-   The simulation start with pre-allocating chunks of cash to each of the party in 2 currencies (USD, GBP), then it enter a loop to generate random events.
-   In each iteration, the issuers will execute a Cash Issue or Cash Exit command (at a 9:1 ratio) and a random party will execute a move of cash to another random party.
-
-**Windows**::
-
-    gradlew.bat tools:explorer:runSimulationNodes
-
-**Other**::
-
-    ./gradlew tools:explorer:runSimulationNodes
-
-
-.. note:: 5 Corda nodes will be created on the following port on localhost by default.
-
-   * Notary -> 20005            (Does not accept logins)
-   * UK Bank Plc -> 20011       (*Issuer node*)
-   * USA Bank Corp -> 20008     (*Issuer node*)
-   * Alice -> 20017
-   * Bob -> 20014
-
-Explorer login credentials to the Issuer nodes are defaulted to ``manager`` and ``test``.
-Explorer login credentials to the Participants nodes are defaulted to ``user1`` and ``test``.
-Please note you are not allowed to login to the notary.
-
-.. note:: When you start the nodes in Windows using the command prompt, they might not be killed when you close the
-          window or terminate the task. If that happens you need to manually terminate the Java processes running the nodes.
-
-.. note:: Alternatively, you may start the demo nodes from within IntelliJ using either of the run configurations
-          ``Explorer - demo nodes`` or ``Explorer - demo nodes (simulation)``
-
-.. note:: It is also possible to start the Explorer GUI from IntelliJ via ``Explorer - GUI`` run configuration, provided that the optional TornadoFX plugin has been installed first.
+    java -jar corda-tools-explorer.jar
 
 .. note:: Use the Explorer in conjunction with the Trader Demo and Bank of Corda samples to use other *Issuer* nodes.
 
 Interface
 ---------
 Login
-  User can login to any Corda node using the explorer. Alternatively, ``gradlew explorer:runDemoNodes`` can be used to start up demo nodes for testing.  
-  Corda node address, username and password are required for login, the address is defaulted to localhost:0 if leave blank.
+  User can login to any Corda node using the explorer.
+  Corda node address, username and password are required for login, the address is defaulted to localhost:0 if left blank.
   Username and password can be configured via the ``rpcUsers`` field in node's configuration file.
   
 .. image:: resources/explorer/login.png

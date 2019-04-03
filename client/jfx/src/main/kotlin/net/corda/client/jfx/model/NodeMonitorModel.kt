@@ -119,19 +119,19 @@ class NodeMonitorModel : AutoCloseable {
                 }.toSet()
                 val consumedStates = statesSnapshot.states.toSet() - unconsumedStates
                 val initialVaultUpdate = Vault.Update(consumedStates, unconsumedStates, references = emptySet())
-                vaultUpdates.startWith(initialVaultUpdate).subscribe({ vaultUpdatesSubject.onNext(it) }, {})
+                vaultUpdates.startWith(initialVaultUpdate).subscribe(vaultUpdatesSubject::onNext, {})
 
                 // Transactions
                 val (transactions, newTransactions) = proxy.internalVerifiedTransactionsFeed()
-                newTransactions.startWith(transactions).subscribe({ transactionsSubject.onNext(it) }, {})
+                newTransactions.startWith(transactions).subscribe(transactionsSubject::onNext, {})
 
                 // SM -> TX mapping
                 val (smTxMappings, futureSmTxMappings) = proxy.stateMachineRecordedTransactionMappingFeed()
-                futureSmTxMappings.startWith(smTxMappings).subscribe({ stateMachineTransactionMappingSubject.onNext(it) }, {})
+                futureSmTxMappings.startWith(smTxMappings).subscribe(stateMachineTransactionMappingSubject::onNext, {})
 
                 // Parties on network
                 val (parties, futurePartyUpdate) = proxy.networkMapFeed()
-                futurePartyUpdate.startWith(parties.map { MapChange.Added(it) }).subscribe({ networkMapSubject.onNext(it) }, {})
+                futurePartyUpdate.startWith(parties.map(MapChange::Added)).subscribe(networkMapSubject::onNext, {})
             }
         }
 

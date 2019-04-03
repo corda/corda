@@ -26,13 +26,13 @@ internal class ValidateConfigurationCli : CliWrapperBase("validate-configuration
             return "for path: \"$pathAsString\": $message"
         }
 
-        internal fun logRawConfig(config: Config) = logger.debug("Actual configuration:\n${V1NodeConfigurationSpec.describe(config, Any?::toConfigValue).render(configRenderingOptions)}")
+        internal fun logRawConfig(config: Config) = logger.info("Actual configuration:\n${V1NodeConfigurationSpec.describe(config, Any?::toConfigValue).render(configRenderingOptions)}")
     }
 
     @Mixin
     private val cmdLineOptions = SharedNodeCmdLineOptions()
 
-    override fun initLogging() = initLogging(cmdLineOptions.baseDirectory)
+    override fun initLogging(): Boolean = initLogging(cmdLineOptions.baseDirectory)
 
     override fun runProgram(): Int {
         val rawConfig = cmdLineOptions.rawConfiguration().doOnErrors(cmdLineOptions::logRawConfigurationErrors).optional ?: return ExitCodes.FAILURE

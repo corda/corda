@@ -3,7 +3,7 @@ apply plugin: 'idea'
 apply plugin: 'net.corda.plugins.cordformation'
 
 dependencies {
-    compile project(':node-api')
+    runtimeOnly project(':node-api')
     runtimeOnly "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
 
     // Corda integration dependencies

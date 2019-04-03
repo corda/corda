@@ -22,11 +22,6 @@ sourceSets {
             srcDir file('src/integration-test/resources')
         }
     }
-    test {
-        resources {
-            srcDir file('src/test/resources')
-        }
-    }
 }
 
 dependencies {

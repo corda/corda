@@ -24,12 +24,14 @@ You can find out more about network maps and network parameters from :doc:`netwo
 Bootstrapping a test network
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The Corda Network Bootstrapper can be downloaded from `here <https://www.corda.net/resources>`_.
+The Corda Network Bootstrapper can be downloaded from `here <https://www.corda.net/resources>`__.
 
-Create a directory containing a node config file, ending in "_node.conf", for each node you want to create. Then run the
+Create a directory containing a node config file, ending in "_node.conf", for each node you want to create. "devMode" must be set to true. Then run the
 following command:
 
-``java -jar network-bootstrapper-VERSION.jar --dir <nodes-root-dir>``
+.. sourcecode:: bash
+
+    java -jar corda-tools-network-bootstrapper-|corda_version|.jar --dir <nodes-root-dir>
 
 For example running the command on a directory containing these files:
 
@@ -76,6 +78,8 @@ alongside the config files. For example, if your directory has this structure:
 The ``cordapp-a.jar`` and ``cordapp-b.jar`` will be installed in each node directory, and any contracts within them will be
 added to the Contract Whitelist (see below).
 
+.. _bootstrapper_whitelisting_contracts:
+
 Whitelisting contracts
 ----------------------
 
@@ -91,7 +95,8 @@ By default the Bootstrapper will whitelist all the contracts found in the unsign
 Whitelisted contracts are checked by `Zone constraints`, while contract classes from signed JARs will be checked by `Signature constraints`.
 To prevent certain contracts from unsigned JARs from being whitelisted, add their fully qualified class name in the ``exclude_whitelist.txt``.
 These will instead use the more restrictive ``HashAttachmentConstraint``.
-Refer to :doc:`api-contract-constraints` to understand the implication of different constraint types before adding ``exclude_whitelist.txt`` files.
+To add certain contracts from signed JARs to whitelist, add their fully qualified class name in the ``include_whitelist.txt``.
+Refer to :doc:`api-contract-constraints` to understand the implication of different constraint types before adding ``exclude_whitelist.txt`` or ``include_whitelist.txt`` files.
 
 For example:
 
@@ -150,7 +155,9 @@ can use the Network Bootstrapper on the following network structure:
 
 Then run the Network Bootstrapper again from the root dir:
 
-``java -jar network-bootstrapper-VERSION.jar --dir <nodes-root-dir>``
+.. sourcecode:: bash
+
+    java -jar corda-tools-network-bootstrapper-|corda_version|.jar --dir <nodes-root-dir>
 
 Which will give the following:
 
@@ -190,6 +197,8 @@ such a generated keys, will be unaffected.
     the same machine. If a network needs to be updated using the Bootstrapper once deployed, the nodes will need
     collecting back together.
 
+.. _bootstrapper_updating_whitelisted_contracts:
+
 Updating the contract whitelist for bootstrapped networks
 ---------------------------------------------------------
 
@@ -219,7 +228,9 @@ For example, with the following pre-generated network:
 
 Then run the Network Bootstrapper again from the root dir:
 
-``java -jar network-bootstrapper-VERSION.jar --dir <nodes-root-dir>``
+.. sourcecode:: bash
+
+    java -jar corda-tools-network-bootstrapper-|corda_version|.jar --dir <nodes-root-dir>
 
 To give the following:
 
@@ -266,18 +277,22 @@ Overriding network parameters via a file
 
 You can provide a network parameters overrides file using the following syntax:
 
-``java -jar network-bootstrapper-VERSION.jar --network-parameter-overrides=<path_to_file>``
+.. sourcecode:: bash
+
+    java -jar corda-tools-network-bootstrapper-|corda_version|.jar --network-parameter-overrides=<path_to_file>
 
 Or alternatively, by using the short form version:
 
-``java -jar network-bootstrapper-VERSION.jar -n=<path_to_file>``
+.. sourcecode:: bash
+
+    java -jar corda-tools-network-bootstrapper-|corda_version|.jar -n=<path_to_file>
 
 The network parameter overrides file is a HOCON file with the following fields, all of which are optional. Any field that is not provided will be
 ignored. If a field is not provided and you are bootstrapping a new network, a sensible default value will be used. If a field is not provided and you
 are updating an existing network, the value in the existing network parameters file will be used.
 
 .. note:: All fields can be used with placeholders for environment variables. For example: ``${KEY_STORE_PASSWORD}`` would be replaced by the contents of environment
-variable ``KEY_STORE_PASSWORD``. See: :ref:`corda-configuration-hiding-sensitive-data` .
+    variable ``KEY_STORE_PASSWORD``. See: :ref:`corda-configuration-hiding-sensitive-data` .
 
 The available configuration fields are listed below:
 
@@ -288,7 +303,7 @@ The available configuration fields are listed below:
 :maxTransactionSize: The maximum permitted transaction size, in bytes.
 
 :eventHorizon: The time after which nodes will be removed from the network map if they have not been seen during this period. This parameter uses
-    the ``parse`` function on the ``java.time.Duration`` class to interpret the data. See `here <https://docs.oracle.com/javase/8/docs/api/java/time/Duration.html#parse-java.lang.CharSequence->`_
+    the ``parse`` function on the ``java.time.Duration`` class to interpret the data. See `here <https://docs.oracle.com/javase/8/docs/api/java/time/Duration.html#parse-java.lang.CharSequence->`__
     for information on valid inputs.
 
 :packageOwnership: A list of package owners. See `Package namespace ownership`_ for more information. For each package owner, the following fields
@@ -350,7 +365,7 @@ For each package to be registered, the following are required:
 :keystoreAlias: The alias for the name associated with the certificate to be associated with the package namespace.
 
 Using the `Example CorDapp <https://github.com/corda/cordapp-example>`_ as an example, we will initialise a simple network and then register and unregister a package namespace.
-Checkout the Example CorDapp and follow the instructions to build it `here <https://docs.corda.net/tutorial-cordapp.html#building-the-example-cordapp>`_.
+Checkout the Example CorDapp and follow the instructions to build it `here <https://docs.corda.net/tutorial-cordapp.html#building-the-example-cordapp>`__.
 
 .. note:: You can point to any existing bootstrapped corda network (this will have the effect of updating the associated network parameters file).
 

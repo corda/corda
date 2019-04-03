@@ -1,5 +1,6 @@
 package net.corda.cliutils
 
+import net.corda.cliutils.ExitCodes
 import net.corda.core.internal.rootMessage
 import net.corda.core.utilities.contextLogger
 import org.fusesource.jansi.AnsiConsole
@@ -70,7 +71,7 @@ fun CordaCliWrapper.start(args: Array<String>) {
             Help.Ansi.AUTO
         }
         val results = cmd.parseWithHandlers(RunLast().useOut(System.out).useAnsi(defaultAnsiMode),
-                DefaultExceptionHandler<List<Any>>().useErr(System.err).useAnsi(defaultAnsiMode),
+                DefaultExceptionHandler<List<Any>>().useErr(System.err).useAnsi(defaultAnsiMode).andExit(ExitCodes.FAILURE),
                 *args)
         // If an error code has been returned, use this and exit
         results?.firstOrNull()?.let {
@@ -123,12 +124,13 @@ abstract class CliWrapperBase(val alias: String, val description: String) : Call
 
     // This needs to be called before loggers (See: NodeStartup.kt:51 logger called by lazy, initLogging happens before).
     // Node's logging is more rich. In corda configurations two properties, defaultLoggingLevel and consoleLogLevel, are usually used.
-    open fun initLogging() {
+    open fun initLogging(): Boolean {
         System.setProperty("defaultLogLevel", specifiedLogLevel) // These properties are referenced from the XML config file.
         if (verbose) {
             System.setProperty("consoleLogLevel", specifiedLogLevel)
         }
         System.setProperty("log-path", Paths.get(".").toString())
+        return true
     }
 
     // Override this function with the actual method to be run once all the arguments have been parsed. The return number
@@ -141,7 +143,9 @@ abstract class CliWrapperBase(val alias: String, val description: String) : Call
         return runProgram()
     }
 
-    val specifiedLogLevel: String by lazy { System.getProperty("log4j2.level")?.toLowerCase(Locale.ENGLISH) ?: loggingLevel.name.toLowerCase(Locale.ENGLISH) }
+    val specifiedLogLevel: String by lazy {
+        System.getProperty("log4j2.level")?.toLowerCase(Locale.ENGLISH) ?: loggingLevel.name.toLowerCase(Locale.ENGLISH)
+    }
 }
 
 /**
@@ -178,19 +182,19 @@ abstract class CordaCliWrapper(alias: String, description: String) : CliWrapperB
     }
 
     override fun call(): Int {
-        initLogging()
+        if (!initLogging()) {
+            return ExitCodes.FAILURE
+        }
         logger.info("Application Args: ${args.joinToString(" ")}")
         installShellExtensionsParser.updateShellExtensions()
         return runProgram()
     }
 
     fun printHelp() = cmd.usage(System.out)
-
 }
 
 fun printWarning(message: String) = System.err.println("${ShellConstants.YELLOW}$message${ShellConstants.RESET}")
 fun printError(message: String) = System.err.println("${ShellConstants.RED}$message${ShellConstants.RESET}")
-
 
 /**
  * Useful commonly used constants applicable to many CLI tools

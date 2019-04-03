@@ -40,11 +40,14 @@ import org.junit.Before
 import org.junit.Ignore
 import org.junit.Test
 import java.io.ByteArrayOutputStream
+import java.io.InputStream
+import java.net.URL
 import java.nio.charset.StandardCharsets
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.FileSystem
 import java.nio.file.Path
 import java.util.*
+import java.util.jar.JarInputStream
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotEquals
@@ -719,6 +722,52 @@ class NodeAttachmentServiceTest {
             assertEquals(1, latestAttachments.size)
             // should return latest version given by insertion date
             assertEquals(attachmentIdSameVersionLatest, latestAttachments[0])
+        }
+    }
+
+    @Test
+    fun `The strict JAR verification function fails signed JARs with removed or extra files that are valid according to the usual jarsigner`() {
+
+        // Signed jar that has a modified file.
+        val changedFileJAR = this::class.java.getResource("/changed-file-signed-jar.jar")
+
+        // Signed jar with removed files.
+        val removedFilesJAR = this::class.java.getResource("/removed-files-signed-jar.jar")
+
+        // Signed jar with extra files.
+        val extraFilesJAR = this::class.java.getResource("/extra-files-signed-jar.jar")
+
+        // Valid signed jar with all files.
+        val legalJAR = this::class.java.getResource("/legal-signed-jar.jar")
+
+        fun URL.standardVerifyJar() = JarInputStream(this.openStream(), true).use { jar ->
+            while (true) {
+                jar.nextJarEntry ?: break
+            }
+        }
+
+        // A compliant signed JAR will pass both the standard and the improved validation.
+        legalJAR.standardVerifyJar()
+        NodeAttachmentService.checkIsAValidJAR(legalJAR.openStream())
+
+        // Signed JAR with removed files passes the non-strict check but fails the strict check.
+        removedFilesJAR.standardVerifyJar()
+        assertFailsWith(SecurityException::class) {
+            NodeAttachmentService.checkIsAValidJAR(removedFilesJAR.openStream())
+        }
+
+        // Signed JAR with a changed file fails both the usual and the strict test.
+        assertFailsWith(SecurityException::class) {
+            changedFileJAR.standardVerifyJar()
+        }
+        assertFailsWith(SecurityException::class) {
+            NodeAttachmentService.checkIsAValidJAR(changedFileJAR.openStream())
+        }
+
+        // Signed JAR with an extra file passes the usual but fails the strict test.
+        extraFilesJAR.standardVerifyJar()
+        assertFailsWith(SecurityException::class) {
+            NodeAttachmentService.checkIsAValidJAR(extraFilesJAR.openStream())
         }
     }
 

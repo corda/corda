@@ -1,17 +1,9 @@
-evaluationDependsOn(":node:capsule")
-buildscript {
-    repositories {
-        mavenLocal()
-        mavenCentral()
-        jcenter()
-    }
-    dependencies {
-        classpath 'com.bmuschko:gradle-docker-plugin:3.4.4'
-    }
+plugins {
+    id 'com.bmuschko.docker-remote-api' version '3.4.4'
 }
 
+evaluationDependsOn(":node:capsule")
 
-import com.bmuschko.gradle.docker.DockerRemoteApiPlugin
 import com.bmuschko.gradle.docker.tasks.image.DockerBuildImage
 import com.bmuschko.gradle.docker.tasks.image.DockerPushImage
 
@@ -19,7 +11,6 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
 apply plugin: 'kotlin'
-apply plugin: DockerRemoteApiPlugin
 apply plugin: 'application'
 // We need to set mainClassName before applying the shadow plugin.
 mainClassName = 'net.corda.core.ConfigExporterMain'

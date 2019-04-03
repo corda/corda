@@ -93,7 +93,9 @@ type's members. This is what controls things like ensuring that all methods impl
 and normalisation of synchronised methods.
 
 Lastly, there is a set of emitters. These are used to instrument the byte code for cost accounting purposes, and also
-to inject code for checks that we want to perform at runtime or modifications to out-of-the-box behaviour.
+to inject code for checks that we want to perform at runtime or modifications to out-of-the-box behaviour. Many of
+these emitters will rewrite non-deterministic operations to throw ``RuleViolationError`` exceptions instead, which
+means that the ultimate proof that a function is *truly* deterministic is that it executes successfully inside the DJVM.
 
 
 Static Byte Code Analysis
@@ -298,7 +300,7 @@ Open your terminal and navigate to the ``djvm`` directory in the Corda source tr
 
 ::
 
-  $ ./shell/install
+  $ djvm/shell/install
 
 
 This will build the DJVM tool and install a shortcut on Bash-enabled systems. It will also generate a Bash completion
@@ -342,7 +344,9 @@ The output should be pretty self-explanatory, but just to summarise:
 
 Other commands to be aware of are:
 
- * ``djvm check`` which allows you to perform the up-front static analysis without running the code.
+ * ``djvm check`` which allows you to perform some up-front static analysis without running the code. However, be aware
+   that the DJVM also transforms some non-deterministic operations into ``RuleViolationError`` exceptions. A successful
+   ``check`` therefore does *not* guarantee that the code will behave correctly at runtime.
 
  * ``djvm inspect`` which allows you to inspect what byte code modifications will be applied to a class.
 

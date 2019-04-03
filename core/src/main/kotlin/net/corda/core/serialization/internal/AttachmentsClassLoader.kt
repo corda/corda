@@ -327,6 +327,7 @@ object AttachmentsClassLoaderBuilder {
                     .withClassLoader(transactionClassLoader)
                     .withWhitelist(whitelistedClasses)
                     .withCustomSerializers(serializers)
+                    .withoutCarpenter()
         }
 
         // Deserialize all relevant classes in the transaction classloader.

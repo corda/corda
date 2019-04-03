@@ -30,17 +30,19 @@ Although the RPC API is backwards compatible with Corda 3, the RPC wire protocol
 updated in lockstep with the node to use the new version of the RPC library. Corda 4 delivers RPC wire stability and therefore in future you
 will be able to update the node and apps without updating RPC clients.
 
+.. _cordapp_upgrade_version_numbers_ref:
+
 Step 2. Adjust the version numbers in your Gradle build files
 -------------------------------------------------------------
 
 Alter the versions you depend on in your Gradle file like so:
 
-.. sourcecode:: groovy
+.. code:: groovy
 
-    ext.corda_release_version = '4.0'
-    ext.corda_gradle_plugins_version = '4.0.38'
-    ext.kotlin_version = '1.2.71'
-    ext.quasar_version = '0.7.10'
+    ext.corda_release_version = '|corda_version|'
+    ext.corda_gradle_plugins_version = '|gradle_plugins_version|'
+    ext.kotlin_version = '|kotlin_version|'
+    ext.quasar_version = '|quasar_version|'
 
 .. note:: You may wish to update your kotlinOptions to use language level 1.2, to benefit from the new features. Apps targeting Corda 4
    may not at this time use Kotlin 1.3, as it was released too late in the development cycle
@@ -154,6 +156,8 @@ Would become:
 
 See :ref:`cordapp_configuration_files_ref` for more information.
 
+.. _cordapp_upgrade_finality_flow_ref:
+
 Step 5. Security: Upgrade your use of FinalityFlow
 --------------------------------------------------
 
@@ -161,11 +165,25 @@ The previous ``FinalityFlow`` API is insecure. It doesn't have a receive flow, s
 all signed transactions that are sent to it, without checks. It is **highly** recommended that existing CorDapps migrate
 away to the new API, as otherwise things like business network membership checks won't be reliably enforced.
 
-This is a three step process:
+The flows that make use of ``FinalityFlow`` in a CorDapp can be classified in the following 2 basic categories:
+
+* **non-initiating flows**: these are flows that finalise a transaction without the involvement of a counterpart flow at all.
+* **initiating flows**: these are flows that initiate a counterpart (responder) flow.
+
+There is a main difference between these 2 different categories, which is relevant to how the CorDapp can be upgraded.
+The second category of flows can be upgraded to use the new ``FinalityFlow`` in a backwards compatible way, which means the upgraded CorDapp can be deployed at the various nodes using a *rolling deployment*.
+On the other hand, the first category of flows cannot be upgraded to the new ``FinalityFlow`` in a backwards compatible way, so the changes to these flows need to be deployed simultaneously at all the nodes, using a *lockstep deployment*.
+
+.. note::  A *lockstep deployment* is one, where all the involved nodes are stopped, upgraded to the new version of the CorDapp and then re-started.
+    As a result, there can't be any nodes running different versions of the CorDapp at any time.
+    A *rolling deployment* is one, where every node can be stopped, upgraded to the new version of the CorDapp and re-started independently and on its own pace.
+    As a result, there can be nodes running different versions of the CorDapp and transact with each other successfully.
+
+The upgrade is a three step process:
 
 1. Change the flow that calls ``FinalityFlow``.
 2. Change or create the flow that will receive the finalised transaction.
-3. Make sure your application's minimum and target version numbers are both set to 4 (see step 2).
+3. Make sure your application's minimum and target version numbers are both set to 4 (see :ref:`cordapp_upgrade_version_numbers_ref`).
 
 Upgrading a non-initiating flow
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -220,7 +238,7 @@ to record the finalised transaction:
         :end-before: DOCEND SimpleNewResponderFlow
         :dedent: 4
 
-.. note:: All the nodes in your business network will need the new CorDapp, otherwise they won't know how to receive the transaction. **This
+.. note:: As described above, all the nodes in your business network will need the new CorDapp, otherwise they won't know how to receive the transaction. **This
    includes nodes which previously didn't have the old CorDapp.** If a node is sent a transaction and it doesn't have the new CorDapp loaded
    then simply restart it with the CorDapp and the transaction will be recorded.
 
@@ -358,6 +376,9 @@ automatically use them if your application JAR is signed. **We recommend all JAR
 with developer certificates is deployed to a production node, the node will refuse to start. Therefore to deploy apps built for Corda 4
 to production you will need to generate signing keys and integrate them with the build process.
 
+.. note:: Please read the :doc:`cordapp-constraint-migration` guide to understand how to upgrade CorDapps to use Corda 4 signature constraints and consume
+    existing states on ledger issued with older constraint types (e.g. Corda 3.x states issued with **hash** or **CZ whitelisted** constraints).
+
 Step 10. Security: Package namespace handling
 ---------------------------------------------
 
@@ -412,3 +433,19 @@ Corda 4 adds several new APIs that help you build applications. Why not explore:
 * The `new withEntityManager API <api/javadoc/net/corda/core/node/ServiceHub.html#withEntityManager-block->`_ for using JPA inside your flows and services.
 * :ref:`reference_states`, that let you use an input state without consuming it.
 * :ref:`state_pointers`, that make it easier to 'point' to one state from another and follow the latest version of a linear state.
+
+Please also read the :doc:`CorDapp Upgradeability Guarantees <cordapp-upgradeability>` associated with CorDapp upgrading.
+
+Step 14. Possibly update your checked in quasar.jar
+---------------------------------------------------
+
+If your project is based on one of the official cordapp templates, it is likely you have a ``lib/quasar.jar`` checked in.  It is worth noting
+that you only use this if you use the JUnit runner in IntelliJ.  In the latest release of the cordapp templates, this directory has
+been removed.
+
+You have some choices here:
+
+* Upgrade your ``quasar.jar`` to ``|quasar_version|``
+* Delete your ``lib`` directory and switch to using the Gradle test runner
+
+Instructions for both options can be found in :ref:`Running tests in Intellij <tutorial_cordapp_running_tests_intellij>`.

@@ -1,6 +1,7 @@
 package net.corda.node.internal
 
 import io.netty.channel.unix.Errors
+import net.corda.cliutils.printError
 import net.corda.cliutils.CliWrapperBase
 import net.corda.cliutils.CordaCliWrapper
 import net.corda.cliutils.CordaVersionProvider
@@ -36,6 +37,7 @@ import java.io.IOException
 import java.io.RandomAccessFile
 import java.lang.management.ManagementFactory
 import java.net.InetAddress
+import java.nio.channels.UnresolvedAddressException
 import java.nio.file.Path
 import java.time.DayOfWeek
 import java.time.ZonedDateTime
@@ -52,7 +54,7 @@ abstract class NodeCliCommand(alias: String, description: String, val startup: N
         const val LOGS_DIRECTORY_NAME = "logs"
     }
 
-    override fun initLogging() = this.initLogging(cmdLineOptions.baseDirectory)
+    override fun initLogging(): Boolean = this.initLogging(cmdLineOptions.baseDirectory)
 
     @Mixin
     val cmdLineOptions = SharedNodeCmdLineOptions()
@@ -70,7 +72,7 @@ open class NodeStartupCli : CordaCliWrapper("corda", "Runs a Corda Node") {
     private val initialRegistrationCli by lazy { InitialRegistrationCli(startup) }
     private val validateConfigurationCli by lazy { ValidateConfigurationCli() }
 
-    override fun initLogging() = this.initLogging(cmdLineOptions.baseDirectory)
+    override fun initLogging(): Boolean = this.initLogging(cmdLineOptions.baseDirectory)
 
     override fun additionalSubCommands() = setOf(networkCacheCli, justGenerateNodeInfoCli, justGenerateRpcSslCertsCli, initialRegistrationCli, validateConfigurationCli)
 
@@ -108,7 +110,7 @@ open class NodeStartupCli : CordaCliWrapper("corda", "Runs a Corda Node") {
             else -> startup.initialiseAndRun(cmdLineOptions, object : RunAfterNodeInitialisation {
                 val startupTime = System.currentTimeMillis()
                 override fun run(node: Node) = startup.startNode(node, startupTime)
-            })
+            }, requireCertificates = true)
         }
     }
 }
@@ -123,7 +125,7 @@ open class NodeStartup : NodeStartupLogging {
 
     lateinit var cmdLineOptions: SharedNodeCmdLineOptions
 
-    fun initialiseAndRun(cmdLineOptions: SharedNodeCmdLineOptions, afterNodeInitialisation: RunAfterNodeInitialisation): Int {
+    fun initialiseAndRun(cmdLineOptions: SharedNodeCmdLineOptions, afterNodeInitialisation: RunAfterNodeInitialisation, requireCertificates: Boolean = false): Int {
         this.cmdLineOptions = cmdLineOptions
 
         // Step 1. Check for supported Java version.
@@ -147,18 +149,20 @@ open class NodeStartup : NodeStartupLogging {
         val rawConfig = cmdLineOptions.rawConfiguration().doOnErrors(cmdLineOptions::logRawConfigurationErrors).optional ?: return ExitCodes.FAILURE
         val configuration = cmdLineOptions.parseConfiguration(rawConfig).doIfValid { logRawConfig(rawConfig) }.doOnErrors(::logConfigurationErrors).optional ?: return ExitCodes.FAILURE
 
-        // Step 6. Configuring special serialisation requirements, i.e., bft-smart relies on Java serialization.
+        // Step 6. Check if we can access the certificates directory
+        if (requireCertificates && !canReadCertificatesDirectory(configuration.certificatesDirectory, configuration.devMode)) return ExitCodes.FAILURE
+
+        // Step 7. Configuring special serialisation requirements, i.e., bft-smart relies on Java serialization.
         if (attempt { banJavaSerialisation(configuration) }.doOnFailure(Consumer { error -> error.logAsUnexpected("Exception while configuring serialisation") }) !is Try.Success) return ExitCodes.FAILURE
 
-        // Step 7. Any actions required before starting up the Corda network layer.
+        // Step 8. Any actions required before starting up the Corda network layer.
         if (attempt { preNetworkRegistration(configuration) }.doOnFailure(Consumer(::handleRegistrationError)) !is Try.Success) return ExitCodes.FAILURE
 
-        // Step 8. Log startup info.
+        // Step 9. Log startup info.
         logStartupInfo(versionInfo, configuration)
 
-        // Step 9. Start node: create the node, check for other command-line options, add extra logging etc.
+        // Step 10. Start node: create the node, check for other command-line options, add extra logging etc.
         if (attempt {
-                    cmdLineOptions.baseDirectory.createDirectories()
                     afterNodeInitialisation.run(createNode(configuration, versionInfo))
                 }.doOnFailure(Consumer(::handleStartError)) !is Try.Success) return ExitCodes.FAILURE
 
@@ -289,6 +293,20 @@ open class NodeStartup : NodeStartupLogging {
             val appUser = System.getProperty("user.name")
             println("Application user '$appUser' does not have necessary permissions for Node base directory '$baseDirectory'.")
             println("Corda Node process in now exiting. Please check directory permissions and try starting the Node again.")
+            return false
+        }
+        return true
+    }
+
+    private fun canReadCertificatesDirectory(certDirectory: Path, devMode: Boolean): Boolean {
+        //Test for access to the certificates path and shutdown if we are unable to reach it.
+        //We don't do this if devMode==true because the certificates would be created anyway
+        if (devMode) return true
+
+        if (!certDirectory.isDirectory()) {
+            printError("Unable to access certificates directory ${certDirectory}. This could be because the node has not been registered with the Identity Operator.")
+            printError("Please see https://docs.corda.net/joining-a-compatibility-zone.html for more information.")
+            printError("Node will now shutdown.")
             return false
         }
         return true
@@ -428,20 +446,40 @@ interface NodeStartupLogging {
             error.isExpectedWhenStartingNode() -> error.logAsExpected()
             error is CouldNotCreateDataSourceException -> error.logAsUnexpected()
             error is Errors.NativeIoException && error.message?.contains("Address already in use") == true -> error.logAsExpected("One of the ports required by the Corda node is already in use.")
+            error is Errors.NativeIoException && error.message?.contains("Can't assign requested address") == true -> error.logAsExpected("Exception during node startup. Check that addresses in node config resolve correctly.")
+            error is UnresolvedAddressException -> error.logAsExpected("Exception during node startup. Check that addresses in node config resolve correctly.")
             error.isOpenJdkKnownIssue() -> error.logAsExpected("Exception during node startup - ${error.message}. This is a known OpenJDK issue on some Linux distributions, please use OpenJDK from zulu.org or Oracle JDK.")
             else -> error.logAsUnexpected("Exception during node startup")
         }
     }
 }
 
-fun CliWrapperBase.initLogging(baseDirectory: Path) {
+fun CliWrapperBase.initLogging(baseDirectory: Path): Boolean {
     System.setProperty("defaultLogLevel", specifiedLogLevel) // These properties are referenced from the XML config file.
     if (verbose) {
         System.setProperty("consoleLoggingEnabled", "true")
         System.setProperty("consoleLogLevel", specifiedLogLevel)
         Node.renderBasicInfoToConsole = false
     }
+
+    //Test for access to the logging path and shutdown if we are unable to reach it.
+    val logPath = baseDirectory / NodeCliCommand.LOGS_DIRECTORY_NAME
+    try {
+        logPath.createDirectories()
+    } catch (e: IOException) {
+        printError("Unable to create logging directory ${logPath.toString()}. Node will now shutdown.")
+        return false
+    } catch (e: SecurityException) {
+        printError("Current user is unable to access logging directory ${logPath.toString()}. Node will now shutdown.")
+        return false
+    }
+    if (!logPath.isDirectory()) {
+        printError("Unable to access logging directory ${logPath.toString()}. Node will now shutdown.")
+        return false
+    }
+
     System.setProperty("log-path", (baseDirectory / NodeCliCommand.LOGS_DIRECTORY_NAME).toString())
     SLF4JBridgeHandler.removeHandlersForRootLogger() // The default j.u.l config adds a ConsoleHandler.
     SLF4JBridgeHandler.install()
+    return true
 }

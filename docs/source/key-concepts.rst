@@ -19,6 +19,7 @@ This section should be read in order:
    key-concepts-flows
    key-concepts-consensus
    key-concepts-notaries
+   key-concepts-vault
    key-concepts-time-windows
    key-concepts-oracles
    key-concepts-node

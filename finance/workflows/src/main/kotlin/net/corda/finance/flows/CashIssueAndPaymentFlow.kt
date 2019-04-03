@@ -10,14 +10,16 @@ import net.corda.core.utilities.ProgressTracker
 import java.util.*
 
 /**
- * Initiates a flow that self-issues cash (which should then be sent to recipient(s) using a payment transaction).
+ * Initiates a flow that self-issues cash and then send this to a recipient.
  *
  * We issue cash only to ourselves so that all KYC/AML checks on payments are enforced consistently, rather than risk
  * checks for issuance and payments differing. Outside of test scenarios it would be extremely unusual to issue cash
  * and immediately transfer it, so impact of this limitation is considered minimal.
  *
  * @param amount the amount of currency to issue.
- * @param issuerBankPartyRef a reference to put on the issued currency.
+ * @param issueRef a reference to put on the issued currency.
+ * @param recipient the recipient of the currency
+ * @param anonymous if true, the recipient of the cash will be anonymous. Should be true for normal usage
  * @param notary the notary to set on the output states.
  */
 @StartableByRPC
@@ -35,9 +37,18 @@ class CashIssueAndPaymentFlow(val amount: Amount<Currency>,
 
     constructor(request: IssueAndPaymentRequest) : this(request.amount, request.issueRef, request.recipient, request.anonymous, request.notary, tracker())
 
+    companion object {
+        val ISSUING_CASH = ProgressTracker.Step("Issuing cash")
+        val PAYING_RECIPIENT = ProgressTracker.Step("Paying recipient")
+
+        fun tracker() = ProgressTracker(ISSUING_CASH, PAYING_RECIPIENT)
+    }
+
     @Suspendable
     override fun call(): Result {
+        progressTracker.currentStep = ISSUING_CASH
         subFlow(CashIssueFlow(amount, issueRef, notary))
+        progressTracker.currentStep = PAYING_RECIPIENT
         return subFlow(CashPaymentFlow(amount, recipient, anonymous, notary))
     }
 

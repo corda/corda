@@ -20,11 +20,7 @@ import net.corda.node.services.api.SchemaService
 import net.corda.node.services.api.VaultServiceInternal
 import net.corda.node.services.schema.PersistentStateService
 import net.corda.node.services.statemachine.FlowStateMachineImpl
-import net.corda.nodeapi.internal.persistence.CordaPersistence
-import net.corda.nodeapi.internal.persistence.bufferUntilDatabaseCommit
-import net.corda.nodeapi.internal.persistence.currentDBSession
-import net.corda.nodeapi.internal.persistence.wrapWithDatabaseTransaction
-import net.corda.nodeapi.internal.persistence.contextTransactionOrNull
+import net.corda.nodeapi.internal.persistence.*
 import org.hibernate.Session
 import rx.Observable
 import rx.subjects.PublishSubject
@@ -71,9 +67,7 @@ class NodeVaultService(
          */
         fun isRelevant(state: ContractState, myKeys: Set<PublicKey>): Boolean {
             val keysToCheck = when (state) {
-                // Sometimes developers forget to add the owning key to participants for OwnableStates.
-                // TODO: This logic should probably be moved to OwnableState so we can just do a simple intersection here.
-                is OwnableState -> (state.participants.map { it.owningKey } + state.owner.owningKey).toSet()
+                is OwnableState -> listOf(state.owner.owningKey)
                 else -> state.participants.map { it.owningKey }
             }
             return keysToCheck.any { it.containsAny(myKeys) }
@@ -230,14 +224,35 @@ class NodeVaultService(
     }
 
     private fun makeUpdates(batch: Iterable<CoreTransaction>, statesToRecord: StatesToRecord): List<Vault.Update<ContractState>> {
+
+        fun <T> withValidDeserialization(list: List<T>, txId: SecureHash): Map<Int, T> = (0 until list.size).mapNotNull { idx ->
+            try {
+                idx to list[idx]
+            } catch (e: TransactionDeserialisationException) {
+                // When resolving transaction dependencies we might encounter contracts we haven't installed locally.
+                // This will cause a failure as we can't deserialize such states in the context of the `appClassloader`.
+                // For now we ignore these states.
+                // In the future we will use the AttachmentsClassloader to correctly deserialize and asses the relevancy.
+                log.debug { "Could not deserialize state $idx from transaction $txId. Cause: $e" }
+                null
+            }
+        }.toMap()
+
+        // Returns only output states that can be deserialised successfully.
+        fun WireTransaction.deserializableOutputStates(): Map<Int, TransactionState<ContractState>> = withValidDeserialization(this.outputs, this.id)
+
+        // Returns only reference states that can be deserialised successfully.
+        fun LedgerTransaction.deserializableRefStates(): Map<Int, StateAndRef<ContractState>> = withValidDeserialization(this.references, this.id)
+
         fun makeUpdate(tx: WireTransaction): Vault.Update<ContractState>? {
+            val outputs: Map<Int, TransactionState<ContractState>> = tx.deserializableOutputStates()
             val ourNewStates = when (statesToRecord) {
                 StatesToRecord.NONE -> throw AssertionError("Should not reach here")
-                StatesToRecord.ONLY_RELEVANT -> tx.outputs.withIndex().filter {
-                    isRelevant(it.value.data, keyManagementService.filterMyKeys(tx.outputs.flatMap { it.data.participants.map { it.owningKey } }).toSet())
+                StatesToRecord.ONLY_RELEVANT -> outputs.filter { (_, value) ->
+                    isRelevant(value.data, keyManagementService.filterMyKeys(outputs.values.flatMap { it.data.participants.map { it.owningKey } }).toSet())
                 }
-                StatesToRecord.ALL_VISIBLE -> tx.outputs.withIndex()
-            }.map { tx.outRef<ContractState>(it.index) }
+                StatesToRecord.ALL_VISIBLE -> outputs
+            }.map { (idx, _) -> tx.outRef<ContractState>(idx) }
 
             // Retrieve all unconsumed states for this transaction's inputs.
             val consumedStates = loadStates(tx.inputs)
@@ -256,12 +271,14 @@ class NodeVaultService(
             val newReferenceStateAndRefs = if (tx.references.isEmpty()) {
                 emptyList()
             } else {
-                 when (statesToRecord) {
+                when (statesToRecord) {
                     StatesToRecord.NONE -> throw AssertionError("Should not reach here")
                     StatesToRecord.ALL_VISIBLE, StatesToRecord.ONLY_RELEVANT -> {
                         val notSeenReferences = tx.references - loadStates(tx.references).map { it.ref }
                         // TODO: This is expensive - is there another way?
-                        tx.toLedgerTransaction(servicesForResolution).references.filter { it.ref in notSeenReferences }
+                        tx.toLedgerTransaction(servicesForResolution).deserializableRefStates()
+                                .filter { (_, stateAndRef) -> stateAndRef.ref in notSeenReferences }
+                                .values
                     }
                 }
             }
@@ -521,7 +538,14 @@ class NodeVaultService(
     }
 
     @Throws(VaultQueryException::class)
-    private fun <T : ContractState> _queryBy(criteria: QueryCriteria, paging: PageSpecification, sorting: Sort, contractStateType: Class<out T>, skipPagingChecks: Boolean): Vault.Page<T> {
+    private fun <T : ContractState> _queryBy(criteria: QueryCriteria, paging_: PageSpecification, sorting: Sort, contractStateType: Class<out T>, skipPagingChecks: Boolean): Vault.Page<T> {
+        // We decrement by one if the client requests MAX_PAGE_SIZE, assuming they can not notice this because they don't have enough memory
+        // to request `MAX_PAGE_SIZE` states at once.
+        val paging = if (paging_.pageSize == Integer.MAX_VALUE) {
+            paging_.copy(pageSize = Integer.MAX_VALUE - 1)
+        } else {
+            paging_
+        }
         log.debug { "Vault Query for contract type: $contractStateType, criteria: $criteria, pagination: $paging, sorting: $sorting" }
         return database.transaction {
             // calculate total results where a page specification has been defined

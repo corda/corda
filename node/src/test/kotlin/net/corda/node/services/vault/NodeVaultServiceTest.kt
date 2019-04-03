@@ -22,8 +22,8 @@ import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.toNonEmptySet
 import net.corda.finance.*
 import net.corda.finance.contracts.asset.Cash
-import net.corda.finance.schemas.CashSchemaV1
 import net.corda.finance.contracts.utils.sumCash
+import net.corda.finance.schemas.CashSchemaV1
 import net.corda.finance.workflows.asset.CashUtils
 import net.corda.finance.workflows.getCashBalance
 import net.corda.node.services.api.IdentityServiceInternal
@@ -42,6 +42,7 @@ import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.*
 import rx.observers.TestSubscriber
 import java.math.BigDecimal
+import java.security.PublicKey
 import java.util.*
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
@@ -98,8 +99,8 @@ class NodeVaultServiceTest {
         vaultFiller = VaultFiller(services, dummyNotary)
         // This is safe because MockServices only ever have a single identity
         identity = services.myInfo.singleIdentityAndCert()
-        issuerServices = MockServices(cordappPackages, dummyCashIssuer, mock<IdentityService>(), parameters)
-        bocServices = MockServices(cordappPackages, bankOfCorda, mock<IdentityService>(), parameters)
+        issuerServices = MockServices(cordappPackages, dummyCashIssuer, mock(), parameters)
+        bocServices = MockServices(cordappPackages, bankOfCorda, mock(), parameters)
         services.identityService.verifyAndRegisterIdentity(DUMMY_CASH_ISSUER_IDENTITY)
         services.identityService.verifyAndRegisterIdentity(BOC_IDENTITY)
     }
@@ -129,6 +130,7 @@ class NodeVaultServiceTest {
     }
 
     class FungibleFoo(override val amount: Amount<Currency>, override val participants: List<AbstractParty>) : FungibleState<Currency>
+
     @Test
     fun `fungible state selection test`() {
         val issuerParty = services.myInfo.legalIdentities.first()
@@ -164,6 +166,17 @@ class NodeVaultServiceTest {
             val transaction = issuerServices.signInitialTransaction(issuance, DUMMY_CASH_ISSUER.party.owningKey)
             services.recordTransactions(transaction)
             services.recordTransactions(transaction)
+        }
+    }
+
+    @Test
+    fun `can query with page size max-integer`() {
+        database.transaction {
+            vaultFiller.fillWithSomeTestCash(100.DOLLARS, issuerServices, 3, DUMMY_CASH_ISSUER)
+        }
+        database.transaction {
+            val w1 = vaultService.queryBy<Cash.State>(PageSpecification(pageNumber = 1, pageSize = Integer.MAX_VALUE)).states
+            assertThat(w1).hasSize(3)
         }
     }
 
@@ -552,20 +565,29 @@ class NodeVaultServiceTest {
 
     @Test
     fun `is ownable state relevant`() {
-        val amount = Amount(1000, Issued(BOC.ref(1), GBP))
-        val wellKnownCash = Cash.State(amount, identity.party)
-        val myKeys = services.keyManagementService.filterMyKeys(listOf(wellKnownCash.owner.owningKey))
-        assertTrue { NodeVaultService.isRelevant(wellKnownCash, myKeys.toSet()) }
+            val myAnonymousIdentity = services.keyManagementService.freshKeyAndCert(identity, false)
+            val myKeys = services.keyManagementService.filterMyKeys(listOf(identity.owningKey, myAnonymousIdentity.owningKey)).toSet()
 
-        val anonymousIdentity = services.keyManagementService.freshKeyAndCert(identity, false)
-        val anonymousCash = Cash.State(amount, anonymousIdentity.party)
-        val anonymousKeys = services.keyManagementService.filterMyKeys(listOf(anonymousCash.owner.owningKey))
-        assertTrue { NodeVaultService.isRelevant(anonymousCash, anonymousKeys.toSet()) }
+            // Well-known owner
+            assertTrue { myKeys.isOwnableStateRelevant(identity.party, participants = emptyList()) }
+            // Anonymous owner
+            assertTrue { myKeys.isOwnableStateRelevant(myAnonymousIdentity.party, participants = emptyList()) }
+            // Unknown owner
+            assertFalse { myKeys.isOwnableStateRelevant(createUnknownIdentity(), participants = emptyList()) }
+            // Under target version 3 only the owner is relevant. This is to preserve backwards compatibility
+            assertFalse { myKeys.isOwnableStateRelevant(createUnknownIdentity(), participants = listOf(identity.party)) }
+    }
 
-        val thirdPartyIdentity = AnonymousParty(generateKeyPair().public)
-        val thirdPartyCash = Cash.State(amount, thirdPartyIdentity)
-        val thirdPartyKeys = services.keyManagementService.filterMyKeys(listOf(thirdPartyCash.owner.owningKey))
-        assertFalse { NodeVaultService.isRelevant(thirdPartyCash, thirdPartyKeys.toSet()) }
+    private fun createUnknownIdentity() = AnonymousParty(generateKeyPair().public)
+
+    private fun Set<PublicKey>.isOwnableStateRelevant(owner: AbstractParty, participants: List<AbstractParty>): Boolean {
+        class TestOwnableState : OwnableState {
+            override val owner: AbstractParty get() = owner
+            override val participants: List<AbstractParty> get() = participants
+            override fun withNewOwner(newOwner: AbstractParty): CommandAndState = throw AbstractMethodError()
+        }
+
+        return NodeVaultService.isRelevant(TestOwnableState(), this)
     }
 
     // TODO: Unit test linear state relevancy checks

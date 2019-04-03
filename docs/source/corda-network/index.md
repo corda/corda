@@ -24,7 +24,7 @@ The main benefit of Corda Network for participants is being able to move cash, d
 or line of business to another. Business network operators also benefit by being able to access network-wide services, and reuse the 
 [trust root](https://corda.network/trust-root/index.html) and network services, instead of building and managing their own.
 
-The Corda Network website has a [high level overview](https://corda.network/participation/implementation-steps.html) of the joining process.
+The Corda Network website has a [high level overview](https://corda.network/participation/index.html) of the joining process.
 
 Key services 
 ============
@@ -69,10 +69,10 @@ The Corda Network provides an endpoint serving an empty certificate revocation l
 This is intended for deployments that do not provide a CRL infrastructure but still require strict CRL mode checking.
 In order to use this, add the following to your configuration file:
 
-		.. parsed-literal::
+.. parsed-literal::
 
-        tlsCertCrlDistPoint = "https://crl.cordaconnect.org/cordatls.crl"
-				tlsCertCrlIssuer = "C=US, L=New York, O=R3 HoldCo LLC, OU=Corda, CN=Corda Root CA"
+    tlsCertCrlDistPoint = "https://crl.cordaconnect.org/cordatls.crl"
+            tlsCertCrlIssuer = "C=US, L=New York, O=R3 HoldCo LLC, OU=Corda, CN=Corda Root CA"
 
 This set-up ensures that the TLS-level certificates are embedded with the CRL distribution point referencing the CRL issued by R3.
 In cases where a proprietary CRL infrastructure is provided those values need to be changed accordingly.

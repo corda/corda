@@ -26,7 +26,6 @@ import org.apache.shiro.realm.AuthorizingRealm
 import org.apache.shiro.realm.jdbc.JdbcRealm
 import org.apache.shiro.subject.PrincipalCollection
 import org.apache.shiro.subject.SimplePrincipalCollection
-import java.io.Closeable
 import java.util.concurrent.ConcurrentHashMap
 import javax.security.auth.login.FailedLoginException
 
@@ -66,7 +65,7 @@ class RPCSecurityManagerImpl(config: AuthServiceConfig, cacheFactory: NamedCache
                     manager = manager)
 
     override fun close() {
-        manager.realms?.filterIsInstance<Closeable>()?.forEach { it.close() }
+        manager.realms?.filterIsInstance<AutoCloseable>()?.forEach(AutoCloseable::close)
         manager.destroy()
     }
 
@@ -197,31 +196,31 @@ private fun buildCredentialMatcher(type: PasswordEncryption) = when (type) {
 }
 
 class InMemoryRealm(users: List<User>,
-                            realmId: String,
-                            passwordEncryption: PasswordEncryption = PasswordEncryption.NONE) : AuthorizingRealm() {
+                    realmId: String,
+                    passwordEncryption: PasswordEncryption = PasswordEncryption.NONE) : AuthorizingRealm() {
 
     private val authorizationInfoByUser: Map<String, AuthorizationInfo>
     private val authenticationInfoByUser: Map<String, AuthenticationInfo>
 
     init {
         permissionResolver = RPCPermissionResolver
-        users.forEach {
-            require(it.username.matches("\\w+".toRegex())) {
-                "Username ${it.username} contains invalid characters"
+        users.forEach { user ->
+            require(user.username.matches("\\w+".toRegex())) {
+                "Username ${user.username} contains invalid characters"
             }
         }
-        val resolvePermission = { s: String -> permissionResolver.resolvePermission(s) }
-        authorizationInfoByUser = users.associate {
-            it.username to SimpleAuthorizationInfo().apply {
-                objectPermissions = it.permissions.map { resolvePermission(it) }.toSet()
+        val resolvePermission = permissionResolver::resolvePermission
+        authorizationInfoByUser = users.associate { user ->
+            user.username to SimpleAuthorizationInfo().apply {
+                objectPermissions = user.permissions.map(resolvePermission).toSet()
                 roles = emptySet<String>()
                 stringPermissions = emptySet<String>()
             }
         }
-        authenticationInfoByUser = users.associate {
-            it.username to SimpleAuthenticationInfo().apply {
-                credentials = it.password
-                principals = SimplePrincipalCollection(it.username, realmId)
+        authenticationInfoByUser = users.associate { user ->
+            user.username to SimpleAuthenticationInfo().apply {
+                credentials = user.password
+                principals = SimplePrincipalCollection(user.username, realmId)
             }
         }
         credentialsMatcher = buildCredentialMatcher(passwordEncryption)
@@ -236,7 +235,7 @@ class InMemoryRealm(users: List<User>,
             authorizationInfoByUser[principals.primaryPrincipal as String]
 }
 
-private class NodeJdbcRealm(config: SecurityConfiguration.AuthService.DataSource) : JdbcRealm(), Closeable {
+private class NodeJdbcRealm(config: SecurityConfiguration.AuthService.DataSource) : JdbcRealm(), AutoCloseable {
 
     init {
         credentialsMatcher = buildCredentialMatcher(config.passwordEncryption)
@@ -246,7 +245,7 @@ private class NodeJdbcRealm(config: SecurityConfiguration.AuthService.DataSource
     }
 
     override fun close() {
-        (dataSource as? Closeable)?.close()
+        (dataSource as? AutoCloseable)?.close()
     }
 }
 

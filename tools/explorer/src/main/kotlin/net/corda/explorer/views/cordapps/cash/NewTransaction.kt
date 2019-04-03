@@ -39,7 +39,6 @@ import net.corda.finance.flows.CashIssueAndPaymentFlow
 import net.corda.finance.flows.CashIssueAndPaymentFlow.IssueAndPaymentRequest
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.finance.flows.CashPaymentFlow.PaymentRequest
-import net.corda.testing.core.singleIdentityAndCert
 import org.controlsfx.dialog.ExceptionDialog
 import tornadofx.*
 import java.math.BigDecimal
@@ -183,7 +182,7 @@ class NewTransaction : Fragment() {
         partyBLabel.textProperty().bind(transactionTypeCB.valueProperty().map { it?.partyNameB?.let { "$it : " } })
         partyBChoiceBox.apply {
             visibleProperty().bind(transactionTypeCB.valueProperty().map { it?.partyNameB }.isNotNull())
-            items = FXCollections.observableList(parties.map { it.singleIdentityAndCert() }).sorted()
+            items = FXCollections.observableList(parties.map { it.legalIdentitiesAndCerts.single() }).sorted()
             converter = stringConverter { it?.let { PartyNameFormatter.short.format(it.name) } ?: "" }
         }
         // Issuer

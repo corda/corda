@@ -4,6 +4,7 @@ import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.delete
+import net.corda.core.internal.getJavaUpdateVersion
 import net.corda.core.internal.list
 import net.corda.core.internal.readObject
 import net.corda.core.node.NodeInfo
@@ -29,6 +30,7 @@ import org.junit.rules.TemporaryFolder
 import java.nio.file.Path
 import java.time.Duration
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 
 class NodeTest {
@@ -139,6 +141,14 @@ class NodeTest {
             //this throws an exception with old behaviour
             node.generateNodeInfo()
         }
+    }
+
+    @Test
+    fun `test getJavaUpdateVersion`() {
+        assertThat(getJavaUpdateVersion("1.8.0_202-ea")).isEqualTo(202)
+        assertThat(getJavaUpdateVersion("1.8.0_202")).isEqualTo(202)
+        assertFailsWith<NumberFormatException> { getJavaUpdateVersion("1.8.0_202wrong-format") }
+        assertFailsWith<NumberFormatException> { getJavaUpdateVersion("1.8.0-adoptopenjdk") }
     }
 
     private fun getAllInfos(database: CordaPersistence): List<NodeInfoSchemaV1.PersistentNodeInfo> {

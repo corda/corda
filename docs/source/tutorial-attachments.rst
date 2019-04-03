@@ -105,7 +105,7 @@ and if so, printed out.
 
 .. container:: codeset
 
-    .. literalinclude:: ../../samples/attachment-demo/workflows/src/main/kotlin/net/corda/attachmentdemo/workflows/AttachmentDemo.kt
+    .. literalinclude:: ../../samples/attachment-demo/src/main/kotlin/net/corda/attachmentdemo/AttachmentDemo.kt
         :language: kotlin
         :start-after: DOCSTART 1
         :end-before: DOCEND 1
@@ -115,7 +115,7 @@ transaction and send it to the recipient node:
 
 .. container:: codeset
 
-    .. literalinclude:: ../../samples/attachment-demo/workflows/src/main/kotlin/net/corda/attachmentdemo/workflows/AttachmentDemo.kt
+    .. literalinclude:: ../../samples/attachment-demo/src/main/kotlin/net/corda/attachmentdemo/AttachmentDemo.kt
         :language: kotlin
         :start-after: DOCSTART 2
         :end-before: DOCEND 2

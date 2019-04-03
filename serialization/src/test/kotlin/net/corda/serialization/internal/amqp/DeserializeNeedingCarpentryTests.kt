@@ -1,11 +1,15 @@
 package net.corda.serialization.internal.amqp
 
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.SerializationContext
+import net.corda.core.serialization.SerializedBytes
 import net.corda.serialization.internal.AllWhitelist
 import net.corda.serialization.internal.amqp.testutils.*
 import net.corda.serialization.internal.carpenter.*
 import org.junit.Test
+import java.io.NotSerializableException
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
@@ -35,6 +39,17 @@ class DeserializeNeedingCarpentryTests : AmqpCarpenterBase(AllWhitelist) {
     // Deserialize with whitelisting on to check that `CordaSerializable` annotation present.
     private val sf2 = testDefaultFactoryWithWhitelist()
 
+    private inline fun <reified T : Any> DeserializationInput.deserializeWithoutAndWithCarpenter(
+            bytes: SerializedBytes<T>,
+            context: SerializationContext? = null
+    )  : T {
+        assertFailsWith(NotSerializableException::class) {
+            deserialize(bytes, T::class.java, (context ?: testSerializationContext).withoutCarpenter())
+        }
+
+        return deserialize(bytes, T::class.java, context ?: testSerializationContext)
+    }
+
     @Test
     fun verySimpleType() {
         val testVal = 10
@@ -52,19 +67,20 @@ class DeserializeNeedingCarpentryTests : AmqpCarpenterBase(AllWhitelist) {
         assertEquals(deserializedObj1::class.java, deserializedObj2::class.java)
         assertEquals(testVal, deserializedObj2::class.java.getMethod("getA").invoke(deserializedObj2))
 
-        val deserializedObj3 = DeserializationInput(sf2).deserialize(serialisedBytes)
+        val deserializedObj3 = DeserializationInput(sf2).deserializeWithoutAndWithCarpenter(serialisedBytes)
         assertNotEquals(clazz, deserializedObj3::class.java)
         assertNotEquals(deserializedObj1::class.java, deserializedObj3::class.java)
         assertNotEquals(deserializedObj2::class.java, deserializedObj3::class.java)
         assertEquals(testVal, deserializedObj3::class.java.getMethod("getA").invoke(deserializedObj3))
 
+        // NOTE: There is no point attempting this without the carepenter a second time as having carpented things up once
+        // it will, of course, just succeed even with the carpenter disabled
         val deserializedObj4 = DeserializationInput(sf2).deserialize(serialisedBytes)
         assertNotEquals(clazz, deserializedObj4::class.java)
         assertNotEquals(deserializedObj1::class.java, deserializedObj4::class.java)
         assertNotEquals(deserializedObj2::class.java, deserializedObj4::class.java)
         assertEquals(deserializedObj3::class.java, deserializedObj4::class.java)
         assertEquals(testVal, deserializedObj4::class.java.getMethod("getA").invoke(deserializedObj4))
-
     }
 
     @Test
@@ -79,7 +95,7 @@ class DeserializeNeedingCarpentryTests : AmqpCarpenterBase(AllWhitelist) {
         val concreteB = clazz.constructors[0].newInstance(testValB)
         val concreteC = clazz.constructors[0].newInstance(testValC)
 
-        val deserialisedA = DeserializationInput(sf2).deserialize(
+        val deserialisedA = DeserializationInput(sf2).deserializeWithoutAndWithCarpenter(
                 TestSerializationOutput(VERBOSE, sf1).serialize(concreteA))
 
         assertEquals(testValA, deserialisedA::class.java.getMethod("getA").invoke(deserialisedA))
@@ -114,7 +130,7 @@ class DeserializeNeedingCarpentryTests : AmqpCarpenterBase(AllWhitelist) {
         val classInstance = clazz.constructors[0].newInstance(testVal)
 
         val serialisedBytes = TestSerializationOutput(VERBOSE, sf1).serialize(classInstance)
-        val deserializedObj = DeserializationInput(sf2).deserialize(serialisedBytes)
+        val deserializedObj = DeserializationInput(sf2).deserializeWithoutAndWithCarpenter(serialisedBytes)
 
         assertTrue(deserializedObj is I)
         assertEquals(testVal, (deserializedObj as I).getName())
@@ -133,7 +149,8 @@ class DeserializeNeedingCarpentryTests : AmqpCarpenterBase(AllWhitelist) {
                 clazz.constructors[0].newInstance(2),
                 clazz.constructors[0].newInstance(3)))
 
-        val deserializedObj = DeserializationInput(sf2).deserialize(TestSerializationOutput(VERBOSE, sf1).serialize(outer))
+        val deserializedObj = DeserializationInput(sf2).deserializeWithoutAndWithCarpenter(
+                TestSerializationOutput(VERBOSE, sf1).serialize(outer))
 
         assertNotEquals((deserializedObj.a[0])::class.java, (outer.a[0])::class.java)
         assertNotEquals((deserializedObj.a[1])::class.java, (outer.a[1])::class.java)
@@ -164,9 +181,9 @@ class DeserializeNeedingCarpentryTests : AmqpCarpenterBase(AllWhitelist) {
         val outer = outerType.constructors[0].newInstance(innerType.constructors[0].newInstance(2))
 
         val serializedI = TestSerializationOutput(VERBOSE, sf1).serialize(inner)
-        val deserialisedI = DeserializationInput(sf2).deserialize(serializedI)
+        val deserialisedI = DeserializationInput(sf2).deserializeWithoutAndWithCarpenter(serializedI)
         val serialisedO = TestSerializationOutput(VERBOSE, sf1).serialize(outer)
-        val deserialisedO = DeserializationInput(sf2).deserialize(serialisedO)
+        val deserialisedO = DeserializationInput(sf2).deserializeWithoutAndWithCarpenter(serialisedO)
 
         // ensure out carpented version of inner is reused
         assertEquals(deserialisedI::class.java,
@@ -184,7 +201,7 @@ class DeserializeNeedingCarpentryTests : AmqpCarpenterBase(AllWhitelist) {
 
         val classInstance = outerClass.constructors.first().newInstance(nestedClass.constructors.first().newInstance("name"))
         val serialisedBytes = TestSerializationOutput(VERBOSE, sf1).serialize(classInstance)
-        val deserializedObj = DeserializationInput(sf2).deserialize(serialisedBytes)
+        val deserializedObj = DeserializationInput(sf2).deserializeWithoutAndWithCarpenter(serialisedBytes)
 
         val inner = deserializedObj::class.java.getMethod("getInner").invoke(deserializedObj)
         assertEquals("name", inner::class.java.getMethod("getName").invoke(inner))
@@ -204,7 +221,7 @@ class DeserializeNeedingCarpentryTests : AmqpCarpenterBase(AllWhitelist) {
                 nestedClass.constructors.first().newInstance("bar"))
 
         val serialisedBytes = TestSerializationOutput(VERBOSE, sf1).serialize(classInstance)
-        val deserializedObj = DeserializationInput(sf2).deserialize(serialisedBytes)
+        val deserializedObj = DeserializationInput(sf2).deserializeWithoutAndWithCarpenter(serialisedBytes)
 
         assertEquals("foo", deserializedObj.a::class.java.getMethod("getName").invoke(deserializedObj.a))
         assertEquals("bar", deserializedObj.b::class.java.getMethod("getName").invoke(deserializedObj.b))
@@ -226,7 +243,8 @@ class DeserializeNeedingCarpentryTests : AmqpCarpenterBase(AllWhitelist) {
                 unknownClass.constructors.first().newInstance(7, 8)))
 
         val serialisedBytes = TestSerializationOutput(VERBOSE, sf1).serialize(toSerialise)
-        val deserializedObj = DeserializationInput(sf2).deserialize(serialisedBytes)
+
+        val deserializedObj = DeserializationInput(sf2).deserializeWithoutAndWithCarpenter(serialisedBytes)
         var sentinel = 1
         deserializedObj.l.forEach {
             assertEquals(sentinel++, it::class.java.getMethod("getV1").invoke(it))
@@ -249,8 +267,8 @@ class DeserializeNeedingCarpentryTests : AmqpCarpenterBase(AllWhitelist) {
 
         val serialisedBytes = TestSerializationOutput(VERBOSE, sf1).serialize(
                 concreteClass.constructors.first().newInstance(12, "timmy"))
-        val deserializedObj = DeserializationInput(sf2).deserialize(serialisedBytes)
 
+        val deserializedObj = DeserializationInput(sf2).deserializeWithoutAndWithCarpenter(serialisedBytes)
         assertTrue(deserializedObj is I)
         assertEquals("timmy", (deserializedObj as I).getName())
         assertEquals("timmy", deserializedObj::class.java.getMethod("getName").invoke(deserializedObj))

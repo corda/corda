@@ -36,7 +36,7 @@ It's always a good idea to make a backup of your data before upgrading any serve
 You can simply make a copy of the node's data directory to enable this. If you use an external non-H2 database please consult your database
 user guide to learn how to make backups.
 
-We provide some `backup recommendations <backup-recommendations>`_ if you'd like more detail.
+We provide some :ref:`backup recommendations <backup-recommendations>` if you'd like more detail.
 
 Step 3. Replace ``corda.jar`` with the new version
 --------------------------------------------------

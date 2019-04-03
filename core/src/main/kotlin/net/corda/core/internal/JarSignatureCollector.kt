@@ -20,6 +20,11 @@ object JarSignatureCollector {
     private val unsignableEntryName = "META-INF/(?:(?:.*[.](?:SF|DSA|RSA|EC)|SIG-.*)|INDEX\\.LIST)".toRegex()
 
     /**
+     * @return if the [entry] [JarEntry] can be signed.
+     */
+    fun isNotSignable(entry: JarEntry): Boolean = entry.isDirectory || unsignableEntryName.matches(entry.name)
+
+    /**
      * Returns an ordered list of every [PublicKey] which has signed every signable item in the given [JarInputStream].
      *
      * @param jar The open [JarInputStream] to collect signing parties from.
@@ -57,8 +62,7 @@ object JarSignatureCollector {
     private val JarInputStream.fileSignerSets: List<Pair<String, Set<CodeSigner>>> get() =
             entries.thatAreSignable.shreddedFrom(this).toFileSignerSet().toList()
 
-    private val Sequence<JarEntry>.thatAreSignable: Sequence<JarEntry> get() =
-            filterNot { entry -> entry.isDirectory || unsignableEntryName.matches(entry.name) }
+    private val Sequence<JarEntry>.thatAreSignable: Sequence<JarEntry> get() = filterNot { isNotSignable(it) }
 
     private fun Sequence<JarEntry>.shreddedFrom(jar: JarInputStream): Sequence<JarEntry> = map { entry ->
         val shredder = ByteArray(1024) // can't share or re-use this, as it's used to compute CRCs during shredding

@@ -8,11 +8,9 @@ import javafx.scene.control.ButtonType
 import javafx.scene.image.Image
 import javafx.stage.Stage
 import jfxtras.resources.JFXtrasFontRoboto
-import joptsimple.OptionParser
 import net.corda.client.jfx.model.Models
 import net.corda.client.jfx.model.NodeMonitorModel
 import net.corda.client.jfx.model.observableValue
-import net.corda.core.utilities.contextLogger
 import net.corda.explorer.model.CordaViewModel
 import net.corda.explorer.model.SettingsModel
 import net.corda.explorer.views.*
@@ -30,10 +28,6 @@ import kotlin.system.exitProcess
 class Main : App(MainView::class) {
     private val loginView by inject<LoginView>()
     private val fullscreen by observableValue(SettingsModel::fullscreenProperty)
-
-    companion object {
-        internal val log = contextLogger()
-    }
 
     override fun start(stage: Stage) {
         var nodeModel: NodeMonitorModel? = null
@@ -121,17 +115,4 @@ class Main : App(MainView::class) {
         JFXtrasFontRoboto.loadAll()
         FontAwesomeIconFactory.get()   // Force initialisation.
     }
-}
-
-/**
- * This main method will start 5 nodes (Notary, USA Bank, UK Bank, Bob and Alice) locally for UI testing,
- * which will bind to ports 20005, 20008, 20011, 20014 and 20017 locally.
- *
- * The simulation starts by pre-allocating chunks of cash to each of the parties in 2 currencies (USD, GBP), then it enters a loop which generates random events.
- * On each iteration, the issuers will execute a Cash Issue or Cash Exit flow (at a 9:1 ratio) and a random party will execute a move of cash to another random party.
- */
-fun main(args: Array<String>) {
-    val parser = OptionParser("SF")
-    val options = parser.parse(*args)
-    ExplorerSimulation(options)
 }

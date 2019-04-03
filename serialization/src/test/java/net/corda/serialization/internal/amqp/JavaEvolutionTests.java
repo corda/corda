@@ -97,4 +97,59 @@ public class JavaEvolutionTests {
                 N2.class,
                 TestSerializationContext.testSerializationContext);
     }
+
+    // Class as it was when it was serialized and written to disk. Uncomment
+    // if the test referencing the object needs regenerating.
+    /*
+    @SuppressWarnings("unused")
+    static class POJOWithInteger {
+        private Integer id;
+
+        public Integer getId() {
+            return id;
+        }
+
+        public void setId(Integer id) {
+            this.id = id;
+        }
+    }
+    */
+
+    /*
+     We want to force the evolution serializer factory to check that the property types of the local and
+     remote types match up, which only happens if both types have the same set of property names (i.e.
+     this might be a spurious evolution candidate). We do this by adding a marker interface to the type,
+     which will change its fingerprint but have no effect on its serialisation behaviour.
+    */
+    public interface ForceEvolution { }
+
+    // Class as it exists now with the newly added interface
+    @SuppressWarnings("unused")
+    static class POJOWithInteger implements ForceEvolution {
+        private Integer id;
+
+        public Integer getId() {
+            return id;
+        }
+
+        public void setId(Integer id) {
+            this.id = id;
+        }
+    }
+
+    @Test
+    public void testNullableInteger() throws IOException {
+        // Uncomment to regenerate the base state of the test
+        //POJOWithInteger n = new POJOWithInteger();
+        //n.setId(100);
+        //AMQPTestUtilsKt.writeTestResource(this, new SerializationOutput(factory).serialize(
+        //        n, TestSerializationContext.testSerializationContext));
+
+        POJOWithInteger n2 = new DeserializationInput(factory).deserialize(
+                new SerializedBytes<>(AMQPTestUtilsKt.readTestResource(this)),
+                POJOWithInteger.class,
+                TestSerializationContext.testSerializationContext);
+
+        assertEquals(Integer.valueOf(100), n2.getId());
+    }
 }

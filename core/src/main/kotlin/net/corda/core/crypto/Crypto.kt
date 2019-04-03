@@ -436,7 +436,7 @@ object Crypto {
             "Unsupported key/algorithm for schemeCodeName: ${signatureScheme.schemeCodeName}"
         }
         require(clearData.isNotEmpty()) { "Signing of an empty array is not permitted!" }
-        val signature = Signature.getInstance(signatureScheme.signatureName, providerMap[signatureScheme.providerName])
+        val signature = Instances.getSignatureInstance(signatureScheme.signatureName, providerMap[signatureScheme.providerName])
         // Note that deterministic signature schemes, such as EdDSA, original SPHINCS-256 and RSA PKCS#1, do not require
         // extra randomness, but we have to ensure that non-deterministic algorithms (i.e., ECDSA) use non-blocking
         // SecureRandom implementation. Also, SPHINCS-256 implementation in BouncyCastle 1.60 fails with
@@ -640,7 +640,7 @@ object Crypto {
         require(isSupportedSignatureScheme(signatureScheme)) {
             "Unsupported key/algorithm for schemeCodeName: ${signatureScheme.schemeCodeName}"
         }
-        val signature = Signature.getInstance(signatureScheme.signatureName, providerMap[signatureScheme.providerName])
+        val signature = Instances.getSignatureInstance(signatureScheme.signatureName, providerMap[signatureScheme.providerName])
         signature.initVerify(publicKey)
         signature.update(clearData)
         return signature.verify(signatureData)

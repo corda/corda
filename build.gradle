@@ -4,7 +4,7 @@ buildscript {
     file("$projectDir/constants.properties").withInputStream { constants.load(it) }
 
     // Our version: bump this on release.
-    ext.corda_release_version = "4.0"
+    ext.corda_release_version = constants.getProperty("cordaVersion")
     ext.corda_platform_version = constants.getProperty("platformVersion")
     ext.gradle_plugins_version = constants.getProperty("gradlePluginsVersion")
 
@@ -14,7 +14,7 @@ buildscript {
     ext.kotlin_version = constants.getProperty("kotlinVersion")
 
     ext.quasar_group = 'co.paralleluniverse'
-    ext.quasar_version = '0.7.10'
+    ext.quasar_version = constants.getProperty("quasarVersion")
 
     // gradle-capsule-plugin:1.0.2 contains capsule:1.0.1 by default.
     // We must configure it manually to use the latest capsule version.
@@ -57,6 +57,7 @@ buildscript {
     ext.jsr305_version = constants.getProperty("jsr305Version")
     ext.shiro_version = '1.4.0'
     ext.artifactory_plugin_version = constants.getProperty('artifactoryPluginVersion')
+    ext.hikari_version = '2.5.1'
     ext.liquibase_version = '3.5.5'
     ext.artifactory_contextUrl = 'https://ci-artifactory.corda.r3cev.com/artifactory'
     ext.snake_yaml_version = constants.getProperty('snakeYamlVersion')
@@ -80,7 +81,7 @@ buildscript {
     // Update 121 is required for ObjectInputFilter.
     // Updates [131, 161] also have zip compression bugs on MacOS (High Sierra).
     // when the java version in NodeStartup.hasMinimumJavaVersion() changes, so must this check
-    ext.java8_minUpdateVersion = '171'
+    ext.java8_minUpdateVersion = constants.getProperty('java8MinUpdateVersion')
 
     repositories {
         mavenLocal()
@@ -161,9 +162,9 @@ allprojects {
         suppressionFile = '.ci/dependency-checker/suppressedLibraries.xml'
         cveValidForHours = 1
         format = 'ALL'
-        failOnError = project.getProperty('owasp.failOnError')
+        failOnError = project.property('owasp.failOnError')
         // by default CVSS is '11' which passes everything. Set between 0-10 to catch vulnerable deps
-        failBuildOnCVSS = project.getProperty('owasp.failBuildOnCVSS').toFloat()
+        failBuildOnCVSS = project.property('owasp.failBuildOnCVSS').toFloat()
 
         analyzers {
             assemblyEnabled = false
@@ -179,7 +180,7 @@ allprojects {
         options.encoding = 'UTF-8'
     }
 
-    tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
+    tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile) {
         kotlinOptions {
             languageVersion = "1.2"
             apiVersion = "1.2"
@@ -207,8 +208,12 @@ allprojects {
         // Prevent the project from creating temporary files outside of the build directory.
         systemProperty 'java.io.tmpdir', buildDir.absolutePath
 
+        if (project.hasProperty('test.parallel') && project.property('test.parallel').toBoolean()) {
+            maxParallelForks = Runtime.runtime.availableProcessors().intdiv(2) as int ?: 1
+        }
+
         if (System.getProperty("test.maxParallelForks") != null) {
-            maxParallelForks = Integer.valueOf(System.getProperty("test.maxParallelForks"))
+            maxParallelForks = Integer.getInteger('test.maxParallelForks')
             logger.debug("System property test.maxParallelForks found - setting max parallel forks to $maxParallelForks for $project")
         }
 
@@ -232,6 +237,7 @@ allprojects {
         jcenter()
         maven { url "$artifactory_contextUrl/corda-dependencies" }
         maven { url 'https://jitpack.io' }
+        maven { url 'https://repo.gradle.org/gradle/libs-releases' }
     }
 
     configurations {
@@ -267,14 +273,6 @@ allprojects {
         runtime {
             // We never want isolated.jar on classPath, since we want to test jar being dynamically loaded as an attachment
             exclude module: 'isolated'
-        }
-    }
-}
-
-subprojects {
-    tasks.withType(Test) {
-        if (project.getProperty('test.parallel').toBoolean()) {
-            maxParallelForks = Runtime.runtime.availableProcessors().intdiv(2) ?: 1
         }
     }
 }
@@ -361,7 +359,6 @@ bintrayConfig {
             'corda-core',
             'corda-core-deterministic',
             'corda-deterministic-verifier',
-            'corda-djvm',
             'corda',
             'corda-finance-workflows',
             'corda-finance-contracts',

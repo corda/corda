@@ -3,6 +3,7 @@ package net.corda.serialization.internal.carpenter
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializableCalculatedProperty
 import net.corda.serialization.internal.AllWhitelist
+import net.corda.serialization.internal.amqp.testutils.testSerializationContext
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
@@ -15,7 +16,7 @@ class MultiMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase(AllWhi
         data class A(val a: Int, val b: Long)
 
         val (_, env) = A(23, 42).roundTrip()
-        val carpentedInstance = env.getMangled<A>().load().new(23, 42)
+        val carpentedInstance = env.getMangled<A>().load(testSerializationContext).new(23, 42)
 
         assertEquals(23, carpentedInstance.get("a"))
         assertEquals(42L, carpentedInstance.get("b"))
@@ -27,7 +28,7 @@ class MultiMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase(AllWhi
         data class A(val a: Int, val b: String)
 
         val (_, env) = A(23, "skidoo").roundTrip()
-        val carpentedInstance = env.getMangled<A>().load().new(23, "skidoo")
+        val carpentedInstance = env.getMangled<A>().load(testSerializationContext).new(23, "skidoo")
 
         assertEquals(23, carpentedInstance.get("a"))
         assertEquals("skidoo", carpentedInstance.get("b"))
@@ -57,7 +58,7 @@ class MultiMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase(AllWhi
               squared: String
               """.trimIndent(), remoteTypeInformation.prettyPrint())
 
-        val pinochio = remoteTypeInformation.mangle<C>().load()
+        val pinochio = remoteTypeInformation.mangle<C>().load(testSerializationContext)
         assertNotEquals(pinochio.name, C::class.java.name)
         assertNotEquals(pinochio, C::class.java)
 
@@ -78,7 +79,7 @@ class MultiMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase(AllWhi
 
         val (_, env) = C(5).roundTrip()
 
-        val pinochio = env.getMangled<C>().load()
+        val pinochio = env.getMangled<C>().load(testSerializationContext)
         val p = pinochio.new(5)
 
         assertEquals(5, p.get("doubled"))

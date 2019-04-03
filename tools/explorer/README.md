@@ -13,36 +13,19 @@ The user can execute cash transaction commands to issue and move cash to other p
 
     ./gradlew tools:explorer:run
     
-
 ## Running Demo Nodes
 
-A demonstration Corda network topology is configured with 5 nodes playing the following roles:
-1. Notary
-2. Issuer nodes (representing two fictional central banks - UK Bank Plc issuer of GBP and USA Bank Corp issuer of USD)
-3. Participant nodes (representing two users - Alice and Bob)
+Node Explorer is included with the [DemoBench](https://docs.corda.net/demobench.html) application,
+which allows you to create local Corda networks on your desktop. For example:
 
-The Issuer nodes have the ability to issue, move and exit cash amounts.
-The Participant nodes are only able to spend cash (eg. move cash).
+    * Notary
+    * Bank of Breakfast Tea    (*Issuer node* for GBP)
+    * Bank of Big Apples       (*Issuer node* for USD)
+    * Alice                    (*Participant node* for user Alice)
+    * Bob                      (*Participant node* for user Bob)
 
-**Windows:**
-
-    gradlew.bat tools:explorer:runDemoNodes
-
-**Other:**
-
-    ./gradlew tools:explorer:runDemoNodes
-
-**These Corda nodes will be created on the following port on localhost.**
-
-   * Notary -> 20005            (Does not accept logins)
-   * UK Bank Plc -> 20011       (*Issuer node*)
-   * USA Bank Corp -> 20008     (*Issuer node*)
-   * Alice -> 20017
-   * Bob -> 20014
-
-Explorer login credentials to the Issuer nodes are defaulted to ``manager`` and ``test``.
-Explorer login credentials to the Participants nodes are defaulted to ``user1`` and ``test``.
-Please note you are not allowed to login to the notary.
+DemoBench will deploy all nodes with Corda's Finance CorDapp automatically, and allow you to launch an
+instance of Node Explorer for each.
 
 ## TODOs:
 - Shows more useful information in the dashboard.

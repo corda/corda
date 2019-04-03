@@ -5,7 +5,6 @@ import net.corda.core.internal.STRUCTURAL_STEP_PREFIX
 import net.corda.core.serialization.CordaSerializable
 import rx.Observable
 import rx.Subscription
-import rx.subjects.PublishSubject
 import rx.subjects.ReplaySubject
 import java.util.*
 
@@ -51,7 +50,9 @@ class ProgressTracker(vararg inputSteps: Step) {
         }
     }
 
-    /** The superclass of all step objects. */
+    /**
+     * The superclass of all step objects.
+     */
     @CordaSerializable
     open class Step(open val label: String) {
         open val changes: Observable<Change> get() = Observable.empty()
@@ -85,16 +86,22 @@ class ProgressTracker(vararg inputSteps: Step) {
 
     private val childProgressTrackers = mutableMapOf<Step, Child>()
 
-    /** The steps in this tracker, same as the steps passed to the constructor but with UNSTARTED and DONE inserted. */
+    /**
+     * The steps in this tracker, same as the steps passed to the constructor but with UNSTARTED and DONE inserted.
+     */
     val steps = arrayOf(UNSTARTED, STARTING, *inputSteps, DONE)
 
     private var _allStepsCache: List<Pair<Int, Step>> = _allSteps()
 
     // This field won't be serialized.
-    private val _changes by transient { PublishSubject.create<Change>() }
-    private val _stepsTreeChanges by transient { PublishSubject.create<List<Pair<Int, String>>>() }
+    private val _changes by transient { ReplaySubject.create<Change>() }
+    private val _stepsTreeChanges by transient { ReplaySubject.create<List<Pair<Int, String>>>() }
     private val _stepsTreeIndexChanges by transient { ReplaySubject.create<Int>() }
 
+    /**
+     * Reading returns the value of steps[stepIndex], writing moves the position of the current tracker. Once moved to
+     * the [DONE] state, this tracker is finished and the current step cannot be moved again.
+     */
     var currentStep: Step
         get() = steps[stepIndex]
         set(value) {
@@ -135,6 +142,9 @@ class ProgressTracker(vararg inputSteps: Step) {
         steps.forEach {
             configureChildTrackerForStep(it)
         }
+        // Immediately update the step tree observable to ensure the first update the client receives is the initial state of the progress
+        // tracker.
+        _stepsTreeChanges.onNext(allStepsLabels)
         this.currentStep = UNSTARTED
     }
 
@@ -145,13 +155,17 @@ class ProgressTracker(vararg inputSteps: Step) {
         }
     }
 
-    /** The zero-based index of the current step in the [steps] array (i.e. with UNSTARTED and DONE) */
+    /**
+     * The zero-based index of the current step in the [steps] array (i.e. with UNSTARTED and DONE)
+     */
     var stepIndex: Int = 0
         private set(value) {
             field = value
         }
 
-    /** The zero-bases index of the current step in a [allStepsLabels] list */
+    /**
+     * The zero-bases index of the current step in a [allStepsLabels] list
+     */
     var stepsTreeIndex: Int = -1
         private set(value) {
             if (value != field) {
@@ -161,25 +175,11 @@ class ProgressTracker(vararg inputSteps: Step) {
         }
 
     /**
-     * Reading returns the value of steps[stepIndex], writing moves the position of the current tracker. Once moved to
-     * the [DONE] state, this tracker is finished and the current step cannot be moved again.
+     * Returns the current step, descending into children to find the deepest step we are up to.
      */
-
-    /** Returns the current step, descending into children to find the deepest step we are up to. */
+    @Suppress("unused")
     val currentStepRecursive: Step
         get() = getChildProgressTracker(currentStep)?.currentStepRecursive ?: currentStep
-
-    /** Returns the current step, descending into children to find the deepest started step we are up to. */
-    private val currentStartedStepRecursive: Step
-        get() {
-            val step = getChildProgressTracker(currentStep)?.currentStartedStepRecursive ?: currentStep
-            return if (step == UNSTARTED) currentStep else step
-        }
-
-    private fun currentStepRecursiveWithoutUnstarted(): Step {
-        val stepRecursive = getChildProgressTracker(currentStep)?.currentStartedStepRecursive
-        return if (stepRecursive == null || stepRecursive == UNSTARTED) currentStep else stepRecursive
-    }
 
     fun getChildProgressTracker(step: Step): ProgressTracker? = childProgressTrackers[step]?.tracker
 
@@ -214,12 +214,17 @@ class ProgressTracker(vararg inputSteps: Step) {
         _stepsTreeChanges.onError(error)
     }
 
-    /** The parent of this tracker: set automatically by the parent when a tracker is added as a child */
+    /**
+     * The parent of this tracker: set automatically by the parent when a tracker is added as a child
+     */
     var parent: ProgressTracker? = null
         private set
 
-    /** Walks up the tree to find the top level tracker. If this is the top level tracker, returns 'this' */
-    @Suppress("unused") // TODO: Review by EOY2016 if this property is useful anywhere.
+    /**
+     * Walks up the tree to find the top level tracker. If this is the top level tracker, returns 'this'.
+     * Required for API compatibility.
+     */
+    @Suppress("unused")
     val topLevelTracker: ProgressTracker
         get() {
             var cursor: ProgressTracker = this
@@ -234,9 +239,21 @@ class ProgressTracker(vararg inputSteps: Step) {
         recalculateStepsTreeIndex()
     }
 
+    private fun getStepIndexAtLevel(): Int {
+        // This gets the index of the current step in the context of this progress tracker, so it will always be at the top level in
+        // the allStepsCache.
+        val index = _allStepsCache.indexOf(Pair(0, currentStep))
+        return if (index >= 0) index else 0
+    }
+
+    private fun getCurrentStepTreeIndex(): Int {
+        val indexAtLevel = getStepIndexAtLevel()
+        val additionalIndex = getChildProgressTracker(currentStep)?.getCurrentStepTreeIndex() ?: 0
+        return indexAtLevel + additionalIndex
+    }
+
     private fun recalculateStepsTreeIndex() {
-        val step = currentStepRecursiveWithoutUnstarted()
-        stepsTreeIndex = _allStepsCache.indexOfFirst { it.second == step }
+        stepsTreeIndex = getCurrentStepTreeIndex()
     }
 
     private fun _allSteps(level: Int = 0): List<Pair<Int, Step>> {
@@ -291,7 +308,9 @@ class ProgressTracker(vararg inputSteps: Step) {
      */
     val stepsTreeIndexChanges: Observable<Int> get() = _stepsTreeIndexChanges
 
-    /** Returns true if the progress tracker has ended, either by reaching the [DONE] step or prematurely with an error */
+    /**
+     * Returns true if the progress tracker has ended, either by reaching the [DONE] step or prematurely with an error
+     */
     val hasEnded: Boolean get() = _changes.hasCompleted() || _changes.hasThrowable()
 }
 // TODO: Expose the concept of errors.

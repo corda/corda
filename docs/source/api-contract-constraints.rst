@@ -24,7 +24,7 @@ to it.
 There are several types of constraint:
 
 1. Hash constraint: exactly one version of the app can be used with this state.
-2. Zone whitelist constraint: the compatibility zone operator lists the hashes of the versions that can be used with this contract class name.
+2. Compatibility zone whitelisted (or CZ whitelisted) constraint: the compatibility zone operator lists the hashes of the versions that can be used with this contract class name.
 3. Signature constraint: any version of the app signed by the given ``CompositeKey`` can be used.
 4. Always accept constraint: any app can be used at all. This is insecure but convenient for testing.
 
@@ -45,6 +45,8 @@ to issue the states was signed by Alice and Bob, every transaction must use an a
 **Constraint propagation.** Constraints are picked when a state is created for the first time in an issuance transaction. Once created,
 the constraint used by equivalent output states (i.e. output states that use the same contract class name) must match the
 input state, so it can't be changed and you can't combine states with incompatible constraints together in the same transaction.
+
+.. _implicit_vs_explicit_upgrades:
 
 **Implicit vs explicit.** Constraints are not the only way to manage upgrades to transactions. There are two ways of handling
 upgrades to a smart contract in Corda:
@@ -136,15 +138,15 @@ From there it's suspended waiting to be retried on node restart.
 This gives the node operator the opportunity to recover from those errors, which in the case of constraint violations means
 adding the right cordapp jar to the ``cordapps`` folder.
 
+.. _relax_hash_constraints_checking_ref:
+
 Hash constrained states in private networks
 -------------------------------------------
 
 Where private networks started life using CorDapps with hash constrained states, we have introduced a mechanism to relax the checking of
 these hash constrained states when upgrading to signed CorDapps using signature constraints.
 
-The following java system property may be set to relax the hash constraint checking behaviour:
-
-   -Dnet.corda.node.disableHashConstraints="true"
+The Java system property ``-Dnet.corda.node.disableHashConstraints="true"`` may be set to relax the hash constraint checking behaviour.
 
 This mode should only be used upon "out of band" agreement by all participants in a network.
 
@@ -191,56 +193,11 @@ During transaction building the ``AutomaticPlaceholderConstraint`` for output st
 will be selected based on a variety of factors so that the above holds true. If it can't find attachments in storage or there are no
 possible constraints, the ``TransactionBuilder`` will throw an exception.
 
+Constraints migration to Corda 4
+--------------------------------
 
-How to use the ``SignatureAttachmentConstraint`` if states were already created on the network with the ``WhitelistedByZoneAttachmentConstraint``
--------------------------------------------------------------------------------------------------------------------------------------------------
-
-1. As the original developer of the corDapp, the first step is to sign the latest version of the JAR that was released (see :doc:`cordapp-build-systems`).
-The key used for signing will be used to sign all subsequent releases, so it should be stored appropriately. The JAR can be signed by multiple keys owned
-by different parties and it will be expressed as a ``CompositeKey`` in the ``SignatureAttachmentConstraint`` (See :doc:`api-core-types`).
-Use `JAR signing and verification tool <https://docs.oracle.com/javase/tutorial/deployment/jar/verify.html>`_ to sign the existing JAR.
-The signing capability of :ref:`corda-gradle-plugins <cordapp_build_system_signing_cordapp_jar_ref>` cannot be used in this context as it signs the JAR while building it from source.
-
-2. Whitelist this newly signed JAR with the Zone operator. The Zone operator should check that the JAR is signed and not allow any
-more versions of it to be whitelisted in the future. From now on the developer(s) who signed the JAR are responsible for new versions.
-
-3. Any flows that build transactions using this Cordapp will have the responsibility of transitioning states to the ``SignatureAttachmentConstraint``.
-This is done explicitly in the code by setting the constraint of the output states to signers of the latest version of the whitelisted jar.
-In the near future we will make this transition automatic if we detect that the previous 2 steps were executed.
-
-4. As a node operator you need to add the new signed version of the contracts cordapp to the "cordapps" folder together with the latest version of the flows jar
-that will contain code like:
-
-.. container:: codeset
-
-    .. sourcecode:: kotlin
-
-        // This will read the signers for the deployed cordapp.
-        val attachment = this.serviceHub.cordappProvider.getContractAttachmentID(contractClass)
-        val signers = this.serviceHub.attachments.openAttachment(attachment!!)!!.signerKeys
-
-        // Create the key that will have to pass for all future versions.
-        val ownersKey = signers.first()
-
-        val txBuilder = TransactionBuilder(notary)
-                // Set the Signature constraint on the new state to migrate away from the WhitelistConstraint.
-                .addOutputState(outputState, constraint = SignatureAttachmentConstraint(ownersKey))
-                ...
-
-    .. sourcecode:: java
-
-        // This will read the signers for the deployed cordapp.
-        SecureHash attachment = this.getServiceHub().getCordappProvider().getContractAttachmentID(contractClass);
-        List<PublicKey> signers = this.getServiceHub().getAttachments().openAttachment(attachment).getSignerKeys();
-
-        // Create the key that will have to pass for all future versions.
-        PublicKey ownersKey = signers.get(0);
-
-        TransactionBuilder txBuilder = new TransactionBuilder(notary)
-                // Set the Signature constraint on the new state to migrate away from the WhitelistConstraint.
-                .addOutputState(outputState, myContract, new SignatureAttachmentConstraint(ownersKey))
-                ...
-
+Please read :doc:`cordapp-constraint-migration` to understand how to consume and evolve pre-Corda 4 issued hash or CZ whitelisted constrained states
+using a Corda 4 signed CorDapp (using signature constraints).
 
 Debugging
 ---------
@@ -276,8 +233,8 @@ The same example in Java:
         });
 
 
-Staring a node missing CorDapp(s)
-*********************************
+Starting a node missing CorDapp(s)
+**********************************
 
 When running the Corda node ensure all CordDapp JARs are placed in ``cordapps`` directory of each node.
 By default Gradle Cordform task ``deployNodes`` copies all JARs if CorDapps to deploy are specified.

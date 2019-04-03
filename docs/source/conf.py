@@ -7,10 +7,28 @@ import sys, os
 #
 # TEXT SUBSTITUTIONS
 
-rst_epilog = """
-.. |java_version| replace:: 8u171
-.. |kotlin_version| replace:: 1.2.71
-"""
+with open("../../constants.properties", "r") as f:
+    constants_properties_lines = f.readlines()
+constants_properties_dict = dict([l.strip().split('=') for l in constants_properties_lines if not l.startswith("#") and not l.strip() == ""])
+
+def cordaSourceReadReplace(app, docname, source):
+    result = source[0]
+    for key in app.config.corda_substitutions:
+        result = result.replace(key, app.config.corda_substitutions[key])
+    source[0] = result
+
+corda_substitutions = {
+    "|corda_version|" : constants_properties_dict["cordaVersion"],
+    "|java_version|" : "8u"+constants_properties_dict["java8MinUpdateVersion"],
+    "|kotlin_version|" : constants_properties_dict["kotlinVersion"],
+    "|gradle_plugins_version|" : constants_properties_dict["gradlePluginsVersion"],
+    "|quasar_version|" : constants_properties_dict["quasarVersion"],
+    "|platform_version|" : constants_properties_dict["platformVersion"]
+}
+
+def setup(app):
+   app.add_config_value('corda_substitutions', {}, True)
+   app.connect('source-read', cordaSourceReadReplace)
 
 ############################################################################
 
@@ -80,9 +98,9 @@ language = None
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns = []
+exclude_patterns = ['./design/README.md']
 if tags.has('pdfmode'):
-    exclude_patterns = ['./design']
+    exclude_patterns = ['./design', './design/README.md']
 
 # The reST default role (used for this markup: `text`) to use for all
 # documents.

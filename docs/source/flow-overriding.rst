@@ -75,6 +75,7 @@ with refactoring into `Base` and `Sub` classes. A simple example is shown below.
             }
         }
 
+        @InitiatedBy(Initiator.class)
         public class SubResponder extends BaseResponder {
             public SubResponder(FlowSession counterpartySession) {
                 super(counterpartySession);
@@ -91,7 +92,7 @@ Corda would detect that both ``BaseResponder`` and ``SubResponder`` are configur
 Corda will then calculate the hops to ``FlowLogic`` and select the implementation which is furthest distance, ie: the most subclassed implementation.
 In the above example, ``SubResponder`` would be selected as the default responder for ``Initiator``
 
-.. note:: The flows do not need to be within the same CordApp, or package, therefore to customise a shared app you obtained from a third party, you'd write your own CorDapp that subclasses the first."
+.. note:: The flows do not need to be within the same CordApp, or package, therefore to customise a shared app you obtained from a third party, you'd write your own CorDapp that subclasses the first.
 
 Overriding a flow via node configuration
 ----------------------------------------
@@ -99,6 +100,8 @@ Overriding a flow via node configuration
 Whilst the subclassing approach is likely to be useful for most applications, there is another mechanism to override this behaviour.
 This would be useful if for example, a specific CordApp user requires such a different responder that subclassing an existing flow
 would not be a good solution. In this case, it's possible to specify a hardcoded flow via the node configuration.
+
+.. note:: A new responder written to override an existing responder must still be annotated with ``@InitiatedBy`` referencing the base initiator.
 
 The configuration section is named ``flowOverrides`` and it accepts an array of ``overrides``
 

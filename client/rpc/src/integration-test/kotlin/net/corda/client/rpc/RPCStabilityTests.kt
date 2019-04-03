@@ -11,7 +11,8 @@ import net.corda.core.serialization.serialize
 import net.corda.core.utilities.*
 import net.corda.node.services.rpc.RPCServerConfiguration
 import net.corda.nodeapi.RPCApi
-import net.corda.nodeapi.eventually
+import net.corda.testing.common.internal.eventually
+import net.corda.testing.common.internal.succeeds
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.internal.testThreadFactory
@@ -249,7 +250,9 @@ class RPCStabilityTests {
             assertEquals("pong", client.ping())
             serverFollower.shutdown()
             startRpcServer<ReconnectOps>(ops = ops, customPort = serverPort).getOrThrow()
-            val response = eventually<RPCException, String>(10.seconds) { client.ping() }
+            val response = eventually {
+                succeeds { client.ping() }
+            }
             assertEquals("pong", response)
             clientFollower.shutdown() // Driver would do this after the new server, causing hang.
         }
@@ -316,13 +319,13 @@ class RPCStabilityTests {
                      })
 
             serverFollower.shutdown()
-            Thread.sleep(100)
 
-            assertTrue(terminateHandlerCalled)
-            assertTrue(errorHandlerCalled)
-            assertEquals("Connection failure detected.", exceptionMessage)
-            assertTrue(subscription.isUnsubscribed)
-
+            eventually {
+                assertTrue(terminateHandlerCalled)
+                assertTrue(errorHandlerCalled)
+                assertEquals("Connection failure detected.", exceptionMessage)
+                assertTrue(subscription.isUnsubscribed)
+            }
             clientFollower.shutdown() // Driver would do this after the new server, causing hang.
         }
     }

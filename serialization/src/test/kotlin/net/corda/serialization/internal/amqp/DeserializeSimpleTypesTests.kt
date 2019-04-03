@@ -550,7 +550,7 @@ class DeserializeSimpleTypesTests {
     @Test
     fun classHasNoPublicConstructor() {
         assertFailsWithMessage("Trying to build an object serializer for ${Garbo::class.java.name}, " +
-                "but it is not constructible from its public properties, and so requires a custom serialiser.") {
+                "but it is not constructable from its public properties, and so requires a custom serialiser.") {
             TestSerializationOutput(VERBOSE, sf1).serializeAndReturnSchema(Garbo.make(1))
         }
     }
@@ -558,7 +558,7 @@ class DeserializeSimpleTypesTests {
     @Test
     fun propertyClassHasNoPublicConstructor() {
         assertFailsWithMessage("Trying to build an object serializer for ${Greta::class.java.name}, " +
-                "but it is not constructible from its public properties, and so requires a custom serialiser.") {
+                "but it is not constructable from its public properties, and so requires a custom serialiser.") {
             TestSerializationOutput(VERBOSE, sf1).serializeAndReturnSchema(Greta(Garbo.make(1)))
         }
     }
@@ -581,6 +581,35 @@ class DeserializeSimpleTypesTests {
                         "is not on the whitelist or annotated with @CordaSerializable.") {
             TestSerializationOutput(VERBOSE, factory).serialize(Owner(PropertyWithoutCordaSerializable(1)))
         }
+    }
+
+    // See CORDA-2782
+    @Test
+    fun comparableNotWhitelistedOk() {
+        @CordaSerializable
+        class Ok(val value: String) : java.lang.Comparable<Ok> {
+            override fun compareTo(o: Ok?): Int = value.compareTo(o?.value ?: "")
+        }
+
+        class NotOk(val value: String) : java.lang.Comparable<NotOk> {
+            override fun compareTo(o: NotOk?): Int = value.compareTo(o?.value ?: "")
+        }
+
+        @CordaSerializable
+        class OkComparable(val value: java.lang.Comparable<Ok>)
+
+        @CordaSerializable
+        class NotOkComparable(val value: java.lang.Comparable<NotOk>)
+
+        val factory = testDefaultFactoryWithWhitelist()
+
+        TestSerializationOutput(VERBOSE, factory).serialize(OkComparable(Ok("value")))
+        assertFailsWithMessage(
+                "Class \"class ${NotOk::class.java.name}\" " +
+                        "is not on the whitelist or annotated with @CordaSerializable.") {
+            TestSerializationOutput(VERBOSE, factory).serialize(NotOkComparable(NotOk("value")))
+        }
+
     }
 
     private fun assertFailsWithMessage(expectedMessage: String, block: () -> Unit) {
