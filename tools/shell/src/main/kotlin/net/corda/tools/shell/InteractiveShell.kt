@@ -389,17 +389,31 @@ object InteractiveShell {
                               inputData: String,
                               clazz: Class<out FlowLogic<T>>,
                               om: ObjectMapper): FlowProgressHandle<T> {
-        // For each constructor, attempt to parse the input data as a method call. Use the first that succeeds,
-        // and keep track of the reasons we failed so we can print them out if no constructors are usable.
-        val parser = StringToMethodCallParser(clazz, om)
-        var allErrors = ArrayList<String>()
-        val errors = ArrayList<String>()
-        var constructorFound = false
 
+        val errors = ArrayList<String>()
+        val parser = StringToMethodCallParser(clazz, om)
+        val nameTypeList = getMatchingConstructorParamsAndTypes(parser, inputData, clazz, om)
+
+        try {
+            val args = parser.parseArguments(clazz.name, nameTypeList, inputData)
+            return invoke(clazz, args)
+        } catch (e: StringToMethodCallParser.UnparseableCallException.ReflectionDataMissing) {
+            val argTypes = nameTypeList.map { (name, type) -> type }
+            errors.add("$argTypes: <constructor missing parameter reflection data>")
+        } catch (e: StringToMethodCallParser.UnparseableCallException) {
+            val argTypes = nameTypeList.map { (name, type) -> type }
+            errors.add("$argTypes: ${e.message}")
+        }
+        throw NoApplicableConstructor(errors)
+    }
+
+    private fun <T> getMatchingConstructorParamsAndTypes(parser: StringToMethodCallParser<FlowLogic<T>>, inputData: String, clazz: Class<out FlowLogic<T>>,
+                                            om: ObjectMapper) : List<Pair<String, Type>> {
+        val errors = ArrayList<String>()
         val classPackage = clazz.packageName
-        for (ctor in clazz.constructors) {
-            errors.clear()
-            var paramNamesFromConstructor: List<String>? = null
+        var paramNamesFromConstructor: List<String>? = null
+
+        for (ctor in clazz.constructors) {                // Attempt construction with the given arguments.
 
             fun getPrototype(): List<String> {
                 val argTypes = ctor.genericParameterTypes.map { it: Type ->
@@ -411,33 +425,28 @@ object InteractiveShell {
             }
 
             try {
-                // Attempt construction with the given arguments.
                 paramNamesFromConstructor = parser.paramNamesFromConstructor(ctor)
                 val nameTypeList = paramNamesFromConstructor.zip(ctor.genericParameterTypes)
                 parser.validateIsMatchingCtor(clazz.name, nameTypeList, inputData)
-                constructorFound = true
-                val args = parser.parseArguments(clazz.name, nameTypeList, inputData)
-                return invoke(clazz, args)
-            } catch (e: StringToMethodCallParser.UnparseableCallException.MissingParameter) {
+                return nameTypeList
+
+            }
+            catch (e: StringToMethodCallParser.UnparseableCallException.MissingParameter) {
                 errors.add("${getPrototype()}: missing parameter ${e.paramName}")
-            } catch (e: StringToMethodCallParser.UnparseableCallException.TooManyParameters) {
+            }
+            catch (e: StringToMethodCallParser.UnparseableCallException.TooManyParameters) {
                 errors.add("${getPrototype()}: too many parameters")
-            } catch (e: StringToMethodCallParser.UnparseableCallException.ReflectionDataMissing) {
+            }
+            catch (e: StringToMethodCallParser.UnparseableCallException.ReflectionDataMissing) {
                 val argTypes = ctor.genericParameterTypes.map { it.typeName }
                 errors.add("$argTypes: <constructor missing parameter reflection data>")
-            } catch (e: StringToMethodCallParser.UnparseableCallException) {
+            }
+            catch (e: StringToMethodCallParser.UnparseableCallException) {
                 val argTypes = ctor.genericParameterTypes.map { it.typeName }
                 errors.add("$argTypes: ${e.message}")
             }
-            if (constructorFound) {
-                allErrors = errors
-                break
-            }
-            else {
-                allErrors.addAll(errors)
-            }
         }
-        throw NoApplicableConstructor(allErrors)
+        throw NoApplicableConstructor(errors)
     }
 
     // TODO Filtering on error/success when we will have some sort of flow auditing, for now it doesn't make much sense.
