@@ -1,9 +1,11 @@
 package net.corda.nodeapi.internal.crypto
 
 import net.corda.core.crypto.newSecureRandom
+import net.corda.core.utilities.Try
 import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.config.CertificateStore
 import net.corda.nodeapi.internal.protonwrapper.netty.init
+import org.assertj.core.api.Assertions
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -21,16 +23,29 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 @RunWith(Parameterized::class)
-class TlsDiffAlgorithmsTest(private val serverAlgo: String, private val clientAlgo: String) {
+class TlsDiffAlgorithmsTest(private val serverAlgo: String, private val clientAlgo: String,
+                            private val cipherSuites: Array<String>, private val shouldFail: Boolean) {
     companion object {
-        val CIPHER_SUITES = arrayOf(
+        private val CIPHER_SUITES_ALL = arrayOf(
                 "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
                 "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
         )
 
-        @Parameterized.Parameters(name = "ServerAlgo: {0}, ClientAlgo: {1}")
+        private val CIPHER_SUITES_JUST_RSA = arrayOf(
+                "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
+        )
+
+        private val CIPHER_SUITES_JUST_EC = arrayOf(
+                "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256"
+        )
+
+        @Parameterized.Parameters(name = "ServerAlgo: {0}, ClientAlgo: {1}, Should fail: {3}")
         @JvmStatic
-        fun data() = listOf(arrayOf("ec", "ec"), arrayOf("rsa", "rsa"), arrayOf("ec", "rsa"), arrayOf("rsa", "ec"))
+        fun data() = listOf(
+                arrayOf("ec", "ec", CIPHER_SUITES_ALL, false), arrayOf("rsa", "rsa", CIPHER_SUITES_ALL, false), arrayOf("ec", "rsa", CIPHER_SUITES_ALL, false), arrayOf("rsa", "ec", CIPHER_SUITES_ALL, false),
+                arrayOf("ec", "ec", CIPHER_SUITES_JUST_RSA, true), arrayOf("rsa", "rsa", CIPHER_SUITES_JUST_RSA, false), arrayOf("ec", "rsa", CIPHER_SUITES_JUST_RSA, true), arrayOf("rsa", "ec", CIPHER_SUITES_JUST_RSA, false),
+                arrayOf("ec", "ec", CIPHER_SUITES_JUST_EC, false), arrayOf("rsa", "rsa", CIPHER_SUITES_JUST_EC, true), arrayOf("ec", "rsa", CIPHER_SUITES_JUST_EC, false), arrayOf("rsa", "ec", CIPHER_SUITES_JUST_EC, true)
+        )
 
         private val logger = contextLogger()
     }
@@ -44,7 +59,7 @@ class TlsDiffAlgorithmsTest(private val serverAlgo: String, private val clientAl
 
         //System.setProperty("javax.net.debug", "all")
 
-        logger.info("Testing: ServerAlgo: $serverAlgo, ClientAlgo: $clientAlgo")
+        logger.info("Testing: ServerAlgo: $serverAlgo, ClientAlgo: $clientAlgo, Suites: ${cipherSuites.toList()}, Should fail: $shouldFail")
 
         val trustStore = CertificateStore.fromResource("net/corda/nodeapi/internal/crypto/keystores/trust.jks", "trustpass", "trustpass")
         val rootCa = trustStore.value.getCertificate("root")
@@ -60,8 +75,7 @@ class TlsDiffAlgorithmsTest(private val serverAlgo: String, private val clientAl
 
         val serverSocket = (serverSocketFactory.createServerSocket(0) as SSLServerSocket).apply {
             // use 0 to get first free socket
-            val serverParams = SSLParameters(CIPHER_SUITES,
-                    arrayOf("TLSv1.2"))
+            val serverParams = SSLParameters(cipherSuites, arrayOf("TLSv1.2"))
             serverParams.wantClientAuth = true
             serverParams.needClientAuth = true
             serverParams.endpointIdentificationAlgorithm = null // Reconfirm default no server name indication, use our own validator.
@@ -70,8 +84,7 @@ class TlsDiffAlgorithmsTest(private val serverAlgo: String, private val clientAl
         }
 
         val clientSocket = (clientSocketFactory.createSocket() as SSLSocket).apply {
-            val clientParams = SSLParameters(CIPHER_SUITES,
-                    arrayOf("TLSv1.2"))
+            val clientParams = SSLParameters(cipherSuites, arrayOf("TLSv1.2"))
             clientParams.endpointIdentificationAlgorithm = null // Reconfirm default no server name indication, use our own validator.
             sslParameters = clientParams
             useClientMode = true
@@ -107,27 +120,43 @@ class TlsDiffAlgorithmsTest(private val serverAlgo: String, private val clientAl
         assertTrue(clientSocket.isConnected)
 
         // Double check hostname manually
-        val peerChain = clientSocket.session.peerCertificates.x509
-        val peerX500Principal = peerChain[0].subjectX500Principal
-        assertEquals(serverCa.certificate.subjectX500Principal, peerX500Principal)
-        X509Utilities.validateCertificateChain(rootCa, peerChain)
-        with(DataOutputStream(clientSocket.outputStream)) {
-            writeUTF(testPhrase)
-        }
-        var timeout = 0
-        synchronized(lock) {
-            while (!done) {
-                timeout++
-                if (timeout > 10) throw IOException("Timed out waiting for server to complete")
-                lock.wait(1000)
+        val peerChainTry = Try.on { clientSocket.session.peerCertificates.x509 }
+        assertEquals(!shouldFail, peerChainTry.isSuccess)
+        when(peerChainTry) {
+            is Try.Success -> {
+                val peerChain = peerChainTry.getOrThrow()
+                val peerX500Principal = peerChain[0].subjectX500Principal
+                assertEquals(serverCa.certificate.subjectX500Principal, peerX500Principal)
+                X509Utilities.validateCertificateChain(rootCa, peerChain)
+                with(DataOutputStream(clientSocket.outputStream)) {
+                    writeUTF(testPhrase)
+                }
+                var timeout = 0
+                synchronized(lock) {
+                    while (!done) {
+                        timeout++
+                        if (timeout > 10) throw IOException("Timed out waiting for server to complete")
+                        lock.wait(1000)
+                    }
+                }
+
+                clientSocket.close()
+                serverThread.join(1000)
+                assertFalse { serverError }
+                serverSocket.close()
+                assertTrue(done)
+            }
+            is Try.Failure -> {
+                Assertions.assertThatThrownBy {
+                    peerChainTry.getOrThrow()
+                }.isInstanceOf(SSLPeerUnverifiedException::class.java)
+
+                // Tidy-up in case of failure
+                clientSocket.close()
+                serverSocket.close()
+                serverThread.interrupt()
             }
         }
-
-        clientSocket.close()
-        serverThread.join(1000)
-        assertFalse { serverError }
-        serverSocket.close()
-        assertTrue(done)
     }
 
     private fun createSslContext(keyStore: CertificateStore, trustStore: CertificateStore): SSLContext {
