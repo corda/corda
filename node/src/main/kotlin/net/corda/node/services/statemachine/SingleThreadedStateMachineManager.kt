@@ -309,7 +309,7 @@ class SingleThreadedStateMachineManager(
     private fun checkQuasarJavaAgentPresence() {
         check(SuspendableHelper.isJavaAgentActive()) {
             """Missing the '-javaagent' JVM argument. Make sure you run the tests with the Quasar java agent attached to your JVM.
-               #See https://docs.corda.net/troubleshooting.html - 'Fiber classes not instrumented' for more details.""".trimMargin("#")
+               #See https://docs.corda.net/head/tutorial-cordapp.html?highlight=quasar#running-tests-in-intellij - 'Fiber classes not instrumented' for more details.""".trimMargin("#")
         }
     }
 
