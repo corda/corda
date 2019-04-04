@@ -227,6 +227,11 @@ class CashTests {
         }
     }
 
+    @BelongsToContract(Cash::class)
+    object DummyState: ContractState {
+        override val participants: List<AbstractParty> = emptyList()
+    }
+
     @Test
     fun `issue by move`() {
         // Check we can't "move" money into existence.
@@ -331,8 +336,8 @@ class CashTests {
             output(Cash.PROGRAM_ID, inState.copy(amount = inState.amount * 2))
             command(MEGA_CORP_PUBKEY, Cash.Commands.Issue())
             tweak {
-                command(MINI_CORP_PUBKEY, Cash.Commands.Issue())
-                this.verifies()
+                command(MEGA_CORP_PUBKEY, Cash.Commands.Issue())
+                this `fails with` "there is only a single issue command"
             }
             this.verifies()
         }
@@ -952,5 +957,7 @@ class CashTests {
         assertEquals(megaCorp.party, out(5).amount.token.issuer.party)
         assertEquals(megaCorp.party, out(6).amount.token.issuer.party)
         assertEquals(megaCorp.party, out(7).amount.token.issuer.party)
+
+        assertEquals(2, wtx.commands.size)
     }
 }
