@@ -392,36 +392,37 @@ object InteractiveShell {
 
         val errors = ArrayList<String>()
         val parser = StringToMethodCallParser(clazz, om)
-        val nameTypeList = getMatchingConstructorParamsAndTypes(parser, inputData, clazz, om)
+        val nameTypeList = getMatchingConstructorParamsAndTypes(parser, inputData, clazz)
 
         try {
             val args = parser.parseArguments(clazz.name, nameTypeList, inputData)
             return invoke(clazz, args)
         } catch (e: StringToMethodCallParser.UnparseableCallException.ReflectionDataMissing) {
-            val argTypes = nameTypeList.map { (name, type) -> type }
+            val argTypes = nameTypeList.map { (_, type) -> type }
             errors.add("$argTypes: <constructor missing parameter reflection data>")
         } catch (e: StringToMethodCallParser.UnparseableCallException) {
-            val argTypes = nameTypeList.map { (name, type) -> type }
+            val argTypes = nameTypeList.map { (_, type) -> type }
             errors.add("$argTypes: ${e.message}")
         }
         throw NoApplicableConstructor(errors)
     }
 
-    private fun <T> getMatchingConstructorParamsAndTypes(parser: StringToMethodCallParser<FlowLogic<T>>, inputData: String, clazz: Class<out FlowLogic<T>>,
-                                            om: ObjectMapper) : List<Pair<String, Type>> {
+    private fun <T> getMatchingConstructorParamsAndTypes(parser: StringToMethodCallParser<FlowLogic<T>>,
+                                                         inputData: String,
+                                                         clazz: Class<out FlowLogic<T>>) : List<Pair<String, Type>> {
         val errors = ArrayList<String>()
         val classPackage = clazz.packageName
-        var paramNamesFromConstructor: List<String>? = null
+        lateinit var paramNamesFromConstructor: List<String>
 
         for (ctor in clazz.constructors) {                // Attempt construction with the given arguments.
 
             fun getPrototype(): List<String> {
-                val argTypes = ctor.genericParameterTypes.map { it: Type ->
+                val argTypes = ctor.genericParameterTypes.map {
                     // If the type name is in the net.corda.core or java namespaces, chop off the package name
                     // because these hierarchies don't have (m)any ambiguous names and the extra detail is just noise.
                     maybeAbbreviateGenericType(it, classPackage)
                 }
-                return paramNamesFromConstructor!!.zip(argTypes).map { (name, type) -> "$name: $type" }
+                return paramNamesFromConstructor.zip(argTypes).map { (name, type) -> "$name: $type" }
             }
 
             try {
