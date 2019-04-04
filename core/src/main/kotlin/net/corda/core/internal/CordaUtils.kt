@@ -26,7 +26,7 @@ import java.util.jar.JarInputStream
 
 // *Internal* Corda-specific utilities.
 
-const val PLATFORM_VERSION = 5
+const val PLATFORM_VERSION = 4
 
 fun ServicesForResolution.ensureMinimumPlatformVersion(requiredMinPlatformVersion: Int, feature: String) {
     checkMinimumPlatformVersion(networkParameters.minimumPlatformVersion, requiredMinPlatformVersion, feature)
