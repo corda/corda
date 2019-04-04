@@ -253,7 +253,7 @@ Each Spring Boot server needs to be started in its own terminal/command prompt, 
 Look for the Started ServerKt in X seconds message, don't rely on the % indicator.
 
 .. warning:: On Unix/Mac OSX, do not click/change focus until all seven additional terminal windows have opened, or some
-   nodes may fail to start. You can run ``workflows-kotlin/build/nodes/runnodes --headless`` to prevent each server from opening in a new terminal window. To interact with the nodes will need to use ssh, see :doc: `The shell via SSH <shell>`
+   nodes may fail to start. You can run ``workflows-kotlin/build/nodes/runnodes --headless`` to prevent each server from opening in a new terminal window. To interact with the nodes will need to use ssh, see :doc:`shell`.
 
 For each node, the ``runnodes`` script creates a node tab/window:
 
