@@ -55,6 +55,11 @@ class ProgressTracker(vararg inputSteps: Step) {
      */
     @CordaSerializable
     open class Step(open val label: String) {
+        private fun definitionLocation():String = Exception().stackTrace.first { it.className != ProgressTracker.Step::class.java.name }.className
+
+        // Required when Steps with the same name are defined in multiple places.
+        private val discriminator:String = definitionLocation()
+
         open val changes: Observable<Change> get() = Observable.empty()
         open fun childProgressTracker(): ProgressTracker? = null
         /**
@@ -63,6 +68,17 @@ class ProgressTracker(vararg inputSteps: Step) {
          * Even if empty the basic details (i.e. label) of the step will be recorded for audit purposes.
          */
         open val extraAuditData: Map<String, String> get() = emptyMap()
+
+        override fun equals(other: Any?) = when (other) {
+            is Step -> this.label == other.label && this.discriminator == other.discriminator
+            else -> false
+        }
+
+        override fun hashCode(): Int {
+            var result = label.hashCode()
+            result = 31 * result + discriminator.hashCode()
+            return result
+        }
     }
 
     // Sentinel objects. Overrides equals() to survive process restarts and serialization.
