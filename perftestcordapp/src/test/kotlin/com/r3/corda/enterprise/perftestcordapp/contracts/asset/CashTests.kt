@@ -227,22 +227,6 @@ class CashTests {
         }
     }
 
-    @Test
-    fun twoMoves() {
-        transaction {
-            attachment(Cash.PROGRAM_ID)
-            input(Cash.PROGRAM_ID, inState)
-            input(Cash.PROGRAM_ID, inState.copy(owner = bob.party))
-            output(Cash.PROGRAM_ID, outState)
-            command(alice.publicKey, Cash.Commands.Move())
-            tweak {
-                output(Cash.PROGRAM_ID, outState)
-                command(bob.publicKey, Cash.Commands.Move())
-                this.verifies()
-            }
-        }
-    }
-
     @BelongsToContract(Cash::class)
     object DummyState: ContractState {
         override val participants: List<AbstractParty> = emptyList()
