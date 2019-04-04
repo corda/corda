@@ -10,8 +10,6 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
 import net.corda.core.internal.AbstractAttachment
 import net.corda.core.internal.PLATFORM_VERSION
-import net.corda.core.internal.cordapp.CordappImpl.Companion.DEFAULT_CORDAPP_VERSION
-import net.corda.core.internal.cordapp.CordappResolver
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.ZoneVersionTooLowException
 import net.corda.core.node.services.AttachmentStorage
@@ -113,27 +111,6 @@ class TransactionBuilderTest {
         doReturn(referenceState).whenever(services).loadState(referenceStateRef)
         val wtx = builder.toWireTransaction(services)
         assertThat(wtx.references).containsOnly(referenceStateRef)
-    }
-
-    @Test
-    fun `multiple commands with same data are joined without duplicates in terms of signers`() {
-        // This behaviour is only activated for platform version 4 onwards.
-        CordappResolver.withCordapp(targetPlatformVersion = 4) {
-            val aliceParty = TestIdentity(ALICE_NAME).party
-            val bobParty = TestIdentity(BOB_NAME).party
-            val tx = TransactionBuilder(notary)
-            tx.addCommand(DummyCommandData, notary.owningKey, aliceParty.owningKey)
-            tx.addCommand(DummyCommandData, aliceParty.owningKey, bobParty.owningKey)
-
-            val commands = tx.commands()
-
-            assertThat(commands).hasSize(1)
-            assertThat(commands.single()).satisfies { cmd ->
-                assertThat(cmd.value).isEqualTo(DummyCommandData)
-                assertThat(cmd.signers).hasSize(3)
-                assertThat(cmd.signers).contains(notary.owningKey, bobParty.owningKey, aliceParty.owningKey)
-            }
-        }
     }
 
     @Test
