@@ -84,11 +84,6 @@ internal class ExceptionSerialisingRpcOpsProxy(private val delegate: CordaRPCOps
                 log(error)
                 CordaRuntimeException(error.message, error)
             }
-
-            if (result is CordaThrowable) {
-                result.stackTrace = arrayOf<StackTraceElement>()
-                result.setCause(null)
-            }
             return result
         }
 
