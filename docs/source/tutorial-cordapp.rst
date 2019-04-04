@@ -242,8 +242,7 @@ Running the example CorDapp
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Start the nodes by running the following command from the root of the ``cordapp-example`` folder:
 
-* Unix/Mac OSX: ``workflows-kotlin/build/nodes/runnodes``
-** You can run ``workflows-kotlin/build/nodes/runnodes --headless`` to prevent each server from opening in a new terminal window. The default mac terminal may fail to start all nodes when they're opened individually. To interact with the nodes will need to use ssh, see :doc: `The shell via SSH <shell>` 
+* Unix/Mac OSX: ``workflows-kotlin/build/nodes/runnodes`` 
 * Windows: ``call workflows-kotlin\build\nodes\runnodes.bat``
 
 Each Spring Boot server needs to be started in its own terminal/command prompt, replace X with A, B and C:
@@ -254,7 +253,7 @@ Each Spring Boot server needs to be started in its own terminal/command prompt, 
 Look for the Started ServerKt in X seconds message, don't rely on the % indicator.
 
 .. warning:: On Unix/Mac OSX, do not click/change focus until all seven additional terminal windows have opened, or some
-   nodes may fail to start.
+   nodes may fail to start. You can run ``workflows-kotlin/build/nodes/runnodes --headless`` to prevent each server from opening in a new terminal window. To interact with the nodes will need to use ssh, see :doc: `The shell via SSH <shell>`
 
 For each node, the ``runnodes`` script creates a node tab/window:
 
