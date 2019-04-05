@@ -391,7 +391,7 @@ open class NodeStartup : NodeStartupLogging {
                     "Where do cryptographers go for\nentertainment? The security theatre.",
                     "How did the Java programmer get rich?\nThey inherited a factory.",
                     "Why did the developer quit his job?\nHe didn't get ar-rays.",
-                    "Quantum computer jokes are funny and not funny at the same time"
+                    "Quantum computer jokes are both\n funny and not funny at the same time"
             )
 
             if (Emoji.hasEmojiTerminal)
@@ -466,8 +466,10 @@ fun CliWrapperBase.initLogging(baseDirectory: Path): Boolean {
     //Test for access to the logging path and shutdown if we are unable to reach it.
     val logPath = baseDirectory / NodeCliCommand.LOGS_DIRECTORY_NAME
     try {
-        if(!logPath.exists()){
-            printError("base directory $baseDirectory does not exist. Node will now shutdown")
+        //Ensure that the base directory actually exists before creating the log file
+        //so that we can warn the developer/operator. The subsequent create directory call will yield any issues related to permissions.
+        if(!logPath.exists()) {
+            printError("Base directory $baseDirectory does not exist. Node will now shutdown")
             return false
         }
         logPath.createDirectories()
