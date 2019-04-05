@@ -3,6 +3,7 @@ package net.corda.core.utilities
 import net.corda.core.serialization.internal.checkpointDeserialize
 import net.corda.core.serialization.internal.checkpointSerialize
 import net.corda.core.utilities.ProgressTrackerTest.NonSingletonSteps.first
+import net.corda.core.utilities.ProgressTrackerTest.NonSingletonSteps.first2
 import net.corda.testing.core.internal.CheckpointSerializationEnvironmentRule
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Before
@@ -335,7 +336,8 @@ class ProgressTrackerTest {
     object NonSingletonSteps {
         val first = ProgressTracker.Step("first")
         val second = ProgressTracker.Step("second")
-        fun tracker() = ProgressTracker(first, second)
+        val first2 = ProgressTracker.Step("first")
+        fun tracker() = ProgressTracker(first, second, first2)
     }
 
     @Test
@@ -360,5 +362,10 @@ class ProgressTrackerTest {
     fun `Steps with the same label defined in different places are not equal`() {
         val one = ProgressTracker.Step("one")
         assertNotEquals(one, SimpleSteps.ONE)
+    }
+
+    @Test
+    fun `Steps with the same label defined in the same place are also not equal`() {
+        assertNotEquals(first, first2)
     }
 }

@@ -2,6 +2,7 @@ package net.corda.core.utilities
 
 import net.corda.core.DeleteForDJVM
 import net.corda.core.internal.STRUCTURAL_STEP_PREFIX
+import net.corda.core.internal.warnOnce
 import net.corda.core.serialization.CordaSerializable
 import rx.Observable
 import rx.Subscription
@@ -34,6 +35,10 @@ import java.util.*
 @DeleteForDJVM
 class ProgressTracker(vararg inputSteps: Step) {
 
+    private companion object {
+        private val log = contextLogger()
+    }
+
     @CordaSerializable
     @DeleteForDJVM
     sealed class Change(val progressTracker: ProgressTracker) {
@@ -55,10 +60,10 @@ class ProgressTracker(vararg inputSteps: Step) {
      */
     @CordaSerializable
     open class Step(open val label: String) {
-        private fun definitionLocation():String = Exception().stackTrace.first { it.className != ProgressTracker.Step::class.java.name }.className
+        private fun definitionLocation(): String = Exception().stackTrace.first { it.className != ProgressTracker.Step::class.java.name }.let { "${it.className}:${it.lineNumber}" }
 
         // Required when Steps with the same name are defined in multiple places.
-        private val discriminator:String = definitionLocation()
+        private val discriminator: String = definitionLocation()
 
         open val changes: Observable<Change> get() = Observable.empty()
         open fun childProgressTracker(): ProgressTracker? = null
@@ -105,7 +110,12 @@ class ProgressTracker(vararg inputSteps: Step) {
     /**
      * The steps in this tracker, same as the steps passed to the constructor but with UNSTARTED and DONE inserted.
      */
-    val steps = arrayOf(UNSTARTED, STARTING, *inputSteps, DONE)
+    val steps = arrayOf(UNSTARTED, STARTING, *inputSteps, DONE).also { stepsArray ->
+        val labels = stepsArray.map { it.label }
+        if (labels.toSet().size < labels.size) {
+            log.warnOnce("Found ProgressTracker Step(s) with the same label: ${labels.groupBy { it }.filter { it.value.size > 1 }.map { it.key }}")
+        }
+    }
 
     private var _allStepsCache: List<Pair<Int, Step>> = _allSteps()
 
@@ -152,7 +162,6 @@ class ProgressTracker(vararg inputSteps: Step) {
                 _stepsTreeChanges.onCompleted()
             }
         }
-
 
     init {
         steps.forEach {
