@@ -1,18 +1,11 @@
 package net.corda.nodeinfo
 
-import com.typesafe.config.Config
-import com.typesafe.config.ConfigFactory
-import com.typesafe.config.ConfigParseOptions
 import net.corda.cliutils.CordaCliWrapper
 import net.corda.cliutils.start
 import net.corda.core.crypto.*
-import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.*
-import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
-import net.corda.core.node.NotaryInfo
-import net.corda.core.node.services.AttachmentId
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
@@ -20,34 +13,17 @@ import net.corda.core.serialization.internal.SerializationEnvironment
 import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.nodeapi.internal.*
-import net.corda.nodeapi.internal.config.CertificateStore
-import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
-import net.corda.nodeapi.internal.crypto.KEYSTORE_TYPE
+import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.crypto.X509KeyStore
-import net.corda.nodeapi.internal.network.NetworkBootstrapper
-import net.corda.nodeapi.internal.network.NetworkBootstrapperWithOverridableParameters
 import net.corda.serialization.internal.*
 import net.corda.serialization.internal.amqp.*
-import net.corda.serialization.internal.amqp.custom.InstantSerializer
 import picocli.CommandLine.*
-import java.io.Console
 import java.io.File
-import java.io.FileInputStream
-import java.net.URL
 import java.nio.file.Path
-import java.nio.file.Paths
-import java.nio.file.StandardCopyOption
-import java.security.KeyStore
 import java.security.cert.CertificateFactory
-import java.time.Instant
 
 fun main(args: Array<String>) {
     NodeInfoSigner().start(args)
-}
-
-fun nodeInfoIdentity(nodeInfo: NodeInfo) : Party {
-    return nodeInfo.legalIdentities.last()
 }
 
 class NetworkHostAndPortConverter : ITypeConverter<NetworkHostAndPort> {
@@ -140,7 +116,6 @@ class NodeInfoSigner : CordaCliWrapper("nodeinfo-signer", "Display and generate 
             val nodeInfo = nodeInfoFromFile(displayPath!!.toFile())
 
             println("identities:      " + nodeInfo.legalIdentities[0].name)
-
             println("address:         " + nodeInfo.addresses[0])
             println("platformVersion: " + nodeInfo.platformVersion)
             println("serial           " + nodeInfo.serial)
