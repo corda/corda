@@ -121,12 +121,7 @@ abstract class FlowLogic<out T> {
      * that this function does not communicate in itself, the counter-flow will be kicked off by the first send/receive.
      */
     @Suspendable
-    fun initiateFlow(party: Party): FlowSession {
-        if (party == ourIdentity) {
-            throw IllegalArgumentException("Attempted to initiate a flow session with the local node.")
-        }
-        return stateMachine.initiateFlow(party)
-    }
+    fun initiateFlow(party: Party): FlowSession = stateMachine.initiateFlow(party)
 
     /**
      * Specifies the identity, with certificate, to use for this flow. This will be one of the multiple identities that

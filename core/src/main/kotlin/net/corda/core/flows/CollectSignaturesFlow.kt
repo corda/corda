@@ -91,6 +91,10 @@ class CollectSignaturesFlow @JvmOverloads constructor(val partiallySignedTx: Sig
             "The Initiator of CollectSignaturesFlow must have signed the transaction."
         }
 
+        require(sessionsToCollectFrom.none { serviceHub.myInfo.isLegalIdentity(it.counterparty) }) {
+            "Do not call CollectSignaturesFlow with sessions for the local node - the initiator should have already signed the transaction"
+        }
+
         // The signatures must be valid and the transaction must be valid.
         partiallySignedTx.verifySignaturesExcept(notSigned)
         partiallySignedTx.tx.toLedgerTransaction(serviceHub).verify()
