@@ -1,13 +1,25 @@
 package net.corda.core.utilities
 
+import net.corda.core.serialization.internal.checkpointDeserialize
+import net.corda.core.serialization.internal.checkpointSerialize
+import net.corda.core.utilities.ProgressTrackerTest.NonSingletonSteps.first
+import net.corda.core.utilities.ProgressTrackerTest.NonSingletonSteps.first2
+import net.corda.testing.core.internal.CheckpointSerializationEnvironmentRule
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertFails
+import kotlin.test.assertNotEquals
 
 class ProgressTrackerTest {
+
+    @Rule
+    @JvmField
+    val testCheckpointSerialization = CheckpointSerializationEnvironmentRule()
+
     object SimpleSteps {
         object ONE : ProgressTracker.Step("one")
         object TWO : ProgressTracker.Step("two")
@@ -92,7 +104,7 @@ class ProgressTrackerTest {
         assertEquals(pt2.currentStep, ProgressTracker.UNSTARTED)
         assertEquals(ProgressTracker.STARTING, pt2.nextStep())
         assertEquals(ChildSteps.AYY, pt2.nextStep())
-        assertEquals((stepNotification.last  as ProgressTracker.Change.Position).newStep, ChildSteps.AYY)
+        assertEquals((stepNotification.last as ProgressTracker.Change.Position).newStep, ChildSteps.AYY)
         assertEquals(ChildSteps.BEE, pt2.nextStep())
     }
 
@@ -112,7 +124,7 @@ class ProgressTrackerTest {
             stepsTreeNotification += it
         }
 
-        fun assertCurrentStepsTree(index:Int, step: ProgressTracker.Step) {
+        fun assertCurrentStepsTree(index: Int, step: ProgressTracker.Step) {
             assertEquals(index, pt.stepsTreeIndex)
             assertEquals(step, allSteps[pt.stepsTreeIndex].second)
         }
@@ -169,7 +181,7 @@ class ProgressTrackerTest {
         assertThat(stepsIndexNotifications).containsExactlyElementsOf(listOf(0, 1, 4, 7))
         assertThat(stepsTreeNotification).hasSize(3) // The initial tree state, plus one per update
     }
-    
+
     @Test
     fun `structure changes are pushed down when progress trackers are added`() {
         pt.setChildProgressTracker(SimpleSteps.TWO, pt2)
@@ -186,7 +198,7 @@ class ProgressTrackerTest {
             stepsTreeNotification += it
         }
 
-        fun assertCurrentStepsTree(index:Int, step: ProgressTracker.Step) {
+        fun assertCurrentStepsTree(index: Int, step: ProgressTracker.Step) {
             assertEquals(index, pt.stepsTreeIndex)
             assertEquals(step.label, stepsTreeNotification.last()[pt.stepsTreeIndex].second)
         }
@@ -223,7 +235,7 @@ class ProgressTrackerTest {
             stepsTreeNotification += it
         }
 
-        fun assertCurrentStepsTree(index:Int, step: ProgressTracker.Step) {
+        fun assertCurrentStepsTree(index: Int, step: ProgressTracker.Step) {
             assertEquals(index, pt.stepsTreeIndex)
             assertEquals(step.label, stepsTreeNotification.last()[pt.stepsTreeIndex].second)
         }
@@ -273,7 +285,7 @@ class ProgressTrackerTest {
         pt.nextStep()
         pt.nextStep()
         pt.nextStep()
-        pt.changes.subscribe { steps.add(it.toString())}
+        pt.changes.subscribe { steps.add(it.toString()) }
         pt.nextStep()
         pt.nextStep()
         pt.nextStep()
@@ -290,7 +302,7 @@ class ProgressTrackerTest {
 
         pt.setChildProgressTracker(SimpleSteps.TWO, pt3)
         val thirdStepLabels = pt.allStepsLabels
-        pt.stepsTreeChanges.subscribe { stepTreeNotifications.add(it)}
+        pt.stepsTreeChanges.subscribe { stepTreeNotifications.add(it) }
 
         // Should have one notification for original tree, then one for each time it changed.
         assertEquals(3, stepTreeNotifications.size)
@@ -319,5 +331,41 @@ class ProgressTrackerTest {
     @Test
     fun `cannot assign step not belonging to this progress tracker`() {
         assertFails { pt.currentStep = BabySteps.UNOS }
+    }
+
+    object NonSingletonSteps {
+        val first = ProgressTracker.Step("first")
+        val second = ProgressTracker.Step("second")
+        val first2 = ProgressTracker.Step("first")
+        fun tracker() = ProgressTracker(first, second, first2)
+    }
+
+    @Test
+    fun `Serializing and deserializing a tracker maintains equality`() {
+        val step = NonSingletonSteps.first
+        val recreatedStep = step
+                .checkpointSerialize(testCheckpointSerialization.checkpointSerializationContext)
+                .checkpointDeserialize(testCheckpointSerialization.checkpointSerializationContext)
+        assertEquals(step, recreatedStep)
+    }
+
+    @Test
+    fun `can assign a recreated equal step`() {
+        val tracker = NonSingletonSteps.tracker()
+        val recreatedStep = first
+                .checkpointSerialize(testCheckpointSerialization.checkpointSerializationContext)
+                .checkpointDeserialize(testCheckpointSerialization.checkpointSerializationContext)
+        tracker.currentStep = recreatedStep
+    }
+
+    @Test
+    fun `Steps with the same label defined in different places are not equal`() {
+        val one = ProgressTracker.Step("one")
+        assertNotEquals(one, SimpleSteps.ONE)
+    }
+
+    @Test
+    fun `Steps with the same label defined in the same place are also not equal`() {
+        assertNotEquals(first, first2)
     }
 }
