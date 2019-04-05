@@ -3,7 +3,6 @@ package net.corda.nodeinfo
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigParseOptions
-//import com.typesafe.config.ConfigParseOptions
 import net.corda.cliutils.CordaCliWrapper
 import net.corda.cliutils.start
 import net.corda.core.crypto.*
@@ -86,14 +85,14 @@ class NodeInfoSigner : CordaCliWrapper("nodeinfo-signer", "Display and generate 
     @Option(names = ["--keyPass"], description = ["Password of signing key"])
     private var keyPass: String? = null
 
-    private fun getInput(prompt: String, isPassword: Boolean = false): String {
+    private fun getInput(prompt: String): String {
         print(prompt)
+        System.out.flush()
         val console = System.console()
-        return if (isPassword) {
-            String(console.readPassword())
-        } else {
-            readLine() ?: ""
-        }
+        if(console != null)
+            return console.readPassword().toString()
+        else
+            return readLine()!!
     }
 
     private object AMQPInspectorSerializationScheme : AbstractAMQPSerializationScheme(emptyList()) {
@@ -116,32 +115,29 @@ class NodeInfoSigner : CordaCliWrapper("nodeinfo-signer", "Display and generate 
     class NodeInfoAndSignedNodeInfo(val nodeInfo : NodeInfo,  val signedInfoNode: SignedNodeInfo)
 
     fun generateNodeInfo() : NodeInfoAndSignedNodeInfo {
-        var keyStore   = X509KeyStore.fromFile(keyStorePath!!, keyStorePass!!)
-        var signingKey = keyStore.getCertificateAndKeyPair(keyAlias!!, keyPass!!)
-        var x509Chain  = keyStore.getCertificateChain(keyAlias!!)
+        val keyStore   = X509KeyStore.fromFile(keyStorePath!!, keyStorePass!!)
+        val signingKey = keyStore.getCertificateAndKeyPair(keyAlias!!, keyPass!!)
+        val x509Chain  = keyStore.getCertificateChain(keyAlias!!)
 
-        var cf = CertificateFactory.getInstance("X.509")
-        var certPath = cf.generateCertPath(x509Chain)
+        val cf = CertificateFactory.getInstance("X.509")
+        val certPath = cf.generateCertPath(x509Chain)
+        val identityList = listOf(PartyAndCertificate(certPath))
 
-        var identityList = listOf<PartyAndCertificate>(PartyAndCertificate(certPath))
+        val nodeInfo = NodeInfo(addressList, identityList, platformVersion, serial)
+        val serializedNodeInfo = nodeInfo.serialize()
 
-
-        var nodeInfo = NodeInfo(addressList, identityList, platformVersion, serial)
-        var serializedNodeInfo = nodeInfo.serialize()
-
-        var sig = signingKey.keyPair.sign(serializedNodeInfo.bytes).withoutKey()  // pure DigitalSignature
-        var sni = SignedNodeInfo(serializedNodeInfo, listOf(sig))
+        val sig = signingKey.keyPair.sign(serializedNodeInfo.bytes).withoutKey()  // pure DigitalSignature
+        val sni = SignedNodeInfo(serializedNodeInfo, listOf(sig))
 
         return NodeInfoAndSignedNodeInfo(nodeInfo, sni)
     }
-
 
     override fun runProgram(): Int {
 
         initialiseSerialization()
 
         if(displayPath != null) {
-            var nodeInfo = nodeInfoFromFile(displayPath!!.toFile())
+            val nodeInfo = nodeInfoFromFile(displayPath!!.toFile())
 
             println("identities:      " + nodeInfo.legalIdentities[0].name)
 
@@ -153,33 +149,25 @@ class NodeInfoSigner : CordaCliWrapper("nodeinfo-signer", "Display and generate 
         else {
             require(addressList.size > 0){ "At least one --address must be specified" }
             require(outputDirectory != null) { "The --outdir parameter must be specified" }
-            require(keyStorePath != null && keyStorePass != null && keyAlias != null && keyPass != null) { "The --keyStorePath, --keyStorePass and --keyAlias and --keyPass parameters must be specified" }
+            require(keyStorePath != null && keyAlias != null) { "The --keyStorePath and --keyAlias parameters must be specified" }
         }
 
+        if(keyStorePass == null)
+            keyStorePass = getInput("Store password (${keyStorePath?.fileName}): ")
 
-        if(outputDirectory != null) {
-            var nodeInfo = generateNodeInfo()
-            var fileNameHash = nodeInfo.nodeInfo.legalIdentities[0].name.serialize().hash
+        if(keyPass == null)
+            keyPass = getInput("Key password (${keyAlias}): ")
 
-            var outputFile = outputDirectory!!.toString() / "nodeinfo-${fileNameHash.toString()}"
 
-            println(outputFile)
+        val nodeInfoSigned = generateNodeInfo()
+        val fileNameHash = nodeInfoSigned.nodeInfo.legalIdentities[0].name.serialize().hash
 
-            outputFile!!.toFile().writeBytes(nodeInfo.signedInfoNode.serialize().bytes)
-        }
-        else {
-            print("\nUse --output to write results")
-        }
+        val outputFile = outputDirectory!!.toString() / "nodeinfo-${fileNameHash.toString()}"
 
+        println(outputFile)
+
+        outputFile!!.toFile().writeBytes(nodeInfoSigned.signedInfoNode.serialize().bytes)
         return 0
-    }
-
-    //
-    // return the Identity from the specified nodekeystore
-    //
-    fun identityFromKeyStore(keyStorePath: File, keyStorePass: String, alias: String = "identity-private-key") : Party {
-        var keyStore = X509KeyStore.fromFile(keyStorePath.toPath(), keyStorePass)
-        return Party(keyStore.getCertificate(alias))
     }
 
     fun nodeInfoFromFile(nodeInfoPath: File) : NodeInfo {
@@ -187,15 +175,6 @@ class NodeInfoSigner : CordaCliWrapper("nodeinfo-signer", "Display and generate 
         var signedNodeInfo = serializedNodeInfo.deserialize()
         return signedNodeInfo.verified()
     }
-
-    fun identityFromNodeInfo(nodeInfoPath: File) : Party{
-
-        var serializedNodeInfo = SerializedBytes<SignedNodeInfo>(nodeInfoPath.toPath().readAll())
-        var signedNodeInfo = serializedNodeInfo.deserialize()
-        return nodeInfoIdentity(signedNodeInfo.verified())
-    }
-
-
 
 }
 

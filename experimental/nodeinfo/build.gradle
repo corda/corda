@@ -30,7 +30,3 @@ processResources {
     from file("$rootDir/config/dev/log4j2.xml")
     from file("$rootDir/node-api/src/main/resources/certificates/cordadevcakeys.jks")
 }
-
-/*publish {
-    name 'corda-experimental-nodeinfo'
-}*/
