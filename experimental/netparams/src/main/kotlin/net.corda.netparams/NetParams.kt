@@ -3,7 +3,6 @@ package net.corda.netparams
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigParseOptions
-//import com.typesafe.config.ConfigParseOptions
 import net.corda.cliutils.CordaCliWrapper
 import net.corda.cliutils.start
 import net.corda.core.crypto.Crypto
@@ -46,44 +45,6 @@ fun main(args: Array<String>) {
     NetParamsSigner().start(args)
 }
 
-/*data class WhitelistContracts(val cordappsJars: List<Path> = emptyList(),
-                              val contracts: List<WhitelistContract> = emptyList(),
-                              val exclude: List<String> = emptyList())
-
-data class WhitelistContract(val className: String, val attachmentIds: List<SecureHash>)
-
-data class NotaryConfig(private val notaryNodeInfoFile: Path,
-                        private val validating: Boolean) {
-    val nodeInfo by lazy { toNodeInfo() }
-    fun toNotaryInfo(): NotaryInfo {
-        // It is always the last identity (in the list of identities) that corresponds to the notary identity.
-        // In case of a single notary, the list has only one element. In case of distributed notaries the list has
-        // two items and the second one corresponds to the notary identity.
-        return NotaryInfo(nodeInfo.legalIdentities.last(), validating)
-    }
-
-    private fun toNodeInfo(): NodeInfo {
-        return if (notaryNodeInfoFile.exists()) {
-            notaryNodeInfoFile.readObject<SignedNodeInfo>().verified()
-        } else {
-            check(!notaryNodeInfoFile.startsWith("\'")) {
-                "File with notary node info file: $notaryNodeInfoFile doesn't exist. Probable cause is use of wrong quotes in config (use \" or any at all)"
-            }
-            throw IllegalArgumentException("File with notary node info file: $notaryNodeInfoFile doesn't exist")
-        }
-    }
-}
-
-class NetworkParametersConfig(
-    val minimumPlatformVersion: Int,
-    val notaries: List<NotaryConfig>,
-    val maxMessageSize: Int,
-    val maxTransactionSize: Int,
-    val eventHorizonDays: Int,
-    val whitelistContracts: WhitelistContracts = WhitelistContracts()
-)//val parametersUpdate: ParametersUpdateConfig?)
-*/
-
 fun nodeInfoIdentity(nodeInfo: NodeInfo) : Party {
     return nodeInfo.legalIdentities.last()
 }
@@ -117,15 +78,14 @@ class NetParamsSigner : CordaCliWrapper("netparams-signer", "Sign network parame
     @Option(names = ["--keyPass"], description = ["Password of signing key"])
     private var keyPass: String? = null
 
-
-    private fun getInput(prompt: String, isPassword: Boolean = false): String {
+    private fun getInput(prompt: String): String {
         print(prompt)
+        System.out.flush()
         val console = System.console()
-        return if (isPassword) {
-            String(console.readPassword())
-        } else {
-            readLine() ?: ""
-        }
+        if(console != null)
+            return console.readPassword().toString()
+        else
+            return readLine()!!
     }
 
     private object AMQPInspectorSerializationScheme : AbstractAMQPSerializationScheme(emptyList()) {
@@ -145,14 +105,9 @@ class NetParamsSigner : CordaCliWrapper("netparams-signer", "Sign network parame
                 AMQP_P2P_CONTEXT)
     }
 
-    private fun verifyInputs() {
-        require(configFile != null ) { "The --config parameter must be specified" }
-        //require(outputFile != null ) { "The --output parameter must be specified" }
-        require(keyStorePath == null || keyStorePath != null && keyStorePass != null && keyAlias != null) { "The --keyStorePath, --keyStorePass and --keyAlias parameters must be specified" }
-    }
-
     override fun runProgram(): Int {
-        verifyInputs()
+        require(configFile != null ) { "The --config parameter must be specified" }
+
         initialiseSerialization()
 
         // notary specified by nodeInfo paths
@@ -173,7 +128,13 @@ class NetParamsSigner : CordaCliWrapper("netparams-signer", "Sign network parame
 
         var signingkey = if(keyStorePath != null) {
 
-            require(keyStorePass != null && keyAlias != null && keyPass != null) { "The --keyStorePath, --keyStorePass and --keyAlias and --keyPass parameters must be specified" }
+            require(keyAlias != null) { "The --keyAlias parameters must be specified" }
+
+            if(keyStorePass == null)
+                keyStorePass = getInput("Store password (${keyStorePath?.fileName}): ")
+
+            if(keyPass == null)
+                keyPass = getInput("Key password (${keyAlias}): ")
 
             var keyStore = X509KeyStore.fromFile(keyStorePath!!, keyStorePass!!)
             keyStore.getCertificateAndKeyPair(keyAlias!!, keyPass!!)
@@ -197,21 +158,6 @@ class NetParamsSigner : CordaCliWrapper("netparams-signer", "Sign network parame
         return 0
     }
 
-    fun signParameters(networkParameters: NetworkParameters, signingKey: CertificateAndKeyPair) : SerializedBytes<SignedDataWithCert<NetworkParameters>> {
-        var serializedNetParams = signingKey.sign(networkParameters).serialize()
-        // serialize & sign
-        /*var serializedNetParams = serializer.serialize(networkParameters, context)
-        val rawsig          = Crypto.doSign(signingKey.keyPair.private, serializedNetParams.bytes)
-        var sigcert         = DigitalSignatureWithCert(signingKey.certificate, rawsig)
-        var signedNetParams = SignedDataWithCert<NetworkParameters>(serializedNetParams, sigcert)
-        var sssNetParams    = serializer.serialize(signedNetParams, context)
-        */
-        return serializedNetParams
-    }
-
-    //
-    // return the Identity from the specified nodekeystore
-    //
     fun identityFromKeyStore(keyStorePath: File, keyStorePass: String, alias: String = "identity-private-key") : Party {
 
         var keyStore = X509KeyStore.fromFile(keyStorePath.toPath(), keyStorePass)
@@ -235,15 +181,13 @@ class NetParamsSigner : CordaCliWrapper("netparams-signer", "Sign network parame
             NotaryInfo(party, it.getBoolean("validating"))
         }
 
-        var whitelistContracts = emptyMap<String, List<AttachmentId>>()
-
         return NetworkParameters(
                 minimumPlatformVersion = config.getInt("minimumPlatformVersion"),
                 maxMessageSize = config.getInt("maxMessageSize"),
                 maxTransactionSize = config.getInt("maxTransactionSize"),
                 epoch = config.getInt("epoch"),
                 modifiedTime = Instant.now(),
-                whitelistedContractImplementations = emptyMap(),//whitelistContracts,
+                whitelistedContractImplementations = emptyMap(), // TODO: not supported
                 notaries = notaryList + optionalNotaryList
         )
     }
@@ -254,9 +198,6 @@ class NetParamsSigner : CordaCliWrapper("netparams-signer", "Sign network parame
         val config = ConfigFactory.parseFile(file.toFile(), parseOptions).resolve()
 
         return parseConfig(config, notaryList)
-
     }
-
-
 }
 
