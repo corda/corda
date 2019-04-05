@@ -53,7 +53,11 @@ open class CashPaymentFlow(
         val recipientSession = initiateFlow(recipient)
         recipientSession.send(anonymous)
         val anonymousRecipient = if (anonymous) {
-            subFlow(SwapIdentitiesFlow(recipientSession))[recipient]!!
+            if (!serviceHub.myInfo.isLegalIdentity(recipient)) {
+                subFlow(SwapIdentitiesFlow(recipientSession))[recipient]!!
+            } else {
+                serviceHub.keyManagementService.freshKeyAndCert(ourIdentityAndCert, false).party.anonymise()
+            }
         } else {
             recipient
         }

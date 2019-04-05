@@ -94,13 +94,22 @@ class CollectSignaturesFlowTests : WithContracts {
         )
     }
 
+    @Test
+    fun `fails if request made for initiator to sign`() {
+        assert.that(
+                aliceNode.startTestFlow(alice, bob, excludeHost = false),
+                willThrow(errorMessage("Do not call CollectSignaturesFlow with sessions for the local node - the initiator should have already signed the transaction"))
+        )
+    }
+
     //region Operators
-    private fun TestStartedNode.startTestFlow(vararg party: Party) =
+    private fun TestStartedNode.startTestFlow(vararg party: Party, excludeHost: Boolean = true) =
             startFlowAndRunNetwork(
                 TestFlow.Initiator(DummyContract.MultiOwnerState(
                     MAGIC_NUMBER,
                     listOf(*party)),
-                    mockNet.defaultNotaryIdentity))
+                    mockNet.defaultNotaryIdentity,
+                    excludeHost))
 
     //region Test Flow
     // With this flow, the initiator starts the "CollectTransactionFlow". It is then the responders responsibility to
@@ -108,14 +117,18 @@ class CollectSignaturesFlowTests : WithContracts {
     // receiving off the wire.
     object TestFlow {
         @InitiatingFlow
-        class Initiator(private val state: DummyContract.MultiOwnerState, private val notary: Party) : FlowLogic<SignedTransaction>() {
+        class Initiator(private val state: DummyContract.MultiOwnerState, private val notary: Party, private val excludeHost: Boolean = true) : FlowLogic<SignedTransaction>() {
             @Suspendable
             override fun call(): SignedTransaction {
                 val myInputKeys = state.participants.map { it.owningKey }
                 val command = Command(DummyContract.Commands.Create(), myInputKeys)
                 val builder = TransactionBuilder(notary).withItems(StateAndContract(state, DummyContract.PROGRAM_ID), command)
                 val ptx = serviceHub.signInitialTransaction(builder)
-                val sessions = excludeHostNode(serviceHub, groupAbstractPartyByWellKnownParty(serviceHub, state.owners)).map { initiateFlow(it.key) }
+                val sessions = if (excludeHost) {
+                    excludeHostNode(serviceHub, groupAbstractPartyByWellKnownParty(serviceHub, state.owners)).map { initiateFlow(it.key) }
+                } else {
+                    groupAbstractPartyByWellKnownParty(serviceHub, state.owners).map { initiateFlow(it.key)}
+                }
                 val stx = subFlow(CollectSignaturesFlow(ptx, sessions, myInputKeys))
                 return subFlow(FinalityFlow(stx, sessions))
             }

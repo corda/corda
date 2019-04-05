@@ -17,11 +17,13 @@ import net.corda.core.identity.PartyAndCertificate
 import net.corda.testing.core.*
 import net.corda.testing.internal.matchers.allOf
 import net.corda.testing.internal.matchers.flow.willReturn
+import net.corda.testing.internal.matchers.flow.willThrow
 import net.corda.testing.internal.matchers.hasOnlyEntries
 import net.corda.testing.node.internal.*
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.AfterClass
 import org.junit.Test
+import java.lang.IllegalArgumentException
 import java.security.PublicKey
 
 class SwapIdentitiesFlowTests {
@@ -63,6 +65,14 @@ class SwapIdentitiesFlowTests {
                     )
                 )
             )
+        )
+    }
+
+    @Test
+    fun `cannot swap identities with local node`() {
+        assert.that(
+                aliceNode.services.startFlow(SwapIdentitiesInitiator(alice)),
+                willThrow<IllegalArgumentException>()
         )
     }
 
