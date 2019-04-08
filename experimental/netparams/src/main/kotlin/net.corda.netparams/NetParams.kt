@@ -8,7 +8,6 @@ import net.corda.cliutils.start
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
 import net.corda.core.node.NetworkParameters
-import net.corda.core.node.NodeInfo
 import net.corda.core.node.NotaryInfo
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializedBytes
@@ -27,6 +26,46 @@ import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.time.Instant
 
+/**
+ * NetworkParameters signing tool for Corda
+ *
+ * This utility can be used to create and sign NetworkParameters files. This is useful for manual bootstrapping
+ * of a corda network, or by distribution via the NetworkMap
+ *
+ * By default the NetworkParameters will be signed with the development NetworkMap key, which is what happens
+ * currently with the Corda network bootstrapper. Arbitrary signing keys can be specified using
+ * the --keyStore and --keyAlias parameters, in which case the specified Java keystore (and key) will be used instead.
+ *
+ * Values for the NetworkParameters are specified in a configuration file (in HOCON format),
+ * using the --config option. An example content is shown below:
+ *
+ *    notaries : []
+ *    minimumPlatformVersion = 1
+ *    maxMessageSize = 10485760
+ *    maxTransactionSize = 10485760
+ *    whitelistContracts = {}
+ *    eventHorizonDays = 30
+ *    epoch = 1
+ *
+ * Notary nodes for the network can be specified in the notaries[] section (as a string of filenames), as below:
+ *
+ *    notaries: ["/path/to/nodeinfo"]
+ *
+ * or via the commandline with the --notaryInfo option. Notaries are identified either by their respective nodeInfo files,
+ * or by a path to the identity certificate (JKS file containing the identity cert)
+ *
+ * Example usage:
+ *
+ * # Generate NetworkParameters with one notary, identified by it's NodeInfo file (and signed with default development NetworkMap key)
+ * java -jar netparams.jar --config netparams.conf --notaryInfo /path/to/nodeinfo --output /path/to/network-parameters
+ *
+ * # Generate using the notary's keystore
+ * java -jar netparams.jar --config netparams.conf --notaryKeyStore /path/to/node/certificates/nodekeystore.jks
+ *
+ * # Generate using an arbitrary 'netparams' signing key
+ * java -jar netparams.jar --config netparams.conf --notaryInfo /path/to/nodeinfo --keyStore /my/keystore.jks --keyAlias netparams
+ *
+ */
 fun main(args: Array<String>) {
     NetParamsSigner().start(args)
 }
