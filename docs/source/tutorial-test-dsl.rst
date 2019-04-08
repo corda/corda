@@ -15,6 +15,33 @@ This tutorial will take you through the steps required to write a contract test 
 The testing DSL allows one to define a piece of the ledger with transactions referring to each other, and ways of
 verifying their correctness.
 
+Setting up the test
+-------------------
+
+Before writing the individual tests, the general test setup must be configured:
+
+.. container:: codeset
+
+    .. sourcecode:: kotlin
+
+        class CommercialPaperTest {
+            private val miniCorp = TestIdentity(CordaX500Name("MiniCorp", "London", "GB"))
+            private val megaCorp = TestIdentity(CordaX500Name("MegaCorp", "London", "GB"))
+            private val ledgerServices = MockServices(listOf("net.corda.finance.schemas"), megaCorp, miniCorp)
+            ...
+        }
+
+    .. sourcecode:: java
+
+        public class CommercialPaperTest {
+            private TestIdentity megaCorp = new TestIdentity(new CordaX500Name("MegaCorp", "London", "GB"));
+            private TestIdentity miniCorp = new TestIdentity(new CordaX500Name("MiniCorp", "London", "GB"));
+            MockServices ledgerServices = new MockServices(Arrays.asList("net.corda.finance.schemas"), megaCorp, miniCorp);
+            ...
+        }
+
+The ``ledgerServices`` object will provide configuration to the ``ledger`` DSL in the individual tests.
+
 Testing single transactions
 ---------------------------
 
@@ -24,25 +51,22 @@ We start with the empty ledger:
 
     .. sourcecode:: kotlin
 
-        class CommercialPaperTest{
+        class CommercialPaperTest {
             @Test
             fun emptyLedger() {
-                ledger {
+                ledgerServices.ledger {
+                    ...
                 }
             }
-            ...
         }
 
     .. sourcecode:: java
 
-        import org.junit.Test;
-
-        import static net.corda.testing.NodeTestUtils.ledger;
-
         public class CommercialPaperTest {
             @Test
             public void emptyLedger() {
-                ledger(l -> {
+                ledger(ledgerServices, l -> {
+                    ...
                     return null;
                 });
             }
@@ -90,7 +114,7 @@ Let's add a ``CommercialPaper`` transaction:
         @Test
         public void simpleCPDoesntCompile() {
             ICommercialPaperState inState = getPaper();
-            ledger(l -> {
+            ledger(ledgerServices, l -> {
                 l.transaction(tx -> {
                     tx.input(inState);
                 });
