@@ -72,7 +72,7 @@ class SwapIdentitiesFlowTests {
     fun `cannot swap identities with local node`() {
         assert.that(
                 aliceNode.services.startFlow(SwapIdentitiesInitiator(alice)),
-                willThrow<IllegalArgumentException>()
+                willThrow<SwapIdentitiesException>()
         )
     }
 
