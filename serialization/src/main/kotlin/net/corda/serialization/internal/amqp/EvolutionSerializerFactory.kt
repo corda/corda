@@ -22,9 +22,10 @@ interface EvolutionSerializerFactory {
 class EvolutionSerializationException(remoteTypeInformation: RemoteTypeInformation, reason: String)
     : NotSerializableException(
         """
-            Cannot construct evolution serializer for remote type ${remoteTypeInformation.prettyPrint(false)}
+        Cannot construct evolution serializer for remote type ${remoteTypeInformation.typeIdentifier.name}: $reason
 
-            $reason
+        Full type information:
+        ${remoteTypeInformation.prettyPrint(false)}
         """.trimIndent()
 )
 
