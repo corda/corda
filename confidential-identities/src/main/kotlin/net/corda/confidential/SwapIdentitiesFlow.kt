@@ -95,8 +95,8 @@ private constructor(private val otherSideSession: FlowSession?,
                     "SwapIdentitiesFlow with FlowSessions. (${CordappResolver.currentCordapp?.info})")
             initiateFlow(otherParty!!)
         }
-        require(!serviceHub.myInfo.isLegalIdentity(session.counterparty)) {
-            "Do not attempt to sync identities with the local node"
+        if (serviceHub.myInfo.isLegalIdentity(session.counterparty)) {
+            throw SwapIdentitiesException("Attempted to swap identities with the local node")
         }
         progressTracker.currentStep = GENERATING_IDENTITY
         val ourAnonymousIdentity = serviceHub.keyManagementService.freshKeyAndCert(ourIdentityAndCert, false)
