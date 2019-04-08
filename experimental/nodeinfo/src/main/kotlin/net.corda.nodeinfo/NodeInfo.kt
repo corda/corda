@@ -22,6 +22,29 @@ import java.io.File
 import java.nio.file.Path
 import java.security.cert.CertificateFactory
 
+/**
+ * NodeInfo signing tool for Corda
+ *
+ * This utility can be used to generate nodeInfo files without having to run a corda node
+ *
+ * The java keystore containing the signing key for the nodeInfo must specified at the commandline
+ * using the --keyStore parameter. HSM are not currently supported.
+ *
+ * The resulting filename of the nodeinfo will be displayed to stdout
+ *
+ * Example usage:
+ *
+ *   # generate a nodeinfo
+ *   java -jar nodeinfo.jar --address host:port --outdir /nodedir --keyStore /nodedir/certificates/nodekeystore.jks
+ *
+ *   nodeinfo will prompt you for the keystore password, and the password of the node identity private key:
+ *    Store password (nodekeystore.jks): *******
+ *    Key password (identity-private-key): *******
+ *
+ *   # display information about an existing nodeinfo (name, address etc)
+ *   java -jar nodeinfo.jar --display nodeinfo-12345678
+ *
+ */
 fun main(args: Array<String>) {
     NodeInfoSigner().start(args)
 }
@@ -49,16 +72,16 @@ class NodeInfoSigner : CordaCliWrapper("nodeinfo-signer", "Display and generate 
     @Option(names = ["--outdir"], paramLabel = "directory", description = ["Output directory"])
     private var outputDirectory: Path? = null
 
-    @Option(names = ["--keyStore"],  description = ["Keystore containing identity certificate"])
+    @Option(names = ["--keyStore"],  description = ["Keystore containing identity certificate for signing"])
     private var keyStorePath: Path? = null
 
-    @Option(names = ["--keyStorePass"], description = ["Keystore password"])
+    @Option(names = ["--keyStorePass"], description = ["Keystore password (will prompt if not specified)"])
     private var keyStorePass: String? = null
 
-    @Option(names = ["--keyAlias"],  description = ["Alias of signing key"])
+    @Option(names = ["--keyAlias"],  description = ["Alias of signing key - default is identity-private-key"])
     private var keyAlias: String? = "identity-private-key"
 
-    @Option(names = ["--keyPass"], description = ["Password of signing key"])
+    @Option(names = ["--keyPass"], description = ["Password of signing key (will prompt if not specified)"])
     private var keyPass: String? = null
 
     private fun getInput(prompt: String): String {
