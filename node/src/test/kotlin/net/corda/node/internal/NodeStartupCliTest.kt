@@ -1,7 +1,6 @@
 package net.corda.node.internal
 
 import net.corda.cliutils.CommonCliConstants
-import net.corda.cliutils.start
 import net.corda.core.internal.div
 import net.corda.nodeapi.internal.config.UnknownConfigKeysPolicy
 import org.assertj.core.api.Assertions
