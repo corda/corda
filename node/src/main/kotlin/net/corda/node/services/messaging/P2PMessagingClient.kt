@@ -146,6 +146,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
     private val externalBridge: Boolean = config.enterpriseConfiguration.externalBridge ?: false
 
     private val handlers = ConcurrentHashMap<String, MessageHandler>()
+    private val handlersChangedSignal = java.lang.Object()
 
     private val deduplicator = P2PMessageDeduplicator(cacheFactory, database, platformClock)
     // Note: Public visibility for testing
@@ -375,6 +376,11 @@ class P2PMessagingClient(val config: NodeConfiguration,
     fun run() {
         val latch = CountDownLatch(1)
         try {
+            synchronized(handlersChangedSignal) {
+                while (handlers.isEmpty() && state.locked { (p2pConsumer != null) }) {
+                    handlersChangedSignal.wait()
+                }
+            }
             val consumer = state.locked {
                 check(started) { "start must be called first" }
                 check(!running) { "run can't be called twice" }
@@ -548,6 +554,9 @@ class P2PMessagingClient(val config: NodeConfiguration,
             }
             prevRunning
         }
+        synchronized(handlersChangedSignal) {
+            handlersChangedSignal.notifyAll()
+        }
         if (running && !nodeExecutor.isOnThread) {
             // Wait for the main loop to notice the consumer has gone and finish up.
             shutdownLatch.await()
@@ -640,6 +649,9 @@ class P2PMessagingClient(val config: NodeConfiguration,
                 throw IllegalStateException("Cannot add another acking handler for $topic, there is already an acking one")
             }
             callback
+        }
+        synchronized(handlersChangedSignal) {
+            handlersChangedSignal.notifyAll()
         }
         return HandlerRegistration(topic, callback)
     }
