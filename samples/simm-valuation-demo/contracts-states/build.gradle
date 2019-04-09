@@ -87,7 +87,8 @@ task sign(type: net.corda.plugins.SignJar) {
     inputJars shrink
 }
 
-jar.finalizedBy shrink
+if (!JavaVersion.current().java8Compatible)
+    jar.finalizedBy shrink
 shrink.finalizedBy sign
 
 artifacts {
