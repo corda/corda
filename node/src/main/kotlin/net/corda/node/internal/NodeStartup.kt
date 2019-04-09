@@ -410,7 +410,8 @@ open class NodeStartup : NodeStartupLogging {
                     "When I discovered my toaster wasn't\nwaterproof, I was shocked.",
                     "Where do cryptographers go for\nentertainment? The security theatre.",
                     "How did the Java programmer get rich?\nThey inherited a factory.",
-                    "Why did the developer quit his job?\nHe didn't get ar-rays."
+                    "Why did the developer quit his job?\nHe didn't get ar-rays.",
+                    "Quantum computer jokes are both\n funny and not funny at the same time."
             )
 
             if (Emoji.hasEmojiTerminal)
