@@ -10,6 +10,9 @@ import java.util.*
  * non-backed observable
  */
 class ReplayedList<A>(sourceList: ObservableList<A>) : TransformationList<A, A>(sourceList) {
+    override fun getViewIndex(p0: Int): Int {
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    }
 
     val replayedList = ArrayList<A>(sourceList)
 
