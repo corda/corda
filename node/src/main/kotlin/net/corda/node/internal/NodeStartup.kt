@@ -76,6 +76,24 @@ open class NodeStartupCli : CordaCliWrapper("corda", "Runs a Corda Node") {
 
     override fun additionalSubCommands() = setOf(networkCacheCli, justGenerateNodeInfoCli, justGenerateRpcSslCertsCli, initialRegistrationCli, validateConfigurationCli)
 
+    override fun call(): Int {
+        if (!validateBaseDirectory()) {
+            return ExitCodes.FAILURE
+        }
+        return super.call()
+    }
+
+    private fun validateBaseDirectory(): Boolean {
+        //Ensure that the base directory actually exists before initialising and the rest of the node.
+        val baseDirectory = cmdLineOptions.baseDirectory
+
+        if (!baseDirectory.exists()) {
+            printError("Base directory $baseDirectory does not exist. Node will now shutdown")
+            return false
+        }
+        return true
+    }
+
     override fun runProgram(): Int {
         return when {
             InitialRegistration.checkRegistrationMode(cmdLineOptions.baseDirectory) -> {
@@ -146,8 +164,10 @@ open class NodeStartup : NodeStartupLogging {
         Node.printBasicNodeInfo(LOGS_CAN_BE_FOUND_IN_STRING, System.getProperty("log-path"))
 
         // Step 5. Load and validate node configuration.
-        val rawConfig = cmdLineOptions.rawConfiguration().doOnErrors(cmdLineOptions::logRawConfigurationErrors).optional ?: return ExitCodes.FAILURE
-        val configuration = cmdLineOptions.parseConfiguration(rawConfig).doIfValid { logRawConfig(rawConfig) }.doOnErrors(::logConfigurationErrors).optional ?: return ExitCodes.FAILURE
+        val rawConfig = cmdLineOptions.rawConfiguration().doOnErrors(cmdLineOptions::logRawConfigurationErrors).optional
+                ?: return ExitCodes.FAILURE
+        val configuration = cmdLineOptions.parseConfiguration(rawConfig).doIfValid { logRawConfig(rawConfig) }.doOnErrors(::logConfigurationErrors).optional
+                ?: return ExitCodes.FAILURE
 
         // Step 6. Check if we can access the certificates directory
         if (requireCertificates && !canReadCertificatesDirectory(configuration.certificatesDirectory, configuration.devMode)) return ExitCodes.FAILURE
@@ -390,7 +410,8 @@ open class NodeStartup : NodeStartupLogging {
                     "When I discovered my toaster wasn't\nwaterproof, I was shocked.",
                     "Where do cryptographers go for\nentertainment? The security theatre.",
                     "How did the Java programmer get rich?\nThey inherited a factory.",
-                    "Why did the developer quit his job?\nHe didn't get ar-rays."
+                    "Why did the developer quit his job?\nHe didn't get ar-rays.",
+                    "Quantum computer jokes are both\n funny and not funny at the same time."
             )
 
             if (Emoji.hasEmojiTerminal)
