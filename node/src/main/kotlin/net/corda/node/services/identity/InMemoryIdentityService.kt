@@ -22,6 +22,8 @@ import javax.annotation.concurrent.ThreadSafe
 @ThreadSafe
 class InMemoryIdentityService(identities: List<PartyAndCertificate> = emptyList(),
                               override val trustRoot: X509Certificate) : SingletonSerializeAsToken(), IdentityServiceInternal {
+
+
     companion object {
         private val log = contextLogger()
     }
@@ -69,5 +71,17 @@ class InMemoryIdentityService(identities: List<PartyAndCertificate> = emptyList(
             }
         }
         return results
+    }
+
+    override fun registerIdentityMapping(identity: Party, key: PublicKey): Boolean {
+        val certificateFromKeyOfWellKnown = certificateFromKey(identity.owningKey)
+        if (certificateFromKeyOfWellKnown == null){
+            throw IllegalStateException("Could not find a matching certificate path for identity $identity")
+        }
+        val existingEntry = keyToParties.putIfAbsent(key, certificateFromKeyOfWellKnown)
+        if (existingEntry != null){
+            throw IllegalStateException("Could not register $key for party $identity as it has already been registered for ${existingEntry.party}")
+        }
+        return true
     }
 }
