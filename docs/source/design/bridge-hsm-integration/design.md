@@ -1,4 +1,4 @@
-#Corda Firewall TLS HSM integration
+# Corda Firewall TLS HSM integration
 
 ## Background
 
@@ -26,7 +26,7 @@
 * Support possibly arbitrary alias name
 
 ## Current Design (ENT v4.0)
-###Firewall Components
+### Firewall Components
 
 * **BridgeSupervisorService**  
 Holds and initialises all bridge related services
