@@ -10,6 +10,7 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.StandardCopyOption
 import java.util.*
+import net.corda.common.logging.CordaVersion
 
 private class ShellExtensionsGenerator(val parent: CordaCliWrapper) {
     private companion object {
@@ -72,7 +73,7 @@ private class ShellExtensionsGenerator(val parent: CordaCliWrapper) {
     // If on Windows, Path.toString() returns a path with \ instead of /, but for bash Windows users we want to convert those back to /'s
     private fun Path.toStringWithDeWindowsfication(): String = this.toAbsolutePath().toString().replace("\\", "/")
 
-    private fun jarVersion(alias: String) = "# $alias - Version: ${CordaVersionProvider.releaseVersion}, Revision: ${CordaVersionProvider.revision}"
+    private fun jarVersion(alias: String) = "# $alias - Version: ${CordaVersion.releaseVersion}, Revision: ${CordaVersion.revision}"
     private fun getAutoCompleteFileLocation(alias: String) = userHome / ".completion" / alias
 
     private fun generateAutoCompleteFile(alias: String) {

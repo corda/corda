@@ -11,6 +11,7 @@ apply plugin: 'com.jfrog.artifactory'
 dependencies {
     compile project(':tools:shell')
     compile project(':tools:cliutils')
+    compile project(":common-logging")
     compile "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
     compile "org.slf4j:jul-to-slf4j:$slf4j_version"
 
