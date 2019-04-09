@@ -32,7 +32,7 @@ import net.corda.tools.shell.InteractiveShell
 import org.fusesource.jansi.Ansi
 import org.slf4j.bridge.SLF4JBridgeHandler
 import picocli.CommandLine.Mixin
-import sun.misc.VMSupport
+//import sun.misc.VMSupport
 import java.io.IOException
 import java.io.RandomAccessFile
 import java.lang.management.ManagementFactory
@@ -251,10 +251,10 @@ open class NodeStartup : NodeStartupLogging {
         logger.info("VM ${info.vmName} ${info.vmVendor} ${info.vmVersion}")
         logger.info("Machine: ${lookupMachineNameAndMaybeWarn()}")
         logger.info("Working Directory: ${cmdLineOptions.baseDirectory}")
-        val agentProperties = VMSupport.getAgentProperties()
-        if (agentProperties.containsKey("sun.jdwp.listenerAddress")) {
-            logger.info("Debug port: ${agentProperties.getProperty("sun.jdwp.listenerAddress")}")
-        }
+//        val agentProperties = VMSupport.getAgentProperties()
+//        if (agentProperties.containsKey("sun.jdwp.listenerAddress")) {
+//            logger.info("Debug port: ${agentProperties.getProperty("sun.jdwp.listenerAddress")}")
+//        }
         var nodeStartedMessage = "Starting as node on ${conf.p2pAddress}"
         if (conf.extraNetworkMapKeys.isNotEmpty()) {
             nodeStartedMessage = "$nodeStartedMessage with additional Network Map keys ${conf.extraNetworkMapKeys.joinToString(prefix = "[", postfix = "]", separator = ", ")}"
