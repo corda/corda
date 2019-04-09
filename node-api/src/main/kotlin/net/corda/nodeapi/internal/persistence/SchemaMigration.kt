@@ -13,7 +13,6 @@ import net.corda.nodeapi.internal.MigrationHelpers.getMigrationResource
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.cordapp.CordappLoader
-import sun.security.x509.X500Name
 import java.io.ByteArrayInputStream
 import java.io.InputStream
 import java.nio.file.Path
