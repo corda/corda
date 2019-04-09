@@ -1,3 +1,5 @@
+import static org.gradle.api.JavaVersion.VERSION_1_8
+
 buildscript {
     // For sharing constants between builds
     Properties constants = new Properties()
@@ -81,6 +83,7 @@ buildscript {
     ext.jcabi_manifests_version = '1.1'
     ext.picocli_version = '3.8.0'
     ext.commons_io_version = '2.6'
+    ext.gradle_modules_plugin_version = constants.getProperty('gradleModulesPluginVersion')
 
     // Name of the IntelliJ SDK created for the deterministic Java rt.jar.
     // ext.deterministic_idea_sdk = '1.8 (Deterministic)'
@@ -100,6 +103,10 @@ buildscript {
         maven {
             url "$artifactory_contextUrl/corda-releases"
         }
+        // JDK11 Java modules gradle plugin
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
     }
     dependencies {
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
@@ -118,6 +125,7 @@ buildscript {
         classpath "net.i2p.crypto:eddsa:$eddsa_version" // Needed for ServiceIdentityGenerator in the build environment.
         classpath "org.owasp:dependency-check-gradle:${dependency_checker_version}"
         classpath "org.jfrog.buildinfo:build-info-extractor-gradle:$artifactory_plugin_version"
+        classpath "org.javamodularity:moduleplugin:$gradle_modules_plugin_version"
         // Capsule gradle plugin forked and maintained locally to support Gradle 5.x
         // See https://github.com/corda/gradle-capsule-plugin
         classpath "us.kirchmeier:gradle-capsule-plugin:1.0.4_r3"
@@ -145,15 +153,20 @@ apply plugin: 'com.jfrog.artifactory'
 // with the run configurations. It also doesn't realise that the project is a Java 8 project and misconfigures
 // the resulting import. This fixes it.
 apply plugin: 'java'
-sourceCompatibility = 1.8
-targetCompatibility = 1.8
+apply plugin: 'org.javamodularity.moduleplugin'
 
+sourceCompatibility = VERSION_1_8
+targetCompatibility = VERSION_1_8
+println "Java version: " + JavaVersion.current()
+println "Java source compatibility: " + sourceCompatibility
+println "Java target compatibility: " + targetCompatibility
 
 allprojects {
     apply plugin: 'kotlin'
     apply plugin: 'jacoco'
     apply plugin: 'org.owasp.dependencycheck'
     apply plugin: 'kotlin-allopen'
+    apply plugin: 'org.javamodularity.moduleplugin'
 
     allOpen {
         annotations(
@@ -177,8 +190,8 @@ allprojects {
             nugetconfEnabled = false
         }
     }
-    sourceCompatibility = 1.8
-    targetCompatibility = 1.8
+    sourceCompatibility = VERSION_1_8
+    targetCompatibility = VERSION_1_8
 
     tasks.withType(JavaCompile) {
         options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation" << "-Xlint:-options" << "-parameters"
