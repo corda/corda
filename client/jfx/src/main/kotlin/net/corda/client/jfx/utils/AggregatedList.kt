@@ -41,6 +41,9 @@ class AggregatedList<A, E : Any, K : Any>(
         val toKey: (E) -> K,
         val assemble: (K, ObservableList<E>) -> A
 ) : TransformationList<A, E>(list) {
+    override fun getViewIndex(p0: Int): Int {
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    }
 
     private class AggregationGroup<E, out A>(
             val keyHashCode: Int,
