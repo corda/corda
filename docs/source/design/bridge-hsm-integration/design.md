@@ -34,7 +34,7 @@ to a Float in the DMZ. As shown in the diagram below:
 ### Firewall Components
 Internally the Corda firewall is implemented as a set of services using a simple supervision framework to manage connection/disconnection
 events and leadership changes. An overview diagram is shown below with descriptions following
-![](./images/firewall v4.0.png)
+![](./images/firewall%20v4.0.png)
 
 #### Service Descriptions
 * **BridgeSupervisorService**  
@@ -97,4 +97,4 @@ An implementation of ``TLSSigningService``, delegating signing operation to ``Cr
 * **AMQPSigningService**  
 An implementation of ``TLSSigningService``, delegating signing operation to the bridge via AMQP messages.
 
-![](./images/firewall with HSM.png)
+![](./images/firewall%20with%20HSM.png)
