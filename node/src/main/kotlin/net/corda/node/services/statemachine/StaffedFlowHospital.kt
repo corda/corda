@@ -161,7 +161,7 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val 
                 .asSequence()
                 .mapIndexed { index, error ->
                     // Rely on the logging context to print details of the flow ID.
-                    log.warn("Error $index of ${errors.size}:", error)
+                    log.warn("Error ${index + 1} of ${errors.size}:", error)
                     val diagnoses: Map<Diagnosis, List<Staff>> = staff.groupBy { it.consult(flowFiber, currentState, error, medicalHistory) }
                     // We're only interested in the highest priority diagnosis for the error
                     val (diagnosis, by) = diagnoses.entries.minBy { it.key }!!
