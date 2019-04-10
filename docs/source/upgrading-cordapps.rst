@@ -294,7 +294,7 @@ Currently, all nodes must **permanently** keep **all** old state and contract de
 process was used on them.
 
 .. note:: This requirement will go away in a future version of Corda. In Corda 4, the contract-code-as-attachment feature was implemented
-          only for "normal" transactions. `Contract Upgrade` and `Notary Change` transactions will still be executed withing the node classpath.
+          only for "normal" transactions. ``Contract Upgrade`` and ``Notary Change`` transactions will still be executed within the node classpath.
 
 
 2. Write the new state and contract definitions
@@ -314,12 +314,12 @@ The ``upgrade`` method describes how the old state type is upgraded to the new s
 By default this new contract will only be able to upgrade legacy states which are constrained by the zone whitelist (see :doc:`api-contract-constraints`).
 
 
-.. note:: The requirement for a `legacyContractConstraint` arises from the fact that when a transaction chain is verified and a `Contract Upgrade` is
-          encountered on the back chain, the verifier wants to know that a legitimate state was transformed into the new contract. The `legacyContractConstraint` is
+.. note:: The requirement for a ``legacyContractConstraint`` arises from the fact that when a transaction chain is verified and a ``Contract Upgrade`` is
+          encountered on the back chain, the verifier wants to know that a legitimate state was transformed into the new contract. The ``legacyContractConstraint`` is
           the mechanism by which this is enforced. Using it, the new contract is able to narrow down what constraint the states it is upgrading should have.
-          If a malicious party would create a fake `com.megacorp.MegaToken` state, he would not be able to use the usual `MegaToken` code as his
-          fake token will not validate because the constraints will not match. The `com.megacorp.SuperMegaToken` would know that it is a fake state and thus refuse to upgrade it.
-          It is safe to omit the `legacyContractConstraint` for the zone whitelist constraint, because the chain of trust is ensured by the Zone operator
+          If a malicious party would create a fake ``com.megacorp.MegaToken`` state, he would not be able to use the usual ``MegaToken`` code as his
+          fake token will not validate because the constraints will not match. The ``com.megacorp.SuperMegaToken`` would know that it is a fake state and thus refuse to upgrade it.
+          It is safe to omit the ``legacyContractConstraint`` for the zone whitelist constraint, because the chain of trust is ensured by the Zone operator
           who would have whitelisted both contracts and checked them.
 
 If the hash constraint is used, the new contract should implement ``UpgradedContractWithLegacyConstraint``
