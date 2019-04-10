@@ -87,7 +87,10 @@ although it has always been intended to move towards HSM support.
 We do support AES encryption of the access passwords to these keystores in the configuration files, but obviously this is not a full strength solution. 
 
 
-## Target Solution
+## Design Proposal
+
+![](./images/Node%20TLS%20Corda%20ENT%20v4.1%20with%20HSM.png)
+
 * **TLSSigningService**  
 Handle TLS signing request, delegate signing operation to external process using DelegatedKeystore.
 
