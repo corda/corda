@@ -18,7 +18,7 @@
 * Full documentation and deployment instruction required for final shipping including consideration of key creation
 * Handle silently HSM session timeout
 * Handle HSM HA if available for that HSM
-* No requirement to ship with HSM jar assume dynamically linked to HSM jars
+* No requirement to ship with HSM jar. Assume dynamically linked to any HSM jars
 * No dependency on Corda Node module in float
 * Support different HSM for different key classes e.g. SSL Peer vs Tunnel vs artemis?
 * Upfront limitation that artemis might not work with HSM to be acceptable 
@@ -26,8 +26,17 @@
 * Support possibly arbitrary alias name
 
 ## Current Design (ENT v4.0)
-### Firewall Components
+### Current System Overview
+The current Corda firewall supports lots of possible configurations, but the main operating mode is with an HA bridge cluster communicating
+to a Float in the DMZ. As shown in the diagram below:
+![](../../resources/bridge/ha_nodes/ha_nodes.png)
 
+### Firewall Components
+Internally the Corda firewall is implemented as a set of services using a simple supervision framework to manage connection/disconnection
+events and leadership changes. An overview diagram is shown below with descriptions following
+![](./images/firewall v4.0.png)
+
+#### Service Descriptions
 * **BridgeSupervisorService**  
 Holds and initialises all bridge related services
 
@@ -64,12 +73,21 @@ Holds and initialises all bridge related services
     * **FloatControlService**  
     Acts as communication server for control messages from the Bridge. Contains an AMQPServer to manage the actual communications.
 
+### Current Key Management
+The Corda firewall was designed to minimise the impact of any compromise of the 'float' component in the DMZ, which therefore contains only very limited keys on disk
+and the P2P key is held only transiently in memory and wiped if the float loses connection to the bridge.
+See [TLS management discussion](https://github.com/corda/corda/blob/master/docs/source/design/float/decisions/ssl-termination.md)
+and [Float Design Review](https://github.com/corda/corda/blob/master/docs/source/design/float/design.md) for the historical discussion.
 
-![](./images/firewall v4.0.png)
+A diagram of the current key management is:
+![](./images/Node%20TLS%20Corda%20ENT%20v4.0.png)
+
+The current key management solution uses encrypted KeyStore files for holding public certificates and private keys,
+although it has always been intended to move towards HSM support.
+We do support AES encryption of the access passwords to these keystores in the configuration files, but obviously this is not a full strength solution. 
 
 
 ## Target Solution
-
 * **TLSSigningService**  
 Handle TLS signing request, delegate signing operation to external process using DelegatedKeystore.
 
