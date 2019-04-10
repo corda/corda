@@ -7,7 +7,6 @@ import net.corda.core.contracts.*
 import net.corda.core.crypto.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
-import net.corda.core.internal.cordapp.CordappResolver
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
@@ -672,15 +671,8 @@ with @BelongsToContract, or supply an explicit contract parameter to addOutputSt
     /** Returns an immutable list of output [TransactionState]s. */
     fun outputStates(): List<TransactionState<*>> = ArrayList(outputs)
 
-    /** Returns an immutable list of [Command]s, grouping by [CommandData] and joining signers (from v4, v3 and below return all commands with duplicates for different signers). */
-    fun commands(): List<Command<*>> {
-        return if (CordappResolver.currentTargetVersion >= CORDA_VERSION_THAT_INTRODUCED_FLATTENED_COMMANDS) {
-            commands.groupBy { cmd -> cmd.value }
-                    .entries.map { (data, cmds) -> Command(data, cmds.flatMap(Command<*>::signers).toSet().toList()) }
-        } else {
-            ArrayList(commands)
-        }
-    }
+    /** Returns an immutable list of [Command]s. */
+    fun commands(): List<Command<*>> = ArrayList(commands)
 
     /**
      * Sign the built transaction and return it. This is an internal function for use by the service hub, please use

@@ -7,6 +7,7 @@ description 'CLI Utilities'
 
 dependencies {
     compile project(":core")
+    compile project(":common-logging")
     
     compile "info.picocli:picocli:$picocli_version"
     compile "commons-io:commons-io:$commons_io_version"

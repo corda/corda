@@ -7,6 +7,7 @@ description 'Network bootstrapper'
 dependencies {
     compile project(':node-api')
     compile project(':tools:cliutils')
+    compile project(":common-logging")
     compile project(':common-configuration-parsing')
     compile "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
 

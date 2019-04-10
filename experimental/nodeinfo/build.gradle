@@ -1,20 +1,15 @@
 apply plugin: 'java'
 apply plugin: 'kotlin'
-apply plugin: 'net.corda.plugins.publish-utils'
-apply plugin: 'com.jfrog.artifactory'
+
+description 'NodeInfo signing tool'
 
 dependencies {
-    compile project(':client:jackson')
     compile project(':tools:cliutils')
-    compile project(":common-logging")
     compile "org.slf4j:jul-to-slf4j:$slf4j_version"
     compile "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
     compile "com.jcabi:jcabi-manifests:$jcabi_manifests_version"
-
-    testCompile(project(':test-utils')) {
-        exclude module: 'node-api'
-        exclude module: 'contracts'
-    }
+    compile project(':core')
+    compile project(':node-api')
 }
 
 jar {
@@ -23,14 +18,15 @@ jar {
         exclude "META-INF/*.DSA"
         exclude "META-INF/*.RSA"
     }
-    baseName = "blob-inspector"
+    baseName = "nodeinfo"
     manifest {
         attributes(
-                'Main-Class': 'net.corda.blobinspector.BlobInspectorKt'
+                'Main-Class': 'net.corda.nodeinfo.NodeInfoKt'
         )
     }
 }
 
-publish {
-    name 'corda-tools-blob-inspector'
+processResources {
+    from file("$rootDir/config/dev/log4j2.xml")
+    from file("$rootDir/node-api/src/main/resources/certificates/cordadevcakeys.jks")
 }
