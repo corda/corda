@@ -28,7 +28,7 @@ class RpcExceptionHandlingTest {
     private val users = listOf(user)
 
     @Test
-    fun `rpc client receives wrapped exceptions in devMode`() {
+    fun `rpc client receives wrapped exceptions in devMode with no stacktraces`() {
         val params = NodeParameters(rpcUsers = users)
         val clientRelevantMessage = "This is for the players!"
 
@@ -40,6 +40,8 @@ class RpcExceptionHandlingTest {
             val devModeNode = startNode(params, BOB_NAME).getOrThrow()
             assertThatThrownBy { devModeNode.throwExceptionFromFlow() }.isInstanceOfSatisfying(ClientRelevantException::class.java) { exception ->
                 assertEquals((exception.cause as CordaRuntimeException).originalExceptionClassName, SQLException::class.qualifiedName)
+                assertThat(exception.stackTrace).isEmpty()
+                assertThat((exception.cause as CordaRuntimeException).stackTrace).isEmpty()
                 assertThat(exception.message).isEqualTo(clientRelevantMessage)
             }
         }
@@ -56,7 +58,6 @@ class RpcExceptionHandlingTest {
 
         fun assertThatThrownExceptionIsReceivedUnwrapped(node: NodeHandle) {
             assertThatThrownBy { node.throwExceptionFromFlow() }.isInstanceOfSatisfying(ClientRelevantException::class.java) { exception ->
-                assertThat(exception.stackTrace).isEmpty()
                 assertThat(exception.message).isEqualTo(clientRelevantMessage)
             }
         }
