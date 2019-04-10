@@ -125,8 +125,12 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
                 }
                 .map(Attachment::id)
 
-        if (untrusted.isNotEmpty())
+        if (untrusted.isNotEmpty()) {
+            log.warn("Cannot verify transaction $sampleTxId as the following attachment IDs are untrusted: $untrusted." +
+                    "You will need to install that app version yourself, to whitelist it for use. " +
+                    "Please follow the operational steps outlined in https://docs.corda.net/cordapp-build-systems.html#cordapp-contract-attachments to learn more and continue.")
             throw TransactionVerificationException.UntrustedAttachmentsException(sampleTxId, untrusted)
+        }
 
         // Enforce the no-overlap and package ownership rules.
         checkAttachments(attachments)
