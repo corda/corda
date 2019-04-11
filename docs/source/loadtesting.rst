@@ -23,6 +23,7 @@ Note that these points could and should be relaxed as needed.
 The load test Main expects a single command line argument that points to a configuration file specifying the cluster hosts and optional overrides for the default configuration:
 
 .. literalinclude:: ../../tools/loadtest/src/main/resources/loadtest-reference.conf
+    :language: none
 
 Running the load tests
 ----------------------

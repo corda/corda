@@ -153,7 +153,9 @@ You should merge the changes back into Corda as follows:
 Developer Certificate of Origin
 -------------------------------
 All contributions to this project are subject to the terms of the Developer Certificate of Origin, available
-`here <https://developercertificate.org/>`_ and reproduced below::
+`here <https://developercertificate.org/>`_ and reproduced below:
+
+.. code-block:: none
 
     Developer Certificate of Origin
     Version 1.1

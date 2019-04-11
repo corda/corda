@@ -66,7 +66,7 @@ Module one - cordapp-contracts-states
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Here is the structure of the ``src`` directory for the ``cordapp-contracts-states`` module of the Java template:
 
-.. parsed-literal::
+.. code-block:: none
 
     .
     └── main
@@ -88,7 +88,7 @@ Module two - cordapp
 ~~~~~~~~~~~~~~~~~~~~
 Here is the structure of the ``src`` directory for the ``cordapp`` module of the Java template:
 
-.. parsed-literal::
+.. code-block:: none
 
     .
     ├── main

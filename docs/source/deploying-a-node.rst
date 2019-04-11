@@ -34,7 +34,9 @@ handling, and ensures the Corda service is run at boot.
 5. Create a directory called ``cordapps`` in ``/opt/corda`` and save your CorDapp jar file to it. Alternatively, download one of
    our `sample CorDapps <https://www.corda.net/samples/>`_ to the ``cordapps`` directory
 
-6. Save the below as ``/opt/corda/node.conf``. See :doc:`corda-configuration-file` for a description of these options::
+6. Save the below as ``/opt/corda/node.conf``. See :doc:`corda-configuration-file` for a description of these options:
+
+.. code-block:: none
 
       p2pAddress = "example.com:10002"
       rpcSettings {
@@ -188,7 +190,9 @@ at boot, and means the Corda service stays running with no users connected to th
    * A supported Java distribution. The supported versions are listed in :doc:`getting-set-up`
 
 1. Create a Corda directory and download the Corda jar. Here's an
-   example using PowerShell::
+   example using PowerShell:
+
+.. code-block:: shell
 
         mkdir C:\Corda
         wget http://jcenter.bintray.com/net/corda/corda/|corda_version|/corda-|corda_version|.jar -OutFile C:\Corda\corda.jar
@@ -196,7 +200,9 @@ at boot, and means the Corda service stays running with no users connected to th
 2. Create a directory called ``cordapps`` in ``C:\Corda\`` and save your CorDapp jar file to it. Alternatively,
    download one of our `sample CorDapps <https://www.corda.net/samples/>`_ to the ``cordapps`` directory
 
-3. Save the below as ``C:\Corda\node.conf``. See :doc:`corda-configuration-file` for a description of these options::
+3. Save the below as ``C:\Corda\node.conf``. See :doc:`corda-configuration-file` for a description of these options:
+
+.. code-block:: none
 
         p2pAddress = "example.com:10002"
         rpcSettings {
