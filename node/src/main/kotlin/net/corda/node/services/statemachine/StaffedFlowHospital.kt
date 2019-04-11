@@ -111,7 +111,7 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val 
                     Triple(Outcome.DISCHARGE, Event.RetryFlowFromSafePoint, backOff)
                 }
                 Diagnosis.OVERNIGHT_OBSERVATION -> {
-                    log.info("Flow error kept for overnight observation by ${report.by}", report.error)
+                    log.info("Flow error kept for overnight observation by ${report.by} (error was ${report.error.message})")
                     // We don't schedule a next event for the flow - it will automatically retry from its checkpoint on node restart
                     Triple(Outcome.OVERNIGHT_OBSERVATION, null, 0.seconds)
                 }
@@ -307,7 +307,7 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val 
         override fun consult(flowFiber: FlowFiber, currentState: StateMachineState, newError: Throwable, history: FlowMedicalHistory): Diagnosis {
             return if (currentState.flowLogic is FinalityHandler || isFromReceiveFinalityFlow(newError)) {
                 log.warn("Flow ${flowFiber.id} failed to be finalised. Manual intervention may be required before retrying " +
-                        "the flow by re-starting the node. State machine state: $currentState")
+                        "the flow by re-starting the node. State machine state: $currentState", newError)
                 Diagnosis.OVERNIGHT_OBSERVATION
             } else {
                 Diagnosis.NOT_MY_SPECIALTY
