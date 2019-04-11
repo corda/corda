@@ -8,6 +8,7 @@ import net.corda.nodeapi.internal.config.CertificateStoreSupplier
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.cryptoservice.CryptoServiceException
+import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.internal.stubs.CertificateStoreStubs
 import org.junit.Before
