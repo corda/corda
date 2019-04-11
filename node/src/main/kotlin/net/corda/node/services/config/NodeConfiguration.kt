@@ -4,6 +4,7 @@ import com.typesafe.config.Config
 import net.corda.common.configuration.parsing.internal.Configuration
 import net.corda.common.validation.internal.Validated
 import net.corda.core.context.AuthServiceId
+import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.TimedFlow
 import net.corda.core.internal.notary.NotaryServiceFlow
@@ -84,6 +85,7 @@ interface NodeConfiguration {
     val cordappSignerKeyFingerprintBlacklist: List<String>
 
     val networkParameterAcceptanceSettings: NetworkParameterAcceptanceSettings
+    val whitelistedKeysForAttachments: List<SecureHash>
 
     companion object {
         // default to at least 8MB and a bit extra for larger heap sizes

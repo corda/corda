@@ -150,4 +150,7 @@ class MigrationServicesForResolution(
     override fun loadContractAttachment(stateRef: StateRef): Attachment {
         throw NotImplementedError()
     }
+
+    override val whitelistedKeysForAttachments: Collection<SecureHash>
+        get() = throw NotImplementedError()
 }

@@ -14,6 +14,7 @@ import net.corda.core.serialization.*
 import net.corda.core.serialization.internal.AttachmentURLStreamHandlerFactory.toUrl
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
+import net.corda.core.utilities.toSHA256Bytes
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.io.InputStream
@@ -31,11 +32,14 @@ import java.util.*
  * @property sampleTxId The transaction ID that triggered the creation of this classloader. Because classloaders are cached
  *           this tx may be stale, that is, classloading might be triggered by the verification of some other transaction
  *           if not all code is invoked every time, however we want a txid for errors in case of attachment bogusness.
+ * @property whitelistedKeys A collection of public key hashes. An attachment signed by a public key with one of these hashes
+ *           will automatically be trusted.
  */
 class AttachmentsClassLoader(attachments: List<Attachment>,
                              val params: NetworkParameters,
                              private val sampleTxId: SecureHash,
-                             parent: ClassLoader = ClassLoader.getSystemClassLoader()) :
+                             parent: ClassLoader = ClassLoader.getSystemClassLoader(),
+                             private val whitelistedKeys: Collection<SecureHash> = listOf()) :
         URLClassLoader(attachments.map(::toUrl).toTypedArray(), parent) {
 
     companion object {
@@ -118,8 +122,8 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
                 .filter(::containsClasses)
                 .filterNot { attachment ->
                     when (attachment) {
-                        is ContractAttachment -> isUploaderTrusted(attachment.uploader)
-                        is AbstractAttachment -> isUploaderTrusted(attachment.uploader)
+                        is ContractAttachment -> isUploaderTrusted(attachment.uploader) || attachmentSignedByTrustedKey(attachment)
+                        is AbstractAttachment -> isUploaderTrusted(attachment.uploader) || attachmentSignedByTrustedKey(attachment)
                         else -> false // This should not happen on normal code paths.
                     }
                 }
@@ -130,6 +134,10 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
 
         // Enforce the no-overlap and package ownership rules.
         checkAttachments(attachments)
+    }
+
+    private fun attachmentSignedByTrustedKey(attachment: Attachment): Boolean {
+        return attachment.signerKeys.map { it.hash }.any { whitelistedKeys.contains(it)}
     }
 
     private fun isZipOrJar(attachment: Attachment) = attachment.openAsJAR().use { jar ->
@@ -307,12 +315,17 @@ object AttachmentsClassLoaderBuilder {
      *
      * @param txId The transaction ID that triggered this request; it's unused except for error messages and exceptions that can occur during setup.
      */
-    fun <T> withAttachmentsClassloaderContext(attachments: List<Attachment>, params: NetworkParameters, txId: SecureHash, parent: ClassLoader = ClassLoader.getSystemClassLoader(), block: (ClassLoader) -> T): T {
+    fun <T> withAttachmentsClassloaderContext(attachments: List<Attachment>,
+                                              params: NetworkParameters,
+                                              txId: SecureHash,
+                                              parent: ClassLoader = ClassLoader.getSystemClassLoader(),
+                                              whitelistedKeys: Collection<SecureHash> = listOf(),
+                                              block: (ClassLoader) -> T): T {
         val attachmentIds = attachments.map { it.id }.toSet()
 
         val serializationContext = cache.computeIfAbsent(Key(attachmentIds, params)) {
             // Create classloader and load serializers, whitelisted classes
-            val transactionClassLoader = AttachmentsClassLoader(attachments, params, txId, parent)
+            val transactionClassLoader = AttachmentsClassLoader(attachments, params, txId, parent, whitelistedKeys)
             val serializers = createInstancesOfClassesImplementing(transactionClassLoader, SerializationCustomSerializer::class.java)
             val whitelistedClasses = ServiceLoader.load(SerializationWhitelist::class.java, transactionClassLoader)
                     .flatMap { it.whitelist }

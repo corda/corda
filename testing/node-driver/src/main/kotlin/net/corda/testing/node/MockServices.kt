@@ -78,6 +78,8 @@ open class MockServices private constructor(
         override val keyManagementService: KeyManagementService = MockKeyManagementService(identityService, *arrayOf(initialIdentity.keyPair) + moreKeys)
 ) : ServiceHub {
 
+    override val whitelistedKeysForAttachments: List<SecureHash> = listOf()
+
     companion object {
         private fun cordappLoaderForPackages(packages: Iterable<String>, versionInfo: VersionInfo = VersionInfo.UNKNOWN): CordappLoader {
             return JarScanningCordappLoader.fromJarUrls(cordappsForPackages(packages).map { it.jarFile.toUri().toURL() }, versionInfo)
@@ -393,7 +395,7 @@ open class MockServices private constructor(
     override var networkParametersService: NetworkParametersService = MockNetworkParametersStorage(initialNetworkParameters)
 
     protected val servicesForResolution: ServicesForResolution
-        get() = ServicesForResolutionImpl(identityService, attachments, cordappProvider, networkParametersService, validatedTransactions)
+        get() = ServicesForResolutionImpl(identityService, attachments, cordappProvider, networkParametersService, validatedTransactions, listOf())
 
     internal fun makeVaultService(schemaService: SchemaService, database: CordaPersistence, cordappLoader: CordappLoader): VaultServiceInternal {
         return NodeVaultService(clock, keyManagementService, servicesForResolution, database, schemaService, cordappLoader.appClassLoader).apply { start() }

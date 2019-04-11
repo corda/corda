@@ -178,7 +178,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     val cordappProvider = CordappProviderImpl(cordappLoader, CordappConfigFileProvider(configuration.cordappDirectories), attachments).tokenize()
     @Suppress("LeakingThis")
     val keyManagementService = makeKeyManagementService(identityService).tokenize()
-    val servicesForResolution = ServicesForResolutionImpl(identityService, attachments, cordappProvider, networkParametersStorage, transactionStorage).also {
+    val servicesForResolution = ServicesForResolutionImpl(identityService, attachments, cordappProvider, networkParametersStorage, transactionStorage, configuration.whitelistedKeysForAttachments).also {
         attachments.servicesForResolution = it
     }
     @Suppress("LeakingThis")
