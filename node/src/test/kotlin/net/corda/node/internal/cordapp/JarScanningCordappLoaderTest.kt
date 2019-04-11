@@ -66,6 +66,18 @@ class JarScanningCordappLoaderTest {
     }
 
     @Test
+    fun `constructed CordappImpl contains the right cordapp classes`() {
+        val isolatedJAR = JarScanningCordappLoaderTest::class.java.getResource("/isolated.jar")
+        val loader = JarScanningCordappLoader.fromJarUrls(listOf(isolatedJAR))
+
+        val actualCordapp = loader.cordapps.single()
+        val cordappClasses = actualCordapp.cordappClasses
+        assertThat(cordappClasses).contains(isolatedFlowName)
+        val serializationWhitelistedClasses = actualCordapp.serializationWhitelists.flatMap { it.whitelist }.map { it.name }
+        assertThat(cordappClasses).containsAll(serializationWhitelistedClasses)
+    }
+
+    @Test
     fun `flows are loaded by loader`() {
         val jarFile = cordappWithPackages(javaClass.packageName).jarFile
         val loader = JarScanningCordappLoader.fromJarUrls(listOf(jarFile.toUri().toURL()))
