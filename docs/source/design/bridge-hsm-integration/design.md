@@ -88,9 +88,31 @@ We do support AES encryption of the access passwords to these keystores in the c
 
 
 ## Design Proposal
+### Key Management
+The proposed overview with full HSM support is shown below. The key technical challenge has been to find a way to prevent the float initiating
+any connection to an HSM containing the Corda Network keys as we have to regard the DMZ machine as potentially compromised by an attacker.
+We will support the float machine in the DMZ being optionally able to access a dedicated HSM for the tunnel TLS key,
+but this HSM has to be regarded as tainted from a security perspective. We therefore developed a way to intercept signing operations
+inside the TLS handshake engine and this allows the commands to be tunneled to the bridge for authorization signing. This is possible by creating
+a custom KeyStore provider that allows for access to the private key to be intercepted. Any attacker is then unable to gain wider access to the
+HSM and the only interactions between bridge and float are for the stereotypical operation of signing the ServerKeyExchange messages,
+which the bridge can confirm is well formed.
 
+The DelegatedKeystore is also used elsewhere to allow us to select the source HSM by context in other components of the bridge/float.
+The existing service architecture also handles correct handling of disconnects from the HSM and will ensure that HA failover can only occur
+to a valid site if there are network issues.
 ![](./images/Node%20TLS%20Corda%20ENT%20v4.1%20with%20HSM.png)
 
+### Internal Service Changes
+Internally the changes shown in diagram below area quite small:
+1. Creation of a few new services which provide the ``DelegatedKeystore`` to the existing services where they would historically load from file.
+2. Altering the tunnel messages to support the signing requests and to provision only the public TLS certificates, rather than the previous
+exchange of encrypted private keys.
+3. Configuration management and loading of the drivers for the specific ``CryptoService`` implementation that actually communicates with the HSMs.
+Note that the drivers will need to be separately installed into a folder as we are not licenced to ship the HSM verdor files as part of our distribution.
+
+![](./images/firewall%20with%20HSM.png)
+### New Services
 * **TLSSigningService**  
 Handle TLS signing request, delegate signing operation to external process using DelegatedKeystore.
 
@@ -100,4 +122,21 @@ An implementation of ``TLSSigningService``, delegating signing operation to ``Cr
 * **AMQPSigningService**  
 An implementation of ``TLSSigningService``, delegating signing operation to the bridge via AMQP messages.
 
-![](./images/firewall%20with%20HSM.png)
+
+### Configuration of HSMs
+We are still investigating what format of config file has the best usability, especially as we need to ensure that pre-existing
+configuration files are still valid. However, in keeping with Node HSM configuration we expect that the type of HSM will selected via
+a ``cryptoServiceName`` configuration property and all of the vendor specific configuration will be in a separate (encrypted) file referred
+to by a ``cryptoServiceConf`` property.
+We will also ensure that we can register different HSM connection details for different roles i.e. Network Keys, Tunnel and possibly Artemis.
+To aid compatibility we will not depend upon certificate chains being in the HSM, but will access the public certificates through the existing
+file stores. Our tool chain will be extended to ensure that the approrpiate files can be generated during registration.
+The configuration section for the HSM should also allow the aliases to be manually specified along with their associated X500 name.
+
+### Known limitations of the design
+There are known limitation in the Artemis library with regard to flexibility of keys and our recommendation is to regard the Artemis TLS as
+a simple internal access token to the Artemis broker. These private keys do not affect the security guarantees of the bridge, although TLS to the 
+Artemis broker does provide privacy protection against internal packet snooping. Do note that all Artemis access happens internally in the trusted zone and whilst
+we will investigate moving to full HSM support we cannot promise this for Corda Enterprise 4.1 and may still need to use files in the node
+and on the broker itself. The primary restriction on internal hijack is that all transactions must be signed by the node legal identity keys
+which will be stored in another HSM.
