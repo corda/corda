@@ -34,7 +34,7 @@ import java.time.Instant
  *
  * By default the NetworkParameters will be signed with the development NetworkMap key, which is what happens
  * currently with the Corda network bootstrapper. Arbitrary signing keys can be specified using
- * the --keyStore and --keyAlias parameters, in which case the specified Java keystore (and key) will be used instead.
+ * the --keystore and --alias parameters, in which case the specified Java keystore (and key) will be used instead.
  *
  * Values for the NetworkParameters are specified in a configuration file (in HOCON format),
  * using the --config option. An example content is shown below:
@@ -51,19 +51,19 @@ import java.time.Instant
  *
  *    notaries: ["/path/to/nodeinfo"]
  *
- * or via the commandline with the --notaryInfo option. Notaries are identified either by their respective nodeInfo files,
+ * or via the commandline with the --notary-info option. Notaries are identified either by their respective nodeInfo files,
  * or by a path to the identity certificate (JKS file containing the identity cert)
  *
  * Example usage:
  *
  * # Generate NetworkParameters with one notary, identified by it's NodeInfo file (and signed with default development NetworkMap key)
- * java -jar netparams.jar --config netparams.conf --notaryInfo /path/to/nodeinfo --output /path/to/network-parameters
+ * java -jar netparams.jar --config netparams.conf --notary-info /path/to/nodeinfo --output /path/to/network-parameters
  *
- * # Generate using the notary's keystore
- * java -jar netparams.jar --config netparams.conf --notaryKeyStore /path/to/node/certificates/nodekeystore.jks
+ * # Generate using the notary's identity certificate (instead of it's nodeinfo)
+ * java -jar netparams.jar --config netparams.conf --notary-keystore /path/to/node/certificates/nodekeystore.jks
  *
  * # Generate using an arbitrary 'netparams' signing key
- * java -jar netparams.jar --config netparams.conf --notaryInfo /path/to/nodeinfo --keyStore /my/keystore.jks --keyAlias netparams
+ * java -jar netparams.jar --config netparams.conf --notary-info /path/to/nodeinfo --keystore /my/keystore.jks --keyalias netparams
  *
  */
 fun main(args: Array<String>) {
@@ -78,25 +78,25 @@ class NetParamsSigner : CordaCliWrapper("netparams-signer", "Sign network parame
     @Option(names = ["--output"], paramLabel = "file", description = ["Network Parameters "])
     private var outputFile: Path? = null
 
-    @Option(names = ["--notaryInfo"], paramLabel = "nodeInfo", description = ["Path to notary NodeInfo"])
+    @Option(names = ["--notary-info"], paramLabel = "nodeInfo", description = ["Path to notary NodeInfo"])
     private var notaryInfos: MutableList<Path> = mutableListOf<Path>()
 
-    @Option(names = ["--notaryKeyStore"], paramLabel = "keyStore", description = ["Path to node keystore"])
+    @Option(names = ["--notary-keystore"], paramLabel = "keyStore", description = ["Path to node keystore"])
     private var notaryKeyStores: MutableList<Path> = mutableListOf<Path>()
 
-    @Option(names = ["--notaryKeyPass"], paramLabel = "password", description = ["Password to node keystore"])
+    @Option(names = ["--notary-keypass"], paramLabel = "password", description = ["Password to node keystore"])
     private var notaryKeyPasswords: MutableList<String> = mutableListOf<String>()
 
-    @Option(names = ["--keyStore"],  description = ["Keystore containing NetworkParameters signing key"])
+    @Option(names = ["--keystore"],  description = ["Keystore containing NetworkParameters signing key"])
     private var keyStorePath: Path? = null
 
-    @Option(names = ["--keyStorePass"], description = ["Keystore password"])
+    @Option(names = ["--keystore-pass"], description = ["Keystore password"])
     private var keyStorePass: String? = null
 
-    @Option(names = ["--keyAlias"],  description = ["Alias of signing key"])
+    @Option(names = ["--keyalias"],  description = ["Alias of signing key"])
     private var keyAlias: String? = null
 
-    @Option(names = ["--keyPass"], description = ["Password of signing key"])
+    @Option(names = ["--keypass"], description = ["Password of signing key"])
     private var keyPass: String? = null
 
     private fun getInput(prompt: String): String {
