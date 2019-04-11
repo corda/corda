@@ -3,7 +3,7 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath 'com.spotify:docker-client:8.14.5'
+        classpath 'com.spotify:docker-client:8.15.1'
     }
 }
 
@@ -13,8 +13,10 @@ import com.spotify.docker.client.DockerClient
 import com.spotify.docker.client.LoggingBuildHandler
 import com.spotify.docker.client.messages.RegistryAuth
 
+import java.nio.file.Paths
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import java.util.stream.Collectors
 
 evaluationDependsOn(":node:capsule")
 evaluationDependsOn(":tools:dbmigration")
@@ -37,35 +39,64 @@ shadowJar {
     zip64 true
 }
 
-task buildDockerFolder(dependsOn: [":node:capsule:buildCordaJAR", shadowJar, ":tools:dbmigration:shadowJar"]) {
-    doLast {
-        def cordaJar = project(":node:capsule").buildCordaJAR.archivePath
-        def dbmigrator = project(":tools:dbmigration").shadowJar.archivePath
-        project.copy {
-            into new File(project.buildDir, "docker-temp")
-            from "src/bash/run-corda.sh"
-            from "src/bash/db-migrate-create-jars.sh"
-            from "src/bash/db-migrate-execute-migration.sh"
-            from cordaJar
-            from shadowJar.archivePath
-            from dbmigrator
-            from "src/config/starting-node.conf"
-            from "src/bash/generate-config.sh"
-            from "src/docker/DockerfileAL"
-            from "src/docker/Dockerfile"
-            rename(cordaJar.name, "corda.jar")
-            rename(dbmigrator.name, "database-manager.jar")
-            rename(shadowJar.archivePath.name, "config-exporter.jar")
-        }
+static java.nio.file.Path combineDockerFiles(java.nio.file.Path base, java.nio.file.Path common, java.nio.file.Path outputDir, String outputName) {
+    final File outputFile = new File(outputDir.toFile(), outputName)
+    println("Combining ${base.toFile().absolutePath} and ${common.toFile().absolutePath} into Dockerfile at: ${outputFile.absolutePath}")
+    outputFile.withWriter { outputStream ->
+        outputStream.println("##START OF BASE##\n")
+        outputStream.write(base.text)
+        outputStream.println("\n##END OF BASE##\n")
+        outputStream.write(common.text)
     }
+    return outputFile.toPath()
+
 }
 
 final String runTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
 final String suffix = project.version.toString().toLowerCase().contains("snapshot") ? runTime : "RELEASE"
-final GString[] zuluBuildTags = ["entdocker.corda.r3cev.com/corda-enterprise-zulu-${project.version.toString().toLowerCase()}:${suffix}", "entdocker.corda.r3cev.com/corda-enterprise-zulu-${project.version.toString().toLowerCase()}:latest"]
-final GString[] correttoBuildTags = ["entdocker.corda.r3cev.com/corda-enterprise-corretto-${project.version.toString().toLowerCase()}:${suffix}", "entdocker.corda.r3cev.com/corda-enterprise-corretto-${project.version.toString().toLowerCase()}:latest"]
 
-static buildImage(java.nio.file.Path dir, String dockerFile, GString[] tags) {
+final String nodeImageBase = "entdocker.software.r3.com/corda-enterprise"
+
+enum BASE {
+    ALPINE_ZULU("alpine-zulu", "DockerfileAlpineZulu"),
+    UBUNTU_ZULU("ubuntu-zulu", "DockerfileUbuntuZulu"),
+    AL_CORRETTO("corretto", "DockerfileCorretto"),
+    CENTOS_CORRETTO("centos-corretto", "DockerfileCentosCorretto"),
+    OFFICIAL("", "DockerfileCorretto")
+    String knownAs
+    String sourceDockerFile
+
+    String versionString(String baseTag, String version) {
+        return "${baseTag}-${knownAs}" +
+                "${knownAs.isEmpty() ? "" : "-"}" +
+                "${version}"
+    }
+
+    BASE(String knownAs, String sourceDockerFile) {
+        this.knownAs = knownAs
+        this.sourceDockerFile = sourceDockerFile
+    }
+}
+
+static Iterable<String> buildTags(String imageName, String suffix) {
+    return [suffix, "latest"].stream().map({ toAppend -> "${imageName}:${toAppend}".toString() }).collect(Collectors.toList())
+}
+
+static List<String> buildImages(String baseTag, String suffix, String version, Map<BASE, Tuple2<java.nio.file.Path, String>> imagesToBuild) {
+    final List<String> tagsToScan = new ArrayList()
+    imagesToBuild.forEach({ base, filePair ->
+        java.nio.file.Path buildDir = filePair.first
+        String dockerFile = filePair.second
+        String imageName = base.versionString(baseTag, version)
+        Iterable<String> tags = buildTags(imageName, suffix)
+        buildImage(buildDir, dockerFile, tags)
+        tagsToScan.addAll(tags)
+    })
+    return tagsToScan
+}
+
+
+static buildImage(java.nio.file.Path dir, String dockerFile, Iterable<CharSequence> tags) {
     println("Building image from ${dir.toAbsolutePath().toString()} using Dockerfile: ${dockerFile}")
     final DockerClient docker = DefaultDockerClient.fromEnv().build()
     def builtImageId = docker.build(dir, null, dockerFile, new LoggingBuildHandler())
@@ -75,26 +106,74 @@ static buildImage(java.nio.file.Path dir, String dockerFile, GString[] tags) {
     }
 }
 
-static pushImages(GString[] imagesToPush) {
+static pushImages(Iterable<CharSequence> tags) {
     final DockerClient docker = DefaultDockerClient.fromEnv().build()
-    for (String tag : imagesToPush) {
+    for (String tag : tags) {
         println("Pushing tag: ${tag}")
         docker.push(tag, RegistryAuth.create(System.env.DOCKER_USERNAME, System.env.DOCKER_PASSWORD, null, null, null, null))
     }
 }
 
-task buildOfficialZuluDockerImage(dependsOn: [buildDockerFolder]) {
+def dockerTempDir = new File(project.buildDir, "docker-temp")
+final List<String> tagsBuilt = new ArrayList<String>()
+
+task buildDockerFolder(dependsOn: [":node:capsule:buildCordaJAR", shadowJar, ":tools:dbmigration:shadowJar"]) {
     doLast {
-        buildImage(new File(project.buildDir, "docker-temp").toPath(), "Dockerfile", zuluBuildTags)
-        pushImages(zuluBuildTags)
+        def outputDir = new File(project.buildDir, "docker-temp")
+        def cordaJar = project(":node:capsule").buildCordaJAR.archivePath
+        def dbmigrator = project(":tools:dbmigration").shadowJar.archivePath
+        project.copy {
+            into outputDir
+            from "src/bash/run-corda.sh"
+            from "src/bash/db-migrate-create-jars.sh"
+            from "src/bash/db-migrate-execute-migration.sh"
+            from cordaJar
+            from shadowJar.archivePath
+            from dbmigrator
+            from "src/config/starting-node.conf"
+            from "src/bash/generate-config.sh"
+            rename(cordaJar.name, "corda.jar")
+            rename(dbmigrator.name, "database-manager.jar")
+            rename(shadowJar.archivePath.name, "config-exporter.jar")
+        }
+
+        def commonDockerFile = Paths.get(project.projectDir.absolutePath, "src/docker/CommonDockerFile")
+        def alpineZuluDockerFile = combineDockerFiles(Paths.get(project.projectDir.absolutePath, "src/docker/BaseAlpineZulu"), commonDockerFile, outputDir.toPath(), BASE.ALPINE_ZULU.sourceDockerFile)
+        def corretttoDockerFile = combineDockerFiles(Paths.get(project.projectDir.absolutePath, "src/docker/BaseAmazonLinuxCorretto"), commonDockerFile, outputDir.toPath(), BASE.AL_CORRETTO.sourceDockerFile)
+        def ubuntuZuluDockerFile = combineDockerFiles(Paths.get(project.projectDir.absolutePath, "src/docker/BaseUbuntuZulu"), commonDockerFile, outputDir.toPath(), BASE.UBUNTU_ZULU.sourceDockerFile)
+        def centosCorrettoDockerFile = combineDockerFiles(Paths.get(project.projectDir.absolutePath, "src/docker/BaseCentosCorretto"), commonDockerFile, outputDir.toPath(), BASE.CENTOS_CORRETTO.sourceDockerFile)
     }
 }
 
-task buildOfficialCorrettoDockerImage(dependsOn: [buildDockerFolder]) {
+task buildAllImages(dependsOn: [buildDockerFolder]) {
     doLast {
-        buildImage(new File(project.buildDir, "docker-temp").toPath(), "DockerfileAL", correttoBuildTags)
-        pushImages(correttoBuildTags)
+        def dockerDirectory = dockerTempDir.toPath()
+        Map<BASE, Tuple2<java.nio.file.Path, String>> nodeTaskMap = [
+                (BASE.ALPINE_ZULU):     new Tuple2<>(dockerDirectory, BASE.ALPINE_ZULU.sourceDockerFile),
+                (BASE.UBUNTU_ZULU):     new Tuple2<>(dockerDirectory, BASE.UBUNTU_ZULU.sourceDockerFile),
+                (BASE.AL_CORRETTO):     new Tuple2<>(dockerDirectory, BASE.AL_CORRETTO.sourceDockerFile),
+                (BASE.CENTOS_CORRETTO): new Tuple2<>(dockerDirectory, BASE.CENTOS_CORRETTO.sourceDockerFile),
+                (BASE.OFFICIAL):        new Tuple2<>(dockerDirectory, BASE.OFFICIAL.sourceDockerFile)
+        ]
+        tagsBuilt.addAll(buildImages(nodeImageBase, suffix, project.version.toString().toLowerCase(), nodeTaskMap))
     }
 }
 
-task pushOfficialImages(dependsOn: [buildOfficialZuluDockerImage, buildOfficialCorrettoDockerImage])
+task scanAllBuiltTags(dependsOn: [buildAllImages]) {
+    doLast{
+        exec {
+            workingDir new File(project.projectDir, "container-scan")
+            executable "./docker_up.sh"
+            args tagsBuilt
+        }
+    }
+}
+
+task pushAllImages(dependsOn: [buildAllImages, scanAllBuiltTags]) {
+    doLast {
+        pushImages(tagsBuilt)
+    }
+}
+
+
+task buildAndPushImages(dependsOn: [buildAllImages, pushAllImages, scanAllBuiltTags])

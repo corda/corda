@@ -2,7 +2,7 @@
 NODE_LIST=("dockerNode1" "dockerNode2" "dockerNode3")
 NETWORK_NAME=mininet
 CORDAPP_VERSION="5.0-SNAPSHOT"
-DOCKER_IMAGE_VERSION="corda-zulu-5.0-snapshot"
+DOCKER_IMAGE_VERSION="corda-enterprise-centos-corretto-5.0-snapshot"
 
 mkdir cordapps
 rm -f cordapps/*
@@ -82,5 +82,5 @@ do
             -e CORDA_ARGS="--sshd --sshd-port=222$(echo ${NODE} | sed 's/[^0-9]*//g')" \
             --name ${NODE} \
             --network="${NETWORK_NAME}" \
-            corda/${DOCKER_IMAGE_VERSION}:latest config-generator --generic
+            entdocker.software.r3.com/${DOCKER_IMAGE_VERSION}:latest config-generator --generic
 done

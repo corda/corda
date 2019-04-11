@@ -22,6 +22,7 @@ function generateTestnetConfig() {
     NETWORKMAP_URL='https://map.testnet.corda.network' \
     DOORMAN_URL='https://doorman.testnet.corda.network' \
     java -jar config-exporter.jar "TEST-NET-COMBINE" "node.conf" "/opt/corda/starting-node.conf" "${CONFIG_FOLDER}/node.conf"
+    run-corda
 }
 
 function generateGenericCZConfig(){
