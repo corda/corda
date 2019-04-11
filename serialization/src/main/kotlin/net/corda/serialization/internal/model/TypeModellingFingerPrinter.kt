@@ -139,8 +139,7 @@ private class FingerPrintingState(
             is LocalTypeInformation.Abstract -> fingerprintAbstract(type)
             is LocalTypeInformation.Singleton -> fingerprintName(type)
             is LocalTypeInformation.Composable -> fingerprintComposable(type)
-            is LocalTypeInformation.NonComposable -> throw NotSerializableException(
-                    "Attempted to fingerprint non-composable type ${type.typeIdentifier.prettyPrint(false)}")
+            is LocalTypeInformation.NonComposable -> fingerprintNonComposable(type)
         }
     }
 
@@ -169,6 +168,14 @@ private class FingerPrintingState(
             }
 
     private fun fingerprintAbstract(type: LocalTypeInformation.Abstract) =
+            fingerprintWithCustomSerializerOrElse(type) {
+                fingerprintName(type)
+                fingerprintProperties(type.properties)
+                fingerprintInterfaces(type.interfaces)
+                fingerprintTypeParameters(type.typeParameters)
+            }
+
+    private fun fingerprintNonComposable(type: LocalTypeInformation.NonComposable) =
             fingerprintWithCustomSerializerOrElse(type) {
                 fingerprintName(type)
                 fingerprintProperties(type.properties)
