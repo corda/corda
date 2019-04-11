@@ -16,9 +16,8 @@ import java.util.*
 interface TokenizableAssetInfo {
     /** The nominal display unit size of a single token, potentially with trailing decimal display places if the scale parameter is non-zero. */
     val displayTokenSize: BigDecimal
-}
 
-/**
+    /**
  * Amount represents a positive quantity of some token (currency, asset, etc.), measured in quantity of the smallest
  * representable units. The nominal quantity represented by each individual token is equal to the [displayTokenSize].
  * The scale property of the [displayTokenSize] should correctly reflect the displayed decimal places and is used
