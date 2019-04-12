@@ -1,4 +1,4 @@
-package net.corda.node.services.keys.cryptoservice
+package net.corda.nodeapi.internal.cryptoservice
 
 enum class SupportedCryptoServices {
     /** Identifier for [BCCryptoService]. */
