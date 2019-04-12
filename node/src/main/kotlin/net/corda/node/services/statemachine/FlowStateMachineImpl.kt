@@ -159,10 +159,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                     is FlowContinuation.Resume -> {
                         return continuation.result
                     }
-                    is FlowContinuation.Throw -> {
-                        continuation.throwable.fillInStackTrace()
-                        throw continuation.throwable
-                    }
+                    is FlowContinuation.Throw -> throw fillInStackTrace(continuation.throwable)
                     FlowContinuation.ProcessEvents -> continue@eventLoop
                     FlowContinuation.Abort -> abortFiber()
                 }
@@ -171,6 +168,36 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             checkDbTransaction(isDbTransactionOpenOnExit)
             openThreadLocalWormhole()
         }
+    }
+
+    private fun fillInStackTrace(throwable: Throwable): Throwable {
+        throwable.apply {
+            fillInStackTrace()
+            // provide useful information that can be displayed to the user
+            when (this) {
+                is UnexpectedFlowEndException -> {
+                    if (peer != null) {
+                        stackTrace += StackTraceElement(
+                            "Received unexpected counter-flow exception from peer",
+                            " ${peer!!.name}",
+                            null,
+                            -1
+                        )
+                    }
+                }
+                is FlowException -> {
+                    if (peer != null) {
+                        throwable.stackTrace += StackTraceElement(
+                            "Received counter-flow exception from peer",
+                            " ${peer!!.name}",
+                            null,
+                            -1
+                        )
+                    }
+                }
+            }
+        }
+        return throwable
     }
 
     /**
