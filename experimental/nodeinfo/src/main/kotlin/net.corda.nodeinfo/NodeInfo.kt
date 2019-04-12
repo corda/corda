@@ -35,7 +35,7 @@ import java.security.cert.CertificateFactory
  * Example usage:
  *
  *   # generate a nodeinfo
- *   java -jar nodeinfo.jar --address host:port --outdir /nodedir --keyStore /nodedir/certificates/nodekeystore.jks
+ *   java -jar nodeinfo.jar --address host:port --outdir /nodedir --keystore /nodedir/certificates/nodekeystore.jks
  *
  *   nodeinfo will prompt you for the keystore password, and the password of the node identity private key:
  *    Store password (nodekeystore.jks): *******
@@ -63,7 +63,7 @@ class NodeInfoSigner : CordaCliWrapper("nodeinfo-signer", "Display and generate 
     @Option(names = ["--address"], paramLabel = "host:port", description = ["Public address of node"], converter = [NetworkHostAndPortConverter::class])
     private var addressList: MutableList<NetworkHostAndPort> = mutableListOf<NetworkHostAndPort>()
 
-    @Option(names = ["--platformVersion"], paramLabel = "int", description = ["Platform version that this node supports"])
+    @Option(names = ["--platform-version"], paramLabel = "int", description = ["Platform version that this node supports"])
     private var platformVersion: Int = 4
 
     @Option(names = ["--serial"], paramLabel = "long", description = [""])
@@ -72,16 +72,16 @@ class NodeInfoSigner : CordaCliWrapper("nodeinfo-signer", "Display and generate 
     @Option(names = ["--outdir"], paramLabel = "directory", description = ["Output directory"])
     private var outputDirectory: Path? = null
 
-    @Option(names = ["--keyStore"],  description = ["Keystore containing identity certificate for signing"])
+    @Option(names = ["--keystore"],  description = ["Keystore containing identity certificate for signing"])
     private var keyStorePath: Path? = null
 
-    @Option(names = ["--keyStorePass"], description = ["Keystore password (will prompt if not specified)"])
+    @Option(names = ["--keystore-pass"], description = ["Keystore password (will prompt if not specified)"])
     private var keyStorePass: String? = null
 
-    @Option(names = ["--keyAlias"],  description = ["Alias of signing key - default is identity-private-key"])
+    @Option(names = ["--keyalias"],  description = ["Alias of signing key - default is identity-private-key"])
     private var keyAlias: String? = "identity-private-key"
 
-    @Option(names = ["--keyPass"], description = ["Password of signing key (will prompt if not specified)"])
+    @Option(names = ["--keypass"], description = ["Password of signing key (will prompt if not specified)"])
     private var keyPass: String? = null
 
     private fun getInput(prompt: String): String {
@@ -147,7 +147,7 @@ class NodeInfoSigner : CordaCliWrapper("nodeinfo-signer", "Display and generate 
         else {
             require(addressList.size > 0){ "At least one --address must be specified" }
             require(outputDirectory != null) { "The --outdir parameter must be specified" }
-            require(keyStorePath != null && keyAlias != null) { "The --keyStorePath and --keyAlias parameters must be specified" }
+            require(keyStorePath != null && keyAlias != null) { "The --keystore and --keyalias parameters must be specified" }
         }
 
         if(keyStorePass == null)
