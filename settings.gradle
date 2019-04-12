@@ -27,6 +27,7 @@ include 'experimental:flow-hook'
 include 'experimental:flow-worker'
 include 'experimental:ha-testing'
 include 'experimental:corda-utils'
+include 'experimental:nodeinfo'
 include 'experimental:rpc-worker'
 include 'jdk8u-deterministic'
 include 'test-common'
@@ -92,6 +93,10 @@ project(":common-validation").projectDir = new File("$settingsDir/common/validat
 
 include 'common-configuration-parsing'
 project(":common-configuration-parsing").projectDir = new File("$settingsDir/common/configuration-parsing")
+
+
+include 'common-logging'
+project(":common-logging").projectDir = new File("$settingsDir/common/logging")
 // Common libraries - end
 
 apply from: 'buildCacheSettings.gradle'

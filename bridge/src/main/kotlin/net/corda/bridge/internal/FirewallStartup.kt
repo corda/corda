@@ -4,8 +4,8 @@ import net.corda.bridge.FirewallCmdLineOptions
 import net.corda.bridge.FirewallVersionInfo
 import net.corda.bridge.services.api.FirewallConfiguration
 import net.corda.cliutils.CordaCliWrapper
-import net.corda.cliutils.CordaVersionProvider
 import net.corda.cliutils.ExitCodes
+import net.corda.common.logging.CordaVersion
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.utilities.contextLogger
@@ -105,10 +105,10 @@ class FirewallStartup: CordaCliWrapper("corda-firewall", "The Corda Firewall app
 
     private fun getVersionInfo(): FirewallVersionInfo {
         return FirewallVersionInfo(
-                CordaVersionProvider.platformVersion,
-                CordaVersionProvider.releaseVersion,
-                CordaVersionProvider.revision,
-                CordaVersionProvider.vendor
+                CordaVersion.platformVersion,
+                CordaVersion.releaseVersion,
+                CordaVersion.revision,
+                CordaVersion.vendor
         )
     }
     private fun enforceSingleBridgeIsRunning(baseDirectory: Path) {

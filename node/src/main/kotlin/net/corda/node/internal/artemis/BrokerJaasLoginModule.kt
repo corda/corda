@@ -108,7 +108,7 @@ class BrokerJaasLoginModule : BaseBrokerJaasLoginModule() {
             if (e is IllegalArgumentException && e.stackTrace.any { it.className == "org.apache.activemq.artemis.protocol.amqp.sasl.PlainSASL" }) {
                 log.trace("SASL Login failed.")
             } else {
-                log.error("Login failed: ${e.message}", e)
+                log.warn("Login failed: ${e.message}")
             }
             if (e is LoginException) {
                 throw e

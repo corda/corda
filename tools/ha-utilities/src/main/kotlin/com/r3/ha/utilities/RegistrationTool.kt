@@ -4,8 +4,8 @@ import com.typesafe.config.ConfigValueFactory
 import net.corda.client.rpc.internal.serialization.amqp.AMQPClientSerializationScheme
 import net.corda.cliutils.CommonCliConstants.BASE_DIR
 import net.corda.cliutils.CordaCliWrapper
-import net.corda.cliutils.CordaVersionProvider
 import net.corda.cliutils.ExitCodes
+import net.corda.common.logging.CordaVersion
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.internal.div
@@ -39,9 +39,9 @@ class RegistrationTool : CordaCliWrapper("node-registration", "Corda registratio
     companion object {
         private val VERSION_INFO = VersionInfo(
                 PLATFORM_VERSION,
-                CordaVersionProvider.releaseVersion,
-                CordaVersionProvider.revision,
-                CordaVersionProvider.vendor)
+                CordaVersion.releaseVersion,
+                CordaVersion.revision,
+                CordaVersion.vendor)
 
         private val logger by lazy { contextLogger() }
     }
@@ -110,7 +110,7 @@ class RegistrationTool : CordaCliWrapper("node-registration", "Corda registratio
 
             if(success.isNotEmpty()) {
                 // Fetch the network params and store them in the `baseDirectory`
-                val versionInfo = VersionInfo(PLATFORM_VERSION, CordaVersionProvider.releaseVersion, CordaVersionProvider.revision, CordaVersionProvider.vendor)
+                val versionInfo = VersionInfo(PLATFORM_VERSION, CordaVersion.releaseVersion, CordaVersion.revision, CordaVersion.vendor)
                 val networkMapClient = NetworkMapClient(success.first().second.getOrThrow().networkServices!!.networkMapURL, versionInfo)
                 val trustRootCertificate = X509KeyStore.fromFile(networkRootTrustStorePath, networkRootTrustStorePassword)
                         .getCertificate(CORDA_ROOT_CA)
