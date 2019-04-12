@@ -185,16 +185,28 @@ open class StringToMethodCallParser<in T : Any> @JvmOverloads constructor(
     }
 
     /**
+     * Validates that the argument string matches the constructor parameters, i.e. this is a matching constructor
+     * for the argument string. Exception is thrown if not a match
+     *
+     * @param methodNameHint A name that will be used in exceptions if thrown; not used for any other purpose.
+     * @throws UnparseableCallException If no match is found between constructor parameters and passed string.
+     */
+    @Throws(UnparseableCallException::class)
+    fun validateIsMatchingCtor(methodNameHint: String, parameters: List<Pair<String, Type>>, args: String) {
+        val tree = createJsonTreeAndValidate(methodNameHint, parameters, args)
+        val inOrderParams: List<Any?> = parameters.mapIndexed { _, (argName, argType) ->
+            tree[argName] ?: throw UnparseableCallException.MissingParameter(methodNameHint, argName, args)
+        }
+    }
+
+    /**
      * Parses only the arguments string given the info about parameter names and types.
      *
      * @param methodNameHint A name that will be used in exceptions if thrown; not used for any other purpose.
      */
     @Throws(UnparseableCallException::class)
     fun parseArguments(methodNameHint: String, parameters: List<Pair<String, Type>>, args: String): Array<Any?> {
-        // If we have parameters, wrap them in {} to allow the Yaml parser to eat them on a single line.
-        val parameterString = "{ $args }"
-        val tree: JsonNode = om.readTree(parameterString) ?: throw UnparseableCallException(args)
-        if (tree.size() > parameters.size) throw UnparseableCallException.TooManyParameters(methodNameHint, args)
+        val tree = createJsonTreeAndValidate(methodNameHint, parameters, args)
         val inOrderParams: List<Any?> = parameters.mapIndexed { _, (argName, argType) ->
             val entry = tree[argName] ?: throw UnparseableCallException.MissingParameter(methodNameHint, argName, args)
             val entryType = om.typeFactory.constructType(argType)
@@ -211,6 +223,14 @@ open class StringToMethodCallParser<in T : Any> @JvmOverloads constructor(
             }
         }
         return inOrderParams.toTypedArray()
+    }
+
+    private fun createJsonTreeAndValidate(methodNameHint: String, parameters: List<Pair<String, Type>>, args: String) : JsonNode {
+        // If we have parameters, wrap them in {} to allow the Yaml parser to eat them on a single line.
+        val parameterString = "{ $args }"
+        val tree: JsonNode = om.readTree(parameterString) ?: throw UnparseableCallException(args)
+        if (tree.size() > parameters.size) throw UnparseableCallException.TooManyParameters(methodNameHint, args)
+        return tree
     }
 
     /** Returns a string-to-string map of commands to a string describing available parameter types. */
