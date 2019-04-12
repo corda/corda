@@ -29,6 +29,7 @@ dependencies {
     compile project(':client:rpc')
     compile project(':client:jackson')
     compile project(':tools:cliutils')
+    compile project(":common-logging")
 
     // Web stuff: for HTTP[S] servlets
     compile "org.eclipse.jetty:jetty-servlet:$jetty_version"

@@ -60,7 +60,7 @@ buildscript {
     ext.dependency_checker_version = '4.0.0'
     ext.commons_collections_version = '4.1'
     ext.beanutils_version = '1.9.3'
-    ext.crash_version = 'cadb53544fbb3c0fb901445da614998a6a419488'
+    ext.crash_version = '810d2b774b85d4938be01b9b65e29e4fddbc450b'
     ext.jsr305_version = constants.getProperty("jsr305Version")
     ext.spring_jdbc_version ='5.0.0.RELEASE'
     ext.shiro_version = '1.4.0'
@@ -431,7 +431,8 @@ bintrayConfig {
             'corda-tools-cliutils',
             'corda-notary-jpa',
             'corda-common-configuration-parsing',
-            'corda-common-validation'
+            'corda-common-validation',
+            'corda-common-logging'
     ]
     license {
         name = 'Apache-2.0'

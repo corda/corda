@@ -316,39 +316,94 @@ reduced the exposure.
 
 If you are constructing a MockServices for testing contracts, and your contract uses the Cash contract from the finance app, you
 now need to explicitly add ``net.corda.finance.contracts`` to the list of ``cordappPackages``. This is a part of the work to disentangle
-the finance app (which is really a demo app) from the Corda internals. Example::
+the finance app (which is really a demo app) from the Corda internals. Example:
 
-    val ledgerServices = MockServices(
-        listOf("net.corda.examples.obligation", "net.corda.testing.contracts"),
-        identityService = makeTestIdentityService(),
-        initialIdentity = TestIdentity(CordaX500Name("TestIdentity", "", "GB"))
-    )
+.. container:: codeset
 
-becomes::
+    .. sourcecode:: kotlin
 
-    val ledgerServices = MockServices(
-        listOf("net.corda.examples.obligation", "net.corda.testing.contracts", "net.corda.finance.contracts"),
-        identityService = makeTestIdentityService(),
-        initialIdentity = TestIdentity(CordaX500Name("TestIdentity", "", "GB"))
-    )
+        val ledgerServices = MockServices(
+            listOf("net.corda.examples.obligation", "net.corda.testing.contracts"),
+            initialIdentity = TestIdentity(CordaX500Name("TestIdentity", "", "GB")),
+            identityService = makeTestIdentityService()
+        )
+
+    .. sourcecode:: java
+
+        MockServices ledgerServices = new MockServices(
+            Arrays.asList("net.corda.examples.obligation", "net.corda.testing.contracts"),
+            new TestIdentity(new CordaX500Name("TestIdentity", "", "GB")),
+            makeTestIdentityService()
+        );
+
+becomes:
+
+.. container:: codeset
+
+    .. sourcecode:: kotlin
+
+        val ledgerServices = MockServices(
+            listOf("net.corda.examples.obligation", "net.corda.testing.contracts", "net.corda.finance.contracts"),
+            initialIdentity = TestIdentity(CordaX500Name("TestIdentity", "", "GB")),
+            identityService = makeTestIdentityService()
+        )
+
+    .. sourcecode:: java
+
+        MockServices ledgerServices = new MockServices(
+            Arrays.asList("net.corda.examples.obligation", "net.corda.testing.contracts", "net.corda.finance.contracts"),
+            new TestIdentity(new CordaX500Name("TestIdentity", "", "GB")),
+            makeTestIdentityService()
+        );
 
 You may need to use the new ``TestCordapp`` API when testing with the node driver or mock network, especially if you decide to stick with the
 pre-Corda 4 ``FinalityFlow`` API. The previous way of pulling in CorDapps into your tests (i.e. via using the ``cordappPackages`` parameter) does not honour CorDapp versioning.
 The new API ``TestCordapp.findCordapp()`` discovers the CorDapps that contain the provided packages scanning the classpath, so you have to ensure that the classpath the tests are running under contains either the CorDapp ``.jar`` or (if using Gradle) the relevant Gradle sub-project.
 In the first case, the versioning information in the CorDapp ``.jar`` file will be maintained. In the second case, the versioning information will be retrieved from the Gradle ``cordapp`` task.
-For example, if you are using ``MockNetwork`` for your tests, the following code::
+For example, if you are using ``MockNetwork`` for your tests, the following code:
 
-    val mockNetwork = MockNetwork(
-        cordappPackages = listOf("net.corda.examples.obligation", "net.corda.finance.contracts"),
-        notarySpecs = listOf(MockNetworkNotarySpec(notary))
-    )
+.. container:: codeset
 
-would need to be transformed into::
+    .. sourcecode:: kotlin
 
-    val mockNetwork = MockNetwork(MockNetworkParameters(
-        cordappsForAllNodes = listOf(TestCordapp.findCordapp("net.corda.businessnetworks.membership")),
-        notarySpecs = listOf(MockNetworkNotarySpec(notary))
-    ))
+        val mockNetwork = MockNetwork(
+            cordappPackages = listOf("net.corda.examples.obligation", "net.corda.finance.contracts"),
+            notarySpecs = listOf(MockNetworkNotarySpec(notary))
+        )
+
+    .. sourcecode:: java
+
+        MockNetwork mockNetwork = new MockNetwork(
+            Arrays.asList("net.corda.examples.obligation", "net.corda.finance.contracts"),
+            new MockNetworkParameters().withNotarySpecs(Arrays.asList(new MockNetworkNotarySpec(notary)))
+        );
+
+would need to be transformed into:
+
+.. container:: codeset
+
+    .. sourcecode:: kotlin
+
+        val mockNetwork = MockNetwork(
+            MockNetworkParameters(
+                cordappsForAllNodes = listOf(
+                    TestCordapp.findCordapp("net.corda.examples.obligation.contracts"),
+                    TestCordapp.findCordapp("net.corda.examples.obligation.flows")
+                ),
+                notarySpecs = listOf(MockNetworkNotarySpec(notary))
+            )
+        )
+
+    .. sourcecode:: java
+
+        MockNetwork mockNetwork = new MockNetwork(
+            new MockNetworkParameters(
+                Arrays.asList(
+                    TestCordapp.findCordapp("net.corda.examples.obligation.contracts"),
+                    TestCordapp.findCordapp("net.corda.examples.obligation.flows")
+                )
+            ).withNotarySpecs(Arrays.asList(new MockNetworkNotarySpec(notary)))
+        );
 
 Note that every package should exist in only one CorDapp, otherwise the discovery process won't be able to determine which one to use and you will most probably see an exception telling you ``There is more than one CorDapp containing the package``.
 For instance, if you have 2 CorDapps containing the packages ``net.corda.examples.obligation.contracts`` and ``net.corda.examples.obligation.flows``, you will get this error if you specify the package ``net.corda.examples.obligation``.

@@ -6,6 +6,7 @@ dependencies {
     compile project(':core')
     compile project(':node-api')
     compile project(':tools:cliutils')
+    compile project(":common-logging")
 
     // Unit testing helpers.
     compile "junit:junit:$junit_version"
