@@ -37,6 +37,10 @@ dependencies {
         transitive = false // we control dependencies directly as the bridge is likely to be audited
     }
 
+    compile(project(':common-logging')) {
+        transitive = false // we control dependencies directly as the bridge is likely to be audited
+    }
+    
     compile(project(':common-configuration-parsing')) {
         transitive = false // we control dependencies directly as the bridge is likely to be audited
     }
