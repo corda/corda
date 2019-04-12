@@ -221,7 +221,7 @@ class SchemaMigration(
 
     private fun checkResourcesInClassPath(resources: List<String?>) {
         for (resource in resources) {
-            if (classLoader.getResource(resource) == null) {
+            if (resource != null && classLoader.getResource(resource) == null) {
                 throw DatabaseMigrationException("Could not find Liquibase database migration script $resource. Please ensure the jar file containing it is deployed in the cordapps directory.")
             }
         }
