@@ -147,7 +147,9 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
         )
     }
 
-    // Especially crafted for TransactionVerificationRequest
+    // Especially crafted for TransactionVerificationRequest.
+    // Note that whitelisted keys do not need to be passed here. The DJVM automatically assumes all attachments are provided by a trusted
+    // uploader, and so all attachments will be trusted when this is called from the DJVM.
     @CordaInternal
     internal fun toLtxDjvmInternalBridge(
             resolveAttachment: (SecureHash) -> Attachment?,
