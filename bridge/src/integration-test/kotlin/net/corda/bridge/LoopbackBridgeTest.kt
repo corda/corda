@@ -18,6 +18,7 @@ import net.corda.testing.node.User
 import net.corda.testing.node.internal.cordappsForPackages
 import net.corda.testing.node.internal.internalDriver
 import org.apache.activemq.artemis.core.server.ActiveMQServer
+import org.junit.Assume
 import org.junit.ClassRule
 import org.junit.Test
 import kotlin.concurrent.thread
@@ -109,6 +110,7 @@ class LoopbackBridgeTest : IntegrationTest() {
     // This test will hang if AMQP bridge is being use instead of Loopback bridge.
     @Test(timeout = 600000)
     fun `Nodes behind one bridge can communicate with each other using loopback bridge - with bridge started first`() {
+        Assume.assumeTrue(!isRemoteDatabaseMode()) // Enterprise only - disable test when running against remote database, reported in ENT-3470
         val demoUser = User("demo", "demo", setOf(Permissions.startFlow<Ping>(), Permissions.all()))
         var artemis: ActiveMQServer? = null
         internalDriver(startNodesInProcess = true, cordappsForAllNodes = cordappsForPackages("net.corda.bridge"), notarySpecs = emptyList(), portAllocation = incrementalPortAllocation(20000)) {
