@@ -6,7 +6,7 @@ import net.corda.core.internal.ThreadBox
 import net.corda.core.node.services.IdentityService
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.crypto.internal.AliasPrivateKey
-import net.corda.node.services.keys.cryptoservice.BCCryptoService
+import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
 import net.corda.nodeapi.internal.cryptoservice.CryptoService
 import org.bouncycastle.operator.ContentSigner
 import java.security.KeyPair
