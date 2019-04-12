@@ -98,7 +98,7 @@ class SchemaMigration(
 
             // Collect all changelog file referenced in the included schemas.
             // For backward compatibility reasons, when failOnMigrationMissing=false, we don't manage CorDapps via Liquibase but use the hibernate hbm2ddl=update.
-            val changelogList = schemas.map { mappedSchema ->
+            val changelogList = schemas.mapNotNull { mappedSchema ->
                 val resource = getMigrationResource(mappedSchema, classLoader)
                 when {
                     resource != null -> resource
