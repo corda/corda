@@ -5,10 +5,10 @@ import net.corda.core.serialization.SerializationContext;
 import net.corda.core.serialization.SerializationFactory;
 import net.corda.core.serialization.SerializedBytes;
 import net.corda.serialization.internal.amqp.SchemaKt;
-import net.corda.testing.core.SerializationEnvironmentRule;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import net.corda.testing.core.SerializationEnvironmentExtension;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.NotSerializableException;
 import java.io.Serializable;
@@ -23,11 +23,11 @@ public final class ForbiddenLambdaSerializationTests {
     private EnumSet<SerializationContext.UseCase> contexts = EnumSet.complementOf(
             EnumSet.of(SerializationContext.UseCase.Testing));
 
-    @Rule
-    public final SerializationEnvironmentRule testSerialization = new SerializationEnvironmentRule();
+    @RegisterExtension
+    public final SerializationEnvironmentExtension testSerialization = new SerializationEnvironmentExtension();
     private SerializationFactory factory;
 
-    @Before
+    @BeforeEach
     public void setup() {
         factory = testSerialization.getSerializationFactory();
     }

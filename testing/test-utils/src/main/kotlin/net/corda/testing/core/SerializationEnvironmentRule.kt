@@ -6,9 +6,15 @@ import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.internal.staticField
 import net.corda.core.serialization.SerializationFactory
 import net.corda.core.serialization.internal.SerializationEnvironment
+import net.corda.core.serialization.internal._contextSerializationEnv
+import net.corda.core.serialization.internal._inheritableContextSerializationEnv
 import net.corda.core.serialization.internal.effectiveSerializationEnv
 import net.corda.testing.internal.*
 import org.apache.activemq.artemis.core.remoting.impl.invm.InVMConnector
+import org.junit.jupiter.api.extension.AfterEachCallback
+import org.junit.jupiter.api.extension.BeforeEachCallback
+import org.junit.jupiter.api.extension.Extension
+import org.junit.jupiter.api.extension.ExtensionContext
 import org.junit.rules.TestRule
 import org.junit.runner.Description
 import org.junit.runners.model.Statement
@@ -23,14 +29,7 @@ import java.util.concurrent.Executors
 class SerializationEnvironmentRule(private val inheritable: Boolean = false) : TestRule {
     companion object {
         init {
-            // Can't turn it off, and it creates threads that do serialization, so hack it:
-            InVMConnector::class.staticField<ExecutorService>("threadPoolExecutor").value = rigorousMock<ExecutorService>().also {
-                doAnswer {
-                    inVMExecutors.computeIfAbsent(effectiveSerializationEnv) {
-                        Executors.newCachedThreadPool(testThreadFactory(true)) // Close enough to what InVMConnector makes normally.
-                    }.execute(it.arguments[0] as Runnable)
-                }.whenever(it).execute(any())
-            }
+            ThreadPoolExecutorHack.enable()
         }
     }
 
@@ -42,6 +41,42 @@ class SerializationEnvironmentRule(private val inheritable: Boolean = false) : T
         env = createTestSerializationEnv()
         return object : Statement() {
             override fun evaluate() = env.asTestContextEnv(inheritable) { base.evaluate() }
+        }
+    }
+}
+
+class SerializationEnvironmentExtension(private val inheritable: Boolean = false): Extension, BeforeEachCallback, AfterEachCallback {
+    companion object {
+        init {
+            ThreadPoolExecutorHack.enable()
+        }
+    }
+
+    private lateinit var env: SerializationEnvironment
+
+    val serializationFactory: SerializationFactory get() = env.serializationFactory
+    val property get() = if (inheritable) _inheritableContextSerializationEnv else _contextSerializationEnv
+
+    override fun beforeEach(context: ExtensionContext?) {
+        env = createTestSerializationEnv()
+        property.set(env)
+    }
+
+    override fun afterEach(context: ExtensionContext?) {
+        inVMExecutors.remove(env)
+        property.set(null)
+    }
+}
+
+private object ThreadPoolExecutorHack {
+    fun enable() {
+        // Can't turn it off, and it creates threads that do serialization, so hack it:
+        InVMConnector::class.staticField<ExecutorService>("threadPoolExecutor").value = rigorousMock<ExecutorService>().also {
+            doAnswer {
+                inVMExecutors.computeIfAbsent(effectiveSerializationEnv) {
+                    Executors.newCachedThreadPool(testThreadFactory(true)) // Close enough to what InVMConnector makes normally.
+                }.execute(it.arguments[0] as Runnable)
+            }.whenever(it).execute(any())
         }
     }
 }
