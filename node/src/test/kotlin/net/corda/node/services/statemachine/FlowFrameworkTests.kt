@@ -186,6 +186,7 @@ class FlowFrameworkTests {
                 .isThrownBy { receivingFiber.resultFuture.getOrThrow() }
                 .withMessage("Nothing useful")
                 .withStackTraceContaining(ReceiveFlow::class.java.name)  // Make sure the stack trace is that of the receiving flow
+                .withStackTraceContaining("Received counter-flow exception from peer")
         bobNode.database.transaction {
             assertThat(bobNode.internals.checkpointStorage.checkpoints()).isEmpty()
         }

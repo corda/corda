@@ -171,33 +171,36 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     }
 
     private fun fillInStackTrace(throwable: Throwable): Throwable {
-        throwable.apply {
+        return throwable.apply {
             fillInStackTrace()
             // provide useful information that can be displayed to the user
             when (this) {
                 is UnexpectedFlowEndException -> {
                     if (peer != null) {
-                        stackTrace += StackTraceElement(
-                            "Received unexpected counter-flow exception from peer",
-                            " ${peer!!.name}",
-                            null,
-                            -1
-                        )
+                        stackTrace = arrayOf(
+                            StackTraceElement(
+                                "Received unexpected counter-flow exception from peer",
+                                " ${peer!!.name}",
+                                null,
+                                -1
+                            )
+                        ) + stackTrace
                     }
                 }
                 is FlowException -> {
                     if (peer != null) {
-                        throwable.stackTrace += StackTraceElement(
-                            "Received counter-flow exception from peer",
-                            " ${peer!!.name}",
-                            null,
-                            -1
-                        )
+                        stackTrace = arrayOf(
+                            StackTraceElement(
+                                "Received counter-flow exception from peer",
+                                " ${peer!!.name}",
+                                null,
+                                -1
+                            )
+                        ) + stackTrace
                     }
                 }
             }
         }
-        return throwable
     }
 
     /**
