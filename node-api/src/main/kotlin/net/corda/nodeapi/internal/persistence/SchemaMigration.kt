@@ -13,6 +13,7 @@ import net.corda.nodeapi.internal.MigrationHelpers.getMigrationResource
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.cordapp.CordappLoader
+import sun.security.x509.X500Name
 import java.io.ByteArrayInputStream
 import java.io.InputStream
 import java.nio.file.Path
@@ -114,7 +115,6 @@ class SchemaMigration(
             }
             System.setProperty(NODE_X500_NAME, ourName.toString())
             val customResourceAccessor = CustomResourceAccessor(dynamicInclude, changelogList, classLoader)
-            checkResourcesInClassPath(changelogList)
 
             // current version of Liquibase appears to be non-threadsafe
             // this is apparent when multiple in-process nodes are all running migrations simultaneously
@@ -209,7 +209,6 @@ class SchemaMigration(
 
         if (preV4Baseline.isNotEmpty()) {
             val dynamicInclude = "master.changelog.json" // Virtual file name of the changelog that includes all schemas.
-            checkResourcesInClassPath(preV4Baseline)
             dataSource.connection.use { connection ->
                 val customResourceAccessor = CustomResourceAccessor(dynamicInclude, preV4Baseline, classLoader)
                 val liquibase = Liquibase(dynamicInclude, customResourceAccessor, getLiquibaseDatabase(JdbcConnection(connection)))
@@ -217,14 +216,6 @@ class SchemaMigration(
             }
         }
         return isExistingDBWithoutLiquibase || isFinanceAppWithLiquibaseNotMigrated
-    }
-
-    private fun checkResourcesInClassPath(resources: List<String?>) {
-        for (resource in resources) {
-            if (classLoader.getResource(resource) == null) {
-                throw DatabaseMigrationException("Could not find Liquibase database migration script $resource. Please ensure the jar file containing it is deployed in the cordapps directory.")
-            }
-        }
     }
 }
 
