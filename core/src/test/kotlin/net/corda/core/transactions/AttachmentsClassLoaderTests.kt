@@ -3,12 +3,15 @@ package net.corda.core.transactions
 import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.Contract
 import net.corda.core.contracts.TransactionVerificationException
+import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.declaredField
+import net.corda.core.internal.hash
 import net.corda.core.internal.inputStream
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.serialization.internal.AttachmentsClassLoader
+import net.corda.nodeapi.internal.cryptoservice.CryptoService
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.internal.ContractJarTestUtils.signContractJar
 import net.corda.testing.internal.fakeAttachment
@@ -40,7 +43,7 @@ class AttachmentsClassLoaderTests {
 
     private val storage = MockAttachmentStorage()
     private val networkParameters = testNetworkParameters()
-    private fun make(attachments: List<Attachment>, params: NetworkParameters = networkParameters) = AttachmentsClassLoader(attachments, params, SecureHash.zeroHash)
+    private fun make(attachments: List<Attachment>, params: NetworkParameters = networkParameters, whitelistedKeys: List<SecureHash> = listOf()) = AttachmentsClassLoader(attachments, params, SecureHash.zeroHash, whitelistedKeys = whitelistedKeys)
 
     @Test
     fun `Loading AnotherDummyContract without using the AttachmentsClassLoader fails`() {
@@ -190,6 +193,15 @@ class AttachmentsClassLoaderTests {
         assertFailsWith(TransactionVerificationException.UntrustedAttachmentsException::class) {
             make(arrayOf(trustedResourceJar, untrustedResourceJar, trustedClassJar, untrustedClassJar).map { storage.openAttachment(it)!! })
         }
+    }
+
+    @Test
+    fun `Allow loading an untrusted contract jar if signed by a trusted public key`() {
+        val keyPair = Crypto.generateKeyPair()
+        val classJar = fakeAttachment("/com/example/something/UntrustedClass.class", "Signed by someone trusted").inputStream()
+        val attachment = classJar.use { storage.importContractAttachment(listOf("UntrustedClass.class"), "untrusted", classJar, signers = listOf(keyPair.public))}
+
+        make(arrayOf(attachment).map { storage.openAttachment(it)!! }, whitelistedKeys = listOf(keyPair.public.hash))
     }
 
     private fun importAttachment(jar: InputStream, uploader: String, filename: String?): AttachmentId {

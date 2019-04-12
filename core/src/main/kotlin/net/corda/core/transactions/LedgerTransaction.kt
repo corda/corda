@@ -75,7 +75,7 @@ private constructor(
     private var componentGroups: List<ComponentGroup>? = null
     private var serializedInputs: List<SerializedStateAndRef>? = null
     private var serializedReferences: List<SerializedStateAndRef>? = null
-    private var whitelistedKeysForAttachments: List<SecureHash> = listOf()
+    private var whitelistedKeysForAttachments: Collection<SecureHash> = listOf()
 
     init {
         if (timeWindow != null) check(notary != null) { "Transactions with time-windows must be notarised" }
@@ -100,7 +100,7 @@ private constructor(
                 componentGroups: List<ComponentGroup>? = null,
                 serializedInputs: List<SerializedStateAndRef>? = null,
                 serializedReferences: List<SerializedStateAndRef>? = null,
-                whitelistedKeysForAttachments: List<SecureHash> = listOf()
+                whitelistedKeysForAttachments: Collection<SecureHash> = listOf()
         ): LedgerTransaction {
             return LedgerTransaction(inputs, outputs, commands, attachments, id, notary, timeWindow, privacySalt, networkParameters, references).apply {
                 this.componentGroups = componentGroups

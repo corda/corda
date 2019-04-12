@@ -107,7 +107,8 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                     val hashToResolve = it ?: services.networkParametersService.defaultHash
                     services.networkParametersService.lookup(hashToResolve)
                 },
-                resolveContractAttachment = { services.loadContractAttachment(it) }
+                resolveContractAttachment = { services.loadContractAttachment(it) },
+                whitelistedKeys = services.whitelistedKeysForAttachments
         )
     }
 
@@ -167,7 +168,8 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
             resolveAttachment: (SecureHash) -> Attachment?,
             resolveStateRefAsSerialized: (StateRef) -> SerializedBytes<TransactionState<ContractState>>?,
             resolveParameters: (SecureHash?) -> NetworkParameters?,
-            resolveContractAttachment: (StateRef) -> Attachment
+            resolveContractAttachment: (StateRef) -> Attachment,
+            whitelistedKeys: Collection<SecureHash> = listOf()
     ): LedgerTransaction {
         // Look up public keys to authenticated identities.
         val authenticatedCommands = commands.lazyMapped { cmd, _ ->
@@ -202,7 +204,8 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                 resolvedReferences,
                 componentGroups,
                 serializedResolvedInputs,
-                serializedResolvedReferences
+                serializedResolvedReferences,
+                whitelistedKeysForAttachments = whitelistedKeys
         )
 
         checkTransactionSize(ltx, resolvedNetworkParameters.maxTransactionSize, serializedResolvedInputs, serializedResolvedReferences)
