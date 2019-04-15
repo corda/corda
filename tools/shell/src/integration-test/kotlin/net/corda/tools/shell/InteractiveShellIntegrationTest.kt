@@ -1,5 +1,8 @@
 package net.corda.tools.shell
 
+import com.fasterxml.jackson.databind.DeserializationContext
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize
+import com.fasterxml.jackson.databind.deser.std.FromStringDeserializer
 import com.google.common.io.Files
 import com.jcraft.jsch.ChannelExec
 import com.jcraft.jsch.JSch
@@ -12,6 +15,7 @@ import net.corda.core.flows.StartableByRPC
 import net.corda.core.internal.div
 import net.corda.core.messaging.ClientRpcSslOptions
 import net.corda.core.messaging.CordaRPCOps
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.Permissions
@@ -21,6 +25,7 @@ import net.corda.node.utilities.createKeyPairAndSelfSignedTLSCertificate
 import net.corda.node.utilities.saveToKeyStore
 import net.corda.node.utilities.saveToTrustStore
 import net.corda.nodeapi.BrokerRpcSslOptions
+import net.corda.nodeapi.internal.cordapp.CustomRPCSerializationJacksonModule
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
@@ -268,7 +273,7 @@ class InteractiveShellIntegrationTest {
                 }
             }
             val ansiProgressRenderer = mock<ANSIProgressRenderer> {
-                on { render(any(), any()) }  doAnswer { InteractiveShell.latch.countDown() }
+                on { render(any(), any()) } doAnswer { InteractiveShell.latch.countDown() }
             }
             InteractiveShell.runFlowByNameFragment(
                     "NoOpFlow",
@@ -300,7 +305,7 @@ class InteractiveShellIntegrationTest {
                 }
             }
             val ansiProgressRenderer = mock<ANSIProgressRenderer> {
-                on { render(any(), any()) }  doAnswer { InteractiveShell.latch.countDown() }
+                on { render(any(), any()) } doAnswer { InteractiveShell.latch.countDown() }
             }
             InteractiveShell.runFlowByNameFragment(
                     "NoOpFlowA",
@@ -332,7 +337,7 @@ class InteractiveShellIntegrationTest {
                 }
             }
             val ansiProgressRenderer = mock<ANSIProgressRenderer> {
-                on { render(any(), any()) }  doAnswer { InteractiveShell.latch.countDown() }
+                on { render(any(), any()) } doAnswer { InteractiveShell.latch.countDown() }
             }
             InteractiveShell.runFlowByNameFragment(
                     "NoOpFlo",
@@ -364,11 +369,43 @@ class InteractiveShellIntegrationTest {
                 }
             }
             val ansiProgressRenderer = mock<ANSIProgressRenderer> {
-                on { render(any(), any()) }  doAnswer { InteractiveShell.latch.countDown() }
+                on { render(any(), any()) } doAnswer { InteractiveShell.latch.countDown() }
             }
             InteractiveShell.runFlowByNameFragment(
                     "Burble",
                     "", output, node.rpc, ansiProgressRenderer)
+        }
+        assertThat(successful).isTrue()
+    }
+
+    @Test
+    fun `shell should start flow with custom json deserializer`() {
+        val user = User("u", "p", setOf(all()))
+        var successful = false
+        driver(DriverParameters(notarySpecs = emptyList())) {
+            val nodeFuture = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user), startInSameProcess = true)
+            val node = nodeFuture.getOrThrow()
+
+            val conf = ShellConfiguration(commandsDirectory = Files.createTempDir().toPath(),
+                    user = user.username, password = user.password,
+                    hostAndPort = node.rpcAddress)
+            InteractiveShell.startShell(conf)
+
+            // setup and configure some mocks required by InteractiveShell.runFlowByNameFragment()
+            val output = mock<RenderPrintWriter> {
+                on { println(any<String>()) } doAnswer {
+                    val line = it.arguments[0]
+                    println("$line")
+                    if ((line is String) && (line.startsWith("Flow completed with result: ${FirstAndLastName("John", "Doe")}")))
+                        successful = true
+                }
+            }
+            val ansiProgressRenderer = mock<ANSIProgressRenderer> {
+                on { render(any(), any()) } doAnswer { InteractiveShell.latch.countDown() }
+            }
+            InteractiveShell.runFlowByNameFragment(
+                    "DeserializeFlow",
+                    "firstAndLastName: John Doe", output, node.rpc, ansiProgressRenderer)
         }
         assertThat(successful).isTrue()
     }
@@ -398,5 +435,35 @@ class BurbleFlow : FlowLogic<Unit>() {
     override val progressTracker = ProgressTracker()
     override fun call() {
         println("NO OP! (Burble)")
+    }
+}
+
+@CordaSerializable
+data class FirstAndLastName(val firstName: String, val lastName: String)
+
+@Suppress("UNUSED")
+@StartableByRPC
+class DeserializeFlow(private val firstAndLastName: FirstAndLastName) : FlowLogic<FirstAndLastName>() {
+    override val progressTracker = ProgressTracker()
+    override fun call(): FirstAndLastName {
+        return firstAndLastName
+    }
+}
+
+@Suppress("UNUSED")
+class MyCustomJackson : CustomRPCSerializationJacksonModule() {
+    override fun setupModule(context: SetupContext) {
+        super.setupModule(context)
+        context.setMixInAnnotations(FirstAndLastName::class.java, FirstLastNameMixin::class.java)
+    }
+
+    @JsonDeserialize(using = FirstLastNameDeserializer::class)
+    private interface FirstLastNameMixin
+
+    object FirstLastNameDeserializer : FromStringDeserializer<FirstAndLastName>(FirstAndLastName::class.java) {
+        override fun _deserialize(value: String, ctxt: DeserializationContext?): FirstAndLastName {
+            val (firstName, lastName) = value.split(" ")
+            return FirstAndLastName(firstName, lastName)
+        }
     }
 }

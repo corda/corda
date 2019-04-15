@@ -2,11 +2,13 @@ package net.corda.tools.shell
 
 import com.fasterxml.jackson.core.JsonFactory
 import com.fasterxml.jackson.databind.JsonMappingException
+import com.fasterxml.jackson.databind.Module
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.dataformat.yaml.YAMLGenerator
+import io.github.classgraph.ClassGraph
 import net.corda.client.jackson.JacksonSupport
 import net.corda.client.jackson.StringToMethodCallParser
 import net.corda.client.rpc.CordaRPCClient
@@ -22,6 +24,7 @@ import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.*
+import net.corda.nodeapi.internal.cordapp.CustomRPCSerializationJacksonModule
 import net.corda.tools.shell.utlities.ANSIProgressRenderer
 import net.corda.tools.shell.utlities.StdoutANSIProgressRenderer
 import org.crsh.command.InvocationContext
@@ -178,7 +181,7 @@ object InteractiveShell {
                     // Don't use the Java language plugin (we may not have tools.jar available at runtime), this
                     // will cause any commands using JIT Java compilation to be suppressed. In CRaSH upstream that
                     // is only the 'jmx' command.
-                    return super.getPlugins().filterNot { it is JavaLanguage } + CordaAuthenticationPlugin(rpcOps)
+                    return super.getPlugins().filterNot { it is JavaLanguage } + CordaAuthenticationPlugin(rpcOps, InteractiveShell.classLoader)
                 }
             }
             val attributes = emptyMap<String, Any>()
@@ -187,7 +190,8 @@ object InteractiveShell {
             this.config = config
             start(context)
             ops = makeRPCOps(rpcOps, localUserName, localUserPassword)
-            return context.getPlugin(ShellFactory::class.java).create(null, CordaSSHAuthInfo(false, ops, StdoutANSIProgressRenderer))
+            return context.getPlugin(ShellFactory::class.java)
+                    .create(null, CordaSSHAuthInfo(false, ops, InteractiveShell.classLoader, StdoutANSIProgressRenderer))
         }
     }
 
@@ -207,7 +211,13 @@ object InteractiveShell {
         return outputFormat
     }
 
-    fun createYamlInputMapper(rpcOps: CordaRPCOps): ObjectMapper {
+    fun createYamlInputMapper(rpcOps: CordaRPCOps, classLoader: ClassLoader?): ObjectMapper {
+        // Scan for CustomRPCSerializationJacksonModule on the classloader and register them as modules.
+        val customModules = ClassGraph().addClassLoader(classLoader).enableClassInfo().pooledScan().use { scan ->
+            scan.getSubclasses(CustomRPCSerializationJacksonModule::class.java.name)
+                    .map { it.loadClass().newInstance() as Module }
+        }
+
         // Return a standard Corda Jackson object mapper, configured to use YAML by default and with extra
         // serializers.
         return JacksonSupport.createDefaultMapper(rpcOps, YAMLFactory(), true).apply {
@@ -215,6 +225,7 @@ object InteractiveShell {
                 addDeserializer(InputStream::class.java, InputStreamDeserializer)
                 addDeserializer(UniqueIdentifier::class.java, UniqueIdentifierDeserializer)
             }
+            customModules.forEach { registerModule(it) }
             registerModule(rpcModule)
         }
     }
@@ -257,7 +268,7 @@ object InteractiveShell {
                               output: RenderPrintWriter,
                               rpcOps: CordaRPCOps,
                               ansiProgressRenderer: ANSIProgressRenderer,
-                              inputObjectMapper: ObjectMapper = createYamlInputMapper(rpcOps)) {
+                              inputObjectMapper: ObjectMapper = createYamlInputMapper(rpcOps, classLoader)) {
         val matches = try {
             rpcOps.registeredFlows().filter { nameFragment in it }
         } catch (e: PermissionException) {
@@ -354,7 +365,7 @@ object InteractiveShell {
     fun killFlowById(id: String,
                      output: RenderPrintWriter,
                      rpcOps: CordaRPCOps,
-                     inputObjectMapper: ObjectMapper = createYamlInputMapper(rpcOps)) {
+                     inputObjectMapper: ObjectMapper = createYamlInputMapper(rpcOps, classLoader)) {
         try {
             val runId = try {
                 inputObjectMapper.readValue(id, StateMachineRunId::class.java)
