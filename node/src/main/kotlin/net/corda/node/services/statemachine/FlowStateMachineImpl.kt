@@ -159,7 +159,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                     is FlowContinuation.Resume -> {
                         return continuation.result
                     }
-                    is FlowContinuation.Throw -> throw fillInStackTrace(continuation.throwable)
+                    is FlowContinuation.Throw -> throw continuation.throwable.fillInLocalStackTrace()
                     FlowContinuation.ProcessEvents -> continue@eventLoop
                     FlowContinuation.Abort -> abortFiber()
                 }
@@ -170,37 +170,36 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         }
     }
 
-    private fun fillInStackTrace(throwable: Throwable): Throwable {
-        return throwable.apply {
-            fillInStackTrace()
-            // provide useful information that can be displayed to the user
-            when (this) {
-                is UnexpectedFlowEndException -> {
-                    if (peer != null) {
-                        stackTrace = arrayOf(
-                            StackTraceElement(
-                                "Received unexpected counter-flow exception from peer",
-                                " ${peer!!.name}",
-                                null,
-                                -1
-                            )
-                        ) + stackTrace
-                    }
+    private fun Throwable.fillInLocalStackTrace(): Throwable {
+        fillInStackTrace()
+        // provide useful information that can be displayed to the user
+        when (this) {
+            is UnexpectedFlowEndException -> {
+                peer?.let {
+                    stackTrace = arrayOf(
+                        StackTraceElement(
+                            "Received unexpected counter-flow exception from peer",
+                            " ${it.name}",
+                            null,
+                            -1
+                        )
+                    ) + stackTrace
                 }
-                is FlowException -> {
-                    if (peer != null) {
-                        stackTrace = arrayOf(
-                            StackTraceElement(
-                                "Received counter-flow exception from peer",
-                                " ${peer!!.name}",
-                                null,
-                                -1
-                            )
-                        ) + stackTrace
-                    }
+            }
+            is FlowException -> {
+                peer?.let {
+                    stackTrace = arrayOf(
+                        StackTraceElement(
+                            "Received counter-flow exception from peer",
+                            " ${it.name}",
+                            null,
+                            -1
+                        )
+                    ) + stackTrace
                 }
             }
         }
+        return this
     }
 
     /**
