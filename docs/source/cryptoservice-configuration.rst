@@ -12,6 +12,7 @@ Configuration
 
 As mentioned in the description of the configuration file (:doc:`corda-configuration-file`), the ``node.conf`` has two relevant fields, ``cryptoServiceName`` and ``cryptoServiceConf``.
 
+.. warning:: The file containing the configuration for the HSM (referenced by the ``cryptoServiceConf`` field) contains sensitive information. So, we strongly advise using the Configuration Obfuscator tool for it, as documented here: :doc:`tools-config-obfuscator`
 
 Utimaco
 -------
@@ -23,7 +24,7 @@ In the ``node.conf``, the ``cryptoServiceName`` needs to be set to "UTIMACO", an
 .. parsed-literal::
 
     cryptoServiceName : "UTIMACO"
-    cryptoServiceConf : "utimaco_conf.yml"
+    cryptoServiceConf : "utimaco.conf"
 
 The configuration file for Utimaco has the fields described below. The entries are similar to the ones described in the documentation for the CryptoServer JCE provider, and you should refer to this documentation for more details. We cannot link to the documentation here, but you should have received a copy which contains the file ``JCE-Documentation.html``.
 
@@ -82,7 +83,7 @@ In the ``node.conf``, the ``cryptoServiceName`` needs to be set to "GEMALTO_LUNA
 .. parsed-literal::
 
     cryptoServiceName : "GEMALTO_LUNA"
-    cryptoServiceConf : "gemalto_conf.yml"
+    cryptoServiceConf : "gemalto.conf"
 
 The configuration file for Gemalto Luna has two fields. The ``keyStore`` field needs to specify a slot or partition. The ``password`` field contains the password associated with the slot or partition.
 
@@ -107,7 +108,7 @@ In the ``node.conf``, the ``cryptoServiceName`` needs to be set to "AZURE_KEY_VA
 .. parsed-literal::
 
     cryptoServiceName: "AZURE_KEY_VAULT"
-    cryptoServiceConf: "az_keyvault_conf.yml"
+    cryptoServiceConf: "az_keyvault.conf"
 
 The configuration file for Azure KeyVault contains the fields listed below. For details refer to the `Azure KeyVault documentation <https://docs.microsoft.com/en-gb/azure/key-vault>`_.
 
