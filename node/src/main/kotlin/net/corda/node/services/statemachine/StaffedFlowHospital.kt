@@ -107,17 +107,17 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val 
             val (outcome, event, backOffForChronicCondition) = when (report.diagnosis) {
                 Diagnosis.DISCHARGE -> {
                     val backOff = calculateBackOffForChronicCondition(report, medicalHistory, currentState)
-                    log.info("Flow ${flowFiber.id} error discharged from hospital (delay ${backOff.seconds}s) by ${report.by}")
+                    log.info("Flow error discharged from hospital (delay ${backOff.seconds}s) by ${report.by} (error was ${report.error.message})")
                     Triple(Outcome.DISCHARGE, Event.RetryFlowFromSafePoint, backOff)
                 }
                 Diagnosis.OVERNIGHT_OBSERVATION -> {
-                    log.info("Flow ${flowFiber.id} error kept for overnight observation by ${report.by}")
+                    log.info("Flow error kept for overnight observation by ${report.by} (error was ${report.error.message})")
                     // We don't schedule a next event for the flow - it will automatically retry from its checkpoint on node restart
                     Triple(Outcome.OVERNIGHT_OBSERVATION, null, 0.seconds)
                 }
                 Diagnosis.NOT_MY_SPECIALTY -> {
                     // None of the staff care for these errors so we let them propagate
-                    log.info("Flow ${flowFiber.id} error allowed to propagate")
+                    log.info("Flow error allowed to propagate", report.error)
                     Triple(Outcome.UNTREATABLE, Event.StartErrorPropagation, 0.seconds)
                 }
             }
@@ -160,7 +160,8 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val 
         return errors
                 .asSequence()
                 .mapIndexed { index, error ->
-                    log.info("Flow ${flowFiber.id} has error [$index]", error)
+                    // Rely on the logging context to print details of the flow ID.
+                    log.info("Error ${index + 1} of ${errors.size}:", error)
                     val diagnoses: Map<Diagnosis, List<Staff>> = staff.groupBy { it.consult(flowFiber, currentState, error, medicalHistory) }
                     // We're only interested in the highest priority diagnosis for the error
                     val (diagnosis, by) = diagnoses.entries.minBy { it.key }!!
@@ -306,7 +307,7 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val 
         override fun consult(flowFiber: FlowFiber, currentState: StateMachineState, newError: Throwable, history: FlowMedicalHistory): Diagnosis {
             return if (currentState.flowLogic is FinalityHandler || isFromReceiveFinalityFlow(newError)) {
                 log.warn("Flow ${flowFiber.id} failed to be finalised. Manual intervention may be required before retrying " +
-                        "the flow by re-starting the node. State machine state: $currentState")
+                        "the flow by re-starting the node. State machine state: $currentState", newError)
                 Diagnosis.OVERNIGHT_OBSERVATION
             } else {
                 Diagnosis.NOT_MY_SPECIALTY
