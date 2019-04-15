@@ -29,7 +29,8 @@ open class FlowException(message: String?, cause: Throwable?, var originalErrorI
     constructor(cause: Throwable?) : this(cause?.toString(), cause)
     constructor() : this(null, null)
 
-    var peer: Party? = null
+    // private field with obscure name to ensure it is not overridden
+    private var _peer: Party? = null
 
     override fun getErrorId(): Long? = originalErrorId
 }
@@ -45,7 +46,8 @@ class UnexpectedFlowEndException(message: String, cause: Throwable?, val origina
     constructor(message: String, cause: Throwable?) : this(message, cause, null)
     constructor(message: String) : this(message, null)
 
-    var peer: Party? = null
+    // private field with obscure name to ensure it is not overridden
+    private var _peer: Party? = null
 
     override fun getErrorId(): Long? = originalErrorId
 }
