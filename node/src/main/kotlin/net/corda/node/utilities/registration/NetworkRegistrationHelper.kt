@@ -7,7 +7,6 @@ import net.corda.core.internal.*
 import net.corda.core.utilities.contextLogger
 import net.corda.node.NodeRegistrationOption
 import net.corda.node.services.config.NodeConfiguration
-import net.corda.node.services.keys.cryptoservice.BCCryptoService
 import net.corda.node.services.keys.cryptoservice.azure.AzureKeyVaultCryptoService
 import net.corda.node.services.keys.cryptoservice.gemalto.GemaltoLunaCryptoService
 import net.corda.node.services.keys.cryptoservice.utimaco.UtimacoCryptoService
