@@ -1,4 +1,4 @@
-package net.corda.node.services.keys.cryptoservice
+package net.corda.nodeapi.internal.cryptoservice.bouncycastle
 
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SignatureScheme

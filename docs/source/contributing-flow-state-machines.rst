@@ -117,7 +117,8 @@ Let's assume we made a mistake in our summing operation:
 The operation now throws a rude exception. If we modify the example flow to use this and run the same test we will get
 a lot of logs about the error condition (as we are in dev mode). The interesting bit looks like this:
 
-.. parsed-literal::
+.. code-block:: none
+
     [WARN ] 18:38:52,613 [Node thread-1] (DumpHistoryOnErrorInterceptor.kt:39) interceptors.DumpHistoryOnErrorInterceptor.executeTransition - Flow [03ab886e-3fd3-4667-b944-ab6a3b1f90a7] errored, dumping all transitions:
 
      --- Transition of flow [03ab886e-3fd3-4667-b944-ab6a3b1f90a7] ---

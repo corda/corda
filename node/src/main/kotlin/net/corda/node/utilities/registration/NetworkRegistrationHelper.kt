@@ -11,6 +11,7 @@ import net.corda.node.services.keys.cryptoservice.BCCryptoService
 import net.corda.node.services.keys.cryptoservice.azure.AzureKeyVaultCryptoService
 import net.corda.node.services.keys.cryptoservice.gemalto.GemaltoLunaCryptoService
 import net.corda.node.services.keys.cryptoservice.utimaco.UtimacoCryptoService
+import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
 import net.corda.nodeapi.internal.config.CertificateStore
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.NOT_YET_REGISTERED_MARKER_KEYS_AND_CERTS

@@ -33,7 +33,6 @@ class CashExceptionSerialisationTest : IntegrationTest() {
             val node = startNode(rpcUsers = listOf(User("mark", "dadada", setOf(all())))).getOrThrow()
             val action = { node.rpc.startFlow(CashExceptionSerialisationTest::CashExceptionThrowingFlow).returnValue.getOrThrow() }
             assertThatThrownBy(action).isInstanceOfSatisfying(CashException::class.java) { thrown ->
-                assertThat(thrown).hasNoCause()
                 assertThat(thrown.stackTrace).isEmpty()
             }
         }

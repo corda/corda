@@ -7,9 +7,20 @@ Software requirements
 Corda uses industry-standard tools:
 
 * **Java 8 JVM** - we require at least version |java_version|, but do not currently support Java 9 or higher.
-  We have tested with Oracle JDK, Amazon Corretto, and Red Hat's OpenJDK builds. Please note that OpenJDK builds
-  usually exclude JavaFX, which our GUI tools require.
-* **IntelliJ IDEA** - supported versions **2017.x** and **2018.x** (with Kotlin plugin version |kotlin_version|)
+
+  We have tested with the following builds:
+
+  * `Oracle JDK <https://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html>`_
+
+  * `Amazon Corretto <https://aws.amazon.com/corretto/>`_
+
+  * `Red Hat's OpenJDK <https://developers.redhat.com/products/openjdk/overview/>`_
+
+  * `Zulu's OpenJDK <https://www.azul.com/>`_
+
+  Please note that OpenJDK builds usually exclude JavaFX, which our GUI tools require.
+
+* **IntelliJ IDEA** - supported versions **2017.x**, **2018.x** and **2019.x** (with Kotlin plugin version |kotlin_version|)
 * **Gradle** - we use 4.10 and the ``gradlew`` script in the project / samples directories will download it for you.
 
 Please note:
@@ -50,6 +61,16 @@ The set-up instructions are available for the following platforms:
 
 .. _windows-label:
 
+.. note:: These setup instructions will guide you on how to install the Oracle JDK. Each JDK can be found on their respective sites:
+
+          * `Oracle <http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html>`_
+
+          * `Amazon Corretto <https://docs.aws.amazon.com/corretto/latest/corretto-8-ug/downloads-list.html>`_
+
+          * `Red Hat OpenJDK <https://developers.redhat.com/products/openjdk/download/>`_
+
+          * `Zulu OpenJDK <https://www.azul.com/downloads/zulu/>`_
+
 Windows
 -------
 
@@ -58,12 +79,10 @@ Windows
 Java
 ^^^^
 1. Visit http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html
-2. Scroll down to "Java SE Development Kit 8uXXX" (where "XXX" is the latest minor version number)
-3. Toggle "Accept License Agreement"
-4. Click the download link for jdk-8uXXX-windows-x64.exe (where "XXX" is the latest minor version number)
-5. Download and run the executable to install Java (use the default settings)
-6. Add Java to the PATH environment variable by following the instructions at https://docs.oracle.com/javase/7/docs/webnotes/install/windows/jdk-installation-windows.html#path
-7. Open a new command prompt and run ``java -version`` to test that Java is installed correctly
+2. Click the download link for jdk-8uXXX-windows-x64.exe (where "XXX" is the latest minor version number)
+3. Download and run the executable to install Java (use the default settings)
+4. Add Java to the PATH environment variable by following the instructions in the `Oracle documentation <https://docs.oracle.com/javase/7/docs/webnotes/install/windows/jdk-installation-windows.html#path>`_
+5. Open a new command prompt and run ``java -version`` to test that Java is installed correctly
 
 Git
 ^^^
@@ -76,7 +95,7 @@ IntelliJ
 ^^^^^^^^
 1. Visit https://www.jetbrains.com/idea/download/download-thanks.html?code=IIC
 2. Download and run the executable to install IntelliJ Community Edition (use the default settings)
-3. Ensure the Kotlin plugin in Intellij is updated to version |kotlin_version|
+3. Ensure the Kotlin plugin in Intellij is updated to version |kotlin_version| (new installs will contains this version)
 
 Download a sample project
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -146,18 +165,15 @@ Mac
 Java
 ^^^^
 1. Visit http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html
-2. Scroll down to "Java SE Development Kit 8uXXX" (where "XXX" is the latest minor version number)
-3. Toggle "Accept License Agreement"
-4. Click the download link for jdk-8uXXX-macosx-x64.dmg (where "XXX" is the latest minor version number)
-5. Download and run the executable to install Java (use the default settings)
-6. Open a new terminal window and run ``java -version`` to test that Java is installed correctly. The version should be
-   "8u171" or higher.
+2. Click the download link for jdk-8uXXX-macosx-x64.dmg (where "XXX" is the latest minor version number)
+3. Download and run the executable to install Java (use the default settings)
+4. Open a new terminal window and run ``java -version`` to test that Java is installed correctly. The version should be
 
 IntelliJ
 ^^^^^^^^
 1. Visit https://www.jetbrains.com/idea/download/download-thanks.html?platform=mac&code=IIC
 2. Download and run the executable to install IntelliJ Community Edition (use the default settings)
-3. Ensure the Kotlin plugin in Intellij is updated to version |kotlin_version|
+3. Ensure the Kotlin plugin in Intellij is updated to version |kotlin_version| (new installs will contains this version)
 
 Download a sample project
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -270,7 +286,7 @@ Jetbrains offers a pre-built snap package that allows for easy, one-step install
 
 1. To download the snap, navigate to https://snapcraft.io/intellij-idea-community
 2. Click ``Install``, then ``View in Desktop Store``. Choose ``Ubuntu Software`` in the Launch Application window.
-3. Ensure the Kotlin plugin in Intellij is updated to version |kotlin_version|
+3. Ensure the Kotlin plugin in Intellij is updated to version |kotlin_version| (new installs will contains this version)
 
 .. _fedora-label:
 
@@ -298,7 +314,7 @@ IntelliJ
 1. Visit https://www.jetbrains.com/idea/download/download-thanks.html?platform=linux&code=IIC
 2. Unpack the ``tar.gz`` file using the following command ``tar xfz ideaIC-<version>.tar.gz -C /opt``
 3. Run IntelliJ with ``/opt/ideaIC-<version>/bin/idea.sh``
-4. Ensure the Kotlin plugin in IntelliJ is updated to version |kotlin_version|
+4. Ensure the Kotlin plugin in IntelliJ is updated to version |kotlin_version| (new installs will contains this version)
 
 
 Next steps

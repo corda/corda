@@ -57,6 +57,7 @@ import net.corda.node.services.keys.cryptoservice.BCCryptoService
 import net.corda.node.services.keys.cryptoservice.azure.AzureKeyVaultCryptoService
 import net.corda.node.services.keys.cryptoservice.gemalto.GemaltoLunaCryptoService
 import net.corda.node.services.keys.cryptoservice.utimaco.UtimacoCryptoService
+import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
 import net.corda.node.services.messaging.DeduplicationHandler
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.network.NetworkMapClient

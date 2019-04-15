@@ -15,6 +15,7 @@ import net.corda.node.services.keys.cryptoservice.SupportedCryptoServices
 import net.corda.node.services.keys.cryptoservice.azure.AzureKeyVaultCryptoService
 import net.corda.node.services.keys.cryptoservice.gemalto.GemaltoLunaCryptoService
 import net.corda.node.services.keys.cryptoservice.utimaco.UtimacoCryptoService
+import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
 import net.corda.nodeapi.internal.config.FileBasedCertificateStoreSupplier
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.config.User

@@ -25,6 +25,7 @@ import org.hibernate.exception.GenericJDBCException
 import org.junit.ClassRule
 import org.junit.Test
 import java.sql.SQLException
+import kotlin.test.assertEquals
 
 class RpcExceptionHandlingTest : IntegrationTest() {
     companion object {
@@ -37,7 +38,27 @@ class RpcExceptionHandlingTest : IntegrationTest() {
     private val users = listOf(user)
 
     @Test
-    fun `rpc client receive client-relevant exceptions regardless of devMode`() {
+    fun `rpc client receives wrapped exceptions in devMode with no stacktraces`() {
+        val params = NodeParameters(rpcUsers = users)
+        val clientRelevantMessage = "This is for the players!"
+
+        fun NodeHandle.throwExceptionFromFlow() {
+            rpc.startFlow(::ClientRelevantErrorFlow, clientRelevantMessage).returnValue.getOrThrow()
+        }
+
+        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
+            val devModeNode = startNode(params, BOB_NAME).getOrThrow()
+            assertThatThrownBy { devModeNode.throwExceptionFromFlow() }.isInstanceOfSatisfying(ClientRelevantException::class.java) { exception ->
+                assertEquals((exception.cause as CordaRuntimeException).originalExceptionClassName, SQLException::class.qualifiedName)
+                assertThat(exception.stackTrace).isEmpty()
+                assertThat((exception.cause as CordaRuntimeException).stackTrace).isEmpty()
+                assertThat(exception.message).isEqualTo(clientRelevantMessage)
+            }
+        }
+    }
+
+    @Test
+    fun `rpc client receives client-relevant message regardless of devMode`() {
         val params = NodeParameters(rpcUsers = users)
         val clientRelevantMessage = "This is for the players!"
 
@@ -47,9 +68,6 @@ class RpcExceptionHandlingTest : IntegrationTest() {
 
         fun assertThatThrownExceptionIsReceivedUnwrapped(node: NodeHandle) {
             assertThatThrownBy { node.throwExceptionFromFlow() }.isInstanceOfSatisfying(ClientRelevantException::class.java) { exception ->
-
-                assertThat(exception).hasNoCause()
-                assertThat(exception.stackTrace).isEmpty()
                 assertThat(exception.message).isEqualTo(clientRelevantMessage)
             }
         }
@@ -60,6 +78,25 @@ class RpcExceptionHandlingTest : IntegrationTest() {
 
             assertThatThrownExceptionIsReceivedUnwrapped(devModeNode)
             assertThatThrownExceptionIsReceivedUnwrapped(node)
+        }
+    }
+
+    @Test
+    fun `rpc client receives no specific information in non devMode`() {
+        val params = NodeParameters(rpcUsers = users)
+        val clientRelevantMessage = "This is for the players!"
+
+        fun NodeHandle.throwExceptionFromFlow() {
+            rpc.startFlow(::ClientRelevantErrorFlow, clientRelevantMessage).returnValue.getOrThrow()
+        }
+
+        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
+            val node = startNode(ALICE_NAME, devMode = false, parameters = params).getOrThrow()
+            assertThatThrownBy { node.throwExceptionFromFlow() }.isInstanceOfSatisfying(ClientRelevantException::class.java) { exception ->
+                assertThat(exception).hasNoCause()
+                assertThat(exception.stackTrace).isEmpty()
+                assertThat(exception.message).isEqualTo(clientRelevantMessage)
+            }
         }
     }
 
