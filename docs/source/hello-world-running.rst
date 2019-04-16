@@ -16,7 +16,7 @@ Let's take a look at the nodes we're going to deploy. Open the project's ``build
 ``PartyB``), plus a special network map/notary node that is running the network map service and advertises a validating notary
 service.
 
-.. code:: bash
+.. code-block:: none
 
     task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         directory "./build/nodes"

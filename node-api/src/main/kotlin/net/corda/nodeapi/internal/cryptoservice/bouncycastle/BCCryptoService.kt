@@ -1,10 +1,9 @@
-package net.corda.node.services.keys.cryptoservice
+package net.corda.nodeapi.internal.cryptoservice.bouncycastle
 
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SignatureScheme
 import net.corda.core.crypto.newSecureRandom
 import net.corda.core.crypto.sha256
-import net.corda.node.services.config.NodeConfiguration
 import net.corda.nodeapi.internal.config.CertificateStore
 import net.corda.nodeapi.internal.config.CertificateStoreSupplier
 import net.corda.nodeapi.internal.crypto.ContentSignerBuilder
@@ -26,7 +25,7 @@ class BCCryptoService(private val legalName: X500Principal, private val certific
 
     // TODO check if keyStore exists.
     // TODO make it private when E2ETestKeyManagementService does not require direct access to the private key.
-    internal var certificateStore: CertificateStore = certificateStoreSupplier.get(true)
+    var certificateStore: CertificateStore = certificateStoreSupplier.get(true)
 
     override fun generateKeyPair(alias: String, scheme: SignatureScheme): PublicKey {
         try {

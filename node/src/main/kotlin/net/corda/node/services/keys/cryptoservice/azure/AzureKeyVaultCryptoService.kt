@@ -238,7 +238,7 @@ class AzureKeyVaultCryptoService(private val keyVaultClient: KeyVaultClient, pri
         internal fun parseConfigFile(configFile: Path): AzureKeyVaultConfig {
             try {
                 val config = ConfigFactory.parseFile(configFile.toFile())
-                return config.parseAs(AzureKeyVaultConfig::class)
+                return config.parseAs(Companion.AzureKeyVaultConfig::class)
             } catch (e: Exception) {
                 when(e) {
                     is ConfigException, is UnknownConfigurationKeysException -> throw Exception("Error in ${configFile.toFile().absolutePath} : ${e.message}")

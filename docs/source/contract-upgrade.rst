@@ -97,7 +97,7 @@ Bank A and Bank B decide to upgrade the contract to ``DummyContractV2``:
 
 .. container:: codeset
 
-   .. sourcecode:: kotlin
+   .. sourcecode:: none
    
       val rpcClient : CordaRPCClient = << Bank A's Corda RPC Client >>
       val rpcA = rpcClient.proxy()
@@ -109,7 +109,7 @@ Bank A and Bank B decide to upgrade the contract to ``DummyContractV2``:
 
 .. container:: codeset
 
-   .. sourcecode:: kotlin
+   .. sourcecode:: none
       
       val rpcClient : CordaRPCClient = << Bank B's Corda RPC Client >>
       val rpcB = rpcClient.proxy()

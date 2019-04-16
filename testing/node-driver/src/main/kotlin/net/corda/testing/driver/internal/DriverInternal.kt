@@ -35,7 +35,7 @@ data class OutOfProcessImpl(
         override val useHTTPS: Boolean,
         val debugPort: Int?,
         override val process: Process,
-        private val onStopCallback: () -> Unit
+        val onStopCallback: () -> Unit
 ) : OutOfProcess, NodeHandleInternal {
     override val rpcUsers: List<User> = configuration.rpcUsers.map { User(it.username, it.password, it.permissions) }
     override fun stop() {

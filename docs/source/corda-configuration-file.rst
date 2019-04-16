@@ -160,7 +160,7 @@ database
 dataSourceProperties
   This section is used to configure the JDBC connection and database driver used for the node's persistence.
   :ref:`Node database <standalone_database_config_examples_ref>` contains example configurations for other database providers.
-  To add additional data source properties (for a specific JDBC driver) use the ``dataSource.`` prefix with the property name (e.g. `dataSource.customProperty = value`).
+  To add additional data source properties (for a specific JDBC driver) use the ``dataSource.`` prefix with the property name (e.g. ``dataSource.customProperty = value``).
 
   dataSourceClassName
     JDBC Data Source class name.
@@ -176,7 +176,7 @@ dataSourceProperties
 
   *Default:*
 
-  .. parsed-literal::
+  .. code-block:: none
 
     dataSourceClassName = org.h2.jdbcx.JdbcDataSource
     dataSource.url = "jdbc:h2:file:"${baseDirectory}"/persistence;DB_CLOSE_ON_EXIT=FALSE;WRITE_DELAY=0;LOCK_TIMEOUT=10000"
@@ -769,6 +769,7 @@ Any options you do not specify in your own ``node.conf`` file will use these def
 Here are the contents of the ``reference.conf`` file:
 
 .. literalinclude:: ../../node/src/main/resources/reference.conf
+    :language: none
 
 
 Configuration examples
@@ -779,11 +780,12 @@ Node configuration hosting the IRSDemo services
 General node configuration file for hosting the IRSDemo services
 
 .. literalinclude:: example-code/src/main/resources/example-node.conf
+    :language: none
 
 Simple notary configuration file
 `````````````````````````````````
 
-.. parsed-literal::
+.. code-block:: none
 
     myLegalName = "O=Notary Service,OU=corda,L=London,C=GB"
     keyStorePassword = "cordacadevpass"
@@ -817,5 +819,6 @@ Node configuration with diffrent URL for NetworkMap and Doorman
 Configuring a node where the Corda Compatibility Zone's registration and Network Map services exist on different URLs
 
 .. literalinclude:: example-code/src/main/resources/example-node-with-networkservices.conf
+    :language: none
 
 

@@ -89,7 +89,6 @@ to respond, we need to update its responder flow to first receive the partially 
         :language: kotlin
         :start-after: DOCSTART 01
         :end-before: DOCEND 01
-        :dedent: 8
 
     .. literalinclude:: example-code/src/main/java/net/corda/docs/java/tutorial/twoparty/IOUFlowResponder.java
         :language: java
