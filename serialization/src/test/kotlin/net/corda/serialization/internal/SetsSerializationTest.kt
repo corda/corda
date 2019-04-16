@@ -9,12 +9,12 @@ import net.corda.node.services.statemachine.DataSessionMessage
 import net.corda.serialization.internal.amqp.propertyDescriptors
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.internal.kryoSpecific
-import org.junit.Assert.assertArrayEquals
-import org.junit.Assert.assertEquals
+import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
 import java.io.ByteArrayOutputStream
 import java.util.*
+import org.assertj.core.api.Assertions.assertThat
 
 class SetsSerializationTest {
     private companion object {
@@ -85,7 +85,7 @@ class SetsSerializationTest {
      */
     @Test
     fun `type variance on setter getter pair does not fail validation`() {
-        assertEquals(1, VarOfP::class.java.propertyDescriptors().size)
+        assertThat(VarOfP::class.java.propertyDescriptors()).containsKey("p")
     }
 
 }
