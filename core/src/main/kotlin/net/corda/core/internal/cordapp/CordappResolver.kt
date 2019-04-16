@@ -3,6 +3,7 @@ package net.corda.core.internal.cordapp
 import net.corda.core.cordapp.Cordapp
 import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.internal.VisibleForTesting
+import net.corda.core.internal.warnOnce
 import net.corda.core.utilities.loggerFor
 import java.util.concurrent.ConcurrentHashMap
 
@@ -10,6 +11,7 @@ import java.util.concurrent.ConcurrentHashMap
  * Provides a way to acquire information about the calling CorDapp.
  */
 object CordappResolver {
+
     private val logger = loggerFor<CordappResolver>()
     private val cordappClasses: ConcurrentHashMap<String, Set<Cordapp>> = ConcurrentHashMap()
 
@@ -29,17 +31,20 @@ object CordappResolver {
      */
     @Synchronized
     fun register(cordapp: Cordapp) {
-        cordapp.cordappClasses.forEach {
-            val cordapps = cordappClasses[it]
-            if (cordapps != null) {
-                // we do not register CorDapps that originate from the same file.
-                if (cordapps.none { it.jarHash == cordapp.jarHash }) {
-                    logger.warn("More than one CorDapp registered for $it.")
-                    cordappClasses[it] = cordappClasses[it]!! + cordapp
-                }
-            } else {
-                cordappClasses[it] = setOf(cordapp)
+        val contractClasses = cordapp.contractClassNames.toSet()
+        val existingClasses = cordappClasses.keys
+        val classesToRegister = cordapp.cordappClasses.toSet()
+        val notAlreadyRegisteredClasses = classesToRegister - existingClasses
+        val alreadyRegistered= HashMap(cordappClasses).apply { keys.retainAll(classesToRegister) }
+
+        notAlreadyRegisteredClasses.forEach { cordappClasses[it] = setOf(cordapp) }
+
+        for ((className, registeredCordapps) in alreadyRegistered) {
+            if (registeredCordapps.any { it.jarHash == cordapp.jarHash }) continue
+            if (className in contractClasses) {
+                logger.warnOnce("More than one CorDapp registered for contract $className.")
             }
+            cordappClasses[className] = registeredCordapps + cordapp
         }
     }
 
