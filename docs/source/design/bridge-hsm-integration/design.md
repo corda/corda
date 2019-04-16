@@ -7,7 +7,7 @@ to a Float in the DMZ. As shown in the diagram below:
 ![](../../resources/bridge/ha_nodes/ha_nodes.png)
 
 ## Requirements
-* Support same list of HSMs that is supported for legal identities
+* Support same list of HSMs that are supported for legal identities
 * Continue to support original file based configuration
 * Continue to support DMZ mode of Corda Firewall. In this mode the 'float' portion operates in the DMZ with no connection initiated to 
 any trusted zone components e.g. HSM. However, we will also allow the float to use a dedicated HSM for the local authenticated TLS link with the 'bridge'
