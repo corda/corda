@@ -6,6 +6,7 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.node.serialization.kryo.kryoMagic
 import net.corda.node.services.statemachine.DataSessionMessage
+import net.corda.serialization.internal.amqp.propertyDescriptors
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.internal.kryoSpecific
 import org.junit.Assert.assertArrayEquals
@@ -64,4 +65,12 @@ class SetsSerializationTest {
         }
         assertArrayEquals(output.toByteArray(), serializedForm.bytes)
     }
+
+    class VarOfP(var p: Set<String>)
+
+    @Test
+    fun `type variance on setter getter pair does not fail validation`() {
+        assertEquals(1, VarOfP::class.java.propertyDescriptors().size)
+    }
+
 }
