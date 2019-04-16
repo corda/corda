@@ -66,8 +66,10 @@ class SetsSerializationTest {
         assertArrayEquals(output.toByteArray(), serializedForm.bytes)
     }
 
-    class VarOfP(var p: Set<String>)
+    open class P
+    class VarOfP(var p: Set<P>)
 
+    // See CORDA-2860
     @Test
     fun `type variance on setter getter pair does not fail validation`() {
         assertEquals(1, VarOfP::class.java.propertyDescriptors().size)
