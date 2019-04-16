@@ -33,8 +33,7 @@ data class PropertyDescriptor(val field: Field?, val setter: Method?, val getter
     fun validate() {
         getter?.apply {
             field?.apply {
-                if (!getter.returnType.boxesOrIsAssignableFrom(field.type) &&
-                        getter.returnType.kotlin.javaPrimitiveType != field.type)
+                if (!getter.returnType.boxesOrIsAssignableFrom(field.type))
                     throw AMQPNotSerializableException(
                             declaringClass,
                             "Defined getter for parameter $name returns type ${getter.returnType} " +
