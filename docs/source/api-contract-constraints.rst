@@ -87,7 +87,7 @@ indicating the ``Contract`` class to which it is tied:
 
     .. sourcecode:: java
 
-        @BelongToContract(MyContract.class)
+        @BelongsToContract(MyContract.class)
         public class MyState implements ContractState {
             // implementation goes here
         }
