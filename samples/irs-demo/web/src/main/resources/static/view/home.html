@@ -45,8 +45,8 @@
             </tr>
             </thead>
             <tbody>
-            <tr class="center aligned" ng-repeat="deal in deals" id="deal-{{deal.ref}}">
-                <td><a href="#/deal/{{deal.ref}}">{{deal.ref}}</a></td>
+            <tr class="center aligned" ng-repeat="deal in deals" id="deal-{{deal.common.tradeID}}">
+                <td><a href="#/deal/{{deal.common.tradeID}}">{{deal.common.tradeID}}</a></td>
                 <td class="single line">{{renderX500Name(deal.fixedLeg.fixedRatePayer)}}</td>
                 <td class="single line">{{deal.fixedLeg.notional}}</td>
                 <td class="single line">{{renderX500Name(deal.floatingLeg.floatingRatePayer)}}</td>
