@@ -14,7 +14,6 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import org.apache.commons.lang.ArrayUtils.EMPTY_BYTE_ARRAY
 import org.bouncycastle.operator.ContentSigner
-import org.hibernate.annotations.Type
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
@@ -63,12 +62,26 @@ class BasicHSMKeyManagementService(cacheFactory: NamedCacheFactory, val identity
                     persistentEntityClass = PersistentKey::class.java
             )
         }
+
+
+        fun createExternalIdMap(cacheFactory: NamedCacheFactory): AppendOnlyPersistentMap<String, UUID, PublicKeyHashToExternalId, String>{
+            return AppendOnlyPersistentMap(
+                    cacheFactory = cacheFactory,
+                    name = "BasicHSMKeyManagementService_keyToExternalId",
+                    toPersistentEntityKey = {it -> it},
+                    fromPersistentEntity = {it.publicKeyHash to it.externalId},
+                    toPersistentEntity = {keyHash: String, uuid: UUID -> PublicKeyHashToExternalId(uuid, keyHash) },
+                    persistentEntityClass = PublicKeyHashToExternalId::class.java)
+        }
     }
 
     // Maintain a map from PublicKey to alias for the initial keys.
     private val originalKeysMap = mutableMapOf<PublicKey, String>()
     // A map for anonymous keys.
     private val keysMap = createKeyMap(cacheFactory)
+    private val keyToExternalId = createExternalIdMap(cacheFactory)
+
+//    private val externalIdCache =
 
     override fun start(initialKeyPairs: Set<KeyPair>) {
         initialKeyPairs.forEach {
@@ -99,7 +112,9 @@ class BasicHSMKeyManagementService(cacheFactory: NamedCacheFactory, val identity
 
     override fun freshKey(externalId: UUID): PublicKey {
         val newKey = freshKey()
-        database.transaction { session.persist(PublicKeyHashToExternalId(externalId, newKey)) }
+        database.transaction {
+            keyToExternalId.set(newKey.toStringShort(), externalId)
+        }
         return newKey
     }
 
@@ -109,8 +124,14 @@ class BasicHSMKeyManagementService(cacheFactory: NamedCacheFactory, val identity
 
     override fun freshKeyAndCert(identity: PartyAndCertificate, revocationEnabled: Boolean, externalId: UUID): PartyAndCertificate {
         val newKeyWithCert = freshKeyAndCert(identity, revocationEnabled)
-        database.transaction { session.persist(PublicKeyHashToExternalId(externalId, newKeyWithCert.owningKey)) }
+        database.transaction {
+            keyToExternalId.set(newKeyWithCert.owningKey.toStringShort(), externalId)
+        }
         return newKeyWithCert
+    }
+
+    override fun externalIdForPublicKey(publicKey: PublicKey): UUID? {
+        return keyToExternalId[publicKey.toStringShort()]
     }
 
     private fun getSigner(publicKey: PublicKey): ContentSigner {

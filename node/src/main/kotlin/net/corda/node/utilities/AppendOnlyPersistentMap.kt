@@ -19,24 +19,24 @@ import java.util.concurrent.atomic.AtomicReference
  *
  * This class relies heavily on the fact that compute operations in the cache are atomic for a particular key.
  */
-abstract class AppendOnlyPersistentMapBase<K, V, E, out EK>(
-        val toPersistentEntityKey: (K) -> EK,
-        val fromPersistentEntity: (E) -> Pair<K, V>,
-        val toPersistentEntity: (key: K, value: V) -> E,
-        val persistentEntityClass: Class<E>
+abstract class AppendOnlyPersistentMapBase<MAP_KEY, MAP_VALUE, PERSISTED_ENTITY, out PERSISTED_ENTITY_KEY>(
+        val toPersistentEntityKey: (MAP_KEY) -> PERSISTED_ENTITY_KEY,
+        val fromPersistentEntity: (PERSISTED_ENTITY) -> Pair<MAP_KEY, MAP_VALUE>,
+        val toPersistentEntity: (key: MAP_KEY, value: MAP_VALUE) -> PERSISTED_ENTITY,
+        val persistentEntityClass: Class<PERSISTED_ENTITY>
 ) {
 
     private companion object {
         private val log = contextLogger()
     }
 
-    protected abstract val cache: LoadingCache<K, Transactional<V>>
-    protected val pendingKeys = ConcurrentHashMap<K, MutableSet<DatabaseTransaction>>()
+    protected abstract val cache: LoadingCache<MAP_KEY, Transactional<MAP_VALUE>>
+    protected val pendingKeys = ConcurrentHashMap<MAP_KEY, MutableSet<DatabaseTransaction>>()
 
     /**
      * Returns the value associated with the key, first loading that value from the storage if necessary.
      */
-    operator fun get(key: K): V? {
+    operator fun get(key: MAP_KEY): MAP_VALUE? {
         return cache.get(key)!!.orElse(null)
     }
 
@@ -45,7 +45,7 @@ abstract class AppendOnlyPersistentMapBase<K, V, E, out EK>(
     /**
      * Returns all key/value pairs from the underlying storage.
      */
-    fun allPersisted(): Sequence<Pair<K, V>> {
+    fun allPersisted(): Sequence<Pair<MAP_KEY, MAP_VALUE>> {
         val session = currentDBSession()
         val criteriaQuery = session.criteriaBuilder.createQuery(persistentEntityClass)
         val root = criteriaQuery.from(persistentEntityClass)
@@ -55,20 +55,20 @@ abstract class AppendOnlyPersistentMapBase<K, V, E, out EK>(
         return result.map { x -> fromPersistentEntity(x) }.asSequence()
     }
 
-    private fun set(key: K, value: V, logWarning: Boolean, store: (K, V) -> V?): Boolean {
+    private fun set(key: MAP_KEY, value: MAP_VALUE, logWarning: Boolean, store: (MAP_KEY, MAP_VALUE) -> MAP_VALUE?): Boolean {
         // Will be set to true if store says it isn't in the database.
         var isUnique = false
         cache.asMap().compute(key) { _, oldValueInCache ->
             // Always write to the database, unless we can see it's already committed.
             when (oldValueInCache) {
-                is Transactional.InFlight<*, V> -> {
+                is Transactional.InFlight<*, MAP_VALUE> -> {
                     // Someone else is writing, so store away!
                     val oldValueInDB = store(key, value)
                     isUnique = (oldValueInDB == null)
                     oldValueInCache.apply { alsoWrite(value) }
                 }
-                is Transactional.Committed<V> -> oldValueInCache // The value is already globally visible and cached.  So do nothing since the values are always the same.
-                is Transactional.Unknown<*, V> -> {
+                is Transactional.Committed<MAP_VALUE> -> oldValueInCache // The value is already globally visible and cached.  So do nothing since the values are always the same.
+                is Transactional.Unknown<*, MAP_VALUE> -> {
                     if (oldValueInCache.isResolved && oldValueInCache.isPresent) {
                         Transactional.Committed(oldValueInCache.value)
                     } else {
@@ -92,7 +92,7 @@ abstract class AppendOnlyPersistentMapBase<K, V, E, out EK>(
         return isUnique
     }
 
-    private fun transactionalForStoreResult(key: K, value: V, oldValue: V?): Transactional<V> {
+    private fun transactionalForStoreResult(key: MAP_KEY, value: MAP_VALUE, oldValue: MAP_VALUE?): Transactional<MAP_VALUE> {
         return if ( (oldValue != null) && !weAreWriting(key)) {
             // If we found a value already in the database, and we were not already writing, then it's already committed but got evicted.
             Transactional.Committed(oldValue)
@@ -106,7 +106,7 @@ abstract class AppendOnlyPersistentMapBase<K, V, E, out EK>(
      * Associates the specified value with the specified key in this map and persists it.
      * If the map previously contained a mapping for the key, the behaviour is unpredictable and may throw an error from the underlying storage.
      */
-    operator fun set(key: K, value: V) =
+    operator fun set(key: MAP_KEY, value: MAP_VALUE) =
             set(key, value, logWarning = false) { k, v ->
                 currentDBSession().save(toPersistentEntity(k, v))
                 null
@@ -118,7 +118,7 @@ abstract class AppendOnlyPersistentMapBase<K, V, E, out EK>(
      * underlying storage if this races with another database transaction to store a value for the same key.
      * @return true if added key was unique, otherwise false
      */
-    fun addWithDuplicatesAllowed(key: K, value: V, logWarning: Boolean = true): Boolean =
+    fun addWithDuplicatesAllowed(key: MAP_KEY, value: MAP_VALUE, logWarning: Boolean = true): Boolean =
             set(key, value, logWarning) { k, v ->
                 val session = currentDBSession()
                 val existingEntry = session.find(persistentEntityClass, toPersistentEntityKey(k))
@@ -130,13 +130,13 @@ abstract class AppendOnlyPersistentMapBase<K, V, E, out EK>(
                 }
             }
 
-    fun putAll(entries: Map<K, V>) {
+    fun putAll(entries: Map<MAP_KEY, MAP_VALUE>) {
         entries.forEach {
             set(it.key, it.value)
         }
     }
 
-    private fun loadValue(key: K): V? {
+    private fun loadValue(key: MAP_KEY): MAP_VALUE? {
         val session = currentDBSession()
         val flushing = contextTransaction.flushing
         if (!flushing) {
@@ -148,7 +148,7 @@ abstract class AppendOnlyPersistentMapBase<K, V, E, out EK>(
         return result?.apply { if (!flushing) session.detach(result) }?.let(fromPersistentEntity)?.second
     }
 
-    protected fun transactionalLoadValue(key: K): Transactional<V> {
+    protected fun transactionalLoadValue(key: MAP_KEY): Transactional<MAP_VALUE> {
         // This gets called if a value is read and the cache has no Transactional for this key yet.
         return if (anyoneWriting(key)) {
             // If someone is writing (but not us)
@@ -161,7 +161,7 @@ abstract class AppendOnlyPersistentMapBase<K, V, E, out EK>(
         }
     }
 
-    operator fun contains(key: K) = get(key) != null
+    operator fun contains(key: MAP_KEY) = get(key) != null
 
     /**
      * Removes all of the mappings from this map and underlying storage. The map will be empty after this call returns.
@@ -176,12 +176,12 @@ abstract class AppendOnlyPersistentMapBase<K, V, E, out EK>(
     }
 
     // Helpers to know if transaction(s) are currently writing the given key.
-    private fun weAreWriting(key: K): Boolean = pendingKeys[key]?.contains(contextTransaction) ?: false
+    private fun weAreWriting(key: MAP_KEY): Boolean = pendingKeys[key]?.contains(contextTransaction) ?: false
 
-    private fun anyoneWriting(key: K): Boolean = pendingKeys[key]?.isNotEmpty() ?: false
+    private fun anyoneWriting(key: MAP_KEY): Boolean = pendingKeys[key]?.isNotEmpty() ?: false
 
     // Indicate this database transaction is a writer of this key.
-    private fun addPendingKey(key: K, databaseTransaction: DatabaseTransaction): Boolean {
+    private fun addPendingKey(key: MAP_KEY, databaseTransaction: DatabaseTransaction): Boolean {
         var added = true
         pendingKeys.compute(key) { _, oldSet ->
             if (oldSet == null) {
@@ -197,7 +197,7 @@ abstract class AppendOnlyPersistentMapBase<K, V, E, out EK>(
     }
 
     // Remove this database transaction as a writer of this key, because the transaction committed or rolled back.
-    private fun removePendingKey(key: K, databaseTransaction: DatabaseTransaction) {
+    private fun removePendingKey(key: MAP_KEY, databaseTransaction: DatabaseTransaction) {
         pendingKeys.compute(key) { _, oldSet ->
             if (oldSet == null) {
                 oldSet
