@@ -15,6 +15,7 @@ import org.apache.activemq.artemis.core.config.CoreQueueConfiguration
 import org.apache.activemq.artemis.core.security.Role
 import org.apache.activemq.artemis.core.settings.impl.AddressFullMessagePolicy
 import org.apache.activemq.artemis.core.settings.impl.AddressSettings
+import org.apache.activemq.artemis.core.settings.impl.SlowConsumerPolicy
 import java.nio.file.Path
 
 internal class RpcBrokerConfiguration(baseDirectory: Path, maxMessageSize: Int, jmxEnabled: Boolean, address: NetworkHostAndPort, adminAddress: NetworkHostAndPort?, sslOptions: BrokerRpcSslOptions?, useSsl: Boolean, nodeConfiguration: MutualSslConfiguration, shouldStartLocalShell: Boolean) : SecureArtemisConfiguration() {
@@ -41,6 +42,9 @@ internal class RpcBrokerConfiguration(baseDirectory: Path, maxMessageSize: Int, 
                     maxSizeBytes = 5L * maxMessageSize
                     addressFullMessagePolicy = AddressFullMessagePolicy.PAGE
                     pageSizeBytes = 1L * maxMessageSize
+                    slowConsumerPolicy = SlowConsumerPolicy.KILL
+                    slowConsumerThreshold = 1
+                    slowConsumerCheckPeriod = 30
                 }
         )
 

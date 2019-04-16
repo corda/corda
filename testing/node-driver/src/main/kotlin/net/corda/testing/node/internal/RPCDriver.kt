@@ -50,6 +50,7 @@ import org.apache.activemq.artemis.core.server.embedded.EmbeddedActiveMQ
 import org.apache.activemq.artemis.core.server.impl.ActiveMQServerImpl
 import org.apache.activemq.artemis.core.settings.impl.AddressFullMessagePolicy
 import org.apache.activemq.artemis.core.settings.impl.AddressSettings
+import org.apache.activemq.artemis.core.settings.impl.SlowConsumerPolicy
 import org.apache.activemq.artemis.spi.core.protocol.RemotingConnection
 import org.apache.activemq.artemis.spi.core.security.ActiveMQSecurityManager3
 import java.lang.reflect.Method
@@ -205,6 +206,10 @@ data class RPCDriverDSL(
                     "${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.#" to AddressSettings().apply {
                         maxSizeBytes = maxBufferedBytesPerClient
                         addressFullMessagePolicy = AddressFullMessagePolicy.PAGE
+                        pageSizeBytes = maxSizeBytes / 10
+                        slowConsumerPolicy = SlowConsumerPolicy.KILL
+                        slowConsumerThreshold = 1
+                        slowConsumerCheckPeriod = 30
                     }
             )
         }
