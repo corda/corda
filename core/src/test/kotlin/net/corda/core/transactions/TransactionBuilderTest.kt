@@ -22,6 +22,8 @@ import net.corda.testing.core.*
 import net.corda.testing.internal.rigorousMock
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.hamcrest.CoreMatchers.`is`
+import org.junit.Assert
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -111,6 +113,26 @@ class TransactionBuilderTest {
         doReturn(referenceState).whenever(services).loadState(referenceStateRef)
         val wtx = builder.toWireTransaction(services)
         assertThat(wtx.references).containsOnly(referenceStateRef)
+    }
+
+    @Test
+    fun `regex should capture final class only`() {
+        val message1 = "net/corda/core/contracts/TransactionState (erased) -> " +
+                "data(net/corda/core/contracts/ContractState) -> " +
+                "com/r3/corda/sdk/token/contracts/states/FungibleToken (erased) -> " +
+                "amount(net/corda/core/contracts/Amount<com/r3/corda/sdk/token/contracts/types/IssuedTokenType<com/r3/corda/sdk/token/contracts/types/TokenType>>) -> " +
+                "net/corda/core/contracts/Amount<com/r3/corda/sdk/token/contracts/types/IssuedTokenType<com/r3/corda/sdk/token/contracts/types/TokenType>> -> " +
+                "token(com/r3/corda/sdk/token/contracts/types/IssuedTokenType<com/r3/corda/sdk/token/contracts/types/TokenType>) -> " +
+                "com/r3/corda/sdk/token/contracts/types/IssuedTokenType<com/r3/corda/sdk/token/contracts/types/TokenType> -> " +
+                "tokenType(com/r3/corda/sdk/token/contracts/types/TokenType) -> " +
+                "com/r3/corda/sdk/token/money/FiatCurrency"
+
+        val message2 = "com/r3/corda/sdk/token/money/FiatCurrency"
+
+        val foundClass1 = TransactionBuilder.classRegex.find(message1)?.value
+        val foundClass2 = TransactionBuilder.classRegex.find(message2)?.value
+        Assert.assertThat(foundClass1, `is`("com/r3/corda/sdk/token/money/FiatCurrency"))
+        Assert.assertThat(foundClass2, `is`("com/r3/corda/sdk/token/money/FiatCurrency"))
     }
 
     @Test
