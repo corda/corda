@@ -264,7 +264,7 @@ class AzureKeyVaultCryptoServiceTest {
 
     @Test
     fun `Parse config file`() {
-        val config = AzureKeyVaultCryptoService.parseConfigFile(javaClass.getResource("azkv_config.yml").toPath())
+        val config = AzureKeyVaultCryptoService.parseConfigFile(javaClass.getResource("azkv.conf").toPath())
         assertEquals(AzureKeyVaultCryptoService.Protection.HARDWARE, config.protection)
     }
 

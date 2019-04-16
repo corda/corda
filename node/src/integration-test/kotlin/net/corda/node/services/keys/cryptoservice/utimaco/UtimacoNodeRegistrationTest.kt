@@ -120,10 +120,10 @@ class UtimacoNodeRegistrationTest : IntegrationTest() {
     }
 
     private fun createTempUtimacoConfig(): String {
-        val utimacoConfig = ConfigFactory.parseFile(javaClass.getResource("utimaco_config.yml").toPath().toFile())
+        val utimacoConfig = ConfigFactory.parseFile(javaClass.getResource("utimaco.conf").toPath().toFile())
         val portConfig = ConfigFactory.parseMap(mapOf("port" to hsmSimulator.address.port))
         val config = portConfig.withFallback(utimacoConfig)
-        val tmpConfigFile = configFolder.newFile("utimaco_config.yml")
+        val tmpConfigFile = configFolder.newFile("utimaco.conf")
         FileUtils.writeStringToFile(tmpConfigFile, config.root().render(), Charset.defaultCharset())
         return tmpConfigFile.absolutePath
     }

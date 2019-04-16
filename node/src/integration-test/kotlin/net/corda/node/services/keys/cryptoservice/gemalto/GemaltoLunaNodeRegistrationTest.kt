@@ -41,7 +41,7 @@ import java.security.KeyStore
 @Ignore
 class GemaltoLunaNodeRegistrationTest : IntegrationTest() {
 
-    private val configPath = javaClass.getResource("gemalto_config.yml").toPath()
+    private val configPath = javaClass.getResource("gemalto.conf").toPath()
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule(true)

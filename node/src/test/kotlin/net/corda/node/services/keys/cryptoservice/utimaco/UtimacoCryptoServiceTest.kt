@@ -10,7 +10,7 @@ class UtimacoCryptoServiceTest {
 
     @Test
     fun `Parse config file`() {
-        val config = parseConfigFile(javaClass.getResource("utimaco_config.yml").toPath())
+        val config = parseConfigFile(javaClass.getResource("utimaco.conf").toPath())
         assertEquals(true, config.keepSessionAlive)
     }
 }
