@@ -11,6 +11,7 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import org.apache.commons.lang.ArrayUtils.EMPTY_BYTE_ARRAY
 import org.bouncycastle.operator.ContentSigner
+import org.hibernate.criterion.Restrictions
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
@@ -27,6 +28,8 @@ import javax.persistence.*
 @Deprecated("Superseded by net.corda.node.services.keys.BasicHSMKeyManagementService")
 class PersistentKeyManagementService(cacheFactory: NamedCacheFactory, val identityService: PersistentIdentityService,
                                      private val database: CordaPersistence) : SingletonSerializeAsToken(), KeyManagementServiceInternal {
+
+
     @Entity
     @Table(name = "${NODE_DATABASE_PREFIX}our_key_pairs")
     class PersistentKey(
@@ -106,6 +109,17 @@ class PersistentKeyManagementService(cacheFactory: NamedCacheFactory, val identi
         return database.transaction {
             val pk = publicKey.keys.first { keysMap[it] != null } //TODO here for us to re-write this using an actual query if publicKey.keys.size > 1
             KeyPair(pk, keysMap[pk]!!)
+        }
+    }
+
+    override fun externalIdForPublicKey(publicKey: PublicKey): UUID {
+        return database.transaction {
+            val criteriaQuery = session.criteriaBuilder.createQuery(PublicKeyHashToExternalId::class.java)
+            val queryRoot = criteriaQuery.from(PublicKeyHashToExternalId::class.java)
+            Restrictions.eq("public_key_hash", publicKey.toStringShort())
+            criteriaQuery.where(session.criteriaBuilder.equal(queryRoot.get<String>(PublicKeyHashToExternalId::publicKeyHash.name), publicKey.toString()))
+            criteriaQuery.select(queryRoot)
+            session.createQuery(criteriaQuery).uniqueResult().externalId
         }
     }
 

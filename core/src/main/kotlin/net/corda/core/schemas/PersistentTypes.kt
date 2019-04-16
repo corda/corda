@@ -109,7 +109,7 @@ interface StatePersistable
 /**
  * Marker interface to denote a persistable Corda state entity that exposes the transaction id and index as composite key called [stateRef].
  */
-interface DirectStatePersistable : StatePersistable {
+interface   DirectStatePersistable : StatePersistable {
     val stateRef: PersistentStateRef?
 }
 
