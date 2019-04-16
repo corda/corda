@@ -118,13 +118,10 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
                     buildInterfaceInformation(type))
             type.isInterface -> buildInterface(type, typeIdentifier, emptyList())
             type.isAbstractClass -> buildAbstract(type, typeIdentifier, emptyList())
-            isOpaque -> LocalTypeInformation.Opaque(
-                    type,
-                    typeIdentifier,
-                    suppressWarningsAnd { buildNonAtomic(type, type, typeIdentifier, emptyList()) })
             Exception::class.java.isAssignableFrom(type.asClass()) -> suppressWarningsAnd {
                 buildNonAtomic(type, type, typeIdentifier, emptyList())
             }
+            isOpaque -> LocalTypeInformation.Opaque(type, typeIdentifier)
             else -> buildNonAtomic(type, type, typeIdentifier, emptyList())
         }
     }
@@ -153,9 +150,7 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
             }
             rawType.isInterface -> buildInterface(type, typeIdentifier, buildTypeParameterInformation(type))
             rawType.isAbstractClass -> buildAbstract(type, typeIdentifier, buildTypeParameterInformation(type))
-            isOpaque -> LocalTypeInformation.Opaque(rawType,
-                    typeIdentifier,
-                    suppressWarningsAnd { buildNonAtomic(rawType, type, typeIdentifier, buildTypeParameterInformation(type)) })
+            isOpaque -> LocalTypeInformation.Opaque(rawType, typeIdentifier)
             else -> buildNonAtomic(rawType, type, typeIdentifier, buildTypeParameterInformation(type))
         }
     }

@@ -32,21 +32,21 @@ data class PropertyDescriptor(val field: Field?, val setter: Method?, val getter
      */
     fun validate() {
         getter?.apply {
-            val getterType = genericReturnType
             field?.apply {
-                if (!getterType.isSupertypeOf(genericReturnType))
+                if (!getter.returnType.boxesOrIsAssignableFrom(field.type) &&
+                        getter.returnType.kotlin.javaPrimitiveType != field.type)
                     throw AMQPNotSerializableException(
                             declaringClass,
-                            "Defined getter for parameter $name returns type $getterType " +
+                            "Defined getter for parameter $name returns type ${getter.returnType} " +
                                     "yet underlying type is $genericType")
             }
         }
 
         setter?.apply {
-            val setterType = genericParameterTypes[0]!!
+            val setterType = setter.parameterTypes[0]!!
 
             field?.apply {
-                if (!genericType.isSupertypeOf(setterType))
+                if (!field.type.boxesOrIsAssignableFrom(setterType))
                     throw AMQPNotSerializableException(
                             declaringClass,
                             "Defined setter for parameter $name takes parameter of type $setterType " +
@@ -54,7 +54,7 @@ data class PropertyDescriptor(val field: Field?, val setter: Method?, val getter
             }
 
             getter?.apply {
-                if (!genericReturnType.isSupertypeOf(setterType))
+                if (!getter.returnType.boxesOrIsAssignableFrom(setterType))
                     throw AMQPNotSerializableException(
                             declaringClass,
                             "Defined setter for parameter $name takes parameter of type $setterType, " +
@@ -63,6 +63,9 @@ data class PropertyDescriptor(val field: Field?, val setter: Method?, val getter
         }
     }
 }
+
+private fun Class<*>.boxesOrIsAssignableFrom(other: Class<*>) =
+        isAssignableFrom(other) || kotlin.javaPrimitiveType == other
 
 private fun Type.isSupertypeOf(that: Type) = TypeToken.of(this).isSupertypeOf(that)
 

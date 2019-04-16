@@ -91,7 +91,6 @@ sealed class LocalTypeInformation {
         is LocalTypeInformation.Abstract -> properties
         is LocalTypeInformation.AnInterface -> properties
         is LocalTypeInformation.NonComposable -> properties
-        is LocalTypeInformation.Opaque -> wrapped.propertiesOrEmptyMap
         else -> emptyMap()
     }
 
@@ -153,8 +152,7 @@ sealed class LocalTypeInformation {
     /**
      * May in fact be a more complex class, but is treated as if atomic, i.e. we don't further expand its properties.
      */
-    data class Opaque(override val observedType: Class<*>, override val typeIdentifier: TypeIdentifier,
-                      val wrapped: LocalTypeInformation) : LocalTypeInformation()
+    data class Opaque(override val observedType: Class<*>, override val typeIdentifier: TypeIdentifier) : LocalTypeInformation()
 
     /**
      * Represents a scalar type such as [Int].
