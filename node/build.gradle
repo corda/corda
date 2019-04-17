@@ -68,6 +68,8 @@ processTestResources {
 
 dependencies {
     compile project(':node-api')
+    // Need this to pickup the HSM simulator
+    testCompile project(path: ':node-api', configuration: 'testArtifacts')
     compile project(':client:rpc')
     compile project(':tools:shell')
     compile project(':tools:cliutils')

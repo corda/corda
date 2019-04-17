@@ -5,6 +5,7 @@ import net.corda.core.identity.Party
 import net.corda.core.utilities.days
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
+import net.corda.nodeapi.internal.cryptoservice.azure.AzureKeyVaultCryptoService
 import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.getTestPartyAndCertificate
 import org.junit.Ignore
