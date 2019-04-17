@@ -5,6 +5,7 @@ import net.corda.core.CordaInternal
 import net.corda.core.DeleteForDJVM
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*
+import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
 import net.corda.core.node.NetworkParameters
@@ -15,13 +16,15 @@ import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.KeyManagementService
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationFactory
+import net.corda.core.serialization.internal.AttachmentURLStreamHandlerFactory
 import net.corda.core.utilities.contextLogger
 import java.io.NotSerializableException
+import java.net.URL
+import java.net.URLClassLoader
 import java.security.PublicKey
 import java.time.Duration
 import java.time.Instant
-import java.util.ArrayDeque
-import java.util.UUID
+import java.util.*
 import kotlin.collections.ArrayList
 import kotlin.collections.component1
 import kotlin.collections.component2
@@ -122,7 +125,27 @@ open class TransactionBuilder(
      * @throws ZoneVersionTooLowException if there are reference states and the zone minimum platform version is less than 4.
      */
     @Throws(MissingContractAttachments::class)
-    fun toWireTransaction(services: ServicesForResolution): WireTransaction = toWireTransactionWithContext(services)
+    fun toWireTransaction(services: ServicesForResolution): WireTransaction {
+        val jarsToInspect: Queue<URL> = LinkedList()
+        FlowLogic.currentTopLevel?.javaClass?.location?.let {
+            jarsToInspect.add(it)
+        }
+
+        while (jarsToInspect.isNotEmpty()) {
+            val jarToInspect = jarsToInspect.remove()
+            URLClassLoader(arrayOf(jarToInspect)).getResourceAsStream("CORDA-INF/DEPENDENCIES.MF")?.bufferedReader()?.use { reader ->
+                val hash = SecureHash.parse(reader.readLine())
+                addAttachment(hash)
+
+                val dependency = services.attachments.openAttachment(hash)
+                if (dependency != null) {
+                    val attachmentUrl = AttachmentURLStreamHandlerFactory.toUrl(dependency)
+                    jarsToInspect.add(attachmentUrl)
+                }
+            }
+        }
+        return toWireTransactionWithContext(services)
+    }
 
     @CordaInternal
     internal fun toWireTransactionWithContext(services: ServicesForResolution, serializationContext: SerializationContext? = null): WireTransaction {
@@ -189,8 +212,8 @@ open class TransactionBuilder(
                 return true
             }
             return false
-        // Ignore these exceptions as they will break unit tests.
-        // The point here is only to detect missing dependencies. The other exceptions are irrelevant.
+            // Ignore these exceptions as they will break unit tests.
+            // The point here is only to detect missing dependencies. The other exceptions are irrelevant.
         } catch (tve: TransactionVerificationException) {
         } catch (tre: TransactionResolutionException) {
         } catch (ise: IllegalStateException) {
