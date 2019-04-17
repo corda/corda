@@ -195,7 +195,7 @@ class VaultStateMigrationTest {
     private fun saveAllIdentities(identities: List<PartyAndCertificate>) {
         cordaDB.transaction {
             identities.groupBy { it.name }.forEach { name, certs ->
-                val persistentIDs = certs.map { PersistentIdentityService.PersistentIdentity(it.owningKey.hash.toString(), it.certPath.encoded) }
+                val persistentIDs = certs.map { PersistentIdentityService.PersistentIdentityCert(it.owningKey.hash.toString(), it.certPath.encoded) }
                 val persistentName = PersistentIdentityService.PersistentIdentityNames(name.toString(), certs.first().owningKey.hash.toString())
                 persistentIDs.forEach { session.save(it) }
                 session.save(persistentName)
