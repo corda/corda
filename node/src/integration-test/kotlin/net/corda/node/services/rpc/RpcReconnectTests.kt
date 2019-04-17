@@ -244,7 +244,7 @@ class RpcReconnectTests {
             // Check that enough vault events were received.
             // This check is fuzzy because events can go missing during node restarts.
             // Ideally there should be nrOfFlowsToRun events receive but some might get lost for each restart.
-            assertTrue(vaultEvents!!.size + nrFailures * 2 >= nrOfFlowsToRun, "Not all vault events were received")
+            assertTrue(vaultEvents!!.size + nrFailures * 3 >= nrOfFlowsToRun, "Not all vault events were received")
             // DOCEND missingVaultEvents
 
             // Query the vault and check that states were created for all flows.
@@ -264,8 +264,8 @@ class RpcReconnectTests {
 
             log.info("SM EVENTS: ${stateMachineEvents!!.size}")
             // State machine events are very likely to get lost more often because they seem to be sent with a delay.
-            assertTrue(stateMachineEvents.count { it is StateMachineUpdate.Added } > nrOfFlowsToRun / 2, "Too many Added state machine events lost.")
-            assertTrue(stateMachineEvents.count { it is StateMachineUpdate.Removed } > nrOfFlowsToRun / 2, "Too many Removed state machine events lost.")
+            assertTrue(stateMachineEvents.count { it is StateMachineUpdate.Added } > nrOfFlowsToRun / 3, "Too many Added state machine events lost.")
+            assertTrue(stateMachineEvents.count { it is StateMachineUpdate.Removed } > nrOfFlowsToRun / 3, "Too many Removed state machine events lost.")
 
             // Stop the observers.
             vaultObserverHandle.stop()

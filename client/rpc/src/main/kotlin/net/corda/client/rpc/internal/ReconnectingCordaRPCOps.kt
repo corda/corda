@@ -141,24 +141,22 @@ class ReconnectingCordaRPCOps private constructor(
     ) : RPCConnection<CordaRPCOps> {
         private var currentRPCConnection: CordaRPCConnection? = null
 
-        init {
-            connect()
-        }
-
         enum class CurrentState {
             UNCONNECTED, CONNECTED, CONNECTING, CLOSED, DIED
         }
 
         private var currentState = CurrentState.UNCONNECTED
 
+        init {
+            current
+        }
+
         private val current: CordaRPCConnection
             @Synchronized get() = when (currentState) {
+                CurrentState.UNCONNECTED -> connect()
                 CurrentState.CONNECTED -> currentRPCConnection!!
-                CurrentState.UNCONNECTED, CurrentState.CLOSED -> {
-                    connect()
-                    currentRPCConnection!!
-                }
-                CurrentState.CONNECTING, CurrentState.DIED -> throw IllegalArgumentException("Illegal state")
+                CurrentState.CLOSED -> throw IllegalArgumentException("The ReconnectingRPCConnection has been closed.")
+                CurrentState.CONNECTING, CurrentState.DIED -> throw IllegalArgumentException("Illegal state: $currentState ")
             }
 
         /**
@@ -173,10 +171,12 @@ class ReconnectingCordaRPCOps private constructor(
             connect()
         }
 
-        private fun connect() {
+        @Synchronized
+        private fun connect(): CordaRPCConnection {
             currentState = CurrentState.CONNECTING
             currentRPCConnection = establishConnectionWithRetry()
             currentState = CurrentState.CONNECTED
+            return currentRPCConnection!!
         }
 
         private tailrec fun establishConnectionWithRetry(retryInterval: Duration = 1.seconds, nrRetries: Int = 0): CordaRPCConnection {
@@ -196,7 +196,10 @@ class ReconnectingCordaRPCOps private constructor(
                     is ActiveMQSecurityException -> {
                         // Happens when incorrect credentials provided.
                         // It can happen at startup as well when the credentials are correct.
-                        if (nrRetries > 1) throw ex
+                        if (nrRetries > 1) {
+                            log.error("Failed to login to node.", ex)
+                            throw ex
+                        }
                     }
                     is RPCException -> {
                         // Deliberately not logging full stack trace as it will be full of internal stacktraces.
@@ -211,14 +214,15 @@ class ReconnectingCordaRPCOps private constructor(
                         log.debug { "Exception upon establishing connection: ${ex.message}" }
                     }
                     else -> {
-                        log.debug("Unknown exception upon establishing connection.", ex)
+                        log.warn("Unknown exception upon establishing connection.", ex)
                     }
                 }
             }
 
             // Could not connect this time round - pause before giving another try.
             Thread.sleep(retryInterval.toMillis())
-            return establishConnectionWithRetry((retryInterval * 3) / 2, nrRetries + 1)
+            // TODO - make the exponential retry factor configurable.
+            return establishConnectionWithRetry((retryInterval * 10) / 9, nrRetries + 1)
         }
 
         override val proxy: CordaRPCOps
