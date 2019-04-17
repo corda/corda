@@ -60,6 +60,7 @@ class TransactionBuilderTest {
         doReturn(emptyList<Party>()).whenever(attachment).signerKeys
         doReturn(listOf(contractAttachmentId)).whenever(attachmentStorage)
                 .getLatestContractAttachments("net.corda.testing.contracts.DummyContract")
+        doReturn(emptyList<SecureHash>()).whenever(services).whitelistedKeysForAttachments
     }
 
     @Test
