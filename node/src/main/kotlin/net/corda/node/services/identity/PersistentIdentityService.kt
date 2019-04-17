@@ -15,7 +15,8 @@ import net.corda.nodeapi.internal.crypto.X509CertificateFactory
 import net.corda.nodeapi.internal.crypto.x509Certificates
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
-import org.apache.commons.lang3.ArrayUtils.EMPTY_BYTE_ARRAY
+import org.apache.commons.lang.ArrayUtils.EMPTY_BYTE_ARRAY
+import java.lang.IllegalStateException
 import java.security.InvalidAlgorithmParameterException
 import java.security.PublicKey
 import java.security.cert.*
@@ -248,22 +249,26 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
 
         val existingEntry = database.transaction {
 
-            // Check by party
-            val existingEntryForParty =  partyToKey[identity.name]
-            if (existingEntryForParty == null) {
-                log.info("Linking: ${key.hash} to ${identity.name}")
-                partyToKey[identity.name] = key.hash
-            }
-
             // Check by key
             val existingEntryForKey = keyToParty[key.hash]
             if (existingEntryForKey == null) {
-                log.info("Linking: ${identity.name} to ${key.hash}")
+                log.info("Linking: ${key.hash} to ${identity.name}")
                 keyToParty[key.hash] = identity.name
+            } else {
+                log.info("An existing entry for ${key.hash} already exists.")
+                if (identity.name != keyToParty[key.hash]) {
+                    throw IllegalStateException("The public key ${key.hash} is already assigned to a party.")
+                }
             }
-        }
-        if (existingEntry != null) {
-            throw IllegalStateException("Could not register $key for party $identity as it has already been registered for $existingEntry")
+
+            // Check by party
+            val existingEntryForParty = partyToKey[identity.name]
+            if (existingEntryForParty == null) {
+                log.info("Linking: ${identity.name} to ${key.hash}")
+                partyToKey[identity.name] = key.hash
+            } else {
+                log.info("An existing entry for ${identity.name} already exists.")
+            }
         }
 
         return true
