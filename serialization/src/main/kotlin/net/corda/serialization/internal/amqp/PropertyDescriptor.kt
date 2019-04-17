@@ -4,6 +4,7 @@ import com.google.common.reflect.TypeToken
 import net.corda.core.KeepForDJVM
 import net.corda.core.internal.isPublic
 import net.corda.core.serialization.SerializableCalculatedProperty
+import net.corda.core.utilities.contextLogger
 import net.corda.serialization.internal.amqp.MethodClassifier.*
 import java.lang.reflect.Field
 import java.lang.reflect.Method
@@ -34,8 +35,8 @@ data class PropertyDescriptor(val field: Field?, val setter: Method?, val getter
         getter?.apply {
             field?.apply {
                 if (!getter.returnType.boxesOrIsAssignableFrom(field.type))
-                    throw AMQPNotSerializableException(
-                            declaringClass,
+                   throw AMQPNotSerializableException(
+                           declaringClass,
                             "Defined getter for parameter $name returns type ${getter.returnType} " +
                                     "yet underlying type is $genericType")
             }
@@ -87,7 +88,7 @@ private val propertyMethodRegex = Regex("(?<type>get|set|is)(?<var>\\p{Lu}.*)")
  * take a single parameter of a type compatible with exampleProperty and isExampleProperty must
  * return a boolean
  */
-internal fun Class<out Any?>.propertyDescriptors(): Map<String, PropertyDescriptor> {
+internal fun Class<out Any?>.propertyDescriptors(warnInvalid: Boolean = true): Map<String, PropertyDescriptor> {
     val fieldProperties = superclassChain().declaredFields().byFieldName()
 
     return superclassChain().declaredMethods()
@@ -95,8 +96,9 @@ internal fun Class<out Any?>.propertyDescriptors(): Map<String, PropertyDescript
             .thatArePropertyMethods()
             .withValidSignature()
             .byNameAndClassifier(fieldProperties.keys)
-            .toClassProperties(fieldProperties)
-            .validated()
+            .toClassProperties(fieldProperties).run {
+                if (warnInvalid) validated() else this
+            }
 }
 
 /**

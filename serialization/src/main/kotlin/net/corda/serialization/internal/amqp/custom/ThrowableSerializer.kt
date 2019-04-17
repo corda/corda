@@ -25,6 +25,7 @@ class ThrowableSerializer(factory: LocalSerializerFactory) : CustomSerializer.Pr
         is LocalTypeInformation.NonComposable -> constructor ?:
                 throw NotSerializableException("$this has no deserialization constructor")
         is LocalTypeInformation.Composable -> constructor
+        is LocalTypeInformation.Opaque -> wrapped.constructor
         else -> throw NotSerializableException("$this has no deserialization constructor")
     }
 

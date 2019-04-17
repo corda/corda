@@ -118,10 +118,13 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
                     buildInterfaceInformation(type))
             type.isInterface -> buildInterface(type, typeIdentifier, emptyList())
             type.isAbstractClass -> buildAbstract(type, typeIdentifier, emptyList())
+            isOpaque -> LocalTypeInformation.Opaque(
+                    type,
+                    typeIdentifier,
+                    suppressWarningsAnd { buildNonAtomic(type, type, typeIdentifier, emptyList()) })
             Exception::class.java.isAssignableFrom(type.asClass()) -> suppressWarningsAnd {
                 buildNonAtomic(type, type, typeIdentifier, emptyList())
             }
-            isOpaque -> LocalTypeInformation.Opaque(type, typeIdentifier)
             else -> buildNonAtomic(type, type, typeIdentifier, emptyList())
         }
     }
@@ -150,7 +153,9 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
             }
             rawType.isInterface -> buildInterface(type, typeIdentifier, buildTypeParameterInformation(type))
             rawType.isAbstractClass -> buildAbstract(type, typeIdentifier, buildTypeParameterInformation(type))
-            isOpaque -> LocalTypeInformation.Opaque(rawType, typeIdentifier)
+            isOpaque -> LocalTypeInformation.Opaque(rawType,
+                    typeIdentifier,
+                    suppressWarningsAnd { buildNonAtomic(rawType, type, typeIdentifier, buildTypeParameterInformation(type)) })
             else -> buildNonAtomic(rawType, type, typeIdentifier, buildTypeParameterInformation(type))
         }
     }
@@ -278,7 +283,7 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
     }
 
     private fun buildReadOnlyProperties(rawType: Class<*>): Map<PropertyName, LocalPropertyInformation> =
-            rawType.propertyDescriptors().asSequence().mapNotNull { (name, descriptor) ->
+            rawType.propertyDescriptors(warnIfNonComposable).asSequence().mapNotNull { (name, descriptor) ->
                 if (descriptor.field == null || descriptor.getter == null) null
                 else {
                     val paramType = (descriptor.getter.genericReturnType).resolveAgainstContext()
@@ -305,7 +310,7 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
             parameter.name to index
         }.toMap()
 
-        return rawType.propertyDescriptors().asSequence().mapNotNull { (name, descriptor) ->
+        return rawType.propertyDescriptors(warnIfNonComposable).asSequence().mapNotNull { (name, descriptor) ->
             val normalisedName = when {
                 name in constructorParameterIndices -> name
                 name.decapitalize() in constructorParameterIndices -> name.decapitalize()
@@ -348,7 +353,7 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
     }
 
     private fun getterSetterProperties(rawType: Class<*>): Sequence<Pair<String, LocalPropertyInformation>> =
-            rawType.propertyDescriptors().asSequence().mapNotNull { (name, descriptor) ->
+            rawType.propertyDescriptors(warnIfNonComposable).asSequence().mapNotNull { (name, descriptor) ->
                 if (descriptor.getter == null || descriptor.setter == null || descriptor.field == null) null
                 else {
                     val paramType = descriptor.getter.genericReturnType
