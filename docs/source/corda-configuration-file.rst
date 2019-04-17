@@ -545,6 +545,13 @@ verfierType
 
   *Default:* InMemory
 
+
+whitelistedKeysForAttachments
+  A list of SHA256 hashes of public keys. Any attachments that are signed by a key that hashes to one of the items in this list will be
+  treated as trusted by the node, even if it was received by an untrusted source (for example, over the network).
+
+  *Default:* not defined
+
 Reference.conf
 --------------
 A set of default configuration options are loaded from the built-in resource file ``/node/src/main/resources/reference.conf``.
