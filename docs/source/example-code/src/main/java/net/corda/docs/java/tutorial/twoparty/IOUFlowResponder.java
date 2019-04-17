@@ -18,10 +18,10 @@ public class IOUFlowResponder extends FlowLogic<Void> {
         this.otherPartySession = otherPartySession;
     }
 
+    // DOCSTART 1
     @Suspendable
     @Override
     public Void call() throws FlowException {
-        // DOCSTART 01
         class SignTxFlow extends SignTransactionFlow {
             private SignTxFlow(FlowSession otherPartySession) {
                 super(otherPartySession);
@@ -44,6 +44,6 @@ public class IOUFlowResponder extends FlowLogic<Void> {
         subFlow(new ReceiveFinalityFlow(otherPartySession, expectedTxId));
 
         return null;
-        // DOCEND 01
     }
+    // DOCEND 1
 }
