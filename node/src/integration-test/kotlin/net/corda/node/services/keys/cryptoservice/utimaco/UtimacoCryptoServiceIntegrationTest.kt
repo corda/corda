@@ -4,10 +4,11 @@ import net.corda.core.crypto.Crypto
 import net.corda.core.identity.Party
 import net.corda.core.internal.toPath
 import net.corda.core.utilities.days
-import net.corda.node.hsm.HsmSimulator
+import net.corda.nodeapi.internal.hsm.HsmSimulator
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.cryptoservice.CryptoServiceException
+import net.corda.nodeapi.internal.cryptoservice.utimaco.UtimacoCryptoService
 import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.getTestPartyAndCertificate
 import net.corda.testing.driver.internal.incrementalPortAllocation

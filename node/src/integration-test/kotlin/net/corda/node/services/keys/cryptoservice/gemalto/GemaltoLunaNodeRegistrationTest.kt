@@ -15,6 +15,7 @@ import net.corda.node.services.keys.cryptoservice.ensurePrivateKeyIsNotInKeyStor
 import net.corda.node.utilities.registration.TestDoorman
 import net.corda.nodeapi.internal.config.parseAs
 import net.corda.nodeapi.internal.crypto.X509Utilities
+import net.corda.nodeapi.internal.cryptoservice.gemalto.GemaltoLunaCryptoService
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.singleIdentity

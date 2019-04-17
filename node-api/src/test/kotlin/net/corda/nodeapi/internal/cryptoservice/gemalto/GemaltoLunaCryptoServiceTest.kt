@@ -1,11 +1,10 @@
-package net.corda.node.services.keys.cryptoservice.gemalto
+package net.corda.nodeapi.internal.cryptoservice.gemalto
 
 import com.safenetinc.luna.provider.LunaProvider
 import net.corda.core.crypto.Crypto
 import net.corda.core.identity.Party
 import net.corda.core.utilities.days
 import net.corda.nodeapi.internal.crypto.CertificateType
-import net.corda.nodeapi.internal.crypto.KEYSTORE_TYPE
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.cryptoservice.CryptoServiceException
 import net.corda.testing.core.DUMMY_BANK_A_NAME

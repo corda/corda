@@ -1,4 +1,4 @@
-package net.corda.node.services.keys.cryptoservice.utimaco
+package net.corda.nodeapi.internal.cryptoservice.utimaco
 
 import CryptoServerCXI.CryptoServerCXI
 import CryptoServerJCE.CryptoServerProvider

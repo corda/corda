@@ -1,4 +1,4 @@
-package net.corda.node.hsm
+package net.corda.nodeapi.internal.hsm
 
 import CryptoServerAPI.CryptoServerException
 import CryptoServerJCE.CryptoServerProvider
@@ -130,16 +130,16 @@ class HsmSimulator(portAllocation: PortAllocation,
 
     private fun DockerClient.stopAndRemoveHsmSimulatorContainer() {
         if (containerId != null) {
-            log.debug("Stopping container $containerId...")
-            this.stopContainer(containerId, CONTAINER_KILL_TIMEOUT_SECONDS)
-            log.debug("Removing container $containerId...")
+            net.corda.nodeapi.internal.hsm.HsmSimulator.Companion.log.debug("Stopping container $containerId...")
+            this.stopContainer(containerId, net.corda.nodeapi.internal.hsm.HsmSimulator.Companion.CONTAINER_KILL_TIMEOUT_SECONDS)
+            net.corda.nodeapi.internal.hsm.HsmSimulator.Companion.log.debug("Removing container $containerId...")
             this.removeContainer(containerId)
         }
     }
 
     private fun DockerClient.startHsmSimulatorContainer() {
         if (containerId != null) {
-            log.debug("Starting container $containerId...")
+            net.corda.nodeapi.internal.hsm.HsmSimulator.Companion.log.debug("Starting container $containerId...")
             this.startContainer(containerId)
             pollAndWaitForHsmSimulator()
         }
@@ -182,13 +182,13 @@ class HsmSimulator(portAllocation: PortAllocation,
     }
 
     private fun DockerClient.createContainer(): String? {
-        val portBindings = mapOf(HSM_SIMULATOR_PORT to listOf(PortBinding.create(address.host, address.port.toString())))
+        val portBindings = mapOf(net.corda.nodeapi.internal.hsm.HsmSimulator.Companion.HSM_SIMULATOR_PORT to listOf(PortBinding.create(address.host, address.port.toString())))
         val hostConfig = HostConfig.builder().portBindings(portBindings).build()
         val containerConfig = ContainerConfig.builder()
                 .hostConfig(hostConfig)
                 .portSpecs()
                 .image(getImageFullName())
-                .exposedPorts(HSM_SIMULATOR_PORT)
+                .exposedPorts(net.corda.nodeapi.internal.hsm.HsmSimulator.Companion.HSM_SIMULATOR_PORT)
                 .build()
         val containerCreation = this.createContainer(containerConfig, containerId)
         return containerCreation.id()
