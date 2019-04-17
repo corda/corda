@@ -6,14 +6,15 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.node.serialization.kryo.kryoMagic
 import net.corda.node.services.statemachine.DataSessionMessage
+import net.corda.serialization.internal.amqp.propertyDescriptors
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.internal.kryoSpecific
-import org.junit.Assert.assertArrayEquals
-import org.junit.Assert.assertEquals
+import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
 import java.io.ByteArrayOutputStream
 import java.util.*
+import org.assertj.core.api.Assertions.assertThat
 
 class SetsSerializationTest {
     private companion object {
@@ -64,4 +65,27 @@ class SetsSerializationTest {
         }
         assertArrayEquals(output.toByteArray(), serializedForm.bytes)
     }
+
+    open class P
+    class VarOfP(var p: Set<P>)
+
+    /*
+    See CORDA-2860.
+
+    When a class has a var parameter of type Set<out T>, Kotlin generates getters and setters with the following (Java) signatures:
+
+    public Set<T> getP();
+    public void setP(Set<? extends T> p);
+
+    The PropertyDescriptor.validate method used to check that the return type of the getter was a supertype of the parameter type of the
+    setter. Unfortunately, Set<T> is not a strict supertype of Set<? extends T>, so this check would fail, throwing an exception.
+
+    We now check only for compatibility of the erased classes, so the call to propertyDescriptors() below should now succeed, returning the
+    property descriptor for "p".
+     */
+    @Test
+    fun `type variance on setter getter pair does not fail validation`() {
+        assertThat(VarOfP::class.java.propertyDescriptors()).containsKey("p")
+    }
+
 }
