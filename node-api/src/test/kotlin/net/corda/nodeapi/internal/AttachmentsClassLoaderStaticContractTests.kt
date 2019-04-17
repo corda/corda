@@ -91,6 +91,7 @@ class AttachmentsClassLoaderStaticContractTests {
         val contractAttachmentId = SecureHash.randomSHA256()
         doReturn(listOf(contractAttachmentId)).whenever(attachmentStorage)
                 .getLatestContractAttachments(AttachmentDummyContract.ATTACHMENT_PROGRAM_ID)
+        doReturn(emptyList<SecureHash>()).whenever(it).whitelistedKeysForAttachments
     }
 
     @Test
