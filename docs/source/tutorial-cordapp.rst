@@ -281,9 +281,7 @@ For each node, the ``runnodes`` script creates a node tab/window:
 
    Fri Mar 02 17:34:02 GMT 2018>>>
 
-It usually takes around 60 seconds for the nodes to finish starting up. To ensure that all the nodes are running, you
-can query the 'status' end-point located at ``http://localhost:[port]/api/status`` (e.g.
-``http://localhost:50005/api/status`` for ``PartyA``).
+It usually takes around 60 seconds for the nodes to finish starting up. Each node will display "Welcome to the Corda interactive shell." along with a prompt when ready.
 
 Running the example CorDapp from IntelliJ
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
