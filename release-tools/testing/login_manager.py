@@ -39,7 +39,7 @@ def confirm(message, auto_yes=False):
 # }}}
 
 # {{{ login(account, user, password, use_keyring) - Present user with login prompt and return the provided username and password. If use_keyring is true, use previously provided password (if any)
-def login(account, user=None, password=None, use_keyring=True):
+def login(account, user=None, password=None, use_keyring=True, reset_keyring=False):
     if not user:
         if 'JIRA_USER' not in os.environ:
             user = prompt('Username: ')
@@ -51,7 +51,9 @@ def login(account, user=None, password=None, use_keyring=True):
     else:
         user = u'{}@r3.com'.format(user) if '@' not in user else user
         print('Username: {}'.format(user))
-    password = get_password(account, user) if password is None and use_keyring else password
+    if reset_keyring:
+        set_password(account, user, '')
+    password = get_password(account, user) if password is None and use_keyring and not reset_keyring else password
     if not password:
         password = prompt('Password: ', secret=True)
         if not password: return (None, None)

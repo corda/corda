@@ -59,7 +59,7 @@ QUERY_LIST_BLOCKING_TEST_CASES = \
 
 # {{{ list_test_cases() - List active test cases for a specific product
 def list_test_cases(args):
-    user, password = login('jira', args.user)
+    user, password = login('jira', args.user, use_keyring=not args.no_keyring, reset_keyring=args.reset_keyring)
     if not user or not password: sys.exit(1)
     jira = Jira().login(user, password)
     print(u'List of active test cases for {}:'.format(yellow(product_map[args.PRODUCT])))
@@ -85,7 +85,7 @@ def format_candidate(candidate):
 
 # {{{ show_status() - Show the status of all test runs for a specific release or release candidate
 def show_status(args):
-    user, password = login('jira', args.user)
+    user, password = login('jira', args.user, use_keyring=not args.no_keyring, reset_keyring=args.reset_keyring)
     if not user or not password: sys.exit(1)
     jira = Jira().login(user, password)
     version = '{} {}'.format(product_map[args.PRODUCT], args.VERSION).replace('.0', '')
@@ -145,7 +145,7 @@ def show_status(args):
 
 # {{{ create_version() - Create a new JIRA version
 def create_version(args):
-    user, password = login('jira', args.user)
+    user, password = login('jira', args.user, use_keyring=not args.no_keyring, reset_keyring=args.reset_keyring)
     if not user or not password: sys.exit(1)
     jira = Jira().login(user, password)
     version = '{} {}'.format(product_map[args.PRODUCT], args.VERSION).replace('.0', '')
@@ -170,7 +170,7 @@ def create_version(args):
 
 # {{{ create_release() - Create test cases for a specific version of a product
 def create_release(args):
-    user, password = login('jira', args.user)
+    user, password = login('jira', args.user, use_keyring=not args.no_keyring, reset_keyring=args.reset_keyring)
     if not user or not password: sys.exit(1)
     jira = Jira().login(user, password)
     version = '{} {}'.format(product_map[args.PRODUCT], args.VERSION).replace('.0', '')
@@ -235,7 +235,7 @@ def create_release(args):
 
 # {{{ create_release_candidate() - Create test run tickets for a specific release candidate of a product
 def create_release_candidate(args):
-    user, password = login('jira', args.user)
+    user, password = login('jira', args.user, use_keyring=not args.no_keyring, reset_keyring=args.reset_keyring)
     if not user or not password: sys.exit(1)
     jira = Jira().login(user, password)
     version = '{} {}'.format(product_map[args.PRODUCT], args.VERSION).replace('.0', '')
@@ -285,7 +285,8 @@ def main():
         program.add('--verbose', '-v', help='turn on verbose logging', action='store_true')
         program.add('--yes', '-y', help='automatically answer "yes" to all prompts', action='store_true')
         program.add('--user', '-u', help='the user name or email address used to log in to JIRA', type=str, metavar='USER')
-        program.add('--no-keyring', help='do not retrieve passwords persisted in the keyring', action='store_true')
+        program.add('--no-keyring', help='do not persist passwords in the keyring', action='store_true')
+        program.add('--reset-keyring', help='reset passwords persisted in the keyring (if any)', action='store_true')
 
         def mixin_dry_run(command):
             command.add('--dry-run', '-d', help='run action without applying any changes to JIRA', action='store_true')
