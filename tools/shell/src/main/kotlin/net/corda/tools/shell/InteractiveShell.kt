@@ -24,7 +24,7 @@ import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.*
-import net.corda.nodeapi.internal.cordapp.CustomRPCSerializationJacksonModule
+import net.corda.client.jackson.internal.CustomRPCSerializationFactory
 import net.corda.tools.shell.utlities.ANSIProgressRenderer
 import net.corda.tools.shell.utlities.StdoutANSIProgressRenderer
 import org.crsh.command.InvocationContext
@@ -214,8 +214,8 @@ object InteractiveShell {
     fun createYamlInputMapper(rpcOps: CordaRPCOps, classLoader: ClassLoader?): ObjectMapper {
         // Scan for CustomRPCSerializationJacksonModule on the classloader and register them as modules.
         val customModules = ClassGraph().addClassLoader(classLoader).enableClassInfo().pooledScan().use { scan ->
-            scan.getSubclasses(CustomRPCSerializationJacksonModule::class.java.name)
-                    .map { it.loadClass().newInstance() as Module }
+            scan.getClassesImplementing(CustomRPCSerializationFactory::class.java.name)
+                    .map { it.loadClass().newInstance() as CustomRPCSerializationFactory }
         }
 
         // Return a standard Corda Jackson object mapper, configured to use YAML by default and with extra
@@ -225,7 +225,7 @@ object InteractiveShell {
                 addDeserializer(InputStream::class.java, InputStreamDeserializer)
                 addDeserializer(UniqueIdentifier::class.java, UniqueIdentifierDeserializer)
             }
-            customModules.forEach { registerModule(it) }
+            customModules.forEach { registerModule(it.createJacksonModule()) }
             registerModule(rpcModule)
         }
     }
@@ -268,7 +268,7 @@ object InteractiveShell {
                               output: RenderPrintWriter,
                               rpcOps: CordaRPCOps,
                               ansiProgressRenderer: ANSIProgressRenderer,
-                              inputObjectMapper: ObjectMapper = createYamlInputMapper(rpcOps, classLoader)) {
+                              inputObjectMapper: ObjectMapper) {
         val matches = try {
             rpcOps.registeredFlows().filter { nameFragment in it }
         } catch (e: PermissionException) {
@@ -365,7 +365,7 @@ object InteractiveShell {
     fun killFlowById(id: String,
                      output: RenderPrintWriter,
                      rpcOps: CordaRPCOps,
-                     inputObjectMapper: ObjectMapper = createYamlInputMapper(rpcOps, classLoader)) {
+                     inputObjectMapper: ObjectMapper) {
         try {
             val runId = try {
                 inputObjectMapper.readValue(id, StateMachineRunId::class.java)

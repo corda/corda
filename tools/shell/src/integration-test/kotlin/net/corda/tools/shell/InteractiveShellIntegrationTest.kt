@@ -3,12 +3,14 @@ package net.corda.tools.shell
 import com.fasterxml.jackson.databind.DeserializationContext
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.fasterxml.jackson.databind.deser.std.FromStringDeserializer
+import com.fasterxml.jackson.databind.module.SimpleModule
 import com.google.common.io.Files
 import com.jcraft.jsch.ChannelExec
 import com.jcraft.jsch.JSch
 import com.nhaarman.mockito_kotlin.any
 import com.nhaarman.mockito_kotlin.doAnswer
 import com.nhaarman.mockito_kotlin.mock
+import net.corda.client.jackson.internal.CustomRPCSerializationFactory
 import net.corda.client.rpc.RPCException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
@@ -25,13 +27,14 @@ import net.corda.node.utilities.createKeyPairAndSelfSignedTLSCertificate
 import net.corda.node.utilities.saveToKeyStore
 import net.corda.node.utilities.saveToTrustStore
 import net.corda.nodeapi.BrokerRpcSslOptions
-import net.corda.nodeapi.internal.cordapp.CustomRPCSerializationJacksonModule
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.driver.internal.NodeHandleInternal
 import net.corda.testing.internal.useSslRpcOverrides
 import net.corda.testing.node.User
+import net.corda.tools.shell.InteractiveShell.createYamlInputMapper
+import net.corda.tools.shell.InteractiveShell.runFlowByNameFragment
 import net.corda.tools.shell.utlities.ANSIProgressRenderer
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import org.assertj.core.api.Assertions.assertThat
@@ -275,9 +278,9 @@ class InteractiveShellIntegrationTest {
             val ansiProgressRenderer = mock<ANSIProgressRenderer> {
                 on { render(any(), any()) } doAnswer { InteractiveShell.latch.countDown() }
             }
-            InteractiveShell.runFlowByNameFragment(
+            runFlowByNameFragment(
                     "NoOpFlow",
-                    "", output, node.rpc, ansiProgressRenderer)
+                    "", output, node.rpc, ansiProgressRenderer, createYamlInputMapper(node.rpc, null))
         }
         assertThat(successful).isTrue()
     }
@@ -307,9 +310,9 @@ class InteractiveShellIntegrationTest {
             val ansiProgressRenderer = mock<ANSIProgressRenderer> {
                 on { render(any(), any()) } doAnswer { InteractiveShell.latch.countDown() }
             }
-            InteractiveShell.runFlowByNameFragment(
+            runFlowByNameFragment(
                     "NoOpFlowA",
-                    "", output, node.rpc, ansiProgressRenderer)
+                    "", output, node.rpc, ansiProgressRenderer, createYamlInputMapper(node.rpc, null))
         }
         assertThat(successful).isTrue()
     }
@@ -339,9 +342,9 @@ class InteractiveShellIntegrationTest {
             val ansiProgressRenderer = mock<ANSIProgressRenderer> {
                 on { render(any(), any()) } doAnswer { InteractiveShell.latch.countDown() }
             }
-            InteractiveShell.runFlowByNameFragment(
+            runFlowByNameFragment(
                     "NoOpFlo",
-                    "", output, node.rpc, ansiProgressRenderer)
+                    "", output, node.rpc, ansiProgressRenderer, createYamlInputMapper(node.rpc, null))
         }
         assertThat(successful).isTrue()
     }
@@ -371,9 +374,9 @@ class InteractiveShellIntegrationTest {
             val ansiProgressRenderer = mock<ANSIProgressRenderer> {
                 on { render(any(), any()) } doAnswer { InteractiveShell.latch.countDown() }
             }
-            InteractiveShell.runFlowByNameFragment(
+            runFlowByNameFragment(
                     "Burble",
-                    "", output, node.rpc, ansiProgressRenderer)
+                    "", output, node.rpc, ansiProgressRenderer, createYamlInputMapper(node.rpc, null))
         }
         assertThat(successful).isTrue()
     }
@@ -403,9 +406,9 @@ class InteractiveShellIntegrationTest {
             val ansiProgressRenderer = mock<ANSIProgressRenderer> {
                 on { render(any(), any()) } doAnswer { InteractiveShell.latch.countDown() }
             }
-            InteractiveShell.runFlowByNameFragment(
+            runFlowByNameFragment(
                     "DeserializeFlow",
-                    "firstAndLastName: John Doe", output, node.rpc, ansiProgressRenderer)
+                    "firstAndLastName: John Doe", output, node.rpc, ansiProgressRenderer, createYamlInputMapper(node.rpc, null))
         }
         assertThat(successful).isTrue()
     }
@@ -451,10 +454,13 @@ class DeserializeFlow(private val firstAndLastName: FirstAndLastName) : FlowLogi
 }
 
 @Suppress("UNUSED")
-class MyCustomJackson : CustomRPCSerializationJacksonModule() {
-    override fun setupModule(context: SetupContext) {
-        super.setupModule(context)
-        context.setMixInAnnotations(FirstAndLastName::class.java, FirstLastNameMixin::class.java)
+class MyCustomJackson : CustomRPCSerializationFactory {
+    override fun createJacksonModule() = object : SimpleModule() {
+
+        override fun setupModule(context: SetupContext) {
+            super.setupModule(context)
+            context.setMixInAnnotations(FirstAndLastName::class.java, FirstLastNameMixin::class.java)
+        }
     }
 
     @JsonDeserialize(using = FirstLastNameDeserializer::class)
