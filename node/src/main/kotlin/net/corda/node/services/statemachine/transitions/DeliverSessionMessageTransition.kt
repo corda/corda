@@ -3,6 +3,7 @@ package net.corda.node.services.statemachine.transitions
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.UnexpectedFlowEndException
 import net.corda.core.identity.Party
+import net.corda.core.internal.DeclaredField
 import net.corda.core.internal.declaredField
 import net.corda.node.services.statemachine.Action
 import net.corda.node.services.statemachine.ConfirmSessionMessage
@@ -125,8 +126,12 @@ class DeliverSessionMessageTransition(
             is SessionState.Initiated -> {
                 when (exception) {
                     // reflection used to access private field
-                    is UnexpectedFlowEndException -> exception.declaredField<Party?>("_peer").value = sessionState.peerParty
-                    is FlowException -> exception.declaredField<Party?>("_peer").value = sessionState.peerParty
+                    is UnexpectedFlowEndException -> DeclaredField<Party?>(
+                        UnexpectedFlowEndException::class.java,
+                        "peer",
+                        exception
+                    ).value = sessionState.peerParty
+                    is FlowException -> DeclaredField<Party?>(FlowException::class.java, "peer", exception).value = sessionState.peerParty
                 }
                 val checkpoint = currentState.checkpoint
                 val sessionId = event.sessionMessage.recipientSessionId

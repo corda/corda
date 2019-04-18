@@ -176,7 +176,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         // reflection use to access private field
         when (this) {
             is UnexpectedFlowEndException -> {
-                this.declaredField<Party?>("_peer").value?.let {
+                DeclaredField<Party?>(UnexpectedFlowEndException::class.java, "peer", this).value?.let {
                     stackTrace = arrayOf(
                         StackTraceElement(
                             "Received unexpected counter-flow exception from peer",
@@ -188,7 +188,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                 }
             }
             is FlowException -> {
-                this.declaredField<Party?>("_peer").value?.let {
+                DeclaredField<Party?>(FlowException::class.java, "peer", this).value?.let {
                     stackTrace = arrayOf(
                         StackTraceElement(
                             "Received counter-flow exception from peer",
