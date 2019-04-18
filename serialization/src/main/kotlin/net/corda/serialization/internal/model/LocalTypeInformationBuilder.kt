@@ -283,7 +283,7 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
     }
 
     private fun buildReadOnlyProperties(rawType: Class<*>): Map<PropertyName, LocalPropertyInformation> =
-            rawType.propertyDescriptors().asSequence().mapNotNull { (name, descriptor) ->
+            rawType.propertyDescriptors(warnIfNonComposable).asSequence().mapNotNull { (name, descriptor) ->
                 if (descriptor.field == null || descriptor.getter == null) null
                 else {
                     val paramType = (descriptor.getter.genericReturnType).resolveAgainstContext()
@@ -310,7 +310,7 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
             parameter.name to index
         }.toMap()
 
-        return rawType.propertyDescriptors().asSequence().mapNotNull { (name, descriptor) ->
+        return rawType.propertyDescriptors(warnIfNonComposable).asSequence().mapNotNull { (name, descriptor) ->
             val normalisedName = when {
                 name in constructorParameterIndices -> name
                 name.decapitalize() in constructorParameterIndices -> name.decapitalize()
@@ -353,7 +353,7 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
     }
 
     private fun getterSetterProperties(rawType: Class<*>): Sequence<Pair<String, LocalPropertyInformation>> =
-            rawType.propertyDescriptors().asSequence().mapNotNull { (name, descriptor) ->
+            rawType.propertyDescriptors(warnIfNonComposable).asSequence().mapNotNull { (name, descriptor) ->
                 if (descriptor.getter == null || descriptor.setter == null || descriptor.field == null) null
                 else {
                     val paramType = descriptor.getter.genericReturnType
