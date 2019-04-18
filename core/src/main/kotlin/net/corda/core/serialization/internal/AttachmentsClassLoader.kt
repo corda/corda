@@ -35,7 +35,8 @@ import java.util.*
 class AttachmentsClassLoader(attachments: List<Attachment>,
                              val params: NetworkParameters,
                              private val sampleTxId: SecureHash,
-                             parent: ClassLoader = ClassLoader.getSystemClassLoader()) :
+                             parent: ClassLoader = ClassLoader.getSystemClassLoader(),
+                             isAttachmentTrusted: (Attachment) -> Boolean = ::isAttachmentTrustedDefault) :
         URLClassLoader(attachments.map(::toUrl).toTypedArray(), parent) {
 
     companion object {
@@ -102,6 +103,14 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
                 }
             }
         }
+
+        fun isAttachmentTrustedDefault(attachment: Attachment): Boolean {
+            return when (attachment) {
+                is ContractAttachment -> isUploaderTrusted(attachment.uploader)
+                is AbstractAttachment -> isUploaderTrusted(attachment.uploader)
+                else -> false
+            }
+        }
     }
 
     init {
@@ -117,11 +126,7 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
         val untrusted = attachments
                 .filter(::containsClasses)
                 .filterNot { attachment ->
-                    when (attachment) {
-                        is ContractAttachment -> isUploaderTrusted(attachment.uploader)
-                        is AbstractAttachment -> isUploaderTrusted(attachment.uploader)
-                        else -> false // This should not happen on normal code paths.
-                    }
+                    isAttachmentTrusted(attachment)
                 }
                 .map(Attachment::id)
 
@@ -311,12 +316,17 @@ object AttachmentsClassLoaderBuilder {
      *
      * @param txId The transaction ID that triggered this request; it's unused except for error messages and exceptions that can occur during setup.
      */
-    fun <T> withAttachmentsClassloaderContext(attachments: List<Attachment>, params: NetworkParameters, txId: SecureHash, parent: ClassLoader = ClassLoader.getSystemClassLoader(), block: (ClassLoader) -> T): T {
+    fun <T> withAttachmentsClassloaderContext(attachments: List<Attachment>,
+                                              params: NetworkParameters,
+                                              txId: SecureHash,
+                                              parent: ClassLoader = ClassLoader.getSystemClassLoader(),
+                                              isAttachmentTrusted: (Attachment) -> Boolean = { AttachmentsClassLoader.isAttachmentTrustedDefault(it) },
+                                              block: (ClassLoader) -> T): T {
         val attachmentIds = attachments.map { it.id }.toSet()
 
         val serializationContext = cache.computeIfAbsent(Key(attachmentIds, params)) {
             // Create classloader and load serializers, whitelisted classes
-            val transactionClassLoader = AttachmentsClassLoader(attachments, params, txId, parent)
+            val transactionClassLoader = AttachmentsClassLoader(attachments, params, txId, parent, isAttachmentTrusted)
             val serializers = createInstancesOfClassesImplementing(transactionClassLoader, SerializationCustomSerializer::class.java)
             val whitelistedClasses = ServiceLoader.load(SerializationWhitelist::class.java, transactionClassLoader)
                     .flatMap { it.whitelist }

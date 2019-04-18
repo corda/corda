@@ -119,4 +119,31 @@ class MockAttachmentStorage : AttachmentStorage, SingletonSerializeAsToken() {
         val attachmentSort = AttachmentSort(listOf(AttachmentSort.AttachmentSortColumn(AttachmentSort.AttachmentSortAttribute.VERSION, Sort.Direction.DESC)))
         return queryAttachments(attachmentQueryCriteria, attachmentSort)
     }
+
+    override fun isAttachmentTrusted(attachmentId: AttachmentId): Boolean {
+        val attachment = openAttachment(attachmentId) ?: throw Exception()// TODO: decide what to throw here.
+        val trustedByUploader = when (attachment) {
+            is ContractAttachment -> isUploaderTrusted(attachment.uploader)
+            is AbstractAttachment -> isUploaderTrusted(attachment.uploader)
+            else -> false
+        }
+
+        val trustedBySuccessor = if (!trustedByUploader && attachment is ContractAttachment) {
+            val signers = attachment.signerKeys
+            val contractClasses = listOf(attachment.contract) // TODO: what about jars with multiple contracts
+            val version = attachment.version
+
+            val queryCriteria = AttachmentQueryCriteria.AttachmentsQueryCriteria(
+                    contractClassNamesCondition = Builder.equal(contractClasses),
+                    signersCondition = Builder.equal(signers),
+                    versionCondition = Builder.greaterThan(version),
+                    uploaderCondition = Builder.`in`(TRUSTED_UPLOADERS)
+            )
+            queryAttachments(queryCriteria).isNotEmpty() // TODO: could mark those we know trusted, perhaps with a cache? (May not want in DB)
+        } else {
+            false
+        }
+
+        return (trustedByUploader || trustedBySuccessor)
+    }
 }

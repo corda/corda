@@ -13,8 +13,10 @@ import net.corda.core.node.NetworkParameters
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.AttachmentId
+import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
+import net.corda.core.serialization.internal.AttachmentsClassLoader
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.OpaqueBytes
 import java.security.PublicKey
@@ -107,7 +109,8 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                     val hashToResolve = it ?: services.networkParametersService.defaultHash
                     services.networkParametersService.lookup(hashToResolve)
                 },
-                resolveContractAttachment = { services.loadContractAttachment(it) }
+                resolveContractAttachment = { services.loadContractAttachment(it) },
+                isAttachmentTrusted = { services.attachments.isAttachmentTrusted(it.id) }
         )
     }
 
@@ -167,7 +170,8 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
             resolveAttachment: (SecureHash) -> Attachment?,
             resolveStateRefAsSerialized: (StateRef) -> SerializedBytes<TransactionState<ContractState>>?,
             resolveParameters: (SecureHash?) -> NetworkParameters?,
-            resolveContractAttachment: (StateRef) -> Attachment
+            resolveContractAttachment: (StateRef) -> Attachment,
+            isAttachmentTrusted: (Attachment) -> Boolean = { AttachmentsClassLoader.isAttachmentTrustedDefault(it) }
     ): LedgerTransaction {
         // Look up public keys to authenticated identities.
         val authenticatedCommands = commands.lazyMapped { cmd, _ ->
@@ -202,7 +206,8 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                 resolvedReferences,
                 componentGroups,
                 serializedResolvedInputs,
-                serializedResolvedReferences
+                serializedResolvedReferences,
+                isAttachmentTrusted
         )
 
         checkTransactionSize(ltx, resolvedNetworkParameters.maxTransactionSize, serializedResolvedInputs, serializedResolvedReferences)

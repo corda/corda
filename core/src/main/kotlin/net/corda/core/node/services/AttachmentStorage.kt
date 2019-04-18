@@ -88,5 +88,11 @@ interface AttachmentStorage {
      * @return the [AttachmentId]s of the contract attachments (signed always first in list), or an empty list if none meet the criteria.
      */
     fun getLatestContractAttachments(contractClassName: String, minContractVersion: Int = DEFAULT_CORDAPP_VERSION): List<AttachmentId>
+
+
+    /**
+     * Check to see whether an attachment is trusted.
+     */
+    fun isAttachmentTrusted(attachmentId: AttachmentId): Boolean
 }
 
