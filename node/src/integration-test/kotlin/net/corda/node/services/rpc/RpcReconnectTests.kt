@@ -19,12 +19,16 @@ import net.corda.finance.schemas.CashSchemaV1
 import net.corda.node.services.Permissions
 import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.DUMMY_BANK_B_NAME
+import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.OutOfProcess
 import net.corda.testing.driver.driver
 import net.corda.testing.driver.internal.OutOfProcessImpl
+import net.corda.testing.internal.IntegrationTest
+import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.FINANCE_CORDAPPS
+import org.junit.ClassRule
 import org.junit.Test
 import java.util.*
 import java.util.concurrent.CountDownLatch
@@ -37,10 +41,14 @@ import kotlin.test.assertTrue
 /**
  * This is a slow test!
  */
-class RpcReconnectTests {
+class RpcReconnectTests : IntegrationTest() {
 
     companion object {
         private val log = contextLogger()
+
+        @ClassRule
+        @JvmField
+        val databaseSchemas = IntegrationTestSchemas(DUMMY_BANK_A_NAME, DUMMY_BANK_B_NAME, DUMMY_NOTARY_NAME)
     }
 
     /**
