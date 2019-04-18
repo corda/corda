@@ -62,8 +62,8 @@ There are several types of constraints:
 * **Hash constraint**: Exactly one version of the app can be used with this state. This prevents the app from being upgraded in the future while still
   making use of the state created with the original version.
 * **Compatibility zone whitelisted (or CZ whitelisted) constraint**: The compatibility zone operator lists the hashes of the versions that can be used with a contract class name.
-* **Signature constraint**: Any version of the app signed by the given ``CompositeKey`` can be used. This allows a new version of the app to be produced
-  and applied to an existing state as long as it has been signed by the same ``CompositeKey`` as the original version.
+* **Signature constraint**: Any version of the app signed by the given ``PublicKey`` (or `CompositeKey`) can be used. This allows a new version of the app to be produced
+  and applied to an existing state as long as it has been signed by the same key(s) as the original version.
 * **Always accept constraint**: Any version of the app can be used. This is insecure but convenient for testing.
 
 .. _signature_constraints:
