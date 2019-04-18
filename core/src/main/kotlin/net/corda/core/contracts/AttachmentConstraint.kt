@@ -108,7 +108,7 @@ object AutomaticPlaceholderConstraint : AttachmentConstraint {
 
 /**
  * An [AttachmentConstraint] that verifies that the attachment has signers that fulfil the provided [PublicKey].
- * See: [Signature Constraints](https://docs.corda.net/design/data-model-upgrades/signature-constraints.html)
+ * See: [Signature Constraints](https://docs.corda.net/head/api-contract-constraints.html#signature-constraints)
  *
  * @property key A [PublicKey] that must be fulfilled by the owning keys of the attachment's signing parties.
  */

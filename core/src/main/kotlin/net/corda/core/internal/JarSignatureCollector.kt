@@ -52,7 +52,7 @@ object JarSignatureCollector {
                     """
                     Mismatch between signers ${firstSignerSet.toOrderedPublicKeys()} for file $firstFile
                     and signers ${otherSignerSet.toOrderedPublicKeys()} for file ${otherFile}.
-                    See https://docs.corda.net/design/data-model-upgrades/signature-constraints.html for details of the
+                    See https://docs.corda.net/head/api-contract-constraints.html#signature-constraints for details of the
                     constraints applied to attachment signatures.
                     """.trimIndent().replace('\n', ' '))
         }
