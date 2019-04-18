@@ -102,6 +102,7 @@ private constructor(private val otherSideSession: FlowSession?,
         val signature = serviceHub.keyManagementService.sign(data, ourAnonymousIdentity.owningKey).withoutKey()
         val ourIdentWithSig = IdentityWithSignature(ourAnonymousIdentity.serialize(), signature)
         progressTracker.currentStep = AWAITING_IDENTITY
+
         val theirAnonymousIdentity = session.sendAndReceive<IdentityWithSignature>(ourIdentWithSig).unwrap { theirIdentWithSig ->
             progressTracker.currentStep = VERIFYING_IDENTITY
             validateAndRegisterIdentity(serviceHub, session.counterparty, theirIdentWithSig.identity.deserialize(), theirIdentWithSig.signature)

@@ -11,7 +11,8 @@ description 'Corda Experimental Confidential Identities'
 
 dependencies {
     cordaCompile project(':core')
-
+    compile(group: 'net.corda', name: 'corda-node', version: '5.0-SNAPSHOT')
+    
     testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
     testCompile "junit:junit:$junit_version"
 
