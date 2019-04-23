@@ -8,6 +8,12 @@ apply plugin: 'net.corda.plugins.cordapp'
 apply plugin: 'com.jfrog.artifactory'
 
 description 'Corda Experimental Confidential Identities'
+repositories {
+    maven {
+        url "http://ci-artifactory.corda.r3cev.com/artifactory/corda-dev"
+    }
+}
+
 
 dependencies {
     cordaCompile project(':core')
