@@ -4,15 +4,11 @@ import CryptoServerAPI.CryptoServerException
 import CryptoServerJCE.CryptoServerProvider
 import com.spotify.docker.client.DefaultDockerClient
 import com.spotify.docker.client.DockerClient
-import com.spotify.docker.client.exceptions.DockerException
-import com.spotify.docker.client.exceptions.DockerRequestException
 import com.spotify.docker.client.messages.ContainerConfig
 import com.spotify.docker.client.messages.HostConfig
 import com.spotify.docker.client.messages.PortBinding
 import com.spotify.docker.client.messages.RegistryAuth
 import net.corda.core.utilities.contextLogger
-import net.corda.core.utilities.loggerFor
-import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.testing.driver.PortAllocation
 import org.junit.Assume.assumeFalse
 import org.junit.rules.ExternalResource
@@ -130,16 +126,16 @@ class HsmSimulator(portAllocation: PortAllocation,
 
     private fun DockerClient.stopAndRemoveHsmSimulatorContainer() {
         if (containerId != null) {
-            net.corda.nodeapi.internal.hsm.HsmSimulator.Companion.log.debug("Stopping container $containerId...")
-            this.stopContainer(containerId, net.corda.nodeapi.internal.hsm.HsmSimulator.Companion.CONTAINER_KILL_TIMEOUT_SECONDS)
-            net.corda.nodeapi.internal.hsm.HsmSimulator.Companion.log.debug("Removing container $containerId...")
+            log.debug("Stopping container $containerId...")
+            this.stopContainer(containerId, CONTAINER_KILL_TIMEOUT_SECONDS)
+            log.debug("Removing container $containerId...")
             this.removeContainer(containerId)
         }
     }
 
     private fun DockerClient.startHsmSimulatorContainer() {
         if (containerId != null) {
-            net.corda.nodeapi.internal.hsm.HsmSimulator.Companion.log.debug("Starting container $containerId...")
+            log.debug("Starting container $containerId...")
             this.startContainer(containerId)
             pollAndWaitForHsmSimulator()
         }
@@ -182,13 +178,13 @@ class HsmSimulator(portAllocation: PortAllocation,
     }
 
     private fun DockerClient.createContainer(): String? {
-        val portBindings = mapOf(net.corda.nodeapi.internal.hsm.HsmSimulator.Companion.HSM_SIMULATOR_PORT to listOf(PortBinding.create(address.host, address.port.toString())))
+        val portBindings = mapOf(HSM_SIMULATOR_PORT to listOf(PortBinding.create(address.host, address.port.toString())))
         val hostConfig = HostConfig.builder().portBindings(portBindings).build()
         val containerConfig = ContainerConfig.builder()
                 .hostConfig(hostConfig)
                 .portSpecs()
                 .image(getImageFullName())
-                .exposedPorts(net.corda.nodeapi.internal.hsm.HsmSimulator.Companion.HSM_SIMULATOR_PORT)
+                .exposedPorts(HSM_SIMULATOR_PORT)
                 .build()
         val containerCreation = this.createContainer(containerConfig, containerId)
         return containerCreation.id()
