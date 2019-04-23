@@ -134,11 +134,11 @@ Hash constrained states in private networks
 Where private networks started life using CorDapps with hash constrained states, we have introduced a mechanism to relax the checking of
 these hash constrained states when upgrading to signed CorDapps using signature constraints.
 
-The Java system property ``-Dnet.corda.node.disableHashConstraints="true"`` may be set to relax the hash constraint checking behaviour.
+The Java system property ``-Dnet.corda.node.disableHashConstraints="true"`` may be set to relax the hash constraint checking behaviour. For
+this to work, every participant of the network must set the property to the same value. Therefore, this mode should only be used upon
+"out of band" agreement by all participants in a network.
 
-This mode should only be used upon "out of band" agreement by all participants in a network.
-
-Please also beware that this flag should remain enabled until every hash constrained state is exited from the ledger.
+.. warning:: This flag should remain enabled until every hash constrained state is exited from the ledger.
 
 .. _contract_state_agreement:
 
@@ -225,7 +225,7 @@ To manually define the Contract Constraint of an output state, see the example b
         TransactionBuilder transaction() {
             TransactionBuilder transaction = new TransactionBuilder(notary());
             // Signature Constraint used if app is signed
-            transaction.addOutputState(state, CONTRACT_ID);
+            transaction.addOutputState(state);
             // Explicitly using a Signature Constraint
             transaction.addOutputState(state, CONTRACT_ID, new SignatureAttachmentConstraint(getOurIdentity().getOwningKey()));
             // Explicitly using a Hash Constraint
@@ -245,15 +245,15 @@ To manually define the Contract Constraint of an output state, see the example b
         private fun transaction(): TransactionBuilder {
             val transaction = TransactionBuilder(notary())
             // Signature Constraint used if app is signed
-            transaction.addOutputState(state, CONTRACT_ID)
+            transaction.addOutputState(state)
             // Explicitly using a Signature Constraint
-            transaction.addOutputState(state, CONTRACT_ID, SignatureAttachmentConstraint(ourIdentity.owningKey))
+            transaction.addOutputState(state, constraint = SignatureAttachmentConstraint(ourIdentity.owningKey))
             // Explicitly using a Hash Constraint
-            transaction.addOutputState(state, CONTRACT_ID, HashAttachmentConstraint(serviceHub.cordappProvider.getContractAttachmentID(CONTRACT_ID)!!))
+            transaction.addOutputState(state, constraint = HashAttachmentConstraint(serviceHub.cordappProvider.getContractAttachmentID(CONTRACT_ID)!!))
             // Explicitly using a Whitelisted by Zone Constraint
-            transaction.addOutputState(state, CONTRACT_ID, WhitelistedByZoneAttachmentConstraint)
+            transaction.addOutputState(state, constraint = WhitelistedByZoneAttachmentConstraint)
             // Explicitly using an Always Accept Constraint
-            transaction.addOutputState(state, CONTRACT_ID, AlwaysAcceptAttachmentConstraint)
+            transaction.addOutputState(state, constraint = AlwaysAcceptAttachmentConstraint)
 
             // other transaction things
             return transaction
