@@ -86,9 +86,10 @@ Signing CorDapps for use with Signature Constraints
 
 Expanding on the previous section, for an app to use Signature Constraints, it must be signed. The signers of the app can consist
 of a single organisation or multiple organisations. Once the app has been signed it can be distributed across the nodes that intend to
-use it. Each transaction received by a node will verify that the version of the app that they have locally has the same signers as the
-app that was passed along with the transaction. This ensures that they are running a version of the app that the transaction can interact
-with.
+use it.
+
+Each transaction received by a node will then verify that the apps attached to it have the correct signers as specified by its
+Signature Constraints. This ensures that the version of each app is acceptable to the transaction's input states.
 
 Signing an app in this way allows it to be upgraded more easily. As long as the new version is signed by the same signers as the original
 version and follows the :ref:`app versioning requirement <app_versioning_with_signature_constraints>` in the section below, it can be
