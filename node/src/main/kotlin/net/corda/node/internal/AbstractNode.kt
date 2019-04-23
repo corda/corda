@@ -53,9 +53,9 @@ import net.corda.node.services.events.ScheduledActivityObserver
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.BasicHSMKeyManagementService
 import net.corda.node.services.keys.KeyManagementServiceInternal
-import net.corda.node.services.keys.cryptoservice.azure.AzureKeyVaultCryptoService
-import net.corda.node.services.keys.cryptoservice.gemalto.GemaltoLunaCryptoService
-import net.corda.node.services.keys.cryptoservice.utimaco.UtimacoCryptoService
+import net.corda.nodeapi.internal.cryptoservice.azure.AzureKeyVaultCryptoService
+import net.corda.nodeapi.internal.cryptoservice.gemalto.GemaltoLunaCryptoService
+import net.corda.nodeapi.internal.cryptoservice.utimaco.UtimacoCryptoService
 import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
 import net.corda.node.services.messaging.DeduplicationHandler
 import net.corda.node.services.messaging.MessagingService

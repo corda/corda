@@ -9,9 +9,28 @@ apply plugin: 'com.jfrog.artifactory'
 description 'Corda node API'
 
 dependencies {
+    
+    
     compile project(":core")
     compile project(":serialization")  // TODO Remove this once the NetworkBootstrapper class is moved into the tools:bootstrapper module
     compile project(":common-configuration-parsing")
+
+    // Azure KeyVault
+    compileOnly 'com.microsoft.azure:azure-keyvault:1.1.1'
+    compileOnly 'com.microsoft.azure:adal4j:1.6.3'
+    testCompile 'com.microsoft.azure:azure-keyvault:1.1.1'
+    testCompile 'com.microsoft.azure:adal4j:1.6.3'
+
+    // Utimaco HSM
+    compileOnly fileTree(dir: 'lib', include: 'CryptoServer*.jar')
+    testCompile fileTree(dir: 'lib', include: 'CryptoServer*.jar')
+
+    // Gemalto Luna HSM
+    compileOnly fileTree(dir: 'lib', include: 'LunaProvider.jar')
+    testCompile fileTree(dir: 'lib', include: 'LunaProvider.jar')
+
+    // Spotify Docker client for using docker containers in integration tests
+    testCompile "com.spotify:docker-client:8.14.5"
 
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"

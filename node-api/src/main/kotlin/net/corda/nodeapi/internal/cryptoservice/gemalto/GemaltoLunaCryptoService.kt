@@ -1,4 +1,4 @@
-package net.corda.node.services.keys.cryptoservice.gemalto
+package net.corda.nodeapi.internal.cryptoservice.gemalto
 
 import com.safenetinc.luna.LunaSlotManager
 import com.safenetinc.luna.provider.LunaProvider
@@ -6,10 +6,10 @@ import com.typesafe.config.ConfigException
 import com.typesafe.config.ConfigFactory
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SignatureScheme
-import net.corda.node.services.keys.cryptoservice.JCACryptoService
 import net.corda.nodeapi.internal.config.UnknownConfigurationKeysException
 import net.corda.nodeapi.internal.config.parseAs
 import net.corda.nodeapi.internal.cryptoservice.CryptoService
+import net.corda.nodeapi.internal.cryptoservice.JCACryptoService
 import java.nio.file.Path
 import java.security.KeyStore
 import java.security.Provider

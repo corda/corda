@@ -10,11 +10,12 @@ import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.finance.DOLLARS
 import net.corda.finance.flows.CashIssueAndPaymentFlow
-import net.corda.node.hsm.HsmSimulator
+import net.corda.nodeapi.internal.hsm.HsmSimulator
 import net.corda.node.services.keys.cryptoservice.ensurePrivateKeyIsNotInKeyStoreFile
 import net.corda.node.utilities.registration.TestDoorman
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_CLIENT_CA
+import net.corda.nodeapi.internal.cryptoservice.utimaco.UtimacoCryptoService
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.singleIdentity

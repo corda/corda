@@ -1,4 +1,4 @@
-package net.corda.node.services.keys.cryptoservice.azure
+package net.corda.nodeapi.internal.cryptoservice.azure
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
