@@ -6,7 +6,7 @@ import net.corda.core.utilities.debug
 import org.apache.curator.framework.CuratorFramework
 import org.apache.curator.framework.api.BackgroundCallback
 import org.apache.curator.framework.api.CuratorEvent
-import org.apache.curator.framework.listen.ListenerContainer
+import org.apache.curator.framework.listen.StandardListenerManager
 import org.apache.curator.framework.recipes.AfterConnectionEstablished
 import org.apache.curator.framework.recipes.leader.LeaderLatchListener
 import org.apache.curator.framework.recipes.locks.InterProcessSemaphoreMutex
@@ -58,7 +58,7 @@ internal class PrioritizedLeaderLatch(private val client: CuratorFramework,
     private val ourPath = AtomicReference<String>()
     private val startTask = AtomicReference<Future<*>>()
 
-    private val listeners = ListenerContainer<LeaderLatchListener>()
+    private val listeners =  StandardListenerManager.standard<LeaderLatchListener>()
     private val connectionStateListener = ConnectionStateListener { _, newState -> handleStateChange(newState) }
 
     private companion object {
@@ -218,7 +218,7 @@ internal class PrioritizedLeaderLatch(private val client: CuratorFramework,
         val oldValue = hasLeadership.getAndSet(newValue)
         log.info("Client $nodeId: setting leadership to $newValue; old value was $oldValue.")
         if (oldValue && !newValue) {
-            listeners.forEach { listener -> listener?.notLeader(); null }
+            listeners.forEach { listener -> listener?.notLeader() }
             // Release lock after listeners have been notified
             try {
                 if (leaderLock.isAcquiredInThisProcess) {
@@ -234,7 +234,6 @@ internal class PrioritizedLeaderLatch(private val client: CuratorFramework,
             leaderLock.asyncAcquire {
                 listeners.forEach { listener ->
                     listener?.isLeader()
-                    null
                 }
             }
         }
