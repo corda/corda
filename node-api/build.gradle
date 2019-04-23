@@ -16,8 +16,10 @@ dependencies {
     compile project(":common-configuration-parsing")
 
     // Azure KeyVault
-    compile 'com.microsoft.azure:azure-keyvault:1.1.1'
-    compile 'com.microsoft.azure:adal4j:1.6.3'
+    compileOnly 'com.microsoft.azure:azure-keyvault:1.1.1'
+    compileOnly 'com.microsoft.azure:adal4j:1.6.3'
+    testCompile 'com.microsoft.azure:azure-keyvault:1.1.1'
+    testCompile 'com.microsoft.azure:adal4j:1.6.3'
 
     // Utimaco HSM
     compileOnly fileTree(dir: 'lib', include: 'CryptoServer*.jar')
