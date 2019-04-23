@@ -64,7 +64,7 @@ fun DriverDSLImpl.startBridge(nodeName: CordaX500Name,
                               nodeDirectory: Path = baseDirectory(nodeName)): CordaFuture<BridgeHandle> {
     val bridgeBaseDir = Paths.get("$nodeDirectory-bridge")
     return waitAndCopyCertificateDir("$ALICE_NAME keystore creation", nodeDirectory / "certificates", bridgeBaseDir / "certificates").flatMap {
-        startBridge(bridgeBaseDir, bridgePort, brokerPort, configOverrides)
+        startSingleProcessBridgeAndFloat(bridgeBaseDir, bridgePort, brokerPort, configOverrides, keystorePassword = DEV_CA_KEY_STORE_PASS, truststorePassword = DEV_CA_TRUST_STORE_PASS)
     }
 }
 
@@ -72,6 +72,8 @@ fun DriverDSLImpl.startBridge(baseDir: Path,
                               artemisPort: Int,
                               advertisedP2PPort: Int,
                               vararg nodeSSLKeystores: Path,
+                              configOverrides: Map<String, Any> = emptyMap(),
+                              floatPort: Int? = null,
                               keyStorePassword: String = DEV_CA_KEY_STORE_PASS,
                               truststorePassword: String = DEV_CA_TRUST_STORE_PASS): CordaFuture<BridgeHandle> {
     val bridgePath = baseDir / "bridge"
@@ -79,14 +81,16 @@ fun DriverDSLImpl.startBridge(baseDir: Path,
     val bridgeCertPath = bridgePath / "certificates"
 
     // Create bridge identity SSL keystore by combining nodes' SSL keystore.
-    createBridgeKeystore(bridgeCertPath, *nodeSSLKeystores)
-    (nodeSSLKeystores.first().parent / "truststore.jks").copyToDirectory(bridgeCertPath)
+    if(nodeSSLKeystores.isNotEmpty()){
+        createBridgeKeystore(bridgeCertPath, *nodeSSLKeystores)
+        (nodeSSLKeystores.first().parent / "truststore.jks").copyToDirectory(bridgeCertPath)
+    }
 
     // Starting the bridge at the end, to test the NodeToBridgeSnapshot message's AMQP bridge convert to Loopback bridge code path.
-    val bridge = startBridge(bridgePath, advertisedP2PPort, artemisPort, mapOf("sslKeystore" to (bridgeCertPath / BRIDGE_KEYSTORE).toString(),
+    val bridge = startBridge(bridgePath, advertisedP2PPort, artemisPort, configOverrides + mapOf("sslKeystore" to (bridgeCertPath / BRIDGE_KEYSTORE).toString(),
             "keyStorePassword" to keyStorePassword,
             "trustStoreFile" to "$bridgeCertPath/truststore.jks",
-            "trustStorePassword" to truststorePassword), artemisCertDir, keyStorePassword, truststorePassword)
+            "trustStorePassword" to truststorePassword), artemisCertDir, floatPort, keyStorePassword, truststorePassword)
 
     val artemisSSLConfig = object : MutualSslConfiguration {
         override val useOpenSsl: Boolean = false
@@ -107,12 +111,134 @@ fun DriverDSLImpl.startBridge(baseDir: Path,
 }
 
 private fun DriverDSLImpl.startBridge(baseDirectory: Path,
-                                      bridgePort: Int,
+                                      p2pPort: Int,
                                       brokerPort: Int,
                                       configOverrides: Map<String, Any>,
-                                      artemisCertDir: Path? = null,
+                                      artemisCertDir: Path?,
+                                      floatPort: Int? = null,
                                       keystorePassword: String = DEV_CA_KEY_STORE_PASS,
                                       truststorePassword: String = DEV_CA_TRUST_STORE_PASS): CordaFuture<BridgeHandle> {
+    return if (floatPort == null) {
+        startSingleProcessBridgeAndFloat(baseDirectory, p2pPort, brokerPort, configOverrides, artemisCertDir, keystorePassword, truststorePassword)
+    } else {
+        startFloat(baseDirectory.parent / "float", p2pPort, brokerPort, floatPort, configOverrides, artemisCertDir!!, keystorePassword, truststorePassword)
+        startBridge(baseDirectory, p2pPort, brokerPort, floatPort, configOverrides, artemisCertDir, keystorePassword, truststorePassword)
+    }
+}
+
+private fun DriverDSLImpl.startBridge(baseDirectory: Path,
+                                      p2pPort: Int,
+                                      brokerPort: Int,
+                                      floatPort: Int,
+                                      configOverrides: Map<String, Any>,
+                                      artemisCertDir: Path,
+                                      keystorePassword: String,
+                                      truststorePassword: String): CordaFuture<BridgeHandle> {
+
+    val sslConfig = mapOf(
+            "keyStorePassword" to keystorePassword,
+            "trustStorePassword" to truststorePassword,
+            "sslKeystore" to (artemisCertDir / ARTEMIS_KEYSTORE).toString(),
+            "trustStoreFile" to (artemisCertDir / ARTEMIS_TRUSTSTORE).toString(),
+            "crlCheckSoftFail" to true
+    )
+
+    baseDirectory.createDirectories()
+    createNetworkParams(baseDirectory)
+    val initialConfig = ConfigFactory.parseResources(ConfigTest::class.java, "/net/corda/bridge/withfloat/bridge/firewall.conf")
+    val outboundConfig = mapOf(
+            "artemisBrokerAddress" to "localhost:$brokerPort",
+            "artemisSSLConfiguration" to sslConfig
+    )
+
+    val portConfig = ConfigFactory.parseMap(
+            mapOf(
+                    "outboundConfig" to outboundConfig,
+                    "bridgeInnerConfig" to mapOf(
+                            "floatAddresses" to listOf("localhost:$floatPort"),
+                            "expectedCertificateSubject" to "CN=artemis, O=Corda, L=London, C=GB",
+                            "tunnelSSLConfiguration" to sslConfig
+                    )
+            )
+    )
+
+    val config = ConfigFactory.parseMap(configOverrides).withFallback(portConfig).withFallback(initialConfig)
+    writeConfig(baseDirectory, "firewall.conf", config)
+    val bridgeConfig = BridgeConfigHelper.loadConfig(baseDirectory).parseAsFirewallConfiguration()
+    val bridgeDebugPort = if (isDebug) debugPortAllocation.nextPort() else null
+
+    val bridgeProcess = startBridgeProcess(baseDirectory, bridgeDebugPort)
+    shutdownManager.registerProcessShutdown(bridgeProcess)
+    return addressMustBeBoundFuture(executorService, NetworkHostAndPort("localhost", p2pPort)).map {
+        BridgeHandle(
+                baseDirectory = baseDirectory,
+                process = bridgeProcess,
+                configuration = bridgeConfig,
+                bridgePort = p2pPort,
+                brokerPort = brokerPort,
+                debugPort = bridgeDebugPort
+        )
+    }
+}
+
+private fun DriverDSLImpl.startFloat(baseDirectory: Path,
+                                     p2pPort: Int,
+                                     brokerPort: Int,
+                                     floatPort: Int,
+                                     configOverrides: Map<String, Any>,
+                                     artemisCertDir: Path,
+                                     keystorePassword: String,
+                                     truststorePassword: String): CordaFuture<BridgeHandle> {
+
+    val sslConfig = mapOf(
+            "keyStorePassword" to keystorePassword,
+            "trustStorePassword" to truststorePassword,
+            "sslKeystore" to (artemisCertDir / ARTEMIS_KEYSTORE).toString(),
+            "trustStoreFile" to (artemisCertDir / ARTEMIS_TRUSTSTORE).toString(),
+            "crlCheckSoftFail" to true
+    )
+
+    baseDirectory.createDirectories()
+    createNetworkParams(baseDirectory)
+    val initialConfig = ConfigFactory.parseResources(ConfigTest::class.java, "/net/corda/bridge/withfloat/float/firewall.conf")
+
+    val portConfig = ConfigFactory.parseMap(
+            mapOf(
+                    "inboundConfig" to mapOf("listeningAddress" to "localhost:$p2pPort"),
+                    "floatOuterConfig" to mapOf(
+                            "floatAddress" to "localhost:$floatPort",
+                            "expectedCertificateSubject" to "CN=artemis, O=Corda, L=London, C=GB",
+                            "tunnelSSLConfiguration" to sslConfig
+                    )
+            )
+    )
+
+    val config = ConfigFactory.parseMap(configOverrides).withFallback(portConfig).withFallback(initialConfig)
+    writeConfig(baseDirectory, "firewall.conf", config)
+    val floatConfig = BridgeConfigHelper.loadConfig(baseDirectory).parseAsFirewallConfiguration()
+    val bridgeDebugPort = if (isDebug) debugPortAllocation.nextPort() else null
+
+    val bridgeProcess = startBridgeProcess(baseDirectory, bridgeDebugPort)
+    shutdownManager.registerProcessShutdown(bridgeProcess)
+    return addressMustBeBoundFuture(executorService, NetworkHostAndPort("localhost", p2pPort)).map {
+        BridgeHandle(
+                baseDirectory = baseDirectory,
+                process = bridgeProcess,
+                configuration = floatConfig,
+                bridgePort = p2pPort,
+                brokerPort = brokerPort,
+                debugPort = bridgeDebugPort
+        )
+    }
+}
+
+private fun DriverDSLImpl.startSingleProcessBridgeAndFloat(baseDirectory: Path,
+                                                           bridgePort: Int,
+                                                           brokerPort: Int,
+                                                           configOverrides: Map<String, Any>,
+                                                           artemisCertDir: Path? = null,
+                                                           keystorePassword: String,
+                                                           truststorePassword: String): CordaFuture<BridgeHandle> {
 
     baseDirectory.createDirectories()
     createNetworkParams(baseDirectory)
