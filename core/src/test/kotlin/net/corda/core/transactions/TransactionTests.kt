@@ -139,7 +139,8 @@ class TransactionTests {
                 timeWindow,
                 privacySalt,
                 testNetworkParameters(),
-                emptyList()
+                emptyList(),
+                isAttachmentTrusted = { true }
         )
 
         transaction.verify()
@@ -191,7 +192,8 @@ class TransactionTests {
                 timeWindow,
                 privacySalt,
                 testNetworkParameters(notaries = listOf(NotaryInfo(DUMMY_NOTARY, true))),
-                emptyList()
+                emptyList(),
+                isAttachmentTrusted = {true}
         )
 
         assertFailsWith<TransactionVerificationException.NotaryChangeInWrongTransactionType> { buildTransaction().verify() }
