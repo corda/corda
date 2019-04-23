@@ -130,22 +130,38 @@ class ZkClientTests {
         var leaderCount = AtomicInteger()
         val failures = mutableListOf<String>()
 
-        listOf(alice, bob, chip).forEach { client ->
-            thread{
+        // This is necessary to ensure that correct start-up order is enforced.
+        val aliceLeadershipRequested = CountDownLatch(1)
+
+        listOf(chip, alice, bob).map { client ->
+            thread {
                 client.start()
                 when (client) {
-                    alice -> client.addLeadershipListener(SyncHelperListener(client.nodeId, leaderCount, failures, aliceLeaderGain))
-                    bob -> client.addLeadershipListener(SyncHelperListener(client.nodeId, leaderCount, failures, bobLeaderGain))
-                    chip -> client.addLeadershipListener(SyncHelperListener(client.nodeId, leaderCount, failures, chipLeaderGain))
+                    alice -> {
+                        client.addLeadershipListener(SyncHelperListener(client.nodeId, leaderCount, failures, aliceLeaderGain))
+                        alice.requestLeadership()
+                        aliceLeadershipRequested.countDown()
+                    }
+
+                    bob -> {
+                        bob.addLeadershipListener(SyncHelperListener(client.nodeId, leaderCount, failures, bobLeaderGain))
+                        aliceLeadershipRequested.await(ELECTION_TIMEOUT, TimeUnit.MILLISECONDS)
+                        bob.requestLeadership()
+                    }
+
+                    chip -> {
+                        chip.addLeadershipListener(SyncHelperListener(client.nodeId, leaderCount, failures, chipLeaderGain))
+                        aliceLeadershipRequested.await(ELECTION_TIMEOUT, TimeUnit.MILLISECONDS)
+                        chip.requestLeadership()
+                    }
                 }
-                client.requestLeadership()
             }
-        }
+        }.forEach { it.join() }
 
         aliceLeaderGain.await(ELECTION_TIMEOUT, TimeUnit.MILLISECONDS)
         require(alice.isLeader())
         assertFalse(bob.isLeader())
-        assertFalse(chip.isLeader()) //wait to lose leadership if leader at some point
+        assertFalse(chip.isLeader())
 
         alice.relinquishLeadership()
         bobLeaderGain.await(ELECTION_TIMEOUT, TimeUnit.MILLISECONDS) // wait for bob to become leader
