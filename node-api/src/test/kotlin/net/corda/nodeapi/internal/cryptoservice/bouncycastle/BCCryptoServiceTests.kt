@@ -71,6 +71,19 @@ class BCCryptoServiceTests {
     }
 
     @Test
+    fun `BCCryptoService generate key pair and sign with passed scheme`() {
+        val cryptoService = BCCryptoService(ALICE_NAME.x500Principal, signingCertificateStore)
+        // Testing every supported scheme.
+        Crypto.supportedSignatureSchemes().filter { it != Crypto.COMPOSITE_KEY }.forEach {
+            val alias = "signature${it.schemeNumberID}"
+            val pubKey = cryptoService.generateKeyPair(alias, it)
+            assertTrue { cryptoService.containsKey(alias) }
+            val signatureData = cryptoService.sign(alias, clearData, it.schemeCodeName)
+            assertTrue(Crypto.doVerify(pubKey, signatureData, clearData))
+        }
+    }
+
+    @Test
     fun `When key does not exist getPublicKey, sign and getSigner should throw`() {
         val nonExistingAlias = "nonExistingAlias"
         val cryptoService = BCCryptoService(ALICE_NAME.x500Principal, signingCertificateStore)

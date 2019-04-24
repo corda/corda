@@ -49,9 +49,13 @@ class BCCryptoService(private val legalName: X500Principal, private val certific
         }
     }
 
-    override fun sign(alias: String, data: ByteArray): ByteArray {
+    @JvmOverloads
+    override fun sign(alias: String, data: ByteArray, scheme: String?): ByteArray {
         try {
-            return Crypto.doSign(certificateStore.query { getPrivateKey(alias, certificateStore.entryPassword) }, data)
+            return when(scheme) {
+                null -> Crypto.doSign(certificateStore.query { getPrivateKey(alias, certificateStore.entryPassword) }, data)
+                else -> Crypto.doSign(scheme, certificateStore.query { getPrivateKey(alias, certificateStore.entryPassword) }, data)
+            }
         } catch (e: Exception) {
             throw CryptoServiceException("Cannot sign using the key with alias $alias. SHA256 of data to be signed: ${data.sha256()}", e)
         }
