@@ -17,10 +17,9 @@ class ZkClientTests {
 
     private lateinit var zkServer: TestingServer
     private companion object {
-        private val ELECTION_PATH = "/example/leader"
-        private val ELECTION_TIMEOUT = 2000L
+        private const val ELECTION_PATH = "/example/leader"
+        private const val ELECTION_TIMEOUT = 2000L
         private val log = contextLogger()
-
     }
 
     @Before
@@ -51,7 +50,7 @@ class ZkClientTests {
     fun `single client becomes leader`() {
         val client = ZkClient(zkServer.connectString, ZKPaths.makePath(ELECTION_PATH, "test3"), "test", 0)
         val leaderGain = CountDownLatch(1)
-        var leaderCount = AtomicInteger()
+        val leaderCount = AtomicInteger()
         val failures = mutableListOf<String>()
 
         thread {
@@ -71,7 +70,7 @@ class ZkClientTests {
         val client = ZkClient(zkServer.connectString, ZKPaths.makePath(ELECTION_PATH, "test4"), "test", 0)
         val leaderGain = CountDownLatch(1)
         val leaderLoss = CountDownLatch(1)
-        var leaderCount = AtomicInteger()
+        val leaderCount = AtomicInteger()
         val failures = mutableListOf<String>()
 
         thread {
@@ -96,7 +95,7 @@ class ZkClientTests {
         val bob = ZkClient(zkServer.connectString, ZKPaths.makePath(ELECTION_PATH, "test5"), "BOB", 1)
         val chip = ZkClient(zkServer.connectString, ZKPaths.makePath(ELECTION_PATH, "test5"), "CHIP", 2)
         val aliceLeaderGain = CountDownLatch(1)
-        var leaderCount = AtomicInteger()
+        val leaderCount = AtomicInteger()
         val failures = mutableListOf<String>()
 
         listOf(alice, bob, chip).forEach { client ->
@@ -127,25 +126,41 @@ class ZkClientTests {
         val aliceLeaderGain = CountDownLatch(1)
         val bobLeaderGain  = CountDownLatch(1)
         val chipLeaderGain = CountDownLatch(1)
-        var leaderCount = AtomicInteger()
+        val leaderCount = AtomicInteger()
         val failures = mutableListOf<String>()
 
-        listOf(alice, bob, chip).forEach { client ->
-            thread{
+        // This is necessary to ensure that correct start-up order is enforced.
+        val aliceLeadershipRequested = CountDownLatch(1)
+
+        listOf(chip, alice, bob).map { client ->
+            thread {
                 client.start()
                 when (client) {
-                    alice -> client.addLeadershipListener(SyncHelperListener(client.nodeId, leaderCount, failures, aliceLeaderGain))
-                    bob -> client.addLeadershipListener(SyncHelperListener(client.nodeId, leaderCount, failures, bobLeaderGain))
-                    chip -> client.addLeadershipListener(SyncHelperListener(client.nodeId, leaderCount, failures, chipLeaderGain))
+                    alice -> {
+                        client.addLeadershipListener(SyncHelperListener(client.nodeId, leaderCount, failures, aliceLeaderGain))
+                        alice.requestLeadership()
+                        aliceLeadershipRequested.countDown()
+                    }
+
+                    bob -> {
+                        bob.addLeadershipListener(SyncHelperListener(client.nodeId, leaderCount, failures, bobLeaderGain))
+                        aliceLeadershipRequested.await(ELECTION_TIMEOUT, TimeUnit.MILLISECONDS)
+                        bob.requestLeadership()
+                    }
+
+                    chip -> {
+                        chip.addLeadershipListener(SyncHelperListener(client.nodeId, leaderCount, failures, chipLeaderGain))
+                        aliceLeadershipRequested.await(ELECTION_TIMEOUT, TimeUnit.MILLISECONDS)
+                        chip.requestLeadership()
+                    }
                 }
-                client.requestLeadership()
             }
-        }
+        }.forEach { it.join() }
 
         aliceLeaderGain.await(ELECTION_TIMEOUT, TimeUnit.MILLISECONDS)
         require(alice.isLeader())
         assertFalse(bob.isLeader())
-        assertFalse(chip.isLeader()) //wait to lose leadership if leader at some point
+        assertFalse(chip.isLeader())
 
         alice.relinquishLeadership()
         bobLeaderGain.await(ELECTION_TIMEOUT, TimeUnit.MILLISECONDS) // wait for bob to become leader
@@ -172,7 +187,7 @@ class ZkClientTests {
         val aliceLeaderGain = CountDownLatch(1)
         val bobLeaderGain  = CountDownLatch(1)
         val chipLeaderGain = CountDownLatch(1)
-        var leaderCount = AtomicInteger()
+        val leaderCount = AtomicInteger()
         val failures = mutableListOf<String>()
 
         chip.start()
@@ -211,7 +226,7 @@ class ZkClientTests {
         val aliceLeaderGain = CountDownLatch(1)
         val bobLeaderGain  = CountDownLatch(1)
         val chipLeaderGain = CountDownLatch(1)
-        var leaderCount = AtomicInteger()
+        val leaderCount = AtomicInteger()
         val failures = mutableListOf<String>()
 
         listOf(alice, chip).forEach { client ->
@@ -259,7 +274,7 @@ class ZkClientTests {
         }
 
         val countDownLatch = CountDownLatch(clientList.size)
-        var leaderCount = AtomicInteger()
+        val leaderCount = AtomicInteger()
         val failures = mutableListOf<String>()
         clientList.forEach { client ->
             thread{
