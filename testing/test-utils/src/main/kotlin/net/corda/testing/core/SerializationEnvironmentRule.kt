@@ -26,7 +26,7 @@ import java.util.concurrent.Executors
 class SerializationEnvironmentRule(private val inheritable: Boolean = false) : TestRule {
     companion object {
         init {
-            ThreadPoolExecutorHack.enable()
+            ThreadPoolExecutorHack.enable(this)
         }
     }
 
@@ -45,7 +45,7 @@ class SerializationEnvironmentRule(private val inheritable: Boolean = false) : T
 class SerializationEnvironmentExtension(private val inheritable: Boolean = false): Extension, BeforeEachCallback, AfterEachCallback {
     companion object {
         init {
-            ThreadPoolExecutorHack.enable()
+            ThreadPoolExecutorHack.enable(this)
         }
     }
 
@@ -68,7 +68,7 @@ class SerializationEnvironmentExtension(private val inheritable: Boolean = false
 class CheckpointSerializationEnvironmentExtension(private val inheritable: Boolean = false): Extension, BeforeEachCallback, AfterEachCallback {
     companion object {
         init {
-            ThreadPoolExecutorHack.enable()
+            ThreadPoolExecutorHack.enable(this)
         }
     }
 
@@ -90,12 +90,12 @@ class CheckpointSerializationEnvironmentExtension(private val inheritable: Boole
 }
 
 private object ThreadPoolExecutorHack {
-    fun enable() {
+    fun enable(target: Any) {
         // Can't turn it off, and it creates threads that do serialization, so hack it:
         InVMConnector::class.staticField<ExecutorService>("threadPoolExecutor").value = rigorousMock<ExecutorService>().also {
             doAnswer {
                 inVMExecutors.computeIfAbsent(effectiveSerializationEnv) {
-                    Executors.newCachedThreadPool(testThreadFactory(true)) // Close enough to what InVMConnector makes normally.
+                    Executors.newCachedThreadPool(target.testThreadFactory(true)) // Close enough to what InVMConnector makes normally.
                 }.execute(it.arguments[0] as Runnable)
             }.whenever(it).execute(any())
         }
