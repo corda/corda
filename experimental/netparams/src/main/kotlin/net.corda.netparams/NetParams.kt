@@ -5,6 +5,7 @@ import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigParseOptions
 import net.corda.cliutils.CordaCliWrapper
 import net.corda.cliutils.start
+import net.corda.core.crypto.Crypto
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
 import net.corda.core.node.NetworkParameters
@@ -17,6 +18,7 @@ import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.serialization.serialize
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.createDevNetworkMapCa
+import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.serialization.internal.*
 import net.corda.serialization.internal.amqp.*
@@ -24,6 +26,8 @@ import picocli.CommandLine.*
 import java.io.File
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
+import java.security.KeyPair
+import java.security.cert.X509Certificate
 import java.time.Instant
 
 /**
@@ -126,6 +130,18 @@ class NetParamsSigner : CordaCliWrapper("netparams-signer", "Sign network parame
                 AMQP_P2P_CONTEXT)
     }
 
+    fun <T:Any> signData(data: T, signingKey: KeyPair, certPath: List<X509Certificate> ) : SignedDataWithCert<T> {
+        val raw = data.serialize()
+        val sig = DigitalSignatureWithCert(certPath.first(), certPath.takeLast(certPath.size - 1),
+                Crypto.doSign(signingKey.private, raw.bytes))
+        return SignedDataWithCert(raw, sig)
+    }
+
+    class CertificatePathAndKeyPair(val certPath: List<X509Certificate>, private val certificateAndKeyPair: CertificateAndKeyPair) {
+        val keyPair: KeyPair
+            get() = certificateAndKeyPair.keyPair
+    }
+
     override fun runProgram(): Int {
         require(configFile != null ) { "The --config parameter must be specified" }
 
@@ -157,20 +173,24 @@ class NetParamsSigner : CordaCliWrapper("netparams-signer", "Sign network parame
             if(keyPass == null)
                 keyPass = getInput("Key password (${keyAlias}): ")
 
-            val keyStore = X509KeyStore.fromFile(keyStorePath!!, keyStorePass!!)
-            keyStore.getCertificateAndKeyPair(keyAlias!!, keyPass!!)
+            val keyStore   = X509KeyStore.fromFile(keyStorePath!!, keyStorePass!!)
+            val signingKey = keyStore.getCertificateAndKeyPair(keyAlias!!, keyPass!!)
+            val x509Chain  = keyStore.getCertificateChain(keyAlias!!)
+
+            CertificatePathAndKeyPair(x509Chain, signingKey)
         }
         else {
             // issue from the development root
-            createDevNetworkMapCa()
+            CertificatePathAndKeyPair(emptyList(), createDevNetworkMapCa())
         }
 
-        // sign & serialise
-        val serializedSignedNetParams = signingkey.sign(networkParameters).serialize()
+        // sign and include the certificate path
+        val signedNetParams = signData(networkParameters, signingkey.keyPair, signingkey.certPath).serialize()
 
         if(outputFile != null) {
             print("\nWriting: " + outputFile)
-            serializedSignedNetParams.open().copyTo(outputFile!!, StandardCopyOption.REPLACE_EXISTING)
+            val ssnp = signedNetParams.serialize()
+            ssnp.open().copyTo(outputFile!!, StandardCopyOption.REPLACE_EXISTING)
         }
         else {
             print("\nUse --output to write results")
