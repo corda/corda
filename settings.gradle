@@ -110,4 +110,6 @@ if (JavaVersion.current() == JavaVersion.VERSION_1_8) {
     include 'serialization-deterministic'
 }
 include 'tools:ha-utilities'
+include 'tools:pinger'
+include 'tools:pinger:capsule'
 

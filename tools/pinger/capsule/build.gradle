@@ -1,0 +1,57 @@
+apply plugin: 'java'
+apply plugin: 'kotlin'
+apply plugin: 'us.kirchmeier.capsule'
+apply plugin: 'com.jfrog.artifactory'
+apply plugin: 'net.corda.plugins.publish-utils'
+
+description 'Simple RPC client for testing capsule packager'
+
+configurations {
+    runtimeArtifacts
+}
+
+// Force the Caplet to target Java 6. 
+sourceCompatibility = 1.6
+targetCompatibility = 1.6
+
+jar {
+    baseName 'pinger'
+}
+
+capsule {
+    version capsule_version
+}
+
+task buildPingerJar(type: FatCapsule, dependsOn: project(':tools:pinger').jar){
+    applicationClass 'net.corda.tools.testing.pinger.MainKt'
+    archiveName "pinger-${corda_release_version}.jar"
+    applicationSource = files(
+            project(':tools:pinger').configurations.runtime,
+            project(':tools:pinger').jar,
+    )
+    capsuleManifest {
+        applicationVersion = corda_release_version
+        javaAgents = []
+        systemProperties['visualvm.display.name'] = 'Corda Pinger'
+        minJavaVersion = '1.8.0'
+        minUpdateVersion['1.8'] = java8_minUpdateVersion
+        caplets = []
+
+        // JVM configuration:
+        // - Constrain to small heap sizes to ease development on low end devices.
+        // - Switch to the G1 GC which is going to be the default in Java 9 and gives low pause times/string dedup.
+        jvmArgs = ['-Xmx200m', '-XX:+UseG1GC']
+    }
+}
+
+artifacts {
+    runtimeArtifacts buildPingerJar
+    publish buildPingerJar {
+        classifier ""
+    }
+}
+
+publish {
+    disableDefaultJar = true
+    name jar.baseName
+}
