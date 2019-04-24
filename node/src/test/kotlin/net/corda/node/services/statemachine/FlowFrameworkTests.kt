@@ -11,6 +11,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
+import net.corda.core.internal.DeclaredField
 import net.corda.core.internal.concurrent.flatMap
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.node.services.PartyInfo
@@ -38,6 +39,7 @@ import net.corda.testing.node.internal.*
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.assertj.core.api.AssertionsForClassTypes.assertThatExceptionOfType
+import org.assertj.core.api.Condition
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -45,6 +47,7 @@ import rx.Notification
 import rx.Observable
 import java.time.Instant
 import java.util.*
+import java.util.function.Predicate
 import kotlin.reflect.KClass
 import kotlin.test.assertFailsWith
 
@@ -186,6 +189,7 @@ class FlowFrameworkTests {
                 .isThrownBy { receivingFiber.resultFuture.getOrThrow() }
                 .withMessage("Nothing useful")
                 .withStackTraceContaining(ReceiveFlow::class.java.name)  // Make sure the stack trace is that of the receiving flow
+                .withStackTraceContaining("Received counter-flow exception from peer")
         bobNode.database.transaction {
             assertThat(bobNode.internals.checkpointStorage.checkpoints()).isEmpty()
         }
@@ -206,6 +210,29 @@ class FlowFrameworkTests {
         // Make sure the original stack trace isn't sent down the wire
         val lastMessage = receivedSessionMessages.last().message as ExistingSessionMessage
         assertThat((lastMessage.payload as ErrorSessionMessage).flowException!!.stackTrace).isEmpty()
+    }
+
+    @Test
+    fun `sub-class of FlowException can have a peer field without causing serialisation problems`() {
+        val exception = MyPeerFlowException("Nothing useful", alice)
+        bobNode.registerCordappFlowFactory(ReceiveFlow::class) {
+            ExceptionFlow { exception }
+        }
+
+        val receivingFiber = aliceNode.services.startFlow(ReceiveFlow(bob)) as FlowStateMachineImpl
+
+        mockNet.runNetwork()
+
+        assertThatExceptionOfType(MyPeerFlowException::class.java)
+            .isThrownBy { receivingFiber.resultFuture.getOrThrow() }
+            .has(Condition(Predicate<MyPeerFlowException> { it.peer == alice }, "subclassed peer field has original value"))
+            .has(Condition(Predicate<MyPeerFlowException> {
+                DeclaredField<Party?>(
+                    FlowException::class.java,
+                    "peer",
+                    it
+                ).value == bob
+            }, "FlowException's private peer field has value set"))
     }
 
     private class ConditionalExceptionFlow(val otherPartySession: FlowSession, val sendPayload: Any) : FlowLogic<Unit>() {
@@ -731,6 +758,8 @@ internal class MyFlowException(override val message: String) : FlowException() {
     override fun equals(other: Any?): Boolean = other is MyFlowException && other.message == this.message
     override fun hashCode(): Int = message.hashCode()
 }
+
+internal class MyPeerFlowException(override val message: String, val peer: Party) : FlowException()
 
 @InitiatingFlow
 internal class SendAndReceiveFlow(private val otherParty: Party, private val payload: Any, private val otherPartySession: FlowSession? = null) : FlowLogic<Any>() {
