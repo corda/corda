@@ -11,10 +11,7 @@ import net.corda.core.serialization.internal._inheritableContextSerializationEnv
 import net.corda.core.serialization.internal.effectiveSerializationEnv
 import net.corda.testing.internal.*
 import org.apache.activemq.artemis.core.remoting.impl.invm.InVMConnector
-import org.junit.jupiter.api.extension.AfterEachCallback
-import org.junit.jupiter.api.extension.BeforeEachCallback
-import org.junit.jupiter.api.extension.Extension
-import org.junit.jupiter.api.extension.ExtensionContext
+import org.junit.jupiter.api.extension.*
 import org.junit.rules.TestRule
 import org.junit.runner.Description
 import org.junit.runners.model.Statement
@@ -55,6 +52,30 @@ class SerializationEnvironmentExtension(private val inheritable: Boolean = false
     private lateinit var env: SerializationEnvironment
 
     val serializationFactory: SerializationFactory get() = env.serializationFactory
+    val property get() = if (inheritable) _inheritableContextSerializationEnv else _contextSerializationEnv
+
+    override fun beforeEach(context: ExtensionContext?) {
+        env = createTestSerializationEnv()
+        property.set(env)
+    }
+
+    override fun afterEach(context: ExtensionContext?) {
+        inVMExecutors.remove(env)
+        property.set(null)
+    }
+}
+
+class CheckpointSerializationEnvironmentExtension(private val inheritable: Boolean = false): Extension, BeforeEachCallback, AfterEachCallback {
+    companion object {
+        init {
+            ThreadPoolExecutorHack.enable()
+        }
+    }
+
+    private lateinit var env: SerializationEnvironment
+
+    val checkpointSerializationContext get() = env.checkpointContext
+    val checkpointSerializer get() = env.checkpointSerializer
     val property get() = if (inheritable) _inheritableContextSerializationEnv else _contextSerializationEnv
 
     override fun beforeEach(context: ExtensionContext?) {
