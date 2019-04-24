@@ -246,8 +246,9 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
     }
 
     override fun registerIdentityMapping(identity: Party, key: PublicKey): Boolean {
+        var willRegisterNewMapping: Boolean = true
 
-        val existingEntry = database.transaction {
+        database.transaction {
 
             // Check by key
             val existingEntryForKey = keyToParty[key.hash]
@@ -257,8 +258,9 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
             } else {
                 log.info("An existing entry for ${key.hash} already exists.")
                 if (identity.name != keyToParty[key.hash]) {
-                    throw IllegalStateException("The public key ${key.hash} is already assigned to a party.")
+                    log.error("The public key ${key.hash} is already assigned to a party.")
                 }
+                willRegisterNewMapping = false
             }
 
             // Check by party
@@ -268,8 +270,12 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
                 partyToKey[identity.name] = key.hash
             } else {
                 log.info("An existing entry for ${identity.name} already exists.")
+                if (key.hash != partyToKey[identity.name]) {
+                    log.error("The public key ${key.hash} is already assigned to a different party.")
+                }
+                willRegisterNewMapping = false
             }
         }
-        return true
+        return willRegisterNewMapping
     }
 }

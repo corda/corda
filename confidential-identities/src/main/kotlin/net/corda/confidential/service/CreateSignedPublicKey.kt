@@ -3,6 +3,7 @@ package net.corda.confidential.service
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.serialize
 import java.security.PublicKey
 import java.util.*
@@ -17,6 +18,7 @@ fun createSignedPublicKey(serviceHub: ServiceHub, uuid: UUID): SignedPublicKey {
     return SignedPublicKey(map, sig)
 }
 
+@CordaSerializable
 data class SignedPublicKey(
         val publicKeyToPartyMap: Map<PublicKey, Party>,
         val signature: DigitalSignature.WithKey
