@@ -416,7 +416,15 @@ open class TransactionBuilder(
         constraints.isEmpty() -> throw IllegalArgumentException("Cannot transition from no constraints.")
 
         // When all input states have the same constraint.
-        constraints.size == 1 -> constraints.single()
+        constraints.size == 1 -> {
+            val constraint = constraints.single()
+            when {
+                constraint is WhitelistedByZoneAttachmentConstraint && attachmentToUse.isSigned -> makeSignatureAttachmentConstraint(
+                    attachmentToUse.signerKeys
+                )
+                else -> constraint
+            }
+        }
 
         // Fail when combining the insecure AlwaysAcceptAttachmentConstraint with something else. The size must be at least 2 at this point.
         constraints.any { it is AlwaysAcceptAttachmentConstraint } ->
@@ -449,7 +457,7 @@ open class TransactionBuilder(
     }
 
     private fun makeSignatureAttachmentConstraint(attachmentSigners: List<PublicKey>) =
-            SignatureAttachmentConstraint(CompositeKey.Builder().addKeys(attachmentSigners.map { it }).build())
+            SignatureAttachmentConstraint(CompositeKey.Builder().addKeys(attachmentSigners).build())
 
     /**
      * This method should only be called for upgradeable contracts.
