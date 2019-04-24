@@ -6,6 +6,7 @@ import net.corda.confidential.flow.RequestKeyFlow
 import net.corda.confidential.flow.RequestKeyFlow.Companion.tracker
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
+import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
@@ -29,12 +30,6 @@ import org.junit.Test
 
 class RequestKeyFlowTests {
 
-    private lateinit var network: MockNetwork
-    private lateinit var partyA: StartedMockNode
-    private lateinit var user: Party
-    private lateinit var serviceHub: ServiceHub
-    private val progressTracker: ProgressTracker = tracker()
-
     private lateinit var mockNet: InternalMockNetwork
     private lateinit var aliceNode: TestStartedNode
     private lateinit var bobNode: TestStartedNode
@@ -42,15 +37,10 @@ class RequestKeyFlowTests {
     private lateinit var bob: Party
     private lateinit var notary: Party
 
-
     @Before
     fun before() {
         // We run this in parallel threads to help catch any race conditions that may exist.
         mockNet = InternalMockNetwork(
-                cordappPackages = listOf(
-                        //TODO add corda-node stuff here?
-                        "com."
-                ),
                 cordappsForAllNodes = FINANCE_CORDAPPS,
                 networkSendManuallyPumped = false,
                 threadPerNode = true)
@@ -68,19 +58,23 @@ class RequestKeyFlowTests {
     }
 
     @Test
-    fun `blah`() {
-        // TODO copy IdentitySyncFlowTests ??
-        aliceNode.services.startFlow(Initiator(alice)).resultFuture.getOrThrow()
+    fun `register new key for party`() {
+        aliceNode.services.startFlow(RequestKeyInitiator(bob))
     }
 
     @InitiatingFlow
-    class Initiator(private val otherSide: Party) : FlowLogic<Boolean>() {
+    private class RequestKeyInitiator(private val otherParty: Party) : FlowLogic<Unit>() {
         @Suspendable
-        override fun call(): Boolean {
-            val session = initiateFlow(otherSide)
-            subFlow(RequestKeyFlow(setOf(session), otherSide, progressTracker!!))
-            // Wait for the counterparty to indicate they're done
-            return session.receive<Boolean>().unwrap { it }
+        override fun call() {
+            subFlow(RequestKeyFlow(setOf(initiateFlow(otherParty)), otherParty))
         }
     }
+
+//    @InitiatedBy(RequestKeyInitiator::class)
+//    private class RequestKeyResponder(private val otherSide: FlowSession) : FlowLogic<Unit>() {
+//        @Suspendable
+//        override fun call() {
+//            subFlow(RequestKeyFlow(setOf(otherSide)))
+//        }
+//    }
 }

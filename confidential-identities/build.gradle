@@ -7,16 +7,10 @@ apply plugin: 'net.corda.plugins.cordapp'
 apply plugin: 'com.jfrog.artifactory'
 
 description 'Corda Experimental Confidential Identities'
-repositories {
-    maven {
-        url "http://ci-artifactory.corda.r3cev.com/artifactory/corda-dev"
-    }
-}
-
 
 dependencies {
     cordaCompile project(':core')
-    compile(group: 'net.corda', name: 'corda-node', version: '5.0-SNAPSHOT')
+    cordaCompile(group: 'net.corda', name: 'corda-node', version: '5.0-SNAPSHOT')
     
     testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
