@@ -55,9 +55,9 @@ class RegistrationToolTest {
         assertFalse((workingDirectory / "PartyD" / "certificates" / "sslkeystore.jks").exists())
 
         listOf("PartyA", "PartyB", "PartyC").forEach {
-            assertTrue(it) {(workingDirectory / it / "certificates" / "sslkeystore.jks").exists()}
-            assertTrue(it) {(workingDirectory / it / "certificates" / "truststore.jks").exists()}
-            assertTrue(it) {(workingDirectory / it / "certificates" / "nodekeystore.jks").exists()}
+            assertTrue("Could not find sslkeystore.js for $it") {(workingDirectory / it / "certificates" / "sslkeystore.jks").exists()}
+            assertTrue("Could not find truststore.js for $it") {(workingDirectory / it / "certificates" / "truststore.jks").exists()}
+            assertTrue("Could not find nodekeystore.js for $it") {(workingDirectory / it / "certificates" / "nodekeystore.jks").exists()}
         }
 
         assertTrue((workingDirectory / NETWORK_PARAMS_FILE_NAME).exists())

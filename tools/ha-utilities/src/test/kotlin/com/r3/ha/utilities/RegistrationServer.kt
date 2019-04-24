@@ -2,6 +2,7 @@ package com.r3.ha.utilities
 
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.readFully
+import net.corda.core.internal.toSynchronised
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.seconds
 import net.corda.nodeapi.internal.DEV_INTERMEDIATE_CA
@@ -29,7 +30,7 @@ class RegistrationServer(hostAndPort: NetworkHostAndPort = NetworkHostAndPort("l
     @Path("certificate")
     internal class SimpleDoormanService {
         val csrMap = mutableMapOf<String, JcaPKCS10CertificationRequest>()
-        val certificates = mutableMapOf<String, X509Certificate>()
+        val certificates = mutableMapOf<String, X509Certificate>().toSynchronised()
 
         @POST
         @Consumes(MediaType.APPLICATION_OCTET_STREAM)
