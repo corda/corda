@@ -550,6 +550,9 @@ whitelistedKeysForAttachments
   A list of SHA256 hashes of public keys. Any attachments that are signed by a key that hashes to one of the items in this list will be
   treated as trusted by the node, even if it was received by an untrusted source (for example, over the network).
 
+ .. note:: Whitelisting attachments to be loaded is a temporary measure until attachments can be loaded within the DJVM sandbox. This
+           configuration option will be ignored in future releases that have the DJVM integrated.
+
   *Default:* not defined
 
 Reference.conf

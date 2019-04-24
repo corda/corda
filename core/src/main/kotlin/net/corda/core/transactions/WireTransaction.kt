@@ -109,7 +109,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                     services.networkParametersService.lookup(hashToResolve)
                 },
                 resolveContractAttachment = { services.loadContractAttachment(it) },
-                whitelistedKeys = whitelistedKeysForAttachments
+                extraTrustedAttachments = ExtraTrustedAttachments.WhitelistedKeys(whitelistedKeysForAttachments)
         )
     }
 
@@ -162,7 +162,8 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                 resolveAttachment,
                 { stateRef -> resolveStateRef(stateRef)?.serialize() },
                 resolveParameters,
-                { resolveAttachment(it.txhash) ?: missingAttachment }
+                { resolveAttachment(it.txhash) ?: missingAttachment },
+                extraTrustedAttachments = ExtraTrustedAttachments.TrustAllAttachments
         )
     }
 
@@ -172,7 +173,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
             resolveStateRefAsSerialized: (StateRef) -> SerializedBytes<TransactionState<ContractState>>?,
             resolveParameters: (SecureHash?) -> NetworkParameters?,
             resolveContractAttachment: (StateRef) -> Attachment,
-            whitelistedKeys: Collection<SecureHash> = listOf()
+            extraTrustedAttachments: ExtraTrustedAttachments = ExtraTrustedAttachments.default()
     ): LedgerTransaction {
         // Look up public keys to authenticated identities.
         val authenticatedCommands = commands.lazyMapped { cmd, _ ->
@@ -208,7 +209,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                 componentGroups,
                 serializedResolvedInputs,
                 serializedResolvedReferences,
-                whitelistedKeysForAttachments = whitelistedKeys
+                extraTrustedAttachments = extraTrustedAttachments
         )
 
         checkTransactionSize(ltx, resolvedNetworkParameters.maxTransactionSize, serializedResolvedInputs, serializedResolvedReferences)

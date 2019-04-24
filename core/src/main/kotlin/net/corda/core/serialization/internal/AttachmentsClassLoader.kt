@@ -12,6 +12,7 @@ import net.corda.core.internal.cordapp.targetPlatformVersion
 import net.corda.core.node.NetworkParameters
 import net.corda.core.serialization.*
 import net.corda.core.serialization.internal.AttachmentURLStreamHandlerFactory.toUrl
+import net.corda.core.transactions.ExtraTrustedAttachments
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.toSHA256Bytes
@@ -39,7 +40,7 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
                              val params: NetworkParameters,
                              private val sampleTxId: SecureHash,
                              parent: ClassLoader = ClassLoader.getSystemClassLoader(),
-                             private val whitelistedPublicKeys: Collection<SecureHash>) :
+                             private val extraTrustedAttachments: ExtraTrustedAttachments) :
         URLClassLoader(attachments.map(::toUrl).toTypedArray(), parent) {
 
     companion object {
@@ -137,7 +138,10 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
     }
 
     private fun attachmentSignedByTrustedKey(attachment: Attachment): Boolean {
-        return attachment.signerKeys.map { it.hash }.any { whitelistedPublicKeys.contains(it) }
+        return when(extraTrustedAttachments) {
+            is ExtraTrustedAttachments.WhitelistedKeys -> attachment.signerKeys.map { it.hash }.any { extraTrustedAttachments.keys.contains(it) }
+            is ExtraTrustedAttachments.TrustAllAttachments -> true
+        }
     }
 
     private fun isZipOrJar(attachment: Attachment) = attachment.openAsJAR().use { jar ->
@@ -319,7 +323,7 @@ object AttachmentsClassLoaderBuilder {
                                               params: NetworkParameters,
                                               txId: SecureHash,
                                               parent: ClassLoader = ClassLoader.getSystemClassLoader(),
-                                              whitelistedPublicKeys: Collection<SecureHash> = listOf(),
+                                              whitelistedPublicKeys: ExtraTrustedAttachments = ExtraTrustedAttachments.default(),
                                               block: (ClassLoader) -> T): T {
         val attachmentIds = attachments.map { it.id }.toSet()
 
