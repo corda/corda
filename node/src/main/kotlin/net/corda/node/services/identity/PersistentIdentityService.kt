@@ -70,23 +70,23 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
                     persistentEntityClass = PersistentIdentityNoCert::class.java)
         }
 
-        fun createX500ToKeyMap(cacheFactory: NamedCacheFactory): AppendOnlyPersistentMap<CordaX500Name, SecureHash, PersistentIdentityNames, String> {
-            return AppendOnlyPersistentMap(
-                    cacheFactory = cacheFactory,
-                    name = "PersistentIdentityService_partyToKey",
-                    toPersistentEntityKey = { it.toString() },
-                    fromPersistentEntity = {
-                        Pair(
-                                CordaX500Name.parse(it.name),
-                                SecureHash.parse(it.publicKeyHash)
-                        )
-                    },
-                    toPersistentEntity = { key: CordaX500Name, value: SecureHash ->
-                        PersistentIdentityNames(key.toString(), value.toString())
-                    },
-                    persistentEntityClass = PersistentIdentityNames::class.java
-            )
-        }
+//        fun createX500ToKeyMap(cacheFactory: NamedCacheFactory): AppendOnlyPersistentMap<CordaX500Name, SecureHash, PersistentIdentityNames, String> {
+//            return AppendOnlyPersistentMap(
+//                    cacheFactory = cacheFactory,
+//                    name = "PersistentIdentityService_partyToKey",
+//                    toPersistentEntityKey = { it.toString() },
+//                    fromPersistentEntity = {
+//                        Pair(
+//                                CordaX500Name.parse(it.name),
+//                                SecureHash.parse(it.publicKeyHash)
+//                        )
+//                    },
+//                    toPersistentEntity = { key: CordaX500Name, value: SecureHash ->
+//                        PersistentIdentityNames(key.toString(), value.toString())
+//                    },
+//                    persistentEntityClass = PersistentIdentityNames::class.java
+//            )
+//        }
 
         private fun mapToKey(owningKey: PublicKey) = owningKey.hash
         private fun mapToKey(party: PartyAndCertificate) = mapToKey(party.owningKey)
@@ -115,16 +115,16 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
             var name: String = ""
     )
 
-    @Entity
-    @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}named_identities")
-    class PersistentIdentityNames(
-            @Id
-            @Column(name = "name", length = 128, nullable = false)
-            var name: String = "",
-
-            @Column(name = "pk_hash", length = MAX_HASH_HEX_SIZE, nullable = true)
-            var publicKeyHash: String? = ""
-    )
+//    @Entity
+//    @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}named_identities")
+//    class PersistentIdentityNames(
+//            @Id
+//            @Column(name = "name", length = 128, nullable = false)
+//            var name: String = "",
+//
+//            @Column(name = "pk_hash", length = MAX_HASH_HEX_SIZE, nullable = true)
+//            var publicKeyHash: String? = ""
+//    )
 
     private lateinit var _caCertStore: CertStore
     override val caCertStore: CertStore get() = _caCertStore
@@ -143,7 +143,7 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
 
     private val keyToPartyAndCert = createKeyToPartyAndCertMap(cacheFactory)
     private val keyToParty = createKeyToX500Map(cacheFactory)
-    private val partyToKey = createX500ToKeyMap(cacheFactory)
+//    private val partyToKey = createX500ToKeyMap(cacheFactory)
 
     fun start(trustRoot: X509Certificate, caCertificates: List<X509Certificate> = emptyList(), notaryIdentities: List<Party> = emptyList()) {
         _trustRoot = trustRoot
@@ -156,7 +156,8 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
         identities.forEach {
             val key = mapToKey(it)
             keyToPartyAndCert.addWithDuplicatesAllowed(key, it, false)
-            partyToKey.addWithDuplicatesAllowed(it.name, key, false)
+            keyToParty.addWithDuplicatesAllowed(key, it.name, false)
+//            partyToKey.addWithDuplicatesAllowed(it.name, key, false)
         }
         confidentialIdentities.forEach {
             keyToPartyAndCert.addWithDuplicatesAllowed(mapToKey(it), it, false)
@@ -186,7 +187,8 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
             keyToPartyAndCert[key] = identity
         } else {
             keyToPartyAndCert.addWithDuplicatesAllowed(key, identity)
-            partyToKey.addWithDuplicatesAllowed(identity.name, key, false)
+            keyToParty.addWithDuplicatesAllowed(key, identity.name)
+//            partyToKey.addWithDuplicatesAllowed(identity.name, key, false)
         }
 
         val parentId = mapToKey(identityCertChain[1].publicKey)
@@ -197,7 +199,9 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
 
     private fun certificateFromCordaX500Name(name: CordaX500Name): PartyAndCertificate? {
         return database.transaction {
-            val partyId = partyToKey[name]
+            val partyId = keyToParty[]
+//            val partyId = partyToKey[name]
+
             if (partyId != null) {
                 keyToPartyAndCert[partyId]
             } else null
@@ -225,6 +229,8 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
     override fun partiesFromName(query: String, exactMatch: Boolean): Set<Party> {
         return database.transaction {
             val results = LinkedHashSet<Party>()
+            keyToParty.allPersisted().forEach {(x500name, partyId)
+            }
             partyToKey.allPersisted().forEach { (x500name, partyId) ->
                 if (x500Matches(query, exactMatch, x500name)) {
                     results += keyToPartyAndCert[partyId]!!.party
@@ -259,22 +265,24 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
                 log.info("An existing entry for ${key.hash} already exists.")
                 if (identity.name != keyToParty[key.hash]) {
                     log.error("The public key ${key.hash} is already assigned to a party.")
+                    return@transaction false
                 }
                 willRegisterNewMapping = false
             }
 
             // Check by party
-            val existingEntryForParty = partyToKey[identity.name]
-            if (existingEntryForParty == null) {
-                log.info("Linking: ${identity.name} to ${key.hash}")
-                partyToKey[identity.name] = key.hash
-            } else {
-                log.info("An existing entry for ${identity.name} already exists.")
-                if (key.hash != partyToKey[identity.name]) {
-                    log.error("The public key ${key.hash} is already assigned to a different party.")
-                }
-                willRegisterNewMapping = false
-            }
+//            val existingEntryForParty = partyToKey[identity.name]
+//            if (existingEntryForParty == null) {
+//                log.info("Linking: ${identity.name} to ${key.hash}")
+//                partyToKey[identity.name] = key.hash
+//            } else {
+//                log.info("An existing entry for ${identity.name} already exists.")
+//                if (key.hash != partyToKey[identity.name]) {
+//                    log.error("The public key ${key.hash} is already assigned to a different party.")
+//                } else {
+//                    println("blah")
+//                }
+//            }
         }
         return willRegisterNewMapping
     }

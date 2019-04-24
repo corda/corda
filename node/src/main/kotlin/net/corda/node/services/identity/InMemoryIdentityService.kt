@@ -84,51 +84,33 @@ class InMemoryIdentityService(identities: List<PartyAndCertificate> = emptyList(
     }
 
     override fun registerIdentityMapping(identity: Party, key: PublicKey): Boolean {
-        // Check by key
+
+        var willRegisterNewMapping = true
         when (keyToParties[key]) {
             null -> {
-                log.info("Linking: ${key.hash} to ${identity.name}")
                 keyToParties[key] = identity
             }
             else -> {
-                log.info("An existing entry for ${key.hash} already exists.")
                 if (identity != keyToParties[key]) {
-                    log.error("The public key ${key.hash} is already assigned to a different party.")
                     return false
                 }
-                return false
+                willRegisterNewMapping = false
             }
         }
 
         // Check by party
-        when(partyToKeys[identity]) {
+        when (partyToKeys[identity]) {
             null -> {
-                log.info("Linking: ${identity.name} to ${key.hash}")
                 partyToKeys.putIfAbsent(identity, arrayListOf(key))
             }
             else -> {
                 val keys = partyToKeys[identity]
                 if (!keys!!.contains(key)) {
                     keys.add(key)
-
-
+                    partyToKeys.replace(identity, keys)
                 }
             }
         }
-//        if (existingEntryForParty.isEmpty()) {
-//            log.info("Linking: ${identity.name} to ${key.hash}")
-//            partyToKeys[identity] = key
-//        } else {
-//            partyToKeys.computeIfPresent( existingEntryForParty, k ->  )
-//            //existingEntryForParty does not equal one of the values for this party then add to the map
-//            ){
-//                log.info("An existing entry for ${identity.name} already exists.")
-//                if (key != partyToKeys[identity]) {
-//                    log.error("The public key ${key.hash} is already assigned to a different party.")
-//                }
-//                return false
-//            }
-//        }
-    return true
+        return willRegisterNewMapping
     }
 }
