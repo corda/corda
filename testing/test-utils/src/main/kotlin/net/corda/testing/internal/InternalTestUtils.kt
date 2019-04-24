@@ -5,6 +5,7 @@ import net.corda.core.contracts.*
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.Crypto.generateKeyPair
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.SignatureScheme
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
@@ -87,12 +88,13 @@ private val defaultIntermediateCaName = X500Principal("CN=Corda Intermediate CA,
  */
 fun createDevIntermediateCaCertPath(
         rootCaName: X500Principal = defaultRootCaName,
-        intermediateCaName: X500Principal = defaultIntermediateCaName
+        intermediateCaName: X500Principal = defaultIntermediateCaName,
+        signatureScheme: SignatureScheme = X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME
 ): Pair<CertificateAndKeyPair, CertificateAndKeyPair> {
-    val rootKeyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
+    val rootKeyPair = Crypto.generateKeyPair(signatureScheme)
     val rootCert = X509Utilities.createSelfSignedCACertificate(rootCaName, rootKeyPair)
 
-    val intermediateCaKeyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
+    val intermediateCaKeyPair = Crypto.generateKeyPair(signatureScheme)
     val intermediateCaCert = X509Utilities.createCertificate(
             CertificateType.INTERMEDIATE_CA,
             rootCert,
