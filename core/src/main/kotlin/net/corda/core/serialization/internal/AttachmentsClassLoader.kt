@@ -32,14 +32,14 @@ import java.util.*
  * @property sampleTxId The transaction ID that triggered the creation of this classloader. Because classloaders are cached
  *           this tx may be stale, that is, classloading might be triggered by the verification of some other transaction
  *           if not all code is invoked every time, however we want a txid for errors in case of attachment bogusness.
- * @property whitelistedKeys A collection of public key hashes. An attachment signed by a public key with one of these hashes
+ * @property whitelistedPublicKeys A collection of public key hashes. An attachment signed by a public key with one of these hashes
  *           will automatically be trusted.
  */
 class AttachmentsClassLoader(attachments: List<Attachment>,
                              val params: NetworkParameters,
                              private val sampleTxId: SecureHash,
                              parent: ClassLoader = ClassLoader.getSystemClassLoader(),
-                             private val whitelistedKeys: Collection<SecureHash> = listOf()) :
+                             private val whitelistedPublicKeys: Collection<SecureHash>) :
         URLClassLoader(attachments.map(::toUrl).toTypedArray(), parent) {
 
     companion object {
@@ -137,7 +137,7 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
     }
 
     private fun attachmentSignedByTrustedKey(attachment: Attachment): Boolean {
-        return attachment.signerKeys.map { it.hash }.any { whitelistedKeys.contains(it)}
+        return attachment.signerKeys.map { it.hash }.any { whitelistedPublicKeys.contains(it) }
     }
 
     private fun isZipOrJar(attachment: Attachment) = attachment.openAsJAR().use { jar ->
@@ -319,13 +319,13 @@ object AttachmentsClassLoaderBuilder {
                                               params: NetworkParameters,
                                               txId: SecureHash,
                                               parent: ClassLoader = ClassLoader.getSystemClassLoader(),
-                                              whitelistedKeys: Collection<SecureHash> = listOf(),
+                                              whitelistedPublicKeys: Collection<SecureHash> = listOf(),
                                               block: (ClassLoader) -> T): T {
         val attachmentIds = attachments.map { it.id }.toSet()
 
         val serializationContext = cache.computeIfAbsent(Key(attachmentIds, params)) {
             // Create classloader and load serializers, whitelisted classes
-            val transactionClassLoader = AttachmentsClassLoader(attachments, params, txId, parent, whitelistedKeys)
+            val transactionClassLoader = AttachmentsClassLoader(attachments, params, txId, parent, whitelistedPublicKeys)
             val serializers = createInstancesOfClassesImplementing(transactionClassLoader, SerializationCustomSerializer::class.java)
             val whitelistedClasses = ServiceLoader.load(SerializationWhitelist::class.java, transactionClassLoader)
                     .flatMap { it.whitelist }

@@ -45,11 +45,6 @@ interface ServicesForResolution {
     val networkParameters: NetworkParameters
 
     /**
-     * If an attachment is signed with a public key with one of these hashes, it will automatically be trusted.
-     */
-    val whitelistedKeysForAttachments: Collection<SecureHash>
-
-    /**
      * Given a [StateRef] loads the referenced transaction and looks up the specified output [ContractState].
      *
      * *WARNING* Do not use this method unless you really only want a single state - any batch loading should

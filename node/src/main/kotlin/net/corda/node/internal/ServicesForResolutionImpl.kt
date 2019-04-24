@@ -4,6 +4,7 @@ import net.corda.core.contracts.*
 import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.SerializedStateAndRef
+import net.corda.core.internal.ServicesForResolutionInternal
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.AttachmentStorage
@@ -22,7 +23,7 @@ data class ServicesForResolutionImpl(
         override val networkParametersService: NetworkParametersService,
         private val validatedTransactions: TransactionStorage,
         override val whitelistedKeysForAttachments: Collection<SecureHash>
-) : ServicesForResolution {
+) : ServicesForResolution, ServicesForResolutionInternal {
     override val networkParameters: NetworkParameters get() = networkParametersService.lookup(networkParametersService.currentHash) ?:
             throw IllegalArgumentException("No current parameters in network parameters storage")
 

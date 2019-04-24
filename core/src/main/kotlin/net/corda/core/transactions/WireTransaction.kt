@@ -99,6 +99,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
     @Throws(AttachmentResolutionException::class, TransactionResolutionException::class)
     @DeleteForDJVM
     fun toLedgerTransaction(services: ServicesForResolution): LedgerTransaction {
+        val whitelistedKeysForAttachments = (services as? ServicesForResolutionInternal)?.whitelistedKeysForAttachments ?: listOf()
         return toLedgerTransactionInternal(
                 resolveIdentity = { services.identityService.partyFromKey(it) },
                 resolveAttachment = { services.attachments.openAttachment(it) },
@@ -108,7 +109,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                     services.networkParametersService.lookup(hashToResolve)
                 },
                 resolveContractAttachment = { services.loadContractAttachment(it) },
-                whitelistedKeys = services.whitelistedKeysForAttachments
+                whitelistedKeys = whitelistedKeysForAttachments
         )
     }
 
