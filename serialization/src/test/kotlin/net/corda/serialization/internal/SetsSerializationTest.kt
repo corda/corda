@@ -11,10 +11,10 @@ import net.corda.testing.core.SerializationEnvironmentExtension
 import net.corda.testing.internal.kryoSpecific
 import org.junit.Assert.*
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.extension.RegisterExtension
 import java.io.ByteArrayOutputStream
 import java.util.*
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.extension.RegisterExtension
 
 class SetsSerializationTest {
     private companion object {
