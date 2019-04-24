@@ -43,7 +43,9 @@ class AttachmentsClassLoaderTests {
 
     private val storage = MockAttachmentStorage()
     private val networkParameters = testNetworkParameters()
-    private fun make(attachments: List<Attachment>, params: NetworkParameters = networkParameters, whitelistedKeys: List<SecureHash> = listOf()) = AttachmentsClassLoader(attachments, params, SecureHash.zeroHash, whitelistedPublicKeys = whitelistedKeys)
+    private fun make(attachments: List<Attachment>,
+                     params: NetworkParameters = networkParameters,
+                     whitelistedKeys: List<SecureHash> = listOf()) = AttachmentsClassLoader(attachments, params, SecureHash.zeroHash, extraTrustedAttachments = ExtraTrustedAttachments.WhitelistedKeys(whitelistedKeys))
 
     @Test
     fun `Loading AnotherDummyContract without using the AttachmentsClassLoader fails`() {
