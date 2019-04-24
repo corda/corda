@@ -9,7 +9,7 @@ import net.corda.serialization.internal.carpenter.ClassCarpenterImpl
 import org.hamcrest.Matchers.`is`
 import org.hamcrest.Matchers.equalTo
 import org.junit.Assert
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import java.util.*
 
 class OptionalSerializationTests {

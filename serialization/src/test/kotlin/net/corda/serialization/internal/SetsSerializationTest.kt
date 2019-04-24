@@ -7,11 +7,11 @@ import net.corda.core.serialization.serialize
 import net.corda.node.serialization.kryo.kryoMagic
 import net.corda.node.services.statemachine.DataSessionMessage
 import net.corda.serialization.internal.amqp.propertyDescriptors
-import net.corda.testing.core.SerializationEnvironmentRule
+import net.corda.testing.core.SerializationEnvironmentExtension
 import net.corda.testing.internal.kryoSpecific
 import org.junit.Assert.*
-import org.junit.Rule
-import org.junit.Test
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.extension.RegisterExtension
 import java.io.ByteArrayOutputStream
 import java.util.*
 import org.assertj.core.api.Assertions.assertThat
@@ -21,9 +21,9 @@ class SetsSerializationTest {
         val javaEmptySetClass = Collections.emptySet<Any>().javaClass
     }
 
-    @Rule
+    @RegisterExtension
     @JvmField
-    val testSerialization = SerializationEnvironmentRule()
+    val testSerialization = SerializationEnvironmentExtension()
 
     @Test
     fun `check set can be serialized as root of serialization graph`() {

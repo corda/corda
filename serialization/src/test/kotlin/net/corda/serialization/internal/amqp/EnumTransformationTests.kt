@@ -7,7 +7,7 @@ import net.corda.core.serialization.CordaSerializationTransformRenames
 import net.corda.serialization.internal.model.EnumTransforms
 import net.corda.serialization.internal.model.InvalidEnumTransformsException
 import org.junit.Assert.assertEquals
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import kotlin.test.assertFailsWith
 
 class EnumTransformationTests {

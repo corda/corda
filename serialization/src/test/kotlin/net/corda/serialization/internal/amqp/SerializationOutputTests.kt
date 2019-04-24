@@ -46,6 +46,7 @@ import org.junit.runners.Parameterized
 import org.junit.runners.Parameterized.Parameters
 import java.io.IOException
 import java.io.NotSerializableException
+import java.lang.IllegalArgumentException
 import java.math.BigDecimal
 import java.math.BigInteger
 import java.security.cert.X509CRL
@@ -460,7 +461,7 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
     }
 
     @Test(expected = NotSerializableException::class)
-    fun `test mismatched property and constructor naming`() {
+    fun `test mismatched property and constructor naming`()  {
         val obj = Mismatch(456)
         serdes(obj)
     }

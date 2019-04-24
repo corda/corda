@@ -2,7 +2,7 @@ package net.corda.serialization.internal.amqp
 
 import net.corda.core.serialization.ConstructorForDeserialization
 import net.corda.serialization.internal.amqp.testutils.*
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import org.apache.qpid.proton.amqp.Symbol
 import java.lang.reflect.Method

@@ -10,7 +10,7 @@ import net.corda.testing.common.internal.ProjectStructure.projectRootDir
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Ignore
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import java.io.File
 import java.io.NotSerializableException
 import java.net.URI

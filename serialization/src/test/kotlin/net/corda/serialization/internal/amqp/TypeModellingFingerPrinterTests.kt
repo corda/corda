@@ -6,7 +6,7 @@ import net.corda.serialization.internal.model.ConfigurableLocalTypeModel
 import net.corda.serialization.internal.model.LocalTypeInformation
 import net.corda.serialization.internal.model.TypeModellingFingerPrinter
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 

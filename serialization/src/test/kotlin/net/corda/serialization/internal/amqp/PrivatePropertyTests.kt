@@ -7,7 +7,7 @@ import net.corda.serialization.internal.amqp.testutils.*
 import net.corda.serialization.internal.model.ConfigurableLocalTypeModel
 import net.corda.serialization.internal.model.LocalPropertyInformation
 import net.corda.serialization.internal.model.LocalTypeInformation
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import org.assertj.core.api.Assertions
 import java.io.NotSerializableException
 import java.util.*

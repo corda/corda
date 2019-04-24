@@ -1,7 +1,7 @@
 package net.corda.serialization.internal.amqp
 
 import org.assertj.core.api.Assertions
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import java.io.NotSerializableException
 import kotlin.test.assertEquals
 

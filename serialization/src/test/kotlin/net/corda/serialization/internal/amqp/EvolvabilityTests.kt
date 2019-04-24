@@ -13,14 +13,15 @@ import net.corda.serialization.internal.amqp.testutils.*
 import net.corda.testing.common.internal.ProjectStructure.projectRootDir
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.TestIdentity
-import org.junit.Ignore
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import java.io.File
 import java.io.NotSerializableException
 import java.net.URI
 import java.time.Instant
 import kotlin.test.assertEquals
 import net.corda.serialization.internal.amqp.custom.InstantSerializer
+import org.junit.jupiter.api.Disabled
+import org.junit.jupiter.api.assertThrows
 
 // To regenerate any of the binary test files do the following
 //
@@ -101,8 +102,8 @@ class EvolvabilityTests {
         assertEquals(null, deserializedC.b)
     }
 
-    @Test(expected = NotSerializableException::class)
-    fun addAdditionalParam() {
+    @Test
+    fun addAdditionalParam() = assertThrows<NotSerializableException> {
         val sf = testDefaultFactory()
         val url = EvolvabilityTests::class.java.getResource("EvolvabilityTests.addAdditionalParam")
         @Suppress("UNUSED_VARIABLE")
@@ -309,9 +310,9 @@ class EvolvabilityTests {
         DeserializationInput(factory).deserialize(SerializedBytes<NetworkParametersExample>(url.readBytes()))
     }
 
-    @Test(expected = NotSerializableException::class)
+    @Test
     @Suppress("UNUSED")
-    fun addMandatoryFieldWithAltConstructorUnAnnotated() {
+    fun addMandatoryFieldWithAltConstructorUnAnnotated() = assertThrows<NotSerializableException> {
         val sf = testDefaultFactory()
         val url = EvolvabilityTests::class.java.getResource(
                 "EvolvabilityTests.addMandatoryFieldWithAltConstructorUnAnnotated")
@@ -596,7 +597,7 @@ class EvolvabilityTests {
     // the resulting file and add to the repo, changing the filename as appropriate
     //
     @Test
-    @Ignore("Test fails after moving NetworkParameters and NotaryInfo into core from node-api")
+    @Disabled("Test fails after moving NetworkParameters and NotaryInfo into core from node-api")
     fun readBrokenNetworkParameters() {
         val sf = testDefaultFactory()
         sf.register(net.corda.serialization.internal.amqp.custom.InstantSerializer(sf))
@@ -627,7 +628,7 @@ class EvolvabilityTests {
     // can still deserialize them
     //
     @Test
-    @Ignore("This test simply regenerates the test file used for readBrokenNetworkParameters")
+    @Disabled("This test simply regenerates the test file used for readBrokenNetworkParameters")
     fun `regenerate broken network parameters`() {
         // note: 6a6b6f256 is the sha that generates the file
         val resource = "networkParams.<corda version>.<commit sha>"

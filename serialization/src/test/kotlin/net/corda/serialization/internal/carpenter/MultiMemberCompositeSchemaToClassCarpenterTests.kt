@@ -4,7 +4,7 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializableCalculatedProperty
 import net.corda.serialization.internal.AllWhitelist
 import net.corda.serialization.internal.amqp.testutils.testSerializationContext
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
 

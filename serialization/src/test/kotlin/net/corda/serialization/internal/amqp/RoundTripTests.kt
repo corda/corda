@@ -17,7 +17,7 @@ import net.corda.serialization.internal.amqp.testutils.serialize
 import net.corda.serialization.internal.amqp.testutils.testDefaultFactoryNoEvolution
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import java.math.BigInteger
 import kotlin.test.assertEquals
 

@@ -2,7 +2,7 @@ package net.corda.serialization.internal.amqp
 
 import net.corda.core.serialization.CordaSerializable
 import net.corda.serialization.internal.amqp.testutils.*
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import java.io.NotSerializableException
 import kotlin.test.assertEquals
 import kotlin.test.assertFails

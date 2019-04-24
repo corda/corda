@@ -5,7 +5,7 @@ import net.corda.serialization.internal.amqp.custom.InputStreamSerializer
 import net.corda.serialization.internal.amqp.testutils.TestSerializationOutput
 import net.corda.serialization.internal.amqp.testutils.deserialize
 import net.corda.serialization.internal.amqp.testutils.testDefaultFactory
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import java.io.FilterInputStream
 import java.io.InputStream
 

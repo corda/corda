@@ -5,7 +5,9 @@ import net.corda.serialization.internal.amqp.testutils.deserialize
 import net.corda.serialization.internal.amqp.testutils.serialize
 import net.corda.serialization.internal.amqp.testutils.testDefaultFactoryNoEvolution
 import org.assertj.core.api.Assertions
-import org.junit.Test
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
+import java.io.NotSerializableException
 import java.util.*
 
 class DeserializeMapTests {
@@ -28,8 +30,8 @@ class DeserializeMapTests {
         DeserializationInput(sf).deserialize(serialisedBytes)
     }
 
-    @Test(expected = java.io.NotSerializableException::class)
-    fun abstractMapFromMapOf() {
+    @Test
+    fun abstractMapFromMapOf() = assertThrows<NotSerializableException> {
         data class C(val c: AbstractMap<String, Int>)
 
         val c = C(mapOf("A" to 1, "B" to 2) as AbstractMap)
@@ -38,8 +40,8 @@ class DeserializeMapTests {
         DeserializationInput(sf).deserialize(serialisedBytes)
     }
 
-    @Test(expected = java.io.NotSerializableException::class)
-    fun abstractMapFromTreeMap() {
+    @Test
+    fun abstractMapFromTreeMap() = assertThrows<NotSerializableException> {
         data class C(val c: AbstractMap<String, Int>)
 
         val c = C(TreeMap(mapOf("A" to 1, "B" to 2)))

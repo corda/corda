@@ -6,7 +6,7 @@ import net.corda.core.serialization.SerializedBytes
 import net.corda.serialization.internal.AllWhitelist
 import net.corda.serialization.internal.amqp.testutils.*
 import net.corda.serialization.internal.carpenter.*
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import java.io.NotSerializableException
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith

@@ -7,7 +7,7 @@ import net.corda.serialization.internal.amqp.testutils.TestSerializationOutput
 import net.corda.serialization.internal.amqp.testutils.deserialize
 import net.corda.serialization.internal.amqp.testutils.testDefaultFactory
 import org.assertj.core.api.Assertions
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import java.io.NotSerializableException
 import java.lang.reflect.Type
 import kotlin.reflect.jvm.jvmName

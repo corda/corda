@@ -1,6 +1,6 @@
 package net.corda.serialization.internal.amqp
 
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import net.corda.serialization.internal.AllWhitelist
 import net.corda.serialization.internal.amqp.testutils.TestSerializationOutput

@@ -6,7 +6,7 @@ import net.corda.serialization.internal.AllWhitelist
 import net.corda.serialization.internal.amqp.*
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import java.lang.reflect.Type
 import java.time.LocalDateTime
 import java.util.*

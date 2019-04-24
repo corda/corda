@@ -6,7 +6,7 @@ import net.corda.core.serialization.SerializationContext
 import net.corda.finance.contracts.asset.Cash
 import org.apache.qpid.proton.amqp.Symbol
 import org.apache.qpid.proton.codec.Data
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import java.lang.reflect.Type
 import kotlin.test.assertFailsWith
 import kotlin.test.assertSame

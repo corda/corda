@@ -7,7 +7,9 @@ import net.corda.serialization.internal.amqp.testutils.deserialize
 import net.corda.serialization.internal.carpenter.ClassCarpenterImpl
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Ignore
-import org.junit.Test
+import org.junit.jupiter.api.Disabled
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import java.io.NotSerializableException
 import java.lang.reflect.Type
 import java.util.concurrent.ConcurrentHashMap
@@ -40,12 +42,12 @@ class C2(var b: Int) {
 }
 
 class StaticInitialisationOfSerializedObjectTest {
-    @Test(expected = java.lang.ExceptionInInitializerError::class)
-    fun itBlowsUp() {
+    @Test
+    fun itBlowsUp() = assertThrows<ExceptionInInitializerError> {
         C()
     }
 
-    @Ignore("Suppressing this, as it depends on obtaining internal access to serialiser cache")
+    @Disabled("Suppressing this, as it depends on obtaining internal access to serialiser cache")
     @Test
     fun kotlinObjectWithCompanionObject() {
         data class D(val c: C)

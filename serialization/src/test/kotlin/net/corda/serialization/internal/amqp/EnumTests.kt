@@ -11,7 +11,8 @@ import net.corda.serialization.internal.amqp.testutils.testDefaultFactoryNoEvolu
 import net.corda.serialization.internal.amqp.testutils.testName
 import net.corda.serialization.internal.carpenter.ClassCarpenterImpl
 import org.assertj.core.api.Assertions
-import org.junit.Test
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import java.io.NotSerializableException
 import java.time.DayOfWeek
 import kotlin.test.assertEquals
@@ -155,8 +156,8 @@ class EnumTests {
         assertEquals(c.c, obj.c)
     }
 
-    @Test(expected = NotSerializableException::class)
-    fun changedEnum1() {
+    @Test
+    fun changedEnum1() = assertThrows<NotSerializableException> {
         val url = EnumTests::class.java.getResource("EnumTests.changedEnum1")
 
         data class C(val a: OldBras)
@@ -174,8 +175,8 @@ class EnumTests {
         DeserializationInput(sf1).deserialize(SerializedBytes<C>(sc2))
     }
 
-    @Test(expected = NotSerializableException::class)
-    fun changedEnum2() {
+    @Test
+    fun changedEnum2() = assertThrows<NotSerializableException> {
         val url = EnumTests::class.java.getResource("EnumTests.changedEnum2")
 
         data class C(val a: OldBras2)

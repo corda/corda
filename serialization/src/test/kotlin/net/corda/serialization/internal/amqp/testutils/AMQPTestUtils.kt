@@ -13,7 +13,7 @@ import net.corda.serialization.internal.amqp.*
 import net.corda.serialization.internal.carpenter.ClassCarpenterImpl
 import net.corda.testing.common.internal.ProjectStructure
 import org.apache.qpid.proton.codec.Data
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import java.io.File.separatorChar
 import java.io.NotSerializableException
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
@@ -90,7 +90,9 @@ fun testName(): String {
     val classLoader = Thread.currentThread().contextClassLoader
     return Thread.currentThread().stackTrace.first {
         try {
-            classLoader.loadClass(it.className).getMethod(it.methodName).isAnnotationPresent(Test::class.java)
+            classLoader.loadClass(it.className).getMethod(it.methodName).run {
+                isAnnotationPresent(org.junit.Test::class.java) || isAnnotationPresent(org.junit.jupiter.api.Test::class.java)
+            }
         } catch (e: Exception) {
             false
         }

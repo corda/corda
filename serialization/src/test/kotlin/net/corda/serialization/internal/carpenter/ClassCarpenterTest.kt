@@ -3,9 +3,13 @@ package net.corda.serialization.internal.carpenter
 import net.corda.core.internal.uncheckedCast
 import net.corda.serialization.internal.AllWhitelist
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
-import org.junit.Test
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import java.beans.Introspector
+import java.io.NotSerializableException
+import java.lang.IllegalArgumentException
 import java.lang.reflect.Field
+import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Method
 import javax.annotation.Nonnull
 import javax.annotation.Nullable
@@ -95,8 +99,8 @@ class ClassCarpenterTest {
         assertEquals("Person{age=32, name=Mike}", i.toString())
     }
 
-    @Test(expected = DuplicateNameException::class)
-    fun duplicates() {
+    @Test
+    fun duplicates() = assertThrows<DuplicateNameException> {
         cc.build(ClassSchema("gen.EmptyClass", emptyMap()))
         cc.build(ClassSchema("gen.EmptyClass", emptyMap()))
     }
@@ -301,8 +305,8 @@ class ClassCarpenterTest {
         assertEquals(testD, i["d"])
     }
 
-    @Test(expected = java.lang.IllegalArgumentException::class)
-    fun `null parameter small int`() {
+    @Test
+    fun `null parameter small int`() = assertThrows<IllegalArgumentException> {
         val className = "iEnjoySwede"
         val schema = ClassSchema(
                 "gen.$className",
@@ -313,8 +317,8 @@ class ClassCarpenterTest {
         clazz.constructors[0].newInstance(a)
     }
 
-    @Test(expected = NullablePrimitiveException::class)
-    fun `nullable parameter small int`() {
+    @Test
+    fun `nullable parameter small int`() = assertThrows<NullablePrimitiveException> {
         val className = "iEnjoySwede"
         val schema = ClassSchema(
                 "gen.$className",
@@ -351,8 +355,8 @@ class ClassCarpenterTest {
         clazz.constructors[0].newInstance(a)
     }
 
-    @Test(expected = java.lang.reflect.InvocationTargetException::class)
-    fun `non nullable parameter integer with null`() {
+    @Test
+    fun `non nullable parameter integer with null`() = assertThrows<InvocationTargetException> {
         val className = "iEnjoyWibble"
         val schema = ClassSchema(
                 "gen.$className",
@@ -383,8 +387,8 @@ class ClassCarpenterTest {
         assertEquals("$className{a=[1, 2, 3]}", i.toString())
     }
 
-    @Test(expected = java.lang.reflect.InvocationTargetException::class)
-    fun `nullable int array throws`() {
+    @Test
+    fun `nullable int array throws`() = assertThrows<InvocationTargetException> {
         val className = "iEnjoySwede"
         val schema = ClassSchema(
                 "gen.$className",

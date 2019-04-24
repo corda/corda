@@ -8,14 +8,14 @@ import net.corda.node.services.statemachine.DataSessionMessage
 import net.corda.serialization.internal.amqp.DeserializationInput
 import net.corda.serialization.internal.amqp.Envelope
 import net.corda.serialization.internal.amqp.SerializerFactoryBuilder
-import net.corda.testing.core.SerializationEnvironmentRule
+import net.corda.testing.core.SerializationEnvironmentExtension
 import net.corda.testing.internal.amqpSpecific
 import net.corda.testing.internal.kryoSpecific
 import org.assertj.core.api.Assertions
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
-import org.junit.Rule
-import org.junit.Test
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.extension.RegisterExtension
 import java.io.ByteArrayOutputStream
 import java.io.NotSerializableException
 import java.nio.charset.StandardCharsets.US_ASCII
@@ -33,9 +33,9 @@ class ListsSerializationTest {
                 }
     }
 
-    @Rule
     @JvmField
-    val testSerialization = SerializationEnvironmentRule()
+    @RegisterExtension
+    val testSerialization = SerializationEnvironmentExtension()
 
     @Test
     fun `check list can be serialized as root of serialization graph`() {

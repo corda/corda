@@ -7,7 +7,7 @@ import net.corda.serialization.internal.CordaSerializationMagic
 import net.corda.serialization.internal.GlobalTransientClassWhiteList
 import net.corda.serialization.internal.SerializationContextImpl
 import net.corda.serialization.internal.carpenter.ClassCarpenterImpl
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 
 // Make sure all serialization calls in this test don't get stomped on by anything else

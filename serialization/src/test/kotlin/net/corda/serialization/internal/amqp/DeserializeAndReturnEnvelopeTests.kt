@@ -6,7 +6,7 @@ import net.corda.serialization.internal.amqp.testutils.serialize
 import net.corda.serialization.internal.amqp.testutils.testDefaultFactoryNoEvolution
 import net.corda.serialization.internal.amqp.testutils.testDefaultFactoryWithWhitelist
 import net.corda.serialization.internal.amqp.testutils.testName
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue

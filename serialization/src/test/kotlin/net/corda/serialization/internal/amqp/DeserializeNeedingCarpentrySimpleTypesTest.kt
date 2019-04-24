@@ -3,7 +3,7 @@ package net.corda.serialization.internal.amqp
 import net.corda.serialization.internal.AllWhitelist
 import net.corda.serialization.internal.amqp.testutils.*
 import net.corda.serialization.internal.carpenter.*
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import kotlin.test.*
 
 // These tests work by having the class carpenter build the classes we serialise and then deserialise. Because

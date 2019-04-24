@@ -7,6 +7,7 @@ import net.corda.core.serialization.internal.CheckpointSerializationContext
 import net.corda.core.serialization.internal.checkpointDeserialize
 import net.corda.core.serialization.internal.checkpointSerialize
 import net.corda.testing.contracts.DummyContract
+import net.corda.testing.core.CheckpointSerializationEnvironmentExtension
 import net.corda.testing.core.internal.CheckpointSerializationEnvironmentRule
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices
@@ -16,19 +17,22 @@ import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Assert.assertArrayEquals
 import org.junit.Before
 import org.junit.Rule
-import org.junit.Test
+import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.extension.RegisterExtension
 import kotlin.test.assertEquals
 
 class ContractAttachmentSerializerTest {
 
-    @Rule
+    @RegisterExtension
     @JvmField
-    val testCheckpointSerialization = CheckpointSerializationEnvironmentRule()
+    val testCheckpointSerialization = CheckpointSerializationEnvironmentExtension()
 
     private lateinit var contextWithToken: CheckpointSerializationContext
     private val mockServices = MockServices(emptyList(), CordaX500Name("MegaCorp", "London", "GB"), rigorousMock())
 
-    @Before
+    @BeforeEach
     fun setup() {
         contextWithToken = testCheckpointSerialization.checkpointSerializationContext.withTokenContext(
                 CheckpointSerializeAsTokenContextImpl(

@@ -4,7 +4,8 @@ import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.CordaSerializable
 import org.assertj.core.api.Assertions
 import org.junit.Ignore
-import org.junit.Test
+import org.junit.jupiter.api.Disabled
+import org.junit.jupiter.api.Test
 import java.io.NotSerializableException
 
 class ClassCarpenterWhitelistTest {
@@ -32,7 +33,7 @@ class ClassCarpenterWhitelistTest {
     }
 
     @Test
-    @Ignore("Currently the carpenter doesn't inspect it's whitelist so will carpent anything" +
+    @Disabled("Currently the carpenter doesn't inspect it's whitelist so will carpent anything" +
             "it's asked relying on the serializer factory to not ask for anything")
     fun notWhitelisted() {
         data class A(val a: Int)
@@ -69,7 +70,7 @@ class ClassCarpenterWhitelistTest {
     }
 
     @Test
-    @Ignore("Currently the carpenter doesn't inspect it's whitelist so will carpent anything" +
+    @Disabled("Currently the carpenter doesn't inspect it's whitelist so will carpent anything" +
             "it's asked relying on the serializer factory to not ask for anything")
     fun notWhitelistedButCarpented() {
         // just have the white list reject *Everything* except ints

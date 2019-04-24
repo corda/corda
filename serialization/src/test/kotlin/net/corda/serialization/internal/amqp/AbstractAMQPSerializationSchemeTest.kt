@@ -13,7 +13,7 @@ import org.hamcrest.CoreMatchers
 import org.hamcrest.CoreMatchers.`is`
 import org.hamcrest.Matchers
 import org.junit.Assert
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import java.net.URLClassLoader
 import java.util.concurrent.ThreadLocalRandom
 import java.util.stream.IntStream

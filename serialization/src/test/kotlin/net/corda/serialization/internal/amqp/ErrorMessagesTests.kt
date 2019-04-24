@@ -6,7 +6,8 @@ import net.corda.serialization.internal.amqp.testutils.testDefaultFactory
 import net.corda.serialization.internal.amqp.testutils.testName
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Ignore
-import org.junit.Test
+import org.junit.jupiter.api.Disabled
+import org.junit.jupiter.api.Test
 import java.io.NotSerializableException
 
 class ErrorMessagesTests {
@@ -18,7 +19,7 @@ class ErrorMessagesTests {
             "Property '$property' or its getter is non public, this renders class 'class $testname\$C' unserializable -> class $testname\$C"
 
     // Java allows this to be set at the class level yet Kotlin doesn't for some reason
-    @Ignore("Current behaviour allows for the serialization of objects with private members, this will be disallowed at some point in the future")
+    @Disabled("Current behaviour allows for the serialization of objects with private members, this will be disallowed at some point in the future")
     @Test
     fun privateProperty() {
         data class C(private val a: Int)
@@ -33,7 +34,7 @@ class ErrorMessagesTests {
     }
 
     // Java allows this to be set at the class level yet Kotlin doesn't for some reason
-    @Ignore("Current behaviour allows for the serialization of objects with private members, this will be disallowed at some point in the future")
+    @Disabled("Current behaviour allows for the serialization of objects with private members, this will be disallowed at some point in the future")
     @Test
     fun privateProperty2() {
         data class C(val a: Int, private val b: Int)
@@ -48,7 +49,7 @@ class ErrorMessagesTests {
     }
 
     // Java allows this to be set at the class level yet Kotlin doesn't for some reason
-    @Ignore("Current behaviour allows for the serialization of objects with private members, this will be disallowed at some point in the future")
+    @Disabled("Current behaviour allows for the serialization of objects with private members, this will be disallowed at some point in the future")
     @Test
     fun privateProperty3() {
         // despite b being private, the getter we've added is public and thus allows for the serialisation
@@ -65,7 +66,7 @@ class ErrorMessagesTests {
     }
 
     // Java allows this to be set at the class level yet Kotlin doesn't for some reason
-    @Ignore("Current behaviour allows for the serialization of objects with private members, this will be disallowed at some point in the future")
+    @Disabled("Current behaviour allows for the serialization of objects with private members, this will be disallowed at some point in the future")
     @Test
     fun protectedProperty() {
         open class C(@Suppress("unused") protected val a: Int)

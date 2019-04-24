@@ -3,7 +3,8 @@ package net.corda.serialization.internal.amqp
 import com.google.common.reflect.TypeToken
 import net.corda.serialization.internal.model.TypeIdentifier
 import org.apache.qpid.proton.amqp.UnsignedShort
-import org.junit.Test
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import java.io.NotSerializableException
 import java.lang.reflect.Type
 import java.time.LocalDateTime
@@ -99,48 +100,48 @@ class AMQPTypeIdentifierParserTests {
         verify("java.util.List<net.corda.core.contracts.Command<net.corda.core.contracts.Command<net.corda.core.contracts.CommandData>>>")
     }
 
-    @Test(expected = NotSerializableException::class)
-    fun `test trailing text`() {
+    @Test
+    fun `test trailing text`() = assertThrows<NotSerializableException> {
         verify("java.util.Map<java.lang.String, java.lang.Integer>foo")
     }
 
-    @Test(expected = NotSerializableException::class)
-    fun `test trailing comma`() {
+    @Test
+    fun `test trailing comma`() = assertThrows<NotSerializableException> {
         verify("java.util.Map<java.lang.String, java.lang.Integer,>")
     }
 
-    @Test(expected = NotSerializableException::class)
-    fun `test leading comma`() {
+    @Test
+    fun `test leading comma`() = assertThrows<NotSerializableException> {
         verify("java.util.Map<,java.lang.String, java.lang.Integer>")
     }
 
-    @Test(expected = NotSerializableException::class)
-    fun `test middle comma`() {
+    @Test
+    fun `test middle comma`() = assertThrows<NotSerializableException> {
         verify("java.util.Map<,java.lang.String,, java.lang.Integer>")
     }
 
-    @Test(expected = NotSerializableException::class)
-    fun `test trailing close`() {
+    @Test
+    fun `test trailing close`() = assertThrows<NotSerializableException> {
         verify("java.util.Map<java.lang.String, java.lang.Integer>>")
     }
 
-    @Test(expected = NotSerializableException::class)
-    fun `test empty params`() {
+    @Test
+    fun `test empty params`() = assertThrows<NotSerializableException> {
         verify("java.util.Map<>")
     }
 
-    @Test(expected = NotSerializableException::class)
-    fun `test mid whitespace`() {
+    @Test
+    fun `test mid whitespace`() = assertThrows<NotSerializableException> {
         verify("java.u til.List<java.lang.String>")
     }
 
-    @Test(expected = NotSerializableException::class)
-    fun `test mid whitespace2`() {
+    @Test
+    fun `test mid whitespace2`() = assertThrows<NotSerializableException> {
         verify("java.util.List<java.l ng.String>")
     }
 
-    @Test(expected = NotSerializableException::class)
-    fun `test wrong number of parameters`() {
+    @Test
+    fun `test wrong number of parameters`() = assertThrows<NotSerializableException> {
         verify("java.util.List<java.lang.String, java.lang.Integer>")
     }
 
@@ -149,13 +150,13 @@ class AMQPTypeIdentifierParserTests {
         verify("java.lang.String")
     }
 
-    @Test(expected = NotSerializableException::class)
-    fun `test parameters on non-generic type`() {
+    @Test
+    fun `test parameters on non-generic type`() = assertThrows<NotSerializableException> {
         verify("java.lang.String<java.lang.Integer>")
     }
 
-    @Test(expected = NotSerializableException::class)
-    fun `test excessive nesting`() {
+    @Test
+    fun `test excessive nesting`() = assertThrows<NotSerializableException> {
         var nested = "java.lang.Integer"
         for (i in 1..AMQPTypeIdentifierParser.MAX_TYPE_PARAM_DEPTH) {
             nested = "java.util.List<$nested>"

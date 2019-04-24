@@ -8,7 +8,7 @@ import net.corda.serialization.internal.model.*
 import net.corda.testing.core.SerializationEnvironmentRule
 import org.junit.Assert.assertEquals
 import org.junit.Rule
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import java.lang.IllegalArgumentException
 import java.util.*
 

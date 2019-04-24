@@ -4,16 +4,16 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializationFactory
 import net.corda.core.serialization.deserialize
 import net.corda.serialization.internal.amqp.testutils.readTestResource
-import net.corda.testing.core.SerializationEnvironmentRule
+import net.corda.testing.core.SerializationEnvironmentExtension
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
-import org.junit.Rule
-import org.junit.Test
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.extension.RegisterExtension
 
 class SerDeserCarpentryTest {
-    @Rule
+    @RegisterExtension
     @JvmField
-    val testSerialization = SerializationEnvironmentRule()
+    val testSerialization = SerializationEnvironmentExtension()
 
     @Test
     fun implementingGenericInterface() {

@@ -6,7 +6,7 @@ import net.corda.serialization.internal.AllWhitelist
 import net.corda.serialization.internal.amqp.asClass
 import net.corda.serialization.internal.amqp.testutils.testSerializationContext
 import net.corda.serialization.internal.carpenter.ClassCarpenterImpl
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import java.lang.reflect.Type
 import kotlin.test.assertEquals
 
