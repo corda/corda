@@ -179,9 +179,9 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                 DeclaredField<Party?>(UnexpectedFlowEndException::class.java, "peer", this).value?.let {
                     stackTrace = arrayOf(
                         StackTraceElement(
-                            "Received unexpected counter-flow exception from peer",
-                            " ${it.name}",
-                            null,
+                            "Received unexpected counter-flow exception from peer ${it.name}",
+                            "",
+                            "",
                             -1
                         )
                     ) + stackTrace
@@ -191,9 +191,9 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                 DeclaredField<Party?>(FlowException::class.java, "peer", this).value?.let {
                     stackTrace = arrayOf(
                         StackTraceElement(
-                            "Received counter-flow exception from peer",
-                            " ${it.name}",
-                            null,
+                            "Received counter-flow exception from peer ${it.name}",
+                            "",
+                            "",
                             -1
                         )
                     ) + stackTrace
