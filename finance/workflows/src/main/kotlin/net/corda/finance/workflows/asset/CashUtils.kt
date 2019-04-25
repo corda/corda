@@ -29,7 +29,6 @@ object CashUtils {
      * @param onlyFromParties if non-null, the asset states will be filtered to only include those issued by the set
      *                        of given parties. This can be useful if the party you're trying to pay has expectations
      *                        about which type of asset claims they are willing to accept.
-     * @param anonymous whether or not to use CI to send the change to
      * @return A [Pair] of the same transaction builder passed in as [tx], and the list of keys that need to sign
      *         the resulting transaction for it to be valid.
      * @throws InsufficientBalanceException when a cash spending transaction fails because
@@ -43,8 +42,7 @@ object CashUtils {
                       tx: TransactionBuilder,
                       amount: Amount<Currency>,
                       to: AbstractParty,
-                      onlyFromParties: Set<AbstractParty> = emptySet(),
-                      anonymous: Boolean = true): Pair<TransactionBuilder, List<PublicKey>> {
+                      onlyFromParties: Set<AbstractParty> = emptySet()): Pair<TransactionBuilder, List<PublicKey>> {
         return generateSpend(services, tx, listOf(PartyAndAmount(to, amount)), services.myInfo.legalIdentitiesAndCerts.single(), onlyFromParties, anonymous)
     }
 
@@ -58,7 +56,9 @@ object CashUtils {
      *           to move the cash will be added on top.
      * @param amount How much currency to send.
      * @param to the recipient party.
-     * @param ourIdentity well known identity to create a new confidential identity from if anonymous is true, for sending change to.
+     * @param ourIdentity ourIdentity is used to determine the where the change will be sent.
+     *                    If anonymous is true then an anonymous identity will be generated from this and the change
+     *                    will be spent to that, otherwise ourIdentity will be used as is.
      * @param onlyFromParties if non-null, the asset states will be filtered to only include those issued by the set
      *                        of given parties. This can be useful if the party you're trying to pay has expectations
      *                        about which type of asset claims they are willing to accept.
@@ -94,7 +94,6 @@ object CashUtils {
      * @param onlyFromParties if non-null, the asset states will be filtered to only include those issued by the set
      *                        of given parties. This can be useful if the party you're trying to pay has expectations
      *                        about which type of asset claims they are willing to accept.
-     * @param anonymous whether or not to use CI to send the change to
      * @return A [Pair] of the same transaction builder passed in as [tx], and the list of keys that need to sign
      *         the resulting transaction for it to be valid.
      * @throws InsufficientBalanceException when a cash spending transaction fails because
@@ -107,9 +106,8 @@ object CashUtils {
     fun generateSpend(services: ServiceHub,
                       tx: TransactionBuilder,
                       payments: List<PartyAndAmount<Currency>>,
-                      onlyFromParties: Set<AbstractParty> = emptySet(),
-                      anonymous: Boolean = true): Pair<TransactionBuilder, List<PublicKey>> {
-        return generateSpend(services, tx, payments, services.myInfo.legalIdentitiesAndCerts.single(), onlyFromParties, anonymous)
+                      onlyFromParties: Set<AbstractParty> = emptySet()): Pair<TransactionBuilder, List<PublicKey>> {
+        return generateSpend(services, tx, payments, services.myInfo.legalIdentitiesAndCerts.single(), onlyFromParties)
     }
 
     /**
@@ -121,7 +119,9 @@ object CashUtils {
      * @param tx A builder, which may contain inputs, outputs and commands already. The relevant components needed
      *           to move the cash will be added on top.
      * @param payments A list of amounts to pay, and the party to send the payment to.
-     * @param ourIdentity well known identity to create a new confidential identity from if anonymous is true, for sending change to.
+     * @param ourIdentity ourIdentity is used to determine the where the change will be sent.
+     *                    If anonymous is true then an anonymous identity will be generated from this and the change
+     *                    will be spent to that, otherwise ourIdentity will be used as is.
      * @param onlyFromParties if non-null, the asset states will be filtered to only include those issued by the set
      *                        of given parties. This can be useful if the party you're trying to pay has expectations
      *                        about which type of asset claims they are willing to accept.
