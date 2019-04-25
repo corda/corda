@@ -36,7 +36,6 @@ class IdentityServiceNoCertificatesTests {
     private val keyToParties = ConcurrentHashMap<PublicKey, Party>()
     private val partyToKeys = ConcurrentHashMap<Party, ArrayList<PublicKey>>()
 
-
     @Before
     fun setup() {
         network = MockNetwork(
@@ -51,7 +50,6 @@ class IdentityServiceNoCertificatesTests {
     fun shutdown() {
         network.stopNodes()
     }
-
 
     @Test
     fun `Persistence identity service tests`() {
@@ -70,14 +68,12 @@ class IdentityServiceNoCertificatesTests {
         val key1 =  createSignedKeyAndVerify(partyA)
         val key2 =  createSignedKeyAndVerify(partyA)
 
-
         assertThat(identityService.registerIdentityMapping(alice, key)).isTrue()
         assertThat(identityService.registerIdentityMapping(alice, key1)).isTrue()
         assertThat(identityService.registerIdentityMapping(bob, key1)).isFalse()
         assertThat(identityService.registerIdentityMapping(bob, key2)).isTrue()
         database.close()
     }
-
 
     @Test
     fun `In memory identity service tests`() {
@@ -92,7 +88,6 @@ class IdentityServiceNoCertificatesTests {
         assertThat(inMemoryIdentityService.registerIdentityMapping(bob, key1)).isFalse()
         assertThat(inMemoryIdentityService.registerIdentityMapping(bob, key2)).isTrue()
     }
-
 
     @Test
     fun `Method testing`() {
@@ -118,13 +113,10 @@ class IdentityServiceNoCertificatesTests {
         assertThat(registerIdentityMapping(alice, key3)).isTrue()
     }
 
-
-    /**
-     *
-     */
     private fun registerIdentityMapping(identity: Party, key: PublicKey): Boolean{
 
         var willRegisterNewMapping = true
+        // Check by key
         when (keyToParties[key]) {
             null -> {
                 keyToParties[key] = identity
@@ -136,7 +128,6 @@ class IdentityServiceNoCertificatesTests {
                 willRegisterNewMapping = false
             }
         }
-
         // Check by party
         when (partyToKeys[identity]) {
             null -> {
@@ -152,7 +143,6 @@ class IdentityServiceNoCertificatesTests {
         }
         return willRegisterNewMapping
     }
-
 
     private fun createSignedKeyAndVerify(node: StartedMockNode) : PublicKey {
         // Generate

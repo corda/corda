@@ -69,7 +69,7 @@ class PersistentKeyManagementService(cacheFactory: NamedCacheFactory, val identi
 
     override fun start(initialKeyPairs: Set<KeyPair>) {
         initialKeyPairs.forEach { keysMap.addWithDuplicatesAllowed(it.public, it.private) }
-        //TODO use similar mapping as in BasicHSMKeyManagementServicer
+        //TODO use similar mapping as in BasicHSMKeyManagementService
     }
 
     override val keys: Set<PublicKey> get() = database.transaction { keysMap.allPersisted().map { it.first }.toSet() }
