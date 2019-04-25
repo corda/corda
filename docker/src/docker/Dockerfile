@@ -1,35 +1,34 @@
 FROM azul/zulu-openjdk:8u192
 
-RUN apt-get update && apt-get -y upgrade && apt-get -y install bash curl unzip
+## Add packages, clean cache, create dirs, create corda user and change ownership
+RUN apt-get update && \
+    apt-get -y upgrade && \
+    apt-get -y install bash curl unzip && \
+    rm -rf /var/lib/apt/lists/* && \
+    mkdir -p /opt/corda/cordapps && \
+    mkdir -p /opt/corda/persistence && \
+    mkdir -p /opt/corda/certificates && \
+    mkdir -p /opt/corda/drivers && \
+    mkdir -p /opt/corda/logs && \
+    mkdir -p /opt/corda/bin && \
+    mkdir -p /opt/corda/additional-node-infos && \
+    mkdir -p /etc/corda && \
+    addgroup corda && \
+    useradd corda -g corda -m -d /opt/corda && \
+    chown -R corda:corda /opt/corda && \
+    chown -R corda:corda /etc/corda
 
-# Create dirs
-RUN mkdir -p /opt/corda/cordapps
-RUN mkdir -p /opt/corda/persistence
-RUN mkdir -p /opt/corda/certificates
-RUN mkdir -p /opt/corda/drivers
-RUN mkdir -p /opt/corda/logs
-RUN mkdir -p /opt/corda/bin
-RUN mkdir -p /opt/corda/additional-node-infos
-RUN mkdir -p /etc/corda
-
-# Create corda user
-RUN addgroup corda && \
-    useradd corda -g corda -m -d /opt/corda
-
-WORKDIR /opt/corda
-
-ENV CORDAPPS_FOLDER="/opt/corda/cordapps"
-ENV PERSISTENCE_FOLDER="/opt/corda/persistence"
-ENV CERTIFICATES_FOLDER="/opt/corda/certificates"
-ENV DRIVERS_FOLDER="/opt/corda/drivers"
-ENV CONFIG_FOLDER="/etc/corda"
-
-ENV MY_P2P_PORT=10200
-ENV MY_RPC_PORT=10201
-ENV MY_RPC_ADMIN_PORT=10202
-
-RUN chown -R corda:corda /opt/corda
-RUN chown -R corda:corda /etc/corda
+ENV CORDAPPS_FOLDER="/opt/corda/cordapps" \
+    PERSISTENCE_FOLDER="/opt/corda/persistence" \
+    CERTIFICATES_FOLDER="/opt/corda/certificates" \
+    DRIVERS_FOLDER="/opt/corda/drivers" \
+    CONFIG_FOLDER="/etc/corda" \
+    MY_P2P_PORT=10200 \
+    MY_RPC_PORT=10201 \
+    MY_RPC_ADMIN_PORT=10202 \
+    PATH=$PATH:/opt/corda/bin \
+    JVM_ARGS="-XX:+UseG1GC -XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap " \
+    CORDA_ARGS=""
 
 ##CORDAPPS FOLDER
 VOLUME ["/opt/corda/cordapps"]
@@ -46,25 +45,18 @@ VOLUME ["/opt/corda/additional-node-infos"]
 ##CONFIG LOCATION
 VOLUME ["/etc/corda"]
 
-
 ##CORDA JAR
-ADD --chown=corda:corda corda.jar /opt/corda/bin/corda.jar
+COPY --chown=corda:corda corda.jar /opt/corda/bin/corda.jar
 ##CONFIG MANIPULATOR JAR
-ADD --chown=corda:corda config-exporter.jar /opt/corda/config-exporter.jar
+COPY --chown=corda:corda config-exporter.jar /opt/corda/config-exporter.jar
 ##CONFIG GENERATOR SHELL SCRIPT
-ADD --chown=corda:corda generate-config.sh /opt/corda/bin/config-generator
+COPY --chown=corda:corda generate-config.sh /opt/corda/bin/config-generator
 ##CORDA RUN SCRIPT
-ADD --chown=corda:corda run-corda.sh /opt/corda/bin/run-corda
+COPY --chown=corda:corda run-corda.sh /opt/corda/bin/run-corda
 ##BASE CONFIG FOR GENERATOR
-ADD --chown=corda:corda starting-node.conf /opt/corda/starting-node.conf
-##SET EXECUTABLE PERMISSIONS
-RUN chmod +x /opt/corda/bin/config-generator
-RUN chmod +x /opt/corda/bin/run-corda
-
-ENV PATH=$PATH:/opt/corda/bin
-
-EXPOSE $MY_P2P_PORT
-EXPOSE $MY_RPC_PORT
+COPY --chown=corda:corda starting-node.conf /opt/corda/starting-node.conf
 
 USER "corda"
+EXPOSE ${MY_P2P_PORT} ${MY_RPC_PORT} ${MY_RPC_ADMIN_PORT}
+WORKDIR /opt/corda
 CMD ["run-corda"]
