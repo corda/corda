@@ -112,7 +112,7 @@ class PersistentKeyManagementService(cacheFactory: NamedCacheFactory, val identi
         }
     }
 
-    override fun externalIdForPublicKey(publicKey: PublicKey): UUID {
+    override fun externalIdForPublicKey(publicKey: PublicKey): UUID? {
         return database.transaction {
             val criteriaQuery = session.criteriaBuilder.createQuery(PublicKeyHashToExternalId::class.java)
             val queryRoot = criteriaQuery.from(PublicKeyHashToExternalId::class.java)

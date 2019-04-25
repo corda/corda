@@ -9,6 +9,7 @@ import net.corda.core.serialization.serialize
 import net.corda.core.utilities.MAX_HASH_HEX_SIZE
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.utilities.AppendOnlyPersistentMap
+import net.corda.node.utilities.AppendOnlyPersistentMapBase
 import net.corda.nodeapi.internal.cryptoservice.CryptoService
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
@@ -45,7 +46,7 @@ class BasicHSMKeyManagementService(cacheFactory: NamedCacheFactory, val identity
             var privateKey: ByteArray = EMPTY_BYTE_ARRAY
     ) {
         constructor(publicKey: PublicKey, privateKey: PrivateKey)
-            : this(publicKey.toStringShort(), publicKey.encoded, privateKey.encoded)
+                : this(publicKey.toStringShort(), publicKey.encoded, privateKey.encoded)
     }
 
     private companion object {
@@ -54,8 +55,10 @@ class BasicHSMKeyManagementService(cacheFactory: NamedCacheFactory, val identity
                     cacheFactory = cacheFactory,
                     name = "BasicHSMKeyManagementService_keys",
                     toPersistentEntityKey = { it.toStringShort() },
-                    fromPersistentEntity = { Pair(Crypto.decodePublicKey(it.publicKey), Crypto.decodePrivateKey(
-                            it.privateKey)) },
+                    fromPersistentEntity = {
+                        Pair(Crypto.decodePublicKey(it.publicKey), Crypto.decodePrivateKey(
+                                it.privateKey))
+                    },
                     toPersistentEntity = { key: PublicKey, value: PrivateKey ->
                         PersistentKey(key, value)
                     },
@@ -63,15 +66,14 @@ class BasicHSMKeyManagementService(cacheFactory: NamedCacheFactory, val identity
             )
         }
 
-
-        fun createExternalIdMap(cacheFactory: NamedCacheFactory): AppendOnlyPersistentMap<String, UUID, PublicKeyHashToExternalId, String>{
+        fun createExternalIdMap(cacheFactory: NamedCacheFactory, database: CordaPersistence): AppendOnlyPersistentMapBase<String, UUID, PublicKeyHashToExternalId, String> {
             return AppendOnlyPersistentMap(
-                    cacheFactory = cacheFactory,
-                    name = "BasicHSMKeyManagementService_keyToExternalId",
-                    toPersistentEntityKey = {it -> it},
-                    fromPersistentEntity = {it.publicKeyHash to it.externalId},
-                    toPersistentEntity = {keyHash: String, uuid: UUID -> PublicKeyHashToExternalId(uuid, keyHash) },
-                    persistentEntityClass = PublicKeyHashToExternalId::class.java)
+                        cacheFactory = cacheFactory,
+                        name = "BasicHSMKeyManagementService_keyToExternalId",
+                        toPersistentEntityKey = { it -> it },
+                        fromPersistentEntity = { it.publicKeyHash to it.externalId },
+                        toPersistentEntity = { keyHash: String, uuid: UUID -> PublicKeyHashToExternalId(uuid, keyHash) },
+                        persistentEntityClass = PublicKeyHashToExternalId::class.java)
         }
     }
 
@@ -79,14 +81,15 @@ class BasicHSMKeyManagementService(cacheFactory: NamedCacheFactory, val identity
     private val originalKeysMap = mutableMapOf<PublicKey, String>()
     // A map for anonymous keys.
     private val keysMap = createKeyMap(cacheFactory)
-    private val keyToExternalId = createExternalIdMap(cacheFactory)
-
-//    private val externalIdCache =
+    private val keyToExternalId = createExternalIdMap(cacheFactory, database)
 
     override fun start(initialKeyPairs: Set<KeyPair>) {
         initialKeyPairs.forEach {
             require(it.private is AliasPrivateKey) { "${this.javaClass.name} supports AliasPrivateKeys only, but ${it.private.algorithm} key was found" }
             originalKeysMap[Crypto.toSupportedPublicKey(it.public)] = (it.private as AliasPrivateKey).alias
+        }
+        database.transaction {
+//            keyToExternalId.preLoaded(limit = 100_000, orderingField = PublicKeyHashToExternalId::dateMapped, ascending = false)
         }
     }
 

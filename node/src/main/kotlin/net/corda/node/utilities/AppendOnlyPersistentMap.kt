@@ -12,6 +12,7 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
+import kotlin.reflect.KProperty1
 
 /**
  * Implements a caching layer on top of an *append-only* table accessed via Hibernate mapping. Note that if the same key is [set] twice,
@@ -55,6 +56,29 @@ abstract class AppendOnlyPersistentMapBase<MAP_KEY, MAP_VALUE, PERSISTED_ENTITY,
         return result.map { x -> fromPersistentEntity(x) }.asSequence()
     }
 
+    inline fun <reified T : Comparable<*>> preLoaded(limit: Int? = null, orderingField: KProperty1<PERSISTED_ENTITY, T>? = null, ascending: Boolean = true): AppendOnlyPersistentMapBase<MAP_KEY, MAP_VALUE, PERSISTED_ENTITY, PERSISTED_ENTITY_KEY> {
+        val session = currentDBSession()
+        val criteriaQuery = session.criteriaBuilder.createQuery(persistentEntityClass)
+        val root = criteriaQuery.from(persistentEntityClass)
+        criteriaQuery.select(root)
+        orderingField?.let {
+            if (ascending) {
+                criteriaQuery.orderBy(session.criteriaBuilder.asc(root.get<T>(orderingField.name)))
+            } else {
+                criteriaQuery.orderBy(session.criteriaBuilder.desc(root.get<T>(orderingField.name)))
+            }
+        }
+        val query = session.createQuery(criteriaQuery)
+        limit?.let {
+            query.maxResults = limit
+        }
+        val results = query.resultList
+
+        val mappedResults = results.map { fromPersistentEntity(it) }.toMap()
+        mappedResults.forEach { this.get(it.key) }
+        return this
+    }
+
     private fun set(key: MAP_KEY, value: MAP_VALUE, logWarning: Boolean, store: (MAP_KEY, MAP_VALUE) -> MAP_VALUE?): Boolean {
         // Will be set to true if store says it isn't in the database.
         var isUnique = false
@@ -93,7 +117,7 @@ abstract class AppendOnlyPersistentMapBase<MAP_KEY, MAP_VALUE, PERSISTED_ENTITY,
     }
 
     private fun transactionalForStoreResult(key: MAP_KEY, value: MAP_VALUE, oldValue: MAP_VALUE?): Transactional<MAP_VALUE> {
-        return if ( (oldValue != null) && !weAreWriting(key)) {
+        return if ((oldValue != null) && !weAreWriting(key)) {
             // If we found a value already in the database, and we were not already writing, then it's already committed but got evicted.
             Transactional.Committed(oldValue)
         } else {
