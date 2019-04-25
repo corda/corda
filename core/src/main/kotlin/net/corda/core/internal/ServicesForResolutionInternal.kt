@@ -1,10 +1,8 @@
 package net.corda.core.internal
 
-import net.corda.core.DeleteForDJVM
 import net.corda.core.crypto.SecureHash
 import net.corda.core.node.ServicesForResolution
 
-@DeleteForDJVM
 interface ServicesForResolutionInternal : ServicesForResolution {
 
     /**

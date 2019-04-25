@@ -91,27 +91,6 @@ class AttachmentLoadingTests {
     }
 
     @Test
-    fun `contract is not executed if signing key is not whitelisted`() {
-        driver(DriverParameters(
-                startNodesInProcess = false,
-                notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, validating = false)),
-                cordappsForAllNodes = listOf(enclosedCordapp()),
-                networkParameters = testNetworkParameters(minimumPlatformVersion = 4)
-        )) {
-            installIsolatedCordapp(ALICE_NAME)
-
-            val (alice, bob) = listOf(
-                    startNode(providedName = ALICE_NAME),
-                    startNode(NodeParameters(providedName = BOB_NAME))
-            ).transpose().getOrThrow()
-
-            val stateRef = alice.rpc.startFlowDynamic(issuanceFlowClass, 1234).returnValue.getOrThrow()
-            assertThatThrownBy { alice.rpc.startFlow(::ConsumeAndBroadcastFlow, stateRef, bob.nodeInfo.singleIdentity()).returnValue.getOrThrow() }
-                    .hasMessage(TransactionVerificationException.UntrustedAttachmentsException::class.java.name)
-        }
-    }
-
-    @Test
     fun `contract is executed if signing key is whitelisted`() {
         driver(DriverParameters(
                 startNodesInProcess = false,
