@@ -118,11 +118,11 @@ plugins {
     // TODO The capsule plugin requires the newer DSL plugin block.It would be nice if we could unify all the plugins into one style,
     // but the DSL has some restrictions e.g can't be used on the allprojects section. So we should revisit this if there are improvements in Gradle.
     // Version 1.0.2 of this plugin uses capsule:1.0.1 by default.
-    id 'us.kirchmeier.capsule' version '1.0.2' apply false
+    id 'us.kirchmeier.capsule' version '1.0.2-gradle-5' apply false
 
     // Add the shadow plugin to the plugins classpath for the entire project.
     id 'com.github.johnrengelman.shadow' version '2.0.4' apply false
-    id "com.gradle.build-scan" version "1.16"
+    id "com.gradle.build-scan" version "2.0.2"
 }
 
 ext {
