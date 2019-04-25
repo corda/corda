@@ -43,7 +43,7 @@ object CashUtils {
                       amount: Amount<Currency>,
                       to: AbstractParty,
                       onlyFromParties: Set<AbstractParty> = emptySet()): Pair<TransactionBuilder, List<PublicKey>> {
-        return generateSpend(services, tx, listOf(PartyAndAmount(to, amount)), services.myInfo.legalIdentitiesAndCerts.single(), onlyFromParties, anonymous)
+        return generateSpend(services, tx, listOf(PartyAndAmount(to, amount)), services.myInfo.legalIdentitiesAndCerts.single(), onlyFromParties)
     }
 
     /**
