@@ -4,9 +4,9 @@ Changelog
 Here's a summary of what's changed in each Corda release. For guidance on how to upgrade code from the previous
 release, see :doc:`app-upgrade-notes`.
 
-.. _changelog_v4.1:
+.. _changelog_v4.2:
 
-Version 4.1
+Version 4.2
 -----------
 
 * Added the ``whitelistedKeysForAttachments`` configuration option. This is a list of SHA-256 hashes of public keys. Attachments signed by
