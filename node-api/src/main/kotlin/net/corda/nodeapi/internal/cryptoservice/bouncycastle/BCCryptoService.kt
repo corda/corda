@@ -53,6 +53,7 @@ class BCCryptoService(private val legalName: X500Principal, private val certific
         }
     }
 
+    @JvmOverloads
     override fun sign(alias: String, data: ByteArray, signAlgorithm: String?): ByteArray {
         try {
             return when(signAlgorithm) {
