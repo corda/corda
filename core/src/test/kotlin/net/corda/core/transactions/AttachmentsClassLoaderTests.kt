@@ -201,11 +201,13 @@ class AttachmentsClassLoaderTests {
         val classJar = fakeAttachment("/com/example/something/UntrustedClass.class", "Signed by someone trusted").inputStream()
         val attachment = classJar.use { storage.importContractAttachment(listOf("UntrustedClass.class"), "untrusted", classJar, signers = listOf(keyPair.public))}
 
-        // Check that without the public key whitelisted, building the AttachmentClassLoader fails
+        // Check that without the public key whitelisted, building the AttachmentsClassLoader fails. The AttachmentsClassLoader is responsible
+        // for checking what attachments are trusted at the point that it is constructed.
         assertFailsWith(TransactionVerificationException.UntrustedAttachmentsException::class) {
             make(arrayOf(attachment).map { storage.openAttachment(it)!! })
         }
 
+        // Check that with the public key whitelisted, the AttachmentsClassLoader can be built (i.e. the attachment trusted check passes)
         make(arrayOf(attachment).map { storage.openAttachment(it)!! }, whitelistedKeys = listOf(keyPair.public.hash))
     }
 

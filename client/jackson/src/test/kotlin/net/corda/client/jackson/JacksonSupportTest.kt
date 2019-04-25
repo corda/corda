@@ -246,7 +246,6 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
         doReturn(emptyList<Party>()).whenever(attachment).signerKeys
         doReturn(setOf(DummyContract.PROGRAM_ID)).whenever(attachment).allContracts
         doReturn("app").whenever(attachment).uploader
-        doReturn(emptyList<SecureHash>()).whenever(services).whitelistedKeysForAttachments
 
         val wtx = TransactionBuilder(
                 notary = DUMMY_NOTARY,
