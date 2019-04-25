@@ -393,7 +393,7 @@ open class MockServices private constructor(
     override var networkParametersService: NetworkParametersService = MockNetworkParametersStorage(initialNetworkParameters)
 
     protected val servicesForResolution: ServicesForResolution
-        get() = ServicesForResolutionImpl(identityService, attachments, cordappProvider, networkParametersService, validatedTransactions)
+        get() = ServicesForResolutionImpl(identityService, attachments, cordappProvider, networkParametersService, validatedTransactions, listOf())
 
     internal fun makeVaultService(schemaService: SchemaService, database: CordaPersistence, cordappLoader: CordappLoader): VaultServiceInternal {
         return NodeVaultService(clock, keyManagementService, servicesForResolution, database, schemaService, cordappLoader.appClassLoader).apply { start() }
