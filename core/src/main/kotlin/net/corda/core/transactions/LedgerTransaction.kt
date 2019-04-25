@@ -100,7 +100,7 @@ private constructor(
                 componentGroups: List<ComponentGroup>? = null,
                 serializedInputs: List<SerializedStateAndRef>? = null,
                 serializedReferences: List<SerializedStateAndRef>? = null,
-                extraTrustedAttachments: ExtraTrustedAttachments = ExtraTrustedAttachments.default()
+                extraTrustedAttachments: ExtraTrustedAttachments
         ): LedgerTransaction {
             return LedgerTransaction(inputs, outputs, commands, attachments, id, notary, timeWindow, privacySalt, networkParameters, references).apply {
                 this.componentGroups = componentGroups
