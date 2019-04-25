@@ -11,6 +11,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
 import net.corda.core.messaging.startFlow
+import net.corda.core.transactions.CoreTransaction
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
@@ -36,17 +37,18 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 class SignatureConstraintVersioningTests {
 
     private val baseUnsigned = cordappWithPackages(MessageState::class.packageName, DummyMessageContract::class.packageName)
     private val base = baseUnsigned.signed()
-    private val oldUnsigedCordapp = baseUnsigned.copy(versionId = 2)
+    private val oldUnsignedCordapp = baseUnsigned.copy(versionId = 2)
     private val oldCordapp = base.copy(versionId = 2)
     private val newCordapp = base.copy(versionId = 3)
     private val user = User("mark", "dadada", setOf(startFlow<CreateMessage>(), startFlow<ConsumeMessage>(), invokeRpc("vaultQuery")))
     private val message = Message("Hello world!")
-    private val transformetMessage = Message(message.value + "A")
+    private val transformedMessage = Message(message.value + "A")
 
     @Test
     fun `can evolve from lower contract class version to higher one`() {
@@ -92,22 +94,21 @@ class SignatureConstraintVersioningTests {
             result
         }
         assertNotNull(stateAndRef)
-        assertEquals(transformetMessage, stateAndRef!!.state.data.message)
+        assertEquals(transformedMessage, stateAndRef!!.state.data.message)
     }
 
     @Test
     fun `auto migration from WhitelistConstraint to SignatureConstraint`() {
-        val stateAndRef =
-            upgradeCorDappBetweenTransactions(oldUnsigedCordapp, newCordapp, listOf(oldUnsigedCordapp, newCordapp))
-        assertNotNull(stateAndRef)
-        assertEquals(transformetMessage, stateAndRef!!.state.data.message)
+        val transaction =
+            upgradeCorDappBetweenTransactions(oldUnsignedCordapp, newCordapp, listOf(oldUnsignedCordapp, newCordapp))
+        assertEquals(1, transaction.outputs.size)
+        assertTrue(transaction.outputs.single().constraint is SignatureAttachmentConstraint)
     }
 
-    //TODO the test actually doesn't check that signature constraint was used for the second transaction
     @Test
     fun `auto migration from WhitelistConstraint to SignatureConstraint fail for not whitelisted signed JAR`() {
         assertThatExceptionOfType(CordaRuntimeException::class.java).isThrownBy {
-            upgradeCorDappBetweenTransactions(oldUnsigedCordapp, newCordapp, emptyList())
+            upgradeCorDappBetweenTransactions(oldUnsignedCordapp, newCordapp, emptyList())
         }.withMessageContaining("Selected output constraint: $WhitelistedByZoneAttachmentConstraint not satisfying")
     }
 
@@ -119,7 +120,7 @@ class SignatureConstraintVersioningTests {
         cordapp: CustomCordapp,
         newCordapp: CustomCordapp,
         whiteListedCordapps: List<CustomCordapp>
-    ): StateAndRef<MessageState>? {
+    ): CoreTransaction {
         assumeFalse(System.getProperty("os.name").toLowerCase().startsWith("win")) // See NodeStatePersistenceTests.kt.
 
         val attachmentHashes = whiteListedCordapps.map { Files.newInputStream(it.jarFile).readFully().sha256() }
@@ -137,7 +138,7 @@ class SignatureConstraintVersioningTests {
             // delete the first cordapp
             deleteCorDapp(baseDirectory, cordapp)
             // create transaction using the upgraded cordapp resuing   input for transaction
-            createConsumingTransaction(nodeName, newCordapp)
+            createConsumingTransaction(nodeName, newCordapp).coreTransaction
         }
     }
 
@@ -156,7 +157,7 @@ class SignatureConstraintVersioningTests {
         cordappPath.delete()
     }
 
-    private fun DriverDSL.createConsumingTransaction(nodeName: CordaX500Name, cordapp: CustomCordapp): StateAndRef<MessageState>? {
+    private fun DriverDSL.createConsumingTransaction(nodeName: CordaX500Name, cordapp: CustomCordapp): SignedTransaction {
         val nodeHandle = startNode(
             NodeParameters(
                 providedName = nodeName,
@@ -164,20 +165,15 @@ class SignatureConstraintVersioningTests {
                 additionalCordapps = listOf(cordapp)
             )
         ).getOrThrow()
-        var result: StateAndRef<MessageState>? = CordaRPCClient(nodeHandle.rpcAddress).start(user.username, user.password).use {
+        val result: StateAndRef<MessageState>? = CordaRPCClient(nodeHandle.rpcAddress).start(user.username, user.password).use {
             val page = it.proxy.vaultQuery(MessageState::class.java)
             page.states.singleOrNull()
         }
-        CordaRPCClient(nodeHandle.rpcAddress).start(user.username, user.password).use {
+        val transaction = CordaRPCClient(nodeHandle.rpcAddress).start(user.username, user.password).use {
             it.proxy.startFlow(::ConsumeMessage, result!!, defaultNotaryIdentity).returnValue.getOrThrow()
         }
-        result = CordaRPCClient(nodeHandle.rpcAddress).start(user.username, user.password).use {
-            val page = it.proxy.vaultQuery(MessageState::class.java)
-            page.states.singleOrNull()
-        }
-
         nodeHandle.stop()
-        return result
+        return transaction
     }
 }
 
