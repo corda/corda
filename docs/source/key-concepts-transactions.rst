@@ -23,8 +23,8 @@ Transactions
 Overview
 --------
 Corda uses a *UTXO* (unspent transaction output) model where every state on the ledger is immutable. The ledger
-evolves over time by applying *transactions*, which update the ledger by marking zero or more existing ledger states
-as historic (the *inputs*) and producing zero or more new ledger states (the *outputs*). Transactions represent a
+evolves over time by applying *transactions*. Transactions update the ledger by marking zero or more existing ledger states
+as historic (the *inputs*), and producing zero or more new ledger states (the *outputs*). Transactions represent a
 single link in the state sequences seen in :doc:`key-concepts-states`.
 
 Here is an example of an update transaction, with two inputs and two outputs:
@@ -35,11 +35,11 @@ Here is an example of an update transaction, with two inputs and two outputs:
 
 A transaction can contain any number of inputs, outputs and references of any type:
 
-* They can include many different state types (e.g. both cash and bonds)
+* They can include many different state types (states may represent cash or bonds, for example)
 * They can be issuances (have zero inputs) or exits (have zero outputs)
-* They can merge or split fungible assets (e.g. combining a $2 state and a $5 state into a $7 cash state)
+* They can merge or split fungible assets (for example, they may combine a $2 state and a $5 state into a $7 cash state)
 
-Transactions are *atomic*: either all the transaction's proposed changes are accepted, or none are.
+Transactions are *atomic*; either all of the transaction's proposed changes are accepted, or none are.
 
 There are two basic types of transactions:
 
@@ -48,8 +48,8 @@ There are two basic types of transactions:
 
 Transaction chains
 ------------------
-When creating a new transaction, the output states that the transaction will propose do not exist yet, and must
-therefore be created by the proposer(s) of the transaction. However, the input states already exist as the outputs of
+When creating a new transaction, the output states that the transaction proposes do not exist yet, and must
+therefore be created by the proposer or proposers of the transaction. However, the input states already exist as the outputs of
 previous transactions. We therefore include them in the proposed transaction by reference.
 
 These input states references are a combination of:
@@ -63,12 +63,12 @@ This situation can be illustrated as follows:
    :scale: 25%
    :align: center
 
-These input state references link together transactions over time, forming what is known as a *transaction chain*.
+These input state references link transactions together over time, forming what is known as a *transaction chain*.
 
 Committing transactions
 -----------------------
 Initially, a transaction is just a **proposal** to update the ledger. It represents the future state of the ledger
-that is desired by the transaction builder(s):
+that is desired by the transaction builders:
 
 .. image:: resources/uncommitted_tx.png
    :scale: 25%
@@ -94,7 +94,7 @@ This means that:
 
 Transaction validity
 --------------------
-Each required signers should only sign the transaction if the following two conditions hold:
+Each required signer should only sign the transaction if the following two conditions hold:
 
    * **Transaction validity**: For both the proposed transaction, and every transaction in the chain of transactions
      that created the current proposed transaction's inputs:
@@ -105,15 +105,15 @@ Each required signers should only sign the transaction if the following two cond
    * **Transaction uniqueness**: There exists no other committed transaction that has consumed any of the inputs to
      our proposed transaction (see :doc:`key-concepts-consensus`)
 
-If the transaction gathers all the required signatures but these conditions do not hold, the transaction's outputs
-will not be valid, and will not be accepted as inputs to subsequent transactions.
+If the transaction gathers all of the required signatures, but the preceding conditions do not hold, the transaction's outputs
+will not be valid and will not be accepted as inputs to subsequent transactions.
 
 Reference states
 ----------------
 
 As mentioned in :doc:`key-concepts-states`, some states need to be referred to by the contracts of other input or output
 states but not updated/consumed. This is where reference states come in. When a state is added to the references list of
-a transaction, instead of the inputs or outputs list, then it is treated as a *reference state*. There are two important
+a transaction, instead of the inputs or outputs list, it is treated as a *reference state*. There are two important
 differences between regular states and reference states:
 
 * The specified notary for the transaction **does** check whether the reference states are current. However, reference
@@ -130,14 +130,13 @@ As well as input states and output states, transactions contain:
 * Notary
 
 For example, suppose we have a transaction where Alice uses a £5 cash payment to pay off £5 of an IOU with Bob.
-This transaction has two supporting attachments and will only be notarised by NotaryClusterA if the notary pool
+This transaction comprises two commands: a settlement command which reduces the amount outstanding on the IOU, and a payment command which changes the ownership of £5 from Alice to Bob. It also
+has two supporting attachments, and will only be notarised by NotaryClusterA if the notary pool
 receives it within the specified time-window. This transaction would look as follows:
 
 .. image:: resources/full-tx.png
    :scale: 25%
    :align: center
-
-We explore the role played by the remaining transaction components below.
 
 Commands
 ^^^^^^^^
@@ -191,13 +190,13 @@ used when checking the transaction's validity.
 
 Time-window
 ^^^^^^^^^^^
-In some cases, we want a transaction proposed to only be approved during a certain time-window. For example:
+In some cases, we want a proposed transaction to only be approved during a certain time-window. For example:
 
 * An option can only be exercised after a certain date
 * A bond may only be redeemed before its expiry date
 
-In such cases, we can add a *time-window* to the transaction. Time-windows specify the time window during which the
-transaction can be committed. We discuss time-windows in the section on :doc:`key-concepts-time-windows`.
+In such cases, we can add a *time-window* to the transaction. Time-windows specify the time period during which the
+transaction can be committed. The notary pool enforces time-window validity. We discuss time-windows in the section on :doc:`key-concepts-time-windows`.
 
 Notary
 ^^^^^^
