@@ -213,6 +213,9 @@ This table should be empty when no events are scheduled.
 Storage of private keys
 -----------------------
 
+Read more in :doc:`cryptoservice-configuration`
+These tables are a less secure alternative for storing keys to using an HSM (Hardware Security Module).
+
 ==============================   ==========================================================================================
 NODE_OUR_KEY_PAIRS                  Stores the anonymous identities
 ==============================   ==========================================================================================
@@ -258,6 +261,9 @@ INSERTION_TIME                      Insertion time
 SENDER                              P2p sender
 SEQUENCE_NUMBER                     Sequence number
 ==============================   ==========================================================================================
+
+The `NodeJanitor` is a background process that will clean up old entries from this table.
+The size should be fairly constant.
 
 
 Key value store
@@ -386,11 +392,25 @@ PARTICIPANTS                        X500 name of participant.
 
 
 
+Hot cold setup
+===============
+
+==============================   ==========================================================================================
+NODE_MUTUAL_EXCLUSION               Lock for hot-cold deployments. Only 1 entry with the active machine.
+==============================   ==========================================================================================
+MUTUAL_EXCLUSION_ID                 Primary key
+MACHINE_NAME                        The machine holding the lock
+PID                                 The process id
+MUTUAL_EXCLUSION_TIMESTAMP          When the lock was taken.
+VERSION                             The version
+==============================   ==========================================================================================
+
+
 
 Liquibase database migration
 ============================
 
-These are `Liquibase <https://www.liquibase.org>`_ proprietary tables used by Corda internally to manage schema change and evolution.
+These are `Liquibase <https://www.liquibase.org`_ proprietary tables used by Corda internally and by CorDapps to manage schema change and evolution.
 
 ==============================   ==========================================================================================
 DATABASECHANGELOG                Read more: `DATABASECHANGELOG <https://www.liquibase.org/documentation/databasechangelog_table.html>`_
