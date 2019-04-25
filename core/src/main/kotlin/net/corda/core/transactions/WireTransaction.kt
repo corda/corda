@@ -144,7 +144,8 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                 { stateRef -> resolveStateRef(stateRef)?.serialize() },
                 { null },
                 // Returning a dummy `missingAttachment` Attachment allows this deprecated method to work and it disables "contract version no downgrade rule" as a dummy Attachment returns version 1
-                { resolveAttachment(it.txhash) ?: missingAttachment }
+                { resolveAttachment(it.txhash) ?: missingAttachment },
+                listOf()
         )
     }
 
@@ -162,7 +163,8 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                 resolveAttachment,
                 { stateRef -> resolveStateRef(stateRef)?.serialize() },
                 resolveParameters,
-                { resolveAttachment(it.txhash) ?: missingAttachment }
+                { resolveAttachment(it.txhash) ?: missingAttachment },
+                listOf()
         )
     }
 
@@ -172,7 +174,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
             resolveStateRefAsSerialized: (StateRef) -> SerializedBytes<TransactionState<ContractState>>?,
             resolveParameters: (SecureHash?) -> NetworkParameters?,
             resolveContractAttachment: (StateRef) -> Attachment,
-            whitelistedKeys: Collection<SecureHash> = listOf()
+            whitelistedKeys: Collection<SecureHash>
     ): LedgerTransaction {
         // Look up public keys to authenticated identities.
         val authenticatedCommands = commands.lazyMapped { cmd, _ ->

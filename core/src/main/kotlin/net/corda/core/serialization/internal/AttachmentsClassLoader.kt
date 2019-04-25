@@ -38,8 +38,8 @@ import java.util.*
 class AttachmentsClassLoader(attachments: List<Attachment>,
                              val params: NetworkParameters,
                              private val sampleTxId: SecureHash,
-                             parent: ClassLoader = ClassLoader.getSystemClassLoader(),
-                             private val whitelistedPublicKeys: Collection<SecureHash>) :
+                             private val whitelistedPublicKeys: Collection<SecureHash>,
+                             parent: ClassLoader = ClassLoader.getSystemClassLoader()) :
         URLClassLoader(attachments.map(::toUrl).toTypedArray(), parent) {
 
     companion object {
@@ -325,7 +325,7 @@ object AttachmentsClassLoaderBuilder {
 
         val serializationContext = cache.computeIfAbsent(Key(attachmentIds, params)) {
             // Create classloader and load serializers, whitelisted classes
-            val transactionClassLoader = AttachmentsClassLoader(attachments, params, txId, parent, whitelistedPublicKeys)
+            val transactionClassLoader = AttachmentsClassLoader(attachments, params, txId, whitelistedPublicKeys, parent)
             val serializers = createInstancesOfClassesImplementing(transactionClassLoader, SerializationCustomSerializer::class.java)
             val whitelistedClasses = ServiceLoader.load(SerializationWhitelist::class.java, transactionClassLoader)
                     .flatMap { it.whitelist }
