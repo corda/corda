@@ -318,8 +318,8 @@ object AttachmentsClassLoaderBuilder {
     fun <T> withAttachmentsClassloaderContext(attachments: List<Attachment>,
                                               params: NetworkParameters,
                                               txId: SecureHash,
+                                              whitelistedPublicKeys: Collection<SecureHash>,
                                               parent: ClassLoader = ClassLoader.getSystemClassLoader(),
-                                              whitelistedPublicKeys: Collection<SecureHash> = listOf(),
                                               block: (ClassLoader) -> T): T {
         val attachmentIds = attachments.map { it.id }.toSet()
 
