@@ -12,7 +12,11 @@ dependencies {
     compile project(":common-validation")
 
     testCompile group: "org.jetbrains.kotlin", name: "kotlin-test", version: kotlin_version
-    testCompile group: "junit", name: "junit", version: junit_version
+    
+    testImplementation "org.junit.jupiter:junit-jupiter:$junit_jupiter_version"
+    testImplementation "org.junit.vintage:junit-vintage-engine:$junit_jupiter_version"
+    testRuntime "org.junit.platform:junit-platform-launcher:$junit_platform_version"
+    
     testCompile group: "org.assertj", name: "assertj-core", version: assertj_version
 }
 

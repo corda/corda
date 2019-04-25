@@ -19,7 +19,9 @@ dependencies {
     testCompile project(':test-utils')
     testCompile project(path: ':core', configuration: 'testArtifacts')
     testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
-    testCompile "junit:junit:$junit_version"
+    testImplementation "org.junit.jupiter:junit-jupiter:$junit_jupiter_version"
+    testImplementation "org.junit.vintage:junit-vintage-engine:$junit_jupiter_version"
+    testRuntime "org.junit.platform:junit-platform-launcher:$junit_platform_version"
 }
 
 jar {

@@ -35,7 +35,10 @@ dependencies {
     shadow "io.github.classgraph:classgraph:$class_graph_version"
 
     // Test utilities
-    testImplementation "junit:junit:$junit_version"
+    testImplementation "org.junit.jupiter:junit-jupiter:$junit_jupiter_version"
+    testImplementation "org.junit.vintage:junit-vintage-engine:$junit_jupiter_version"
+    testRuntime "org.junit.platform:junit-platform-launcher:$junit_platform_version"
+    
     testImplementation "org.assertj:assertj-core:$assertj_version"
     testImplementation "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
     jdkRt "net.corda:deterministic-rt:latest.integration"

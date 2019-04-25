@@ -61,7 +61,9 @@ dependencies {
     compileOnly "co.paralleluniverse:capsule:$capsule_version"
 
     integrationTestCompile project(':node-driver')
-    testCompile "junit:junit:$junit_version"
+    testImplementation "org.junit.jupiter:junit-jupiter:$junit_jupiter_version"
+    testRuntime "org.junit.vintage:junit-vintage-engine:$junit_jupiter_version"
+    testRuntime "org.junit.platform:junit-platform-launcher:$junit_platform_version"
 }
 
 task integrationTest(type: Test) {

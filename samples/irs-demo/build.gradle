@@ -69,7 +69,9 @@ dependencies {
     }
 
     testCompile project(':node-driver')
-    testCompile "junit:junit:$junit_version"
+    testImplementation "org.junit.jupiter:junit-jupiter:$junit_jupiter_version"
+    testImplementation "org.junit.vintage:junit-vintage-engine:$junit_jupiter_version"
+    testRuntime "org.junit.platform:junit-platform-launcher:$junit_platform_version"
     testCompile "org.assertj:assertj-core:${assertj_version}"
 
     integrationTestCompile project(path: ":samples:irs-demo:web", configuration: "demoArtifacts")

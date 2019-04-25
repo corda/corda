@@ -129,7 +129,9 @@ dependencies {
     compile "com.typesafe:config:$typesafe_config_version"
 
     // Unit testing helpers.
-    testCompile "junit:junit:$junit_version"
+    testImplementation "org.junit.jupiter:junit-jupiter:$junit_jupiter_version"
+    testImplementation "org.junit.vintage:junit-vintage-engine:$junit_jupiter_version"
+    testRuntime "org.junit.platform:junit-platform-launcher:$junit_platform_version"
     testCompile "org.assertj:assertj-core:${assertj_version}"
     testCompile project(':test-utils')
     testCompile project(':client:jfx')
@@ -167,7 +169,9 @@ dependencies {
     compile "info.picocli:picocli:$picocli_version"
 
     // Integration test helpers
-    integrationTestCompile "junit:junit:$junit_version"
+    integrationTestImplementation "org.junit.jupiter:junit-jupiter:$junit_jupiter_version"
+    integrationTestImplementation "org.junit.vintage:junit-vintage-engine:$junit_jupiter_version"
+    integrationTestRuntime "org.junit.platform:junit-platform-launcher:$junit_platform_version"
     integrationTestCompile "org.assertj:assertj-core:${assertj_version}"
 
     // AgentLoader: dynamic loading of JVM agents
