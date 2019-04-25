@@ -89,7 +89,7 @@ class BasicHSMKeyManagementService(cacheFactory: NamedCacheFactory, val identity
             originalKeysMap[Crypto.toSupportedPublicKey(it.public)] = (it.private as AliasPrivateKey).alias
         }
         database.transaction {
-//            keyToExternalId.preLoaded(limit = 100_000, orderingField = PublicKeyHashToExternalId::dateMapped, ascending = false)
+            keyToExternalId.preLoaded(limit = 100_000, orderingField = PublicKeyHashToExternalId::dateMapped, ascending = false)
         }
     }
 
