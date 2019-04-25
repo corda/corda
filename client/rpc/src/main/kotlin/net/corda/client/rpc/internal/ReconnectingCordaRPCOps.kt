@@ -197,7 +197,7 @@ class ReconnectingCordaRPCOps private constructor(
                     is ActiveMQSecurityException -> {
                         // Happens when incorrect credentials provided.
                         // It can happen at startup as well when the credentials are correct.
-                        if (_currentAuthenticationRetries++ > 1) {
+                        if (_currentAuthenticationRetries++ > 3) {
                             log.error("Failed to login to node.", ex)
                             throw ex
                         }
