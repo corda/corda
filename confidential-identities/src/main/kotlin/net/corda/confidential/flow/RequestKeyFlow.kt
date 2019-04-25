@@ -13,6 +13,7 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.unwrap
+import net.corda.node.services.api.IdentityServiceInternal
 import java.security.SignatureException
 
 class RequestKeyFlow
