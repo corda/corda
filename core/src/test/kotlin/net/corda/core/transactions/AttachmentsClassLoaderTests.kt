@@ -201,6 +201,11 @@ class AttachmentsClassLoaderTests {
         val classJar = fakeAttachment("/com/example/something/UntrustedClass.class", "Signed by someone trusted").inputStream()
         val attachment = classJar.use { storage.importContractAttachment(listOf("UntrustedClass.class"), "untrusted", classJar, signers = listOf(keyPair.public))}
 
+        // Check that without the public key whitelisted, building the AttachmentClassLoader fails
+        assertFailsWith(TransactionVerificationException.UntrustedAttachmentsException::class) {
+            make(arrayOf(attachment).map { storage.openAttachment(it)!! })
+        }
+
         make(arrayOf(attachment).map { storage.openAttachment(it)!! }, whitelistedKeys = listOf(keyPair.public.hash))
     }
 
