@@ -5,7 +5,6 @@ buildscript {
     ext {
         guava_version = constants.getProperty("guavaVersion")
         assertj_version = '3.9.1'
-        junit_version = '4.12'
     }
 }
 
