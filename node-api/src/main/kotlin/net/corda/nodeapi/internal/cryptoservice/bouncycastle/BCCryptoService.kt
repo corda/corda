@@ -3,7 +3,6 @@ package net.corda.nodeapi.internal.cryptoservice.bouncycastle
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SignatureScheme
 import net.corda.core.crypto.internal.cordaBouncyCastleProvider
-import net.corda.core.crypto.internal.providerMap
 import net.corda.core.crypto.newSecureRandom
 import net.corda.core.crypto.sha256
 import net.corda.nodeapi.internal.config.CertificateStore
@@ -12,7 +11,6 @@ import net.corda.nodeapi.internal.crypto.ContentSignerBuilder
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.cryptoservice.CryptoService
 import net.corda.nodeapi.internal.cryptoservice.CryptoServiceException
-import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.bouncycastle.operator.ContentSigner
 import java.security.KeyPair
 import java.security.KeyStore
