@@ -7,14 +7,12 @@ import net.corda.core.CordaInternal
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
-import net.corda.core.flows.InitiatedBy
 import net.corda.core.identity.Party
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.unwrap
-import net.corda.node.services.api.IdentityServiceInternal
 import java.security.SignatureException
 
 class RequestKeyFlow
@@ -65,9 +63,10 @@ class RequestKeyFlow
     }
 }
 
-@InitiatedBy(RequestKeyFlow::class)
+//cannot be initatedBy RequestKeyFlow as RequestKeyFlow is not a topLevel Flow (it takes sessions into it's constructor)
 class RequestKeyFlowHandler(private val otherSession: FlowSession) : FlowLogic<Unit>() {
 
+    @Suspendable
     override fun call() {
         otherSession.receive<NewKeyRequest>().unwrap { it }
         // Generate key
