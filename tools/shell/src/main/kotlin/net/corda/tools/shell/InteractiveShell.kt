@@ -2,7 +2,6 @@ package net.corda.tools.shell
 
 import com.fasterxml.jackson.core.JsonFactory
 import com.fasterxml.jackson.databind.JsonMappingException
-import com.fasterxml.jackson.databind.Module
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.databind.module.SimpleModule
@@ -24,7 +23,7 @@ import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.*
-import net.corda.client.jackson.internal.CustomRPCSerializationFactory
+import net.corda.client.jackson.internal.CustomShellSerializationFactory
 import net.corda.tools.shell.utlities.ANSIProgressRenderer
 import net.corda.tools.shell.utlities.StdoutANSIProgressRenderer
 import org.crsh.command.InvocationContext
@@ -212,12 +211,6 @@ object InteractiveShell {
     }
 
     fun createYamlInputMapper(rpcOps: CordaRPCOps, classLoader: ClassLoader?): ObjectMapper {
-        // Scan for CustomRPCSerializationJacksonModule on the classloader and register them as modules.
-        val customModules = ClassGraph().addClassLoader(classLoader).enableClassInfo().pooledScan().use { scan ->
-            scan.getClassesImplementing(CustomRPCSerializationFactory::class.java.name)
-                    .map { it.loadClass().newInstance() as CustomRPCSerializationFactory }
-        }
-
         // Return a standard Corda Jackson object mapper, configured to use YAML by default and with extra
         // serializers.
         return JacksonSupport.createDefaultMapper(rpcOps, YAMLFactory(), true).apply {
@@ -225,7 +218,15 @@ object InteractiveShell {
                 addDeserializer(InputStream::class.java, InputStreamDeserializer)
                 addDeserializer(UniqueIdentifier::class.java, UniqueIdentifierDeserializer)
             }
-            customModules.forEach { registerModule(it.createJacksonModule()) }
+            if(classLoader != null){
+                // Scan for CustomShellSerializationFactory on the classloader and register them as modules.
+                val customModules = ClassGraph().addClassLoader(classLoader).enableClassInfo().pooledScan().use { scan ->
+                    scan.getClassesImplementing(CustomShellSerializationFactory::class.java.name)
+                            .map { it.loadClass().newInstance() as CustomShellSerializationFactory }
+                }
+                log.info("Found the following custom shell serialization modules: ${customModules.map { it.javaClass.name }}")
+                customModules.forEach { registerModule(it.createJacksonModule()) }
+            }
             registerModule(rpcModule)
         }
     }

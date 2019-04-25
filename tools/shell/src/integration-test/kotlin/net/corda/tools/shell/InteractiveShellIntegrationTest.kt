@@ -10,7 +10,7 @@ import com.jcraft.jsch.JSch
 import com.nhaarman.mockito_kotlin.any
 import com.nhaarman.mockito_kotlin.doAnswer
 import com.nhaarman.mockito_kotlin.mock
-import net.corda.client.jackson.internal.CustomRPCSerializationFactory
+import net.corda.client.jackson.internal.CustomShellSerializationFactory
 import net.corda.client.rpc.RPCException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
@@ -408,7 +408,7 @@ class InteractiveShellIntegrationTest {
             }
             runFlowByNameFragment(
                     "DeserializeFlow",
-                    "firstAndLastName: John Doe", output, node.rpc, ansiProgressRenderer, createYamlInputMapper(node.rpc, null))
+                    "firstAndLastName: John Doe", output, node.rpc, ansiProgressRenderer, createYamlInputMapper(node.rpc, this::class.java.classLoader))
         }
         assertThat(successful).isTrue()
     }
@@ -454,7 +454,7 @@ class DeserializeFlow(private val firstAndLastName: FirstAndLastName) : FlowLogi
 }
 
 @Suppress("UNUSED")
-class MyCustomJackson : CustomRPCSerializationFactory {
+class MyCustomJackson : CustomShellSerializationFactory {
     override fun createJacksonModule() = object : SimpleModule() {
 
         override fun setupModule(context: SetupContext) {
