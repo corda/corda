@@ -69,12 +69,4 @@ class RequestKeyFlowTests {
             subFlow(RequestKeyFlow(setOf(initiateFlow(otherParty)), otherParty))
         }
     }
-
-//    @InitiatedBy(RequestKeyInitiator::class)
-//    private class RequestKeyResponder(private val otherSide: FlowSession) : FlowLogic<Unit>() {
-//        @Suspendable
-//        override fun call() {
-//            subFlow(RequestKeyFlow(setOf(otherSide)))
-//        }
-//    }
 }
