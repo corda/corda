@@ -17,6 +17,7 @@ import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashIssueAndPaymentFlow
 import net.corda.finance.schemas.CashSchemaV1
 import net.corda.node.services.Permissions
+import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.DUMMY_BANK_B_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME
@@ -24,6 +25,7 @@ import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.OutOfProcess
 import net.corda.testing.driver.driver
 import net.corda.testing.driver.internal.OutOfProcessImpl
+import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.node.User
@@ -51,6 +53,8 @@ class RpcReconnectTests : IntegrationTest() {
         val databaseSchemas = IntegrationTestSchemas(DUMMY_BANK_A_NAME, DUMMY_BANK_B_NAME, DUMMY_NOTARY_NAME)
     }
 
+    private val portAllocator = incrementalPortAllocation(20006)
+
     /**
      * This test showcases and stress tests the demo [ReconnectingCordaRPCOps].
      *
@@ -67,8 +71,8 @@ class RpcReconnectTests : IntegrationTest() {
 
         val demoUser = User("demo", "demo", setOf(Permissions.all()))
 
-        val nodePort = 20006
-        val proxyPort = 20007
+        val nodePort = portAllocator.nextPort()
+        val proxyPort = portAllocator.nextPort()
         val tcpProxy = RandomFailingProxy(serverPort = proxyPort, remotePort = nodePort).start()
 
         // When this reaches 0 - the test will end.
@@ -290,4 +294,3 @@ class RpcReconnectTests : IntegrationTest() {
         return getOrPut(id) { mutableListOf() }.let { if (progress != null) it.add(progress) else false }
     }
 }
-

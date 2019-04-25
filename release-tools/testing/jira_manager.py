@@ -30,7 +30,7 @@ class Jira:
     # {{{ login(user, password) - Log in as a specific JIRA user
     def login(self, user, password):
         try:
-            self.jira = JIRA(self.address, auth=(user, password))
+            self.jira = JIRA(self.address, basic_auth=(user, password))
             for x in self.jira.fields():
                 if x['custom']:
                     self.custom_fields_by_name[x['name']] = x['key']

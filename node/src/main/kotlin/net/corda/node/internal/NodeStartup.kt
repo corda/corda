@@ -39,6 +39,7 @@ import java.io.RandomAccessFile
 import java.lang.management.ManagementFactory
 import java.net.InetAddress
 import java.nio.channels.UnresolvedAddressException
+import java.nio.file.Files
 import java.nio.file.Path
 import java.time.DayOfWeek
 import java.time.ZonedDateTime
@@ -496,7 +497,11 @@ fun CliWrapperBase.initLogging(baseDirectory: Path): Boolean {
     //Test for access to the logging path and shutdown if we are unable to reach it.
     val logPath = baseDirectory / NodeCliCommand.LOGS_DIRECTORY_NAME
     try {
-        logPath.createDirectories()
+        if (Files.isSymbolicLink(logPath)){
+            Files.readSymbolicLink(logPath).createDirectories()
+        } else {
+            logPath.createDirectories()
+        }
     } catch (e: IOException) {
         printError("Unable to create logging directory ${logPath.toString()}. Node will now shutdown.")
         return false

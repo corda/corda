@@ -179,7 +179,8 @@ class ReconnectingCordaRPCOps private constructor(
             return currentRPCConnection!!
         }
 
-        private tailrec fun establishConnectionWithRetry(retryInterval: Duration = 1.seconds, nrRetries: Int = 0): CordaRPCConnection {
+        private tailrec fun establishConnectionWithRetry(retryInterval: Duration = 1.seconds, currentAuthenticationRetries: Int = 0): CordaRPCConnection {
+            var _currentAuthenticationRetries = currentAuthenticationRetries
             log.info("Connecting to: $nodeHostAndPorts")
             try {
                 return CordaRPCClient(
@@ -196,7 +197,7 @@ class ReconnectingCordaRPCOps private constructor(
                     is ActiveMQSecurityException -> {
                         // Happens when incorrect credentials provided.
                         // It can happen at startup as well when the credentials are correct.
-                        if (nrRetries > 1) {
+                        if (_currentAuthenticationRetries++ > 3) {
                             log.error("Failed to login to node.", ex)
                             throw ex
                         }
@@ -222,7 +223,7 @@ class ReconnectingCordaRPCOps private constructor(
             // Could not connect this time round - pause before giving another try.
             Thread.sleep(retryInterval.toMillis())
             // TODO - make the exponential retry factor configurable.
-            return establishConnectionWithRetry((retryInterval * 10) / 9, nrRetries + 1)
+            return establishConnectionWithRetry((retryInterval * 10) / 9, _currentAuthenticationRetries)
         }
 
         override val proxy: CordaRPCOps
