@@ -17,7 +17,7 @@ dependencies {
     
     // only included to control the `DemoClock` as part of the demo application
     // normally `:node` should not be depended on in any CorDapps
-    cordaCompile project(':node')
+    compileOnly project(':node')
 
     // Cordapp dependencies
     // Specify your cordapp's dependencies below, including dependent cordapps
