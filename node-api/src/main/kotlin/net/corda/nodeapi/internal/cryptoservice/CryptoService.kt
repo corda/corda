@@ -31,10 +31,10 @@ interface CryptoService {
     /**
      * Sign a [ByteArray] using the private key identified by the input alias.
      * Returns the signature bytes formatted according to the signature scheme.
-     * The scheme parameter if specified determines the signature scheme used for signing, if
+     * The signAlgorithm if specified determines the signature scheme used for signing, if
      * not specified then the signature scheme is based on the private key scheme.
      */
-    fun sign(alias: String, data: ByteArray, schemeCodeName: String? = null): ByteArray
+    fun sign(alias: String, data: ByteArray, signAlgorithm: String? = null): ByteArray
 
     /**
      * Returns [ContentSigner] for the key identified by the input alias.
