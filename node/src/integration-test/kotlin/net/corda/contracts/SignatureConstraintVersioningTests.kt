@@ -7,6 +7,7 @@ import net.corda.core.contracts.*
 import net.corda.core.crypto.sha256
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
 import net.corda.core.messaging.startFlow
@@ -21,6 +22,7 @@ import net.corda.testMessage.Message
 import net.corda.testMessage.MessageState
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.singleIdentity
+import net.corda.testing.driver.DriverDSL
 import net.corda.testing.driver.NodeParameters
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.CustomCordapp
@@ -30,16 +32,16 @@ import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.Assume.assumeFalse
 import org.junit.Test
 import java.nio.file.Files
+import java.nio.file.Path
 import java.nio.file.Paths
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
 class SignatureConstraintVersioningTests {
 
-    private val baseUnsinded = cordappWithPackages(MessageState::class.packageName, DummyMessageContract::class.packageName)
-    private val base = baseUnsinded.signed()
-    private val oldUnsigedCordapp = baseUnsinded.copy(versionId = 2)
-//    private val base = cordappWithPackages(MessageState::class.packageName, DummyMessageContract::class.packageName).signed()
+    private val baseUnsigned = cordappWithPackages(MessageState::class.packageName, DummyMessageContract::class.packageName)
+    private val base = baseUnsigned.signed()
+    private val oldUnsigedCordapp = baseUnsigned.copy(versionId = 2)
     private val oldCordapp = base.copy(versionId = 2)
     private val newCordapp = base.copy(versionId = 3)
     private val user = User("mark", "dadada", setOf(startFlow<CreateMessage>(), startFlow<ConsumeMessage>(), invokeRpc("vaultQuery")))
@@ -96,7 +98,7 @@ class SignatureConstraintVersioningTests {
     @Test
     fun `auto migration from WhitelistConstraint to SignatureConstraint`() {
         val stateAndRef =
-            `use states to create transaction with newer cordapp`(oldUnsigedCordapp, newCordapp, listOf(oldUnsigedCordapp, newCordapp))
+            upgradeCorDappBetweenTransactions(oldUnsigedCordapp, newCordapp, listOf(oldUnsigedCordapp, newCordapp))
         assertNotNull(stateAndRef)
         assertEquals(transformetMessage, stateAndRef!!.state.data.message)
     }
@@ -105,11 +107,15 @@ class SignatureConstraintVersioningTests {
     @Test
     fun `auto migration from WhitelistConstraint to SignatureConstraint fail for not whitelisted signed JAR`() {
         assertThatExceptionOfType(CordaRuntimeException::class.java).isThrownBy {
-            `use states to create transaction with newer cordapp`(oldUnsigedCordapp, newCordapp, emptyList())
+            upgradeCorDappBetweenTransactions(oldUnsigedCordapp, newCordapp, emptyList())
         }.withMessageContaining("Selected output constraint: $WhitelistedByZoneAttachmentConstraint not satisfying")
     }
 
-    private fun `use states to create transaction with newer cordapp`(
+    /**
+     * Create an issuance transaction on one version of a cordapp
+     * Upgrade the cordapp and create a consuming transaction using it
+     */
+    private fun upgradeCorDappBetweenTransactions(
         cordapp: CustomCordapp,
         newCordapp: CustomCordapp,
         whiteListedCordapps: List<CustomCordapp>
@@ -127,46 +133,51 @@ class SignatureConstraintVersioningTests {
             )
         ) {
             // create transaction using first Cordapp
-            var (nodeName, baseDirectory) = {
-                val nodeHandle = startNode(NodeParameters(rpcUsers = listOf(user), additionalCordapps = listOf(cordapp))).getOrThrow()
-                val nodeName = nodeHandle.nodeInfo.singleIdentity().name
-                CordaRPCClient(nodeHandle.rpcAddress).start(user.username, user.password).use {
-                    it.proxy.startFlow(::CreateMessage, message, defaultNotaryIdentity).returnValue.getOrThrow()
-                }
-                nodeHandle.stop()
-                Pair(nodeName, nodeHandle.baseDirectory)
-            }()
-
+            val (nodeName, baseDirectory) = createIssuanceTransaction(cordapp)
             // delete the first cordapp
-            val cordappPath = baseDirectory.resolve(Paths.get("cordapps")).resolve(cordapp.jarFile.fileName)
-            cordappPath.delete()
-
+            deleteCorDapp(baseDirectory, cordapp)
             // create transaction using the upgraded cordapp resuing   input for transaction
-            var result = {
-                val nodeHandle = startNode(
-                    NodeParameters(
-                        providedName = nodeName,
-                        rpcUsers = listOf(user),
-                        additionalCordapps = listOf(newCordapp)
-                    )
-                ).getOrThrow()
-                var result: StateAndRef<MessageState>? = CordaRPCClient(nodeHandle.rpcAddress).start(user.username, user.password).use {
-                    val page = it.proxy.vaultQuery(MessageState::class.java)
-                    page.states.singleOrNull()
-                }
-                CordaRPCClient(nodeHandle.rpcAddress).start(user.username, user.password).use {
-                    it.proxy.startFlow(::ConsumeMessage, result!!, defaultNotaryIdentity).returnValue.getOrThrow()
-                }
-                result = CordaRPCClient(nodeHandle.rpcAddress).start(user.username, user.password).use {
-                    val page = it.proxy.vaultQuery(MessageState::class.java)
-                    page.states.singleOrNull()
-                }
-
-                nodeHandle.stop()
-                result
-            }()
-            result
+            createConsumingTransaction(nodeName, newCordapp)
         }
+    }
+
+    private fun DriverDSL.createIssuanceTransaction(cordapp: CustomCordapp): Pair<CordaX500Name, Path> {
+        val nodeHandle = startNode(NodeParameters(rpcUsers = listOf(user), additionalCordapps = listOf(cordapp))).getOrThrow()
+        val nodeName = nodeHandle.nodeInfo.singleIdentity().name
+        CordaRPCClient(nodeHandle.rpcAddress).start(user.username, user.password).use {
+            it.proxy.startFlow(::CreateMessage, message, defaultNotaryIdentity).returnValue.getOrThrow()
+        }
+        nodeHandle.stop()
+        return Pair(nodeName, nodeHandle.baseDirectory)
+    }
+
+    private fun deleteCorDapp(baseDirectory: Path, cordapp: CustomCordapp) {
+        val cordappPath = baseDirectory.resolve(Paths.get("cordapps")).resolve(cordapp.jarFile.fileName)
+        cordappPath.delete()
+    }
+
+    private fun DriverDSL.createConsumingTransaction(nodeName: CordaX500Name, cordapp: CustomCordapp): StateAndRef<MessageState>? {
+        val nodeHandle = startNode(
+            NodeParameters(
+                providedName = nodeName,
+                rpcUsers = listOf(user),
+                additionalCordapps = listOf(cordapp)
+            )
+        ).getOrThrow()
+        var result: StateAndRef<MessageState>? = CordaRPCClient(nodeHandle.rpcAddress).start(user.username, user.password).use {
+            val page = it.proxy.vaultQuery(MessageState::class.java)
+            page.states.singleOrNull()
+        }
+        CordaRPCClient(nodeHandle.rpcAddress).start(user.username, user.password).use {
+            it.proxy.startFlow(::ConsumeMessage, result!!, defaultNotaryIdentity).returnValue.getOrThrow()
+        }
+        result = CordaRPCClient(nodeHandle.rpcAddress).start(user.username, user.password).use {
+            val page = it.proxy.vaultQuery(MessageState::class.java)
+            page.states.singleOrNull()
+        }
+
+        nodeHandle.stop()
+        return result
     }
 }
 
@@ -192,7 +203,8 @@ class ConsumeMessage(private val stateRef: StateAndRef<MessageState>, private va
         val oldMessageState = stateRef.state.data
         val messageState = MessageState(Message(oldMessageState.message.value + "A"), ourIdentity, stateRef.state.data.linearId)
         val txCommand = Command(DummyMessageContract.Commands.Send(), messageState.participants.map { it.owningKey })
-        val txBuilder = TransactionBuilder(notary).withItems(StateAndContract(messageState, TEST_MESSAGE_CONTRACT_PROGRAM_ID), txCommand, stateRef)
+        val txBuilder =
+            TransactionBuilder(notary).withItems(StateAndContract(messageState, TEST_MESSAGE_CONTRACT_PROGRAM_ID), txCommand, stateRef)
         txBuilder.toWireTransaction(serviceHub).toLedgerTransaction(serviceHub).verify()
         val signedTx = serviceHub.signInitialTransaction(txBuilder)
         serviceHub.recordTransactions(signedTx)
