@@ -8,6 +8,7 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
+import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.core.ALICE_NAME
@@ -17,6 +18,7 @@ import net.corda.testing.node.internal.FINANCE_CORDAPPS
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.TestStartedNode
 import net.corda.testing.node.internal.startFlow
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -56,15 +58,33 @@ class RequestKeyFlowTests {
 
     @Test
     fun `register new key for party`() {
-        val flowFuture = aliceNode.services.startFlow(RequestKeyInitiator(bob)).resultFuture
+
+        val anonymousBob = AnonymousParty(bob.owningKey)
+        val anonymousAlice = AnonymousParty(alice.owningKey)
+
+        val keyForBob = aliceNode.services.startFlow(RequestKeyInitiator(anonymousBob)).resultFuture
+        val keyForAlice = bobNode.services.startFlow(RequestKeyInitiator(anonymousAlice)).resultFuture
         mockNet.runNetwork()
-        println(flowFuture.getOrThrow())
+
+        val bobResults = keyForBob.getOrThrow().publicKeyToPartyMap.entries.filter { it.value == bob }.first()
+        val aliceResults  = keyForAlice.getOrThrow().publicKeyToPartyMap.entries.filter { it.value == alice }.first()
+
+        val resolvedBobParty = aliceNode.services.identityService.wellKnownPartyFromAnonymous(bobResults.value)
+        val resolvedAliceParty = aliceNode.services.identityService.wellKnownPartyFromAnonymous(aliceResults.value)
+
+        assertThat(resolvedBobParty).isEqualTo(bob)
+        assertThat(resolvedAliceParty).isEqualTo(alice)
+    }
+
+    @Test
+    fun `verify flow exception`(){
+        //TODO need to figure out how to force a duplicate key to be used
     }
 
     @InitiatingFlow
-    private class RequestKeyInitiator(private val otherParty: Party) : FlowLogic<SignedPublicKey>() {
+    private class RequestKeyInitiator(private val otherParty: AnonymousParty) : FlowLogic<SignedPublicKey>() {
         @Suspendable
-        override fun call() : SignedPublicKey{
+        override fun call(): SignedPublicKey {
             return subFlow(RequestKeyFlow(setOf(initiateFlow(otherParty)), otherParty))
         }
     }

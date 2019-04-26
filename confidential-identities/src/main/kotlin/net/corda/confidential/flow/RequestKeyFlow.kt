@@ -9,7 +9,7 @@ import net.corda.core.crypto.DigitalSignature
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
-import net.corda.core.identity.Party
+import net.corda.core.identity.AbstractParty
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.serialize
@@ -19,10 +19,10 @@ import net.corda.node.services.api.IdentityServiceInternal
 import java.security.SignatureException
 
 class RequestKeyFlow
-constructor(private val sessions: Set<FlowSession>, private val otherParty: Party?, override val progressTracker: ProgressTracker) : FlowLogic<SignedPublicKey>() {
+constructor(private val sessions: Set<FlowSession>, private val anonymousParty: AbstractParty, override val progressTracker: ProgressTracker) : FlowLogic<SignedPublicKey>() {
 
     @JvmOverloads
-    constructor(sessions: Set<FlowSession>, otherParty: Party) : this(sessions, otherParty, tracker())
+    constructor(sessions: Set<FlowSession>, otherParty: AbstractParty) : this(sessions, otherParty, tracker())
 
     companion object {
         object REQUESTING_KEY : ProgressTracker.Step("Generating a public key")
@@ -47,8 +47,10 @@ constructor(private val sessions: Set<FlowSession>, private val otherParty: Part
     @Suspendable
     @Throws(FlowException::class)
     override fun call(): SignedPublicKey {
-        // TODO not sure how to get around this
+        // TODO not sure how to get around this so we can return the SignedPublicKey
         var signedKey = SignedPublicKey(emptyMap(), DigitalSignature.WithKey(serviceHub.keyManagementService.freshKey(), ByteArray(1)))
+
+        val party = serviceHub.identityService.wellKnownPartyFromAnonymous(anonymousParty)
         progressTracker.currentStep = REQUESTING_KEY
         sessions.forEach { session ->
             session.sendAndReceive<SignedPublicKey>(NewKeyRequest()).unwrap {
@@ -56,11 +58,11 @@ constructor(private val sessions: Set<FlowSession>, private val otherParty: Part
                 signedKey = validateSignature(it)
                 progressTracker.currentStep = KEY_VERIFIED
 
-                val isRegistered = (serviceHub.identityService as IdentityServiceInternal).registerIdentityMapping(otherParty!!, signedKey.publicKeyToPartyMap.filter { identityName ->
-                    identityName.value.name == otherParty.name
+                val isRegistered = (serviceHub.identityService as IdentityServiceInternal).registerIdentityMapping(party!!, signedKey.publicKeyToPartyMap.filter { identityName ->
+                    identityName.value.name == party.name
                 }.keys.first())
                 if (!isRegistered) {
-                    throw FlowException("Could not generate a new key for $otherParty as the key is already registered or registered to a different party.")
+                    throw FlowException("Could not generate a new key for $party as the key is already registered or registered to a different party.")
                 }
             }
         }

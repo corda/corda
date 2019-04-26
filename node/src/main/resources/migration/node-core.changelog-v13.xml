@@ -9,13 +9,13 @@
         <column name="pk_hash" type="NVARCHAR(130)">
             <constraints nullable="false"/>
         </column>
-        <column name="name" type="STRING(128)">
+        <column name="name" type="NVARCHAR(128)">
             <constraints nullable="false"/>
         </column>
         </createTable>
     </changeSet>
 
     <changeSet author="R3.Corda" id="remove-persistence-table">
-        <delete tableName="named_identities"/>
+        <delete tableName="node_named_identities"/>
     </changeSet>
 </databaseChangeLog>
