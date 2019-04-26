@@ -118,15 +118,13 @@ buildscript {
         classpath "net.i2p.crypto:eddsa:$eddsa_version" // Needed for ServiceIdentityGenerator in the build environment.
         classpath "org.owasp:dependency-check-gradle:${dependency_checker_version}"
         classpath "org.jfrog.buildinfo:build-info-extractor-gradle:$artifactory_plugin_version"
+        // Capsule gradle plugin forked and maintained locally to support Gradle 5.x
+        // See https://github.com/corda/gradle-capsule-plugin
+        classpath "us.kirchmeier:gradle-capsule-plugin:1.0.4"
     }
 }
 
 plugins {
-    // TODO The capsule plugin requires the newer DSL plugin block.It would be nice if we could unify all the plugins into one style,
-    // but the DSL has some restrictions e.g can't be used on the allprojects section. So we should revisit this if there are improvements in Gradle.
-    // Version 1.0.2 of this plugin uses capsule:1.0.1 by default.
-    id 'us.kirchmeier.capsule' version '1.0.2-gradle-5' apply false
-
     // Add the shadow plugin to the plugins classpath for the entire project.
     id 'com.github.johnrengelman.shadow' version '2.0.4' apply false
     id "com.gradle.build-scan" version "2.0.2"
