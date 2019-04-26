@@ -127,8 +127,7 @@ object VaultMigrationSchemaV1 : MappedSchema(schemaFamily = VaultMigrationSchema
         mappedTypes = listOf(
                 DBTransactionStorage.DBTransaction::class.java,
                 PersistentIdentityService.PersistentIdentityCert::class.java,
-                PersistentIdentityService.PersistentIdentityNoCert::class.java,
-                PersistentIdentityService.PersistentIdentityNames::class.java,
+                PersistentIdentityService.PersistentIdentity::class.java,
                 BasicHSMKeyManagementService.PersistentKey::class.java,
                 NodeAttachmentService.DBAttachment::class.java,
                 DBNetworkParametersStorage.PersistentNetworkParameters::class.java

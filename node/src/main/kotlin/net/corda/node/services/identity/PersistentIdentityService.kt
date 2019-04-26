@@ -16,7 +16,6 @@ import net.corda.nodeapi.internal.crypto.x509Certificates
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import org.apache.commons.lang.ArrayUtils.EMPTY_BYTE_ARRAY
-import java.lang.IllegalStateException
 import java.security.InvalidAlgorithmParameterException
 import java.security.PublicKey
 import java.security.cert.*
@@ -53,7 +52,7 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
             )
         }
 
-        fun createKeyToX500Map(cacheFactory: NamedCacheFactory): AppendOnlyPersistentMap<SecureHash, CordaX500Name, PersistentIdentityNoCert, String> {
+        fun createKeyToX500Map(cacheFactory: NamedCacheFactory): AppendOnlyPersistentMap<SecureHash, CordaX500Name, PersistentIdentity, String> {
             return AppendOnlyPersistentMap(
                     cacheFactory = cacheFactory,
                     name = "PersistentIdentityService_keyToParty",
@@ -65,35 +64,17 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
                         )
                     },
                     toPersistentEntity = { key: SecureHash, value: CordaX500Name ->
-                        PersistentIdentityNoCert(key.toString(), value.toString())
+                        PersistentIdentity(key.toString(), value.toString())
                     },
-                    persistentEntityClass = PersistentIdentityNoCert::class.java)
+                    persistentEntityClass = PersistentIdentity::class.java)
         }
-
-//        fun createX500ToKeyMap(cacheFactory: NamedCacheFactory): AppendOnlyPersistentMap<CordaX500Name, SecureHash, PersistentIdentityNames, String> {
-//            return AppendOnlyPersistentMap(
-//                    cacheFactory = cacheFactory,
-//                    name = "PersistentIdentityService_partyToKey",
-//                    toPersistentEntityKey = { it.toString() },
-//                    fromPersistentEntity = {
-//                        Pair(
-//                                CordaX500Name.parse(it.name),
-//                                SecureHash.parse(it.publicKeyHash)
-//                        )
-//                    },
-//                    toPersistentEntity = { key: CordaX500Name, value: SecureHash ->
-//                        PersistentIdentityNames(key.toString(), value.toString())
-//                    },
-//                    persistentEntityClass = PersistentIdentityNames::class.java
-//            )
-//        }
 
         private fun mapToKey(owningKey: PublicKey) = owningKey.hash
         private fun mapToKey(party: PartyAndCertificate) = mapToKey(party.owningKey)
     }
 
     @Entity
-    @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}identities_cert")
+    @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}identities")
     class PersistentIdentityCert(
             @Id
             @Column(name = "pk_hash", length = MAX_HASH_HEX_SIZE, nullable = false)
@@ -106,24 +87,13 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
 
     @Entity
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}identities_no_cert")
-    class PersistentIdentityNoCert(
+    class PersistentIdentity(
             @Id
             @Column(name = "pk_hash", length = MAX_HASH_HEX_SIZE, nullable = false)
             var publicKeyHash: String = "",
 
             @Column(name = "name", length = 128, nullable = false)
             var name: String = ""
-    )
-
-    @Entity
-    @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}named_identities")
-    class PersistentIdentityNames(
-            @Id
-            @Column(name = "name", length = 128, nullable = false)
-            var name: String = "",
-
-            @Column(name = "pk_hash", length = MAX_HASH_HEX_SIZE, nullable = true)
-            var publicKeyHash: String? = ""
     )
 
     private lateinit var _caCertStore: CertStore
@@ -243,6 +213,7 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
 
     // Allows us to eliminate keys we know belong to others by using the cache contents that might have been seen during other identity activity.
     // Concentrating activity on the identity cache works better than spreading checking across identity and key management, because we cache misses too.
+    // TODO still needs to be removed from VaultMigrationService
     fun stripNotOurKeys(keys: Iterable<PublicKey>): Iterable<PublicKey> {
         return keys.filter { certificateFromKey(it)?.name in ourNames }
     }
@@ -252,7 +223,6 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
 
         database.transaction {
 
-            // Check by key
             val existingEntryForKey = keyToParty[key.hash]
             if (existingEntryForKey == null) {
                 log.info("Linking: ${key.hash} to ${identity.name}")
@@ -268,3 +238,4 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
         return willRegisterNewMapping
     }
 }
+

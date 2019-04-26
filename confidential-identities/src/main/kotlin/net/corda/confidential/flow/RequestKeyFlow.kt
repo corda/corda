@@ -5,6 +5,8 @@ import net.corda.confidential.service.SignedPublicKey
 import net.corda.confidential.service.createSignedPublicKey
 import net.corda.core.CordaInternal
 import net.corda.core.contracts.UniqueIdentifier
+import net.corda.core.crypto.DigitalSignature
+import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
 import net.corda.core.identity.Party
@@ -17,13 +19,10 @@ import net.corda.node.services.api.IdentityServiceInternal
 import java.security.SignatureException
 
 class RequestKeyFlow
-    constructor(private val sessions: Set<FlowSession>, private val otherParty: Party?, override val progressTracker: ProgressTracker) : FlowLogic<Unit>() {
+constructor(private val sessions: Set<FlowSession>, private val otherParty: Party?, override val progressTracker: ProgressTracker) : FlowLogic<SignedPublicKey>() {
 
     @JvmOverloads
     constructor(sessions: Set<FlowSession>, otherParty: Party) : this(sessions, otherParty, tracker())
-
-    @JvmOverloads
-    constructor(sessions: Set<FlowSession>, progressTracker: ProgressTracker = tracker()) : this(sessions, null, progressTracker)
 
     companion object {
         object REQUESTING_KEY : ProgressTracker.Step("Generating a public key")
@@ -39,38 +38,40 @@ class RequestKeyFlow
             try {
                 signedKey.signature.verify(signedKey.publicKeyToPartyMap.serialize().hash.bytes)
             } catch (ex: SignatureException) {
-                throw SignatureException("The signature does not match expected blah blah", ex)
+                throw SignatureException("The signature does not match the expected.", ex)
             }
             return signedKey
         }
     }
 
     @Suspendable
-    override fun call() {
+    @Throws(FlowException::class)
+    override fun call(): SignedPublicKey {
+        // TODO not sure how to get around this
+        var signedKey = SignedPublicKey(emptyMap(), DigitalSignature.WithKey(serviceHub.keyManagementService.freshKey(), ByteArray(1)))
         progressTracker.currentStep = REQUESTING_KEY
         sessions.forEach { session ->
             session.sendAndReceive<SignedPublicKey>(NewKeyRequest()).unwrap {
                 progressTracker.currentStep = VERIFYING_KEY
-                val signedKey = validateSignature(it)
+                signedKey = validateSignature(it)
                 progressTracker.currentStep = KEY_VERIFIED
 
-                if (signedKey != null) {
-                    (serviceHub.identityService as IdentityServiceInternal).registerIdentityMapping(otherParty!!, signedKey.publicKeyToPartyMap.filter {
-                        identityName -> identityName.value.name == otherParty.name
-                    }.keys.first())
+                val isRegistered = (serviceHub.identityService as IdentityServiceInternal).registerIdentityMapping(otherParty!!, signedKey.publicKeyToPartyMap.filter { identityName ->
+                    identityName.value.name == otherParty.name
+                }.keys.first())
+                if (!isRegistered) {
+                    throw FlowException("Could not generate a new key for $otherParty as the key is already registered or registered to a different party.")
                 }
             }
         }
+        return signedKey
     }
 }
 
-//cannot be initatedBy RequestKeyFlow as RequestKeyFlow is not a topLevel Flow (it takes sessions into it's constructor)
 class RequestKeyFlowHandler(private val otherSession: FlowSession) : FlowLogic<Unit>() {
-
     @Suspendable
     override fun call() {
         otherSession.receive<NewKeyRequest>().unwrap { it }
-        // Generate key
         val signedPK = createSignedPublicKey(serviceHub, UniqueIdentifier().id)
         otherSession.send(signedPK)
     }
