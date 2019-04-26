@@ -513,7 +513,7 @@ class RPCClientProxyHandler(
     private fun initSessions() {
         producerSession = sessionFactory!!.createSession(rpcUsername, rpcPassword, false, true, true, false, DEFAULT_ACK_BATCH_SIZE)
         rpcProducer = producerSession!!.createProducer(RPCApi.RPC_SERVER_QUEUE_NAME)
-        consumerSession = sessionFactory!!.createSession(rpcUsername, rpcPassword, false, true, true, false, DEFAULT_ACK_BATCH_SIZE)
+        consumerSession = sessionFactory!!.createSession(rpcUsername, rpcPassword, false, true, true, false, 16384)
         consumerSession!!.createTemporaryQueue(clientAddress, RoutingType.ANYCAST, clientAddress)
         rpcConsumer = consumerSession!!.createConsumer(clientAddress)
         rpcConsumer!!.setMessageHandler(this::artemisMessageHandler)
