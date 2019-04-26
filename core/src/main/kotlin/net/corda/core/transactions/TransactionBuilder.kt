@@ -418,6 +418,18 @@ open class TransactionBuilder(
         // Sanity check.
         constraints.isEmpty() -> throw IllegalArgumentException("Cannot transition from no constraints.")
 
+        // Fail when combining the insecure AlwaysAcceptAttachmentConstraint with something else.
+        constraints.size > 1 && constraints.any { it is AlwaysAcceptAttachmentConstraint } ->
+            throw IllegalArgumentException("Can't mix the AlwaysAcceptAttachmentConstraint with a secure constraint in the same transaction. This can be used to hide insecure transitions.")
+
+        // Multiple states with Hash constraints with different hashes. This should not happen as we checked already.
+        constraints.size > 1 && constraints.all { it is HashAttachmentConstraint } ->
+            throw IllegalArgumentException("Cannot mix HashConstraints with different hashes in the same transaction.")
+
+        // The HashAttachmentConstraint is the strongest constraint, so it wins when mixed with anything. As long as the actual constraints pass.
+        // TODO - this could change if we decide to introduce a way to gracefully migrate from the Hash Constraint to the Signature Constraint.
+        constraints.any { it is HashAttachmentConstraint } -> constraints.find { it is HashAttachmentConstraint }!!
+
         // TODO, we don't currently support mixing signature constraints with different signers. This will change once we introduce third party signers.
         constraints.map { it is SignatureAttachmentConstraint }.size > 1 ->
             throw IllegalArgumentException("Cannot mix SignatureAttachmentConstraints signed by different parties in the same transaction.")
@@ -438,18 +450,6 @@ open class TransactionBuilder(
 
         // When all input states have the same constraint.
         constraints.size == 1 -> constraints.single()
-
-        // Fail when combining the insecure AlwaysAcceptAttachmentConstraint with something else.
-        constraints.any { it is AlwaysAcceptAttachmentConstraint } ->
-            throw IllegalArgumentException("Can't mix the AlwaysAcceptAttachmentConstraint with a secure constraint in the same transaction. This can be used to hide insecure transitions.")
-
-        // Multiple states with Hash constraints with different hashes. This should not happen as we checked already.
-        constraints.all { it is HashAttachmentConstraint } ->
-            throw IllegalArgumentException("Cannot mix HashConstraints with different hashes in the same transaction.")
-
-        // The HashAttachmentConstraint is the strongest constraint, so it wins when mixed with anything. As long as the actual constraints pass.
-        // TODO - this could change if we decide to introduce a way to gracefully migrate from the Hash Constraint to the Signature Constraint.
-        constraints.any { it is HashAttachmentConstraint } -> constraints.find { it is HashAttachmentConstraint }!!
 
         else -> throw IllegalArgumentException("Unexpected constraints $constraints.")
     }
