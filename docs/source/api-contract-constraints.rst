@@ -57,13 +57,14 @@ This article focuses on the first approach. To learn about the second please see
 Types of Contract Constraints
 -----------------------------
 
-There are several types of constraints:
+Corda supports several types of constraints to cover a wide set of client requirements:
 
 * **Hash constraint**: Exactly one version of the app can be used with this state. This prevents the app from being upgraded in the future while still
   making use of the state created with the original version.
 * **Compatibility zone whitelisted (or CZ whitelisted) constraint**: The compatibility zone operator lists the hashes of the versions that can be used with a contract class name.
-* **Signature constraint**: Any version of the app signed by the given ``PublicKey`` (or `CompositeKey`) can be used. This allows a new version of the app to be produced
-  and applied to an existing state as long as it has been signed by the same key(s) as the original version.
+* **Signature constraint**: Any version of the app signed by the given ``CompositeKey`` can be used. This allows app issuers to express the
+  complex social and business relationships that arise around code ownership. For example, a Signature Constraint allows a new version of an
+  app to be produced and applied to an existing state as long as it has been signed by the same key(s) as the original version.
 * **Always accept constraint**: Any version of the app can be used. This is insecure but convenient for testing.
 
 .. _signature_constraints:
@@ -72,27 +73,36 @@ Signature Constraints
 ---------------------
 
 The best kind of constraint to use is the **Signature Constraint**. If you sign your application it will be used automatically.
-We recommend signature constraints because they let you smoothly migrate existing data to new versions of your application.
-Hash and zone whitelist constraints are left over from earlier Corda versions before signature constraints were
-implemented. They make it harder to upgrade applications than when using signature constraints, so they're best avoided.
+We recommend signature constraints because they let you express complex social and business relationships while allowing
+smooth migration of existing data to new versions of your application.
+
 Signature constraints can specify flexible threshold policies, but if you use the automatic support then a state will
 require the attached app to be signed by every key that the first attachment was signed by. Thus if the app that was used
-to issue the states was signed by Alice and Bob, every transaction must use an attachment signed by Alice and Bob.
+to issue the states was signed by Alice and Bob, every transaction must use an attachment signed by Alice and Bob. Doing so allows the
+app to be upgraded and changed while still remaining valid for use with the previously issued states.
+
+More complex policies can be expressed through Signature Constraints if required. Allowing policies where only a number of the possible
+signers must sign the new version of an app that is interacting with previously issued states. Accepting different versions of apps in this
+way makes it possible for multiple versions to be valid across the network as long as the majority (or possibly a minority) agree with the
+logic provided by the apps.
+
+Hash and zone whitelist constraints are left over from earlier Corda versions before Signature Constraints were
+implemented. They make it harder to upgrade applications than when using signature constraints, so they're best avoided.
 
 Further information into the design of Signature Constraints can be found in its :doc:`design document <design/data-model-upgrades/signature-constraints>`.
 
 Signing CorDapps for use with Signature Constraints
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Expanding on the previous section, for an app to use Signature Constraints, it must be signed. The signers of the app can consist
+Expanding on the previous section, for an app to use Signature Constraints, it must be signed by a ``CompositeKey`` The signers of the app can consist
 of a single organisation or multiple organisations. Once the app has been signed it can be distributed across the nodes that intend to
 use it.
 
 Each transaction received by a node will then verify that the apps attached to it have the correct signers as specified by its
 Signature Constraints. This ensures that the version of each app is acceptable to the transaction's input states.
 
-Signing an app in this way allows it to be upgraded more easily. As long as the new version is signed by the same signers as the original
-version and follows the :ref:`app versioning requirement <app_versioning_with_signature_constraints>` in the section below, it can be
+Signing an app in this way allows it to be upgraded more easily. As long as the new version is signed by the required signers specified
+by the constraint and follows the :ref:`app versioning requirement <app_versioning_with_signature_constraints>` in the section below, it can be
 upgraded without any further steps.
 
 More information on how to sign an app directly from Gradle can be found in the
@@ -208,9 +218,11 @@ transaction verification will fail with a ``TransactionContractConflictException
 Using Contract Constraints in Transactions
 ------------------------------------------
 
-The actual app version used is defined by the attachments on a transaction that consumes a state: the JAR containing the state and contract classes, and optionally
-its dependencies, are all attached to the transaction. Other nodes will download these JARs from a node if they haven't seen them before,
-so they can be used for verification. The ``TransactionBuilder`` will manage the details of constraints for you, by selecting both constraints
+The app version used by a transaction is defined by its attachments. The JAR containing the state and contract classes, and optionally its
+dependencies, are all attached to the transaction. Nodes will download this JAR from other nodes if they haven't seen it before,
+so it can be used for verification.
+
+The ``TransactionBuilder`` will manage the details of constraints for you, by selecting both constraints
 and attachments to ensure they line up correctly. Therefore you only need to have a basic understanding of this topic unless you are
 doing something sophisticated.
 
@@ -256,7 +268,7 @@ To manually define the Contract Constraint of an output state, see the example b
             // Explicitly using an Always Accept Constraint
             transaction.addOutputState(state, constraint = AlwaysAcceptAttachmentConstraint)
 
-            // other transaction things
+            // other transaction stuff
             return transaction
         }
 
