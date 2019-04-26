@@ -3,6 +3,7 @@ package flow
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.confidential.flow.RequestKeyFlow
 import net.corda.confidential.flow.RequestKeyFlowHandler
+import net.corda.confidential.service.SignedPublicKey
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
 import net.corda.core.flows.InitiatedBy
@@ -31,7 +32,6 @@ class RequestKeyFlowTests {
 
     @Before
     fun before() {
-        // We run this in parallel threads to help catch any race conditions that may exist.
         mockNet = InternalMockNetwork(
                 cordappsForAllNodes = FINANCE_CORDAPPS,
                 networkSendManuallyPumped = false,
@@ -42,6 +42,8 @@ class RequestKeyFlowTests {
         alice = aliceNode.info.singleIdentity()
         bob = bobNode.info.singleIdentity()
         notary = mockNet.defaultNotaryIdentity
+
+        mockNet.startNodes()
 
         aliceNode.registerInitiatedFlow(RequestKeyResponder::class.java)
         bobNode.registerInitiatedFlow(RequestKeyResponder::class.java)
@@ -60,10 +62,10 @@ class RequestKeyFlowTests {
     }
 
     @InitiatingFlow
-    private class RequestKeyInitiator(private val otherParty: Party) : FlowLogic<Unit>() {
+    private class RequestKeyInitiator(private val otherParty: Party) : FlowLogic<SignedPublicKey>() {
         @Suspendable
-        override fun call() {
-            subFlow(RequestKeyFlow(setOf(initiateFlow(otherParty)), otherParty))
+        override fun call() : SignedPublicKey{
+            return subFlow(RequestKeyFlow(setOf(initiateFlow(otherParty)), otherParty))
         }
     }
 
