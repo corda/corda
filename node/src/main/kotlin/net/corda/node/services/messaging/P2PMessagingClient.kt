@@ -108,6 +108,8 @@ class P2PMessagingClient(val config: NodeConfiguration,
         var eventsSubscription: Subscription? = null
         var p2pConsumer: P2PMessagingConsumer? = null
         var locator: ServerLocator? = null
+        var executorProducer: ClientProducer? = null
+        var executorSession: ClientSession? = null
         var producer: ClientProducer? = null
         var producerSession: ClientSession? = null
         var bridgeSession: ClientSession? = null
@@ -133,6 +135,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
     private val delayStartQueues = Collections.newSetFromMap(ConcurrentHashMap<String, Boolean>())
 
     private val handlers = ConcurrentHashMap<String, MessageHandler>()
+    private val handlersChangedSignal = java.lang.Object()
 
     private val deduplicator = P2PMessageDeduplicator(cacheFactory, database)
     internal var messagingExecutor: MessagingExecutor? = null
@@ -170,8 +173,10 @@ class P2PMessagingClient(val config: NodeConfiguration,
             // size of 1MB is acknowledged.
             val createNewSession = { sessionFactory!!.createSession(ArtemisMessagingComponent.NODE_P2P_USER, ArtemisMessagingComponent.NODE_P2P_USER, false, true, true, false, ActiveMQClient.DEFAULT_ACK_BATCH_SIZE) }
 
+            executorSession = createNewSession()
             producerSession = createNewSession()
             bridgeSession = createNewSession()
+            executorSession!!.start()
             producerSession!!.start()
             bridgeSession!!.start()
 
@@ -179,6 +184,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
             // Create a queue, consumer and producer for handling P2P network messages.
             // Create a general purpose producer.
             producer = producerSession!!.createProducer()
+            executorProducer = executorSession!!.createProducer()
 
             inboxes += RemoteInboxAddress(myIdentity).queueName
             serviceIdentity?.let {
@@ -190,8 +196,8 @@ class P2PMessagingClient(val config: NodeConfiguration,
             p2pConsumer = P2PMessagingConsumer(inboxes, createNewSession, isDrainingModeOn, drainingModeWasChangedEvents)
 
             messagingExecutor = MessagingExecutor(
-                    producerSession!!,
-                    producer!!,
+                    executorSession!!,
+                    executorProducer!!,
                     versionInfo,
                     this@P2PMessagingClient,
                     ourSenderUUID = ourSenderUUID
@@ -306,6 +312,11 @@ class P2PMessagingClient(val config: NodeConfiguration,
     fun run() {
         val latch = CountDownLatch(1)
         try {
+            synchronized(handlersChangedSignal) {
+                while (handlers.isEmpty() && state.locked { (p2pConsumer != null) }) {
+                    handlersChangedSignal.wait()
+                }
+            }
             val consumer = state.locked {
                 check(started) { "start must be called first" }
                 check(!running) { "run can't be called twice" }
@@ -435,11 +446,18 @@ class P2PMessagingClient(val config: NodeConfiguration,
             producer = null
             producerSession!!.commit()
 
+            close(executorProducer)
+            executorProducer = null
+            executorSession!!.commit()
+
             close(bridgeNotifyConsumer)
             knownQueues.clear()
             eventsSubscription?.unsubscribe()
             eventsSubscription = null
             prevRunning
+        }
+        synchronized(handlersChangedSignal) {
+            handlersChangedSignal.notifyAll()
         }
         if (running && !nodeExecutor.isOnThread) {
             // Wait for the main loop to notice the consumer has gone and finish up.
@@ -527,6 +545,9 @@ class P2PMessagingClient(val config: NodeConfiguration,
                 throw IllegalStateException("Cannot add another acking handler for $topic, there is already an acking one")
             }
             callback
+        }
+        synchronized(handlersChangedSignal) {
+            handlersChangedSignal.notifyAll()
         }
         return HandlerRegistration(topic, callback)
     }

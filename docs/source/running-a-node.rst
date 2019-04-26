@@ -46,7 +46,9 @@ anything set earlier.
 :Default arguments in capsule: The capsuled corda node has default flags set to ``-Xmx512m -XX:+UseG1GC`` - this gives the node (a relatively
    low) 512 MB of heap space and turns on the G1 garbage collector, ensuring low pause times for garbage collection.
 
-:Node configuration: The node configuration file can specify custom default JVM arguments by adding a section like::
+:Node configuration: The node configuration file can specify custom default JVM arguments by adding a section like:
+
+.. code-block:: none
 
       custom = {
          jvmArgs: [ '-Xmx1G', '-XX:+UseG1GC' ]

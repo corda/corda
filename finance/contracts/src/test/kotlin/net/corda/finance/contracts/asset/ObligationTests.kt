@@ -244,7 +244,7 @@ class ObligationTests {
             command(MEGA_CORP_PUBKEY, Obligation.Commands.Issue())
             tweak {
                 command(MEGA_CORP_PUBKEY, Obligation.Commands.Issue())
-                this.verifies()
+                this `fails with` "there is only a single issue command"
             }
             this.verifies()
         }

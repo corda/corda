@@ -69,7 +69,7 @@ The ``and`` and ``or`` operators can be used to build complex queries. For examp
         :language: kotlin
         :start-after: DOCSTART AttachmentQueryExample1
         :end-before: DOCEND AttachmentQueryExample1
-        :dedent: 12
+        :dedent: 8
 
 Protocol
 --------

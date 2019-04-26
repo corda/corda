@@ -1,4 +1,11 @@
 .. highlight:: kotlin
+.. role:: kotlin(code)
+    :language: kotlin
+.. raw:: html
+
+
+   <script type="text/javascript" src="_static/jquery.js"></script>
+   <script type="text/javascript" src="_static/codesets.js"></script>
 
 API: Contract Constraints
 =========================
@@ -76,42 +83,50 @@ the transition of the ``ContractState`` will be verified against the business ru
 There are two mechanisms for indicating ownership. One is to annotate the ``ContractState`` with the ``BelongsToContract`` annotation,
 indicating the ``Contract`` class to which it is tied:
 
-.. sourcecode:: java
+.. container:: codeset
 
-    @BelongToContract(MyContract.class)
-    public class MyState implements ContractState {
-        // implementation goes here
-    }
+    .. sourcecode:: java
 
-
-.. sourcecode:: kotlin
-
-    @BelongsToContract(MyContract::class)
-    data class MyState(val value: Int) : ContractState {
-        // implementation goes here
-    }
-
-
-The other is to define the ``ContractState`` class as an inner class of the ``Contract`` class
-
-.. sourcecode:: java
-
-    public class MyContract implements Contract {
-    
-        public static class MyState implements ContractState {
-            // state implementation goes here
+        @BelongsToContract(MyContract.class)
+        public class MyState implements ContractState {
+            // implementation goes here
         }
 
-        // contract implementation goes here
-    }
+
+    .. sourcecode:: kotlin
+
+        @BelongsToContract(MyContract::class)
+        data class MyState(val value: Int) : ContractState {
+            // implementation goes here
+        }
+
+The other is to define the ``ContractState`` class as an inner class of the ``Contract`` class:
 
 
-.. sourcecode:: kotlin
+.. container:: codeset
 
-    class MyContract : Contract {
-        data class MyState(val value: Int) : ContractState
-    }
-    
+    .. sourcecode:: java
+
+        public class MyContract implements Contract {
+
+            public static class MyState implements ContractState {
+                // state implementation goes here
+            }
+
+            // contract implementation goes here
+        }
+
+
+    .. sourcecode:: kotlin
+
+        class MyContract : Contract {
+
+            data class MyState(val value: Int) : ContractState {
+                // state implementation goes here
+            }
+
+            // contract implementation goes here
+        }
 
 If a ``ContractState``'s owning ``Contract`` cannot be identified by either of these mechanisms, and the ``targetVersion`` of the
 CorDapp is 4 or greater, then transaction verification will fail with a ``TransactionRequiredContractUnspecifiedException``. If
@@ -213,25 +228,35 @@ When using ``MockNetwork`` ensure you have provided a package containing the con
 Similarly package names need to be provided when testing using ``DriverDSl``. ``DriverParameters`` has a property ``cordappsForAllNodes`` (Kotlin)
 or method ``withCordappsForAllNodes`` in Java. Pass the collection of ``TestCordapp`` created by utility method ``TestCordapp.findCordapp(String)``.
 
-Example of creation of two Cordapps with Finance App Flows and Finance App Contracts in Kotlin:
+Example of creation of two Cordapps with Finance App Flows and Finance App Contracts:
+
+.. container:: codeset
 
    .. sourcecode:: kotlin
 
-        Driver.driver(DriverParameters(cordappsForAllNodes = listOf(TestCordapp.findCordapp("net.corda.finance.schemas"),
-                TestCordapp.findCordapp("net.corda.finance.flows"))) {
+        Driver.driver(DriverParameters(
+            cordappsForAllNodes = listOf(
+                TestCordapp.findCordapp("net.corda.finance.schemas"),
+                TestCordapp.findCordapp("net.corda.finance.flows")
+            )
+        ) {
             // Your test code goes here
         })
 
-The same example in Java:
-
    .. sourcecode:: java
 
-        Driver.driver(new DriverParameters()
-                .withCordappsForAllNodes(Arrays.asList(TestCordapp.findCordapp("net.corda.finance.schemas"),
-                TestCordapp.findCordapp("net.corda.finance.flows"))), dsl -> {
-            // Your test code goes here
-        });
-
+        Driver.driver(
+            new DriverParameters()
+                .withCordappsForAllNodes(
+                    Arrays.asList(
+                        TestCordapp.findCordapp("net.corda.finance.schemas"),
+                        TestCordapp.findCordapp("net.corda.finance.flows")
+                    )
+                ),
+            dsl -> {
+              // Your test code goes here
+            }
+        );
 
 Starting a node missing CorDapp(s)
 **********************************

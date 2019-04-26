@@ -1,4 +1,4 @@
-package net.corda.cliutils
+package net.corda.common.logging
 
 import org.apache.logging.log4j.core.Core
 import org.apache.logging.log4j.core.LogEvent

@@ -7,7 +7,6 @@ import net.corda.core.contracts.*
 import net.corda.core.crypto.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
-import net.corda.core.internal.cordapp.CordappResolver
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
@@ -18,11 +17,13 @@ import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationFactory
 import net.corda.core.utilities.contextLogger
 import java.io.NotSerializableException
+import java.lang.Exception
 import java.security.PublicKey
 import java.time.Duration
 import java.time.Instant
 import java.util.ArrayDeque
 import java.util.UUID
+import java.util.regex.Pattern
 import kotlin.collections.ArrayList
 import kotlin.collections.component1
 import kotlin.collections.component2
@@ -67,7 +68,10 @@ open class TransactionBuilder(
     private companion object {
         private fun defaultLockId() = (Strand.currentStrand() as? FlowStateMachine<*>)?.id?.uuid ?: UUID.randomUUID()
         private val log = contextLogger()
-        private const val CORDA_VERSION_THAT_INTRODUCED_FLATTENED_COMMANDS = 4
+
+        private val ID_PATTERN = "\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*"
+        private val FQCP = Pattern.compile("$ID_PATTERN(/$ID_PATTERN)+")
+        private fun isValidJavaClass(identifier: String) = FQCP.matcher(identifier).matches()
     }
 
     private val inputsWithTransactionState = arrayListOf<StateAndRef<ContractState>>()
@@ -169,42 +173,52 @@ open class TransactionBuilder(
      * @return true if a new dependency was successfully added.
      */
     private fun addMissingDependency(services: ServicesForResolution, wireTx: WireTransaction): Boolean {
-        try {
+        return try {
             wireTx.toLedgerTransaction(services).verify()
-        } catch (e: NoClassDefFoundError) {
-            val missingClass = e.message ?: throw e
-            addMissingAttachment(missingClass, services)
-            return true
-        } catch (e: TransactionDeserialisationException) {
-            if (e.cause is NotSerializableException && e.cause.cause is ClassNotFoundException) {
-                val missingClass = e.cause.cause!!.message ?: throw e
-                addMissingAttachment(missingClass.replace(".", "/"), services)
-                return true
+            // The transaction verified successfully without adding any extra dependency.
+            false
+        } catch (e: Throwable) {
+            val rootError = e.rootCause
+            when {
+                // Handle various exceptions that can be thrown during verification and drill down the wrappings.
+                // Note: this is a best effort to preserve backwards compatibility.
+                rootError is ClassNotFoundException -> addMissingAttachment((rootError.message ?: throw e).replace(".", "/"), services, e)
+                rootError is NoClassDefFoundError -> addMissingAttachment(rootError.message ?: throw e, services, e)
+
+                // Ignore these exceptions as they will break unit tests.
+                // The point here is only to detect missing dependencies. The other exceptions are irrelevant.
+                e is TransactionVerificationException -> false
+                e is TransactionResolutionException -> false
+                e is IllegalStateException -> false
+                e is IllegalArgumentException -> false
+
+                // Fail early if none of the expected scenarios were hit.
+                else -> {
+                    log.error("""The transaction currently built will not validate because of an unknown error most likely caused by a
+                        missing dependency in the transaction attachments.
+                        Please contact the developer of the CorDapp for further instructions.
+                    """.trimIndent(), e)
+                    throw e
+                }
             }
-            return false
-        } catch (e: NotSerializableException) {
-            if (e.cause is ClassNotFoundException) {
-                val missingClass = e.cause!!.message ?: throw e
-                addMissingAttachment(missingClass.replace(".", "/"), services)
-                return true
-            }
-            return false
-        // Ignore these exceptions as they will break unit tests.
-        // The point here is only to detect missing dependencies. The other exceptions are irrelevant.
-        } catch (tve: TransactionVerificationException) {
-        } catch (tre: TransactionResolutionException) {
-        } catch (ise: IllegalStateException) {
-        } catch (ise: IllegalArgumentException) {
         }
-        return false
     }
 
-    private fun addMissingAttachment(missingClass: String, services: ServicesForResolution) {
+    private fun addMissingAttachment(missingClass: String, services: ServicesForResolution, originalException: Throwable): Boolean {
+        if (!isValidJavaClass(missingClass)) {
+            log.warn("Could not autodetect a valid attachment for the transaction being built.")
+            throw originalException
+        }
+
         val attachment = services.attachments.internalFindTrustedAttachmentForClass(missingClass)
-                ?: throw IllegalArgumentException("""The transaction currently built is missing an attachment for class: $missingClass.
+
+        if (attachment == null) {
+            log.error("""The transaction currently built is missing an attachment for class: $missingClass.
                         Attempted to find a suitable attachment but could not find any in the storage.
                         Please contact the developer of the CorDapp for further instructions.
                     """.trimIndent())
+            throw originalException
+        }
 
         log.warnOnce("""The transaction currently built is missing an attachment for class: $missingClass.
                         Automatically attaching contract dependency $attachment.
@@ -212,6 +226,7 @@ open class TransactionBuilder(
                     """.trimIndent())
 
         addAttachment(attachment.id)
+        return true
     }
 
     /**
@@ -672,15 +687,8 @@ with @BelongsToContract, or supply an explicit contract parameter to addOutputSt
     /** Returns an immutable list of output [TransactionState]s. */
     fun outputStates(): List<TransactionState<*>> = ArrayList(outputs)
 
-    /** Returns an immutable list of [Command]s, grouping by [CommandData] and joining signers (from v4, v3 and below return all commands with duplicates for different signers). */
-    fun commands(): List<Command<*>> {
-        return if (CordappResolver.currentTargetVersion >= CORDA_VERSION_THAT_INTRODUCED_FLATTENED_COMMANDS) {
-            commands.groupBy { cmd -> cmd.value }
-                    .entries.map { (data, cmds) -> Command(data, cmds.flatMap(Command<*>::signers).toSet().toList()) }
-        } else {
-            ArrayList(commands)
-        }
-    }
+    /** Returns an immutable list of [Command]s. */
+    fun commands(): List<Command<*>> = ArrayList(commands)
 
     /**
      * Sign the built transaction and return it. This is an internal function for use by the service hub, please use

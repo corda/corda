@@ -19,6 +19,7 @@ dependencies {
     compile project(':finance:contracts')
     compile project(':finance:workflows')
     compile project(':tools:worldmap')
+    compile project(':common-logging')
 
     // Log4J: logging framework (with SLF4J bindings)
     compile "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"

@@ -115,7 +115,7 @@ class TransactionDataModel {
     val partiallyResolvedTransactions = collectedTransactions.map {
         PartiallyResolvedTransaction.fromSignedTransaction(it,
                 it.inputs.map { stateRef ->
-                    stateRef to rpcProxy.value!!.cordaRPCOps.internalFindVerifiedTransaction(stateRef.txhash)
+                    stateRef to rpcProxy.value!!.internalFindVerifiedTransaction(stateRef.txhash)
                 }.toMap())
     }
 }

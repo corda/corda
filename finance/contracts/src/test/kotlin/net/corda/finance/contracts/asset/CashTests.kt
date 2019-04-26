@@ -164,6 +164,22 @@ class CashTests {
         }
     }
 
+    @Test
+    fun twoMoves() {
+        transaction {
+            attachment(Cash.PROGRAM_ID)
+            input(Cash.PROGRAM_ID, inState)
+            input(Cash.PROGRAM_ID, inState.copy(owner = bob.party))
+            output(Cash.PROGRAM_ID, outState)
+            command(alice.publicKey, Cash.Commands.Move())
+            tweak {
+                output(Cash.PROGRAM_ID, outState)
+                command(bob.publicKey, Cash.Commands.Move())
+                this.verifies()
+            }
+        }
+    }
+
     @BelongsToContract(Cash::class)
     object DummyState: ContractState {
         override val participants: List<AbstractParty> = emptyList()
@@ -273,8 +289,8 @@ class CashTests {
             output(Cash.PROGRAM_ID, inState.copy(amount = inState.amount * 2))
             command(megaCorp.publicKey, Cash.Commands.Issue())
             tweak {
-                command(miniCorp.publicKey, Cash.Commands.Issue())
-                this.verifies()
+                command(megaCorp.publicKey, Cash.Commands.Issue())
+                this `fails with` "there is only a single issue command"
             }
             this.verifies()
         }
@@ -889,5 +905,7 @@ class CashTests {
         assertEquals(megaCorp.party, out(5).amount.token.issuer.party)
         assertEquals(megaCorp.party, out(6).amount.token.issuer.party)
         assertEquals(megaCorp.party, out(7).amount.token.issuer.party)
+
+        assertEquals(2, wtx.commands.size)
     }
 }

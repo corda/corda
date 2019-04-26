@@ -468,7 +468,7 @@ abstract class FlowLogic<out T> {
         val theirs = subLogic.progressTracker
         if (ours != null && theirs != null && ours != theirs) {
             if (ours.currentStep == ProgressTracker.UNSTARTED) {
-                logger.warn("ProgressTracker has not been started")
+                logger.debug { "Initializing the progress tracker for flow: ${this::class.java.name}." }
                 ours.nextStep()
             }
             ours.setChildProgressTracker(ours.currentStep, theirs)

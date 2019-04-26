@@ -3,6 +3,7 @@ package net.corda.node.services.statemachine.interceptors
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.debug
 import net.corda.node.services.statemachine.ActionExecutor
 import net.corda.node.services.statemachine.ErrorState
 import net.corda.node.services.statemachine.Event
@@ -39,7 +40,8 @@ class DumpHistoryOnErrorInterceptor(val delegate: TransitionExecutor) : Transiti
             (record ?: ArrayList()).apply { add(transitionRecord) }
         }
 
-        // Just if we decide to propagate, and not if just on the way to the hospital.
+        // Just if we decide to propagate, and not if just on the way to the hospital. Only log at debug level here - the flow transition
+        // information is often unhelpful in the logs, and the actual cause of the problem will be logged elsewhere.
         if (nextState.checkpoint.errorState is ErrorState.Errored && nextState.checkpoint.errorState.propagating) {
             log.warn("Flow ${fiber.id} errored, dumping all transitions:\n${record!!.joinToString("\n")}")
             for (error in nextState.checkpoint.errorState.errors) {

@@ -17,14 +17,7 @@ import net.corda.node.services.config.NodeConfigurationImpl
 import net.corda.node.services.config.NodeConfigurationImpl.Defaults
 import net.corda.node.services.config.Valid
 import net.corda.node.services.config.VerifierType
-import net.corda.node.services.config.schema.parsers.badValue
-import net.corda.node.services.config.schema.parsers.toCordaX500Name
-import net.corda.node.services.config.schema.parsers.toNetworkHostAndPort
-import net.corda.node.services.config.schema.parsers.toPath
-import net.corda.node.services.config.schema.parsers.toPrincipal
-import net.corda.node.services.config.schema.parsers.toProperties
-import net.corda.node.services.config.schema.parsers.toURL
-import net.corda.node.services.config.schema.parsers.toUUID
+import net.corda.node.services.config.schema.parsers.*
 
 internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfiguration>("NodeConfiguration") {
     private val myLegalName by string().mapValid(::toCordaX500Name)
@@ -73,6 +66,7 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
     private val jarDirs by string().list().optional().withDefaultValue(Defaults.jarDirs)
     private val cordappDirectories by string().mapValid(::toPath).list().optional()
     private val cordappSignerKeyFingerprintBlacklist by string().list().optional().withDefaultValue(Defaults.cordappSignerKeyFingerprintBlacklist)
+    private val whitelistedKeysForAttachments by string().mapValid(::toSecureHash).list().optional().withDefaultValue(listOf())
     @Suppress("unused")
     private val custom by nestedObject().optional()
 
@@ -128,7 +122,8 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
                     h2port = configuration[h2port],
                     jarDirs = configuration[jarDirs],
                     cordappDirectories = cordappDirectories,
-                    cordappSignerKeyFingerprintBlacklist = configuration[cordappSignerKeyFingerprintBlacklist]
+                    cordappSignerKeyFingerprintBlacklist = configuration[cordappSignerKeyFingerprintBlacklist],
+                    whitelistedKeysForAttachments = configuration[whitelistedKeysForAttachments]
             ))
         } catch (e: Exception) {
             return when (e) {

@@ -7,12 +7,15 @@ import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.dataformat.yaml.YAMLGenerator
+import io.github.classgraph.ClassGraph
 import net.corda.client.jackson.JacksonSupport
 import net.corda.client.jackson.StringToMethodCallParser
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCClientConfiguration
-import net.corda.client.rpc.CordaRPCConnection
 import net.corda.client.rpc.PermissionException
+import net.corda.client.rpc.internal.ReconnectingCordaRPCOps
+import net.corda.client.rpc.internal.ReconnectingObservable
+import net.corda.client.rpc.internal.asReconnectingWithInitialValues
 import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.UniqueIdentifier
@@ -22,6 +25,7 @@ import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.*
+import net.corda.client.jackson.internal.CustomShellSerializationFactory
 import net.corda.tools.shell.utlities.ANSIProgressRenderer
 import net.corda.tools.shell.utlities.StdoutANSIProgressRenderer
 import org.crsh.command.InvocationContext
@@ -71,9 +75,9 @@ import kotlin.concurrent.thread
 
 object InteractiveShell {
     private val log = LoggerFactory.getLogger(javaClass)
-    private lateinit var rpcOps: (username: String, credentials: String) -> CordaRPCOps
+    private lateinit var rpcOps: (username: String, password: String) -> CordaRPCOps
     private lateinit var ops: CordaRPCOps
-    private lateinit var connection: CordaRPCConnection
+    private lateinit var rpcConn: AutoCloseable
     private var shell: Shell? = null
     private var classLoader: ClassLoader? = null
     private lateinit var shellConfiguration: ShellConfiguration
@@ -87,20 +91,23 @@ object InteractiveShell {
         YAML
     }
 
-    /**
-     * Starts an interactive shell connected to the local terminal. This shell gives administrator access to the node
-     * internals.
-     */
-    fun startShell(configuration: ShellConfiguration, classLoader: ClassLoader? = null) {
-        rpcOps = { username: String, credentials: String ->
-            val client = CordaRPCClient(hostAndPort = configuration.hostAndPort,
-                    configuration = CordaRPCClientConfiguration.DEFAULT.copy(
-                            maxReconnectAttempts = 1
-                    ),
-                    sslConfiguration = configuration.ssl,
-                    classLoader = classLoader)
-            this.connection = client.start(username, credentials)
-            connection.proxy
+    fun startShell(configuration: ShellConfiguration, classLoader: ClassLoader? = null, standalone: Boolean = false) {
+        rpcOps = { username: String, password: String ->
+            if (standalone) {
+                ReconnectingCordaRPCOps(configuration.hostAndPort, username, password, configuration.ssl, classLoader).also {
+                    rpcConn = it
+                }
+            } else {
+                val client = CordaRPCClient(hostAndPort = configuration.hostAndPort,
+                        configuration = CordaRPCClientConfiguration.DEFAULT.copy(
+                                maxReconnectAttempts = 1
+                        ),
+                        sslConfiguration = configuration.ssl,
+                        classLoader = classLoader)
+                val connection = client.start(username, password)
+                rpcConn = connection
+                connection.proxy
+            }
         }
         _startShell(configuration, classLoader)
     }
@@ -178,7 +185,7 @@ object InteractiveShell {
                     // Don't use the Java language plugin (we may not have tools.jar available at runtime), this
                     // will cause any commands using JIT Java compilation to be suppressed. In CRaSH upstream that
                     // is only the 'jmx' command.
-                    return super.getPlugins().filterNot { it is JavaLanguage } + CordaAuthenticationPlugin(rpcOps)
+                    return super.getPlugins().filterNot { it is JavaLanguage } + CordaAuthenticationPlugin(rpcOps, InteractiveShell.classLoader)
                 }
             }
             val attributes = emptyMap<String, Any>()
@@ -187,7 +194,8 @@ object InteractiveShell {
             this.config = config
             start(context)
             ops = makeRPCOps(rpcOps, localUserName, localUserPassword)
-            return context.getPlugin(ShellFactory::class.java).create(null, CordaSSHAuthInfo(false, ops, StdoutANSIProgressRenderer))
+            return context.getPlugin(ShellFactory::class.java)
+                    .create(null, CordaSSHAuthInfo(false, ops, InteractiveShell.classLoader, StdoutANSIProgressRenderer))
         }
     }
 
@@ -207,13 +215,22 @@ object InteractiveShell {
         return outputFormat
     }
 
-    fun createYamlInputMapper(rpcOps: CordaRPCOps): ObjectMapper {
+    fun createYamlInputMapper(rpcOps: CordaRPCOps, classLoader: ClassLoader?): ObjectMapper {
         // Return a standard Corda Jackson object mapper, configured to use YAML by default and with extra
         // serializers.
         return JacksonSupport.createDefaultMapper(rpcOps, YAMLFactory(), true).apply {
             val rpcModule = SimpleModule().apply {
                 addDeserializer(InputStream::class.java, InputStreamDeserializer)
                 addDeserializer(UniqueIdentifier::class.java, UniqueIdentifierDeserializer)
+            }
+            if(classLoader != null){
+                // Scan for CustomShellSerializationFactory on the classloader and register them as modules.
+                val customModules = ClassGraph().addClassLoader(classLoader).enableClassInfo().pooledScan().use { scan ->
+                    scan.getClassesImplementing(CustomShellSerializationFactory::class.java.name)
+                            .map { it.loadClass().newInstance() as CustomShellSerializationFactory }
+                }
+                log.info("Found the following custom shell serialization modules: ${customModules.map { it.javaClass.name }}")
+                customModules.forEach { registerModule(it.createJacksonModule()) }
             }
             registerModule(rpcModule)
         }
@@ -257,7 +274,7 @@ object InteractiveShell {
                               output: RenderPrintWriter,
                               rpcOps: CordaRPCOps,
                               ansiProgressRenderer: ANSIProgressRenderer,
-                              inputObjectMapper: ObjectMapper = createYamlInputMapper(rpcOps)) {
+                              inputObjectMapper: ObjectMapper) {
         val matches = try {
             rpcOps.registeredFlows().filter { nameFragment in it }
         } catch (e: PermissionException) {
@@ -354,7 +371,7 @@ object InteractiveShell {
     fun killFlowById(id: String,
                      output: RenderPrintWriter,
                      rpcOps: CordaRPCOps,
-                     inputObjectMapper: ObjectMapper = createYamlInputMapper(rpcOps)) {
+                     inputObjectMapper: ObjectMapper) {
         try {
             val runId = try {
                 inputObjectMapper.readValue(id, StateMachineRunId::class.java)
@@ -389,41 +406,60 @@ object InteractiveShell {
                               inputData: String,
                               clazz: Class<out FlowLogic<T>>,
                               om: ObjectMapper): FlowProgressHandle<T> {
-        // For each constructor, attempt to parse the input data as a method call. Use the first that succeeds,
-        // and keep track of the reasons we failed so we can print them out if no constructors are usable.
-        val parser = StringToMethodCallParser(clazz, om)
-        val errors = ArrayList<String>()
 
+        val errors = ArrayList<String>()
+        val parser = StringToMethodCallParser(clazz, om)
+        val nameTypeList = getMatchingConstructorParamsAndTypes(parser, inputData, clazz)
+
+        try {
+            val args = parser.parseArguments(clazz.name, nameTypeList, inputData)
+            return invoke(clazz, args)
+        } catch (e: StringToMethodCallParser.UnparseableCallException.ReflectionDataMissing) {
+            val argTypes = nameTypeList.map { (_, type) -> type }
+            errors.add("$argTypes: <constructor missing parameter reflection data>")
+        } catch (e: StringToMethodCallParser.UnparseableCallException) {
+            val argTypes = nameTypeList.map { (_, type) -> type }
+            errors.add("$argTypes: ${e.message}")
+        }
+        throw NoApplicableConstructor(errors)
+    }
+
+    private fun <T> getMatchingConstructorParamsAndTypes(parser: StringToMethodCallParser<FlowLogic<T>>,
+                                                         inputData: String,
+                                                         clazz: Class<out FlowLogic<T>>) : List<Pair<String, Type>> {
+        val errors = ArrayList<String>()
         val classPackage = clazz.packageName
-        for (ctor in clazz.constructors) {
-            var paramNamesFromConstructor: List<String>? = null
+        lateinit var paramNamesFromConstructor: List<String>
+
+        for (ctor in clazz.constructors) {                // Attempt construction with the given arguments.
 
             fun getPrototype(): List<String> {
-                val argTypes = ctor.genericParameterTypes.map { it: Type ->
+                val argTypes = ctor.genericParameterTypes.map {
                     // If the type name is in the net.corda.core or java namespaces, chop off the package name
                     // because these hierarchies don't have (m)any ambiguous names and the extra detail is just noise.
                     maybeAbbreviateGenericType(it, classPackage)
                 }
-                return paramNamesFromConstructor!!.zip(argTypes).map { (name, type) -> "$name: $type" }
+                return paramNamesFromConstructor.zip(argTypes).map { (name, type) -> "$name: $type" }
             }
 
             try {
-                // Attempt construction with the given arguments.
                 paramNamesFromConstructor = parser.paramNamesFromConstructor(ctor)
-                val args = parser.parseArguments(clazz.name, paramNamesFromConstructor.zip(ctor.genericParameterTypes), inputData)
-                if (args.size != ctor.genericParameterTypes.size) {
-                    errors.add("${getPrototype()}: Wrong number of arguments (${args.size} provided, ${ctor.genericParameterTypes.size} needed)")
-                    continue
-                }
-                return invoke(clazz, args)
-            } catch (e: StringToMethodCallParser.UnparseableCallException.MissingParameter) {
+                val nameTypeList = paramNamesFromConstructor.zip(ctor.genericParameterTypes)
+                parser.validateIsMatchingCtor(clazz.name, nameTypeList, inputData)
+                return nameTypeList
+
+            }
+            catch (e: StringToMethodCallParser.UnparseableCallException.MissingParameter) {
                 errors.add("${getPrototype()}: missing parameter ${e.paramName}")
-            } catch (e: StringToMethodCallParser.UnparseableCallException.TooManyParameters) {
+            }
+            catch (e: StringToMethodCallParser.UnparseableCallException.TooManyParameters) {
                 errors.add("${getPrototype()}: too many parameters")
-            } catch (e: StringToMethodCallParser.UnparseableCallException.ReflectionDataMissing) {
+            }
+            catch (e: StringToMethodCallParser.UnparseableCallException.ReflectionDataMissing) {
                 val argTypes = ctor.genericParameterTypes.map { it.typeName }
                 errors.add("$argTypes: <constructor missing parameter reflection data>")
-            } catch (e: StringToMethodCallParser.UnparseableCallException) {
+            }
+            catch (e: StringToMethodCallParser.UnparseableCallException) {
                 val argTypes = ctor.genericParameterTypes.map { it.typeName }
                 errors.add("$argTypes: ${e.message}")
             }
@@ -438,7 +474,11 @@ object InteractiveShell {
         val (stateMachines, stateMachineUpdates) = proxy.stateMachinesFeed()
         val currentStateMachines = stateMachines.map { StateMachineUpdate.Added(it) }
         val subscriber = FlowWatchPrintingSubscriber(out)
-        stateMachineUpdates.startWith(currentStateMachines).subscribe(subscriber)
+        if (stateMachineUpdates is ReconnectingObservable<*>) {
+            stateMachineUpdates.asReconnectingWithInitialValues(currentStateMachines).subscribe(subscriber::onNext)
+        } else {
+            stateMachineUpdates.startWith(currentStateMachines).subscribe(subscriber)
+        }
         var result: Any? = subscriber.future
         if (result is Future<*>) {
             if (!result.isDone) {
@@ -499,7 +539,9 @@ object InteractiveShell {
             }
         } catch (e: StringToMethodCallParser.UnparseableCallException) {
             out.println(e.message, Color.red)
-            out.println("Please try 'man run' to learn what syntax is acceptable")
+            if (e !is StringToMethodCallParser.UnparseableCallException.NoSuchFile) {
+                out.println("Please try 'man run' to learn what syntax is acceptable")
+            }
         } catch (e: Exception) {
             out.println("RPC failed: ${e.rootCause}", Color.red)
         } finally {
@@ -542,7 +584,7 @@ object InteractiveShell {
                     },
                     // When completed.
                     {
-                        connection.forceClose()
+                        rpcConn.close()
                         // This will only show up in the standalone Shell, because the embedded one is killed as part of a node's shutdown.
                         display { println("...done, quitting the shell now.") }
                         onExit.invoke()

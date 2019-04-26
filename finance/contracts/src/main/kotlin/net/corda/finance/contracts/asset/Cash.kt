@@ -14,10 +14,10 @@ import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.QueryableState
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.finance.schemas.CashSchemaV1
 import net.corda.finance.contracts.utils.sumCash
 import net.corda.finance.contracts.utils.sumCashOrNull
 import net.corda.finance.contracts.utils.sumCashOrZero
+import net.corda.finance.schemas.CashSchemaV1
 import java.security.PublicKey
 import java.util.*
 
@@ -164,7 +164,7 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
                             (inputAmount == outputAmount + amountExitingLedger)
                 }
 
-                verifyMoveCommand<Commands.Move>(inputs, tx.commands)
+                verifyFlattenedMoveCommand<Commands.Move>(inputs, tx.commands)
             }
         }
     }
@@ -207,3 +207,37 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
 val Amount<Currency>.CASH: Cash.State get() = Cash.State(Amount(quantity, Issued(NULL_PARTY.ref(1), token)), NULL_PARTY)
 /** An extension property that lets you get a cash state from an issued token, under the [NULL_PARTY] */
 val Amount<Issued<Currency>>.STATE: Cash.State get() = Cash.State(this, NULL_PARTY)
+
+/**
+ * Simple functionality for verifying multiple move commands that differ only by signers. Verifies that each input has a signature from its owning key.
+ *
+ * @param T the type of the move command.
+ */
+@Throws(IllegalArgumentException::class)
+internal inline fun <reified T : MoveCommand> verifyFlattenedMoveCommand(inputs: List<OwnableState>,
+                                                                         commands: List<CommandWithParties<CommandData>>)
+        : MoveCommand {
+    // Now check the digital signatures on the move command. Every input has an owning public key, and we must
+    // see a signature from each of those keys. The actual signatures have been verified against the transaction
+    // data by the platform before execution.
+    val owningPubKeys = inputs.map { it.owner.owningKey }.toSet()
+    val commands = commands.groupCommands<T>()
+    // Does not use requireThat to maintain message compatibility with verifyMoveCommand.
+    if (commands.isEmpty()) {
+        throw IllegalStateException("Required ${T::class.qualifiedName} command")
+    }
+    requireThat {
+        "move commands can only differ by signing keys" using (commands.size == 1)
+    }
+    val keysThatSigned = commands.values.first()
+    requireThat {
+        "the owning keys are a subset of the signing keys" using keysThatSigned.containsAll(owningPubKeys)
+    }
+    return commands.keys.single()
+}
+
+/** Group commands by instances of the given type. */
+internal inline fun <reified T : CommandData> Collection<CommandWithParties<CommandData>>.groupCommands() = groupCommands(T::class.java)
+
+/** Group commands by instances of the given type. */
+internal fun <C : CommandData> Collection<CommandWithParties<CommandData>>.groupCommands(klass: Class<C>) = select(klass).groupBy { it.value }.map { it.key to it.value.flatMap { it.signers }.toSet() }.toMap()

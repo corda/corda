@@ -46,18 +46,18 @@ For this tutorial, we will only be modifying the following files:
     .. code-block:: java
 
         // 1. The state
-        cordapp-contracts-states/src/main/java/com/template/TemplateState.java
+        contracts/src/main/java/com/template/states/TemplateState.java
 
         // 2. The flow
-        cordapp/src/main/java/com/template/Initiator.java
+        workflows/src/main/java/com/template/flows/Initiator.java
 
     .. code-block:: kotlin
 
         // 1. The state
-        cordapp-contracts-states/src/main/kotlin/com/template/StatesAndContracts.kt
+        contracts/src/main/kotlin/com/template/states/TemplateState.kt
 
         // 2. The flow
-        cordapp/src/main/kotlin/com/template/Flows.kt
+        workflows/src/main/kotlin/com/template/flows/Flows.kt
 
 Progress so far
 ---------------

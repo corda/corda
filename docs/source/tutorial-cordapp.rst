@@ -242,7 +242,7 @@ Running the example CorDapp
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Start the nodes by running the following command from the root of the ``cordapp-example`` folder:
 
-* Unix/Mac OSX: ``workflows-kotlin/build/nodes/runnodes``
+* Unix/Mac OSX: ``workflows-kotlin/build/nodes/runnodes`` 
 * Windows: ``call workflows-kotlin\build\nodes\runnodes.bat``
 
 Each Spring Boot server needs to be started in its own terminal/command prompt, replace X with A, B and C:
@@ -253,7 +253,7 @@ Each Spring Boot server needs to be started in its own terminal/command prompt, 
 Look for the Started ServerKt in X seconds message, don't rely on the % indicator.
 
 .. warning:: On Unix/Mac OSX, do not click/change focus until all seven additional terminal windows have opened, or some
-   nodes may fail to start.
+   nodes may fail to start. You can run ``workflows-kotlin/build/nodes/runnodes --headless`` to prevent each server from opening in a new terminal window. To interact with the nodes will need to use ssh, see :doc:`shell`.
 
 For each node, the ``runnodes`` script creates a node tab/window:
 
@@ -281,9 +281,7 @@ For each node, the ``runnodes`` script creates a node tab/window:
 
    Fri Mar 02 17:34:02 GMT 2018>>>
 
-It usually takes around 60 seconds for the nodes to finish starting up. To ensure that all the nodes are running, you
-can query the 'status' end-point located at ``http://localhost:[port]/api/status`` (e.g.
-``http://localhost:50005/api/status`` for ``PartyA``).
+It usually takes around 60 seconds for the nodes to finish starting up. Each node will display "Welcome to the Corda interactive shell." along with a prompt when ready.
 
 Running the example CorDapp from IntelliJ
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -486,41 +484,7 @@ You can run the CorDapp's integration tests by running the ``Run Integration Tes
 Running tests in IntelliJ
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-We recommend editing your IntelliJ preferences so that you use the Gradle runner - this means that the quasar utils
-plugin will make sure that some flags (like ``-javaagent`` - see :ref:`below <tutorial_cordapp_alternative_test_runners>`) are
-set for you.
-
-To switch to using the Gradle runner:
-
-* Navigate to ``Build, Execution, Deployment -> Build Tools -> Gradle -> Runner`` (or search for `runner`)
-
-  * Windows: this is in "Settings"
-  * MacOS: this is in "Preferences"
-
-* Set "Delegate IDE build/run actions to gradle" to true
-* Set "Run test using:" to "Gradle Test Runner"
-
-.. _tutorial_cordapp_alternative_test_runners:
-
-If you would prefer to use the built in IntelliJ JUnit test runner, you can add some code to your ``build.gradle`` file and
-it will copy your quasar JAR file to the lib directory. You will also need to specify ``-javaagent:lib/quasar.jar``
-and set the run directory to the project root directory for each test.
-
-Add the following to your ``build.gradle`` file - ideally to a ``build.gradle`` that already contains the quasar-utils plugin line:
-
-.. sourcecode:: groovy
-
-    apply plugin: 'net.corda.plugins.quasar-utils'
-
-    task installQuasar(type: Copy) {
-        destinationDir rootProject.file("lib")
-        from(configurations.quasar) {
-            rename 'quasar-core(.*).jar', 'quasar.jar'
-        }
-    }
-
-
-and then you can run ``gradlew installQuasar``.
+See :ref:`Running tests in IntelliJ<tutorial_cordapp_alternative_test_runners>`
 
 Debugging your CorDapp
 ----------------------

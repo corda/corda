@@ -1,11 +1,11 @@
-package net.corda.cliutils
+package net.corda.common.logging
 
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.message.Message
 import org.apache.logging.log4j.message.SimpleMessage
 import java.util.*
 
-internal fun Message.withErrorCodeFor(error: Throwable?, level: Level): Message {
+fun Message.withErrorCodeFor(error: Throwable?, level: Level): Message {
 
     return when {
         error != null && level.isInRange(Level.FATAL, Level.WARN) -> CompositeMessage("$formattedMessage [errorCode=${error.errorCode()}, moreInformationAt=${error.errorCodeLocationUrl()}]", format, parameters, throwable)
@@ -13,9 +13,9 @@ internal fun Message.withErrorCodeFor(error: Throwable?, level: Level): Message 
     }
 }
 
-private fun Throwable.errorCodeLocationUrl() = "https://errors.corda.net/${CordaVersionProvider.platformEditionCode}/${CordaVersionProvider.semanticVersion}/${errorCode()}"
+fun Throwable.errorCodeLocationUrl() = "https://errors.corda.net/${CordaVersion.platformEditionCode}/${CordaVersion.semanticVersion}/${errorCode()}"
 
-private fun Throwable.errorCode(hashedFields: (Throwable) -> Array<out Any?> = Throwable::defaultHashedFields): String {
+fun Throwable.errorCode(hashedFields: (Throwable) -> Array<out Any?> = Throwable::defaultHashedFields): String {
 
     val hash = staticLocationBasedHash(hashedFields)
     return hash.toBase(36)

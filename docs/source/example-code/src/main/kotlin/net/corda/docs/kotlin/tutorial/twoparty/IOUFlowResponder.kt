@@ -7,7 +7,6 @@ import net.corda.core.flows.*
 import net.corda.docs.kotlin.tutorial.helloworld.IOUFlow
 import net.corda.docs.kotlin.tutorial.helloworld.IOUState
 
-// DOCSTART 01
 // Add these imports:
 import net.corda.core.contracts.requireThat
 import net.corda.core.transactions.SignedTransaction
@@ -15,9 +14,9 @@ import net.corda.core.transactions.SignedTransaction
 // Define IOUFlowResponder:
 @InitiatedBy(IOUFlow::class)
 class IOUFlowResponder(val otherPartySession: FlowSession) : FlowLogic<Unit>() {
+    // DOCSTART 1
     @Suspendable
     override fun call() {
-        // DOCSTART 01
         val signTransactionFlow = object : SignTransactionFlow(otherPartySession) {
             override fun checkTransaction(stx: SignedTransaction) = requireThat {
                 val output = stx.tx.outputs.single().data
@@ -26,10 +25,8 @@ class IOUFlowResponder(val otherPartySession: FlowSession) : FlowLogic<Unit>() {
                 "The IOU's value can't be too high." using (iou.value < 100)
             }
         }
-
         val expectedTxId = subFlow(signTransactionFlow).id
-
         subFlow(ReceiveFinalityFlow(otherPartySession, expectedTxId))
-        // DOCEND 01
     }
+    // DOCEND 1
 }
