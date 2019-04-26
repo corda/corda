@@ -56,7 +56,9 @@ abstract class AppendOnlyPersistentMapBase<MAP_KEY, MAP_VALUE, PERSISTED_ENTITY,
         return result.map { x -> fromPersistentEntity(x) }.asSequence()
     }
 
-    inline fun <reified T : Comparable<*>> preLoaded(limit: Int? = null, orderingField: KProperty1<PERSISTED_ENTITY, T>? = null, ascending: Boolean = true): AppendOnlyPersistentMapBase<MAP_KEY, MAP_VALUE, PERSISTED_ENTITY, PERSISTED_ENTITY_KEY> {
+    inline fun <reified T : Comparable<*>> load(limit: Int? = `access$cache`.policy().eviction().map { (it.maximum / 0.5).toInt() }.orElse(null),
+                                                orderingField: KProperty1<PERSISTED_ENTITY, T>? = null,
+                                                ascending: Boolean = true): AppendOnlyPersistentMapBase<MAP_KEY, MAP_VALUE, PERSISTED_ENTITY, PERSISTED_ENTITY_KEY> {
         val session = currentDBSession()
         val criteriaQuery = session.criteriaBuilder.createQuery(persistentEntityClass)
         val root = criteriaQuery.from(persistentEntityClass)
@@ -74,8 +76,11 @@ abstract class AppendOnlyPersistentMapBase<MAP_KEY, MAP_VALUE, PERSISTED_ENTITY,
         }
         val results = query.resultList
 
-        val mappedResults = results.map { fromPersistentEntity(it) }.toMap()
-        mappedResults.forEach { this.get(it.key) }
+        val mappedResults = results.map {
+            val entity = fromPersistentEntity(it)
+            entity.first to Transactional.Committed(entity.second)
+        }.toMap()
+        `access$cache`.putAll(mappedResults)
         return this
     }
 
@@ -371,6 +376,10 @@ abstract class AppendOnlyPersistentMapBase<MAP_KEY, MAP_VALUE, PERSISTED_ENTITY,
                 get() = if (writerValueLoader.get() != _writerValueLoader) writerValueLoader.get()() else if (readerValueLoader.get() != _writerValueLoader) readerValueLoader.get()() else null
         }
     }
+
+    @PublishedApi
+    internal val `access$cache`: LoadingCache<MAP_KEY, Transactional<MAP_VALUE>>
+        get() = cache
 }
 
 // Open for tests to override
