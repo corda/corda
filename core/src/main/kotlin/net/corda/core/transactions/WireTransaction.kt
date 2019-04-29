@@ -396,7 +396,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                         signersCondition = Builder.equal(signers),
                         uploaderCondition = Builder.`in`(TRUSTED_UPLOADERS)
                 )
-                service.queryAttachments(queryCriteria).isNotEmpty() // TODO: could mark those we know trusted, perhaps with a cache? (May not want in DB)
+                service.queryAttachments(queryCriteria).isNotEmpty()
             } else {
                 false
             }
