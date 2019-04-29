@@ -199,21 +199,24 @@ class NodeVaultService(
             referenceStateRefsMap.keys.map { it.txhash }.distinct().map { producedStatesMapping.invalidate(it) }
 
             // Persist the consumed inputs.
-                if (consumedStateRefs.isNotEmpty()) {
-                    // We have to do this so that the session does not hold onto the prior version of the states status.  i.e.
-                    // it is not aware of this query.
-                    session.flush()
-                    session.clear()
-                    val criteriaBuilder = session.criteriaBuilder
+            if (consumedStateRefs.isNotEmpty()) {
+                // We have to do this so that the session does not hold onto the prior version of the states status.  i.e.
+                // it is not aware of this query.
+                session.flush()
+                session.clear()
+                val criteriaBuilder = session.criteriaBuilder
+                // check if we need to batch the vault update - the default is one large batch
+                val batchSize = database.hibernateConfig.vaultUpdateBatchSize ?: consumedStateRefs.size
+                consumedStateRefs.chunked(batchSize).forEach { consumedStateRefsBatch ->
                     val updateQuery = criteriaBuilder.createCriteriaUpdate(VaultSchemaV1.VaultStates::class.java)
                     val root = updateQuery.from(VaultSchemaV1.VaultStates::class.java)
                     updateQuery.set(root.get<Vault.StateStatus>(VaultSchemaV1.VaultStates::stateStatus.name), Vault.StateStatus.CONSUMED)
                     updateQuery.set(root.get<Instant>(VaultSchemaV1.VaultStates::consumedTime.name), now)
                     updateQuery.set(root.get<String>(VaultSchemaV1.VaultStates::lockId.name), criteriaBuilder.nullLiteral(String::class.java))
-                    updateQuery.where(root.get<PersistentStateRef>(VaultSchemaV1.VaultStates::stateRef.name).`in`(consumedStateRefs.map { PersistentStateRef(it) }))
+                    updateQuery.where(root.get<PersistentStateRef>(VaultSchemaV1.VaultStates::stateRef.name).`in`(consumedStateRefsBatch.map { PersistentStateRef(it) }))
                     session.createQuery(updateQuery).executeUpdate()
+                }
             }
-
         }
         return update
     }
