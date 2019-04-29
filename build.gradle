@@ -127,7 +127,7 @@ buildscript {
 plugins {
     // Add the shadow plugin to the plugins classpath for the entire project.
     id 'com.github.johnrengelman.shadow' version '2.0.4' apply false
-    id "com.gradle.build-scan" version "2.0.2"
+    id "com.gradle.build-scan" version "2.2.1"
 }
 
 ext {
@@ -214,6 +214,8 @@ allprojects {
 
         // Prevent the project from creating temporary files outside of the build directory.
         systemProperty 'java.io.tmpdir', buildDir.absolutePath
+
+        maxHeapSize = "1g"
 
         if (project.hasProperty('test.parallel') && project.property('test.parallel').toBoolean()) {
             maxParallelForks = Runtime.runtime.availableProcessors().intdiv(2) as int ?: 1
