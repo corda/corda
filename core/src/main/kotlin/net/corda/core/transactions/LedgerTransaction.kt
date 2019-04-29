@@ -12,10 +12,8 @@ import net.corda.core.node.NetworkParameters
 import net.corda.core.serialization.ConstructorForDeserialization
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.DeprecatedConstructorForDeserialization
-import net.corda.core.serialization.internal.AttachmentsClassLoader
 import net.corda.core.serialization.internal.AttachmentsClassLoaderBuilder
 import net.corda.core.utilities.contextLogger
-import java.lang.UnsupportedOperationException
 import java.util.*
 import java.util.function.Predicate
 
@@ -76,7 +74,7 @@ private constructor(
     private var componentGroups: List<ComponentGroup>? = null
     private var serializedInputs: List<SerializedStateAndRef>? = null
     private var serializedReferences: List<SerializedStateAndRef>? = null
-    private var attachmentTrustedFun: (Attachment) -> Boolean = { AttachmentsClassLoader.isAttachmentTrustedDefault(it) }
+    private var attachmentTrustedFun: (Attachment) -> Boolean = { WireTransaction.isAttachmentTrusted(it, null) }
 
     init {
         if (timeWindow != null) check(notary != null) { "Transactions with time-windows must be notarised" }

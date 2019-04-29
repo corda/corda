@@ -3,8 +3,8 @@ package net.corda.core.serialization.internal
 import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.ContractAttachment
 import net.corda.core.contracts.TransactionVerificationException
-import net.corda.core.contracts.TransactionVerificationException.PackageOwnershipException
 import net.corda.core.contracts.TransactionVerificationException.OverlappingAttachmentsException
+import net.corda.core.contracts.TransactionVerificationException.PackageOwnershipException
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
 import net.corda.core.internal.*
@@ -101,14 +101,6 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
                             }
                     )
                 }
-            }
-        }
-
-        fun isAttachmentTrustedDefault(attachment: Attachment): Boolean {
-            return when (attachment) {
-                is ContractAttachment -> isUploaderTrusted(attachment.uploader)
-                is AbstractAttachment -> isUploaderTrusted(attachment.uploader)
-                else -> false
             }
         }
     }

@@ -147,7 +147,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                 { null },
                 // Returning a dummy `missingAttachment` Attachment allows this deprecated method to work and it disables "contract version no downgrade rule" as a dummy Attachment returns version 1
                 { resolveAttachment(it.txhash) ?: missingAttachment },
-                { isAttachmentTrusted(it, null)}
+                { isAttachmentTrusted(it, null) }
         )
     }
 
