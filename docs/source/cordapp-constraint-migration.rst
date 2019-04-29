@@ -13,9 +13,10 @@ CorDapp constraints migration
 .. note:: Before reading this page, you should be familiar with the key concepts of :doc:`Contract Constraints <api-contract-constraints>`.
 
 Corda 4 introduces and recommends building signed CorDapps that issue states with signature constraints.
-Existing on ledger states issued before Corda 4 are not automatically transitioned to new signature constraints when building transactions in Corda 4.
-This document explains how to modify existing CorDapp flows to explicitly consume and evolve pre Corda 4 states, and outlines a future mechanism
-where such states will transition automatically (without explicit migration code).
+When building transactions in Corda 4, existing on ledger states issued before Corda 4 are only automatically transitioned to the new
+Signature Constraint if they were originally using the CZ Whitelisted Constraint. This document explains how to modify existing CorDapp flows to
+explicitly consume and evolve pre Corda 4 states, and outlines a future mechanism where such states will transition automatically
+(without explicit migration code).
 
 Faced with the exercise of upgrading an existing Corda 3.x CorDapp to Corda 4, you need to consider the following:
 
@@ -129,22 +130,13 @@ Corda 4.0 requires some additional steps to consume and evolve pre-existing on-l
    The key used for signing will be used to sign all subsequent releases, so it should be stored appropriately. The JAR can be signed by multiple keys owned
    by different parties and it will be expressed as a ``CompositeKey`` in the ``SignatureAttachmentConstraint`` (See :doc:`api-core-types`).
 
-2. The new Corda 4 signed CorDapp JAR must be registered with the CZ network operator (as whitelisted in the network parameters which are distributed
-   to all nodes in that CZ). The CZ network operator should check that the JAR is signed and not allow any more versions of it to be whitelisted in the future.
-   From now on the development organisation that signed the JAR is responsible for signing new versions.
+2. Any flow that builds transactions using this CorDapp will automatically transition states to use the ``SignatureAttachmentConstraint`` if
+   no other constraint is specified. Therefore, there are two ways to alter the existing code.
 
-   The process of CZ network CorDapp whitelisting depends on how the Corda network is configured:
+   * Do not specify a constraint
+   * Explicitly add a Signature Constraint
 
-    - if using a hosted CZ network (such as `The Corda Network <https://docs.corda.net/head/corda-network/index.html>`_ or
-      `UAT Environment <https://docs.corda.net/head/corda-network/UAT.html>`_ ) running an Identity Operator (formerly known as Doorman) and
-      Network Map Service, you should manually send the hashes of the two JARs to the CZ network operator and request these be added using
-      their network parameter update process.
-
-    - if using a local network created using the Network Bootstrapper tool, please follow the instructions in
-      :ref:`Updating the contract whitelist for bootstrapped networks <bootstrapper_updating_whitelisted_contracts>` to can add both CorDapp Contract JAR hashes.
-
-3. Any flows that build transactions using this CorDapp will have the responsibility of transitioning states to the ``SignatureAttachmentConstraint``.
-   This is done explicitly in the code by setting the constraint of the output states to signers of the latest version of the whitelisted jar:
+The code below details how to explicitly add a Signature Constraint:
 
 .. container:: codeset
 
@@ -174,7 +166,7 @@ Corda 4.0 requires some additional steps to consume and evolve pre-existing on-l
                 // Set the Signature constraint on the new state to migrate away from the WhitelistConstraint.
                 .addOutputState(outputState, myContract, new SignatureAttachmentConstraint(ownersKey))
 
-4. As a node operator you need to add the new signed version of the contracts CorDapp to the ``/cordapps`` folder together with the latest version of the flows jar.
+3. As a node operator you need to add the new signed version of the contracts CorDapp to the ``/cordapps`` folder together with the latest version of the flows jar.
    Please also ensure that the original unsigned contracts CorDapp is removed from the ``/cordapps`` folder (this will already be present in the
    nodes attachments store) to ensure the lookup code in step 3 retrieves the correct signed contract CorDapp JAR.
 
