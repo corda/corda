@@ -8,7 +8,9 @@ import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.internal.configureDatabase
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
+import org.hamcrest.CoreMatchers.`is`
 import org.junit.After
+import org.junit.Assert
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -91,6 +93,20 @@ class AppendOnlyPersistentMapTest(var scenario: Scenario) {
         a.join()
         b.join()
         assertTrue(map.pendingKeysIsEmpty())
+    }
+
+    @Test
+    fun `should successfully pre-populate the cache`() {
+        var idx = 0L
+        database.transaction {
+            for (i: Int in 1..100) {
+                session.save(PersistentMapEntry(idx++, idx.toString(3)))
+            }
+        }
+        val map =  database.transaction {
+            createMap().load(orderingField = PersistentMapEntry::key)
+        } as TestMap
+        Assert.assertThat(map.cachedCount(), `is`(100L))
     }
 
     @Test
@@ -286,6 +302,8 @@ class AppendOnlyPersistentMapTest(var scenario: Scenario) {
         fun pendingKeysIsEmpty() = pendingKeys.isEmpty()
 
         fun invalidate() = cache.invalidateAll()
+
+        fun cachedCount() = cache.estimatedSize()
     }
 
     fun createMap() = TestMap()

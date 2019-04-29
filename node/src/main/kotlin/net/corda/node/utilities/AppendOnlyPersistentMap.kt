@@ -56,19 +56,17 @@ abstract class AppendOnlyPersistentMapBase<MAP_KEY, MAP_VALUE, PERSISTED_ENTITY,
         return result.map { x -> fromPersistentEntity(x) }.asSequence()
     }
 
-    inline fun <reified T : Comparable<*>> load(limit: Int? = `access$cache`.policy().eviction().map { (it.maximum / 0.5).toInt() }.orElse(null),
-                                                orderingField: KProperty1<PERSISTED_ENTITY, T>? = null,
-                                                ascending: Boolean = true): AppendOnlyPersistentMapBase<MAP_KEY, MAP_VALUE, PERSISTED_ENTITY, PERSISTED_ENTITY_KEY> {
+    inline fun <reified T : Any?> load(limit: Int? = `access$cache`.policy().eviction().map { (it.maximum / 0.5).toInt() }.orElse(null),
+                                       orderingField: KProperty1<PERSISTED_ENTITY, T>,
+                                       ascending: Boolean = true): AppendOnlyPersistentMapBase<MAP_KEY, MAP_VALUE, PERSISTED_ENTITY, PERSISTED_ENTITY_KEY> {
         val session = currentDBSession()
         val criteriaQuery = session.criteriaBuilder.createQuery(persistentEntityClass)
         val root = criteriaQuery.from(persistentEntityClass)
         criteriaQuery.select(root)
-        orderingField?.let {
-            if (ascending) {
-                criteriaQuery.orderBy(session.criteriaBuilder.asc(root.get<T>(orderingField.name)))
-            } else {
-                criteriaQuery.orderBy(session.criteriaBuilder.desc(root.get<T>(orderingField.name)))
-            }
+        if (ascending) {
+            criteriaQuery.orderBy(session.criteriaBuilder.asc(root.get<T>(orderingField.name)))
+        } else {
+            criteriaQuery.orderBy(session.criteriaBuilder.desc(root.get<T>(orderingField.name)))
         }
         val query = session.createQuery(criteriaQuery)
         limit?.let {
