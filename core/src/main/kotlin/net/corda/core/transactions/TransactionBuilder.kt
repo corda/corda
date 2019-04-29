@@ -431,7 +431,7 @@ open class TransactionBuilder(
         constraints.any { it is HashAttachmentConstraint } -> constraints.find { it is HashAttachmentConstraint }!!
 
         // TODO, we don't currently support mixing signature constraints with different signers. This will change once we introduce third party signers.
-        constraints.map { it is SignatureAttachmentConstraint }.size > 1 ->
+        constraints.count { it is SignatureAttachmentConstraint } > 1 ->
             throw IllegalArgumentException("Cannot mix SignatureAttachmentConstraints signed by different parties in the same transaction.")
 
         // This ensures a smooth migration from a Whitelist Constraint to a Signature Constraint
@@ -445,7 +445,7 @@ open class TransactionBuilder(
         }
 
         // This condition is hit when the current node has not installed the latest signed version but has already received states that have been migrated
-        constraints.any { it is WhitelistedByZoneAttachmentConstraint } && constraints.any { it is SignatureAttachmentConstraint } && !attachmentToUse.isSigned ->
+        constraints.any { it is SignatureAttachmentConstraint } && !attachmentToUse.isSigned ->
             throw IllegalArgumentException("Attempting to create an illegal transaction. Please install the latest signed version for the $attachmentToUse Cordapp.")
 
         // When all input states have the same constraint.
