@@ -18,7 +18,6 @@ import net.corda.core.node.services.vault.AttachmentQueryCriteria
 import net.corda.core.node.services.vault.Builder
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
-import net.corda.core.serialization.internal.AttachmentsClassLoader
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.OpaqueBytes
 import java.security.PublicKey

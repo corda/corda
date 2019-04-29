@@ -3,6 +3,7 @@ package net.corda.core.transactions
 import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.Contract
 import net.corda.core.contracts.TransactionVerificationException
+import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.declaredField
 import net.corda.core.internal.inputStream
@@ -21,6 +22,7 @@ import org.junit.Test
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
 import java.net.URL
+import java.security.PublicKey
 import kotlin.test.assertFailsWith
 
 class AttachmentsClassLoaderTests {
@@ -40,7 +42,10 @@ class AttachmentsClassLoaderTests {
 
     private val storage = MockAttachmentStorage()
     private val networkParameters = testNetworkParameters()
-    private fun make(attachments: List<Attachment>, params: NetworkParameters = networkParameters) = AttachmentsClassLoader(attachments, params, SecureHash.zeroHash, { true })
+    private fun make(attachments: List<Attachment>,
+                     params: NetworkParameters = networkParameters): AttachmentsClassLoader {
+        return AttachmentsClassLoader(attachments, params, SecureHash.zeroHash, { WireTransaction.isAttachmentTrusted(it, storage) })
+    }
 
     @Test
     fun `Loading AnotherDummyContract without using the AttachmentsClassLoader fails`() {
