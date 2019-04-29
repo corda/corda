@@ -4,31 +4,15 @@ Changelog
 Here's a summary of what's changed in each Corda release. For guidance on how to upgrade code from the previous
 release, see :doc:`app-upgrade-notes`.
 
-Unreleased
-----------
+.. _changelog_v4.2:
 
-* Updating postgres dependency to 42.2.5
+Version 4.2
+-----------
 
-* Test ``CordaService`` s can be installed on mock nodes using ``UnstartedMockNode.installCordaService``.
-
-* The finance-contracts demo CorDapp has been slimmed down to contain only that which is relevant for contract verification. Everything else
-  has been moved to the finance-workflows CorDapp:
-
-  * The cash selection logic. ``AbstractCashSelection`` is now in net.corda.finance.contracts.asset so any custom implementations must now be
-    defined in ``META-INF/services/net.corda.finance.workflows.asset.selection.AbstractCashSelection``.
-
-  * The jackson annotations on ``Expression`` have been removed. You will need to use ``FinanceJSONSupport.registerFinanceJSONMappers`` if
-    you wish to preserve the JSON format for this class.
-
-  * The various utility methods defined in ``Cash`` for creating cash transactions have been moved to ``net.corda.finance.workflows.asset.CashUtils``.
-    Similarly with ``CommercialPaperUtils`` and ``ObligationUtils``.
-
-  * Various other utilities such as ``GetBalances`` and the test calendar data.
-
-  The only exception to this is ``Interpolator`` and related classes. These are now in the `IRS demo workflows CorDapp <https://github.com/corda/corda/tree/master/samples/irs-demo/cordapp/workflows-irs>`_.
-
-* Vault states are now correctly migrated when moving from V3 to V4. In particular, this means the relevancy column is correctly filled, and the state party table is populated.
-  Note: This means Corda can be slow to start up for the first time after upgrading from V3 to V4.
+* Added the ``whitelistedKeysForAttachments`` configuration option. This is a list of SHA-256 hashes of public keys. Attachments signed by
+  any keys in this list will automatically be trusted by the node. This change removes the requirement to have every version of a CorDapp
+  present in the node in order to verify a chain of transactions using different versions of the same CorDapp - instead the signing key can
+  be whitelisted.
 
 .. _changelog_v4.0:
 

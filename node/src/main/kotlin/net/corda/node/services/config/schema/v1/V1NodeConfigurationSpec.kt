@@ -11,14 +11,7 @@ import net.corda.node.services.config.NodeConfigurationImpl
 import net.corda.node.services.config.NodeConfigurationImpl.Defaults
 import net.corda.node.services.config.Valid
 import net.corda.node.services.config.VerifierType
-import net.corda.node.services.config.schema.parsers.badValue
-import net.corda.node.services.config.schema.parsers.toCordaX500Name
-import net.corda.node.services.config.schema.parsers.toNetworkHostAndPort
-import net.corda.node.services.config.schema.parsers.toPath
-import net.corda.node.services.config.schema.parsers.toPrincipal
-import net.corda.node.services.config.schema.parsers.toProperties
-import net.corda.node.services.config.schema.parsers.toURL
-import net.corda.node.services.config.schema.parsers.toUUID
+import net.corda.node.services.config.schema.parsers.*
 import net.corda.nodeapi.internal.cryptoservice.SupportedCryptoServices
 
 internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfiguration>("NodeConfiguration") {
@@ -70,6 +63,7 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
     private val cordappSignerKeyFingerprintBlacklist by string().list().optional().withDefaultValue(Defaults.cordappSignerKeyFingerprintBlacklist)
     private val cryptoServiceName by enum(SupportedCryptoServices::class).optional()
     private val cryptoServiceConf by string().mapValid(::toPath).optional()
+    private val whitelistedKeysForAttachments by string().mapValid(::toSecureHash).list().optional().withDefaultValue(listOf())
     @Suppress("unused")
     private val custom by nestedObject().optional()
     private val relay by nested(RelayConfigurationSpec).optional()
@@ -137,7 +131,8 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
                     enableSNI = config[enableSNI],
                     useOpenSsl = config[useOpenSsl],
                     graphiteOptions = config[graphiteOptions],
-                    enterpriseConfiguration = config[enterpriseConfiguration]
+                    enterpriseConfiguration = config[enterpriseConfiguration],
+                    whitelistedKeysForAttachments = config[whitelistedKeysForAttachments]
             ))
         } catch (e: Exception) {
             return when (e) {

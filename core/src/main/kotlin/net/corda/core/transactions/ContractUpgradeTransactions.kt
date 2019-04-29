@@ -9,6 +9,7 @@ import net.corda.core.crypto.componentHash
 import net.corda.core.crypto.computeNonce
 import net.corda.core.identity.Party
 import net.corda.core.internal.AttachmentWithContext
+import net.corda.core.internal.ServicesForResolutionInternal
 import net.corda.core.internal.combinedHash
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.ServicesForResolution
@@ -144,8 +145,13 @@ data class ContractUpgradeWireTransaction(
                 ?: throw MissingContractAttachments(emptyList())
         val upgradedAttachment = services.attachments.openAttachment(upgradedContractAttachmentId)
                 ?: throw MissingContractAttachments(emptyList())
+        val whitelistedPublicKeys = (services as? ServicesForResolutionInternal)?.whitelistedKeysForAttachments ?: listOf()
 
-        return AttachmentsClassLoaderBuilder.withAttachmentsClassloaderContext(listOf(legacyAttachment, upgradedAttachment), params, id) { transactionClassLoader ->
+        return AttachmentsClassLoaderBuilder.withAttachmentsClassloaderContext(
+                listOf(legacyAttachment, upgradedAttachment),
+                params,
+                id,
+                whitelistedPublicKeys) { transactionClassLoader ->
             val resolvedInput = binaryInput.deserialize()
             val upgradedContract = upgradedContract(upgradedContractClassName, transactionClassLoader)
             val outputState = calculateUpgradedState(resolvedInput, upgradedContract, upgradedAttachment)
