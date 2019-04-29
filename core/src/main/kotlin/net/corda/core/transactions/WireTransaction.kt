@@ -14,6 +14,8 @@ import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.AttachmentStorage
+import net.corda.core.node.services.vault.AttachmentQueryCriteria
+import net.corda.core.node.services.vault.Builder
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.internal.AttachmentsClassLoader
@@ -110,7 +112,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                     services.networkParametersService.lookup(hashToResolve)
                 },
                 resolveContractAttachment = { services.loadContractAttachment(it) },
-                isAttachmentTrusted = { services.attachments.isAttachmentTrusted(it.id) }
+                isAttachmentTrusted = { isAttachmentTrusted(it, services.attachments) }
         )
     }
 
@@ -145,7 +147,8 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                 { stateRef -> resolveStateRef(stateRef)?.serialize() },
                 { null },
                 // Returning a dummy `missingAttachment` Attachment allows this deprecated method to work and it disables "contract version no downgrade rule" as a dummy Attachment returns version 1
-                { resolveAttachment(it.txhash) ?: missingAttachment }
+                { resolveAttachment(it.txhash) ?: missingAttachment },
+                { isAttachmentTrusted(it, null)}
         )
     }
 
@@ -161,7 +164,8 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                 resolveAttachment,
                 { stateRef -> resolveStateRef(stateRef)?.serialize() },
                 resolveParameters,
-                { resolveAttachment(it.txhash) ?: missingAttachment }
+                { resolveAttachment(it.txhash) ?: missingAttachment },
+                { true } // Any attachment loaded through the DJVM should be trusted
         )
     }
 
@@ -171,7 +175,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
             resolveStateRefAsSerialized: (StateRef) -> SerializedBytes<TransactionState<ContractState>>?,
             resolveParameters: (SecureHash?) -> NetworkParameters?,
             resolveContractAttachment: (StateRef) -> Attachment,
-            isAttachmentTrusted: (Attachment) -> Boolean = { AttachmentsClassLoader.isAttachmentTrustedDefault(it) }
+            isAttachmentTrusted: (Attachment) -> Boolean
     ): LedgerTransaction {
         // Look up public keys to authenticated identities.
         val authenticatedCommands = commands.lazyMapped { cmd, _ ->
@@ -366,6 +370,39 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                 // For backwards compatibility revert to using the node classloader.
                 services.loadState(stateRef).serialize()
             }
+        }
+
+        /**
+         * Establishes whether an attachment should be trusted. This logic is required in order to verify transactions, as transaction
+         * verification should only be carried out using trusted attachments.
+         *
+         * Attachments are trusted if one of the following is true:
+         *  - They are uploaded by a trusted uploader
+         *  - There is another attachment in the attachment store with the same contract classes and signed by the same keys that is trusted
+         */
+        @CordaInternal
+        fun isAttachmentTrusted(attachment: Attachment, service: AttachmentStorage?): Boolean {
+            val trustedByUploader = when (attachment) {
+                is ContractAttachment -> isUploaderTrusted(attachment.uploader)
+                is AbstractAttachment -> isUploaderTrusted(attachment.uploader)
+                else -> false
+            }
+
+            val trustedBySuccessor = if (!trustedByUploader && service != null && attachment is ContractAttachment) {
+                val signers = attachment.signerKeys
+                val contractClasses = listOf(attachment.contract) + attachment.additionalContracts.toList()
+
+                val queryCriteria = AttachmentQueryCriteria.AttachmentsQueryCriteria(
+                        contractClassNamesCondition = Builder.equal(contractClasses),
+                        signersCondition = Builder.equal(signers),
+                        uploaderCondition = Builder.`in`(TRUSTED_UPLOADERS)
+                )
+                service.queryAttachments(queryCriteria).isNotEmpty() // TODO: could mark those we know trusted, perhaps with a cache? (May not want in DB)
+            } else {
+                false
+            }
+
+            return (trustedByUploader || trustedBySuccessor)
         }
     }
 

@@ -145,7 +145,11 @@ data class ContractUpgradeWireTransaction(
         val upgradedAttachment = services.attachments.openAttachment(upgradedContractAttachmentId)
                 ?: throw MissingContractAttachments(emptyList())
 
-        return AttachmentsClassLoaderBuilder.withAttachmentsClassloaderContext(listOf(legacyAttachment, upgradedAttachment), params, id) { transactionClassLoader ->
+        return AttachmentsClassLoaderBuilder.withAttachmentsClassloaderContext(
+                listOf(legacyAttachment, upgradedAttachment),
+                params,
+                id,
+                { WireTransaction.isAttachmentTrusted(it, services.attachments) }) { transactionClassLoader ->
             val resolvedInput = binaryInput.deserialize()
             val upgradedContract = upgradedContract(upgradedContractClassName, transactionClassLoader)
             val outputState = calculateUpgradedState(resolvedInput, upgradedContract, upgradedAttachment)

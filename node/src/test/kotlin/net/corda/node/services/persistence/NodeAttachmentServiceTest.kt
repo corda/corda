@@ -773,53 +773,22 @@ class NodeAttachmentServiceTest {
         }
     }
 
-    @Test
-    fun `Jar uploaded by trusted uploader is trusted`() {
-        SelfCleaningDir().use { file ->
-            val (jar, _) = makeTestSignedContractJar(file.path, "foo.bar.DummyContract")
-            val unsignedJar = ContractJarTestUtils.makeTestContractJar(file.path, "com.example.MyContract")
-            val (attachment, _) = makeTestJar()
-
-            val signedId = jar.read { storage.privilegedImportAttachment(it, "app", "signed-contract.jar")}
-            val unsignedId = unsignedJar.read { storage.privilegedImportAttachment(it, "app", "unsigned-contract.jar") }
-            val attachmentId = attachment.read { storage.privilegedImportAttachment(it, "app", "attachment.jar")}
-
-            assert(storage.isAttachmentTrusted(signedId)) { "Signed contract $signedId should be trusted but isn't" }
-            assert(storage.isAttachmentTrusted(unsignedId)) { "Unsigned contract $unsignedId should be trusted but isn't"}
-            assert(storage.isAttachmentTrusted(attachmentId)) { "Attachment $attachmentId should be trusted but isn't"}
-        }
-    }
-
-    @Test
-    fun `Jar uploaded by untrusted uploader is not trusted`() {
-        SelfCleaningDir().use { file ->
-            val (jar, _) = makeTestSignedContractJar(file.path, "foo.bar.DummyContract")
-            val unsignedJar = ContractJarTestUtils.makeTestContractJar(file.path, "com.example.MyContract")
-            val (attachment, _) = makeTestJar()
-
-            val signedId = jar.read { storage.privilegedImportAttachment(it, "bad_guy", "signed-contract.jar")}
-            val unsignedId = unsignedJar.read { storage.privilegedImportAttachment(it, "bad_guy", "unsigned-contract.jar") }
-            val attachmentId = attachment.read { storage.privilegedImportAttachment(it, "bad_guy", "attachment.jar")}
-
-            assert(!storage.isAttachmentTrusted(signedId)) { "Signed contract $signedId should not be trusted but is"}
-            assert(!storage.isAttachmentTrusted(unsignedId)) { "Unsigned contract $unsignedId should not be trusted but is"}
-            assert(!storage.isAttachmentTrusted(attachmentId)) { "Attachment $attachmentId should not be trusted but is"}
-        }
-    }
-
-    @Test
-    fun `Jar signed by same keys but uploaded by untrusted uploader is trusted`() {
-        SelfCleaningDir().use { file ->
-            val (v1Attachment, key) = makeTestSignedContractJar(file.path, "com.example.MyContract")
-            val v2Attachment = ContractJarTestUtils.makeTestContractJar(file.path, "com.example.MyContract", version = 2)
-            file.path.signJar(v2Attachment.toAbsolutePath().toString(), "testAlias", "testPassword")
-
-            val v1Id = v1Attachment.read { storage.privilegedImportAttachment(it, "p2p", "v1-contract.jar")}
-            val v2Id = v2Attachment.read { storage.privilegedImportAttachment(it, "app", "v2-contract.jar")}
-
-            assert(storage.isAttachmentTrusted(v1Id)) { "Should trust non-upgraded attachment as upgraded is uploaded by a trusted uploader"}
-        }
-    }
+//    @Test
+//    fun `Jar uploaded by trusted uploader is trusted`() {
+//        SelfCleaningDir().use { file ->
+//            val (jar, _) = makeTestSignedContractJar(file.path, "foo.bar.DummyContract")
+//            val unsignedJar = ContractJarTestUtils.makeTestContractJar(file.path, "com.example.MyContract")
+//            val (attachment, _) = makeTestJar()
+//
+//            val signedId = jar.read { storage.privilegedImportAttachment(it, "app", "signed-contract.jar")}
+//            val unsignedId = unsignedJar.read { storage.privilegedImportAttachment(it, "app", "unsigned-contract.jar") }
+//            val attachmentId = attachment.read { storage.privilegedImportAttachment(it, "app", "attachment.jar")}
+//
+//            assert(storage.isAttachmentTrusted(signedId)) { "Signed contract $signedId should be trusted but isn't" }
+//            assert(storage.isAttachmentTrusted(unsignedId)) { "Unsigned contract $unsignedId should be trusted but isn't"}
+//            assert(storage.isAttachmentTrusted(attachmentId)) { "Attachment $attachmentId should be trusted but isn't"}
+//        }
+//    }
 
     // Not the real FetchAttachmentsFlow!
     private class FetchAttachmentsFlow : FlowLogic<Unit>() {

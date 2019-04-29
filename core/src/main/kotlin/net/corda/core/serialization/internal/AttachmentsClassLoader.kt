@@ -35,8 +35,8 @@ import java.util.*
 class AttachmentsClassLoader(attachments: List<Attachment>,
                              val params: NetworkParameters,
                              private val sampleTxId: SecureHash,
-                             parent: ClassLoader = ClassLoader.getSystemClassLoader(),
-                             isAttachmentTrusted: (Attachment) -> Boolean = ::isAttachmentTrustedDefault) :
+                             isAttachmentTrusted: (Attachment) -> Boolean,
+                             parent: ClassLoader = ClassLoader.getSystemClassLoader()) :
         URLClassLoader(attachments.map(::toUrl).toTypedArray(), parent) {
 
     companion object {
@@ -319,14 +319,14 @@ object AttachmentsClassLoaderBuilder {
     fun <T> withAttachmentsClassloaderContext(attachments: List<Attachment>,
                                               params: NetworkParameters,
                                               txId: SecureHash,
+                                              isAttachmentTrusted: (Attachment) -> Boolean,
                                               parent: ClassLoader = ClassLoader.getSystemClassLoader(),
-                                              isAttachmentTrusted: (Attachment) -> Boolean = { AttachmentsClassLoader.isAttachmentTrustedDefault(it) },
                                               block: (ClassLoader) -> T): T {
         val attachmentIds = attachments.map { it.id }.toSet()
 
         val serializationContext = cache.computeIfAbsent(Key(attachmentIds, params)) {
             // Create classloader and load serializers, whitelisted classes
-            val transactionClassLoader = AttachmentsClassLoader(attachments, params, txId, parent, isAttachmentTrusted)
+            val transactionClassLoader = AttachmentsClassLoader(attachments, params, txId, isAttachmentTrusted, parent)
             val serializers = createInstancesOfClassesImplementing(transactionClassLoader, SerializationCustomSerializer::class.java)
             val whitelistedClasses = ServiceLoader.load(SerializationWhitelist::class.java, transactionClassLoader)
                     .flatMap { it.whitelist }
