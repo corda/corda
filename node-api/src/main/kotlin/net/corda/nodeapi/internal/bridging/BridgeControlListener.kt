@@ -36,8 +36,8 @@ class BridgeControlListener(val config: MutualSslConfiguration,
                             bridgeMetricsService: BridgeMetricsService? = null,
                             trace: Boolean = false) : AutoCloseable {
     private val bridgeId: String = UUID.randomUUID().toString()
-    private val bridgeControlQueue = "$BRIDGE_CONTROL.$bridgeId"
-    private val bridgeNotifyQueue = "$BRIDGE_NOTIFY.$bridgeId"
+    private var bridgeControlQueue = "$BRIDGE_CONTROL.$bridgeId"
+    private var bridgeNotifyQueue = "$BRIDGE_NOTIFY.$bridgeId"
     private val validInboundQueues = mutableSetOf<String>()
     private val bridgeManager = if (enableSNI) {
         LoopbackBridgeManager(config, proxyConfig, maxMessageSize, crlCheckSoftFail, enableSNI, artemisMessageClientFactory, bridgeMetricsService, this::validateReceiveTopic, trace)
@@ -68,6 +68,11 @@ class BridgeControlListener(val config: MutualSslConfiguration,
 
     fun start() {
         stop()
+
+        val queueDisambiguityId = UUID.randomUUID().toString()
+        bridgeControlQueue = "$BRIDGE_CONTROL.$queueDisambiguityId"
+        bridgeNotifyQueue = "$BRIDGE_NOTIFY.$queueDisambiguityId"
+
         bridgeManager.start()
         val artemis = artemisMessageClientFactory()
         this.artemis = artemis
