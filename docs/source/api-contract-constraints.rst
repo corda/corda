@@ -94,16 +94,12 @@ Further information into the design of Signature Constraints can be found in its
 Signing CorDapps for use with Signature Constraints
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Expanding on the previous section, for an app to use Signature Constraints, it must be signed by a ``CompositeKey`` The signers of the app can consist
-of a single organisation or multiple organisations. Once the app has been signed it can be distributed across the nodes that intend to
-use it.
+Expanding on the previous section, for an app to use Signature Constraints, it must be signed by a ``CompositeKey`` or a simpler ``PublicKey``.
+The signers of the app can consist of a single organisation or multiple organisations. Once the app has been signed, it can be distributed
+across the nodes that intend to use it.
 
 Each transaction received by a node will then verify that the apps attached to it have the correct signers as specified by its
 Signature Constraints. This ensures that the version of each app is acceptable to the transaction's input states.
-
-Signing an app in this way allows it to be upgraded more easily. As long as the new version is signed by the required signers specified
-by the constraint and follows the :ref:`app versioning requirement <app_versioning_with_signature_constraints>` in the section below, it can be
-upgraded without any further steps.
 
 More information on how to sign an app directly from Gradle can be found in the
 :ref:`CorDapp Jar signing <cordapp_build_system_signing_cordapp_jar_ref>` section of the documentation.
@@ -111,8 +107,11 @@ More information on how to sign an app directly from Gradle can be found in the
 Using Signature Constraints in transactions
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Signature Constraints are used by default by the ``TransactionBuilder`` for any issuance transactions if the app attached to it is signed.
+If the app is signed, Signature Constraints will be used by default (in most situations) by the ``TransactionBuilder`` when adding output states.
 This is expanded upon in :ref:`contract_constraints_in_transactions`.
+
+.. note:: Signature Constraints are used by default except when a new transaction contains an input state with a Hash Constraint. In this
+          situation the Hash Constraint is used.
 
 .. _app_versioning_with_signature_constraints:
 
