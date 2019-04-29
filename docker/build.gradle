@@ -18,12 +18,11 @@ apply plugin: 'com.github.johnrengelman.shadow'
 
 repositories {
     maven {
-        url 'https://ci-artifactory.corda.r3cev.com/artifactory/corda-releases'
+        url "${artifactory_contextUrl}/corda-releases"
     }
     maven {
-        url "https://ci-artifactory.corda.r3cev.com/artifactory/corda-dev"
+        url "${artifactory_contextUrl}/corda-dev"
     }
-
 }
 
 configurations {
@@ -32,7 +31,7 @@ configurations {
 
 dependencies{
     compile project(':node')
-    artifactoryCorda group : 'net.corda', name : 'corda', version : project.version.toString(), transitive: false
+    artifactoryCorda "net.corda:corda:${project.version}"
 }
 
 shadowJar {
