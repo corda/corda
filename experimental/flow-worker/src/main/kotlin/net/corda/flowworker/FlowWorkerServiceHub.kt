@@ -150,7 +150,7 @@ class FlowWorkerServiceHub(override val configuration: NodeConfiguration,
 
     private val networkMapClient: NetworkMapClient? = configuration.networkServices?.let { NetworkMapClient(it.networkMapURL, versionInfo) }
     override val networkParametersService = DBNetworkParametersStorage(cacheFactory, database, networkMapClient).tokenize()
-    private val servicesForResolution = ServicesForResolutionImpl(identityService, attachments, cordappProvider, networkParametersService, validatedTransactions).also {
+    private val servicesForResolution = ServicesForResolutionImpl(identityService, attachments, cordappProvider, networkParametersService, validatedTransactions, configuration.whitelistedKeysForAttachments).also {
         // circular dependency, hurr durr..
         attachments.servicesForResolution = it
     }

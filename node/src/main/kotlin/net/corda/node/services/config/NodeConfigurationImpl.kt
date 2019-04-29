@@ -86,8 +86,7 @@ data class NodeConfigurationImpl(
         override val networkParameterAcceptanceSettings: NetworkParameterAcceptanceSettings = Defaults.networkParameterAcceptanceSettings,
         override val whitelistedKeysForAttachments: List<SecureHash> = listOf(),
         override val cryptoServiceName: SupportedCryptoServices? = Defaults.cryptoServiceName,
-        override val cryptoServiceConf: Path? = Defaults.cryptoServiceConf,
-        override val networkParameterAcceptanceSettings: NetworkParameterAcceptanceSettings = Defaults.networkParameterAcceptanceSettings
+        override val cryptoServiceConf: Path? = Defaults.cryptoServiceConf
 ) : NodeConfiguration {
     internal object Defaults {
         val jmxMonitoringHttpPort: Int? = null
