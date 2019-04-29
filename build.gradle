@@ -120,7 +120,7 @@ buildscript {
         classpath "org.jfrog.buildinfo:build-info-extractor-gradle:$artifactory_plugin_version"
         // Capsule gradle plugin forked and maintained locally to support Gradle 5.x
         // See https://github.com/corda/gradle-capsule-plugin
-        classpath "us.kirchmeier:gradle-capsule-plugin:1.0.4"
+        classpath "us.kirchmeier:gradle-capsule-plugin:1.0.4_r3"
     }
 }
 
