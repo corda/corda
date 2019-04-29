@@ -4,16 +4,6 @@ Changelog
 Here's a summary of what's changed in each Corda release. For guidance on how to upgrade code from the previous
 release, see :doc:`app-upgrade-notes`.
 
-.. _changelog_v4.2:
-
-Version 4.2
------------
-
-* Added the ``whitelistedKeysForAttachments`` configuration option. This is a list of SHA-256 hashes of public keys. Attachments signed by
-  any keys in this list will automatically be trusted by the node. This change removes the requirement to have every version of a CorDapp
-  present in the node in order to verify a chain of transactions using different versions of the same CorDapp - instead the signing key can
-  be whitelisted.
-
 .. _changelog_v4.0:
 
 Version 4.0

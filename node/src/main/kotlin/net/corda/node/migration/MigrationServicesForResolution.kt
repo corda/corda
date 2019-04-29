@@ -107,7 +107,7 @@ class MigrationServicesForResolution(
     private fun extractStateFromTx(tx: WireTransaction, stateIndices: Collection<Int>): List<TransactionState<ContractState>> {
         return try {
             val attachments = tx.attachments.mapNotNull { attachments.openAttachment(it)}
-            val states = AttachmentsClassLoaderBuilder.withAttachmentsClassloaderContext(attachments, networkParameters, tx.id, listOf(), cordappLoader.appClassLoader) {
+            val states = AttachmentsClassLoaderBuilder.withAttachmentsClassloaderContext(attachments, networkParameters, tx.id, cordappLoader.appClassLoader) {
                 deserialiseComponentGroup(tx.componentGroups, TransactionState::class, ComponentGroupEnum.OUTPUTS_GROUP, forceDeserialize = true)
             }
             states.filterIndexed {index, _ -> stateIndices.contains(index)}.toList()

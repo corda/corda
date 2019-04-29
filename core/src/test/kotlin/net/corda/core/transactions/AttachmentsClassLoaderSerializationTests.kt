@@ -47,11 +47,7 @@ class AttachmentsClassLoaderSerializationTests {
         val att1 = storage.importAttachment(fakeAttachment("file1.txt", "some data").inputStream(), "app", "file1.jar")
         val att2 = storage.importAttachment(fakeAttachment("file2.txt", "some other data").inputStream(), "app", "file2.jar")
 
-        val serialisedState = AttachmentsClassLoaderBuilder.withAttachmentsClassloaderContext(
-                arrayOf(isolatedId, att1, att2).map { storage.openAttachment(it)!! },
-                testNetworkParameters(),
-                SecureHash.zeroHash,
-                listOf()) { classLoader ->
+        val serialisedState = AttachmentsClassLoaderBuilder.withAttachmentsClassloaderContext(arrayOf(isolatedId, att1, att2).map { storage.openAttachment(it)!! }, testNetworkParameters(), SecureHash.zeroHash) { classLoader ->
             val contractClass = Class.forName(ISOLATED_CONTRACT_CLASS_NAME, true, classLoader)
             val contract = contractClass.newInstance() as Contract
             assertEquals("helloworld", contract.declaredField<Any?>("magicString").value)
