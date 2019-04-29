@@ -4,7 +4,7 @@ Contracts
 .. topic:: Summary
 
    * *A transaction is contractually valid if all of its input and output states are acceptable according to the contract.*
-   * *Contracts are written in a JVM programming language such as Java or Kotlin.*
+   * *Contracts are written in Java or Kotlin.*
    * *Contract execution is deterministic, and transaction acceptance is based on the transaction's contents alone.*
 
 .. only:: htmlmode
@@ -36,10 +36,11 @@ We can picture this situation as follows:
    :scale: 25%
    :align: center
 
-The contract code can be written in any JVM language, and has access to the full capabilities of the language,
+The contract code has access to the full capabilities of the language,
 including:
 
-* Checking the number of inputs, outputs, commands, time-windows or attachments
+* Checking the number of inputs, outputs, commands, or attachments
+* Checking whether there is a time window or not
 * Checking the contents of any of these components
 * Looping constructs, variable assignment, function calls, helper methods, and so on
 * Grouping similar states to validate them as a group; for example, imposing a rule on the combined value of all the cash
@@ -62,7 +63,7 @@ that provide the current time, random number generators, libraries that provide 
 libraries, for example. Ultimately, the only information available to the contract when verifying the transaction is
 the information included in the transaction itself.
 
-**Tip:** Developers can pre-verify that their CorDapps are determinsitic by linking their CorDapps against the deterministic modules
+**Tip:** Developers can pre-verify that their CorDapps are deterministic by linking their CorDapps against the deterministic modules
 (see the :doc:`Deterministic Corda Modules <deterministic-modules>`).
 
 Contract limitations
