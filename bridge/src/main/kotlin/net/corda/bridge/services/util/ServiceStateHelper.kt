@@ -12,9 +12,12 @@ import kotlin.concurrent.withLock
  */
 class ServiceStateHelper(val log: Logger) : ServiceStateSupport {
     val lock = ReentrantLock()
+
+    // Volatile to prevent deadlocks when locking on read.
+    @Volatile
     private var _active: Boolean = false
     override var active: Boolean
-        get() = lock.withLock { _active }
+        get() = _active
         set(value) {
             lock.withLock {
                 if (value != _active) {
