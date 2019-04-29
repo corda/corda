@@ -6,6 +6,7 @@ import com.typesafe.config.ConfigUtil
 import net.corda.common.configuration.parsing.internal.Configuration
 import net.corda.common.validation.internal.Validated.Companion.invalid
 import net.corda.common.validation.internal.Validated.Companion.valid
+import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.services.config.Valid
@@ -32,6 +33,8 @@ internal fun toNetworkHostAndPort(rawValue: String) = attempt<NetworkHostAndPort
 internal fun toPrincipal(rawValue: String) = attempt<X500Principal, IllegalArgumentException> { X500Principal(rawValue) }
 
 internal fun toPath(rawValue: String) = attempt<Path, InvalidPathException> { Paths.get(rawValue) }
+
+internal fun toSecureHash(rawValue: String) = attempt<SecureHash, IllegalArgumentException> { SecureHash.parse(rawValue)}
 
 private inline fun <RESULT, reified ERROR : Exception> attempt(action: () -> RESULT, message: (ERROR) -> String): Valid<RESULT> {
     return try {

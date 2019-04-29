@@ -99,6 +99,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
     @Throws(AttachmentResolutionException::class, TransactionResolutionException::class)
     @DeleteForDJVM
     fun toLedgerTransaction(services: ServicesForResolution): LedgerTransaction {
+        val whitelistedKeysForAttachments = (services as? ServicesForResolutionInternal)?.whitelistedKeysForAttachments ?: listOf()
         return toLedgerTransactionInternal(
                 resolveIdentity = { services.identityService.partyFromKey(it) },
                 resolveAttachment = { services.attachments.openAttachment(it) },
@@ -107,7 +108,8 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                     val hashToResolve = it ?: services.networkParametersService.defaultHash
                     services.networkParametersService.lookup(hashToResolve)
                 },
-                resolveContractAttachment = { services.loadContractAttachment(it) }
+                resolveContractAttachment = { services.loadContractAttachment(it) },
+                whitelistedKeys = whitelistedKeysForAttachments
         )
     }
 
@@ -142,11 +144,14 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                 { stateRef -> resolveStateRef(stateRef)?.serialize() },
                 { null },
                 // Returning a dummy `missingAttachment` Attachment allows this deprecated method to work and it disables "contract version no downgrade rule" as a dummy Attachment returns version 1
-                { resolveAttachment(it.txhash) ?: missingAttachment }
+                { resolveAttachment(it.txhash) ?: missingAttachment },
+                listOf()
         )
     }
 
-    // Especially crafted for TransactionVerificationRequest
+    // Especially crafted for TransactionVerificationRequest.
+    // Note that whitelisted keys do not need to be passed here. The DJVM automatically assumes all attachments are provided by a trusted
+    // uploader, and so all attachments will be trusted when this is called from the DJVM.
     @CordaInternal
     internal fun toLtxDjvmInternalBridge(
             resolveAttachment: (SecureHash) -> Attachment?,
@@ -158,7 +163,8 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                 resolveAttachment,
                 { stateRef -> resolveStateRef(stateRef)?.serialize() },
                 resolveParameters,
-                { resolveAttachment(it.txhash) ?: missingAttachment }
+                { resolveAttachment(it.txhash) ?: missingAttachment },
+                listOf()
         )
     }
 
@@ -167,7 +173,8 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
             resolveAttachment: (SecureHash) -> Attachment?,
             resolveStateRefAsSerialized: (StateRef) -> SerializedBytes<TransactionState<ContractState>>?,
             resolveParameters: (SecureHash?) -> NetworkParameters?,
-            resolveContractAttachment: (StateRef) -> Attachment
+            resolveContractAttachment: (StateRef) -> Attachment,
+            whitelistedKeys: Collection<SecureHash>
     ): LedgerTransaction {
         // Look up public keys to authenticated identities.
         val authenticatedCommands = commands.lazyMapped { cmd, _ ->
@@ -202,7 +209,8 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                 resolvedReferences,
                 componentGroups,
                 serializedResolvedInputs,
-                serializedResolvedReferences
+                serializedResolvedReferences,
+                whitelistedKeysForAttachments = whitelistedKeys
         )
 
         checkTransactionSize(ltx, resolvedNetworkParameters.maxTransactionSize, serializedResolvedInputs, serializedResolvedReferences)

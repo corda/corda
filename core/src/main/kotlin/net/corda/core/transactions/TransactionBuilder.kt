@@ -72,7 +72,6 @@ open class TransactionBuilder(
     private companion object {
         private fun defaultLockId() = (Strand.currentStrand() as? FlowStateMachine<*>)?.id?.uuid ?: UUID.randomUUID()
         private val log = contextLogger()
-        private const val CORDA_VERSION_THAT_INTRODUCED_FLATTENED_COMMANDS = 4
 
         private val ID_PATTERN = "\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*"
         private val FQCP = Pattern.compile("$ID_PATTERN(/$ID_PATTERN)+")

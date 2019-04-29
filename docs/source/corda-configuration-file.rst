@@ -760,6 +760,16 @@ verfierType
 
   *Default:* InMemory
 
+
+whitelistedKeysForAttachments
+  A list of SHA256 hashes of public keys. Any attachments that are signed by a key that hashes to one of the items in this list will be
+  treated as trusted by the node, even if it was received by an untrusted source (for example, over the network).
+
+  .. note:: In the future, the DJVM will be integrated with Corda and all attachments will be loaded inside a DJVM sandbox. At this point,
+  all attachments would be considered trusted, and so this configuration option would be ignored.
+
+  *Default:* not defined
+
 Reference.conf
 --------------
 A set of default configuration options are loaded from the built-in resource file ``/node/src/main/resources/reference.conf``.

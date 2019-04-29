@@ -622,6 +622,7 @@ private fun mockNodeConfiguration(certificatesDirectory: Path): NodeConfiguratio
                 useMultiThreadedSMM = false
         )).whenever(it).enterpriseConfiguration
         doReturn(NetworkParameterAcceptanceSettings()).whenever(it).networkParameterAcceptanceSettings
+        doReturn(emptyList<SecureHash>()).whenever(it).whitelistedKeysForAttachments
     }
 }
 

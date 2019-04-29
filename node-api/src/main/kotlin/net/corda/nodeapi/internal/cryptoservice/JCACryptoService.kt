@@ -55,7 +55,7 @@ abstract class JCACryptoService(internal val keyStore: KeyStore, internal val pr
     /**
      * We _could_ consider doing the digest locally and then signing over the hash remotely with NONEwithALGO as a performance optimization.
      */
-    override fun sign(alias: String, data: ByteArray): ByteArray {
+    override fun sign(alias: String, data: ByteArray, signAlgorithm: String?): ByteArray {
         return withAuthentication {
             (keyStore.getKey(alias, null) as PrivateKey?)?.let {
                 val algorithm = if (it.algorithm == "RSA") {

@@ -14,12 +14,14 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
 import net.corda.testing.common.internal.checkNotOnClasspath
+import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverDSL
 import net.corda.testing.driver.DriverParameters
+import net.corda.testing.driver.NodeParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
@@ -30,6 +32,7 @@ import org.junit.ClassRule
 import org.junit.Test
 import java.net.URL
 import java.net.URLClassLoader
+import java.util.jar.JarInputStream
 
 class AttachmentLoadingTests : IntegrationTest() {
     companion object {
@@ -87,6 +90,49 @@ class AttachmentLoadingTests : IntegrationTest() {
             val (alice, bob) = listOf(
                     startNode(providedName = ALICE_NAME),
                     startNode(providedName = BOB_NAME)
+            ).transpose().getOrThrow()
+
+            val stateRef = alice.rpc.startFlowDynamic(issuanceFlowClass, 1234).returnValue.getOrThrow()
+            alice.rpc.startFlow(::ConsumeAndBroadcastFlow, stateRef, bob.nodeInfo.singleIdentity()).returnValue.getOrThrow()
+        }
+    }
+
+    @Test
+    fun `contract is not executed if signing key is not whitelisted and uploader is untrusted`() {
+        driver(DriverParameters(
+                startNodesInProcess = false,
+                notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, validating = false)),
+                cordappsForAllNodes = listOf(enclosedCordapp()),
+                networkParameters = testNetworkParameters(minimumPlatformVersion = 4)
+        )) {
+            installIsolatedCordapp(ALICE_NAME)
+
+            val (alice, bob) = listOf(
+                    startNode(providedName = ALICE_NAME),
+                    startNode(NodeParameters(providedName = BOB_NAME))
+            ).transpose().getOrThrow()
+
+            val stateRef = alice.rpc.startFlowDynamic(issuanceFlowClass, 1234).returnValue.getOrThrow()
+            assertThatThrownBy { alice.rpc.startFlow(::ConsumeAndBroadcastFlow, stateRef, bob.nodeInfo.singleIdentity()).returnValue.getOrThrow() }
+                    .hasMessage(TransactionVerificationException.UntrustedAttachmentsException::class.java.name)
+        }
+    }
+
+    @Test
+    fun `contract is executed if signing key is whitelisted`() {
+        driver(DriverParameters(
+                startNodesInProcess = false,
+                notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, validating = false)),
+                cordappsForAllNodes = listOf(enclosedCordapp()),
+                networkParameters = testNetworkParameters(minimumPlatformVersion = 4)
+        )) {
+            installIsolatedCordapp(ALICE_NAME)
+
+            val signingKeys = JarSignatureCollector.collectSigners(JarInputStream(isolatedJar.openStream()))
+            val bobOverrides = mapOf("whitelistedKeysForAttachments" to signingKeys.map{ it.hash.toString() })
+            val (alice, bob) = listOf(
+                    startNode(providedName = ALICE_NAME),
+                    startNode(NodeParameters(providedName = BOB_NAME).withCustomOverrides(bobOverrides))
             ).transpose().getOrThrow()
 
             val stateRef = alice.rpc.startFlowDynamic(issuanceFlowClass, 1234).returnValue.getOrThrow()
