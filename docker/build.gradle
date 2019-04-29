@@ -16,9 +16,22 @@ apply plugin: 'application'
 mainClassName = 'net.corda.core.ConfigExporterMain'
 apply plugin: 'com.github.johnrengelman.shadow'
 
+repositories {
+    maven {
+        url "${artifactory_contextUrl}/corda-releases"
+    }
+    maven {
+        url "${artifactory_contextUrl}/corda-dev"
+    }
+}
+
+configurations {
+    artifactoryCorda
+}
 
 dependencies{
     compile project(':node')
+    artifactoryCorda "net.corda:corda:${project.version}"
 }
 
 shadowJar {
@@ -38,11 +51,11 @@ docker{
 
 task buildDockerFolder(dependsOn: [":node:capsule:buildCordaJAR", shadowJar]) {
     doLast {
-        def cordaJar = project(":node:capsule").buildCordaJAR.archivePath
+        def cordaJar = configurations.artifactoryCorda.singleFile
         project.copy {
             into new File(project.buildDir, "docker-temp")
             from "src/bash/run-corda.sh"
-            from cordaJar
+            from cordaJar.path
             from shadowJar.archivePath
             from "src/config/starting-node.conf"
             from "src/bash/generate-config.sh"
