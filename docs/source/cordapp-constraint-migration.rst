@@ -15,8 +15,7 @@ CorDapp constraints migration
 Corda 4 introduces and recommends building signed CorDapps that issue states with signature constraints.
 When building transactions in Corda 4, existing on ledger states issued before Corda 4 are only automatically transitioned to the new
 Signature Constraint if they were originally using the CZ Whitelisted Constraint. This document explains how to modify existing CorDapp flows to
-explicitly consume and evolve pre Corda 4 states, and outlines a future mechanism where such states will transition automatically
-(without explicit migration code).
+explicitly consume and evolve pre Corda 4 states.
 
 Faced with the exercise of upgrading an existing Corda 3.x CorDapp to Corda 4, you need to consider the following:
 
@@ -169,9 +168,3 @@ The code below details how to explicitly add a Signature Constraint:
 3. As a node operator you need to add the new signed version of the contracts CorDapp to the ``/cordapps`` folder together with the latest version of the flows jar.
    Please also ensure that the original unsigned contracts CorDapp is removed from the ``/cordapps`` folder (this will already be present in the
    nodes attachments store) to ensure the lookup code in step 3 retrieves the correct signed contract CorDapp JAR.
-
-Later releases
-~~~~~~~~~~~~~~
-
-The next version of Corda will provide automatic transition of *CZ whitelisted* constrained states. This means that signed CorDapps running on a Corda 4.x node will
-automatically propagate any pre-existing on-ledger *CZ whitelisted* constrained states (and generate *signature* constrained outputs).
