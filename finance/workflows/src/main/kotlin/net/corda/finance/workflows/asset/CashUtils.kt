@@ -69,6 +69,7 @@ object CashUtils {
      *         there is insufficient quantity for a given currency (and optionally set of Issuer Parties).
      */
     @JvmStatic
+    @JvmOverloads
     @Throws(InsufficientBalanceException::class)
     @Suspendable
     fun generateSpend(services: ServiceHub,
@@ -132,6 +133,7 @@ object CashUtils {
      *         there is insufficient quantity for a given currency (and optionally set of Issuer Parties).
      */
     @JvmStatic
+    @JvmOverloads
     @Throws(InsufficientBalanceException::class)
     @Suspendable
     fun generateSpend(services: ServiceHub,
