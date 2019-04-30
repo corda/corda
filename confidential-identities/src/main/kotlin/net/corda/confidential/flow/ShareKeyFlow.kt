@@ -5,24 +5,30 @@ import net.corda.confidential.service.*
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
-import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.unwrap
 import java.util.*
 
-class RequestKeyFlow(
-        private val session: FlowSession,
-        private val otherParty: Party,
-        private val uuid: UUID) : FlowLogic<SignedPublicKey>() {
+class ShareKeyFlow(private val session: FlowSession, private val uuid: UUID) : FlowLogic<Unit>() {
+
+    @Suspendable
+    override fun call() {
+        session.sendAndReceive<UUIDReceived>(uuid)
+        val signedKey = createSignedPublicKey(serviceHub, uuid)
+        registerIdentityMapping(serviceHub, signedKey, signedKey.publicKeyToPartyMap.values.first())
+        session.send(signedKey)
+    }
+}
+
+class ShareKeyFlowHandler(private val otherSession: FlowSession) : FlowLogic<SignedPublicKey>() {
 
     companion object {
-        object REQUESTING_KEY : ProgressTracker.Step("Generating a public key")
         object VERIFYING_KEY : ProgressTracker.Step("Verifying counterparty's signature")
         object KEY_VERIFIED : ProgressTracker.Step("Signature is correct")
 
         @JvmStatic
-        fun tracker(): ProgressTracker = ProgressTracker(REQUESTING_KEY, VERIFYING_KEY, KEY_VERIFIED)
+        fun tracker(): ProgressTracker = ProgressTracker(VERIFYING_KEY, KEY_VERIFIED)
     }
 
     override val progressTracker = tracker()
@@ -30,15 +36,15 @@ class RequestKeyFlow(
     @Suspendable
     @Throws(FlowException::class)
     override fun call(): SignedPublicKey {
-        progressTracker!!.currentStep = REQUESTING_KEY
-        val signedKey = session.sendAndReceive<SignedPublicKey>(CreateKeyForAccount(uuid)).unwrap { it }
+        val uuid = otherSession.receive<UUID>().unwrap { it }
+        otherSession.send(UUIDReceived())
+        val signedKey = otherSession.sendAndReceive<SignedPublicKey>(CreateKeyForAccount(uuid)).unwrap { it }
         progressTracker.currentStep = VERIFYING_KEY
         validateSignature(signedKey)
         progressTracker.currentStep = KEY_VERIFIED
 
         val party = signedKey.publicKeyToPartyMap.values.first()
         val isRegistered = registerIdentityMapping(serviceHub, signedKey, party)
-
         if (!isRegistered) {
             throw FlowException("Could not generate a new key for $party as the key is already registered or registered to a different party.")
         }
@@ -46,11 +52,5 @@ class RequestKeyFlow(
     }
 }
 
-class RequestKeyFlowHandler(private val otherSession: FlowSession) : FlowLogic<Unit>() {
-    @Suspendable
-    override fun call() {
-        val request = otherSession.receive<CreateKeyForAccount>().unwrap { it }
-        val signedPK = createSignedPublicKey(serviceHub, request.uuid)
-        otherSession.send(signedPK)
-    }
-}
+@CordaSerializable
+class UUIDReceived
