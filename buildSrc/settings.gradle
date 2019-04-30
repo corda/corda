@@ -1,4 +1,3 @@
 rootProject.name = 'buildSrc'
-include 'canonicalizer'
 
 apply from: '../buildCacheSettings.gradle'
