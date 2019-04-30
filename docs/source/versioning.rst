@@ -99,6 +99,6 @@ sophisticated or proprietary business logic, machine learning models, even user 
 being Corda flows or services.
 
 .. important:: The ``versionId`` specified for the JAR manifest is checked by the platform and is used for informative purposes only.
- See ":ref:`contract_downgrade_rule_ref`" for more information.
+ See ":ref:`app_versioning_with_signature_constraints`" for more information.
 
 .. note:: You can read the original design doc here: :doc:`design/targetversion/design`.

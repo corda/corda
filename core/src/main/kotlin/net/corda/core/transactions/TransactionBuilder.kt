@@ -430,20 +430,20 @@ open class TransactionBuilder(
      *
      * TODO - once support for third party signing is added, it should be implemented here. ( a constraint with 2 signatures is less restrictive than a constraint with 1 more signature)
      */
-    private fun attachmentConstraintsTransition(constraints: Set<AttachmentConstraint>, attachmentToUse: ContractAttachment): AttachmentConstraint = when {
+    private fun attachmentConstraintsTransition(
+        constraints: Set<AttachmentConstraint>,
+        attachmentToUse: ContractAttachment
+    ): AttachmentConstraint = when {
 
         // Sanity check.
         constraints.isEmpty() -> throw IllegalArgumentException("Cannot transition from no constraints.")
 
-        // When all input states have the same constraint.
-        constraints.size == 1 -> constraints.single()
-
-        // Fail when combining the insecure AlwaysAcceptAttachmentConstraint with something else. The size must be at least 2 at this point.
-        constraints.any { it is AlwaysAcceptAttachmentConstraint } ->
+        // Fail when combining the insecure AlwaysAcceptAttachmentConstraint with something else.
+        constraints.size > 1 && constraints.any { it is AlwaysAcceptAttachmentConstraint } ->
             throw IllegalArgumentException("Can't mix the AlwaysAcceptAttachmentConstraint with a secure constraint in the same transaction. This can be used to hide insecure transitions.")
 
         // Multiple states with Hash constraints with different hashes. This should not happen as we checked already.
-        constraints.all { it is HashAttachmentConstraint } ->
+        constraints.size > 1 && constraints.all { it is HashAttachmentConstraint } ->
             throw IllegalArgumentException("Cannot mix HashConstraints with different hashes in the same transaction.")
 
         // The HashAttachmentConstraint is the strongest constraint, so it wins when mixed with anything. As long as the actual constraints pass.
@@ -451,25 +451,31 @@ open class TransactionBuilder(
         constraints.any { it is HashAttachmentConstraint } -> constraints.find { it is HashAttachmentConstraint }!!
 
         // TODO, we don't currently support mixing signature constraints with different signers. This will change once we introduce third party signers.
-        constraints.all { it is SignatureAttachmentConstraint } ->
+        constraints.count { it is SignatureAttachmentConstraint } > 1 ->
             throw IllegalArgumentException("Cannot mix SignatureAttachmentConstraints signed by different parties in the same transaction.")
 
-        // This ensures a smooth migration from the Whitelist Constraint, given that for the transaction to be valid it still has to pass both constraints.
-        // The transition is possible only when the SignatureConstraint contains ALL signers from the attachment.
-        constraints.any { it is SignatureAttachmentConstraint } && constraints.any { it is WhitelistedByZoneAttachmentConstraint } -> {
-            val signatureConstraint = constraints.mapNotNull { it as? SignatureAttachmentConstraint }.single()
+        // This ensures a smooth migration from a Whitelist Constraint to a Signature Constraint
+        constraints.any { it is WhitelistedByZoneAttachmentConstraint } && attachmentToUse.isSigned -> {
+            val signatureConstraint = constraints.singleOrNull { it is SignatureAttachmentConstraint }
+            // If there were states transitioned already used in the current transaction use that signature constraint, otherwise create a new one.
             when {
-                attachmentToUse.signerKeys.isEmpty() -> throw IllegalArgumentException("Cannot mix a state with the WhitelistedByZoneAttachmentConstraint and a state with the SignatureAttachmentConstraint, when the latest attachment is not signed. Please contact your Zone operator.")
-                signatureConstraint.key.keys.containsAll(attachmentToUse.signerKeys) -> signatureConstraint
-                else -> throw IllegalArgumentException("Attempting to transition a WhitelistedByZoneAttachmentConstraint state backed by an attachment signed by multiple parties to a weaker SignatureConstraint that does not require all those signatures. Please contact your Zone operator.")
+                signatureConstraint != null -> signatureConstraint
+                else -> makeSignatureAttachmentConstraint(attachmentToUse.signerKeys)
             }
         }
+
+        // This condition is hit when the current node has not installed the latest signed version but has already received states that have been migrated
+        constraints.any { it is SignatureAttachmentConstraint } && !attachmentToUse.isSigned ->
+            throw IllegalArgumentException("Attempting to create an illegal transaction. Please install the latest signed version for the $attachmentToUse Cordapp.")
+
+        // When all input states have the same constraint.
+        constraints.size == 1 -> constraints.single()
 
         else -> throw IllegalArgumentException("Unexpected constraints $constraints.")
     }
 
     private fun makeSignatureAttachmentConstraint(attachmentSigners: List<PublicKey>) =
-            SignatureAttachmentConstraint(CompositeKey.Builder().addKeys(attachmentSigners.map { it }).build())
+            SignatureAttachmentConstraint(CompositeKey.Builder().addKeys(attachmentSigners).build())
 
     /**
      * This method should only be called for upgradeable contracts.

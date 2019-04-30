@@ -2,7 +2,6 @@ apply plugin: 'kotlin'
 // Java Persistence API support: create no-arg constructor
 // see: http://stackoverflow.com/questions/32038177/kotlin-with-jpa-default-constructor-hell
 apply plugin: 'kotlin-jpa'
-apply plugin: CanonicalizerPlugin
 apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'net.corda.plugins.cordapp'
@@ -66,6 +65,8 @@ artifacts {
 
 jar {
     baseName 'corda-ptflows'
+    preserveFileTimestamps = false
+    reproducibleFileOrder = true
 }
 
 cordapp {
