@@ -1,9 +1,26 @@
 import net.corda.plugins.Cordform
 
+import com.bmuschko.gradle.docker.tasks.container.DockerCreateContainer
+import com.bmuschko.gradle.docker.tasks.container.DockerExecContainer
+import com.bmuschko.gradle.docker.tasks.container.DockerRemoveContainer
+import com.bmuschko.gradle.docker.tasks.container.DockerStartContainer
+import com.bmuschko.gradle.docker.tasks.container.DockerStopContainer
+import com.bmuschko.gradle.docker.tasks.image.DockerPullImage
+
+buildscript {
+    repositories {
+        gradlePluginPortal()
+    }
+    dependencies {
+        classpath 'com.bmuschko:gradle-docker-plugin:4.6.2'
+    }
+}
+
 apply plugin: 'kotlin'
 apply plugin: 'idea'
 apply plugin: 'net.corda.plugins.cordapp'
 apply plugin: 'net.corda.plugins.cordformation'
+apply plugin: 'com.bmuschko.docker-remote-api'
 
 cordapp {
     info {
@@ -32,6 +49,8 @@ dependencies {
 
 def nodeTask = tasks.getByPath(':node:capsule:assemble')
 def webTask = tasks.getByPath(':webserver:webcapsule:assemble')
+def perconaImage = "percona"
+def perconaImageTag = "5.7"
 
 task deployNodes(dependsOn: ['deployNodesSingle', 'deployNodesRaft', 'deployNodesBFT', 'deployNodesCustom'])
 
@@ -250,6 +269,114 @@ task deployNodesBFT(type: Cordform, dependsOn: ['jar', nodeTask, webTask]) {
                 ]
         ]
     }
+}
+
+task deployNodesMySQL(type: Cordform, dependsOn: ['jar', nodeTask, webTask]) {
+    directory file("$buildDir/nodes/nodesMySQL")
+    def notaryConfig = [
+            validating      : false,
+            serviceLegalName: "O=HA Notary,L=Zurich,C=CH",
+            mysql           : [
+                    connectionRetries: 1,
+                    dataSource       : [
+                            autoCommit: false,
+                            jdbcUrl   : "jdbc:mysql://127.0.0.1:3306/corda?rewriteBatchedStatements=true&useSSL=false&failOverReadOnly=false",
+                            username  : "root",
+                            password  : "1234"
+                    ]
+
+            ]
+    ]
+    nodeDefaults {
+        projectCordapp {
+            deploy = false
+        }
+        extraConfig = [h2Settings: [address: "localhost:0"]]
+        cordapp project(':samples:notary-demo:contracts')
+        cordapp project(':samples:notary-demo:workflows')
+    }
+    node {
+        name "O=Alice Corp,L=Madrid,C=ES"
+        p2pPort 10002
+        rpcSettings {
+            address "localhost:10003"
+            adminAddress "localhost:10103"
+        }
+        rpcUsers = [[user: "demou", password: "demop", permissions: ["ALL"]]]
+    }
+    node {
+        name "O=Notary Service 0,L=Zurich,C=CH"
+        p2pPort 10009
+        rpcSettings {
+            address "localhost:10010"
+            adminAddress "localhost:10110"
+        }
+        notary = notaryConfig
+    }
+    node {
+        name "O=Notary Service 1,L=Zurich,C=CH"
+        p2pPort 10013
+        rpcSettings {
+            address "localhost:10014"
+            adminAddress "localhost:10114"
+        }
+        notary = notaryConfig
+    }
+    node {
+        name "O=Notary Service 2,L=Zurich,C=CH"
+        p2pPort 10017
+        rpcSettings {
+            address "localhost:10018"
+            adminAddress "localhost:10118"
+        }
+        notary = notaryConfig
+    }
+    node {
+        name "O=Notary Service 3,L=Zurich,C=CH"
+        p2pPort 10021
+        rpcSettings {
+            address "localhost:10022"
+            adminAddress "localhost:10122"
+        }
+        notary = notaryConfig
+    }
+}
+
+task pullPerconaContainerImage(type: DockerPullImage) {
+    repository = perconaImage
+    tag = perconaImageTag
+}
+
+task createPerconaContainer(type: DockerCreateContainer) {
+    containerName = "percona"
+    imageId = perconaImage +":"+ perconaImageTag
+    portBindings = ["3306:3306"]
+    envVars = [MYSQL_ROOT_PASSWORD: "1234"]
+}
+
+task startPerconaContainer(type: DockerStartContainer) {
+    containerId = "percona"
+}
+
+task createDatabase(type: DockerExecContainer) {
+    targetContainerId "percona"
+    withCommand(["sh", "-c", "mysql --host=localhost --port=3306 --user=root --password=1234 --execute='create database if not exists corda'"])
+}
+
+task stopPerconaContainer(type: DockerStopContainer) {
+    containerId = "percona"
+}
+
+task removePerconaContainer(type: DockerRemoveContainer) {
+    containerId = "percona"
+}
+
+task startPercona(type: GradleBuild) {
+    tasks = ['pullPerconaContainer', 'createPerconaContainer', 'startPerconaContainer']
+}
+
+task removePercona(type: GradleBuild) {
+    tasks = ['stopPerconaContainer', 'removePerconaContainer']
 }
 
 task notarise(type: JavaExec, dependsOn: jar) {
