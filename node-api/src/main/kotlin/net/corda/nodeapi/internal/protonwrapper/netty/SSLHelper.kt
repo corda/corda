@@ -168,21 +168,23 @@ internal fun createServerSslHandler(keyStore: CertificateStore,
     return SslHandler(sslEngine)
 }
 
-internal fun initialiseTrustStoreAndEnableCrlChecking(trustStore: CertificateStore, crlCheckSoftFail: Boolean): ManagerFactoryParameters {
-    val certPathBuilder = CertPathBuilder.getInstance("PKIX")
-    val revocationChecker = certPathBuilder.revocationChecker as PKIXRevocationChecker
-    revocationChecker.options = EnumSet.of(
-            // Prefer CRL over OCSP
-            PKIXRevocationChecker.Option.PREFER_CRLS,
-            // Don't fall back to OCSP checking
-            PKIXRevocationChecker.Option.NO_FALLBACK)
-    if (crlCheckSoftFail) {
-        // Allow revocation check to succeed if the revocation status cannot be determined for one of
-        // the following reasons: The CRL or OCSP response cannot be obtained because of a network error.
-        revocationChecker.options = revocationChecker.options + PKIXRevocationChecker.Option.SOFT_FAIL
-    }
+internal fun initialiseTrustStoreAndEnableCrlChecking(trustStore: CertificateStore, revocationConfig: RevocationConfig): ManagerFactoryParameters {
     val pkixParams = PKIXBuilderParameters(trustStore.value.internal, X509CertSelector())
-    pkixParams.addCertPathChecker(revocationChecker)
+    if(revocationConfig.mode != RevocationConfig.Mode.OFF) {
+        val certPathBuilder = CertPathBuilder.getInstance("PKIX")
+        val revocationChecker = certPathBuilder.revocationChecker as PKIXRevocationChecker
+        revocationChecker.options = EnumSet.of(
+                // Prefer CRL over OCSP
+                PKIXRevocationChecker.Option.PREFER_CRLS,
+                // Don't fall back to OCSP checking
+                PKIXRevocationChecker.Option.NO_FALLBACK)
+        if (revocationConfig.mode == RevocationConfig.Mode.SOFT_FAIL) {
+            // Allow revocation check to succeed if the revocation status cannot be determined for one of
+            // the following reasons: The CRL or OCSP response cannot be obtained because of a network error.
+            revocationChecker.options = revocationChecker.options + PKIXRevocationChecker.Option.SOFT_FAIL
+        }
+        pkixParams.addCertPathChecker(revocationChecker)
+    }
     return CertPathTrustManagerParameters(pkixParams)
 }
 
