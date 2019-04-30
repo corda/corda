@@ -110,7 +110,7 @@ class JarSignatureCollectorTest {
                 """
             Mismatch between signers [O=Alice Corp, L=Madrid, C=ES, O=Bob Plc, L=Rome, C=IT] for file _signable1
             and signers [O=Bob Plc, L=Rome, C=IT] for file _signable2.
-            See https://docs.corda.net/design/data-model-upgrades/signature-constraints.html for details of the
+            See https://docs.corda.net/api-contract-constraints.html#signature-constraints for details of the
             constraints applied to attachment signatures.
             """.trimIndent().replace('\n', ' ')
         ) { dir.getJarSigners(FILENAME) }
