@@ -27,9 +27,30 @@ apply plugin: 'application'
 mainClassName = 'net.corda.core.ConfigExporterMain'
 apply plugin: 'com.github.johnrengelman.shadow'
 
+repositories {
+    maven {
+        url "${artifactory_contextUrl}/r3-corda-releases"
+        credentials {
+            username = System.getenv('CORDA_ARTIFACTORY_USERNAME')
+            password = System.getenv('CORDA_ARTIFACTORY_PASSWORD')
+        }
+    }
+    maven {
+        url "${artifactory_contextUrl}/r3-corda-dev"
+        credentials {
+            username = System.getenv('CORDA_ARTIFACTORY_USERNAME')
+            password = System.getenv('CORDA_ARTIFACTORY_PASSWORD')
+        }
+    }
+}
+
+configurations {
+    artifactoryCorda
+}
 
 dependencies {
     compile project(':node')
+    artifactoryCorda "com.r3.corda:corda:${project.version}"
 }
 
 shadowJar {
@@ -120,14 +141,14 @@ final List<String> tagsBuilt = new ArrayList<String>()
 task buildDockerFolder(dependsOn: [":node:capsule:buildCordaJAR", shadowJar, ":tools:dbmigration:shadowJar"]) {
     doLast {
         def outputDir = new File(project.buildDir, "docker-temp")
-        def cordaJar = project(":node:capsule").buildCordaJAR.archivePath
         def dbmigrator = project(":tools:dbmigration").shadowJar.archivePath
+        def cordaJar = configurations.artifactoryCorda.singleFile
         project.copy {
             into outputDir
             from "src/bash/run-corda.sh"
             from "src/bash/db-migrate-create-jars.sh"
             from "src/bash/db-migrate-execute-migration.sh"
-            from cordaJar
+            from cordaJar.path
             from shadowJar.archivePath
             from dbmigrator
             from "src/config/starting-node.conf"
