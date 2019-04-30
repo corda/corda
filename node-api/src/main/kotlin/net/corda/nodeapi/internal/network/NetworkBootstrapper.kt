@@ -459,7 +459,7 @@ internal constructor(private val initSerEnv: Boolean,
         )
     }
 
-    private class AMQPParametersSerializationScheme : AbstractAMQPSerializationScheme(emptyList()) {
+    class AMQPParametersSerializationScheme : AbstractAMQPSerializationScheme(emptyList()) {
         override fun rpcClientSerializerFactory(context: SerializationContext) = throw UnsupportedOperationException()
         override fun rpcServerSerializerFactory(context: SerializationContext) = throw UnsupportedOperationException()
 
