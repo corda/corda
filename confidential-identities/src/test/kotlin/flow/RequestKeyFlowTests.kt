@@ -1,9 +1,11 @@
 package flow
 
 import co.paralleluniverse.fibers.Suspendable
+import junit.framework.Assert.assertNull
 import net.corda.confidential.flow.RequestKeyFlow
 import net.corda.confidential.flow.RequestKeyFlowHandler
 import net.corda.confidential.service.SignedPublicKey
+import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
 import net.corda.core.flows.InitiatedBy
@@ -22,6 +24,8 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import sun.security.x509.UniqueIdentity
+import java.util.*
 
 class RequestKeyFlowTests {
 
@@ -57,23 +61,23 @@ class RequestKeyFlowTests {
     }
 
     @Test
-    fun `register new key for party`() {
-
-        val anonymousBob = AnonymousParty(bob.owningKey)
-        val anonymousAlice = AnonymousParty(alice.owningKey)
-
-        val keyForBob = aliceNode.services.startFlow(RequestKeyInitiator(anonymousBob)).resultFuture
-        val keyForAlice = bobNode.services.startFlow(RequestKeyInitiator(anonymousAlice)).resultFuture
+    fun `request new key from another party`() {
+        // Alice requests that bob generates a new key for an account
+        val keyForBob = aliceNode.services.startFlow(RequestKeyInitiator(bob, UUID.randomUUID())).resultFuture
         mockNet.runNetwork()
 
-        val bobResults = keyForBob.getOrThrow().publicKeyToPartyMap.entries.filter { it.value == bob }.first()
-        val aliceResults  = keyForAlice.getOrThrow().publicKeyToPartyMap.entries.filter { it.value == alice }.first()
+        val bobResults = keyForBob.getOrThrow().publicKeyToPartyMap.filter { it.value == bob }
 
-        val resolvedBobParty = aliceNode.services.identityService.wellKnownPartyFromAnonymous(bobResults.value)
-        val resolvedAliceParty = aliceNode.services.identityService.wellKnownPartyFromAnonymous(aliceResults.value)
+        // Bob has the newly generated key as well as the owning key
+        val bobKeys = aliceNode.services.keyManagementService.keys
+        val aliceKeys = aliceNode.services.keyManagementService.keys
+        assertThat(bobKeys).hasSize(2)
+        assertThat(aliceKeys).hasSize(1)
 
+        assertThat(bobNode.services.keyManagementService.keys).contains(bobResults.keys.first())
+
+        val resolvedBobParty = aliceNode.services.identityService.wellKnownPartyFromAnonymous(bobResults.values.first())
         assertThat(resolvedBobParty).isEqualTo(bob)
-        assertThat(resolvedAliceParty).isEqualTo(alice)
     }
 
     @Test
@@ -82,10 +86,10 @@ class RequestKeyFlowTests {
     }
 
     @InitiatingFlow
-    private class RequestKeyInitiator(private val otherParty: AnonymousParty) : FlowLogic<SignedPublicKey>() {
+    private class RequestKeyInitiator(private val otherParty: Party, private val uuid: UUID) : FlowLogic<SignedPublicKey>() {
         @Suspendable
         override fun call(): SignedPublicKey {
-            return subFlow(RequestKeyFlow(setOf(initiateFlow(otherParty)), otherParty))
+            return subFlow(RequestKeyFlow(initiateFlow(otherParty), otherParty, uuid))
         }
     }
 

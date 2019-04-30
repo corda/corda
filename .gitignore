@@ -41,7 +41,7 @@ lib/quasar.jar
 
 
 # Include the -parameters compiler option by default in IntelliJ required for serialization.
-!.idea/compiler.xml
+.idea/compiler.xml
 !.idea/codeStyleSettings.xml
 
 # if you remove the above rule, at least ignore the following:
@@ -61,6 +61,7 @@ lib/quasar.jar
 # Gradle:
 # .idea/gradle.xml
 # .idea/libraries
+
 
 # Mongo Explorer plugin:
 # .idea/mongoSettings.xml

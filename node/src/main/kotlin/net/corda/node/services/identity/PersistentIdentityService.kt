@@ -4,11 +4,14 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.*
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.internal.hash
+import net.corda.core.node.NodeInfo
+import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.UnknownAnonymousPartyException
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.MAX_HASH_HEX_SIZE
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
+import net.corda.node.internal.schemas.NodeInfoSchemaV1
 import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
@@ -16,6 +19,7 @@ import net.corda.nodeapi.internal.crypto.x509Certificates
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import org.apache.commons.lang.ArrayUtils.EMPTY_BYTE_ARRAY
+import org.hibernate.Session
 import java.security.InvalidAlgorithmParameterException
 import java.security.PublicKey
 import java.security.cert.*
@@ -33,6 +37,7 @@ import javax.persistence.Lob
 class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSerializeAsToken(), IdentityServiceInternal {
     companion object {
         private val log = contextLogger()
+
 
         fun createKeyToPartyAndCertMap(cacheFactory: NamedCacheFactory): AppendOnlyPersistentMap<SecureHash, PartyAndCertificate, PersistentIdentityCert, String> {
             return AppendOnlyPersistentMap(
@@ -96,6 +101,9 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
             var name: String = ""
     )
 
+    // CordaPersistence is not a c'tor parameter to work around the cyclic dependency
+    lateinit var database: CordaPersistence
+
     private lateinit var _caCertStore: CertStore
     override val caCertStore: CertStore get() = _caCertStore
 
@@ -107,9 +115,6 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
 
     /** Stores notary identities obtained from the network parameters, for which we don't need to perform a database lookup. */
     private val notaryIdentityCache = HashSet<Party>()
-
-    // CordaPersistence is not a c'tor parameter to work around the cyclic dependency
-    lateinit var database: CordaPersistence
 
     private val keyToPartyAndCert = createKeyToPartyAndCertMap(cacheFactory)
     private val keyToParty = createKeyToX500Map(cacheFactory)
@@ -187,10 +192,14 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
         // Skip database lookup if the party is a notary identity.
         // This also prevents an issue where the notary identity can't be resolved if it's not in the network map cache. The node obtains
         // a trusted list of notary identities from the network parameters automatically.
+        log.debug("Attempting to find wellKnownParty for: ${party.owningKey.hash}")
+        val candidate = keyToParty[party.owningKey.hash]
         return if (party is Party && party in notaryIdentityCache) {
-            party
+            return party
+        } else if (candidate != null){
+            return getNodesByLegalName(candidate).first().legalIdentities.first()
         } else {
-            database.transaction { super.wellKnownPartyFromAnonymous(party) }
+            super.wellKnownPartyFromAnonymous(party)
         }
     }
 
@@ -204,6 +213,36 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
             }
             results
         }
+    }
+
+    override fun partyFromKey(key: PublicKey): Party? {
+        val candidate = keyToParty[key.hash]
+        return if (candidate != null) {
+            getNodesByLegalName(candidate).first().legalIdentities.first()
+        } else {
+            null
+        }
+    }
+
+    /**
+     * TODO - Duplicate
+     * This is duplicate of what is found in [PersistentNetworkMapCache] but we cannot instantiate that class here due to cyclic constructor
+     * dependencies.
+     */
+    private fun getNodesByLegalName(name: CordaX500Name): List<NodeInfo> {
+        return database.transaction { queryByLegalName(session, name) }.sortedByDescending { it.serial }
+    }
+
+    /**
+     * TODO - Duplicate
+     */
+    private fun queryByLegalName(session: Session, name: CordaX500Name): List<NodeInfo> {
+        val query = session.createQuery(
+                "SELECT n FROM ${NodeInfoSchemaV1.PersistentNodeInfo::class.java.name} n JOIN n.legalIdentitiesAndCerts l WHERE l.name = :name",
+                NodeInfoSchemaV1.PersistentNodeInfo::class.java)
+        query.setParameter("name", name.toString())
+        val result = query.resultList
+        return result.map { it.toNodeInfo() }
     }
 
     @Throws(UnknownAnonymousPartyException::class)
