@@ -25,6 +25,12 @@
         <createIndex indexName="external_id_idx" tableName="pk_hash_to_ext_id_map">
             <column name="external_id"/>
         </createIndex>
-
     </changeSet>
+
+    <changeSet author="R3.Corda" id="set_date_of_mappings_to_epoch0">
+        <customChange class="net.corda.nodeapi.internal.persistence.ExternalIdTableMigration">
+        </customChange>
+    </changeSet>
+
+
 </databaseChangeLog>
