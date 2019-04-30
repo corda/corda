@@ -35,7 +35,9 @@ class ClassCarpentingTypeLoader(private val carpenter: RemoteTypeCarpenter, priv
         // Grab all the types we can from the cache, or the classloader.
         val noCarpentryRequired = remoteInformationByIdentifier.asSequence().mapNotNull { (identifier, _) ->
             try {
-                identifier to cache.computeIfAbsent(identifier) { identifier.getLocalType(classLoader) }
+                // In case the carpenter is disabled, don't use the wrapper 'CarpenterClassLoader'.
+                val cl = if(context.carpenterDisabled) classLoader.parent else classLoader
+                identifier to cache.computeIfAbsent(identifier) { identifier.getLocalType(cl) }
             } catch (e: ClassNotFoundException) {
                 if (context.carpenterDisabled) {
                     throw e
