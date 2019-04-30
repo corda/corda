@@ -215,7 +215,7 @@ allprojects {
         // Prevent the project from creating temporary files outside of the build directory.
         systemProperty 'java.io.tmpdir', buildDir.absolutePath
 
-        maxHeapSize = "1512m"
+        maxHeapSize = "2g"
 
         if (project.hasProperty('test.parallel') && project.property('test.parallel').toBoolean()) {
             maxParallelForks = Runtime.runtime.availableProcessors().intdiv(2) as int ?: 1
