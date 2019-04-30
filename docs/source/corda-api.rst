@@ -15,6 +15,7 @@ The following are the core APIs that are used in the development of CorDapps:
    api-flows
    api-identity
    api-service-hub
+   api-service-classes
    api-rpc
    api-core-types
    api-testing
