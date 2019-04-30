@@ -99,6 +99,7 @@ class SignatureConstraintVersioningTests {
 
     @Test
     fun `auto migration from WhitelistConstraint to SignatureConstraint`() {
+        assumeFalse(System.getProperty("os.name").toLowerCase().startsWith("win")) // See NodeStatePersistenceTests.kt.
         val transaction =
             upgradeCorDappBetweenTransactions(oldUnsignedCordapp, newCordapp, listOf(oldUnsignedCordapp, newCordapp))
         assertEquals(1, transaction.outputs.size)
@@ -107,6 +108,7 @@ class SignatureConstraintVersioningTests {
 
     @Test
     fun `auto migration from WhitelistConstraint to SignatureConstraint fail for not whitelisted signed JAR`() {
+        assumeFalse(System.getProperty("os.name").toLowerCase().startsWith("win")) // See NodeStatePersistenceTests.kt.
         assertThatExceptionOfType(CordaRuntimeException::class.java).isThrownBy {
             upgradeCorDappBetweenTransactions(oldUnsignedCordapp, newCordapp, emptyList())
         }.withMessageContaining("Selected output constraint: $WhitelistedByZoneAttachmentConstraint not satisfying")
@@ -121,7 +123,6 @@ class SignatureConstraintVersioningTests {
         newCordapp: CustomCordapp,
         whiteListedCordapps: List<CustomCordapp>
     ): CoreTransaction {
-        assumeFalse(System.getProperty("os.name").toLowerCase().startsWith("win")) // See NodeStatePersistenceTests.kt.
 
         val attachmentHashes = whiteListedCordapps.map { Files.newInputStream(it.jarFile).readFully().sha256() }
 
