@@ -143,6 +143,27 @@ To copy the same file to all nodes `ext.drivers` can be defined in the top level
         }
     }
 
+Package namespace ownership
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+To optionally specify package namespace ownership, the ``networkParameterOverrides`` and ``packageOwnership`` closures can be used:
+
+.. sourcecode:: groovy
+
+    task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
+        [...]
+        networkParameterOverrides {
+            packageOwnership {
+                "com.mypackagename" {
+                    keystore = "_teststore"
+                    keystorePassword = "MyStorePassword"
+                    keystoreAlias = "MyKeyAlias"
+                }
+            }
+        }
+        [...]
+    }
+
+
 Signing Cordapp JARs
 ^^^^^^^^^^^^^^^^^^^^
 The default behaviour of Cordform is to deploy CorDapp JARs "as built":
