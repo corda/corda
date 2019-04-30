@@ -79,7 +79,7 @@ class AzureKeyVaultCryptoService(private val keyVaultClient: KeyVaultClient, pri
         return toPublicKey(keyBundle)
     }
 
-    override fun sign(alias: String, data: ByteArray): ByteArray {
+    override fun sign(alias: String, data: ByteArray, signAlgorithm: String?): ByteArray {
         checkAlias(alias)
         // KeyVault can only sign over hashed data.
         val digest = MessageDigest.getInstance("SHA-256")
