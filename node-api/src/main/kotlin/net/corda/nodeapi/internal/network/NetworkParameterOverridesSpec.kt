@@ -52,12 +52,12 @@ internal object NetworkParameterOverridesSpec : Configuration.Specification<Netw
                     val publicKey = ks.getCertificate(configuration[keystoreAlias]).publicKey
                     valid(PackageOwner(javaPackageName, publicKey))
                 } catch (kse: KeyStoreException) {
-                    badValue("Keystore has not been initialized for alias ${configuration[keystoreAlias]}")
+                    badValue("Keystore has not been initialized for alias ${configuration[keystoreAlias]}.")
                 }
             } catch (kse: KeyStoreException) {
-                badValue("Password is incorrect or the key store is damaged for keyStoreFilePath: $suppliedKeystorePath and keyStorePassword: $keystorePassword")
+                badValue("Password is incorrect or the key store is damaged for keyStoreFilePath: $suppliedKeystorePath.")
             } catch (e: IOException) {
-                badValue("Error reading the key store from the file for keyStoreFilePath: $suppliedKeystorePath and keyStorePassword: $keystorePassword ${e.message}")
+                badValue("Error reading the key store from the file for keyStoreFilePath: $suppliedKeystorePath ${e.message}.")
             }
         }
 
