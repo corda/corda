@@ -199,6 +199,12 @@ internal constructor(private val initSerEnv: Boolean,
         bootstrap(directory, cordappJars, CopyCordapps.No, fromCordform = true)
     }
 
+    /**
+     * Entry point for Cordform with extra configurations
+     * @param directory - directory on which the network will be deployed
+     * @param cordappJars - List of CordApps to deploy
+     * @param extraConfigurations - HOCON representation of extra configuration parameters
+     */
     fun bootstrapCordform(directory: Path, cordappJars: List<Path>, extraConfigurations: String) {
         val configuration = ConfigFactory.parseString(extraConfigurations).resolve().getObject("networkParameterOverrides").toConfig().parseAsNetworkParametersConfiguration()
         val networkParametersOverrides = configuration.doOnErrors(::reportErrors).optional ?: throw IllegalStateException("Invalid configuration passed.")
