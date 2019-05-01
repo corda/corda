@@ -58,7 +58,7 @@ abstract class JCACryptoService(internal val keyStore: KeyStore, internal val pr
     override fun sign(alias: String, data: ByteArray, signAlgorithm: String?): ByteArray {
         return withAuthentication {
             (keyStore.getKey(alias, null) as PrivateKey?)?.let {
-                val algorithm = if (it.algorithm == "RSA") {
+                val algorithm = signAlgorithm ?: if (it.algorithm == "RSA") {
                     "SHA256withRSA"
                 } else {
                     "SHA256withECDSA"
