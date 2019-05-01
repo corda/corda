@@ -208,6 +208,7 @@ class FloatControlListenerService(val conf: FirewallConfiguration,
         if (message.payload.size > maximumMessageSize) {
             auditService.packetDropEvent(message, "Message exceeds maxMessageSize network parameter, maxMessageSize: [${message.payload.size}], message size: [$maximumMessageSize]. Message is acknowledged and dropped.", RoutingDirection.INBOUND)
             message.complete(true)
+            return
         }
 
         if (!message.topic.startsWith(P2P_PREFIX)) {
