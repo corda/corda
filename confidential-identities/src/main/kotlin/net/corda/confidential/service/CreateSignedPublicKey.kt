@@ -11,10 +11,10 @@ import java.security.SignatureException
 import java.util.*
 
 fun createSignedPublicKey(serviceHub: ServiceHub, uuid: UUID): SignedPublicKey {
-    val key = serviceHub.keyManagementService.freshKey(uuid)
-    // Link the key to the host node
-    val map = mapOf(key to serviceHub.myInfo.legalIdentities.first())
-    val sig = serviceHub.keyManagementService.sign(map.serialize().hash.bytes, key)
+    val nodeParty = serviceHub.myInfo.legalIdentities.first()
+    val newKey = serviceHub.keyManagementService.freshKey(uuid)
+    val map = mapOf(newKey to nodeParty)
+    val sig = serviceHub.keyManagementService.sign(map.serialize().hash.bytes, nodeParty.owningKey)
     return SignedPublicKey(map, sig)
 }
 

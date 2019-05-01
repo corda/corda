@@ -5,8 +5,10 @@ import net.corda.confidential.service.*
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
+import net.corda.core.identity.AnonymousParty
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.ProgressTracker
+import net.corda.core.utilities.toBase58String
 import net.corda.core.utilities.unwrap
 import java.util.*
 
@@ -14,6 +16,7 @@ class ShareKeyFlow(private val session: FlowSession, private val uuid: UUID) : F
 
     @Suspendable
     override fun call() {
+        val nodeParty = serviceHub.myInfo.legalIdentities.first()
         session.sendAndReceive<UUIDReceived>(uuid)
         val signedKey = createSignedPublicKey(serviceHub, uuid)
         registerIdentityMapping(serviceHub, signedKey, signedKey.publicKeyToPartyMap.values.first())
@@ -39,6 +42,10 @@ class ShareKeyFlowHandler(private val otherSession: FlowSession) : FlowLogic<Sig
         val uuid = otherSession.receive<UUID>().unwrap { it }
         otherSession.send(UUIDReceived())
         val signedKey = otherSession.sendAndReceive<SignedPublicKey>(CreateKeyForAccount(uuid)).unwrap { it }
+        // Ensure the counter party was the one that generated the key
+        require(otherSession.counterparty.owningKey == signedKey.signature.by) {
+            "Expected a signature by ${otherSession.counterparty.owningKey.toBase58String()}, but received by ${signedKey.signature.by.toBase58String()}}"
+        }
         progressTracker.currentStep = VERIFYING_KEY
         validateSignature(signedKey)
         progressTracker.currentStep = KEY_VERIFIED

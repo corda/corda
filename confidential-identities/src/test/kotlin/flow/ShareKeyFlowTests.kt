@@ -69,8 +69,6 @@ class ShareKeyFlowTests {
         val aliceKeys = aliceNode.services.keyManagementService.keys
         assertThat(aliceKeys).hasSize(2)
 
-        val bobService = bobNode.services.identityService
-        val aliceService = bobNode.services.identityService
         val aliceGeneratedKey = aliceKeys.last()
 
         // Bob should be able to resolve the generated key as it has been shared with him
