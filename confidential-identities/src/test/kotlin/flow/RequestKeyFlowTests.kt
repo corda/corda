@@ -1,17 +1,13 @@
 package flow
 
 import co.paralleluniverse.fibers.Suspendable
-import junit.framework.Assert.assertNull
 import net.corda.confidential.flow.RequestKeyFlow
 import net.corda.confidential.flow.RequestKeyFlowHandler
 import net.corda.confidential.service.SignedPublicKey
-import net.corda.core.contracts.UniqueIdentifier
-import net.corda.core.crypto.Crypto
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
-import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.core.ALICE_NAME
@@ -25,8 +21,6 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import org.postgresql.shaded.com.ongres.scram.common.util.CryptoUtil
-import sun.security.x509.UniqueIdentity
 import java.util.*
 
 class RequestKeyFlowTests {
