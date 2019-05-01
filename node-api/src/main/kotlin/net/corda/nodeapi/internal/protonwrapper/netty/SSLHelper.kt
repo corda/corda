@@ -171,9 +171,10 @@ internal fun createServerSslHandler(keyStore: CertificateStore,
 internal fun initialiseTrustStoreAndEnableCrlChecking(trustStore: CertificateStore, revocationConfig: RevocationConfig): ManagerFactoryParameters {
     val pkixParams = PKIXBuilderParameters(trustStore.value.internal, X509CertSelector())
     val revocationChecker = if (revocationConfig.mode == RevocationConfig.Mode.OFF) {
-        pkixParams.isRevocationEnabled = false // Prevents adding of sun.security.provider.certpath.RevocationChecker into the list of checkers
+        //pkixParams.isRevocationEnabled = false // Prevents adding of sun.security.provider.certpath.RevocationChecker into the list of checkers
                                                 // @see sun.security.provider.certpath.PKIXCertPathValidator.validate(java.security.cert.TrustAnchor, sun.security.provider.certpath.PKIX.ValidatorParams)
-        AllowAllRevocationChecker  // This is optional just to illustrate how we can add a custom checker
+                                                // Alternatively, it is possible to add an instance of PKIXRevocationChecker (see below) to disable default RevocationChecker
+        AllowAllRevocationChecker  // Custom PKIXRevocationChecker
     } else {
         val certPathBuilder = CertPathBuilder.getInstance("PKIX")
         val pkixRevocationChecker = certPathBuilder.revocationChecker as PKIXRevocationChecker
