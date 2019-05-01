@@ -103,6 +103,10 @@ buildscript {
         maven {
             url "$artifactory_contextUrl/corda-releases"
         }
+        // TEMP: remove once Corda Gradle plugins 5.0.0 published.
+        maven {
+            url "$artifactory_contextUrl/corda-dev"
+        }
         // JDK11 Java modules gradle plugin
         maven {
             url "https://plugins.gradle.org/m2/"
