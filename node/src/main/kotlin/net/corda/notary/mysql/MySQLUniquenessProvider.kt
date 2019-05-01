@@ -120,14 +120,16 @@ class MySQLUniquenessProvider(
     private val connectionExceptionCounter = metrics.counter("$metricPrefix.ConnectionException")
     /** Track double spend attempts. Note that this will also include notarisation retries. */
     private val conflictCounter = metrics.counter("$metricPrefix.Conflicts")
-    /** Track the distribution of the number of input states. **/
-    private val inputStateCount = metrics.histogram("$metricPrefix.NumberOfInputStates")
-    /** Track the measured ETA. **/
+    /** Track the distribution of the number of input states. */
+    private val inputStateHistogram = metrics.histogram("$metricPrefix.NumberOfInputStates")
+    /** Track the measured ETA. */
     private val requestProcessingETA = metrics.histogram("$metricPrefix.requestProcessingETASeconds")
-    /** Track the number of requests in the queue at insert. **/
-    private val requestQueueSize = metrics.histogram("$metricPrefix.requestQueue.size")
-    /** Track the number of states in the queue at insert. **/
+    /** Track the number of requests in the queue at insert. */
+    private val requestQueueCount = metrics.histogram("$metricPrefix.requestQueue.size")
+    /** Track the number of states in the queue at insert. */
     private val requestQueueStateCount = metrics.histogram("$metricPrefix.requestQueue.queuedStates")
+    /** Tracks the distribution of the number of unique transactions that contributed states to the current transaction */
+    private val uniqueTxHashCount = metrics.histogram("$metricPrefix.NumberOfUniqueTxHashes")
 
     private val dataSource = HikariDataSource(HikariConfig(config.dataSource))
     private val connectionRetries = config.connectionRetries
@@ -174,7 +176,7 @@ class MySQLUniquenessProvider(
             "$metricPrefix.RequestsQueueSize",
             Gauge<Int> { requestQueue.size }
     )
-    /** Track the batch size. **/
+    /** Track the batch size. */
     private val processedBatchSize = metrics.histogram("$metricPrefix.ProcessedBatchSize")
 
     /** A request processor thread. */
@@ -228,7 +230,8 @@ class MySQLUniquenessProvider(
             timeWindow: TimeWindow?,
             references: List<StateRef>
     ): CordaFuture<Result> {
-        inputStateCount.update(states.size)
+        inputStateHistogram.update(states.size)
+        uniqueTxHashCount.update(states.distinctBy { it.txhash }.count())
         val timer = Stopwatch.createStarted()
         val request = CommitRequest(states, txId, callerIdentity, requestSignature, timeWindow, references)
         val future = openFuture<Result>()
@@ -237,7 +240,7 @@ class MySQLUniquenessProvider(
             recordDuration(timer)
         }
         requestQueue.put(request)
-        requestQueueSize.update(requestQueue.size)
+        requestQueueCount.update(requestQueue.size)
         return future
     }
 
@@ -389,6 +392,7 @@ class MySQLUniquenessProvider(
             recordTransactions(connection, toCommit)
 
             connection.commit()
+
             return results
         }
 

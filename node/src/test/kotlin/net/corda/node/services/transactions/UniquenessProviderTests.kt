@@ -404,7 +404,7 @@ class PersistentUniquenessProviderFactory : UniquenessProviderFactory {
     override fun create(clock: Clock): UniquenessProvider {
         database?.close()
         database = configureDatabase(MockServices.makeTestDataSourceProperties(), DatabaseConfig(runMigration = true), { null }, { null }, NodeSchemaService(extraSchemas = setOf(NodeNotarySchemaV1)))
-        return PersistentUniquenessProvider(clock, database!!, TestingNamedCacheFactory())
+        return PersistentUniquenessProvider(MetricRegistry(), clock, database!!, TestingNamedCacheFactory())
     }
 
     override fun cleanUp() {
@@ -460,7 +460,7 @@ class JPAUniquenessProviderFactory : UniquenessProviderFactory {
     override fun create(clock: Clock): UniquenessProvider {
         database?.close()
         database = configureDatabase(MockServices.makeTestDataSourceProperties(), DatabaseConfig(runMigration = true), { null }, { null }, NodeSchemaService(extraSchemas = setOf(JPANotarySchemaV1)))
-        return JPAUniquenessProvider(clock, database!!, notaryConfig)
+        return JPAUniquenessProvider(MetricRegistry(), clock, database!!, notaryConfig)
     }
 
     override fun cleanUp() {

@@ -1,6 +1,8 @@
 package net.corda.notary.jpa
 
+import com.codahale.metrics.MetricRegistry
 import com.codahale.metrics.SlidingWindowReservoir
+import com.google.common.base.Stopwatch
 import com.google.common.collect.Queues
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.StateRef
@@ -39,7 +41,12 @@ import kotlin.concurrent.thread
 
 /** A JPA backed Uniqueness provider */
 @ThreadSafe
-class JPAUniquenessProvider(val clock: Clock, val database: CordaPersistence, val config: JPANotaryConfiguration) : UniquenessProvider, SingletonSerializeAsToken() {
+class JPAUniquenessProvider(
+        metrics: MetricRegistry,
+        val clock: Clock,
+        val database: CordaPersistence,
+        val config: JPANotaryConfiguration
+) : UniquenessProvider, SingletonSerializeAsToken() {
 
     // TODO: test vs. MySQLUniquenessProvider
 
@@ -109,7 +116,23 @@ class JPAUniquenessProvider(val clock: Clock, val database: CordaPersistence, va
     private val requestQueue = LinkedBlockingQueue<CommitRequest>(requestQueueSize)
     private val nrQueuedStates = AtomicInteger(0)
 
-    // TODO: Collect metrics.
+    private val metricPrefix = JPAUniquenessProvider::class.simpleName
+    /** Transaction commit duration timer and TPS meter. */
+    private val commitTimer = metrics.timer("$metricPrefix.Commit")
+    /** IPS (input states per second) meter. */
+    private val inputStatesMeter = metrics.meter("$metricPrefix.IPS")
+    /** Track double spend attempts. Note that this will also include notarisation retries. */
+    private val conflictCounter = metrics.counter("$metricPrefix.Conflicts")
+    /** Track the distribution of the number of input states. */
+    private val inputStateHistogram = metrics.histogram("$metricPrefix.NumberOfInputStates")
+    /** Track the measured ETA. */
+    private val requestProcessingETA = metrics.histogram("$metricPrefix.requestProcessingETASeconds")
+    /** Track the number of requests in the queue at insert. */
+    private val requestQueueCount = metrics.histogram("$metricPrefix.requestQueue.size")
+    /** Track the number of states in the queue at insert. */
+    private val requestQueueStateCount = metrics.histogram("$metricPrefix.requestQueue.queuedStates")
+    /** Tracks the distribution of the number of unique transactions that contributed states to the current transaction */
+    private val uniqueTxHashCount = metrics.histogram("$metricPrefix.NumberOfUniqueTxHashes")
 
     /**
      * Estimated time of request processing.
@@ -123,9 +146,12 @@ class JPAUniquenessProvider(val clock: Clock, val database: CordaPersistence, va
     override fun getEta(numStates: Int): Duration {
         val rate = throughput
         val nrStates = nrQueuedStates.getAndAdd(numStates)
+        requestQueueStateCount.update(nrStates)
         log.debug { "rate: $rate, queueSize: $nrStates" }
         if (rate > 0.0 && nrStates > 0) {
-            return Duration.ofSeconds((2 * TimeUnit.MINUTES.toSeconds(1) * nrStates / rate).toLong())
+            val eta = Duration.ofSeconds((2 * TimeUnit.MINUTES.toSeconds(1) * nrStates / rate).toLong())
+            requestProcessingETA.update(eta.seconds)
+            return eta
         }
         return NotaryServiceFlow.defaultEstimatedWaitTime
     }
@@ -183,6 +209,9 @@ class JPAUniquenessProvider(val clock: Clock, val database: CordaPersistence, va
             timeWindow: TimeWindow?,
             references: List<StateRef>
     ): CordaFuture<UniquenessProvider.Result> {
+        inputStateHistogram.update(states.size)
+        uniqueTxHashCount.update(states.distinctBy { it.txhash }.count())
+        val timer = Stopwatch.createStarted()
         val future = openFuture<UniquenessProvider.Result>()
         val requestEntities = Request(consumingTxHash = txId.toString(),
                 partyName = callerIdentity.name.toString(),
@@ -190,8 +219,18 @@ class JPAUniquenessProvider(val clock: Clock, val database: CordaPersistence, va
                 requestDate = clock.instant())
         val stateEntities = states.map { CommittedState(encodeStateRef(it), txId.toString()) }
         val request = CommitRequest(states, txId, callerIdentity, requestSignature, timeWindow, references, future, requestEntities, stateEntities)
+        future.then {
+            recordDuration(timer)
+        }
         requestQueue.put(request)
+        requestQueueCount.update(requestQueue.size)
         return future
+    }
+
+    private fun recordDuration(totalTime: Stopwatch) {
+        totalTime.stop()
+        val elapsed = totalTime.elapsed(TimeUnit.MILLISECONDS)
+        commitTimer.update(elapsed, TimeUnit.MILLISECONDS)
     }
 
     // Safe up to 100k requests per second.
@@ -272,6 +311,7 @@ class JPAUniquenessProvider(val clock: Clock, val database: CordaPersistence, va
                 if (request.states.isEmpty() && isPreviouslyNotarised(session, request.txId)) {
                     UniquenessProvider.Result.Success
                 } else {
+                    conflictCounter.inc()
                     UniquenessProvider.Result.Failure(NotaryError.Conflict(request.txId, conflicts))
                 }
             }
@@ -301,6 +341,7 @@ class JPAUniquenessProvider(val clock: Clock, val database: CordaPersistence, va
 
     private fun processRequests(requests: List<CommitRequest>) {
         val numStates = decrementQueueSize(requests)
+        var inputStateCount = 0
         val duration = elapsedTime {
             try {
                 // Note that there is an additional retry mechanism within the transaction itself.
@@ -315,12 +356,17 @@ class JPAUniquenessProvider(val clock: Clock, val database: CordaPersistence, va
                         val results = requests.map { request ->
                             processRequest(session, request, allConflicts, toCommit)
                         }
+
                         logRequests(requests)
                         commitRequests(session, toCommit)
 
                         for ((request, result) in requests.zip(results)) {
                             request.future.set(result)
+                            inputStateCount += request.states.size
                         }
+
+                        inputStatesMeter.mark(inputStateCount.toLong())
+                        inputStateCount = 0
                     }
                 }
             } catch (e: Exception) {

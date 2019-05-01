@@ -1,5 +1,6 @@
 package net.corda.notary.jpa
 
+import com.codahale.metrics.MetricRegistry
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.NullKeys
 import net.corda.core.crypto.SecureHash
@@ -64,7 +65,7 @@ class JPAUniquenessProviderTests {
         println(stateRefs.size)
 
         val firstTxId = SecureHash.randomSHA256()
-        val provider = JPAUniquenessProvider(Clock.systemUTC(), database, notaryConfig)
+        val provider = JPAUniquenessProvider(MetricRegistry(), Clock.systemUTC(), database, notaryConfig)
         val firstResult = provider.commit(stateRefs, firstTxId, identity, requestSignature).get()
         assertEquals(UniquenessProvider.Result.Success, firstResult)
 

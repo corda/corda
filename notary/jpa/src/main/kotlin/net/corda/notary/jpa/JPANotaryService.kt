@@ -24,7 +24,7 @@ class JPANotaryService(
         } catch (e: Exception) {
             throw IllegalArgumentException("Failed to register ${JPANotaryService::class.java}: JPA notary configuration not present")
         }
-        JPAUniquenessProvider(services.clock, services.database, jpaNotaryConfig)
+        JPAUniquenessProvider(services.monitoringService.metrics, services.clock, services.database, jpaNotaryConfig)
     }
 
     override fun createServiceFlow(otherPartySession: FlowSession): NotaryServiceFlow {
