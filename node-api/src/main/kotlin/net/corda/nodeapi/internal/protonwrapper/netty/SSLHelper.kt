@@ -170,10 +170,14 @@ internal fun createServerSslHandler(keyStore: CertificateStore,
 
 internal fun initialiseTrustStoreAndEnableCrlChecking(trustStore: CertificateStore, revocationConfig: RevocationConfig): ManagerFactoryParameters {
     val pkixParams = PKIXBuilderParameters(trustStore.value.internal, X509CertSelector())
-    if(revocationConfig.mode != RevocationConfig.Mode.OFF) {
+    val revocationChecker = if (revocationConfig.mode == RevocationConfig.Mode.OFF) {
+        pkixParams.isRevocationEnabled = false // Prevents adding of sun.security.provider.certpath.RevocationChecker into the list of checkers
+                                                // @see sun.security.provider.certpath.PKIXCertPathValidator.validate(java.security.cert.TrustAnchor, sun.security.provider.certpath.PKIX.ValidatorParams)
+        AllowAllRevocationChecker  // This is optional just to illustrate how we can add a custom checker
+    } else {
         val certPathBuilder = CertPathBuilder.getInstance("PKIX")
-        val revocationChecker = certPathBuilder.revocationChecker as PKIXRevocationChecker
-        revocationChecker.options = EnumSet.of(
+        val pkixRevocationChecker = certPathBuilder.revocationChecker as PKIXRevocationChecker
+        pkixRevocationChecker.options = EnumSet.of(
                 // Prefer CRL over OCSP
                 PKIXRevocationChecker.Option.PREFER_CRLS,
                 // Don't fall back to OCSP checking
@@ -181,10 +185,11 @@ internal fun initialiseTrustStoreAndEnableCrlChecking(trustStore: CertificateSto
         if (revocationConfig.mode == RevocationConfig.Mode.SOFT_FAIL) {
             // Allow revocation check to succeed if the revocation status cannot be determined for one of
             // the following reasons: The CRL or OCSP response cannot be obtained because of a network error.
-            revocationChecker.options = revocationChecker.options + PKIXRevocationChecker.Option.SOFT_FAIL
+            pkixRevocationChecker.options = pkixRevocationChecker.options + PKIXRevocationChecker.Option.SOFT_FAIL
         }
-        pkixParams.addCertPathChecker(revocationChecker)
+        pkixRevocationChecker
     }
+    pkixParams.addCertPathChecker(revocationChecker)
     return CertPathTrustManagerParameters(pkixParams)
 }
 
