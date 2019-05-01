@@ -1,5 +1,7 @@
 package net.corda.node.services.keys.cryptoservice.utimaco
 
+import net.corda.nodeapi.internal.cryptoservice.utimaco.UtimacoCryptoService
+
 fun testConfig(
         port: Int,
         host: String = "127.0.0.1",

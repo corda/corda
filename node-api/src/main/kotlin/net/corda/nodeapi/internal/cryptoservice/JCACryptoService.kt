@@ -1,4 +1,4 @@
-package net.corda.node.services.keys.cryptoservice
+package net.corda.nodeapi.internal.cryptoservice
 
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SignatureScheme
@@ -6,9 +6,6 @@ import net.corda.core.crypto.random63BitValue
 import net.corda.nodeapi.internal.crypto.ContentSignerBuilder
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.toJca
-import net.corda.nodeapi.internal.cryptoservice.CryptoService
-import net.corda.nodeapi.internal.cryptoservice.CryptoServiceException
-import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x509.AlgorithmIdentifier
 import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder
 import org.bouncycastle.operator.ContentSigner
@@ -19,7 +16,6 @@ import java.math.BigInteger
 import java.security.*
 import java.security.cert.Certificate
 import java.security.spec.ECGenParameterSpec
-import java.security.spec.X509EncodedKeySpec
 import javax.security.auth.x500.X500Principal
 
 /*
@@ -59,7 +55,7 @@ abstract class JCACryptoService(internal val keyStore: KeyStore, internal val pr
     /**
      * We _could_ consider doing the digest locally and then signing over the hash remotely with NONEwithALGO as a performance optimization.
      */
-    override fun sign(alias: String, data: ByteArray): ByteArray {
+    override fun sign(alias: String, data: ByteArray, signAlgorithm: String?): ByteArray {
         return withAuthentication {
             (keyStore.getKey(alias, null) as PrivateKey?)?.let {
                 val algorithm = if (it.algorithm == "RSA") {

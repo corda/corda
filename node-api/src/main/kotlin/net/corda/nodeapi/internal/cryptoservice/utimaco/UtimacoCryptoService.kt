@@ -1,4 +1,4 @@
-package net.corda.node.services.keys.cryptoservice.utimaco
+package net.corda.nodeapi.internal.cryptoservice.utimaco
 
 import CryptoServerCXI.CryptoServerCXI
 import CryptoServerJCE.CryptoServerProvider
@@ -91,7 +91,7 @@ class UtimacoCryptoService(private val cryptoServerProvider: CryptoServerProvide
         }
     }
 
-    override fun sign(alias: String, data: ByteArray): ByteArray {
+    override fun sign(alias: String, data: ByteArray, signAlgorithm: String?): ByteArray {
         try {
             return withAuthentication {
                 (keyStore.getKey(alias, null) as PrivateKey?)?.let {

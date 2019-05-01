@@ -1,4 +1,4 @@
-package net.corda.node.services.keys.cryptoservice.azure
+package net.corda.nodeapi.internal.cryptoservice.azure
 
 import com.microsoft.aad.adal4j.AsymmetricKeyCredential
 import com.microsoft.aad.adal4j.AuthenticationContext
@@ -79,7 +79,7 @@ class AzureKeyVaultCryptoService(private val keyVaultClient: KeyVaultClient, pri
         return toPublicKey(keyBundle)
     }
 
-    override fun sign(alias: String, data: ByteArray): ByteArray {
+    override fun sign(alias: String, data: ByteArray, signAlgorithm: String?): ByteArray {
         checkAlias(alias)
         // KeyVault can only sign over hashed data.
         val digest = MessageDigest.getInstance("SHA-256")
@@ -232,7 +232,8 @@ class AzureKeyVaultCryptoService(private val keyVaultClient: KeyVaultClient, pri
         fun fromConfigurationFile(configFile: Path): AzureKeyVaultCryptoService {
             val config = parseConfigFile(configFile)
             val keyVaultClient: KeyVaultClient = createKeyVaultClient(config.path, config.password, config.alias, config.clientId)
-            return AzureKeyVaultCryptoService(keyVaultClient, config.keyVaultURL, config.protection ?: DEFAULT_PROTECTION)
+            return AzureKeyVaultCryptoService(keyVaultClient, config.keyVaultURL, config.protection
+                    ?: DEFAULT_PROTECTION)
         }
 
         internal fun parseConfigFile(configFile: Path): AzureKeyVaultConfig {
