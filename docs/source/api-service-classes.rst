@@ -53,10 +53,8 @@ Below is an empty implementation of a Service class:
             // public api of service
         }
 
-The ``AppServiceHub`` provides the ``ServiceHub`` functionality to the Service class, with the extra ability to start flows.
-
-.. warning:: Take care starting flows via ``AppServiceHub`` from inside a running flow as it can deadlock the node's flow worker queue,
-             preventing new flows from being started.
+The ``AppServiceHub`` provides the ``ServiceHub`` functionality to the Service class, with the extra ability to start flows. Starting flows
+from ``AppServiceHub`` is explained further in :ref:`Starting Flows from a Service <starting_flows_from_a_service>`.
 
 Code can be run during node startup when the class is being initialised. To do so, place the code into the ``init`` block or constructor.
 This is useful when a service needs to establish a connection to an external database or setup observables via ``ServiceHub.trackBy`` during
@@ -79,6 +77,23 @@ A Service class can be retrieved by calling ``ServiceHub.cordaService``. Returni
 
 .. warning:: ``ServiceHub.cordaService`` should not be called during initialisation of a flow and should instead be called in line where
              needed or set after the flow's ``call`` function has been triggered.
+
+.. _starting_flows_from_a_service:
+
+Starting Flows from a Service
+-----------------------------
+
+Starting flows via a service can lead to deadlock within the node's flow worker queue, which will prevent new flows from
+starting. To avoid this, the rules bellow should be followed:
+
+    * When called from a running flow, the service must invoke the new flow from another thread. The existing flow cannot await the
+      execution of the new flow.
+    * When ``ServiceHub.trackBy`` is placed inside the service, flows started inside the observable must be placed onto another thread.
+    * Flows started by other means, do not require any special treatment.
+
+.. note:: It is possible to avoid deadlock without following these rules depending on the number of flows running within the node. But, if the
+          number of flows violating these rules reaches the flow worker queue size, then the node will deadlock. It is best practice to
+          abide by these rules to remove this possibility.
 
 
 
