@@ -387,12 +387,17 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                 else -> false
             }
 
-            val trustedBySuccessor = if (!trustedByUploader && service != null && attachment is ContractAttachment) {
+            val trustedBySuccessor = if (!trustedByUploader && service != null && (attachment is AbstractAttachment || attachment is ContractAttachment)) {
                 val signers = attachment.signerKeys
-                val contractClasses = listOf(attachment.contract) + attachment.additionalContracts.toList()
+                val contractClassCondition = if (attachment is ContractAttachment) {
+                    val contractClasses = listOf(attachment.contract) + attachment.additionalContracts.toList()
+                    Builder.equal(contractClasses)
+                } else {
+                    null
+                }
 
                 val queryCriteria = AttachmentQueryCriteria.AttachmentsQueryCriteria(
-                        contractClassNamesCondition = Builder.equal(contractClasses),
+                        contractClassNamesCondition = contractClassCondition,
                         signersCondition = Builder.equal(signers),
                         uploaderCondition = Builder.`in`(TRUSTED_UPLOADERS)
                 )

@@ -29,18 +29,17 @@ object ContractJarTestUtils {
 
     @JvmOverloads
     fun makeTestJar(output: OutputStream, extraEntries: List<Pair<String, String>> = emptyList()) {
-        output.use {
-            val jar = JarOutputStream(it)
-            jar.putNextEntry(JarEntry("test1.txt"))
-            jar.write("This is some useful content".toByteArray())
-            jar.closeEntry()
-            jar.putNextEntry(JarEntry("test2.txt"))
-            jar.write("Some more useful content".toByteArray())
-            extraEntries.forEach {
-                jar.putNextEntry(JarEntry(it.first))
-                jar.write(it.second.toByteArray())
+        JarOutputStream(output).use {
+            it.putNextEntry(JarEntry("test1.txt"))
+            it.write("This is some useful content".toByteArray())
+            it.closeEntry()
+            it.putNextEntry(JarEntry("test2.txt"))
+            it.write("Some more useful content".toByteArray())
+            extraEntries.forEach { entry ->
+                it.putNextEntry(JarEntry(entry.first))
+                it.write(entry.second.toByteArray())
             }
-            jar.closeEntry()
+            it.closeEntry()
         }
     }
 

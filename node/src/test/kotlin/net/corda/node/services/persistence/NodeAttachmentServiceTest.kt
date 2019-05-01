@@ -7,7 +7,6 @@ import com.google.common.jimfs.Jimfs
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.ContractAttachment
-import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
 import net.corda.core.flows.FlowLogic
@@ -31,22 +30,23 @@ import net.corda.testing.core.internal.ContractJarTestUtils
 import net.corda.testing.core.internal.ContractJarTestUtils.makeTestContractJar
 import net.corda.testing.core.internal.ContractJarTestUtils.makeTestJar
 import net.corda.testing.core.internal.ContractJarTestUtils.makeTestSignedContractJar
-import net.corda.testing.core.internal.JarSignatureTestUtils.signJar
 import net.corda.testing.core.internal.JarSignatureTestUtils.generateKey
+import net.corda.testing.core.internal.JarSignatureTestUtils.signJar
 import net.corda.testing.core.internal.SelfCleaningDir
-import net.corda.testing.internal.*
+import net.corda.testing.internal.LogHelper
+import net.corda.testing.internal.TestingNamedCacheFactory
+import net.corda.testing.internal.configureDatabase
+import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.startFlow
 import org.assertj.core.api.Assertions.*
-import org.hibernate.TransactionException
 import org.junit.After
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Ignore
 import org.junit.Test
 import java.io.ByteArrayOutputStream
-import java.io.InputStream
 import java.net.URL
 import java.nio.charset.StandardCharsets
 import java.nio.file.FileAlreadyExistsException
@@ -878,6 +878,66 @@ class NodeAttachmentServiceTest {
             assert(key1 == key2) { "Different public keys used to sign jars" }
             assert(!WireTransaction.isAttachmentTrusted(storage.openAttachment(v1Id)!!, storage)) { "Initial contract $v1Id should not be trusted" }
             assert(!WireTransaction.isAttachmentTrusted(storage.openAttachment(v2Id)!!, storage)) { "Upgraded contract $v2Id should not be trusted" }
+        }
+    }
+
+    @Test
+    fun `non contract jar trusted if trusted jar with same keys present`() {
+        SelfCleaningDir().use { file ->
+            val alias = "testAlias"
+            val password = "testPassword"
+
+            // Directly use the ContractJarTestUtils version of makeTestJar to ensure jars are created in the right place, in order to sign
+            // them.
+            var counter = 0
+            val jarV1 = file.path / "$counter.jar"
+            ContractJarTestUtils.makeTestJar(jarV1.outputStream())
+            counter++
+            val jarV2 = file.path / "$counter.jar"
+            // Ensure that the first and second jars do not have the same hash
+            ContractJarTestUtils.makeTestJar(jarV2.outputStream(), extraEntries = listOf(Pair("foo", "bar")))
+
+            file.path.generateKey(alias, password)
+            val key1 = file.path.signJar(jarV1.toAbsolutePath().toString(), alias, password)
+            val key2 = file.path.signJar(jarV2.toAbsolutePath().toString(), alias, password)
+
+            val v1Id = jarV1.read { storage.privilegedImportAttachment(it, "app", "dummy-attachment.jar") }
+            val v2Id = jarV2.read { storage.privilegedImportAttachment(it, "untrusted", "dummy-attachment-2.jar") }
+
+            // Sanity check.
+            assert(key1 == key2) { "Different public keys used to sign jars" }
+            assert(WireTransaction.isAttachmentTrusted(storage.openAttachment(v1Id)!!, storage)) { "Initial attachment $v1Id should be trusted" }
+            assert(WireTransaction.isAttachmentTrusted(storage.openAttachment(v2Id)!!, storage)) { "Other attachment $v2Id should be trusted" }
+        }
+    }
+
+    @Test
+    fun `all non contract jars not trusted if all are uploaded by non trusted uploaders`() {
+        SelfCleaningDir().use { file ->
+            val alias = "testAlias"
+            val password = "testPassword"
+
+            // Directly use the ContractJarTestUtils version of makeTestJar to ensure jars are created in the right place, in order to sign
+            // them.
+            var counter = 0
+            val jarV1 = file.path / "$counter.jar"
+            ContractJarTestUtils.makeTestJar(jarV1.outputStream())
+            counter++
+            val jarV2 = file.path / "$counter.jar"
+            // Ensure that the first and second jars do not have the same hash
+            ContractJarTestUtils.makeTestJar(jarV2.outputStream(), extraEntries = listOf(Pair("foo", "bar")))
+
+            file.path.generateKey(alias, password)
+            val key1 = file.path.signJar(jarV1.toAbsolutePath().toString(), alias, password)
+            val key2 = file.path.signJar(jarV2.toAbsolutePath().toString(), alias, password)
+
+            val v1Id = jarV1.read { storage.privilegedImportAttachment(it, "untrusted", "dummy-attachment.jar") }
+            val v2Id = jarV2.read { storage.privilegedImportAttachment(it, "untrusted", "dummy-attachment-2.jar") }
+
+            // Sanity check.
+            assert(key1 == key2) { "Different public keys used to sign jars" }
+            assert(!WireTransaction.isAttachmentTrusted(storage.openAttachment(v1Id)!!, storage)) { "Initial attachment $v1Id should not be trusted" }
+            assert(!WireTransaction.isAttachmentTrusted(storage.openAttachment(v2Id)!!, storage)) { "Other attachment $v2Id should not be trusted" }
         }
     }
 
