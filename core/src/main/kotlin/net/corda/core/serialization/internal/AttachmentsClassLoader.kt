@@ -117,9 +117,7 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
         // Until we have a sandbox to run untrusted code we need to make sure that any loaded class file was whitelisted by the node administrator.
         val untrusted = attachments
                 .filter(::containsClasses)
-                .filterNot { attachment ->
-                    isAttachmentTrusted(attachment)
-                }
+                .filterNot(isAttachmentTrusted)
                 .map(Attachment::id)
 
         if (untrusted.isNotEmpty()) {

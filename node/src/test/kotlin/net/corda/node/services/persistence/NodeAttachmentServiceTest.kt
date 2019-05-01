@@ -18,7 +18,6 @@ import net.corda.core.node.services.vault.AttachmentQueryCriteria.AttachmentsQue
 import net.corda.core.node.services.vault.AttachmentSort
 import net.corda.core.node.services.vault.Builder
 import net.corda.core.node.services.vault.Sort
-import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.nodeapi.exceptions.DuplicateAttachmentException
@@ -54,10 +53,7 @@ import java.nio.file.FileSystem
 import java.nio.file.Path
 import java.util.*
 import java.util.jar.JarInputStream
-import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
-import kotlin.test.assertNotEquals
-import kotlin.test.assertNull
+import kotlin.test.*
 
 class NodeAttachmentServiceTest {
 
@@ -788,9 +784,9 @@ class NodeAttachmentServiceTest {
             val unsignedId = unsignedJar.read { storage.privilegedImportAttachment(it, "app", "unsigned-contract.jar") }
             val attachmentId = attachment.read { storage.privilegedImportAttachment(it, "app", "attachment.jar")}
 
-            assert(WireTransaction.isAttachmentTrusted(storage.openAttachment(signedId)!!, storage)) { "Signed contract $signedId should be trusted but isn't" }
-            assert(WireTransaction.isAttachmentTrusted(storage.openAttachment(unsignedId)!!, storage)) { "Unsigned contract $unsignedId should be trusted but isn't"}
-            assert(WireTransaction.isAttachmentTrusted(storage.openAttachment(attachmentId)!!, storage)) { "Attachment $attachmentId should be trusted but isn't"}
+            assertTrue(isAttachmentTrusted(storage.openAttachment(signedId)!!, storage), "Signed contract $signedId should be trusted but isn't")
+            assertTrue(isAttachmentTrusted(storage.openAttachment(unsignedId)!!, storage), "Unsigned contract $unsignedId should be trusted but isn't")
+            assertTrue(isAttachmentTrusted(storage.openAttachment(attachmentId)!!, storage), "Attachment $attachmentId should be trusted but isn't")
         }
     }
 
@@ -809,9 +805,9 @@ class NodeAttachmentServiceTest {
             val v2Id = jarV2.read { storage.privilegedImportAttachment(it, "untrusted", "dummy-contract.jar") }
 
             // Sanity check.
-            assert(key1 == key2) { "Different public keys used to sign jars" }
-            assert(WireTransaction.isAttachmentTrusted(storage.openAttachment(v1Id)!!, storage)) { "Initial contract $v1Id should be trusted" }
-            assert(WireTransaction.isAttachmentTrusted(storage.openAttachment(v2Id)!!, storage)) { "Upgraded contract $v2Id should be trusted" }
+            assertEquals(key1, key2, "Different public keys used to sign jars")
+            assertTrue(isAttachmentTrusted(storage.openAttachment(v1Id)!!, storage), "Initial contract $v1Id should be trusted")
+            assertTrue(isAttachmentTrusted(storage.openAttachment(v2Id)!!, storage), "Upgraded contract $v2Id should be trusted")
         }
     }
 
@@ -830,9 +826,9 @@ class NodeAttachmentServiceTest {
             val v2Id = jarV2.read { storage.privilegedImportAttachment(it, "untrusted", "dummy-contract.jar") }
 
             // Sanity check.
-            assert(key1 == key2) { "Different public keys used to sign jars" }
-            assert(WireTransaction.isAttachmentTrusted(storage.openAttachment(v1Id)!!, storage)) { "Initial contract $v1Id should be trusted" }
-            assert(!WireTransaction.isAttachmentTrusted(storage.openAttachment(v2Id)!!, storage)) { "Upgraded contract $v2Id should not be trusted" }
+            assertEquals(key1, key2, "Different public keys used to sign jars")
+            assertTrue(isAttachmentTrusted(storage.openAttachment(v1Id)!!, storage), "Initial contract $v1Id should be trusted")
+            assertFalse(isAttachmentTrusted(storage.openAttachment(v2Id)!!, storage), "Upgraded contract $v2Id should not be trusted")
         }
     }
 
@@ -854,9 +850,9 @@ class NodeAttachmentServiceTest {
             val v2Id = jarV2.read { storage.privilegedImportAttachment(it, "untrusted", "dummy-contract.jar") }
 
             // Sanity check.
-            assert(key1 != key2) { "Same public keys used to sign jars" }
-            assert(WireTransaction.isAttachmentTrusted(storage.openAttachment(v1Id)!!, storage)) { "Initial contract $v1Id should be trusted" }
-            assert(!WireTransaction.isAttachmentTrusted(storage.openAttachment(v2Id)!!, storage)) { "Upgraded contract $v2Id should not be trusted" }
+            assertNotEquals(key1, key2, "Same public keys used to sign jars")
+            assertTrue(isAttachmentTrusted(storage.openAttachment(v1Id)!!, storage), "Initial contract $v1Id should be trusted")
+            assertFalse(isAttachmentTrusted(storage.openAttachment(v2Id)!!, storage), "Upgraded contract $v2Id should not be trusted")
         }
     }
 
@@ -875,9 +871,9 @@ class NodeAttachmentServiceTest {
             val v2Id = jarV2.read { storage.privilegedImportAttachment(it, "untrusted", "dummy-contract.jar") }
 
             // Sanity check.
-            assert(key1 == key2) { "Different public keys used to sign jars" }
-            assert(!WireTransaction.isAttachmentTrusted(storage.openAttachment(v1Id)!!, storage)) { "Initial contract $v1Id should not be trusted" }
-            assert(!WireTransaction.isAttachmentTrusted(storage.openAttachment(v2Id)!!, storage)) { "Upgraded contract $v2Id should not be trusted" }
+            assertEquals(key1, key2, "Different public keys used to sign jars")
+            assertFalse(isAttachmentTrusted(storage.openAttachment(v1Id)!!, storage), "Initial contract $v1Id should not be trusted")
+            assertFalse(isAttachmentTrusted(storage.openAttachment(v2Id)!!, storage), "Upgraded contract $v2Id should not be trusted")
         }
     }
 
@@ -905,9 +901,9 @@ class NodeAttachmentServiceTest {
             val v2Id = jarV2.read { storage.privilegedImportAttachment(it, "untrusted", "dummy-attachment-2.jar") }
 
             // Sanity check.
-            assert(key1 == key2) { "Different public keys used to sign jars" }
-            assert(WireTransaction.isAttachmentTrusted(storage.openAttachment(v1Id)!!, storage)) { "Initial attachment $v1Id should be trusted" }
-            assert(WireTransaction.isAttachmentTrusted(storage.openAttachment(v2Id)!!, storage)) { "Other attachment $v2Id should be trusted" }
+            assertEquals(key1, key2, "Different public keys used to sign jars")
+            assertTrue(isAttachmentTrusted(storage.openAttachment(v1Id)!!, storage), "Initial attachment $v1Id should be trusted")
+            assertTrue(isAttachmentTrusted(storage.openAttachment(v2Id)!!, storage), "Other attachment $v2Id should be trusted")
         }
     }
 
@@ -935,9 +931,9 @@ class NodeAttachmentServiceTest {
             val v2Id = jarV2.read { storage.privilegedImportAttachment(it, "untrusted", "dummy-attachment-2.jar") }
 
             // Sanity check.
-            assert(key1 == key2) { "Different public keys used to sign jars" }
-            assert(!WireTransaction.isAttachmentTrusted(storage.openAttachment(v1Id)!!, storage)) { "Initial attachment $v1Id should not be trusted" }
-            assert(!WireTransaction.isAttachmentTrusted(storage.openAttachment(v2Id)!!, storage)) { "Other attachment $v2Id should not be trusted" }
+            assertEquals(key1, key2, "Different public keys used to sign jars")
+            assertFalse(isAttachmentTrusted(storage.openAttachment(v1Id)!!, storage), "Initial attachment $v1Id should not be trusted")
+            assertFalse(isAttachmentTrusted(storage.openAttachment(v2Id)!!, storage), "Other attachment $v2Id should not be trusted")
         }
     }
 

@@ -13,9 +13,6 @@ import net.corda.core.node.NetworkParameters
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.AttachmentId
-import net.corda.core.node.services.AttachmentStorage
-import net.corda.core.node.services.vault.AttachmentQueryCriteria
-import net.corda.core.node.services.vault.Builder
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.serialize
@@ -354,7 +351,8 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                         ?: throw TransactionResolutionException(stateRef.txhash)
                 // Get the network parameters from the tx or whatever the default params are.
                 val paramsHash = coreTransaction.networkParametersHash ?: services.networkParametersService.defaultHash
-                val params = services.networkParametersService.lookup(paramsHash) ?: throw IllegalStateException("Should have been able to fetch parameters by this point: $paramsHash")
+                val params = services.networkParametersService.lookup(paramsHash)
+                        ?: throw IllegalStateException("Should have been able to fetch parameters by this point: $paramsHash")
                 @Suppress("UNCHECKED_CAST")
                 when (coreTransaction) {
                     is WireTransaction -> coreTransaction.componentGroups
@@ -369,44 +367,6 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                 // For backwards compatibility revert to using the node classloader.
                 services.loadState(stateRef).serialize()
             }
-        }
-
-        /**
-         * Establishes whether an attachment should be trusted. This logic is required in order to verify transactions, as transaction
-         * verification should only be carried out using trusted attachments.
-         *
-         * Attachments are trusted if one of the following is true:
-         *  - They are uploaded by a trusted uploader
-         *  - There is another attachment in the attachment store with the same contract classes and signed by the same keys that is trusted
-         */
-        @CordaInternal
-        fun isAttachmentTrusted(attachment: Attachment, service: AttachmentStorage?): Boolean {
-            val trustedByUploader = when (attachment) {
-                is ContractAttachment -> isUploaderTrusted(attachment.uploader)
-                is AbstractAttachment -> isUploaderTrusted(attachment.uploader)
-                else -> false
-            }
-
-            val trustedBySuccessor = if (!trustedByUploader && service != null && (attachment is AbstractAttachment || attachment is ContractAttachment)) {
-                val signers = attachment.signerKeys
-                val contractClassCondition = if (attachment is ContractAttachment) {
-                    val contractClasses = listOf(attachment.contract) + attachment.additionalContracts.toList()
-                    Builder.equal(contractClasses)
-                } else {
-                    null
-                }
-
-                val queryCriteria = AttachmentQueryCriteria.AttachmentsQueryCriteria(
-                        contractClassNamesCondition = contractClassCondition,
-                        signersCondition = Builder.equal(signers),
-                        uploaderCondition = Builder.`in`(TRUSTED_UPLOADERS)
-                )
-                service.queryAttachments(queryCriteria).isNotEmpty()
-            } else {
-                false
-            }
-
-            return (trustedByUploader || trustedBySuccessor)
         }
     }
 
