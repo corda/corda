@@ -5,9 +5,6 @@ import net.corda.confidential.service.*
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
-import net.corda.core.identity.AnonymousParty
-import net.corda.core.identity.Party
-import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.toBase58String
 import net.corda.core.utilities.unwrap
@@ -31,7 +28,7 @@ class RequestKeyFlow(
     @Suspendable
     @Throws(FlowException::class)
     override fun call(): SignedPublicKey {
-        progressTracker!!.currentStep = REQUESTING_KEY
+        progressTracker.currentStep = REQUESTING_KEY
         val signedKey = session.sendAndReceive<SignedPublicKey>(CreateKeyForAccount(uuid)).unwrap { it }
 
         // Ensure the counter party was the one that generated the key

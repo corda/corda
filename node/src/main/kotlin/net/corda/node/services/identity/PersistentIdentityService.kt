@@ -276,5 +276,6 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
         }
         return willRegisterNewMapping
     }
+
 }
 
