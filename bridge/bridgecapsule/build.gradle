@@ -76,6 +76,8 @@ task buildFirewallJar(type: FatCapsule, dependsOn: project(':bridge').jar) {
     applicationSource = files(
             project(':bridge').configurations.runtime,
             project(':bridge').jar,
+            project(':bridge').sourceSets.main.java.outputDir.toString() + '/BridgeCaplet.class',
+            project(':bridge').sourceSets.main.java.outputDir.toString() + '/BridgeCaplet$1.class',
             "$rootDir/config/dev/log4j2.xml",
             "$rootDir/bridge/build/resources/main/firewalldefault.conf"
     )
@@ -88,7 +90,7 @@ task buildFirewallJar(type: FatCapsule, dependsOn: project(':bridge').jar) {
         systemProperties['visualvm.display.name'] = 'Corda Firewall Server'
         minJavaVersion = '1.8.0'
         minUpdateVersion['1.8'] = java8_minUpdateVersion
-        caplets = []
+        caplets = ["BridgeCaplet"]
 
         // JVM configuration:
         // - Constrain to small heap sizes to ease development on low end devices.

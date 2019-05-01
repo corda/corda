@@ -99,6 +99,10 @@ dependencies {
     testCompile project(':test-utils')
     testCompile project(':tools:ha-utilities')
     integrationTestCompile project(':tools:ha-utilities')
+
+    // Capsule is a library for building independently executable fat JARs.
+    // We only need this dependency to compile our Caplet against.
+    compileOnly "co.paralleluniverse:capsule:$capsule_version"
 }
 
 task integrationTest(type: Test) {
