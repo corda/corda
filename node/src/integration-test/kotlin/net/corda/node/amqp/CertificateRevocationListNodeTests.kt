@@ -300,7 +300,7 @@ class CertificateRevocationListNodeTests {
     }
 
     @Test
-    fun `Revocation status chceck fails when the CRL distribution point is not set and soft fail is disabled`() {
+    fun `Revocation status check fails when the CRL distribution point is not set and soft fail is disabled`() {
         val crlCheckSoftFail = false
         val (amqpServer, _) = createServer(
                 serverPort,
@@ -326,7 +326,7 @@ class CertificateRevocationListNodeTests {
     }
 
     @Test
-    fun `Revocation status chceck succeds when the CRL distribution point is not set and soft fail is enabled`() {
+    fun `Revocation status check succeds when the CRL distribution point is not set and soft fail is enabled`() {
         val crlCheckSoftFail = true
         val (amqpServer, _) = createServer(
                 serverPort,
@@ -356,6 +356,15 @@ class CertificateRevocationListNodeTests {
                              nodeCrlDistPoint: String = "http://${server.hostAndPort}/crl/node.crl",
                              tlsCrlDistPoint: String? = "http://${server.hostAndPort}/crl/empty.crl",
                              maxMessageSize: Int = MAX_MESSAGE_SIZE): Pair<AMQPClient, X509Certificate> {
+
+        return createClient(targetPort, crlCheckSoftFail.toRevocationConfig(), nodeCrlDistPoint, tlsCrlDistPoint, maxMessageSize)
+    }
+
+    private fun createClient(targetPort: Int,
+                             revocationConfig: RevocationConfig,
+                             nodeCrlDistPoint: String = "http://${server.hostAndPort}/crl/node.crl",
+                             tlsCrlDistPoint: String? = "http://${server.hostAndPort}/crl/empty.crl",
+                             maxMessageSize: Int = MAX_MESSAGE_SIZE): Pair<AMQPClient, X509Certificate> {
         val baseDirectory = temporaryFolder.root.toPath() / "client"
         val certificatesDirectory = baseDirectory / "certificates"
         val p2pSslConfiguration = CertificateStoreStubs.P2P.withCertificatesDirectory(certificatesDirectory)
@@ -366,7 +375,6 @@ class CertificateRevocationListNodeTests {
             doReturn(BOB_NAME).whenever(it).myLegalName
             doReturn(p2pSslConfiguration).whenever(it).p2pSslOptions
             doReturn(signingCertificateStore).whenever(it).signingCertificateStore
-            doReturn(crlCheckSoftFail).whenever(it).crlCheckSoftFail
         }
         clientConfig.configureWithDevSSLCertificate()
         val nodeCert = (signingCertificateStore to p2pSslConfiguration).recreateNodeCaAndTlsCertificates(nodeCrlDistPoint, tlsCrlDistPoint)
@@ -375,7 +383,7 @@ class CertificateRevocationListNodeTests {
         val amqpConfig = object : AMQPConfiguration {
             override val keyStore = keyStore
             override val trustStore = clientConfig.p2pSslOptions.trustStore.get()
-            override val revocationConfig: RevocationConfig = crlCheckSoftFail.toRevocationConfig()
+            override val revocationConfig = revocationConfig
             override val maxMessageSize: Int = maxMessageSize
         }
         return Pair(AMQPClient(
@@ -389,6 +397,14 @@ class CertificateRevocationListNodeTests {
                              nodeCrlDistPoint: String = "http://${server.hostAndPort}/crl/node.crl",
                              tlsCrlDistPoint: String? = "http://${server.hostAndPort}/crl/empty.crl",
                              maxMessageSize: Int = MAX_MESSAGE_SIZE): Pair<AMQPServer, X509Certificate> {
+        return createServer(port, name, crlCheckSoftFail.toRevocationConfig(), nodeCrlDistPoint, tlsCrlDistPoint, maxMessageSize)
+    }
+
+    private fun createServer(port: Int, name: CordaX500Name = ALICE_NAME,
+                             revocationConfig: RevocationConfig,
+                             nodeCrlDistPoint: String = "http://${server.hostAndPort}/crl/node.crl",
+                             tlsCrlDistPoint: String? = "http://${server.hostAndPort}/crl/empty.crl",
+                             maxMessageSize: Int = MAX_MESSAGE_SIZE): Pair<AMQPServer, X509Certificate> {
         val baseDirectory = temporaryFolder.root.toPath() / "server"
         val certificatesDirectory = baseDirectory / "certificates"
         val p2pSslConfiguration = CertificateStoreStubs.P2P.withCertificatesDirectory(certificatesDirectory)
@@ -399,7 +415,6 @@ class CertificateRevocationListNodeTests {
             doReturn(name).whenever(it).myLegalName
             doReturn(p2pSslConfiguration).whenever(it).p2pSslOptions
             doReturn(signingCertificateStore).whenever(it).signingCertificateStore
-            doReturn(crlCheckSoftFail).whenever(it).crlCheckSoftFail
         }
         serverConfig.configureWithDevSSLCertificate()
         val nodeCert = (signingCertificateStore to p2pSslConfiguration).recreateNodeCaAndTlsCertificates(nodeCrlDistPoint, tlsCrlDistPoint)
@@ -407,7 +422,7 @@ class CertificateRevocationListNodeTests {
         val amqpConfig = object : AMQPConfiguration {
             override val keyStore = keyStore
             override val trustStore = serverConfig.p2pSslOptions.trustStore.get()
-            override val revocationConfig: RevocationConfig = crlCheckSoftFail.toRevocationConfig()
+            override val revocationConfig = revocationConfig
             override val maxMessageSize: Int = maxMessageSize
         }
         return Pair(AMQPServer(
