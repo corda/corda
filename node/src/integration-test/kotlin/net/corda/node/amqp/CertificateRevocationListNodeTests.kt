@@ -621,7 +621,7 @@ class CertificateRevocationListNodeTests {
                 checkPerformed.set(true)
             }
             val (amqpClient, clientCert) = createClient(serverPort, revocationConfig = revocationConfig)
-            //revokedNodeCerts.add(clientCert.serialNumber)
+            revokedNodeCerts.add(clientCert.serialNumber)
             amqpClient.use {
                 val serverConnected = amqpServer.onConnection.toFuture()
                 val clientConnected = amqpClient.onConnection.toFuture()
