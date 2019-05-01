@@ -225,6 +225,11 @@ allprojects {
     sourceCompatibility = VERSION_1_8
     targetCompatibility = VERSION_1_8
 
+    jacoco {
+        // JDK11 official support (https://github.com/jacoco/jacoco/releases/tag/v0.8.3)
+        toolVersion = "0.8.3"    
+    }
+    
     tasks.withType(JavaCompile) {
         options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation" << "-Xlint:-options" << "-parameters"
         options.encoding = 'UTF-8'
