@@ -143,6 +143,12 @@ configurations {
     testArtifacts.extendsFrom testRuntimeClasspath
 }
 
+tasks.withType(Test) {
+//    maxHeapSize = "2g"
+    // fork a new test process for every test class
+    forkEvery = 10
+}
+
 task testJar(type: Jar) {
     classifier "tests"
     from sourceSets.test.output
