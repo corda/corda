@@ -57,6 +57,7 @@ import java.security.cert.X509CRL
 import java.security.cert.X509Certificate
 import java.util.*
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 import javax.ws.rs.GET
 import javax.ws.rs.Path
 import javax.ws.rs.Produces
@@ -76,6 +77,8 @@ class CertificateRevocationListNodeTests {
     private val serverPort = portAllocation.nextPort()
 
     private lateinit var server: CrlServer
+
+    private val crlServerHitCount = AtomicInteger(0)
 
     private val revokedNodeCerts: MutableList<BigInteger> = mutableListOf()
     private val revokedIntermediateCerts: MutableList<BigInteger> = mutableListOf()
@@ -119,6 +122,7 @@ class CertificateRevocationListNodeTests {
                 CertificateType.INTERMEDIATE_CA,
                 ROOT_CA.keyPair,
                 "http://${server.hostAndPort}/crl/intermediate.crl"), DEV_INTERMEDIATE_CA.keyPair)
+        crlServerHitCount.set(0)
     }
 
     @After
@@ -273,6 +277,7 @@ class CertificateRevocationListNodeTests {
                 assertEquals(false, serverConnect.connected)
             }
         }
+        assertTrue(crlServerHitCount.get() > 0)
     }
 
     @Test
@@ -485,96 +490,6 @@ class CertificateRevocationListNodeTests {
         return builder.build(issuerSigner).toJca()
     }
 
-    @Path("crl")
-    inner class CrlServlet(private val server: CrlServer) {
-
-        private val SIGNATURE_ALGORITHM = "SHA256withECDSA"
-        private val NODE_CRL = "node.crl"
-        private val INTEMEDIATE_CRL = "intermediate.crl"
-        private val EMPTY_CRL = "empty.crl"
-
-        @GET
-        @Path("node.crl")
-        @Produces("application/pkcs7-crl")
-        fun getNodeCRL(): Response {
-            return Response.ok(CertificateRevocationListNodeTests.createRevocationList(
-                    server,
-                    SIGNATURE_ALGORITHM,
-                    INTERMEDIATE_CA.certificate,
-                    INTERMEDIATE_CA.keyPair.private,
-                    NODE_CRL,
-                    false,
-                    *revokedNodeCerts.toTypedArray()).encoded)
-                    .build()
-        }
-
-        @GET
-        @Path("intermediate.crl")
-        @Produces("application/pkcs7-crl")
-        fun getIntermediateCRL(): Response {
-            return Response.ok(createRevocationList(
-                    server,
-                    SIGNATURE_ALGORITHM,
-                    ROOT_CA.certificate,
-                    ROOT_CA.keyPair.private,
-                    INTEMEDIATE_CRL,
-                    false,
-                    *revokedIntermediateCerts.toTypedArray()).encoded)
-                    .build()
-        }
-
-        @GET
-        @Path("empty.crl")
-        @Produces("application/pkcs7-crl")
-        fun getEmptyCRL(): Response {
-            return Response.ok(createRevocationList(
-                    server,
-                    SIGNATURE_ALGORITHM,
-                    ROOT_CA.certificate,
-                    ROOT_CA.keyPair.private,
-                    EMPTY_CRL,
-                    true).encoded)
-                    .build()
-        }
-    }
-
-    inner class CrlServer(hostAndPort: NetworkHostAndPort) : Closeable {
-
-        private val server: Server = Server(InetSocketAddress(hostAndPort.host, hostAndPort.port)).apply {
-            handler = HandlerCollection().apply {
-                addHandler(buildServletContextHandler())
-            }
-        }
-
-        val hostAndPort: NetworkHostAndPort
-            get() = server.connectors.mapNotNull { it as? ServerConnector }
-                    .map { NetworkHostAndPort(it.host, it.localPort) }
-                    .first()
-
-        override fun close() {
-            println("Shutting down network management web services...")
-            server.stop()
-            server.join()
-        }
-
-        fun start() {
-            server.start()
-            println("Network management web services started on $hostAndPort")
-        }
-
-        private fun buildServletContextHandler(): ServletContextHandler {
-            val crlServer = this
-            return ServletContextHandler().apply {
-                contextPath = "/"
-                val resourceConfig = ResourceConfig().apply {
-                    register(CrlServlet(crlServer))
-                }
-                val jerseyServlet = ServletHolder(ServletContainer(resourceConfig)).apply { initOrder = 0 }
-                addServlet(jerseyServlet, "/*")
-            }
-        }
-    }
-
     @Test
     fun `verify CRL algorithms`() {
         val ECDSA_ALGORITHM = "SHA256withECDSA"
@@ -638,6 +553,100 @@ class CertificateRevocationListNodeTests {
                 assertEquals(MessageStatus.Acknowledged, msg.onComplete.get())
                 assertTrue(checkPerformed.get())
                 receiveSubs.unsubscribe()
+            }
+        }
+        assertEquals(0, crlServerHitCount.get())
+    }
+
+    @Path("crl")
+    inner class CrlServlet(private val server: CrlServer) {
+
+        private val SIGNATURE_ALGORITHM = "SHA256withECDSA"
+        private val NODE_CRL = "node.crl"
+        private val INTEMEDIATE_CRL = "intermediate.crl"
+        private val EMPTY_CRL = "empty.crl"
+
+        @GET
+        @Path("node.crl")
+        @Produces("application/pkcs7-crl")
+        fun getNodeCRL(): Response {
+            crlServerHitCount.incrementAndGet()
+            return Response.ok(CertificateRevocationListNodeTests.createRevocationList(
+                    server,
+                    SIGNATURE_ALGORITHM,
+                    INTERMEDIATE_CA.certificate,
+                    INTERMEDIATE_CA.keyPair.private,
+                    NODE_CRL,
+                    false,
+                    *revokedNodeCerts.toTypedArray()).encoded)
+                    .build()
+        }
+
+        @GET
+        @Path("intermediate.crl")
+        @Produces("application/pkcs7-crl")
+        fun getIntermediateCRL(): Response {
+            crlServerHitCount.incrementAndGet()
+            return Response.ok(createRevocationList(
+                    server,
+                    SIGNATURE_ALGORITHM,
+                    ROOT_CA.certificate,
+                    ROOT_CA.keyPair.private,
+                    INTEMEDIATE_CRL,
+                    false,
+                    *revokedIntermediateCerts.toTypedArray()).encoded)
+                    .build()
+        }
+
+        @GET
+        @Path("empty.crl")
+        @Produces("application/pkcs7-crl")
+        fun getEmptyCRL(): Response {
+            crlServerHitCount.incrementAndGet()
+            return Response.ok(createRevocationList(
+                    server,
+                    SIGNATURE_ALGORITHM,
+                    ROOT_CA.certificate,
+                    ROOT_CA.keyPair.private,
+                    EMPTY_CRL,
+                    true).encoded)
+                    .build()
+        }
+    }
+
+    inner class CrlServer(hostAndPort: NetworkHostAndPort) : Closeable {
+
+        private val server: Server = Server(InetSocketAddress(hostAndPort.host, hostAndPort.port)).apply {
+            handler = HandlerCollection().apply {
+                addHandler(buildServletContextHandler())
+            }
+        }
+
+        val hostAndPort: NetworkHostAndPort
+            get() = server.connectors.mapNotNull { it as? ServerConnector }
+                    .map { NetworkHostAndPort(it.host, it.localPort) }
+                    .first()
+
+        override fun close() {
+            println("Shutting down network management web services...")
+            server.stop()
+            server.join()
+        }
+
+        fun start() {
+            server.start()
+            println("Network management web services started on $hostAndPort")
+        }
+
+        private fun buildServletContextHandler(): ServletContextHandler {
+            val crlServer = this
+            return ServletContextHandler().apply {
+                contextPath = "/"
+                val resourceConfig = ResourceConfig().apply {
+                    register(CrlServlet(crlServer))
+                }
+                val jerseyServlet = ServletHolder(ServletContainer(resourceConfig)).apply { initOrder = 0 }
+                addServlet(jerseyServlet, "/*")
             }
         }
     }
