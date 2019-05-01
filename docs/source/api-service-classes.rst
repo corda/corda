@@ -63,7 +63,7 @@ its startup. These can then persist during the service's lifetime.
 Retrieving a Service
 --------------------
 
-A Service class can be retrieved by calling ``ServiceHub.cordaService``. Returning the single instance of the class passed into the function:
+A Service class can be retrieved by calling ``ServiceHub.cordaService`` which returns the single instance of the class passed into the function:
 
 .. container:: codeset
 
