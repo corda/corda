@@ -38,7 +38,7 @@ fun Config.parseAsFirewallConfiguration(): FirewallConfiguration {
                         "New style config will look as follows:\n$configAsString")
                 return newStyleConfig
             } catch (oldFormatEx: ConfigException) {
-                FirewallCmdLineOptions.logger.info("Parsing with $configurationClass failed", oldFormatEx)
+                FirewallCmdLineOptions.logger.debug("Parsing with $configurationClass failed", oldFormatEx)
             }
         }
 

@@ -59,6 +59,13 @@ data class Version3BridgeSSLConfigurationImpl(private val sslKeystore: Path,
     }
 }
 
+data class Version3BridgeInboundConfigurationImpl(private val listeningAddress: NetworkHostAndPort,
+                                                  private val customSSLConfiguration: Version3BridgeSSLConfigurationImpl?) : ModernConfigurationAdaptor<BridgeInboundConfigurationImpl> {
+    override fun toConfig(): BridgeInboundConfigurationImpl {
+        return BridgeInboundConfigurationImpl(listeningAddress, customSSLConfiguration?.toConfig())
+    }
+}
+
 internal data class Version3BridgeConfigurationImpl(
         val baseDirectory: Path,
         val certificatesDirectory: Path = baseDirectory / "certificates",
@@ -70,7 +77,7 @@ internal data class Version3BridgeConfigurationImpl(
         val bridgeMode: FirewallMode,
         val networkParametersPath: Path,
         val outboundConfig: Version3BridgeOutboundConfigurationImpl?,
-        val inboundConfig: BridgeInboundConfigurationImpl?,
+        val inboundConfig: Version3BridgeInboundConfigurationImpl?,
         val bridgeInnerConfig: Version3BridgeInnerConfigurationImpl?,
         val floatOuterConfig: Version3FloatOuterConfigurationImpl?,
         val haConfig: BridgeHAConfigImpl?,
@@ -94,7 +101,7 @@ internal data class Version3BridgeConfigurationImpl(
                 bridgeMode,
                 networkParametersPath,
                 outboundConfig?.toConfig(),
-                inboundConfig,
+                inboundConfig?.toConfig(),
                 bridgeInnerConfig?.toConfig(),
                 floatOuterConfig?.toConfig(),
                 haConfig,
@@ -120,13 +127,6 @@ data class Version4BridgeOutboundConfigurationImpl(private val artemisBrokerAddr
                                                    private val proxyConfig: ProxyConfig? = null) : ModernConfigurationAdaptor<BridgeOutboundConfigurationImpl> {
     override fun toConfig(): BridgeOutboundConfigurationImpl {
         return BridgeOutboundConfigurationImpl(artemisBrokerAddress, alternateArtemisBrokerAddresses, artemisSSLConfiguration?.toConfig(), proxyConfig)
-    }
-}
-
-data class Version4BridgeInboundConfigurationImpl(private val listeningAddress: NetworkHostAndPort,
-                                                  private val customSSLConfiguration: Version3BridgeSSLConfigurationImpl?) : ModernConfigurationAdaptor<BridgeInboundConfigurationImpl> {
-    override fun toConfig(): BridgeInboundConfigurationImpl {
-        return BridgeInboundConfigurationImpl(listeningAddress, customSSLConfiguration?.toConfig())
     }
 }
 
@@ -158,7 +158,7 @@ data class Version4FirewallConfiguration(
         val firewallMode: FirewallMode,
         val networkParametersPath: Path,
         val outboundConfig: Version4BridgeOutboundConfigurationImpl?,
-        val inboundConfig: Version4BridgeInboundConfigurationImpl?,
+        val inboundConfig: Version3BridgeInboundConfigurationImpl?,
         val bridgeInnerConfig: Version4BridgeInnerConfigurationImpl?,
         val floatOuterConfig: Version4FloatOuterConfigurationImpl?,
         val haConfig: BridgeHAConfigImpl?,
