@@ -149,8 +149,13 @@ class MessagingExecutor(
         val executor = this.executor
         if (executor != null) {
             queue.offer(Job.Shutdown)
-            executor.join()
-            this.executor = null
+            try {
+                executor.join()
+            } catch (e: InterruptedException) {
+                log.warn("Thread interrupted while executor was closing")
+            } finally {
+                this.executor = null
+            }
         }
     }
 
