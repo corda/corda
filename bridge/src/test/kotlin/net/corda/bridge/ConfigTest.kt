@@ -7,12 +7,10 @@ import net.corda.bridge.services.config.BridgeConfigHelper.maskPassword
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.nodeapi.internal.config.UnknownConfigurationKeysException
 import net.corda.nodeapi.internal.config.toConfig
 import net.corda.nodeapi.internal.protonwrapper.netty.ProxyVersion
 import net.corda.nodeapi.internal.protonwrapper.netty.RevocationConfig
 import net.corda.testing.core.SerializationEnvironmentRule
-import org.assertj.core.api.Assertions
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Rule
@@ -222,15 +220,6 @@ class ConfigTest {
         assertEquals("proxyUser", config.outboundConfig!!.proxyConfig!!.userName)
         assertEquals("pwd", config.outboundConfig!!.proxyConfig!!.password)
         assertEquals(30000L, config.outboundConfig!!.proxyConfig!!.proxyTimeoutMS)
-    }
-
-    @Test
-    fun `Load invalid option config`() {
-        val configResource = "/net/corda/bridge/invalidoption/firewall.conf"
-
-        Assertions.assertThatThrownBy { createAndLoadConfigFromResource(tempFolder.root.toPath(), configResource) }
-                .isInstanceOf(UnknownConfigurationKeysException::class.java)
-                .hasMessageContaining("invalidOption")
     }
 
     @Test
