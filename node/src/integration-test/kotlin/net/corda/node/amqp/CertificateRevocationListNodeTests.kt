@@ -56,11 +56,13 @@ import java.security.Security
 import java.security.cert.X509CRL
 import java.security.cert.X509Certificate
 import java.util.*
+import java.util.concurrent.atomic.AtomicBoolean
 import javax.ws.rs.GET
 import javax.ws.rs.Path
 import javax.ws.rs.Produces
 import javax.ws.rs.core.Response
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class CertificateRevocationListNodeTests {
     @Rule
@@ -600,5 +602,43 @@ class CertificateRevocationListNodeTests {
                     true
             )
         }.withMessage("Unknown signature type requested: EC")
+    }
+
+    @Test
+    fun `AMPQ Client to Server connection works when client certificate is revoked and CRL check is OFF`() {
+
+        val revocationConfig = RevocationConfigImpl(RevocationConfig.Mode.OFF)
+
+        val (amqpServer, _) = createServer(serverPort, revocationConfig = revocationConfig)
+        amqpServer.use {
+            amqpServer.start()
+            val checkPerformed = AtomicBoolean(false)
+            val receiveSubs = amqpServer.onReceive.subscribe {
+                assertEquals(BOB_NAME.toString(), it.sourceLegalName)
+                assertEquals(P2P_PREFIX + "Test", it.topic)
+                assertEquals("Test", String(it.payload))
+                it.complete(true)
+                checkPerformed.set(true)
+            }
+            val (amqpClient, clientCert) = createClient(serverPort, revocationConfig = revocationConfig)
+            //revokedNodeCerts.add(clientCert.serialNumber)
+            amqpClient.use {
+                val serverConnected = amqpServer.onConnection.toFuture()
+                val clientConnected = amqpClient.onConnection.toFuture()
+                amqpClient.start()
+                val serverConnect = serverConnected.get()
+                assertEquals(true, serverConnect.connected)
+                val clientConnect = clientConnected.get()
+                assertEquals(true, clientConnect.connected)
+                val msg = amqpClient.createMessage("Test".toByteArray(),
+                        P2P_PREFIX + "Test",
+                        ALICE_NAME.toString(),
+                        emptyMap())
+                amqpClient.write(msg)
+                assertEquals(MessageStatus.Acknowledged, msg.onComplete.get())
+                assertTrue(checkPerformed.get())
+                receiveSubs.unsubscribe()
+            }
+        }
     }
 }
