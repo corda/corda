@@ -17,9 +17,7 @@ import net.corda.nodeapi.internal.config.CertificateStoreSupplier
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.crypto.*
 import net.corda.nodeapi.internal.protonwrapper.messages.MessageStatus
-import net.corda.nodeapi.internal.protonwrapper.netty.AMQPClient
-import net.corda.nodeapi.internal.protonwrapper.netty.AMQPConfiguration
-import net.corda.nodeapi.internal.protonwrapper.netty.AMQPServer
+import net.corda.nodeapi.internal.protonwrapper.netty.*
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.CHARLIE_NAME
@@ -377,7 +375,7 @@ class CertificateRevocationListNodeTests {
         val amqpConfig = object : AMQPConfiguration {
             override val keyStore = keyStore
             override val trustStore = clientConfig.p2pSslOptions.trustStore.get()
-            override val crlCheckSoftFail: Boolean = crlCheckSoftFail
+            override val revocationConfig: RevocationConfig = crlCheckSoftFail.toRevocationConfig()
             override val maxMessageSize: Int = maxMessageSize
         }
         return Pair(AMQPClient(
@@ -409,7 +407,7 @@ class CertificateRevocationListNodeTests {
         val amqpConfig = object : AMQPConfiguration {
             override val keyStore = keyStore
             override val trustStore = serverConfig.p2pSslOptions.trustStore.get()
-            override val crlCheckSoftFail: Boolean = crlCheckSoftFail
+            override val revocationConfig: RevocationConfig = crlCheckSoftFail.toRevocationConfig()
             override val maxMessageSize: Int = maxMessageSize
         }
         return Pair(AMQPServer(

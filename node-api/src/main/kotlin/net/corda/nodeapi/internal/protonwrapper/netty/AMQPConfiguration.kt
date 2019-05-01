@@ -31,12 +31,11 @@ interface AMQPConfiguration {
     val trustStore: CertificateStore
 
     /**
-     * Setting crlCheckSoftFail to true allows certificate paths where some leaf certificates do not contain cRLDistributionPoints
-     * and also allows validation to continue if the CRL distribution server is not contactable.
+     * Control how CRL check will be performed.
      */
     @JvmDefault
-    val crlCheckSoftFail: Boolean
-        get() = true
+    val revocationConfig: RevocationConfig
+        get() = RevocationConfigImpl(RevocationConfig.Mode.SOFT_FAIL)
 
     /**
      * Enables full debug tracing of all netty and AMQP level packets. This logs aat very high volume and is only for developers.

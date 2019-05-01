@@ -8,6 +8,9 @@ import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.internal.ArtemisMessagingComponent
 import net.corda.nodeapi.internal.protonwrapper.netty.ProxyConfig
+import net.corda.nodeapi.internal.protonwrapper.netty.RevocationConfig
+import net.corda.nodeapi.internal.protonwrapper.netty.RevocationConfigImpl
+import net.corda.nodeapi.internal.protonwrapper.netty.toRevocationConfig
 import java.nio.file.Path
 
 // Previously `proxyConfig` was known as `socksProxyConfig` and `artemisSSLConfiguration` as `customSSLConfiguration`
@@ -70,7 +73,6 @@ internal data class Version3BridgeConfigurationImpl(
                 certificatesDirectory,
                 sslKeystore,
                 trustStoreFile,
-                crlCheckSoftFail,
                 keyStorePassword,
                 trustStorePassword,
                 bridgeMode,
@@ -88,7 +90,8 @@ internal data class Version3BridgeConfigurationImpl(
                 whitelistedHeaders,
                 AuditServiceConfigurationImpl(60), // Same as `firewalldefault.conf`, new in v4
                 healthCheckPhrase,
-                silencedIPs
+                silencedIPs,
+                crlCheckSoftFail.toRevocationConfig()
         )
     }
 }

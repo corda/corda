@@ -13,6 +13,7 @@ import net.corda.nodeapi.internal.ArtemisSessionProvider
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.protonwrapper.messages.impl.SendableMessageImpl
 import net.corda.nodeapi.internal.protonwrapper.netty.ProxyConfig
+import net.corda.nodeapi.internal.protonwrapper.netty.RevocationConfig
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient.DEFAULT_ACK_BATCH_SIZE
 import org.apache.activemq.artemis.api.core.client.ClientConsumer
@@ -29,12 +30,12 @@ import org.slf4j.MDC
 class LoopbackBridgeManager(config: MutualSslConfiguration,
                             proxyConfig: ProxyConfig? = null,
                             maxMessageSize: Int,
-                            crlCheckSoftFail: Boolean,
+                            revocationConfig: RevocationConfig,
                             enableSNI: Boolean,
                             private val artemisMessageClientFactory: () -> ArtemisSessionProvider,
                             private val bridgeMetricsService: BridgeMetricsService? = null,
                             private val isLocalInbox: (String) -> Boolean,
-                            trace: Boolean) : AMQPBridgeManager(config, proxyConfig, maxMessageSize, crlCheckSoftFail, enableSNI, artemisMessageClientFactory, bridgeMetricsService, trace) {
+                            trace: Boolean) : AMQPBridgeManager(config, proxyConfig, maxMessageSize, revocationConfig, enableSNI, artemisMessageClientFactory, bridgeMetricsService, trace) {
 
     companion object {
         private val log = contextLogger()

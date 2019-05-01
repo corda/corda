@@ -19,6 +19,7 @@ import net.corda.nodeapi.internal.protonwrapper.messages.ReceivedMessage
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPClient
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPConfiguration
 import net.corda.nodeapi.internal.protonwrapper.netty.ConnectionChange
+import net.corda.nodeapi.internal.protonwrapper.netty.RevocationConfig
 import rx.Subscription
 import java.io.ByteArrayOutputStream
 import java.security.SecureRandom
@@ -55,11 +56,11 @@ class TunnelingBridgeReceiverService(val conf: FirewallConfiguration,
                     override val password: String? = null
                     override val keyStore = controlLinkKeyStore
                     override val trustStore = controlLinkTrustStore
-                    override val crlCheckSoftFail: Boolean = conf.crlCheckSoftFail
                     override val maxMessageSize: Int = Int.MAX_VALUE
                     override val trace: Boolean = conf.enableAMQPPacketTrace
                     override val enableSNI: Boolean = conf.bridgeInnerConfig!!.enableSNI
                     override val healthCheckPhrase = conf.healthCheckPhrase
+                    override val revocationConfig: RevocationConfig = conf.revocationConfig
                 }
                 val controlClient = AMQPClient(floatAddresses,
                         setOf(expectedCertificateSubject),

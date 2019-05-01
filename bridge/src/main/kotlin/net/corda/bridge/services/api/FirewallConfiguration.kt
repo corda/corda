@@ -4,6 +4,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.protonwrapper.netty.ProxyConfig
+import net.corda.nodeapi.internal.protonwrapper.netty.RevocationConfig
 import java.nio.file.Path
 
 enum class FirewallMode {
@@ -116,10 +117,10 @@ interface FirewallConfiguration {
     // This is relevant to bridges, because we push messages into the inbox and use the async acknowledgement responses to reply to sender.
     val p2pConfirmationWindowSize: Int
     val whitelistedHeaders: List<String>
-    val crlCheckSoftFail: Boolean
     val publicSSLConfiguration: MutualSslConfiguration
     val auditServiceConfiguration: AuditServiceConfiguration
     // An optional Health Check Phrase which if passed through the channel will cause AMQP Server to echo it back instead of doing normal pipeline processing
     val healthCheckPhrase: String?
     val silencedIPs: Set<String>
+    val revocationConfig: RevocationConfig
 }

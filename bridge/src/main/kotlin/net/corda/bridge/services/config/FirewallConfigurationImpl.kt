@@ -13,6 +13,7 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.internal.ArtemisMessagingComponent
 import net.corda.nodeapi.internal.config.*
 import net.corda.nodeapi.internal.protonwrapper.netty.ProxyConfig
+import net.corda.nodeapi.internal.protonwrapper.netty.RevocationConfig
 import java.nio.file.Path
 
 fun Config.parseAsFirewallConfiguration(): FirewallConfiguration {
@@ -43,7 +44,7 @@ data class BridgeSSLConfigurationImpl(private val sslKeystore: Path,
                                       private val keyStorePrivateKeyPassword: String = keyStorePassword,
                                       private val trustStoreFile: Path,
                                       private val trustStorePassword: String,
-                                      private val crlCheckSoftFail: Boolean,
+                                      private val revocationConfig: RevocationConfig,
                                       override val useOpenSsl: Boolean = false) : BridgeSSLConfiguration {
 
     override val keyStore = FileBasedCertificateStoreSupplier(sslKeystore, keyStorePassword, keyStorePrivateKeyPassword)
@@ -77,7 +78,6 @@ data class FirewallConfigurationImpl(
         override val certificatesDirectory: Path = baseDirectory / "certificates",
         override val sslKeystore: Path = certificatesDirectory / "sslkeystore.jks",
         override val trustStoreFile: Path = certificatesDirectory / "truststore.jks",
-        override val crlCheckSoftFail: Boolean,
         private val keyStorePassword: String,
         private val trustStorePassword: String,
         override val firewallMode: FirewallMode,
@@ -95,7 +95,8 @@ data class FirewallConfigurationImpl(
         override val whitelistedHeaders: List<String> = ArtemisMessagingComponent.Companion.P2PMessagingHeaders.whitelistedHeaders.toList(),
         override val auditServiceConfiguration: AuditServiceConfigurationImpl,
         override val healthCheckPhrase: String? = null,
-        override val silencedIPs: Set<String> = emptySet()) : FirewallConfiguration {
+        override val silencedIPs: Set<String> = emptySet(),
+        override val revocationConfig: RevocationConfig) : FirewallConfiguration {
     init {
         when (firewallMode) {
             FirewallMode.SenderReceiver -> require(inboundConfig != null && outboundConfig != null) { "Missing required configuration" }

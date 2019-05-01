@@ -11,6 +11,7 @@ import net.corda.nodeapi.internal.protonwrapper.messages.ReceivedMessage
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPConfiguration
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPServer
 import net.corda.nodeapi.internal.protonwrapper.netty.ConnectionChange
+import net.corda.nodeapi.internal.protonwrapper.netty.RevocationConfig
 import org.slf4j.LoggerFactory
 import rx.Observable
 import rx.Subscription
@@ -53,12 +54,12 @@ class BridgeAMQPListenerServiceImpl(val conf: FirewallConfiguration,
         val amqpConfiguration = object : AMQPConfiguration {
             override val keyStore = keyStore
             override val trustStore = trustStore
-            override val crlCheckSoftFail: Boolean = conf.crlCheckSoftFail
             override val maxMessageSize: Int = maximumMessageSize
             override val trace: Boolean = conf.enableAMQPPacketTrace
             override val enableSNI: Boolean = conf.bridgeInnerConfig?.enableSNI ?: true
             override val healthCheckPhrase = conf.healthCheckPhrase
             override val silencedIPs: Set<String> = conf.silencedIPs
+            override val revocationConfig: RevocationConfig = conf.revocationConfig
         }
         val server = AMQPServer(bindAddress.host,
                 bindAddress.port,

@@ -15,6 +15,7 @@ import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2PMessagi
 import net.corda.nodeapi.internal.bridging.BridgeManager
 import net.corda.nodeapi.internal.bridging.LoopbackBridgeManager
 import net.corda.nodeapi.internal.bridging.payload
+import net.corda.nodeapi.internal.protonwrapper.netty.toRevocationConfig
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.MAX_MESSAGE_SIZE
@@ -208,7 +209,7 @@ class LoopbackBridgeTest(private val useOpenSsl: Boolean) {
         val bridgeManager = LoopbackBridgeManager(artemisConfig.p2pSslOptions,
                 null,
                 MAX_MESSAGE_SIZE,
-                artemisConfig.crlCheckSoftFail,
+                artemisConfig.crlCheckSoftFail.toRevocationConfig(),
                 artemisConfig.enableSNI,
                 { ArtemisMessagingClient(artemisConfig.p2pSslOptions, artemisAddress, MAX_MESSAGE_SIZE, confirmationWindowSize = artemisConfig.enterpriseConfiguration.tuning.p2pConfirmationWindowSize) },
                 null,
