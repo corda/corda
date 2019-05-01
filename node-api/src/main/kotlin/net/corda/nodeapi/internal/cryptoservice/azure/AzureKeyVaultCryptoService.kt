@@ -90,7 +90,7 @@ class AzureKeyVaultCryptoService(private val keyVaultClient: KeyVaultClient, pri
         // its type, which we need to specify when making the call for the actual signing operation.
         // TODO if we can make absolutely sure that only the default algorithm is used here, we could skip the first call.
         val keyBundle = keyVaultClient.getKey(createIdentifier(alias))
-        val algorithm = getKeyTypeFromSignatureAlgorithm(signAlgorithm) ?: determineAlgorithm(keyBundle)
+        val algorithm = determineAlgorithm(keyBundle)
         val result = keyVaultClient.sign(createIdentifier(alias), algorithm, hash)
         val keyType = keyBundle.key().kty()
         return when (keyType) {
@@ -107,18 +107,6 @@ class AzureKeyVaultCryptoService(private val keyVaultClient: KeyVaultClient, pri
             when (hash) {
                 "" -> throw IllegalArgumentException("$signAlgorithm does not contain 'with' string")
                 else -> hash.replace("SHA", "SHA-")
-            }
-        }
-    }
-
-    private fun getKeyTypeFromSignatureAlgorithm(signAlgorithm: String?) : JsonWebKeySignatureAlgorithm? {
-        return signAlgorithm?.let {
-            val algorithm =  it.replace( "WITH", "with", true)
-            var keyTypeAlgo = algorithm.substringAfter("with", "?")
-            when (keyTypeAlgo[0]) {
-                'E' -> JsonWebKeySignatureAlgorithm.ES256
-                'R' -> JsonWebKeySignatureAlgorithm.RS256
-                else -> throw IllegalArgumentException("$signAlgorithm does not contain 'with' string")
             }
         }
     }
