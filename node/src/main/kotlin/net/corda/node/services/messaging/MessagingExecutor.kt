@@ -152,6 +152,7 @@ class MessagingExecutor(
             try {
                 executor.join()
             } catch (e: InterruptedException) {
+                Thread.currentThread().interrupt()
                 log.warn("Thread interrupted while executor was closing")
             } finally {
                 this.executor = null
