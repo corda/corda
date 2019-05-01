@@ -12,7 +12,12 @@ dependencies {
     cordaCompile project(':core')
 
     testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
-    testCompile "junit:junit:$junit_version"
+    testCompile "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
+    testCompile "junit:junit:${junit4_version}"
+
+    testRuntime "org.junit.vintage:junit-vintage-engine:${junit_vintage_version}"
+    testRuntime "org.junit.jupiter:junit-jupiter-engine:${junit_jupiter_version}"
+    testRuntime "org.junit.platform:junit-platform-launcher:${junit_platform_version}"
 
     // Guava: Google test library (collections test suite)
     testCompile "com.google.guava:guava-testlib:$guava_version"
