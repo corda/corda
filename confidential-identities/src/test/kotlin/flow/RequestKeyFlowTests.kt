@@ -6,6 +6,7 @@ import net.corda.confidential.flow.RequestKeyFlow
 import net.corda.confidential.flow.RequestKeyFlowHandler
 import net.corda.confidential.service.SignedPublicKey
 import net.corda.core.contracts.UniqueIdentifier
+import net.corda.core.crypto.Crypto
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
 import net.corda.core.flows.InitiatedBy
@@ -24,6 +25,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import org.postgresql.shaded.com.ongres.scram.common.util.CryptoUtil
 import sun.security.x509.UniqueIdentity
 import java.util.*
 
@@ -69,7 +71,7 @@ class RequestKeyFlowTests {
         val bobResults = keyForBob.getOrThrow().publicKeyToPartyMap.filter { it.value == bob }
 
         // Bob has the newly generated key as well as the owning key
-        val bobKeys = aliceNode.services.keyManagementService.keys
+        val bobKeys = bobNode.services.keyManagementService.keys
         val aliceKeys = aliceNode.services.keyManagementService.keys
         assertThat(bobKeys).hasSize(2)
         assertThat(aliceKeys).hasSize(1)
@@ -82,14 +84,14 @@ class RequestKeyFlowTests {
 
     @Test
     fun `verify flow exception`(){
-        //TODO need to figure out how to force a duplicate key to be used
+        //TODO
     }
 
     @InitiatingFlow
     private class RequestKeyInitiator(private val otherParty: Party, private val uuid: UUID) : FlowLogic<SignedPublicKey>() {
         @Suspendable
         override fun call(): SignedPublicKey {
-            return subFlow(RequestKeyFlow(initiateFlow(otherParty), otherParty, uuid))
+            return subFlow(RequestKeyFlow(initiateFlow(otherParty), uuid))
         }
     }
 
