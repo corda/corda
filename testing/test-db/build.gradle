@@ -1,0 +1,26 @@
+apply plugin: 'net.corda.plugins.publish-utils'
+apply plugin: 'net.corda.plugins.api-scanner'
+apply plugin: 'com.jfrog.artifactory'
+
+dependencies {
+    compile "org.slf4j:slf4j-api:$slf4j_version"
+    compile "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
+    
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+
+    compile "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
+
+    testRuntime "org.junit.vintage:junit-vintage-engine:${junit_vintage_version}"
+    testRuntime "org.junit.jupiter:junit-jupiter-engine:${junit_jupiter_version}"
+    testRuntime "org.junit.platform:junit-platform-launcher:${junit_platform_version}"
+
+    compile "org.assertj:assertj-core:$assertj_version"
+}
+
+jar {
+    baseName 'corda-test-db'
+}
+
+publish {
+    name jar.baseName
+}
