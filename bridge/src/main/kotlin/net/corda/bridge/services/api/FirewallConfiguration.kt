@@ -28,8 +28,9 @@ enum class FirewallMode {
     FloatOuter
 }
 
-interface BridgeSSLConfiguration : MutualSslConfiguration
-
+interface BridgeSSLConfiguration : MutualSslConfiguration {
+    val revocationConfig: RevocationConfig
+}
 
 /**
  * Details of the local Artemis broker.

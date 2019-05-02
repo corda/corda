@@ -22,15 +22,12 @@ fun Config.parseAsFirewallConfiguration(): FirewallConfiguration {
         parseAs<FirewallConfigurationImpl>()
     } catch (ex: UnknownConfigurationKeysException) {
 
-        FirewallCmdLineOptions.logger.info("Attempting to parse using old formats")
+        FirewallCmdLineOptions.logger.info("Attempting to parse using old formats. Modern format parsing failed due to:", ex)
 
-        val legacyConfigurationClasses = mutableListOf(Version4FirewallConfiguration::class, Version3BridgeConfigurationImpl::class)
-
-        while (!legacyConfigurationClasses.isEmpty()) {
-            val configurationClass = legacyConfigurationClasses.removeAt(0)
+        listOf(Version4FirewallConfiguration::class, Version3BridgeConfigurationImpl::class).forEach {
             try {
                 // Note: "Ignore" is needed to disregard any default properties from "firewalldefault.conf" that are not applicable to previous versions
-                val oldStyleConfig = parseAs(configurationClass, UnknownConfigKeysPolicy.IGNORE::handle)
+                val oldStyleConfig = parseAs(it, UnknownConfigKeysPolicy.IGNORE::handle)
                 val newStyleConfig = oldStyleConfig.toConfig()
 
                 val configAsString = newStyleConfig.toConfig().root().maskPassword().render(ConfigRenderOptions.defaults())
@@ -38,7 +35,7 @@ fun Config.parseAsFirewallConfiguration(): FirewallConfiguration {
                         "New style config will look as follows:\n$configAsString")
                 return newStyleConfig
             } catch (oldFormatEx: ConfigException) {
-                FirewallCmdLineOptions.logger.debug("Parsing with $configurationClass failed", oldFormatEx)
+                FirewallCmdLineOptions.logger.debug("Parsing with $it failed", oldFormatEx)
             }
         }
 
@@ -52,7 +49,7 @@ data class BridgeSSLConfigurationImpl(private val sslKeystore: Path,
                                       private val keyStorePrivateKeyPassword: String = keyStorePassword,
                                       private val trustStoreFile: Path,
                                       private val trustStorePassword: String,
-                                      private val revocationConfig: RevocationConfig,
+                                      override val revocationConfig: RevocationConfig,
                                       override val useOpenSsl: Boolean = false) : BridgeSSLConfiguration {
 
     override val keyStore = FileBasedCertificateStoreSupplier(sslKeystore, keyStorePassword, keyStorePrivateKeyPassword)
