@@ -14,17 +14,19 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.NodeStartup
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.nodeapi.exceptions.InternalNodeException
+import net.corda.testing.common.internal.isInstanceOf
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
-import net.corda.testing.driver.DriverParameters
-import net.corda.testing.driver.NodeHandle
-import net.corda.testing.driver.NodeParameters
-import net.corda.testing.driver.driver
+import net.corda.testing.driver.*
+import net.corda.testing.internal.stubs.CertificateStoreStubs
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.startNode
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
-import java.io.*
+import java.io.ByteArrayOutputStream
+import java.io.ObjectInputStream
+import java.io.ObjectOutputStream
+import java.io.Serializable
 import kotlin.test.assertEquals
 
 class BootTests {
@@ -62,6 +64,25 @@ class BootTests {
             // We count the number of nodes that wrote into the logfile by counting "Logs can be found in"
             val numberOfNodesThatLogged = logFile.readLines { it.filter { NodeStartup.LOGS_CAN_BE_FOUND_IN_STRING in it }.count() }
             assertEquals(1, numberOfNodesThatLogged)
+        }
+    }
+
+    @Test
+    fun `node fails to start if identity key for x500 name is lost`() {
+        driver(DriverParameters(notarySpecs = emptyList(), inMemoryDB = false, startNodesInProcess = false)) {
+            val alice = startNode(providedName = ALICE_NAME).getOrThrow()
+            val aliceDir = alice.baseDirectory / "certificates"
+            (aliceDir / "nodekeystore.jks").toFile().delete()
+            CertificateStoreStubs.Signing.withCertificatesDirectory(aliceDir).get(true)
+            (alice as OutOfProcess).process.destroyForcibly()
+            alice.stop()
+            val customOverrides = mapOf(
+                    "p2pAddress" to "localhost:${alice.rpcAddress.port}"
+            )
+            assertThatThrownBy {
+                startNode(providedName = ALICE_NAME, customOverrides = customOverrides).getOrThrow()
+            }.isInstanceOf<IllegalArgumentException>()
+
         }
     }
 }
