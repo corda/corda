@@ -45,7 +45,7 @@ class MockAttachmentStorage : AttachmentStorage, SingletonSerializeAsToken() {
 
     // This function only covers those possibilities currently used within tests. Each ColumnPredicate type can have multiple operators,
     // and not all predicate types are covered here.
-    private fun <C>criteriaFilter(metadata: C, predicate: ColumnPredicate<C>?): Boolean {
+    private fun <C> criteriaFilter(metadata: C, predicate: ColumnPredicate<C>?): Boolean {
         return when (predicate) {
             is ColumnPredicate.EqualityComparison -> predicate.rightLiteral == metadata
             is ColumnPredicate.CollectionExpression -> predicate.rightLiteral.contains(metadata)

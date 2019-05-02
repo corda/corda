@@ -186,7 +186,7 @@ fun FlowLogic<*>.checkParameterHash(networkParametersHash: SecureHash?) {
 }
 
 private object AttachmentTrustedCache {
-    val cache: MutableMap<AttachmentId, Boolean> = createSimpleCache(100)
+    val cache: MutableMap<AttachmentId, Boolean> = createSimpleCache<AttachmentId, Boolean>(100).toSynchronised()
 }
 
 /**
@@ -195,7 +195,8 @@ private object AttachmentTrustedCache {
  *
  * Attachments are trusted if one of the following is true:
  *  - They are uploaded by a trusted uploader
- *  - There is another attachment in the attachment store with the same contract classes and signed by the same keys that is trusted
+ *  - There is another attachment in the attachment store signed by the same keys (and with the same contract classes if the attachment is a
+ *    contract attachment) that is trusted
  */
 fun isAttachmentTrusted(attachment: Attachment, service: AttachmentStorage?): Boolean {
     val trustedByUploader = when (attachment) {
