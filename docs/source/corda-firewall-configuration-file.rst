@@ -121,7 +121,20 @@ absolute path to the firewall's base directory.
 
         :trustStoreFile: The path to the TrustStore file to use in outgoing ``TLS 1.2/AMQP 1.0`` connections.
 
-        :crlCheckSoftFail: If true (recommended setting) allows certificate checks to pass if the CRL(certificate revocation list) provider is unavailable.
+.. _revocationConfig :
+
+        :revocationConfig: Controls the way Certificate Revocation Lists (CRL) are handled.
+
+            :mode: Either ``SOFT_FAIL`` or ``HARD_FAIL`` or ``OFF``
+
+                ``SOFT_FAIL`` : Causes CRL checking to use soft fail mode. Soft fail mode allows the revocation check to succeed if the revocation status cannot be determined because of a network error.
+
+                ``HARD_FAIL`` :  Rigorous CRL checking takes place. This involves each certificate in the certificate path being checked for a CRL distribution point extension, and that this extension points to a URL serving a valid CRL.
+                    This means that if any CRL URL in the certificate path is inaccessible, the connection with the other party will fail and be marked as bad.
+                    Additionally, if any certificate in the hierarchy, including the self-generated node SSL certificate, is missing a valid CRL URL, then the certificate path will be marked as invalid.
+
+                ``OFF`` : do not perform CRL check.
+
 
 .. _proxyConfig :
 
@@ -156,7 +169,7 @@ absolute path to the firewall's base directory.
 
         :trustStoreFile: The path to the TrustStore file to use in inbound ``TLS 1.2/AMQP 1.0`` connections.
 
-        :crlCheckSoftFail: If true (recommended setting) allows certificate checks to pass if the CRL(certificate revocation list) provider is unavailable.
+        :revocationConfig: Please see `revocationConfig`_ parameter above.
 
 :bridgeInnerConfig:  This section is required for ``BridgeInner`` mode and configures the tunnel connection to the ``FloatOuter`` (s) in the DMZ. The section should be absent in ``SenderReceiver`` and ``FloatOuter`` modes:
 
@@ -180,7 +193,7 @@ absolute path to the firewall's base directory.
 
             :trustStoreFile: The path to the TrustStore file to use in control tunnel connections.
 
-            :crlCheckSoftFail: If true (recommended setting) allows certificate checks to pass if the CRL(certificate revocation list) provider is unavailable.
+            :revocationConfig: Please see `revocationConfig`_ parameter above.
 
 :floatOuterConfig:   This section is required for ``FloatOuter`` mode and configures the control tunnel listening socket. It should be absent for ``SenderReceiver`` and ``BridgeInner`` modes:
 
@@ -203,7 +216,7 @@ absolute path to the firewall's base directory.
 
             :trustStoreFile: The path to the TrustStore file to use in control tunnel connections.
 
-            :crlCheckSoftFail: If true (recommended setting) allows certificate checks to pass if the CRL(certificate revocation list) provider is unavailable.
+            :revocationConfig: Please see `revocationConfig`_ parameter above.
             
 :haConfig: Optionally the ``SenderReceiver`` and ``BridgeInner`` modes can be run in a hot-warm configuration, which determines the active instance using an external master election service.
     Currently, the leader election process can be delegated to Zookeeper, or the firewall can use the ``Bully Algorithm`` (see `here <https://en.wikipedia.org/wiki/Bully_algorithm>`_) via Publish/Subscribe messages on the artemis broker.
@@ -655,12 +668,14 @@ Configuration file: ``firewall.conf`` for ``vmFloat1`` should look as follows:
         floatAddress = "vmFloat1-int:12005" // NB: Replace with "vmFloat2-int:12005" on vmFloat2 host
         expectedCertificateSubject = "CN=bridge, O=Corda, L=London, C=GB" // This X.500 name must align with name that Bridge received at the time of internal certificates generation.
         tunnelSSLConfiguration {
-               keyStorePassword = "tunnelStorePass"
-               keyStorePrivateKeyPassword = "tunnelPrivateKeyPassword"
-               trustStorePassword = "tunnelTrustpass"
-               sslKeystore = "./tunnel/float.jks"
-               trustStoreFile = "./tunnel/tunnel-truststore.jks"
-               crlCheckSoftFail = true
+            keyStorePassword = "tunnelStorePass"
+            keyStorePrivateKeyPassword = "tunnelPrivateKeyPassword"
+            trustStorePassword = "tunnelTrustpass"
+            sslKeystore = "./tunnel/float.jks"
+            trustStoreFile = "./tunnel/tunnel-truststore.jks"
+            revocationConfig {
+                mode = SOFT_FAIL
+            }
         }
     }
     networkParametersPath = network-parameters // The network-parameters file is expected to be copied from the node registration phase and here is expected in the workspace folder.
@@ -785,7 +800,9 @@ Configuration file: ``firewall.conf`` for ``vmInfra1`` should look as follows:
             trustStorePassword = "artemisTrustpass"
             sslKeystore = "artemis/artemis.jks"
             trustStoreFile = "artemis/artemis-truststore.jks"
-            crlCheckSoftFail = true
+            revocationConfig {
+                mode = SOFT_FAIL
+            }
         }
     }
     bridgeInnerConfig {
@@ -797,7 +814,9 @@ Configuration file: ``firewall.conf`` for ``vmInfra1`` should look as follows:
             trustStorePassword = "tunnelTrustpass"
             sslKeystore = "./tunnel/bridge.jks"
             trustStoreFile = "./tunnel/tunnel-truststore.jks"
-            crlCheckSoftFail = true
+            revocationConfig {
+                mode = SOFT_FAIL
+            }
         }
     }
     haConfig {

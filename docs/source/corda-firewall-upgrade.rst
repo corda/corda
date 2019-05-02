@@ -110,7 +110,9 @@ DMZ ready (node + bridge + float)
 |             trustStorePassword = "trustpass"                                     |             trustStorePassword = "trustpass"                                     |
 |             sslKeystore = "./bridgecerts/bridge.jks"                             |             sslKeystore = "./bridgecerts/bridge.jks"                             |
 |             trustStoreFile = "./bridgecerts/trust.jks"                           |             trustStoreFile = "./bridgecerts/trust.jks"                           |
-|             crlCheckSoftFail = true                                              |             crlCheckSoftFail = true                                              |
+|             crlCheckSoftFail = true                                              |             revocationConfig {                                                   |
+|                                                                                  |                 mode = SOFT_FAIL                                                 |
+|                                                                                  |             }                                                                    |
 |         }                                                                        |         }                                                                        |
 |     }                                                                            |     }                                                                            |
 |     networkParametersPath = network-parameters                                   |     networkParametersPath = network-parameters                                   |
@@ -138,7 +140,9 @@ DMZ ready (node + bridge + float)
 |             trustStorePassword = "trustpass"                                     |             trustStorePassword = "trustpass"                                     |
 |             sslKeystore = "./floatcerts/float.jks"                               |             sslKeystore = "./floatcerts/float.jks"                               |
 |             trustStoreFile = "./floatcerts/trust.jks"                            |             trustStoreFile = "./floatcerts/trust.jks"                            |
-|             crlCheckSoftFail = true                                              |             crlCheckSoftFail = true                                              |
+|             crlCheckSoftFail = true                                              |             revocationConfig {                                                   |
+|                                                                                  |                 mode = SOFT_FAIL                                                 |
+|                                                                                  |             }                                                                    |
 |         }                                                                        |         }                                                                        |
 |     }                                                                            |     }                                                                            |
 |     networkParametersPath = network-parameters                                   |     networkParametersPath = network-parameters                                   |
@@ -222,7 +226,9 @@ Full production HA DMZ ready (hot/cold node, hot/warm bridge)
 |             trustStorePassword = "trustpass"                                     |             trustStorePassword = "trustpass"                                     |
 |             sslKeystore = "./bridgecerts/bridge.jks"                             |             sslKeystore = "./bridgecerts/bridge.jks"                             |
 |             trustStoreFile = "./bridgecerts/trust.jks"                           |             trustStoreFile = "./bridgecerts/trust.jks"                           |
-|             crlCheckSoftFail = true                                              |             crlCheckSoftFail = true                                              |
+|             crlCheckSoftFail = true                                              |             revocationConfig {                                                   |
+|                                                                                  |                 mode = SOFT_FAIL                                                 |
+|                                                                                  |             }                                                                    |
 |         }                                                                        |         }                                                                        |
 |     }                                                                            |     }                                                                            |
 |     haConfig {                                                                   |     haConfig {                                                                   |
@@ -254,7 +260,9 @@ Full production HA DMZ ready (hot/cold node, hot/warm bridge)
 |             trustStorePassword = "trustpass"                                     |             trustStorePassword = "trustpass"                                     |
 |             sslKeystore = "./floatcerts/float.jks"                               |             sslKeystore = "./floatcerts/float.jks"                               |
 |             trustStoreFile = "./floatcerts/trust.jks"                            |             trustStoreFile = "./floatcerts/trust.jks"                            |
-|             crlCheckSoftFail = true                                              |             crlCheckSoftFail = true                                              |
+|             crlCheckSoftFail = true                                              |             revocationConfig {                                                   |
+|                                                                                  |                 mode = SOFT_FAIL                                                 |
+|                                                                                  |             }                                                                    |
 |         }                                                                        |         }                                                                        |
 |     }                                                                            |     }                                                                            |
 |     networkParametersPath = network-parameters                                   |     networkParametersPath = network-parameters                                   |
@@ -278,7 +286,9 @@ Full production HA DMZ ready (hot/cold node, hot/warm bridge)
 |             trustStorePassword = "trustpass"                                     |             trustStorePassword = "trustpass"                                     |
 |             sslKeystore = "./floatcerts/float.jks"                               |             sslKeystore = "./floatcerts/float.jks"                               |
 |             trustStoreFile = "./floatcerts/trust.jks"                            |             trustStoreFile = "./floatcerts/trust.jks"                            |
-|             crlCheckSoftFail = true                                              |             crlCheckSoftFail = true                                              |
+|             crlCheckSoftFail = true                                              |             revocationConfig {                                                   |
+|                                                                                  |                 mode = SOFT_FAIL                                                 |
+|                                                                                  |             }                                                                    |
 |         }                                                                        |         }                                                                        |
 |     }                                                                            |     }                                                                            |
 |     networkParametersPath = network-parameters                                   |     networkParametersPath = network-parameters                                   |
@@ -347,7 +357,9 @@ Node + Bridge to Node + Artemis + Bridge
 |                                                   |             trustStorePassword = "artemisTrustpass"                  |
 |                                                   |             sslKeystore = "artemis/artemis.jks"                      |
 |                                                   |             trustStoreFile = "artemis/artemis-truststore.jks"        |
-|                                                   |             crlCheckSoftFail = true                                  |
+|                                                   |             revocationConfig {                                       |
+|                                                   |               mode = SOFT_FAIL                                       |
+|                                                   |             }                                                        |
 |                                                   |         }                                                            |
 |     }                                             |     }                                                                |
 |     inboundConfig {                               |     inboundConfig {                                                  |
