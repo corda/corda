@@ -102,12 +102,7 @@ class AzureKeyVaultCryptoService(private val keyVaultClient: KeyVaultClient, pri
 
     private fun getHashAlgorithmFromSignatureAlgorithm(signAlgorithm: String?) : String? {
         return signAlgorithm?.let {
-            val algorithm = it.replace("WITH", "with", true)
-            var hash = algorithm.substringBefore("with", "")
-            when (hash) {
-                "" -> throw IllegalArgumentException("$signAlgorithm does not contain 'with' string")
-                else -> hash.replace("SHA", "SHA-")
-            }
+            signAlgorithm.toUpperCase().substringBefore("WITH").replace("SHA", "SHA-")
         }
     }
 

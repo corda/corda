@@ -152,15 +152,6 @@ class AzureKeyVaultCryptoServiceTest {
         Crypto.doVerify(generated, signed, data)
     }
 
-    @Test(expected=IllegalArgumentException::class)
-    fun `Exception raised when sign string does not contain with string`() {
-        val keyVaultClient: KeyVaultClient = Mockito.mock(KeyVaultClient::class.java)
-        val cryptoService = AzureKeyVaultCryptoService(keyVaultClient, vaultURL)
-        val alias = "c16d2aa8-2f42-4b2f-946d-00e51df43d88"
-        val data = Base64.getDecoder().decode("NmU1ZTMxZWYtYWU0NS00MzM0LThkYjQtNzRkNWU3NDQ1YWY3")
-        cryptoService.sign(alias, data, "SHA512ECDSA")
-    }
-
     @Test
     fun `Generate P-256 ECDSA key with hardware protection, sign and verify data`() {
         val keyVaultClient: KeyVaultClient = Mockito.mock(KeyVaultClient::class.java)
