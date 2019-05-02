@@ -57,6 +57,102 @@ class AzureKeyVaultCryptoServiceTest {
     }
 
     @Test
+    fun `Generate key with the default legal identity scheme, then sign using SHA512withRSA and verify data`() {
+        val keyVaultClient: KeyVaultClient = Mockito.mock(KeyVaultClient::class.java)
+        val cryptoService = AzureKeyVaultCryptoService(keyVaultClient, vaultURL)
+        val alias = "c16d2aa8-2f42-4b2f-946d-00e51df43d88"
+        val webKeyString = "{\"kid\":\"none\",\"kty\":\"EC-HSM\",\"key_ops\":[\"sign\"],\"n\":null,\"e\":null,\"d\":null,\"dp\":null,\"dq\":null,\"qi\":null,\"p\":null,\"q\":null,\"k\":null,\"key_hsm\":null,\"crv\":\"P-256\",\"x\":\"Q9sEtdtbb2tb2XJHXtgD80BO5RcUpL3Q2xoca7CQZ7E\",\"y\":\"eDZP2RTd6_Nyk-uJ7Zs6MDaxzQ2RtQZJyWVXE15Dflg\"}"
+        val jsonWebKey = objectMapper.readValue<JsonWebKey>(webKeyString)
+        val keyBundle = Mockito.mock(KeyBundle::class.java)
+        Mockito.`when`(keyBundle.key()).thenReturn(jsonWebKey)
+        Mockito.`when`(keyVaultClient.createKey(any())).thenReturn(keyBundle)
+        val generated = cryptoService.generateKeyPair(alias, cryptoService.defaultIdentitySignatureScheme())
+        Mockito.verify(keyVaultClient, times(1)).createKey(any())
+        Mockito.`when`(keyVaultClient.getKey(any())).thenReturn(keyBundle)
+        val exists = cryptoService.containsKey(alias)
+        assertTrue(exists)
+        val data = Base64.getDecoder().decode("NmU1ZTMxZWYtYWU0NS00MzM0LThkYjQtNzRkNWU3NDQ1YWY3")
+        val resultString = "{\"kid\":\"none\",\"value\":\"nvrVKgmfDa3MSAStp4PfiB9VkPJfLVR-m7hzgGYpL2qcoI2QxF4H54dkMC798ff-3YLqcHN6PX7v3nxvJR-QYg\"}"
+        val result = objectMapper.readValue<KeyOperationResult>(resultString)
+        Mockito.`when`(keyVaultClient.sign(any(), any(), any())).thenReturn(result)
+        val signed = cryptoService.sign(alias, data, "SHA512withRSA")
+        // doesn't throw
+        Crypto.doVerify(generated, signed, data)
+    }
+
+    @Test
+    fun `Generate key with the default legal identity scheme, then sign using MD5withRSA and verify data`() {
+        val keyVaultClient: KeyVaultClient = Mockito.mock(KeyVaultClient::class.java)
+        val cryptoService = AzureKeyVaultCryptoService(keyVaultClient, vaultURL)
+        val alias = "c16d2aa8-2f42-4b2f-946d-00e51df43d88"
+        val webKeyString = "{\"kid\":\"none\",\"kty\":\"EC-HSM\",\"key_ops\":[\"sign\"],\"n\":null,\"e\":null,\"d\":null,\"dp\":null,\"dq\":null,\"qi\":null,\"p\":null,\"q\":null,\"k\":null,\"key_hsm\":null,\"crv\":\"P-256\",\"x\":\"Q9sEtdtbb2tb2XJHXtgD80BO5RcUpL3Q2xoca7CQZ7E\",\"y\":\"eDZP2RTd6_Nyk-uJ7Zs6MDaxzQ2RtQZJyWVXE15Dflg\"}"
+        val jsonWebKey = objectMapper.readValue<JsonWebKey>(webKeyString)
+        val keyBundle = Mockito.mock(KeyBundle::class.java)
+        Mockito.`when`(keyBundle.key()).thenReturn(jsonWebKey)
+        Mockito.`when`(keyVaultClient.createKey(any())).thenReturn(keyBundle)
+        val generated = cryptoService.generateKeyPair(alias, cryptoService.defaultIdentitySignatureScheme())
+        Mockito.verify(keyVaultClient, times(1)).createKey(any())
+        Mockito.`when`(keyVaultClient.getKey(any())).thenReturn(keyBundle)
+        val exists = cryptoService.containsKey(alias)
+        assertTrue(exists)
+        val data = Base64.getDecoder().decode("NmU1ZTMxZWYtYWU0NS00MzM0LThkYjQtNzRkNWU3NDQ1YWY3")
+        val resultString = "{\"kid\":\"none\",\"value\":\"nvrVKgmfDa3MSAStp4PfiB9VkPJfLVR-m7hzgGYpL2qcoI2QxF4H54dkMC798ff-3YLqcHN6PX7v3nxvJR-QYg\"}"
+        val result = objectMapper.readValue<KeyOperationResult>(resultString)
+        Mockito.`when`(keyVaultClient.sign(any(), any(), any())).thenReturn(result)
+        val signed = cryptoService.sign(alias, data, "MD5withRSA")
+        // doesn't throw
+        Crypto.doVerify(generated, signed, data)
+    }
+
+    @Test
+    fun `Generate key with the default legal identity scheme, then sign using SHA512withECDSA and verify data`() {
+        val keyVaultClient: KeyVaultClient = Mockito.mock(KeyVaultClient::class.java)
+        val cryptoService = AzureKeyVaultCryptoService(keyVaultClient, vaultURL)
+        val alias = "c16d2aa8-2f42-4b2f-946d-00e51df43d88"
+        val webKeyString = "{\"kid\":\"none\",\"kty\":\"EC-HSM\",\"key_ops\":[\"sign\"],\"n\":null,\"e\":null,\"d\":null,\"dp\":null,\"dq\":null,\"qi\":null,\"p\":null,\"q\":null,\"k\":null,\"key_hsm\":null,\"crv\":\"P-256\",\"x\":\"Q9sEtdtbb2tb2XJHXtgD80BO5RcUpL3Q2xoca7CQZ7E\",\"y\":\"eDZP2RTd6_Nyk-uJ7Zs6MDaxzQ2RtQZJyWVXE15Dflg\"}"
+        val jsonWebKey = objectMapper.readValue<JsonWebKey>(webKeyString)
+        val keyBundle = Mockito.mock(KeyBundle::class.java)
+        Mockito.`when`(keyBundle.key()).thenReturn(jsonWebKey)
+        Mockito.`when`(keyVaultClient.createKey(any())).thenReturn(keyBundle)
+        val generated = cryptoService.generateKeyPair(alias, cryptoService.defaultIdentitySignatureScheme())
+        Mockito.verify(keyVaultClient, times(1)).createKey(any())
+        Mockito.`when`(keyVaultClient.getKey(any())).thenReturn(keyBundle)
+        val exists = cryptoService.containsKey(alias)
+        assertTrue(exists)
+        val data = Base64.getDecoder().decode("NmU1ZTMxZWYtYWU0NS00MzM0LThkYjQtNzRkNWU3NDQ1YWY3")
+        val resultString = "{\"kid\":\"none\",\"value\":\"nvrVKgmfDa3MSAStp4PfiB9VkPJfLVR-m7hzgGYpL2qcoI2QxF4H54dkMC798ff-3YLqcHN6PX7v3nxvJR-QYg\"}"
+        val result = objectMapper.readValue<KeyOperationResult>(resultString)
+        Mockito.`when`(keyVaultClient.sign(any(), any(), any())).thenReturn(result)
+        val signed = cryptoService.sign(alias, data, "SHA512withECDSA")
+        // doesn't throw
+        Crypto.doVerify(generated, signed, data)
+    }
+
+    @Test
+    fun `Generate key with the default legal identity scheme, then sign using SHA512WITHECDSA (checking case) and verify data`() {
+        val keyVaultClient: KeyVaultClient = Mockito.mock(KeyVaultClient::class.java)
+        val cryptoService = AzureKeyVaultCryptoService(keyVaultClient, vaultURL)
+        val alias = "c16d2aa8-2f42-4b2f-946d-00e51df43d88"
+        val webKeyString = "{\"kid\":\"none\",\"kty\":\"EC-HSM\",\"key_ops\":[\"sign\"],\"n\":null,\"e\":null,\"d\":null,\"dp\":null,\"dq\":null,\"qi\":null,\"p\":null,\"q\":null,\"k\":null,\"key_hsm\":null,\"crv\":\"P-256\",\"x\":\"Q9sEtdtbb2tb2XJHXtgD80BO5RcUpL3Q2xoca7CQZ7E\",\"y\":\"eDZP2RTd6_Nyk-uJ7Zs6MDaxzQ2RtQZJyWVXE15Dflg\"}"
+        val jsonWebKey = objectMapper.readValue<JsonWebKey>(webKeyString)
+        val keyBundle = Mockito.mock(KeyBundle::class.java)
+        Mockito.`when`(keyBundle.key()).thenReturn(jsonWebKey)
+        Mockito.`when`(keyVaultClient.createKey(any())).thenReturn(keyBundle)
+        val generated = cryptoService.generateKeyPair(alias, cryptoService.defaultIdentitySignatureScheme())
+        Mockito.verify(keyVaultClient, times(1)).createKey(any())
+        Mockito.`when`(keyVaultClient.getKey(any())).thenReturn(keyBundle)
+        val exists = cryptoService.containsKey(alias)
+        assertTrue(exists)
+        val data = Base64.getDecoder().decode("NmU1ZTMxZWYtYWU0NS00MzM0LThkYjQtNzRkNWU3NDQ1YWY3")
+        val resultString = "{\"kid\":\"none\",\"value\":\"nvrVKgmfDa3MSAStp4PfiB9VkPJfLVR-m7hzgGYpL2qcoI2QxF4H54dkMC798ff-3YLqcHN6PX7v3nxvJR-QYg\"}"
+        val result = objectMapper.readValue<KeyOperationResult>(resultString)
+        Mockito.`when`(keyVaultClient.sign(any(), any(), any())).thenReturn(result)
+        val signed = cryptoService.sign(alias, data, "SHA512WITHECDSA")
+        // doesn't throw
+        Crypto.doVerify(generated, signed, data)
+    }
+
+    @Test
     fun `Generate P-256 ECDSA key with hardware protection, sign and verify data`() {
         val keyVaultClient: KeyVaultClient = Mockito.mock(KeyVaultClient::class.java)
         val cryptoService = AzureKeyVaultCryptoService(keyVaultClient, vaultURL, AzureKeyVaultCryptoService.Protection.HARDWARE)
