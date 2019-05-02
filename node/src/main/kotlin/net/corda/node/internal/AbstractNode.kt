@@ -55,7 +55,6 @@ import net.corda.node.services.events.ScheduledActivityObserver
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.BasicHSMKeyManagementService
 import net.corda.node.services.keys.KeyManagementServiceInternal
-import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
 import net.corda.node.services.messaging.DeduplicationHandler
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.network.NetworkMapClient
@@ -82,6 +81,7 @@ import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_ROOT_CA
 import net.corda.nodeapi.internal.crypto.X509Utilities.DEFAULT_VALIDITY_WINDOW
 import net.corda.nodeapi.internal.crypto.X509Utilities.DISTRIBUTED_NOTARY_ALIAS_PREFIX
 import net.corda.nodeapi.internal.crypto.X509Utilities.NODE_IDENTITY_ALIAS_PREFIX
+import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
 import net.corda.nodeapi.internal.persistence.*
 import net.corda.tools.shell.InteractiveShell
 import org.apache.activemq.artemis.utils.ReusableLatch
@@ -286,8 +286,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         check(started == null) { "Node has already been started" }
         log.info("Generating nodeInfo ...")
         val trustRoot = initKeyStores()
-        val (identity, identityKeyPair) = obtainIdentity()
         startDatabase()
+        val (identity, identityKeyPair) = obtainIdentity()
         val nodeCa = configuration.signingCertificateStore.get()[CORDA_CLIENT_CA]
         identityService.start(trustRoot, listOf(identity.certificate, nodeCa))
         return database.use {
@@ -838,6 +838,16 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
         var signingCertificateStore = configuration.signingCertificateStore.get()
         if (!cryptoService.containsKey(legalIdentityPrivateKeyAlias) && !signingCertificateStore.contains(legalIdentityPrivateKeyAlias)) {
+            // Directly use the X500 name to public key map, as the identity service requires the node identity to start correctly.
+            database.transaction {
+                val x500Map = PersistentIdentityService.createX500Map(cacheFactory)
+                require(x500Map[configuration.myLegalName] == null) {
+                    // There is already a party in the identity store for this node, but the key has been lost. If this node starts up, it will
+                    // publish it's new key to the network map, which Corda cannot currently handle. To prevent this, stop the node from starting.
+                    "$legalIdentityPrivateKeyAlias not found in key store, but the corresponding X500 name ${configuration.myLegalName}" +
+                            " has a keypair. This suggests the identity for this node has been lost. Shutting down to prevent network issues."
+                }
+            }
             log.info("$legalIdentityPrivateKeyAlias not found in key store, generating fresh key!")
             createAndStoreLegalIdentity(legalIdentityPrivateKeyAlias)
             signingCertificateStore = configuration.signingCertificateStore.get() // We need to resync after [createAndStoreLegalIdentity].
