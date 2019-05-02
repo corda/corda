@@ -252,7 +252,9 @@ private fun DriverDSLImpl.startSingleProcessBridgeAndFloat(baseDirectory: Path,
                         "trustStorePassword" to truststorePassword,
                         "sslKeystore" to (artemisCertDir / ARTEMIS_KEYSTORE).toString(),
                         "trustStoreFile" to (artemisCertDir / ARTEMIS_TRUSTSTORE).toString(),
-                        "crlCheckSoftFail" to true
+                        "revocationConfig" to mapOf(
+                                "mode" to "SOFT_FAIL"
+                        )
                 )
         )
     } else {

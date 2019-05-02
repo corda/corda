@@ -58,7 +58,7 @@ class AMQPServer(val hostName: String,
 
         init {
             keyManagerFactory.init(conf.keyStore.value.internal, conf.keyStore.entryPassword.toCharArray())
-            trustManagerFactory.init(initialiseTrustStoreAndEnableCrlChecking(conf.trustStore, conf.crlCheckSoftFail))
+            trustManagerFactory.init(initialiseTrustStoreAndEnableCrlChecking(conf.trustStore, conf.revocationConfig))
         }
 
         override fun initChannel(ch: SocketChannel) {

@@ -7,12 +7,14 @@ import net.corda.bridge.FirewallCmdLineOptions
 import net.corda.bridge.services.api.*
 import net.corda.bridge.services.config.BridgeConfigHelper.maskPassword
 import net.corda.bridge.services.config.internal.Version3BridgeConfigurationImpl
+import net.corda.bridge.services.config.internal.Version4FirewallConfiguration
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.internal.ArtemisMessagingComponent
 import net.corda.nodeapi.internal.config.*
 import net.corda.nodeapi.internal.protonwrapper.netty.ProxyConfig
+import net.corda.nodeapi.internal.protonwrapper.netty.RevocationConfig
 import java.nio.file.Path
 
 fun Config.parseAsFirewallConfiguration(): FirewallConfiguration {
@@ -20,21 +22,25 @@ fun Config.parseAsFirewallConfiguration(): FirewallConfiguration {
         parseAs<FirewallConfigurationImpl>()
     } catch (ex: UnknownConfigurationKeysException) {
 
-        FirewallCmdLineOptions.logger.info("Attempting to parse using old format")
+        FirewallCmdLineOptions.logger.info("Attempting to parse using old formats. Modern format parsing failed due to:", ex)
 
-        try {
-            // Note: "Ignore" is needed to disregard any default properties from "firewalldefault.conf" that are not applicable to V3 configuration
-            val oldStyleConfig = parseAs<Version3BridgeConfigurationImpl>(UnknownConfigKeysPolicy.IGNORE::handle)
-            val newStyleConfig = oldStyleConfig.toConfig()
+        listOf(Version4FirewallConfiguration::class, Version3BridgeConfigurationImpl::class).forEach {
+            try {
+                // Note: "Ignore" is needed to disregard any default properties from "firewalldefault.conf" that are not applicable to previous versions
+                val oldStyleConfig = parseAs(it, UnknownConfigKeysPolicy.IGNORE::handle)
+                val newStyleConfig = oldStyleConfig.toConfig()
 
-            val configAsString = newStyleConfig.toConfig().root().maskPassword().render(ConfigRenderOptions.defaults())
-            FirewallCmdLineOptions.logger.warn("Old style config used. To avoid seeing this warning in the future, please upgrade to new style. " +
-                    "New style config will look as follows:\n$configAsString")
-            newStyleConfig
-        } catch (oldFormatEx: ConfigException) {
-            FirewallCmdLineOptions.logger.error("Old format parsing failed as well.")
-            throw ex
+                val configAsString = newStyleConfig.toConfig().root().maskPassword().render(ConfigRenderOptions.defaults())
+                FirewallCmdLineOptions.logger.warn("Old style config used. To avoid seeing this warning in the future, please upgrade to new style. " +
+                        "New style config will look as follows:\n$configAsString")
+                return newStyleConfig
+            } catch (oldFormatEx: ConfigException) {
+                FirewallCmdLineOptions.logger.debug("Parsing with $it failed", oldFormatEx)
+            }
         }
+
+        FirewallCmdLineOptions.logger.error("Old formats parsing failed as well.")
+        throw ex
     }
 }
 
@@ -43,7 +49,7 @@ data class BridgeSSLConfigurationImpl(private val sslKeystore: Path,
                                       private val keyStorePrivateKeyPassword: String = keyStorePassword,
                                       private val trustStoreFile: Path,
                                       private val trustStorePassword: String,
-                                      private val crlCheckSoftFail: Boolean,
+                                      override val revocationConfig: RevocationConfig,
                                       override val useOpenSsl: Boolean = false) : BridgeSSLConfiguration {
 
     override val keyStore = FileBasedCertificateStoreSupplier(sslKeystore, keyStorePassword, keyStorePrivateKeyPassword)
@@ -77,7 +83,6 @@ data class FirewallConfigurationImpl(
         override val certificatesDirectory: Path = baseDirectory / "certificates",
         override val sslKeystore: Path = certificatesDirectory / "sslkeystore.jks",
         override val trustStoreFile: Path = certificatesDirectory / "truststore.jks",
-        override val crlCheckSoftFail: Boolean,
         private val keyStorePassword: String,
         private val trustStorePassword: String,
         override val firewallMode: FirewallMode,
@@ -95,7 +100,8 @@ data class FirewallConfigurationImpl(
         override val whitelistedHeaders: List<String> = ArtemisMessagingComponent.Companion.P2PMessagingHeaders.whitelistedHeaders.toList(),
         override val auditServiceConfiguration: AuditServiceConfigurationImpl,
         override val healthCheckPhrase: String? = null,
-        override val silencedIPs: Set<String> = emptySet()) : FirewallConfiguration {
+        override val silencedIPs: Set<String> = emptySet(),
+        override val revocationConfig: RevocationConfig) : FirewallConfiguration {
     init {
         when (firewallMode) {
             FirewallMode.SenderReceiver -> require(inboundConfig != null && outboundConfig != null) { "Missing required configuration" }

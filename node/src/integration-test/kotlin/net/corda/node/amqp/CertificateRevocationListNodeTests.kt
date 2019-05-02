@@ -17,9 +17,7 @@ import net.corda.nodeapi.internal.config.CertificateStoreSupplier
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.crypto.*
 import net.corda.nodeapi.internal.protonwrapper.messages.MessageStatus
-import net.corda.nodeapi.internal.protonwrapper.netty.AMQPClient
-import net.corda.nodeapi.internal.protonwrapper.netty.AMQPConfiguration
-import net.corda.nodeapi.internal.protonwrapper.netty.AMQPServer
+import net.corda.nodeapi.internal.protonwrapper.netty.*
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.CHARLIE_NAME
@@ -58,11 +56,14 @@ import java.security.Security
 import java.security.cert.X509CRL
 import java.security.cert.X509Certificate
 import java.util.*
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 import javax.ws.rs.GET
 import javax.ws.rs.Path
 import javax.ws.rs.Produces
 import javax.ws.rs.core.Response
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class CertificateRevocationListNodeTests {
     @Rule
@@ -76,6 +77,8 @@ class CertificateRevocationListNodeTests {
     private val serverPort = portAllocation.nextPort()
 
     private lateinit var server: CrlServer
+
+    private val crlServerHitCount = AtomicInteger(0)
 
     private val revokedNodeCerts: MutableList<BigInteger> = mutableListOf()
     private val revokedIntermediateCerts: MutableList<BigInteger> = mutableListOf()
@@ -119,6 +122,7 @@ class CertificateRevocationListNodeTests {
                 CertificateType.INTERMEDIATE_CA,
                 ROOT_CA.keyPair,
                 "http://${server.hostAndPort}/crl/intermediate.crl"), DEV_INTERMEDIATE_CA.keyPair)
+        crlServerHitCount.set(0)
     }
 
     @After
@@ -273,6 +277,7 @@ class CertificateRevocationListNodeTests {
                 assertEquals(false, serverConnect.connected)
             }
         }
+        assertTrue(crlServerHitCount.get() > 0)
     }
 
     @Test
@@ -302,7 +307,7 @@ class CertificateRevocationListNodeTests {
     }
 
     @Test
-    fun `Revocation status chceck fails when the CRL distribution point is not set and soft fail is disabled`() {
+    fun `Revocation status check fails when the CRL distribution point is not set and soft fail is disabled`() {
         val crlCheckSoftFail = false
         val (amqpServer, _) = createServer(
                 serverPort,
@@ -328,7 +333,7 @@ class CertificateRevocationListNodeTests {
     }
 
     @Test
-    fun `Revocation status chceck succeds when the CRL distribution point is not set and soft fail is enabled`() {
+    fun `Revocation status check succeds when the CRL distribution point is not set and soft fail is enabled`() {
         val crlCheckSoftFail = true
         val (amqpServer, _) = createServer(
                 serverPort,
@@ -358,6 +363,15 @@ class CertificateRevocationListNodeTests {
                              nodeCrlDistPoint: String = "http://${server.hostAndPort}/crl/node.crl",
                              tlsCrlDistPoint: String? = "http://${server.hostAndPort}/crl/empty.crl",
                              maxMessageSize: Int = MAX_MESSAGE_SIZE): Pair<AMQPClient, X509Certificate> {
+
+        return createClient(targetPort, crlCheckSoftFail.toRevocationConfig(), nodeCrlDistPoint, tlsCrlDistPoint, maxMessageSize)
+    }
+
+    private fun createClient(targetPort: Int,
+                             revocationConfig: RevocationConfig,
+                             nodeCrlDistPoint: String = "http://${server.hostAndPort}/crl/node.crl",
+                             tlsCrlDistPoint: String? = "http://${server.hostAndPort}/crl/empty.crl",
+                             maxMessageSize: Int = MAX_MESSAGE_SIZE): Pair<AMQPClient, X509Certificate> {
         val baseDirectory = temporaryFolder.root.toPath() / "client"
         val certificatesDirectory = baseDirectory / "certificates"
         val p2pSslConfiguration = CertificateStoreStubs.P2P.withCertificatesDirectory(certificatesDirectory)
@@ -368,7 +382,6 @@ class CertificateRevocationListNodeTests {
             doReturn(BOB_NAME).whenever(it).myLegalName
             doReturn(p2pSslConfiguration).whenever(it).p2pSslOptions
             doReturn(signingCertificateStore).whenever(it).signingCertificateStore
-            doReturn(crlCheckSoftFail).whenever(it).crlCheckSoftFail
         }
         clientConfig.configureWithDevSSLCertificate()
         val nodeCert = (signingCertificateStore to p2pSslConfiguration).recreateNodeCaAndTlsCertificates(nodeCrlDistPoint, tlsCrlDistPoint)
@@ -377,7 +390,7 @@ class CertificateRevocationListNodeTests {
         val amqpConfig = object : AMQPConfiguration {
             override val keyStore = keyStore
             override val trustStore = clientConfig.p2pSslOptions.trustStore.get()
-            override val crlCheckSoftFail: Boolean = crlCheckSoftFail
+            override val revocationConfig = revocationConfig
             override val maxMessageSize: Int = maxMessageSize
         }
         return Pair(AMQPClient(
@@ -391,6 +404,14 @@ class CertificateRevocationListNodeTests {
                              nodeCrlDistPoint: String = "http://${server.hostAndPort}/crl/node.crl",
                              tlsCrlDistPoint: String? = "http://${server.hostAndPort}/crl/empty.crl",
                              maxMessageSize: Int = MAX_MESSAGE_SIZE): Pair<AMQPServer, X509Certificate> {
+        return createServer(port, name, crlCheckSoftFail.toRevocationConfig(), nodeCrlDistPoint, tlsCrlDistPoint, maxMessageSize)
+    }
+
+    private fun createServer(port: Int, name: CordaX500Name = ALICE_NAME,
+                             revocationConfig: RevocationConfig,
+                             nodeCrlDistPoint: String = "http://${server.hostAndPort}/crl/node.crl",
+                             tlsCrlDistPoint: String? = "http://${server.hostAndPort}/crl/empty.crl",
+                             maxMessageSize: Int = MAX_MESSAGE_SIZE): Pair<AMQPServer, X509Certificate> {
         val baseDirectory = temporaryFolder.root.toPath() / "server"
         val certificatesDirectory = baseDirectory / "certificates"
         val p2pSslConfiguration = CertificateStoreStubs.P2P.withCertificatesDirectory(certificatesDirectory)
@@ -401,7 +422,6 @@ class CertificateRevocationListNodeTests {
             doReturn(name).whenever(it).myLegalName
             doReturn(p2pSslConfiguration).whenever(it).p2pSslOptions
             doReturn(signingCertificateStore).whenever(it).signingCertificateStore
-            doReturn(crlCheckSoftFail).whenever(it).crlCheckSoftFail
         }
         serverConfig.configureWithDevSSLCertificate()
         val nodeCert = (signingCertificateStore to p2pSslConfiguration).recreateNodeCaAndTlsCertificates(nodeCrlDistPoint, tlsCrlDistPoint)
@@ -409,7 +429,7 @@ class CertificateRevocationListNodeTests {
         val amqpConfig = object : AMQPConfiguration {
             override val keyStore = keyStore
             override val trustStore = serverConfig.p2pSslOptions.trustStore.get()
-            override val crlCheckSoftFail: Boolean = crlCheckSoftFail
+            override val revocationConfig = revocationConfig
             override val maxMessageSize: Int = maxMessageSize
         }
         return Pair(AMQPServer(
@@ -470,6 +490,74 @@ class CertificateRevocationListNodeTests {
         return builder.build(issuerSigner).toJca()
     }
 
+    @Test
+    fun `verify CRL algorithms`() {
+        val ECDSA_ALGORITHM = "SHA256withECDSA"
+        val EC_ALGORITHM = "EC"
+        val EMPTY_CRL = "empty.crl"
+
+        val crl = createRevocationList(
+                server,
+                ECDSA_ALGORITHM,
+                ROOT_CA.certificate,
+                ROOT_CA.keyPair.private,
+                EMPTY_CRL,
+                true)
+        // This should pass.
+        crl.verify(ROOT_CA.keyPair.public)
+
+        // Try changing the algorithm to EC will fail.
+        assertThatIllegalArgumentException().isThrownBy {
+            createRevocationList(
+                    server,
+                    EC_ALGORITHM,
+                    ROOT_CA.certificate,
+                    ROOT_CA.keyPair.private,
+                    EMPTY_CRL,
+                    true
+            )
+        }.withMessage("Unknown signature type requested: EC")
+    }
+
+    @Test
+    fun `AMPQ Client to Server connection works when client certificate is revoked and CRL check is OFF`() {
+
+        val revocationConfig = RevocationConfigImpl(RevocationConfig.Mode.OFF)
+
+        val (amqpServer, _) = createServer(serverPort, revocationConfig = revocationConfig)
+        amqpServer.use {
+            amqpServer.start()
+            val checkPerformed = AtomicBoolean(false)
+            val receiveSubs = amqpServer.onReceive.subscribe {
+                assertEquals(BOB_NAME.toString(), it.sourceLegalName)
+                assertEquals(P2P_PREFIX + "Test", it.topic)
+                assertEquals("Test", String(it.payload))
+                it.complete(true)
+                checkPerformed.set(true)
+            }
+            val (amqpClient, clientCert) = createClient(serverPort, revocationConfig = revocationConfig)
+            revokedNodeCerts.add(clientCert.serialNumber)
+            amqpClient.use {
+                val serverConnected = amqpServer.onConnection.toFuture()
+                val clientConnected = amqpClient.onConnection.toFuture()
+                amqpClient.start()
+                val serverConnect = serverConnected.get()
+                assertEquals(true, serverConnect.connected)
+                val clientConnect = clientConnected.get()
+                assertEquals(true, clientConnect.connected)
+                val msg = amqpClient.createMessage("Test".toByteArray(),
+                        P2P_PREFIX + "Test",
+                        ALICE_NAME.toString(),
+                        emptyMap())
+                amqpClient.write(msg)
+                assertEquals(MessageStatus.Acknowledged, msg.onComplete.get())
+                assertTrue(checkPerformed.get())
+                receiveSubs.unsubscribe()
+            }
+        }
+        assertEquals(0, crlServerHitCount.get())
+    }
+
     @Path("crl")
     inner class CrlServlet(private val server: CrlServer) {
 
@@ -482,6 +570,7 @@ class CertificateRevocationListNodeTests {
         @Path("node.crl")
         @Produces("application/pkcs7-crl")
         fun getNodeCRL(): Response {
+            crlServerHitCount.incrementAndGet()
             return Response.ok(CertificateRevocationListNodeTests.createRevocationList(
                     server,
                     SIGNATURE_ALGORITHM,
@@ -497,6 +586,7 @@ class CertificateRevocationListNodeTests {
         @Path("intermediate.crl")
         @Produces("application/pkcs7-crl")
         fun getIntermediateCRL(): Response {
+            crlServerHitCount.incrementAndGet()
             return Response.ok(createRevocationList(
                     server,
                     SIGNATURE_ALGORITHM,
@@ -512,6 +602,7 @@ class CertificateRevocationListNodeTests {
         @Path("empty.crl")
         @Produces("application/pkcs7-crl")
         fun getEmptyCRL(): Response {
+            crlServerHitCount.incrementAndGet()
             return Response.ok(createRevocationList(
                     server,
                     SIGNATURE_ALGORITHM,
@@ -558,34 +649,5 @@ class CertificateRevocationListNodeTests {
                 addServlet(jerseyServlet, "/*")
             }
         }
-    }
-
-    @Test
-    fun `verify CRL algorithms`() {
-        val ECDSA_ALGORITHM = "SHA256withECDSA"
-        val EC_ALGORITHM = "EC"
-        val EMPTY_CRL = "empty.crl"
-
-        val crl = createRevocationList(
-                server,
-                ECDSA_ALGORITHM,
-                ROOT_CA.certificate,
-                ROOT_CA.keyPair.private,
-                EMPTY_CRL,
-                true)
-        // This should pass.
-        crl.verify(ROOT_CA.keyPair.public)
-
-        // Try changing the algorithm to EC will fail.
-        assertThatIllegalArgumentException().isThrownBy {
-            createRevocationList(
-                    server,
-                    EC_ALGORITHM,
-                    ROOT_CA.certificate,
-                    ROOT_CA.keyPair.private,
-                    EMPTY_CRL,
-                    true
-            )
-        }.withMessage("Unknown signature type requested: EC")
     }
 }

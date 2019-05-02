@@ -7,11 +7,10 @@ import net.corda.bridge.services.config.BridgeConfigHelper.maskPassword
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.nodeapi.internal.config.UnknownConfigurationKeysException
 import net.corda.nodeapi.internal.config.toConfig
 import net.corda.nodeapi.internal.protonwrapper.netty.ProxyVersion
+import net.corda.nodeapi.internal.protonwrapper.netty.RevocationConfig
 import net.corda.testing.core.SerializationEnvironmentRule
-import org.assertj.core.api.Assertions
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Rule
@@ -224,15 +223,6 @@ class ConfigTest {
     }
 
     @Test
-    fun `Load invalid option config`() {
-        val configResource = "/net/corda/bridge/invalidoption/firewall.conf"
-
-        Assertions.assertThatThrownBy { createAndLoadConfigFromResource(tempFolder.root.toPath(), configResource) }
-                .isInstanceOf(UnknownConfigurationKeysException::class.java)
-                .hasMessageContaining("invalidOption")
-    }
-
-    @Test
     fun `Load with sslKeystore path overridden`() {
         val configResource = "/net/corda/bridge/keystoreoverride/firewall.conf"
         val config = createAndLoadConfigFromResource(tempFolder.root.toPath(), configResource)
@@ -281,5 +271,26 @@ class ConfigTest {
                         assertFalse(configString.contains(it))
                     }
                 }
+    }
+
+    @Test
+    fun `crlCheckSoftFail old style implicit`() {
+        val configResource = "/net/corda/bridge/crlCheckSoftFail/firewall_old_implicit.conf"
+        val config = createAndLoadConfigFromResource(tempFolder.root.toPath(), configResource)
+        assertEquals(RevocationConfig.Mode.SOFT_FAIL, config.revocationConfig.mode)
+    }
+
+    @Test
+    fun `crlCheckSoftFail old style explicit`(){
+        val configResource = "/net/corda/bridge/crlCheckSoftFail/firewall_old_explicit.conf"
+        val config = createAndLoadConfigFromResource(tempFolder.root.toPath(), configResource)
+        assertEquals(RevocationConfig.Mode.HARD_FAIL, config.revocationConfig.mode)
+    }
+
+    @Test
+    fun `crlCheckSoftFail new style`() {
+        val configResource = "/net/corda/bridge/crlCheckSoftFail/firewall_new.conf"
+        val config = createAndLoadConfigFromResource(tempFolder.root.toPath(), configResource)
+        assertEquals(RevocationConfig.Mode.OFF, config.revocationConfig.mode)
     }
 }

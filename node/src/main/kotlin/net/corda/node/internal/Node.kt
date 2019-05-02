@@ -61,6 +61,7 @@ import net.corda.nodeapi.internal.config.MessagingServerConnectionConfiguration
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.persistence.CouldNotCreateDataSourceException
+import net.corda.nodeapi.internal.protonwrapper.netty.toRevocationConfig
 import net.corda.serialization.internal.*
 import net.corda.serialization.internal.amqp.SerializationFactoryCacheKey
 import net.corda.serialization.internal.amqp.SerializerFactory
@@ -275,7 +276,7 @@ open class Node(configuration: NodeConfiguration,
                         configuration.enterpriseConfiguration.messagingServerConnectionConfiguration,
                         configuration.enterpriseConfiguration.messagingServerBackupAddresses)
             }
-            BridgeControlListener(configuration.p2pSslOptions, null, networkParameters.maxMessageSize, configuration.crlCheckSoftFail, configuration.enableSNI, artemisClient)
+            BridgeControlListener(configuration.p2pSslOptions, null, networkParameters.maxMessageSize, configuration.crlCheckSoftFail.toRevocationConfig(), configuration.enableSNI, artemisClient)
         } else {
             null
         }

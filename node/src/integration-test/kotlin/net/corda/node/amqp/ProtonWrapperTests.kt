@@ -21,10 +21,7 @@ import net.corda.nodeapi.internal.config.CertificateStore
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.protonwrapper.messages.MessageStatus
-import net.corda.nodeapi.internal.protonwrapper.netty.AMQPClient
-import net.corda.nodeapi.internal.protonwrapper.netty.AMQPConfiguration
-import net.corda.nodeapi.internal.protonwrapper.netty.AMQPServer
-import net.corda.nodeapi.internal.protonwrapper.netty.init
+import net.corda.nodeapi.internal.protonwrapper.netty.*
 import net.corda.nodeapi.internal.registerDevP2pCertificates
 import net.corda.nodeapi.internal.registerDevSigningCertificates
 import net.corda.testing.core.*
@@ -538,7 +535,7 @@ class ProtonWrapperTests(val sslSetup: SslSetup) {
             override val trustStore = clientTruststore
             override val trace: Boolean = true
             override val maxMessageSize: Int = maxMessageSize
-            override val crlCheckSoftFail: Boolean = clientConfig.crlCheckSoftFail
+            override val revocationConfig: RevocationConfig = clientConfig.crlCheckSoftFail.toRevocationConfig()
             override val sourceX500Name = BOB_NAME.toString()
             override val useOpenSsl: Boolean = sslSetup.clientNative
         }
@@ -572,7 +569,7 @@ class ProtonWrapperTests(val sslSetup: SslSetup) {
             override val trustStore = clientTruststore
             override val trace: Boolean = true
             override val maxMessageSize: Int = maxMessageSize
-            override val crlCheckSoftFail: Boolean = clientConfig.crlCheckSoftFail
+            override val revocationConfig: RevocationConfig = clientConfig.crlCheckSoftFail.toRevocationConfig()
             override val useOpenSsl: Boolean = sslSetup.clientNative
         }
         return AMQPClient(
@@ -607,7 +604,7 @@ class ProtonWrapperTests(val sslSetup: SslSetup) {
             override val trustStore = serverTruststore
             override val trace: Boolean = true
             override val maxMessageSize: Int = maxMessageSize
-            override val crlCheckSoftFail: Boolean = serverConfig.crlCheckSoftFail
+            override val revocationConfig: RevocationConfig = serverConfig.crlCheckSoftFail.toRevocationConfig()
             override val useOpenSsl: Boolean = sslSetup.serverNative
         }
         return AMQPServer(
