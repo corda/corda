@@ -1,4 +1,4 @@
-package net.corda.testing.db
+package net.corda.testing.internal.db
 
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory

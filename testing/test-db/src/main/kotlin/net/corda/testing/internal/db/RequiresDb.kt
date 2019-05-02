@@ -1,4 +1,4 @@
-package net.corda.testing.db
+package net.corda.testing.internal.db
 
 import org.junit.jupiter.api.extension.ExtendWith
 
@@ -17,7 +17,7 @@ import org.junit.jupiter.api.extension.ExtendWith
 @Target(AnnotationTarget.CLASS)
 annotation class RequiresDb(
         val group: String = "default",
-        val defaultContextClassName: String = "net.corda.testing.db.NoOpTestDatabaseContext")
+        val defaultContextClassName: String = "net.corda.testing.internal.db.NoOpTestDatabaseContext")
 
 /**
  * An annotation which is applied to test classes and methods to indicate that the corresponding test suite  / instance requires SQL scripts

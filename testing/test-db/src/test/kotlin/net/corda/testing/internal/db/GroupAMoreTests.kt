@@ -1,8 +1,8 @@
-package net.corda.testing.db
+package net.corda.testing.internal.db
 
 import org.junit.jupiter.api.Test
 
-@RequiresDb("groupA", "net.corda.testing.db.AssertingTestDatabaseContext")
+@RequiresDb("groupA", "net.corda.testing.internal.db.AssertingTestDatabaseContext")
 class GroupAMoreTests {
 
     @Test

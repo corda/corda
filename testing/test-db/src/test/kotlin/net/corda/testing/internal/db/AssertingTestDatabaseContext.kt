@@ -1,4 +1,4 @@
-package net.corda.testing.db
+package net.corda.testing.internal.db
 
 import org.assertj.core.api.Assertions.assertThat
 import org.slf4j.Logger
