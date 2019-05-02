@@ -373,6 +373,7 @@ bintrayConfig {
             'corda-node-api',
             'corda-test-common',
             'corda-test-utils',
+            'corda-test-db',
             'corda-jackson',
             'corda-webserver-impl',
             'corda-webserver',

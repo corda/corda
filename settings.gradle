@@ -28,10 +28,11 @@ include 'jdk8u-deterministic'
 include 'test-common'
 include 'test-cli'
 include 'test-utils'
+include 'test-db'
 include 'smoke-test-utils'
 include 'node-driver'
 // Avoid making 'testing' a project, and allow build.gradle files to refer to these by their simple names:
-['test-common', 'test-utils', 'test-cli', 'smoke-test-utils', 'node-driver'].each {
+['test-common', 'test-utils', 'test-cli', 'test-db', 'smoke-test-utils', 'node-driver'].each {
     project(":$it").projectDir = new File("$settingsDir/testing/$it")
 }
 include 'tools:explorer'
