@@ -104,8 +104,10 @@ Signature Constraints. This ensures that the version of each app is acceptable t
 If a node receives a transaction that uses a contract attachment that it doesn't trust, but there is an attachment present on the node with
 the same contract classes and same signatures, then the node will execute that contract's code as if it were trusted. This means that nodes
 are no longer required to have every version of a CorDapp uploaded to them in order to verify transactions running older version of a CorDapp.
-Instead, it is sufficient to have any version of the CorDapp contract installed. If there are any third party dependencies attached to the
-transaction, these will be trusted if there are any trusted attachments in the node's attachment store that are signed by the same keys.
+Instead, it is sufficient to have any version of the CorDapp contract installed.
+
+For third party dependencies attached to the transaction, the rule is slightly different. In this case, the attachment will be trusted by the
+node provided there is another trusted attachment in the node's attachment store that has been signed with the same keys.
 
 More information on how to sign an app directly from Gradle can be found in the
 :ref:`CorDapp Jar signing <cordapp_build_system_signing_cordapp_jar_ref>` section of the documentation.
