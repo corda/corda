@@ -69,7 +69,7 @@ It is possible to utilize the image to automatically generate a sensible minimal
 Joining TestNet
 ---------------
 
-.. note:: Requirements: A valid registration for TestNet and a one-time code for joining TestNet.
+.. note:: Requirements: A valid registration for TestNet and a one-time code for joining TestNet. Certificate and configuration folders should be accessible from the container. Docker will create folders using the permissions of it's daemon if they don't exist and the container may fail accessing them.
 
 .. code-block:: shell
 
