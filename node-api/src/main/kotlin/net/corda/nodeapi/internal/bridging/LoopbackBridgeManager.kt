@@ -10,7 +10,7 @@ import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_P2P_U
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.RemoteInboxAddress.Companion.translateInboxAddressToLocalQueue
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.RemoteInboxAddress.Companion.translateLocalQueueToInboxAddress
 import net.corda.nodeapi.internal.ArtemisSessionProvider
-import net.corda.nodeapi.internal.config.MutualSslConfiguration
+import net.corda.nodeapi.internal.config.CertificateStore
 import net.corda.nodeapi.internal.protonwrapper.messages.impl.SendableMessageImpl
 import net.corda.nodeapi.internal.protonwrapper.netty.ProxyConfig
 import net.corda.nodeapi.internal.protonwrapper.netty.RevocationConfig
@@ -27,7 +27,9 @@ import org.slf4j.MDC
  *  inboxes.
  */
 @VisibleForTesting
-class LoopbackBridgeManager(config: MutualSslConfiguration,
+class LoopbackBridgeManager(keyStore: CertificateStore,
+                            trustStore: CertificateStore,
+                            useOpenSSL: Boolean,
                             proxyConfig: ProxyConfig? = null,
                             maxMessageSize: Int,
                             revocationConfig: RevocationConfig,
@@ -35,7 +37,7 @@ class LoopbackBridgeManager(config: MutualSslConfiguration,
                             private val artemisMessageClientFactory: () -> ArtemisSessionProvider,
                             private val bridgeMetricsService: BridgeMetricsService? = null,
                             private val isLocalInbox: (String) -> Boolean,
-                            trace: Boolean) : AMQPBridgeManager(config, proxyConfig, maxMessageSize, revocationConfig, enableSNI, artemisMessageClientFactory, bridgeMetricsService, trace) {
+                            trace: Boolean) : AMQPBridgeManager(keyStore, trustStore, useOpenSSL, proxyConfig, maxMessageSize, revocationConfig, enableSNI, artemisMessageClientFactory, bridgeMetricsService, trace) {
 
     companion object {
         private val log = contextLogger()

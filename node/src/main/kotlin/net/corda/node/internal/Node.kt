@@ -266,7 +266,7 @@ open class Node(configuration: NodeConfiguration,
 
         val externalBridge = configuration.enterpriseConfiguration.externalBridge
         val bridgeControlListener = if (externalBridge == null || !externalBridge) {
-            val artemisClient =  {
+            val artemisClient = {
                 ArtemisMessagingClient(configuration.p2pSslOptions,
                         network.serverAddress,
                         networkParameters.maxMessageSize,
@@ -276,7 +276,14 @@ open class Node(configuration: NodeConfiguration,
                         configuration.enterpriseConfiguration.messagingServerConnectionConfiguration,
                         configuration.enterpriseConfiguration.messagingServerBackupAddresses)
             }
-            BridgeControlListener(configuration.p2pSslOptions, null, networkParameters.maxMessageSize, configuration.crlCheckSoftFail.toRevocationConfig(), configuration.enableSNI, artemisClient)
+            BridgeControlListener(configuration.p2pSslOptions.keyStore.get(),
+                    configuration.p2pSslOptions.trustStore.get(),
+                    configuration.p2pSslOptions.useOpenSsl,
+                    null,
+                    networkParameters.maxMessageSize,
+                    configuration.crlCheckSoftFail.toRevocationConfig(),
+                    configuration.enableSNI,
+                    artemisClient)
         } else {
             null
         }
@@ -340,9 +347,13 @@ open class Node(configuration: NodeConfiguration,
                             Thread.sleep(delay)
                             delay = Math.min(2L * delay, 60000L)
                             retry = true
-                        } else { throw e } // Preserve old behaviour
+                        } else {
+                            throw e
+                        } // Preserve old behaviour
                     }
-                    else -> { throw e } // All other exceptions are thrown to cause the node to exit
+                    else -> {
+                        throw e
+                    } // All other exceptions are thrown to cause the node to exit
                 }
             }
         } while (retry)
@@ -562,7 +573,7 @@ open class Node(configuration: NodeConfiguration,
 
                 checkpointSerializer = KryoCheckpointSerializer,
                 checkpointContext = KRYO_CHECKPOINT_CONTEXT.withClassLoader(classloader)
-            )
+        )
     }
 
     /** Starts a blocking event loop for message dispatch. */

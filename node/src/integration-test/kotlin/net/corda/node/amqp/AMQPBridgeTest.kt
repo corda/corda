@@ -374,7 +374,13 @@ class AMQPBridgeTest(private val useOpenSsl: Boolean, private val enableSNI: Boo
 
         artemisServer.start()
         artemisClient.start()
-        val bridgeManager = AMQPBridgeManager(artemisConfig.p2pSslOptions, artemisAddress, MAX_MESSAGE_SIZE, artemisConfig.crlCheckSoftFail.toRevocationConfig(), enableSNI)
+        val bridgeManager = AMQPBridgeManager(artemisConfig.p2pSslOptions.keyStore.get(),
+                artemisConfig.p2pSslOptions.trustStore.get(),
+                artemisConfig.p2pSslOptions.useOpenSsl,
+                null,
+                MAX_MESSAGE_SIZE,
+                artemisConfig.crlCheckSoftFail.toRevocationConfig(),
+                enableSNI, { ArtemisMessagingClient(artemisConfig.p2pSslOptions, artemisAddress, MAX_MESSAGE_SIZE) }, trace = false)
         bridgeManager.start()
         val artemis = artemisClient.started!!
         if (sourceQueueName != null) {

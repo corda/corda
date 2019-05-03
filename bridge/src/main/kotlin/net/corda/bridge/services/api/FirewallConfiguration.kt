@@ -3,6 +3,7 @@ package net.corda.bridge.services.api
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
+import net.corda.nodeapi.internal.cryptoservice.SupportedCryptoServices
 import net.corda.nodeapi.internal.protonwrapper.netty.ProxyConfig
 import net.corda.nodeapi.internal.protonwrapper.netty.RevocationConfig
 import java.nio.file.Path
@@ -29,9 +30,8 @@ enum class FirewallMode {
 }
 
 interface BridgeSSLConfiguration : MutualSslConfiguration {
-    val revocationConfig: RevocationConfig
+val revocationConfig: RevocationConfig
 }
-
 /**
  * Details of the local Artemis broker.
  * Required in SenderReceiver and BridgeInner modes.
@@ -119,9 +119,19 @@ interface FirewallConfiguration {
     val p2pConfirmationWindowSize: Int
     val whitelistedHeaders: List<String>
     val publicSSLConfiguration: MutualSslConfiguration
+    val publicCryptoServiceConfig: CryptoServiceConfig?
+    val tunnelingCryptoServiceConfig: CryptoServiceConfig? // Location for the cryptoService conf file.
+
     val auditServiceConfiguration: AuditServiceConfiguration
     // An optional Health Check Phrase which if passed through the channel will cause AMQP Server to echo it back instead of doing normal pipeline processing
     val healthCheckPhrase: String?
     val silencedIPs: Set<String>
+
+    val sslHandshakeTimeout:Long
     val revocationConfig: RevocationConfig
+}
+
+interface CryptoServiceConfig {
+    val name: SupportedCryptoServices?
+    val conf: Path?
 }

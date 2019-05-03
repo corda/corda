@@ -38,14 +38,16 @@ import kotlin.concurrent.withLock
  *  The Netty thread pool used by the AMQPBridges is also shared and managed by the AMQPBridgeManager.
  */
 @VisibleForTesting
-open class AMQPBridgeManager(config: MutualSslConfiguration,
+open class AMQPBridgeManager(keyStore: CertificateStore,
+                             trustStore: CertificateStore,
+                             useOpenSSL: Boolean,
                              proxyConfig: ProxyConfig? = null,
                              maxMessageSize: Int,
                              revocationConfig: RevocationConfig,
                              enableSNI: Boolean,
                              private val artemisMessageClientFactory: () -> ArtemisSessionProvider,
                              private val bridgeMetricsService: BridgeMetricsService? = null,
-                             private val trace: Boolean) : BridgeManager {
+                             trace: Boolean) : BridgeManager {
 
     private val lock = ReentrantLock()
     private val queueNamesToBridgesMap = mutableMapOf<String, MutableList<AMQPBridge>>()
@@ -58,29 +60,11 @@ open class AMQPBridgeManager(config: MutualSslConfiguration,
                                         override val useOpenSsl: Boolean,
                                         override val enableSNI: Boolean,
                                         override val sourceX500Name: String? = null,
-                                        override val trace: Boolean) : AMQPConfiguration {
-        constructor(config: MutualSslConfiguration, proxyConfig: ProxyConfig?, maxMessageSize: Int, revocationConfig: RevocationConfig, enableSNI: Boolean, trace: Boolean) : this(config.keyStore.get(),
-                config.trustStore.get(),
-                proxyConfig,
-                maxMessageSize,
-                revocationConfig,
-                config.useOpenSsl,
-                enableSNI,
-                trace = trace)
-    }
+                                        override val trace: Boolean) : AMQPConfiguration
 
-    private val amqpConfig: AMQPConfiguration = AMQPConfigurationImpl(config, proxyConfig, maxMessageSize, revocationConfig, enableSNI, trace)
+    private val amqpConfig: AMQPConfiguration = AMQPConfigurationImpl(keyStore, trustStore, proxyConfig, maxMessageSize, revocationConfig,useOpenSSL, enableSNI, trace = trace)
     private var sharedEventLoopGroup: EventLoopGroup? = null
     private var artemis: ArtemisSessionProvider? = null
-
-    constructor(config: MutualSslConfiguration,
-                p2pAddress: NetworkHostAndPort,
-                maxMessageSize: Int,
-                revocationConfig: RevocationConfig,
-                enableSNI: Boolean,
-                proxyConfig: ProxyConfig? = null,
-                trace: Boolean = false)
-            : this(config, proxyConfig, maxMessageSize, revocationConfig, enableSNI, { ArtemisMessagingClient(config, p2pAddress, maxMessageSize) }, trace = trace)
 
     companion object {
         private const val NUM_BRIDGE_THREADS = 0 // Default sized pool
@@ -173,8 +157,9 @@ open class AMQPBridgeManager(config: MutualSslConfiguration,
                 synchronized(artemis) {
                     if (connected) {
                         logInfoWithMDC("Bridge Connected")
-                        sharedEventGroup.schedule({ // during testing we found that kill -9 can fail to replay messages into the consumer until the session is restarted/remade
-                            if(!messagesReceived) { // we only make bridges if there is at least one message to process, so if none arrive hit artemis with a hammer
+                        sharedEventGroup.schedule({
+                            // during testing we found that kill -9 can fail to replay messages into the consumer until the session is restarted/remade
+                            if (!messagesReceived) { // we only make bridges if there is at least one message to process, so if none arrive hit artemis with a hammer
                                 synchronized(artemis) {
                                     logInfoWithMDC("No messages received on new bridge. Restarting Artemis session")
                                     try {
@@ -182,7 +167,7 @@ open class AMQPBridgeManager(config: MutualSslConfiguration,
                                             stop()
                                             start()
                                         }
-                                    } catch(ex: Exception) {
+                                    } catch (ex: Exception) {
                                         log.error("Restart artemis session error", ex)
                                     }
                                 }
@@ -231,7 +216,7 @@ open class AMQPBridgeManager(config: MutualSslConfiguration,
                 // Ack the message to prevent same message being sent to us again.
                 try {
                     artemisMessage.individualAcknowledge()
-                } catch(ex: ActiveMQObjectClosedException) {
+                } catch (ex: ActiveMQObjectClosedException) {
                     log.warn("Artemis message was closed")
                 }
                 return
@@ -257,7 +242,7 @@ open class AMQPBridgeManager(config: MutualSslConfiguration,
                     if (sendableMessage.onComplete.get() == MessageStatus.Acknowledged) {
                         try {
                             artemisMessage.individualAcknowledge()
-                        } catch(ex: ActiveMQObjectClosedException) {
+                        } catch (ex: ActiveMQObjectClosedException) {
                             log.warn("Artemis message was closed")
                         }
                     } else {

@@ -12,6 +12,7 @@ import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.BRIDGE_NOT
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_PREFIX
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEERS_PREFIX
 import net.corda.nodeapi.internal.ArtemisSessionProvider
+import net.corda.nodeapi.internal.config.CertificateStore
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.crypto.x509
 import net.corda.nodeapi.internal.protonwrapper.netty.ProxyConfig
@@ -28,7 +29,9 @@ import rx.subjects.PublishSubject
 import sun.security.x509.X500Name
 import java.util.*
 
-class BridgeControlListener(val config: MutualSslConfiguration,
+class BridgeControlListener(private val keyStore: CertificateStore,
+                            trustStore: CertificateStore,
+                            useOpenSSL: Boolean,
                             proxyConfig: ProxyConfig? = null,
                             maxMessageSize: Int,
                             revocationConfig: RevocationConfig,
@@ -41,9 +44,9 @@ class BridgeControlListener(val config: MutualSslConfiguration,
     private val bridgeNotifyQueue = "$BRIDGE_NOTIFY.$bridgeId"
     private val validInboundQueues = mutableSetOf<String>()
     private val bridgeManager = if (enableSNI) {
-        LoopbackBridgeManager(config, proxyConfig, maxMessageSize, revocationConfig, enableSNI, artemisMessageClientFactory, bridgeMetricsService, this::validateReceiveTopic, trace)
+        LoopbackBridgeManager(keyStore, trustStore, useOpenSSL, proxyConfig, maxMessageSize, revocationConfig, enableSNI, artemisMessageClientFactory, bridgeMetricsService, this::validateReceiveTopic, trace)
     } else {
-        AMQPBridgeManager(config, proxyConfig, maxMessageSize, revocationConfig, enableSNI, artemisMessageClientFactory, bridgeMetricsService, trace)
+        AMQPBridgeManager(keyStore, trustStore, useOpenSSL, proxyConfig, maxMessageSize, revocationConfig, enableSNI, artemisMessageClientFactory, bridgeMetricsService, trace)
     }
     private var artemis: ArtemisSessionProvider? = null
     private var controlConsumer: ClientConsumer? = null
@@ -54,7 +57,7 @@ class BridgeControlListener(val config: MutualSslConfiguration,
                 maxMessageSize: Int,
                 revocationConfig: RevocationConfig,
                 enableSNI: Boolean,
-                proxy: ProxyConfig? = null) : this(config, proxy, maxMessageSize, revocationConfig, enableSNI, { ArtemisMessagingClient(config, p2pAddress, maxMessageSize) })
+                proxy: ProxyConfig? = null) : this(config.keyStore.get(), config.trustStore.get(), config.useOpenSsl, proxy, maxMessageSize, revocationConfig, enableSNI, { ArtemisMessagingClient(config, p2pAddress, maxMessageSize) })
 
     companion object {
         private val log = contextLogger()
@@ -226,11 +229,11 @@ class BridgeControlListener(val config: MutualSslConfiguration,
     }
 
     private fun isConfigured(sourceX500Name: String): Boolean {
-        val keyStore = config.keyStore.get().value.internal
-        return keyStore.aliases().toList().filter { alias ->
+        val keyStore = keyStore.value.internal
+        return keyStore.aliases().toList().any { alias ->
             val x500Name = keyStore.getCertificate(alias).x509.subjectDN as X500Name
             val cordaX500Name = CordaX500Name.build(x500Name.asX500Principal())
             cordaX500Name.toString() == sourceX500Name
-        }.isNotEmpty()
+        }
     }
 }

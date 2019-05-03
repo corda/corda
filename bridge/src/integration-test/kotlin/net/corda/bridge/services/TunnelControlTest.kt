@@ -4,15 +4,19 @@ import com.nhaarman.mockito_kotlin.*
 import net.corda.bridge.*
 import net.corda.bridge.services.api.BridgeAMQPListenerService
 import net.corda.bridge.services.api.IncomingMessageFilterService
+import net.corda.bridge.services.config.CryptoServiceFactory
 import net.corda.bridge.services.ha.SingleInstanceMasterService
+import net.corda.bridge.services.receiver.CryptoServiceSigningService
 import net.corda.bridge.services.receiver.FloatControlListenerService
 import net.corda.bridge.services.receiver.TunnelingBridgeReceiverService
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_PREFIX
+import net.corda.nodeapi.internal.config.CertificateStore
 import net.corda.nodeapi.internal.protonwrapper.messages.ReceivedMessage
 import net.corda.nodeapi.internal.protonwrapper.netty.ConnectionChange
+import net.corda.nodeapi.internal.provider.extractCertificates
 import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.DUMMY_BANK_B_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
@@ -45,7 +49,7 @@ class TunnelControlTest {
         override val running: Boolean
             get() = _running
 
-        override fun provisionKeysAndActivate(keyStoreBytes: ByteArray, keyStorePassword: CharArray, keyStorePrivateKeyPassword: CharArray, trustStoreBytes: ByteArray, trustStorePassword: CharArray) {
+        override fun provisionKeysAndActivate(keyStore: CertificateStore, trustStore: CertificateStore) {
             _running = true
         }
 
@@ -66,8 +70,16 @@ class TunnelControlTest {
         bridgeConfig.createBridgeKeyStores(DUMMY_BANK_A_NAME)
         val bridgeAuditService = TestAuditService()
         val haService = SingleInstanceMasterService(bridgeConfig, bridgeAuditService)
+        val cryptoService = CryptoServiceFactory.get(bridgeConfig.publicCryptoServiceConfig, bridgeConfig.publicSSLConfiguration.keyStore)
+
+        val controlLinkSSLConfiguration = bridgeConfig.bridgeInnerConfig?.tunnelSSLConfiguration ?: bridgeConfig.publicSSLConfiguration
+        val tunnelingCryptoService = CryptoServiceFactory.get(bridgeConfig.tunnelingCryptoServiceConfig, controlLinkSSLConfiguration.keyStore)
+        val signingService = CryptoServiceSigningService(cryptoService, bridgeConfig.publicSSLConfiguration.keyStore.get().extractCertificates(), bridgeConfig.publicSSLConfiguration.trustStore.get(), bridgeConfig.sslHandshakeTimeout, bridgeAuditService)
+        val tunnelingSigningService = CryptoServiceSigningService(tunnelingCryptoService, controlLinkSSLConfiguration.keyStore.get().extractCertificates(), controlLinkSSLConfiguration.trustStore.get(), auditService = bridgeAuditService)
         val filterService = createPartialMock<TestIncomingMessageFilterService>()
-        val bridgeProxiedReceiverService = TunnelingBridgeReceiverService(bridgeConfig, bridgeAuditService, haService, filterService)
+        signingService.start()
+        tunnelingSigningService.start()
+        val bridgeProxiedReceiverService = TunnelingBridgeReceiverService(bridgeConfig, bridgeAuditService, haService, tunnelingSigningService, signingService, filterService)
         val bridgeStateFollower = bridgeProxiedReceiverService.activeChange.toBlocking().iterator
         bridgeProxiedReceiverService.start()
         assertEquals(false, bridgeStateFollower.next())
@@ -100,7 +112,7 @@ class TunnelControlTest {
         floatAuditService.start()
         assertEquals(false, floatControlListener.active)
         verify(amqpListenerService, times(0)).wipeKeysAndDeactivate()
-        verify(amqpListenerService, times(0)).provisionKeysAndActivate(any(), any(), any(), any(), any())
+        verify(amqpListenerService, times(0)).provisionKeysAndActivate(any(), any())
         assertEquals(false, serverListening("localhost", 12005))
         amqpListenerService.start()
         assertEquals(true, floatStateFollower.next())
@@ -110,14 +122,14 @@ class TunnelControlTest {
         assertEquals(true, bridgeStateFollower.next())
         assertEquals(true, bridgeProxiedReceiverService.active)
         verify(amqpListenerService, times(0)).wipeKeysAndDeactivate()
-        verify(amqpListenerService, times(1)).provisionKeysAndActivate(any(), any(), any(), any(), any())
+        verify(amqpListenerService, times(1)).provisionKeysAndActivate(any(), any())
 
         haService.stop()
         assertEquals(false, bridgeStateFollower.next())
         assertEquals(false, bridgeProxiedReceiverService.active)
         assertEquals(true, floatControlListener.active)
         verify(amqpListenerService, times(1)).wipeKeysAndDeactivate()
-        verify(amqpListenerService, times(1)).provisionKeysAndActivate(any(), any(), any(), any(), any())
+        verify(amqpListenerService, times(1)).provisionKeysAndActivate(any(), any())
         assertEquals(true, serverListening("localhost", 12005))
 
         haService.start()
@@ -125,7 +137,7 @@ class TunnelControlTest {
         assertEquals(true, bridgeProxiedReceiverService.active)
         assertEquals(true, floatControlListener.active)
         verify(amqpListenerService, times(1)).wipeKeysAndDeactivate()
-        verify(amqpListenerService, times(2)).provisionKeysAndActivate(any(), any(), any(), any(), any())
+        verify(amqpListenerService, times(2)).provisionKeysAndActivate(any(), any())
 
         floatControlListener.stop()
         assertEquals(false, floatControlListener.active)
@@ -152,7 +164,16 @@ class TunnelControlTest {
                 Unit
             }.whenever(it).sendMessageToLocalBroker(any())
         }
-        val bridgeProxiedReceiverService = TunnelingBridgeReceiverService(bridgeConfig, bridgeAuditService, haService, filterService)
+        val cryptoService = CryptoServiceFactory.get(bridgeConfig.publicCryptoServiceConfig, bridgeConfig.publicSSLConfiguration.keyStore)
+        val signingService = CryptoServiceSigningService(cryptoService, bridgeConfig.publicSSLConfiguration.keyStore.get().extractCertificates(), bridgeConfig.publicSSLConfiguration.trustStore.get(), bridgeConfig.sslHandshakeTimeout, bridgeAuditService)
+
+        val controlLinkSSLConfiguration = bridgeConfig.bridgeInnerConfig?.tunnelSSLConfiguration ?: bridgeConfig.publicSSLConfiguration
+        val tunnelingCryptoService = CryptoServiceFactory.get(bridgeConfig.tunnelingCryptoServiceConfig, controlLinkSSLConfiguration.keyStore)
+        val tunnelingSigningService = CryptoServiceSigningService(tunnelingCryptoService, controlLinkSSLConfiguration.keyStore.get().extractCertificates(), controlLinkSSLConfiguration.trustStore.get(), auditService = bridgeAuditService)
+        signingService.start()
+        tunnelingSigningService.start()
+
+        val bridgeProxiedReceiverService = TunnelingBridgeReceiverService(bridgeConfig, bridgeAuditService, haService, tunnelingSigningService, signingService, filterService)
         val bridgeStateFollower = bridgeProxiedReceiverService.activeChange.toBlocking().iterator
         bridgeProxiedReceiverService.start()
         bridgeAuditService.start()
@@ -247,5 +268,4 @@ class TunnelControlTest {
 
         floatControlListener.stop()
     }
-
 }

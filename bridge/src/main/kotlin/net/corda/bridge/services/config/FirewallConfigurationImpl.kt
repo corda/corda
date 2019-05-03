@@ -13,6 +13,7 @@ import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.internal.ArtemisMessagingComponent
 import net.corda.nodeapi.internal.config.*
+import net.corda.nodeapi.internal.cryptoservice.SupportedCryptoServices
 import net.corda.nodeapi.internal.protonwrapper.netty.ProxyConfig
 import net.corda.nodeapi.internal.protonwrapper.netty.RevocationConfig
 import java.nio.file.Path
@@ -76,6 +77,8 @@ data class FloatOuterConfigurationImpl(override val floatAddress: NetworkHostAnd
 
 data class BridgeHAConfigImpl(override val haConnectionString: String, override val haPriority: Int = 10, override val haTopic: String = "/bridge/ha") : BridgeHAConfig
 
+data class CryptoServiceConfigImpl(override val name: SupportedCryptoServices?, override val conf: Path?) : CryptoServiceConfig
+
 data class AuditServiceConfigurationImpl(override val loggingIntervalSec: Long) : AuditServiceConfiguration
 
 data class FirewallConfigurationImpl(
@@ -101,7 +104,10 @@ data class FirewallConfigurationImpl(
         override val auditServiceConfiguration: AuditServiceConfigurationImpl,
         override val healthCheckPhrase: String? = null,
         override val silencedIPs: Set<String> = emptySet(),
-        override val revocationConfig: RevocationConfig) : FirewallConfiguration {
+        override val publicCryptoServiceConfig: CryptoServiceConfigImpl?,
+        override val tunnelingCryptoServiceConfig: CryptoServiceConfigImpl?,
+        override val revocationConfig: RevocationConfig,
+        override val sslHandshakeTimeout: Long = 10000) : FirewallConfiguration {
     init {
         when (firewallMode) {
             FirewallMode.SenderReceiver -> require(inboundConfig != null && outboundConfig != null) { "Missing required configuration" }

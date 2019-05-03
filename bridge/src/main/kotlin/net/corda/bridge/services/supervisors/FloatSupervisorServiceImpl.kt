@@ -31,7 +31,7 @@ class FloatSupervisorServiceImpl(val conf: FirewallConfiguration,
         } else {
             null
         }
-        statusFollower = ServiceStateCombiner(listOf(amqpListenerService, floatControlService).filterNotNull())
+        statusFollower = ServiceStateCombiner(listOfNotNull(amqpListenerService, floatControlService))
         activeChange.subscribe({
             consoleLogger.info("FloatSupervisorService: active = $it")
         }, { log.error("Error in state change", it) })

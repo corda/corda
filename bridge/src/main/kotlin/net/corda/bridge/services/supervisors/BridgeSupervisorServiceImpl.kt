@@ -2,15 +2,18 @@ package net.corda.bridge.services.supervisors
 
 import net.corda.bridge.services.api.*
 import net.corda.bridge.services.artemis.BridgeArtemisConnectionServiceImpl
+import net.corda.bridge.services.config.CryptoServiceFactory
 import net.corda.bridge.services.filter.SimpleMessageFilterService
 import net.corda.bridge.services.ha.ExternalMasterElectionService
 import net.corda.bridge.services.ha.SingleInstanceMasterService
+import net.corda.bridge.services.receiver.CryptoServiceSigningService
 import net.corda.bridge.services.receiver.InProcessBridgeReceiverService
 import net.corda.bridge.services.receiver.TunnelingBridgeReceiverService
 import net.corda.bridge.services.sender.DirectBridgeSenderService
 import net.corda.bridge.services.util.ServiceStateCombiner
 import net.corda.bridge.services.util.ServiceStateHelper
 import net.corda.core.utilities.contextLogger
+import net.corda.nodeapi.internal.provider.extractCertificates
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import rx.Subscription
@@ -22,7 +25,7 @@ class BridgeSupervisorServiceImpl(conf: FirewallConfiguration,
                                   private val stateHelper: ServiceStateHelper = ServiceStateHelper(log)) : BridgeSupervisorService, ServiceStateSupport by stateHelper {
     companion object {
         private val log = contextLogger()
-        private val consoleLogger : Logger = LoggerFactory.getLogger("BasicInfo")
+        private val consoleLogger: Logger = LoggerFactory.getLogger("BasicInfo")
     }
 
     private val haService: BridgeMasterService
@@ -32,6 +35,8 @@ class BridgeSupervisorServiceImpl(conf: FirewallConfiguration,
     private val filterService: IncomingMessageFilterService
     private val statusFollower: ServiceStateCombiner
     private var statusSubscriber: Subscription? = null
+    private val signingService: TLSSigningService
+    private val tunnelingSigningService: TLSSigningService
 
     init {
         artemisService = BridgeArtemisConnectionServiceImpl(conf, maxMessageSize, auditService)
@@ -40,13 +45,21 @@ class BridgeSupervisorServiceImpl(conf: FirewallConfiguration,
         } else {
             ExternalMasterElectionService(conf, auditService, artemisService)
         }
-        senderService = DirectBridgeSenderService(conf, maxMessageSize, auditService, haService, artemisService)
+
+        // TODO: get keystore public data from crypto service? or from config?
+        val cryptoService = CryptoServiceFactory.get(conf.publicCryptoServiceConfig, conf.publicSSLConfiguration.keyStore)
+        signingService = CryptoServiceSigningService(cryptoService, conf.publicSSLConfiguration.keyStore.get().extractCertificates(), conf.publicSSLConfiguration.trustStore.get(), conf.sslHandshakeTimeout, auditService)
+
+        val controlLinkSSLConfiguration = conf.bridgeInnerConfig?.tunnelSSLConfiguration ?: conf.publicSSLConfiguration
+        val tunnelingCryptoService = CryptoServiceFactory.get(conf.tunnelingCryptoServiceConfig, controlLinkSSLConfiguration.keyStore)
+        tunnelingSigningService = CryptoServiceSigningService(tunnelingCryptoService, controlLinkSSLConfiguration.keyStore.get().extractCertificates(), controlLinkSSLConfiguration.trustStore.get(), auditService = auditService)
+        senderService = DirectBridgeSenderService(conf, maxMessageSize, signingService, auditService, haService, artemisService)
         filterService = SimpleMessageFilterService(conf, auditService, artemisService, senderService)
         receiverService = if (conf.firewallMode == FirewallMode.SenderReceiver) {
-            InProcessBridgeReceiverService(conf, auditService, haService, inProcessAMQPListenerService!!, filterService)
+            InProcessBridgeReceiverService(auditService, haService, signingService, inProcessAMQPListenerService!!, filterService)
         } else {
             require(inProcessAMQPListenerService == null) { "Should not have an in process instance of the AMQPListenerService" }
-            TunnelingBridgeReceiverService(conf, auditService, haService, filterService)
+            TunnelingBridgeReceiverService(conf, auditService, haService, tunnelingSigningService, signingService, filterService)
         }
         statusFollower = ServiceStateCombiner(listOf(haService, senderService, receiverService, filterService))
         activeChange.subscribe({
@@ -63,6 +76,8 @@ class BridgeSupervisorServiceImpl(conf: FirewallConfiguration,
         receiverService.start()
         filterService.start()
         haService.start()
+        signingService.start()
+        tunnelingSigningService.start()
     }
 
     override fun stop() {
@@ -74,5 +89,7 @@ class BridgeSupervisorServiceImpl(conf: FirewallConfiguration,
         artemisService.stop()
         statusSubscriber?.unsubscribe()
         statusSubscriber = null
+        signingService.stop()
+        tunnelingSigningService.stop()
     }
 }

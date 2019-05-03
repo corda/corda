@@ -206,7 +206,9 @@ class LoopbackBridgeTest(private val useOpenSsl: Boolean) {
 
         artemisServer.start()
         artemisClient.start()
-        val bridgeManager = LoopbackBridgeManager(artemisConfig.p2pSslOptions,
+        val bridgeManager = LoopbackBridgeManager(artemisConfig.p2pSslOptions.keyStore.get(),
+                artemisConfig.p2pSslOptions.trustStore.get(),
+                artemisConfig.p2pSslOptions.useOpenSsl,
                 null,
                 MAX_MESSAGE_SIZE,
                 artemisConfig.crlCheckSoftFail.toRevocationConfig(),

@@ -53,6 +53,13 @@ dependencies {
         transitive = false// we control dependencies directly as the bridge is likely to be audited
     }
 
+    // For HSM simulator
+    testCompile project(':node-api').sourceSets.test.output
+    testCompile project(':test-cli')
+    testCompile fileTree(dir: 'lib', include: 'CryptoServer*.jar')
+    // Spotify Docker client for using docker containers in integration tests
+    testCompile "com.spotify:docker-client:8.14.5"
+
     // Here we pull in dependencies that would normally be pulled in transitively from :core and :node-api, but we need more fine grained control
     // For AMQP serialisation.
     compile "org.apache.qpid:proton-j:${protonj_version}"
@@ -91,7 +98,7 @@ dependencies {
     compile "org.fusesource.jansi:jansi:$jansi_version"
 
     compile "commons-lang:commons-lang:$commons_lang_version"
-    
+
     integrationTestCompile project(':node-driver')
     integrationTestCompile "org.apache.curator:curator-test:${curator_version}"
     testCompile "junit:junit:$junit_version"

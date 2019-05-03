@@ -38,20 +38,11 @@ class BridgeAMQPListenerServiceImpl(val conf: FirewallConfiguration,
     private var onConnectAuditSubscription: Subscription? = null
     private var onReceiveSubscription: Subscription? = null
 
-    override fun provisionKeysAndActivate(keyStoreBytes: ByteArray,
-                                          keyStorePassword: CharArray,
-                                          keyStorePrivateKeyPassword: CharArray,
-                                          trustStoreBytes: ByteArray,
-                                          trustStorePassword: CharArray) {
+    override fun provisionKeysAndActivate(keyStore: CertificateStore, trustStore:CertificateStore) {
         require(active) { "AuditService must be active" }
-        require(keyStorePassword !== keyStorePrivateKeyPassword) { "keyStorePassword and keyStorePrivateKeyPassword must reference distinct arrays!" }
-
-        val keyStore = CertificateStore.of(loadKeyStore(keyStoreBytes, keyStorePassword),
-                java.lang.String.valueOf(keyStorePassword), java.lang.String.valueOf(keyStorePrivateKeyPassword)).also { wipeKeys(keyStoreBytes, keyStorePassword) }
-        val trustStore = CertificateStore.of(loadKeyStore(trustStoreBytes, trustStorePassword),
-                java.lang.String.valueOf(trustStorePassword), java.lang.String.valueOf(trustStorePassword)).also { wipeKeys(trustStoreBytes, trustStorePassword) }
         val bindAddress = conf.inboundConfig!!.listeningAddress
         val amqpConfiguration = object : AMQPConfiguration {
+            //TODO: No password for delegated keystore. Refactor this?
             override val keyStore = keyStore
             override val trustStore = trustStore
             override val maxMessageSize: Int = maximumMessageSize
@@ -59,6 +50,7 @@ class BridgeAMQPListenerServiceImpl(val conf: FirewallConfiguration,
             override val enableSNI: Boolean = conf.bridgeInnerConfig?.enableSNI ?: true
             override val healthCheckPhrase = conf.healthCheckPhrase
             override val silencedIPs: Set<String> = conf.silencedIPs
+            override val sslHandshakeTimeout: Long = conf.sslHandshakeTimeout
             override val revocationConfig: RevocationConfig = conf.revocationConfig
         }
         val server = AMQPServer(bindAddress.host,
@@ -80,20 +72,6 @@ class BridgeAMQPListenerServiceImpl(val conf: FirewallConfiguration,
         val msg = "Now listening for incoming connections on $bindAddress"
         auditService.statusChangeEvent(msg)
         consoleLogger.info(msg)
-    }
-
-    private fun wipeKeys(keyStoreBytes: ByteArray, keyStorePassword: CharArray) {
-        // We overwrite the keys we don't need anymore
-        Arrays.fill(keyStoreBytes, 0xAA.toByte())
-        Arrays.fill(keyStorePassword, 0xAA55.toChar())
-    }
-
-    private fun loadKeyStore(keyStoreBytes: ByteArray, keyStorePassword: CharArray): X509KeyStore {
-        val keyStore = KeyStore.getInstance(KEYSTORE_TYPE)
-        ByteArrayInputStream(keyStoreBytes).use {
-            keyStore.load(it, keyStorePassword)
-        }
-        return X509KeyStore(keyStore, valueOf(keyStorePassword))
     }
 
     override fun wipeKeysAndDeactivate() {
@@ -140,5 +118,4 @@ class BridgeAMQPListenerServiceImpl(val conf: FirewallConfiguration,
     private val _onConnection = PublishSubject.create<ConnectionChange>().toSerialized()
     override val onConnection: Observable<ConnectionChange>
         get() = _onConnection
-
 }

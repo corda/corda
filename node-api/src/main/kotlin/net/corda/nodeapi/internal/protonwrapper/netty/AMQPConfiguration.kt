@@ -65,6 +65,10 @@ interface AMQPConfiguration {
     val useOpenSsl: Boolean
         get() = false
 
+    @JvmDefault
+    val sslHandshakeTimeout: Long
+        get() = 10000
+
     /**
      * An optional Health Check Phrase which if passed through the channel will cause AMQP Server to echo it back instead of doing normal pipeline processing
      */
