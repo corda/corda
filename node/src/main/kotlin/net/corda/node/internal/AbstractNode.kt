@@ -841,11 +841,11 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             // Directly use the X500 name to public key map, as the identity service requires the node identity to start correctly.
             database.transaction {
                 val x500Map = PersistentIdentityService.createX500Map(cacheFactory)
-                require(x500Map[configuration.myLegalName] == null) {
+                require(configuration.myLegalName !in x500Map) {
                     // There is already a party in the identity store for this node, but the key has been lost. If this node starts up, it will
                     // publish it's new key to the network map, which Corda cannot currently handle. To prevent this, stop the node from starting.
-                    "$legalIdentityPrivateKeyAlias not found in key store, but the corresponding X500 name ${configuration.myLegalName}" +
-                            " has a keypair. This suggests the identity for this node has been lost. Shutting down to prevent network issues."
+                    "Private key for the node legal identity not found (alias $legalIdentityPrivateKeyAlias) but the corresponding public key" +
+                            " for it exists in the database. This suggests the identity for this node has been lost. Shutting down to prevent network map issues."
                 }
             }
             log.info("$legalIdentityPrivateKeyAlias not found in key store, generating fresh key!")

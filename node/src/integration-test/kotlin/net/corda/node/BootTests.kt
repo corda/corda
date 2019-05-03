@@ -5,10 +5,7 @@ import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.CordaRuntimeException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
-import net.corda.core.internal.div
-import net.corda.core.internal.isRegularFile
-import net.corda.core.internal.list
-import net.corda.core.internal.readLines
+import net.corda.core.internal.*
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.NodeStartup
@@ -18,7 +15,10 @@ import net.corda.nodeapi.internal.crypto.X509Utilities.NODE_IDENTITY_ALIAS_PREFI
 import net.corda.nodeapi.internal.registerDevSigningCertificates
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
-import net.corda.testing.driver.*
+import net.corda.testing.driver.DriverParameters
+import net.corda.testing.driver.NodeHandle
+import net.corda.testing.driver.NodeParameters
+import net.corda.testing.driver.driver
 import net.corda.testing.internal.stubs.CertificateStoreStubs
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.startNode
@@ -29,6 +29,7 @@ import java.io.ObjectInputStream
 import java.io.ObjectOutputStream
 import java.io.Serializable
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class BootTests {
     @Test
@@ -72,23 +73,19 @@ class BootTests {
     fun `node fails to start if identity key for x500 name is lost`() {
         driver(DriverParameters(notarySpecs = emptyList(), inMemoryDB = false, startNodesInProcess = false)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
-            val aliceDir = alice.baseDirectory / "certificates"
-            (aliceDir / "nodekeystore.jks").toFile().delete()
-            val cert = CertificateStoreStubs.Signing.withCertificatesDirectory(aliceDir).get(true)
+            val aliceCertDir = alice.baseDirectory / "certificates"
+            (aliceCertDir / "nodekeystore.jks").delete()
+            val cert = CertificateStoreStubs.Signing.withCertificatesDirectory(aliceCertDir).get(true)
             cert.registerDevSigningCertificates(ALICE_NAME)
-            (alice as OutOfProcess).process.destroyForcibly()
             alice.stop()
-            val customOverrides = mapOf(
-                    "p2pAddress" to "localhost:${alice.rpcAddress.port}"
-            )
             // The node shouldn't start, and the logs should indicate that the failure is due to a missing identity key
             assertThatThrownBy {
-                startNode(providedName = ALICE_NAME, customOverrides = customOverrides).getOrThrow()
+                startNode(providedName = ALICE_NAME).getOrThrow()
             }
             val logFolder = alice.baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME
             val logFile = logFolder.list { it.filter { a -> a.isRegularFile() && a.fileName.toString().startsWith("node") }.findFirst().get() }
             val lines = logFile.readLines { lines -> lines.filter { "$NODE_IDENTITY_ALIAS_PREFIX-private-key" in it }.toArray() }
-            assert(lines.count() > 0)
+            assertTrue(lines.count() > 0)
         }
     }
 }
