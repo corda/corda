@@ -35,12 +35,9 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledThreadPoolExecutor
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
 import java.util.function.Consumer
 import java.util.function.Supplier
-import java.util.concurrent.ForkJoinPool
-import java.util.concurrent.ScheduledThreadPoolExecutor
-import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicReference
 import kotlin.reflect.KProperty1
 import kotlin.reflect.full.declaredMemberProperties
 import kotlin.reflect.full.findAnnotation
@@ -228,8 +225,7 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
                 logger.info("Fetched: ${hashesToFetch.size} using $threadsToUseForNetworkMapDownload Threads in ${System.currentTimeMillis() - networkMapDownloadStartTime}ms")
                 executorToUseForDownloadingNodeInfos.shutdown()
                 executorToUseForInsertionIntoDB.shutdown()
-            }
-            waitForAllHashes.getOrThrow()
+            }.getOrThrow()
         }
 
         // Mark the network map cache as ready on a successful poll of the HTTP network map, even on the odd chance that

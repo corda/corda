@@ -2,7 +2,6 @@ package net.corda.node.services.network
 
 import com.google.common.jimfs.Configuration.unix
 import com.google.common.jimfs.Jimfs
-import com.natpryce.hamkrest.assertion.assertThat
 import com.nhaarman.mockito_kotlin.*
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
@@ -38,9 +37,7 @@ import net.corda.testing.node.internal.network.NetworkMapServer
 import net.corda.testing.node.makeTestIdentityService
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
-import org.hamcrest.CoreMatchers
 import org.hamcrest.collection.IsIterableContainingInAnyOrder
-import org.hamcrest.collection.IsIterableContainingInAnyOrder.containsInAnyOrder
 import org.junit.*
 import rx.schedulers.TestScheduler
 import java.io.IOException
