@@ -26,11 +26,8 @@ function generateTestnetConfig() {
 }
 
 function generateGenericCZConfig(){
-
-    if [[ -f /etc/corda/node.conf ]] ; then
-        echo  'WARN: existing config detected, launching corda'
-        run-corda
-    else
+    if ! [[ -f ${CONFIG_FOLDER}/node.conf ]] ; then
+        echo  'INFO: no existing node config detected, generating config skeleton'
         : ${NETWORKMAP_URL:? '$NETWORKMAP_URL, the Compatibility Zone to join must be set as environment variable'}
         : ${DOORMAN_URL:? '$DOORMAN_URL, the Doorman to use when joining must be set as environment variable'}
         : ${MY_LEGAL_NAME:? '$MY_LEGAL_NAME, the X500 name to use when joining must be set as environment variable'}
@@ -48,16 +45,15 @@ function generateGenericCZConfig(){
         MY_RPC_PORT=${MY_RPC_PORT} \
         MY_RPC_ADMIN_PORT=${MY_RPC_ADMIN_PORT} \
         java -jar config-exporter.jar "GENERIC-CZ" "/opt/corda/starting-node.conf" "${CONFIG_FOLDER}/node.conf"
-
-        java -Djava.security.egd=file:/dev/./urandom -Dcapsule.jvm.args="${JVM_ARGS}" -jar /opt/corda/bin/corda.jar \
-                initial-registration \
-                --base-directory=/opt/corda \
-                --config-file=/etc/corda/node.conf \
-                --network-root-truststore-password=${NETWORK_TRUST_PASSWORD} \
-                --network-root-truststore=${CERTIFICATES_FOLDER}/${TRUST_STORE_NAME} &&\
-        echo "Succesfully registered with ${DOORMAN_URL}, starting corda" && \
-        run-corda
     fi
+        java -Djava.security.egd=file:/dev/./urandom -Dcapsule.jvm.args="${JVM_ARGS}" -jar /opt/corda/bin/corda.jar \
+                --initial-registration \
+                --base-directory /opt/corda \
+                --config-file ${CONFIG_FOLDER}/node.conf \
+                --network-root-truststore-password ${NETWORK_TRUST_PASSWORD} \
+                --network-root-truststore ${CERTIFICATES_FOLDER}/${TRUST_STORE_NAME} && \
+        echo "Successfully registered with ${DOORMAN_URL}, starting corda" && \
+        run-corda
 }
 
 function downloadTestnetCerts() {
@@ -109,7 +105,6 @@ while :; do
     esac
     shift
 done
-
 
 : ${TRUST_STORE_NAME="network-root-truststore.jks"}
 : ${JVM_ARGS='-Xmx4g -Xms2g -XX:+UseG1GC'}
