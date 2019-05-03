@@ -82,7 +82,8 @@ class AzureKeyVaultCryptoService(private val keyVaultClient: KeyVaultClient, pri
     override fun sign(alias: String, data: ByteArray, signAlgorithm: String?): ByteArray {
         checkAlias(alias)
         // KeyVault can only sign over hashed data.
-        val digest = MessageDigest.getInstance("SHA-256")
+        val hashAlgo = getHashAlgorithmFromSignatureAlgorithm(signAlgorithm) ?: "SHA-256"
+        val digest = MessageDigest.getInstance(hashAlgo)
         digest.update(data)
         val hash = digest.digest()
         // Signing requires us to make two calls to KeyVault. First, we need to get the key to look up
@@ -96,6 +97,12 @@ class AzureKeyVaultCryptoService(private val keyVaultClient: KeyVaultClient, pri
             JsonWebKeyType.RSA, JsonWebKeyType.RSA_HSM -> result.result()
             JsonWebKeyType.EC, JsonWebKeyType.EC_HSM -> toSupportedSignature(result.result())
             else -> throw IllegalStateException("Key type $keyType not supported.")
+        }
+    }
+
+    private fun getHashAlgorithmFromSignatureAlgorithm(signAlgorithm: String?) : String? {
+        return signAlgorithm?.let {
+            signAlgorithm.toUpperCase().substringBefore("WITH").replace("SHA", "SHA-")
         }
     }
 

@@ -95,7 +95,7 @@ class UtimacoCryptoService(private val cryptoServerProvider: CryptoServerProvide
         try {
             return withAuthentication {
                 (keyStore.getKey(alias, null) as PrivateKey?)?.let {
-                    val algorithm = if (it.algorithm == "RSA") {
+                    val algorithm = signAlgorithm ?: if (it.algorithm == "RSA") {
                         "SHA256withRSA"
                     } else {
                         "SHA256withECDSA"
