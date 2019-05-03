@@ -791,7 +791,7 @@ class NodeAttachmentServiceTest {
     }
 
     @Test
-    fun `jar trusted if signed by same key and has same contracts as existing jar`() {
+    fun `jar trusted if signed by same key and has same contract as existing jar`() {
         SelfCleaningDir().use { file ->
             val alias = "testAlias"
             val password = "testPassword"
@@ -812,7 +812,7 @@ class NodeAttachmentServiceTest {
     }
 
     @Test
-    fun `jar not trusted if same keys but different contracts`() {
+    fun `jar not trusted if same key but different contract`() {
         SelfCleaningDir().use { file ->
             val alias = "testAlias"
             val password = "testPassword"
@@ -833,7 +833,7 @@ class NodeAttachmentServiceTest {
     }
 
     @Test
-    fun `jar not trusted if different keys but same contracts`() {
+    fun `jar not trusted if different key but same contract`() {
         SelfCleaningDir().use { file ->
             val alias = "testAlias"
             val password = "testPassword"
@@ -857,7 +857,7 @@ class NodeAttachmentServiceTest {
     }
 
     @Test
-    fun `neither jar trusted if same contracts and signers but not uploaded by a trusted uploader`() {
+    fun `neither jar trusted if same contract and signer but not uploaded by a trusted uploader`() {
         SelfCleaningDir().use { file ->
             val alias = "testAlias"
             val password = "testPassword"
@@ -878,7 +878,7 @@ class NodeAttachmentServiceTest {
     }
 
     @Test
-    fun `non contract jar trusted if trusted jar with same keys present`() {
+    fun `non contract jar trusted if trusted jar with same key present`() {
         SelfCleaningDir().use { file ->
             val alias = "testAlias"
             val password = "testPassword"
@@ -933,6 +933,20 @@ class NodeAttachmentServiceTest {
             // Sanity check.
             assertEquals(key1, key2, "Different public keys used to sign jars")
             assertFalse(isAttachmentTrusted(storage.openAttachment(v1Id)!!, storage), "Initial attachment $v1Id should not be trusted")
+            assertFalse(isAttachmentTrusted(storage.openAttachment(v2Id)!!, storage), "Other attachment $v2Id should not be trusted")
+        }
+    }
+
+    @Test
+    fun `non contract jars not trusted if unsigned`() {
+        SelfCleaningDir().use {
+            val (jarV1, _) = makeTestJar()
+            val (jarV2, _) = makeTestJar(extraEntries = listOf(Pair("foo", "bar")))
+
+            val v1Id = jarV1.read { storage.privilegedImportAttachment(it, "app", "dummy-attachment.jar") }
+            val v2Id = jarV2.read { storage.privilegedImportAttachment(it, "untrusted", "dummy-attachment-2.jar") }
+
+            assertTrue(isAttachmentTrusted(storage.openAttachment(v1Id)!!, storage), "Initial attachment $v1Id should not be trusted")
             assertFalse(isAttachmentTrusted(storage.openAttachment(v2Id)!!, storage), "Other attachment $v2Id should not be trusted")
         }
     }

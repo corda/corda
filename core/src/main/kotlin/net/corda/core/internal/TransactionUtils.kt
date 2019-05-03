@@ -7,7 +7,6 @@ import net.corda.core.crypto.componentHash
 import net.corda.core.crypto.sha256
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.Party
-import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.node.services.vault.AttachmentQueryCriteria
 import net.corda.core.node.services.vault.Builder
@@ -185,9 +184,10 @@ fun FlowLogic<*>.checkParameterHash(networkParametersHash: SecureHash?) {
     //       For now we don't check whether the attached network parameters match the current ones.
 }
 
-private object AttachmentTrustedCache {
-    val cache: MutableMap<AttachmentId, Boolean> = createSimpleCache<AttachmentId, Boolean>(100).toSynchronised()
-}
+private data class AttachmentAttributeKey(val signers: List<PublicKey>, val contractClasses: List<ContractClassName>?)
+
+// A cache for caching whether a particular attachment ID is trusted
+private val attachmentTrustedCache: MutableMap<AttachmentAttributeKey, Boolean> = createSimpleCache<AttachmentAttributeKey, Boolean>(100).toSynchronised()
 
 /**
  * Establishes whether an attachment should be trusted. This logic is required in order to verify transactions, as transaction
@@ -207,16 +207,17 @@ fun isAttachmentTrusted(attachment: Attachment, service: AttachmentStorage?): Bo
 
     if (trustedByUploader) return true
 
-    return if (service != null && (attachment is AbstractAttachment || attachment is ContractAttachment)) {
-        AttachmentTrustedCache.cache.computeIfAbsent(attachment.id) {
-            val signers = attachment.signerKeys
-            val contractClassCondition = if (attachment is ContractAttachment) {
-                val contractClasses = attachment.allContracts.toList()
-                Builder.equal(contractClasses)
-            } else {
-                null
-            }
+    return if (service != null) {
+        val signers = attachment.signerKeys
+        val contractClasses = if (attachment is ContractAttachment) {
+            attachment.allContracts.toList()
+        } else {
+            null
+        }
+        val key = AttachmentAttributeKey(signers, contractClasses)
 
+        attachmentTrustedCache.computeIfAbsent(key) {
+            val contractClassCondition = it.contractClasses?.let { classes -> Builder.equal(classes) }
             val queryCriteria = AttachmentQueryCriteria.AttachmentsQueryCriteria(
                     contractClassNamesCondition = contractClassCondition,
                     signersCondition = Builder.equal(signers),
