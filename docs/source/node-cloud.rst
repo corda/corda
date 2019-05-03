@@ -1,5 +1,5 @@
-Corda Enterprise Virtual Machine image
-======================================
+Corda Enterprise cloud images
+==========================================
 
 Corda Enteprise is avaliable as a Virtual Machine image on AWS and Azure.
 These are simple Linux VM with a JDK supported by a cloud provider and Corda Enterprise.
@@ -23,18 +23,19 @@ Go to corda directory:
 
     cd /opt/corda/current
 
-Review and adjust the content of the configuration files to your needs. The main configuration file is the 'node.conf' file and database specific configuration is stored in the 'dbconfig.conf' file. All Corda configuration parameters are described in https://docs.corda.r3.com/corda-configuration-file.html. Remember to adjust the 'p2paddress' to a public IP address or FQDN. The public IP address can be obtained from the shell using the following command:
+Review and adjust the content of the configuration files to your needs. The main configuration file is the 'node.conf' file and database specific configuration is stored in the 'dbconfig.conf' file. All Corda configuration parameters are described in :doc:`corda-configuration-file`. Remember to adjust the 'p2paddress' to a public IP address or FQDN. The public IP address can be obtained from the shell using the following command:
 
 .. code-block:: shell
     curl -H Metadata:true http://169.254.169.254/metadata/instance?api-version=2017-04-02| jq '.network.interface[0].ipv4.ipAddress[0].publicIpAddress'
 
  In the same time keep the RPC addresses to one of the IP addresses of the VM. (Preconfigured value of 0.0.0.0 is fine). Note that only p2p port (10002) is opened by default on an Azure firewall attached to the VM.  To enable RPC communication from a remote machine firewall has to be adjusted.
 
-Copy selected DB drivers for production quality DB (e.g. Azure DB) into the 'drivers' directory. More information on DB configuration can be found on https://docs.corda.r3.com/releases/master/node-database.html
+Copy selected DB drivers for production quality DB (e.g. Azure DB) into the 'drivers' directory. More information on DB configuration can be found on :doc:`node-database`
 
 Copy selected CorDapps into the cordapps directory and their configuration to cordapps/config subdirectory.
 
-Copy the network root trust store for a Corda network you plan to join into the 'certificates' directory. For more information please see https://docs.corda.r3.com/releases/master/running-a-notary-cluster/installing-the-notary-service-netman.html
+Copy the network root trust store for a Corda network you plan to join into the 'certificates' directory. For more information please see :doc:`installing-the-notary-service-netman`
+
 
 Start the initial registration process with:
 

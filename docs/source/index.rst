@@ -143,8 +143,7 @@ application development please continue to refer to `the main project documentat
    corda-nodes-index.rst
    corda-networks-index.rst
    docker-image.rst
-   azure-vm.rst
-   aws-vm.rst
+   node-cloud.rst
    loadtesting.rst
    cli-application-shell-extensions.rst
    certificate-revocation
