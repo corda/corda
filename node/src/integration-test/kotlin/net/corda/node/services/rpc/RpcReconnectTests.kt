@@ -257,7 +257,7 @@ class RpcReconnectTests : IntegrationTest() {
             var nrRetries = 0
 
             // It might be necessary to wait more for all events to arrive when the node is slow.
-            while (allCashStates.size < nrOfFlowsToRun && nrRetries++ < 3) {
+            while (allCashStates.size < nrOfFlowsToRun && nrRetries++ < 50) {
                 Thread.sleep(2000)
                 allCashStates = readCashStates()
             }
