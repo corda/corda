@@ -210,25 +210,4 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
     fun stripNotOurKeys(keys: Iterable<PublicKey>): Iterable<PublicKey> {
         return keys.filter { certificateFromKey(it)?.name in ourNames }
     }
-
-    override fun registerIdentityMapping(identity: Party, key: PublicKey): Boolean {
-        val certificateFromKeyOfWellKnown = certificateFromKey(identity.owningKey)
-        if (certificateFromKeyOfWellKnown == null) {
-            throw IllegalStateException("Could not find a matching certificate path for identity $identity")
-        }
-        val keyHash = key.hash
-        val existingEntry = database.transaction {
-            val existingEntry = partyFromKey(key)
-            if (existingEntry == null) {
-                log.info("Linking: ${key.hash} to ${identity.name}")
-                keyToParties[keyHash] = certificateFromKeyOfWellKnown
-            }
-            existingEntry
-        }
-        if (existingEntry != null) {
-            throw IllegalStateException("Could not register $key for party $identity as it has already been registered for $existingEntry")
-        }
-
-        return true
-    }
 }

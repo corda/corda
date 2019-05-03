@@ -63,10 +63,10 @@ class CollectSignaturesFlowTests : WithContracts {
 
     @Test
     fun `successfully collects signatures when sessions are initiated with AnonymousParty`() {
-        val aConfidentialIdentity1 = aliceNode.createConfidentialIdentity(alice).owningKey to alice
-        val bConfidentialIdentity1 = bobNode.createConfidentialIdentity(bob).owningKey to bob
-        val bConfidentialIdentity2 = bobNode.createConfidentialIdentity(bob).owningKey to bob
-        val cConfidentialIdentity1 = charlieNode.createConfidentialIdentity(charlie).owningKey to charlie
+        val aConfidentialIdentity1 = aliceNode.createConfidentialIdentity(alice)
+        val bConfidentialIdentity1 = bobNode.createConfidentialIdentity(bob)
+        val bConfidentialIdentity2 = bobNode.createConfidentialIdentity(bob)
+        val cConfidentialIdentity1 = charlieNode.createConfidentialIdentity(charlie)
 
         bobNode.registerInitiatedFlow(AnonymousSessionTestFlowResponder::class.java)
         charlieNode.registerInitiatedFlow(AnonymousSessionTestFlowResponder::class.java)
@@ -82,11 +82,11 @@ class CollectSignaturesFlowTests : WithContracts {
 
     @Test
     fun `successfully collects signatures when sessions are initiated with both AnonymousParty and WellKnownParty`() {
-        val aConfidentialIdentity1 = aliceNode.createConfidentialIdentity(alice).owningKey to alice
-        val bConfidentialIdentity1 = bobNode.createConfidentialIdentity(bob).owningKey to bob
-        val bConfidentialIdentity2 = bobNode.createConfidentialIdentity(bob).owningKey to bob
-        val cConfidentialIdentity1 = charlieNode.createConfidentialIdentity(charlie).owningKey to charlie
-        val cConfidentialIdentity2 = charlieNode.createConfidentialIdentity(charlie).owningKey to charlie
+        val aConfidentialIdentity1 = aliceNode.createConfidentialIdentity(alice)
+        val bConfidentialIdentity1 = bobNode.createConfidentialIdentity(bob)
+        val bConfidentialIdentity2 = bobNode.createConfidentialIdentity(bob)
+        val cConfidentialIdentity1 = charlieNode.createConfidentialIdentity(charlie)
+        val cConfidentialIdentity2 = charlieNode.createConfidentialIdentity(charlie)
 
         bobNode.registerInitiatedFlow(MixAndMatchAnonymousSessionTestFlowResponder::class.java)
         charlieNode.registerInitiatedFlow(MixAndMatchAnonymousSessionTestFlowResponder::class.java)
@@ -99,8 +99,8 @@ class CollectSignaturesFlowTests : WithContracts {
                 cConfidentialIdentity2
         )
 
-        val keysToLookup = listOf(bConfidentialIdentity1.first, bConfidentialIdentity2.first, cConfidentialIdentity1.first)
-        val keysToKeepAnonymous = listOf(cConfidentialIdentity2.first)
+        val keysToLookup = listOf(bConfidentialIdentity1.owningKey, bConfidentialIdentity2.owningKey, cConfidentialIdentity1.owningKey)
+        val keysToKeepAnonymous = listOf(cConfidentialIdentity2.owningKey)
 
         val future = aliceNode.startFlow(MixAndMatchAnonymousSessionTestFlow(owners, keysToLookup.toSet(), keysToKeepAnonymous.toSet())).resultFuture
         mockNet.runNetwork()
@@ -195,23 +195,25 @@ class CollectSignaturesFlowTests : WithContracts {
 }
 
 @InitiatingFlow
-class AnonymousSessionTestFlow(val keys: List<Pair<PublicKey, Party>>) : FlowLogic<SignedTransaction>() {
+class AnonymousSessionTestFlow(val cis: List<PartyAndCertificate>) : FlowLogic<SignedTransaction>() {
     @Suspendable
     override fun call(): SignedTransaction {
 
-        for ((key, party) in keys) {
-            if (party.name != ourIdentity.name) {
-                (serviceHub.identityService as IdentityServiceInternal).registerIdentityMapping(key = key, identity = party)
+        for (ci in cis) {
+            if (ci.name != ourIdentity.name) {
+                (serviceHub.identityService as IdentityServiceInternal).verifyAndRegisterIdentity(ci)
             }
         }
-        val state = DummyContract.MultiOwnerState(owners = keys.map { AnonymousParty(it.first) })
+        val state = DummyContract.MultiOwnerState(owners = cis.map { AnonymousParty(it.owningKey) })
         val create = net.corda.testing.contracts.DummyContract.Commands.Create()
         val txBuilder = TransactionBuilder(notary = serviceHub.networkMapCache.notaryIdentities.first())
                 .addOutputState(state)
-                .addCommand(create, keys.map { it.first })
-        val ourKey = keys.single { it.second.name == ourIdentity.name }.first
+                .addCommand(create, cis.map { it.owningKey })
+
+
+        val ourKey = cis.single { it.name == ourIdentity.name }.owningKey
         val signedByUsTx = serviceHub.signInitialTransaction(txBuilder, ourKey)
-        val sessionsToCollectFrom = keys.filter { it.second.name != ourIdentity.name }.map { initiateFlow(AnonymousParty(it.first)) }
+        val sessionsToCollectFrom = cis.filter { it.name != ourIdentity.name }.map { initiateFlow(AnonymousParty(it.owningKey)) }
         return subFlow(CollectSignaturesFlow(signedByUsTx, sessionsToCollectFrom, myOptionalKeys = listOf(ourKey)))
     }
 }
@@ -230,25 +232,25 @@ class AnonymousSessionTestFlowResponder(private val otherSideSession: FlowSessio
 }
 
 @InitiatingFlow
-class MixAndMatchAnonymousSessionTestFlow(val allKeys: List<Pair<PublicKey, Party>>,
+class MixAndMatchAnonymousSessionTestFlow(val cis: List<PartyAndCertificate>,
                                           val keysToLookUp: Set<PublicKey>,
                                           val keysToKeepAnonymous: Set<PublicKey>) : FlowLogic<SignedTransaction>() {
     @Suspendable
     override fun call(): SignedTransaction {
 
-        for ((key, party) in allKeys) {
-            if (party.name != ourIdentity.name) {
-                (serviceHub.identityService as IdentityServiceInternal).registerIdentityMapping(key = key, identity = party)
+        for (ci  in cis) {
+            if (ci.name != ourIdentity.name) {
+                (serviceHub.identityService as IdentityServiceInternal).verifyAndRegisterIdentity(ci)
             }
         }
-        val state = DummyContract.MultiOwnerState(owners = allKeys.map { AnonymousParty(it.first) })
+        val state = DummyContract.MultiOwnerState(owners = cis.map { AnonymousParty(it.owningKey) })
         val create = net.corda.testing.contracts.DummyContract.Commands.Create()
         val txBuilder = TransactionBuilder(notary = serviceHub.networkMapCache.notaryIdentities.first())
                 .addOutputState(state)
-                .addCommand(create, allKeys.map { it.first })
+                .addCommand(create, cis.map { it.owningKey })
 
 
-        val ourKey = allKeys.single { it.second.name == ourIdentity.name }.first
+        val ourKey = cis.single { it.name == ourIdentity.name }.owningKey
         val signedByUsTx = serviceHub.signInitialTransaction(txBuilder, ourKey)
 
         val resolvedParties = keysToLookUp.map { serviceHub.identityService.wellKnownPartyFromAnonymous(AnonymousParty(it))!! }.toSet()

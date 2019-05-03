@@ -83,6 +83,4 @@ interface IdentityServiceInternal : IdentityService {
     }
 
     fun registerIdentity(identity: PartyAndCertificate, isNewRandomIdentity: Boolean = false): PartyAndCertificate?
-
-    fun registerIdentityMapping(identity: Party, key: PublicKey): Boolean
 }
