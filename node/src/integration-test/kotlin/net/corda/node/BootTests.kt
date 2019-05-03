@@ -14,7 +14,8 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.NodeStartup
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.nodeapi.exceptions.InternalNodeException
-import net.corda.testing.common.internal.isInstanceOf
+import net.corda.nodeapi.internal.crypto.X509Utilities.NODE_IDENTITY_ALIAS_PREFIX
+import net.corda.nodeapi.internal.registerDevSigningCertificates
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.driver.*
@@ -73,16 +74,21 @@ class BootTests {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val aliceDir = alice.baseDirectory / "certificates"
             (aliceDir / "nodekeystore.jks").toFile().delete()
-            CertificateStoreStubs.Signing.withCertificatesDirectory(aliceDir).get(true)
+            val cert = CertificateStoreStubs.Signing.withCertificatesDirectory(aliceDir).get(true)
+            cert.registerDevSigningCertificates(ALICE_NAME)
             (alice as OutOfProcess).process.destroyForcibly()
             alice.stop()
             val customOverrides = mapOf(
                     "p2pAddress" to "localhost:${alice.rpcAddress.port}"
             )
+            // The node shouldn't start, and the logs should indicate that the failure is due to a missing identity key
             assertThatThrownBy {
                 startNode(providedName = ALICE_NAME, customOverrides = customOverrides).getOrThrow()
-            }.isInstanceOf<IllegalArgumentException>()
-
+            }
+            val logFolder = alice.baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME
+            val logFile = logFolder.list { it.filter { a -> a.isRegularFile() && a.fileName.toString().startsWith("node") }.findFirst().get() }
+            val lines = logFile.readLines { lines -> lines.filter { "$NODE_IDENTITY_ALIAS_PREFIX-private-key" in it }.toArray() }
+            assert(lines.count() > 0)
         }
     }
 }
