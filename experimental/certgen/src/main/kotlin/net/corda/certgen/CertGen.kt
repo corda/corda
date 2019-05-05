@@ -36,8 +36,8 @@ import java.util.*
 import javax.security.auth.x500.X500Principal
 
 /**
- * WFC Internal Corda Network Certificate Utility Tool
- * Generate the complete tree of certificates for A' or A, based on a config. This is for non-PROD use.
+ * Corda Network Certificate Generation Tool
+ * Generate the complete tree of certificates from root to nodes, based on a config. This is for non-PROD use.
  * Create CSRs for the nodes and keep the keys in JKS
  * Example confs are in resources/cert_defs.conf and csr_defs.conf
  * Two commands: cert and csr, only one can execute at a time
