@@ -43,6 +43,10 @@ import javax.security.auth.x500.X500Principal
  * Two commands: cert and csr, only one can execute at a time
  * Each command must have its own --config; --output is optional - if not provided, output will be in
  * either the certs or csrs subfolder of the folder where config file is.
+ * To test the commands in Intellij IDEA, add Run/Debug Configurations with Program arguments as
+ * cert --config ./experimental/certgen/src/main/resources/cert_defs.conf
+ * csr --config ./experimental/certgen/src/main/resources/csr_defs.conf
+ * respectively.
  */
 fun main(args: Array<String>) {
     CertGen().start(args)
@@ -540,8 +544,10 @@ class CertGen : CordaCliWrapper("certgen", "Generate certificates or CSRs") {
         val notAfter: Date = calendar.time
         /**
          * Basic Constraint
+         * Only LEGAL_IDENTITY is CA
          */
-        val basicConstraints = BasicConstraints(false)
+        val isCA = certRole == CertRole.LEGAL_IDENTITY
+        val basicConstraints = BasicConstraints(isCA)
         /**
          * Key Usage
          */
@@ -550,13 +556,7 @@ class CertGen : CordaCliWrapper("certgen", "Generate certificates or CSRs") {
         // this is for TLS
         if (certRole == CertRole.TLS) {
             keyUsage = KeyUsage(KeyUsage.digitalSignature or KeyUsage.keyEncipherment or KeyUsage.keyAgreement)
-//            calendar.set(2019, Calendar.APRIL, 15, 9, 0, 0)
-//            notAfter = calendar.time
         }
-//        else if (certRole == CertRole.LEGAL_IDENTITY) {
-//            calendar.set(2019, Calendar.APRIL, 15, 9, 0, 0)
-//            notAfter = calendar.time
-//        }
         /**
          * Extended Key Usage
          */
