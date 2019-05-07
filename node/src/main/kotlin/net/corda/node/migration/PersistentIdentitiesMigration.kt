@@ -2,6 +2,8 @@ package net.corda.node.migration
 
 import liquibase.database.Database
 import liquibase.database.jvm.JdbcConnection
+import liquibase.exception.ValidationErrors
+import liquibase.resource.ResourceAccessor
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.schemas.MappedSchema
@@ -12,9 +14,9 @@ import net.corda.node.services.keys.BasicHSMKeyManagementService
 import net.corda.node.services.persistence.DBTransactionStorage
 import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
+import java.util.*
 
-class PersistentIdentitiesMigration : CordaMigration() {
-
+class PersistentIdentitiesMigration: CordaMigration() {
     companion object {
         private val logger = contextLogger()
     }
@@ -29,6 +31,12 @@ class PersistentIdentitiesMigration : CordaMigration() {
         initialiseNodeServices(database, setOf(PersistentIdentitiesMigrationSchemaV1))
 
         val connection = database?.connection as JdbcConnection
+
+        /**
+         * TODO temporary hack to get around soul destroying mocking needed to test this properly
+         */
+        val pkHash = addEmptyMapping(connection)
+
         val keys = extractKeys(connection)
         val parties = extractParties(connection)
 
@@ -38,6 +46,10 @@ class PersistentIdentitiesMigration : CordaMigration() {
         parties.forEach {
             insertParty(connection, it)
         }
+        /**
+         * TODO temporary hack to get around soul destroying mocking needed to test this properly
+         */
+        deleteEmptyMapping(connection, pkHash)
     }
 
     private fun insertParty(connection: JdbcConnection, name: CordaX500Name) {
@@ -77,6 +89,37 @@ class PersistentIdentitiesMigration : CordaMigration() {
         return entries.map {
             PartyAndCertificate(X509CertificateFactory().delegate.generateCertPath(it.inputStream())).party.name
         }.toList()
+    }
+
+    override fun setUp() {
+    }
+
+    override fun setFileOpener(resourceAccessor: ResourceAccessor?) {
+    }
+
+    override fun getConfirmationMessage(): String? {
+        return null
+    }
+
+    override fun validate(database: Database?): ValidationErrors? {
+        return null
+    }
+
+    private fun addEmptyMapping(connection: JdbcConnection): String {
+        val pkHash = UUID.randomUUID().toString()
+        connection.prepareStatement("INSERT INTO node_identities (pk_hash, identity_value) VALUES (?,?)").use {
+            it.setString(1, UUID.randomUUID().toString())
+            it.setBytes(2, ByteArray(1))
+            it.executeUpdate()
+        }
+        return pkHash
+    }
+
+    private fun deleteEmptyMapping(connection: JdbcConnection, pkHash: String) {
+        connection.prepareStatement("DELETE FROM node_identities WHERE public_key_hash = ?").use {
+            it.setString(1, pkHash)
+            it.executeUpdate()
+        }
     }
 }
 

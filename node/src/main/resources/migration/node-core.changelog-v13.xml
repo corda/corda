@@ -19,9 +19,9 @@
         <delete tableName="node_named_identities"/>
     </changeSet>
 
-<!--    <changeSet author="R3.Corda" id="transfer-to-new-persistence-table">-->
-<!--        <customChange class="net.corda.node.migration.PersistentIdentitiesMigration">-->
-<!--        </customChange>-->
-<!--    </changeSet>-->
+    <changeSet author="R3.Corda" id="transfer-to-new-persistence-table">
+        <customChange class="net.corda.node.migration.PersistentIdentitiesMigration">
+        </customChange>
+    </changeSet>
 
 </databaseChangeLog>
