@@ -23,7 +23,7 @@ Next, change the session user to ``corda`` (alternatively, change the user to ``
 
   sudo -u corda bash
 
-Go to the corda installation directory:
+Go to the Corda installation directory:
 
 .. code-block:: shell
 
@@ -43,10 +43,10 @@ In the same time keep the RPC addresses to one of the IP addresses of the VM. (P
 Note that only the p2p port (10002) is opened by default on a Network Security Group attached to the VM.
 To enable RPC communication from a remote machine firewall has to be adjusted.
 
-For proudction usage, copy required database drivers for an external database (e.g. Azure DB) into the ``drivers`` directory.
+For proudction usage, copy the required database drivers (e.g. Azure DB) into the ``drivers`` directory.
 More information on database configuration can be found on :doc:`node-database`
 
-Copy selected CorDapps into the cordapps directory and their configuration to the ``cordapps/config`` subdirectory.
+Copy the selected CorDapps into the cordapps directory and their configuration to the ``cordapps/config`` subdirectory.
 
 Copy the network root trust store for a Corda network you plan to join into the ``certificates`` directory.
 
@@ -58,8 +58,7 @@ Start the initial registration process with:
 
   java -jar corda.jar initial-registration -p <PASSWORD_FOR_NETWORK_ROOT_TRUSTORE>
 
-When the node registers the corda systemd process can be started.
-After the node has registered, verify that all files in the ``/opt/corda/current`` directory (and its subdirectories) are owned by the `corda` user.
+After the node has registered, verify that all files in the ``/opt/corda/current`` directory (and its subdirectories) are owned by the ``corda`` user.
 Then the systemd ``corda`` service can be started.
 
 .. code-block:: shell
@@ -92,7 +91,7 @@ Next, change the session user to ``corda`` (alternatively, change the user to ``
 
   sudo -u corda bash
 
-Go to corda directory:
+Go to the Corda installation directory:
 
 .. code-block:: shell
 
@@ -113,10 +112,10 @@ In the same time keep the RPC addresses to one of the IP addresses of the VM.
 Note that only the p2p port (10002) is opened by default in a Security Group attached to the VM.
 To enable RPC communication from a remote machine firewall has to be adjusted.
 
-For proudction usage, copy required database drivers for an external database into the ``drivers`` directory.
+For proudction usage, copy the required database drivers into the ``drivers`` directory.
 More information on database configuration can be found at :doc:`node-database`
 
-Copy selected CorDapps into the cordapps directory and their configuration to the ``cordapps/config`` subdirectory.
+Copy the selected CorDapps into the cordapps directory and their configuration to the ``cordapps/config`` subdirectory.
 
 Copy the network root trust store for a Corda network you plan to join into the ``certificates`` directory.
 
@@ -128,8 +127,7 @@ Start the initial registration process with:
 
   java -jar corda.jar initial-registration -p <PASSWORD_FOR_NETWORK_ROOT_TRUSTORE>
 
-When the node registers the corda systemd process can be started.
-After the node has registered, verify that all files in the ``/opt/corda/current`` directory (and its subdirectories) are owned by the `corda` user.
+After the node has registered, verify that all files in the ``/opt/corda/current`` directory (and its subdirectories) are owned by the ``corda`` user.
 Then the systemd ``corda`` service can be started.
 
 .. code-block:: shell
