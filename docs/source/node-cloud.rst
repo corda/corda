@@ -68,7 +68,7 @@ Then the systemd ``corda`` service can be started.
   sudo chown -R corda:corda /opt/corda/current # to change file ownership
   sudo systemctl start corda
 
-You can check the status of corda service by running:
+You can check the status of the ``corda`` service by running:
 
 .. code-block:: shell
 
@@ -138,7 +138,7 @@ Then the systemd ``corda`` service can be started.
   sudo chown -R corda:corda /opt/corda/current # to change file ownership
   sudo systemctl start corda
 
-You can check the status of corda service by running:
+You can check the status of the ``corda`` service by running:
 
 .. code-block:: shell
 
