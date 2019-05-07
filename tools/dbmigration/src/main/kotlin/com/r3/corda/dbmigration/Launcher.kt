@@ -3,8 +3,10 @@
 package com.r3.corda.dbmigration
 
 import com.typesafe.config.Config
-import liquibase.exception.MigrationFailedException
-import net.corda.cliutils.*
+import net.corda.cliutils.CordaCliWrapper
+import net.corda.cliutils.ExitCodes
+import net.corda.cliutils.ShellConstants
+import net.corda.cliutils.start
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.Emoji
 import net.corda.core.internal.div
@@ -14,7 +16,6 @@ import net.corda.node.internal.DataSourceFactory.createDatasourceFromDriverJarFo
 import net.corda.nodeapi.internal.config.UnknownConfigKeysPolicy
 import net.corda.nodeapi.internal.config.parseAs
 import net.corda.nodeapi.internal.cordapp.CordappLoader
-import net.corda.nodeapi.internal.persistence.CheckpointsException
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.SchemaMigration
 import org.slf4j.Logger
@@ -119,20 +120,25 @@ abstract class DbManagerConfiguration(private val cmdLineOptions: SharedDbManage
         val jarDirs = config.jarDirs.map { Paths.get(it) }
         for (jarDir in jarDirs) {
             if (!jarDir.exists()) {
-                error("Could not find the configured JDBC driver directory: '$jarDir'.")
+                throw error("Could not find the configured JDBC driver directory: '$jarDir'.")
             }
         }
-
-        return try {
-            withDatasource(createDatasourceFromDriverJarFolders(config.dataSourceProperties, classLoader, driversFolder + jarDirs))
+        val dataSource = createDataSource(driversFolder, jarDirs)
+        try {
+            withDatasource(dataSource)
         } catch (e: Exception) {
-            when (e) {
-                is CheckpointsException, is MigrationFailedException -> error(e)
-                else -> wrappedError("""Failed to create datasource.
-                |Please check that the correct JDBC driver is installed in one of the following folders:
-                |${(driversFolder + jarDirs).joinToString("\n\t - ", "\t - ")}
-                |Caused By $e""".trimMargin(), e)
-            }
+            throw wrappedError("Migration failed:\nCaused By $e", e)
+        }
+    }
+
+    private fun createDataSource(driversFolder: List<Path>, jarDirs: List<Path>): DataSource {
+        return try {
+            createDatasourceFromDriverJarFolders(config.dataSourceProperties, classLoader, driversFolder + jarDirs)
+        } catch (e: Exception) {
+            throw wrappedError("""Failed to create datasource.
+                    |Please check that the correct JDBC driver is installed in one of the following folders:
+                    |${(driversFolder + jarDirs).joinToString("\n\t - ", "\t - ")}
+                    |Caused By $e""".trimMargin(), e)
         }
     }
 
@@ -144,14 +150,14 @@ abstract class DbManagerConfiguration(private val cmdLineOptions: SharedDbManage
 class ConfigurationException(message: String) : Exception(message)
 class WrappedConfigurationException(message: String, val innerException: Exception) : Exception(message)
 
-fun wrappedError(message: String, innerException: Exception) {
+fun wrappedError(message: String, innerException: Exception): WrappedConfigurationException {
     errorLogger.error(message, innerException)
-    throw WrappedConfigurationException(message, innerException)
+    return WrappedConfigurationException(message, innerException)
 }
 
-fun error(exception: Exception) {
+fun error(exception: Exception): Exception {
     errorLogger.error(exception.message, exception)
-    throw exception
+    return exception
 }
 
 private fun error(message: String): Throwable {

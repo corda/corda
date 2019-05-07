@@ -181,7 +181,7 @@ class SchemaMigration(
                 }
 
                 if (unRunChanges.isNotEmpty()) {
-                    statusLogger?.info("Changesets to run (${unRunChanges.size}):\n${unRunChanges.joinToString("\n")}")
+                    statusLogger?.info("Changesets to run: ${unRunChanges.size} (${unRunChanges.joinToString(limit = 3)})")
                 } else {
                     statusLogger?.info("Database is up to date.")
                 }
