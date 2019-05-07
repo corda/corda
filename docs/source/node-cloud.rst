@@ -39,7 +39,6 @@ The public IP address can be obtained from the shell using the following command
 
   curl -H Metadata:true http://169.254.169.254/metadata/instance?api-version=2017-04-02| jq '.network.interface[0].ipv4.ipAddress[0].publicIpAddress'
 
-In the same time keep the RPC addresses to one of the IP addresses of the VM. (Preconfigured value of 0.0.0.0 is fine).
 Note that only the p2p port (10002) is opened by default on a Network Security Group attached to the VM.
 To enable RPC communication from a remote machine firewall has to be adjusted.
 
@@ -107,8 +106,6 @@ The public IP address can be obtained from the shell using the following command
 
   curl http://169.254.169.254/latest/meta-data/public-ipv4
 
-In the same time keep the RPC addresses to one of the IP addresses of the VM.
-(Preconfigured value of 0.0.0.0 is fine).
 Note that only the p2p port (10002) is opened by default in a Security Group attached to the VM.
 To enable RPC communication from a remote machine firewall has to be adjusted.
 
