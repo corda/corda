@@ -47,11 +47,12 @@ function generateGenericCZConfig(){
         java -jar config-exporter.jar "GENERIC-CZ" "/opt/corda/starting-node.conf" "${CONFIG_FOLDER}/node.conf"
     fi
         java -Djava.security.egd=file:/dev/./urandom -Dcapsule.jvm.args="${JVM_ARGS}" -jar /opt/corda/bin/corda.jar \
-                initial-registration \
-                --base-directory=/opt/corda \
-                --config-file=/etc/corda/node.conf \
-                --network-root-truststore-password=${NETWORK_TRUST_PASSWORD} \
-                --network-root-truststore=${CERTIFICATES_FOLDER}/${TRUST_STORE_NAME} && \
+                --initial-registration \
+                --base-directory /opt/corda \
+                --config-file ${CONFIG_FOLDER}/node.conf \
+                --network-root-truststore-password ${NETWORK_TRUST_PASSWORD} \
+                --network-root-truststore ${CERTIFICATES_FOLDER}/${TRUST_STORE_NAME} && \
+
         echo "Successfully registered with ${DOORMAN_URL}, starting corda" && \
         run-corda
 }
