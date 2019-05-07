@@ -207,7 +207,7 @@ fun isAttachmentTrusted(attachment: Attachment, service: AttachmentStorage?): Bo
 
     if (trustedByUploader) return true
 
-    return if (service != null) {
+    return if (service != null && attachment.signerKeys.isNotEmpty()) {
         val signers = attachment.signerKeys
         val contractClasses = if (attachment is ContractAttachment) {
             attachment.allContracts.toList()
