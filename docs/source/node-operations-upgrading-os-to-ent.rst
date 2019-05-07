@@ -109,7 +109,7 @@ and then proceed with the upgrade following the instructions in :ref:`above <nod
 Reusing an existing database
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-To reuse an existing database, follow the same database instructions as 
+To reuse an existing database, follow the same database instructions as
 :ref:`upgrading withing the same Corda version <node_operations-upgrading_os_to_ent_1>`.
 
 Migrating from H2 database to other database vendor
@@ -119,5 +119,14 @@ Migrating from H2 database to other database vendor
    Specialist third party tools are available that facilitate this activity. Please contact R3 for advice on specialised tooling
    that we have validated for this upgrade exercise.
 
-To migrate from a H2 database to another database, follow the same database instructions as 
+To migrate from a H2 database to another database, follow the same database instructions as
 :ref:`upgrading within the same Corda version <node_operations-upgrading_os_to_ent_2>`.
+
+Using a third-party tool to migrate data from a H2 database
+-----------------------------------------------------------
+
+R3 has trialled the third-party commercial tool `Full Convert <https://www.spectralcore.com/fullconvert>`_ for migrating from a H2 database
+to a 3rd party commercial databases.
+It can be used via the GUI application or from the command-line, however it only runs on Windows: Vista SP2 and later, as well as Windows Server 2008 and later.
+The tool works by connecting to both databases simultaneously and migrates tables, their data, and other schema objects form one database to the other.
+It can be used to migrate from a H2 database by connecting to its database file.
