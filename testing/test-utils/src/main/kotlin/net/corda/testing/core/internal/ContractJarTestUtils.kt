@@ -28,18 +28,17 @@ import javax.tools.ToolProvider
 object ContractJarTestUtils {
 
     @JvmOverloads
-    fun makeTestJar(output: OutputStream, extraEntries: List<Pair<String, String>> = emptyList()) {
+    fun makeTestJar(output: OutputStream,
+                    entries: List<Pair<String, String>> = listOf(
+                            Pair("test1.txt", "This is some useful content"),
+                            Pair("test2.txt", "Some more useful content")
+                    )) {
         JarOutputStream(output).use {
-            it.putNextEntry(JarEntry("test1.txt"))
-            it.write("This is some useful content".toByteArray())
-            it.closeEntry()
-            it.putNextEntry(JarEntry("test2.txt"))
-            it.write("Some more useful content".toByteArray())
-            extraEntries.forEach { entry ->
+            entries.forEach { entry ->
                 it.putNextEntry(JarEntry(entry.first))
                 it.write(entry.second.toByteArray())
+                it.closeEntry()
             }
-            it.closeEntry()
         }
     }
 

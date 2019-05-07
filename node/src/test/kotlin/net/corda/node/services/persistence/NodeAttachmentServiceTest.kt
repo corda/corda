@@ -891,7 +891,7 @@ class NodeAttachmentServiceTest {
             counter++
             val jarV2 = file.path / "$counter.jar"
             // Ensure that the first and second jars do not have the same hash
-            ContractJarTestUtils.makeTestJar(jarV2.outputStream(), extraEntries = listOf(Pair("foo", "bar")))
+            ContractJarTestUtils.makeTestJar(jarV2.outputStream(), entries = listOf(Pair("foo", "bar")))
 
             file.path.generateKey(alias, password)
             val key1 = file.path.signJar(jarV1.toAbsolutePath().toString(), alias, password)
@@ -921,7 +921,7 @@ class NodeAttachmentServiceTest {
             counter++
             val jarV2 = file.path / "$counter.jar"
             // Ensure that the first and second jars do not have the same hash
-            ContractJarTestUtils.makeTestJar(jarV2.outputStream(), extraEntries = listOf(Pair("foo", "bar")))
+            ContractJarTestUtils.makeTestJar(jarV2.outputStream(), entries = listOf(Pair("foo", "bar")))
 
             file.path.generateKey(alias, password)
             val key1 = file.path.signJar(jarV1.toAbsolutePath().toString(), alias, password)
@@ -941,7 +941,7 @@ class NodeAttachmentServiceTest {
     fun `non contract jars not trusted if unsigned`() {
         SelfCleaningDir().use {
             val (jarV1, _) = makeTestJar()
-            val (jarV2, _) = makeTestJar(extraEntries = listOf(Pair("foo", "bar")))
+            val (jarV2, _) = makeTestJar(entries = listOf(Pair("foo", "bar")))
 
             val v1Id = jarV1.read { storage.privilegedImportAttachment(it, "app", "dummy-attachment.jar") }
             val v2Id = jarV2.read { storage.privilegedImportAttachment(it, "untrusted", "dummy-attachment-2.jar") }
@@ -962,10 +962,13 @@ class NodeAttachmentServiceTest {
     }
 
     private var counter = 0
-    private fun makeTestJar(extraEntries: List<Pair<String, String>> = emptyList()): Pair<Path, SecureHash> {
+    private fun makeTestJar(entries: List<Pair<String, String>> = listOf(
+            Pair("test1.txt", "This is some useful content"),
+            Pair("test2.txt", "Some more useful content")
+    )): Pair<Path, SecureHash> {
         counter++
         val file = fs.getPath("$counter.jar")
-        makeTestJar(file.outputStream(), extraEntries)
+        makeTestJar(file.outputStream(), entries)
         return Pair(file, file.readAll().sha256())
     }
 }
