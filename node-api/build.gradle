@@ -8,7 +8,7 @@ description 'Corda node API'
 dependencies {
     compile project(":core")
     compile project(":serialization")  // TODO Remove this once the NetworkBootstrapper class is moved into the tools:bootstrapper module
-    compile project(':common-configuration-parsing')
+    compile project(':common-configuration-parsing') // TODO Remove this dependency once NetworkBootsrapper is moved into tools:bootstrapper
 
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
