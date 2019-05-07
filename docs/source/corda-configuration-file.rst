@@ -385,6 +385,8 @@ h2Settings
 
   *Default:* NULL
 
+.. _corda_configuration_file_jar_dirs_ref:
+
 jarDirs
   An optional list of file system directories containing JARs to include in the classpath when launching via ``corda.jar`` only.
   Each should be a string.

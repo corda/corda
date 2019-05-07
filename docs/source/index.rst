@@ -112,7 +112,7 @@ application development please continue to refer to `the main project documentat
    :if_tag: htmlmode
 
    hot-cold-deployment
-   database-management
+   node-database-intro
    corda-firewall
    sizing-and-performance
    running-a-notary-cluster/toctree
