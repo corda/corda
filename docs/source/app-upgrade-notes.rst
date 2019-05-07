@@ -110,7 +110,7 @@ may exhibit undefined behaviour at runtime. However it's good to get in the habi
 properly for future releases.
 
 .. note:: Whilst it's currently a convention that Corda releases have the platform version number as their
-   major version i.e. Corda 3.3 implements platform version 3, this is not actually required and may in
+   major version i.e. Corda 3.4 implements platform version 3, this is not actually required and may in
    future not hold true. You should know the platform version of the node releases you want to target.
 
 The new ``versionId`` number is a version code for **your** app, and is unrelated to Corda's own versions.
