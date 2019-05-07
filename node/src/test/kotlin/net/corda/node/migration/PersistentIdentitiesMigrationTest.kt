@@ -11,6 +11,8 @@ import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NotaryInfo
 import net.corda.core.utilities.contextLogger
 import net.corda.node.internal.DBNetworkParametersStorage
+import net.corda.node.migration.VaultStateMigrationTest.Companion.CHARLIE
+import net.corda.node.migration.VaultStateMigrationTest.Companion.DUMMY_NOTARY
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.BasicHSMKeyManagementService
 import net.corda.nodeapi.internal.crypto.X509Utilities
@@ -120,7 +122,7 @@ class PersistentIdentitiesMigrationTest {
             val clock = Clock.systemUTC()
             val params = NetworkParameters(
                     1,
-                    listOf(NotaryInfo(VaultStateMigrationTest.DUMMY_NOTARY, false), NotaryInfo(VaultStateMigrationTest.CHARLIE, false)),
+                    listOf(NotaryInfo(DUMMY_NOTARY, false), NotaryInfo(CHARLIE, false)),
                     1,
                     1,
                     clock.instant(),
@@ -129,7 +131,7 @@ class PersistentIdentitiesMigrationTest {
                     Duration.ZERO,
                     mapOf()
             )
-            val signedParams = params.signWithCert(bob.keyPair.private, VaultStateMigrationTest.BOB_IDENTITY.certificate)
+            val signedParams = params.signWithCert(bob.keyPair.private, BOB_IDENTITY.certificate)
             val persistentParams = DBNetworkParametersStorage.PersistentNetworkParameters(
                     SecureHash.allOnesHash.toString(),
                     params.epoch,
