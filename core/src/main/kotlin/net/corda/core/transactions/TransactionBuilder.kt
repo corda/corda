@@ -625,7 +625,9 @@ open class TransactionBuilder(
         contract: ContractClassName = requireNotNullContractClassName(state),
         notary: Party, encumbrance: Int? = null,
         constraint: AttachmentConstraint = AutomaticPlaceholderConstraint
-    ) = addOutputState(TransactionState(state, contract, notary, encumbrance, constraint))
+    ): TransactionBuilder {
+        return addOutputState(TransactionState(state, contract, notary, encumbrance, constraint))
+    }
 
     /** Adds an output state. A default notary must be specified during builder construction to use this method */
     @JvmOverloads
@@ -633,16 +635,16 @@ open class TransactionBuilder(
         state: ContractState,
         contract: ContractClassName = requireNotNullContractClassName(state),
         constraint: AttachmentConstraint = AutomaticPlaceholderConstraint
-    ) = apply {
-        checkNotNull(notary) {
-            "Need to specify a notary for the state, or set a default one on TransactionBuilder initialisation"
-        }
+    ): TransactionBuilder {
+        checkNotNull(notary) { "Need to specify a notary for the state, or set a default one on TransactionBuilder initialisation" }
         addOutputState(state, contract, notary!!, constraint = constraint)
+        return this
     }
 
     /** Adds an output state with the specified constraint. */
-    fun addOutputState(state: ContractState, constraint: AttachmentConstraint) =
-        addOutputState(state, requireNotNullContractClassName(state), constraint)
+    fun addOutputState(state: ContractState, constraint: AttachmentConstraint): TransactionBuilder {
+        return addOutputState(state, requireNotNullContractClassName(state), constraint)
+    }
 
     private fun requireNotNullContractClassName(state: ContractState) = requireNotNull(state.requiredContractClassName) {
         //TODO: add link to docsite page, when there is one.
