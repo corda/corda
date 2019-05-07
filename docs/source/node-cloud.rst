@@ -39,11 +39,11 @@ The public IP address can be obtained from the shell using the following command
 
   curl -H Metadata:true http://169.254.169.254/metadata/instance?api-version=2017-04-02| jq '.network.interface[0].ipv4.ipAddress[0].publicIpAddress'
 
-Note that only the p2p port (10002) is opened by default on a Network Security Group attached to the VM.
+Note that only the p2p port (10002) is opened by default in a Network Security Group attached to the VM.
 To enable RPC communication from a remote machine the firewall has to be adjusted.
 
 For proudction usage, copy the required database drivers (e.g. Azure DB) into the ``drivers`` directory.
-More information on database configuration can be found on :doc:`node-database`
+More information on database configuration can be found at :doc:`node-database`
 
 Copy the selected CorDapps into the cordapps directory and their configuration to the ``cordapps/config`` subdirectory.
 
@@ -74,7 +74,7 @@ You can check the status of the ``corda`` service by running:
 
 
 Corda Enterprise for AWS
---------------------------
+------------------------
 
 .. note:: Corda Enterprise for AWS is based on Amazon Linux 2 and has Corretto JDK installed.
 
