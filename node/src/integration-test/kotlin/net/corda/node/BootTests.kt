@@ -12,7 +12,7 @@ import net.corda.node.internal.NodeStartup
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.nodeapi.exceptions.InternalNodeException
 import net.corda.nodeapi.internal.crypto.X509Utilities.NODE_IDENTITY_ALIAS_PREFIX
-import net.corda.nodeapi.internal.registerDevSigningCertificates
+import net.corda.nodeapi.internal.installDevNodeCaCertPath
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.driver.DriverParameters
@@ -76,7 +76,7 @@ class BootTests {
             val aliceCertDir = alice.baseDirectory / "certificates"
             (aliceCertDir / "nodekeystore.jks").delete()
             val cert = CertificateStoreStubs.Signing.withCertificatesDirectory(aliceCertDir).get(true)
-            cert.registerDevSigningCertificates(ALICE_NAME)
+            cert.installDevNodeCaCertPath(ALICE_NAME)
             alice.stop()
             // The node shouldn't start, and the logs should indicate that the failure is due to a missing identity key
             assertThatThrownBy {
