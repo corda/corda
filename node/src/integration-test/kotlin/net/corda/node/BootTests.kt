@@ -70,12 +70,15 @@ class BootTests {
     }
 
     @Test
-    fun `node fails to start if identity key for x500 name is lost`() {
+    fun `node fails to start if legal identity is lost`() {
         driver(DriverParameters(notarySpecs = emptyList(), inMemoryDB = false, startNodesInProcess = false)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val aliceCertDir = alice.baseDirectory / "certificates"
             (aliceCertDir / "nodekeystore.jks").delete()
             val cert = CertificateStoreStubs.Signing.withCertificatesDirectory(aliceCertDir).get(true)
+            // Creating a new certificate store does not populate that store with the node certificate path. If the node certificate path is
+            // missing, the node will fail to start but not because the legal identity is missing. To test that a missing legal identity
+            // prevents the node from starting, the node certificate path must be installed.
             cert.installDevNodeCaCertPath(ALICE_NAME)
             alice.stop()
             // The node shouldn't start, and the logs should indicate that the failure is due to a missing identity key
