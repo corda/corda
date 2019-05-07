@@ -211,7 +211,7 @@ internal constructor(private val initSerEnv: Boolean,
         bootstrap(directory, cordappJars, CopyCordapps.No, fromCordform = true, networkParametersOverrides = networkParametersOverrides)
     }
 
-    fun reportErrors(errors: Set<Configuration.Validation.Error>) {
+    private fun reportErrors(errors: Set<Configuration.Validation.Error>) {
         System.err.println("Error(s) found parsing the networkParameterOverrides:")
         errors.forEach { System.err.println("Error parsing ${it.pathAsString}: ${it.message}") }
     }
