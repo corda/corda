@@ -3,8 +3,8 @@ Corda Enterprise cloud images
 
 Corda Enteprise is avaliable as a Virtual Machine image on AWS and Azure.
 These are simple Linux VM images with a JDK supported by both cloud providers and Corda Enterprise.
-Alongside the Corda Enterprise JAR the image contains an example `node.conf` file and `dbconfig.conf` file for H2 DB.
-There is also the systemd service (called `corda`) ready to use.
+Alongside the Corda Enterprise JAR the image contains an example ``node.conf`` file and ``dbconfig.conf`` file for H2 DB.
+There is also the systemd service (called ``corda``) ready to use.
 
 Corda Enterprise for Azure
 --------------------------
@@ -40,7 +40,7 @@ The public IP address can be obtained from the shell using the following command
   curl -H Metadata:true http://169.254.169.254/metadata/instance?api-version=2017-04-02| jq '.network.interface[0].ipv4.ipAddress[0].publicIpAddress'
 
 Note that only the p2p port (10002) is opened by default on a Network Security Group attached to the VM.
-To enable RPC communication from a remote machine firewall has to be adjusted.
+To enable RPC communication from a remote machine the firewall has to be adjusted.
 
 For proudction usage, copy the required database drivers (e.g. Azure DB) into the ``drivers`` directory.
 More information on database configuration can be found on :doc:`node-database`
@@ -107,7 +107,7 @@ The public IP address can be obtained from the shell using the following command
   curl http://169.254.169.254/latest/meta-data/public-ipv4
 
 Note that only the p2p port (10002) is opened by default in a Security Group attached to the VM.
-To enable RPC communication from a remote machine firewall has to be adjusted.
+To enable RPC communication from a remote machine the firewall has to be adjusted.
 
 For proudction usage, copy the required database drivers into the ``drivers`` directory.
 More information on database configuration can be found at :doc:`node-database`
