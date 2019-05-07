@@ -265,7 +265,7 @@ By default, the node database has the following tables:
 | V_PKEY_HASH_EX_ID_MAP       | ID, PUBLIC_KEY_HASH, TRANSACTION_ID, OUTPUT_INDEX, EXTERNAL_ID                                                                                                                                           |
 +-----------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 
-For more details, see :doc:`node-database-tables`.
+For more details see: :doc:`node-database-tables`.
 
 The node database for a Simple Notary has additional tables:
 
