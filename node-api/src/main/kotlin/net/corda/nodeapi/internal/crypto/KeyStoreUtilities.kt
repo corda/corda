@@ -10,6 +10,7 @@ import net.corda.core.internal.write
 import java.io.IOException
 import java.io.InputStream
 import java.nio.file.Path
+import java.nio.file.Files
 import java.security.*
 import java.security.cert.Certificate
 import java.security.cert.X509Certificate
@@ -30,7 +31,14 @@ fun loadOrCreateKeyStore(keyStoreFilePath: Path, storePassword: String): KeyStor
         keyStoreFilePath.read { keyStore.load(it, pass) }
     } else {
         keyStore.load(null, pass)
-        keyStoreFilePath.toAbsolutePath().parent?.createDirectories()
+        if (keyStoreFilePath.toAbsolutePath().parent != null){
+            val parentDir = keyStoreFilePath.toAbsolutePath().parent
+            if (Files.isSymbolicLink(parentDir)){
+                Files.readSymbolicLink(parentDir).createDirectories()
+            } else {
+                parentDir.createDirectories()
+            }
+        }
         keyStoreFilePath.write { keyStore.store(it, pass) }
     }
     return keyStore
