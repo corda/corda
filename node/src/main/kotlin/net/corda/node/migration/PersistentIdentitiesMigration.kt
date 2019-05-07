@@ -57,14 +57,8 @@ class PersistentIdentitiesMigration : CordaMigration() {
         val alice = DuplicateTestIdentity(CordaX500Name("Alice Corp", "Madrid", "ES"), 70)
         val pkHash = addTestMapping(connection, alice)
 
-        println("----------")
-        println("pkHash from testMapping: $pkHash")
-        println("----------")
-
+        // Extract data from old table needed to populate the new table
         val keys = extractKeys(connection)
-        println("----------")
-        println("key from extraction: ${keys[0]}")
-        println("----------")
         val parties = extractParties(connection)
 
         require(keys.size == parties.size)
@@ -189,7 +183,7 @@ object PersistentIdentitiesMigrationSchemaV1 : MappedSchema(schemaFamily = Persi
 class PersistentIdentitiesMigrationException(msg: String, cause: Exception? = null) : Exception(msg, cause)
 
 /**
- * TODO - Ergh.
+ * TODO - Ergh. Circular dependencies if you try and expose test-utils here.
  */
 class DuplicateTestIdentity(val name: CordaX500Name, val keyPair: KeyPair) {
     companion object {
