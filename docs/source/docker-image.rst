@@ -6,7 +6,6 @@ Running a node connected to a Compatibility Zone in Docker
 
 .. note:: Requirements: A valid node.conf and a valid set of certificates - (signed by the CZ)
 
-
 In this example, the certificates are stored at ``/home/user/cordaBase/certificates``, the node configuration is in ``/home/user/cordaBase/config/node.conf`` and the CorDapps to run are in ``/path/to/cordapps``
 
 .. code-block:: shell
