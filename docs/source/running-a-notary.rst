@@ -43,7 +43,7 @@ setup steps.
 Metrics
 -------
 
-Corda Enterprise features three different notary implementations that each capture various metrics. These metrics can be 
+Corda Enterprise captures different metrics for each of its notary implementations. These metrics can be 
 used to analyse the performance and stability of the notary service, and are exposed to third party interfaces.
 
 Common Metrics
