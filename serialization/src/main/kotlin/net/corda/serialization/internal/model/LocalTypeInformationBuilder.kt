@@ -208,25 +208,57 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
             if (warnIfNonComposable) {
                 logger.info("No unique deserialisation constructor found for class $rawType, type is marked as non-composable")
             }
-            return LocalTypeInformation.NonComposable(type, typeIdentifier, null, buildReadOnlyProperties(rawType),
-                    superclassInformation, interfaceInformation, typeParameterInformation)
+            return LocalTypeInformation.NonComposable(
+                observedType = type,
+                typeIdentifier = typeIdentifier,
+                constructor = null,
+                properties = buildReadOnlyProperties(rawType),
+                superclass = superclassInformation,
+                interfaces = interfaceInformation,
+                typeParameters = typeParameterInformation,
+                reason = "No unique deserialization constructor can be identified",
+                remedy = "Either annotate a constructor for this type with @ConstructorForDeserialization, or provide a custom serializer for it"
+            )
         }
 
         val constructorInformation = buildConstructorInformation(type, observedConstructor)
         val properties = buildObjectProperties(rawType, constructorInformation)
 
-        val hasNonComposableProperties = properties.values.any { it.type is LocalTypeInformation.NonComposable }
-
-        if (!propertiesSatisfyConstructor(constructorInformation, properties) || hasNonComposableProperties) {
+        if (!propertiesSatisfyConstructor(constructorInformation, properties)) {
             if (warnIfNonComposable) {
-                if (hasNonComposableProperties) {
-                    logger.info("Type ${type.typeName} has non-composable properties and has been marked as non-composable")
-                } else {
-                    logger.info("Properties of type ${type.typeName} do not satisfy its constructor, type has been marked as non-composable")
-                }
+                logger.info("Properties of type ${type.typeName} do not satisfy its constructor, type has been marked as non-composable")
             }
-            return LocalTypeInformation.NonComposable(type, typeIdentifier, constructorInformation, properties, superclassInformation,
-                    interfaceInformation, typeParameterInformation)
+            val missingParameters = missingMandatoryConstructorProperties(constructorInformation, properties).map { it.name }
+            return LocalTypeInformation.NonComposable(
+                observedType = type,
+                typeIdentifier = typeIdentifier,
+                constructor = constructorInformation,
+                properties = properties,
+                superclass = superclassInformation,
+                interfaces = interfaceInformation,
+                typeParameters = typeParameterInformation,
+                reason = "Mandatory constructor parameters $missingParameters are missing from the readable properties ${properties.keys}",
+                remedy = "Either provide getters or readable fields for $missingParameters, or provide a custom serializer for this type"
+            )
+        }
+
+        val nonComposableProperties = properties.filterValues { it.type is LocalTypeInformation.NonComposable }
+
+        if (nonComposableProperties.isNotEmpty()) {
+            if (warnIfNonComposable) {
+                logger.info("Type ${type.typeName} has non-composable properties and has been marked as non-composable")
+            }
+            return LocalTypeInformation.NonComposable(
+                observedType = type,
+                typeIdentifier = typeIdentifier,
+                constructor = constructorInformation,
+                properties = properties,
+                superclass = superclassInformation,
+                interfaces = interfaceInformation,
+                typeParameters = typeParameterInformation,
+                reason = nonComposablePropertiesErrorReason(nonComposableProperties),
+                remedy = "Either ensure that the properties ${nonComposableProperties.keys} are serializable, or provide a custom serializer for this type"
+            )
         }
 
         val evolutionConstructors = evolutionConstructors(type).map { ctor ->
@@ -254,6 +286,40 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
         return (0 until constructorInformation.parameters.size).none { index ->
             constructorInformation.parameters[index].isMandatory && index !in indicesAddressedByProperties
         }
+    }
+
+    private fun missingMandatoryConstructorProperties(
+        constructorInformation: LocalConstructorInformation,
+        properties: Map<PropertyName, LocalPropertyInformation>
+    ): List<LocalConstructorParameterInformation> {
+        if (!constructorInformation.hasParameters) return emptyList()
+
+        val indicesAddressedByProperties = properties.values.asSequence().mapNotNull {
+            when (it) {
+                is LocalPropertyInformation.ConstructorPairedProperty -> it.constructorSlot.parameterIndex
+                is LocalPropertyInformation.PrivateConstructorPairedProperty -> it.constructorSlot.parameterIndex
+                else -> null
+            }
+        }.toSet()
+
+        return (0 until constructorInformation.parameters.size).mapNotNull { index ->
+            val parameter = constructorInformation.parameters[index]
+            when {
+                constructorInformation.parameters[index].isMandatory && index !in indicesAddressedByProperties -> parameter
+                else -> null
+            }
+        }
+    }
+
+    private fun nonComposablePropertiesErrorReason(nonComposableProperties: Map<PropertyName, LocalPropertyInformation>): String {
+        val reason = StringBuilder("Has properties ${nonComposableProperties.keys} of types that are not serializable:\n")
+        for ((key, value) in nonComposableProperties) {
+            reason.appendln(
+                "$key [${value.type.observedType}]: ${(value.type as LocalTypeInformation.NonComposable).reason}"
+                    .replace("\n", "\n    ")
+            )
+        }
+        return reason.removeSuffix("\n").toString()
     }
 
     private fun buildSuperclassInformation(type: Type): LocalTypeInformation =
