@@ -83,10 +83,8 @@ data class NodeConfigurationImpl(
         override val flowOverrides: FlowOverrideConfig?,
         override val cordappSignerKeyFingerprintBlacklist: List<String> = Defaults.cordappSignerKeyFingerprintBlacklist,
         override val networkParameterAcceptanceSettings: NetworkParameterAcceptanceSettings = Defaults.networkParameterAcceptanceSettings,
-        override val whitelistedKeysForAttachments: List<SecureHash> = listOf(),
         override val cryptoServiceName: SupportedCryptoServices? = Defaults.cryptoServiceName,
         override val cryptoServiceConf: Path? = Defaults.cryptoServiceConf
-        override val networkParameterAcceptanceSettings: NetworkParameterAcceptanceSettings = Defaults.networkParameterAcceptanceSettings
 ) : NodeConfiguration {
     internal object Defaults {
         val jmxMonitoringHttpPort: Int? = null

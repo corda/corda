@@ -130,8 +130,7 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
                     enableSNI = config[enableSNI],
                     useOpenSsl = config[useOpenSsl],
                     graphiteOptions = config[graphiteOptions],
-                    enterpriseConfiguration = config[enterpriseConfiguration],
-                    whitelistedKeysForAttachments = config[whitelistedKeysForAttachments]
+                    enterpriseConfiguration = config[enterpriseConfiguration]
             ))
         } catch (e: Exception) {
             return when (e) {
