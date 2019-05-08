@@ -13,10 +13,7 @@ import net.corda.core.flows.NotaryFlow.Client.Companion.VALIDATING
 import net.corda.core.identity.Party
 import net.corda.core.internal.FetchDataFlow
 import net.corda.core.internal.notary.generateSignature
-import net.corda.core.transactions.ContractUpgradeWireTransaction
-import net.corda.core.transactions.SignedTransaction
-import net.corda.core.transactions.TransactionBuilder
-import net.corda.core.transactions.WireTransaction
+import net.corda.core.transactions.*
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.UntrustworthyData
 import net.corda.node.services.api.ServiceHubInternal
@@ -105,7 +102,9 @@ class HealthCheckFlow(monitorable: Monitorable) : FlowLogic<List<TransactionSign
             val ctx = stx.coreTransaction
             val tx = when (ctx) {
                 is ContractUpgradeWireTransaction -> ctx.buildFilteredTransaction()
-                is WireTransaction -> ctx.buildFilteredTransaction(Predicate { it is StateRef || it is TimeWindow || it == notaryParty })
+                is WireTransaction -> ctx.buildFilteredTransaction(Predicate {
+                    it is StateRef || it is ReferenceStateRef || it is TimeWindow || it == notaryParty || it is NetworkParametersHash
+                })
                 else -> ctx
             }
             session.send(NotarisationPayload(tx, signature))
