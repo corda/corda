@@ -28,6 +28,7 @@ class MigrationNamedCacheFactory(private val metricRegistry: MetricRegistry?,
                     nodeConfiguration?.transactionCacheSizeBytes ?: NodeConfiguration.defaultTransactionCacheSize
             )
             "PersistentIdentityService_keyToPartyAndCert" -> caffeine.maximumSize(defaultCacheSize)
+            "PersistentIdentityService_partyToKey" -> caffeine.maximumSize(defaultCacheSize)
             "PersistentIdentityService_keyToParty" -> caffeine.maximumSize(defaultCacheSize)
             "BasicHSMKeyManagementService_keys" -> caffeine.maximumSize(defaultCacheSize)
             "NodeAttachmentService_attachmentContent" -> caffeine.maximumWeight(defaultCacheSize)

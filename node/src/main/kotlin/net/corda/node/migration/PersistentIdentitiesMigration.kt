@@ -173,6 +173,7 @@ object PersistentIdentitiesMigrationSchemaV1 : MappedSchema(schemaFamily = Persi
         mappedTypes = listOf(
                 DBTransactionStorage.DBTransaction::class.java,
                 PersistentIdentityService.PersistentIdentityCert::class.java,
+                PersistentIdentityService.PersistentIdentityNames::class.java,
                 PersistentIdentityService.PersistentIdentity::class.java,
                 BasicHSMKeyManagementService.PersistentKey::class.java,
                 NodeAttachmentService.DBAttachment::class.java,

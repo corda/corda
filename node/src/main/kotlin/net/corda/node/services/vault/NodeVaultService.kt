@@ -405,7 +405,8 @@ class NodeVaultService(
                 val lockIdPredicate = criteriaBuilder.or(get<String>(VaultSchemaV1.VaultStates::lockId.name).isNull,
                         criteriaBuilder.equal(get<String>(VaultSchemaV1.VaultStates::lockId.name), lockId.toString()))
                 update.set(get<String>(VaultSchemaV1.VaultStates::lockId.name), lockId.toString())
-                update.set(get<Instant>(VaultSchemaV1.VaultStates::lockUpdateTime.name), softLockTimestamp)
+                update.set(get<Instant>
+                (VaultSchemaV1.VaultStates::lockUpdateTime.name), softLockTimestamp)
                 update.where(stateStatusPredication, lockIdPredicate, *commonPredicates)
             }
             if (updatedRows > 0 && updatedRows == stateRefs.size) {

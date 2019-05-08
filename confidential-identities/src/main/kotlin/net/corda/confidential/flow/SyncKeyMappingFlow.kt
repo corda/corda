@@ -48,7 +48,7 @@ class SyncKeyMappingFlow(private val session: FlowSession, val tx: WireTransacti
         }
         // TODO erm
         val keyMappings = resolvedParties.map {
-            //TODO it!! is dangerous
+            //TODO erm
             createSignedPublicKey(serviceHub, UniqueIdentifier().id) to it!!
         }.toMap()
         session.send(keyMappings)
