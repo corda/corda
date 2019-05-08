@@ -41,7 +41,7 @@ We provide some :ref:`backup recommendations <backup-recommendations>` if you'd 
 Step 3. Upgrade the node database to Corda 3.2 or later
 -------------------------------------------------------
 
-Ensure you node is running Corda 3.2 or later.
+Ensure your node is running Corda 3.2 or later.
 Corda 3.2 required a database table name change and column type change in PostgreSQL.
 These changes need to be applied to the database before upgrading to Corda 4.0.
 Refer to `Corda 3.2 release notes <https://docs.corda.net/releases/release-V3.4/upgrade-notes.html#v3-1-to-v3-2>`_
