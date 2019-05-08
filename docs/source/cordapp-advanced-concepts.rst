@@ -35,7 +35,9 @@ strongly typed serialized java object) and a reference to the logic (contract) t
 Corda does not embed the actual verification bytecode in transactions. The logic is expressed as a Java class name and a contract constraint
 (read more in: :doc:`api-contract-constraints`), and the actual code lives in a JAR file that is referenced by the transaction.
 
-.. The basic threat model and security requirement.
+
+The basic threat model and security requirement.
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Being a decentralized system, anyone who can build transactions can create `.java` files, compile and bundle them in a JAR, and then reference
 this code in the transaction he created. If it were possible to do this without any restrictions, an attacker seeking to steal your money,
@@ -54,6 +56,10 @@ long as the JAR containing this contract is signed by `Mega Corp`".
 
 .. Introduce the `LedgerTransaction` abstraction and how it relates to the transaction chain. Introduce the state serialization/deserialization and Classloaders.
 
+
+The LedgerTranscation
+^^^^^^^^^^^^^^^^^^^^^
+
 Another relevant aspect to remember is that because states are serialised binary objects, to perform any useful operation on them they need to
 be deserialized into instances of Java objects. All these instances are made available to the contract code as the `LedgerTransaction` parameter
 passed to the `verify` method. The `LedgerTransaction` class abstracts away a lot of complexity and offers contracts a usable data structure where
@@ -70,12 +76,14 @@ Behind the scenes, the matter is more complex. As can be seen in this illustrati
 .. note:: Corda's design is based on the UTXO model. In a serialized transaction the input and reference states are `StateRefs` - only references
           to output states from previous transactions (see :doc:`api-transactions`).
           When building the `LedgerTransaction`, the `inputs` and `references` are resolved to Java objects created by deserialising blobs of data
-          fetched from previous transactions that were serialized in that context - within the classloader of that transaction.
+          fetched from previous transactions that were in turn serialized in that context (within the classloader of that transaction - introduced here: :ref:`attachments_classloader`).
           This model has consequences when it comes to how states can be evolved. Removing a field from a newer version of a state would mean
           that when deserialising that state in the context of a transaction using the more recent code, that field could just disappear.
           In Corda 4 we implemented the no-data loss rule, which prevents this to happen. See :doc:`serialization-default-evolution`
 
-.. Go through a very basic example of transaction verification.
+
+Simple example of transaction verification.
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Let's consider a very simple case, a transaction swapping `Apples` for `Oranges`. Each of the states that need to be swapped is the output of a previous transaction.
 Similar to the above image the `Apples` state is the output of some previous transaction, through which it came to be possessed by the party now paying it away in return for some oranges.
@@ -83,11 +91,13 @@ The `Apples` and `Oranges` states that will be consumed in this new transaction 
 It is these `TransactionState`s that specify the fully qualified names of the contract code that should be run to verify their consumption as well as,
 importantly, the governing `constraint`s on which specific implementations of that class name can be used.
 The swap transaction would contain the two input states, the two output states with the new owners of the fruit and the code to be used to deserialize and
-verify the transaction as two attachment IDs - which are SHA256 of the apples and oranges CorDapps (more specifically, the CorDapp kernels).
+verify the transaction as two attachment IDs - which are SHA-256 hashes of the apples and oranges CorDapps (more specifically, the contracts JAR).
+
+.. TODO - update this note once the DJVM is integrated
 
 .. note:: The attachment ID is a cryptographic hash of a file. Any node calculates this hash when it downloads the file from a peer (during transaction resolution) or from
           another source, and thus knows that it is the exact file that any other party verifying this transaction will use. In the current version of
-          Corda - v4 -, nodes won't load JARs downloaded from a peer into a classloader. This is a temporary security measure until we integrate the
+          Corda - |corda_version| -, nodes won't load JARs downloaded from a peer into a classloader. This is a temporary security measure until we integrate the
           Deterministic JVM Sandbox, which will be able to isolate network loaded code from sensitive data.
 
 This combination of fully qualified contract class name and constraint ensures that, when a state is spent, the contract code attached to the transaction
@@ -95,7 +105,9 @@ This combination of fully qualified contract class name and constraint ensures t
 For example, if a state is created with a constraint that says its consumption can only be verified by code signed by MegaCorp,
 then the Corda consensus rules mean that any transaction attaching an implementation of the class that is _not_ signed by MegaCorp will not be considered valid.
 
-.. Verify attachment constraints. Introduce constraints propagation.
+
+Verify attachment constraints. Introduce constraints propagation.
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The previous discussion explained the construction of a transaction that consumes one or more states. Now let's consider this from the perspective
 of somebody verifying a transaction they are presented with.
@@ -115,11 +127,14 @@ the verification code.
 This rule, together with the no-overlap rule - which we'll introduce below - ensure that the code used to deserialize and verify the transaction is
 legitimate and that there is no ambiguity when it comes to what code to execute.
 
-.. Contract execution in the AttachmentsClassloader, and the no-overlap rule.
+.. _attachments_classloader:
 
-After ensuring that the contract code is correct, to verify the business rules of the transaction, the node needs to execute it.
+Contract execution in the AttachmentsClassloader and the no-overlap rule.
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+After ensuring that the contract code is correct the node needs to execute it to verify the business rules of the transaction.
 This is done by creating an `AttachmentsClassloader` from all the attachments listed by the transaction, then deserialising the binary
-representation of the transaction inside this classloader, create the `LedgerTransaction` and then running the contract verification code
+representation of the transaction inside this classloader, creating the `LedgerTransaction` and then running the contract verification code
 in this classloader.
 
 Corda transactions can combine any states, which makes it possible that 2 different transaction attachments contain the same class name (they overlap).
@@ -168,7 +183,7 @@ The question to consider as a developer of a CorDapp is: where and how should my
 There are 2 options to achieve this (given the hypothetical `Apples` for `Oranges` transaction):
 
  1. Bundle the `Fruit` library with the CorDapp. This means creating a Fat-JAR containing all the required code.
- 2. Add the dependency as another attachment to the transaction.
+ 2. Add the dependency as another attachment to the transaction manually.
 
 These options have pros and cons, which are now discussed:
 
@@ -184,16 +199,19 @@ could just create his own version of the library and attach that to the transact
 the attacker to change the intended behavior of your contract to his advantage.
 See :ref:`contract_security` for an example.
 Basically, what this manual check does is extend the security umbrella provided by the attachment constraint of the state to its dependencies.
-As soon as support is added at the platform level this code can be removed from future versions of the CorDapp.
+
+.. note:: As soon as support is added at the platform level this code can be removed from future versions of the CorDapp.
 
 .. warning:: In Corda 4, it is the responsibility of the CorDapp developer to ensure that all dependencies are added in a secure way.
              Bundling the dependency together with the contract code is secure, so if there are no other factors it is the preferred approach.
              If the dependency is not bundled, just adding the attachment to the transaction is not enough. The contract code, that is guaranteed
              to be correct by the constraints mechanism, must verify that all dependencies are available in the `attachments` and are not malicious.
 
-.. CorDapps depending on the same library.
 
-It should be evident now that each CorDapp must add its own dependencies to the transaction, but what happens when two CorDapps depend on the same library?
+CorDapps depending on the same library.
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+It should be evident now that each CorDapp must add its own dependencies to the transaction, but what happens when two CorDapps depend on different versions of the same library?
 The node that is building the transaction must ensure that the attached JARs contain all code needed for all CorDapps and also do not break the `no-overlap` rule.
 
 In the above example, if the `Apples` code depends on `Fruit v3.2` and the `Oranges` code depends on `Fruit v3.4` that would be impossible to achieve,
@@ -380,28 +398,3 @@ needs to be updated with the code described here: :ref:`contract_security`.
 
 .. warning:: The `finance` CorDapp is a sample and should not normally be used in production or depended upon in a production CorDapp. In case
              the app developer requires some code, they can just copy it under their own namespace.
-
-
-
-The Tokens SDK CorDapp
-----------------------
-
-The Tokens SDK is the successor of the `finance` CorDapp and will be suitable to be used by production CorDapps.
-
-When it will be officially released, it will be signed by R3. Until then, development against it can proceed without the additional security checks.
-These security checks matter only when the CorDapp is released.
-
-The Tokens SDK will be released as three artifacts:
-
-    - A `money` JAR containing utilities. This will be shipped as a signed JAR.
-    - A `contracts` JAR containing ready-to-use contracts and contracts and states that can be extended. This will also be shipped as a signed JAR.
-    - A `flows` JAR, which is not relevant for security concerns.
-
-The `money` and the `contracts` JARs are typical signed dependencies so the code that needs to be added is this: :ref:`contract_security_signed`.
-
-
-Suggested steps for using the Tokens SDK:
-
-- During development time, just following the instructions `here <https://github.com/corda/cordapp-template-kotlin/tree/token-template>`_ is enough.
-- The snippet of code required to add the right attachment to the transaction builder will be provided in the Tokens SDK instructions.
-- When your CorDapp is ready for release, just add contract verification code that will also be provided in the Tokens SDK instructions
