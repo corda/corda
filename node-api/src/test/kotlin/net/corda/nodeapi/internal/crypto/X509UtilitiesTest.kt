@@ -24,9 +24,9 @@ import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.createDevNodeCa
 import net.corda.nodeapi.internal.crypto.X509Utilities.DEFAULT_IDENTITY_SIGNATURE_SCHEME
 import net.corda.nodeapi.internal.crypto.X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME
+import net.corda.nodeapi.internal.installDevNodeCaCertPath
 import net.corda.nodeapi.internal.protonwrapper.netty.init
 import net.corda.nodeapi.internal.registerDevP2pCertificates
-import net.corda.nodeapi.internal.registerDevSigningCertificates
 import net.corda.serialization.internal.AllWhitelist
 import net.corda.serialization.internal.SerializationContextImpl
 import net.corda.serialization.internal.SerializationFactoryImpl
@@ -245,7 +245,7 @@ class X509UtilitiesTest {
 
         // Generate server cert and private key and populate another keystore suitable for SSL
         val nodeCa = createDevNodeCa(intermediateCa, MEGA_CORP.name)
-        signingCertStore.get(createNew = true).also { it.registerDevSigningCertificates(MEGA_CORP.name, rootCa.certificate, intermediateCa, nodeCa) }
+        signingCertStore.get(createNew = true).also { it.installDevNodeCaCertPath(MEGA_CORP.name, rootCa.certificate, intermediateCa, nodeCa) }
         p2pSslConfig.keyStore.get(createNew = true).also { it.registerDevP2pCertificates(MEGA_CORP.name, rootCa.certificate, intermediateCa, nodeCa) }
         // Load back server certificate
         val certStore = signingCertStore.get()

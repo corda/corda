@@ -9,10 +9,10 @@ release, see :doc:`app-upgrade-notes`.
 Version 4.2
 -----------
 
-* Added the ``whitelistedKeysForAttachments`` configuration option. This is a list of SHA-256 hashes of public keys. Attachments signed by
-  any keys in this list will automatically be trusted by the node. This change removes the requirement to have every version of a CorDapp
-  present in the node in order to verify a chain of transactions using different versions of the same CorDapp - instead the signing key can
-  be whitelisted.
+* Contract attachments are now automatically whitelisted by the node if another contract attachment is present with the same contract classes,
+  signed by the same public keys, and uploaded by a trusted uploader. This allows the node to resolve transactions that use earlier versions
+  of a contract without having to manually install that version, provided a newer version is installed. Similarly, non-contract attachments
+  are whitelisted if another attachment is present on the node that is signed by the same public key.
 
 .. _changelog_v4.0:
 

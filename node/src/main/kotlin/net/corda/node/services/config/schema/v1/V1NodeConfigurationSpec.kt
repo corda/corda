@@ -63,7 +63,6 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
     private val cordappSignerKeyFingerprintBlacklist by string().list().optional().withDefaultValue(Defaults.cordappSignerKeyFingerprintBlacklist)
     private val cryptoServiceName by enum(SupportedCryptoServices::class).optional()
     private val cryptoServiceConf by string().mapValid(::toPath).optional()
-    private val whitelistedKeysForAttachments by string().mapValid(::toSecureHash).list().optional().withDefaultValue(listOf())
     @Suppress("unused")
     private val custom by nestedObject().optional()
     private val relay by nested(RelayConfigurationSpec).optional()
