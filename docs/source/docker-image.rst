@@ -33,6 +33,9 @@ If using the H2 database:
 
 5. Persistence - the folder to hold the H2 database files must be mounted at location ``/opt/corda/persistence``
 
+.. note:: If there is no dataSourceProperties key in the node.conf, the docker container overrides the url for H2 to point to the persistence directory by default so that the database can be accessed outside the container
+
+
 Running a node connected to a Bootstrapped Network
 --------------------------------------------------
 
@@ -69,7 +72,7 @@ It is possible to utilize the image to automatically generate a sensible minimal
 Joining TestNet
 ---------------
 
-.. note:: Requirements: A valid registration for TestNet and a one-time code for joining TestNet.
+.. note:: Requirements: A valid registration for TestNet and a one-time code for joining TestNet. Certificate and configuration folders should be accessible from the container. Docker will create folders using the permissions of it's daemon if they don't exist and the container may fail accessing them.
 
 .. code-block:: shell
 
