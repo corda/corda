@@ -91,7 +91,7 @@ class HardRestartTest : IntegrationTest() {
                 Thread.sleep(ms.toLong())
                 (b as OutOfProcess).process.destroyForcibly()
                 b.stop()
-                startNode(providedName = DUMMY_BANK_B_NAME, rpcUsers = listOf(demoUser), customOverrides = mapOf("p2pAddress" to "localhost:${b.rpcAddress.port}"))
+                startNode(providedName = DUMMY_BANK_B_NAME, rpcUsers = listOf(demoUser))
             }
             CordaRPCClient(a.rpcAddress).use(demoUser.username, demoUser.password) {
                 val returnValue = it.proxy.startFlow(::Ping, b.nodeInfo.singleIdentity(), 1).returnValue
@@ -129,7 +129,7 @@ class HardRestartTest : IntegrationTest() {
                 Thread.sleep(ms.toLong())
                 (b as OutOfProcess).process.destroyForcibly()
                 b.stop()
-                startNode(providedName = DUMMY_BANK_B_NAME, rpcUsers = listOf(demoUser), customOverrides = mapOf("p2pAddress" to "localhost:${b.rpcAddress.port}"))
+                startNode(providedName = DUMMY_BANK_B_NAME, rpcUsers = listOf(demoUser))
             }
             CordaRPCClient(a.rpcAddress).use(demoUser.username, demoUser.password) {
                 val returnValue = it.proxy.startFlow(::Ping, b.nodeInfo.singleIdentity(), 100).returnValue
@@ -166,7 +166,7 @@ class HardRestartTest : IntegrationTest() {
                 println("Sleeping $ms ms before kill")
                 Thread.sleep(ms.toLong())
                 b.stop()
-                startNode(providedName = DUMMY_BANK_B_NAME, rpcUsers = listOf(demoUser), customOverrides = mapOf("p2pAddress" to "localhost:${b.rpcAddress.port}"))
+                startNode(providedName = DUMMY_BANK_B_NAME, rpcUsers = listOf(demoUser))
             }
             CordaRPCClient(a.rpcAddress).use(demoUser.username, demoUser.password) {
                 val returnValue = it.proxy.startFlow(::Ping, b.nodeInfo.singleIdentity(), 100).returnValue
@@ -249,7 +249,7 @@ class HardRestartTest : IntegrationTest() {
                 Thread.sleep(ms.toLong())
                 (b as OutOfProcess).process.destroyForcibly()
                 b.stop()
-                startNode(providedName = DUMMY_BANK_B_NAME, rpcUsers = listOf(demoUser), customOverrides = mapOf("p2pAddress" to "localhost:${b.rpcAddress.port}"))
+                startNode(providedName = DUMMY_BANK_B_NAME, rpcUsers = listOf(demoUser))
             }
             val executor = Executors.newFixedThreadPool(8)
             try {

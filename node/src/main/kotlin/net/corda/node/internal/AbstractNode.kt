@@ -181,7 +181,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     val cordappProvider = CordappProviderImpl(cordappLoader, CordappConfigFileProvider(configuration.cordappDirectories), attachments).tokenize()
     @Suppress("LeakingThis")
     val keyManagementService = makeKeyManagementService(identityService).tokenize()
-    val servicesForResolution = ServicesForResolutionImpl(identityService, attachments, cordappProvider, networkParametersStorage, transactionStorage, configuration.whitelistedKeysForAttachments).also {
+    val servicesForResolution = ServicesForResolutionImpl(identityService, attachments, cordappProvider, networkParametersStorage, transactionStorage).also {
         attachments.servicesForResolution = it
     }
     @Suppress("LeakingThis")
@@ -289,8 +289,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         check(started == null) { "Node has already been started" }
         log.info("Generating nodeInfo ...")
         val trustRoot = initKeyStores()
-        val (identity, identityKeyPair) = obtainIdentity()
         startDatabase()
+        val (identity, identityKeyPair) = obtainIdentity()
         val nodeCa = configuration.signingCertificateStore.get()[CORDA_CLIENT_CA]
         identityService.start(trustRoot, listOf(identity.certificate, nodeCa))
         return database.use {
@@ -899,6 +899,16 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
         var signingCertificateStore = configuration.signingCertificateStore.get()
         if (!cryptoService.containsKey(legalIdentityPrivateKeyAlias) && !signingCertificateStore.contains(legalIdentityPrivateKeyAlias)) {
+            // Directly use the X500 name to public key map, as the identity service requires the node identity to start correctly.
+            database.transaction {
+                val x500Map = PersistentIdentityService.createX500Map(cacheFactory)
+                require(configuration.myLegalName !in x500Map) {
+                    // There is already a party in the identity store for this node, but the key has been lost. If this node starts up, it will
+                    // publish it's new key to the network map, which Corda cannot currently handle. To prevent this, stop the node from starting.
+                    "Private key for the node legal identity not found (alias $legalIdentityPrivateKeyAlias) but the corresponding public key" +
+                            " for it exists in the database. This suggests the identity for this node has been lost. Shutting down to prevent network map issues."
+                }
+            }
             log.info("$legalIdentityPrivateKeyAlias not found in key store, generating fresh key!")
             createAndStoreLegalIdentity(legalIdentityPrivateKeyAlias)
             signingCertificateStore = configuration.signingCertificateStore.get() // We need to resync after [createAndStoreLegalIdentity].
@@ -1034,7 +1044,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
     }
 
-    inner class ServiceHubInternalImpl : SingletonSerializeAsToken(), ServiceHubInternal, ServicesForResolutionInternal by servicesForResolution {
+    inner class ServiceHubInternalImpl : SingletonSerializeAsToken(), ServiceHubInternal, ServicesForResolution by servicesForResolution {
         override val rpcFlows = ArrayList<Class<out FlowLogic<*>>>()
         override val stateMachineRecordedTransactionMapping = DBTransactionMappingStorage(database)
         override val identityService: IdentityService get() = this@AbstractNode.identityService

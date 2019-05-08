@@ -99,7 +99,6 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
     @Throws(AttachmentResolutionException::class, TransactionResolutionException::class)
     @DeleteForDJVM
     fun toLedgerTransaction(services: ServicesForResolution): LedgerTransaction {
-        val whitelistedKeysForAttachments = (services as? ServicesForResolutionInternal)?.whitelistedKeysForAttachments ?: listOf()
         return toLedgerTransactionInternal(
                 resolveIdentity = { services.identityService.partyFromKey(it) },
                 resolveAttachment = { services.attachments.openAttachment(it) },
@@ -109,7 +108,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                     services.networkParametersService.lookup(hashToResolve)
                 },
                 resolveContractAttachment = { services.loadContractAttachment(it) },
-                whitelistedKeys = whitelistedKeysForAttachments
+                isAttachmentTrusted = { isAttachmentTrusted(it, services.attachments) }
         )
     }
 
@@ -145,13 +144,11 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                 { null },
                 // Returning a dummy `missingAttachment` Attachment allows this deprecated method to work and it disables "contract version no downgrade rule" as a dummy Attachment returns version 1
                 { resolveAttachment(it.txhash) ?: missingAttachment },
-                listOf()
+                { isAttachmentTrusted(it, null) }
         )
     }
 
-    // Especially crafted for TransactionVerificationRequest.
-    // Note that whitelisted keys do not need to be passed here. The DJVM automatically assumes all attachments are provided by a trusted
-    // uploader, and so all attachments will be trusted when this is called from the DJVM.
+    // Especially crafted for TransactionVerificationRequest
     @CordaInternal
     internal fun toLtxDjvmInternalBridge(
             resolveAttachment: (SecureHash) -> Attachment?,
@@ -164,7 +161,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                 { stateRef -> resolveStateRef(stateRef)?.serialize() },
                 resolveParameters,
                 { resolveAttachment(it.txhash) ?: missingAttachment },
-                listOf()
+                { true } // Any attachment loaded through the DJVM should be trusted
         )
     }
 
@@ -174,7 +171,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
             resolveStateRefAsSerialized: (StateRef) -> SerializedBytes<TransactionState<ContractState>>?,
             resolveParameters: (SecureHash?) -> NetworkParameters?,
             resolveContractAttachment: (StateRef) -> Attachment,
-            whitelistedKeys: Collection<SecureHash>
+            isAttachmentTrusted: (Attachment) -> Boolean
     ): LedgerTransaction {
         // Look up public keys to authenticated identities.
         val authenticatedCommands = commands.lazyMapped { cmd, _ ->
@@ -210,7 +207,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                 componentGroups,
                 serializedResolvedInputs,
                 serializedResolvedReferences,
-                whitelistedKeysForAttachments = whitelistedKeys
+                isAttachmentTrusted
         )
 
         checkTransactionSize(ltx, resolvedNetworkParameters.maxTransactionSize, serializedResolvedInputs, serializedResolvedReferences)
@@ -354,7 +351,8 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                         ?: throw TransactionResolutionException(stateRef.txhash)
                 // Get the network parameters from the tx or whatever the default params are.
                 val paramsHash = coreTransaction.networkParametersHash ?: services.networkParametersService.defaultHash
-                val params = services.networkParametersService.lookup(paramsHash) ?: throw IllegalStateException("Should have been able to fetch parameters by this point: $paramsHash")
+                val params = services.networkParametersService.lookup(paramsHash)
+                        ?: throw IllegalStateException("Should have been able to fetch parameters by this point: $paramsHash")
                 @Suppress("UNCHECKED_CAST")
                 when (coreTransaction) {
                     is WireTransaction -> coreTransaction.componentGroups

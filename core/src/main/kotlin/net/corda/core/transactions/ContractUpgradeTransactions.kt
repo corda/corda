@@ -9,12 +9,15 @@ import net.corda.core.crypto.componentHash
 import net.corda.core.crypto.computeNonce
 import net.corda.core.identity.Party
 import net.corda.core.internal.AttachmentWithContext
-import net.corda.core.internal.ServicesForResolutionInternal
 import net.corda.core.internal.combinedHash
+import net.corda.core.internal.isAttachmentTrusted
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.ServicesForResolution
-import net.corda.core.serialization.*
+import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.SerializedBytes
+import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.internal.AttachmentsClassLoaderBuilder
+import net.corda.core.serialization.serialize
 import net.corda.core.transactions.ContractUpgradeFilteredTransaction.FilteredComponent
 import net.corda.core.transactions.ContractUpgradeLedgerTransaction.Companion.loadUpgradedContract
 import net.corda.core.transactions.ContractUpgradeLedgerTransaction.Companion.retrieveAppClassLoader
@@ -145,13 +148,12 @@ data class ContractUpgradeWireTransaction(
                 ?: throw MissingContractAttachments(emptyList())
         val upgradedAttachment = services.attachments.openAttachment(upgradedContractAttachmentId)
                 ?: throw MissingContractAttachments(emptyList())
-        val whitelistedPublicKeys = (services as? ServicesForResolutionInternal)?.whitelistedKeysForAttachments ?: listOf()
 
         return AttachmentsClassLoaderBuilder.withAttachmentsClassloaderContext(
                 listOf(legacyAttachment, upgradedAttachment),
                 params,
                 id,
-                whitelistedPublicKeys) { transactionClassLoader ->
+                { isAttachmentTrusted(it, services.attachments) }) { transactionClassLoader ->
             val resolvedInput = binaryInput.deserialize()
             val upgradedContract = upgradedContract(upgradedContractClassName, transactionClassLoader)
             val outputState = calculateUpgradedState(resolvedInput, upgradedContract, upgradedAttachment)

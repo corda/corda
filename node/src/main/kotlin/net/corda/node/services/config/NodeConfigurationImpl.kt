@@ -1,7 +1,6 @@
 package net.corda.node.services.config
 
 import com.typesafe.config.ConfigException
-import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
@@ -84,7 +83,6 @@ data class NodeConfigurationImpl(
         override val flowOverrides: FlowOverrideConfig?,
         override val cordappSignerKeyFingerprintBlacklist: List<String> = Defaults.cordappSignerKeyFingerprintBlacklist,
         override val networkParameterAcceptanceSettings: NetworkParameterAcceptanceSettings = Defaults.networkParameterAcceptanceSettings,
-        override val whitelistedKeysForAttachments: List<SecureHash> = listOf(),
         override val cryptoServiceName: SupportedCryptoServices? = Defaults.cryptoServiceName,
         override val cryptoServiceConf: Path? = Defaults.cryptoServiceConf
 ) : NodeConfiguration {
