@@ -96,9 +96,4 @@ class RequestKeyFlowTests {
             subFlow(RequestKeyFlowHandler(otherSession))
         }
     }
-
-    @Test
-    fun `clah`() {
-        println(aliceNode.services.myInfo.legalIdentities.first().name.toString())
-    }
 }

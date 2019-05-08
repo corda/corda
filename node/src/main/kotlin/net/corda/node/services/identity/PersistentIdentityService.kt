@@ -5,7 +5,6 @@ import net.corda.core.identity.*
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.internal.hash
 import net.corda.core.node.NodeInfo
-import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.UnknownAnonymousPartyException
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.MAX_HASH_HEX_SIZE
@@ -59,7 +58,7 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
         fun createX500ToKeyMap(cacheFactory: NamedCacheFactory): AppendOnlyPersistentMap<CordaX500Name, SecureHash, PersistentIdentityNames, String> {
             return AppendOnlyPersistentMap(
                     cacheFactory = cacheFactory,
-                    name = "PersistentIdentityService_partyByName",
+                    name = "PersistentIdentityService_partyToKey",
                     toPersistentEntityKey = { it.toString() },
                     fromPersistentEntity = { Pair(CordaX500Name.parse(it.name), SecureHash.parse(it.publicKeyHash)) },
                     toPersistentEntity = { key: CordaX500Name, value: SecureHash ->
@@ -213,24 +212,25 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
     override fun wellKnownPartyFromX500Name(name: CordaX500Name): Party? = certificateFromCordaX500Name(name)?.party
 
     override fun wellKnownPartyFromAnonymous(party: AbstractParty): Party? {
+
         // Skip database lookup if the party is a notary identity.
         // This also prevents an issue where the notary identity can't be resolved if it's not in the network map cache. The node obtains
         // a trusted list of notary identities from the network parameters automatically.
         log.debug("Attempting to find wellKnownParty for: ${party.owningKey.hash}")
         val candidate = keyToParty[party.owningKey.hash]
         return if (party is Party && party in notaryIdentityCache) {
-            return party
-        } else if (candidate != null){
-            return getNodesByLegalName(candidate).first().legalIdentities.first()
+            party
+        } else if (candidate != null ){
+            getNodesByLegalName(candidate).first().legalIdentities.first()
         } else {
-            super.wellKnownPartyFromAnonymous(party)
+            throw IllegalArgumentException("Could not find a well known party from key ${party.owningKey}.")
         }
     }
 
     override fun partiesFromName(query: String, exactMatch: Boolean): Set<Party> {
         return database.transaction {
             val results = LinkedHashSet<Party>()
-            keyToParty.allPersisted().forEach {(partyId, x500name) ->
+            partyToKey.allPersisted().forEach { (x500name, partyId) ->
                 if (x500Matches(query, exactMatch, x500name)) {
                     results += keyToPartyAndCert[partyId]!!.party
                 }
@@ -241,6 +241,7 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
 
     /**
      * TODO - Duplicate
+     *
      * This is duplicate of what is found in [PersistentNetworkMapCache] but we cannot instantiate that class here due to cyclic constructor
      * dependencies.
      */
@@ -260,14 +261,13 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
         return result.map { it.toNodeInfo() }
     }
 
-    @Throws(UnknownAnonymousPartyException::class)
+        @Throws(UnknownAnonymousPartyException::class)
     override fun assertOwnership(party: Party, anonymousParty: AnonymousParty) = database.transaction { super.assertOwnership(party, anonymousParty) }
 
     lateinit var ourNames: Set<CordaX500Name>
 
     // Allows us to eliminate keys we know belong to others by using the cache contents that might have been seen during other identity activity.
     // Concentrating activity on the identity cache works better than spreading checking across identity and key management, because we cache misses too.
-    // TODO still needs to be removed from VaultMigrationService
     fun stripNotOurKeys(keys: Iterable<PublicKey>): Iterable<PublicKey> {
         return keys.filter { certificateFromKey(it)?.name in ourNames }
     }
@@ -291,6 +291,5 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
         }
         return willRegisterNewMapping
     }
-
 }
 
