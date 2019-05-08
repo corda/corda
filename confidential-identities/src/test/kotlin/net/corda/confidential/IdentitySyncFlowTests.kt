@@ -37,7 +37,7 @@ class IdentitySyncFlowTests {
         mockNet = InternalMockNetwork(
                 cordappsForAllNodes = FINANCE_CORDAPPS,
                 networkSendManuallyPumped = false,
-                threadPerNode = true
+                threadPerNode = false
         )
     }
 
@@ -59,6 +59,7 @@ class IdentitySyncFlowTests {
         val anonymous = true
         val ref = OpaqueBytes.of(0x01)
         val issueFlow = aliceNode.services.startFlow(CashIssueAndPaymentFlow(1000.DOLLARS, ref, alice, anonymous, notary)).resultFuture
+        mockNet.runNetwork()
         val issueTx = issueFlow.getOrThrow().stx
         val confidentialIdentity = issueTx.tx.outputs.map { it.data }.filterIsInstance<Cash.State>().single().owner
         assertNull(bobNode.database.transaction { bobNode.services.identityService.wellKnownPartyFromAnonymous(confidentialIdentity) })

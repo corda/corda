@@ -46,6 +46,7 @@ open class DefaultNamedCacheFactory protected constructor(private val metricRegi
                 name == "NodeAttachmentService_attachmentPresence" -> caffeine.maximumSize(attachmentCacheBound)
                 name == "NodeAttachmentService_contractAttachmentVersions" -> caffeine.maximumSize(defaultCacheSize)
                 name == "PersistentIdentityService_keyToPartyAndCert" -> caffeine.maximumSize(defaultCacheSize)
+                name == "PersistentIdentityService_partyToKey" -> caffeine.maximumSize(defaultCacheSize)
                 name == "PersistentIdentityService_keyToParty" -> caffeine.maximumSize(defaultCacheSize)
                 name == "PersistentNetworkMap_nodesByKey" -> caffeine.maximumSize(defaultCacheSize)
                 name == "PersistentNetworkMap_idByLegalName" -> caffeine.maximumSize(defaultCacheSize)
