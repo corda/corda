@@ -27,6 +27,7 @@ import java.util.regex.Pattern
 import kotlin.collections.ArrayList
 import kotlin.collections.component1
 import kotlin.collections.component2
+import kotlin.reflect.KClass
 
 /**
  * A TransactionBuilder is a transaction class that's mutable (unlike the others which are all immutable). It is
@@ -170,6 +171,13 @@ open class TransactionBuilder(
             wireTx
     }
 
+    // Returns the first exception in the hierarchy that matches one of the [types].
+    private tailrec fun Throwable.rootClassNotFoundCause(vararg types: KClass<*>): Throwable = when {
+        this::class in types -> this
+        this.cause == null -> this
+        else -> this.cause!!.rootClassNotFoundCause(*types)
+    }
+
     /**
      * @return true if a new dependency was successfully added.
      */
@@ -179,7 +187,8 @@ open class TransactionBuilder(
             // The transaction verified successfully without adding any extra dependency.
             false
         } catch (e: Throwable) {
-            val rootError = e.rootCause
+            val rootError = e.rootClassNotFoundCause(ClassNotFoundException::class, NoClassDefFoundError::class)
+
             when {
                 // Handle various exceptions that can be thrown during verification and drill down the wrappings.
                 // Note: this is a best effort to preserve backwards compatibility.
