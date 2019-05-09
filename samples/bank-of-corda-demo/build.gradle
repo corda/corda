@@ -26,7 +26,6 @@ dependencies {
 
     // Test dependencies
     testCompile "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
-    testCompile "junit:junit:${junit4_version}"
 
     testRuntime "org.junit.vintage:junit-vintage-engine:${junit_vintage_version}"
     testRuntime "org.junit.jupiter:junit-jupiter-engine:${junit_jupiter_version}"

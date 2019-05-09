@@ -30,7 +30,6 @@ dependencies {
     // Integration test helpers
     testCompile "org.assertj:assertj-core:$assertj_version"
     integrationTestCompile "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
-    integrationTestCompile "junit:junit:${junit4_version}"
 
     integrationTestRuntime "org.junit.vintage:junit-vintage-engine:${junit_vintage_version}"
     integrationTestRuntime "org.junit.jupiter:junit-jupiter-engine:${junit_jupiter_version}"

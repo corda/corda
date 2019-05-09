@@ -9,7 +9,7 @@ dependencies {
     compile "com.fasterxml.jackson.module:jackson-module-kotlin:2.9.+"
     
     compile "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
-    compile "junit:junit:${junit4_version}"
+    compile "junit:junit:${junit_version}"
 
     testRuntime "org.junit.vintage:junit-vintage-engine:${junit_vintage_version}"
     testRuntime "org.junit.jupiter:junit-jupiter-engine:${junit_jupiter_version}"
