@@ -1,9 +1,6 @@
-package flow
+package net.corda.confidential.identities
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.confidential.IdentitySyncFlowTests
-import net.corda.confidential.flow.SyncKeyMappingFlow
-import net.corda.confidential.flow.SyncKeyMappingFlowHandler
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
 import net.corda.core.flows.InitiatedBy
@@ -45,7 +42,7 @@ class SyncKeyMappingFlowTests {
         mockNet = InternalMockNetwork(
                 cordappsForAllNodes = FINANCE_CORDAPPS,
                 networkSendManuallyPumped = false,
-                threadPerNode = false)
+                threadPerNode = true)
 
         aliceNode = mockNet.createPartyNode(ALICE_NAME)
         bobNode = mockNet.createPartyNode(BOB_NAME)
@@ -72,7 +69,6 @@ class SyncKeyMappingFlowTests {
         val anonymous = true
         val ref = OpaqueBytes.of(0x01)
         val issueFlow = aliceNode.services.startFlow(CashIssueAndPaymentFlow(1000.DOLLARS, ref, alice, anonymous, notary)).resultFuture
-        mockNet.runNetwork()
         val issueTx = issueFlow.getOrThrow().stx
         val confidentialIdentity = issueTx.tx.outputs.map { it.data }.filterIsInstance<Cash.State>().single().owner
         assertNull(bobNode.database.transaction { bobNode.services.identityService.wellKnownPartyFromAnonymous(confidentialIdentity) })

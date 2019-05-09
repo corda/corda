@@ -1,10 +1,10 @@
-package net.corda.confidential.flow
+package net.corda.confidential.identities
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.confidential.service.*
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
+import net.corda.core.identity.SignedKeyToPartyMapping
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.toBase58String
@@ -17,12 +17,12 @@ class ShareKeyFlow(private val session: FlowSession, private val uuid: UUID) : F
     override fun call() {
         session.sendAndReceive<UUIDReceived>(uuid)
         val signedKey = createSignedPublicKey(serviceHub, uuid)
-        registerIdentityMapping(serviceHub, signedKey, signedKey.publicKeyToPartyMap.values.first())
+//        registerIdentityMapping(serviceHub, signedKey, signedKey.publicKeyToPartyMap.values.first())
         session.send(signedKey)
     }
 }
 
-class ShareKeyFlowHandler(private val otherSession: FlowSession) : FlowLogic<SignedPublicKey>() {
+class ShareKeyFlowHandler(private val otherSession: FlowSession) : FlowLogic<SignedKeyToPartyMapping>() {
 
     companion object {
         object VERIFYING_KEY : ProgressTracker.Step("Verifying counterparty's signature")
@@ -36,10 +36,10 @@ class ShareKeyFlowHandler(private val otherSession: FlowSession) : FlowLogic<Sig
 
     @Suspendable
     @Throws(FlowException::class)
-    override fun call(): SignedPublicKey {
+    override fun call(): SignedKeyToPartyMapping {
         val uuid = otherSession.receive<UUID>().unwrap { it }
         otherSession.send(UUIDReceived())
-        val signedKey = otherSession.sendAndReceive<SignedPublicKey>(CreateKeyForAccount(uuid)).unwrap { it }
+        val signedKey = otherSession.sendAndReceive<SignedKeyToPartyMapping>(CreateKeyForAccount(uuid)).unwrap { it }
         // Ensure the counter party was the one that generated the key
         require(otherSession.counterparty.owningKey == signedKey.signature.by) {
             "Expected a signature by ${otherSession.counterparty.owningKey.toBase58String()}, but received by ${signedKey.signature.by.toBase58String()}}"
@@ -48,8 +48,8 @@ class ShareKeyFlowHandler(private val otherSession: FlowSession) : FlowLogic<Sig
         validateSignature(signedKey)
         progressTracker.currentStep = KEY_VERIFIED
 
-        val party = signedKey.publicKeyToPartyMap.values.first()
-        val isRegistered = registerIdentityMapping(serviceHub, signedKey, party)
+        val isRegistered = serviceHub.identityService.registerConfidentialIdentity(signedKey, serviceHub.myInfo.legalIdentities.first())
+        val party = signedKey.mapping.party
         if (!isRegistered) {
             throw FlowException("Could not generate a new key for $party as the key is already registered or registered to a different party.")
         }

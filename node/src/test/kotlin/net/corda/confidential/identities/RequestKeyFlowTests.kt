@@ -1,17 +1,14 @@
-package flow
+package net.corda.confidential.identities
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.confidential.flow.ShareKeyFlow
-import net.corda.confidential.flow.ShareKeyFlowHandler
-import net.corda.confidential.service.SignedPublicKey
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
-import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
-import net.corda.node.services.identity.PersistentIdentityService
+import net.corda.core.identity.SignedKeyToPartyMapping
+import net.corda.core.utilities.getOrThrow
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.singleIdentity
@@ -19,15 +16,14 @@ import net.corda.testing.node.internal.FINANCE_CORDAPPS
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.TestStartedNode
 import net.corda.testing.node.internal.startFlow
-import org.assertj.core.api.Assertions
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import java.security.PublicKey
 import java.util.*
 
-class ShareKeyFlowTests {
+class RequestKeyFlowTests {
+
     private lateinit var mockNet: InternalMockNetwork
     private lateinit var aliceNode: TestStartedNode
     private lateinit var bobNode: TestStartedNode
@@ -50,8 +46,8 @@ class ShareKeyFlowTests {
 
         mockNet.startNodes()
 
-        aliceNode.registerInitiatedFlow(ShareKeyResponder::class.java)
-        bobNode.registerInitiatedFlow(ShareKeyResponder::class.java)
+        aliceNode.registerInitiatedFlow(RequestKeyResponder::class.java)
+        bobNode.registerInitiatedFlow(RequestKeyResponder::class.java)
     }
 
     @After
@@ -60,36 +56,43 @@ class ShareKeyFlowTests {
     }
 
     @Test
-    fun `share new key with another party `() {
-        // Alice creates a new key and shares it with Bob
-        aliceNode.services.startFlow(ShareKeyInitiator(bob, UUID.randomUUID())).resultFuture
+    fun `request new key from another party`() {
+        // Alice requests that bob generates a new key for an account
+        val keyForBob = aliceNode.services.startFlow(RequestKeyInitiator(bob, UUID.randomUUID())).resultFuture
         mockNet.runNetwork()
 
-        // Alice has her own key and the newly generated key
+        val bobResults = keyForBob.getOrThrow().mapping
+
+        // Bob has the newly generated key as well as the owning key
+        val bobKeys = bobNode.services.keyManagementService.keys
         val aliceKeys = aliceNode.services.keyManagementService.keys
-        assertThat(aliceKeys).hasSize(2)
+        assertThat(bobKeys).hasSize(2)
+        assertThat(aliceKeys).hasSize(1)
 
-        val aliceGeneratedKey = aliceKeys.last()
+        assertThat(bobNode.services.keyManagementService.keys).contains(bobResults.key)
 
-        // Bob should be able to resolve the generated key as it has been shared with him
-        val resolvedParty = bobNode.services.identityService.wellKnownPartyFromAnonymous(AnonymousParty(aliceGeneratedKey))
-        assertThat(resolvedParty).isEqualTo(alice)
+        val resolvedBobParty = aliceNode.services.identityService.wellKnownPartyFromAnonymous(AnonymousParty(bobResults.key))
+        assertThat(resolvedBobParty).isEqualTo(bob)
+    }
+
+    @Test
+    fun `verify flow exception`(){
+        //TODO
+    }
+
+    @InitiatingFlow
+    private class RequestKeyInitiator(private val otherParty: Party, private val uuid: UUID) : FlowLogic<SignedKeyToPartyMapping>() {
+        @Suspendable
+        override fun call(): SignedKeyToPartyMapping {
+            return subFlow(RequestKeyFlow(initiateFlow(otherParty), uuid))
+        }
+    }
+
+    @InitiatedBy(RequestKeyInitiator::class)
+    private class RequestKeyResponder(private val otherSession: FlowSession) : FlowLogic<Unit>() {
+        @Suspendable
+        override fun call() {
+            subFlow(RequestKeyFlowHandler(otherSession))
+        }
     }
 }
-
-@InitiatingFlow
-private class ShareKeyInitiator(private val otherParty: Party, private val uuid: UUID) : FlowLogic<Unit>() {
-    @Suspendable
-    override fun call() {
-        subFlow(ShareKeyFlow(initiateFlow(otherParty), uuid))
-    }
-}
-
-@InitiatedBy(ShareKeyInitiator::class)
-private class ShareKeyResponder(private val otherSession: FlowSession) : FlowLogic<SignedPublicKey>() {
-    @Suspendable
-    override fun call() : SignedPublicKey{
-        return subFlow(ShareKeyFlowHandler(otherSession))
-    }
-}
-

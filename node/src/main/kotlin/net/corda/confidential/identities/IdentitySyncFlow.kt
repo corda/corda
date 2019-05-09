@@ -1,4 +1,4 @@
-package net.corda.confidential
+package net.corda.confidential.identities
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.ContractState
@@ -36,9 +36,9 @@ object IdentitySyncFlow {
         override fun call() {
             progressTracker.currentStep = SYNCING_IDENTITIES
             val identityCertificates: Map<AbstractParty, PartyAndCertificate?> = extractOurConfidentialIdentities()
-
+            val blah = identityCertificates.keys.toList()
             otherSideSessions.forEach { otherSideSession ->
-                val requestedIdentities: List<AbstractParty> = otherSideSession.sendAndReceive<List<AbstractParty>>(identityCertificates.keys.toList()).unwrap { req ->
+                val requestedIdentities: List<AbstractParty> = otherSideSession.sendAndReceive<List<AbstractParty>>(blah).unwrap { req ->
                     require(req.all { it in identityCertificates.keys }) { "${otherSideSession.counterparty} requested a confidential identity not part of transaction: ${tx.id}" }
                     req
                 }

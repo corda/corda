@@ -10,7 +10,6 @@ import net.corda.core.identity.*
 import net.corda.core.node.services.IdentityService
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.*
 import net.corda.testing.internal.matchers.flow.willReturn
@@ -201,7 +200,8 @@ class AnonymousSessionTestFlow(val keys: List<Pair<PublicKey, Party>>) : FlowLog
 
         for ((key, party) in keys) {
             if (party.name != ourIdentity.name) {
-                (serviceHub.identityService as IdentityServiceInternal).registerIdentityMapping(key = key, identity = party)
+                //FIXME
+//                (serviceHub.identityService as IdentityServiceInternal).registerConfidentialIdentityMapping(key = key, identity = party)
             }
         }
         val state = DummyContract.MultiOwnerState(owners = keys.map { AnonymousParty(it.first) })
@@ -238,7 +238,8 @@ class MixAndMatchAnonymousSessionTestFlow(val allKeys: List<Pair<PublicKey, Part
 
         for ((key, party) in allKeys) {
             if (party.name != ourIdentity.name) {
-                (serviceHub.identityService as IdentityServiceInternal).registerIdentityMapping(key = key, identity = party)
+                //FIXME
+//                serviceHub.identityService.registerConfidentialIdentityMapping(key = key, identity = party)
             }
         }
         val state = DummyContract.MultiOwnerState(owners = allKeys.map { AnonymousParty(it.first) })

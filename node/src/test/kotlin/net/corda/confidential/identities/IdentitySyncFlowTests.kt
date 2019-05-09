@@ -1,12 +1,10 @@
-package net.corda.confidential
+package net.corda.confidential.identities
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
-import net.corda.core.identity.AbstractParty
-import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.OpaqueBytes
@@ -39,7 +37,7 @@ class IdentitySyncFlowTests {
         mockNet = InternalMockNetwork(
                 cordappsForAllNodes = FINANCE_CORDAPPS,
                 networkSendManuallyPumped = false,
-                threadPerNode = false
+                threadPerNode = true
         )
     }
 
@@ -61,7 +59,6 @@ class IdentitySyncFlowTests {
         val anonymous = true
         val ref = OpaqueBytes.of(0x01)
         val issueFlow = aliceNode.services.startFlow(CashIssueAndPaymentFlow(1000.DOLLARS, ref, alice, anonymous, notary)).resultFuture
-        mockNet.runNetwork()
         val issueTx = issueFlow.getOrThrow().stx
         val confidentialIdentity = issueTx.tx.outputs.map { it.data }.filterIsInstance<Cash.State>().single().owner
         assertNull(bobNode.database.transaction { bobNode.services.identityService.wellKnownPartyFromAnonymous(confidentialIdentity) })
@@ -123,7 +120,7 @@ class IdentitySyncFlowTests {
         }
     }
 
-    @InitiatedBy(IdentitySyncFlowTests.Initiator::class)
+    @InitiatedBy(Initiator::class)
     class Receive(private val otherSideSession: FlowSession) : FlowLogic<Unit>() {
         @Suspendable
         override fun call() {

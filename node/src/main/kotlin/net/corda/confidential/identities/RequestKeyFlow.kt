@@ -1,10 +1,10 @@
-package net.corda.confidential.flow
+package net.corda.confidential.identities
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.confidential.service.*
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
+import net.corda.core.identity.SignedKeyToPartyMapping
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.toBase58String
 import net.corda.core.utilities.unwrap
@@ -12,7 +12,7 @@ import java.util.*
 
 class RequestKeyFlow(
         private val session: FlowSession,
-        private val uuid: UUID) : FlowLogic<SignedPublicKey>() {
+        private val uuid: UUID) : FlowLogic<SignedKeyToPartyMapping>() {
 
     companion object {
         object REQUESTING_KEY : ProgressTracker.Step("Generating a public key")
@@ -27,9 +27,9 @@ class RequestKeyFlow(
 
     @Suspendable
     @Throws(FlowException::class)
-    override fun call(): SignedPublicKey {
+    override fun call(): SignedKeyToPartyMapping {
         progressTracker.currentStep = REQUESTING_KEY
-        val signedKey = session.sendAndReceive<SignedPublicKey>(CreateKeyForAccount(uuid)).unwrap { it }
+        val signedKey = session.sendAndReceive<SignedKeyToPartyMapping>(CreateKeyForAccount(uuid)).unwrap { it }
 
         // Ensure the counter party was the one that generated the key
         require(session.counterparty.owningKey == signedKey.signature.by) {
@@ -39,8 +39,8 @@ class RequestKeyFlow(
         validateSignature(signedKey)
         progressTracker.currentStep = KEY_VERIFIED
 
-        val party = signedKey.publicKeyToPartyMap.values.first()
-        val isRegistered = registerIdentityMapping(serviceHub, signedKey, party)
+        val isRegistered = serviceHub.identityService.registerConfidentialIdentity(signedKey, serviceHub.myInfo.legalIdentities.first())
+        val party = signedKey.mapping.party
         if (!isRegistered) {
             throw FlowException("Could not generate a new key for $party as the key is already registered or registered to a different party.")
         }

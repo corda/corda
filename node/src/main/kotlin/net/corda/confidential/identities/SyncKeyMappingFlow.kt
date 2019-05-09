@@ -1,9 +1,6 @@
-package net.corda.confidential.flow
+package net.corda.confidential.identities
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.confidential.service.SignedPublicKey
-import net.corda.confidential.service.createSignedPublicKey
-import net.corda.confidential.service.registerIdentityMapping
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.TransactionResolutionException
 import net.corda.core.contracts.UniqueIdentifier
@@ -11,6 +8,7 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
+import net.corda.core.identity.SignedKeyToPartyMapping
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.unwrap
@@ -71,13 +69,13 @@ class SyncKeyMappingFlowHandler(private val otherSession: FlowSession) : FlowLog
         val allIdentities = otherSession.receive<List<AbstractParty>>().unwrap { it }
         val unknownIdentities = allIdentities.filter { (serviceHub.identityService as PersistentIdentityService).wellKnownPartyFromAnonymous(it) == null }
         progressTracker.currentStep = RECEIVING_MAPPINGS
-        val missingIdentities = otherSession.sendAndReceive<Map<SignedPublicKey, Party>>(unknownIdentities)
+        val missingIdentities = otherSession.sendAndReceive<Map<SignedKeyToPartyMapping, Party>>(unknownIdentities)
         // Batch verify the identities we've received, so we know they're all correct before we start storing them in
         // the identity service
         val keyMappings = missingIdentities.unwrap { it }
         // TODO erm
         keyMappings.forEach {entry ->
-            registerIdentityMapping(serviceHub, entry.key, entry.value)
+            serviceHub.identityService.registerConfidentialIdentity(entry.key, serviceHub.myInfo.legalIdentities.first())
         }
     }
 }

@@ -3,17 +3,19 @@ package net.corda.node.services.identity
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.internal.hash
+import net.corda.core.identity.SignedKeyToPartyMapping
+import net.corda.core.node.services.IdentityService
+import net.corda.core.node.services.x500Matches
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.trace
-import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.nodeapi.internal.crypto.x509Certificates
-import java.security.InvalidAlgorithmParameterException
 import java.security.PublicKey
-import java.security.cert.*
+import java.security.cert.CertStore
+import java.security.cert.CollectionCertStoreParameters
+import java.security.cert.TrustAnchor
+import java.security.cert.X509Certificate
 import java.util.concurrent.ConcurrentHashMap
-import java.util.stream.Collectors
 import javax.annotation.concurrent.ThreadSafe
 
 /**
@@ -24,7 +26,7 @@ import javax.annotation.concurrent.ThreadSafe
 @ThreadSafe
 class InMemoryIdentityService(identities: List<PartyAndCertificate> = emptyList(),
                               override val trustRoot: X509Certificate,
-                              private val keyToParty: Map<PublicKey, Party>) : SingletonSerializeAsToken(), IdentityServiceInternal {
+                              private val keyToParty: Map<PublicKey, Party>) : SingletonSerializeAsToken(), IdentityService {
 
     @JvmOverloads
     constructor(identities: List<PartyAndCertificate>, trustRoot: X509Certificate) : this(identities, trustRoot, emptyMap())
@@ -51,11 +53,18 @@ class InMemoryIdentityService(identities: List<PartyAndCertificate> = emptyList(
         partyToKeys.putAll(swapped)
     }
 
-    @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
-    override fun verifyAndRegisterIdentity(identity: PartyAndCertificate): PartyAndCertificate? = verifyAndRegisterIdentity(trustAnchor, identity)
+//    @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
+//    override fun verifyAndRegisterIdentity(identity: PartyAndCertificate): PartyAndCertificate? = verifyAndRegisterIdentity(trustAnchor, identity)
+//
+//    @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
+//    override fun verifyAndRegisterIdentity(identity: PartyAndCertificate, isNewRandomIdentity: Boolean): PartyAndCertificate? = verifyAndRegisterIdentity(trustAnchor, identity)
+    override fun verifyAndRegisterIdentity(identity: PartyAndCertificate): PartyAndCertificate? = verifyAndRegisterIdentity(trustAnchor, identity, false)
 
-    @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
-    override fun verifyAndRegisterIdentity(identity: PartyAndCertificate, isNewRandomIdentity: Boolean): PartyAndCertificate? = verifyAndRegisterIdentity(trustAnchor, identity)
+    fun verifyAndRegisterIdentity(trustAnchor: TrustAnchor, identity: PartyAndCertificate, bool: Boolean) : PartyAndCertificate {
+        //FIXME
+        return identity
+    }
+
 
     override fun registerIdentity(identity: PartyAndCertificate, isNewRandomIdentity: Boolean): PartyAndCertificate? {
         val identityCertChain = identity.certPath.x509Certificates
@@ -77,38 +86,36 @@ class InMemoryIdentityService(identities: List<PartyAndCertificate> = emptyList(
         val results = LinkedHashSet<Party>()
         principalToParties.forEach { (x500name, partyAndCertificate) ->
             if (x500Matches(query, exactMatch, x500name)) {
-                results +=  partyAndCertificate.party
+                results += partyAndCertificate.party
             }
         }
         return results
     }
 
-    override fun registerIdentityMapping(identity: Party, key: PublicKey): Boolean {
+    override fun registerConfidentialIdentity(keyMapping: SignedKeyToPartyMapping, nodeParty: Party): Boolean {
+        val k = keyMapping.mapping.key
+        val p = keyMapping.mapping.party
+        val sig = keyMapping.signature
+
+        if (p != nodeParty) {
+            throw IllegalArgumentException("Something something something")
+        }
+
+        if (sig.by != nodeParty.owningKey) {
+            throw IllegalArgumentException("Something somethign seomthien ghrijei")
+        }
 
         var willRegisterNewMapping = true
-        when (keyToParties[key]) {
+
+        when (keyToParties.get(k)) {
             null -> {
-                keyToParties[key] = identity
+                keyToParties.putIfAbsent(k, p)
             }
             else -> {
-                if (identity != keyToParties[key]) {
+                if (p != keyToParties.get(k)) {
                     return false
                 }
                 willRegisterNewMapping = false
-            }
-        }
-
-        // Check by party
-        when (partyToKeys[identity]) {
-            null -> {
-                partyToKeys.putIfAbsent(identity, arrayListOf(key))
-            }
-            else -> {
-                val keys = partyToKeys[identity]
-                if (!keys!!.contains(key)) {
-                    keys.add(key)
-                    partyToKeys.replace(identity, keys)
-                }
             }
         }
         return willRegisterNewMapping
