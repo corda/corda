@@ -29,22 +29,22 @@ class RequestKeyFlow(
     @Throws(FlowException::class)
     override fun call(): SignedKeyToPartyMapping {
         progressTracker.currentStep = REQUESTING_KEY
-        val signedKey = session.sendAndReceive<SignedKeyToPartyMapping>(CreateKeyForAccount(uuid)).unwrap { it }
+        val signedKeyMapping = session.sendAndReceive<SignedKeyToPartyMapping>(CreateKeyForAccount(uuid)).unwrap { it }
 
         // Ensure the counter party was the one that generated the key
-        require(session.counterparty.owningKey == signedKey.signature.by) {
-            "Expected a signature by ${session.counterparty.owningKey.toBase58String()}, but received by ${signedKey.signature.by.toBase58String()}}"
+        require(session.counterparty.owningKey == signedKeyMapping.signature.by) {
+            "Expected a signature by ${session.counterparty.owningKey.toBase58String()}, but received by ${signedKeyMapping.signature.by.toBase58String()}}"
         }
         progressTracker.currentStep = VERIFYING_KEY
-        validateSignature(signedKey)
+        validateSignature(signedKeyMapping)
         progressTracker.currentStep = KEY_VERIFIED
 
-        val isRegistered = serviceHub.identityService.registerConfidentialIdentity(signedKey, serviceHub.myInfo.legalIdentities.first())
-        val party = signedKey.mapping.party
+        val isRegistered = serviceHub.identityService.registerConfidentialIdentity(signedKeyMapping, serviceHub.myInfo.legalIdentities.first())
+        val party = signedKeyMapping.mapping.party
         if (!isRegistered) {
             throw FlowException("Could not generate a new key for $party as the key is already registered or registered to a different party.")
         }
-        return signedKey
+        return signedKeyMapping
     }
 }
 
