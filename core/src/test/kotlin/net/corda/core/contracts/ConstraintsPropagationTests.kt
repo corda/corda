@@ -11,18 +11,17 @@ import net.corda.core.crypto.SignableData
 import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.AttachmentWithContext
 import net.corda.core.internal.canBeTransitionedFrom
 import net.corda.core.internal.inputStream
 import net.corda.core.internal.toPath
 import net.corda.core.node.NotaryInfo
+import net.corda.core.node.services.IdentityService
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.finance.POUNDS
 import net.corda.finance.`issued by`
 import net.corda.finance.contracts.asset.Cash
-import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME
@@ -33,7 +32,6 @@ import net.corda.testing.core.internal.JarSignatureTestUtils.generateKey
 import net.corda.testing.core.internal.SelfCleaningDir
 import net.corda.testing.internal.MockCordappProvider
 import net.corda.testing.node.MockServices
-import net.corda.testing.node.internal.MockNetworkParametersStorage
 import net.corda.testing.node.ledger
 import org.junit.*
 import java.security.PublicKey
@@ -83,7 +81,7 @@ class ConstraintsPropagationTests {
         ledgerServices = object : MockServices(
                 cordappPackages = listOf("net.corda.finance.contracts.asset"),
                 initialIdentity = ALICE,
-                identityService = mock<IdentityServiceInternal>().also {
+                identityService = mock<IdentityService>().also {
                     doReturn(ALICE_PARTY).whenever(it).partyFromKey(ALICE_PUBKEY)
                     doReturn(BOB_PARTY).whenever(it).partyFromKey(BOB_PUBKEY)
                 },
@@ -182,7 +180,6 @@ class ConstraintsPropagationTests {
     fun `Transaction validation fails, when constraints do not propagate correctly`() {
         ledgerServices.ledger(DUMMY_NOTARY) {
             ledgerServices.recordTransaction(transaction {
-                attachment(Cash.PROGRAM_ID, SecureHash.zeroHash)
                 output(Cash.PROGRAM_ID, "c1", DUMMY_NOTARY, null, HashAttachmentConstraint(SecureHash.zeroHash), Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), ALICE_PARTY))
                 command(ALICE_PUBKEY, Cash.Commands.Issue())
                 verifies()

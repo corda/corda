@@ -145,6 +145,19 @@ interface IdentityService {
      * @param exactMatch If true, a case sensitive match is done against each component of each X.500 name.
      */
     fun partiesFromName(query: String, exactMatch: Boolean): Set<Party>
+
+    fun registerIdentity(identity: PartyAndCertificate, isNewRandomIdentity: Boolean = false): PartyAndCertificate?
+
+    fun registerConfidentialIdentity(keyMapping: SignedKeyToPartyMapping, party: Party) : Boolean
 }
 
 class UnknownAnonymousPartyException(message: String) : CordaException(message)
+
+/**
+ * Check if [x500name] matches the [query].
+ */
+fun x500Matches(query: String, exactMatch: Boolean, x500name: CordaX500Name): Boolean {
+    val components = listOfNotNull(x500name.commonName, x500name.organisationUnit, x500name.organisation, x500name.locality, x500name.state, x500name.country)
+    return components.any { (exactMatch && it == query)
+            || (!exactMatch && it.contains(query, ignoreCase = true)) }
+}

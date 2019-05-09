@@ -1,4 +1,4 @@
-package net.corda.confidential
+package net.corda.confidential.identities
 
 import co.paralleluniverse.fibers.Suspendable
 import com.natpryce.hamkrest.MatchResult
