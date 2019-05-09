@@ -1,5 +1,6 @@
 package net.corda.confidential.flow
 
+import co.paralleluniverse.fibers.Suspendable
 import net.corda.confidential.service.SignedPublicKey
 import net.corda.confidential.service.createSignedPublicKey
 import net.corda.confidential.service.registerIdentityMapping
@@ -23,6 +24,7 @@ class SyncKeyMappingFlow(private val session: FlowSession, val tx: WireTransacti
 
     override val progressTracker = ProgressTracker(SYNCING_KEY_MAPPINGS)
 
+    @Suspendable
     override fun call() {
         val inputStates: List<ContractState> = (tx.inputs.toSet()).mapNotNull {
             try {
@@ -63,6 +65,7 @@ class SyncKeyMappingFlowHandler(private val otherSession: FlowSession) : FlowLog
 
     override val progressTracker: ProgressTracker = ProgressTracker(RECEIVING_IDENTITIES, RECEIVING_MAPPINGS)
 
+    @Suspendable
     override fun call() {
         progressTracker.currentStep = RECEIVING_IDENTITIES
         val allIdentities = otherSession.receive<List<AbstractParty>>().unwrap { it }
