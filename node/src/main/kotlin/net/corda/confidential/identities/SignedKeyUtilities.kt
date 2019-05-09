@@ -22,13 +22,12 @@ fun createSignedPublicKey(serviceHub: ServiceHub, uuid: UUID): SignedKeyToPartyM
 
 @CordaInternal
 @VisibleForTesting
-fun validateSignature(signedKey: SignedKeyToPartyMapping): SignedKeyToPartyMapping {
+fun validateSignature(signedKeyMapping: SignedKeyToPartyMapping) {
     try {
-        signedKey.signature.verify(signedKey.signature.serialize().hash.bytes)
+        signedKeyMapping.signature.verify(signedKeyMapping.mapping.serialize().hash.bytes)
     } catch (ex: SignatureException) {
         throw SignatureException("The signature does not match the expected.", ex)
     }
-    return signedKey
 }
 
 @CordaSerializable
