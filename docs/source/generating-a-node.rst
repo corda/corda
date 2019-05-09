@@ -143,6 +143,8 @@ To copy the same file to all nodes `ext.drivers` can be defined in the top level
         }
     }
 
+.. _node_package_namespace_ownership:
+
 Package namespace ownership
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 To specify :doc:`design/data-model-upgrades/package-namespace-ownership` configuration, the optional ``networkParameterOverrides`` and ``packageOwnership`` blocks can be used, similar to the configuration file used in :doc:`network-bootstrapper`:

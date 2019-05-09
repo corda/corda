@@ -14,6 +14,9 @@ Version 4.2
   present in the node in order to verify a chain of transactions using different versions of the same CorDapp - instead the signing key can
   be whitelisted.
 
+* :doc:`design/data-model-upgrades/package-namespace-ownership` configurations can be now be set as described in
+  :ref:`node_package_namespace_ownership`, when using the Cordformation plugin version 4.0.43.
+
 .. _changelog_v4.0:
 
 Version 4.0
