@@ -36,8 +36,8 @@ except:
 product_map = {
     'OS'   : 'Corda',
     'ENT'  : 'Corda Enterprise',
-    'NS'   : 'ENM',
-    'ENM'  : 'ENM',
+    'NS'   : 'CENM',
+    'ENM'  : 'CENM',
     'TEST' : 'Corda', # for demo and test purposes
 }
 # }}}
