@@ -11,7 +11,7 @@ public keys to `Party`s) by:
 
 * eliminate a dependency on the `IdentityService` by the `BasicHSMKeyManagementService`
 
-* eliminate the need for an `IdentityServiceInternal` interface; and,
+* eliminate the need for an `IdentityServiceInternal` interface
 
 The key motivation driving these changes is the accounts feature which is
 due to be released in Corda 5.
