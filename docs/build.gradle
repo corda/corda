@@ -46,7 +46,7 @@ task dokkaJavadoc(type: org.jetbrains.dokka.gradle.DokkaTask) {
         includes = ['packages.md']
         jdkVersion = 8
         externalDocumentationLink {
-            url = new URL("http://fasterxml.github.io/jackson-core/javadoc/2.8/")
+            url = new URL("http://fasterxml.github.io/jackson-core/javadoc/2.9/")
         }
         externalDocumentationLink {
             url = new URL("https://docs.oracle.com/javafx/2/api/")

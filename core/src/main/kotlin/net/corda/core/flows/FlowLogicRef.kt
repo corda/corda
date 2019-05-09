@@ -7,7 +7,7 @@ import net.corda.core.serialization.CordaSerializable
 /**
  * The public factory interface for creating validated [FlowLogicRef] instances as part of the scheduling framework.
  *
- * Typically this would be used from within the nextScheduledActivity method of a QueryableState to specify
+ * Typically this would be used from within the nextScheduledActivity method of a SchedulableState to specify
  * the flow to run at the scheduled time.
  */
 @DoNotImplement

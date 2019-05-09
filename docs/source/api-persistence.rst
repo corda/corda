@@ -59,7 +59,7 @@ integration points and is not dependant on changes to the contract code.
 It is expected that multiple contract state implementations might provide mappings within a single schema.
 For example an Interest Rate Swap contract and an Equity OTC Option contract might both provide a mapping to
 a Derivative contract within the same schema. The schemas should typically not be part of the contract itself and should exist independently
-to encourage re-use of a common set within a particular business area or Cordapp.
+to encourage re-use of a common set within a particular business area or CorDapp.
 
 .. note:: It's advisable to avoid cross-references between different schemas as this may cause issues when evolving ``MappedSchema``
    or migrating its data. At startup, nodes log such violations as warnings stating that there's a cross-reference between ``MappedSchema``'s.
