@@ -6,15 +6,13 @@ import net.corda.core.crypto.NullKeys.NULL_PARTY
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.AbstractParty
 import net.corda.core.internal.Emoji
-import net.corda.core.internal.castIfPossible
 import net.corda.core.internal.sumByLong
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.QueryableState
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.finance.contracts.asset.Cash
-import net.corda.finance.contracts.utils.sumCash
+import net.corda.finance.contracts.utils.sumCashBy
 import net.corda.finance.schemas.CommercialPaperSchemaV1
 import java.time.Instant
 import java.util.*
@@ -50,9 +48,6 @@ class CommercialPaper : Contract {
     ) : OwnableState, QueryableState, ICommercialPaperState {
         override val participants = listOf(owner)
 
-        @Deprecated("")
-        override fun withNewOwner(newOwner: AbstractParty) = CommandAndState(Commands.Move(-1, -1), copy(owner = newOwner))
-
         fun withoutOwner() = copy(owner = NULL_PARTY)
         override fun toString() = "${Emoji.newspaper}CommercialPaper(of $faceValue redeemable on $maturityDate by '$issuance', owned by $owner)"
 
@@ -86,6 +81,9 @@ class CommercialPaper : Contract {
 
         /** @suppress */
         infix fun `owned by`(owner: AbstractParty) = copy(owner = owner)
+
+        @Deprecated("")
+        override fun withNewOwner(newOwner: AbstractParty) = TODO()
     }
 
     /**
@@ -96,49 +94,24 @@ class CommercialPaper : Contract {
      *
      * Obviously, once all transitions have been identified the logic must check that there's no free floating states, or that the same state is part of 2 transitions.
      */
-    sealed class Commands : CommandWithMetadata {
-        data class Move(val input: Int, val output: Int) : Commands() {
+    interface Commands : CommandWithMetadata {
+        data class Move(val input: Int, val output: Int) : Commands {
             override val inputs: List<Int> get() = listOf(input)
             override val outputs: List<Int> get() = listOf(output)
         }
 
-        data class Redeem(override val inputs: List<Int>, val paymentOutputs: List<Int>) : Commands() {
+        data class Redeem(override val inputs: List<Int>) : Commands {
             override val outputs: List<Int> get() = emptyList()
         }
 
-        data class Issue(override val outputs: List<Int>) : Commands() {
+        data class Issue(override val outputs: List<Int>) : Commands {
             override val inputs: List<Int> get() = emptyList()
         }
     }
 
-    /**
-     * Utilities to build unambiguous transactions.
-     * They add metadata to the commands that will be used by the verification logic to build transitions.
-     */
-    fun TransactionBuilder.issue(outputs: List<State>): TransactionBuilder = this.apply {
-        val startIdx = this.outputStates().size - 1
-        outputs.forEach { addOutputState(it) }
-        // TODO fail early if the outputs have different owners
-        addCommand(Commands.Issue(outputs.mapIndexed { idx, _ -> startIdx + idx }), outputs.first().owner.owningKey)
-    }
-
-    fun TransactionBuilder.move(input: StateAndRef<State>, output: State): TransactionBuilder = this.apply {
-        addInputState(input)
-        addOutputState(output)
-        addCommand(Commands.Move(inputStates().size - 1, outputStates().size - 1), output.owner.owningKey)
-    }
-
-    fun TransactionBuilder.redeem(inputs: List<StateAndRef<State>>, paymentStates: List<Int>): TransactionBuilder = this.apply {
-        val startIdx = this.inputStates().size - 1
-        inputs.forEach { addInputState(it) }
-        // TODO fail early if the inputs have different owners
-        addCommand(Commands.Redeem(inputs.mapIndexed { idx, _ -> startIdx + idx }, paymentStates), inputs.first().state.data.owner.owningKey)
-    }
-
-
-    // The 3 business rules for the 3 types of possible transitions.
-    data class MoveTransition(val command: Command<Commands.Move>, val input: StateAndRef<State>, val output: State) : Transition {
-        override fun check(tx: LedgerTransaction) {
+    // The business rules for the 3 types of possible transitions.
+    data class MoveTransition(override val command: Command<Commands.Move>, val input: StateAndRef<State>, val output: State) : Transition<Commands.Move>() {
+        override fun verify(tx: LedgerTransaction) {
             requireThat {
                 "the transaction is signed by the owner of the CP" using (input.state.data.owner.owningKey in command.signers)
                 "the CP state is propagated" using (input.state.data.withoutOwner() == output.withoutOwner())
@@ -146,8 +119,8 @@ class CommercialPaper : Contract {
         }
     }
 
-    data class IssueTransition(val command: Command<Commands.Issue>, val outputs: List<State>) : Transition {
-        override fun check(tx: LedgerTransaction) {
+    data class IssueTransition(override val command: Command<Commands.Issue>, val outputs: List<State>) : Transition<Commands.Issue>() {
+        override fun verify(tx: LedgerTransaction) {
             val time = tx.timeWindow?.untilTime ?: throw IllegalArgumentException("Issuances have a time-window")
             requireThat {
                 "at least one state issued" using (outputs.isNotEmpty())
@@ -169,16 +142,15 @@ class CommercialPaper : Contract {
      *
      * Note: There is a later cross-transition overlap check to make sure that these cash states are only used to pay for this transition.
      */
-    data class RedeemTransition(val command: Command<Commands.Redeem>, val inputs: List<StateAndRef<State>>, val payments: List<Cash.State>) : Transition {
-        override fun check(tx: LedgerTransaction) {
+    data class RedeemTransition(override val command: Command<Commands.Redeem>, val inputs: List<StateAndRef<State>>, val cashMove: Cash.MoveTransition) : Transition<Commands.Redeem>() {
+        override fun verify(tx: LedgerTransaction) {
             val time = tx.timeWindow?.fromTime ?: throw IllegalArgumentException("Redemptions must have a time-window")
 
-            // all inputs have the same owner
+            // all CP inputs have the same owner
             val cpOwner = inputs.map { it.state.data.owner }.toSet().single()
-            val newCashOwner = payments.map { it.owner }.toSet().single()
 
-            // Redemption of the paper requires movement of on-ledger cash.
-            val cashReceived = payments.sumCash()
+            // Redemption of the paper requires movement of on-ledger cash to the owner of the CP.
+            val cashReceived = cashMove.outputs.sumCashBy(cpOwner)
 
             val totalCPFaceValue = inputs.drop(1)
                     .fold(inputs.first().state.data.faceValue) { sum, input -> sum + input.state.data.faceValue }
@@ -189,7 +161,6 @@ class CommercialPaper : Contract {
                 }
                 "the received amount equals the total face value" using (cashReceived == totalCPFaceValue)
                 "the transaction is signed by the owner of the CP" using (cpOwner.owningKey in command.signers)
-                "the cash is transferred to the owner of the CP" using (cpOwner == newCashOwner)
             }
         }
     }
@@ -204,20 +175,26 @@ class CommercialPaper : Contract {
         when (command) {
             is Commands.Move -> MoveTransition(cmd as Command<Commands.Move>, this.inputs[command.input] as StateAndRef<State>, this.outputStates[command.output] as State)
             is Commands.Issue -> IssueTransition(cmd as Command<Commands.Issue>, command.outputs.map { this.outputStates[it] as State })
-            is Commands.Redeem -> RedeemTransition(cmd as Command<Commands.Redeem>, command.inputs.map { this.inputs[it] as StateAndRef<State> }, command.paymentOutputs.map { this.outputStates[it] as Cash.State })
+            is Commands.Redeem -> {
+                val thisCmdId = this.commands.map { Command(it.value, it.signers) }.indexOf(cmd as Command<CommandData>)
+
+                // Find the Cash Move that pays for this.
+                // The Cash contract should check that multiple Move commands don't pay for the same item.
+                val cashCmd = this.commandsOfType<Cash.Commands.Move>().firstOrNull { it.value.paysFor == thisCmdId }
+
+                RedeemTransition(cmd as Command<Commands.Redeem>, command.inputs.map { this.inputs[it] as StateAndRef<State> }, Cash.MoveTransition(cashCmd!!, this))
+            }
+            else -> throw java.lang.IllegalArgumentException("Unknown comand $command")
         }
     }
 
-    /**
-     * This
-     */
     override fun verify(tx: LedgerTransaction) {
         val cpCommands = tx.commandsOfType<Commands>()
 
         // 1. Identify the transitions and verify them independently.
         val transitions = tx.extractTransitions(cpCommands)
         for (transition in transitions) {
-            transition.check(tx)
+            transition.verify(tx)
         }
 
         // 2. Make sure there's no conflicting transitions. (This is just an example)
@@ -227,53 +204,30 @@ class CommercialPaper : Contract {
 
         // 3. Ensure there are no free floating CP states and that the same state is not used in multiple transitions.
         tx.checkNoFreeFloatingStates<State, Commands>(cpCommands.map { it.value })
-
-        // 4. Additional cross transition overlap check.
-        val payments = tx.commandsOfType<Commands.Redeem>().flatMap { it.value.paymentOutputs }
-        requireThat {
-            "didn't pay multiple CPs with the same money" using (payments.noDuplicates())
-        }
     }
 }
 
 /**
- * Will be used to verify transitions independently.
+ * Utilities to build unambiguous transactions.
+ * They add metadata to the commands that will be used by the verification logic to build transitions.
  */
-interface Transition {
-    fun check(tx: LedgerTransaction)
+fun TransactionBuilder.issueCP(outputs: List<CommercialPaper.State>): Int = this.let {
+    val idxs = addOutputStatesIdx(outputs)
+    // TODO fail early if the outputs have different owners
+    addCommand(CommercialPaper.Commands.Issue(idxs), outputs.first().owner.owningKey)
+    commands().size - 1
 }
 
-interface CommandWithMetadata : CommandData {
-    val inputs: List<Int>
-    val outputs: List<Int>
+fun TransactionBuilder.moveCP(input: StateAndRef<CommercialPaper.State>, output: CommercialPaper.State): Int = this.let {
+    val inIdx = addInputStateIdx(input)
+    val outIdx = addOutputStateIdx(output)
+    addCommand(CommercialPaper.Commands.Move(inIdx, outIdx), output.owner.owningKey)
+    commands().size - 1
 }
 
-inline fun <reified S : ContractState, C : CommandWithMetadata> LedgerTransaction.checkNoFreeFloatingStates(commands: List<C>) {
-    val allInputs = this.inputIdxsOfType<S>()
-    val allOutputs = this.outputIdxsOfType<S>()
-
-    val allReferredInputs = commands.flatMap { it.inputs }
-    val allReferredOutputs = commands.flatMap { it.outputs }
-
-    requireThat {
-        "input states not referenced by any command" using (allReferredInputs.sorted() == allInputs.sorted())
-        "output states not referenced by any command" using (allReferredOutputs.sorted() == allOutputs.sorted())
-        "input state referred by multiple transitions" using (allReferredInputs.noDuplicates())
-        "output state referred by multiple transitions" using (allReferredOutputs.noDuplicates())
-    }
+fun TransactionBuilder.redeemCP(inputs: List<StateAndRef<CommercialPaper.State>>): Int = this.let {
+    val idxs = addInputStatesIdx(inputs)
+    // TODO fail early if the inputs have different owners
+    addCommand(CommercialPaper.Commands.Redeem(idxs), inputs.first().state.data.owner.owningKey)
+    commands().size - 1
 }
-
-// Utilities.
-fun <T : ContractState> LedgerTransaction.inputIdxsOfType(clazz: Class<T>): List<Int> = inputs.mapIndexedNotNull { idx, it ->
-    clazz.castIfPossible(it.state.data)?.let { idx }
-}
-
-inline fun <reified T : ContractState> LedgerTransaction.inputIdxsOfType(): List<Int> = inputIdxsOfType(T::class.java)
-
-fun <T : ContractState> LedgerTransaction.outputIdxsOfType(clazz: Class<T>): List<Int> = outputs.mapIndexedNotNull { idx, it ->
-    clazz.castIfPossible(it.data)?.let { idx }
-}
-
-inline fun <reified T : ContractState> LedgerTransaction.outputIdxsOfType(): List<Int> = outputIdxsOfType(T::class.java)
-
-fun Collection<*>.noDuplicates() = this.toSet().size == this.size
