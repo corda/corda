@@ -374,7 +374,7 @@ in progress.
 
 6. Re-run the network bootstrapper (only if you want to whitelist the new contract)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-If you're using the network bootstrapper instead of a network map server and have defined any new contracts, you need to 
+If you're using the network bootstrapper instead of a network map server and have defined any new contracts, you need to
 re-run the network bootstrapper to whitelist the new contracts. See :doc:`network-bootstrapper`.
 
 7. Restart the nodes
