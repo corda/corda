@@ -72,7 +72,8 @@ class CachingCustomSerializerRegistry(
     }
 
     private val customSerializersCache: MutableMap<CustomSerializerIdentifier, CustomSerializerLookupResult> = DefaultCacheProvider.createCache()
-    private var customSerializers: List<SerializerFor> = emptyList()
+    var customSerializers: List<SerializerFor> = emptyList()
+        private set
 
     /**
      * Register a custom serializer for any type that cannot be serialized or deserialized by the default serializer

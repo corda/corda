@@ -82,7 +82,7 @@ class DefaultLocalSerializerFactory(
         private val fingerPrinter: FingerPrinter,
         override val classloader: ClassLoader,
         private val descriptorBasedSerializerRegistry: DescriptorBasedSerializerRegistry,
-        private val customSerializerRegistry: CustomSerializerRegistry,
+        val customSerializerRegistry: CustomSerializerRegistry,
         private val onlyCustomSerializers: Boolean)
     : LocalSerializerFactory {
 

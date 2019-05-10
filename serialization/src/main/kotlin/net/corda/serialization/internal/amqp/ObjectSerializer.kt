@@ -15,9 +15,17 @@ interface ObjectSerializer : AMQPSerializer<Any> {
     companion object {
         fun make(typeInformation: LocalTypeInformation, factory: LocalSerializerFactory): ObjectSerializer {
             if (typeInformation is LocalTypeInformation.NonComposable) {
+                val serializerInformation = (factory as? DefaultLocalSerializerFactory)?.let {
+                    (it.customSerializerRegistry as? CachingCustomSerializerRegistry)?.customSerializers?.map {
+                        "Serializer: ${(it as? CorDappCustomSerializer)?.toString()
+                            ?: it::class.java} - Classloader: ${it::class.java.classLoader}"
+                    }
+                } ?: emptyList()
                 throw NotSerializableException(
                     "Unable to create an object serializer for type ${typeInformation.observedType}:\n" +
-                            "${typeInformation.reason}\n\n${typeInformation.remedy}"
+                            "${typeInformation.reason}\n\n" +
+                            "${typeInformation.remedy}\n\n" +
+                            "Registered custom serializers:\n ${serializerInformation.joinToString("\n    ")}\n"
                 )
             }
 

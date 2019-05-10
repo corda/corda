@@ -312,14 +312,11 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
     }
 
     private fun nonComposablePropertiesErrorReason(nonComposableProperties: Map<PropertyName, LocalPropertyInformation>): String {
-        val reason = StringBuilder("Has properties ${nonComposableProperties.keys} of types that are not serializable:\n")
-        for ((key, value) in nonComposableProperties) {
-            reason.appendln(
-                "$key [${value.type.observedType}]: ${(value.type as LocalTypeInformation.NonComposable).reason}"
-                    .replace("\n", "\n    ")
-            )
+        val reasons = nonComposableProperties.entries.joinToString("\n") { (key, value) ->
+            "$key [${value.type.observedType}]: ${(value.type as LocalTypeInformation.NonComposable).reason}"
+                .replace("\n", "\n    ")
         }
-        return reason.removeSuffix("\n").toString()
+        return "Has properties ${nonComposableProperties.keys} of types that are not serializable:\n" + reasons
     }
 
     private fun buildSuperclassInformation(type: Type): LocalTypeInformation =
