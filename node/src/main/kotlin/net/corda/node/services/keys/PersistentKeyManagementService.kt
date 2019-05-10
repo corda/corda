@@ -1,5 +1,6 @@
 package net.corda.node.services.keys
 
+import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.crypto.*
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.NamedCacheFactory
@@ -112,6 +113,7 @@ class PersistentKeyManagementService(cacheFactory: NamedCacheFactory, val identi
         }
     }
 
+    @Suspendable
     override fun externalIdForPublicKey(publicKey: PublicKey): UUID? {
         return database.transaction {
             val criteriaQuery = session.criteriaBuilder.createQuery(PublicKeyHashToExternalId::class.java)

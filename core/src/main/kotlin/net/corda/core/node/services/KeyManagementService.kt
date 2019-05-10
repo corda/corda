@@ -90,4 +90,13 @@ interface KeyManagementService {
      */
     @Suspendable
     fun sign(signableData: SignableData, publicKey: PublicKey): TransactionSignature
+
+    /**
+     * Perform a lookup to find which externalId a previously registered public key has been mapped to.
+     *
+     * @param publicKey key to lookup externalId for
+     * @return UUID externalId or null, if no UUID is discovered.
+     */
+    @Suspendable
+    fun externalIdForPublicKey(publicKey: PublicKey): UUID?
 }

@@ -11,7 +11,6 @@ import javax.persistence.*
 
 interface KeyManagementServiceInternal : KeyManagementService {
     fun start(initialKeyPairs: Set<KeyPair>)
-    fun externalIdForPublicKey(publicKey: PublicKey): UUID?
 }
 
 @Entity

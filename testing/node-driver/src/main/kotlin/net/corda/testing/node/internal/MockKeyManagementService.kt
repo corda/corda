@@ -1,5 +1,6 @@
 package net.corda.testing.node.internal
 
+import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.crypto.*
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.services.IdentityService
@@ -20,6 +21,8 @@ import java.util.concurrent.ConcurrentHashMap
  */
 class MockKeyManagementService(val identityService: IdentityService,
                                vararg initialKeys: KeyPair) : SingletonSerializeAsToken(), KeyManagementService {
+
+
     private val keyStore: MutableMap<PublicKey, PrivateKey> = initialKeys.associateByTo(HashMap(), { it.public }, { it.private })
 
     override val keys: Set<PublicKey> get() = keyStore.keys
@@ -74,4 +77,11 @@ class MockKeyManagementService(val identityService: IdentityService,
         val keyPair = getSigningKeyPair(publicKey)
         return keyPair.sign(signableData)
     }
+
+    @Suspendable
+    override fun externalIdForPublicKey(publicKey: PublicKey): UUID? {
+        return keysById.filter { publicKey in it.value }.map { it.key }.singleOrNull()
+    }
+
+
 }

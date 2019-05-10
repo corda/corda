@@ -1,5 +1,6 @@
 package net.corda.node.services.keys
 
+import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.crypto.*
 import net.corda.core.crypto.internal.AliasPrivateKey
 import net.corda.core.identity.PartyAndCertificate
@@ -133,6 +134,7 @@ class BasicHSMKeyManagementService(cacheFactory: NamedCacheFactory, val identity
         return newKeyWithCert
     }
 
+    @Suspendable
     override fun externalIdForPublicKey(publicKey: PublicKey): UUID? {
         return keyToExternalId[publicKey.toStringShort()]
     }
