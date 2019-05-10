@@ -4,16 +4,14 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.ClientRelevantException
 import net.corda.core.CordaRuntimeException
 import net.corda.core.flows.*
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
 import net.corda.node.services.Permissions
 import net.corda.nodeapi.exceptions.InternalNodeException
-import net.corda.testing.core.ALICE_NAME
-import net.corda.testing.core.BOB_NAME
-import net.corda.testing.core.DUMMY_NOTARY_NAME
-import net.corda.testing.core.singleIdentity
+import net.corda.testing.core.*
 import net.corda.testing.driver.*
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
@@ -31,7 +29,7 @@ class RpcExceptionHandlingTest : IntegrationTest() {
     companion object {
         @ClassRule
         @JvmField
-        val databaseSchemas = IntegrationTestSchemas(ALICE_NAME, BOB_NAME, DUMMY_NOTARY_NAME)
+        val databaseSchemas = IntegrationTestSchemas(ALICE_NAME, BOB_NAME, DUMMY_NOTARY_NAME, DUMMY_BANK_A_NAME, DUMMY_BANK_B_NAME)
     }
 
     private val user = User("mark", "dadada", setOf(Permissions.all()))
@@ -135,24 +133,26 @@ class RpcExceptionHandlingTest : IntegrationTest() {
     fun `rpc client handles exceptions thrown on counter-party side`() {
         val params = NodeParameters(rpcUsers = users)
 
-        fun DriverDSL.scenario(devMode: Boolean) {
+        fun DriverDSL.scenario(nameA: CordaX500Name, nameB: CordaX500Name, devMode: Boolean) {
 
-            val nodeA = startNode(ALICE_NAME, devMode, params).getOrThrow()
-            val nodeB = startNode(BOB_NAME, devMode, params).getOrThrow()
+            val nodeA = startNode(nameA, devMode, params).getOrThrow()
+            val nodeB = startNode(nameB, devMode, params).getOrThrow()
 
             nodeA.rpc.startFlow(::InitFlow, nodeB.nodeInfo.singleIdentity()).returnValue.getOrThrow()
         }
 
         driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
 
-            assertThatThrownBy { scenario(true) }.isInstanceOfSatisfying(CordaRuntimeException::class.java) { exception ->
+            assertThatThrownBy { scenario(ALICE_NAME, BOB_NAME,true) }.isInstanceOfSatisfying(CordaRuntimeException::class.java) { exception ->
 
                 assertThat(exception).hasNoCause()
                 assertThat(exception.stackTrace).isEmpty()
             }
-        }
-        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
-            assertThatThrownBy { scenario(false) }.isInstanceOfSatisfying(InternalNodeException::class.java) { exception ->
+
+            assertThatThrownBy { scenario(
+                    DUMMY_BANK_A_NAME,
+                    DUMMY_BANK_B_NAME,
+                    false) }.isInstanceOfSatisfying(InternalNodeException::class.java) { exception ->
 
                 assertThat(exception).hasNoCause()
                 assertThat(exception.stackTrace).isEmpty()
