@@ -13,6 +13,7 @@ import net.corda.nodeapi.internal.ArtemisSessionProvider
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.protonwrapper.messages.impl.SendableMessageImpl
 import net.corda.nodeapi.internal.protonwrapper.netty.ProxyConfig
+import net.corda.nodeapi.internal.stillOpen
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient.DEFAULT_ACK_BATCH_SIZE
 import org.apache.activemq.artemis.api.core.client.ClientConsumer
@@ -83,6 +84,8 @@ class LoopbackBridgeManager(config: MutualSslConfiguration,
         private fun logWarnWithMDC(msg: String) = withMDC { log.warn(msg) }
 
         private val artemis = ConcurrentBox(artemis)
+        private var consumerSession: ClientSession? = null
+        private var producerSession: ClientSession? = null
         private var session: ClientSession? = null
         private var consumer: ClientConsumer? = null
         private var producer: ClientProducer? = null
@@ -93,14 +96,15 @@ class LoopbackBridgeManager(config: MutualSslConfiguration,
                 logInfoWithMDC("Bridge Connected")
                 bridgeMetricsService?.bridgeConnected(targets, legalNames)
                 val sessionFactory = started!!.sessionFactory
-                val session = sessionFactory.createSession(NODE_P2P_USER, NODE_P2P_USER, false, true, true, false, DEFAULT_ACK_BATCH_SIZE)
-                this@LoopbackBridge.session = session
+                this@LoopbackBridge.consumerSession = sessionFactory.createSession(NODE_P2P_USER, NODE_P2P_USER, false, true, true, false, DEFAULT_ACK_BATCH_SIZE)
+                this@LoopbackBridge.producerSession = sessionFactory.createSession(NODE_P2P_USER, NODE_P2P_USER, false, true, true, false, DEFAULT_ACK_BATCH_SIZE)
                 // Several producers (in the case of shared bridge) can put messages in the same outbound p2p queue. The consumers are created using the source x500 name as a filter
-                val consumer = session.createConsumer(queueName, "hyphenated_props:sender-subject-name = '$sourceX500Name'")
-                this@LoopbackBridge.consumer = consumer
+                val consumer = consumerSession!!.createConsumer(queueName, "hyphenated_props:sender-subject-name = '$sourceX500Name'")
                 consumer.setMessageHandler(this@LoopbackBridge::clientArtemisMessageHandler)
-                this@LoopbackBridge.producer = session.createProducer()
-                session.start()
+                this@LoopbackBridge.consumer = consumer
+                this@LoopbackBridge.producer = producerSession!!.createProducer()
+                consumerSession?.start()
+                producerSession?.start()
             }
         }
 
@@ -109,8 +113,12 @@ class LoopbackBridgeManager(config: MutualSslConfiguration,
             artemis.exclusive {
                 consumer?.apply { if (!isClosed) close() }
                 consumer = null
-                session?.apply { if (!isClosed) stop() }
-                session = null
+                producer?.apply { if (!isClosed) close() }
+                producer = null
+                consumerSession?.apply { if (stillOpen()) stop() }
+                consumerSession = null
+                producerSession?.apply { if (stillOpen()) stop()}
+                producerSession = null
             }
         }
 
