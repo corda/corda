@@ -380,7 +380,8 @@ bintrayConfig {
             'corda-tools-network-bootstrapper',
             'corda-tools-cliutils',
             'corda-common-configuration-parsing',
-            'corda-common-validation'
+            'corda-common-validation',
+            'corda-common-logging'
     ]
     license {
         name = 'Apache-2.0'
