@@ -45,6 +45,16 @@ import java.util.concurrent.Executors
  */
 class AzureKeyVaultCryptoService(private val keyVaultClient: KeyVaultClient, private val keyVaultUrl: String, private val protection: Protection = DEFAULT_PROTECTION) : CryptoService {
 
+    enum class DigestAlgo(val nameString: String) {
+        SHA1("SHA-1"),
+        SHA224("SHA-224"),
+        SHA256("SHA-256"),
+        SHA384("SHA-384"),
+        SHA512("SHA-512"),
+        MD2("MD2"),
+        MD5("MD5");
+    }
+
     /**
      * The protection parameter indicates if  KeyVault should store keys protected by an HSM or as "software-protected" keys.
      */
@@ -82,17 +92,18 @@ class AzureKeyVaultCryptoService(private val keyVaultClient: KeyVaultClient, pri
     override fun sign(alias: String, data: ByteArray, signAlgorithm: String?): ByteArray {
         checkAlias(alias)
         // KeyVault can only sign over hashed data.
-        val hashAlgo = getHashAlgorithmFromSignatureAlgorithm(signAlgorithm) ?: "SHA-256"
-        val digest = MessageDigest.getInstance(hashAlgo)
+        val hashAlgo = getHashAlgorithmFromSignatureAlgorithm(signAlgorithm) ?: DigestAlgo.SHA256
+        val digest = MessageDigest.getInstance(hashAlgo.nameString)
         digest.update(data)
         val hash = digest.digest()
         // Signing requires us to make two calls to KeyVault. First, we need to get the key to look up
         // its type, which we need to specify when making the call for the actual signing operation.
         // TODO if we can make absolutely sure that only the default algorithm is used here, we could skip the first call.
         val keyBundle = keyVaultClient.getKey(createIdentifier(alias))
-        val algorithm = determineAlgorithm(keyBundle)
-        val result = keyVaultClient.sign(createIdentifier(alias), algorithm, hash)
         val keyType = keyBundle.key().kty()
+        val algorithm = determineAlgorithm(keyBundle, hashAlgo)
+        val transformedHash = transformHash(hashAlgo, hash, keyType)
+        val result = keyVaultClient.sign(createIdentifier(alias), algorithm, transformedHash)
         return when (keyType) {
             JsonWebKeyType.RSA, JsonWebKeyType.RSA_HSM -> result.result()
             JsonWebKeyType.EC, JsonWebKeyType.EC_HSM -> toSupportedSignature(result.result())
@@ -100,9 +111,24 @@ class AzureKeyVaultCryptoService(private val keyVaultClient: KeyVaultClient, pri
         }
     }
 
-    private fun getHashAlgorithmFromSignatureAlgorithm(signAlgorithm: String?) : String? {
+    private fun transformHash(hashAlgo: DigestAlgo, digest: ByteArray, keyType: JsonWebKeyType): ByteArray {
+        return when(keyType) {
+            JsonWebKeyType.RSA, JsonWebKeyType.RSA_HSM -> digest
+            JsonWebKeyType.EC, JsonWebKeyType.EC_HSM -> getECHash(digest)
+            else -> throw IllegalStateException("Key type $keyType not supported.")
+        }
+    }
+
+    /*
+    Before we call the Azure sign algo, we need to extract the first 32 bytes of the digest.
+    This is required when signing with ES256 or ES256K. Note that we only support keys with curve
+    P-256 or P-256K
+     */
+    private fun getECHash(digest: ByteArray):ByteArray = digest.take(32).toByteArray()
+
+    private fun getHashAlgorithmFromSignatureAlgorithm(signAlgorithm: String?) : DigestAlgo? {
         return signAlgorithm?.let {
-            signAlgorithm.toUpperCase().substringBefore("WITH").replace("SHA", "SHA-")
+            DigestAlgo.valueOf(signAlgorithm.toUpperCase().substringBefore("WITH"))
         }
     }
 
@@ -167,20 +193,32 @@ class AzureKeyVaultCryptoService(private val keyVaultClient: KeyVaultClient, pri
         }
     }
 
-    private fun determineAlgorithm(keyBundle: KeyBundle): JsonWebKeySignatureAlgorithm {
-        val keyType = keyBundle.key().kty()
-        return if (keyType == JsonWebKeyType.EC_HSM || keyType == JsonWebKeyType.EC) {
-            if (keyBundle.key().crv() == P_256) {
-                JsonWebKeySignatureAlgorithm.ES256
-            } else if (keyBundle.key().crv() == P_256K) {
-                JsonWebKeySignatureAlgorithm.ES256K
-            } else {
-                throw IllegalArgumentException("Unsupported curve ${keyBundle.key().crv()}")
-            }
-        } else if (keyBundle.key().kty() == JsonWebKeyType.RSA_HSM || keyBundle.key().kty() == JsonWebKeyType.RSA) {
-            JsonWebKeySignatureAlgorithm.RS256
-        } else {
+    private fun determineAlgorithm(keyBundle: KeyBundle, hashAlgo: DigestAlgo): JsonWebKeySignatureAlgorithm {
+        return when (keyBundle.key().kty()) {
+            JsonWebKeyType.RSA, JsonWebKeyType.RSA_HSM -> determineRSASignAlgorithmFrom(hashAlgo)
+            JsonWebKeyType.EC, JsonWebKeyType.EC_HSM -> determineECAlgorithm(keyBundle, hashAlgo)
+            else -> throw IllegalArgumentException("Key type ${keyBundle.key().kty()} not supported.")
+        }
+    }
+
+    private fun determineECAlgorithm(keyBundle: KeyBundle, hashAlgo: DigestAlgo): JsonWebKeySignatureAlgorithm {
+        return if (keyBundle.key().crv() == P_256) {
+            JsonWebKeySignatureAlgorithm.ES256
+        }
+        else if (keyBundle.key().crv() == P_256K) {
+            JsonWebKeySignatureAlgorithm.ES256K
+        }
+        else {
             throw IllegalArgumentException("Key type ${keyBundle.key().kty()} not supported.")
+        }
+    }
+
+    private fun determineRSASignAlgorithmFrom(hashAlgo: DigestAlgo): JsonWebKeySignatureAlgorithm {
+        return when(hashAlgo) {
+            DigestAlgo.SHA256 -> JsonWebKeySignatureAlgorithm.RS256
+            DigestAlgo.SHA384 -> JsonWebKeySignatureAlgorithm.RS384
+            DigestAlgo.SHA512 -> JsonWebKeySignatureAlgorithm.RS512
+            else -> throw java.lang.IllegalArgumentException("Unsupported (by Azure keyvault) Hash algo [${hashAlgo.nameString}]")
         }
     }
 
