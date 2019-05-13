@@ -15,27 +15,27 @@ class NoOpTestDatabaseContext : TestDatabaseContext {
     private lateinit var groupName: String
 
     override fun initialize(groupName: String) {
-        logger.info("[NO-OP] Initializing database group $groupName")
+        logger.trace("[NO-OP] Initializing database group $groupName")
         this.groupName = groupName
     }
 
     override fun beforeClass(setupSql: String) {
-        logger.info("[NO-OP] Running SQL setup script $setupSql in group $groupName")
+        logger.trace("[NO-OP] Running SQL setup script $setupSql in group $groupName")
     }
 
     override fun afterClass(teardownSql: String) {
-        logger.info("[NO-OP] Running SQL teardown script $teardownSql in group $groupName")
+        logger.trace("[NO-OP] Running SQL teardown script $teardownSql in group $groupName")
     }
 
     override fun beforeTest(setupSql: String) {
-        logger.info("[NO-OP] Running SQL setup script $setupSql in group $groupName")
+        logger.trace("[NO-OP] Running SQL setup script $setupSql in group $groupName")
     }
 
     override fun afterTest(teardownSql: String) {
-        logger.info("[NO-OP] Running SQL teardown script $teardownSql in group $groupName")
+        logger.trace("[NO-OP] Running SQL teardown script $teardownSql in group $groupName")
     }
 
     override fun close() {
-        logger.info("[NO-OP] Cleaning up database group $groupName")
+        logger.trace("[NO-OP] Cleaning up database group $groupName")
     }
 }
