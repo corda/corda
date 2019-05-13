@@ -38,7 +38,16 @@ user guide to learn how to make backups.
 
 We provide some :ref:`backup recommendations <backup-recommendations>` if you'd like more detail.
 
-Step 3. Replace ``corda.jar`` with the new version
+Step 3. Upgrade the node database to Corda 3.2 or later
+-------------------------------------------------------
+
+Ensure your node is running Corda 3.2 or later.
+Corda 3.2 required a database table name change and column type change in PostgreSQL.
+These changes need to be applied to the database before upgrading to Corda 4.0.
+Refer to `Corda 3.2 release notes <https://docs.corda.net/releases/release-V3.4/upgrade-notes.html#v3-1-to-v3-2>`_
+for further information.
+
+Step 4. Replace ``corda.jar`` with the new version
 --------------------------------------------------
 
 Download the latest version of Corda from `our Artifactory site <https://ci-artifactory.corda.r3cev.com/artifactory/webapp/#/artifacts/browse/simple/General/corda/net/corda/corda-node>`_.
@@ -47,13 +56,13 @@ node requires.
 
 .. important:: Corda 4 requires Java |java_version| or any higher Java 8 patchlevel. Java 9+ is not currently supported.
 
-Step 4. Start up the node
+Step 5. Start up the node
 -------------------------
 
 Start the node in the usual manner you have selected. The node will perform any automatic data migrations required, which may take some
 time. If the migration process is interrupted it can be continued simply by starting the node again, without harm.
 
-Step 5. Undrain the node
+Step 6. Undrain the node
 ------------------------
 
 You may now do any checks that you wish to perform, read the logs, and so on. When you are ready, use this command at the shell:
