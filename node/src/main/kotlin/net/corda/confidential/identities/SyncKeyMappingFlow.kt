@@ -3,16 +3,14 @@ package net.corda.confidential.identities
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.TransactionResolutionException
-import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
+import net.corda.core.flows.InitiatedBy
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.SignedKeyToPartyMapping
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.ProgressTracker
-import net.corda.core.utilities.toBase58String
 import net.corda.core.utilities.unwrap
-import java.util.*
 
 class SyncKeyMappingFlow(private val session: FlowSession, val tx: WireTransaction) : FlowLogic<Unit>() {
 
@@ -25,7 +23,7 @@ class SyncKeyMappingFlow(private val session: FlowSession, val tx: WireTransacti
     @Suspendable
     override fun call() {
         progressTracker.currentStep = SYNCING_KEY_MAPPINGS
-        val confidentialIdentities = extractOurConfidentialIdentities()
+        val confidentialIdentities = extractConfidentialIdentities()
 
         val requestedIdentities = session.sendAndReceive<List<AbstractParty>>(confidentialIdentities).unwrap { req ->
             require(req.all { it in confidentialIdentities }) {
@@ -39,7 +37,7 @@ class SyncKeyMappingFlow(private val session: FlowSession, val tx: WireTransacti
         session.send(keyMappings)
     }
 
-    private fun extractOurConfidentialIdentities(): List<AbstractParty> {
+    private fun extractConfidentialIdentities(): List<AbstractParty> {
         val inputStates: List<ContractState> = (tx.inputs.toSet()).mapNotNull {
             try {
                 serviceHub.loadState(it).data
