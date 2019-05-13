@@ -55,10 +55,10 @@ processSmokeTestResources {
 
 dependencies {
 
-    testCompile "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
-    testRuntime "org.junit.vintage:junit-vintage-engine:${junit_vintage_version}"
-    testRuntime "org.junit.jupiter:junit-jupiter-engine:${junit_jupiter_version}"
-    testRuntime "org.junit.platform:junit-platform-launcher:${junit_platform_version}"
+    testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
+    testImplementation "org.junit.vintage:junit-vintage-engine:${junit_vintage_version}"
+    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${junit_jupiter_version}"
+    testRuntimeOnly "org.junit.platform:junit-platform-launcher:${junit_platform_version}"
     
     testCompile "commons-fileupload:commons-fileupload:$fileupload_version"
 
@@ -92,11 +92,11 @@ dependencies {
     compile "com.github.ben-manes.caffeine:caffeine:$caffeine_version"
 
     // Smoke tests do NOT have any Node code on the classpath!
-    smokeTestCompile "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
+    smokeTestImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
 
     smokeTestCompile "org.junit.vintage:junit-vintage-engine:${junit_vintage_version}"
-    smokeTestRuntime "org.junit.jupiter:junit-jupiter-engine:${junit_jupiter_version}"
-    smokeTestRuntime "org.junit.platform:junit-platform-launcher:${junit_platform_version}"
+    smokeTestRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${junit_jupiter_version}"
+    smokeTestRuntimeOnly "org.junit.platform:junit-platform-launcher:${junit_platform_version}"
     
     smokeTestCompile project(':smoke-test-utils')
     smokeTestCompile "org.assertj:assertj-core:${assertj_version}"
