@@ -8,7 +8,6 @@ dependencies {
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
 
     testCompile project(":test-utils")
-    
 }
 
 jar {
