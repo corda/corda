@@ -17,7 +17,6 @@ class ShareKeyFlow(private val session: FlowSession, private val uuid: UUID) : F
     override fun call() {
         session.sendAndReceive<UUIDReceived>(uuid)
         val signedKey = createSignedPublicKey(serviceHub, uuid)
-//        registerIdentityMapping(serviceHub, signedKey, signedKey.publicKeyToPartyMap.values.first())
         session.send(signedKey)
     }
 }
@@ -48,7 +47,7 @@ class ShareKeyFlowHandler(private val otherSession: FlowSession) : FlowLogic<Sig
         validateSignature(signedKey)
         progressTracker.currentStep = KEY_VERIFIED
 
-        val isRegistered = serviceHub.identityService.registerConfidentialIdentity(signedKey, serviceHub.myInfo.legalIdentities.first())
+        val isRegistered = serviceHub.identityService.registerPublicKeyToPartyMapping(signedKey)
         val party = signedKey.mapping.party
         if (!isRegistered) {
             throw FlowException("Could not generate a new key for $party as the key is already registered or registered to a different party.")

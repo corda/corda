@@ -92,27 +92,18 @@ class InMemoryIdentityService(identities: List<PartyAndCertificate> = emptyList(
         return results
     }
 
-    override fun registerConfidentialIdentity(keyMapping: SignedKeyToPartyMapping, nodeParty: Party): Boolean {
+    override fun registerPublicKeyToPartyMapping(keyMapping: SignedKeyToPartyMapping): Boolean {
         val k = keyMapping.mapping.key
         val p = keyMapping.mapping.party
-        val sig = keyMapping.signature
-
-        if (p != nodeParty) {
-            throw IllegalArgumentException("Something something something")
-        }
-
-        if (sig.by != nodeParty.owningKey) {
-            throw IllegalArgumentException("Something somethign seomthien ghrijei")
-        }
 
         var willRegisterNewMapping = true
 
-        when (keyToParties.get(k)) {
+        when (keyToParties[k]) {
             null -> {
                 keyToParties.putIfAbsent(k, p)
             }
             else -> {
-                if (p != keyToParties.get(k)) {
+                if (p != keyToParties[k]) {
                     return false
                 }
                 willRegisterNewMapping = false
