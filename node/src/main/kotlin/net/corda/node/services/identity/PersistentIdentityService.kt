@@ -1,15 +1,18 @@
 package net.corda.node.services.identity
 
 import net.corda.core.crypto.SecureHash
-import net.corda.core.identity.*
+import net.corda.core.identity.AnonymousParty
+import net.corda.core.identity.CordaX500Name
+import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.internal.hash
+import net.corda.core.messaging.NetworkDestination
 import net.corda.core.node.services.UnknownAnonymousPartyException
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.MAX_HASH_HEX_SIZE
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
-import net.corda.core.utilities.toBase58String
 import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
@@ -177,7 +180,7 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
 
     override fun wellKnownPartyFromX500Name(name: CordaX500Name): Party? = certificateFromCordaX500Name(name)?.party
 
-    override fun wellKnownPartyFromAnonymous(party: AbstractParty): Party? {
+    override fun wellKnownPartyFromAnonymous(party: NetworkDestination): Party? {
         // Skip database lookup if the party is a notary identity.
         // This also prevents an issue where the notary identity can't be resolved if it's not in the network map cache. The node obtains
         // a trusted list of notary identities from the network parameters automatically.

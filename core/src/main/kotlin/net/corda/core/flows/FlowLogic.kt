@@ -6,11 +6,12 @@ import net.corda.core.CordaInternal
 import net.corda.core.DeleteForDJVM
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.SecureHash
-import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.*
 import net.corda.core.messaging.DataFeed
+import net.corda.core.messaging.Destination
+import net.corda.core.messaging.NetworkDestination
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.CordaSerializable
@@ -121,12 +122,19 @@ abstract class FlowLogic<out T> {
      * that this function does not communicate in itself, the counter-flow will be kicked off by the first send/receive.
      */
     @Suspendable
-    fun initiateFlow(requested: AbstractParty): FlowSession {
-        val wellKnown = serviceHub.identityService.wellKnownPartyFromAnonymous(requested)
-        if (wellKnown == null) {
-            throw IllegalStateException("could not initiate flow with party $requested as they are not in the node identity service")
+    fun initiateFlow(requested: Destination): FlowSession {
+        when (requested) {
+            is NetworkDestination -> {
+                val wellKnown = serviceHub.identityService.wellKnownPartyFromAnonymous(requested)
+                if (wellKnown == null) {
+                    throw IllegalStateException("could not initiate flow with party $requested as they are not in the node identity service")
+                }
+                return stateMachine.initiateFlow(wellKnown = wellKnown, requested = requested)
+            }
+            else -> {
+                throw UnsupportedOperationException("Unable to handle flow destination of type: ${requested::class.java}")
+            }
         }
-        return stateMachine.initiateFlow(wellKnown = wellKnown, requested = requested)
     }
 
     /**

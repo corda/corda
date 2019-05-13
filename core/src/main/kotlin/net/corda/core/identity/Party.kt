@@ -4,6 +4,7 @@ import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Crypto
+import net.corda.core.messaging.WellKnownNetworkDestination
 import net.corda.core.utilities.OpaqueBytes
 import java.security.PublicKey
 import java.security.cert.X509Certificate
@@ -28,7 +29,7 @@ import java.security.cert.X509Certificate
  * @see CompositeKey
  */
 @KeepForDJVM
-class Party(val name: CordaX500Name, owningKey: PublicKey) : AbstractParty(owningKey) {
+class Party(val name: CordaX500Name, override val owningKey: PublicKey) : AbstractParty(), WellKnownNetworkDestination {
     constructor(certificate: X509Certificate)
             : this(CordaX500Name.build(certificate.subjectX500Principal), Crypto.toSupportedPublicKey(certificate.publicKey))
 

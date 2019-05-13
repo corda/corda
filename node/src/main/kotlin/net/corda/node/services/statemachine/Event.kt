@@ -1,9 +1,9 @@
 package net.corda.node.services.statemachine
 
 import net.corda.core.flows.FlowLogic
-import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowIORequest
+import net.corda.core.messaging.NetworkDestination
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.transactions.SignedTransaction
 import net.corda.node.services.messaging.DeduplicationHandler
@@ -72,7 +72,7 @@ sealed class Event {
      * communication takes place at this time, only on the first send/receive operation on the session.
      * @param party the [Party] to create a session with.
      */
-    data class InitiateFlow(val wellKnownParty: Party, val requestedParty: AbstractParty?) : Event()
+    data class InitiateFlow(val wellKnownParty: Party, val requestedParty: NetworkDestination?) : Event()
 
     /**
      * Signal the entering into a subflow.
