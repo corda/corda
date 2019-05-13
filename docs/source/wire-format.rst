@@ -8,13 +8,15 @@ Qpid Proton, or Microsoft AMQP.NET Lite.
 Header
 ------
 
-All messages start with the 8 byte sequence ``corda\1\0\0``, that is, the string "corda" followed by a one byte and then two
-zero bytes. That means you can't directly feed a Corda message into an AMQP library. You must check the header string and
-then skip it.
+All messages start with the 5 byte sequence ``corda`` followed by three versioning bytes: major, minor and encoding.
+That means you can't directly feed a Corda message into an AMQP library. You must check the header string and
+then skip it. This is deliberate, to enable other message formats in future.
 
-The '1' byte indicates the major version of the format. It should always be set to 1, if it isn't that implies a backwards
-incompatible serialisation format has been developed and you should abort. The second and third bytes are incremented if we make
-extensions to the format. You can usually ignore these.
+The first version byte is set to 1 and indicates the major version of the format. It should always be set to 1,
+if it isn't that means a backwards incompatible serialisation format has been developed and you should therefore abort.
+The second byte is a minor version, you should be able to tolerate this incrementing as long as your code is robust
+to unknown data (e.g. new schema elements). The third byte is an encoding byte. This is used to indicate new features
+like compression are active. You should abort if this isn't zero.
 
 AMQP intro
 ----------
@@ -36,9 +38,10 @@ or a 64 bit value. Both types of label have a defined namespacing mechanism. Thi
 layerings to be added on top of the simple, interoperable core.
 
 AMQP therefore also defines a type system and schema representation, that allows you to create the app-level type layer.
-Standard AMQP defines an XML based schema language. Fields can be grouped together using *composite types*. A composite
-type is simply a described list, in which each list entry is one field of the composite. Composites are used to encode
-language-level classes, records, structs etc.
+Standard AMQP defines an XML based schema language as part of the specification, but doesn't define any way to represent
+schemas using AMQP itself. Fields can be grouped together using *composite types*. A composite type is simply a
+described list, in which each list entry is one field of the composite. Composites are used to encode language-level
+classes, records, structs etc.
 
 You can also define in a *restricted type*, which can be used to define a new type that is a specialisation or subset of
 an existing one. For enumerations the choices can be listed in the schema.
@@ -77,7 +80,7 @@ Descriptors
 
 Serialised messages use described types extensively. There are two types of descriptor:
 
-1. 64 bit code. In Corda, the top 16 bits are always equal to 0xc562 which is R3's IANA assigned enterprise number. The
+1. 64 bit code. In Corda, the top 32 bits are always equal to 0x0000c562 which is R3's IANA assigned enterprise number. The
    low bits define various elements in our meta-schema (i.e. the way we describe the schemas of other messages).
 2. String. These always start with "net.corda:" and are then followed by either a 'well known' type name, or
    a base64 encoded *fingerprint* of the underlying schema that was generated from the original class. They are
@@ -149,14 +152,14 @@ Finally, the fields are defined. Each *FIELD* record has the following members:
 
 The meaning of these are defined in the AMQP specification. The type string is a Java class name *with* generic parameters.
 
-The other parts of the schema map to the AMQP XML schema spec in the same straightforward manner.
+The other parts of the schema map to the AMQP XML schema specification in the same straightforward manner.
 
 Mapping JVM classes to composite types
 --------------------------------------
 
 Corda does not need or use a separate schema definition language. Instead, source code is used as a way to define schemas
 via regular class definitions in any statically typed JVM-bytecode targeting language. This specification will thus
-frequently to types whose only definitions are found in the Corda source code: these definitions are canonical and not
+frequently refer to types whose only definitions are found in the Corda source code: these definitions are canonical and not
 derived from any other kind of schema. Any class annotated as ``@CordaSerializable`` could appear in an AMQP message.
 Whilst you don't need access to the original class files to decode the typed structure of a Corda message due to the embedded AMQP
 schema, it will often be much more convenient to work with the original structures using JVM reflection. This is typically
