@@ -2,6 +2,7 @@ package net.corda.finance.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.confidential.identities.RequestKeyFlow
+import net.corda.confidential.identities.RequestKeyFlowHandler
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.InsufficientBalanceException
 import net.corda.core.contracts.UniqueIdentifier
@@ -54,8 +55,9 @@ open class CashPaymentFlow(
     override fun call(): AbstractCashFlow.Result {
         progressTracker.currentStep = GENERATING_ID
         val recipientSession = initiateFlow(recipient)
-        val keyToPartyMapping = recipientSession.sendAndReceive<SignedKeyToPartyMapping>(anonymous).unwrap {it}
+        recipientSession.send(anonymous)
         val anonymousRecipient = if (anonymous) {
+            val keyToPartyMapping = subFlow(RequestKeyFlow(recipientSession, UniqueIdentifier().id))
             AnonymousParty(keyToPartyMapping.mapping.key)
         } else {
             recipient
@@ -63,7 +65,6 @@ open class CashPaymentFlow(
         progressTracker.currentStep = GENERATING_TX
         val builder = TransactionBuilder(notary = notary ?: serviceHub.networkMapCache.notaryIdentities.first())
         logger.info("Generating spend for: ${builder.lockId}")
-        // TODO: Have some way of restricting this to states the caller controls
         val (spendTX, keysForSigning) = try {
             CashUtils.generateSpend(
                     serviceHub,
@@ -103,7 +104,7 @@ class CashPaymentReceiverFlow(private val otherSide: FlowSession) : FlowLogic<Un
     override fun call() {
         val anonymous = otherSide.receive<Boolean>().unwrap { it }
         if (anonymous) {
-            otherSide.send(subFlow(RequestKeyFlow(otherSide, UniqueIdentifier().id)))
+            subFlow(RequestKeyFlowHandler(otherSide))
         }
         // Not ideal that we have to do this check, but we must as FinalityFlow does not send locally
         if (!serviceHub.myInfo.isLegalIdentity(otherSide.counterparty)) {

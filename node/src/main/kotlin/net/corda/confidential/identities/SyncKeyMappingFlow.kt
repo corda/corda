@@ -34,7 +34,7 @@ class SyncKeyMappingFlow(private val session: FlowSession, val tx: WireTransacti
             req
         }
         val keyMappings = requestedIdentities.map {
-            createSignedPublicKey(serviceHub, UniqueIdentifier().id)
+            createSignedPublicKeyMappingFromKnownKey(serviceHub, it.owningKey)
         }.toList()
         session.send(keyMappings)
     }

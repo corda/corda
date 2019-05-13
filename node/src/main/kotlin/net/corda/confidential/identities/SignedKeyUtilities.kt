@@ -7,6 +7,7 @@ import net.corda.core.internal.VisibleForTesting
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.serialize
+import java.security.PublicKey
 import java.security.SignatureException
 import java.util.*
 
@@ -16,6 +17,15 @@ fun createSignedPublicKey(serviceHub: ServiceHub, uuid: UUID): SignedKeyToPartyM
     val nodeParty = serviceHub.myInfo.legalIdentities.first()
     val newKey = serviceHub.keyManagementService.freshKey(uuid)
     val keyToPartyMapping = KeyToPartyMapping(newKey, nodeParty)
+    val sig = serviceHub.keyManagementService.sign(keyToPartyMapping.serialize().hash.bytes, nodeParty.owningKey)
+    return SignedKeyToPartyMapping(keyToPartyMapping, sig)
+}
+
+@CordaInternal
+@VisibleForTesting
+fun createSignedPublicKeyMappingFromKnownKey(serviceHub: ServiceHub, knownKey: PublicKey): SignedKeyToPartyMapping {
+    val nodeParty = serviceHub.myInfo.legalIdentities.first()
+    val keyToPartyMapping = KeyToPartyMapping(knownKey, nodeParty)
     val sig = serviceHub.keyManagementService.sign(keyToPartyMapping.serialize().hash.bytes, nodeParty.owningKey)
     return SignedKeyToPartyMapping(keyToPartyMapping, sig)
 }
