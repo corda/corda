@@ -39,7 +39,7 @@ class RequestKeyFlow(
         validateSignature(signedKeyMapping)
         progressTracker.currentStep = KEY_VERIFIED
 
-        val isRegistered = serviceHub.identityService.registerConfidentialIdentity(signedKeyMapping, serviceHub.myInfo.legalIdentities.first())
+        val isRegistered = serviceHub.identityService.registerPublicKeyToPartyMapping(signedKeyMapping)
         val party = signedKeyMapping.mapping.party
         if (!isRegistered) {
             throw FlowException("Could not generate a new key for $party as the key is already registered or registered to a different party.")

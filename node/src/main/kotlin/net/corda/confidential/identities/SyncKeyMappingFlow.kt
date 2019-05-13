@@ -44,7 +44,7 @@ class SyncKeyMappingFlow(private val session: FlowSession, val tx: WireTransacti
             req
         }
         val resolvedParties = requestedIdentities.map {
-            (serviceHub.identityService as PersistentIdentityService).wellKnownPartyFromAnonymous(it)
+            serviceHub.identityService.wellKnownPartyFromAnonymous(it)
         }
         // TODO erm
         val keyMappings = resolvedParties.map {
@@ -67,7 +67,7 @@ class SyncKeyMappingFlowHandler(private val otherSession: FlowSession) : FlowLog
     override fun call() {
         progressTracker.currentStep = RECEIVING_IDENTITIES
         val allIdentities = otherSession.receive<List<AbstractParty>>().unwrap { it }
-        val unknownIdentities = allIdentities.filter { (serviceHub.identityService as PersistentIdentityService).wellKnownPartyFromAnonymous(it) == null }
+        val unknownIdentities = allIdentities.filter { serviceHub.identityService.wellKnownPartyFromAnonymous(it) == null }
         progressTracker.currentStep = RECEIVING_MAPPINGS
         val missingIdentities = otherSession.sendAndReceive<Map<SignedKeyToPartyMapping, Party>>(unknownIdentities)
         // Batch verify the identities we've received, so we know they're all correct before we start storing them in
@@ -75,7 +75,7 @@ class SyncKeyMappingFlowHandler(private val otherSession: FlowSession) : FlowLog
         val keyMappings = missingIdentities.unwrap { it }
         // TODO erm
         keyMappings.forEach {entry ->
-            serviceHub.identityService.registerConfidentialIdentity(entry.key, serviceHub.myInfo.legalIdentities.first())
+            serviceHub.identityService.registerPublicKeyToPartyMapping(entry.key)
         }
     }
-}
+}:q

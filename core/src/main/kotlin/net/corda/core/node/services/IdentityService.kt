@@ -68,6 +68,7 @@ interface IdentityService {
      * @param owningKey The [PublicKey] to determine well known identity for.
      * @return the party and certificate, or null if unknown.
      */
+    @Deprecated("This should be removed but must be retained for backwards compatibility. Please do not use. ")
     fun certificateFromKey(owningKey: PublicKey): PartyAndCertificate?
 
     /**
@@ -148,7 +149,7 @@ interface IdentityService {
 
     fun registerIdentity(identity: PartyAndCertificate, isNewRandomIdentity: Boolean = false): PartyAndCertificate?
 
-    fun registerConfidentialIdentity(keyMapping: SignedKeyToPartyMapping, party: Party) : Boolean
+    fun registerPublicKeyToPartyMapping(keyMapping: SignedKeyToPartyMapping) : Boolean
 }
 
 class UnknownAnonymousPartyException(message: String) : CordaException(message)

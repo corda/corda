@@ -64,7 +64,7 @@ class SyncKeyMappingFlowTests {
     }
 
     @Test
-    fun `tenner says this doesn't work`() {
+    fun `sync the key mapping between two parties in a transaction`() {
         // Alice issues then pays some cash to a new confidential identity that Bob doesn't know about
         val anonymous = true
         val ref = OpaqueBytes.of(0x01)
