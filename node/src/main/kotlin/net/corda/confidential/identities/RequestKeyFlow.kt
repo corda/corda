@@ -29,7 +29,8 @@ class RequestKeyFlow(
     @Throws(FlowException::class)
     override fun call(): SignedKeyToPartyMapping {
         progressTracker.currentStep = REQUESTING_KEY
-        val signedKeyMapping = session.sendAndReceive<SignedKeyToPartyMapping>(CreateKeyForAccount(uuid)).unwrap { it }
+        val payload = CreateKeyForAccount(uuid)
+        val signedKeyMapping = session.sendAndReceive<SignedKeyToPartyMapping>(payload).unwrap { it }
 
         // Ensure the counter party was the one that generated the key
         require(session.counterparty.owningKey == signedKeyMapping.signature.by) {
