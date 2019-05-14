@@ -42,6 +42,7 @@ fun checkMinimumPlatformVersion(minimumPlatformVersion: Int, requiredMinPlatform
     }
 }
 
+// JDK11: revisit (JDK 9+ uses different numbering scheme: see https://docs.oracle.com/javase/9/docs/api/java/lang/Runtime.Version.html)
 @Throws(NumberFormatException::class)
 fun getJavaUpdateVersion(javaVersion: String): Long = javaVersion.substringAfter("_").substringBefore("-").toLong()
 
