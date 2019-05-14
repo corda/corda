@@ -210,6 +210,27 @@ tasks.withType(Test) {
     forkEvery = 10
 }
 
+tasks.withType(JavaCompile) {
+    // Relaxes JPMS visibility constraints across module boundaries
+    options.compilerArgs << '--add-exports' << 'java.base/sun.security.util=ALL-UNNAMED' << '--add-exports' << 'java.base/sun.security.x509=ALL-UNNAMED'
+}
+
+tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile) {
+    kotlinOptions {
+        verbose = true
+        allWarningsAsErrors = false
+        // Kotlin Compiler does not yet support passing Modularity directives (eg. add-exports, add-reads, patch-module).
+        // https://youtrack.jetbrains.com/issue/KT-20740
+//        freeCompilerArgs = ['--add-export','java.base/sun.security.util=ALL-UNNAMED']
+    }
+}
+
+tasks.withType(Test) {
+    ignoreFailures = true
+    failFast = false
+    jvmArgs '--add-exports=java.base/sun.security.util=ALL-UNNAMED'
+}
+
 task testJar(type: Jar) {
     classifier "tests"
     from sourceSets.test.output
