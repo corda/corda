@@ -13,7 +13,6 @@ import net.corda.core.utilities.MAX_HASH_HEX_SIZE
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.toBase58String
-import net.corda.node.internal.schemas.NodeInfoSchemaV1
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
 import net.corda.nodeapi.internal.crypto.X509Utilities
@@ -21,7 +20,6 @@ import net.corda.nodeapi.internal.crypto.x509Certificates
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import org.apache.commons.lang.ArrayUtils.EMPTY_BYTE_ARRAY
-import java.lang.IllegalArgumentException
 import java.security.InvalidAlgorithmParameterException
 import java.security.PublicKey
 import java.security.cert.*
@@ -216,7 +214,6 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
         log.debug { "Registering identity $identity" }
         val identityCertChain = identity.certPath.x509Certificates
         val key = mapToKey(identity)
-
         return database.transaction {
             // Because this is supposed to be new and random, there's no way we have it in the database already, so skip the pessimistic check.
             if (isNewRandomIdentity) {
