@@ -1,4 +1,5 @@
 import static org.gradle.api.JavaVersion.VERSION_1_8
+import static org.gradle.api.JavaVersion.VERSION_11
 
 buildscript {
     // For sharing constants between builds
@@ -41,7 +42,7 @@ buildscript {
     ext.typesafe_config_version = constants.getProperty("typesafeConfigVersion")
     ext.fileupload_version = '1.3.3'
     ext.junit_version = '4.12'
-    ext.mockito_version = '2.18.3'
+    ext.mockito_version = '2.24.0'
     ext.mockito_kotlin_version = '1.5.0'
     ext.hamkrest_version = '1.4.2.2'
     ext.jopt_simple_version = '5.0.2'
@@ -157,7 +158,7 @@ apply plugin: 'java'
 //apply plugin: 'org.javamodularity.moduleplugin'
 
 sourceCompatibility = VERSION_1_8
-targetCompatibility = VERSION_1_8
+targetCompatibility = VERSION_11
 println "Java version: " + JavaVersion.current()
 println "Java source compatibility: " + sourceCompatibility
 println "Java target compatibility: " + targetCompatibility
@@ -227,7 +228,7 @@ allprojects {
         }
     }
     sourceCompatibility = VERSION_1_8
-    targetCompatibility = VERSION_1_8
+    targetCompatibility = VERSION_11
 
     jacoco {
         // JDK11 official support (https://github.com/jacoco/jacoco/releases/tag/v0.8.3)
@@ -235,7 +236,8 @@ allprojects {
     }
     
     tasks.withType(JavaCompile) {
-        options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation" << "-Xlint:-options" << "-parameters"
+        options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation" << "-Xlint:-options" << "-parameters" 
+        //<<  "--illegal-access=warn"
         options.encoding = 'UTF-8'
         options.verbose = true
 //        moduleOptions {
