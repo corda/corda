@@ -1,34 +1,39 @@
 package net.corda.confidential.identities
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.flows.FlowException
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.FlowSession
+import net.corda.core.flows.*
+import net.corda.core.identity.Party
 import net.corda.core.identity.SignedKeyToPartyMapping
-import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.toBase58String
 import net.corda.core.utilities.unwrap
+import java.security.PublicKey
 import java.util.*
 
-class ShareKeyFlow(private val session: FlowSession, private val uuid: UUID) : FlowLogic<Unit>() {
+class ShareKeyFlow(private val session: FlowSession,
+                   private val uuid: UUID?,
+                   private val key: PublicKey?) : FlowLogic<Unit>() {
+    constructor(session: FlowSession, uuid: UUID) : this(session, uuid, null)
+    constructor(session: FlowSession, key: PublicKey) : this(session, null, key)
 
     @Suspendable
     override fun call() {
-        session.sendAndReceive<UUIDReceived>(uuid)
-        val signedKey = createSignedPublicKey(serviceHub, uuid)
-        session.send(signedKey)
+        when {
+            key == null -> session.send(createSignedPublicKey(serviceHub, uuid!!))
+            key != null -> session.send(createSignedPublicKeyMappingFromKnownKey(serviceHub, key))
+            else -> FlowException("Unable to create a signed key mapping with the parameters provided.")
+        }
     }
 }
 
 class ShareKeyFlowHandler(private val otherSession: FlowSession) : FlowLogic<SignedKeyToPartyMapping>() {
 
     companion object {
-        object VERIFYING_KEY : ProgressTracker.Step("Verifying counterparty's signature")
-        object KEY_VERIFIED : ProgressTracker.Step("Signature is correct")
+        object VERIFYING_SIGNATURE : ProgressTracker.Step("Verifying counterparty's signature")
+        object SIGNATURE_VERIFIED : ProgressTracker.Step("Signature is correct")
 
         @JvmStatic
-        fun tracker(): ProgressTracker = ProgressTracker(VERIFYING_KEY, KEY_VERIFIED)
+        fun tracker(): ProgressTracker = ProgressTracker(VERIFYING_SIGNATURE, SIGNATURE_VERIFIED)
     }
 
     override val progressTracker = tracker()
@@ -36,16 +41,15 @@ class ShareKeyFlowHandler(private val otherSession: FlowSession) : FlowLogic<Sig
     @Suspendable
     @Throws(FlowException::class)
     override fun call(): SignedKeyToPartyMapping {
-        val uuid = otherSession.receive<UUID>().unwrap { it }
-        otherSession.send(UUIDReceived())
-        val signedKey = otherSession.sendAndReceive<SignedKeyToPartyMapping>(CreateKeyForAccount(uuid)).unwrap { it }
+        val signedKey = otherSession.receive<SignedKeyToPartyMapping>().unwrap { it }
+
         // Ensure the counter party was the one that generated the key
         require(otherSession.counterparty.owningKey == signedKey.signature.by) {
             "Expected a signature by ${otherSession.counterparty.owningKey.toBase58String()}, but received by ${signedKey.signature.by.toBase58String()}}"
         }
-        progressTracker.currentStep = VERIFYING_KEY
+        progressTracker.currentStep = VERIFYING_SIGNATURE
         validateSignature(signedKey)
-        progressTracker.currentStep = KEY_VERIFIED
+        progressTracker.currentStep = SIGNATURE_VERIFIED
 
         val isRegistered = serviceHub.identityService.registerPublicKeyToPartyMapping(signedKey)
         val party = signedKey.mapping.party
@@ -56,5 +60,21 @@ class ShareKeyFlowHandler(private val otherSession: FlowSession) : FlowLogic<Sig
     }
 }
 
-@CordaSerializable
-class UUIDReceived
+@InitiatingFlow
+class ShareKeyFlowWrapper(private val party: Party, private val key: PublicKey): FlowLogic<Unit>() {
+    @Suspendable
+    override fun call() {
+        subFlow(ShareKeyFlow(initiateFlow(party), key))
+    }
+}
+
+@InitiatedBy(ShareKeyFlowWrapper::class)
+class ShareKeyFlowWrapperHandler(private val otherSession: FlowSession) : FlowLogic<SignedKeyToPartyMapping>() {
+    @Suspendable
+    override fun call(): SignedKeyToPartyMapping {
+        return subFlow(ShareKeyFlowHandler(otherSession))
+    }
+}
+
+
+

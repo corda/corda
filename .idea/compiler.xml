@@ -72,6 +72,8 @@
       <module name="corda-project.client.test" target="1.8" />
       <module name="corda-project.common-configuration-parsing.main" target="1.8" />
       <module name="corda-project.common-configuration-parsing.test" target="1.8" />
+      <module name="corda-project.common-logging.main" target="1.8" />
+      <module name="corda-project.common-logging.test" target="1.8" />
       <module name="corda-project.common-validation.main" target="1.8" />
       <module name="corda-project.common-validation.test" target="1.8" />
       <module name="corda-project.confidential-identities.main" target="1.8" />
@@ -104,6 +106,10 @@
       <module name="corda-project.experimental.corda-utils.main" target="1.8" />
       <module name="corda-project.experimental.corda-utils.test" target="1.8" />
       <module name="corda-project.experimental.main" target="1.8" />
+      <module name="corda-project.experimental.netparams.main" target="1.8" />
+      <module name="corda-project.experimental.netparams.test" target="1.8" />
+      <module name="corda-project.experimental.nodeinfo.main" target="1.8" />
+      <module name="corda-project.experimental.nodeinfo.test" target="1.8" />
       <module name="corda-project.experimental.quasar-hook.main" target="1.8" />
       <module name="corda-project.experimental.quasar-hook.test" target="1.8" />
       <module name="corda-project.experimental.test" target="1.8" />

@@ -36,7 +36,7 @@ class RequestKeyFlowTests {
         mockNet = InternalMockNetwork(
                 cordappsForAllNodes = FINANCE_CORDAPPS,
                 networkSendManuallyPumped = false,
-                threadPerNode = false)
+                threadPerNode = true)
 
         aliceNode = mockNet.createPartyNode(ALICE_NAME)
         bobNode = mockNet.createPartyNode(BOB_NAME)
@@ -59,7 +59,6 @@ class RequestKeyFlowTests {
     fun `request new key from another party`() {
         // Alice requests that bob generates a new key for an account
         val keyForBob = aliceNode.services.startFlow(RequestKeyInitiator(bob, UUID.randomUUID())).resultFuture
-        mockNet.runNetwork()
 
         val bobResults = keyForBob.getOrThrow().mapping
 
@@ -73,11 +72,6 @@ class RequestKeyFlowTests {
 
         val resolvedBobParty = aliceNode.services.identityService.wellKnownPartyFromAnonymous(AnonymousParty(bobResults.key))
         assertThat(resolvedBobParty).isEqualTo(bob)
-    }
-
-    @Test
-    fun `verify flow exception`(){
-        //TODO
     }
 
     @InitiatingFlow
