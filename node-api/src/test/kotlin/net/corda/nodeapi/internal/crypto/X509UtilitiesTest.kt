@@ -38,7 +38,7 @@ import org.bouncycastle.pqc.jcajce.provider.sphincs.BCSphincs256PrivateKey
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
-import sun.security.rsa.RSAPrivateCrtKeyImpl
+//import sun.security.rsa.RSAPrivateCrtKeyImpl
 import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.io.IOException
@@ -84,7 +84,7 @@ class X509UtilitiesTest {
                 Triple(ECDSA_SECP256K1_SHA256,java.security.interfaces.ECPrivateKey::class.java, org.bouncycastle.jce.interfaces.ECPrivateKey::class.java),
                 Triple(EDDSA_ED25519_SHA512, EdDSAPrivateKey::class.java, EdDSAPrivateKey::class.java),
                 // By default, JKS returns SUN RSA key.
-                Triple(RSA_SHA256, RSAPrivateCrtKeyImpl::class.java, BCRSAPrivateCrtKey::class.java),
+//                Triple(RSA_SHA256, RSAPrivateCrtKeyImpl::class.java, BCRSAPrivateCrtKey::class.java),
                 Triple(SPHINCS256_SHA256, BCSphincs256PrivateKey::class.java, BCSphincs256PrivateKey::class.java)
         )
     }
