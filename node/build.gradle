@@ -8,6 +8,7 @@ buildscript {
 
 plugins {
     id 'com.google.cloud.tools.jib' version '0.9.4'
+    id 'org.javamodularity.moduleplugin' version '1.5.0' apply true
 }
 
 apply plugin: 'kotlin'
@@ -18,6 +19,9 @@ apply plugin: 'java'
 apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'com.jfrog.artifactory'
+
+// CordaCaplet using 'sun.misc.Signal'
+apply plugin: "org.javamodularity.moduleplugin"
 
 description 'Corda node modules'
 
@@ -209,7 +213,16 @@ dependencies {
 
 tasks.withType(JavaCompile) {
     // Resolves a Gradle warning about not scanning for pre-processors.
-    options.compilerArgs << '-proc:none'
+    options.compilerArgs << '-proc:none' << '--add-exports' << 'java.unsupported/sun.misc=ALL-UNNAMED'  << '--add-exports' << 'java.base/sun.security.util=ALL-UNNAMED' << '--add-exports' << 'java.base/sun.security.x509=ALL-UNNAMED'
+
+//    moduleOptions {
+//        addExports = [
+//                'java.unsupported/sun.misc.Unsafe': 'ALL-UNNAMED'
+//        ]
+//    }
+
+//    jvmArgs('--add-exports', 'java.unsupported/sun.misc.Unsafe=ALL-UNNAMED')
+
 }
 
 tasks.withType(Test) {
