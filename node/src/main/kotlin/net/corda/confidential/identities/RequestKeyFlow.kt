@@ -1,18 +1,22 @@
 package net.corda.confidential.identities
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.flows.FlowException
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.FlowSession
+import net.corda.core.contracts.UniqueIdentifier
+import net.corda.core.flows.*
+import net.corda.core.identity.Party
 import net.corda.core.identity.SignedKeyToPartyMapping
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.toBase58String
 import net.corda.core.utilities.unwrap
+import java.security.PublicKey
 import java.util.*
 
 class RequestKeyFlow(
         private val session: FlowSession,
-        private val uuid: UUID) : FlowLogic<SignedKeyToPartyMapping>() {
+        private val uuid: UUID,
+        private val key: PublicKey?) : FlowLogic<SignedKeyToPartyMapping>() {
+    constructor(session: FlowSession, uuid: UUID) : this(session, uuid, null)
+    constructor(session: FlowSession, key: PublicKey) : this(session, UniqueIdentifier().id, key)
 
     companion object {
         object REQUESTING_KEY : ProgressTracker.Step("Generating a public key")
@@ -29,8 +33,11 @@ class RequestKeyFlow(
     @Throws(FlowException::class)
     override fun call(): SignedKeyToPartyMapping {
         progressTracker.currentStep = REQUESTING_KEY
-        val payload = CreateKeyForAccount(uuid)
-        val signedKeyMapping = session.sendAndReceive<SignedKeyToPartyMapping>(payload).unwrap { it }
+        var accountData = CreateKeyForAccount(uuid)
+        if (key != null) {
+           accountData = CreateKeyForAccount(key)
+        }
+        val signedKeyMapping = session.sendAndReceive<SignedKeyToPartyMapping>(accountData).unwrap { it }
 
         // Ensure the counter party was the one that generated the key
         require(session.counterparty.owningKey == signedKeyMapping.signature.by) {
@@ -53,7 +60,26 @@ class RequestKeyFlowHandler(private val otherSession: FlowSession) : FlowLogic<U
     @Suspendable
     override fun call() {
         val request = otherSession.receive<CreateKeyForAccount>().unwrap { it }
-        val signedPK = createSignedPublicKey(serviceHub, request.uuid)
-        otherSession.send(signedPK)
+        when {
+            request.uuid != null -> otherSession.send(createSignedPublicKey(serviceHub, request.uuid!!))
+            request.knownKey != null -> otherSession.send(createSignedPublicKeyMappingFromKnownKey(serviceHub, request.knownKey!!))
+            else -> FlowException("Unable to generate a signed key mapping from the data provided.")
+        }
+    }
+}
+
+@InitiatingFlow
+class RequestKeyFlowWrapper(private val party: Party, private val key: PublicKey): FlowLogic<SignedKeyToPartyMapping>() {
+    @Suspendable
+    override fun call(): SignedKeyToPartyMapping {
+        return subFlow(RequestKeyFlow(initiateFlow(party), key))
+    }
+}
+
+@InitiatedBy(RequestKeyFlowWrapper::class)
+class RequestKeyFlowWrapperHandler(private val otherSession: FlowSession) : FlowLogic<Unit>() {
+    @Suspendable
+    override fun call() {
+        return subFlow(RequestKeyFlowHandler(otherSession))
     }
 }

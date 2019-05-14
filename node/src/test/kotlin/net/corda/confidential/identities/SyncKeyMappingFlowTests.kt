@@ -26,6 +26,7 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 
 class SyncKeyMappingFlowTests {
@@ -57,8 +58,8 @@ class SyncKeyMappingFlowTests {
 
         aliceNode.registerInitiatedFlow(SyncKeyMappingResponse::class.java)
         bobNode.registerInitiatedFlow(SyncKeyMappingResponse::class.java)
-        aliceNode.registerInitiatedFlow(ShareKeyFlowWrapperHandler::class.java)
-        bobNode.registerInitiatedFlow(ShareKeyFlowWrapperHandler::class.java)
+        aliceNode.registerInitiatedFlow(RequestKeyFlowWrapperHandler::class.java)
+        bobNode.registerInitiatedFlow(RequestKeyFlowWrapperHandler::class.java)
     }
 
     @After
@@ -100,8 +101,8 @@ class SyncKeyMappingFlowTests {
         val confidentialIdentCert = charlieNode.services.identityService.certificateFromKey(confidentialIdentity.owningKey)!!
 
         // Manually inject this identity into Alice's database so the node could leak it, but we prove won't
-//        aliceNode.database.transaction { aliceNode.services.identityService.registerIdentity(confidentialIdentCert, false)}
-//        assertNotNull(aliceNode.database.transaction { aliceNode.services.identityService.wellKnownPartyFromAnonymous(confidentialIdentity) })
+        aliceNode.database.transaction { aliceNode.services.identityService.registerIdentity(confidentialIdentCert, false)}
+        assertNotNull(aliceNode.database.transaction { aliceNode.services.identityService.wellKnownPartyFromAnonymous(confidentialIdentity) })
 
         // Generate a payment from Charlie to Alice, including the confidential state
         val payTx = charlieNode.services.startFlow(CashPaymentFlow(1000.DOLLARS, alice, anonymous)).resultFuture.getOrThrow().stx

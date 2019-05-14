@@ -8,9 +8,11 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
+import net.corda.core.internal.hash
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.unwrap
+import java.security.PublicKey
 
 class SyncKeyMappingFlow(private val session: FlowSession, val tx: WireTransaction) : FlowLogic<Unit>() {
 
@@ -77,11 +79,16 @@ class SyncKeyMappingFlowHandler(private val otherSession: FlowSession) : FlowLog
         val parties = otherSession.receive<List<Party>>().unwrap { it }
         progressTracker.currentStep = PARTIES_RECEIVED
 
+        val mapConfidentialKeyToParty: Map<PublicKey, Party> = unknownIdentities.map{ it.owningKey}.zip(parties).toMap()
+
+        require(mapConfidentialKeyToParty.size == parties.size &&
+                mapConfidentialKeyToParty.size == unknownIdentities.size)
+
         progressTracker.currentStep = REQUESTING_PROOF_OF_ID
-        parties.forEach {
-            subFlow(ShareKeyFlowWrapper(it, it.owningKey))
+
+        mapConfidentialKeyToParty.forEach {
+            subFlow(RequestKeyFlowWrapper(it.value, it.key))
         }
-        // Request signed mapping from those parties?
         progressTracker.currentStep = IDENTITIES_SYNCHRONISED
     }
 }
