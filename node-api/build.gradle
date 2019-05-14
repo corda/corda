@@ -57,6 +57,10 @@ configurations {
     testArtifacts.extendsFrom testRuntime
 }
 
+tasks.withType(Test) {
+    jvmArgs '-Djava.security.debug=provider'
+}
+
 task testJar(type: Jar) {
     classifier "tests"
     from sourceSets.test.output
