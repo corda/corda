@@ -1,5 +1,6 @@
 package net.corda.notaryhealthcheck
 
+import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.vault.PageSpecification
@@ -11,6 +12,7 @@ import net.corda.node.services.Permissions
 import net.corda.notaryhealthcheck.cordapp.SchedulingContract.*
 import net.corda.notaryhealthcheck.cordapp.StartAllChecksFlow
 import net.corda.notaryhealthcheck.cordapp.StopAllChecksFlow
+import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
@@ -42,7 +44,8 @@ class TestNotaryTypes(val validating: Boolean, @Suppress("UNUSED_PARAMETER") des
         driver(DriverParameters(
                 notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, validating = validating, cluster = DummyClusterSpec(3))),
                 extraCordappPackagesToScan = listOf("net.corda.notaryhealthcheck.contract", "net.corda.notaryhealthcheck.cordapp", "net.corda.notary.raft"),
-                startNodesInProcess = true
+                startNodesInProcess = true,
+                networkParameters = testNetworkParameters(minimumPlatformVersion = PLATFORM_VERSION)
         )) {
             val nodeA = startNode(rpcUsers = listOf(testUser)).getOrThrow()
             nodeA.rpc.startFlow(::StartAllChecksFlow, 2, 5).returnValue.getOrThrow()
@@ -69,7 +72,9 @@ class TestNotaryTypes(val validating: Boolean, @Suppress("UNUSED_PARAMETER") des
         driver(DriverParameters(
                 notarySpecs = listOf(NotarySpec(name = DUMMY_NOTARY_NAME, validating = validating)),
                 extraCordappPackagesToScan = listOf("net.corda.notaryhealthcheck.contract", "net.corda.notaryhealthcheck.cordapp"),
-                startNodesInProcess = true)) {
+                startNodesInProcess = true,
+                networkParameters = testNetworkParameters(minimumPlatformVersion = PLATFORM_VERSION)
+        )) {
             val nodeA = startNode(rpcUsers = listOf(testUser)).getOrThrow()
             nodeA.rpc.startFlow(::StartAllChecksFlow, 2, 5).returnValue.getOrThrow()
             Thread.sleep(5.seconds.toMillis())
@@ -83,6 +88,5 @@ class TestNotaryTypes(val validating: Boolean, @Suppress("UNUSED_PARAMETER") des
             val pendingStatesAfterClean = nodeA.rpc.vaultQueryBy(criteria = QueryCriteria.VaultQueryCriteria(Vault.StateStatus.UNCONSUMED), contractStateType = ScheduledCheckState::class.java, paging = PageSpecification(1, 100), sorting = Sort(columns = emptyList())).states
             assertTrue(pendingStatesAfterClean.isEmpty(), "Expected all pending states to be cleared, got ${pendingStatesAfterClean.size}")
         }
-
     }
 }
