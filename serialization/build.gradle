@@ -49,19 +49,47 @@ dependencies {
 //            addExports = [
 //                    'java.base/sun.security.util' : 'ALL-UNNAMED'
 //            ]
+//            // WARNING: An illegal reflective access operation has occurred
+//            addOpens = [
+//                    'java.base/java.time.ZonedDateTime' : 'ALL-UNNAMED'
+//                    // WARNING: Illegal reflective access by net.corda.serialization.internal.amqp.custom.ZonedDateTimeSerializer (file:/Users/josecoll/IdeaProjects/corda-jdk11/serialization/build/libs/corda-serialization-5.0-SNAPSHOT.jar) to method java.time.ZonedDateTime.ofLenient(java.time.LocalDateTime,java.time.ZoneOffset,java.time.ZoneId)
+//            ]
 //        }
 //    }     
+//    test {
+//        moduleOptions {
+//            addExports = [
+//                    'java.base/sun.security.util': 'ALL-UNNAMED',
+//                    'java.base/sun.security.x509': 'ALL-UNNAMED'
+//            ]
+//            addOpens = [
+//                    'java.base/java.time.ZonedDateTime' : 'ALL-UNNAMED'
+//            ]
+//        }
+//    }
 //    kotlinCompile {
 //        moduleOptions {
 //            addExports = [
 //                    'java.base/sun.security.util': 'ALL-UNNAMED'
 //            ]
+//            addOpens = [
+//                    'java.base/java.time.ZonedDateTime' : 'ALL-UNNAMED'
+//            ]
 //        }
 //    }
 //}
 
+// Alternative configuration without java modularity plugin:
+//test {
+//    jvmArgs('--add-opens', 'java.base/java.time.ZonedDateTime=ALL-UNNAMED')
+//}
+
 configurations {
     testArtifacts.extendsFrom testRuntime
+}
+
+tasks.withType(JavaCompile) {
+    options.compilerArgs += ['--illegal-access=warn']
 }
 
 task testJar(type: Jar) {
