@@ -220,8 +220,8 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
                 keyToPartyAndCert[key] = identity
             } else {
                 keyToPartyAndCert.addWithDuplicatesAllowed(key, identity, false)
-                keyToParty.addWithDuplicatesAllowed(key, identity.name)
                 partyToKey.addWithDuplicatesAllowed(identity.name, key, false)
+                keyToParty.addWithDuplicatesAllowed(key, identity.name)
             }
             val parentId = mapToKey(identityCertChain[1].publicKey)
             keyToPartyAndCert[parentId]

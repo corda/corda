@@ -1,28 +1,21 @@
 package net.corda.confidential.identities
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.flows.*
-import net.corda.core.identity.Party
+import net.corda.core.flows.FlowException
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowSession
 import net.corda.core.identity.SignedKeyToPartyMapping
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.toBase58String
 import net.corda.core.utilities.unwrap
-import java.security.PublicKey
 import java.util.*
 
-class ShareKeyFlow(private val session: FlowSession,
-                   private val uuid: UUID?,
-                   private val key: PublicKey?) : FlowLogic<Unit>() {
-    constructor(session: FlowSession, uuid: UUID) : this(session, uuid, null)
-    constructor(session: FlowSession, key: PublicKey) : this(session, null, key)
+class ShareKeyFlow(private val session: FlowSession, private val uuid: UUID) : FlowLogic<Unit>() {
 
     @Suspendable
     override fun call() {
-        when {
-            key == null -> session.send(createSignedPublicKey(serviceHub, uuid!!))
-            key != null -> session.send(createSignedPublicKeyMappingFromKnownKey(serviceHub, key))
-            else -> FlowException("Unable to create a signed key mapping with the parameters provided.")
-        }
+        val signedKey = createSignedPublicKey(serviceHub, uuid)
+        session.send(signedKey)
     }
 }
 
@@ -42,7 +35,6 @@ class ShareKeyFlowHandler(private val otherSession: FlowSession) : FlowLogic<Sig
     @Throws(FlowException::class)
     override fun call(): SignedKeyToPartyMapping {
         val signedKey = otherSession.receive<SignedKeyToPartyMapping>().unwrap { it }
-
         // Ensure the counter party was the one that generated the key
         require(otherSession.counterparty.owningKey == signedKey.signature.by) {
             "Expected a signature by ${otherSession.counterparty.owningKey.toBase58String()}, but received by ${signedKey.signature.by.toBase58String()}}"
@@ -59,22 +51,3 @@ class ShareKeyFlowHandler(private val otherSession: FlowSession) : FlowLogic<Sig
         return signedKey
     }
 }
-
-@InitiatingFlow
-class ShareKeyFlowWrapper(private val party: Party, private val key: PublicKey): FlowLogic<Unit>() {
-    @Suspendable
-    override fun call() {
-        subFlow(ShareKeyFlow(initiateFlow(party), key))
-    }
-}
-
-@InitiatedBy(ShareKeyFlowWrapper::class)
-class ShareKeyFlowWrapperHandler(private val otherSession: FlowSession) : FlowLogic<SignedKeyToPartyMapping>() {
-    @Suspendable
-    override fun call(): SignedKeyToPartyMapping {
-        return subFlow(ShareKeyFlowHandler(otherSession))
-    }
-}
-
-
-

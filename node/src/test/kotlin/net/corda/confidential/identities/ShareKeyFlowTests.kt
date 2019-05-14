@@ -83,27 +83,6 @@ class ShareKeyFlowTests {
         assertThat(resolvedParty).isEqualTo(alice)
     }
 
-    @Test
-    fun `verify a known key with another party`() {
-        // Charlie issues then pays some cash to a new confidential identity
-        val anonymous = true
-        val ref = OpaqueBytes.of(0x01)
-        val issueFlow = charlieNode.services.startFlow(CashIssueAndPaymentFlow(1000.DOLLARS, ref, charlie, anonymous, notary))
-        val issueTx = issueFlow.resultFuture.getOrThrow().stx
-        val confidentialIdentity = issueTx.tx.outputs.map { it.data }.filterIsInstance<Cash.State>().single().owner
-
-        // Bob knows nothing of the CI before we share the key
-        assertNull(bobNode.database.transaction { bobNode.services.identityService.wellKnownPartyFromAnonymous(confidentialIdentity) })
-        bobNode.services.startFlow(ShareKeyFlowWrapper(charlie, confidentialIdentity.owningKey)).resultFuture.getOrThrow()
-
-        val expected = charlieNode.database.transaction {
-            charlieNode.services.identityService.wellKnownPartyFromAnonymous(confidentialIdentity)
-        }
-        val actual = bobNode.database.transaction {
-            bobNode.services.identityService.wellKnownPartyFromAnonymous(confidentialIdentity)
-        }
-        assertEquals(expected, actual)
-    }
 }
 
 @InitiatingFlow

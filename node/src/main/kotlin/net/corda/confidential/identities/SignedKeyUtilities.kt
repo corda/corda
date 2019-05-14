@@ -40,8 +40,14 @@ fun validateSignature(signedKeyMapping: SignedKeyToPartyMapping) {
     }
 }
 
+/**
+ * Utility object used to parse data required for generating key mappings between different flow sessions.
+ */
 @CordaSerializable
-class CreateKeyForAccount(private val _uuid: UUID) {
-    val uuid: UUID
+class CreateKeyForAccount(private val _uuid: UUID?, val knownKey: PublicKey?) {
+    constructor(knownKey: PublicKey) : this(null, knownKey)
+    constructor(uuid: UUID) : this(uuid, null)
+
+    val uuid: UUID?
         get() = _uuid
 }
