@@ -13,11 +13,11 @@ Some tables, especially the ones where the ``Ledger`` is maintained are append-o
              data could lead to unexpected behaviour and inconsistent views of the ledger.
 
 Network map
-===========
+-----------
 
 
 Node Infos
------------
+^^^^^^^^^^
 
 These are tables that store the NodeInfo of other network participants.
 They are just a local cache that is kept in sync with the network map server.
@@ -69,7 +69,7 @@ PARTY_NAME                          FK to NODE_INFO_PARTY_CERT
 
 
 Node identities
----------------
+^^^^^^^^^^^^^^^
 
 The following two tables are used by the ``IdentityService`` and are created from the NodeInfos.
 They are append only tables used for persistent caching.
@@ -94,7 +94,7 @@ PK_HASH                             The public key
 
 
 Network parameters
-------------------
+^^^^^^^^^^^^^^^^^^
 
 Read more here: :doc:`network-map`.
 Each downloaded network parameters file will create an entry in this table.
@@ -115,14 +115,14 @@ PARENT_CERT_PATH                    Parent certificate path of signer.
 
 
 Ledger
-======
+------
 
 The ledger data is formed of transactions and attachments.
 In future versions this data will be encrypted using SGX.
 Read more in :doc:`key-concepts-ledger`
 
 Attachments
------------
+^^^^^^^^^^^
 
 Read more in :doc:`tutorial-attachments` and :doc:`node-services`
 
@@ -160,7 +160,7 @@ SIGNER                             Hex encoded public key of the JAR signer.
 
 
 Transactions
-------------
+^^^^^^^^^^^^
 
 These are all the transactions that the node has created or has ever downloaded as part of transaction resolution. This table can grow very large.
 It is an append-only table, and the data will never change.
@@ -178,7 +178,7 @@ STATE_MACHINE_RUN_ID              The flow id associated with this transaction.
                                                                                      |
 
 Contract upgrades
------------------
+^^^^^^^^^^^^^^^^^
 
 Read more in :doc:`contract-upgrade`
 
@@ -194,7 +194,7 @@ This table should be empty when no states are authorised for upgrade or after au
 
 
 Scheduling
-----------
+^^^^^^^^^^
 
 Read more in :doc:`event-scheduling`
 
@@ -211,7 +211,7 @@ This table should be empty when no events are scheduled.
 
 
 Storage of private keys
------------------------
+^^^^^^^^^^^^^^^^^^^^^^^
 
 ==============================   ==========================================================================================
 NODE_OUR_KEY_PAIRS                  Stores the anonymous identities
@@ -233,7 +233,7 @@ These tables should be append only.
 
 
 Node state machine
-------------------
+^^^^^^^^^^^^^^^^^^
 
 Read more in :doc:`node-services`
 
@@ -261,7 +261,7 @@ SEQUENCE_NUMBER                     Sequence number
 
 
 Key value store
----------------
+^^^^^^^^^^^^^^^
 
 ==============================   ==========================================================================================
 NODE_PROPERTIES                     General key value store. Currently only used for the flow draining mode.
@@ -272,7 +272,7 @@ PROPERTY_VALUE                      The value
 
 
 Vault tables
-============
+------------
 
 Read more about the vault here :doc:`key-concepts-vault`.
 
@@ -331,7 +331,7 @@ EXTERNAL_ID                         The external id.
 
 
 Fungible states
----------------
+^^^^^^^^^^^^^^^
 
 .. image:: resources/database/vault_fungible_states.png
    :scale: 50%
@@ -360,7 +360,7 @@ PARTICIPANTS                        X500 name of participant.
 
 
 Linear states
----------------
+^^^^^^^^^^^^^
 
 .. image:: resources/database/vault_linear_states.png
    :scale: 50%
@@ -388,7 +388,7 @@ PARTICIPANTS                        X500 name of participant.
 
 
 Liquibase database migration
-============================
+----------------------------
 
 These are `Liquibase <https://www.liquibase.org>`_ proprietary tables used by Corda internally to manage schema change and evolution.
 
