@@ -19,6 +19,8 @@ import java.util.*
 import javax.net.ssl.*
 
 private const val HOSTNAME_FORMAT = "%s.corda.net"
+private const val SSL_HANDSHAKE_TIMEOUT_PROP_NAME = "corda.netty.sslHelper.handshakeTimeout"
+private const val DEFAULT_SSL_TIMEOUT = 20000 // Aligned with sun.security.provider.certpath.URICertStore.DEFAULT_CRL_CONNECT_TIMEOUT
 
 internal class LoggingTrustManagerWrapper(val wrapped: X509ExtendedTrustManager) : X509ExtendedTrustManager() {
     companion object {
@@ -123,7 +125,9 @@ internal fun createClientSslHelper(target: NetworkHostAndPort,
         sslParameters.serverNames = listOf(SNIHostName(x500toHostName(expectedRemoteLegalNames.single())))
         sslEngine.sslParameters = sslParameters
     }
-    return SslHandler(sslEngine)
+    val sslHandler = SslHandler(sslEngine)
+    sslHandler.handshakeTimeoutMillis = Integer.getInteger(SSL_HANDSHAKE_TIMEOUT_PROP_NAME, DEFAULT_SSL_TIMEOUT).toLong()
+    return sslHandler
 }
 
 internal fun createServerSslHelper(keyManagerFactory: KeyManagerFactory,
@@ -138,7 +142,9 @@ internal fun createServerSslHelper(keyManagerFactory: KeyManagerFactory,
     sslEngine.enabledProtocols = ArtemisTcpTransport.TLS_VERSIONS.toTypedArray()
     sslEngine.enabledCipherSuites = ArtemisTcpTransport.CIPHER_SUITES.toTypedArray()
     sslEngine.enableSessionCreation = true
-    return SslHandler(sslEngine)
+    val sslHandler = SslHandler(sslEngine)
+    sslHandler.handshakeTimeoutMillis = Integer.getInteger(SSL_HANDSHAKE_TIMEOUT_PROP_NAME, DEFAULT_SSL_TIMEOUT).toLong()
+    return sslHandler
 }
 
 internal fun initialiseTrustStoreAndEnableCrlChecking(trustStore: CertificateStore, crlCheckSoftFail: Boolean): ManagerFactoryParameters {
