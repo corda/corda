@@ -15,18 +15,7 @@ interface ObjectSerializer : AMQPSerializer<Any> {
     companion object {
         fun make(typeInformation: LocalTypeInformation, factory: LocalSerializerFactory): ObjectSerializer {
             if (typeInformation is LocalTypeInformation.NonComposable) {
-                val serializerInformation = (factory as? DefaultLocalSerializerFactory)?.let {
-                    (it.customSerializerRegistry as? CachingCustomSerializerRegistry)?.customSerializers?.map {
-                        "Serializer: ${(it as? CorDappCustomSerializer)?.toString()
-                            ?: it::class.java} - Classloader: ${it::class.java.classLoader}"
-                    }
-                } ?: emptyList()
-                throw NotSerializableException(
-                    "Unable to create an object serializer for type ${typeInformation.observedType}:\n" +
-                            "${typeInformation.reason}\n\n" +
-                            "${typeInformation.remedy}\n\n" +
-                            "Registered custom serializers:\n ${serializerInformation.joinToString("\n    ")}\n"
-                )
+                throw NotSerializableException(nonComposableExceptionMessage(typeInformation, factory))
             }
 
             val typeDescriptor = factory.createDescriptor(typeInformation)
@@ -40,6 +29,27 @@ interface ObjectSerializer : AMQPSerializer<Any> {
                     makeForAbstract(typeNotation, typeInformation, typeDescriptor, factory)
                 else -> throw NotSerializableException("Cannot build object serializer for $typeInformation")
             }
+        }
+
+        private fun nonComposableExceptionMessage(
+            typeInformation: LocalTypeInformation.NonComposable,
+            factory: LocalSerializerFactory
+        ): String {
+            val serializerInformation = (factory as? DefaultLocalSerializerFactory)?.let {
+                (it.customSerializerRegistry as? CachingCustomSerializerRegistry)?.customSerializers?.map {
+                    "Serializer: ${(it as? CorDappCustomSerializer)?.toString()
+                        ?: it::class.java} - Classloader: ${it::class.java.classLoader}"
+                }
+            } ?: emptyList()
+            val registeredSerializersString = if (serializerInformation.isNotEmpty()) {
+                "Registered custom serializers:\n    ${serializerInformation.joinToString("\n    ")}"
+            } else {
+                "No custom serializers registered."
+            }
+            return "Unable to create an object serializer for type ${typeInformation.observedType}:\n" +
+                    "${typeInformation.reason}\n\n" +
+                    "${typeInformation.remedy}\n\n" +
+                    "$registeredSerializersString\n"
         }
 
         private fun makeForAbstract(typeNotation: CompositeType,
