@@ -5,7 +5,10 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
+import net.corda.core.identity.KeyToPartyMapping
 import net.corda.core.identity.Party
+import net.corda.core.identity.SignedKeyToPartyMapping
+import net.corda.core.serialization.serialize
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
@@ -25,6 +28,7 @@ import net.corda.testing.node.internal.startFlow
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import java.security.PublicKey
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -89,20 +93,16 @@ class SyncKeyMappingFlowTests {
     }
 
     @Test
-    fun `don't offer other's identities confidential identities`() {
-        bobNode.registerInitiatedFlow(SyncKeyMappingResponse::class.java)
-
+    fun `don't leak confidential identities`() {
         // Charlie issues then pays some cash to a new confidential identity
         val anonymous = true
         val ref = OpaqueBytes.of(0x01)
         val issueFlow = charlieNode.services.startFlow(CashIssueAndPaymentFlow(1000.DOLLARS, ref, charlie, anonymous, notary))
         val issueTx = issueFlow.resultFuture.getOrThrow().stx
         val confidentialIdentity = issueTx.tx.outputs.map { it.data }.filterIsInstance<Cash.State>().single().owner
-        val confidentialIdentCert = charlieNode.services.identityService.certificateFromKey(confidentialIdentity.owningKey)!!
 
         // Manually inject this identity into Alice's database so the node could leak it, but we prove won't
-        aliceNode.database.transaction { aliceNode.services.identityService.registerIdentity(confidentialIdentCert, false)}
-        assertNotNull(aliceNode.database.transaction { aliceNode.services.identityService.wellKnownPartyFromAnonymous(confidentialIdentity) })
+        aliceNode.services.startFlow(InjectConfidentialId(charlie, confidentialIdentity.owningKey)).resultFuture.getOrThrow()
 
         // Generate a payment from Charlie to Alice, including the confidential state
         val payTx = charlieNode.services.startFlow(CashPaymentFlow(1000.DOLLARS, alice, anonymous)).resultFuture.getOrThrow().stx
@@ -132,3 +132,17 @@ private class SyncKeyMappingResponse(private val otherSession: FlowSession) : Fl
         otherSession.send(true)
     }
 }
+
+@InitiatingFlow
+private class InjectConfidentialId(private val party: Party, private val key: PublicKey) : FlowLogic<Unit>() {
+    @Suspendable
+    override fun call() {
+        val nodeParty = serviceHub.myInfo.legalIdentities.first()
+        val keyToPartyMapping = KeyToPartyMapping(key, party)
+        val sig = serviceHub.keyManagementService.sign(keyToPartyMapping.serialize().hash.bytes, nodeParty.owningKey)
+        val signedPK = SignedKeyToPartyMapping(keyToPartyMapping, sig)
+        serviceHub.identityService.registerPublicKeyToPartyMapping(signedPK)
+    }
+}
+
+
