@@ -16,6 +16,7 @@ class LocalTypeModelTests {
     private val customSerializerRegistry: CustomSerializerRegistry = CachingCustomSerializerRegistry(descriptorBasedSerializerRegistry)
     private val model = ConfigurableLocalTypeModel(WhitelistBasedTypeModelConfiguration(AllWhitelist, customSerializerRegistry))
     private val emptyCustomSerializerRegistry = object: CustomSerializerRegistry {
+        override val customSerializerNames: List<String> = emptyList()
         override fun register(customSerializer: CustomSerializer<out Any>) {}
         override fun registerExternal(customSerializer: CorDappCustomSerializer) {}
         override fun findCustomSerializer(clazz: Class<*>, declaredType: Type): AMQPSerializer<Any>? = null

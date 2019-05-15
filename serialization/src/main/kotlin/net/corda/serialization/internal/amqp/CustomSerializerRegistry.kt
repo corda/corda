@@ -26,6 +26,12 @@ class DuplicateCustomSerializerException(serializers: List<AMQPSerializer<*>>, c
                 " registered to serialize type $clazz")
 
 interface CustomSerializerRegistry {
+
+    /**
+     * Retrieves the names of the registered custom serializers.
+     */
+    val customSerializerNames: List<String>
+
     /**
      * Register a custom serializer for any type that cannot be serialized or deserialized by the default serializer
      * that expects to find getters and a constructor with a parameter for each property.
@@ -58,6 +64,12 @@ class CachingCustomSerializerRegistry(
         val logger = contextLogger()
     }
 
+    override val customSerializerNames: List<String>
+        get() = customSerializers.map { serializer ->
+            if (serializer is CorDappCustomSerializer) serializer.toString()
+            else "${serializer::class.java} - Classloader: ${serializer::class.java.classLoader}"
+        }
+
     private data class CustomSerializerIdentifier(val actualTypeIdentifier: TypeIdentifier, val declaredTypeIdentifier: TypeIdentifier)
 
     private sealed class CustomSerializerLookupResult {
@@ -72,8 +84,7 @@ class CachingCustomSerializerRegistry(
     }
 
     private val customSerializersCache: MutableMap<CustomSerializerIdentifier, CustomSerializerLookupResult> = DefaultCacheProvider.createCache()
-    var customSerializers: List<SerializerFor> = emptyList()
-        private set
+    private var customSerializers: List<SerializerFor> = emptyList()
 
     /**
      * Register a custom serializer for any type that cannot be serialized or deserialized by the default serializer

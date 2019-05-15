@@ -32,6 +32,11 @@ interface LocalSerializerFactory {
     val classloader: ClassLoader
 
     /**
+     * Retrieves the names of the registered custom serializers.
+     */
+    val customSerializerNames: List<String>
+
+    /**
      * Obtain an [AMQPSerializer] for an object of actual type [actualClass], and declared type [declaredType].
      */
     fun get(actualClass: Class<*>, declaredType: Type): AMQPSerializer<Any>
@@ -82,13 +87,16 @@ class DefaultLocalSerializerFactory(
         private val fingerPrinter: FingerPrinter,
         override val classloader: ClassLoader,
         private val descriptorBasedSerializerRegistry: DescriptorBasedSerializerRegistry,
-        val customSerializerRegistry: CustomSerializerRegistry,
+        private val customSerializerRegistry: CustomSerializerRegistry,
         private val onlyCustomSerializers: Boolean)
     : LocalSerializerFactory {
 
     companion object {
         val logger = contextLogger()
     }
+
+    override val customSerializerNames: List<String>
+        get() = customSerializerRegistry.customSerializerNames
 
     private data class ActualAndDeclaredType(val actualType: Class<*>, val declaredType: Type)
 

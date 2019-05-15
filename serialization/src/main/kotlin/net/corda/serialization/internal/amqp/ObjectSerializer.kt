@@ -35,21 +35,16 @@ interface ObjectSerializer : AMQPSerializer<Any> {
             typeInformation: LocalTypeInformation.NonComposable,
             factory: LocalSerializerFactory
         ): String {
-            val serializerInformation = (factory as? DefaultLocalSerializerFactory)?.let {
-                (it.customSerializerRegistry as? CachingCustomSerializerRegistry)?.customSerializers?.map {
-                    "Serializer: ${(it as? CorDappCustomSerializer)?.toString()
-                        ?: it::class.java} - Classloader: ${it::class.java.classLoader}"
+            val serializerInformation = factory.customSerializerNames.map { "Serializer: $it" }.let { serializers ->
+                when {
+                    serializers.isNotEmpty() -> "Registered custom serializers:\n    ${serializers.joinToString("\n    ")}"
+                    else -> "No custom serializers registered."
                 }
-            } ?: emptyList()
-            val registeredSerializersString = if (serializerInformation.isNotEmpty()) {
-                "Registered custom serializers:\n    ${serializerInformation.joinToString("\n    ")}"
-            } else {
-                "No custom serializers registered."
             }
             return "Unable to create an object serializer for type ${typeInformation.observedType}:\n" +
                     "${typeInformation.reason}\n\n" +
                     "${typeInformation.remedy}\n\n" +
-                    "$registeredSerializersString\n"
+                    "$serializerInformation\n"
         }
 
         private fun makeForAbstract(typeNotation: CompositeType,
