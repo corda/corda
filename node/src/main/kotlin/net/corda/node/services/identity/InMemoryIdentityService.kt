@@ -88,7 +88,8 @@ class InMemoryIdentityService(identities: List<PartyAndCertificate> = emptyList(
         log.trace { "Registering identity $identity" }
         keyToPartyAndCerts[identity.owningKey] = identity
         // Always keep the first party we registered, as that's the well known identity
-        partyToKeys.computeIfAbsent(identity.name) { identity.owningKey }
+        partyToKeys.putIfAbsent(identity.name, identity.owningKey)
+        keyToParties.putIfAbsent(identity.owningKey, identity.name)
         return keyToPartyAndCerts[identityCertChain[1].publicKey]
     }
 
@@ -111,7 +112,13 @@ class InMemoryIdentityService(identities: List<PartyAndCertificate> = emptyList(
     // We give the caller a copy of the data set to avoid any locking problems
     override fun getAllIdentities(): Iterable<PartyAndCertificate> = ArrayList(keyToPartyAndCerts.values)
 
-    override fun wellKnownPartyFromX500Name(name: CordaX500Name): Party? = partyToKeys[name]?.party
+    override fun wellKnownPartyFromX500Name(name: CordaX500Name): Party? {
+        val key = partyToKeys[name]
+        return if (key!=null) {
+            keyToPartyAndCerts[key]?.party
+        } else
+            null
+    }
 
     override fun partiesFromName(query: String, exactMatch: Boolean): Set<Party> {
         val results = LinkedHashSet<Party>()
