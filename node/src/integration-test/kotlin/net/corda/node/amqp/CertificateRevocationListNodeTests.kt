@@ -83,6 +83,9 @@ class CertificateRevocationListNodeTests {
     private abstract class AbstractNodeConfiguration : NodeConfiguration
 
     companion object {
+
+        const val FORBIDDEN_CRL = "forbidden.crl"
+
         fun createRevocationList(clrServer: CrlServer, signatureAlgorithm: String, caCertificate: X509Certificate,
                                  caPrivateKey: PrivateKey,
                                  endpoint: String,
@@ -494,6 +497,13 @@ class CertificateRevocationListNodeTests {
         }
 
         @GET
+        @Path(FORBIDDEN_CRL)
+        @Produces("application/pkcs7-crl")
+        fun getNodeSlowCRL(): Response {
+            return Response.status(Response.Status.FORBIDDEN).build()
+        }
+
+        @GET
         @Path("intermediate.crl")
         @Produces("application/pkcs7-crl")
         fun getIntermediateCRL(): Response {
@@ -587,5 +597,34 @@ class CertificateRevocationListNodeTests {
                     true
             )
         }.withMessage("Unknown signature type requested: EC")
+    }
+
+    @Test
+    fun `AMPQ Client to Server connection succeeds when CRL retrieval is forbidden and soft fail is enabled`() {
+        val crlCheckSoftFail = true
+        val forbiddenUrl = "http://${server.hostAndPort}/crl/$FORBIDDEN_CRL"
+        val (amqpServer, _) = createServer(
+                serverPort,
+                crlCheckSoftFail = crlCheckSoftFail,
+                nodeCrlDistPoint = forbiddenUrl,
+                tlsCrlDistPoint = forbiddenUrl)
+        amqpServer.use {
+            amqpServer.start()
+            amqpServer.onReceive.subscribe {
+                it.complete(true)
+            }
+            val (amqpClient, _) = createClient(
+                    serverPort,
+                    crlCheckSoftFail,
+                    nodeCrlDistPoint = forbiddenUrl,
+                    tlsCrlDistPoint = forbiddenUrl)
+            amqpClient.use {
+                val serverConnected = amqpServer.onConnection.toFuture()
+                amqpClient.onConnection.toFuture()
+                amqpClient.start()
+                val serverConnect = serverConnected.get()
+                assertEquals(true, serverConnect.connected)
+            }
+        }
     }
 }
