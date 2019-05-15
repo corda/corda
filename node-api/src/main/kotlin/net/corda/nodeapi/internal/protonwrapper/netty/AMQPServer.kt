@@ -102,6 +102,7 @@ class AMQPServer(val hostName: String,
                     // For javaSSL, SNI matching is handled at key manager level.
                     createServerSslHandler(amqpConfig.keyStore, keyManagerFactory, trustManagerFactory)
                 }
+                handler.handshakeTimeoutMillis = Integer.getInteger(SSL_HANDSHAKE_TIMEOUT_PROP_NAME, DEFAULT_SSL_TIMEOUT).toLong()
                 Pair(handler, mapOf(DEFAULT to keyManagerFactory))
             }
         }

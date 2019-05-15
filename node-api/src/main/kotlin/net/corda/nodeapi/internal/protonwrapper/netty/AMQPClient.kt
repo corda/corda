@@ -183,6 +183,7 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
             } else {
                 createClientSslHelper(target, parent.allowedRemoteLegalNames, wrappedKeyManagerFactory, trustManagerFactory)
             }
+            handler.handshakeTimeoutMillis = Integer.getInteger(SSL_HANDSHAKE_TIMEOUT_PROP_NAME, DEFAULT_SSL_TIMEOUT).toLong()
             pipeline.addLast("sslHandler", handler)
             if (conf.trace) pipeline.addLast("logger", LoggingHandler(LogLevel.INFO))
             pipeline.addLast(AMQPChannelHandler(false,
