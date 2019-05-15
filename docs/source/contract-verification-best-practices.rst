@@ -35,10 +35,29 @@ Given the nature of this code, the usual guidelines for writing secure software 
 
 
 
-Step 1: Implement business logic
---------------------------------
+Step 1: Validate fields of States
+---------------------------------
 
-First step when writing a contract is to define and implement the main business logic checks.
+The verify methods main responsibility is to ensure that the output states are valid transitions from the input states. Obviously the first
+prerequisite for this is that both the input and the output states are themselves logically valid objects.
+
+Similar to JPA Entity objects that are mapped and persisted to database tables, the ``ContractState`` objects are persisted on the ``Ledger``.
+This means that similar concerns apply around their inner validity.
+E.g.: Some fields have to be ``NotNull``, other fields can only go to a maximum size, others must be valid emails, etc.
+
+Same as for normal entities, it should be the responsibility of the object itself to only be constructed with values that will leave it in a
+valid state.
+Ideally, to make this easy to reason about, the ``ContractState`` should be an immutable object and all fields should also be immutable types.
+In this case the check can be performed in the constructor.
+
+When a transaction is created or deserialized from its binary format, the constructors of all the ``ContractState`` objects are called.
+If the validation logic is added there, it will be run and ensure that they are correct. This makes this logic transitively a part of the verify method.
+
+
+Step 2: Implement business logic rules for state transitions
+------------------------------------------------------------
+
+The most important step when writing a contract is to define and implement the main business logic checks for transitions.
 
 A few example of business checks:
 
@@ -67,14 +86,15 @@ Another possible check is if two Commands are mutually exclusive when used in th
 
 
 
-Step 2: Make sure that nothing unexpected is present in the transaction
+Step 3: Make sure that nothing unexpected is present in the transaction
 -----------------------------------------------------------------------
 
 The contract must also perform negative checks to make sure nothing unexpected or ambiguous was sneaked in.
 
 The implementation of this step depends on how the CorDapp was structured.
 
-Generally, after unambiguously identifying all transitions (commands and states) the contract must make sure there's no extra commands and states in the transaction.
+Generally, after unambiguously identifying all transitions (commands and states) the contract must make sure there's no extra unexpected commands and states
+in the transaction belonging to the same CorDapp.
 
 Another mandatory check for each transition is to reject a command if it is not expected. Remember, an attacker can extend your base ``Command`` class and attach that
 JAR to the transaction, so it is not enough to check the super class.
@@ -84,11 +104,13 @@ As a general guideline there should be an ``else`` branch to all checks which sh
 
 
 
-Step 3: Purely technical decentralized specific concerns
+Step 4: Purely technical decentralized specific concerns
 --------------------------------------------------------
 
 Split up the flows code from the contracts code, and keep contracts as small as possible. The reason for this is that the contracts JAR is code
 that lives on the ledger and will travel together with he transactions which use it.
+
+By default, contract JARs will be signed and the package sealed. Unless there is a good reason to change this, leave the default secure behaviour.
 
 Given that transactions are assembled from multiple contracts by transacting nodes, it is good practice to minimize the use of dependencies (even if the source is reputable).
 .. TODO - point to the dependencies doc.
@@ -99,9 +121,11 @@ or Clojure can be exploited by malicious code and should be avoided. Also avoid 
 Another thing to keep in mind is to mark all classes, fields and methods as ``final`` when using Java. In Kotlin this is the default behaviour,
 so make sure to only use ``open`` when there is a good reason. This is necessary to close the possibility of a an attacker to find an exploit
 by extending classes and overriding behaviour. ( More defense in depth)
+Reducing the visibility of all types to the minimum combined with JAR sealing (default for contract JARs) is another efficient defence in depth protection against obscure class extending attacks.
+``enum``s are safe to use as they can't be extended.
 
 Always target the latest platform version on which the CorDapp was tested. This will ensure it will be able to benefit from the latest security fixes
-and optimisations.
+and optimisations. Read more about the target platform version here: :doc:`versioning`.
 
 Make sure the ContractState class is annotated with ``@BelongsToContract``. This metadata will instruct the platform to check that a malicious
 actor does not attempt to create invalid states by referring to an invalid contract.
@@ -112,9 +136,3 @@ be a check in the contract code that ensures that a malicious party didn't attac
 
 If your contract depends on an attachment with reference data. For example a csv file containing exchange rates. Before opening and parsing the content
 make sure the file is authentic. Maybe verify if the JAR was signed, or some other attribute of the file.
-
-By default, contract JARs will be signed and the package sealed. Unless there is a good reason to change this, leave the default secure behaviour.
-
-
-
-
