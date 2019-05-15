@@ -8,9 +8,6 @@ Corda, and want to understand its architecture. It does not contain any code, an
 
 .. note:: 
    The pages in this section should be read in order.
-   
-..  comment::
-	Is this ignored?
 
 .. toctree::
    :maxdepth: 1
