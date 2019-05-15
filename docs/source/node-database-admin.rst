@@ -152,9 +152,16 @@ Run this script as database administrator:
   GRANT CREATE TABLE TO my_admin_user;
   GRANT CREATE VIEW TO my_admin_user;
   GRANT CREATE SEQUENCE TO my_admin_user;
+  GRANT SELECT ON v_$parameter TO my_admin_user;
 
 The permissions for the Corda node user to access database objects will be assigned in :ref:`the following step <db_setup_step_2_oracle_extra_step_ref>`
 after the database objects are created.
+
+The last permission for the *v_$parameter* view is needed when a database is running in
+`Database Compatibility mode <https://docs.oracle.com/en/database/oracle/oracle-database/12.2/upgrd/what-is-oracle-database-compatibility.html>`_.
+If the permission is not granted then :ref:`Corda Database Management Tool <database-management-tool-ref>` will output the message
+*'Could not set check compatibility mode on OracleDatabase, assuming not running in any sort of compatibility mode ...'* in a log file,
+the message can be ignored.
 
 .. _db_setup_create_user_postgresql_ref:
 
@@ -481,6 +488,7 @@ Connect to the database as administrator and run the following DDL script:
 
      CREATE USER my_user identified by my_password;
      GRANT CREATE SESSION TO my_user;
+     GRANT SELECT ON v_$parameter TO my_user;
      GRANT SELECT ON my_admin_user.DATABASECHANGELOG TO my_user;
      GRANT SELECT ON my_admin_user.DATABASECHANGELOGLOCK TO my_user;
      GRANT SELECT SEQUENCE ON my_admin_user.HIBERNATE_SEQUENCE TO my_user;

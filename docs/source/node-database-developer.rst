@@ -142,6 +142,7 @@ Revise these settings depending on your nodes sizing requirements.
  GRANT CREATE TABLE TO my_user;
  GRANT CREATE VIEW TO my_user;
  GRANT CREATE SEQUENCE TO my_user;
+ GRANT SELECT ON v_$parameter TO my_user;
 
 .. _db_dev_setup_create_user_postgresql_ref:
 
