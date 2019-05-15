@@ -123,6 +123,7 @@ so make sure to only use ``open`` when there is a good reason. This is necessary
 by extending classes and overriding behaviour. ( More defense in depth)
 Reducing the visibility of all types to the minimum combined with JAR sealing (default for contract JARs) is another efficient defence in depth protection against obscure class extending attacks.
 ``enum``s are safe to use as they can't be extended.
+If a type is not final, it is good practice to check that the instance is actually one of the expected sub types using code like: ``instance.getClass().equals(Foo.class) || instance.getClass().equals(Bar.class)``
 
 Always target the latest platform version on which the CorDapp was tested. This will ensure it will be able to benefit from the latest security fixes
 and optimisations. Read more about the target platform version here: :doc:`versioning`.
