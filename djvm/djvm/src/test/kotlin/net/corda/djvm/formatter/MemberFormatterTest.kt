@@ -2,7 +2,7 @@ package net.corda.djvm.formatter
 
 import net.corda.djvm.formatting.MemberFormatter
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.Test
+import org.junit.jupiter.api.Test
 
 class MemberFormatterTest {
 

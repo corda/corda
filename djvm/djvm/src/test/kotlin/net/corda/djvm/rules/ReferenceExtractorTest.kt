@@ -3,7 +3,7 @@ package net.corda.djvm.rules
 import foo.bar.sandbox.Callable
 import net.corda.djvm.TestBase
 import net.corda.djvm.assertions.AssertionExtensions.assertThat
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import org.objectweb.asm.Type
 import java.util.*
 
