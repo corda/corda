@@ -90,6 +90,16 @@ class CordaServiceTest {
         nodeA.services.cordaService(VaultQueryService::class.java)
     }
 
+    @Test
+    fun `Can query using jdbc session in constructor`() {
+        nodeA.services.cordaService(JdbcSessionQueryService::class.java)
+    }
+
+    @Test
+    fun `Can use entity manager in constructor`() {
+        nodeA.services.cordaService(EntityManagerService::class.java)
+    }
+
     @StartableByService
     class DummyServiceFlow : FlowLogic<InvocationContext>() {
         companion object {
@@ -158,6 +168,22 @@ class CordaServiceTest {
 
         fun thatWeCanAccessClassLoader() {
             assertNotNull(Thread.currentThread().contextClassLoader, "thread context classloader should not be null during service initialisation")
+        }
+    }
+
+    @CordaService
+    class JdbcSessionQueryService(val serviceHub: AppServiceHub): SingletonSerializeAsToken() {
+        init {
+            serviceHub.jdbcSession().prepareStatement("SELECT * FROM VAULT_STATES").execute()
+        }
+    }
+
+    @CordaService
+    class EntityManagerService(val serviceHub: AppServiceHub): SingletonSerializeAsToken() {
+        init {
+            serviceHub.withEntityManager {
+                createNativeQuery("SELECT * FROM VAULT_STATES").resultList
+            }
         }
     }
 }

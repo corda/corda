@@ -100,7 +100,7 @@ The standalone shell
 --------------------
 The standalone shell is a standalone application interacting with a Corda node via RPC calls.
 RPC node permissions are necessary for authentication and authorisation.
-Certain operations, such as starting flows, require access to CordApps jars.
+Certain operations, such as starting flows, require access to the CorDapp jars.
 
 Starting the standalone shell
 *****************************

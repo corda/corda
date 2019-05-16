@@ -307,7 +307,7 @@ class DriverDSLImpl(
 
         while (process.isAlive) try {
             val response = client.newCall(Request.Builder().url(url).build()).execute()
-            if (response.isSuccessful && (response.body().string() == "started")) {
+            if (response.isSuccessful && (response.body()?.string() == "started")) {
                 return WebserverHandle(handle.webAddress, process)
             }
         } catch (e: ConnectException) {
@@ -802,7 +802,7 @@ class DriverDSLImpl(
             )
         }
 
-        private val propertiesInScope = setOf("java.io.tmpdir", AbstractAMQPSerializationScheme.SCAN_SPEC_PROP_NAME)
+        private val propertiesInScope = setOf("java.io.tmpdir")
 
         private fun inheritFromParentProcess(): Iterable<Pair<String, String>> {
             return propertiesInScope.flatMap { propName ->

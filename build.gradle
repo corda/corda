@@ -22,7 +22,7 @@ buildscript {
 
     ext.asm_version = '5.0.4'
     ext.artemis_version = '2.6.2'
-    ext.jackson_version = '2.9.5'
+    ext.jackson_version = '2.9.8'
     ext.jetty_version = '9.4.7.v20170914'
     ext.jersey_version = '2.25'
     ext.assertj_version = '3.8.0'
@@ -34,17 +34,24 @@ buildscript {
     ext.disruptor_version = constants.getProperty("disruptorVersion")
     ext.metrics_version = constants.getProperty("metricsVersion")
     ext.metrics_new_relic_version = constants.getProperty("metricsNewRelicVersion")
-    ext.okhttp_version = '3.5.0'
+    ext.okhttp_version = '3.14.1'
     ext.netty_version = '4.1.22.Final'
     ext.typesafe_config_version = constants.getProperty("typesafeConfigVersion")
     ext.fileupload_version = '1.3.3'
+    // Legacy JUnit 4 version
     ext.junit_version = '4.12'
+    // Need this version to access classpath scanning error handling fix -
+    // see https://github.com/junit-team/junit5/commit/389de48c2a18c5a93a7203ef424aa47a8a835a74
+    // Upgrade to 5.5.x when GA release is available.
+    ext.junit_vintage_version = '5.5.0-M1'
+    ext.junit_jupiter_version = '5.5.0-M1'
+    ext.junit_platform_version = '1.4.2'
     ext.mockito_version = '2.18.3'
     ext.mockito_kotlin_version = '1.5.0'
     ext.hamkrest_version = '1.4.2.2'
     ext.jopt_simple_version = '5.0.2'
     ext.jansi_version = '1.14'
-    ext.hibernate_version = '5.3.6.Final'
+    ext.hibernate_version = '5.3.10.Final'
     ext.h2_version = '1.4.197' // Update docs if renamed or removed.
     ext.postgresql_version = '42.2.5'
     ext.rxjava_version = '1.3.8'
@@ -68,7 +75,7 @@ buildscript {
     ext.proguard_version = constants.getProperty('proguardVersion')
     ext.jsch_version = '0.1.54'
     ext.commons_cli_version = '1.4'
-    ext.protonj_version = '0.27.1' // This is now aligned with the Artemis version, but retaining in case we ever need to diverge again for a bug fix.
+    ext.protonj_version = '0.33.0' // Overide Artemis version
     ext.snappy_version = '0.4'
     ext.class_graph_version = '4.6.12'
     ext.jcabi_manifests_version = '1.1'
@@ -460,6 +467,8 @@ if (file('corda-docs-only-build').exists() || (System.getenv('CORDA_DOCS_ONLY_BU
         }
     }
 }
+
+
 
 wrapper {
     gradleVersion = "4.10.1"

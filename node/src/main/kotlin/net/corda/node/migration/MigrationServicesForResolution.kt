@@ -6,6 +6,7 @@ import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.deserialiseComponentGroup
 import net.corda.core.internal.div
+import net.corda.core.internal.isAttachmentTrusted
 import net.corda.core.internal.readObject
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.ServicesForResolution
@@ -106,8 +107,13 @@ class MigrationServicesForResolution(
 
     private fun extractStateFromTx(tx: WireTransaction, stateIndices: Collection<Int>): List<TransactionState<ContractState>> {
         return try {
-            val attachments = tx.attachments.mapNotNull { attachments.openAttachment(it)}
-            val states = AttachmentsClassLoaderBuilder.withAttachmentsClassloaderContext(attachments, networkParameters, tx.id, cordappLoader.appClassLoader) {
+            val txAttachments = tx.attachments.mapNotNull { attachments.openAttachment(it)}
+            val states = AttachmentsClassLoaderBuilder.withAttachmentsClassloaderContext(
+                    txAttachments,
+                    networkParameters,
+                    tx.id,
+                    { isAttachmentTrusted(it, attachments) },
+                    cordappLoader.appClassLoader) {
                 deserialiseComponentGroup(tx.componentGroups, TransactionState::class, ComponentGroupEnum.OUTPUTS_GROUP, forceDeserialize = true)
             }
             states.filterIndexed {index, _ -> stateIndices.contains(index)}.toList()

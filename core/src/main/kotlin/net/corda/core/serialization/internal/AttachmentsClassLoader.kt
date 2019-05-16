@@ -3,8 +3,8 @@ package net.corda.core.serialization.internal
 import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.ContractAttachment
 import net.corda.core.contracts.TransactionVerificationException
-import net.corda.core.contracts.TransactionVerificationException.PackageOwnershipException
 import net.corda.core.contracts.TransactionVerificationException.OverlappingAttachmentsException
+import net.corda.core.contracts.TransactionVerificationException.PackageOwnershipException
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
 import net.corda.core.internal.*
@@ -35,6 +35,7 @@ import java.util.*
 class AttachmentsClassLoader(attachments: List<Attachment>,
                              val params: NetworkParameters,
                              private val sampleTxId: SecureHash,
+                             isAttachmentTrusted: (Attachment) -> Boolean,
                              parent: ClassLoader = ClassLoader.getSystemClassLoader()) :
         URLClassLoader(attachments.map(::toUrl).toTypedArray(), parent) {
 
@@ -116,13 +117,7 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
         // Until we have a sandbox to run untrusted code we need to make sure that any loaded class file was whitelisted by the node administrator.
         val untrusted = attachments
                 .filter(::containsClasses)
-                .filterNot { attachment ->
-                    when (attachment) {
-                        is ContractAttachment -> isUploaderTrusted(attachment.uploader)
-                        is AbstractAttachment -> isUploaderTrusted(attachment.uploader)
-                        else -> false // This should not happen on normal code paths.
-                    }
-                }
+                .filterNot(isAttachmentTrusted)
                 .map(Attachment::id)
 
         if (untrusted.isNotEmpty()) {
@@ -311,12 +306,17 @@ object AttachmentsClassLoaderBuilder {
      *
      * @param txId The transaction ID that triggered this request; it's unused except for error messages and exceptions that can occur during setup.
      */
-    fun <T> withAttachmentsClassloaderContext(attachments: List<Attachment>, params: NetworkParameters, txId: SecureHash, parent: ClassLoader = ClassLoader.getSystemClassLoader(), block: (ClassLoader) -> T): T {
+    fun <T> withAttachmentsClassloaderContext(attachments: List<Attachment>,
+                                              params: NetworkParameters,
+                                              txId: SecureHash,
+                                              isAttachmentTrusted: (Attachment) -> Boolean,
+                                              parent: ClassLoader = ClassLoader.getSystemClassLoader(),
+                                              block: (ClassLoader) -> T): T {
         val attachmentIds = attachments.map { it.id }.toSet()
 
         val serializationContext = cache.computeIfAbsent(Key(attachmentIds, params)) {
             // Create classloader and load serializers, whitelisted classes
-            val transactionClassLoader = AttachmentsClassLoader(attachments, params, txId, parent)
+            val transactionClassLoader = AttachmentsClassLoader(attachments, params, txId, isAttachmentTrusted, parent)
             val serializers = createInstancesOfClassesImplementing(transactionClassLoader, SerializationCustomSerializer::class.java)
             val whitelistedClasses = ServiceLoader.load(SerializationWhitelist::class.java, transactionClassLoader)
                     .flatMap { it.whitelist }

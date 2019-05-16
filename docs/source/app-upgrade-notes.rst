@@ -106,7 +106,7 @@ properly for future releases.
    future not hold true. You should know the platform version of the node releases you want to target.
 
 The new ``versionId`` number is a version code for **your** app, and is unrelated to Corda's own versions.
-It is used to informative purposes only. See ":ref:`contract_downgrade_rule_ref`" for more information.
+It is used to informative purposes only. See ":ref:`app_versioning_with_signature_constraints`" for more information.
 
 **Split your app into contract and workflow JARs.** The duplication between ``contract`` and ``workflow`` blocks exists because you should split your app into
 two separate JARs/modules, one that contains on-ledger validation code like states and contracts, and one
@@ -418,13 +418,13 @@ to be governed by a contract that is either:
 1. The outer class of the state class, if the state is an inner class of a contract. This is a common design pattern.
 2. Annotated with ``@BelongsToContract`` which specifies the contract class explicitly.
 
-Learn more by reading ":ref:`implicit_constraint_types`". If an app targets Corda 3 or lower (i.e. does not specify a target version),
+Learn more by reading :ref:`contract_state_agreement`. If an app targets Corda 3 or lower (i.e. does not specify a target version),
 states that point to contracts outside their package will trigger a log warning but validation will proceed.
 
 Step 9. Learn about signature constraints and JAR signing
 ---------------------------------------------------------
 
-:doc:`design/data-model-upgrades/signature-constraints` are a new data model feature introduced in Corda 4. They make it much easier to
+:ref:`signature_constraints` are a new data model feature introduced in Corda 4. They make it much easier to
 deploy application upgrades smoothly and in a decentralised manner. Signature constraints are the new default mode for CorDapps, and
 the act of upgrading your app to use the version 4 Gradle plugins will result in your app being automatically signed, and new states
 automatically using new signature constraints selected automatically based on these signing keys.

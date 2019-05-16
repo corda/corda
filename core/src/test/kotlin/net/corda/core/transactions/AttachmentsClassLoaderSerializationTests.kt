@@ -4,6 +4,7 @@ import net.corda.core.contracts.Contract
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.declaredField
+import net.corda.core.internal.isAttachmentTrusted
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.internal.AttachmentsClassLoaderBuilder
 import net.corda.core.serialization.serialize
@@ -47,7 +48,11 @@ class AttachmentsClassLoaderSerializationTests {
         val att1 = storage.importAttachment(fakeAttachment("file1.txt", "some data").inputStream(), "app", "file1.jar")
         val att2 = storage.importAttachment(fakeAttachment("file2.txt", "some other data").inputStream(), "app", "file2.jar")
 
-        val serialisedState = AttachmentsClassLoaderBuilder.withAttachmentsClassloaderContext(arrayOf(isolatedId, att1, att2).map { storage.openAttachment(it)!! }, testNetworkParameters(), SecureHash.zeroHash) { classLoader ->
+        val serialisedState = AttachmentsClassLoaderBuilder.withAttachmentsClassloaderContext(
+                arrayOf(isolatedId, att1, att2).map { storage.openAttachment(it)!! },
+                testNetworkParameters(),
+                SecureHash.zeroHash,
+                { isAttachmentTrusted(it, storage) }) { classLoader ->
             val contractClass = Class.forName(ISOLATED_CONTRACT_CLASS_NAME, true, classLoader)
             val contract = contractClass.newInstance() as Contract
             assertEquals("helloworld", contract.declaredField<Any?>("magicString").value)

@@ -107,7 +107,8 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                     val hashToResolve = it ?: services.networkParametersService.defaultHash
                     services.networkParametersService.lookup(hashToResolve)
                 },
-                resolveContractAttachment = { services.loadContractAttachment(it) }
+                resolveContractAttachment = { services.loadContractAttachment(it) },
+                isAttachmentTrusted = { isAttachmentTrusted(it, services.attachments) }
         )
     }
 
@@ -142,7 +143,8 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                 { stateRef -> resolveStateRef(stateRef)?.serialize() },
                 { null },
                 // Returning a dummy `missingAttachment` Attachment allows this deprecated method to work and it disables "contract version no downgrade rule" as a dummy Attachment returns version 1
-                { resolveAttachment(it.txhash) ?: missingAttachment }
+                { resolveAttachment(it.txhash) ?: missingAttachment },
+                { isAttachmentTrusted(it, null) }
         )
     }
 
@@ -158,7 +160,8 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                 resolveAttachment,
                 { stateRef -> resolveStateRef(stateRef)?.serialize() },
                 resolveParameters,
-                { resolveAttachment(it.txhash) ?: missingAttachment }
+                { resolveAttachment(it.txhash) ?: missingAttachment },
+                { true } // Any attachment loaded through the DJVM should be trusted
         )
     }
 
@@ -167,7 +170,8 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
             resolveAttachment: (SecureHash) -> Attachment?,
             resolveStateRefAsSerialized: (StateRef) -> SerializedBytes<TransactionState<ContractState>>?,
             resolveParameters: (SecureHash?) -> NetworkParameters?,
-            resolveContractAttachment: (StateRef) -> Attachment
+            resolveContractAttachment: (StateRef) -> Attachment,
+            isAttachmentTrusted: (Attachment) -> Boolean
     ): LedgerTransaction {
         // Look up public keys to authenticated identities.
         val authenticatedCommands = commands.lazyMapped { cmd, _ ->
@@ -202,7 +206,8 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                 resolvedReferences,
                 componentGroups,
                 serializedResolvedInputs,
-                serializedResolvedReferences
+                serializedResolvedReferences,
+                isAttachmentTrusted
         )
 
         checkTransactionSize(ltx, resolvedNetworkParameters.maxTransactionSize, serializedResolvedInputs, serializedResolvedReferences)
@@ -346,7 +351,8 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                         ?: throw TransactionResolutionException(stateRef.txhash)
                 // Get the network parameters from the tx or whatever the default params are.
                 val paramsHash = coreTransaction.networkParametersHash ?: services.networkParametersService.defaultHash
-                val params = services.networkParametersService.lookup(paramsHash) ?: throw IllegalStateException("Should have been able to fetch parameters by this point: $paramsHash")
+                val params = services.networkParametersService.lookup(paramsHash)
+                        ?: throw IllegalStateException("Should have been able to fetch parameters by this point: $paramsHash")
                 @Suppress("UNCHECKED_CAST")
                 when (coreTransaction) {
                     is WireTransaction -> coreTransaction.componentGroups

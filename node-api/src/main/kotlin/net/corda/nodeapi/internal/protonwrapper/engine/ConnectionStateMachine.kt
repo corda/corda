@@ -22,7 +22,6 @@ import org.apache.qpid.proton.amqp.transport.ReceiverSettleMode
 import org.apache.qpid.proton.amqp.transport.SenderSettleMode
 import org.apache.qpid.proton.engine.*
 import org.apache.qpid.proton.message.Message
-import org.apache.qpid.proton.message.ProtonJMessage
 import org.slf4j.MDC
 import java.net.InetSocketAddress
 import java.nio.ByteBuffer
@@ -380,8 +379,7 @@ internal class ConnectionStateMachine(private val serverMode: Boolean,
         val link = delivery.link
         if (link is Receiver) {
             if (delivery.isReadable && !delivery.isPartial) {
-                val pending = delivery.pending()
-                val amqpMessage = decodeAMQPMessage(pending, link)
+                val amqpMessage = decodeAMQPMessage(link)
                 val payload = (amqpMessage.body as Data).value.array
                 val connection = event.connection
                 val channel = connection?.context as? Channel
@@ -420,7 +418,7 @@ internal class ConnectionStateMachine(private val serverMode: Boolean,
         }
     }
 
-    private fun encodeAMQPMessage(message: ProtonJMessage): ByteBuf {
+    private fun encodeAMQPMessage(message: Message): ByteBuf {
         val buffer = PooledByteBufAllocator.DEFAULT.heapBuffer(1500)
         try {
             try {
@@ -438,7 +436,7 @@ internal class ConnectionStateMachine(private val serverMode: Boolean,
     }
 
     private fun encodePayloadBytes(msg: SendableMessageImpl): ByteBuf {
-        val message = Proton.message() as ProtonJMessage
+        val message = Proton.message()
         message.body = Data(Binary(msg.payload))
         message.isDurable = true
         message.properties = Properties()
@@ -450,16 +448,11 @@ internal class ConnectionStateMachine(private val serverMode: Boolean,
         return encodeAMQPMessage(message)
     }
 
-    private fun decodeAMQPMessage(pending: Int, link: Receiver): Message {
-        val msgBuf = PooledByteBufAllocator.DEFAULT.heapBuffer(pending)
-        try {
-            link.recv(NettyWritable(msgBuf))
-            val amqpMessage = Proton.message()
-            amqpMessage.decode(msgBuf.array(), msgBuf.arrayOffset() + msgBuf.readerIndex(), msgBuf.readableBytes())
-            return amqpMessage
-        } finally {
-            msgBuf.release()
-        }
+    private fun decodeAMQPMessage(link: Receiver): Message {
+        val amqpMessage = Proton.message()
+        val buf = link.recv()
+        amqpMessage.decode(buf)
+        return amqpMessage
     }
 
     fun transportWriteMessage(msg: SendableMessageImpl) {

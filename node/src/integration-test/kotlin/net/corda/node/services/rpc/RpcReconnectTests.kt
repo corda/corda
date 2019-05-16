@@ -60,7 +60,7 @@ class RpcReconnectTests {
      */
     @Test
     fun `test that the RPC client is able to reconnect and proceed after node failure, restart, or connection reset`() {
-        val nrOfFlowsToRun = 450 // Takes around 5 minutes.
+        val nrOfFlowsToRun = 150 // Takes around 5 minutes.
         val nodeRunningTime = { Random().nextInt(12000) + 8000 }
 
         val demoUser = User("demo", "demo", setOf(Permissions.all()))
@@ -242,6 +242,26 @@ class RpcReconnectTests {
             val nrFailures = nrRestarts.get()
             log.info("Checking results after $nrFailures restarts.")
 
+            // Query the vault and check that states were created for all flows.
+            fun readCashStates() = bankAReconnectingRpc
+                    .vaultQueryByWithPagingSpec(Cash.State::class.java, QueryCriteria.VaultQueryCriteria(status = Vault.StateStatus.CONSUMED), PageSpecification(1, 10000))
+                    .states
+
+            var allCashStates = readCashStates()
+            var nrRetries = 0
+
+            // It might be necessary to wait more for all events to arrive when the node is slow.
+            while (allCashStates.size < nrOfFlowsToRun && nrRetries++ < 50) {
+                Thread.sleep(2000)
+                allCashStates = readCashStates()
+            }
+
+            val allCash = allCashStates.map { it.state.data.amount.quantity }.toSet()
+            val missingCash = (1..nrOfFlowsToRun).filterNot { allCash.contains(it.toLong() * 100) }
+            log.info("MISSING: $missingCash")
+
+            assertEquals(nrOfFlowsToRun, allCashStates.size, "Not all flows were executed successfully")
+
             // The progress status for each flow can only miss the last events, because the node might have been killed.
             val missingProgressEvents = flowProgressEvents.filterValues { expectedProgress.subList(0, it.size) != it }
             assertTrue(missingProgressEvents.isEmpty(), "The flow progress tracker is missing events: $missingProgressEvents")
@@ -252,17 +272,6 @@ class RpcReconnectTests {
             // Ideally there should be nrOfFlowsToRun events receive but some might get lost for each restart.
             assertTrue(vaultEvents!!.size + nrFailures * 3 >= nrOfFlowsToRun, "Not all vault events were received")
             // DOCEND missingVaultEvents
-
-            // Query the vault and check that states were created for all flows.
-            val allCashStates = bankAReconnectingRpc
-                    .vaultQueryByWithPagingSpec(Cash.State::class.java, QueryCriteria.VaultQueryCriteria(status = Vault.StateStatus.CONSUMED), PageSpecification(1, 10000))
-                    .states
-
-            val allCash = allCashStates.map { it.state.data.amount.quantity }.toSet()
-            val missingCash = (1..nrOfFlowsToRun).filterNot { allCash.contains(it.toLong() * 100) }
-            log.info("MISSING: $missingCash")
-
-            assertEquals(nrOfFlowsToRun, allCashStates.size, "Not all flows were executed successfully")
 
             // Check that no flow was triggered twice.
             val duplicates = allCashStates.groupBy { it.state.data.amount }.filterValues { it.size > 1 }
