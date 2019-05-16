@@ -130,11 +130,18 @@ class FinalityFlow private constructor(val setOfTransactions: Set<SignedTransact
         if (!newApi) {
             logger.warnOnce("The current usage of FinalityFlow is unsafe. Please consider upgrading your CorDapp to use " +
                     "FinalityFlow with FlowSessions. (${CordappResolver.currentCordapp?.info})")
+
+            require(setOfTransactions.size < 2) {
+                "Do not provide multiple transactions to the finality flow if you are using the old version of the API"
+            }
+
         } else {
             require(sessions.none { serviceHub.myInfo.isLegalIdentity(it.counterparty) }) {
                 "Do not provide flow sessions for the local node. FinalityFlow will record the notarised transaction locally."
             }
         }
+
+
 
         // Note: this method is carefully broken up to minimize the amount of data reachable from the stack at
         // the point where subFlow is invoked, as that minimizes the checkpointing work to be done.
@@ -159,9 +166,11 @@ class FinalityFlow private constructor(val setOfTransactions: Set<SignedTransact
                     require(it.isEmpty()) { "The following parties are specified both in flow sessions and in the oldParticipants list: $it" }
                 }
             }
+        }
 
-            val notarised = notariseAndRecord(stx)
+        val notarisedSetOfTransactions = notariseAndRecord()
 
+        notarisedSetOfTransactions.forEach { notarised ->
             progressTracker.currentStep = BROADCASTING
 
             if (newApi) {
@@ -185,6 +194,8 @@ class FinalityFlow private constructor(val setOfTransactions: Set<SignedTransact
 
             logger.info("All parties received the transaction successfully.")
         }
+
+
 
     }
 
@@ -211,6 +222,26 @@ class FinalityFlow private constructor(val setOfTransactions: Set<SignedTransact
 
     @Suspendable
     private fun notariseAndRecord(transaction: SignedTransaction): SignedTransaction {
+        val notarised = if (needsNotarySignature(transaction)) {
+            progressTracker.currentStep = NOTARISING
+            val notarySignatures = subFlow(NotaryFlow.Client(transaction))
+            transaction + notarySignatures
+        } else {
+            logger.info("No need to notarise this transaction.")
+            transaction
+        }
+        logger.info("Recording transaction locally.")
+        serviceHub.recordTransactions(notarised)
+        logger.info("Recorded transaction locally successfully.")
+        return notarised
+    }
+
+    @Suspendable
+    private fun notariseAndRecordMany(): Set<SignedTransaction> {
+
+        val setOfTransactionsRequiringNotarySignature = setOfTransactions.filter { needsNotarySignature(it) }
+        val setOfTransactionsNotRequiringNotarySignature = setOfTransactions.filter { !needsNotarySignature(it) }
+
         val notarised = if (needsNotarySignature(transaction)) {
             progressTracker.currentStep = NOTARISING
             val notarySignatures = subFlow(NotaryFlow.Client(transaction))

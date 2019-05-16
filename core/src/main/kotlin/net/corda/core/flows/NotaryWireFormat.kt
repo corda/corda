@@ -28,7 +28,7 @@ import java.time.Duration
  *    to ensure the serialization does not get affected by the order.
  */
 @CordaSerializable
-class NotarisationRequest(statesToConsume: List<StateRef>, val transactionId: SecureHash) {
+class NotarisationRequest(statesToConsume: List<StateRef>) {
     companion object {
         /** Sorts in ascending order first by transaction hash, then by output index. */
         private val stateRefComparator = compareBy<StateRef>({ it.txhash }, { it.index })
@@ -54,10 +54,12 @@ data class NotarisationRequestSignature(val digitalSignature: DigitalSignature.W
  * This is the payload that gets sent by a client to a notary service for committing the input states of the [transaction].
  */
 @CordaSerializable
-data class NotarisationPayload(val transaction: Any, val requestSignature: NotarisationRequestSignature) {
+data class NotarisationPayload(val transactions: Set<Any>, val requestSignature: NotarisationRequestSignature) {
     init {
-        require(transaction is SignedTransaction || transaction is CoreTransaction) {
-            "Unsupported transaction type in the notarisation payload: ${transaction.javaClass.simpleName}"
+        transactions.forEach { transaction ->
+            require(transaction is SignedTransaction || transaction is CoreTransaction) {
+                "Unsupported transaction type in the notarisation payload: ${transaction.javaClass.simpleName}"
+            }
         }
     }
 
@@ -65,23 +67,23 @@ data class NotarisationPayload(val transaction: Any, val requestSignature: Notar
      * A helper for automatically casting the underlying [transaction] payload to a [SignedTransaction].
      * Should only be used by validating notaries.
      */
-    val signedTransaction get() = transaction as? SignedTransaction ?: throw exception()
+    val signedTransactions get() = transactions as? Set<SignedTransaction> ?: throw exception()
 
     /**
      * A helper for automatically casting the underlying [transaction] payload to a [CoreTransaction].
      * Should only be used by non-validating notaries.
      */
-    val coreTransaction get() = transaction as? CoreTransaction ?: throw exception()
+    val coreTransactions get() = transactions as? Set<CoreTransaction> ?: throw exception()
 
     private fun exception() = IllegalArgumentException("Unexpected transaction type in the notarisation payload: " +
-            "${transaction::class.java}, it may be that there is a discrepancy between the configured notary type " +
+            "${transactions.first()::class.java}, it may be that there is a discrepancy between the configured notary type " +
             "(validating/non-validating) and the one advertised on the network parameters."
     )
 }
 
 /** Payload returned by the notary service flow to the client. */
 @CordaSerializable
-data class NotarisationResponse(val signatures: List<TransactionSignature>)
+data class NotarisationResponse(val signatures: Map<SecureHash, List<TransactionSignature>>)
 
 /** Sent by the notary when the notary detects it will unlikely respond before the client retries. */
 @CordaSerializable

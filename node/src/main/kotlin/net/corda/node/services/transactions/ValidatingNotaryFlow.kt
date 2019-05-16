@@ -21,8 +21,8 @@ import java.time.Duration
  * indeed valid.
  */
 open class ValidatingNotaryFlow(otherSideSession: FlowSession, service: SinglePartyNotaryService, etaThreshold: Duration = defaultEstimatedWaitTime) : NotaryServiceFlow(otherSideSession, service, etaThreshold) {
-    override fun extractParts(requestPayload: NotarisationPayload): TransactionParts {
-        val stx = requestPayload.signedTransaction
+    override fun extractParts(tx: Any): TransactionParts {
+        val stx = tx as SignedTransaction
         val timeWindow: TimeWindow? = if (stx.coreTransaction is WireTransaction) stx.tx.timeWindow else null
         return TransactionParts(stx.id, stx.inputs, timeWindow, stx.notary, stx.references, stx.networkParametersHash)
     }
@@ -32,11 +32,17 @@ open class ValidatingNotaryFlow(otherSideSession: FlowSession, service: SinglePa
      * the transaction in question has all required signatures apart from the notary's.
      */
     @Suspendable
-    override fun verifyTransaction(requestPayload: NotarisationPayload) {
+    override fun verifyTransaction(transaction: Any) {
+
+        require(transaction is SignedTransaction) {
+            "Unexpected transaction type in notary verification"
+        }
+
+        val signedTransaction = transaction as SignedTransaction
+
         try {
-            val stx = requestPayload.signedTransaction
-            resolveAndContractVerify(stx)
-            verifySignatures(stx)
+            resolveAndContractVerify(signedTransaction)
+            verifySignatures(signedTransaction)
         } catch (e: Exception) {
             throw NotaryInternalException(NotaryError.TransactionInvalid(e))
         }

@@ -27,18 +27,19 @@ import java.time.Duration
 class NonValidatingNotaryFlow(otherSideSession: FlowSession, service: SinglePartyNotaryService, etaThreshold: Duration) : NotaryServiceFlow(otherSideSession, service, etaThreshold) {
     private val minPlatformVersion get() = serviceHub.networkParameters.minimumPlatformVersion
 
-    override fun extractParts(requestPayload: NotarisationPayload): TransactionParts {
-        val tx = requestPayload.coreTransaction
-        return when (tx) {
-            is FilteredTransaction -> TransactionParts(tx.id, tx.inputs, tx.timeWindow, tx.notary, tx.references, networkParametersHash = tx.networkParametersHash)
-            is ContractUpgradeFilteredTransaction,
-            is NotaryChangeWireTransaction -> TransactionParts(tx.id, tx.inputs, null, tx.notary, networkParametersHash = tx.networkParametersHash)
-            else -> throw unexpectedTransactionType(tx)
-        }
+    override fun extractParts(tx: Any): TransactionParts {
+         return when (tx) {
+                is FilteredTransaction -> TransactionParts(tx.id, tx.inputs, tx.timeWindow, tx.notary, tx.references, networkParametersHash = tx.networkParametersHash)
+                is ContractUpgradeFilteredTransaction,
+                is NotaryChangeWireTransaction -> {
+                    val txWithType = tx as NotaryChangeWireTransaction
+                    TransactionParts(txWithType.id, txWithType.inputs, null, txWithType.notary, networkParametersHash = txWithType.networkParametersHash)
+                }
+             else -> throw unexpectedTransactionType(tx as CoreTransaction)
+         }
     }
 
-    override fun verifyTransaction(requestPayload: NotarisationPayload) {
-        val tx = requestPayload.coreTransaction
+    override fun verifyTransaction(tx: Any) {
         try {
             when (tx) {
                 is FilteredTransaction -> {
@@ -58,7 +59,7 @@ class NonValidatingNotaryFlow(otherSideSession: FlowSession, service: SinglePart
                 is NotaryChangeWireTransaction -> {
                     checkNotaryWhitelisted(tx.newNotary, tx.networkParametersHash)
                 }
-                else -> throw unexpectedTransactionType(tx)
+                else -> throw unexpectedTransactionType(tx as CoreTransaction)
             }
         } catch (e: Exception) {
             throw NotaryInternalException(NotaryError.TransactionInvalid(e))

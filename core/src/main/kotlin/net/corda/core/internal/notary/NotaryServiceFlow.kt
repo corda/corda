@@ -4,10 +4,12 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.MIN_PLATFORM_VERSION_FOR_BACKPRESSURE_MESSAGE
 import net.corda.core.internal.checkParameterHash
+import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.seconds
 import net.corda.core.utilities.unwrap
 import java.time.Duration
@@ -47,25 +49,32 @@ abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service:
     override fun call(): Void? {
         val requestPayload = otherSideSession.receive<NotarisationPayload>().unwrap { it }
 
+        val validatedTxsWithIds: Map<SecureHash, TransactionParts>;
         try {
-            val tx: TransactionParts = validateRequest(requestPayload)
-            val request = NotarisationRequest(tx.inputs, tx.id)
-            validateRequestSignature(request, requestPayload.requestSignature)
+            validatedTxsWithIds = validateRequest(requestPayload)
 
-            verifyTransaction(requestPayload)
+            validatedTxsWithIds.forEach { id, tx ->
+                val request = NotarisationRequest(tx.inputs, tx.id)
+                validateRequestSignature(request, requestPayload.requestSignature)
 
-            val eta = service.getEstimatedWaitTime(tx.inputs.size + tx.references.size)
-            if (eta > etaThreshold && counterpartyCanHandleBackPressure()) {
-                otherSideSession.send(WaitTimeUpdate(eta))
+                verifyTransaction(tx)
+
+                val eta = service.getEstimatedWaitTime(tx.inputs.size + tx.references.size)
+                if (eta > etaThreshold && counterpartyCanHandleBackPressure()) {
+                    otherSideSession.send(WaitTimeUpdate(eta))
+                }
             }
 
-            service.commitInputStates(
-                    tx.inputs,
-                    tx.id,
-                    otherSideSession.counterparty,
-                    requestPayload.requestSignature,
-                    tx.timeWindow,
-                    tx.references)
+            validatedTxsWithIds.forEach { id, tx ->
+                service.commitInputStates(
+                        tx.inputs,
+                        tx.id,
+                        otherSideSession.counterparty,
+                        requestPayload.requestSignature,
+                        tx.timeWindow,
+                        tx.references)
+            }
+
         } catch (e: NotaryInternalException) {
             logError(e.error)
             // Any exception that's not a NotaryInternalException is assumed to be an unexpected internal error
@@ -73,26 +82,34 @@ abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service:
             throw NotaryException(e.error, transactionId)
         }
 
-        signTransactionAndSendResponse(transactionId!!)
+        signTransactionAndSendResponse(validatedTxsWithIds.map { it.value.id })
         return null
     }
 
-    private fun validateRequest(requestPayload: NotarisationPayload): TransactionParts {
-        try {
-            val transaction = extractParts(requestPayload)
-            transactionId = transaction.id
-            checkNotary(transaction.notary)
-            checkParameterHash(transaction.networkParametersHash)
-            checkInputs(transaction.inputs + transaction.references)
-            return transaction
-        } catch (e: Exception) {
-            val error = NotaryError.TransactionInvalid(e)
-            throw NotaryInternalException(error)
+    private fun validateRequest(requestPayload: NotarisationPayload): Map<SecureHash, TransactionParts> {
+        val mapOfTxIdAndTxParts = mutableMapOf<SecureHash, TransactionParts>()
+
+        requestPayload.transactions.forEach {
+            try {
+                val transactionParts = extractParts(requestPayload)
+                transactionId = transactionParts.id
+                checkNotary(transactionParts.notary)
+                checkParameterHash(transactionParts.networkParametersHash)
+                checkInputs(transactionParts.inputs + transactionParts.references)
+                mapOfTxIdAndTxParts[transactionParts.id] = transactionParts
+                return mapOfTxIdAndTxParts
+            } catch (e: Exception) {
+                val error = NotaryError.TransactionInvalid(e)
+                throw NotaryInternalException(error)
+            }
         }
+
+        return mapOfTxIdAndTxParts
+
     }
 
     /** Extract the common transaction components required for notarisation. */
-    protected abstract fun extractParts(requestPayload: NotarisationPayload): TransactionParts
+    protected abstract fun extractParts(tx: Any): TransactionParts
 
     /** Check if transaction is intended to be signed by this notary. */
     @Suspendable
@@ -120,13 +137,24 @@ abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service:
      * Override to implement custom logic to perform transaction verification based on validity and privacy requirements.
      */
     @Suspendable
-    abstract fun verifyTransaction(requestPayload: NotarisationPayload)
+    abstract fun verifyTransaction(transaction: Any)
 
     @Suspendable
     private fun signTransactionAndSendResponse(txId: SecureHash) {
         val signature = service.signTransaction(txId)
-        otherSideSession.send(NotarisationResponse(listOf(signature)))
+        otherSideSession.send(NotarisationResponse(listOf(signature), txId))
     }
+
+
+    @Suspendable
+    private fun signTransactionAndSendResponse(txIds: List<SecureHash>) {
+        val mapOfSignedTransaction = mutableMapOf<SecureHash, List<TransactionSignature>>()
+        txIds.forEach {
+            mapOfSignedTransaction[it] = listOf(service.signTransaction(it))
+        }
+        otherSideSession.send(mapOfSignedTransaction)
+    }
+
 
     /**
      * The minimum amount of information needed to notarise a transaction. Note that this does not include

@@ -118,7 +118,7 @@ class BFTSmartNotaryService(
                 }
                 is BFTSmart.ClusterResponse.Signatures -> {
                     log.debug("All input states of transaction ${payload.coreTransaction.id} have been committed")
-                    return NotarisationResponse(response.txSignatures)
+                    return NotarisationResponse(response.txSignatures, payload.coreTransaction.id)
                 }
             }
         }
