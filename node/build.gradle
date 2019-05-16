@@ -179,7 +179,6 @@ dependencies {
     compile group: 'com.ea.agentloader', name: 'ea-agent-loader', version: "${eaagentloader_version}"
 
     // BFT-Smart dependencies
-    compile 'commons-codec:commons-codec:1.10'
     compile 'com.github.bft-smart:library:master-v1.1-beta-g6215ec8-87'
 
     // Java Atomix: RAFT library
