@@ -32,7 +32,7 @@ open class ValidatingNotaryFlow(otherSideSession: FlowSession, service: SinglePa
      * the transaction in question has all required signatures apart from the notary's.
      */
     @Suspendable
-    override fun verifyTransaction(transaction: TransactionParts) {
+    override fun verifyTransaction(transaction: NotarisationPayload) {
 
         require(transaction is SignedTransaction) {
             "Unexpected transaction type in notary verification"
