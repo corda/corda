@@ -54,7 +54,7 @@ class LoggingFirewallAuditService(val conf: FirewallConfiguration,
 
     private data class DirectionalStats(val successfulConnectionCount : ConcurrentMap<InetSocketAddress, AtomicLong> = ConcurrentHashMap<InetSocketAddress, AtomicLong>(),
                                         val failedConnectionCount : ConcurrentMap<InetSocketAddress, AtomicLong> = ConcurrentHashMap<InetSocketAddress, AtomicLong>(),
-                                        val activeConnectionCount : AtomicLong = AtomicLong(0),
+                                        val activeConnectionCount : ConcurrentMap<InetSocketAddress, AtomicLong> =  ConcurrentHashMap<InetSocketAddress, AtomicLong>(),
                                         val accepted : ConcurrentMap<String, Pair<AtomicLong, AtomicLong>> = ConcurrentHashMap<String, Pair<AtomicLong, AtomicLong>>(),
                                         val droppedPacketsCount : ConcurrentMap<String, AtomicLong> = ConcurrentHashMap<String, AtomicLong>())
 
@@ -72,7 +72,7 @@ class LoggingFirewallAuditService(val conf: FirewallConfiguration,
             directionalStatsMap.entries.forEach {
                 val currentStats = it.value
                 val newStats = DirectionalStats().apply {
-                    activeConnectionCount.set(currentStats.activeConnectionCount.get())
+                    activeConnectionCount.putAll(currentStats.activeConnectionCount)
                 }
                 newStatsMap[it.key] = newStats
             }
@@ -105,7 +105,7 @@ class LoggingFirewallAuditService(val conf: FirewallConfiguration,
         logWithSuppression(address, certificateSubject, msg, direction) { log.warn(it) }
         withDirectionalStatsOf(direction) {
             successfulConnectionCount.getOrPut(address, ::AtomicLong).incrementAndGet()
-            activeConnectionCount.incrementAndGet()
+            activeConnectionCount.getOrPut(address, ::AtomicLong).incrementAndGet()
         }
     }
 
@@ -113,7 +113,7 @@ class LoggingFirewallAuditService(val conf: FirewallConfiguration,
         logWithSuppression(address, certificateSubject, msg, direction) { log.info(it) }
         withDirectionalStatsOf(direction) {
             failedConnectionCount.getOrPut(address, ::AtomicLong).incrementAndGet()
-            activeConnectionCount.decrementAndGet()
+            activeConnectionCount.getOrPut(address, ::AtomicLong).decrementAndGet()
         }
     }
 
@@ -212,7 +212,7 @@ class LoggingFirewallAuditService(val conf: FirewallConfiguration,
         val trafficTotalsStr =   "Traffic totals:\n" +
                                 "\tSuccessful connection count: ${nf.format(dirStatsIn.successfulConnectionCount.sumValues())}(inbound), ${nf.format(dirStatsOut.successfulConnectionCount.sumValues())}(outbound)\n" +
                                 "\tFailed connection count: ${nf.format(dirStatsIn.failedConnectionCount.sumValues())}(inbound), ${nf.format(dirStatsOut.failedConnectionCount.sumValues())}(outbound)\n" +
-                                "\tActive connection count: ${nf.format(dirStatsIn.activeConnectionCount)}(inbound), ${nf.format(dirStatsOut.activeConnectionCount)}(outbound)\n" +
+                                "\tActive connection count: ${nf.format(dirStatsIn.activeConnectionCount.sumValues())}(inbound), ${nf.format(dirStatsOut.activeConnectionCount.sumValues())}(outbound)\n" +
                                 "\tPackets accepted count: ${nf.format(inAcceptedPackets.sumValues())}(inbound), " +
                                                         "${nf.format(outAcceptedPackets.sumValues())}(outbound)\n" +
                                 "\tBytes transmitted: ${nf.format(dirStatsIn.accepted.mapValues { it.value.second }.sumValues())}(inbound), " +
@@ -220,6 +220,8 @@ class LoggingFirewallAuditService(val conf: FirewallConfiguration,
                                 "\tPackets dropped count: ${nf.format(dirStatsIn.droppedPacketsCount.sumValues())}(inbound), ${nf.format(dirStatsOut.droppedPacketsCount.sumValues())}(outbound)"
 
         val breakDownTrafficStr = "Traffic breakdown:\n" +
+                dirStatsIn.activeConnectionCount.whenNonEmptyPrint { "\tLive connections in:\n${prettyPrint(2, nf)}\n" } +
+                dirStatsOut.activeConnectionCount.whenNonEmptyPrint { "\tLive connections out:\n${prettyPrint(2, nf)}\n" } +
                 dirStatsIn.successfulConnectionCount.whenNonEmptyPrint { "\tSuccessful connections in:\n${prettyPrint(2, nf)}\n" } +
                 dirStatsOut.successfulConnectionCount.whenNonEmptyPrint { "\tSuccessful connections out:\n${prettyPrint(2, nf)}\n" } +
                 dirStatsIn.failedConnectionCount.whenNonEmptyPrint { "\tFailed connections in:\n${prettyPrint(2, nf)}\n" } +
