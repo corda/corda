@@ -2,9 +2,9 @@ pluginManagement {
     ext.artifactory_contextUrl = 'https://software.r3.com/artifactory'
 
     repositories {
+        mavenLocal()
         gradlePluginPortal()
         maven { url "$artifactory_contextUrl/corda-dependencies" }
-        mavenLocal()
     }
 }
 // The project is named 'corda-project' and not 'corda' because if this is named the same as the
