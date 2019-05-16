@@ -81,7 +81,7 @@ object TwoPartyDealFlow {
     /**
      * Abstracted bilateral deal flow participant that is recipient of initial communication.
      */
-    abstract class Secondary<U>(override val progressTracker: ProgressTracker = Secondary.tracker()) : FlowLogic<SignedTransaction>() {
+    abstract class Secondary<U>(override val progressTracker: ProgressTracker = Secondary.tracker()) : FlowLogic<Set<SignedTransaction>>() {
 
         companion object {
             object RECEIVING : ProgressTracker.Step("Waiting for deal info.")
@@ -96,7 +96,7 @@ object TwoPartyDealFlow {
         abstract val otherSideSession: FlowSession
 
         @Suspendable
-        override fun call(): SignedTransaction {
+        override fun call(): Set<SignedTransaction> {
             val handshake = receiveAndValidateHandshake()
 
             progressTracker.currentStep = SIGNING

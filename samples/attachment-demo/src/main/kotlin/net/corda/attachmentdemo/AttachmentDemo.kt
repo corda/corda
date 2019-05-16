@@ -78,9 +78,11 @@ private fun sender(rpc: CordaRPCOps, inputStream: InputStream, hash: SecureHash.
 
     val flowHandle = rpc.startTrackedFlow(::AttachmentDemoFlow, bankBParty, notaryParty, hash)
     flowHandle.progress.subscribe(::println)
-    val stx = flowHandle.returnValue.getOrThrow()
-    println("Sent ${stx.id}")
+    val stxs = flowHandle.returnValue.getOrThrow()
+    stxs.forEach { println("Sent ${it.id}") }
+
 }
+
 // DOCEND 2
 
 @Suppress("DEPRECATION")

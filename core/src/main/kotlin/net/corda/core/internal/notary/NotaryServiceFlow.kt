@@ -93,7 +93,7 @@ abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service:
 
         requestPayload.transactions.forEach {
             try {
-                val transactionParts = extractParts(requestPayload)
+                val transactionParts = extractParts(it)
                 transactionId = transactionParts.id
                 checkNotary(transactionParts.notary)
                 checkParameterHash(transactionParts.networkParametersHash)
@@ -139,7 +139,7 @@ abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service:
      * Override to implement custom logic to perform transaction verification based on validity and privacy requirements.
      */
     @Suspendable
-    abstract fun verifyTransaction(transaction: Any)
+    abstract fun verifyTransaction(transaction: TransactionParts)
 
     @Suspendable
     private fun signTransactionAndSendResponse(txId: SecureHash) {

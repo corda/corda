@@ -135,7 +135,7 @@ object TwoPartyTradeFlow {
                      private val notary: Party,
                      private val acceptablePrice: Amount<Currency>,
                      private val typeToBuy: Class<out OwnableState>,
-                     private val anonymous: Boolean) : FlowLogic<SignedTransaction>() {
+                     private val anonymous: Boolean) : FlowLogic<Set<SignedTransaction>>() {
         constructor(otherSideSession: FlowSession, notary: Party, acceptablePrice: Amount<Currency>, typeToBuy: Class<out OwnableState>) :
                 this(otherSideSession, notary, acceptablePrice, typeToBuy, true)
 
@@ -158,7 +158,7 @@ object TwoPartyTradeFlow {
 
         // DOCSTART 1
         @Suspendable
-        override fun call(): SignedTransaction {
+        override fun call(): Set<SignedTransaction> {
             // Wait for a trade request to come in from the other party.
             progressTracker.currentStep = RECEIVING
             val (assetForSale, tradeRequest) = receiveAndValidateTradeRequest()

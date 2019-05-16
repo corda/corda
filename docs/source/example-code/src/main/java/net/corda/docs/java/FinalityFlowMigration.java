@@ -6,6 +6,8 @@ import net.corda.core.identity.Party;
 import net.corda.core.transactions.SignedTransaction;
 import org.jetbrains.annotations.NotNull;
 
+import javax.annotation.Signed;
+
 import static java.util.Collections.singletonList;
 
 @SuppressWarnings("ALL")
@@ -22,7 +24,7 @@ public class FinalityFlowMigration {
         @Override
         public SignedTransaction call() throws FlowException {
             SignedTransaction stx = dummyTransactionWithParticipant(counterparty);
-            return subFlow(new FinalityFlow(stx));
+            return (SignedTransaction) subFlow(new FinalityFlow(stx)).toArray()[0];
         }
         // DOCEND SimpleFlowUsingOldApi
 
@@ -43,7 +45,7 @@ public class FinalityFlowMigration {
             SignedTransaction stx = dummyTransactionWithParticipant(counterparty);
             // For each non-local participant in the transaction we must initiate a flow session with them.
             FlowSession session = initiateFlow(counterparty);
-            return subFlow(new FinalityFlow(stx, session));
+            return (SignedTransaction) subFlow(new FinalityFlow(stx, session)).toArray()[0];
         }
         // DOCEND SimpleFlowUsingNewApi
 
@@ -86,10 +88,10 @@ public class FinalityFlowMigration {
             // Determine which version of the flow that other side is using.
             if (session.getCounterpartyFlowInfo().getFlowVersion() == 1) {
                 // Use the old API if the other side is using the previous version of the flow.
-                return subFlow(new FinalityFlow(fullySignedTx));
+                return (SignedTransaction) subFlow(new FinalityFlow(fullySignedTx)).toArray()[0];
             } else {
                 // Otherwise they're at least on version 2 and so we can send the finalised transaction on the existing session.
-                return subFlow(new FinalityFlow(fullySignedTx, session));
+                return (SignedTransaction) subFlow(new FinalityFlow(fullySignedTx, session)).toArray()[0];
             }
         }
         // DOCEND ExistingInitiatingFlow

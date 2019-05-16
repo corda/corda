@@ -82,7 +82,7 @@ open class CashPaymentFlow(
         logger.info("Finalising transaction for: ${tx.id}")
         val sessionsForFinality = if (serviceHub.myInfo.isLegalIdentity(recipient)) emptyList() else listOf(recipientSession)
         val notarised = finaliseTx(tx, sessionsForFinality, "Unable to notarise spend")
-        logger.info("Finalised transaction for: ${notarised.id}")
+        notarised.forEach { logger.info("Finalised transaction for: ${it.id}") }
         return Result(notarised, anonymousRecipient)
     }
 

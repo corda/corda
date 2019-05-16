@@ -41,6 +41,7 @@ class FinalityFlow private constructor(private val setOfTransactions: Set<Signed
                                        override val progressTracker: ProgressTracker,
                                        private val sessions: Collection<FlowSession>,
                                        private val newApi: Boolean) : FlowLogic<Set<SignedTransaction>>() {
+
     @Deprecated(DEPRECATION_MSG)
     constructor(transaction: SignedTransaction, extraRecipients: Set<Party>, progressTracker: ProgressTracker) : this(
             setOf(transaction), extraRecipients, progressTracker, emptyList(), false
@@ -48,7 +49,7 @@ class FinalityFlow private constructor(private val setOfTransactions: Set<Signed
     @Deprecated(DEPRECATION_MSG)
     constructor(transaction: SignedTransaction, extraRecipients: Set<Party>) : this(setOf(transaction), extraRecipients, tracker(), emptyList(), false)
     @Deprecated(DEPRECATION_MSG)
-    constructor(transaction: SignedTransaction) : this(setOf(transaction), emptySet(), tracker(), emptyList(), false)
+    constructor(onlyTransaction: SignedTransaction) : this(setOfTransactions = setOf(onlyTransaction), oldParticipants = emptySet<Party>(), progressTracker = tracker(), sessions = emptyList<FlowSession>(), newApi = false)
     @Deprecated(DEPRECATION_MSG)
     constructor(transaction: SignedTransaction, progressTracker: ProgressTracker) : this(setOf(transaction), emptySet(), progressTracker, emptyList(), false)
 
@@ -79,14 +80,11 @@ class FinalityFlow private constructor(private val setOfTransactions: Set<Signed
     /**
      * Notarise the set of provided transactions and then broadcast them to all the participants.
      *
-     * @param transactions a set of transactions to commit.
+     * @param setOfTransactions a set of transactions to commit.
      * @param sessions A collection of [FlowSession]s for each non-local participant of the transaction. Sessions to non-participants can
      * also be provided.
      */
-    constructor(
-            transactions: Set<SignedTransaction>,
-            sessions: Collection<FlowSession>
-    ) : this(transactions, emptyList(), ProgressTracker(), sessions,true)
+    constructor(setOfTransactions: Set<SignedTransaction>, sessions: Collection<FlowSession>): this(setOfTransactions, emptyList(), ProgressTracker(), sessions, newApi = true)
 
     /**
      * Notarise the given transaction and broadcast it to all the participants.
@@ -99,6 +97,7 @@ class FinalityFlow private constructor(private val setOfTransactions: Set<Signed
      * backwards compatibility with participants running V3 nodes. If you're writing a new CorDapp then this does not apply and this
      * parameter should be ignored.
      */
+
     @Deprecated(DEPRECATION_MSG)
     constructor(
             transaction: SignedTransaction,
@@ -108,6 +107,7 @@ class FinalityFlow private constructor(private val setOfTransactions: Set<Signed
     ) : this(setOf(transaction), oldParticipants, progressTracker, sessions, true)
 
     companion object {
+
         private const val DEPRECATION_MSG = "It is unsafe to use this constructor as it requires nodes to automatically " +
                 "accept notarised transactions without first checking their relevancy. Instead, use one of the constructors " +
                 "that requires only FlowSessions."

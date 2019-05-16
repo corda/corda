@@ -37,7 +37,7 @@ class MyCustomValidatingNotaryService(override val services: ServiceHubInternal,
 class MyValidatingNotaryFlow(otherSide: FlowSession, service: MyCustomValidatingNotaryService) : ValidatingNotaryFlow(otherSide, service) {
     override fun verifyTransaction(requestPayload: NotarisationPayload) {
         try {
-            val stx = requestPayload.signedTransaction
+            val stx = requestPayload.signedTransactions.single()
             resolveAndContractVerify(stx)
             verifySignatures(stx)
             customVerify(stx)

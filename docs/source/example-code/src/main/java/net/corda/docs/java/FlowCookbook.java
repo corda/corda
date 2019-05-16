@@ -578,13 +578,13 @@ public class FlowCookbook {
             // We notarise the transaction and get it recorded in the vault of
             // the participants of all the transaction's states.
             // DOCSTART 09
-            SignedTransaction notarisedTx1 = subFlow(new FinalityFlow(fullySignedTx, singleton(counterpartySession), FINALISATION.childProgressTracker()));
+            SignedTransaction notarisedTx1 = (SignedTransaction) subFlow(new FinalityFlow(fullySignedTx, singleton(counterpartySession), FINALISATION.childProgressTracker())).toArray()[0];
             // DOCEND 09
             // We can also choose to send it to additional parties who aren't one
             // of the state's participants.
             // DOCSTART 10
             List<FlowSession> partySessions = Arrays.asList(counterpartySession, initiateFlow(regulator));
-            SignedTransaction notarisedTx2 = subFlow(new FinalityFlow(fullySignedTx, partySessions, FINALISATION.childProgressTracker()));
+            SignedTransaction notarisedTx2 = (SignedTransaction) subFlow(new FinalityFlow(fullySignedTx, partySessions, FINALISATION.childProgressTracker())).toArray()[0];
             // DOCEND 10
 
             // DOCSTART FlowSession porting

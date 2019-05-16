@@ -10,9 +10,9 @@ import net.corda.core.transactions.SignedTransaction
 private fun dummyTransactionWithParticipant(party: Party): SignedTransaction = TODO()
 
 // DOCSTART SimpleFlowUsingOldApi
-class SimpleFlowUsingOldApi(private val counterparty: Party) : FlowLogic<SignedTransaction>() {
+class SimpleFlowUsingOldApi(private val counterparty: Party) : FlowLogic<Set<SignedTransaction>>() {
     @Suspendable
-    override fun call(): SignedTransaction {
+    override fun call(): Set<SignedTransaction> {
         val stx = dummyTransactionWithParticipant(counterparty)
         return subFlow(FinalityFlow(stx))
     }
@@ -22,13 +22,12 @@ class SimpleFlowUsingOldApi(private val counterparty: Party) : FlowLogic<SignedT
 // DOCSTART SimpleFlowUsingNewApi
 // Notice how the flow *must* now be an initiating flow even when it wasn't before.
 @InitiatingFlow
-class SimpleFlowUsingNewApi(private val counterparty: Party) : FlowLogic<SignedTransaction>() {
+class SimpleFlowUsingNewApi(private val counterparty: Party) : FlowLogic<Set<SignedTransaction>>() {
     @Suspendable
-    override fun call(): SignedTransaction {
+    override fun call(): Set<SignedTransaction> {
         val stx = dummyTransactionWithParticipant(counterparty)
         // For each non-local participant in the transaction we must initiate a flow session with them.
-        val session = initiateFlow(counterparty)
-        return subFlow(FinalityFlow(stx, session))
+        return subFlow(FinalityFlow(stx))
     }
 }
 // DOCEND SimpleFlowUsingNewApi
@@ -48,9 +47,9 @@ class SimpleNewResponderFlow(private val otherSide: FlowSession) : FlowLogic<Uni
 // Assuming the previous version of the flow was 1 (the default if none is specified), we increment the version number to 2
 // to allow for backwards compatibility with nodes running the old CorDapp.
 @InitiatingFlow(version = 2)
-class ExistingInitiatingFlow(private val counterparty: Party) : FlowLogic<SignedTransaction>() {
+class ExistingInitiatingFlow(private val counterparty: Party) : FlowLogic<Set<SignedTransaction>>() {
     @Suspendable
-    override fun call(): SignedTransaction {
+    override fun call(): Set<SignedTransaction> {
         val partiallySignedTx = dummyTransactionWithParticipant(counterparty)
         val session = initiateFlow(counterparty)
         val fullySignedTx = subFlow(CollectSignaturesFlow(partiallySignedTx, listOf(session)))

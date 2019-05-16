@@ -568,13 +568,13 @@ class InitiatorFlow(val arg1: Boolean, val arg2: Int, private val counterparty: 
         // We notarise the transaction and get it recorded in the vault of
         // the participants of all the transaction's states.
         // DOCSTART 09
-        val notarisedTx1: SignedTransaction = subFlow(FinalityFlow(fullySignedTx, listOf(counterpartySession), FINALISATION.childProgressTracker()))
+        val notarisedTx1: Set<SignedTransaction> = subFlow(FinalityFlow(fullySignedTx, listOf(counterpartySession), FINALISATION.childProgressTracker()))
         // DOCEND 09
         // We can also choose to send it to additional parties who aren't one
         // of the state's participants.
         // DOCSTART 10
         val partySessions: List<FlowSession> = listOf(counterpartySession, initiateFlow(regulator))
-        val notarisedTx2: SignedTransaction = subFlow(FinalityFlow(fullySignedTx, partySessions, FINALISATION.childProgressTracker()))
+        val notarisedTx2: Set<SignedTransaction> = subFlow(FinalityFlow(fullySignedTx, partySessions, FINALISATION.childProgressTracker()))
         // DOCEND 10
 
         // DOCSTART FlowSession porting

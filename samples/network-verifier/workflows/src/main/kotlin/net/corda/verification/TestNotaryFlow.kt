@@ -30,10 +30,10 @@ class TestNotaryFlow : FlowLogic<String>() {
         progressTracker.currentStep = ISSUED
         val destroyBuilder = TransactionBuilder()
         destroyBuilder.notary = notary
-        destroyBuilder.addInputState(issueResult.tx.outRefsOfType<NotaryTestState>().first())
+        destroyBuilder.addInputState(issueResult.single().tx.outRefsOfType<NotaryTestState>().first())
         destroyBuilder.addCommand(NotaryTestCommand, myIdentity.owningKey)
         val signedDestroyT = serviceHub.signInitialTransaction(destroyBuilder)
-        val result = subFlow(FinalityFlow(signedDestroyT, emptyList()))
+        val result = subFlow(FinalityFlow(signedDestroyT, emptyList())).single()
         progressTracker.currentStep = DESTROYING
         progressTracker.currentStep = FINALIZED
         return "notarised: ${result.notary}::${result.tx.id}"

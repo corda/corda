@@ -15,14 +15,14 @@ import net.corda.core.utilities.ProgressTracker
 @StartableByRPC
 class AttachmentDemoFlow(private val otherSide: Party,
                          private val notary: Party,
-                         private val attachId: SecureHash.SHA256) : FlowLogic<SignedTransaction>() {
+                         private val attachId: SecureHash.SHA256) : FlowLogic<Set<SignedTransaction>>() {
 
     object SIGNING : ProgressTracker.Step("Signing transaction")
 
     override val progressTracker: ProgressTracker = ProgressTracker(SIGNING)
 
     @Suspendable
-    override fun call(): SignedTransaction {
+    override fun call(): Set<SignedTransaction> {
         // Create a trivial transaction with an output that describes the attachment, and the attachment itself
         val ptx = TransactionBuilder(notary)
                 .addOutputState(AttachmentContract.State(attachId), ATTACHMENT_PROGRAM_ID)

@@ -64,7 +64,7 @@ object AutoOfferFlow {
     @InitiatedBy(Requester::class)
     class AutoOfferAcceptor(otherSideSession: FlowSession) : Acceptor(otherSideSession) {
         @Suspendable
-        override fun call(): SignedTransaction {
+        override fun call(): Set<SignedTransaction> {
             val finalTx = super.call()
             // Our transaction is now committed to the ledger, so report it to our regulator. We use a custom flow
             // that wraps SendTransactionFlow to allow the receiver to customise how ReceiveTransactionFlow is run,
@@ -78,11 +78,13 @@ object AutoOfferFlow {
     }
 
     @InitiatingFlow
-    class ReportToRegulatorFlow(private val regulator: Party, private val finalTx: SignedTransaction) : FlowLogic<Unit>() {
+    class ReportToRegulatorFlow(private val regulator: Party, private val finalTx: Set<SignedTransaction>) : FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
             val session = initiateFlow(regulator)
-            subFlow(SendTransactionFlow(session, finalTx))
+            finalTx.forEach {
+                subFlow(SendTransactionFlow(session, it))
+            }
         }
     }
 

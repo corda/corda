@@ -23,7 +23,7 @@ abstract class AbstractCashFlow<out T>(override val progressTracker: ProgressTra
     }
 
     @Suspendable
-    protected fun finaliseTx(tx: SignedTransaction, sessions: Collection<FlowSession>, message: String): SignedTransaction {
+    protected fun finaliseTx(tx: SignedTransaction, sessions: Collection<FlowSession>, message: String): Set<SignedTransaction> {
         try {
             return subFlow(FinalityFlow(tx, sessions))
         } catch (e: NotaryException) {
@@ -41,7 +41,9 @@ abstract class AbstractCashFlow<out T>(override val progressTracker: ProgressTra
      * transaction, otherwise this is the well known identity.
      */
     @CordaSerializable
-    data class Result(val stx: SignedTransaction, val recipient: AbstractParty?)
+    data class Result(val stxs: Set<SignedTransaction>, val recipient: AbstractParty?) {
+        val stx = stxs.single()
+    }
 
     abstract class AbstractRequest(val amount: Amount<Currency>)
 }
