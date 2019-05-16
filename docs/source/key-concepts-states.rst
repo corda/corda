@@ -78,7 +78,7 @@ Example: A simplified representation of the current (unconsumed) and historic (c
 * The ledger is the set of all the current (that is, non-historic) states that the node is party to. 
 * The vault stores the states that comprise the whole state sequence. That is, the current state and all of the historic versions of those states.
 
-**Terminology:** The "head" of a state sequence the current state of a shared fact. The current state of the ledger comprises all of the heads of the state sequences. 
+**Terminology:** The "head" of a state sequence is the current state of a shared fact. The current state of the ledger comprises all of the heads of the state sequences. 
 
 Reference States
 ----------------
