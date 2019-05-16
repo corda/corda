@@ -93,10 +93,6 @@ configurations {
     testArtifacts.extendsFrom testRuntimeClasspath
 }
 
-tasks.withType(JavaCompile) {
-    options.compilerArgs += ['--illegal-access=warn']
-}
-
 task testJar(type: Jar) {
     classifier "tests"
     from sourceSets.test.output
