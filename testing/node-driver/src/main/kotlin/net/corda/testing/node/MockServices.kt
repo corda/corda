@@ -147,7 +147,7 @@ open class MockServices private constructor(
             val dataSourceProps = makeTestDataSourceProperties()
             val schemaService = NodeSchemaService(cordappLoader.cordappSchemas)
             val identityService = PersistentIdentityService(TestingNamedCacheFactory())
-            val persistence = configureDatabase(dataSourceProps, DatabaseConfig(), identityService::wellKnownPartyFromX500Name, identityService::wellKnownPartyFromAnonymous, schemaService, schemaService.internalSchemas())
+            val persistence = configureDatabase(dataSourceProps, DatabaseConfig(), identityService::wellKnownPartyFromX500Name, identityService::wellKnownPartyFromAnonymous, schemaService)
 
             // Create a persistent identity service and add all the supplied identities.
             identityService.apply {

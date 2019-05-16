@@ -47,7 +47,6 @@ import net.corda.node.utilities.EnterpriseNamedCacheFactory
 import net.corda.node.utilities.profiling.getTracingConfig
 import net.corda.nodeapi.internal.NodeInfoAndSigned
 import net.corda.nodeapi.internal.persistence.CordaPersistence
-import net.corda.nodeapi.internal.persistence.isH2Database
 import net.corda.serialization.internal.*
 import org.slf4j.Logger
 import rx.schedulers.Schedulers
@@ -236,10 +235,7 @@ class RpcWorkerServiceHub(override val configuration: NodeConfiguration,
 
         networkMapClient?.start(trustRoot)
 
-        val isH2Database = isH2Database(configuration.dataSourceProperties.getProperty("dataSource.url", ""))
-        val schemas = if (isH2Database) schemaService.internalSchemas() else schemaService.schemaOptions.keys
-
-        database.startHikariPool(configuration.dataSourceProperties, configuration.database, schemas, ourName = myInfo.legalIdentities.first().name)
+        database.startHikariPool(configuration.dataSourceProperties, configuration.database, schemaService.schemaOptions.keys, ourName = myInfo.legalIdentities.first().name)
         identityService.start(trustRoot, listOf(myInfo.legalIdentitiesAndCerts.first().certificate, nodeCa))
 
         // networkParametersService needs the database started

@@ -15,6 +15,10 @@
             <column name="id" type="NVARCHAR(255)"/>
         </createTable>
 
+        <addUniqueConstraint columnNames="id"
+                             constraintName="UQ_id"
+                             tableName="unique_dummy_linear_state"/>
+
         <addPrimaryKey columnNames="output_index, transaction_id" constraintName="PK_unique_dummy_linear_sta"
                        tableName="unique_dummy_linear_state"/>
 

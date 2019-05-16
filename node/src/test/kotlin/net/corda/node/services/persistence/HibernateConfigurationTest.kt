@@ -36,10 +36,7 @@ import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.schema.PersistentStateService
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.services.vault.VaultSchemaV1
-import net.corda.nodeapi.internal.persistence.CordaPersistence
-import net.corda.nodeapi.internal.persistence.DatabaseConfig
-import net.corda.nodeapi.internal.persistence.HibernateConfiguration
-import net.corda.nodeapi.internal.persistence.HibernateSchemaChangeException
+import net.corda.nodeapi.internal.persistence.*
 import net.corda.testing.core.*
 import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.internal.configureDatabase
@@ -987,12 +984,9 @@ class HibernateConfigurationTest {
                 vaultFiller.fillWithSomeTestCash(100.DOLLARS, issuerServices, 4, issuer.ref(1), rng = Random(0L))
             }
         }
-        createNewDB(setOf(CashSchemaV1, SampleCashSchemaV1, SampleCashSchemaV2), initialiseSchema = false).use {
-            assertThatThrownBy {
-                it.transaction {
-                    vaultFiller.fillWithSomeTestCash(100.DOLLARS, issuerServices, 4, issuer.ref(1), rng = Random(0L))
-                }
-            }.isInstanceOf(HibernateSchemaChangeException::class.java)
-        }
+        // OS - Enterprise diff, Liquibase does verification earlier than Hibernate validation for CorDapps in OS and throws the different error
+        assertThatThrownBy {
+            createNewDB(setOf(CashSchemaV1, SampleCashSchemaV1, SampleCashSchemaV2), initialiseSchema = false)
+        }.isInstanceOf(DatabaseIncompatibleException::class.java)
     }
 }
