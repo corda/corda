@@ -13,6 +13,7 @@ import net.corda.nodeapi.internal.protonwrapper.messages.SendableMessage
 import org.junit.After
 import org.junit.Test
 import java.net.InetSocketAddress
+import kotlin.concurrent.thread
 
 class LoggingFirewallAuditServiceTest {
 
@@ -32,40 +33,55 @@ class LoggingFirewallAuditServiceTest {
     }
 
     @Test
+    fun testActiveConnectionsTracking() {
+        var t1 = thread {
+            (1..20).forEach { instance.successfulConnectionEvent(it.toAddress(), "connectionTrackingTest", "connectionSuccess", it.toDirection())}
+            (1..10).forEach { instance.failedConnectionEvent(it.toAddress(), "connectionTrackingTest", "connectionClose", it.toDirection())}
+        }
+
+        var t2 = thread {
+            (1..10).forEach { instance.successfulConnectionEvent(it.toAddress(), "connectionTrackingTest", "connectionSuccess", it.toDirection())}
+            (1..5).forEach { instance.failedConnectionEvent(it.toAddress(), "connectionTrackingTest", "connectionClose", it.toDirection())}
+        }
+
+        t1.join()
+        t2.join()
+
+        with(instance.prepareStatsAndReset()) {
+            assertThat(this, containsSubstring("Successful connection count: 9(inbound), 21(outbound)"))
+            assertThat(this, containsSubstring("Failed connection count: 4(inbound), 11(outbound)"))
+            assertThat(this, containsSubstring("Active connection count: 5(inbound), 10(outbound)"))
+            assertThat(this, containsSubstring("Packets accepted count: 0(inbound), 0(outbound)"))
+            assertThat(this, containsSubstring("Bytes transmitted: 0(inbound), 0(outbound)"))
+            assertThat(this, containsSubstring("Packets dropped count: 0(inbound), 0(outbound)"))
+        }
+
+        t1 = thread {
+            (1..20).forEach { instance.successfulConnectionEvent(it.toAddress(), "connectionTrackingTest", "connectionSuccess", it.toDirection())}
+            (1..10).forEach { instance.failedConnectionEvent(it.toAddress(), "connectionTrackingTest", "connectionClose", it.toDirection())}
+        }
+
+        t2 = thread {
+            (1..10).forEach { instance.successfulConnectionEvent(it.toAddress(), "connectionTrackingTest", "connectionSuccess", it.toDirection())}
+            (1..5).forEach { instance.failedConnectionEvent(it.toAddress(), "connectionTrackingTest", "connectionClose", it.toDirection())}
+        }
+
+        t1.join()
+        t2.join()
+
+        // Verify that after another round of connection shuffling, the temporary stats are properly reset while active connections are only updated correctly
+        with(instance.prepareStatsAndReset()) {
+            assertThat(this, containsSubstring("Successful connection count: 9(inbound), 21(outbound)"))
+            assertThat(this, containsSubstring("Failed connection count: 4(inbound), 11(outbound)"))
+            assertThat(this, containsSubstring("Active connection count: 10(inbound), 20(outbound)"))
+            assertThat(this, containsSubstring("Packets accepted count: 0(inbound), 0(outbound)"))
+            assertThat(this, containsSubstring("Bytes transmitted: 0(inbound), 0(outbound)"))
+            assertThat(this, containsSubstring("Packets dropped count: 0(inbound), 0(outbound)"))
+        }
+    }
+
+    @Test
     fun testStatsOutput() {
-
-        fun Int.toDirection() : RoutingDirection {
-            return if (this % 3 == 0) {
-                RoutingDirection.INBOUND
-            } else {
-                RoutingDirection.OUTGOING
-            }
-        }
-
-        val byteArray = ByteArray(20)
-
-        fun Int.createMessage(direction : RoutingDirection) : ApplicationMessage {
-            val partyName = "Party" + ((this % 4) + 1)
-            return when(direction) {
-                RoutingDirection.INBOUND -> {
-                    val msg = mock<ReceivedMessage>()
-                    whenever(msg.payload).then { byteArray }
-                    whenever(msg.sourceLegalName).then { partyName }
-                    msg
-                }
-                RoutingDirection.OUTGOING -> {
-                    val msg = mock<SendableMessage>()
-                    whenever(msg.payload).then { byteArray }
-                    whenever(msg.destinationLegalName).then { partyName }
-                    msg
-                }
-            }
-        }
-
-        fun Int.toAddress(): InetSocketAddress {
-            val hostname = "Server" + ((this % 5) + 1)
-            return InetSocketAddress(hostname, 10001)
-        }
 
         val failedConnCount = 7
         (1..failedConnCount).forEach { instance.failedConnectionEvent(it.toAddress(), null, "test", it.toDirection()) }
@@ -85,11 +101,12 @@ class LoggingFirewallAuditServiceTest {
         }
 
        with(instance.prepareStatsAndReset()) {
-           assertThat(this, containsSubstring("Successful connection count: 13(inbound), 27(outgoing)"))
-           assertThat(this, containsSubstring("Failed connection count: 2(inbound), 5(outgoing)"))
-           assertThat(this, containsSubstring("Packets accepted count: 3,000(inbound), 6,000(outgoing)"))
-           assertThat(this, containsSubstring("Bytes transmitted: 60,000(inbound), 120,000(outgoing)"))
-           assertThat(this, containsSubstring("Packets dropped count: 6(inbound), 14(outgoing)"))
+           assertThat(this, containsSubstring("Successful connection count: 13(inbound), 27(outbound)"))
+           assertThat(this, containsSubstring("Failed connection count: 2(inbound), 5(outbound)"))
+           assertThat(this, containsSubstring("Active connection count: 11(inbound), 22(outbound)"))
+           assertThat(this, containsSubstring("Packets accepted count: 3,000(inbound), 6,000(outbound)"))
+           assertThat(this, containsSubstring("Bytes transmitted: 60,000(inbound), 120,000(outbound)"))
+           assertThat(this, containsSubstring("Packets dropped count: 6(inbound), 14(outbound)"))
            assertThat(this, containsSubstring("Failed connections out:"))
            assertThat(this, containsSubstring("Server5:10001 -> 1"))
        }
@@ -97,9 +114,42 @@ class LoggingFirewallAuditServiceTest {
         // Ensure reset stats
         with(instance.prepareStatsAndReset()) {
             assertThat(this, containsSubstring("Successful connection count: 0"))
-            assertThat(this, containsSubstring("Packets dropped count: 0(inbound), 0(outgoing)"))
+            assertThat(this, containsSubstring("Active connection count: 11(inbound), 22(outbound)"))
+            assertThat(this, containsSubstring("Packets dropped count: 0(inbound), 0(outbound)"))
             assertThat(this, containsSubstring("Failed connections out:").not())
             assertThat(this, containsSubstring("Accepted packets out:").not())
+        }
+    }
+
+    private fun Int.createMessage(direction : RoutingDirection) : ApplicationMessage {
+        val byteArray = ByteArray(20)
+        val partyName = "Party" + ((this % 4) + 1)
+        return when(direction) {
+            RoutingDirection.INBOUND -> {
+                val msg = mock<ReceivedMessage>()
+                whenever(msg.payload).then { byteArray }
+                whenever(msg.sourceLegalName).then { partyName }
+                msg
+            }
+            RoutingDirection.OUTBOUND -> {
+                val msg = mock<SendableMessage>()
+                whenever(msg.payload).then { byteArray }
+                whenever(msg.destinationLegalName).then { partyName }
+                msg
+            }
+        }
+    }
+
+    private fun Int.toAddress(): InetSocketAddress {
+        val hostname = "Server" + ((this % 5) + 1)
+        return InetSocketAddress(hostname, 10001)
+    }
+
+    private fun Int.toDirection() : RoutingDirection {
+        return if (this % 3 == 0) {
+            RoutingDirection.INBOUND
+        } else {
+            RoutingDirection.OUTBOUND
         }
     }
 }

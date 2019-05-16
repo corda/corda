@@ -21,5 +21,5 @@ interface FirewallAuditService : ServiceLifecycleSupport {
  */
 enum class RoutingDirection {
     INBOUND,
-    OUTGOING
+    OUTBOUND
 }
