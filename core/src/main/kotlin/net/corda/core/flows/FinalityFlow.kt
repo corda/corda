@@ -40,7 +40,7 @@ class FinalityFlow private constructor(val setOfTransactions: Set<SignedTransact
                                        private val oldParticipants: Collection<Party>,
                                        override val progressTracker: ProgressTracker,
                                        private val sessions: Collection<FlowSession>,
-                                       private val newApi: Boolean) : FlowLogic<SignedTransaction>() {
+                                       private val newApi: Boolean) : FlowLogic<Set<SignedTransaction>>() {
     @Deprecated(DEPRECATION_MSG)
     constructor(transaction: SignedTransaction, extraRecipients: Set<Party>, progressTracker: ProgressTracker) : this(
             setOf(transaction), extraRecipients, progressTracker, emptyList(), false
