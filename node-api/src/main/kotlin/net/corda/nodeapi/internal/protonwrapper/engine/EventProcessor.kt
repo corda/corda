@@ -4,6 +4,7 @@ import io.netty.buffer.ByteBuf
 import io.netty.channel.Channel
 import io.netty.channel.ChannelHandlerContext
 import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.trace
 import net.corda.nodeapi.internal.protonwrapper.messages.MessageStatus
 import net.corda.nodeapi.internal.protonwrapper.messages.impl.ReceivedMessageImpl
 import net.corda.nodeapi.internal.protonwrapper.messages.impl.SendableMessageImpl
@@ -93,6 +94,7 @@ internal class EventProcessor(channel: Channel,
 
     private fun tick(connection: Connection) {
         lock.withLock {
+            logDebugWithMDC { "Tick" }
             try {
                 if ((connection.localState != EndpointState.CLOSED) && !connection.transport.isClosed) {
                     val now = System.currentTimeMillis()
@@ -103,6 +105,7 @@ internal class EventProcessor(channel: Channel,
                     }, tickDelay, TimeUnit.MILLISECONDS)
                 }
             } catch (ex: Exception) {
+                withMDC { log.info("Tick failed", ex) }
                 connection.transport.close()
                 connection.condition = ErrorCondition()
             }
