@@ -4,7 +4,6 @@ import com.google.common.reflect.TypeToken
 import net.corda.core.KeepForDJVM
 import net.corda.core.internal.isPublic
 import net.corda.core.serialization.SerializableCalculatedProperty
-import net.corda.core.utilities.contextLogger
 import net.corda.serialization.internal.amqp.MethodClassifier.*
 import java.lang.reflect.Field
 import java.lang.reflect.Method
@@ -88,7 +87,7 @@ private val propertyMethodRegex = Regex("(?<type>get|set|is)(?<var>\\p{Lu}.*)")
  * take a single parameter of a type compatible with exampleProperty and isExampleProperty must
  * return a boolean
  */
-internal fun Class<out Any?>.propertyDescriptors(warnInvalid: Boolean = true): Map<String, PropertyDescriptor> {
+internal fun Class<out Any?>.propertyDescriptors(validateProperties: Boolean = true): Map<String, PropertyDescriptor> {
     val fieldProperties = superclassChain().declaredFields().byFieldName()
 
     return superclassChain().declaredMethods()
@@ -97,7 +96,7 @@ internal fun Class<out Any?>.propertyDescriptors(warnInvalid: Boolean = true): M
             .withValidSignature()
             .byNameAndClassifier(fieldProperties.keys)
             .toClassProperties(fieldProperties).run {
-                if (warnInvalid) validated() else this
+                if (validateProperties) validated() else this
             }
 }
 
