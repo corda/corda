@@ -6,6 +6,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.*
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.unwrap
+import java.util.stream.Collectors
 
 /**
  * The [SendTransactionFlow] should be used to send a transaction to another peer that wishes to verify that transaction's
@@ -48,7 +49,7 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any) 
         // Each time an authorised transaction is requested, the input transactions are added to the list.
         // Once a transaction has been requested, it will be removed from the authorised list. This means that it is a protocol violation to request a transaction twice.
         val authorisedTransactions = when (payload) {
-            is NotarisationPayload -> TransactionAuthorisationFilter().addAuthorised(getInputTransactions(payload.signedTransaction))
+            is NotarisationPayload -> TransactionAuthorisationFilter().addAuthorised(getInputTransactions(payload.signedTransactions))
             is SignedTransaction -> TransactionAuthorisationFilter().addAuthorised(getInputTransactions(payload))
             is RetrieveAnyTransactionPayload -> TransactionAuthorisationFilter(acceptAll = true)
             is List<*> -> TransactionAuthorisationFilter().addAuthorised(payload.flatMap { stateAndRef ->
@@ -102,6 +103,13 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any) 
     @Suspendable
     private fun getInputTransactions(tx: SignedTransaction): Set<SecureHash> {
         return tx.inputs.map { it.txhash }.toSet() + tx.references.map { it.txhash }.toSet()
+    }
+
+    @Suspendable
+    private fun getInputTransactions(txs: Set<SignedTransaction>): Set<SecureHash> {
+        val allInputTransactions = arrayListOf<SecureHash>()
+        txs.forEach { tx -> allInputTransactions.addAll(tx.inputs.map { it.txhash }.toSet() + tx.references.map { it.txhash }.toSet()) }
+        return allInputTransactions.toSet()
     }
 
     private class TransactionAuthorisationFilter(private val authorisedTransactions: MutableSet<SecureHash> = mutableSetOf(), val acceptAll: Boolean = false) {

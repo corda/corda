@@ -36,7 +36,7 @@ import net.corda.core.utilities.debug
 // This is only possible because a flow is only truly initiating when the first call to initiateFlow is made (where the
 // presence of @InitiatingFlow is checked). So the new API is inlined simply because that code path doesn't call initiateFlow.
 @InitiatingFlow
-class FinalityFlow private constructor(val setOfTransactions: Set<SignedTransaction>,
+class FinalityFlow private constructor(private val setOfTransactions: Set<SignedTransaction>,
                                        private val oldParticipants: Collection<Party>,
                                        override val progressTracker: ProgressTracker,
                                        private val sessions: Collection<FlowSession>,
@@ -58,8 +58,8 @@ class FinalityFlow private constructor(val setOfTransactions: Set<SignedTransact
      *
      * @param transaction What to commit.
      */
-    constructor(transaction: SignedTransaction, firstSession: FlowSession, vararg restSessions: FlowSession) : this(
-            setOf(transaction), listOf(firstSession) + restSessions.asList()
+    constructor(transaction: SignedTransaction, firstSession: FlowSession, vararg restSessions: FlowSession) : this (
+            transaction, listOf(firstSession) + restSessions.asList()
     )
 
     /**
@@ -73,8 +73,8 @@ class FinalityFlow private constructor(val setOfTransactions: Set<SignedTransact
     constructor(
             transaction: SignedTransaction,
             sessions: Collection<FlowSession>,
-            progressTracker: ProgressTracker = tracker()
-    ) : this(setOf(transaction), emptyList(), progressTracker, sessions, true)
+            progressTracker: ProgressTracker = ProgressTracker()
+    ) : this(setOfTransactions = setOf(transaction), oldParticipants = emptyList<Party>(), progressTracker = progressTracker, sessions = sessions, newApi = true)
 
     /**
      * Notarise the set of provided transactions and then broadcast them to all the participants.
@@ -83,12 +83,10 @@ class FinalityFlow private constructor(val setOfTransactions: Set<SignedTransact
      * @param sessions A collection of [FlowSession]s for each non-local participant of the transaction. Sessions to non-participants can
      * also be provided.
      */
-    @JvmOverloads
     constructor(
             transactions: Set<SignedTransaction>,
-            sessions: Collection<FlowSession>,
-            progressTracker: ProgressTracker = tracker()
-    ) : this(transactions, emptyList(), progressTracker, sessions,true)
+            sessions: Collection<FlowSession>
+    ) : this(transactions, emptyList(), ProgressTracker(), sessions,true)
 
     /**
      * Notarise the given transaction and broadcast it to all the participants.
@@ -141,13 +139,13 @@ class FinalityFlow private constructor(val setOfTransactions: Set<SignedTransact
             }
         }
 
-
-
         // Note: this method is carefully broken up to minimize the amount of data reachable from the stack at
         // the point where subFlow is invoked, as that minimizes the checkpointing work to be done.
         //
         // Lookup the resolved transactions and use them to map each signed transaction to the list of participants.
         // Then send to the notary if needed, record locally and distribute.
+
+        var txIdToExternalParticipants = mutableMapOf<SecureHash, Set<Party>>()
 
         setOfTransactions.forEach { stx ->
 
@@ -155,6 +153,7 @@ class FinalityFlow private constructor(val setOfTransactions: Set<SignedTransact
             logCommandData()
             val ledgerTransaction = verifyTx(stx)
             val externalTxParticipants = extractExternalParticipants(ledgerTransaction)
+            txIdToExternalParticipants[stx.id] = externalTxParticipants
 
             if (newApi) {
                 val sessionParties = sessions.map { it.counterparty }
@@ -189,13 +188,14 @@ class FinalityFlow private constructor(val setOfTransactions: Set<SignedTransact
                     }
                 }
             } else {
-                oldV3Broadcast(notarised, (externalTxParticipants + oldParticipants).toSet())
+                val externalParticipantsToNotarisedTransaction = txIdToExternalParticipants[notarised.id] ?: emptySet()
+                oldV3Broadcast(notarised, (externalParticipantsToNotarisedTransaction + oldParticipants).toSet())
             }
 
-            logger.info("All parties received the transaction successfully.")
+            logger.info("All parties received the transactions successfully.")
         }
 
-
+        return notarisedSetOfTransactions
 
     }
 
@@ -220,40 +220,49 @@ class FinalityFlow private constructor(val setOfTransactions: Set<SignedTransact
         }
     }
 
-    @Suspendable
-    private fun notariseAndRecord(transaction: SignedTransaction): SignedTransaction {
-        val notarised = if (needsNotarySignature(transaction)) {
-            progressTracker.currentStep = NOTARISING
-            val notarySignatures = subFlow(NotaryFlow.Client(transaction))
-            transaction + notarySignatures
-        } else {
-            logger.info("No need to notarise this transaction.")
-            transaction
-        }
-        logger.info("Recording transaction locally.")
-        serviceHub.recordTransactions(notarised)
-        logger.info("Recorded transaction locally successfully.")
-        return notarised
-    }
+//    @Suspendable
+//    private fun notariseAndRecord(transaction: SignedTransaction): SignedTransaction {
+//        val notarised = if (needsNotarySignature(transaction)) {
+//            progressTracker.currentStep = NOTARISING
+//            val notarySignatures = subFlow(NotaryFlow.Client(transaction))
+//            transaction + notarySignatures
+//        } else {
+//            logger.info("No need to notarise this transaction.")
+//            transaction
+//        }
+//        logger.info("Recording transaction locally.")
+//        serviceHub.recordTransactions(notarised)
+//        logger.info("Recorded transaction locally successfully.")
+//        return notarised
+//    }
 
     @Suspendable
-    private fun notariseAndRecordMany(): Set<SignedTransaction> {
+    private fun notariseAndRecord(): Set<SignedTransaction> {
 
-        val setOfTransactionsRequiringNotarySignature = setOfTransactions.filter { needsNotarySignature(it) }
-        val setOfTransactionsNotRequiringNotarySignature = setOfTransactions.filter { !needsNotarySignature(it) }
+        val setOfTransactionsRequiringNotarySignature = setOfTransactions.filter { needsNotarySignature(it) }.toSet()
+        val setOfTransactionsNotRequiringNotarySignature = setOfTransactions.filter { !needsNotarySignature(it) }.toSet()
 
-        val notarised = if (needsNotarySignature(transaction)) {
-            progressTracker.currentStep = NOTARISING
-            val notarySignatures = subFlow(NotaryFlow.Client(transaction))
-            transaction + notarySignatures
-        } else {
-            logger.info("No need to notarise this transaction.")
-            transaction
+        progressTracker.currentStep = NOTARISING
+        val notarySignatures = subFlow(NotaryFlow.Client(setOfTransactionsRequiringNotarySignature))
+
+        setOfTransactionsNotRequiringNotarySignature.forEach {
+            val idOfTransactionNotRequiringNotarization = it.id
+            logger.info("No need to notarise this transaction: $idOfTransactionNotRequiringNotarization")
         }
+
+        val setOfTransactionWithNotarySignatures = setOfTransactions.map {
+            if (notarySignatures[it.id] != null) {
+                it + notarySignatures.getOrElse(it.id) { listOf() }
+            } else {
+                it
+            }
+        }.toSet()
+
         logger.info("Recording transaction locally.")
-        serviceHub.recordTransactions(notarised)
+        serviceHub.recordTransactions(setOfTransactionWithNotarySignatures)
         logger.info("Recorded transaction locally successfully.")
-        return notarised
+
+        return setOfTransactionWithNotarySignatures
     }
 
     private fun needsNotarySignature(stx: SignedTransaction): Boolean {

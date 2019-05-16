@@ -3,6 +3,7 @@ package net.corda.core.internal.notary
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
@@ -10,6 +11,7 @@ import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.toBase58String
 import java.time.Instant
+import kotlin.math.sign
 
 /** Verifies the signature against this notarisation request. Checks that the signature is issued by the right party. */
 fun NotarisationRequest.verifySignature(requestSignature: NotarisationRequestSignature, intendedSigner: Party) {
@@ -34,7 +36,7 @@ fun NotarisationRequest.verifySignature(requestSignature: NotarisationRequestSig
  * Checks that there are sufficient signatures to satisfy the notary signing requirement and validates the signatures
  * against the given transaction id.
  */
-fun NotarisationResponse.validateSignatures(txId: SecureHash, notary: Party) {
+fun NotarisationResponse.validateSignatures(txId: SecureHash, signatures: List<TransactionSignature>, notary: Party) {
     val signingKeys = signatures.map { it.by }
     require(notary.owningKey.isFulfilledBy(signingKeys)) { "Insufficient signatures to fulfill the notary signing requirement for $notary" }
     signatures.forEach { it.verify(txId) }

@@ -15,8 +15,11 @@ class NotaryException(
         /** Cause of notarisation failure. */
         val error: NotaryError,
         /** Id of the transaction to be notarised. Can be _null_ if an error occurred before the id could be resolved. */
-        val txId: SecureHash? = null
-) : FlowException("Unable to notarise transaction ${txId ?: "<Unknown>"} : $error")
+        val txIds: Set<SecureHash?> = emptySet()
+) : FlowException(if (txIds.size == 1 ) "Unable to notarise transaction ${txIds.single() ?: "<Unknown>"} : $error"
+    else "Unable to notarise transaction ${txIds.map { it ?: "<Unknown>" }} : $error") {
+    constructor(error: NotaryError, txId: SecureHash): this(error, setOf(txId))
+}
 
 /** Specifies the cause for notarisation request failure. */
 @CordaSerializable

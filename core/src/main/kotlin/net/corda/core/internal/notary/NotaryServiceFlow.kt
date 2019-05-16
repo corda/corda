@@ -48,13 +48,15 @@ abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service:
     @Suspendable
     override fun call(): Void? {
         val requestPayload = otherSideSession.receive<NotarisationPayload>().unwrap { it }
+        val validatedTxsWithIds: Map<SecureHash, TransactionParts>
+        var currId: SecureHash = SecureHash.zeroHash
 
-        val validatedTxsWithIds: Map<SecureHash, TransactionParts>;
         try {
             validatedTxsWithIds = validateRequest(requestPayload)
 
             validatedTxsWithIds.forEach { id, tx ->
-                val request = NotarisationRequest(tx.inputs, tx.id)
+                currId = id
+                val request = NotarisationRequest(tx.inputs)
                 validateRequestSignature(request, requestPayload.requestSignature)
 
                 verifyTransaction(tx)
@@ -79,7 +81,7 @@ abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service:
             logError(e.error)
             // Any exception that's not a NotaryInternalException is assumed to be an unexpected internal error
             // that is not relayed back to the client.
-            throw NotaryException(e.error, transactionId)
+            throw NotaryException(e.error, currId)
         }
 
         signTransactionAndSendResponse(validatedTxsWithIds.map { it.value.id })
@@ -142,7 +144,7 @@ abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service:
     @Suspendable
     private fun signTransactionAndSendResponse(txId: SecureHash) {
         val signature = service.signTransaction(txId)
-        otherSideSession.send(NotarisationResponse(listOf(signature), txId))
+        otherSideSession.send(NotarisationResponse(mutableMapOf(Pair(txId, listOf(signature)))))
     }
 
 

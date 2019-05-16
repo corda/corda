@@ -5,6 +5,7 @@ import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignedData
+import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.notary.NotaryInternalException
@@ -114,11 +115,12 @@ class BFTSmartNotaryService(
                 is BFTSmart.ClusterResponse.Error -> {
                     // TODO: here we assume that all error will be the same, but there might be invalid onces from mailicious nodes
                     val responseError = response.errors.first().verified()
-                    throw NotaryException(responseError, payload.coreTransaction.id)
+                    throw NotaryException(responseError, payload.coreTransactions.map { it.id }.toSet())
                 }
                 is BFTSmart.ClusterResponse.Signatures -> {
-                    log.debug("All input states of transaction ${payload.coreTransaction.id} have been committed")
-                    return NotarisationResponse(response.txSignatures, payload.coreTransaction.id)
+                    log.debug("All input states of transaction ${payload.coreTransactions.map { it.id }} have been committed")
+                    response.txSignatures
+                    return NotarisationResponse(response.txSignatures)
                 }
             }
         }
@@ -169,33 +171,39 @@ class BFTSmartNotaryService(
         override fun executeCommand(command: ByteArray): ByteArray {
             val commitRequest = command.deserialize<BFTSmart.CommitRequest>()
             verifyRequest(commitRequest)
-            val response = verifyAndCommitTx(commitRequest.payload.coreTransaction, commitRequest.callerIdentity, commitRequest.payload.requestSignature)
+            val response = verifyAndCommitTx(commitRequest.payload.coreTransactions, commitRequest.callerIdentity, commitRequest.payload.requestSignature)
             return response.serialize().bytes
         }
 
-        private fun verifyAndCommitTx(transaction: CoreTransaction, callerIdentity: Party, requestSignature: NotarisationRequestSignature): BFTSmart.ReplicaResponse {
-            return try {
-                val id = transaction.id
-                val inputs = transaction.inputs
-                val references = transaction.references
-                val notary = transaction.notary
-                val timeWindow = (transaction as? FilteredTransaction)?.timeWindow
-                if (notary !in services.myInfo.legalIdentities) throw NotaryInternalException(NotaryError.WrongNotary)
-                commitInputStates(inputs, id, callerIdentity.name, requestSignature, timeWindow, references)
-                log.debug { "Inputs committed successfully, signing $id" }
-                BFTSmart.ReplicaResponse.Signature(sign(id))
-            } catch (e: NotaryInternalException) {
-                log.debug { "Error processing transaction: ${e.error}" }
-                val serializedError = e.error.serialize()
-                val errorSignature = sign(serializedError.bytes)
-                val signedError = SignedData(serializedError, errorSignature)
-                BFTSmart.ReplicaResponse.Error(signedError)
+        private fun verifyAndCommitTx(transactions: Set<CoreTransaction>, callerIdentity: Party, requestSignature: NotarisationRequestSignature): BFTSmart.ReplicaResponse {
+            val mapOfTransactionSignatures = mutableMapOf<SecureHash, TransactionSignature>()
+            transactions.map { transaction ->
+                try {
+                    val id = transaction.id
+                    val inputs = transaction.inputs
+                    val references = transaction.references
+                    val notary = transaction.notary
+                    val timeWindow = (transaction as? FilteredTransaction)?.timeWindow
+                    if (notary !in services.myInfo.legalIdentities) throw NotaryInternalException(NotaryError.WrongNotary)
+                    commitInputStates(inputs, id, callerIdentity.name, requestSignature, timeWindow, references)
+                    log.debug { "Inputs committed successfully, signing $id" }
+                    mapOfTransactionSignatures[id] = sign(id)
+                } catch (e: NotaryInternalException) {
+                    log.debug { "Error processing transaction: ${e.error}" }
+                    val serializedError = e.error.serialize()
+                    val errorSignature = sign(serializedError.bytes)
+                    val signedError = SignedData(serializedError, errorSignature)
+                    BFTSmart.ReplicaResponse.Error(signedError)
+                }
             }
+            return BFTSmart.ReplicaResponse.Signature(mapOfTransactionSignatures.toMap())
         }
 
         private fun verifyRequest(commitRequest: BFTSmart.CommitRequest) {
-            val transaction = commitRequest.payload.coreTransaction
-            val notarisationRequest = NotarisationRequest(transaction.inputs, transaction.id)
+            val transactions = commitRequest.payload.coreTransactions
+            val inputStatesToConsume = arrayListOf<StateRef>()
+            transactions.forEach { inputStatesToConsume.addAll(it.inputs) }
+            val notarisationRequest = NotarisationRequest(inputStatesToConsume)
             notarisationRequest.verifySignature(commitRequest.payload.requestSignature, commitRequest.callerIdentity)
         }
     }

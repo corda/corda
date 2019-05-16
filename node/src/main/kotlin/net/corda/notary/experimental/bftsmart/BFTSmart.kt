@@ -64,14 +64,14 @@ object BFTSmart {
     @CordaSerializable
     sealed class ReplicaResponse {
         data class Error(val error: SignedData<NotaryError>) : ReplicaResponse()
-        data class Signature(val txSignature: TransactionSignature) : ReplicaResponse()
+        data class Signature(val txSignature: Map<SecureHash, TransactionSignature>) : ReplicaResponse()
     }
 
     /** An aggregate response from all replica ([Replica]) replies sent from [Client] back to the calling application. */
     @CordaSerializable
     sealed class ClusterResponse {
         data class Error(val errors: List<SignedData<NotaryError>>) : ClusterResponse()
-        data class Signatures(val txSignatures: List<TransactionSignature>) : ClusterResponse()
+        data class Signatures(val txSignatures: Map<SecureHash, List<TransactionSignature>>) : ClusterResponse()
     }
 
     interface Cluster {
@@ -138,9 +138,19 @@ object BFTSmart {
 
                 // TODO: only return an aggregate if the majority of signatures are replies
                 // TODO: return an error reported by the majority and not just the first one
+                val BFTReplicaResponses = mutableMapOf<SecureHash, ArrayList<TransactionSignature>>()
                 val aggregateResponse = if (accepted.isNotEmpty()) {
                     log.debug { "Cluster response - signatures: ${accepted.map { it.txSignature }}" }
-                    ClusterResponse.Signatures(accepted.map { it.txSignature })
+                    accepted.forEach {
+                        it.txSignature.forEach { id, signature ->
+                            if (BFTReplicaResponses[id] == null) {
+                                BFTReplicaResponses[id] = arrayListOf(signature)
+                            } else {
+                                BFTReplicaResponses[id]?.add(signature)
+                            }
+                        }
+                    }
+                    ClusterResponse.Signatures(BFTReplicaResponses.toMap())
                 } else {
                     log.debug { "Cluster response - error: ${rejected.first().error}" }
                     ClusterResponse.Error(rejected.map { it.error })

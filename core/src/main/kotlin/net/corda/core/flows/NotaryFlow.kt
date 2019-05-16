@@ -38,6 +38,7 @@ class NotaryFlow {
             override val progressTracker: ProgressTracker
     ) : BackpressureAwareTimedFlow<Map<SecureHash, List<TransactionSignature>>>() {
         constructor(stxs: Set<SignedTransaction>) : this(stxs, tracker())
+        constructor(stx: SignedTransaction): this(setOf(stx), tracker())
 
         companion object {
             object REQUESTING : ProgressTracker.Step("Requesting signature by Notary service")
@@ -151,8 +152,8 @@ class NotaryFlow {
         /** Checks that the notary's signature(s) is/are valid. */
         protected fun validateResponse(response: UntrustworthyData<NotarisationResponse>, notaryParty: Party): Map<SecureHash, List<TransactionSignature>> {
             return response.unwrap {
-                it.signatures.forEach { setOfSignatures ->
-                    it.validateSignatures(setOfSignatures.key, notaryParty)
+                it.signatures.forEach { id, signatures ->
+                    it.validateSignatures(id, signatures, notaryParty)
                 }
                 it.signatures
             }
