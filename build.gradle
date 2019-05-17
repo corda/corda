@@ -165,6 +165,7 @@ apply plugin: 'java'
 
 sourceCompatibility = VERSION_1_8
 targetCompatibility = VERSION_11
+println "JAVA_HOME:  " + System.getenv('JAVA_HOME')
 println "Java version: " + JavaVersion.current()
 println "Java source compatibility: " + sourceCompatibility
 println "Java target compatibility: " + targetCompatibility
