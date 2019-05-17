@@ -39,30 +39,32 @@ class NonValidatingNotaryFlow(otherSideSession: FlowSession, service: SinglePart
          }
     }
 
-    override fun verifyTransaction(tx: Any) {
-        try {
-            when (tx) {
-                is FilteredTransaction -> {
-                    tx.apply {
-                        verify()
-                        checkAllComponentsVisible(ComponentGroupEnum.INPUTS_GROUP)
-                        checkAllComponentsVisible(ComponentGroupEnum.TIMEWINDOW_GROUP)
-                        checkAllComponentsVisible(ComponentGroupEnum.REFERENCES_GROUP)
-                        if (minPlatformVersion >= 4) checkAllComponentsVisible(ComponentGroupEnum.PARAMETERS_GROUP)
+    override fun verifyTransaction(notaryPayload: NotarisationPayload) {
+        notaryPayload.transactions.forEach { tx: Any ->
+            try {
+                when (tx) {
+                    is FilteredTransaction -> {
+                        tx.apply {
+                            verify()
+                            checkAllComponentsVisible(ComponentGroupEnum.INPUTS_GROUP)
+                            checkAllComponentsVisible(ComponentGroupEnum.TIMEWINDOW_GROUP)
+                            checkAllComponentsVisible(ComponentGroupEnum.REFERENCES_GROUP)
+                            if (minPlatformVersion >= 4) checkAllComponentsVisible(ComponentGroupEnum.PARAMETERS_GROUP)
+                        }
+                        val notary = tx.notary ?: throw IllegalArgumentException("Transaction does not specify a notary.")
+                        checkNotaryWhitelisted(notary, tx.networkParametersHash)
                     }
-                    val notary = tx.notary ?: throw IllegalArgumentException("Transaction does not specify a notary.")
-                    checkNotaryWhitelisted(notary, tx.networkParametersHash)
+                    is ContractUpgradeFilteredTransaction -> {
+                        checkNotaryWhitelisted(tx.notary, tx.networkParametersHash)
+                    }
+                    is NotaryChangeWireTransaction -> {
+                        checkNotaryWhitelisted(tx.newNotary, tx.networkParametersHash)
+                    }
+                    else -> throw unexpectedTransactionType(tx as CoreTransaction)
                 }
-                is ContractUpgradeFilteredTransaction -> {
-                    checkNotaryWhitelisted(tx.notary, tx.networkParametersHash)
-                }
-                is NotaryChangeWireTransaction -> {
-                    checkNotaryWhitelisted(tx.newNotary, tx.networkParametersHash)
-                }
-                else -> throw unexpectedTransactionType(tx as CoreTransaction)
+            } catch (e: Exception) {
+                throw NotaryInternalException(NotaryError.TransactionInvalid(e))
             }
-        } catch (e: Exception) {
-            throw NotaryInternalException(NotaryError.TransactionInvalid(e))
         }
     }
 

@@ -55,7 +55,8 @@ class NotaryFlow {
                  * as we have already checked that all transactions specify the same notary in the [CheckTransaction] method.
                  */
 
-                val notaryParty = stxs.first().notary ?: throw IllegalStateException("Transaction does not specify a Notary")
+                val firstTransaction = stxs.firstOrNull() ?: throw IllegalStateException("There are no transactions to check.")
+                val notaryParty = firstTransaction.notary ?: throw IllegalStateException("Transaction does not specify a Notary")
                 return serviceHub.networkMapCache.getNodesByLegalIdentityKey(notaryParty.owningKey).size > 1
             }
 

@@ -65,7 +65,7 @@ private class NotaryDemoClientApi(val rpc: CordaRPCOps) {
      */
     private fun notariseTransactions(transactions: List<SignedTransaction>): List<Future<List<String>>> {
         return transactions.map {
-            rpc.startFlow(::RPCStartableNotaryFlowClient, it).returnValue.toCompletableFuture().thenApply { it.map { it.by.toStringShort() } }
+            rpc.startFlow(::RPCStartableNotaryFlowClient, it).returnValue.toCompletableFuture().thenApply { it.map { it.value.single().by.toStringShort() } }
         }
     }
 }

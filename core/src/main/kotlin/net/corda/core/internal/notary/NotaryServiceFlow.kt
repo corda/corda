@@ -59,7 +59,7 @@ abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service:
                 val request = NotarisationRequest(tx.inputs)
                 validateRequestSignature(request, requestPayload.requestSignature)
 
-                verifyTransaction(tx)
+                verifyTransaction(requestPayload)
 
                 val eta = service.getEstimatedWaitTime(tx.inputs.size + tx.references.size)
                 if (eta > etaThreshold && counterpartyCanHandleBackPressure()) {
@@ -139,7 +139,7 @@ abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service:
      * Override to implement custom logic to perform transaction verification based on validity and privacy requirements.
      */
     @Suspendable
-    abstract fun verifyTransaction(transaction: TransactionParts)
+    abstract fun verifyTransaction(notaryPayload: NotarisationPayload)
 
     @Suspendable
     private fun signTransactionAndSendResponse(txId: SecureHash) {

@@ -25,7 +25,7 @@ class CommercialPaperIssueFlow(private val amount: Amount<Currency>,
                                private val issueRef: OpaqueBytes,
                                private val recipient: Party,
                                private val notary: Party,
-                               override val progressTracker: ProgressTracker) : FlowLogic<SignedTransaction>() {
+                               override val progressTracker: ProgressTracker) : FlowLogic<Set<SignedTransaction>>() {
     constructor(amount: Amount<Currency>, issueRef: OpaqueBytes, recipient: Party, notary: Party) : this(amount, issueRef, recipient, notary, tracker())
 
     companion object {
@@ -37,10 +37,10 @@ class CommercialPaperIssueFlow(private val amount: Amount<Currency>,
     }
 
     @Suspendable
-    override fun call(): SignedTransaction {
+    override fun call(): Set<SignedTransaction> {
         progressTracker.currentStep = ISSUING
 
-        val issuance: SignedTransaction = run {
+        val issuance: Set<SignedTransaction> = run {
             val tx = CommercialPaperUtils.generateIssue(ourIdentity.ref(issueRef), amount `issued by` ourIdentity.ref(issueRef),
                     Instant.now() + 10.days, notary)
 
@@ -62,7 +62,7 @@ class CommercialPaperIssueFlow(private val amount: Amount<Currency>,
 
         return run {
             val builder = TransactionBuilder(notary)
-            CommercialPaperUtils.generateMove(builder, issuance.tx.outRef(0), recipient)
+            CommercialPaperUtils.generateMove(builder, issuance.single().tx.outRef(0), recipient)
             val stx = serviceHub.signInitialTransaction(builder)
             val recipientSession = initiateFlow(recipient)
             subFlow(FinalityFlow(stx, listOf(recipientSession)))

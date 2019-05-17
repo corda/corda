@@ -12,11 +12,11 @@ import net.corda.finance.workflows.getCashBalances
 class LoggingBuyerFlow(private val otherSideSession: FlowSession) : BuyerFlow(otherSideSession) {
 
     @Suspendable
-    override fun call(): SignedTransaction {
-        val tradeTX = super.call()
-        logIssuanceAttachment(tradeTX)
+    override fun call(): Set<SignedTransaction> {
+        val tradeTXs = super.call()
+        tradeTXs.forEach { logIssuanceAttachment(it) }
         logBalance()
-        return tradeTX
+        return tradeTXs
     }
 
     private fun logBalance() {

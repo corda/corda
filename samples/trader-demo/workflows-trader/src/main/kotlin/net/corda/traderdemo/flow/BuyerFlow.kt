@@ -15,13 +15,13 @@ import net.corda.finance.flows.TwoPartyTradeFlow
 import java.util.*
 
 @InitiatedBy(SellerFlow::class)
-open class BuyerFlow(private val otherSideSession: FlowSession) : FlowLogic<SignedTransaction>() {
+open class BuyerFlow(private val otherSideSession: FlowSession) : FlowLogic<Set<SignedTransaction>>() {
 
     object STARTING_BUY : ProgressTracker.Step("Seller connected, purchasing commercial paper asset")
     override val progressTracker: ProgressTracker = ProgressTracker(STARTING_BUY)
 
     @Suspendable
-    override fun call(): SignedTransaction {
+    override fun call(): Set<SignedTransaction> {
         progressTracker.currentStep = STARTING_BUY
 
         // Receive the offered amount and automatically agree to it (in reality this would be a longer negotiation)
@@ -35,11 +35,12 @@ open class BuyerFlow(private val otherSideSession: FlowSession) : FlowLogic<Sign
                 CommercialPaper.State::class.java)
 
         // This invokes the trading flow and out pops our finished transaction.
-        val tradeTX: SignedTransaction = subFlow(buyer)
+        val STXS: Set<SignedTransaction> = subFlow(buyer)
+        val tradeTX = STXS.single()
 
         println("Purchase complete - we are a happy customer! Final transaction is: " +
                 "\n\n${Emoji.renderIfSupported(tradeTX.tx)}")
 
-        return tradeTX
+        return STXS
     }
 }

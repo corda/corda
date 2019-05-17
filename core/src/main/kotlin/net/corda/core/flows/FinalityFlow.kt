@@ -2,6 +2,7 @@ package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.identity.Party
 import net.corda.core.identity.groupAbstractPartyByWellKnownParty
@@ -74,7 +75,7 @@ class FinalityFlow private constructor(private val setOfTransactions: Set<Signed
     constructor(
             transaction: SignedTransaction,
             sessions: Collection<FlowSession>,
-            progressTracker: ProgressTracker = ProgressTracker()
+            progressTracker: ProgressTracker = tracker()
     ) : this(setOfTransactions = setOf(transaction), oldParticipants = emptyList<Party>(), progressTracker = progressTracker, sessions = sessions, newApi = true)
 
     /**
@@ -84,7 +85,7 @@ class FinalityFlow private constructor(private val setOfTransactions: Set<Signed
      * @param sessions A collection of [FlowSession]s for each non-local participant of the transaction. Sessions to non-participants can
      * also be provided.
      */
-    constructor(setOfTransactions: Set<SignedTransaction>, sessions: Collection<FlowSession>): this(setOfTransactions, emptyList(), ProgressTracker(), sessions, newApi = true)
+    constructor(setOfTransactions: Set<SignedTransaction>, sessions: Collection<FlowSession>): this(setOfTransactions, emptyList(), tracker(), sessions, newApi = true)
 
     /**
      * Notarise the given transaction and broadcast it to all the participants.
@@ -167,6 +168,7 @@ class FinalityFlow private constructor(private val setOfTransactions: Set<Signed
             }
         }
 
+        progressTracker.currentStep = NOTARISING
         val notarisedSetOfTransactions = notariseAndRecord()
 
         notarisedSetOfTransactions.forEach { notarised ->
@@ -239,12 +241,22 @@ class FinalityFlow private constructor(private val setOfTransactions: Set<Signed
     @Suspendable
     private fun notariseAndRecord(): Set<SignedTransaction> {
 
+        /**
+         * Here we handle the transactions requiring a signature from the notary. The transactions
+         * are sent to the notary as a set. The notary then evaluates each individual transaction (the
+         * details of evaluation vary depending on whether or not the notary is validating or non-validating)
+         * The notary then signs if and only if all transactions are valid.
+         */
         val setOfTransactionsRequiringNotarySignature = setOfTransactions.filter { needsNotarySignature(it) }.toSet()
+        val notarySignatures: Map<SecureHash, List<TransactionSignature>>
+        if (setOfTransactionsRequiringNotarySignature.isNotEmpty()) notarySignatures = subFlow(NotaryFlow.Client(setOfTransactionsRequiringNotarySignature))
+        else notarySignatures = mapOf()
+
+        /**
+         * Here we handle the transactions NOT requiring a signature from the notary. Since they do not have
+         * to be notarised, we can simply log out their ID and record them locally.
+         */
         val setOfTransactionsNotRequiringNotarySignature = setOfTransactions.filter { !needsNotarySignature(it) }.toSet()
-
-        progressTracker.currentStep = NOTARISING
-        val notarySignatures = subFlow(NotaryFlow.Client(setOfTransactionsRequiringNotarySignature))
-
         setOfTransactionsNotRequiringNotarySignature.forEach {
             val idOfTransactionNotRequiringNotarization = it.id
             logger.info("No need to notarise this transaction: $idOfTransactionNotRequiringNotarization")
