@@ -9,6 +9,7 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.messaging.startFlow
+import net.corda.core.node.services.AttachmentId
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
@@ -17,6 +18,7 @@ import net.corda.testing.common.internal.checkNotOnClasspath
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME
+import net.corda.testing.core.internal.ContractJarTestUtils
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverDSL
 import net.corda.testing.driver.DriverParameters
@@ -27,6 +29,7 @@ import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
 import java.net.URL
 import java.net.URLClassLoader
+import java.nio.file.Paths
 
 class AttachmentLoadingTests {
     private companion object {
@@ -60,7 +63,7 @@ class AttachmentLoadingTests {
 
             val stateRef = alice.rpc.startFlowDynamic(issuanceFlowClass, 1234).returnValue.getOrThrow()
 
-            assertThatThrownBy { alice.rpc.startFlow(::ConsumeAndBroadcastFlow, stateRef, bob.nodeInfo.singleIdentity()).returnValue.getOrThrow() }
+            assertThatThrownBy { alice.rpc.startFlow(::ConsumeAndBroadcastFlow, stateRef, bob.nodeInfo.singleIdentity(), listOf()).returnValue.getOrThrow() }
                     // ConsumeAndBroadcastResponderFlow re-throws any non-FlowExceptions with just their class name in the message so that
                     // we can verify here Bob threw the correct exception
                     .hasMessage(TransactionVerificationException.UntrustedAttachmentsException::class.java.name)
@@ -83,7 +86,41 @@ class AttachmentLoadingTests {
             ).transpose().getOrThrow()
 
             val stateRef = alice.rpc.startFlowDynamic(issuanceFlowClass, 1234).returnValue.getOrThrow()
-            alice.rpc.startFlow(::ConsumeAndBroadcastFlow, stateRef, bob.nodeInfo.singleIdentity()).returnValue.getOrThrow()
+            alice.rpc.startFlow(::ConsumeAndBroadcastFlow, stateRef, bob.nodeInfo.singleIdentity(), listOf()).returnValue.getOrThrow()
+        }
+    }
+
+    @Test
+    fun `contract is executed if colliding non-code attachments are present`() {
+        driver(DriverParameters(
+                startNodesInProcess = false,
+                notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, validating = false)),
+                cordappsForAllNodes = listOf(enclosedCordapp())
+        )) {
+            installIsolatedCordapp(ALICE_NAME)
+            installIsolatedCordapp(BOB_NAME)
+
+            val (alice, bob) = listOf(
+                    startNode(providedName = ALICE_NAME),
+                    startNode(providedName = BOB_NAME)
+            ).transpose().getOrThrow()
+
+            val file1 = (Paths.get("").toAbsolutePath() / "jar1").toFile()
+            val file2 = (Paths.get("").toAbsolutePath() / "jar2").toFile()
+            val content1 = listOf(Pair("test.txt", "A dummy non-code attachment"))
+            val content2 = listOf(Pair("test.txt", "A second dummy non-code attachment"), Pair("test2.txt", "A second file"))
+
+            ContractJarTestUtils.makeTestJar(file1.outputStream(), content1)
+            ContractJarTestUtils.makeTestJar(file2.outputStream(), content2)
+
+            val id1 = alice.rpc.uploadAttachment(file1.inputStream())
+            val id2 = alice.rpc.uploadAttachment(file2.inputStream())
+
+            bob.rpc.uploadAttachment(file1.inputStream())
+            bob.rpc.uploadAttachment(file2.inputStream())
+
+            val stateRef = alice.rpc.startFlowDynamic(issuanceFlowClass, 1234).returnValue.getOrThrow()
+            alice.rpc.startFlow(::ConsumeAndBroadcastFlow, stateRef, bob.nodeInfo.singleIdentity(), listOf(id1, id2)).returnValue.getOrThrow()
         }
     }
 
@@ -94,17 +131,21 @@ class AttachmentLoadingTests {
 
     @InitiatingFlow
     @StartableByRPC
-    class ConsumeAndBroadcastFlow(private val stateRef: StateRef, private val otherSide: Party) : FlowLogic<Unit>() {
+    class ConsumeAndBroadcastFlow(private val stateRef: StateRef,
+                                  private val otherSide: Party,
+                                  private val extraAttachments: List<AttachmentId> = listOf()) : FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
             val notary = serviceHub.networkMapCache.notaryIdentities[0]
             val stateAndRef = serviceHub.toStateAndRef<ContractState>(stateRef)
-            val stx = serviceHub.signInitialTransaction(
-                    TransactionBuilder(notary)
-                            .addInputState(stateAndRef)
-                            .addOutputState(ConsumeContract.State())
-                            .addCommand(Command(ConsumeContract.Cmd, ourIdentity.owningKey))
-            )
+            val builder = TransactionBuilder(notary)
+                    .addInputState(stateAndRef)
+                    .addOutputState(ConsumeContract.State())
+                    .addCommand(Command(ConsumeContract.Cmd, ourIdentity.owningKey))
+            for (attachment in extraAttachments) {
+                builder.addAttachment(attachment)
+            }
+            val stx = serviceHub.signInitialTransaction(builder)
             stx.verify(serviceHub, checkSufficientSignatures = false)
             val session = initiateFlow(otherSide)
             subFlow(FinalityFlow(stx, session))
