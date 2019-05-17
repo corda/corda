@@ -20,6 +20,17 @@ import java.util.stream.Collectors
 open class SendTransactionFlow(otherSide: FlowSession, stx: SignedTransaction) : DataVendingFlow(otherSide, stx)
 
 /**
+ * The [SendTransactionSetFlow] should be used to send a set of transactions to another peer that wishes to verify that transaction's
+ * integrity by resolving and checking the dependencies as well. The other side should invoke [ReceiveTransactionFlow] at
+ * the right point in the conversation to receive the sent transaction and perform the resolution back-and-forth required
+ * to check the dependencies and download any missing attachments.
+ *
+ * @param otherSide the target party.
+ * @param stx the [SignedTransaction] being sent to the [otherSideSession].
+ */
+open class SendTransactionSetFlow(otherSide: FlowSession, stxs: Set<SignedTransaction>) : DataVendingFlow(otherSide, stxs)
+
+/**
  * The [SendStateAndRefFlow] should be used to send a list of input [StateAndRef] to another peer that wishes to verify
  * the input's integrity by resolving and checking the dependencies as well. The other side should invoke [ReceiveStateAndRefFlow]
  * at the right point in the conversation to receive the input state and ref and perform the resolution back-and-forth

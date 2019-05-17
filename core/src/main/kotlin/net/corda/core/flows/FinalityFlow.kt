@@ -171,31 +171,45 @@ class FinalityFlow private constructor(private val setOfTransactions: Set<Signed
         progressTracker.currentStep = NOTARISING
         val notarisedSetOfTransactions = notariseAndRecord()
 
-        notarisedSetOfTransactions.forEach { notarised ->
-            progressTracker.currentStep = BROADCASTING
+        progressTracker.currentStep = BROADCASTING
 
-            if (newApi) {
-                oldV3Broadcast(notarised, oldParticipants.toSet())
-                for (session in sessions) {
-                    try {
-                        subFlow(SendTransactionFlow(session, notarised))
-                        logger.info("Party ${session.counterparty} received the transaction.")
-                    } catch (e: UnexpectedFlowEndException) {
-                        throw UnexpectedFlowEndException(
-                                "${session.counterparty} has finished prematurely and we're trying to send them the finalised transaction. " +
-                                        "Did they forget to call ReceiveFinalityFlow? (${e.message})",
-                                e.cause,
-                                e.originalErrorId
-                        )
-                    }
+        if (newApi && setOfTransactions.size > 1) {
+            for (session in sessions) {
+                try {
+                    subFlow(SendTransactionSetFlow(session, notarisedSetOfTransactions))
+                    logger.info("Party ${session.counterparty} received the transaction.")
+                } catch (e: UnexpectedFlowEndException) {
+                    throw UnexpectedFlowEndException(
+                            "${session.counterparty} has finished prematurely and we're trying to send them the finalised transaction. " +
+                                    "Did they forget to call ReceiveFinalityFlow? (${e.message})",
+                            e.cause,
+                            e.originalErrorId
+                    )
                 }
-            } else {
-                val externalParticipantsToNotarisedTransaction = txIdToExternalParticipants[notarised.id] ?: emptySet()
-                oldV3Broadcast(notarised, (externalParticipantsToNotarisedTransaction + oldParticipants).toSet())
             }
-
-            logger.info("All parties received the transactions successfully.")
+        } else if (newApi) {
+            val notarised = setOfTransactions.single()
+            oldV3Broadcast(notarised, oldParticipants.toSet())
+            for (session in sessions) {
+                try {
+                    subFlow(SendTransactionFlow(session, notarised))
+                    logger.info("Party ${session.counterparty} received the transaction.")
+                } catch (e: UnexpectedFlowEndException) {
+                    throw UnexpectedFlowEndException(
+                            "${session.counterparty} has finished prematurely and we're trying to send them the finalised transaction. " +
+                                    "Did they forget to call ReceiveFinalityFlow? (${e.message})",
+                            e.cause,
+                            e.originalErrorId
+                    )
+                }
+            }
+        } else {
+            val notarised = setOfTransactions.single()
+            val externalParticipantsToNotarisedTransaction = txIdToExternalParticipants[notarised.id] ?: emptySet()
+            oldV3Broadcast(notarised, (externalParticipantsToNotarisedTransaction + oldParticipants).toSet())
         }
+
+        logger.info("All parties received the transactions successfully.")
 
         return notarisedSetOfTransactions
 
