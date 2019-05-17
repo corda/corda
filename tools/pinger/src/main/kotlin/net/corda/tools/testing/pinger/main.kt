@@ -47,13 +47,13 @@ fun main(args: Array<String>) {
         log.error(confInfo)
         System.exit(-1)
     }
-    Thread.setDefaultUncaughtExceptionHandler({ t, e ->
+    Thread.setDefaultUncaughtExceptionHandler { _, e ->
         if (e is ConfigException) {
             log.error("Config parsing error")
             log.error(confInfo)
             System.exit(-1)
         }
-    })
+    }
     val fileConfig = ConfigFactory.parseFile(Paths.get("pinger.conf").toFile())
     val baseConfig = ConfigFactory.defaultReference(Pinger::class.java.classLoader)
     val conf = fileConfig.withFallback(baseConfig).resolve()
@@ -90,10 +90,18 @@ fun main(args: Array<String>) {
         }
     }
     conn?.use {
-        val notary = conn.proxy.wellKnownPartyFromX500Name(notaryName)!!
-        val parties = peers.map { conn.proxy.wellKnownPartyFromX500Name(CordaX500Name.parse(it))!! }
-        for (party in parties) {
-            flowRunners += FlowRunner(conn.proxy, party, notary, parallelFlows, waitDoneTime)
+        val notary = conn.proxy.wellKnownPartyFromX500Name(notaryName)
+        if (notary == null) {
+            log.error("Notary with name $notaryName could not be found.")
+            System.exit(-1)
+        }
+        peers.forEach {
+            val party = conn.proxy.wellKnownPartyFromX500Name(CordaX500Name.parse(it))
+            if (party == null) {
+                log.error("Party with name $it could not be found.")
+                System.exit(-1)
+            }
+            flowRunners += FlowRunner(conn.proxy, party!!, notary!!, parallelFlows, waitDoneTime)
         }
         flowRunners.forEach { it.start() }
 
