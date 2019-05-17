@@ -36,6 +36,7 @@ dependencies {
 
     // FontAwesomeFX: The "FontAwesome" icon library.
     compile 'de.jensd:fontawesomefx-fontawesome:4.7.0'
+    compile 'de.jensd:fontawesomefx-commons:8.13'
 
     // ReactFX: Functional reactive UI programming.
     compile 'org.reactfx:reactfx:2.0-M5'
