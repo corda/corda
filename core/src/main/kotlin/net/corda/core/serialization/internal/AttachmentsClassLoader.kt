@@ -116,7 +116,6 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
 
         // Until we have a sandbox to run untrusted code we need to make sure that any loaded class file was whitelisted by the node administrator.
         val untrusted = attachments
-                .filter(::containsClasses)
                 .filterNot(isAttachmentTrusted)
                 .map(Attachment::id)
 
@@ -133,16 +132,6 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
 
     private fun isZipOrJar(attachment: Attachment) = attachment.openAsJAR().use { jar ->
         jar.nextEntry != null
-    }
-
-    private fun containsClasses(attachment: Attachment): Boolean {
-        attachment.openAsJAR().use { jar ->
-            while (true) {
-                val entry = jar.nextJarEntry ?: return false
-                if(entry.name.endsWith(".class", ignoreCase = true)) return true
-            }
-        }
-        return false
     }
 
     // This function attempts to strike a balance between security and usability when it comes to the no-overlap rule.
@@ -213,6 +202,7 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
             // Now open it again to compute the overlap and package ownership data.
             attachment.openAsJAR().use { jar ->
                 val targetPlatformVersion = jar.manifest?.targetPlatformVersion ?: 1
+                // This should be changed to use JarInputStream.entries
                 while (true) {
                     val entry = jar.nextJarEntry ?: break
                     if (entry.isDirectory) continue
@@ -313,10 +303,11 @@ object AttachmentsClassLoaderBuilder {
                                               parent: ClassLoader = ClassLoader.getSystemClassLoader(),
                                               block: (ClassLoader) -> T): T {
         val attachmentIds = attachments.map { it.id }.toSet()
+        val attachmentsToLoad = attachments.filter { containsClasses(it) }
 
         val serializationContext = cache.computeIfAbsent(Key(attachmentIds, params)) {
             // Create classloader and load serializers, whitelisted classes
-            val transactionClassLoader = AttachmentsClassLoader(attachments, params, txId, isAttachmentTrusted, parent)
+            val transactionClassLoader = AttachmentsClassLoader(attachmentsToLoad, params, txId, isAttachmentTrusted, parent)
             val serializers = createInstancesOfClassesImplementing(transactionClassLoader, SerializationCustomSerializer::class.java)
             val whitelistedClasses = ServiceLoader.load(SerializationWhitelist::class.java, transactionClassLoader)
                     .flatMap { it.whitelist }
@@ -337,6 +328,12 @@ object AttachmentsClassLoaderBuilder {
         // Deserialize all relevant classes in the transaction classloader.
         return SerializationFactory.defaultFactory.withCurrentContext(serializationContext) {
             block(serializationContext.deserializationClassLoader)
+        }
+    }
+
+    private fun containsClasses(attachment: Attachment): Boolean {
+        attachment.openAsJAR().use { jar ->
+            return jar.entries.any { it.name.endsWith(".class", ignoreCase = true) }
         }
     }
 }

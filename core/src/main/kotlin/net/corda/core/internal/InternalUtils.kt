@@ -45,6 +45,8 @@ import java.util.*
 import java.util.Spliterator.*
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.TimeUnit
+import java.util.jar.JarEntry
+import java.util.jar.JarInputStream
 import java.util.stream.IntStream
 import java.util.stream.Stream
 import java.util.stream.StreamSupport
@@ -591,3 +593,8 @@ fun Logger.warnOnce(warning: String) {
         this.warn(warning)
     }
 }
+
+/**
+ * A utility to iterate over all entries in a JarInputStream
+ */
+val JarInputStream.entries get(): Sequence<JarEntry> = generateSequence(nextJarEntry) { nextJarEntry }

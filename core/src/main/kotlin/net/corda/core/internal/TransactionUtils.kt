@@ -7,7 +7,6 @@ import net.corda.core.crypto.componentHash
 import net.corda.core.crypto.sha256
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.Party
-import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.node.services.vault.AttachmentQueryCriteria
 import net.corda.core.node.services.vault.Builder
@@ -228,32 +227,5 @@ fun isAttachmentTrusted(attachment: Attachment, service: AttachmentStorage?): Bo
         }
     } else {
         false
-    }
-}
-
-// A cache that maps attachment IDs to whether that attachment contains code. Attachments containing no code do not need to be loaded by the
-// attachments classloader.
-private val codeAttachmentsCache: MutableMap<AttachmentId, Boolean> = createSimpleCache<AttachmentId, Boolean>(100).toSynchronised()
-
-/**
- * Establish whether an attachment contains any code.
- *
- * This is used during the transaction validation process to ensure that only attachments containing code are passed to the attachments
- * classloader. This means that non-code attachments are excluded from the no-overlap rule.
- *
- * This function detects class files by looking for files with the .class suffix, which is the same check made by the AttachmentsClassloader.
- */
-fun doesAttachmentContainCode(attachment: Attachment): Boolean {
-    return codeAttachmentsCache.computeIfAbsent(attachment.id) {
-        val stream = attachment.openAsJAR()
-        var containsCode = false
-        var entry = stream.nextJarEntry
-        while (entry != null && !containsCode) {
-            if (entry.name.endsWith(".class")) {
-                containsCode = true
-            }
-            entry = stream.nextJarEntry
-        }
-        containsCode
     }
 }

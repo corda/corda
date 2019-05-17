@@ -951,29 +951,6 @@ class NodeAttachmentServiceTest {
         }
     }
 
-    @Test
-    fun `code attachments are provided in transaction validation`() {
-        SelfCleaningDir().use { file ->
-            val jar = makeTestContractJar(file.path, "foo.bar.DummyContract")
-            val (jar2, _) = makeTestJar(listOf(Pair("foo.class", ""), Pair("test.txt", "foo")))
-
-            val id = jar.read { storage.privilegedImportAttachment(it, "app", "dummy-contract-attachment.jar") }
-            val id2 = jar2.read { storage.privilegedImportAttachment(it, "app", "dummy-attachment-2.jar") }
-            assertTrue(doesAttachmentContainCode(storage.openAttachment(id)!!), "Attachment $id contains code but filter has removed it")
-            assertTrue(doesAttachmentContainCode(storage.openAttachment(id2)!!), "Attachment $id2 contains code but filter has removed it")
-        }
-    }
-
-    @Test
-    fun `non code attachments are not provided in transaction validation`() {
-        SelfCleaningDir().use { file ->
-            val (jar, _) = makeTestJar()
-
-            val id = jar.read { storage.privilegedImportAttachment(it, "app", "dummy-attachment.jar") }
-            assertFalse(doesAttachmentContainCode(storage.openAttachment(id)!!), "Attachment $id contains no code but passes filter")
-        }
-    }
-
     // Not the real FetchAttachmentsFlow!
     private class FetchAttachmentsFlow : FlowLogic<Unit>() {
         @Suspendable

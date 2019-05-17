@@ -72,9 +72,8 @@ abstract class AbstractAttachment(dataLoader: () -> ByteArray, val uploader: Str
 fun JarInputStream.extractFile(path: String, outputTo: OutputStream) {
     fun String.norm() = toLowerCase().split('\\', '/') // XXX: Should this really be locale-sensitive?
     val p = path.norm()
-    while (true) {
-        val e = nextJarEntry ?: break
-        if (!e.isDirectory && e.name.norm() == p) {
+    entries.forEach {
+        if (!it.isDirectory && it.name.norm() == p) {
             copyTo(outputTo)
             return
         }

@@ -87,8 +87,6 @@ object JarSignatureCollector {
     private fun Set<CodeSigner>.toCertificates(): List<X509Certificate> = map {
        it.signerCertPath.certificates[0] as X509Certificate
     }.sortedBy { it.toString() } // Sorted for determinism.
-
-    private val JarInputStream.entries get(): Sequence<JarEntry> = generateSequence(nextJarEntry) { nextJarEntry }
 }
 
 class InvalidJarSignersException(msg: String) : Exception(msg)
