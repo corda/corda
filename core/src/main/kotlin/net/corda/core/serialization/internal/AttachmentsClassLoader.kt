@@ -303,6 +303,9 @@ object AttachmentsClassLoaderBuilder {
                                               parent: ClassLoader = ClassLoader.getSystemClassLoader(),
                                               block: (ClassLoader) -> T): T {
         val attachmentIds = attachments.map { it.id }.toSet()
+
+        // Only load attachments containing code in the AttachmentsClassloader. This prevents non-code attachments from being subject to the
+        // no-overlap rule.
         val attachmentsToLoad = attachments.filter { containsClasses(it) }
 
         val serializationContext = cache.computeIfAbsent(Key(attachmentIds, params)) {

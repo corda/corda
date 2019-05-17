@@ -17,7 +17,6 @@ import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.internal.fakeAttachment
 import net.corda.testing.services.MockAttachmentStorage
-import org.apache.commons.io.IOUtils
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -56,9 +55,6 @@ class AttachmentsClassLoaderSerializationTests {
             val contractClass = Class.forName(ISOLATED_CONTRACT_CLASS_NAME, true, classLoader)
             val contract = contractClass.newInstance() as Contract
             assertEquals("helloworld", contract.declaredField<Any?>("magicString").value)
-
-            val txt = IOUtils.toString(classLoader.getResourceAsStream("file1.txt"), Charsets.UTF_8.name())
-            assertEquals("some data", txt)
 
             val state = (contract as DummyContractBackdoor).generateInitial(MEGA_CORP.ref(1), 1, DUMMY_NOTARY).outputStates().first()
             val serialisedState = state.serialize()
