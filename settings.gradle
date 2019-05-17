@@ -4,6 +4,7 @@ pluginManagement {
     repositories {
         mavenLocal()
         gradlePluginPortal()
+        maven { url "$artifactory_contextUrl/corda-dev" }
         maven { url "$artifactory_contextUrl/corda-dependencies" }
     }
 }
