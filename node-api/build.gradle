@@ -60,7 +60,17 @@ configurations {
 }
 
 tasks.withType(Test) {
-    jvmArgs '-Djava.security.debug=provider'
+//    jvmArgs '-Djava.security.debug=provider'
+    jvmArgs 
+    //'-Xbootclasspath/jar:/Users/josecoll/IdeaProjects/corda-jdk11/lib/patch.jar' 
+    //'--list-modules' 
+//    '--patch-module=java.base=/Users/josecoll/IdeaProjects/corda-jdk11/lib/java.base.jmod'
+//            '--list-modules'
+//            '--upgrade-module-path=/Users/josecoll/IdeaProjects/corda-jdk11/lib ' +
+//            '-Xbootclasspath/p:/Users/josecoll/IdeaProjects/corda-jdk11/lib/java.base.jmod '
+
+//    compile time option only:
+//    '--system /Users/josecoll/IdeaProjects/jdk11/build/macosx-x86_64-normal-server-release/images/jdk ' //<<
 }
 
 task testJar(type: Jar) {
