@@ -2,7 +2,6 @@ package net.corda.notarytest.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import com.google.common.base.Stopwatch
-import net.corda.client.mock.Generator
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.SecureHash
@@ -14,9 +13,15 @@ import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.transpose
+import net.corda.core.internal.notary.NotaryService
 import net.corda.core.internal.notary.SinglePartyNotaryService
 import net.corda.core.internal.notary.UniquenessProvider
 import net.corda.core.internal.notary.generateSignature
+import net.corda.node.VersionInfo
+import net.corda.node.internal.cordapp.CordappProviderImpl
+import net.corda.node.services.api.ServiceHubInternal
+import net.corda.node.utilities.NotaryLoader
+import net.corda.notarytest.Generator
 import java.math.BigInteger
 import java.util.*
 import java.util.concurrent.TimeUnit
@@ -58,7 +63,7 @@ open class AsyncLoadTestFlow<T : SinglePartyNotaryService>(
         val stopwatch = Stopwatch.createStarted()
         val futures = mutableListOf<CordaFuture<UniquenessProvider.Result>>()
 
-        val service = serviceHub.cordaService(serviceType)
+        val service = loadService() as SinglePartyNotaryService
 
         for (i in 1..batchSize) {
             val txId: SecureHash = txIdGenerator.generateOrFail(random)
@@ -71,6 +76,7 @@ open class AsyncLoadTestFlow<T : SinglePartyNotaryService>(
             val inputs = inputGenerator.generateOrFail(random)
             val requestSignature = NotarisationRequest(inputs, txId).generateSignature(serviceHub)
 
+
             futures += SinglePartyNotaryService.CommitOperation(service, inputs, txId, callerParty, requestSignature,
                     null, emptyList()).execute("")
         }
@@ -82,5 +88,12 @@ open class AsyncLoadTestFlow<T : SinglePartyNotaryService>(
         logger.info("Committed $transactionCount transactions in $duration ms, avg ${duration.toDouble() / transactionCount} ms")
 
         return duration
+    }
+
+    private fun loadService(): NotaryService {
+        val serviceHubInternal = serviceHub as ServiceHubInternal
+        val cordappLoader = (serviceHub.cordappProvider as CordappProviderImpl).cordappLoader
+        val notaryLoader = NotaryLoader(serviceHubInternal.configuration.notary!!, VersionInfo.UNKNOWN)
+        return notaryLoader.loadService(serviceHub.myInfo.legalIdentitiesAndCerts.last(), serviceHubInternal, cordappLoader)
     }
 }

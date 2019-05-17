@@ -21,8 +21,8 @@ fun main(args: Array<String>) {
     // Provide a list of notary node addresses to invoke the load generation flow on
     val addresses = listOf(
             NetworkHostAndPort("localhost", 10010),
-            NetworkHostAndPort("localhost", 11014),
-            NetworkHostAndPort("localhost", 11018)
+            NetworkHostAndPort("localhost", 10014),
+            NetworkHostAndPort("localhost", 10018)
     )
 
     addresses.parallelStream().forEach {

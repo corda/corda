@@ -1,32 +1,21 @@
 package net.corda.notarytest.service
 
-import com.codahale.metrics.MetricFilter
-import com.codahale.metrics.MetricRegistry
-import com.codahale.metrics.graphite.GraphiteReporter
-import com.codahale.metrics.graphite.PickledGraphite
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.internal.notary.SinglePartyNotaryService
-import net.corda.core.node.AppServiceHub
-import net.corda.core.node.services.CordaService
-import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.seconds
-import net.corda.node.services.config.ConfigHelper
+import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.transactions.NonValidatingNotaryFlow
 import net.corda.nodeapi.internal.config.parseAs
 import net.corda.notary.mysql.MySQLNotaryConfig
 import net.corda.notary.mysql.MySQLUniquenessProvider
 import net.corda.notarytest.flows.AsyncLoadTestFlow
-import java.net.InetAddress
-import java.net.InetSocketAddress
-import java.nio.file.Paths
 import java.security.PublicKey
-import java.util.concurrent.TimeUnit
 
-@CordaService
-class JDBCNotaryService(override val services: AppServiceHub, override val notaryIdentityKey: PublicKey) : SinglePartyNotaryService() {
-    private val appConfig = ConfigHelper.loadConfig(Paths.get(".")).getConfig("custom")
+class JDBCNotaryService(override val services: ServiceHubInternal, override val notaryIdentityKey: PublicKey) : SinglePartyNotaryService() {
+    private val notaryConfig = services.configuration.notary
+            ?: throw IllegalArgumentException("Failed to register ${this::class.java}: notary configuration not present")
 
     override val uniquenessProvider: MySQLUniquenessProvider = createUniquenessProvider()
     private val etaMessageThreshold = 10.seconds
@@ -41,30 +30,9 @@ class JDBCNotaryService(override val services: AppServiceHub, override val notar
         uniquenessProvider.stop()
     }
 
-    private fun createMetricsRegistry(): MetricRegistry {
-        val graphiteAddress = appConfig.getString("graphiteAddress").let { NetworkHostAndPort.parse(it) }
-        val hostName = InetAddress.getLocalHost().hostName.replace(".", "_")
-        val nodeName = services.myInfo.legalIdentities.first().name.organisation
-                .toLowerCase()
-                .replace(" ", "_")
-                .replace(".", "_")
-        val pickledGraphite = PickledGraphite(
-                InetSocketAddress(graphiteAddress.host, graphiteAddress.port)
-        )
-        val metrics = MetricRegistry()
-        GraphiteReporter.forRegistry(metrics)
-                .prefixedWith("corda.$hostName.$nodeName")
-                .convertRatesTo(TimeUnit.SECONDS)
-                .convertDurationsTo(TimeUnit.MILLISECONDS)
-                .filter(MetricFilter.ALL)
-                .build(pickledGraphite)
-                .start(10, TimeUnit.SECONDS)
-        return metrics
-    }
-
     private fun createUniquenessProvider(): MySQLUniquenessProvider {
-        val mysqlConfig = appConfig.getConfig("mysql").parseAs<MySQLNotaryConfig>()
-        return MySQLUniquenessProvider(createMetricsRegistry(), services.clock, mysqlConfig)
+        val mysqlConfig = notaryConfig.extraConfig!!.parseAs<MySQLNotaryConfig>()
+        return MySQLUniquenessProvider(services.monitoringService.metrics, services.clock, mysqlConfig)
     }
 }
 
