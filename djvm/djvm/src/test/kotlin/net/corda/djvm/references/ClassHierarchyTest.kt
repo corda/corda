@@ -1,7 +1,7 @@
 package net.corda.djvm.references
 
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import org.objectweb.asm.Opcodes
 
 class ClassHierarchyTest {
@@ -39,7 +39,7 @@ class ClassHierarchyTest {
         classes.add(clazz1)
         val member = classes.getMember(clazz<FirstClass>().name, "method", "()V")
         assertThat(member)
-                .isNotNull()
+                .isNotNull
                 .hasFieldOrPropertyWithValue("className", clazz<FirstClass>().name)
                 .hasFieldOrPropertyWithValue("memberName", "method")
                 .hasFieldOrPropertyWithValue("signature", "()V")
@@ -63,7 +63,7 @@ class ClassHierarchyTest {
         classes.add(clazz2)
         val member = classes.getMember(clazz<SecondClass>().name, "method", "()V")
         assertThat(member)
-                .isNotNull()
+                .isNotNull
                 .hasFieldOrPropertyWithValue("className", clazz<FirstClass>().name)
                 .hasFieldOrPropertyWithValue("memberName", "method")
                 .hasFieldOrPropertyWithValue("signature", "()V")
@@ -78,7 +78,7 @@ class ClassHierarchyTest {
         classes.add(clazz2)
         val member = classes.getMember(clazz<SecondClass>().name, "method", "()V")
         assertThat(member)
-                .isNotNull()
+                .isNotNull
                 .hasFieldOrPropertyWithValue("className", clazz<SecondClass>().name)
                 .hasFieldOrPropertyWithValue("memberName", "method")
                 .hasFieldOrPropertyWithValue("signature", "()V")
@@ -98,7 +98,7 @@ class ClassHierarchyTest {
         classes.add(clazz4)
         val member = classes.getMember(clazz<FourthClass>().name, "method", "()V")
         assertThat(member)
-                .isNotNull()
+                .isNotNull
                 .hasFieldOrPropertyWithValue("className", clazz<SecondClass>().name)
                 .hasFieldOrPropertyWithValue("memberName", "method")
                 .hasFieldOrPropertyWithValue("signature", "()V")
@@ -123,42 +123,42 @@ class ClassHierarchyTest {
 
         var member = classes.getMember(clazz<FourthClass>().name, "method", "()V")
         assertThat(member)
-                .isNotNull()
+                .isNotNull
                 .hasFieldOrPropertyWithValue("className", clazz<FirstClass>().name)
                 .hasFieldOrPropertyWithValue("memberName", "method")
                 .hasFieldOrPropertyWithValue("signature", "()V")
 
         member = classes.getMember(clazz<FourthClass>().name, "method", "(I)V")
         assertThat(member)
-                .isNotNull()
+                .isNotNull
                 .hasFieldOrPropertyWithValue("className", clazz<FirstClass>().name)
                 .hasFieldOrPropertyWithValue("memberName", "method")
                 .hasFieldOrPropertyWithValue("signature", "(I)V")
 
         member = classes.getMember(clazz<FourthClass>().name, "method", "(J)V")
         assertThat(member)
-                .isNotNull()
+                .isNotNull
                 .hasFieldOrPropertyWithValue("className", clazz<SecondClass>().name)
                 .hasFieldOrPropertyWithValue("memberName", "method")
                 .hasFieldOrPropertyWithValue("signature", "(J)V")
 
         member = classes.getMember(clazz<FourthClass>().name, "method", "(B)V")
         assertThat(member)
-                .isNotNull()
+                .isNotNull
                 .hasFieldOrPropertyWithValue("className", clazz<ThirdClass>().name)
                 .hasFieldOrPropertyWithValue("memberName", "method")
                 .hasFieldOrPropertyWithValue("signature", "(B)V")
 
         member = classes.getMember(clazz<FourthClass>().name, "anotherMethod", "([B)V")
         assertThat(member)
-                .isNotNull()
+                .isNotNull
                 .hasFieldOrPropertyWithValue("className", clazz<FourthClass>().name)
                 .hasFieldOrPropertyWithValue("memberName", "anotherMethod")
                 .hasFieldOrPropertyWithValue("signature", "([B)V")
 
         member = classes.getMember(clazz<ThirdClass>().name, "anotherMethod", "([B)V")
         assertThat(member)
-                .isNotNull()
+                .isNotNull
                 .hasFieldOrPropertyWithValue("className", clazz<SecondClass>().name)
                 .hasFieldOrPropertyWithValue("memberName", "anotherMethod")
                 .hasFieldOrPropertyWithValue("signature", "([B)V")
@@ -183,8 +183,8 @@ class ClassHierarchyTest {
                 val apiVersion = Opcodes.V1_8
                 val access = 0
                 val className = classModule.getBinaryClassName(it.name)
-                val superClassName = TSuper::class.java.let {
-                    classModule.getBinaryClassName(it.name)
+                val superClassName = TSuper::class.java.let { s ->
+                    classModule.getBinaryClassName(s.name)
                 }
                 ClassRepresentation(apiVersion, access, className, superClassName, sourceFile = "${it.simpleName}.kt")
             }

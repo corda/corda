@@ -13,7 +13,7 @@ import net.corda.djvm.code.instructions.TypeInstruction
 import net.corda.djvm.references.ClassRepresentation
 import net.corda.djvm.references.Member
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.Test
+import org.junit.jupiter.api.Test
 
 @Suppress("unused")
 class ClassAndMemberVisitorTest : TestBase() {

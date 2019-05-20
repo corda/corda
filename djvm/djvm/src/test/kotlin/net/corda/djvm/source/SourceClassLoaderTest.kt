@@ -3,8 +3,9 @@ package net.corda.djvm.source
 import net.corda.djvm.analysis.ClassResolver
 import net.corda.djvm.analysis.Whitelist
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.After
-import org.junit.Test
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import java.nio.file.Files
 import java.nio.file.Path
 
@@ -19,10 +20,12 @@ class SourceClassLoaderTest {
         assertThat(clazz.simpleName).isEqualTo("Boolean")
     }
 
-    @Test(expected = ClassNotFoundException::class)
+    @Test
     fun `cannot load arbitrary class when no files are provided to the class loader`() {
         val classLoader = SourceClassLoader(emptyList(), classResolver)
-        classLoader.loadClass("net.foo.NonExistentClass")
+        assertThrows<ClassNotFoundException> {
+            classLoader.loadClass("net.foo.NonExistentClass")
+        }
     }
 
     @Test
@@ -34,11 +37,13 @@ class SourceClassLoaderTest {
         }
     }
 
-    @Test(expected = ClassNotFoundException::class)
+    @Test
     fun `cannot load arbitrary class when JAR file is provided to the class loader`() {
         useTemporaryFile("jar-with-single-class.jar") {
             val classLoader = SourceClassLoader(this, classResolver)
-            classLoader.loadClass("net.foo.NonExistentClass")
+            assertThrows<ClassNotFoundException> {
+                classLoader.loadClass("net.foo.NonExistentClass")
+            }
         }
     }
 
@@ -53,11 +58,13 @@ class SourceClassLoaderTest {
         }
     }
 
-    @Test(expected = ClassNotFoundException::class)
+    @Test
     fun `cannot load arbitrary class when multiple JAR files are provided to the class loader`() {
         useTemporaryFile("jar-with-single-class.jar", "jar-with-two-classes.jar") {
             val classLoader = SourceClassLoader(this, classResolver)
-            classLoader.loadClass("com.somewhere.NonExistentClass")
+            assertThrows<ClassNotFoundException> {
+                classLoader.loadClass("com.somewhere.NonExistentClass")
+            }
         }
     }
 
@@ -75,7 +82,7 @@ class SourceClassLoaderTest {
         }
     }
 
-    @After
+    @AfterEach
     fun cleanup() {
         openedFiles.forEach {
             try {

@@ -14,10 +14,9 @@ interface ObjectSerializer : AMQPSerializer<Any> {
 
     companion object {
         fun make(typeInformation: LocalTypeInformation, factory: LocalSerializerFactory): ObjectSerializer {
-            if (typeInformation is LocalTypeInformation.NonComposable)
-                throw NotSerializableException(
-                        "Trying to build an object serializer for ${typeInformation.typeIdentifier.prettyPrint(false)}, " +
-                        "but it is not constructable from its public properties, and so requires a custom serialiser.")
+            if (typeInformation is LocalTypeInformation.NonComposable) {
+                throw NotSerializableException(nonComposableExceptionMessage(typeInformation, factory))
+            }
 
             val typeDescriptor = factory.createDescriptor(typeInformation)
             val typeNotation = TypeNotationGenerator.getTypeNotation(typeInformation, typeDescriptor)
@@ -30,6 +29,22 @@ interface ObjectSerializer : AMQPSerializer<Any> {
                     makeForAbstract(typeNotation, typeInformation, typeDescriptor, factory)
                 else -> throw NotSerializableException("Cannot build object serializer for $typeInformation")
             }
+        }
+
+        private fun nonComposableExceptionMessage(
+            typeInformation: LocalTypeInformation.NonComposable,
+            factory: LocalSerializerFactory
+        ): String {
+            val serializerInformation = factory.customSerializerNames.map { "Serializer: $it" }.let { serializers ->
+                when {
+                    serializers.isNotEmpty() -> "Registered custom serializers:\n    ${serializers.joinToString("\n    ")}"
+                    else -> "No custom serializers registered."
+                }
+            }
+            return "Unable to create an object serializer for type ${typeInformation.observedType}:\n" +
+                    "${typeInformation.reason}\n\n" +
+                    "${typeInformation.remedy}\n\n" +
+                    "$serializerInformation\n"
         }
 
         private fun makeForAbstract(typeNotation: CompositeType,

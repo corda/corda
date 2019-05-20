@@ -139,8 +139,13 @@ dependencies {
     // TypeSafe Config: for simple and human friendly config files.
     compile "com.typesafe:config:$typesafe_config_version"
 
+    testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
+
+    testImplementation "org.junit.vintage:junit-vintage-engine:${junit_vintage_version}"
+    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${junit_jupiter_version}"
+    testRuntimeOnly "org.junit.platform:junit-platform-launcher:${junit_platform_version}"
+    
     // Unit testing helpers.
-    testCompile "junit:junit:$junit_version"
     testCompile "org.assertj:assertj-core:${assertj_version}"
     testCompile 'com.github.stefanbirkner:system-rules:1.16.0'
     testCompile project(':test-utils')
@@ -183,7 +188,6 @@ dependencies {
     compile group: 'com.ea.agentloader', name: 'ea-agent-loader', version: "${eaagentloader_version}"
 
     // BFT-Smart dependencies
-    compile 'commons-codec:commons-codec:1.10'
     compile 'com.github.bft-smart:library:master-v1.1-beta-g6215ec8-87'
 
     // Java Atomix: RAFT library

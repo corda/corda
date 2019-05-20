@@ -97,5 +97,6 @@ class CorDappCustomSerializer(
     override fun isSerializerFor(clazz: Class<*>) =
         TypeToken.of(type.asClass()) == TypeToken.of(clazz)
 
+    override fun toString(): String = "${this::class.java}(${serializer::class.java})"
 }
 
