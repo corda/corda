@@ -2,9 +2,10 @@ package net.corda.djvm.execution;
 
 import net.corda.djvm.TestBase;
 import net.corda.djvm.WithJava;
+import org.junit.jupiter.api.Test;
+
 import static net.corda.djvm.messages.Severity.*;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
-import org.junit.Test;
 
 import java.util.EnumMap;
 import java.util.EnumSet;

@@ -2,7 +2,7 @@ package net.corda.djvm.costing
 
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import sandbox.net.corda.djvm.costing.ThresholdViolationError
 import kotlin.concurrent.thread
 

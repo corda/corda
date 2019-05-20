@@ -4,7 +4,7 @@ import foo.bar.sandbox.Callable
 import net.corda.djvm.TestBase
 import net.corda.djvm.assertions.AssertionExtensions.assertThat
 import net.corda.djvm.messages.Severity
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import org.objectweb.asm.Opcodes
 import sandbox.greymalkin.StringReturner
 

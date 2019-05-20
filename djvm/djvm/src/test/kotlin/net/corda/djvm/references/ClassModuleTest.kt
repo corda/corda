@@ -1,7 +1,7 @@
 package net.corda.djvm.references
 
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.Test
+import org.junit.jupiter.api.Test
 
 class ClassModuleTest {
 

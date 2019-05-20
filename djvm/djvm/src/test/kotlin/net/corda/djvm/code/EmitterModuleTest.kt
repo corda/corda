@@ -3,7 +3,7 @@ package net.corda.djvm.code
 import net.corda.djvm.TestBase
 import net.corda.djvm.analysis.ClassAndMemberVisitor
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes.NEW
