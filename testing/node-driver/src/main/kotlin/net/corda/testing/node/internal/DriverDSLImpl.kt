@@ -142,7 +142,7 @@ class DriverDSLImpl(
         return try {
             val type = Class.forName(className)
             val src = type.protectionDomain.codeSource
-            return src.location.toString()
+            return src.location.toPath().toString()
         } catch (e: Exception) {
             log.warn("Unable to locate JAR for class given by `$className` on classpath: ${e.message}", e)
             throw e
@@ -549,6 +549,7 @@ class DriverDSLImpl(
                 *extraCmdLineFlag
         )
 
+        System.exit(-1)
         return poll(executorService, "$extraCmdLineFlag (${config.corda.myLegalName})") {
             if (process.isAlive) null else Unit
         }
@@ -757,7 +758,7 @@ class DriverDSLImpl(
                     "org.hamcrest**;org.hibernate**;org.jboss**;org.jcp**;org.joda**;org.junit**;org.mockito**;org.objectweb**;" +
                     "org.objenesis**;org.slf4j**;org.w3c**;org.xml**;org.yaml**;reflectasm**;rx**;org.jolokia**;" +
                     "com.lmax**;picocli**;liquibase**;com.github.benmanes**;org.json**;org.postgresql**;nonapi.io.github.classgraph**;)"
-            val extraJvmArguments = systemProperties.removeResolvedClasspath().map { "-D${it.key}=${it.value}" } +
+            val extraJvmArguments = systemProperties.removeResolvedClasspath().map { "-D${it.key}=${it.value}" } //+
                     "-javaagent:$quasarJarPath=$excludePattern"
             val loggingLevel = if (debugPort == null) "INFO" else "DEBUG"
 
