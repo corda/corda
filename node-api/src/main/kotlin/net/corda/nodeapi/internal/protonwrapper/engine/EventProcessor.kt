@@ -4,7 +4,6 @@ import io.netty.buffer.ByteBuf
 import io.netty.channel.Channel
 import io.netty.channel.ChannelHandlerContext
 import net.corda.core.utilities.contextLogger
-import net.corda.core.utilities.trace
 import net.corda.nodeapi.internal.protonwrapper.messages.MessageStatus
 import net.corda.nodeapi.internal.protonwrapper.messages.impl.ReceivedMessageImpl
 import net.corda.nodeapi.internal.protonwrapper.messages.impl.SendableMessageImpl
@@ -37,7 +36,9 @@ internal class EventProcessor(channel: Channel,
                               userName: String?,
                               password: String?) : BaseHandler() {
     companion object {
-        private const val FLOW_WINDOW_SIZE = 10
+        private const val CORDA_AMQP_FLOW_WINDOW_SIZE_PROP_NAME = "net.corda.nodeapi.eventprocessor.FlowWindowSize"
+
+        private val FLOW_WINDOW_SIZE = Integer.getInteger(CORDA_AMQP_FLOW_WINDOW_SIZE_PROP_NAME, 5)
         private val log = contextLogger()
     }
 
