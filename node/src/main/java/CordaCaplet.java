@@ -3,7 +3,7 @@
 // trying to construct this from Capsule, so it is written in Java.
 
 import com.typesafe.config.*;
-//import sun.misc.Signal;
+import sun.misc.Signal;
 
 import java.io.File;
 import java.nio.file.Path;
@@ -173,8 +173,8 @@ public class CordaCaplet extends Capsule {
 
     private static void checkJavaVersion() {
         String version = System.getProperty("java.version");
-        if (version == null || Arrays.asList("1.8", "11").stream().noneMatch(version::startsWith)) {
-            System.err.printf("Error: Unsupported Java version %s; currently only version 1.8 or 11 is supported.\n", version);
+        if (version == null || !version.startsWith("1.8")) {
+            System.err.printf("Error: Unsupported Java version %s; currently only version 1.8 is supported.\n", version);
             System.exit(1);
         }
     }
@@ -216,9 +216,9 @@ public class CordaCaplet extends Capsule {
     @Override
     protected void liftoff() {
         super.liftoff();
-//        Signal.handle(new Signal("INT"), signal -> {
-//            // Disable Ctrl-C for this process, so the child process can handle it in the shell instead.
-//        });
+        Signal.handle(new Signal("INT"), signal -> {
+            // Disable Ctrl-C for this process, so the child process can handle it in the shell instead.
+        });
     }
 
     private Boolean isJAR(File file) {

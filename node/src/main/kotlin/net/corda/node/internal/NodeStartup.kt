@@ -32,7 +32,7 @@ import net.corda.tools.shell.InteractiveShell
 import org.fusesource.jansi.Ansi
 import org.slf4j.bridge.SLF4JBridgeHandler
 import picocli.CommandLine.Mixin
-//import sun.misc.VMSupport
+import sun.misc.VMSupport
 import java.io.IOException
 import java.io.RandomAccessFile
 import java.lang.management.ManagementFactory
@@ -246,16 +246,15 @@ open class NodeStartup : NodeStartupLogging {
         logger.info("PID: ${info.name.split("@").firstOrNull()}")  // TODO Java 9 has better support for this
         logger.info("Main class: ${NodeConfiguration::class.java.location.toURI().path}")
         logger.info("CommandLine Args: ${info.inputArguments.joinToString(" ")}")
-        // JDK 11 (bootclasspath no longer supported from JDK 9)
-        if (info.isBootClassPathSupported) logger.info("bootclasspath: ${info.bootClassPath}")
+        logger.info("bootclasspath: ${info.bootClassPath}")
         logger.info("classpath: ${info.classPath}")
         logger.info("VM ${info.vmName} ${info.vmVendor} ${info.vmVersion}")
         logger.info("Machine: ${lookupMachineNameAndMaybeWarn()}")
         logger.info("Working Directory: ${cmdLineOptions.baseDirectory}")
-//        val agentProperties = VMSupport.getAgentProperties()
-//        if (agentProperties.containsKey("sun.jdwp.listenerAddress")) {
-//            logger.info("Debug port: ${agentProperties.getProperty("sun.jdwp.listenerAddress")}")
-//        }
+        val agentProperties = VMSupport.getAgentProperties()
+        if (agentProperties.containsKey("sun.jdwp.listenerAddress")) {
+            logger.info("Debug port: ${agentProperties.getProperty("sun.jdwp.listenerAddress")}")
+        }
         var nodeStartedMessage = "Starting as node on ${conf.p2pAddress}"
         if (conf.extraNetworkMapKeys.isNotEmpty()) {
             nodeStartedMessage = "$nodeStartedMessage with additional Network Map keys ${conf.extraNetworkMapKeys.joinToString(prefix = "[", postfix = "]", separator = ", ")}"
