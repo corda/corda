@@ -26,20 +26,20 @@ class AssertingTestDatabaseContext : TestDatabaseContext {
         scriptsRun += "${groupName}-db-setup.sql"
     }
 
-    override fun beforeClass(setupSql: String) {
-        scriptsRun += "$groupName-$setupSql-setup.sql"
+    override fun beforeClass(setupSql: List<String>) {
+        scriptsRun += setupSql.map { "$groupName-$it-setup.sql" }
     }
 
-    override fun afterClass(teardownSql: String) {
-        scriptsRun += "$groupName-$teardownSql-teardown.sql"
+    override fun afterClass(teardownSql: List<String>) {
+        scriptsRun += teardownSql.map { "$groupName-$it-teardown.sql" }
     }
 
-    override fun beforeTest(setupSql: String) {
-        scriptsRun += "$groupName-$setupSql-setup.sql"
+    override fun beforeTest(setupSql: List<String>) {
+        scriptsRun += setupSql.map { "$groupName-$it-setup.sql" }
     }
 
-    override fun afterTest(teardownSql: String) {
-        scriptsRun += "$groupName-$teardownSql-teardown.sql"
+    override fun afterTest(teardownSql: List<String>) {
+        scriptsRun += teardownSql.map { "$groupName-$it-teardown.sql" }
     }
 
     override fun close() {

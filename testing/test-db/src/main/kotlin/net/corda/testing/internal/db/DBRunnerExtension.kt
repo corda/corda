@@ -1,6 +1,7 @@
 package net.corda.testing.internal.db
 
 import org.junit.jupiter.api.extension.*
+import java.lang.reflect.AnnotatedElement
 
 /***
  * A JUnit 5 [Extension] which invokes a [TestDatabaseContext] to manage database state across three scopes:
@@ -10,7 +11,8 @@ import org.junit.jupiter.api.extension.*
  * * Test instance (defined in a single method)
  *
  * A test class will not ordinarily register this extension directly: instead, it is registered for any class having the [RequiresDb]
- * annotation, which it consults to discover which group of tests the test class belongs to (`"default"`, if not stated).
+ * annotation (or an annotation which is itself annotated with [RequiresDb]), which it consults to discover which group of tests the
+ * test class belongs to (`"default"`, if not stated).
  *
  * The class of the [TestDatabaseContext] used is selected by a system property, `test.db.context./groupName/`, where `groupName` is the
  * name of the group of tests to which the test using this extension belongs. If this system property is not set, the class name defaults
@@ -23,40 +25,40 @@ import org.junit.jupiter.api.extension.*
  * the test run completes, tearing down the database state created at the beginning.
  *
  * For each test suite and test instance, this extension looks at the corresponding class or method to see if it is annotated with
- * [RequiresSql], indicating that further SQL setup/teardown is required around the current scope. If it is, then appropriate calls are made
- * to [TestDatabaseContext.beforeClass], [TestDatabaseContext.beforeTest], [TestDatabaseContext.afterTest] and
- * [TestDatabaseContext.afterClass], passing through the name of the SQL script to be run. (Note that the same name is used for setup and
- * teardown, and it is up to the [TestDatabaseContext] to map this to the appropriate SQL script for each case).
+ * [RequiresSql] (or any annotations which are themselves annotated with [RequiresSql]), indicating that further SQL setup/teardown is required
+ * around the current scope. Calls are then made to [TestDatabaseContext.beforeClass], [TestDatabaseContext.beforeTest],
+ * [TestDatabaseContext.afterTest] and [TestDatabaseContext.afterClass], passing through the names of any SQL scripts to be run.
+ *
+ * (Note that the same name is used for setup and teardown, and it is up to the [TestDatabaseContext] to map this to the appropriate SQL
+ * script for each case).
  */
 class DBRunnerExtension : Extension, BeforeAllCallback, AfterAllCallback, BeforeEachCallback, AfterEachCallback {
 
     override fun beforeAll(context: ExtensionContext?) {
-        // Always obtain/create a database context
-        val dbContext = getDatabaseContext(context) ?: return
-        val testSql = context?.testClass?.orElse(null)?.getAnnotation(RequiresSql::class.java)?.name ?: return
-        dbContext.beforeClass(testSql)
+        val required = context?.testClass?.orElse(null)?.requiredSql ?: return
+        getDatabaseContext(context)?.beforeTest(required)
     }
 
     override fun afterAll(context: ExtensionContext?) {
-        val testSql = context?.testClass?.orElse(null)?.getAnnotation(RequiresSql::class.java)?.name ?: return
-        getDatabaseContext(context)?.afterClass(testSql)
+        val required = context?.testClass?.orElse(null)?.requiredSql ?: return
+        getDatabaseContext(context)?.afterClass(required.asReversed())
     }
 
     override fun beforeEach(context: ExtensionContext?) {
-        val testSql = context?.testMethod?.orElse(null)?.getAnnotation(RequiresSql::class.java)?.name ?: return
-        getDatabaseContext(context)?.beforeTest(testSql)
+        val required = context?.testMethod?.orElse(null)?.requiredSql ?: return
+        getDatabaseContext(context)?.beforeTest(required)
     }
 
     override fun afterEach(context: ExtensionContext?) {
-        val testSql = context?.testMethod?.orElse(null)?.getAnnotation(RequiresSql::class.java)?.name ?: return
-        getDatabaseContext(context)?.afterTest(testSql)
+        val required = context?.testMethod?.orElse(null)?.requiredSql ?: return
+        getDatabaseContext(context)?.afterTest(required.asReversed())
     }
 
     private fun getDatabaseContext(context: ExtensionContext?): TestDatabaseContext? {
         val rootContext = context?.root ?: return null
 
         val testClass = context.testClass.orElse(null) ?: return null
-        val annotation = testClass.getAnnotation(RequiresDb::class.java) ?:
+        val annotation = testClass.requiredDb ?:
             throw IllegalStateException("Test run with DBRunnerExtension is not annotated with @RequiresDb")
         val groupName = annotation.group
         val defaultContextClassName = annotation.defaultContextClassName
@@ -75,5 +77,21 @@ class DBRunnerExtension : Extension, BeforeAllCallback, AfterAllCallback, Before
         val ctx = Class.forName(className).newInstance() as TestDatabaseContext
         ctx.initialize(groupName)
         return ctx
+    }
+
+    private val Class<*>.requiredDb: RequiresDb? get() = findAnnotations(RequiresDb::class.java).firstOrNull()
+    private val AnnotatedElement.requiredSql: List<String> get() = findAnnotations(RequiresSql::class.java).map { it.name }.toList()
+
+    private fun <T : Any> AnnotatedElement.findAnnotations(annotationClass: Class<T>): Sequence<T> = declaredAnnotations.asSequence()
+            .filterNot { it.isInternal }
+            .flatMap { annotation ->
+        if (annotationClass.isAssignableFrom(annotation::class.java))sequenceOf(annotationClass.cast(annotation))
+        else annotation.annotationClass.java.findAnnotations(annotationClass)
+    }
+
+    private val Annotation.isInternal: Boolean get() = annotationClass.java.name.run {
+        startsWith("java.lang") ||
+                startsWith("org.junit") ||
+                startsWith("kotlin")
     }
 }

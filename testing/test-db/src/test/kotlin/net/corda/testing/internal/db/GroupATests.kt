@@ -3,7 +3,7 @@ package net.corda.testing.internal.db
 import org.junit.jupiter.api.Test
 
 @RequiresDb("groupA", "net.corda.testing.internal.db.AssertingTestDatabaseContext")
-@RequiresSql("forClassGroupATests")
+@GroupASql
 class GroupATests {
 
     @Test
@@ -18,7 +18,7 @@ class GroupATests {
     }
 
     @Test
-    @RequiresSql("specialSql1")
+    @SpecialSql1
     fun someSpecialSqlRequired() {
 
     }

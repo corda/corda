@@ -7,13 +7,13 @@ class NoOpTestDatabaseContext : TestDatabaseContext {
 
     override fun initialize(groupName: String) {}
 
-    override fun beforeClass(setupSql: String) {}
+    override fun beforeClass(setupSql: List<String>) {}
 
-    override fun afterClass(teardownSql: String) {}
+    override fun afterClass(teardownSql: List<String>) {}
 
-    override fun beforeTest(setupSql: String) {}
+    override fun beforeTest(setupSql: List<String>) {}
 
-    override fun afterTest(teardownSql: String) {}
+    override fun afterTest(teardownSql: List<String>) {}
 
     override fun close() {}
 
