@@ -22,6 +22,7 @@ import net.corda.nodeapi.internal.network.NETWORK_PARAMS_FILE_NAME
 import net.corda.nodeapi.internal.network.SignedNetworkParameters
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.SchemaMigration
+import sun.reflect.generics.reflectiveObjects.NotImplementedException
 import java.nio.file.Paths
 import java.time.Clock
 import java.time.Duration
@@ -43,11 +44,11 @@ class MigrationServicesForResolution(
             val cordappLoader = SchemaMigration.loader.get()
 
             override fun getAppContext(): CordappContext {
-                TODO("not implemented")
+                throw NotImplementedException()
             }
 
             override fun getContractAttachmentID(contractClassName: ContractClassName): AttachmentId? {
-                TODO("not implemented")
+                throw NotImplementedException()
             }
         }
     private val cordappLoader = SchemaMigration.loader.get()

@@ -1,14 +1,8 @@
 apply plugin: 'kotlin'
 apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'com.jfrog.artifactory'
-//apply plugin: "org.javamodularity.moduleplugin"
 
 description 'Corda serialization'
-
-repositories {
-    mavenLocal()
-    maven { url "https://plugins.gradle.org/m2/" }
-}
 
 dependencies {
     compile project(":core")
@@ -45,49 +39,6 @@ dependencies {
     testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
     testCompile project(':node-driver')
 }
-
-// allprojects not allowed ???
-//subprojects {
-//    // inlined usage of compileJava with moduleOptions not allowed ???
-//    compileJava {
-//        moduleOptions {
-//            addExports = [
-//                    'java.base/sun.security.util' : 'ALL-UNNAMED'
-//            ]
-//            // WARNING: An illegal reflective access operation has occurred
-//            addOpens = [
-//                    'java.base/java.time.ZonedDateTime' : 'ALL-UNNAMED'
-//                    // WARNING: Illegal reflective access by net.corda.serialization.internal.amqp.custom.ZonedDateTimeSerializer (file:/Users/josecoll/IdeaProjects/corda-jdk11/serialization/build/libs/corda-serialization-5.0-SNAPSHOT.jar) to method java.time.ZonedDateTime.ofLenient(java.time.LocalDateTime,java.time.ZoneOffset,java.time.ZoneId)
-//            ]
-//        }
-//    }     
-//    test {
-//        moduleOptions {
-//            addExports = [
-//                    'java.base/sun.security.util': 'ALL-UNNAMED',
-//                    'java.base/sun.security.x509': 'ALL-UNNAMED'
-//            ]
-//            addOpens = [
-//                    'java.base/java.time.ZonedDateTime' : 'ALL-UNNAMED'
-//            ]
-//        }
-//    }
-//    kotlinCompile {
-//        moduleOptions {
-//            addExports = [
-//                    'java.base/sun.security.util': 'ALL-UNNAMED'
-//            ]
-//            addOpens = [
-//                    'java.base/java.time.ZonedDateTime' : 'ALL-UNNAMED'
-//            ]
-//        }
-//    }
-//}
-
-// Alternative configuration without java modularity plugin:
-//test {
-//    jvmArgs('--add-opens', 'java.base/java.time.ZonedDateTime=ALL-UNNAMED')
-//}
 
 configurations {
     testArtifacts.extendsFrom testRuntimeClasspath

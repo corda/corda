@@ -126,7 +126,7 @@ class DriverDSLImpl(
     private val state = ThreadBox(State())
 
     //TODO: remove this once we can bundle quasar properly.
-    private val quasarJarPath: String by lazy { resolveJar("co.paralleluniverse.fibers.Suspendable") }
+    private val quasarJarPath: String by lazy { resolveJar(".*quasar.*\\.jar$") }
 
     private fun NodeConfig.checkAndOverrideForInMemoryDB(): NodeConfig = this.run {
         if (inMemoryDB && corda.dataSourceProperties.getProperty("dataSource.url").startsWith("jdbc:h2:")) {
@@ -138,13 +138,15 @@ class DriverDSLImpl(
         }
     }
 
-    private fun resolveJar(className: String): String {
+    private fun resolveJar(jarNamePattern: String): String {
         return try {
-            val type = Class.forName(className)
-            val src = type.protectionDomain.codeSource
-            return src.location.toPath().toString()
+            val cl = ClassLoader.getSystemClassLoader()
+            val urls = (cl as URLClassLoader).urLs
+            val jarPattern = jarNamePattern.toRegex()
+            val jarFileUrl = urls.first { jarPattern.matches(it.path) }
+            jarFileUrl.toPath().toString()
         } catch (e: Exception) {
-            log.warn("Unable to locate JAR for class given by `$className` on classpath: ${e.message}", e)
+            log.warn("Unable to locate JAR `$jarNamePattern` on classpath: ${e.message}", e)
             throw e
         }
     }
@@ -549,7 +551,6 @@ class DriverDSLImpl(
                 *extraCmdLineFlag
         )
 
-        System.exit(-1)
         return poll(executorService, "$extraCmdLineFlag (${config.corda.myLegalName})") {
             if (process.isAlive) null else Unit
         }

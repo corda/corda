@@ -12,9 +12,6 @@ import java.util.*
  * are reflected in the exposed list as expected.
  */
 class FlattenedList<A>(val sourceList: ObservableList<out ObservableValue<out A>>) : TransformationList<A, ObservableValue<out A>>(sourceList) {
-    override fun getViewIndex(p0: Int): Int {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
 
     /**
      * We maintain an ObservableValue->index map. This is needed because we need the ObservableValue's index in order to

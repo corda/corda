@@ -22,7 +22,7 @@ dependencies {
     // The SIMM demo CorDapp depends upon Cash CorDapp features
     cordapp project(':finance:workflows')
     cordapp project(':finance:contracts')
-    cordapp project(':samples:simm-valuation-demo:contracts-states')
+    cordapp project(path: ':samples:simm-valuation-demo:contracts-states', configuration: 'shrinkArtifacts')
 
     // Corda integration dependencies
     cordaCompile project(':core')
