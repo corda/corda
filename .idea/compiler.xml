@@ -83,6 +83,16 @@
       <module name="corda-enterprise-testing_test" target="1.8" />
       <module name="corda-enterprise-tools_main" target="1.8" />
       <module name="corda-enterprise-tools_test" target="1.8" />
+      <module name="corda-enterprise.common-logging.main" target="1.8" />
+      <module name="corda-enterprise.common-logging.test" target="1.8" />
+      <module name="corda-enterprise.experimental.netparams.main" target="1.8" />
+      <module name="corda-enterprise.experimental.netparams.test" target="1.8" />
+      <module name="corda-enterprise.experimental.nodeinfo.main" target="1.8" />
+      <module name="corda-enterprise.experimental.nodeinfo.test" target="1.8" />
+      <module name="corda-enterprise.tools.pinger.capsule.main" target="1.6" />
+      <module name="corda-enterprise.tools.pinger.capsule.test" target="1.6" />
+      <module name="corda-enterprise.tools.pinger.main" target="1.8" />
+      <module name="corda-enterprise.tools.pinger.test" target="1.8" />
       <module name="corda-enterprise_main" target="1.8" />
       <module name="corda-enterprise_test" target="1.8" />
       <module name="corda-finance_integrationTest" target="1.8" />

@@ -112,7 +112,7 @@ application development please continue to refer to `the main project documentat
    :if_tag: htmlmode
 
    hot-cold-deployment
-   database-management
+   node-database-intro
    corda-firewall
    sizing-and-performance
    running-a-notary-cluster/toctree
@@ -143,8 +143,7 @@ application development please continue to refer to `the main project documentat
    corda-nodes-index.rst
    corda-networks-index.rst
    docker-image.rst
-   azure-vm.rst
-   aws-vm.rst
+   node-cloud.rst
    loadtesting.rst
    cli-application-shell-extensions.rst
    certificate-revocation

@@ -232,6 +232,11 @@ class FloatControlListenerService(val conf: FirewallConfiguration,
             message.complete(true) // consume message so it isn't resent forever
             return
         }
+        if (message.payload.size > maximumMessageSize) {
+            auditService.packetDropEvent(message, "Message exceeds maxMessageSize network parameter, maxMessageSize: [${message.payload.size}], message size: [$maximumMessageSize]. Message is acknowledged and dropped.", RoutingDirection.INBOUND)
+            message.complete(true)
+            return
+        }
         if (!message.topic.startsWith(P2P_PREFIX)) {
             auditService.packetDropEvent(message, "Message topic is not a valid peer namespace ${message.topic}", RoutingDirection.INBOUND)
             message.complete(true) // consume message so it isn't resent forever

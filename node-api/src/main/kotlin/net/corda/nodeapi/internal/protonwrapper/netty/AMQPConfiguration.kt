@@ -67,7 +67,7 @@ interface AMQPConfiguration {
 
     @JvmDefault
     val sslHandshakeTimeout: Long
-        get() = 10000
+        get() = 20000 // Aligned with sun.security.provider.certpath.URICertStore.DEFAULT_CRL_CONNECT_TIMEOUT
 
     /**
      * An optional Health Check Phrase which if passed through the channel will cause AMQP Server to echo it back instead of doing normal pipeline processing

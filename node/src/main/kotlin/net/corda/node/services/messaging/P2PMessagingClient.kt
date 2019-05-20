@@ -118,6 +118,8 @@ class P2PMessagingClient(val config: NodeConfiguration,
         var eventsSubscription: Subscription? = null
         var p2pConsumer: P2PMessagingConsumer? = null
         var locator: ServerLocator? = null
+        var executorProducer: ClientProducer? = null
+        var executorSession: ClientSession? = null
         var producer: ClientProducer? = null
         var producerSession: ClientSession? = null
         var bridgeSession: ClientSession? = null
@@ -233,8 +235,10 @@ class P2PMessagingClient(val config: NodeConfiguration,
             // size of 1MB is acknowledged.
             val createNewSession = { sessionFactory!!.createSession(ArtemisMessagingComponent.NODE_P2P_USER, ArtemisMessagingComponent.NODE_P2P_USER, false, true, true, false, ActiveMQClient.DEFAULT_ACK_BATCH_SIZE) }
 
+            executorSession = createNewSession()
             producerSession = createNewSession()
             bridgeSession = createNewSession()
+            executorSession!!.start()
             producerSession!!.start()
             bridgeSession!!.start()
 
@@ -242,6 +246,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
             // Create a queue, consumer and producer for handling P2P network messages.
             // Create a general purpose producer.
             producer = producerSession!!.createProducer()
+            executorProducer = executorSession!!.createProducer()
 
 
             inboxes += RemoteInboxAddress(myIdentity).queueName
@@ -254,8 +259,8 @@ class P2PMessagingClient(val config: NodeConfiguration,
             p2pConsumer = P2PMessagingConsumer(inboxes, createNewSession, isDrainingModeOn, drainingModeWasChangedEvents)
 
             val messagingExecutor = MessagingExecutor(
-                    producerSession!!,
-                    producer!!,
+                    executorSession!!,
+                    executorProducer!!,
                     versionInfo,
                     this@P2PMessagingClient,
                     metricRegistry,
@@ -537,6 +542,17 @@ class P2PMessagingClient(val config: NodeConfiguration,
             }
 
             producerSession?.let {
+                if (it.stillOpen()) {
+                    it.commit()
+                }
+            }
+
+            executorProducer?.let {
+                close(executorProducer)
+                executorProducer = null
+            }
+
+            executorSession?.let {
                 if (it.stillOpen()) {
                     it.commit()
                 }
