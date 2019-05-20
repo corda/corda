@@ -31,8 +31,6 @@ dependencies {
 
 jar {
     baseName 'corda-confidential-identities'
-    preserveFileTimestamps = false
-    reproducibleFileOrder = true
 }
 
 publish {
