@@ -13,7 +13,7 @@ availability deployment configurations for Enterprise customers using DMZ enviro
 |release| is operationally compatible with Corda (open source) 4.x and 3.x, and Corda Enterprise 3.x, while providing enterprise-grade features and performance.
 
 .. note:: The compatibility and interoperability assurances apply to nodes running at the latest patch level for any given integer version.
-   For example, at the time of writing, the Corda Enterprise 4.0 interoperability and compatibility assurance is with respect to Corda 3.3, Corda Enterprise 3.2 and Corda 4.0.
+   For example, at the time of writing, the Corda Enterprise 4.0 interoperability and compatibility assurance is with respect to Corda 3.4, Corda Enterprise 3.3 and Corda 4.0.
 
 Key new features and components
 *******************************
@@ -160,7 +160,7 @@ The following list contains important known issues identified in this release. W
   .. note:: CorDapps built using the new `Token SDK <https://github.com/corda/token-sdk>`_ fall into this category and are required
      to include Token SDK CorDapps in their own Contract CorDapps JAR.
 
-* The experimental finance CorDapp compiled against Corda 3.3 or Enterprise Corda 3.2 and run on |release| is not guaranteed to interoperate with
+* The experimental finance CorDapp compiled against Corda 3.4 or Enterprise Corda 3.3 and run on |release| is not guaranteed to interoperate with
   its upgraded equivalent Corda 4 version compiled against Corda 4.0 or |release| and running on |release|.
 
   See :doc:`CorDapp Upgradeability Guarantees <cordapp-upgradeability>` for further information.

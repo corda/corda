@@ -8,7 +8,6 @@ For developer information on upgrading CorDapps, see :doc:`upgrading-cordapps`.
 
 To be compatible with Corda Enterprise, CorDapps need to bundle database migaration scripts (see :doc:`database-management`).
 
-
 Flow upgrades
 ~~~~~~~~~~~~~
 
@@ -56,7 +55,10 @@ In order to perform the upgrade, follow the following steps:
 
 * Once all flows have completed, stop the node
 * Replace the existing JAR with the new one
-* Make any database changes required to any custom vault tables for the upgraded CorDapp
+* Make any database changes required to any custom vault tables for the upgraded CorDapp,
+  following the database upgrade steps in :doc:`node-operations-cordapp-deployment`.
+  The database update for a CorDapp upgrade follows the same steps as database setup for a new CorDapp.
+
 * Restart the node
 * If you drained the node prior to upgrading, switch off flow draining mode to allow the node to continue to receive requests
 

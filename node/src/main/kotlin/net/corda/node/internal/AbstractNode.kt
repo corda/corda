@@ -825,9 +825,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
         val props = configuration.dataSourceProperties
         if (props.isEmpty) throw DatabaseConfigurationException("There must be a database configured.")
-        val isH2Database = isH2Database(props.getProperty("dataSource.url", ""))
-        val schemas = if (isH2Database) schemaService.internalSchemas() else schemaService.schemaOptions.keys
-        database.startHikariPool(props, configuration.database, schemas, metricRegistry, this.cordappLoader, configuration.baseDirectory, configuration.myLegalName)
+        //Enterprise differs to Open Source as it doesn't distinguish internal schemas and Cordapp's schemas as all tables are created by Liquibase
+        database.startHikariPool(props, configuration.database, schemaService.schemaOptions.keys, metricRegistry, this.cordappLoader, configuration.baseDirectory, configuration.myLegalName)
         // Now log the vendor string as this will also cause a connection to be tested eagerly.
         logVendorString(database, log)
     }

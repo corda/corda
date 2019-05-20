@@ -34,7 +34,6 @@ import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.loadDevCaTrustStore
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
-import net.corda.nodeapi.internal.persistence.isH2Database
 import net.corda.nodeapi.internal.registerDevP2pCertificates
 import net.corda.serialization.internal.amqp.AMQP_ENABLED
 import net.corda.testing.core.ALICE_NAME
@@ -180,13 +179,11 @@ fun configureDatabase(hikariProperties: Properties,
                       wellKnownPartyFromX500Name: (CordaX500Name) -> Party?,
                       wellKnownPartyFromAnonymous: (AbstractParty) -> Party?,
                       schemaService: SchemaService = NodeSchemaService(),
-                      internalSchemas: Set<MappedSchema> = NodeSchemaService().internalSchemas(),
                       cacheFactory: NamedCacheFactory = TestingNamedCacheFactory(),
                       ourName: CordaX500Name = TestIdentity(ALICE_NAME, 70).name): CordaPersistence {
-    val isH2Database = isH2Database(hikariProperties.getProperty("dataSource.url", ""))
-    val schemas = if (isH2Database) internalSchemas else schemaService.schemaOptions.keys
     val persistence = createCordaPersistence(databaseConfig, wellKnownPartyFromX500Name, wellKnownPartyFromAnonymous, schemaService, cacheFactory, null)
-    persistence.startHikariPool(hikariProperties, databaseConfig, schemas, ourName = ourName)
+    //Enterprise differs to Open Source as it doesn't distinguish internal schemas and Cordapp's schemas as all tables are created by Liquibase
+    persistence.startHikariPool(hikariProperties, databaseConfig, schemaService.schemaOptions.keys, ourName = ourName)
     return persistence
 }
 
