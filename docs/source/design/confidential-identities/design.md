@@ -58,8 +58,7 @@ two maps:
    object for the legal/operator identity of a node.
 
 2. `principalToParties` which maps an x500 name to a legal/operator
-   identity. This map is currently only used for one operation, which is
-   a `Party` lookup from some string by the shell (see `partiesFromName`).
+   identity.
 
 Both maps are updated via the network map cache when a new `Party` is added
 to the network and when a new "confidential identity" is created.
@@ -246,9 +245,9 @@ there will be a set of flows for:
    need to be updated when new `SignedKeyToPartyMapping` are stored.
 
 3. Add a new `AppendOnlyPersistentMap` called `keyToPartyMapping` which
-   should contain **all** public keys mapped to the x500 name of the node
-   where it is associated with. All legal identity keys as well as newly
-   created anonymous keys should be stored in this map.
+   should contain **all** public keys hashes mapped to the x500 name of
+   the node where it is associated with. All legal identity keys as well
+   as newly created anonymous keys should be stored in this map.
 
 The `principalToParties` map and the `keysToParties` map are required because
 the party information in the network map cache is ephemeral - parties can
@@ -348,9 +347,27 @@ Three sets of flows will be added:
 2. `GenerateAndShareNewKey` which implements the above but in reverse. This
    flow requests a new key pair and key to `Party` mapping, stores the mapping
    then shares it with the specified `Party`s.
-3. `SyncKeyMappings` which takes a transaction and shares mappings for
-   all the `AnonymousParty` objects which the specified `Party` does not
-   have a mapping for.
+3. `SyncKeyMappings` which takes the following format:
+
+    1. The initiator shares `AnonymousParty` objects for all parties involved
+       in a confidential transaction.
+    2. The responder tries to resolve each `AnonymousParty` to a `Party`.
+       The parties which cannot be resolved are sent back to the initiator.
+    3. The initiator sends back the `Party` objects for each `AnonymousParty`
+       object which could not be looked up. The takes the form of a map,
+       keyed with `AnonymousParty`s. The initiator cannot create a signed
+       assertion that the mapping is correct. Instead, the responder must
+       contact each `Party` individually and ask them for a signed assertion.
+    4. The Responder asks each `Party` for a `SignedKeyMapping`. The responders
+       will return a `SignedKeyMapping` if they own the key, otherwise, they'll
+       return a `null`.
+    5. The key difference to the old `SyncIdentitiesFlow` is that when we
+       used certificates, the initiator of the flow could just send the
+       certificate chains to the responder. Clearly this cannot happen in
+       the absence of certificates stored for each CA. However, the upshot
+       of this, is that now, only the creator of the confidential identity
+       can prove they created it. Assertions made by other nodes are
+       deniable.
 
 
 
