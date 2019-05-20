@@ -25,7 +25,8 @@ import javax.net.ssl.*
 
 private const val HOSTNAME_FORMAT = "%s.corda.net"
 internal const val DEFAULT = "default"
-internal const val SSL_HANDSHAKE_TIMEOUT_PROP_NAME = "corda.netty.sslHelper.handshakeTimeout"
+internal const val SSL_HANDSHAKE_TIMEOUT_PROP_NAME = "net.corda.nodeapi.sslhelper.SslHandshakeTimeout"
+internal const val SSL_HANDSHAKE_TIMEOUT_DEFAULT_VALUE = 20000L // Aligned with sun.security.provider.certpath.URICertStore.DEFAULT_CRL_CONNECT_TIMEOUT
 
 internal class LoggingTrustManagerWrapper(val wrapped: X509ExtendedTrustManager) : X509ExtendedTrustManager() {
     companion object {
