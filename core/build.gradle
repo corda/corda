@@ -1,6 +1,3 @@
-//plugins {
-//    id 'org.javamodularity.moduleplugin'
-//}
 apply plugin: 'kotlin'
 apply plugin: 'kotlin-jpa'
 apply plugin: 'net.corda.plugins.quasar-utils'
@@ -11,56 +8,6 @@ apply plugin: 'com.jfrog.artifactory'
 description 'Corda core'
 
 evaluationDependsOn(':node:capsule')
-
-//subprojects {
-//    apply plugin: 'java'
-//    apply plugin: "org.javamodularity.moduleplugin"
-//    kotlinCompile {
-//        moduleOptions {
-//            addExports = [
-//                    'java.base/sun.security.util': 'ALL-UNNAMED',
-//                    'java.base/sun.security.x509': 'ALL-UNNAMED'
-//            ]
-//        }
-//    }
-//    compileJava {
-//        moduleOptions {
-////            addModules = []
-////            addReads = [:]
-////            addOpens = [:]
-//            addExports = [
-//                'java.base/sun.security.util': 'ALL-UNNAMED',
-//                'java.base/sun.security.x509': 'ALL-UNNAMED'
-////                'java.base/sun.security.util.BitArray': 'ALL-UNNAMED',
-////                'java.base/sun.security.util.ObjectIdentifier': 'ALL-UNNAMED',
-////                'java.base/sun.security.x509.AlgorithmId': 'ALL-UNNAMED',
-////                'java.base/sun.security.x509.X509Key': 'ALL-UNNAMED'
-//            ]
-////            addExports = [:]
-//        }
-//    }
-//    test {
-//        moduleOptions {
-//            addExports = [
-//                    'java.base/sun.security.util': 'ALL-UNNAMED',
-//                    'java.base/sun.security.x509': 'ALL-UNNAMED'
-//            ]
-//        }
-//    }
-//}
-
-//allprojects {
-//    apply plugin: 'java'
-//    apply plugin: "org.javamodularity.moduleplugin"
-//    compileJava {
-//        moduleOptions {
-//            addExports = [
-//                    'java.base/sun.security.util': 'ALL-UNNAMED',
-//                    'java.base/sun.security.x509': 'ALL-UNNAMED'
-//            ]
-//        }
-//    }
-//}
 
 configurations {
     integrationTestCompile.extendsFrom testCompile
@@ -178,19 +125,7 @@ dependencies {
     compile "org.hibernate:hibernate-core:$hibernate_version"
 
     compile group: "io.github.classgraph", name: "classgraph", version: class_graph_version
-
-    // JDK 11 (https://stackoverflow.com/questions/52502189/java-11-package-javax-xml-bind-does-not-exist)
-    compile group: 'javax.xml.bind', name: 'jaxb-api', version: '2.3.0'
 }
-
-//compileJava {
-//    moduleOptions {
-//        addExports = [
-//                'java.base/sun.security.util': 'ALL-UNNAMED',
-//                'java.base/sun.security.x509': 'ALL-UNNAMED'
-//        ]
-//    }
-//}
 
 // TODO Consider moving it to quasar-utils in the future (introduced with PR-1388)
 task copyQuasarJar(type: Copy) {
@@ -208,28 +143,9 @@ configurations {
     testArtifacts.extendsFrom testRuntimeClasspath
 }
 
-tasks.withType(JavaCompile) {
-    // Relaxes JPMS visibility constraints across module boundaries
-    options.compilerArgs << '--add-exports' << 'java.base/sun.security.util=ALL-UNNAMED' << '--add-exports' << 'java.base/sun.security.x509=ALL-UNNAMED'
-}
-
-tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile) {
-    kotlinOptions {
-        verbose = true
-        allWarningsAsErrors = false
-        // Kotlin Compiler does not yet support passing Modularity directives (eg. add-exports, add-reads, patch-module).
-        // https://youtrack.jetbrains.com/issue/KT-20740
-//        freeCompilerArgs = ['--add-export','java.base/sun.security.util=ALL-UNNAMED']
-    }
-}
-
 tasks.withType(Test) {
     // fork a new test process for every test class
     forkEvery = 10
-    
-    ignoreFailures = true
-    failFast = false
-    jvmArgs '--add-exports=java.base/sun.security.util=ALL-UNNAMED'
 }
 
 task testJar(type: Jar) {

@@ -1,14 +1,3 @@
-// JDK 11 JavaFX
-plugins {
-    id 'org.openjfx.javafxplugin' version '0.0.7'
-}
-javafx {
-    modules = [ 'javafx.controls',
-                'javafx.fxml',
-                'javafx.swing'
-    ]
-}
-
 ext {
     tornadofx_version = '1.7.15'
     controlsfx_version = '8.40.12'

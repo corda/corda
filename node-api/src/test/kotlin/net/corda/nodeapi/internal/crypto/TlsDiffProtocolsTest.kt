@@ -6,6 +6,7 @@ import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.config.CertificateStore
 import net.corda.nodeapi.internal.protonwrapper.netty.init
 import org.assertj.core.api.Assertions
+import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -28,6 +29,7 @@ import javax.net.ssl.StandardConstants
 /**
  * This test checks compatibility of TLS 1.2 and 1.3 communication using different cipher suites with SNI header
  */
+@Ignore("Disabled till we switched to Java 11 where TLS 1.3 becomes available")
 @RunWith(Parameterized::class)
 class TlsDiffProtocolsTest(private val serverAlgo: String, private val clientAlgo: String,
                            private val cipherSuites: CipherSuites, private val shouldFail: Boolean,
@@ -68,9 +70,7 @@ class TlsDiffProtocolsTest(private val serverAlgo: String, private val clientAlg
             CIPHER_SUITES_ALL(arrayOf(
                     // 1.3 only
                     "TLS_AES_128_GCM_SHA256",
-//                    Unsupported CipherSuite: TLS_CHACHA20_POLY1305_SHA256 (java version "11.0.2" 2019-01-15 LTS)
-//                    Works with: openjdk version "12.0.1" 2019-04-16 (OpenJDK Runtime Environment (build 12.0.1+12))
-//                    "TLS_CHACHA20_POLY1305_SHA256",
+                    "TLS_CHACHA20_POLY1305_SHA256",
                     // 1.2 only
                     "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
                     "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"

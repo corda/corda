@@ -78,31 +78,31 @@ class MappedSchemasCrossReferenceDetectionTests {
 
     @Test
     fun `no cross reference to other schema java`() {
-        assertThat(fieldsFromOtherMappedSchema(GoodSchemaV1())).isEmpty()
-        assertThat(methodsFromOtherMappedSchema(GoodSchemaV1())).isEmpty()
+        assertThat(fieldsFromOtherMappedSchema(GoodSchemaJavaV1())).isEmpty()
+        assertThat(methodsFromOtherMappedSchema(GoodSchemaJavaV1())).isEmpty()
     }
 
     @Test
     fun `cross reference to other schema is detected java`() {
-        assertThat(fieldsFromOtherMappedSchema(BadSchemaV1())).isEmpty()
-        assertThat(methodsFromOtherMappedSchema(BadSchemaV1())).isNotEmpty
+        assertThat(fieldsFromOtherMappedSchema(BadSchemaJavaV1())).isEmpty()
+        assertThat(methodsFromOtherMappedSchema(BadSchemaJavaV1())).isNotEmpty
     }
 
     @Test
     fun `cross reference to other schema via field is detected java`() {
-        assertThat(fieldsFromOtherMappedSchema(BadSchemaNoGetterV1())).isNotEmpty
-        assertThat(methodsFromOtherMappedSchema(BadSchemaNoGetterV1())).isEmpty()
+        assertThat(fieldsFromOtherMappedSchema(BadSchemaNoGetterJavaV1())).isNotEmpty
+        assertThat(methodsFromOtherMappedSchema(BadSchemaNoGetterJavaV1())).isEmpty()
     }
 
     @Test
     fun `cross reference via non JPA field is allowed java`() {
-        assertThat(fieldsFromOtherMappedSchema(TrickySchemaV1())).isEmpty()
-        assertThat(methodsFromOtherMappedSchema(TrickySchemaV1())).isEmpty()
+        assertThat(fieldsFromOtherMappedSchema(TrickySchemaJavaV1())).isEmpty()
+        assertThat(methodsFromOtherMappedSchema(TrickySchemaJavaV1())).isEmpty()
     }
 
     @Test
     fun `cross reference via transient field is allowed java`() {
-        assertThat(fieldsFromOtherMappedSchema(PoliteSchemaV1())).isEmpty()
-        assertThat(methodsFromOtherMappedSchema(PoliteSchemaV1())).isEmpty()
+        assertThat(fieldsFromOtherMappedSchema(PoliteSchemaJavaV1())).isEmpty()
+        assertThat(methodsFromOtherMappedSchema(PoliteSchemaJavaV1())).isEmpty()
     }
 }

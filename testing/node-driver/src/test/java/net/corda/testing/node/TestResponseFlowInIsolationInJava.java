@@ -1,4 +1,4 @@
-package net.corda.testing.node.internal;
+package net.corda.testing.node;
 
 import co.paralleluniverse.fibers.Suspendable;
 import net.corda.core.Utils;
@@ -6,9 +6,6 @@ import net.corda.core.concurrent.CordaFuture;
 import net.corda.core.flows.*;
 import net.corda.core.identity.Party;
 import net.corda.core.utilities.UntrustworthyData;
-import net.corda.testing.node.MockNetwork;
-import net.corda.testing.node.MockNetworkParameters;
-import net.corda.testing.node.StartedMockNode;
 import org.junit.After;
 import org.junit.Rule;
 import org.junit.Test;
