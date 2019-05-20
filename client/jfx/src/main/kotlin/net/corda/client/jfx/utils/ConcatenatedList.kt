@@ -11,6 +11,10 @@ import java.util.*
  * is propagated as expected.
  */
 class ConcatenatedList<A>(sourceList: ObservableList<ObservableList<A>>) : TransformationList<A, ObservableList<A>>(sourceList) {
+    override fun getViewIndex(p0: Int): Int {
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    }
+
     // A wrapper for input lists so we hash differently even if a list is reused in the input.
     @VisibleForTesting
     internal class WrappedObservableList<A>(

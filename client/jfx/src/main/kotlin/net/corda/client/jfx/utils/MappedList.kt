@@ -11,6 +11,10 @@ import java.util.*
  * Use this instead of [EasyBind.map] to trade off memory vs CPU, or if (god forbid) the mapped function is side-effecting.
  */
 class MappedList<A, B>(list: ObservableList<A>, val function: (A) -> B) : TransformationList<B, A>(list) {
+    override fun getViewIndex(p0: Int): Int {
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    }
+
     private val backingList = ArrayList<B>(list.size)
 
     init {
