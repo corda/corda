@@ -143,6 +143,11 @@ configurations {
     testArtifacts.extendsFrom testRuntimeClasspath
 }
 
+tasks.withType(Test) {
+    // fork a new test process for every test class
+    forkEvery = 10
+}
+
 task testJar(type: Jar) {
     classifier "tests"
     from sourceSets.test.output

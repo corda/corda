@@ -31,8 +31,6 @@ configurations {
 
 jar {
     baseName 'corda-finance-contracts'
-    preserveFileTimestamps = false
-    reproducibleFileOrder = true
     manifest {
         attributes('Corda-Revision': 'n/a')
         attributes('Corda-Vendor': 'Corda Open Source')
