@@ -8,7 +8,7 @@ apply plugin: 'com.jfrog.artifactory'
 //noinspection GroovyAssignabilityCheck
 configurations {
     integrationTestCompile.extendsFrom testCompile
-    integrationTestRuntime.extendsFrom testRuntime
+    integrationTestRuntimeOnly.extendsFrom testRuntimeOnly
 }
 
 sourceSets {

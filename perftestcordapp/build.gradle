@@ -48,10 +48,10 @@ dependencies {
 }
 
 configurations {
-    testArtifacts.extendsFrom testRuntime
+    testArtifacts.extendsFrom testRuntimeClasspath
 
     integrationTestCompile.extendsFrom testCompile
-    integrationTestRuntime.extendsFrom testRuntime
+    integrationTestRuntimeOnly.extendsFrom testRuntimeOnly
 }
 
 task testJar(type: Jar) {
@@ -65,8 +65,6 @@ artifacts {
 
 jar {
     baseName 'corda-ptflows'
-    preserveFileTimestamps = false
-    reproducibleFileOrder = true
 }
 
 cordapp {
