@@ -62,7 +62,7 @@ import net.corda.nodeapi.internal.persistence.CouldNotCreateDataSourceException
 import net.corda.serialization.internal.*
 import net.corda.serialization.internal.amqp.SerializationFactoryCacheKey
 import net.corda.serialization.internal.amqp.SerializerFactory
-import org.apache.commons.lang.SystemUtils
+import org.apache.commons.lang3.SystemUtils
 import org.h2.jdbc.JdbcSQLException
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -156,10 +156,9 @@ open class Node(configuration: NodeConfiguration,
 
         private fun hasMinimumJavaVersion(): Boolean {
             // when the ext.java8_minUpdateVersion gradle constant changes, so must this check
-            val major = SystemUtils.JAVA_VERSION_FLOAT
             return try {
                 val update = getJavaUpdateVersion(SystemUtils.JAVA_VERSION) // To filter out cases like 1.8.0_202-ea
-                major == 1.8F && update >= 171
+                SystemUtils.IS_JAVA_1_8 && update >= 171
             } catch (e: NumberFormatException) { // custom JDKs may not have the update version (e.g. 1.8.0-adoptopenjdk)
                 false
             }
