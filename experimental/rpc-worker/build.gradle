@@ -6,7 +6,7 @@ description 'Experiment to make out-of-node RPC processing'
 
 configurations {
     integrationTestCompile.extendsFrom testCompile
-    integrationTestRuntime.extendsFrom testRuntime
+    integrationTestRuntimeOnly.extendsFrom testRuntimeOnly
 }
 
 sourceSets {
@@ -44,6 +44,10 @@ dependencies {
     integrationTestCompile project(":node-driver")
     compile project(":experimental:flow-worker")
     compile project(":bridge")
+
+    testImplementation "junit:junit:$junit_version"
+    testRuntimeOnly "org.junit.vintage:junit-vintage-engine:${junit_vintage_version}"
+    testRuntimeOnly "org.junit.platform:junit-platform-launcher:${junit_platform_version}"
 }
 
 jar {
