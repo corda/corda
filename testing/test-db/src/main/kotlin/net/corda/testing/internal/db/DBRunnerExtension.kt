@@ -14,9 +14,9 @@ import java.lang.reflect.AnnotatedElement
  * annotation (or an annotation which is itself annotated with [RequiresDb]), which it consults to discover which group of tests the
  * test class belongs to (`"default"`, if not stated).
  *
- * The class of the [TestDatabaseContext] used is selected by a system property, `test.db.context./groupName/`, where `groupName` is the
- * name of the group of tests to which the test using this extension belongs. If this system property is not set, the class name defaults
- * to the [RequiresDb.defaultContextClassName] stated in the annotation, which in turn defaults to the class of [NoOpTestDatabaseContext].
+ * The class of the [TestDatabaseContext] used is selected by a system property, `test.db.context` If this system property is not set, the
+ * class name defaults to the [RequiresDb.defaultContextClassName] stated in the annotation, which in turn defaults to the class of
+ * [NoOpTestDatabaseContext].
  *
  * When [BeforeAllCallback.beforeAll] is called prior to executing any test methods in a given class, the [ExtensionContext.Store] of the
  * root extension context is used to look up the [TestDatabaseContext] for the class's declared `groupName`, creating and initialising it
@@ -59,7 +59,7 @@ class DBRunnerExtension : Extension, BeforeAllCallback, AfterAllCallback, Before
 
         val testClass = context.testClass.orElse(null) ?: return null
         val annotation = testClass.requiredDb ?:
-            throw IllegalStateException("Test run with DBRunnerExtension is not annotated with @RequiresDb")
+        throw IllegalStateException("Test run with DBRunnerExtension is not annotated with @RequiresDb")
         val groupName = annotation.group
         val defaultContextClassName = annotation.defaultContextClassName
 
@@ -71,8 +71,7 @@ class DBRunnerExtension : Extension, BeforeAllCallback, AfterAllCallback, Before
     }
 
     private fun createDatabaseContext(groupName: String, defaultContextClassName: String): TestDatabaseContext {
-        val propertyKey = "test.db.context.$groupName"
-        val className = System.getProperty(propertyKey) ?: defaultContextClassName
+        val className = System.getProperty("test.db.context") ?: defaultContextClassName
 
         val ctx = Class.forName(className).newInstance() as TestDatabaseContext
         ctx.initialize(groupName)
@@ -85,9 +84,9 @@ class DBRunnerExtension : Extension, BeforeAllCallback, AfterAllCallback, Before
     private fun <T : Any> AnnotatedElement.findAnnotations(annotationClass: Class<T>): Sequence<T> = declaredAnnotations.asSequence()
             .filterNot { it.isInternal }
             .flatMap { annotation ->
-        if (annotationClass.isAssignableFrom(annotation::class.java))sequenceOf(annotationClass.cast(annotation))
-        else annotation.annotationClass.java.findAnnotations(annotationClass)
-    }
+                if (annotationClass.isAssignableFrom(annotation::class.java))sequenceOf(annotationClass.cast(annotation))
+                else annotation.annotationClass.java.findAnnotations(annotationClass)
+            }
 
     private val Annotation.isInternal: Boolean get() = annotationClass.java.name.run {
         startsWith("java.lang") ||
