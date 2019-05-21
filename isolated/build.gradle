@@ -7,11 +7,6 @@ dependencies {
     cordaCompile project(':core')
 }
 
-jar {
-    preserveFileTimestamps = false
-    reproducibleFileOrder = true
-}
-
 cordapp {
     targetPlatformVersion corda_platform_version.toInteger()
     minimumPlatformVersion 1

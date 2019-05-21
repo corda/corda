@@ -295,6 +295,8 @@ node or will be automatically fetched over the network when receiving a transact
    app into multiple modules: one which contains just states, contracts and core data types. And another which contains
    the rest of the app. See :ref:`cordapp-structure`.
 
+.. _constraints_propagation:
+
 Constraints propagation
 -----------------------
 
