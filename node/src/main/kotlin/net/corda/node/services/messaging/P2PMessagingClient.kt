@@ -589,7 +589,7 @@ private class P2PMessagingConsumer(
     private val initialAndExistingConsumer = multiplex(queueNames, createSession)
     private val subscriptions = mutableSetOf<Subscription>()
 
-    private val notificationTimer = Timer("DrainNotificationTimer", true)
+    private var notificationTimer : Timer? = null
 
     override fun start() {
 
@@ -597,15 +597,17 @@ private class P2PMessagingConsumer(
             require(!startedFlag){"Must not already be started"}
             drainingModeWasChangedEvents.filter { change -> change.switchedOn() }.doOnNext {
                 initialAndExistingConsumer.switchTo(existingOnlyConsumer)
-                notificationTimer.schedule(object : TimerTask() {
-                    override fun run() {
-                        logger.warn("Node is currently in draining mode, new flows will not be processed!")
-                    }
-                }, 10.seconds.toMillis(), 1.minutes.toMillis())
+                notificationTimer =  Timer("DrainNotificationTimer", true).apply {
+                    schedule(object : TimerTask() {
+                        override fun run() {
+                            logger.warn("Node is currently in draining mode, new flows will not be processed!")
+                        }
+                    }, 10.seconds.toMillis(), 1.minutes.toMillis())
+                }
             }.subscribe()
             drainingModeWasChangedEvents.filter { change -> change.switchedOff() }.doOnNext {
                 existingOnlyConsumer.switchTo(initialAndExistingConsumer)
-                notificationTimer.cancel()
+                notificationTimer?.cancel()
             }.subscribe()
             subscriptions += existingOnlyConsumer.messages.doOnNext(messages::onNext).subscribe()
             subscriptions += initialAndExistingConsumer.messages.doOnNext(messages::onNext).subscribe()
