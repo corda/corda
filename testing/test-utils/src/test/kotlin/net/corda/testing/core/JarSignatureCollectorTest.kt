@@ -135,7 +135,8 @@ class JarSignatureCollectorTest {
     @Test
     fun `one signer with EC algorithm`() {
         dir.createJar(FILENAME, "_signable1", "_signable2")
-        val key = dir.signJar(FILENAME, CHARLIE, "storepass", CHARLIE_PASS)
+        // JDK11: Warning:  Different store and key passwords not supported for PKCS12 KeyStores. Ignoring user-specified -keypass value.
+        val key = dir.signJar(FILENAME, CHARLIE, "storepass", "storepass")
         assertEquals(listOf(key), dir.getJarSigners(FILENAME)) // We only used CHARLIE's distinguished name, so the keys will be different.
     }
 
