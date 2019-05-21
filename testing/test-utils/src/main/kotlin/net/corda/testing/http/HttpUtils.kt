@@ -47,7 +47,7 @@ object HttpUtils {
     private fun makeRequest(request: Request) {
         val response = client.newCall(request).execute()
         if (!response.isSuccessful) {
-            throw IOException("${request.method()} to ${request.url()} returned a ${response.code()}: ${response.body().string()}")
+            throw IOException("${request.method()} to ${request.url()} returned a ${response.code()}: ${response.body()?.string()}")
         }
     }
 }

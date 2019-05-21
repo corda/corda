@@ -5,7 +5,7 @@ import net.corda.djvm.analysis.AnalysisRuntimeContext
 import net.corda.djvm.references.ClassRepresentation
 import net.corda.djvm.references.Member
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import org.objectweb.asm.Opcodes.ACC_STRICT
 
 @Suppress("unused")

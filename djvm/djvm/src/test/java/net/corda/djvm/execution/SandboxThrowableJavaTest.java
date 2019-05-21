@@ -2,9 +2,9 @@ package net.corda.djvm.execution;
 
 import net.corda.djvm.TestBase;
 import net.corda.djvm.WithJava;
-import static net.corda.djvm.messages.Severity.*;
+import org.junit.jupiter.api.Test;
 
-import org.junit.Test;
+import static net.corda.djvm.messages.Severity.*;
 
 import java.net.URI;
 import java.net.URISyntaxException;

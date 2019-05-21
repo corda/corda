@@ -1,7 +1,7 @@
 package net.corda.djvm.analysis
 
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.Test
+import org.junit.jupiter.api.Test
 
 class SourceLocationTest {
 

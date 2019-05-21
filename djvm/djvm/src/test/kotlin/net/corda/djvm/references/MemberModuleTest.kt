@@ -3,7 +3,7 @@ package net.corda.djvm.references
 import net.corda.djvm.annotations.NonDeterministic
 import org.assertj.core.api.Assertions.assertThat
 import org.jetbrains.annotations.NotNull
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import org.objectweb.asm.Type
 
 class MemberModuleTest {
@@ -132,7 +132,7 @@ class MemberModuleTest {
         assertThat(module.isConstructor(member("<clinit>"))).isTrue()
     }
 
-    private val java.lang.Class<*>.descriptor: String
+    private val Class<*>.descriptor: String
         get() = Type.getDescriptor(this)
 
     private fun member(member: String) =

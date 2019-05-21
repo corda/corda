@@ -4,7 +4,7 @@ import net.corda.djvm.assertions.AssertionExtensions.assertThatDJVM
 import net.corda.djvm.rewiring.SandboxClassLoadingException
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import sandbox.SandboxFunction
 import sandbox.Task
 import java.util.*
@@ -71,7 +71,7 @@ class DJVMExceptionTest : TestBase() {
 
         assertThat(result.getArray("getStackTrace"))
             .hasOnlyElementsOfType(djvm.stackTraceElementClass)
-            .isNotEmpty()
+            .isNotEmpty
     }
 
     @Test
@@ -88,7 +88,7 @@ class DJVMExceptionTest : TestBase() {
 
         assertThat(result.getArray("getStackTrace"))
             .hasOnlyElementsOfType(djvm.stackTraceElementClass)
-            .isNotEmpty()
+            .isNotEmpty
 
         assertThatExceptionOfType(ClassNotFoundException::class.java)
             .isThrownBy { djvm.classFor("sandbox.java.lang.RuntimeException\$1DJVM") }
@@ -108,7 +108,7 @@ class DJVMExceptionTest : TestBase() {
 
         assertThat(result.getArray("getStackTrace"))
             .hasOnlyElementsOfType(djvm.stackTraceElementClass)
-            .isNotEmpty()
+            .isNotEmpty
 
         assertThatDJVM(djvm.classFor("sandbox.java.util.EmptyStackException\$1DJVM"))
             .isAssignableFrom(RuntimeException::class.java)
