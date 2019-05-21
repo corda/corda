@@ -20,9 +20,9 @@ dependencies {
 
 
 task generateSource(type: Copy) {
-    from 'src/template/kotlin'
+    from 'src/main/template'
     filter(ReplaceTokens, tokens: [corda_release_version: corda_release_version])
-    into 'src/main/kotlin'
+    into 'src/main'
 }
 compileKotlin.dependsOn generateSource
 
