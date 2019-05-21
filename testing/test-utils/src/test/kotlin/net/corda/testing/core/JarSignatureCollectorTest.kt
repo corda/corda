@@ -147,6 +147,8 @@ class JarSignatureCollectorTest {
         assertEquals(listOf(key), dir.getJarSigners(FILENAME))
     }
 
-    private fun signAsAlice() = dir.signJar(FILENAME, ALICE, "storepass", ALICE_PASS)
-    private fun signAsBob() = dir.signJar(FILENAME, BOB, "storepass", BOB_PASS)
+    // JDK11: Warning:  Different store and key passwords not supported for PKCS12 KeyStores. Ignoring user-specified -keypass value.
+    // TODO: use programmatic API support to implement signing (see https://docs.oracle.com/javase/9/docs/api/jdk/security/jarsigner/JarSigner.html)
+    private fun signAsAlice() = dir.signJar(FILENAME, ALICE, "storepass", "storepass")
+    private fun signAsBob() = dir.signJar(FILENAME, BOB, "storepass", "storepass")
 }
