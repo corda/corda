@@ -12,7 +12,10 @@ Nodes
    deploying-a-node
    node-database
    node-database-access-h2
+   node-database-tables
+   node-operations-upgrade-cordapps
    shell
    clientrpc
    generating-a-node
    running-a-node
+   node-flow-hospital

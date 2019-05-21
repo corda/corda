@@ -292,7 +292,7 @@ abstract class TransactionVerificationException(val txId: SecureHash, message: S
     class UntrustedAttachmentsException(val txId: SecureHash, val ids: List<SecureHash>) :
             CordaException("Attempting to load untrusted transaction attachments: $ids. " +
                     "At this time these are not loadable because the DJVM sandbox has not yet been integrated. " +
-                    "You will need to install that app version yourself, to whitelist it for use. " +
+                    "You will need to manually install the CorDapp to whitelist it for use. " +
                     "Please follow the operational steps outlined in https://docs.corda.net/cordapp-build-systems.html#cordapp-contract-attachments to learn more and continue.")
 
     /*

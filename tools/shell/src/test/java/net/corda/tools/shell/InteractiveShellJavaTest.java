@@ -30,6 +30,7 @@ import java.util.*;
 
 import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class InteractiveShellJavaTest {
     private static TestIdentity megaCorp = new TestIdentity(new CordaX500Name("MegaCorp", "London", "GB"));
@@ -257,6 +258,16 @@ public class InteractiveShellJavaTest {
             check("amount: $100", "", FlowB.class);
         } catch (InteractiveShell.NoApplicableConstructor e) {
             assertEquals("[amount: Amount<Currency>, abc: int]: missing parameter abc", e.getErrors().get(1));
+        }
+    }
+
+    @Test
+    public void flowStartWithUnknownParty() throws InteractiveShell.NoApplicableConstructor {
+        try {
+            check("party: nonexistent", "", FlowA.class);
+        } catch (InteractiveShell.NoApplicableConstructor e) {
+            assertTrue(e.getErrors().get(0).contains("No matching Party found"));
+            assertEquals(1, e.getErrors().size());
         }
     }
 }

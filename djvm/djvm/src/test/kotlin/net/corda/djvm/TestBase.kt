@@ -20,10 +20,10 @@ import net.corda.djvm.source.ClassSource
 import net.corda.djvm.source.SourceClassLoader
 import net.corda.djvm.utilities.Discovery
 import net.corda.djvm.validation.RuleValidator
-import org.junit.After
-import org.junit.AfterClass
-import org.junit.Assert.assertEquals
-import org.junit.BeforeClass
+import org.junit.jupiter.api.AfterAll
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.BeforeAll
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.Type
@@ -81,7 +81,7 @@ abstract class TestBase {
          */
         inline fun <reified T> nameOf(prefix: String = "") = "$prefix${Type.getInternalName(T::class.java)}"
 
-        @BeforeClass
+        @BeforeAll
         @JvmStatic
         fun setupParentClassLoader() {
             val rootConfiguration = AnalysisConfiguration.createRoot(
@@ -105,7 +105,7 @@ abstract class TestBase {
             parentClassLoader = SandboxClassLoader.createFor(parentConfiguration)
         }
 
-        @AfterClass
+        @AfterAll
         @JvmStatic
         fun destroyRootContext() {
             parentConfiguration.analysisConfiguration.close()
@@ -126,7 +126,7 @@ abstract class TestBase {
     val context: AnalysisContext
         get() = AnalysisContext.fromConfiguration(configuration)
 
-    @After
+    @AfterEach
     fun destroy() {
         configuration.close()
     }

@@ -29,7 +29,12 @@ dependencies {
 
     // Integration test helpers
     testCompile "org.assertj:assertj-core:$assertj_version"
-    integrationTestCompile "junit:junit:$junit_version"
+    integrationTestImplementation "junit:junit:$junit_version"
+    integrationTestImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
+
+    integrationTestRuntimeOnly "org.junit.vintage:junit-vintage-engine:${junit_vintage_version}"
+    integrationTestRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${junit_jupiter_version}"
+    integrationTestRuntimeOnly "org.junit.platform:junit-platform-launcher:${junit_platform_version}"
 
     // Jetty dependencies for NetworkMapClient test.
     // Web stuff: for HTTP[S] servlets

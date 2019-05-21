@@ -1,6 +1,6 @@
 package net.corda.nodeapi.internal.crypto
 
-import net.corda.core.crypto.*
+import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.Crypto.COMPOSITE_KEY
 import net.corda.core.crypto.Crypto.ECDSA_SECP256K1_SHA256
 import net.corda.core.crypto.Crypto.ECDSA_SECP256R1_SHA256
@@ -8,6 +8,8 @@ import net.corda.core.crypto.Crypto.EDDSA_ED25519_SHA512
 import net.corda.core.crypto.Crypto.RSA_SHA256
 import net.corda.core.crypto.Crypto.SPHINCS256_SHA256
 import net.corda.core.crypto.Crypto.generateKeyPair
+import net.corda.core.crypto.SignatureScheme
+import net.corda.core.crypto.newSecureRandom
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.div
 import net.corda.core.serialization.SerializationContext
@@ -18,9 +20,9 @@ import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.createDevNodeCa
 import net.corda.nodeapi.internal.crypto.X509Utilities.DEFAULT_IDENTITY_SIGNATURE_SCHEME
 import net.corda.nodeapi.internal.crypto.X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME
+import net.corda.nodeapi.internal.installDevNodeCaCertPath
 import net.corda.nodeapi.internal.protonwrapper.netty.init
 import net.corda.nodeapi.internal.registerDevP2pCertificates
-import net.corda.nodeapi.internal.registerDevSigningCertificates
 import net.corda.serialization.internal.AllWhitelist
 import net.corda.serialization.internal.SerializationContextImpl
 import net.corda.serialization.internal.SerializationFactoryImpl
@@ -28,8 +30,8 @@ import net.corda.serialization.internal.amqp.amqpMagic
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.TestIdentity
-import net.corda.testing.internal.stubs.CertificateStoreStubs
 import net.corda.testing.internal.createDevIntermediateCaCertPath
+import net.corda.testing.internal.stubs.CertificateStoreStubs
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import org.assertj.core.api.Assertions.assertThat
 import org.bouncycastle.asn1.x509.*
@@ -232,7 +234,7 @@ class X509UtilitiesTest {
 
         // Generate server cert and private key and populate another keystore suitable for SSL
         val nodeCa = createDevNodeCa(intermediateCa, MEGA_CORP.name)
-        signingCertStore.get(createNew = true).also { it.registerDevSigningCertificates(MEGA_CORP.name, rootCa.certificate, intermediateCa, nodeCa) }
+        signingCertStore.get(createNew = true).also { it.installDevNodeCaCertPath(MEGA_CORP.name, rootCa.certificate, intermediateCa, nodeCa) }
         p2pSslConfig.keyStore.get(createNew = true).also { it.registerDevP2pCertificates(MEGA_CORP.name, rootCa.certificate, intermediateCa, nodeCa) }
         // Load back server certificate
         val certStore = signingCertStore.get()

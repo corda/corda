@@ -4,15 +4,14 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.ClientRelevantException
 import net.corda.core.CordaRuntimeException
 import net.corda.core.flows.*
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
 import net.corda.node.services.Permissions
 import net.corda.nodeapi.exceptions.InternalNodeException
-import net.corda.testing.core.ALICE_NAME
-import net.corda.testing.core.BOB_NAME
-import net.corda.testing.core.singleIdentity
+import net.corda.testing.core.*
 import net.corda.testing.driver.*
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.startNode
@@ -21,13 +20,34 @@ import org.assertj.core.api.AssertionsForInterfaceTypes.assertThat
 import org.hibernate.exception.GenericJDBCException
 import org.junit.Test
 import java.sql.SQLException
+import kotlin.test.assertEquals
 
 class RpcExceptionHandlingTest {
     private val user = User("mark", "dadada", setOf(Permissions.all()))
     private val users = listOf(user)
 
     @Test
-    fun `rpc client receive client-relevant exceptions regardless of devMode`() {
+    fun `rpc client receives wrapped exceptions in devMode with no stacktraces`() {
+        val params = NodeParameters(rpcUsers = users)
+        val clientRelevantMessage = "This is for the players!"
+
+        fun NodeHandle.throwExceptionFromFlow() {
+            rpc.startFlow(::ClientRelevantErrorFlow, clientRelevantMessage).returnValue.getOrThrow()
+        }
+
+        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
+            val devModeNode = startNode(params, BOB_NAME).getOrThrow()
+            assertThatThrownBy { devModeNode.throwExceptionFromFlow() }.isInstanceOfSatisfying(ClientRelevantException::class.java) { exception ->
+                assertEquals((exception.cause as CordaRuntimeException).originalExceptionClassName, SQLException::class.qualifiedName)
+                assertThat(exception.stackTrace).isEmpty()
+                assertThat((exception.cause as CordaRuntimeException).stackTrace).isEmpty()
+                assertThat(exception.message).isEqualTo(clientRelevantMessage)
+            }
+        }
+    }
+
+    @Test
+    fun `rpc client receives client-relevant message regardless of devMode`() {
         val params = NodeParameters(rpcUsers = users)
         val clientRelevantMessage = "This is for the players!"
 
@@ -37,9 +57,6 @@ class RpcExceptionHandlingTest {
 
         fun assertThatThrownExceptionIsReceivedUnwrapped(node: NodeHandle) {
             assertThatThrownBy { node.throwExceptionFromFlow() }.isInstanceOfSatisfying(ClientRelevantException::class.java) { exception ->
-
-                assertThat(exception).hasNoCause()
-                assertThat(exception.stackTrace).isEmpty()
                 assertThat(exception.message).isEqualTo(clientRelevantMessage)
             }
         }
@@ -50,6 +67,25 @@ class RpcExceptionHandlingTest {
 
             assertThatThrownExceptionIsReceivedUnwrapped(devModeNode)
             assertThatThrownExceptionIsReceivedUnwrapped(node)
+        }
+    }
+
+    @Test
+    fun `rpc client receives no specific information in non devMode`() {
+        val params = NodeParameters(rpcUsers = users)
+        val clientRelevantMessage = "This is for the players!"
+
+        fun NodeHandle.throwExceptionFromFlow() {
+            rpc.startFlow(::ClientRelevantErrorFlow, clientRelevantMessage).returnValue.getOrThrow()
+        }
+
+        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
+            val node = startNode(ALICE_NAME, devMode = false, parameters = params).getOrThrow()
+            assertThatThrownBy { node.throwExceptionFromFlow() }.isInstanceOfSatisfying(ClientRelevantException::class.java) { exception ->
+                assertThat(exception).hasNoCause()
+                assertThat(exception.stackTrace).isEmpty()
+                assertThat(exception.message).isEqualTo(clientRelevantMessage)
+            }
         }
     }
 
@@ -88,24 +124,26 @@ class RpcExceptionHandlingTest {
     fun `rpc client handles exceptions thrown on counter-party side`() {
         val params = NodeParameters(rpcUsers = users)
 
-        fun DriverDSL.scenario(devMode: Boolean) {
+        fun DriverDSL.scenario(nameA: CordaX500Name, nameB: CordaX500Name, devMode: Boolean) {
 
-            val nodeA = startNode(ALICE_NAME, devMode, params).getOrThrow()
-            val nodeB = startNode(BOB_NAME, devMode, params).getOrThrow()
+            val nodeA = startNode(nameA, devMode, params).getOrThrow()
+            val nodeB = startNode(nameB, devMode, params).getOrThrow()
 
             nodeA.rpc.startFlow(::InitFlow, nodeB.nodeInfo.singleIdentity()).returnValue.getOrThrow()
         }
 
         driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
 
-            assertThatThrownBy { scenario(true) }.isInstanceOfSatisfying(CordaRuntimeException::class.java) { exception ->
+            assertThatThrownBy { scenario(ALICE_NAME, BOB_NAME,true) }.isInstanceOfSatisfying(CordaRuntimeException::class.java) { exception ->
 
                 assertThat(exception).hasNoCause()
                 assertThat(exception.stackTrace).isEmpty()
             }
-        }
-        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
-            assertThatThrownBy { scenario(false) }.isInstanceOfSatisfying(InternalNodeException::class.java) { exception ->
+
+            assertThatThrownBy { scenario(
+                    DUMMY_BANK_A_NAME,
+                    DUMMY_BANK_B_NAME,
+                    false) }.isInstanceOfSatisfying(InternalNodeException::class.java) { exception ->
 
                 assertThat(exception).hasNoCause()
                 assertThat(exception.stackTrace).isEmpty()

@@ -26,14 +26,14 @@ import javax.security.auth.x500.X500Principal
  * the given legal name), and the SSL key store will store the TLS cert which is a sub-cert of the node CA.
  */
 
-fun CertificateStore.registerDevSigningCertificates(legalName: CordaX500Name,
-                                                    rootCert: X509Certificate = DEV_ROOT_CA.certificate,
-                                                    intermediateCa: CertificateAndKeyPair = DEV_INTERMEDIATE_CA,
-                                                    devNodeCa: CertificateAndKeyPair = createDevNodeCa(intermediateCa, legalName)) {
+fun CertificateStore.installDevNodeCaCertPath(legalName: CordaX500Name,
+                                              rootCert: X509Certificate = DEV_ROOT_CA.certificate,
+                                              intermediateCa: CertificateAndKeyPair = DEV_INTERMEDIATE_CA,
+                                              devNodeCa: CertificateAndKeyPair = createDevNodeCa(intermediateCa, legalName)) {
 
     update {
         setPrivateKey(X509Utilities.CORDA_CLIENT_CA, devNodeCa.keyPair.private, listOf(devNodeCa.certificate, intermediateCa.certificate, rootCert),
-                this@registerDevSigningCertificates.entryPassword)
+                this@installDevNodeCaCertPath.entryPassword)
     }
 }
 

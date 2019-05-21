@@ -8,7 +8,7 @@ description 'Corda Shell'
 
 configurations {
     integrationTestCompile.extendsFrom testCompile
-    integrationTestRuntime.extendsFrom testRuntime
+    integrationTestRuntimeOnly.extendsFrom testRuntimeOnly
 }
 
 sourceSets {
@@ -54,8 +54,12 @@ dependencies {
     // For logging, required for ANSIProgressRenderer.
     compile "org.apache.logging.log4j:log4j-core:$log4j_version"
 
+    testImplementation "junit:junit:$junit_version"
+
+    testRuntimeOnly "org.junit.vintage:junit-vintage-engine:${junit_vintage_version}"
+    testRuntimeOnly "org.junit.platform:junit-platform-launcher:${junit_platform_version}"
+    
     // Unit testing helpers.
-    testCompile "junit:junit:$junit_version"
     testCompile "org.assertj:assertj-core:$assertj_version"
     testCompile project(':test-utils')
     testCompile project(':finance:contracts')

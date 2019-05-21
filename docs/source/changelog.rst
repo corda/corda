@@ -4,6 +4,25 @@ Changelog
 Here's a summary of what's changed in each Corda release. For guidance on how to upgrade code from the previous
 release, see :doc:`app-upgrade-notes`.
 
+.. _changelog_v4.2:
+
+Version 4.2
+-----------
+
+* Contract attachments are now automatically whitelisted by the node if another contract attachment is present with the same contract classes,
+  signed by the same public keys, and uploaded by a trusted uploader. This allows the node to resolve transactions that use earlier versions
+  of a contract without having to manually install that version, provided a newer version is installed. Similarly, non-contract attachments
+  are whitelisted if another attachment is present on the node that is signed by the same public key.
+
+* :doc:`design/data-model-upgrades/package-namespace-ownership` configurations can be now be set as described in
+  :ref:`node_package_namespace_ownership`, when using the Cordformation plugin version 4.0.43.
+
+* Disabled the default loading of ``hibernate-validator`` as a plugin by hibernate when a CorDapp depends on it. This change will in turn fix the
+  (https://github.com/corda/corda/issues/4444) issue, because nodes will no longer need to add ``hibernate-validator`` to the ``\libs`` folder.
+  For nodes that already did that, it can be safely removed when the latest Corda is installed.
+  One thing to keep in mind is that if any CorDapp relied on hibernate-validator to validate Querayable JPA Entities via annotations, that will no longer happen.
+  That was a bad practice anyway, because the ``ContractState`` should be validated in the Contract verify method.
+
 .. _changelog_v4.0:
 
 Version 4.0

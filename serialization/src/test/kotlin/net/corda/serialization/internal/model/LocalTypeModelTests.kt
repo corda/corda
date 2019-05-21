@@ -8,7 +8,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.lang.reflect.Type
-import java.time.LocalDateTime
 import java.util.*
 
 class LocalTypeModelTests {
@@ -16,6 +15,13 @@ class LocalTypeModelTests {
     private val descriptorBasedSerializerRegistry = DefaultDescriptorBasedSerializerRegistry()
     private val customSerializerRegistry: CustomSerializerRegistry = CachingCustomSerializerRegistry(descriptorBasedSerializerRegistry)
     private val model = ConfigurableLocalTypeModel(WhitelistBasedTypeModelConfiguration(AllWhitelist, customSerializerRegistry))
+    private val emptyCustomSerializerRegistry = object: CustomSerializerRegistry {
+        override val customSerializerNames: List<String> = emptyList()
+        override fun register(customSerializer: CustomSerializer<out Any>) {}
+        override fun registerExternal(customSerializer: CorDappCustomSerializer) {}
+        override fun findCustomSerializer(clazz: Class<*>, declaredType: Type): AMQPSerializer<Any>? = null
+    }
+    private val modelWithoutOpacity = ConfigurableLocalTypeModel(WhitelistBasedTypeModelConfiguration(AllWhitelist, emptyCustomSerializerRegistry))
 
     interface CollectionHolder<K, V> {
         val list: List<V>
@@ -40,7 +46,7 @@ class LocalTypeModelTests {
 
     @Test
     fun `Primitives and collections`() {
-        assertInformation<CollectionHolder<UUID, LocalDateTime>>("CollectionHolder<UUID, LocalDateTime>")
+        assertInformation<CollectionHolder<UUID, String>>("CollectionHolder<UUID, String>")
 
         assertInformation<StringKeyedCollectionHolder<Int>>("""
             StringKeyedCollectionHolder<Integer>(list: List<Integer>, map: Map<String, Integer>, array: List<Integer>[]): CollectionHolder<String, Integer>
@@ -85,9 +91,9 @@ class LocalTypeModelTests {
     fun `interfaces and superclasses`() {
         assertInformation<SuperSuper<Int, Int>>("SuperSuper<Integer, Integer>")
         assertInformation<Super<UUID>>("Super<UUID>: SuperSuper<UUID, Double>")
-        assertInformation<Abstract<LocalDateTime>>("""
-            Abstract<LocalDateTime>: Super<LocalDateTime[]>, SuperSuper<LocalDateTime[], Double>
-              a: LocalDateTime[]
+        assertInformation<Abstract<String>>("""
+            Abstract<String>: Super<String[]>, SuperSuper<String[], Double>
+              a: String[]
               b: Double
         """)
         assertInformation<Concrete>("""
@@ -134,20 +140,70 @@ class LocalTypeModelTests {
         """)
     }
 
-    class TransitivelyNonComposable(val a: String, val b: Exception)
+    class TransitivelyNonComposable(
+        val a: String,
+        val b: Exception,
+        val c: MissingConstructorParameter,
+        val d: AnotherTransitivelyNonComposable
+    )
+
+    class AnotherTransitivelyNonComposable(val e: String, val f: Exception, val g: OneMoreTransitivelyNonComposable)
+    class OneMoreTransitivelyNonComposable(val h: String, val i: Exception)
+    class MissingConstructorParameter(val a: String, b: Exception)
 
     @Test
-    fun `non-composable types`() {
-        val serializerRegistry = object: CustomSerializerRegistry {
-            override fun register(customSerializer: CustomSerializer<out Any>) {}
-
-            override fun registerExternal(customSerializer: CorDappCustomSerializer) {}
-
-            override fun findCustomSerializer(clazz: Class<*>, declaredType: Type): AMQPSerializer<Any>? = null
+    fun `no unique deserialization constructor creates non-composable type`() {
+        modelWithoutOpacity.inspect(typeOf<Exception>()).let { typeInformation ->
+            assertTrue(typeInformation is LocalTypeInformation.NonComposable)
+            typeInformation as LocalTypeInformation.NonComposable
+            assertEquals(
+                "No unique deserialization constructor can be identified",
+                typeInformation.reason
+            )
+            assertEquals(
+                "Either annotate a constructor for this type with @ConstructorForDeserialization, or provide a custom serializer for it",
+                typeInformation.remedy
+            )
         }
-        val modelWithoutOpacity = ConfigurableLocalTypeModel(WhitelistBasedTypeModelConfiguration(AllWhitelist, serializerRegistry) )
-        assertTrue(modelWithoutOpacity.inspect(typeOf<Exception>()) is LocalTypeInformation.NonComposable)
-        assertTrue(modelWithoutOpacity.inspect(typeOf<TransitivelyNonComposable>()) is LocalTypeInformation.NonComposable)
+    }
+
+    @Test
+    fun `missing constructor parameters creates non-composable type`() {
+        modelWithoutOpacity.inspect(typeOf<MissingConstructorParameter>()).let { typeInformation ->
+            assertTrue(typeInformation is LocalTypeInformation.NonComposable)
+            typeInformation as LocalTypeInformation.NonComposable
+            assertEquals(
+                "Mandatory constructor parameters [b] are missing from the readable properties [a]",
+                typeInformation.reason
+            )
+            assertEquals(
+                "Either provide getters or readable fields for [b], or provide a custom serializer for this type",
+                typeInformation.remedy
+            )
+        }
+    }
+
+    @Test
+    fun `transitive types are non-composable creates non-composable type`() {
+        modelWithoutOpacity.inspect(typeOf<TransitivelyNonComposable>()).let { typeInformation ->
+            assertTrue(typeInformation is LocalTypeInformation.NonComposable)
+            typeInformation as LocalTypeInformation.NonComposable
+            assertEquals(
+                """
+                Has properties [b, c, d] of types that are not serializable:
+                b [${Exception::class.java}]: No unique deserialization constructor can be identified
+                c [${MissingConstructorParameter::class.java}]: Mandatory constructor parameters [b] are missing from the readable properties [a]
+                d [${AnotherTransitivelyNonComposable::class.java}]: Has properties [f, g] of types that are not serializable:
+                    f [${Exception::class.java}]: No unique deserialization constructor can be identified
+                    g [${OneMoreTransitivelyNonComposable::class.java}]: Has properties [i] of types that are not serializable:
+                        i [${Exception::class.java}]: No unique deserialization constructor can be identified
+                """.trimIndent(), typeInformation.reason
+            )
+            assertEquals(
+                "Either ensure that the properties [b, c, d] are serializable, or provide a custom serializer for this type",
+                typeInformation.remedy
+            )
+        }
     }
 
     private inline fun <reified T> assertInformation(expected: String) {

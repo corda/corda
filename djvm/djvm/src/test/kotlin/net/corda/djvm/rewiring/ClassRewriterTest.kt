@@ -5,7 +5,7 @@ import net.corda.djvm.TestBase
 import net.corda.djvm.assertions.AssertionExtensions.assertThat
 import net.corda.djvm.execution.ExecutionProfile
 import org.assertj.core.api.Assertions.*
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import sandbox.net.corda.djvm.costing.ThresholdViolationError
 import java.nio.file.Paths
 import java.util.*

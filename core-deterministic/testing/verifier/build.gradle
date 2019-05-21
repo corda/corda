@@ -21,6 +21,7 @@ dependencies {
     // Compile against the deterministic artifacts to ensure that we use only the deterministic API subset.
     compileOnly configurations.deterministicArtifacts
     api "junit:junit:$junit_version"
+    runtimeOnly "org.junit.vintage:junit-vintage-engine:${junit_vintage_version}"
 }
 
 jar {

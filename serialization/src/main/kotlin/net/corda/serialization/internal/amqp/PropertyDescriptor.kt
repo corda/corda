@@ -32,21 +32,20 @@ data class PropertyDescriptor(val field: Field?, val setter: Method?, val getter
      */
     fun validate() {
         getter?.apply {
-            val getterType = genericReturnType
             field?.apply {
-                if (!getterType.isSupertypeOf(genericReturnType))
-                    throw AMQPNotSerializableException(
-                            declaringClass,
-                            "Defined getter for parameter $name returns type $getterType " +
+                if (!getter.returnType.boxesOrIsAssignableFrom(field.type))
+                   throw AMQPNotSerializableException(
+                           declaringClass,
+                            "Defined getter for parameter $name returns type ${getter.returnType} " +
                                     "yet underlying type is $genericType")
             }
         }
 
         setter?.apply {
-            val setterType = genericParameterTypes[0]!!
+            val setterType = setter.parameterTypes[0]!!
 
             field?.apply {
-                if (!genericType.isSupertypeOf(setterType))
+                if (!field.type.boxesOrIsAssignableFrom(setterType))
                     throw AMQPNotSerializableException(
                             declaringClass,
                             "Defined setter for parameter $name takes parameter of type $setterType " +
@@ -54,7 +53,7 @@ data class PropertyDescriptor(val field: Field?, val setter: Method?, val getter
             }
 
             getter?.apply {
-                if (!genericReturnType.isSupertypeOf(setterType))
+                if (!getter.returnType.boxesOrIsAssignableFrom(setterType))
                     throw AMQPNotSerializableException(
                             declaringClass,
                             "Defined setter for parameter $name takes parameter of type $setterType, " +
@@ -63,6 +62,9 @@ data class PropertyDescriptor(val field: Field?, val setter: Method?, val getter
         }
     }
 }
+
+private fun Class<*>.boxesOrIsAssignableFrom(other: Class<*>) =
+        isAssignableFrom(other) || kotlin.javaPrimitiveType == other
 
 private fun Type.isSupertypeOf(that: Type) = TypeToken.of(this).isSupertypeOf(that)
 
@@ -85,7 +87,7 @@ private val propertyMethodRegex = Regex("(?<type>get|set|is)(?<var>\\p{Lu}.*)")
  * take a single parameter of a type compatible with exampleProperty and isExampleProperty must
  * return a boolean
  */
-internal fun Class<out Any?>.propertyDescriptors(): Map<String, PropertyDescriptor> {
+internal fun Class<out Any?>.propertyDescriptors(validateProperties: Boolean = true): Map<String, PropertyDescriptor> {
     val fieldProperties = superclassChain().declaredFields().byFieldName()
 
     return superclassChain().declaredMethods()
@@ -93,8 +95,9 @@ internal fun Class<out Any?>.propertyDescriptors(): Map<String, PropertyDescript
             .thatArePropertyMethods()
             .withValidSignature()
             .byNameAndClassifier(fieldProperties.keys)
-            .toClassProperties(fieldProperties)
-            .validated()
+            .toClassProperties(fieldProperties).run {
+                if (validateProperties) validated() else this
+            }
 }
 
 /**

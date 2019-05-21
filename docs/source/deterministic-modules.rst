@@ -163,7 +163,7 @@ Creating the Deterministic SDK
 Configuring the Corda Project
     #. Open the root ``build.gradle`` file and define this property:
 
-       .. code-block:: gradle
+       .. code-block:: groovy
 
            buildscript {
                ext {

@@ -15,3 +15,4 @@ Corda is an open-source project and contributions are welcome!
    codestyle
    cli-ux-guidelines
    contributing-flow-state-machines
+   contributing-flow-internals

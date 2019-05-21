@@ -1,3 +1,12 @@
+pluginManagement {
+    ext.artifactory_contextUrl = 'https://software.r3.com/artifactory'
+
+    repositories {
+        mavenLocal()
+        gradlePluginPortal()
+        maven { url "$artifactory_contextUrl/corda-dependencies" }
+    }
+}
 // The project is named 'corda-project' and not 'corda' because if this is named the same as the
 // output JAR from the capsule then the buildCordaJAR task goes into an infinite loop.
 rootProject.name = 'corda-project'
@@ -22,6 +31,8 @@ include 'experimental:avalanche'
 include 'experimental:behave'
 include 'experimental:quasar-hook'
 include 'experimental:corda-utils'
+include 'experimental:nodeinfo'
+include 'experimental:netparams'
 include 'jdk8u-deterministic'
 include 'test-common'
 include 'test-cli'
@@ -70,6 +81,10 @@ project(":common-validation").projectDir = new File("$settingsDir/common/validat
 
 include 'common-configuration-parsing'
 project(":common-configuration-parsing").projectDir = new File("$settingsDir/common/configuration-parsing")
+
+
+include 'common-logging'
+project(":common-logging").projectDir = new File("$settingsDir/common/logging")
 // Common libraries - end
 
 apply from: 'buildCacheSettings.gradle'

@@ -163,7 +163,7 @@ A frequent requirement is that configuration files must not expose passwords to 
 
 Take a simple node config that wishes to protect the node cryptographic stores:
 
-.. parsed-literal::
+.. code-block:: none
 
     myLegalName = "O=PasswordProtectedNode,OU=corda,L=London,C=GB"
     keyStorePassword = ${KEY_PASS}

@@ -2,7 +2,7 @@ package net.corda.djvm.execution
 
 import net.corda.djvm.TestBase
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import java.util.*
 import java.util.function.Function
 

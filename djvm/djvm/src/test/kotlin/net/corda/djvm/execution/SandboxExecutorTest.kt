@@ -11,7 +11,7 @@ import net.corda.djvm.assertions.AssertionExtensions.withProblem
 import net.corda.djvm.rewiring.SandboxClassLoadingException
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import sandbox.net.corda.djvm.costing.ThresholdViolationError
 import sandbox.net.corda.djvm.rules.RuleViolationError
 import java.nio.file.Files
@@ -431,7 +431,7 @@ class SandboxExecutorTest : TestBase() {
         override fun apply(input: Int): String? {
             return synchronized(this) {
                 @Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN")
-                val javaObject = this as java.lang.Object
+                val javaObject = this as Object
                 when(input) {
                     1 -> {
                         javaObject.notify()

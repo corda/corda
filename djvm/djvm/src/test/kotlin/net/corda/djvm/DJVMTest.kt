@@ -1,8 +1,8 @@
 package net.corda.djvm
 
 import org.assertj.core.api.Assertions.*
-import org.junit.Assert.*
-import org.junit.Test
+import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Test
 import sandbox.java.lang.sandbox
 import java.text.DecimalFormatSymbols
 
