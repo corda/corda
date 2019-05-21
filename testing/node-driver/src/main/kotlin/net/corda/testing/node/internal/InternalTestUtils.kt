@@ -31,7 +31,7 @@ import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.TestCordapp
 import net.corda.testing.node.User
 import net.corda.testing.node.testContext
-import org.apache.commons.lang.ClassUtils
+import org.apache.commons.lang3.ClassUtils
 import org.assertj.core.api.Assertions.assertThat
 import org.slf4j.LoggerFactory
 import rx.Observable

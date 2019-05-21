@@ -7,7 +7,7 @@ import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.FlowProgressHandleImpl
 import net.corda.tools.shell.utlities.ANSIProgressRenderer
 import net.corda.tools.shell.utlities.CRaSHANSIProgressRenderer
-import org.apache.commons.lang.SystemUtils
+import org.apache.commons.lang3.SystemUtils
 import org.assertj.core.api.Assertions.assertThat
 import org.crsh.text.RenderPrintWriter
 import org.junit.Test
