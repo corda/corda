@@ -24,6 +24,7 @@ import net.corda.node.internal.artemis.ReactiveArtemisConsumer
 import net.corda.node.internal.artemis.ReactiveArtemisConsumer.Companion.multiplex
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.services.config.NodeConfiguration
+import net.corda.node.services.events.NodeSchedulerService
 import net.corda.node.services.statemachine.DeduplicationId
 import net.corda.node.services.statemachine.ExternalEvent
 import net.corda.node.services.statemachine.SenderDeduplicationId
@@ -577,6 +578,7 @@ private class P2PMessagingConsumer(
 
     private companion object {
         private const val initialSessionMessages = "${P2PMessagingHeaders.Type.KEY}<>'${P2PMessagingHeaders.Type.SESSION_INIT_VALUE}'"
+        private val logger by lazy { loggerFor<P2PMessagingClient>() }
     }
 
     private var startedFlag = false
@@ -587,12 +589,24 @@ private class P2PMessagingConsumer(
     private val initialAndExistingConsumer = multiplex(queueNames, createSession)
     private val subscriptions = mutableSetOf<Subscription>()
 
+    private val notificationTimer = Timer("DrainNotificationTimer", true)
+
     override fun start() {
 
         synchronized(this) {
             require(!startedFlag){"Must not already be started"}
-            drainingModeWasChangedEvents.filter { change -> change.switchedOn() }.doOnNext { initialAndExistingConsumer.switchTo(existingOnlyConsumer) }.subscribe()
-            drainingModeWasChangedEvents.filter { change -> change.switchedOff() }.doOnNext { existingOnlyConsumer.switchTo(initialAndExistingConsumer) }.subscribe()
+            drainingModeWasChangedEvents.filter { change -> change.switchedOn() }.doOnNext {
+                initialAndExistingConsumer.switchTo(existingOnlyConsumer)
+                notificationTimer.schedule(object : TimerTask() {
+                    override fun run() {
+                        logger.warn("Node is currently in draining mode, new flows will not be processed!")
+                    }
+                }, 10.seconds.toMillis(), 1.minutes.toMillis())
+            }.subscribe()
+            drainingModeWasChangedEvents.filter { change -> change.switchedOff() }.doOnNext {
+                existingOnlyConsumer.switchTo(initialAndExistingConsumer)
+                notificationTimer.cancel()
+            }.subscribe()
             subscriptions += existingOnlyConsumer.messages.doOnNext(messages::onNext).subscribe()
             subscriptions += initialAndExistingConsumer.messages.doOnNext(messages::onNext).subscribe()
             if (isDrainingModeOn()) {

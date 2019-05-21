@@ -7,7 +7,9 @@ import net.corda.core.internal.concurrent.map
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.seconds
 import net.corda.core.utilities.unwrap
+import net.corda.node.logging.logFile
 import net.corda.node.services.Permissions
 import net.corda.nodeapi.internal.hasCancelledDrainingShutdown
 import net.corda.testing.core.ALICE_NAME
@@ -19,6 +21,7 @@ import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.internal.chooseIdentity
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.waitForShutdown
+import org.assertj.core.api.Assertions
 import org.assertj.core.api.AssertionsForInterfaceTypes.assertThat
 import org.junit.After
 import org.junit.Before
@@ -77,6 +80,24 @@ class P2PFlowsDrainingModeTest {
                     }
                 }.getOrThrow()
             }
+        }
+    }
+
+    @Test
+    fun `flows draining mode warns the operator of the draining mode`() {
+        driver(DriverParameters(startNodesInProcess = false, portAllocation = portAllocation, notarySpecs = emptyList())) {
+            val initiatedNode = startNode(providedName = ALICE_NAME).getOrThrow()
+            val initiated = initiatedNode.rpc
+
+            initiated.setFlowsDrainingModeEnabled(true)
+
+            Thread.sleep(10.seconds.toMillis())
+
+            val logFile = initiatedNode.logFile()
+            val linesWithWarning = logFile.useLines { lines -> lines.filter { it.contains("Node is currently in draining mode, new flows will not be processed!")}.toList() }
+
+
+            Assertions.assertThat(linesWithWarning).isNotEmpty
         }
     }
 
