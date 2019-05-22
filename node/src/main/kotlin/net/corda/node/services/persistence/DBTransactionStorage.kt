@@ -21,7 +21,7 @@ import net.corda.node.utilities.NonInvalidatingCache
 import net.corda.node.utilities.WeightBasedAppendOnlyPersistentMap
 import net.corda.nodeapi.internal.persistence.*
 import net.corda.serialization.internal.CordaSerializationEncoding.SNAPPY
-import org.apache.commons.lang.ArrayUtils.EMPTY_BYTE_ARRAY
+import org.apache.commons.lang3.ArrayUtils.EMPTY_BYTE_ARRAY
 import rx.Observable
 import rx.subjects.PublishSubject
 import java.util.concurrent.locks.ReentrantReadWriteLock
