@@ -216,7 +216,10 @@ allprojects {
     }
 
     tasks.withType(Test) {
-        useJUnitPlatform()
+        useJUnitPlatform() {
+            includeEngines 'junit-vintage'
+            excludeEngines 'junit-jupiter'
+        }
 
         failFast = project.hasProperty('tests.failFast') ? project.property('tests.failFast').toBoolean() : false
 
