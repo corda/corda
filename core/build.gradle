@@ -170,6 +170,11 @@ task smokeTest(type: Test) {
     classpath = sourceSets.smokeTest.runtimeClasspath
 }
 
+// quasar exclusions upon agent code instrumentation at run-time
+quasar {
+    excludePackages.addAll "org.h2.**",  "org.junit.**"
+}
+
 artifacts {
     testArtifacts testJar
 }

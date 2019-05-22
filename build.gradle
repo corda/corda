@@ -163,6 +163,14 @@ allprojects {
         )
     }
 
+    // quasar exclusions upon agent code instrumentation at run-time
+    ext {
+        quasar_exclusions = [
+                "co.paralleluniverse**",
+                "groovy**"
+        ]
+    }
+
     dependencyCheck {
         suppressionFile = '.ci/dependency-checker/suppressedLibraries.xml'
         cveValidForHours = 1
