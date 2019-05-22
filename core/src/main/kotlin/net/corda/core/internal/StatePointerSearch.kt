@@ -2,6 +2,7 @@ package net.corda.core.internal
 
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StatePointer
+import org.apache.commons.lang3.reflect.FieldUtils
 import java.lang.reflect.Field
 import java.util.*
 
@@ -25,20 +26,9 @@ class StatePointerSearch(val state: ContractState) {
     // Queue of fields to search.
     private val fieldQueue = ArrayDeque<FieldWithObject>().apply { addAllFields(state) }
 
-    // Get fields of class and all super-classes.
-    private fun getAllFields(clazz: Class<*>): List<Field> {
-        val fields = mutableListOf<Field>()
-        var currentClazz = clazz
-        while (currentClazz.superclass != null) {
-            fields.addAll(currentClazz.declaredFields)
-            currentClazz = currentClazz.superclass
-        }
-        return fields
-    }
-
     // Helper for adding all fields to the queue.
     private fun ArrayDeque<FieldWithObject>.addAllFields(obj: Any) {
-        val fields = getAllFields(obj::class.java)
+        val fields = FieldUtils.getAllFieldsList(obj::class.java)
 
         val fieldsWithObjects = fields.mapNotNull { field ->
             // Ignore classes which have not been loaded.
