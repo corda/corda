@@ -89,7 +89,7 @@ buildscript {
     ext.class_graph_version = '4.6.12'
     ext.jcabi_manifests_version = '1.1'
     ext.picocli_version = '3.8.0'
-    ext.commons_lang_version = '2.6'
+    ext.commons_lang_version = '3.9'
     ext.commons_io_version = '2.6'
 
     // Name of the IntelliJ SDK created for the deterministic Java rt.jar.

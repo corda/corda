@@ -12,7 +12,7 @@ import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.nodeapi.internal.cryptoservice.CryptoService
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
-import org.apache.commons.lang.ArrayUtils.EMPTY_BYTE_ARRAY
+import org.apache.commons.lang3.ArrayUtils.EMPTY_BYTE_ARRAY
 import org.bouncycastle.operator.ContentSigner
 import org.hibernate.annotations.Type
 import java.security.KeyPair

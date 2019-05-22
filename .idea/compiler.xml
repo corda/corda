@@ -30,9 +30,9 @@
       <module name="bridge_integrationTest" target="1.8" />
       <module name="bridge_main" target="1.8" />
       <module name="bridge_test" target="1.8" />
-      <module name="bridgecapsule_main" target="1.6" />
-      <module name="bridgecapsule_smokeTest" target="1.6" />
-      <module name="bridgecapsule_test" target="1.6" />
+      <module name="bridgecapsule_main" target="1.8" />
+      <module name="bridgecapsule_smokeTest" target="1.8" />
+      <module name="bridgecapsule_test" target="1.8" />
       <module name="buildSrc-com.r3.corda_buildSrc_main" target="1.8" />
       <module name="buildSrc-com.r3.corda_buildSrc_test" target="1.8" />
       <module name="buildSrc-com.r3.corda_canonicalizer_main" target="1.8" />
@@ -58,6 +58,8 @@
       <module name="com.r3.corda_canonicalizer_test" target="1.8" />
       <module name="common-configuration-parsing_main" target="1.8" />
       <module name="common-configuration-parsing_test" target="1.8" />
+      <module name="common-logging_main" target="1.8" />
+      <module name="common-logging_test" target="1.8" />
       <module name="common-validation_main" target="1.8" />
       <module name="common-validation_test" target="1.8" />
       <module name="confidential-identities_main" target="1.8" />
@@ -83,6 +85,8 @@
       <module name="corda-enterprise-testing_test" target="1.8" />
       <module name="corda-enterprise-tools_main" target="1.8" />
       <module name="corda-enterprise-tools_test" target="1.8" />
+      <module name="corda-enterprise_buildSrc_main" target="1.8" />
+      <module name="corda-enterprise_buildSrc_test" target="1.8" />
       <module name="corda-enterprise_main" target="1.8" />
       <module name="corda-enterprise_test" target="1.8" />
       <module name="corda-finance_integrationTest" target="1.8" />
@@ -246,6 +250,8 @@
       <module name="net.corda_buildSrc_test" target="1.8" />
       <module name="net.corda_canonicalizer_main" target="1.8" />
       <module name="net.corda_canonicalizer_test" target="1.8" />
+      <module name="netparams_main" target="1.8" />
+      <module name="netparams_test" target="1.8" />
       <module name="network-bootstrapper_main" target="1.8" />
       <module name="network-bootstrapper_test" target="1.8" />
       <module name="network-verifier-contracts_main" target="1.8" />
@@ -269,6 +275,8 @@
       <module name="node_main" target="1.8" />
       <module name="node_smokeTest" target="1.8" />
       <module name="node_test" target="1.8" />
+      <module name="nodeinfo_main" target="1.8" />
+      <module name="nodeinfo_test" target="1.8" />
       <module name="notary-bft-smart_main" target="1.8" />
       <module name="notary-bft-smart_test" target="1.8" />
       <module name="notary-demo-contracts_main" target="1.8" />
@@ -293,6 +301,10 @@
       <module name="perftestcordapp_integrationTest" target="1.8" />
       <module name="perftestcordapp_main" target="1.8" />
       <module name="perftestcordapp_test" target="1.8" />
+      <module name="pinger-capsule_main" target="1.6" />
+      <module name="pinger-capsule_test" target="1.6" />
+      <module name="pinger_main" target="1.8" />
+      <module name="pinger_test" target="1.8" />
       <module name="publish-utils_main" target="1.8" />
       <module name="publish-utils_test" target="1.8" />
       <module name="qa-behave_main" target="1.8" />
