@@ -113,7 +113,7 @@ dependencies {
     // This may be temporary until we experiment with other ways to do on-the-fly contract specialisation via an API.
     compile "org.apache.commons:commons-jexl3:3.0"
     
-    compile "org.apache.commons:commons-lang3:3.9"
+    compile "org.apache.commons:commons-lang3:$commons_lang_version"
 
     // Java ed25519 implementation. See https://github.com/str4d/ed25519-java/
     compile "net.i2p.crypto:eddsa:$eddsa_version"
