@@ -165,9 +165,21 @@ allprojects {
 
     // quasar exclusions upon agent code instrumentation at run-time
     ext {
+        verbose = true
         quasar_exclusions = [
-                "co.paralleluniverse**",
-                "groovy**"
+                'co.paralleluniverse**',
+                'groovy**',
+                'com.esotericsoftware.**',
+                'jdk**',
+                'junit**',
+                'kotlin**',
+                'net.rubygrapefruit.**',
+                'org.gradle.**',
+                'org.apache.**',
+                'org.jacoco.**',
+                'org.junit**',
+                'org.slf4j**',
+                'worker.org.gradle.**'
         ]
     }
 
@@ -216,11 +228,6 @@ allprojects {
     }
 
     tasks.withType(Test) {
-        useJUnitPlatform() {
-            includeEngines 'junit-vintage'
-            excludeEngines 'junit-jupiter'
-        }
-
         failFast = project.hasProperty('tests.failFast') ? project.property('tests.failFast').toBoolean() : false
 
         // Prevent the project from creating temporary files outside of the build directory.

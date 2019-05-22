@@ -228,7 +228,36 @@ task integrationTest(type: Test) {
 
 // quasar exclusions upon agent code instrumentation at run-time
 quasar {
-    excludePackages.addAll "org.h2.**",  "org.junit.**"
+    excludePackages.addAll(
+            "antlr**",
+            "com.codahale**",
+            "com.fasterxml.**",
+            "com.github.benmanes.caffeine.**",
+            "com.google.**",
+            "com.lmax.**",
+            "com.nhaarman.mockito_kotlin**",
+            "com.zaxxer.**",
+            "net.bytebuddy**",
+            "io.github.classgraph**",
+            "io.netty*",
+            "liquibase**",
+            "net.i2p.crypto.**",
+            "nonapi.io.github.classgraph.**",
+            "org.apiguardian.**",
+            "org.assertj**",
+            "org.bouncycastle**",
+            "org.codehaus.**",
+            "org.h2**",
+            "org.hamcrest**",
+            "org.hibernate**",
+            "org.jboss.**",
+            "org.mockito**",
+            "org.objenesis**",
+            "org.opentest4j**",
+            "org.w3c.**",
+            "org.xml**",
+            "org.yaml**",
+            "rx**")
 }
 
 jar {
