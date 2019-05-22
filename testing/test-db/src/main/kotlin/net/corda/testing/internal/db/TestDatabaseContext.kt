@@ -13,6 +13,17 @@ import org.junit.jupiter.api.extension.ExtensionContext
  */
 interface TestDatabaseContext : ExtensionContext.Store.CloseableResource {
 
+    companion object {
+        private val _usingRemoteDatabase = ThreadLocal<Boolean>()
+
+        /**
+         * A flag that an instantiating class can set to indicate to tests that a remote database is in use.
+         */
+        var usingRemoteDatabase: Boolean
+            get() = _usingRemoteDatabase.get() ?: false
+            set(value) = _usingRemoteDatabase.set(value)
+    }
+    
     /**
      * Called once when the context is first instantiated, i.e. at the start of the test run, before any tests at all have been executed.
      *
