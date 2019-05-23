@@ -109,7 +109,6 @@ class LoggingFirewallAuditServiceTest {
            assertThat(this, containsSubstring("Packets dropped count: 6(inbound), 14(outbound)"))
            assertThat(this, containsSubstring("Failed connections:"))
            assertThat(this, containsSubstring("Server4:10001 -> in: 1 out: 0"))
-           println(this)
        }
 
         // Ensure reset stats
@@ -119,7 +118,6 @@ class LoggingFirewallAuditServiceTest {
             assertThat(this, containsSubstring("Packets dropped count: 0(inbound), 0(outbound)"))
             assertThat(this, containsSubstring("Failed connections:").not())
             assertThat(this, containsSubstring("Accepted packets:").not())
-            println(this)
         }
     }
 
