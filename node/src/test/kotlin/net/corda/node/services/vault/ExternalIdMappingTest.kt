@@ -15,6 +15,7 @@ import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.node.MockServices
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import java.util.*
@@ -87,6 +88,7 @@ class ExternalIdMappingTest {
         assertEquals(setOf(dummyStateOne, dummyStateTwo), resultTwo.map { it.state.data }.toSet())
     }
 
+    @Ignore("TC Flaky test: java.security.NoSuchAlgorithmException: no such algorithm: NONEwithEdDSA for provider BC")
     @Test
     fun `One state can be mapped to multiple externalIds`() {
         val vaultService = services.vaultService
