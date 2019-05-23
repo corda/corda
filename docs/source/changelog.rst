@@ -4,6 +4,14 @@ Changelog
 Here's a summary of what's changed in each Corda release. For guidance on how to upgrade code from the previous
 release, see :doc:`app-upgrade-notes`.
 
+.. _changelog_v5.0:
+
+Version 5.0
+-----------
+
+* Removed ``finance-workflows`` dependency on jackson library.  The functions that used jackson (e.g. ``FinanceJSONSupport``) have been moved
+  into IRS Demo.
+
 .. _changelog_v4.2:
 
 Version 4.2
