@@ -14,7 +14,7 @@ import net.corda.core.utilities.seconds
 import net.corda.finance.DOLLARS
 import net.corda.finance.EUR
 import net.corda.finance.contracts.*
-import net.corda.irs.utilities.loadTestCalendar
+import net.corda.finance.workflows.utils.loadTestCalendar
 import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.testing.common.internal.addNotary
 import net.corda.testing.common.internal.testNetworkParameters
