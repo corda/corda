@@ -258,6 +258,11 @@ absolute path to the firewall's base directory.
 :silencedIPs: An optional list of strings of that will be compared to the remote IPv4/IPv6 source address of inbound socket connections.
     If there is a match all logging for this connection will be reduced to TRACE level. The intention is to allow simple filtering of health check connections from load balancers and other monitoring components.
 
+:custom.jvmArgs: Allows a list of jvm argument overrides to be sent to the Corda firewall process spawned by the capsule wrapper.
+    For instance ```custom.jvmArgs = ["-Xmx2G"]`` in the configuration file will set 2GByte of memory for the firewall.
+    This is equivalent to specifying ``-Dcapsule.jvm.args="-Xmx2G"`` on the command line, but is easier to track with other configuration and does not risk
+    accidentally setting the properties onto the capsule parent process (e.g. wasting 2Gbyte of memory).
+
 Complete example
 ================
 As an example to show all features, the following is a walk-through of the configuration steps to set-up a pair of HA hot-cold nodes for two separate legal identities,
