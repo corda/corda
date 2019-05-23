@@ -1,4 +1,4 @@
-package net.corda.irs.utilities
+package net.corda.finance.workflows.utils
 
 import net.corda.core.flows.FlowException
 import net.corda.core.serialization.CordaSerializable
