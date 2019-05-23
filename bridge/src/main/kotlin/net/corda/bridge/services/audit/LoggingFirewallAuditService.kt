@@ -32,12 +32,15 @@ class LoggingFirewallAuditService(val conf: FirewallConfiguration,
             return this.values.map { it.get() }.sum()
         }
 
-        private fun <K> Map<K, AtomicLong>.prettyPrint(tabsCount: Int, nf: NumberFormat): String {
+        private fun <K> prettyPrint(inbound: Map<K, AtomicLong>, outbound: Map<K, AtomicLong>, tabsCount: Int, nf: NumberFormat): String {
+            val keys = inbound.keys.union(outbound.keys)
             val leftPad = "\t".repeat(tabsCount)
-            return entries.joinToString(separator = "\n") { entry -> leftPad + entry.key.toString() + " -> " + nf.format(entry.value.get())}
+            return keys.joinToString(separator = "\n") { key ->
+                leftPad + "$key -> in: ${nf.format(inbound.getOrDefault(key, AtomicLong(0))?.get())} out: ${nf.format(outbound.getOrDefault(key, AtomicLong(0))?.get())}"
+            }
         }
 
-        private fun <K> Map<K, AtomicLong>.whenNonEmptyPrint(block: Map<K, AtomicLong>.() -> String): String {
+        private fun <K> Set<K>.whenNonEmptyPrint(block:() -> String): String {
             return if(this.isEmpty()) {
                 ""
             } else {
@@ -54,6 +57,7 @@ class LoggingFirewallAuditService(val conf: FirewallConfiguration,
 
     private data class DirectionalStats(val successfulConnectionCount : ConcurrentMap<InetSocketAddress, AtomicLong> = ConcurrentHashMap<InetSocketAddress, AtomicLong>(),
                                         val failedConnectionCount : ConcurrentMap<InetSocketAddress, AtomicLong> = ConcurrentHashMap<InetSocketAddress, AtomicLong>(),
+                                        val activeConnectionCount : ConcurrentMap<InetSocketAddress, AtomicLong> =  ConcurrentHashMap<InetSocketAddress, AtomicLong>(),
                                         val accepted : ConcurrentMap<String, Pair<AtomicLong, AtomicLong>> = ConcurrentHashMap<String, Pair<AtomicLong, AtomicLong>>(),
                                         val droppedPacketsCount : ConcurrentMap<String, AtomicLong> = ConcurrentHashMap<String, AtomicLong>())
 
@@ -64,6 +68,18 @@ class LoggingFirewallAuditService(val conf: FirewallConfiguration,
                 val map = RoutingDirection.values().map { it to DirectionalStats() }.toMap()
                 return EnumMap(map)
             }
+        }
+
+        fun reset() : State {
+            val newStatsMap = forEveryRoutingDirection()
+            directionalStatsMap.entries.forEach {
+                val currentStats = it.value
+                val newStats = DirectionalStats().apply {
+                    activeConnectionCount.putAll(currentStats.activeConnectionCount)
+                }
+                newStatsMap[it.key] = newStats
+            }
+            return State(newStatsMap)
         }
     }
 
@@ -92,6 +108,7 @@ class LoggingFirewallAuditService(val conf: FirewallConfiguration,
         logWithSuppression(address, certificateSubject, msg, direction) { log.warn(it) }
         withDirectionalStatsOf(direction) {
             successfulConnectionCount.getOrPut(address, ::AtomicLong).incrementAndGet()
+            activeConnectionCount.getOrPut(address, ::AtomicLong).incrementAndGet()
         }
     }
 
@@ -99,6 +116,7 @@ class LoggingFirewallAuditService(val conf: FirewallConfiguration,
         logWithSuppression(address, certificateSubject, msg, direction) { log.info(it) }
         withDirectionalStatsOf(direction) {
             failedConnectionCount.getOrPut(address, ::AtomicLong).incrementAndGet()
+            activeConnectionCount.getOrPut(address, ::AtomicLong).decrementAndGet()
         }
     }
 
@@ -114,7 +132,7 @@ class LoggingFirewallAuditService(val conf: FirewallConfiguration,
     private fun ApplicationMessage?.address(direction: RoutingDirection) : String {
         val unknownAddress = "Unknown address"
         return when(direction) {
-            RoutingDirection.OUTGOING -> this?.destinationLegalName ?: unknownAddress
+            RoutingDirection.OUTBOUND -> this?.destinationLegalName ?: unknownAddress
             RoutingDirection.INBOUND -> if (this is ReceivedMessage) {
                 this.sourceLegalName
             } else {
@@ -186,32 +204,30 @@ class LoggingFirewallAuditService(val conf: FirewallConfiguration,
                                         "\n\tTotal: ${nf.format(totalMemory)} MB" +
                                         "\n\tMax: ${nf.format(maxMemory)} MB"
 
-        val state = stateRef.getAndSet(State())
+        val state = stateRef.getAndSet(stateRef.get().reset())
 
         val dirStatsIn = state.directionalStatsMap[RoutingDirection.INBOUND]!!
-        val dirStatsOut = state.directionalStatsMap[RoutingDirection.OUTGOING]!!
+        val dirStatsOut = state.directionalStatsMap[RoutingDirection.OUTBOUND]!!
 
         val inAcceptedPackets = dirStatsIn.accepted.mapValues { it.value.first }
         val outAcceptedPackets = dirStatsOut.accepted.mapValues { it.value.first }
 
         val trafficTotalsStr =   "Traffic totals:\n" +
-                                "\tSuccessful connection count: ${nf.format(dirStatsIn.successfulConnectionCount.sumValues())}(inbound), ${nf.format(dirStatsOut.successfulConnectionCount.sumValues())}(outgoing)\n" +
-                                "\tFailed connection count: ${nf.format(dirStatsIn.failedConnectionCount.sumValues())}(inbound), ${nf.format(dirStatsOut.failedConnectionCount.sumValues())}(outgoing)\n" +
+                                "\tSuccessful connection count: ${nf.format(dirStatsIn.successfulConnectionCount.sumValues())}(inbound), ${nf.format(dirStatsOut.successfulConnectionCount.sumValues())}(outbound)\n" +
+                                "\tFailed connection count: ${nf.format(dirStatsIn.failedConnectionCount.sumValues())}(inbound), ${nf.format(dirStatsOut.failedConnectionCount.sumValues())}(outbound)\n" +
+                                "\tActive connection count: ${nf.format(dirStatsIn.activeConnectionCount.sumValues())}(inbound), ${nf.format(dirStatsOut.activeConnectionCount.sumValues())}(outbound)\n" +
                                 "\tPackets accepted count: ${nf.format(inAcceptedPackets.sumValues())}(inbound), " +
-                                                        "${nf.format(outAcceptedPackets.sumValues())}(outgoing)\n" +
+                                                        "${nf.format(outAcceptedPackets.sumValues())}(outbound)\n" +
                                 "\tBytes transmitted: ${nf.format(dirStatsIn.accepted.mapValues { it.value.second }.sumValues())}(inbound), " +
-                                                   "${nf.format(dirStatsOut.accepted.mapValues { it.value.second }.sumValues())}(outgoing)\n" +
-                                "\tPackets dropped count: ${nf.format(dirStatsIn.droppedPacketsCount.sumValues())}(inbound), ${nf.format(dirStatsOut.droppedPacketsCount.sumValues())}(outgoing)"
+                                                   "${nf.format(dirStatsOut.accepted.mapValues { it.value.second }.sumValues())}(outbound)\n" +
+                                "\tPackets dropped count: ${nf.format(dirStatsIn.droppedPacketsCount.sumValues())}(inbound), ${nf.format(dirStatsOut.droppedPacketsCount.sumValues())}(outbound)"
 
         val breakDownTrafficStr = "Traffic breakdown:\n" +
-                dirStatsIn.successfulConnectionCount.whenNonEmptyPrint { "\tSuccessful connections in:\n${prettyPrint(2, nf)}\n" } +
-                dirStatsOut.successfulConnectionCount.whenNonEmptyPrint { "\tSuccessful connections out:\n${prettyPrint(2, nf)}\n" } +
-                dirStatsIn.failedConnectionCount.whenNonEmptyPrint { "\tFailed connections in:\n${prettyPrint(2, nf)}\n" } +
-                dirStatsOut.failedConnectionCount.whenNonEmptyPrint { "\tFailed connections out:\n${prettyPrint(2, nf)}\n" } +
-                inAcceptedPackets.whenNonEmptyPrint { "\tAccepted packets in:\n${prettyPrint(2, nf)}\n" } +
-                outAcceptedPackets.whenNonEmptyPrint { "\tAccepted packets out:\n${prettyPrint(2, nf)}\n" } +
-                dirStatsIn.droppedPacketsCount.whenNonEmptyPrint { "\tDropped packets in:\n${prettyPrint(2, nf)}\n" } +
-                dirStatsOut.droppedPacketsCount.whenNonEmptyPrint { "\tDropped packets out:\n${prettyPrint(2, nf)}" }
+                dirStatsIn.activeConnectionCount.keys.union(dirStatsOut.activeConnectionCount.keys).whenNonEmptyPrint {  "\tLive connections:\n" + "${prettyPrint(dirStatsIn.activeConnectionCount, dirStatsOut.activeConnectionCount, 2, nf)}\n" } +
+                dirStatsIn.successfulConnectionCount.keys.union(dirStatsOut.successfulConnectionCount.keys).whenNonEmptyPrint { "\tSuccessful connections:\n" + "${prettyPrint(dirStatsIn.successfulConnectionCount, dirStatsOut.successfulConnectionCount, 2, nf)}\n" } +
+                dirStatsIn.failedConnectionCount.keys.union(dirStatsOut.failedConnectionCount.keys).whenNonEmptyPrint { "\tFailed connections:\n" + "${prettyPrint(dirStatsIn.failedConnectionCount, dirStatsOut.failedConnectionCount, 2, nf)}\n" } +
+                inAcceptedPackets.keys.union(outAcceptedPackets.keys).whenNonEmptyPrint { "\tAccepted packets:\n" + "${prettyPrint(inAcceptedPackets, outAcceptedPackets, 2, nf)}\n" } +
+                dirStatsIn.droppedPacketsCount.keys.union(dirStatsOut.droppedPacketsCount.keys).whenNonEmptyPrint { "\tDropped packets:\n" + "${prettyPrint(dirStatsIn.droppedPacketsCount, dirStatsOut.droppedPacketsCount, 2, nf)}\n" }
 
         return durationStr + "\n" + runtimeStr + "\n" + trafficTotalsStr + "\n" + breakDownTrafficStr
     }
