@@ -11,10 +11,10 @@ evaluationDependsOn(':node:capsule')
 
 configurations {
     integrationTestCompile.extendsFrom testCompile
-    integrationTestRuntimeOnly.extendsFrom testRuntimeOnly
+    integrationTestRuntime.extendsFrom testRuntime
 
     smokeTestCompile.extendsFrom compile
-    smokeTestRuntimeOnly.extendsFrom runtimeOnly
+    smokeTestRuntime.extendsFrom runtime
 }
 
 sourceSets {
@@ -56,11 +56,10 @@ processSmokeTestResources {
 dependencies {
 
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
-    testImplementation "junit:junit:$junit_version"
-    testRuntimeOnly "org.junit.vintage:junit-vintage-engine:${junit_vintage_version}"
+    testImplementation "org.junit.vintage:junit-vintage-engine:${junit_vintage_version}"
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${junit_jupiter_version}"
     testRuntimeOnly "org.junit.platform:junit-platform-launcher:${junit_platform_version}"
-
+    
     testCompile "commons-fileupload:commons-fileupload:$fileupload_version"
 
     // Guava: Google test library (collections test suite)
@@ -94,12 +93,11 @@ dependencies {
 
     // Smoke tests do NOT have any Node code on the classpath!
     smokeTestImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
-    smokeTestImplementation "junit:junit:$junit_version"
 
-    smokeTestRuntimeOnly "org.junit.vintage:junit-vintage-engine:${junit_vintage_version}"
+    smokeTestCompile "org.junit.vintage:junit-vintage-engine:${junit_vintage_version}"
     smokeTestRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${junit_jupiter_version}"
     smokeTestRuntimeOnly "org.junit.platform:junit-platform-launcher:${junit_platform_version}"
-
+    
     smokeTestCompile project(':smoke-test-utils')
     smokeTestCompile "org.assertj:assertj-core:${assertj_version}"
 
@@ -141,7 +139,7 @@ jar {
 }
 
 configurations {
-    testArtifacts.extendsFrom testRuntimeClasspath
+    testArtifacts.extendsFrom testRuntime
 }
 
 tasks.withType(Test) {

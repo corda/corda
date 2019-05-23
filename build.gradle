@@ -208,8 +208,6 @@ allprojects {
     }
 
     tasks.withType(Test) {
-        useJUnitPlatform()
-
         failFast = project.hasProperty('tests.failFast') ? project.property('tests.failFast').toBoolean() : false
 
         // Prevent the project from creating temporary files outside of the build directory.
