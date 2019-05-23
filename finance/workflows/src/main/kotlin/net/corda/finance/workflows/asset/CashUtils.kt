@@ -56,16 +56,20 @@ object CashUtils {
      *           to move the cash will be added on top.
      * @param amount How much currency to send.
      * @param to the recipient party.
-     * @param ourIdentity well known identity to create a new confidential identity from, for sending change to.
+     * @param ourIdentity ourIdentity is used to determine the where the change will be sent.
+     *                    If anonymous is true then an anonymous identity will be generated from this and the change
+     *                    will be spent to that, otherwise ourIdentity will be used as is.
      * @param onlyFromParties if non-null, the asset states will be filtered to only include those issued by the set
      *                        of given parties. This can be useful if the party you're trying to pay has expectations
      *                        about which type of asset claims they are willing to accept.
+     * @param anonymous whether or not to use CI to send the change to
      * @return A [Pair] of the same transaction builder passed in as [tx], and the list of keys that need to sign
      *         the resulting transaction for it to be valid.
      * @throws InsufficientBalanceException when a cash spending transaction fails because
      *         there is insufficient quantity for a given currency (and optionally set of Issuer Parties).
      */
     @JvmStatic
+    @JvmOverloads
     @Throws(InsufficientBalanceException::class)
     @Suspendable
     fun generateSpend(services: ServiceHub,
@@ -73,8 +77,9 @@ object CashUtils {
                       amount: Amount<Currency>,
                       ourIdentity: PartyAndCertificate,
                       to: AbstractParty,
-                      onlyFromParties: Set<AbstractParty> = emptySet()): Pair<TransactionBuilder, List<PublicKey>> {
-        return generateSpend(services, tx, listOf(PartyAndAmount(to, amount)), ourIdentity, onlyFromParties)
+                      onlyFromParties: Set<AbstractParty> = emptySet(),
+                      anonymous: Boolean = true): Pair<TransactionBuilder, List<PublicKey>> {
+        return generateSpend(services, tx, listOf(PartyAndAmount(to, amount)), ourIdentity, onlyFromParties, anonymous)
     }
 
     /**
@@ -115,23 +120,28 @@ object CashUtils {
      * @param tx A builder, which may contain inputs, outputs and commands already. The relevant components needed
      *           to move the cash will be added on top.
      * @param payments A list of amounts to pay, and the party to send the payment to.
-     * @param ourIdentity well known identity to create a new confidential identity from, for sending change to.
+     * @param ourIdentity ourIdentity is used to determine the where the change will be sent.
+     *                    If anonymous is true then an anonymous identity will be generated from this and the change
+     *                    will be spent to that, otherwise ourIdentity will be used as is.
      * @param onlyFromParties if non-null, the asset states will be filtered to only include those issued by the set
      *                        of given parties. This can be useful if the party you're trying to pay has expectations
      *                        about which type of asset claims they are willing to accept.
+     * @param anonymous whether or not to use CI to send the change to
      * @return A [Pair] of the same transaction builder passed in as [tx], and the list of keys that need to sign
      *         the resulting transaction for it to be valid.
      * @throws InsufficientBalanceException when a cash spending transaction fails because
      *         there is insufficient quantity for a given currency (and optionally set of Issuer Parties).
      */
     @JvmStatic
+    @JvmOverloads
     @Throws(InsufficientBalanceException::class)
     @Suspendable
     fun generateSpend(services: ServiceHub,
                       tx: TransactionBuilder,
                       payments: List<PartyAndAmount<Currency>>,
                       ourIdentity: PartyAndCertificate,
-                      onlyFromParties: Set<AbstractParty> = emptySet()): Pair<TransactionBuilder, List<PublicKey>> {
+                      onlyFromParties: Set<AbstractParty> = emptySet(),
+                      anonymous: Boolean = true): Pair<TransactionBuilder, List<PublicKey>> {
         fun deriveState(txState: TransactionState<Cash.State>, amt: Amount<Issued<Currency>>, owner: AbstractParty): TransactionState<Cash.State> {
             return txState.copy(data = txState.data.copy(amount = amt, owner = owner))
         }
@@ -141,17 +151,18 @@ object CashUtils {
         val cashSelection = AbstractCashSelection.getInstance { services.jdbcSession().metaData }
         val acceptableCoins = cashSelection.unconsumedCashStatesForSpending(services, totalAmount, onlyFromParties, tx.notary, tx.lockId)
         val revocationEnabled = false // Revocation is currently unsupported
-        // Generate a new identity that change will be sent to for confidentiality purposes. This means that a
+        // If anonymous is true, generate a new identity that change will be sent to for confidentiality purposes. This means that a
         // third party with a copy of the transaction (such as the notary) cannot identify who the change was
         // sent to
-        val changeIdentity = services.keyManagementService.freshKeyAndCert(ourIdentity, revocationEnabled)
+        val changeIdentity = if (anonymous) services.keyManagementService.freshKeyAndCert(ourIdentity, revocationEnabled).party.anonymise() else ourIdentity.party
         return OnLedgerAsset.generateSpend(
                 tx,
                 payments,
                 acceptableCoins,
-                changeIdentity.party.anonymise(),
+                changeIdentity,
                 ::deriveState,
                 Cash()::generateMoveCommand
         )
     }
 }
+

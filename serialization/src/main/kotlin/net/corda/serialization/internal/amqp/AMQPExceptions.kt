@@ -23,10 +23,12 @@ internal inline fun <T> ifThrowsAppend(strToAppendFn: () -> String, block: () ->
     try {
         return block()
     } catch (th: Throwable) {
-        if (th is AMQPNotSerializableException) {
-            th.classHierarchy.add(strToAppendFn())
-        } else {
-            th.setMessage("${strToAppendFn()} -> ${th.message}")
+        when (th) {
+            is AMQPNotSerializableException -> th.classHierarchy.add(strToAppendFn())
+            // Do not overwrite the message of these exceptions as it may be used.
+            is ClassNotFoundException -> {}
+            is NoClassDefFoundError -> {}
+            else -> th.setMessage("${strToAppendFn()} -> ${th.message}")
         }
         throw th
     }

@@ -17,14 +17,17 @@ import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationFactory
 import net.corda.core.utilities.contextLogger
 import java.io.NotSerializableException
+import java.lang.Exception
 import java.security.PublicKey
 import java.time.Duration
 import java.time.Instant
 import java.util.ArrayDeque
 import java.util.UUID
+import java.util.regex.Pattern
 import kotlin.collections.ArrayList
 import kotlin.collections.component1
 import kotlin.collections.component2
+import kotlin.reflect.KClass
 
 /**
  * A TransactionBuilder is a transaction class that's mutable (unlike the others which are all immutable). It is
@@ -66,7 +69,10 @@ open class TransactionBuilder(
     private companion object {
         private fun defaultLockId() = (Strand.currentStrand() as? FlowStateMachine<*>)?.id?.uuid ?: UUID.randomUUID()
         private val log = contextLogger()
-        private const val CORDA_VERSION_THAT_INTRODUCED_FLATTENED_COMMANDS = 4
+
+        private val ID_PATTERN = "\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*"
+        private val FQCP = Pattern.compile("$ID_PATTERN(/$ID_PATTERN)+")
+        private fun isValidJavaClass(identifier: String) = FQCP.matcher(identifier).matches()
     }
 
     private val inputsWithTransactionState = arrayListOf<StateAndRef<ContractState>>()
@@ -164,46 +170,64 @@ open class TransactionBuilder(
             wireTx
     }
 
+    // Returns the first exception in the hierarchy that matches one of the [types].
+    private tailrec fun Throwable.rootClassNotFoundCause(vararg types: KClass<*>): Throwable = when {
+        this::class in types -> this
+        this.cause == null -> this
+        else -> this.cause!!.rootClassNotFoundCause(*types)
+    }
+
     /**
      * @return true if a new dependency was successfully added.
      */
     private fun addMissingDependency(services: ServicesForResolution, wireTx: WireTransaction): Boolean {
-        try {
+        return try {
             wireTx.toLedgerTransaction(services).verify()
-        } catch (e: NoClassDefFoundError) {
-            val missingClass = e.message ?: throw e
-            addMissingAttachment(missingClass, services)
-            return true
-        } catch (e: TransactionDeserialisationException) {
-            if (e.cause is NotSerializableException && e.cause.cause is ClassNotFoundException) {
-                val missingClass = e.cause.cause!!.message ?: throw e
-                addMissingAttachment(missingClass.replace(".", "/"), services)
-                return true
+            // The transaction verified successfully without adding any extra dependency.
+            false
+        } catch (e: Throwable) {
+            val rootError = e.rootClassNotFoundCause(ClassNotFoundException::class, NoClassDefFoundError::class)
+
+            when {
+                // Handle various exceptions that can be thrown during verification and drill down the wrappings.
+                // Note: this is a best effort to preserve backwards compatibility.
+                rootError is ClassNotFoundException -> addMissingAttachment((rootError.message ?: throw e).replace(".", "/"), services, e)
+                rootError is NoClassDefFoundError -> addMissingAttachment(rootError.message ?: throw e, services, e)
+
+                // Ignore these exceptions as they will break unit tests.
+                // The point here is only to detect missing dependencies. The other exceptions are irrelevant.
+                e is TransactionVerificationException -> false
+                e is TransactionResolutionException -> false
+                e is IllegalStateException -> false
+                e is IllegalArgumentException -> false
+
+                // Fail early if none of the expected scenarios were hit.
+                else -> {
+                    log.error("""The transaction currently built will not validate because of an unknown error most likely caused by a
+                        missing dependency in the transaction attachments.
+                        Please contact the developer of the CorDapp for further instructions.
+                    """.trimIndent(), e)
+                    throw e
+                }
             }
-            return false
-        } catch (e: NotSerializableException) {
-            if (e.cause is ClassNotFoundException) {
-                val missingClass = e.cause!!.message ?: throw e
-                addMissingAttachment(missingClass.replace(".", "/"), services)
-                return true
-            }
-            return false
-        // Ignore these exceptions as they will break unit tests.
-        // The point here is only to detect missing dependencies. The other exceptions are irrelevant.
-        } catch (tve: TransactionVerificationException) {
-        } catch (tre: TransactionResolutionException) {
-        } catch (ise: IllegalStateException) {
-        } catch (ise: IllegalArgumentException) {
         }
-        return false
     }
 
-    private fun addMissingAttachment(missingClass: String, services: ServicesForResolution) {
+    private fun addMissingAttachment(missingClass: String, services: ServicesForResolution, originalException: Throwable): Boolean {
+        if (!isValidJavaClass(missingClass)) {
+            log.warn("Could not autodetect a valid attachment for the transaction being built.")
+            throw originalException
+        }
+
         val attachment = services.attachments.internalFindTrustedAttachmentForClass(missingClass)
-                ?: throw IllegalArgumentException("""The transaction currently built is missing an attachment for class: $missingClass.
+
+        if (attachment == null) {
+            log.error("""The transaction currently built is missing an attachment for class: $missingClass.
                         Attempted to find a suitable attachment but could not find any in the storage.
                         Please contact the developer of the CorDapp for further instructions.
                     """.trimIndent())
+            throw originalException
+        }
 
         log.warnOnce("""The transaction currently built is missing an attachment for class: $missingClass.
                         Automatically attaching contract dependency $attachment.
@@ -211,6 +235,7 @@ open class TransactionBuilder(
                     """.trimIndent())
 
         addAttachment(attachment.id)
+        return true
     }
 
     /**
@@ -410,20 +435,20 @@ open class TransactionBuilder(
      *
      * TODO - once support for third party signing is added, it should be implemented here. ( a constraint with 2 signatures is less restrictive than a constraint with 1 more signature)
      */
-    private fun attachmentConstraintsTransition(constraints: Set<AttachmentConstraint>, attachmentToUse: ContractAttachment): AttachmentConstraint = when {
+    private fun attachmentConstraintsTransition(
+        constraints: Set<AttachmentConstraint>,
+        attachmentToUse: ContractAttachment
+    ): AttachmentConstraint = when {
 
         // Sanity check.
         constraints.isEmpty() -> throw IllegalArgumentException("Cannot transition from no constraints.")
 
-        // When all input states have the same constraint.
-        constraints.size == 1 -> constraints.single()
-
-        // Fail when combining the insecure AlwaysAcceptAttachmentConstraint with something else. The size must be at least 2 at this point.
-        constraints.any { it is AlwaysAcceptAttachmentConstraint } ->
+        // Fail when combining the insecure AlwaysAcceptAttachmentConstraint with something else.
+        constraints.size > 1 && constraints.any { it is AlwaysAcceptAttachmentConstraint } ->
             throw IllegalArgumentException("Can't mix the AlwaysAcceptAttachmentConstraint with a secure constraint in the same transaction. This can be used to hide insecure transitions.")
 
         // Multiple states with Hash constraints with different hashes. This should not happen as we checked already.
-        constraints.all { it is HashAttachmentConstraint } ->
+        constraints.size > 1 && constraints.all { it is HashAttachmentConstraint } ->
             throw IllegalArgumentException("Cannot mix HashConstraints with different hashes in the same transaction.")
 
         // The HashAttachmentConstraint is the strongest constraint, so it wins when mixed with anything. As long as the actual constraints pass.
@@ -431,25 +456,31 @@ open class TransactionBuilder(
         constraints.any { it is HashAttachmentConstraint } -> constraints.find { it is HashAttachmentConstraint }!!
 
         // TODO, we don't currently support mixing signature constraints with different signers. This will change once we introduce third party signers.
-        constraints.all { it is SignatureAttachmentConstraint } ->
+        constraints.count { it is SignatureAttachmentConstraint } > 1 ->
             throw IllegalArgumentException("Cannot mix SignatureAttachmentConstraints signed by different parties in the same transaction.")
 
-        // This ensures a smooth migration from the Whitelist Constraint, given that for the transaction to be valid it still has to pass both constraints.
-        // The transition is possible only when the SignatureConstraint contains ALL signers from the attachment.
-        constraints.any { it is SignatureAttachmentConstraint } && constraints.any { it is WhitelistedByZoneAttachmentConstraint } -> {
-            val signatureConstraint = constraints.mapNotNull { it as? SignatureAttachmentConstraint }.single()
+        // This ensures a smooth migration from a Whitelist Constraint to a Signature Constraint
+        constraints.any { it is WhitelistedByZoneAttachmentConstraint } && attachmentToUse.isSigned -> {
+            val signatureConstraint = constraints.singleOrNull { it is SignatureAttachmentConstraint }
+            // If there were states transitioned already used in the current transaction use that signature constraint, otherwise create a new one.
             when {
-                attachmentToUse.signerKeys.isEmpty() -> throw IllegalArgumentException("Cannot mix a state with the WhitelistedByZoneAttachmentConstraint and a state with the SignatureAttachmentConstraint, when the latest attachment is not signed. Please contact your Zone operator.")
-                signatureConstraint.key.keys.containsAll(attachmentToUse.signerKeys) -> signatureConstraint
-                else -> throw IllegalArgumentException("Attempting to transition a WhitelistedByZoneAttachmentConstraint state backed by an attachment signed by multiple parties to a weaker SignatureConstraint that does not require all those signatures. Please contact your Zone operator.")
+                signatureConstraint != null -> signatureConstraint
+                else -> makeSignatureAttachmentConstraint(attachmentToUse.signerKeys)
             }
         }
+
+        // This condition is hit when the current node has not installed the latest signed version but has already received states that have been migrated
+        constraints.any { it is SignatureAttachmentConstraint } && !attachmentToUse.isSigned ->
+            throw IllegalArgumentException("Attempting to create an illegal transaction. Please install the latest signed version for the $attachmentToUse Cordapp.")
+
+        // When all input states have the same constraint.
+        constraints.size == 1 -> constraints.single()
 
         else -> throw IllegalArgumentException("Unexpected constraints $constraints.")
     }
 
     private fun makeSignatureAttachmentConstraint(attachmentSigners: List<PublicKey>) =
-            SignatureAttachmentConstraint(CompositeKey.Builder().addKeys(attachmentSigners.map { it }).build())
+            SignatureAttachmentConstraint(CompositeKey.Builder().addKeys(attachmentSigners).build())
 
     /**
      * This method should only be called for upgradeable contracts.

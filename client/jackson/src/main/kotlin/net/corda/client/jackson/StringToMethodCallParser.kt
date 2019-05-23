@@ -127,7 +127,7 @@ open class StringToMethodCallParser<in T : Any> @JvmOverloads constructor(
         return method.parameters.mapIndexed { index, param ->
             when {
                 param.isNamePresent -> param.name
-            // index + 1 because the first Kotlin reflection param is 'this', but that doesn't match Java reflection.
+                // index + 1 because the first Kotlin reflection param is 'this', but that doesn't match Java reflection.
                 kf != null -> kf.parameters[index + 1].name ?: throw UnparseableCallException.ReflectionDataMissing(method.name, index)
                 else -> throw UnparseableCallException.ReflectionDataMissing(method.name, index)
             }
@@ -153,6 +153,7 @@ open class StringToMethodCallParser<in T : Any> @JvmOverloads constructor(
         class MissingParameter(methodName: String, val paramName: String, command: String) : UnparseableCallException("Parameter $paramName missing from attempt to invoke $methodName in command: $command")
         class TooManyParameters(methodName: String, command: String) : UnparseableCallException("Too many parameters provided for $methodName: $command")
         class ReflectionDataMissing(methodName: String, argIndex: Int) : UnparseableCallException("Method $methodName missing parameter name at index $argIndex")
+        class NoSuchFile(filename: String) : UnparseableCallException("File $filename not found")
         class FailedParse(e: Exception) : UnparseableCallException(e.message ?: e.toString(), e)
     }
 
@@ -212,6 +213,8 @@ open class StringToMethodCallParser<in T : Any> @JvmOverloads constructor(
             val entryType = om.typeFactory.constructType(argType)
             try {
                 om.readValue<Any>(entry.traverse(om), entryType)
+            } catch (e: java.nio.file.NoSuchFileException) {
+                throw UnparseableCallException.NoSuchFile(e.file ?: entry.toString())
             } catch (e: Exception) {
                 throw UnparseableCallException.FailedParse(e)
             }
@@ -236,8 +239,7 @@ open class StringToMethodCallParser<in T : Any> @JvmOverloads constructor(
     /** Returns a string-to-string map of commands to a string describing available parameter types. */
     val availableCommands: Map<String, String>
         get() {
-            return methodMap.entries().map { entry ->
-                val (name, args) = entry   // TODO: Kotlin 1.1
+            return methodMap.entries().map { (name, args) ->
                 val argStr = if (args.parameterCount == 0) "" else {
                     val paramNames = methodParamNames[name]!!
                     val typeNames = args.parameters.map { it.type.simpleName }
