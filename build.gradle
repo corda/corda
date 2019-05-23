@@ -165,7 +165,6 @@ allprojects {
 
     // quasar exclusions upon agent code instrumentation at run-time
     ext {
-        verbose = true
         quasar_exclusions = [
                 'co.paralleluniverse**',
                 'groovy**',
