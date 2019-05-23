@@ -1,7 +1,7 @@
 package net.corda.irs.api
 
 import co.paralleluniverse.fibers.Suspendable
-import loadTestCalendar
+import net.corda.irs.utilities.loadTestCalendar
 import net.corda.core.contracts.Command
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.*
