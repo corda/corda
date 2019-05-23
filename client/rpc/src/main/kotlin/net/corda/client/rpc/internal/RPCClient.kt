@@ -85,6 +85,7 @@ class RPCClient<I : RPCOps>(
                 reconnectAttempts = if (haPoolTransportConfigurations.isEmpty()) rpcConfiguration.maxReconnectAttempts else 0
                 minLargeMessageSize = rpcConfiguration.maxFileSize
                 isUseGlobalPools = nodeSerializationEnv != null
+                producerWindowSize = -1
             }
             val sessionId = Trace.SessionId.newInstance()
             val proxyHandler = RPCClientProxyHandler(rpcConfiguration, username, password, serverLocator, clientAddress,
