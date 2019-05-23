@@ -155,57 +155,46 @@ class LoggingFirewallAuditServiceTest {
 }
 
 /*
-During last PT1M stats were as follows:
-Load average: N/A
+During last PT50S stats were as follows:
+Load average: 455.96%
 Memory:
-	Free: 230 MB
-	Total: 702 MB
-	Max: 7,243 MB
+	Free: 236 MB
+	Total: 379 MB
+	Max: 3,641 MB
 Traffic totals:
-	Successful connection count: 13(inbound), 27(outgoing)
-	Failed connection count: 2(inbound), 5(outgoing)
-	Packets accepted count: 3,000(inbound), 6,000(outgoing)
-	Bytes transmitted: 60,000(inbound), 120,000(outgoing)
-	Packets dropped count: 6(inbound), 14(outgoing)
+	Successful connection count: 13(inbound), 27(outbound)
+	Failed connection count: 2(inbound), 5(outbound)
+	Active connection count: 11(inbound), 22(outbound)
+	Packets accepted count: 3,000(inbound), 6,000(outbound)
+	Bytes transmitted: 60,000(inbound), 120,000(outbound)
+	Packets dropped count: 6(inbound), 14(outbound)
 Traffic breakdown:
-	Successful connections in:
-		Server5:10001 -> 3
-		Server4:10001 -> 3
-		Server3:10001 -> 2
-		Server2:10001 -> 3
-		Server1:10001 -> 2
-	Successful connections out:
-		Server5:10001 -> 5
-		Server4:10001 -> 5
-		Server3:10001 -> 6
-		Server2:10001 -> 5
-		Server1:10001 -> 6
-	Failed connections in:
-		Server4:10001 -> 1
-		Server2:10001 -> 1
-	Failed connections out:
-		Server5:10001 -> 1
-		Server3:10001 -> 2
-		Server2:10001 -> 1
-		Server1:10001 -> 1
-	Accepted packets in:
-		Party1 -> 750
-		Party2 -> 750
-		Party3 -> 750
-		Party4 -> 750
-	Accepted packets out:
-		Party1 -> 1,500
-		Party2 -> 1,500
-		Party3 -> 1,500
-		Party4 -> 1,500
-	Dropped packets in:
-		Party1 -> 1
-		Party2 -> 1
-		Party3 -> 2
-		Party4 -> 2
-	Dropped packets out:
-		Party1 -> 4
-		Party2 -> 4
-		Party3 -> 3
-		Party4 -> 3
+	Live connections:
+		Server5:10001 -> in: 3 out: 4
+		Server4:10001 -> in: 2 out: 5
+		Server3:10001 -> in: 2 out: 4
+		Server2:10001 -> in: 2 out: 4
+		Server1:10001 -> in: 2 out: 5
+	Successful connections:
+		Server5:10001 -> in: 3 out: 5
+		Server4:10001 -> in: 3 out: 5
+		Server3:10001 -> in: 2 out: 6
+		Server2:10001 -> in: 3 out: 5
+		Server1:10001 -> in: 2 out: 6
+	Failed connections:
+		Server4:10001 -> in: 1 out: 0
+		Server2:10001 -> in: 1 out: 1
+		Server5:10001 -> in: 0 out: 1
+		Server3:10001 -> in: 0 out: 2
+		Server1:10001 -> in: 0 out: 1
+	Accepted packets:
+		Party1 -> in: 750 out: 1,500
+		Party2 -> in: 750 out: 1,500
+		Party3 -> in: 750 out: 1,500
+		Party4 -> in: 750 out: 1,500
+	Dropped packets:
+		Party1 -> in: 1 out: 4
+		Party2 -> in: 1 out: 4
+		Party3 -> in: 2 out: 3
+		Party4 -> in: 2 out: 3
  */
