@@ -1,17 +1,17 @@
 @file:JvmName("FinanceJSONSupport")
 
-package net.corda.finance.workflows.plugin
+package net.corda.irs.flows.plugin
 
-import TEST_CALENDAR_NAMES
 import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.core.JsonParseException
 import com.fasterxml.jackson.core.JsonParser
 import com.fasterxml.jackson.databind.*
 import com.fasterxml.jackson.databind.deser.std.StringArrayDeserializer
 import com.fasterxml.jackson.databind.module.SimpleModule
-import loadTestCalendar
 import net.corda.finance.contracts.BusinessCalendar
 import net.corda.finance.contracts.Expression
+import net.corda.finance.workflows.utils.TEST_CALENDAR_NAMES
+import net.corda.finance.workflows.utils.loadTestCalendar
 import java.time.LocalDate
 import java.util.*
 
