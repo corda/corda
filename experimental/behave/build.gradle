@@ -65,6 +65,7 @@ dependencies {
 
     // Unit Tests
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
+    testImplementation "junit:junit:$junit_version"
 
     testCompile "org.junit.vintage:junit-vintage-engine:${junit_vintage_version}"
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${junit_jupiter_version}"
