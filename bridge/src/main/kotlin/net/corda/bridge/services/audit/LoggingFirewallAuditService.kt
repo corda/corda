@@ -32,12 +32,15 @@ class LoggingFirewallAuditService(val conf: FirewallConfiguration,
             return this.values.map { it.get() }.sum()
         }
 
-        private fun <K> Map<K, AtomicLong>.prettyPrint(tabsCount: Int, nf: NumberFormat): String {
+        private fun <K> prettyPrint(inbound: Map<K, AtomicLong>, outbound: Map<K, AtomicLong>, tabsCount: Int, nf: NumberFormat): String {
+            val keys = inbound.keys.union(outbound.keys)
             val leftPad = "\t".repeat(tabsCount)
-            return entries.joinToString(separator = "\n") { entry -> leftPad + entry.key.toString() + " -> " + nf.format(entry.value.get())}
+            return keys.joinToString(separator = "\n") { key ->
+                leftPad + "$key -> in: ${nf.format(inbound.getOrDefault(key, AtomicLong(0))?.get())} out: ${nf.format(outbound.getOrDefault(key, AtomicLong(0))?.get())}"
+            }
         }
 
-        private fun <K> Map<K, AtomicLong>.whenNonEmptyPrint(block: Map<K, AtomicLong>.() -> String): String {
+        private fun <K> Set<K>.whenNonEmptyPrint(block:() -> String): String {
             return if(this.isEmpty()) {
                 ""
             } else {
@@ -220,16 +223,11 @@ class LoggingFirewallAuditService(val conf: FirewallConfiguration,
                                 "\tPackets dropped count: ${nf.format(dirStatsIn.droppedPacketsCount.sumValues())}(inbound), ${nf.format(dirStatsOut.droppedPacketsCount.sumValues())}(outbound)"
 
         val breakDownTrafficStr = "Traffic breakdown:\n" +
-                dirStatsIn.activeConnectionCount.whenNonEmptyPrint { "\tLive connections in:\n${prettyPrint(2, nf)}\n" } +
-                dirStatsOut.activeConnectionCount.whenNonEmptyPrint { "\tLive connections out:\n${prettyPrint(2, nf)}\n" } +
-                dirStatsIn.successfulConnectionCount.whenNonEmptyPrint { "\tSuccessful connections in:\n${prettyPrint(2, nf)}\n" } +
-                dirStatsOut.successfulConnectionCount.whenNonEmptyPrint { "\tSuccessful connections out:\n${prettyPrint(2, nf)}\n" } +
-                dirStatsIn.failedConnectionCount.whenNonEmptyPrint { "\tFailed connections in:\n${prettyPrint(2, nf)}\n" } +
-                dirStatsOut.failedConnectionCount.whenNonEmptyPrint { "\tFailed connections out:\n${prettyPrint(2, nf)}\n" } +
-                inAcceptedPackets.whenNonEmptyPrint { "\tAccepted packets in:\n${prettyPrint(2, nf)}\n" } +
-                outAcceptedPackets.whenNonEmptyPrint { "\tAccepted packets out:\n${prettyPrint(2, nf)}\n" } +
-                dirStatsIn.droppedPacketsCount.whenNonEmptyPrint { "\tDropped packets in:\n${prettyPrint(2, nf)}\n" } +
-                dirStatsOut.droppedPacketsCount.whenNonEmptyPrint { "\tDropped packets out:\n${prettyPrint(2, nf)}" }
+                dirStatsIn.activeConnectionCount.keys.union(dirStatsOut.activeConnectionCount.keys).whenNonEmptyPrint {  "\tLive connections:\n" + "${prettyPrint(dirStatsIn.activeConnectionCount, dirStatsOut.activeConnectionCount, 2, nf)}\n" } +
+                dirStatsIn.successfulConnectionCount.keys.union(dirStatsOut.successfulConnectionCount.keys).whenNonEmptyPrint { "\tSuccessful connections:\n" + "${prettyPrint(dirStatsIn.successfulConnectionCount, dirStatsOut.successfulConnectionCount, 2, nf)}\n" } +
+                dirStatsIn.failedConnectionCount.keys.union(dirStatsOut.failedConnectionCount.keys).whenNonEmptyPrint { "\tFailed connections:\n" + "${prettyPrint(dirStatsIn.failedConnectionCount, dirStatsOut.failedConnectionCount, 2, nf)}\n" } +
+                inAcceptedPackets.keys.union(outAcceptedPackets.keys).whenNonEmptyPrint { "\tAccepted packets:\n" + "${prettyPrint(inAcceptedPackets, outAcceptedPackets, 2, nf)}\n" } +
+                dirStatsIn.droppedPacketsCount.keys.union(dirStatsOut.droppedPacketsCount.keys).whenNonEmptyPrint { "\tDropped packets:\n" + "${prettyPrint(dirStatsIn.droppedPacketsCount, dirStatsOut.droppedPacketsCount, 2, nf)}\n" }
 
         return durationStr + "\n" + runtimeStr + "\n" + trafficTotalsStr + "\n" + breakDownTrafficStr
     }
