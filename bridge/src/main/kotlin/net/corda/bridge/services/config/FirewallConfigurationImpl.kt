@@ -106,6 +106,7 @@ data class FirewallConfigurationImpl(
         override val silencedIPs: Set<String> = emptySet(),
         override val publicCryptoServiceConfig: CryptoServiceConfigImpl?,
         override val tunnelingCryptoServiceConfig: CryptoServiceConfigImpl?,
+        override val artemisCryptoServiceConfig: CryptoServiceConfigImpl?,
         override val revocationConfig: RevocationConfig,
         override val sslHandshakeTimeout: Long = 10000) : FirewallConfiguration {
     init {

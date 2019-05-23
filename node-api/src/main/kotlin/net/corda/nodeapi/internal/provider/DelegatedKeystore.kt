@@ -43,6 +43,10 @@ class DelegatedKeystore(private val signingService: DelegatedSigningService) : K
         }
     }
 
+    override fun engineLoad(stream: InputStream, password: CharArray) {
+        engineLoad(null)
+    }
+
     // Read only keystore, write operations are not supported.
     override fun engineSetKeyEntry(var1: String, var2: Key, var3: CharArray, var4: Array<Certificate>?) {
         throw UnsupportedOperationException()
@@ -72,10 +76,6 @@ class DelegatedKeystore(private val signingService: DelegatedSigningService) : K
     }
 
     override fun engineStore(var1: OutputStream, var2: CharArray) {
-        throw UnsupportedOperationException()
-    }
-
-    override fun engineLoad(var1: InputStream, var2: CharArray?) {
         throw UnsupportedOperationException()
     }
 

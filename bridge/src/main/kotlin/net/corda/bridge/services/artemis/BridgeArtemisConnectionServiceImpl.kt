@@ -10,6 +10,7 @@ import net.corda.nodeapi.internal.ArtemisMessagingClient
 import net.corda.nodeapi.internal.ArtemisMessagingComponent
 import net.corda.nodeapi.internal.ArtemisTcpTransport
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
+import net.corda.nodeapi.internal.provider.DelegatedKeystoreProvider
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient
 import org.apache.activemq.artemis.api.core.client.FailoverEventType
 import org.apache.activemq.artemis.api.core.client.ServerLocator
@@ -60,7 +61,8 @@ class BridgeArtemisConnectionServiceImpl(val conf: FirewallConfiguration,
             val outboundConf = conf.outboundConfig!!
             log.info("Connecting to message broker: ${outboundConf.artemisBrokerAddress}")
             val brokerAddresses = listOf(outboundConf.artemisBrokerAddress) + outboundConf.alternateArtemisBrokerAddresses
-            val tcpTransports = brokerAddresses.map { ArtemisTcpTransport.p2pConnectorTcpTransport(it, sslConfiguration) }
+            val tcpTransports = brokerAddresses.map { ArtemisTcpTransport.p2pConnectorTcpTransport(it, sslConfiguration,
+                    keyStoreProvider = DelegatedKeystoreProvider.ALGORITHM_NAME) }
             locator = ActiveMQClient.createServerLocatorWithoutHA(*tcpTransports.toTypedArray()).apply {
                 // Never time out on our loopback Artemis connections. If we switch back to using the InVM transport this
                 // would be the default and the two lines below can be deleted.

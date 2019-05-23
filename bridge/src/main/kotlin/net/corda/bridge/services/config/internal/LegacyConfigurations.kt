@@ -116,6 +116,7 @@ internal data class Version3BridgeConfigurationImpl(
                 silencedIPs,
                 null,
                 null,
+                null,
                 crlCheckSoftFail.toRevocationConfig()
         )
     }
@@ -198,6 +199,7 @@ data class Version4FirewallConfiguration(
                 AuditServiceConfigurationImpl(60), // Same as `firewalldefault.conf`, new in v4
                 healthCheckPhrase,
                 silencedIPs,
+                null,
                 null,
                 null,
                 crlCheckSoftFail.toRevocationConfig())

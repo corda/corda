@@ -13,10 +13,12 @@ import net.corda.bridge.services.sender.DirectBridgeSenderService
 import net.corda.bridge.services.util.ServiceStateCombiner
 import net.corda.bridge.services.util.ServiceStateHelper
 import net.corda.core.utilities.contextLogger
+import net.corda.nodeapi.internal.provider.DelegatedKeystoreProvider
 import net.corda.nodeapi.internal.provider.extractCertificates
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import rx.Subscription
+import java.security.Security
 
 class BridgeSupervisorServiceImpl(conf: FirewallConfiguration,
                                   maxMessageSize: Int,
@@ -37,8 +39,20 @@ class BridgeSupervisorServiceImpl(conf: FirewallConfiguration,
     private var statusSubscriber: Subscription? = null
     private val signingService: TLSSigningService
     private val tunnelingSigningService: TLSSigningService
+    private val artemisSigningService: TLSSigningService
+    private val artemisKeystoreProvider: DelegatedKeystoreProvider
 
     init {
+        val artemisSSlConfiguration = conf.outboundConfig?.artemisSSLConfiguration ?: conf.publicSSLConfiguration
+        val artemisCryptoService = CryptoServiceFactory.get(conf.artemisCryptoServiceConfig, artemisSSlConfiguration.keyStore)
+        artemisSigningService = CryptoServiceSigningService(artemisCryptoService,
+                artemisSSlConfiguration.keyStore.get().extractCertificates(),
+                artemisSSlConfiguration.trustStore.get(), conf.sslHandshakeTimeout, auditService)
+        artemisKeystoreProvider = DelegatedKeystoreProvider(artemisSigningService)
+        if (Security.getProvider( DelegatedKeystoreProvider.PROVIDER_NAME) == null) {
+            Security.addProvider(artemisKeystoreProvider)
+        }
+
         artemisService = BridgeArtemisConnectionServiceImpl(conf, maxMessageSize, auditService)
         haService = if (conf.haConfig == null) {
             SingleInstanceMasterService(conf, auditService)
@@ -78,6 +92,7 @@ class BridgeSupervisorServiceImpl(conf: FirewallConfiguration,
         haService.start()
         signingService.start()
         tunnelingSigningService.start()
+        artemisSigningService.start()
     }
 
     override fun stop() {
@@ -91,5 +106,6 @@ class BridgeSupervisorServiceImpl(conf: FirewallConfiguration,
         statusSubscriber = null
         signingService.stop()
         tunnelingSigningService.stop()
+        artemisSigningService.stop()
     }
 }
