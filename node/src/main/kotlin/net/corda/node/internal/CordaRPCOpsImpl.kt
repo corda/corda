@@ -32,6 +32,7 @@ import net.corda.core.utilities.loggerFor
 import net.corda.node.internal.exceptions.StateMachineStoppedException
 import net.corda.node.services.api.FlowStarter
 import net.corda.node.services.api.ServiceHubInternal
+import net.corda.node.services.rpc.CheckpointDumper
 import net.corda.node.services.rpc.context
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.nodeapi.exceptions.NonRpcFlowException
@@ -52,6 +53,7 @@ internal class CordaRPCOpsImpl(
         private val services: ServiceHubInternal,
         private val smm: StateMachineManager,
         private val flowStarter: FlowStarter,
+        private val checkpointDumper: CheckpointDumper,
         private val shutdownNode: () -> Unit
 ) : CordaRPCOps, AutoCloseable {
 
@@ -130,6 +132,8 @@ internal class CordaRPCOpsImpl(
     override fun internalVerifiedTransactionsFeed(): DataFeed<List<SignedTransaction>, SignedTransaction> {
         return services.validatedTransactions.track()
     }
+
+    override fun dumpCheckpoints() = checkpointDumper.dump()
 
     override fun stateMachinesSnapshot(): List<StateMachineInfo> {
         val (snapshot, updates) = stateMachinesFeed()
@@ -303,17 +307,21 @@ internal class CordaRPCOpsImpl(
     override fun shutdown() = terminate(false)
 
     override fun terminate(drainPendingFlows: Boolean) {
-
         if (drainPendingFlows) {
             logger.info("Waiting for pending flows to complete before shutting down.")
             setFlowsDrainingModeEnabled(true)
-            drainingShutdownHook.set(pendingFlowsCount().updates.doOnNext {(completed, total) ->
-                logger.info("Pending flows progress before shutdown: $completed / $total.")
-            }.doOnCompleted { setPersistentDrainingModeProperty(false, false) }.doOnCompleted(::cancelDrainingShutdownHook).doOnCompleted { logger.info("No more pending flows to drain. Shutting down.") }.doOnCompleted(shutdownNode::invoke).subscribe({
-                // Nothing to do on each update here, only completion matters.
-            }, { error ->
-                logger.error("Error while waiting for pending flows to drain in preparation for shutdown. Cause was: ${error.message}", error)
-            }))
+            val subscription = pendingFlowsCount()
+                    .updates
+                    .doOnNext { (completed, total) -> logger.info("Pending flows progress before shutdown: $completed / $total.") }
+                    .doOnCompleted { setPersistentDrainingModeProperty(enabled = false, propagateChange = false) }
+                    .doOnCompleted(::cancelDrainingShutdownHook)
+                    .doOnCompleted { logger.info("No more pending flows to drain. Shutting down.") }
+                    .doOnCompleted(shutdownNode::invoke)
+                    .subscribe(
+                            { }, // Nothing to do on each update here, only completion matters.
+                            { error -> logger.error("Error while waiting for pending flows to drain in preparation for shutdown. Cause was: ${error.message}", error) }
+                    )
+            drainingShutdownHook.set(subscription)
         } else {
             shutdownNode.invoke()
         }
@@ -322,19 +330,19 @@ internal class CordaRPCOpsImpl(
     override fun isWaitingForShutdown() = drainingShutdownHook.get() != null
 
     override fun close() {
-
         cancelDrainingShutdownHook()
     }
 
     private fun cancelDrainingShutdownHook() {
-
         drainingShutdownHook.getAndSet(null)?.let {
             it.unsubscribe()
             logger.info("Cancelled draining shutdown hook.")
         }
     }
 
-    private fun setPersistentDrainingModeProperty(enabled: Boolean, propagateChange: Boolean) = services.nodeProperties.flowsDrainingMode.setEnabled(enabled, propagateChange)
+    private fun setPersistentDrainingModeProperty(enabled: Boolean, propagateChange: Boolean) {
+        services.nodeProperties.flowsDrainingMode.setEnabled(enabled, propagateChange)
+    }
 
     private fun stateMachineInfoFromFlowLogic(flowLogic: FlowLogic<*>): StateMachineInfo {
         return StateMachineInfo(flowLogic.runId, flowLogic.javaClass.name, flowLogic.stateMachine.context.toFlowInitiator(), flowLogic.track(), flowLogic.stateMachine.context)
