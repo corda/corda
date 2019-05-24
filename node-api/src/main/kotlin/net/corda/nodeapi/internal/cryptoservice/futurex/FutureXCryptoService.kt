@@ -51,7 +51,7 @@ class FutureXCryptoService(keyStore: KeyStore, provider: SunPKCS11, x500Principa
         return super.generateKeyPair(alias, scheme)
     }
 
-    override fun sign(alias: String, data: ByteArray): ByteArray {
+    override fun sign(alias: String, data: ByteArray, signAlgorithm: String?): ByteArray {
         return withAuthentication {
             val privateKeyHandle = if (cachedKeyHandles.containsKey(alias)) {
                 cachedKeyHandles[alias]!!
@@ -61,7 +61,7 @@ class FutureXCryptoService(keyStore: KeyStore, provider: SunPKCS11, x500Principa
                 key
             }
             privateKeyHandle.let {
-                val algorithm = if (it.algorithm == "RSA") {
+                val algorithm = signAlgorithm?: if (it.algorithm == "RSA") {
                     "SHA256withRSA"
                 } else {
                     "SHA256withECDSA"
