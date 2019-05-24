@@ -99,14 +99,6 @@ class CheckpointDumper(private val checkpointStorage: CheckpointStorage, private
         }
     }
 
-    private val formatter = DateTimeFormatter.ofPattern("HHmmss.SSS")
-
-    fun dump(id: UUID, checkpoint: Checkpoint) {
-        val info = checkpoint.toJson(id)
-        val file = serviceHub.configuration.baseDirectory / "$id-${formatter.format(LocalTime.now(serviceHub.clock))}.json"
-        writer.writeValue(file.toFile(), info)
-    }
-
     private fun Checkpoint.toJson(id: UUID): CheckpointJson {
         val (fiber, flowLogic) = when (flowState) {
             is FlowState.Unstarted -> {
