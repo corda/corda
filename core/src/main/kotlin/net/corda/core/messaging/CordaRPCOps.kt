@@ -113,6 +113,9 @@ interface CordaRPCOps : RPCOps {
     @RPCReturnsObservables
     fun stateMachinesFeed(): DataFeed<List<StateMachineInfo>, StateMachineUpdate>
 
+    /** Dump all the current flow checkpoints as JSON into a zip file in the node's directory. */
+    fun dumpCheckpoints()
+
     /**
      * Returns a snapshot of vault states for a given query criteria (and optional order and paging specification)
      *

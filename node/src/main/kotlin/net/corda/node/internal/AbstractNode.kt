@@ -49,6 +49,7 @@ import net.corda.node.services.keys.PersistentKeyManagementService
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.network.*
 import net.corda.node.services.persistence.*
+import net.corda.node.services.rpc.CheckpointDumper
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.statemachine.*
 import net.corda.node.services.transactions.*
@@ -159,8 +160,8 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     private var _started: StartedNode<AbstractNode>? = null
 
     /** The implementation of the [CordaRPCOps] interface used by this node. */
-    open fun makeRPCOps(flowStarter: FlowStarter, database: CordaPersistence, smm: StateMachineManager): CordaRPCOps {
-        return SecureCordaRPCOps(services, smm, database, flowStarter)
+    open fun makeRPCOps(flowStarter: FlowStarter, database: CordaPersistence, smm: StateMachineManager, checkpointDumper: CheckpointDumper): CordaRPCOps {
+        return SecureCordaRPCOps(services, smm, database, flowStarter, checkpointDumper)
     }
 
     private fun initCertificate() {
@@ -242,6 +243,8 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
                     drainingModePollPeriod = configuration.drainingModePollPeriod,
                     nodeProperties = nodeProperties)
 
+            val checkpointDumper = CheckpointDumper(checkpointStorage, database, services)
+
             (serverThread as? ExecutorService)?.let {
                 runOnStop += {
                     // We wait here, even though any in-flight messages should have been drained away because the
@@ -252,7 +255,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             }
 
             makeVaultObservers(schedulerService, database.hibernateConfig, smm, schemaService, flowLogicRefFactory)
-            val rpcOps = makeRPCOps(flowStarter, database, smm)
+            val rpcOps = makeRPCOps(flowStarter, database, smm, checkpointDumper)
             startMessagingService(rpcOps)
             installCoreFlows()
             val cordaServices = installCordaServices(flowStarter)
@@ -261,6 +264,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             _services.rpcFlows += cordappLoader.cordapps.flatMap { it.rpcFlows }
             startShell(rpcOps)
             Pair(StartedNodeImpl(this, _services, nodeInfo, checkpointStorage, smm, attachments, network, database, rpcOps, flowStarter, notaryService), schedulerService)
+            checkpointDumper.start(tokenizableServices)
         }
 
         networkMapUpdater = NetworkMapUpdater(services.networkMapCache,
