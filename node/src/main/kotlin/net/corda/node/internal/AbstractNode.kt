@@ -56,6 +56,7 @@ import net.corda.node.services.keys.KeyManagementServiceInternal
 import net.corda.nodeapi.internal.cryptoservice.azure.AzureKeyVaultCryptoService
 import net.corda.nodeapi.internal.cryptoservice.gemalto.GemaltoLunaCryptoService
 import net.corda.nodeapi.internal.cryptoservice.utimaco.UtimacoCryptoService
+import net.corda.nodeapi.internal.cryptoservice.futurex.FutureXCryptoService
 import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
 import net.corda.node.services.messaging.DeduplicationHandler
 import net.corda.node.services.messaging.MessagingService
@@ -1005,6 +1006,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             is GemaltoLunaCryptoService -> log.info("Private key '$alias' stored in Gemalto HSM. Certificate-chain stored in node keystore.")
             is AzureKeyVaultCryptoService -> log.info("Private key '$alias' stored in Azure KeyVault. Certificate-chain stored in node keystore.")
             is UtimacoCryptoService -> log.info("Private key '$alias' stored in Utimaco HSM.  Certificate-chain stored in node keystore.")
+            is FutureXCryptoService -> log.info("Private key '$alias' stored in FutureX HSM.  Certificate-chain stored in node keystore.")
             else -> log.info("Private key '$alias' and its certificate-chain stored successfully.")
         }
         return PartyAndCertificate(X509Utilities.buildCertPath(identityCertPath))

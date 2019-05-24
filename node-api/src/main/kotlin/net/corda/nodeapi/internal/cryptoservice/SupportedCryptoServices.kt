@@ -5,5 +5,6 @@ enum class SupportedCryptoServices {
     BC_SIMPLE,
     UTIMACO, // Utimaco HSM.
     AZURE_KEY_VAULT, // Azure key Vault.
-    GEMALTO_LUNA // Gemalto Luna HSM.
+    GEMALTO_LUNA, // Gemalto Luna HSM.
+    FUTUREX // FutureX HSM
 }

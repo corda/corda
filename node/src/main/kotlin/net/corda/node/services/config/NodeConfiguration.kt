@@ -13,6 +13,7 @@ import net.corda.node.services.config.schema.v1.V1NodeConfigurationSpec
 import net.corda.nodeapi.internal.cryptoservice.azure.AzureKeyVaultCryptoService
 import net.corda.nodeapi.internal.cryptoservice.gemalto.GemaltoLunaCryptoService
 import net.corda.nodeapi.internal.cryptoservice.utimaco.UtimacoCryptoService
+import net.corda.nodeapi.internal.cryptoservice.futurex.FutureXCryptoService
 import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
 import net.corda.nodeapi.internal.config.FileBasedCertificateStoreSupplier
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
@@ -126,6 +127,7 @@ interface NodeConfiguration {
             SupportedCryptoServices.BC_SIMPLE -> BCCryptoService(this.myLegalName.x500Principal, this.signingCertificateStore)
             SupportedCryptoServices.UTIMACO -> UtimacoCryptoService.fromConfigurationFile(cryptoServiceConf)
             SupportedCryptoServices.GEMALTO_LUNA -> GemaltoLunaCryptoService.fromConfigurationFile(this.myLegalName.x500Principal, cryptoServiceConf)
+            SupportedCryptoServices.FUTUREX -> FutureXCryptoService.fromConfigurationFile(this.myLegalName.x500Principal, cryptoServiceConf)
             SupportedCryptoServices.AZURE_KEY_VAULT -> {
                 val configPath = requireNotNull(cryptoServiceConf) { "When cryptoServiceName is set to AZURE_KEY_VAULT, cryptoServiceConf must specify the path to the configuration file."}
                 AzureKeyVaultCryptoService.fromConfigurationFile(configPath)

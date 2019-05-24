@@ -10,6 +10,7 @@ import net.corda.node.services.config.NodeConfiguration
 import net.corda.nodeapi.internal.cryptoservice.azure.AzureKeyVaultCryptoService
 import net.corda.nodeapi.internal.cryptoservice.gemalto.GemaltoLunaCryptoService
 import net.corda.nodeapi.internal.cryptoservice.utimaco.UtimacoCryptoService
+import net.corda.nodeapi.internal.cryptoservice.futurex.FutureXCryptoService
 import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
 import net.corda.nodeapi.internal.config.CertificateStore
 import net.corda.nodeapi.internal.crypto.CertificateType
@@ -115,6 +116,7 @@ open class NetworkRegistrationHelper(
             is GemaltoLunaCryptoService -> logProgress("Private key '$nodeCaKeyAlias' stored in Gemalto HSM. Certificate-chain stored in node keystore.")
             is AzureKeyVaultCryptoService -> logProgress("Private key '$nodeCaKeyAlias' stored in Azure KeyVault. Certificate-chain stored in node keystore.")
             is UtimacoCryptoService -> logProgress("Private key '$nodeCaKeyAlias' stored in Utimaco HSM. Certificate-chain stored in node keystore.")
+            is FutureXCryptoService -> logProgress("Private key '$nodeCaKeyAlias' stored in FutureX HSM. Certificate-chain stored in node keystore.")
             else -> logProgress("Private key '$nodeCaKeyAlias' and its certificate-chain stored successfully.")
         }
 
