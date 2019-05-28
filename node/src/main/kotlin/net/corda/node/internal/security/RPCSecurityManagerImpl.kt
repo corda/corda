@@ -114,7 +114,7 @@ private class RPCPermission : DomainPermission {
      * @param methods Set of allowed RPC methods
      * @param target  An optional "target" type on which methods act
      */
-    constructor(methods: Set<String>, target: String? = null) : super(methods, target?.let { setOf(it) })
+    constructor(methods: Set<String>, target: String? = null) : super(methods, target?.let { setOf(it.replace(".", ":")) })
 
 
     /**
@@ -122,7 +122,6 @@ private class RPCPermission : DomainPermission {
      */
     constructor() : super()
 }
-
 /*
  * A [org.apache.shiro.authz.permission.PermissionResolver] implementation for RPC permissions.
  * Provides a method to construct an [RPCPermission] instance from its string representation
@@ -143,11 +142,25 @@ private object RPCPermissionResolver : PermissionResolver {
     private const val ACTION_START_FLOW = "startflow"
     private const val ACTION_INVOKE_RPC = "invokerpc"
     private const val ACTION_ALL = "all"
+    private const val ACTION_MAINTAINER = "maintainer"
     private val FLOW_RPC_CALLS = setOf(
             "startFlowDynamic",
             "startTrackedFlowDynamic",
             "startFlow",
             "startTrackedFlow")
+
+    private val NON_FLOW_RPC_CALLS = setOf(
+            "setFlowsDrainingModeEnabled",
+            "isFlowsDrainingModeEnabled",
+            "nodeInfo",
+            "currentNodeTime",
+            "killFlow",
+            "isWaitingForShutdown",
+            "shutdown",
+            "terminate",
+            "gracefulShutdown",
+            "clearNetworkMapCache"
+    )
 
     override fun resolvePermission(representation: String): Permission {
     	val action = representation.substringBefore(SEPARATOR).toLowerCase()
@@ -174,6 +187,9 @@ private object RPCPermissionResolver : PermissionResolver {
             ACTION_ALL -> {
                 // Leaving empty set of targets and actions to match everything
                 return RPCPermission()
+            }
+            ACTION_MAINTAINER-> {
+                return RPCPermission(NON_FLOW_RPC_CALLS)
             }
             else -> throw IllegalArgumentException("Unknown permission action specifier: $action")
         }

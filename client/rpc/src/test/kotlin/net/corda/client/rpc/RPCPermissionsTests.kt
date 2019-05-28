@@ -14,6 +14,7 @@ import kotlin.test.assertFailsWith
 class RPCPermissionsTests : AbstractRPCTest() {
     companion object {
         const val DUMMY_FLOW = "StartFlow.net.corda.flows.DummyFlow"
+        const val WILDCARD_FLOW = "StartFlow.net.corda.flows:*"
         const val ALL_ALLOWED = "ALL"
     }
 
@@ -100,6 +101,44 @@ class RPCPermissionsTests : AbstractRPCTest() {
             }
             assertNotAllowed {
                 proxy.validatePermission("networkMapFeed")
+            }
+        }
+    }
+
+    @Test
+    fun `joe user can call different methods matching to a wildcard`() {
+        rpcDriver {
+            val joeUser = userOf("joe", setOf(WILDCARD_FLOW))
+            val proxy = testProxyFor(joeUser)
+            assertNotAllowed {
+                proxy.validatePermission("nodeInfo")
+            }
+
+            proxy.validatePermission("startFlowDynamic", "net.corda.flows.OtherFlow")
+            proxy.validatePermission("startFlowDynamic", "net.corda.flows.DummyFlow")
+            proxy.validatePermission("startTrackedFlowDynamic", "net.corda.flows.DummyFlow")
+            proxy.validatePermission("startTrackedFlowDynamic", "net.corda.flows.OtherFlow")
+            assertNotAllowed {
+                proxy.validatePermission("startTrackedFlowDynamic", "net.banned.flows.OtherFlow")
+            }
+            assertNotAllowed {
+                proxy.validatePermission("startTrackedFlowDynamic", "net.banned.flows")
+            }
+
+        }
+    }
+
+    @Test
+    fun `Maintenance user can call system methods but not user flows` () {
+        rpcDriver {
+            val joeUser = userOf("notJoe", setOf("maintainer"))
+            val proxy = testProxyFor(joeUser)
+            proxy.validatePermission("nodeInfo")
+            assertNotAllowed {
+                proxy.validatePermission("startFlowDynamic", "net.corda.flows.OtherFlow")
+            }
+            assertNotAllowed {
+                proxy.validatePermission("startTrackedFlowDynamic", "net.corda.flows.DummyFlow")
             }
         }
     }
