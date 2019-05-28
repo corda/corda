@@ -19,6 +19,7 @@ import java.io.IOException
 import java.io.InputStream
 import java.net.*
 import java.util.*
+import java.util.jar.JarInputStream
 
 /**
  * A custom ClassLoader that knows how to load classes from a set of attachments. The attachments themselves only
@@ -139,7 +140,7 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
         attachment.openAsJAR().use { jar ->
             while (true) {
                 val entry = jar.nextJarEntry ?: return false
-                if(entry.name.endsWith(".class", ignoreCase = true)) return true
+                if (entry.name.endsWith(".class", ignoreCase = true)) return true
             }
         }
         return false
@@ -190,7 +191,7 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
         // attacks on externally connected systems that only consider type names, we allow people to formally
         // claim their parts of the Java package namespace via registration with the zone operator.
 
-        val classLoaderEntries = mutableMapOf<String, Attachment>()
+        val classLoaderEntries = mutableMapOf<String, SecureHash.SHA256>()
         for (attachment in attachments) {
             // We may have been given an attachment loaded from the database in which case, important info like
             // signers is already calculated.
@@ -251,21 +252,26 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
                     // Some files don't need overlap checking because they don't affect the way the code runs.
                     if (!shouldCheckForNoOverlap(path, targetPlatformVersion)) continue
 
-                    // If 2 entries have the same content hash, it means the same file is present in both attachments, so that is ok.
-                    if (path in classLoaderEntries.keys) {
-                        val contentHash = readAttachment(attachment, path).sha256()
-                        val originalAttachment = classLoaderEntries[path]!!
-                        val originalContentHash = readAttachment(originalAttachment, path).sha256()
-                        if (contentHash == originalContentHash) {
-                            log.debug { "Duplicate entry $path has same content hash $contentHash" }
-                            continue
-                        } else {
+                    // This calculates the hash of the current entry because the JarInputStream returns only the current entry.
+                    fun entryHash() = ByteArrayOutputStream().use {
+                        jar.copyTo(it)
+                        it.toByteArray()
+                    }.sha256()
+
+                    // If 2 entries are identical, it means the same file is present in both attachments, so that is ok.
+                    val currentHash = entryHash()
+                    val previousFileHash = classLoaderEntries[path]
+                    when {
+                        previousFileHash == null -> {
+                            log.debug { "Adding new entry for $path" }
+                            classLoaderEntries[path] = currentHash
+                        }
+                        currentHash == previousFileHash -> log.debug { "Duplicate entry $path has same content hash $currentHash" }
+                        else -> {
                             log.debug { "Content hash differs for $path" }
                             throw OverlappingAttachmentsException(sampleTxId, path)
                         }
                     }
-                    log.debug { "Adding new entry for $path" }
-                    classLoaderEntries[path] = attachment
                 }
             }
             log.debug { "${classLoaderEntries.size} classloaded entries for $attachment" }
