@@ -15,12 +15,15 @@ import org.apache.activemq.artemis.core.config.CoreQueueConfiguration
 import org.apache.activemq.artemis.core.security.Role
 import org.apache.activemq.artemis.core.settings.impl.AddressFullMessagePolicy
 import org.apache.activemq.artemis.core.settings.impl.AddressSettings
+import org.apache.activemq.artemis.core.settings.impl.SlowConsumerPolicy
 import java.nio.file.Path
 
 internal class RpcBrokerConfiguration(baseDirectory: Path, maxMessageSize: Int, jmxEnabled: Boolean, address: NetworkHostAndPort, adminAddress: NetworkHostAndPort?, sslOptions: BrokerRpcSslOptions?, useSsl: Boolean, nodeConfiguration: MutualSslConfiguration, shouldStartLocalShell: Boolean) : SecureArtemisConfiguration() {
     val loginListener: (String) -> Unit
 
     init {
+        name = "RPC"
+
         setDirectories(baseDirectory)
 
         val acceptorConfigurationsSet = mutableSetOf(
@@ -36,11 +39,16 @@ internal class RpcBrokerConfiguration(baseDirectory: Path, maxMessageSize: Int, 
         managementNotificationAddress = SimpleString(ArtemisMessagingComponent.NOTIFICATIONS_ADDRESS)
         addressesSettings = mapOf(
                 "${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.#" to AddressSettings().apply {
-                    maxSizeBytes = 10L * maxMessageSize
-                    addressFullMessagePolicy = AddressFullMessagePolicy.FAIL
+                    maxSizeBytes = 5L * maxMessageSize
+                    addressFullMessagePolicy = AddressFullMessagePolicy.PAGE
+                    pageSizeBytes = 1L * maxMessageSize
+                    slowConsumerPolicy = SlowConsumerPolicy.KILL
+                    slowConsumerThreshold = 1
+                    slowConsumerCheckPeriod = 30
                 }
         )
 
+        globalMaxSize = Runtime.getRuntime().maxMemory() / 8
         initialiseSettings(maxMessageSize)
 
         val nodeInternalRole = Role(BrokerJaasLoginModule.NODE_RPC_ROLE, true, true, true, true, true, true, true, true, true, true)
@@ -108,6 +116,7 @@ internal class RpcBrokerConfiguration(baseDirectory: Path, maxMessageSize: Int, 
         bindingsDirectory = (baseDirectory / "bindings").toString()
         journalDirectory = (baseDirectory / "journal").toString()
         largeMessagesDirectory = (baseDirectory / "large-messages").toString()
+        pagingDirectory = (baseDirectory / "paging").toString()
     }
 
     private fun queueConfiguration(name: String, address: String = name, filter: String? = null, durable: Boolean): CoreQueueConfiguration {

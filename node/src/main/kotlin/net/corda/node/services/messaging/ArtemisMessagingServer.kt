@@ -2,6 +2,7 @@ package net.corda.node.services.messaging
 
 import net.corda.core.internal.ThreadBox
 import net.corda.core.internal.div
+import net.corda.core.internal.errors.AddressBindingException
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
@@ -9,7 +10,6 @@ import net.corda.core.utilities.debug
 import net.corda.node.internal.artemis.*
 import net.corda.node.internal.artemis.BrokerJaasLoginModule.Companion.NODE_P2P_ROLE
 import net.corda.node.internal.artemis.BrokerJaasLoginModule.Companion.PEER_ROLE
-import net.corda.core.internal.errors.AddressBindingException
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.nodeapi.internal.AmqpMessageSizeChecksInterceptor
 import net.corda.nodeapi.internal.ArtemisMessageSizeChecksInterceptor
@@ -29,6 +29,7 @@ import org.apache.activemq.artemis.core.server.ActiveMQServer
 import org.apache.activemq.artemis.core.server.impl.ActiveMQServerImpl
 import org.apache.activemq.artemis.spi.core.security.ActiveMQJAASSecurityManager
 import java.io.IOException
+import java.lang.Long.max
 import java.security.KeyStoreException
 import javax.annotation.concurrent.ThreadSafe
 import javax.security.auth.login.AppConfigurationEntry
@@ -115,10 +116,16 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
     }
 
     private fun createArtemisConfig() = SecureArtemisConfiguration().apply {
+        name = "P2P"
+
         val artemisDir = config.baseDirectory / "artemis"
         bindingsDirectory = (artemisDir / "bindings").toString()
         journalDirectory = (artemisDir / "journal").toString()
         largeMessagesDirectory = (artemisDir / "large-messages").toString()
+        pagingDirectory = (artemisDir / "paging").toString()
+        // The transaction cache is configurable, and drives other cache sizes.
+        globalMaxSize = max(config.transactionCacheSizeBytes, 10L * maxMessageSize)
+
         acceptorConfigurations = mutableSetOf(p2pAcceptorTcpTransport(NetworkHostAndPort(messagingServerAddress.host, messagingServerAddress.port), config.p2pSslOptions))
         // Enable built in message deduplication. Note we still have to do our own as the delayed commits
         // and our own definition of commit mean that the built in deduplication cannot remove all duplicates.

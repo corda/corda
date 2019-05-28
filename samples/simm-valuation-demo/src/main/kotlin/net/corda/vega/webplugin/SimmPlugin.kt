@@ -1,8 +1,6 @@
 package net.corda.vega.webplugin
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import net.corda.core.serialization.SerializationWhitelist
-import net.corda.finance.workflows.plugin.registerFinanceJSONMappers
 import net.corda.vega.api.PortfolioApi
 import net.corda.webserver.services.WebServerPluginRegistry
 import java.util.function.Function
@@ -16,5 +14,4 @@ import java.util.function.Function
 class SimmPlugin : WebServerPluginRegistry {
     override val webApis = listOf(Function(::PortfolioApi))
     override val staticServeDirs: Map<String, String> = emptyMap()
-    override fun customizeJSONSerialization(om: ObjectMapper): Unit = registerFinanceJSONMappers(om)
 }

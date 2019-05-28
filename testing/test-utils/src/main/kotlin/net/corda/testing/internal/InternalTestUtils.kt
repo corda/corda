@@ -200,6 +200,21 @@ fun fakeAttachment(filePath: String, content: String, manifestAttributes: Map<St
     return bs.toByteArray()
 }
 
+fun fakeAttachment(filePath1: String, content1: String, filePath2: String, content2: String, manifestAttributes: Map<String, String> = emptyMap()): ByteArray {
+    val bs = ByteArrayOutputStream()
+    val manifest = Manifest()
+    manifestAttributes.forEach { manifest[it.key] = it.value } //adding manually instead of putAll, as it requires typed keys, not strings
+    JarOutputStream(bs, manifest).use { js ->
+        js.putNextEntry(ZipEntry(filePath1))
+        js.writer().apply { append(content1); flush() }
+        js.closeEntry()
+        js.putNextEntry(ZipEntry(filePath2))
+        js.writer().apply { append(content2); flush() }
+        js.closeEntry()
+    }
+    return bs.toByteArray()
+}
+
 /** If [effectiveSerializationEnv] is not set, runs the block with a new [SerializationEnvironmentRule]. */
 fun <R> withTestSerializationEnvIfNotSet(block: () -> R): R {
     val serializationExists = try {
