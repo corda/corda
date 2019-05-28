@@ -1,26 +1,50 @@
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigException;
+import com.typesafe.config.ConfigFactory;
+import com.typesafe.config.ConfigParseOptions;
+
 import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class BridgeCaplet extends Capsule {
+    private Config bridgeConfig = null;
     private String baseDir = null;
 
     protected BridgeCaplet(Capsule pred) {
         super(pred);
     }
 
-    @Override
-    protected ProcessBuilder prelaunch(List<String> jvmArgs, List<String> args) {
-        this.baseDir = getBaseDirectory(args);
-        return super.prelaunch(jvmArgs, args);
+    private Config parseConfigFile(List<String> args) {
+        String baseDirOption = getOptionMultiple(args, Arrays.asList("--base-directory", "-b"));
+        // Ensure consistent behaviour with NodeArgsParser.kt, see CORDA-1598.
+        if (null == baseDirOption || baseDirOption.isEmpty()) {
+            baseDirOption = getOption(args, "-base-directory");
+        }
+        this.baseDir = Paths.get((baseDirOption == null) ? "." : baseDirOption).toAbsolutePath().normalize().toString();
+        String config = getOption(args, "--config-file");
+        // Same as for baseDirOption.
+        if (null == config || config.isEmpty()) {
+            config = getOption(args, "-config-file");
+        }
+        File configFile = (config == null) ? new File(baseDir, "bridge.conf") : new File(config);
+        try {
+            ConfigParseOptions parseOptions = ConfigParseOptions.defaults().setAllowMissing(false);
+            Config defaultConfig = ConfigFactory.parseResources("bridgedefault.conf", parseOptions);
+            Config baseDirectoryConfig = ConfigFactory.parseMap(Collections.singletonMap("baseDirectory", baseDir));
+            Config nodeConfig = ConfigFactory.parseFile(configFile, parseOptions);
+            return baseDirectoryConfig.withFallback(nodeConfig).withFallback(defaultConfig).resolve();
+        } catch (ConfigException e) {
+            log(LOG_QUIET, e);
+            return ConfigFactory.empty();
+        }
     }
 
-    private String getBaseDirectory(List<String> args) {
-        String baseDir = getOptionMultiple(args, Arrays.asList("--base-directory", "-b"));
-        return Paths.get((baseDir == null) ? "." : baseDir).toAbsolutePath().normalize().toString();
+    @Override
+    protected ProcessBuilder prelaunch(List<String> jvmArgs, List<String> args) {
+        this.bridgeConfig = parseConfigFile(args);
+        return super.prelaunch(jvmArgs, args);
     }
 
     private String getOptionMultiple(List<String> args, List<String> possibleOptions) {
@@ -79,6 +103,20 @@ public class BridgeCaplet extends Capsule {
             // Add additional directories of JARs to the classpath (at the end), e.g., for JDBC drivers.
             augmentClasspath(cp, new File(baseDir, "drivers"));
             return (T) cp;
+        } else if (ATTR_JVM_ARGS == attr) {
+            // Read JVM args from the config if specified, else leave alone.
+            List<String> jvmArgs = new ArrayList<>((List<String>) super.attribute(attr));
+            try {
+                List<String> configJvmArgs = bridgeConfig.getStringList("custom.jvmArgs");
+                jvmArgs.clear();
+                jvmArgs.addAll(configJvmArgs);
+                log(LOG_VERBOSE, "Configured JVM args = " + jvmArgs);
+            } catch (ConfigException.Missing e) {
+                // Ignore since it's ok to be Missing. Other errors would be unexpected.
+            } catch (ConfigException e) {
+                log(LOG_QUIET, e);
+            }
+            return (T) jvmArgs;
         } else return super.attribute(attr);
     }
 
