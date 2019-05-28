@@ -16,7 +16,7 @@ import net.corda.testing.node.internal.TestStartedNode
 
 interface WithFinality : WithMockNet {
     //region Operations
-    fun TestStartedNode.finalise(stx: SignedTransaction, vararg recipients: Party): FlowStateMachine<SignedTransaction> {
+    fun TestStartedNode.finalise(stx: SignedTransaction, vararg recipients: Party): FlowStateMachine<Set<SignedTransaction>> {
         return startFlowAndRunNetwork(FinalityInvoker(stx, recipients.toSet(), emptySet()))
     }
 
@@ -24,7 +24,7 @@ interface WithFinality : WithMockNet {
         return services.validatedTransactions.getTransaction(stx.id)!!
     }
 
-    fun CordaRPCOps.finalise(stx: SignedTransaction, vararg recipients: Party): FlowHandle<SignedTransaction> {
+    fun CordaRPCOps.finalise(stx: SignedTransaction, vararg recipients: Party): FlowHandle<Set<SignedTransaction>> {
         return startFlow(::FinalityInvoker, stx, recipients.toSet(), emptySet()).andRunNetwork()
     }
     //endregion
@@ -42,9 +42,9 @@ interface WithFinality : WithMockNet {
     @StartableByRPC
     class FinalityInvoker(private val transaction: SignedTransaction,
                           private val newRecipients: Set<Party>,
-                          private val oldRecipients: Set<Party>) : FlowLogic<SignedTransaction>() {
+                          private val oldRecipients: Set<Party>) : FlowLogic<Set<SignedTransaction>>() {
         @Suspendable
-        override fun call(): SignedTransaction {
+        override fun call(): Set<SignedTransaction> {
             val sessions = newRecipients.map(::initiateFlow)
             @Suppress("DEPRECATION")
             return subFlow(FinalityFlow(transaction, sessions, oldRecipients, FinalityFlow.tracker()))

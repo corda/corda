@@ -85,7 +85,10 @@ class FinalityFlow private constructor(private val setOfTransactions: Set<Signed
      * @param sessions A collection of [FlowSession]s for each non-local participant of the transaction. Sessions to non-participants can
      * also be provided.
      */
-    constructor(setOfTransactions: Set<SignedTransaction>, sessions: Collection<FlowSession>): this(setOfTransactions, emptyList(), tracker(), sessions, newApi = true)
+    constructor(
+            setOfTransactions: Set<SignedTransaction>,
+            sessions: Collection<FlowSession>
+    ): this(setOfTransactions, emptyList(), tracker(), sessions, newApi = true)
 
     /**
      * Notarise the given transaction and broadcast it to all the participants.

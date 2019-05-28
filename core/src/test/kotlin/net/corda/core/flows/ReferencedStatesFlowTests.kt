@@ -48,14 +48,14 @@ class ReferencedStatesFlowTests {
     fun `with referenced states flow blocks until the reference state update is received`() {
         // 1. Create reference state.
         val newRefTx = nodes[0].services.startFlow(CreateRefState()).resultFuture.getOrThrow()
-        val newRefState = newRefTx.tx.outRefsOfType<RefState.State>().single()
+        val newRefState = newRefTx.first().tx.outRefsOfType<RefState.State>().single()
 
         // 2. Share it with others.
         nodes[0].services.startFlow(Initiator(newRefState)).resultFuture.getOrThrow()
 
         // 3. Update the reference state but don't share the update.
         val updatedRefTx = nodes[0].services.startFlow(UpdateRefState(newRefState)).resultFuture.getOrThrow()
-        val updatedRefState = updatedRefTx.tx.outRefsOfType<RefState.State>().single()
+        val updatedRefState = updatedRefTx.first().tx.outRefsOfType<RefState.State>().single()
 
         // 4. Try to use the old reference state. This will throw a NotaryException.
         val nodeOneIdentity = nodes[1].info.legalIdentities.first()
@@ -66,16 +66,16 @@ class ReferencedStatesFlowTests {
 
         // 6. Check that we have a valid signed transaction with the updated reference state.
         val result = useRefTx.getOrThrow()
-        assertEquals(updatedRefState.ref, result.tx.references.single())
+        assertEquals(updatedRefState.ref, result.first().tx.references.single())
     }
 
     @Test
     fun `check ref state is persisted when used in tx with relevant states`() {
         // 1. Create a state to be used as a reference state. Don't share it.
         val newRefTx = nodes[0].services.startFlow(CreateRefState()).resultFuture.getOrThrow()
-        val newRefState = newRefTx.tx.outRefsOfType<RefState.State>().single()
+        val newRefState = newRefTx.first().tx.outRefsOfType<RefState.State>().single()
         // 2. Use the "newRefState" a transaction involving another party (nodes[1]) which creates a new state. They should store the new state and the reference state.
-        val newTx = nodes[0].services.startFlow(UseRefState(nodes[1].info.legalIdentities.first(), newRefState.state.data.linearId)).resultFuture.getOrThrow()
+        val newTx = nodes[0].services.startFlow(UseRefState(nodes[1].info.legalIdentities.first(), newRefState.state.data.linearId)).resultFuture.getOrThrow().first()
         // Wait until node 1 stores the new tx.
         nodes[1].services.validatedTransactions.updates.filter { it.id == newTx.id }.toFuture().getOrThrow()
         // Check that nodes[1] has finished recording the transaction (and updating the vault.. hopefully!).
@@ -104,9 +104,9 @@ class ReferencedStatesFlowTests {
     fun `check schema mappings are updated for reference states`() {
         // 1. Create a state to be used as a reference state. Don't share it.
         val newRefTx = nodes[0].services.startFlow(CreateRefState()).resultFuture.getOrThrow()
-        val newRefState = newRefTx.tx.outRefsOfType<RefState.State>().single()
+        val newRefState = newRefTx.first().tx.outRefsOfType<RefState.State>().single()
         // 2. Use the "newRefState" a transaction involving another party (nodes[1]) which creates a new state. They should store the new state and the reference state.
-        val newTx = nodes[0].services.startFlow(UseRefState(nodes[1].info.legalIdentities.first(), newRefState.state.data.linearId)).resultFuture.getOrThrow()
+        val newTx = nodes[0].services.startFlow(UseRefState(nodes[1].info.legalIdentities.first(), newRefState.state.data.linearId)).resultFuture.getOrThrow().first()
         // Wait until node 1 stores the new tx.
         nodes[1].services.validatedTransactions.updates.filter { it.id == newTx.id }.toFuture().getOrThrow()
         // Check that nodes[1] has finished recording the transaction (and updating the vault.. hopefully!).
@@ -119,11 +119,11 @@ class ReferencedStatesFlowTests {
     fun `check old ref state is consumed when update used in tx with relevant states`() {
         // 1. Create a state to be used as a reference state. Don't share it.
         val newRefTx = nodes[0].services.startFlow(CreateRefState()).resultFuture.getOrThrow()
-        val newRefState = newRefTx.tx.outRefsOfType<RefState.State>().single()
+        val newRefState = newRefTx.first().tx.outRefsOfType<RefState.State>().single()
 
         // 2. Use the "newRefState" in a transaction involving another party (nodes[1]) which creates a new state. They should store the new state and the reference state.
         val newTx = nodes[0].services.startFlow(UseRefState(nodes[1].info.legalIdentities.first(), newRefState.state.data.linearId))
-                .resultFuture.getOrThrow()
+                .resultFuture.getOrThrow().first()
         // Wait until node 1 stores the new tx.
         nodes[1].services.validatedTransactions.updates.filter { it.id == newTx.id }.toFuture().getOrThrow()
         // Check that nodes[1] has finished recording the transaction (and updating the vault.. hopefully!).
@@ -148,7 +148,7 @@ class ReferencedStatesFlowTests {
 
         // 4. Use the evolved state as a reference state.
         val updatedTx = nodes[0].services.startFlow(UseRefState(nodes[1].info.legalIdentities.first(), newRefState.state.data.linearId))
-                .resultFuture.getOrThrow()
+                .resultFuture.getOrThrow().first()
         // Wait until node 1 stores the new tx.
         nodes[1].services.validatedTransactions.updates.filter { it.id == updatedTx.id }.toFuture().getOrThrow()
         // Check that nodes[1] has finished recording the transaction (and updating the vault.. hopefully!).
@@ -199,9 +199,9 @@ class ReferencedStatesFlowTests {
     }
 
     // A flow to create a reference state.
-    class CreateRefState : FlowLogic<SignedTransaction>() {
+    class CreateRefState : FlowLogic<Set<SignedTransaction>>() {
         @Suspendable
-        override fun call(): SignedTransaction {
+        override fun call(): Set<SignedTransaction> {
             val notary = serviceHub.networkMapCache.notaryIdentities.first()
             val stx = serviceHub.signInitialTransaction(TransactionBuilder(notary = notary).apply {
                 addOutputState(RefState.State(ourIdentity), RefState.CONTRACT_ID)
@@ -212,9 +212,9 @@ class ReferencedStatesFlowTests {
     }
 
     // A flow to update a specific reference state.
-    class UpdateRefState(private val stateAndRef: StateAndRef<RefState.State>) : FlowLogic<SignedTransaction>() {
+    class UpdateRefState(private val stateAndRef: StateAndRef<RefState.State>) : FlowLogic<Set<SignedTransaction>>() {
         @Suspendable
-        override fun call(): SignedTransaction {
+        override fun call(): Set<SignedTransaction> {
             val notary = serviceHub.networkMapCache.notaryIdentities.first()
             val stx = serviceHub.signInitialTransaction(TransactionBuilder(notary = notary).apply {
                 addInputState(stateAndRef)
@@ -253,9 +253,9 @@ class ReferencedStatesFlowTests {
 
     // A flow to use a reference state in another transaction.
     @InitiatingFlow
-    class UseRefState(private val participant: Party, private val linearId: UniqueIdentifier) : FlowLogic<SignedTransaction>() {
+    class UseRefState(private val participant: Party, private val linearId: UniqueIdentifier) : FlowLogic<Set<SignedTransaction>>() {
         @Suspendable
-        override fun call(): SignedTransaction {
+        override fun call(): Set<SignedTransaction> {
             val notary = serviceHub.networkMapCache.notaryIdentities.first()
             val query = QueryCriteria.LinearStateQueryCriteria(
                     linearId = listOf(linearId),

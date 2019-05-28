@@ -108,9 +108,9 @@ class CollectSignaturesFlowTests : WithContracts {
     // receiving off the wire.
     object TestFlow {
         @InitiatingFlow
-        class Initiator(private val state: DummyContract.MultiOwnerState, private val notary: Party) : FlowLogic<SignedTransaction>() {
+        class Initiator(private val state: DummyContract.MultiOwnerState, private val notary: Party) : FlowLogic<Set<SignedTransaction>>() {
             @Suspendable
-            override fun call(): SignedTransaction {
+            override fun call(): Set<SignedTransaction> {
                 val myInputKeys = state.participants.map { it.owningKey }
                 val command = Command(DummyContract.Commands.Create(), myInputKeys)
                 val builder = TransactionBuilder(notary).withItems(StateAndContract(state, DummyContract.PROGRAM_ID), command)
