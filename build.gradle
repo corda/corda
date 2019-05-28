@@ -43,7 +43,7 @@ buildscript {
     // Need this version to access classpath scanning error handling fix -
     // see https://github.com/junit-team/junit5/commit/389de48c2a18c5a93a7203ef424aa47a8a835a74
     // Upgrade to 5.5.x when GA release is available.
-    ext.junit_vintage_version = '5.5.0-M1'
+    ext.junit_vintage_version = '5.4.2'
     ext.junit_jupiter_version = '5.5.0-M1'
     ext.junit_platform_version = '1.4.2'
     ext.mockito_version = '2.18.3'
