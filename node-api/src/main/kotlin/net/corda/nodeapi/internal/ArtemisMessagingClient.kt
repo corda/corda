@@ -55,6 +55,7 @@ class ArtemisMessagingClient(private val config: MutualSslConfiguration,
             minLargeMessageSize = maxMessageSize
             isUseGlobalPools = nodeSerializationEnv != null
             confirmationWindowSize = this@ArtemisMessagingClient.confirmationWindowSize
+            producerWindowSize = -1
             messagingServerConnectionConfig?.let {
                 connectionLoadBalancingPolicyClassName = RoundRobinConnectionPolicy::class.java.canonicalName
                 reconnectAttempts = messagingServerConnectionConfig.reconnectAttempts(isHA)
