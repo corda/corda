@@ -43,6 +43,8 @@
       <module name="com.r3cev.prototyping.experimental.test" target="1.8" />
       <module name="common-configuration-parsing_main" target="1.8" />
       <module name="common-configuration-parsing_test" target="1.8" />
+      <module name="common-logging_main" target="1.8" />
+      <module name="common-logging_test" target="1.8" />
       <module name="common-validation_main" target="1.8" />
       <module name="common-validation_test" target="1.8" />
       <module name="confidential-identities_main" target="1.8" />
@@ -351,6 +353,8 @@
       <module name="net.corda_buildSrc_test" target="1.8" />
       <module name="net.corda_canonicalizer_main" target="1.8" />
       <module name="net.corda_canonicalizer_test" target="1.8" />
+      <module name="netparams_main" target="1.8" />
+      <module name="netparams_test" target="1.8" />
       <module name="network-bootstrapper_main" target="1.8" />
       <module name="network-bootstrapper_test" target="1.8" />
       <module name="network-verifier-contracts_main" target="1.8" />
@@ -378,6 +382,8 @@
       <module name="node_main" target="1.8" />
       <module name="node_smokeTest" target="1.8" />
       <module name="node_test" target="1.8" />
+      <module name="nodeinfo_main" target="1.8" />
+      <module name="nodeinfo_test" target="1.8" />
       <module name="notary-bft-smart_main" target="1.8" />
       <module name="notary-bft-smart_test" target="1.8" />
       <module name="notary-demo-contracts_main" target="1.8" />

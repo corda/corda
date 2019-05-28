@@ -1,7 +1,0 @@
-#!/usr/bin/env bash
-
-SCRIPT_DIR=$(dirname $(readlink -f ${BASH_SOURCE[0]}))
-
-# Generate auto-completion file for Bash and ZSH
-java -cp ${SCRIPT_DIR}/corda-djvm-cli.jar \
-    picocli.AutoComplete -n djvm net.corda.djvm.tools.cli.Commands -f

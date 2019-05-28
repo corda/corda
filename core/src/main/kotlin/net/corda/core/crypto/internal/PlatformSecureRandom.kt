@@ -4,7 +4,7 @@ package net.corda.core.crypto.internal
 
 import net.corda.core.DeleteForDJVM
 import net.corda.core.crypto.newSecureRandom
-import org.apache.commons.lang.SystemUtils
+import org.apache.commons.lang3.SystemUtils
 import java.security.Provider
 import java.security.SecureRandom
 import java.security.SecureRandomSpi

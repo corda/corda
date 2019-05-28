@@ -24,7 +24,7 @@ import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.internal.testThreadFactory
 import net.corda.testing.node.User
-import org.apache.commons.lang.SystemUtils
+import org.apache.commons.lang3.SystemUtils
 import org.apache.logging.log4j.Level
 import org.junit.After
 import org.junit.Before

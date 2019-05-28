@@ -18,7 +18,6 @@ import net.corda.testing.node.internal.addressMustNotBeBound
 import org.assertj.core.api.Assertions.*
 import org.json.simple.JSONObject
 import org.junit.Test
-import java.io.RandomAccessFile
 import java.util.*
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors

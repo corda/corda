@@ -60,13 +60,23 @@
 # --------------
 # Should be a simple matter of ``pip install <package>``
 #
+#  Atlassian Passwords
+# =====================
+#
+# It's important to note that the Jira REST API no longer allows the use of
+# user passwords for authentication. Rather, the password that must be supplied
+# should be a generated API token. These can be created for your account at the
+# following link
+#
+# https://id.atlassian.com/manage/api-tokens
+#
 #  Issues
 # ========
 #
 # Doesn't really handle many errors all that well, also gives no mechanism 
 # to enter a correct password into the keyring if a wrong one is added which
 # isn't great but for now this should do
-#
+##
 #-------------------------------------------------------------------------------
 
 import re
@@ -102,13 +112,13 @@ def jiraLogin(args_) :
         password = None
 
     if not password:
-        password = getpass.getpass("Please enter your JIRA password, " +
+        password = getpass.getpass("Please enter your JIRA authkey, " +
                 "it will be stored in your OS Keyring: ")
 
         if not disableKeyring :
             keyring.set_password ('jira', args_.jiraUser, password)
 
-    return JIRA(R3_JIRA_ADDR, auth=(args_.jiraUser, password))
+    return JIRA(R3_JIRA_ADDR, basic_auth=(args_.jiraUser, password))
 
 #-------------------------------------------------------------------------------
 

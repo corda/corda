@@ -50,6 +50,7 @@ import org.apache.activemq.artemis.core.server.embedded.EmbeddedActiveMQ
 import org.apache.activemq.artemis.core.server.impl.ActiveMQServerImpl
 import org.apache.activemq.artemis.core.settings.impl.AddressFullMessagePolicy
 import org.apache.activemq.artemis.core.settings.impl.AddressSettings
+import org.apache.activemq.artemis.core.settings.impl.SlowConsumerPolicy
 import org.apache.activemq.artemis.spi.core.protocol.RemotingConnection
 import org.apache.activemq.artemis.spi.core.security.ActiveMQSecurityManager3
 import java.lang.reflect.Method
@@ -176,6 +177,7 @@ data class RPCDriverDSL(
         const val notificationAddress = "notifications"
 
         private fun ConfigurationImpl.configureCommonSettings(maxFileSize: Int, maxBufferedBytesPerClient: Long) {
+            name = "RPCDriver"
             managementNotificationAddress = SimpleString(notificationAddress)
             isPopulateValidatedUser = true
             journalBufferSize_NIO = maxFileSize
@@ -203,7 +205,11 @@ data class RPCDriverDSL(
             addressesSettings = mapOf(
                     "${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.#" to AddressSettings().apply {
                         maxSizeBytes = maxBufferedBytesPerClient
-                        addressFullMessagePolicy = AddressFullMessagePolicy.FAIL
+                        addressFullMessagePolicy = AddressFullMessagePolicy.PAGE
+                        pageSizeBytes = maxSizeBytes / 10
+                        slowConsumerPolicy = SlowConsumerPolicy.KILL
+                        slowConsumerThreshold = 1
+                        slowConsumerCheckPeriod = 30
                     }
             )
         }
@@ -222,6 +228,7 @@ data class RPCDriverDSL(
                 bindingsDirectory = "$artemisDir/bindings"
                 journalDirectory = "$artemisDir/journal"
                 largeMessagesDirectory = "$artemisDir/large-messages"
+                pagingDirectory = "$artemisDir/paging"
                 acceptorConfigurations = setOf(ArtemisTcpTransport.rpcAcceptorTcpTransport(hostAndPort, null))
                 configureCommonSettings(maxFileSize, maxBufferedBytesPerClient)
             }
@@ -314,7 +321,7 @@ data class RPCDriverDSL(
             rpcUser: User = rpcTestUser,
             nodeLegalName: CordaX500Name = fakeNodeLegalName,
             maxFileSize: Int = MAX_MESSAGE_SIZE,
-            maxBufferedBytesPerClient: Long = 10L * MAX_MESSAGE_SIZE,
+            maxBufferedBytesPerClient: Long = 5L * MAX_MESSAGE_SIZE,
             configuration: RPCServerConfiguration = RPCServerConfiguration.DEFAULT,
             customPort: NetworkHostAndPort? = null,
             ops: I
