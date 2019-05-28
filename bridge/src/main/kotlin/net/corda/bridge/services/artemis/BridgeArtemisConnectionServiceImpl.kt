@@ -17,9 +17,11 @@ import org.apache.activemq.artemis.api.core.client.ServerLocator
 import org.apache.activemq.artemis.core.remoting.impl.netty.TransportConstants
 import rx.Subscription
 import java.lang.Long.min
+import java.security.Security
 import java.util.concurrent.CountDownLatch
 
-class BridgeArtemisConnectionServiceImpl(val conf: FirewallConfiguration,
+class BridgeArtemisConnectionServiceImpl(artemisSigningService: TLSSigningService,
+                                         val conf: FirewallConfiguration,
                                          val maxMessageSize: Int,
                                          val auditService: FirewallAuditService,
                                          private val stateHelper: ServiceStateHelper = ServiceStateHelper(log)) : BridgeArtemisConnectionService, ServiceStateSupport by stateHelper {
@@ -42,6 +44,10 @@ class BridgeArtemisConnectionServiceImpl(val conf: FirewallConfiguration,
     init {
         statusFollower = ServiceStateCombiner(listOf(auditService))
         sslConfiguration = conf.outboundConfig?.artemisSSLConfiguration ?: conf.publicSSLConfiguration
+
+        if (Security.getProvider( DelegatedKeystoreProvider.PROVIDER_NAME) == null) {
+            Security.addProvider(DelegatedKeystoreProvider(artemisSigningService))
+        }
     }
 
     override fun start() {

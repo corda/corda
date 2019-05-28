@@ -40,7 +40,6 @@ class BridgeSupervisorServiceImpl(conf: FirewallConfiguration,
     private val signingService: TLSSigningService
     private val tunnelingSigningService: TLSSigningService
     private val artemisSigningService: TLSSigningService
-    private val artemisKeystoreProvider: DelegatedKeystoreProvider
 
     init {
         val artemisSSlConfiguration = conf.outboundConfig?.artemisSSLConfiguration ?: conf.publicSSLConfiguration
@@ -48,12 +47,8 @@ class BridgeSupervisorServiceImpl(conf: FirewallConfiguration,
         artemisSigningService = CryptoServiceSigningService(artemisCryptoService,
                 artemisSSlConfiguration.keyStore.get().extractCertificates(),
                 artemisSSlConfiguration.trustStore.get(), conf.sslHandshakeTimeout, auditService)
-        artemisKeystoreProvider = DelegatedKeystoreProvider(artemisSigningService)
-        if (Security.getProvider( DelegatedKeystoreProvider.PROVIDER_NAME) == null) {
-            Security.addProvider(artemisKeystoreProvider)
-        }
 
-        artemisService = BridgeArtemisConnectionServiceImpl(conf, maxMessageSize, auditService)
+        artemisService = BridgeArtemisConnectionServiceImpl(artemisSigningService, conf, maxMessageSize, auditService)
         haService = if (conf.haConfig == null) {
             SingleInstanceMasterService(conf, auditService)
         } else {

@@ -5,13 +5,18 @@ import com.nhaarman.mockito_kotlin.whenever
 import net.corda.bridge.createAndLoadConfigFromResource
 import net.corda.bridge.createBridgeKeyStores
 import net.corda.bridge.createNetworkParams
+import net.corda.bridge.services.api.FirewallConfiguration
+import net.corda.bridge.services.api.TLSSigningService
 import net.corda.bridge.services.artemis.BridgeArtemisConnectionServiceImpl
+import net.corda.bridge.services.config.CryptoServiceFactory
+import net.corda.bridge.services.receiver.CryptoServiceSigningService
 import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.services.config.EnterpriseConfiguration
 import net.corda.node.services.config.MutualExclusionConfiguration
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.ArtemisMessagingServer
+import net.corda.nodeapi.internal.provider.extractCertificates
 import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.MAX_MESSAGE_SIZE
 import net.corda.testing.core.SerializationEnvironmentRule
@@ -42,7 +47,8 @@ class ArtemisConnectionTest {
         val bridgeConfig = createAndLoadConfigFromResource(tempFolder.root.toPath(), configResource)
         bridgeConfig.createBridgeKeyStores(DUMMY_BANK_A_NAME)
         val auditService = TestAuditService()
-        val artemisService = BridgeArtemisConnectionServiceImpl(bridgeConfig, MAX_MESSAGE_SIZE, auditService)
+        val artemisSigningService = createArtemisSigningService(bridgeConfig)
+        val artemisService = BridgeArtemisConnectionServiceImpl(artemisSigningService, bridgeConfig, MAX_MESSAGE_SIZE, auditService)
         val stateFollower = artemisService.activeChange.toBlocking().iterator
         artemisService.start()
         assertEquals(false, stateFollower.next())
@@ -104,6 +110,14 @@ class ArtemisConnectionTest {
         val artemisServer = ArtemisMessagingServer(artemisConfig, NetworkHostAndPort("0.0.0.0", 11005), MAX_MESSAGE_SIZE)
         artemisServer.start()
         return artemisServer
+    }
+
+    private fun createArtemisSigningService(conf: FirewallConfiguration): TLSSigningService {
+        val artemisSSlConfiguration = conf.outboundConfig?.artemisSSLConfiguration ?: conf.publicSSLConfiguration
+        val artemisCryptoService = CryptoServiceFactory.get(conf.artemisCryptoServiceConfig, artemisSSlConfiguration.keyStore)
+        return  CryptoServiceSigningService(artemisCryptoService,
+                artemisSSlConfiguration.keyStore.get().extractCertificates(),
+                artemisSSlConfiguration.trustStore.get(), conf.sslHandshakeTimeout, TestAuditService())
     }
 
 }

@@ -37,7 +37,7 @@ import java.nio.file.Paths
 import javax.security.auth.x500.X500Principal
 import java.util.UUID
 
-const val ARTEMIS_HSM_KEYSTORE = "artemis-hsm.jks"  // Store only the public key for Bridge Artemis link
+const val ARTEMIS_HSM_KEYSTORE = "artemishsm.jks"  // Store only the public key for Bridge Artemis link
 
 class BridgeHSMTest : IntegrationTest() {
     @Rule
