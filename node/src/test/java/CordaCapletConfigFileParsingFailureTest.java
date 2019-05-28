@@ -1,3 +1,4 @@
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -29,6 +30,7 @@ public class CordaCapletConfigFileParsingFailureTest {
         this.cmdLineArguments = baseOption;
     }
 
+    @Ignore
     @Test
     public void testThatBaseDirectoryFallsBackToDefaultWhenConfigFileIsNotSupplied() {
         final CordaCaplet caplet = CordaCapletTestUtils.getCaplet();

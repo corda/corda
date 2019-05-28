@@ -1,4 +1,5 @@
 
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -29,6 +30,7 @@ public class CordaCapletConfigFileParsingTest {
         this.cmdLineArguments = arr;
     }
 
+    @Ignore
     @Test
     public void testThatConfigFileParameterIsRecognised() {
         final CordaCaplet caplet = CordaCapletTestUtils.getCaplet();

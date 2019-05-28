@@ -1,4 +1,5 @@
 
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -28,6 +29,7 @@ public class CordaCapletBaseDirectoryParsingTest {
         this.cmdLineArguments = arr;
     }
 
+    @Ignore
     @Test
     public void testThatBaseDirectoryParameterIsRecognised() {
         final CordaCaplet caplet = CordaCapletTestUtils.getCaplet();
