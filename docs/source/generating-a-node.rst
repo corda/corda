@@ -185,13 +185,31 @@ The ``signing`` entry may contain the following parameters:
   by default the JAR file is signed by Corda development key, the external keystore can be specified,
   the minimal list of required options is shown below, for other options referer to `SignJar task <https://ant.apache.org/manual/Tasks/signjar.html>`_:
 
-  * ``keystore`` the path to the keystore file, by default *cordadevcakeys.jks* keystore is shipped with the plugin
   * ``alias`` the alias to sign under, the default value is *cordaintermediateca*
-  * ``storepass`` the keystore password, the default value is *cordacadevpass*
   * ``keypass`` the private key password if it's different than the password for the keystore, the default value is *cordacadevkeypass*
+  * ``keystore`` the path to the keystore file, by default *cordadevcakeys.jks* keystore is shipped with the plugin
   * ``storetype`` the keystore type, the default value is *JKS*
-  * ``dname`` the distinguished name for entity, the option is used when ``generateKeystore true`` only
-  * ``keyalg`` the method to use when generating name-value pair, the value defaults to *RSA* as Corda doesn't support *DSA*, the option is used when ``generateKeystore true`` only
+  * ``storepass`` the keystore password, the default value is *cordacadevpass*
+  * ``sigfile`` *******
+  * ``signedjar`` *******
+  * ``verbose`` *******
+  * ``strict`` *******
+  * ``internalsf`` *******
+  * ``sectionsonly`` *******
+  * ``lazy`` *******
+  * ``maxmemory`` *******
+  * ``preservelastmodified`` *******
+  * ``tsaurl`` *******
+  * ``tsacert`` *******
+  * ``tsaproxyhost`` *******
+  * ``tsaproxyport`` *******
+  * ``executable`` *******
+  * ``force`` *******
+  * ``sigalg`` *******
+  * ``digestalg`` *******
+  * ``tsadigestalg`` *******
+  * !!``dname`` the distinguished name for entity, the option is used when ``generateKeystore true`` only
+  * !!``keyalg`` the method to use when generating name-value pair, the value defaults to *RSA* as Corda doesn't support *DSA*, the option is used when ``generateKeystore true`` only
 
 * ``generateKeystore`` the flag to generate a keystore, it is set to ``false`` by default. If set to ``true`` then ad hock keystore is created and its key isused
   instead of the default Corda development key or any external key.
