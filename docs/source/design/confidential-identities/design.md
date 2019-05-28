@@ -78,6 +78,12 @@ function. However, as the `KeyManagementService` stores all the node's keys
 this dependency is not required! This dependency can be removed, which will
 simplify things at start-up a little.
 
+**Update:** It looks like we won't be able to remove this dependency after
+all since `KeyManagementService.freshKeyAndCert` uses the identityService
+to register CIs and our new way of doing this needs to be done from within
+a flow so we have decided to deprecate this method instead of removing the
+dependency.
+
 ### Unnecessary use of x.509 certificates
 
 The confidential identities feature uses certificate chains when there is
@@ -146,9 +152,16 @@ Requirements for anonymous key mappings:
    wrong node or assets might be moved to incorrect keys, due to error or
    malicious intent.
 
-4. Nodes must to be able to generate key pairs for multiple purposes; "confidential
-   identity" for the node's legal identity, new key pairs for an "accounts".
-   The key management service API should be generic.
+4. Nodes must to be able to generate key pairs for multiple purposes;
+
+   1. The node operator is a single legal identity and they wish to generate
+      a new key pair ( or confidential identity) to transact with.
+
+   2. The the node operator hosts accounts on behalf of its customers. As
+      such, the node operator will need to generate a "Default" key pair
+      for each account (the "account key") and further key pairs if an account
+      wishes to use a "confidential identity" and not continually have their
+      account key associated with their states.
 
 5. Nodes must be able to lookup the `Party` for `AnonymousParty`s (i.e.
    just a `PublicKey`) that have an associated mapping. Nodes must be able
@@ -184,7 +197,7 @@ No changes.
 #### New public types
 
     @CordaSerializable
-    data class KeyToPartyMapping(val key: PublicKey, val party: Party)
+    data class KeyToPartyMapping(val key: PublicKey, val party: PartyAndCertificate)
 
     @CordaSerializable
     data class SignedKeyToPartyMapping(
@@ -192,7 +205,7 @@ No changes.
             val signature: DigitalSignature.WithKey
     )
 
-The new type `KeyToPartyMapping` simply maps a `PublicKey` to a `Party`
+The new type `KeyToPartyMapping` simply maps a `PublicKey` to a `PartyAndCertificate`
 object. The type makes no assumptions about _who_ the `PublicKey` is for.
 Indeed, it could be for an account or a legal identity, if a company wishes
 to self-host Corda. The `KeyToPartyMapping` should be signed by a node operator's
@@ -368,6 +381,9 @@ Three sets of flows will be added:
        of this, is that now, only the creator of the confidential identity
        can prove they created it. Assertions made by other nodes are
        deniable.
+
+The current flows can be left as they are. However my view is that they
+should be deprecated.
 
 
 
