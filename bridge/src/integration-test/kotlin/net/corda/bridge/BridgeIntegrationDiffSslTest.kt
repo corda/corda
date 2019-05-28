@@ -93,7 +93,6 @@ class BridgeIntegrationDiffSslTest {
                 floatOuterConfig = floatConfigInitial.floatOuterConfig!!.copy(
                         tunnelSSLConfiguration = floatConfigInitial.floatOuterConfig!!.tunnelSSLConfiguration!!.resolveToBaseDir()))
 
-        createNetworkParams(floatFolder)
         assertEquals(FirewallMode.FloatOuter, floatConfig.firewallMode)
         assertEquals(NetworkHostAndPort("0.0.0.0", 10005), floatConfig.inboundConfig!!.listeningAddress)
         val (artemisServer, artemisClient) = createArtemis(bridgeConfig.outboundConfig!!.artemisSSLConfiguration!!)

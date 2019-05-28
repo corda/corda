@@ -32,7 +32,6 @@ import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 
 class FloatControlListenerService(val conf: FirewallConfiguration,
-                                  val maximumMessageSize: Int,
                                   val auditService: FirewallAuditService,
                                   private val amqpListener: BridgeAMQPListenerService,
                                   private val stateHelper: ServiceStateHelper = ServiceStateHelper(log)) : FloatControlService, ServiceStateSupport by stateHelper {
@@ -56,6 +55,8 @@ class FloatControlListenerService(val conf: FirewallConfiguration,
     private val tunnelSigningService: TLSSigningService
     private val tunnelingTruststore: CertificateStore
     private val statusFollower:ServiceStateCombiner
+
+    private var maxMessageSize :Int? = null
 
 
     init {
@@ -88,7 +89,9 @@ class FloatControlListenerService(val conf: FirewallConfiguration,
                 override val password: String? = null
                 override val keyStore = tunnelSigningService.keyStore()
                 override val trustStore = tunnelingTruststore
-                override val maxMessageSize: Int = maximumMessageSize
+                // There is no need to have the network maxMessageSize as this value is used to control tunnel messaging. Filtering based on
+                // the network maxMessageSize is done elsewhere
+                override val maxMessageSize: Int = Int.MAX_VALUE
                 override val trace: Boolean = conf.enableAMQPPacketTrace
                 override val healthCheckPhrase = conf.healthCheckPhrase
                 override val silencedIPs: Set<String> = conf.silencedIPs
@@ -111,6 +114,7 @@ class FloatControlListenerService(val conf: FirewallConfiguration,
             stopControlListener()
             statusSubscriber?.unsubscribe()
             statusSubscriber = null
+            maxMessageSize = null
         }
     }
 
@@ -190,7 +194,8 @@ class FloatControlListenerService(val conf: FirewallConfiguration,
                             p2pSigningService = AMQPSigningService(amqpControlServer!!, floatClientName, receivedMessage.sourceLink, receivedMessage.sourceLegalName, controlMessage.certificates, trustStore, auditService)
                             p2pSigningService!!.start()
 
-                            amqpListener.provisionKeysAndActivate(p2pSigningService!!.keyStore(), trustStore)
+                            maxMessageSize = controlMessage.maxMessageSize
+                            amqpListener.provisionKeysAndActivate(p2pSigningService!!.keyStore(), trustStore, maxMessageSize!!)
                             forwardAddress = receivedMessage.sourceLink
                             forwardLegalName = receivedMessage.sourceLegalName
                         }
@@ -232,8 +237,8 @@ class FloatControlListenerService(val conf: FirewallConfiguration,
             message.complete(true) // consume message so it isn't resent forever
             return
         }
-        if (message.payload.size > maximumMessageSize) {
-            auditService.packetDropEvent(message, "Message exceeds maxMessageSize network parameter, maxMessageSize: [${message.payload.size}], message size: [$maximumMessageSize]. Message is acknowledged and dropped.", RoutingDirection.INBOUND)
+        if (message.payload.size > maxMessageSize!!) {
+            auditService.packetDropEvent(message, "Message exceeds maxMessageSize network parameter, maxMessageSize: [${message.payload.size}], message size: [$maxMessageSize]. Message is acknowledged and dropped.", RoutingDirection.INBOUND)
             message.complete(true)
             return
         }

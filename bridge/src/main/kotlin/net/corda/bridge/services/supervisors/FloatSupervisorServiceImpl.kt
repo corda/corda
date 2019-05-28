@@ -10,7 +10,6 @@ import org.slf4j.LoggerFactory
 import rx.Subscription
 
 class FloatSupervisorServiceImpl(val conf: FirewallConfiguration,
-                                 val maxMessageSize: Int,
                                  val auditService: FirewallAuditService,
                                  private val stateHelper: ServiceStateHelper = ServiceStateHelper(log)) : FloatSupervisorService, ServiceStateSupport by stateHelper {
     companion object {
@@ -24,10 +23,10 @@ class FloatSupervisorServiceImpl(val conf: FirewallConfiguration,
     private var statusSubscriber: Subscription? = null
 
     init {
-        amqpListenerService = BridgeAMQPListenerServiceImpl(conf, maxMessageSize, auditService)
+        amqpListenerService = BridgeAMQPListenerServiceImpl(conf, auditService)
         floatControlService = if (conf.firewallMode == FirewallMode.FloatOuter) {
             require(conf.haConfig == null) { "Float process should not have HA config, that is controlled via the bridge." }
-            FloatControlListenerService(conf, maxMessageSize, auditService, amqpListenerService)
+            FloatControlListenerService(conf, auditService, amqpListenerService)
         } else {
             null
         }

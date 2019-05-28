@@ -18,7 +18,7 @@ object FloatControlTopics {
     const val FLOAT_DATA_TOPIC = "float.forward"
 }
 
-internal class ActivateFloat(val certificates: Map<String, List<X509Certificate>>, val trustStoreBytes: ByteArray, val trustStorePassword: CharArray) : TunnelControlMessage()
+internal class ActivateFloat(val certificates: Map<String, List<X509Certificate>>, val trustStoreBytes: ByteArray, val trustStorePassword: CharArray, val maxMessageSize: Int) : TunnelControlMessage()
 
 internal class SigningRequest(val requestId: Long = System.currentTimeMillis(), val alias: String, val sigAlgo: String, val data: ByteArray) : TunnelControlMessage()
 internal class SigningResponse(val requestId: Long, val signature: ByteArray?) : TunnelControlMessage()

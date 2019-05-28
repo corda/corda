@@ -22,7 +22,6 @@ import java.security.KeyStore
 import java.util.*
 
 class BridgeAMQPListenerServiceImpl(val conf: FirewallConfiguration,
-                                    val maximumMessageSize: Int,
                                     val auditService: FirewallAuditService,
                                     private val stateHelper: ServiceStateHelper = ServiceStateHelper(log)) : BridgeAMQPListenerService, ServiceStateSupport by stateHelper {
     companion object {
@@ -38,7 +37,7 @@ class BridgeAMQPListenerServiceImpl(val conf: FirewallConfiguration,
     private var onConnectAuditSubscription: Subscription? = null
     private var onReceiveSubscription: Subscription? = null
 
-    override fun provisionKeysAndActivate(keyStore: CertificateStore, trustStore:CertificateStore) {
+    override fun provisionKeysAndActivate(keyStore: CertificateStore, trustStore:CertificateStore, maximumMessageSize: Int) {
         require(active) { "AuditService must be active" }
         val bindAddress = conf.inboundConfig!!.listeningAddress
         val amqpConfiguration = object : AMQPConfiguration {

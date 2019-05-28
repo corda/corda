@@ -26,6 +26,7 @@ import java.util.concurrent.TimeoutException
 import kotlin.concurrent.thread
 
 class TunnelingBridgeReceiverService(val conf: FirewallConfiguration,
+                                     private val maximumMessageSize: Int,
                                      val auditService: FirewallAuditService,
                                      haService: BridgeMasterService,
                                      private val tunnelingSigningService: TLSSigningService,
@@ -113,7 +114,7 @@ class TunnelingBridgeReceiverService(val conf: FirewallConfiguration,
             val trustStore = signingService.truststore()
             val trustStoreBytes = ByteArrayOutputStream()
             trustStore.writeTo(trustStoreBytes)
-            val activateMessage = ActivateFloat(signingService.certificates(), trustStoreBytes.toByteArray(), trustStore.password.toCharArray())
+            val activateMessage = ActivateFloat(signingService.certificates(), trustStoreBytes.toByteArray(), trustStore.password.toCharArray(), maximumMessageSize)
             val amqpActivateMessage = amqpControlClient!!.createMessage(activateMessage.serialize(context = SerializationDefaults.P2P_CONTEXT).bytes,
                     FLOAT_CONTROL_TOPIC,
                     expectedCertificateSubject.toString(),

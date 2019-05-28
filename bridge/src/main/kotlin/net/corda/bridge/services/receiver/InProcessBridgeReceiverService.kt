@@ -7,7 +7,8 @@ import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.protonwrapper.messages.ReceivedMessage
 import rx.Subscription
 
-class InProcessBridgeReceiverService(auditService: FirewallAuditService,
+class InProcessBridgeReceiverService(private val maxMessageSize: Int,
+                                     auditService: FirewallAuditService,
                                      haService: BridgeMasterService,
                                      private val signingService: TLSSigningService,
                                      private val amqpListenerService: BridgeAMQPListenerService,
@@ -24,7 +25,7 @@ class InProcessBridgeReceiverService(auditService: FirewallAuditService,
     override fun start() {
         statusSubscriber = statusFollower.activeChange.subscribe({
             if (it) {
-                amqpListenerService.provisionKeysAndActivate(signingService.keyStore(), signingService.truststore())
+                amqpListenerService.provisionKeysAndActivate(signingService.keyStore(), signingService.truststore(), maxMessageSize)
             } else {
                 if (amqpListenerService.running) {
                     amqpListenerService.wipeKeysAndDeactivate()

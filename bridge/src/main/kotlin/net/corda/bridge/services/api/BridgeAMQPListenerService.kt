@@ -18,7 +18,7 @@ interface BridgeAMQPListenerService : ServiceLifecycleSupport {
      * Passes in the [KeyStore]s containing the TLS keys and certificates. This data is only to be held in memory
      * and will be wiped on close.
      */
-    fun provisionKeysAndActivate(keyStore: CertificateStore, trustStore: CertificateStore)
+    fun provisionKeysAndActivate(keyStore: CertificateStore, trustStore: CertificateStore, maxMessageSize: Int)
 
     /**
      * Stop listening on the socket and cleanup any private data/keys.

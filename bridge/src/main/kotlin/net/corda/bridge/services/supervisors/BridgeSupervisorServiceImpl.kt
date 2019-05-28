@@ -56,10 +56,10 @@ class BridgeSupervisorServiceImpl(conf: FirewallConfiguration,
         senderService = DirectBridgeSenderService(conf, maxMessageSize, signingService, auditService, haService, artemisService)
         filterService = SimpleMessageFilterService(conf, auditService, artemisService, senderService)
         receiverService = if (conf.firewallMode == FirewallMode.SenderReceiver) {
-            InProcessBridgeReceiverService(auditService, haService, signingService, inProcessAMQPListenerService!!, filterService)
+            InProcessBridgeReceiverService(maxMessageSize, auditService, haService, signingService, inProcessAMQPListenerService!!, filterService)
         } else {
             require(inProcessAMQPListenerService == null) { "Should not have an in process instance of the AMQPListenerService" }
-            TunnelingBridgeReceiverService(conf, auditService, haService, tunnelingSigningService, signingService, filterService)
+            TunnelingBridgeReceiverService(conf, maxMessageSize, auditService, haService, tunnelingSigningService, signingService, filterService)
         }
         statusFollower = ServiceStateCombiner(listOf(haService, senderService, receiverService, filterService))
         activeChange.subscribe({
