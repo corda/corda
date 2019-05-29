@@ -592,7 +592,7 @@ private class P2PMessagingConsumer(
 
     private var notificationTimer : Timer? = null
     private fun scheduleDrainNotificationTimer() {
-        notificationTimer =  timer("DrainNotificationTimerTimer", true, 10.seconds.toMillis(), 1.minutes.toMillis()) {
+        notificationTimer =  timer("DrainNotificationTimer", true, 10.seconds.toMillis(), 1.minutes.toMillis()) {
             logger.warn("Node is currently in draining mode, new flows will not be processed! Flows in flight: ${metricsRegistry.gauges["Flows.InFlight"]?.value}")
         }
     }
