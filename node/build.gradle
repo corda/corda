@@ -253,7 +253,6 @@ quasar {
             "org.jboss.**",
             "org.mockito**",
             "org.objenesis**",
-            "org.opentest4j**",
             "org.w3c.**",
             "org.xml**",
             "org.yaml**",

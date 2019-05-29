@@ -32,7 +32,8 @@ buildscript {
                 'com.nhaarman.mockito_kotlin**',
                 'org.assertj**',
                 'org.hamcrest**',
-                'org.mockito**'
+                'org.mockito**',
+                'org.opentest4j**'
         ]
 
     // gradle-capsule-plugin:1.0.2 contains capsule:1.0.1 by default.
