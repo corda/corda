@@ -41,7 +41,6 @@ We look forward to seeing what you can do with Corda!
    node-internals-index.rst
    component-library-index.rst
    release-process-index.rst
-   faq.rst
    troubleshooting.rst
    other-index.rst
    glossary.rst
