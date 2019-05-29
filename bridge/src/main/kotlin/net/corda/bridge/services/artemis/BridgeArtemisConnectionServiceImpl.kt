@@ -45,9 +45,10 @@ class BridgeArtemisConnectionServiceImpl(artemisSigningService: TLSSigningServic
         statusFollower = ServiceStateCombiner(listOf(auditService))
         sslConfiguration = conf.outboundConfig?.artemisSSLConfiguration ?: conf.publicSSLConfiguration
 
-        if (Security.getProvider( DelegatedKeystoreProvider.PROVIDER_NAME) == null) {
-            Security.addProvider(DelegatedKeystoreProvider(artemisSigningService))
+        Security.getProvider( DelegatedKeystoreProvider.PROVIDER_NAME)?.let {
+            Security.removeProvider(DelegatedKeystoreProvider.PROVIDER_NAME)
         }
+        Security.addProvider(DelegatedKeystoreProvider(artemisSigningService))
     }
 
     override fun start() {
