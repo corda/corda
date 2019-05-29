@@ -84,24 +84,6 @@ class P2PFlowsDrainingModeTest {
     }
 
     @Test
-    fun `flows draining mode warns the operator of the draining mode`() {
-        driver(DriverParameters(startNodesInProcess = false, portAllocation = portAllocation, notarySpecs = emptyList())) {
-            val initiatedNode = startNode(providedName = ALICE_NAME).getOrThrow()
-            val initiated = initiatedNode.rpc
-
-            initiated.setFlowsDrainingModeEnabled(true)
-
-            Thread.sleep(10.seconds.toMillis())
-
-            val logFile = initiatedNode.logFile()
-            val linesWithWarning = logFile.useLines { lines -> lines.filter { it.contains("Node is currently in draining mode, new flows will not be processed!")}.toList() }
-
-
-            Assertions.assertThat(linesWithWarning).isNotEmpty
-        }
-    }
-
-    @Test
     fun `terminate node waiting for pending flows`() {
 
         driver(DriverParameters(portAllocation = portAllocation, notarySpecs = emptyList())) {

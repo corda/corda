@@ -24,7 +24,6 @@ import net.corda.node.internal.artemis.ReactiveArtemisConsumer
 import net.corda.node.internal.artemis.ReactiveArtemisConsumer.Companion.multiplex
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.services.config.NodeConfiguration
-import net.corda.node.services.events.NodeSchedulerService
 import net.corda.node.services.statemachine.DeduplicationId
 import net.corda.node.services.statemachine.ExternalEvent
 import net.corda.node.services.statemachine.SenderDeduplicationId
@@ -57,6 +56,7 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CountDownLatch
 import javax.annotation.concurrent.ThreadSafe
+import kotlin.concurrent.timer
 
 /**
  * This class implements the [MessagingService] API using Apache Artemis, the successor to their ActiveMQ product.
@@ -194,7 +194,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
 
             inboxes.forEach { createQueueIfAbsent(it, producerSession!!, exclusive = true) }
 
-            p2pConsumer = P2PMessagingConsumer(inboxes, createNewSession, isDrainingModeOn, drainingModeWasChangedEvents)
+            p2pConsumer = P2PMessagingConsumer(inboxes, createNewSession, isDrainingModeOn, drainingModeWasChangedEvents, metricRegistry)
 
             messagingExecutor = MessagingExecutor(
                     executorSession!!,
@@ -574,7 +574,8 @@ private class P2PMessagingConsumer(
         queueNames: Set<String>,
         createSession: () -> ClientSession,
         private val isDrainingModeOn: () -> Boolean,
-        private val drainingModeWasChangedEvents: Observable<Pair<Boolean, Boolean>>) : LifecycleSupport {
+        private val drainingModeWasChangedEvents: Observable<Pair<Boolean, Boolean>>,
+        private val metricsRegistry : MetricRegistry) : LifecycleSupport {
 
     private companion object {
         private const val initialSessionMessages = "${P2PMessagingHeaders.Type.KEY}<>'${P2PMessagingHeaders.Type.SESSION_INIT_VALUE}'"
@@ -591,12 +592,8 @@ private class P2PMessagingConsumer(
 
     private var notificationTimer : Timer? = null
     private fun scheduleDrainNotificationTimer() {
-        notificationTimer =  Timer("DrainNotificationTimer", true).apply {
-            schedule(object : TimerTask() {
-                override fun run() {
-                    logger.warn("Node is currently in draining mode, new flows will not be processed!")
-                }
-            }, 10.seconds.toMillis(), 1.minutes.toMillis())
+        notificationTimer =  timer("DrainNotificationTimerTimer", true, 10.seconds.toMillis(), 1.minutes.toMillis()) {
+            logger.warn("Node is currently in draining mode, new flows will not be processed! Flows in flight: ${metricsRegistry.gauges["Flows.InFlight"]?.value}")
         }
     }
 
