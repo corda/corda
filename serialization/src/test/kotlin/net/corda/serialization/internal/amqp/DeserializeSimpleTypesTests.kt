@@ -549,16 +549,31 @@ class DeserializeSimpleTypesTests {
 
     @Test
     fun classHasNoPublicConstructor() {
-        assertFailsWithMessage("Trying to build an object serializer for ${Garbo::class.java.name}, " +
-                "but it is not constructable from its public properties, and so requires a custom serialiser.") {
+        assertFailsWithMessage(
+            """Unable to create an object serializer for type class ${Garbo::class.java.name}:
+Mandatory constructor parameters [value] are missing from the readable properties []
+
+Either provide getters or readable fields for [value], or provide a custom serializer for this type
+
+No custom serializers registered.
+"""
+        ) {
             TestSerializationOutput(VERBOSE, sf1).serializeAndReturnSchema(Garbo.make(1))
         }
     }
 
     @Test
     fun propertyClassHasNoPublicConstructor() {
-        assertFailsWithMessage("Trying to build an object serializer for ${Greta::class.java.name}, " +
-                "but it is not constructable from its public properties, and so requires a custom serialiser.") {
+        assertFailsWithMessage(
+            """Unable to create an object serializer for type class ${Greta::class.java.name}:
+Has properties [garbo] of types that are not serializable:
+garbo [class ${Garbo::class.java.name}]: Mandatory constructor parameters [value] are missing from the readable properties []
+
+Either ensure that the properties [garbo] are serializable, or provide a custom serializer for this type
+
+No custom serializers registered.
+"""
+        ) {
             TestSerializationOutput(VERBOSE, sf1).serializeAndReturnSchema(Greta(Garbo.make(1)))
         }
     }
