@@ -549,7 +549,6 @@ class DriverDSLImpl(
                 *extraCmdLineFlag
         )
 
-        System.exit(-1)
         return poll(executorService, "$extraCmdLineFlag (${config.corda.myLegalName})") {
             if (process.isAlive) null else Unit
         }
