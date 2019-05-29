@@ -508,7 +508,7 @@ class RPCStabilityTests {
             session.createTemporaryQueue(myQueue, ActiveMQDefaultConfiguration.getDefaultRoutingType(), myQueue)
             val consumer = session.createConsumer(myQueue, null, -1, -1, false)
             consumer.setMessageHandler {
-                Thread.sleep(50) // 5x slower than the server producer
+                Thread.sleep(5000) // Needs to be slower than one per second to get kicked.
                 it.acknowledge()
             }
             val producer = session.createProducer(RPCApi.RPC_SERVER_QUEUE_NAME)
@@ -520,7 +520,7 @@ class RPCStabilityTests {
             val request = RPCApi.ClientToServer.RpcRequest(
                     clientAddress = SimpleString(myQueue),
                     methodName = SlowConsumerRPCOps::streamAtInterval.name,
-                    serialisedArguments = listOf(10.millis, 123456).serialize(context = SerializationDefaults.RPC_SERVER_CONTEXT),
+                    serialisedArguments = listOf(100.millis, 1234).serialize(context = SerializationDefaults.RPC_SERVER_CONTEXT),
                     replyId = Trace.InvocationId.newInstance(),
                     sessionId = Trace.SessionId.newInstance()
             )

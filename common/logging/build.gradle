@@ -1,5 +1,6 @@
-apply plugin: 'kotlin'
+import org.apache.tools.ant.filters.ReplaceTokens
 
+apply plugin: 'kotlin'
 apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'com.jfrog.artifactory'
 
@@ -16,6 +17,14 @@ dependencies {
 
     testCompile project(":test-utils")
 }
+
+
+task generateSource(type: Copy) {
+    from 'src/main/template'
+    filter(ReplaceTokens, tokens: [corda_release_version: corda_release_version])
+    into 'src/main'
+}
+compileKotlin.dependsOn generateSource
 
 jar {
     baseName 'corda-common-logging'
