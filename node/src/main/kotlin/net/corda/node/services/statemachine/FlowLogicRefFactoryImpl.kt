@@ -7,6 +7,7 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SingletonSerializeAsToken
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
+import java.lang.reflect.TypeVariable
 import java.util.*
 import kotlin.reflect.KFunction
 import kotlin.reflect.KParameter
@@ -156,6 +157,8 @@ open class FlowLogicRefFactoryImpl(private val classloader: ClassLoader) : Singl
             }
         } else if (type is ParameterizedType) {
             parameterAssignableFrom(type.rawType, value)
+        } else if (type is TypeVariable<*>) {
+            type.bounds.all { parameterAssignableFrom(it, value) }
         } else {
             false
         }
