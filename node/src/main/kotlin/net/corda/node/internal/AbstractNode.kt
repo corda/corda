@@ -112,6 +112,7 @@ import java.util.concurrent.TimeUnit.SECONDS
 import java.util.function.Consumer
 import javax.persistence.EntityManager
 import kotlin.math.max
+import kotlin.math.min
 import net.corda.core.crypto.generateKeyPair as cryptoGenerateKeyPair
 
 /**
@@ -428,6 +429,19 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         return max(
                 1000, // The minimum number of messages to retain for the default configuration
                 (configuration.enterpriseConfiguration.tuning.p2pConfirmationWindowSize / 512) + 1 // Assumed message size is 0.5 KB
+        )
+    }
+
+    /**
+     * By default the node will retain entries in the message deduplication table for up to the number of days specified by the event
+     * horizon value – this is the number of days a node is allowed to be offline before being evicted from the network.
+     *
+     * However, since some networks may set the event horizon be arbitrarily large, we cap the retain for days value to 1 year.
+     */
+    private fun defaultRetainForDays(eventHorizon: Duration): Int {
+        return min(
+                NodeJanitor.maxRetainForDays,
+                eventHorizon.toDays().toInt()
         )
     }
 
@@ -878,7 +892,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         val retainPerSender = messageCleanupConfig?.retainPerSender
                 ?: defaultRetainPerSender()
         val retainForDays = messageCleanupConfig?.retainForDays
-                ?: eventHorizon.toDays().toInt()
+                ?: defaultRetainForDays(eventHorizon)
 
         NodeJanitor.cleanUpProcessedMessages(database, platformClock, retainForDays, retainPerSender)
     }
