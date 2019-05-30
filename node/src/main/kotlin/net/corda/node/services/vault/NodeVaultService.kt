@@ -208,7 +208,6 @@ class NodeVaultService(
         if (statesToRecord == StatesToRecord.NONE || (!txns.any() && !previouslySeenTxns.any()))  return
         val batch = mutableListOf<CoreTransaction>()
 
-        log.info("Recording transactions. New: $txns, Seen before: $previouslySeenTxns")
         fun flushBatch(previouslySeen: Boolean) {
             val updates = makeUpdates(batch, statesToRecord, previouslySeen)
             processAndNotify(updates)
@@ -257,6 +256,9 @@ class NodeVaultService(
                     isRelevant(value.data, keyManagementService.filterMyKeys(outputs.values.flatMap { it.data.participants.map { it.owningKey } }).toSet())
                 }
                 StatesToRecord.ALL_VISIBLE -> if (previouslySeen) {
+                    // For transactions being re-recorded, the node must check its vault to find out what states it has already seen. Note
+                    // that some of the outputs previously seen may have been consumed in the meantime, so the check must look for all state
+                    // statuses.
                     val outputRefs = tx.outRefsOfType<ContractState>().map { it.ref }
                     val seenRefs = loadStates(outputRefs, stateStatus = Vault.StateStatus.ALL).map { it.ref }
                     val unseenRefs = outputRefs - seenRefs
@@ -267,7 +269,6 @@ class NodeVaultService(
                 }
             }.map { (idx, _) -> tx.outRef<ContractState>(idx) }
 
-            log.info("Produced states to add: $ourNewStates")
             // Retrieve all unconsumed states for this transaction's inputs.
             val consumedStates = loadStates(tx.inputs)
 

@@ -17,6 +17,9 @@ interface VaultServiceInternal : VaultService {
      */
     fun notifyAll(statesToRecord: StatesToRecord, txns: Iterable<CoreTransaction>, previouslySeenTxns: Iterable<CoreTransaction> = emptyList())
 
-    /** Same as notifyAll but with a single transaction. */
+    /**
+     * Same as notifyAll but with a single transaction.
+     * This does not allow for passing transactions that have already been seen by the node, as this API is only used in testing.
+     */
     fun notify(statesToRecord: StatesToRecord, tx: CoreTransaction) = notifyAll(statesToRecord, listOf(tx))
 }
