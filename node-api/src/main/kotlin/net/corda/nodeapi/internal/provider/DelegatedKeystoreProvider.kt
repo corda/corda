@@ -9,20 +9,19 @@ import java.security.cert.X509Certificate
 
 
 
-class DelegatedKeystoreProvider(signingService: DelegatedSigningService) : Provider( PROVIDER_NAME,
+class DelegatedKeystoreProvider : Provider( PROVIDER_NAME,
         0.1, "JCA/JCE delegated keystore provider") {
 
     companion object {
         const val PROVIDER_NAME = "DelegatedKeyStore"
-        const val ALGORITHM_NAME = "Delegated"
     }
 
-    init {
-        this.putService(DelegatedKeyStoreService(this, signingService))
+    fun putService(name: String, signingService: DelegatedSigningService) {
+        putService(DelegatedKeyStoreService(this, name, signingService))
     }
 
-    private class DelegatedKeyStoreService(provider: Provider, private val signingService: DelegatedSigningService) : Service(provider,
-            "KeyStore", ALGORITHM_NAME, "DelegatedKeyStore", null, null) {
+    private class DelegatedKeyStoreService(provider: Provider, name: String, private val signingService: DelegatedSigningService) : Service(provider,
+            "KeyStore", name, "DelegatedKeyStore", null, null) {
         @Throws(NoSuchAlgorithmException::class)
         override fun newInstance(var1: Any?): Any {
             return DelegatedKeystore(signingService)

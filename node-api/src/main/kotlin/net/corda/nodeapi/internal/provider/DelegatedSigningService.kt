@@ -18,7 +18,8 @@ interface DelegatedSigningService {
     fun certificate(alias: String): X509Certificate? = certificates(alias)?.first()
 
     fun keyStore(): CertificateStore {
-        val provider = DelegatedKeystoreProvider(this)
+        val provider = DelegatedKeystoreProvider()
+        provider.putService( "Delegated",this)
         val keyStore = KeyStore.getInstance("Delegated", provider).also { it.load(null) }
         return CertificateStore.of(X509KeyStore(keyStore, "dummy"), "dummy", "dummy")
     }
