@@ -210,7 +210,7 @@ configurations {
 
 tasks.withType(Test) {
     // fork a new test process for every test class
-    forkEvery = 50
+    forkEvery = 20
 }
 
 tasks.withType(JavaCompile) {
