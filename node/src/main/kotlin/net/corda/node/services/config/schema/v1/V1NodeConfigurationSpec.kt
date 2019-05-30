@@ -19,7 +19,7 @@ import net.corda.node.services.config.schema.parsers.toPrincipal
 import net.corda.node.services.config.schema.parsers.toProperties
 import net.corda.node.services.config.schema.parsers.toURL
 import net.corda.node.services.config.schema.parsers.toUUID
-import net.corda.node.services.keys.cryptoservice.SupportedCryptoServices
+import net.corda.nodeapi.internal.cryptoservice.SupportedCryptoServices
 
 internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfiguration>("NodeConfiguration") {
     private val myLegalName by string().mapValid(::toCordaX500Name)

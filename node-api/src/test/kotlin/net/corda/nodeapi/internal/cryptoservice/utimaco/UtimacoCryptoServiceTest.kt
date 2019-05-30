@@ -1,8 +1,7 @@
-package net.corda.node.services.keys.cryptoservice.utimaco
+package net.corda.nodeapi.internal.cryptoservice.utimaco
 
 import net.corda.core.internal.toPath
-import net.corda.node.services.keys.cryptoservice.utimaco.UtimacoCryptoService.Companion.fileBasedAuth
-import net.corda.node.services.keys.cryptoservice.utimaco.UtimacoCryptoService.Companion.parseConfigFile
+import net.corda.nodeapi.internal.cryptoservice.utimaco.UtimacoCryptoService.Companion.parseConfigFile
 import org.junit.Test
 import kotlin.test.assertEquals
 

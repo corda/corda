@@ -1,10 +1,10 @@
-package net.corda.node.services.keys.cryptoservice
+package net.corda.nodeapi.internal.cryptoservice.bouncycastle
 
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SignatureScheme
+import net.corda.core.crypto.internal.cordaBouncyCastleProvider
 import net.corda.core.crypto.newSecureRandom
 import net.corda.core.crypto.sha256
-import net.corda.node.services.config.NodeConfiguration
 import net.corda.nodeapi.internal.config.CertificateStore
 import net.corda.nodeapi.internal.config.CertificateStoreSupplier
 import net.corda.nodeapi.internal.crypto.ContentSignerBuilder
@@ -15,6 +15,7 @@ import org.bouncycastle.operator.ContentSigner
 import java.security.KeyPair
 import java.security.KeyStore
 import java.security.PublicKey
+import java.security.Signature
 import javax.security.auth.x500.X500Principal
 
 /**
@@ -26,7 +27,7 @@ class BCCryptoService(private val legalName: X500Principal, private val certific
 
     // TODO check if keyStore exists.
     // TODO make it private when E2ETestKeyManagementService does not require direct access to the private key.
-    internal var certificateStore: CertificateStore = certificateStoreSupplier.get(true)
+    var certificateStore: CertificateStore = certificateStoreSupplier.get(true)
 
     override fun generateKeyPair(alias: String, scheme: SignatureScheme): PublicKey {
         try {
@@ -50,12 +51,23 @@ class BCCryptoService(private val legalName: X500Principal, private val certific
         }
     }
 
-    override fun sign(alias: String, data: ByteArray): ByteArray {
+    override fun sign(alias: String, data: ByteArray, signAlgorithm: String?): ByteArray {
         try {
-            return Crypto.doSign(certificateStore.query { getPrivateKey(alias, certificateStore.entryPassword) }, data)
+            return when(signAlgorithm) {
+                null -> Crypto.doSign(certificateStore.query { getPrivateKey(alias, certificateStore.entryPassword) }, data)
+                else -> signWithAlgorithm(alias, data, signAlgorithm)
+            }
         } catch (e: Exception) {
             throw CryptoServiceException("Cannot sign using the key with alias $alias. SHA256 of data to be signed: ${data.sha256()}", e)
         }
+    }
+
+    private fun signWithAlgorithm(alias: String, data: ByteArray, signAlgorithm: String): ByteArray {
+            val privateKey = certificateStore.query { getPrivateKey(alias, certificateStore.entryPassword) }
+            val signature = Signature.getInstance(signAlgorithm, cordaBouncyCastleProvider)
+            signature.initSign(privateKey, newSecureRandom())
+            signature.update(data)
+            return signature.sign()
     }
 
     override fun getSigner(alias: String): ContentSigner {
