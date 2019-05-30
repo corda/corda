@@ -242,14 +242,14 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
         }
         val des = DeserializationInput(freshDeserializationFactory)
         val desObj = des.deserialize(bytes, testSerializationContext.withEncodingWhitelist(encodingWhitelist))
-        assertTrue(Objects.deepEquals(obj, desObj) == expectedEqual)
+        assertTrue(Objects.deepEquals((obj as Exception).stackTrace.toStackTraceBasic, (desObj as Exception).stackTrace.toStackTraceBasic) == expectedEqual)
 
         // Now repeat with a re-used factory
         val ser2 = SerializationOutput(factory)
         val des2 = DeserializationInput(factory)
         val desObj2 = des2.deserialize(ser2.serialize(obj, compression), testSerializationContext.withEncodingWhitelist(encodingWhitelist))
-        assertTrue(Objects.deepEquals(obj, desObj2) == expectedEqual)
-        assertTrue(Objects.deepEquals(desObj, desObj2) == expectDeserializedEqual)
+        assertTrue(Objects.deepEquals((obj as Exception).stackTrace.toStackTraceBasic, (desObj2 as Exception).stackTrace.toStackTraceBasic) == expectedEqual)
+        assertTrue(Objects.deepEquals((desObj as Exception).stackTrace.toStackTraceBasic, (desObj2 as Exception).stackTrace.toStackTraceBasic) == expectDeserializedEqual)
 
         // TODO: add some schema assertions to check correctly formed.
         return desObj
@@ -581,7 +581,7 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
         assertTrue(desThrowable is CordaRuntimeException) // Since we don't handle the other case(s) yet
         if (desThrowable is CordaRuntimeException) {
             assertEquals("${t.javaClass.name}: ${t.message}", desThrowable.message)
-            assertTrue(Objects.deepEquals(t.stackTrace, desThrowable.stackTrace))
+            assertTrue(Objects.deepEquals(t.stackTrace.toStackTraceBasic, desThrowable.stackTrace.toStackTraceBasic))
             assertEquals(t.suppressed.size, desThrowable.suppressed.size)
             t.suppressed.zip(desThrowable.suppressed).forEach { (before, after) -> assertSerializedThrowableEquivalent(before, after) }
         }
@@ -1523,5 +1523,20 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
         assertEquals(20059, uncompressedSize)
         assertEquals(1018, compressedSize)
     }
-}
 
+    private val <T> Array<T>.toStackTraceBasic: Unit
+        get() {
+            this.map { StackTraceElementBasic(it as StackTraceElement) }
+        }
+
+    data class StackTraceElementBasic(val ste: StackTraceElement) {
+        override fun equals(other: Any?): Boolean {
+            return if (other is StackTraceElementBasic)
+                (ste.className == other.ste.className) &&
+                        (ste.methodName == other.ste.methodName) &&
+                        (ste.fileName == other.ste.fileName) &&
+                        (ste.lineNumber == other.ste.lineNumber)
+            else false
+        }
+    }
+}
