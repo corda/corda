@@ -204,26 +204,31 @@ class NodeVaultService(
         get() = mutex.locked { _updatesInDbTx }
 
     /** Groups adjacent transactions into batches to generate separate net updates per transaction type. */
-    override fun notifyAll(statesToRecord: StatesToRecord, txns: Iterable<CoreTransaction>) {
-        if (statesToRecord == StatesToRecord.NONE || !txns.any()) return
+    override fun notifyAll(statesToRecord: StatesToRecord, txns: Iterable<CoreTransaction>, previouslySeenTxns: Iterable<CoreTransaction>) {
+        if (statesToRecord == StatesToRecord.NONE || (!txns.any() && !previouslySeenTxns.any()))  return
         val batch = mutableListOf<CoreTransaction>()
 
-        fun flushBatch() {
-            val updates = makeUpdates(batch, statesToRecord)
+        log.info("Recording transactions. New: $txns, Seen before: $previouslySeenTxns")
+        fun flushBatch(previouslySeen: Boolean) {
+            val updates = makeUpdates(batch, statesToRecord, previouslySeen)
             processAndNotify(updates)
             batch.clear()
         }
-
-        for (tx in txns) {
-            if (batch.isNotEmpty() && tx.javaClass != batch.last().javaClass) {
-                flushBatch()
+        fun processTransactions(txs: Iterable<CoreTransaction>, previouslySeen: Boolean) {
+            for (tx in txs) {
+                if (batch.isNotEmpty() && tx.javaClass != batch.last().javaClass) {
+                    flushBatch(previouslySeen)
+                }
+                batch.add(tx)
             }
-            batch.add(tx)
+            flushBatch(previouslySeen)
         }
-        flushBatch()
+
+        processTransactions(previouslySeenTxns, true)
+        processTransactions(txns, false)
     }
 
-    private fun makeUpdates(batch: Iterable<CoreTransaction>, statesToRecord: StatesToRecord): List<Vault.Update<ContractState>> {
+    private fun makeUpdates(batch: Iterable<CoreTransaction>, statesToRecord: StatesToRecord, previouslySeen: Boolean): List<Vault.Update<ContractState>> {
 
         fun <T> withValidDeserialization(list: List<T>, txId: SecureHash): Map<Int, T> = (0 until list.size).mapNotNull { idx ->
             try {
@@ -251,9 +256,18 @@ class NodeVaultService(
                 StatesToRecord.ONLY_RELEVANT -> outputs.filter { (_, value) ->
                     isRelevant(value.data, keyManagementService.filterMyKeys(outputs.values.flatMap { it.data.participants.map { it.owningKey } }).toSet())
                 }
-                StatesToRecord.ALL_VISIBLE -> outputs
+                StatesToRecord.ALL_VISIBLE -> if (previouslySeen) {
+                    val outputRefs = tx.outRefsOfType<ContractState>().map { it.ref }
+                    val seenRefs = loadStates(outputRefs, stateStatus = Vault.StateStatus.ALL).map { it.ref }
+                    val unseenRefs = outputRefs - seenRefs
+                    val unseenOutputIdxs = unseenRefs.map { it.index }.toSet()
+                    outputs.filter { it.key in unseenOutputIdxs }
+                } else {
+                    outputs
+                }
             }.map { (idx, _) -> tx.outRef<ContractState>(idx) }
 
+            log.info("Produced states to add: $ourNewStates")
             // Retrieve all unconsumed states for this transaction's inputs.
             val consumedStates = loadStates(tx.inputs)
 
@@ -326,7 +340,8 @@ class NodeVaultService(
         }
     }
 
-    private fun loadStates(refs: Collection<StateRef>): Collection<StateAndRef<ContractState>> {
+    private fun loadStates(refs: Collection<StateRef>,
+                           stateStatus: Vault.StateStatus = Vault.StateStatus.UNCONSUMED): Collection<StateAndRef<ContractState>> {
         val states = mutableListOf<StateAndRef<ContractState>>()
         if (refs.isNotEmpty()) {
             val refsList = refs.toList()
@@ -334,7 +349,9 @@ class NodeVaultService(
             (0..(refsList.size - 1) / pageSize).forEach {
                 val offset = it * pageSize
                 val limit = minOf(offset + pageSize, refsList.size)
-                val page = queryBy<ContractState>(QueryCriteria.VaultQueryCriteria(stateRefs = refsList.subList(offset, limit))).states
+                val page = queryBy<ContractState>(QueryCriteria.VaultQueryCriteria(
+                        stateRefs = refsList.subList(offset, limit),
+                        status = stateStatus)).states
                 states.addAll(page)
             }
         }

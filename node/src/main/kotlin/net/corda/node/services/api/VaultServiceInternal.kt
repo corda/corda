@@ -15,7 +15,7 @@ interface VaultServiceInternal : VaultService {
      * indicate whether an update consists entirely of regular or notary change transactions, which may require
      * different processing logic.
      */
-    fun notifyAll(statesToRecord: StatesToRecord, txns: Iterable<CoreTransaction>)
+    fun notifyAll(statesToRecord: StatesToRecord, txns: Iterable<CoreTransaction>, previouslySeenTxns: Iterable<CoreTransaction> = emptyList())
 
     /** Same as notifyAll but with a single transaction. */
     fun notify(statesToRecord: StatesToRecord, tx: CoreTransaction) = notifyAll(statesToRecord, listOf(tx))
