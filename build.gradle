@@ -15,6 +15,26 @@ buildscript {
 
     ext.quasar_group = 'co.paralleluniverse'
     ext.quasar_version = constants.getProperty("quasarVersion")
+    ext.quasar_exclusions = [
+                'co.paralleluniverse**',
+                'groovy**',
+                'com.esotericsoftware.**',
+                'jdk**',
+                'junit**',
+                'kotlin**',
+                'net.rubygrapefruit.**',
+                'org.gradle.**',
+                'org.apache.**',
+                'org.jacoco.**',
+                'org.junit**',
+                'org.slf4j**',
+                'worker.org.gradle.**',
+                'com.nhaarman.mockito_kotlin**',
+                'org.assertj**',
+                'org.hamcrest**',
+                'org.mockito**',
+                'org.opentest4j**'
+        ]
 
     // gradle-capsule-plugin:1.0.2 contains capsule:1.0.1 by default.
     // We must configure it manually to use the latest capsule version.
