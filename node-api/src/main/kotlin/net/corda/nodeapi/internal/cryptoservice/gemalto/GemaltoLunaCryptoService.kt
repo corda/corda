@@ -13,6 +13,7 @@ import net.corda.nodeapi.internal.cryptoservice.JCACryptoService
 import java.nio.file.Path
 import java.security.KeyStore
 import java.security.Provider
+import java.security.PublicKey
 import javax.security.auth.x500.X500Principal
 
 class GemaltoLunaCryptoService(keyStore: KeyStore, provider: Provider, x500Principal: X500Principal = DUMMY_X500_PRINCIPAL, private val auth: () -> GemaltoLunaConfiguration) : JCACryptoService(keyStore, provider, x500Principal) {
@@ -32,6 +33,17 @@ class GemaltoLunaCryptoService(keyStore: KeyStore, provider: Provider, x500Princ
 
     override fun defaultTLSSignatureScheme(): SignatureScheme {
         return DEFAULT_TLS_SIGNATURE_SCHEME
+    }
+
+    override fun generateKeyPair(alias: String, scheme: SignatureScheme): PublicKey {
+        return withAuthentication {
+            val keyPairGenerator = keyPairGeneratorFromScheme(scheme)
+            val keyPair = keyPairGenerator.generateKeyPair()
+            keyStore.setKeyEntry(alias, keyPair.private, null, selfSign(scheme, keyPair))
+            keyStore.store(null, null) // Gemalto-specific
+            // We call toSupportedKey because it's possible that the PublicKey object returned by the provider is not initialized.
+            Crypto.toSupportedPublicKey(keyPair.public)
+        }
     }
 
     /*

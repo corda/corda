@@ -32,7 +32,6 @@ abstract class JCACryptoService(internal val keyStore: KeyStore, internal val pr
             val keyPairGenerator = keyPairGeneratorFromScheme(scheme)
             val keyPair = keyPairGenerator.generateKeyPair()
             keyStore.setKeyEntry(alias, keyPair.private, null, selfSign(scheme, keyPair))
-            keyStore.store(null, null)
             // We call toSupportedKey because it's possible that the PublicKey object returned by the provider is not initialized.
             Crypto.toSupportedPublicKey(keyPair.public)
         }
@@ -101,8 +100,7 @@ abstract class JCACryptoService(internal val keyStore: KeyStore, internal val pr
      */
     internal open fun keyPairGeneratorFromScheme(scheme: SignatureScheme): KeyPairGenerator {
         val algorithm = when (scheme) {
-            Crypto.ECDSA_SECP256R1_SHA256 -> "ECDSA"
-            Crypto.ECDSA_SECP256K1_SHA256 -> "ECDSA"
+            Crypto.ECDSA_SECP256R1_SHA256, Crypto.ECDSA_SECP256K1_SHA256 -> "EC"
             Crypto.RSA_SHA256 -> "RSA"
             else -> throw IllegalArgumentException("No algorithm for scheme ID ${scheme.schemeNumberID}")
         }
