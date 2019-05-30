@@ -106,6 +106,22 @@ Additionally, all three nodes will include any CorDapps defined in the project's
 CorDapps are not listed in each node's ``cordapps`` entry. This means that running the ``deployNodes`` task from the
 template CorDapp, for example, would automatically build and add the template CorDapp to each node.
 
+The configuration values available in ``deployNodes`` task are as follows:
+
+* ``name`` the name of the Corda node (see :ref:`myLegalName <corda_configuration_file_myLegalName>`)
+* ``notary`` for notaries only (see :ref:`notary <corda_configuration_file_notary>`)
+* ``p2pAddress`` the address to open for the p2p connection (see :ref:`p2pAddress <corda_configuration_file_p2pAddress>`)
+* ``p2pPort`` the port to open for the p2p connection (see :ref:`p2pAddress <corda_configuration_file_p2pAddress>`)
+* ``devMode`` when true enables development mode (see :ref:`devMode <corda_configuration_file_dev_mode>`)
+* ``webPort`` (see :ref:`Specifying a custom webserver<specify-custom-webserver>`)
+* ``webAddress`` (see :ref:`Specifying a custom webserver<specify-custom-webserver>`)
+* ``rpcSettings`` (see :ref:`rpcSettings <corda_configuration_file_rpc_settings>`)
+* ``rpcUsers`` (see :ref:`rpcUsers <corda_configuration_file_rpc_users>`)
+* ``configFile`` for extending configuration of nodes (see below)
+* ``https`` when true enables HTTPS communication
+* ``h2Settings`` (see :ref:`h2Settings <corda_configuration_file_h2_settings>`)
+* ``sshdPort`` Specifies the port for sshd communication (see :ref:`sshd <corda_configuration_file_sshd>`)
+
 You can extend ``deployNodes`` to generate additional nodes.
 
 .. warning:: When adding nodes, make sure that there are no port clashes!
@@ -185,31 +201,13 @@ The ``signing`` entry may contain the following parameters:
   by default the JAR file is signed by Corda development key, the external keystore can be specified,
   the minimal list of required options is shown below, for other options referer to `SignJar task <https://ant.apache.org/manual/Tasks/signjar.html>`_:
 
-  * ``alias`` the alias to sign under, the default value is *cordaintermediateca*
-  * ``keypass`` the private key password if it's different than the password for the keystore, the default value is *cordacadevkeypass*
   * ``keystore`` the path to the keystore file, by default *cordadevcakeys.jks* keystore is shipped with the plugin
-  * ``storetype`` the keystore type, the default value is *JKS*
+  * ``alias`` the alias to sign under, the default value is *cordaintermediateca*
   * ``storepass`` the keystore password, the default value is *cordacadevpass*
-  * ``sigfile`` *******
-  * ``signedjar`` *******
-  * ``verbose`` *******
-  * ``strict`` *******
-  * ``internalsf`` *******
-  * ``sectionsonly`` *******
-  * ``lazy`` *******
-  * ``maxmemory`` *******
-  * ``preservelastmodified`` *******
-  * ``tsaurl`` *******
-  * ``tsacert`` *******
-  * ``tsaproxyhost`` *******
-  * ``tsaproxyport`` *******
-  * ``executable`` *******
-  * ``force`` *******
-  * ``sigalg`` *******
-  * ``digestalg`` *******
-  * ``tsadigestalg`` *******
-  * !!``dname`` the distinguished name for entity, the option is used when ``generateKeystore true`` only
-  * !!``keyalg`` the method to use when generating name-value pair, the value defaults to *RSA* as Corda doesn't support *DSA*, the option is used when ``generateKeystore true`` only
+  * ``keypass`` the private key password if it's different than the password for the keystore, the default value is *cordacadevkeypass*
+  * ``storetype`` the keystore type, the default value is *JKS*
+  * ``dname`` the distinguished name for entity, the option is used when ``generateKeystore true`` only
+  * ``keyalg`` the method to use when generating name-value pair, the value defaults to *RSA* as Corda doesn't support *DSA*, the option is used when ``generateKeystore true`` only
 
 * ``generateKeystore`` the flag to generate a keystore, it is set to ``false`` by default. If set to ``true`` then ad hock keystore is created and its key isused
   instead of the default Corda development key or any external key.
@@ -249,6 +247,8 @@ The snippet below configures contracts classes from Finance CorDapp to be verifi
     task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         includeWhitelist = [ "net.corda.finance.contracts.asset.Cash", "net.corda.finance.contracts.asset.CommercialPaper" ]
         //...
+
+.. _specify-custom-webserver:
 
 Specifying a custom webserver
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
