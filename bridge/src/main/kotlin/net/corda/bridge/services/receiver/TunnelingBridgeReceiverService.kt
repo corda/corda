@@ -35,6 +35,7 @@ class TunnelingBridgeReceiverService(val conf: FirewallConfiguration,
                                      private val stateHelper: ServiceStateHelper = ServiceStateHelper(log)) : BridgeReceiverService, ServiceStateSupport by stateHelper {
     companion object {
         private val log = contextLogger()
+        private val emptyPayload = ByteArray(0)
     }
 
     private val statusFollower = ServiceStateCombiner(listOf(auditService, haService, filterService, tunnelingSigningService, signingService))
@@ -157,9 +158,13 @@ class TunnelingBridgeReceiverService(val conf: FirewallConfiguration,
         val onwardMessage = object : ReceivedMessage {
             override val topic: String = innerMessage.topic
             override val applicationProperties: Map<String, Any?> = innerMessage.originalHeaders.toMap()
-            override val payload: ByteArray = innerMessage.originalPayload
+            override var payload: ByteArray = innerMessage.originalPayload
             override val sourceLegalName: String = innerMessage.sourceLegalName.toString()
             override val sourceLink: NetworkHostAndPort = receivedMessage.sourceLink
+
+            override fun release() {
+                payload = emptyPayload
+            }
 
             override fun complete(accepted: Boolean) {
                 receivedMessage.complete(accepted)
@@ -168,6 +173,7 @@ class TunnelingBridgeReceiverService(val conf: FirewallConfiguration,
             override val destinationLegalName: String = innerMessage.destinationLegalName.toString()
             override val destinationLink: NetworkHostAndPort = innerMessage.destinationLink
         }
+        receivedMessage.release()
         filterService.sendMessageToLocalBroker(onwardMessage)
     }
 
