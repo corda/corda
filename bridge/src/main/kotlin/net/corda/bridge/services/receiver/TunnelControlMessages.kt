@@ -20,8 +20,10 @@ object FloatControlTopics {
 
 internal class ActivateFloat(val certificates: Map<String, List<X509Certificate>>, val trustStoreBytes: ByteArray, val trustStorePassword: CharArray, val maxMessageSize: Int) : TunnelControlMessage()
 
-internal class SigningRequest(val requestId: Long = System.currentTimeMillis(), val alias: String, val sigAlgo: String, val data: ByteArray) : TunnelControlMessage()
-internal class SigningResponse(val requestId: Long, val signature: ByteArray?) : TunnelControlMessage()
+internal abstract class TunnelControlMessageWithId(val requestId: Long) : TunnelControlMessage()
+
+internal class SigningRequest(requestId: Long = System.currentTimeMillis(), val alias: String, val sigAlgo: String, val data: ByteArray) : TunnelControlMessageWithId(requestId)
+internal class SigningResponse(requestId: Long, val signature: ByteArray?) : TunnelControlMessageWithId(requestId)
 
 object DeactivateFloat : TunnelControlMessage()
 
