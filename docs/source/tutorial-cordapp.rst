@@ -329,7 +329,7 @@ To create an IOU between PartyA and PartyB, run the following command from the c
 
 .. sourcecode:: bash
 
-   curl -X PUT 'http://localhost:50005/api/example/create-iou?iouValue=1&partyName=O=PartyB,L=New%20York,C=US'
+   curl -X POST -H 'Content-Type: application/x-www-form-urlencoded' 'http://localhost:50005/api/example/create-iou?iouValue=1&partyName=O=PartyB,L=New%20York,C=US'
 
 Note that both PartyA's port number (``50005``) and PartyB are referenced in the PUT request path. This command
 instructs PartyA to agree an IOU with PartyB. Once the process is complete, both nodes will have a signed, notarised

@@ -111,7 +111,7 @@ IntelliJ
 ^^^^^^^^
 1. Visit https://www.jetbrains.com/idea/download/download-thanks.html?platform=mac&code=IIC
 2. Download and run the executable to install IntelliJ Community Edition (use the default settings)
-3. Ensure the Kotlin plugin in Intellij is updated to version |kotlin_version| (new installs will contains this version)
+3. Ensure the Kotlin plugin in IntelliJ is updated to version |kotlin_version| (new installs will contains this version)
 
 .. _deb-ubuntu-label:
 
@@ -124,10 +124,36 @@ These instructions were tested on Ubuntu Desktop 18.04 LTS.
 
 Java
 ^^^^
-1. Open a new terminal and add the Oracle PPA to your repositories by typing ``sudo add-apt-repository ppa:webupd8team/java``. Press ENTER when prompted.
-2. Update your packages list with the command ``sudo apt update``
-3. Install the Oracle JDK 8 by typing ``sudo apt install oracle-java8-installer``. Press Y when prompted and agree to the licence terms.
-4. Verify that the JDK was installed correctly by running ``java -version``
+1. Go to https://www.oracle.com/technetwork/java/javase/downloads/java-archive-javase8-2177648.html and download ``jdk-8u202-linux-x64.tar.gz``.
+   You will be redirected to an Oracle login page. Login or create an account to download the JDK.
+2. Extract the archive with ``tar -xvf jdk-8u202-linux-x64.tar.gz jdk1.8.0_202/``
+3. Create a directory to place the JDK e.g. ``sudo mkdir -p /usr/lib/jvm``
+4. Move the extracted archive in that folder with ``sudo mv ./jdk1.8.0_202 /usr/lib/jvm/``
+5. Add the most common java binaries to the list of alternatives to allow easy swap between Java versions in the future
+
+       .. code-block:: shell
+
+         sudo update-alternatives --install "/usr/bin/java" "java" "/usr/lib/jvm/jdk1.8.0_202/bin/java" 1
+         sudo update-alternatives --install "/usr/bin/javac" "javac" "/usr/lib/jvm/jdk1.8.0_202/bin/javac" 1
+         sudo update-alternatives --install "/usr/bin/javaws" "javaws" "/usr/lib/jvm/jdk1.8.0_202/bin/javaws" 1
+
+6. Update permissions
+
+       .. code-block:: shell
+
+         sudo chmod a+x /usr/bin/java
+         sudo chmod a+x /usr/bin/javac
+         sudo chmod a+x /usr/bin/javaws
+         sudo chown -R root:root /usr/lib/jvm/jdk1.8.0_202
+
+7. Set JAVA_HOME and JRE_HOME to your ``~/.bash_profile`` and/or ``~/.bashrc``
+
+       .. code-block:: shell
+
+         export JAVA_HOME=/usr/lib/jvm/jdk1.8.0_202
+         export JRE_HOME=/usr/lib/jvm/jdk1.8.0_202/jre
+
+8. Verify that the JDK was installed correctly by running ``java -version``
 
 Git
 ^^^^
