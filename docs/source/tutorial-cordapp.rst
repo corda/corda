@@ -287,7 +287,7 @@ Running the example CorDapp from IntelliJ
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 * Load the project by opening the project folder (Do not use "Import Project" functionality by IntelliJ because it will overwrite the pre-existing configuration) 
 
-* Follow the prompt to ``import Graddle project``
+* Follow the prompt to ``import Gradle project``
 
 * Select the ``Run Example CorDapp - Kotlin`` run configuration from the drop-down menu at the top right-hand side of
   the IDE
