@@ -10,6 +10,7 @@ import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.config.CertificateStore
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPServer
 import java.security.cert.X509Certificate
+import java.time.Duration
 
 internal class AMQPSigningService(amqpControl: AMQPServer,
                                   floatClientName: CordaX500Name,
@@ -18,9 +19,10 @@ internal class AMQPSigningService(amqpControl: AMQPServer,
                                   private val certificates: Map<String, List<X509Certificate>>,
                                   private val truststore: CertificateStore,
                                   auditService: FirewallAuditService,
+                                  responseTimeOut: Duration,
                                   stateHelper: ServiceStateHelper = ServiceStateHelper(log),
                                   private val reqRespHelper: RequestResponseServiceHelper<SigningRequest, SigningResponse> =
-                                          RequestResponseServiceHelper(amqpControl, floatClientName, sourceLink, sourceLegalName, auditService, log, stateHelper, FloatControlTopics.FLOAT_SIGNING_TOPIC, SigningResponse::class))
+                                          RequestResponseServiceHelper(amqpControl, floatClientName, sourceLink, sourceLegalName, auditService, log, stateHelper, FloatControlTopics.FLOAT_SIGNING_TOPIC, SigningResponse::class, responseTimeOut))
     : TLSSigningService, ServiceLifecycleSupport by reqRespHelper {
 
     companion object {
