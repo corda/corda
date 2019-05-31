@@ -1,5 +1,6 @@
 package net.corda.bridge.services.artemis
 
+import net.corda.bridge.services.api.TLSSigningService
 import net.corda.bridge.services.api.BridgeArtemisConnectionService
 import net.corda.bridge.services.api.FirewallAuditService
 import net.corda.bridge.services.api.FirewallConfiguration
