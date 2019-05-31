@@ -121,6 +121,7 @@ interface FirewallConfiguration {
     val publicSSLConfiguration: MutualSslConfiguration
     val publicCryptoServiceConfig: CryptoServiceConfig?
     val tunnelingCryptoServiceConfig: CryptoServiceConfig? // Location for the cryptoService conf file.
+    val artemisCryptoServiceConfig: CryptoServiceConfig?
 
     val auditServiceConfiguration: AuditServiceConfiguration
     // An optional Health Check Phrase which if passed through the channel will cause AMQP Server to echo it back instead of doing normal pipeline processing
