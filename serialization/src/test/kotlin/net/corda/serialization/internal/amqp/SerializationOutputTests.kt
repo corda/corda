@@ -242,14 +242,14 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
         }
         val des = DeserializationInput(freshDeserializationFactory)
         val desObj = des.deserialize(bytes, testSerializationContext.withEncodingWhitelist(encodingWhitelist))
-        assertTrue(Objects.deepEquals((obj as Exception).stackTrace.toStackTraceBasic, (desObj as Exception).stackTrace.toStackTraceBasic) == expectedEqual)
+        assertTrue(deepEquals(obj, desObj) == expectedEqual)
 
         // Now repeat with a re-used factory
         val ser2 = SerializationOutput(factory)
         val des2 = DeserializationInput(factory)
         val desObj2 = des2.deserialize(ser2.serialize(obj, compression), testSerializationContext.withEncodingWhitelist(encodingWhitelist))
-        assertTrue(Objects.deepEquals((obj as Exception).stackTrace.toStackTraceBasic, (desObj2 as Exception).stackTrace.toStackTraceBasic) == expectedEqual)
-        assertTrue(Objects.deepEquals((desObj as Exception).stackTrace.toStackTraceBasic, (desObj2 as Exception).stackTrace.toStackTraceBasic) == expectDeserializedEqual)
+        assertTrue(deepEquals(obj, desObj2) == expectedEqual)
+        assertTrue(deepEquals(desObj, desObj2) == expectDeserializedEqual)
 
         // TODO: add some schema assertions to check correctly formed.
         return desObj
@@ -1524,11 +1524,27 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
         assertEquals(1018, compressedSize)
     }
 
+    // JDK11: backwards compatibility function to deal with StacktraceElement comparison pre-JPMS
+    private fun deepEquals(a: Any?, b: Any?): Boolean {
+        return if (a === b)
+            true
+        else if (a == null || b == null)
+            false
+        else {
+            if (a is Exception && b is Exception)
+                (a.cause == b.cause && a.localizedMessage == b.localizedMessage && a.message == b.message) &&
+                        Objects.deepEquals(a.stackTrace.toStackTraceBasic, b.stackTrace.toStackTraceBasic)
+            else
+                Objects.deepEquals(a, b)
+        }
+    }
+
     private val <T> Array<T>.toStackTraceBasic: Unit
         get() {
             this.map { StackTraceElementBasic(it as StackTraceElement) }
         }
 
+    // JPMS adds additional fields that are not equal according to classloader/module hierarchy
     data class StackTraceElementBasic(val ste: StackTraceElement) {
         override fun equals(other: Any?): Boolean {
             return if (other is StackTraceElementBasic)
