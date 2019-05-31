@@ -335,22 +335,6 @@ class NodeAttachmentService(
         currentDBSession().find(NodeAttachmentService.DBAttachment::class.java, attachmentId.toString()) != null
     }
 
-    private fun verifyVersionUniquenessForSignedAttachments(contractClassNames: List<ContractClassName>, contractVersion: Int, signers: List<PublicKey>?) {
-        if (signers != null && signers.isNotEmpty()) {
-            contractClassNames.forEach {
-                val existingContractsImplementations = queryAttachments(AttachmentQueryCriteria.AttachmentsQueryCriteria(
-                        contractClassNamesCondition = Builder.equal(listOf(it)),
-                        versionCondition = Builder.equal(contractVersion),
-                        uploaderCondition = Builder.`in`(TRUSTED_UPLOADERS),
-                        isSignedCondition = Builder.equal(true))
-                )
-                if (existingContractsImplementations.isNotEmpty()) {
-                    throw DuplicateContractClassException(it, contractVersion, existingContractsImplementations.map { it.toString() })
-                }
-            }
-        }
-    }
-
     private fun increaseDefaultVersionIfWhitelistedAttachment(contractClassNames: List<ContractClassName>, contractVersionFromFile: Int, attachmentId: AttachmentId) =
             if (contractVersionFromFile == DEFAULT_CORDAPP_VERSION) {
                 val versions = contractClassNames.mapNotNull { servicesForResolution.networkParameters.whitelistedContractImplementations[it]?.indexOf(attachmentId) }
@@ -385,8 +369,6 @@ class NodeAttachmentService(
                     val jarSigners = getSigners(bytes)
                     val contractVersion = increaseDefaultVersionIfWhitelistedAttachment(contractClassNames, getVersion(bytes), id)
                     val session = currentDBSession()
-                    if (!devMode)
-                        verifyVersionUniquenessForSignedAttachments(contractClassNames, contractVersion, jarSigners)
                     val attachment = NodeAttachmentService.DBAttachment(
                             attId = id.toString(),
                             content = bytes,
@@ -407,8 +389,6 @@ class NodeAttachmentService(
                     val attachment = session.get(NodeAttachmentService.DBAttachment::class.java, id.toString())
                     // update the `uploader` field (as the existing attachment may have been resolved from a peer)
                     if (attachment.uploader != uploader) {
-                        if (!devMode)
-                            verifyVersionUniquenessForSignedAttachments(contractClassNames, attachment.version, attachment.signers)
                         attachment.uploader = uploader
                         log.info("Updated attachment $id with uploader $uploader")
                         contractClassNames.forEach { contractsCache.invalidate(it) }
