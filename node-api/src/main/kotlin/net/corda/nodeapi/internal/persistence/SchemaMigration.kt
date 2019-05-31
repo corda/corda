@@ -62,11 +62,13 @@ class SchemaMigration(
      */
     fun nodeStartup(existingCheckpoints: Boolean, isH2Database: Boolean) {
         when {
-            databaseConfig.initialiseSchema && isH2Database -> {
+            //Enterprise - OS diff: the initialiseSchema flag is checked against a H2 database only
+            isH2Database && databaseConfig.initialiseSchema -> {
                 migrateOlderDatabaseToUseLiquibase(existingCheckpoints)
                 runMigration(existingCheckpoints)
             }
-            databaseConfig.initialiseSchema -> runMigration(existingCheckpoints)
+            //Enterprise only runMigration flag
+            !isH2Database && databaseConfig.runMigration -> runMigration(existingCheckpoints)
             else -> checkState()
         }
     }

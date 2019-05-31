@@ -131,12 +131,14 @@ database
     *Default:* false
 
   initialiseSchema
+    The property is used only when a node runs against a H2 database, and it's replaced by the ``runMigration`` property for other databases.
     Boolean which indicates whether to update the database schema at startup (or create the schema when node starts for the first time).
     If set to ``false`` on startup, the node will validate if it's running against a compatible database schema.
 
     *Default:* true
 
   initialiseAppSchema
+    The property is used only when a node runs against a H2 database.
     The property allows to override ``database.initialiseSchema`` for the Hibernate DDL generation for CorDapp schemas.
     ``UPDATE`` performs an update of CorDapp schemas, while ``VALID`` only verifies their integrity and ``NONE`` performs no check.
     When ``initialiseSchema`` is set to ``false``, then ``initialiseAppSchema`` may be set as ``VALID`` or ``NONE`` only.
@@ -146,6 +148,7 @@ database
   runMigration
     Boolean on whether to run the database migration scripts at startup. In production please keep it false. For more information please
     check :doc:`database-management`. If migration is not run, on startup, the node will check if it's running on the correct database version.
+    The property is used only when a node runs against a database other than H2, and it's replaced by the ``initialiseSchema`` property for other databases.
 
     *Default:* false
 
