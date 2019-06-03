@@ -8,7 +8,7 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.messaging.startFlow
 import net.corda.core.messaging.vaultQueryBy
 import net.corda.core.utilities.getOrThrow
-import net.corda.finance.USD
+import net.corda.finance.util.USD
 import net.corda.finance.flows.CashIssueAndPaymentFlow
 import net.corda.finance.flows.CashIssueAndPaymentFlow.IssueAndPaymentRequest
 import net.corda.loadtest.LoadTest

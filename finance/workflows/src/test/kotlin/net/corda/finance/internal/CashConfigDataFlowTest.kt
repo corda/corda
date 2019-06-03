@@ -1,8 +1,8 @@
 package net.corda.finance.internal
 
 import net.corda.core.utilities.getOrThrow
-import net.corda.finance.EUR
-import net.corda.finance.USD
+import net.corda.finance.util.EUR
+import net.corda.finance.util.USD
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetworkParameters
 import net.corda.testing.node.MockNodeParameters

@@ -8,7 +8,7 @@ import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.messaging.startFlow
 import net.corda.core.messaging.vaultQueryBy
 import net.corda.core.utilities.OpaqueBytes
-import net.corda.finance.USD
+import net.corda.finance.util.USD
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.AbstractCashFlow.AbstractRequest
 import net.corda.finance.flows.CashExitFlow

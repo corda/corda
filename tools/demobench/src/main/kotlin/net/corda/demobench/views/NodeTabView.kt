@@ -18,10 +18,10 @@ import javafx.util.StringConverter
 import net.corda.core.internal.*
 import net.corda.demobench.model.*
 import net.corda.demobench.ui.CloseableTab
-import net.corda.finance.CHF
-import net.corda.finance.EUR
-import net.corda.finance.GBP
-import net.corda.finance.USD
+import net.corda.finance.util.CHF
+import net.corda.finance.util.EUR
+import net.corda.finance.util.GBP
+import net.corda.finance.util.USD
 import net.corda.worldmap.CityDatabase
 import net.corda.worldmap.WorldMapLocation
 import org.controlsfx.control.CheckListView

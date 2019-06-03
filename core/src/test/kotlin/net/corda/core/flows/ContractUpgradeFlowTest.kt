@@ -11,8 +11,8 @@ import net.corda.core.transactions.ContractUpgradeLedgerTransaction
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
-import net.corda.finance.USD
-import net.corda.finance.`issued by`
+import net.corda.finance.util.USD
+import net.corda.finance.util.`issued by`
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.testing.contracts.DummyContract

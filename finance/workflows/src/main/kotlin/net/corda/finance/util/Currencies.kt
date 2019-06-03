@@ -1,6 +1,6 @@
 @file:JvmName("Currencies")
 
-package net.corda.finance
+package net.corda.finance.util
 
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.Issued

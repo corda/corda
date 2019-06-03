@@ -16,8 +16,8 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 
 import static java.util.Collections.singletonList;
-import static net.corda.finance.Currencies.DOLLARS;
-import static net.corda.finance.Currencies.issuedBy;
+import static net.corda.finance.util.Currencies.DOLLARS;
+import static net.corda.finance.util.Currencies.issuedBy;
 import static net.corda.finance.contracts.JavaCommercialPaper.JCP_PROGRAM_ID;
 import static net.corda.testing.core.TestConstants.ALICE_NAME;
 import static net.corda.testing.core.TestConstants.BOB_NAME;

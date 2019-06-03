@@ -8,15 +8,14 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.VaultService
-import net.corda.core.node.services.queryBy
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.OpaqueBytes
-import net.corda.finance.*
 import net.corda.finance.contracts.utils.sumCash
 import net.corda.finance.contracts.utils.sumCashBy
 import net.corda.finance.contracts.utils.sumCashOrNull
 import net.corda.finance.contracts.utils.sumCashOrZero
+import net.corda.finance.util.*
 import net.corda.finance.workflows.asset.CashUtils
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.nodeapi.internal.persistence.CordaPersistence

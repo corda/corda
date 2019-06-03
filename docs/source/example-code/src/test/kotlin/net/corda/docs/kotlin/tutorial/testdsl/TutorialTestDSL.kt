@@ -9,8 +9,8 @@ import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.node.services.IdentityService
 import net.corda.core.utilities.days
-import net.corda.finance.DOLLARS
-import net.corda.finance.`issued by`
+import net.corda.finance.util.DOLLARS
+import net.corda.finance.util.`issued by`
 import net.corda.finance.contracts.CP_PROGRAM_ID
 import net.corda.finance.contracts.CommercialPaper
 import net.corda.finance.contracts.ICommercialPaperState

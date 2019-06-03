@@ -3,10 +3,10 @@ package net.corda.client.jfx.model
 import javafx.beans.property.SimpleObjectProperty
 import javafx.beans.value.ObservableValue
 import net.corda.core.contracts.Amount
-import net.corda.finance.CHF
-import net.corda.finance.EUR
-import net.corda.finance.GBP
-import net.corda.finance.USD
+import net.corda.finance.util.CHF
+import net.corda.finance.util.EUR
+import net.corda.finance.util.GBP
+import net.corda.finance.util.USD
 import java.math.BigDecimal
 import java.math.MathContext
 import java.util.*

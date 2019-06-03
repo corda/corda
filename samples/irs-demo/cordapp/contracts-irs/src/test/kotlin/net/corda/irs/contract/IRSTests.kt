@@ -12,8 +12,8 @@ import net.corda.core.identity.Party
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.seconds
-import net.corda.finance.DOLLARS
-import net.corda.finance.EUR
+import net.corda.finance.util.DOLLARS
+import net.corda.finance.util.EUR
 import net.corda.finance.contracts.*
 import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.testing.common.internal.addNotary

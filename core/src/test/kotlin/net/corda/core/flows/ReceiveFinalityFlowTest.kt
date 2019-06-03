@@ -6,8 +6,8 @@ import net.corda.core.node.services.queryBy
 import net.corda.core.toFuture
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
-import net.corda.finance.GBP
-import net.corda.finance.POUNDS
+import net.corda.finance.util.GBP
+import net.corda.finance.util.POUNDS
 import net.corda.finance.workflows.getCashBalance
 import net.corda.finance.flows.CashIssueAndPaymentFlow
 import net.corda.finance.flows.CashPaymentReceiverFlow
