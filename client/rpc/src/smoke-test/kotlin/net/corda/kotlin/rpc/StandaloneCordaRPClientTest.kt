@@ -16,10 +16,7 @@ import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
-import net.corda.finance.DOLLARS
-import net.corda.finance.POUNDS
-import net.corda.finance.SWISS_FRANCS
-import net.corda.finance.USD
+import net.corda.finance.util.*
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.workflows.getCashBalance
 import net.corda.finance.workflows.getCashBalances
