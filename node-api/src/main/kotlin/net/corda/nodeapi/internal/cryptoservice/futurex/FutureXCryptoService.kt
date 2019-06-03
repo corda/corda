@@ -7,7 +7,6 @@ import fx.security.pkcs11.SunPKCS11
 import fx.security.pkcs11.wrapper.PKCS11Constants.CKA_SIGN
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SignatureScheme
-import net.corda.core.internal.VisibleForTesting
 import net.corda.nodeapi.internal.config.UnknownConfigurationKeysException
 import net.corda.nodeapi.internal.config.parseAs
 import net.corda.nodeapi.internal.cryptoservice.CryptoService
@@ -99,14 +98,6 @@ class FutureXCryptoService(keyStore: KeyStore, provider: SunPKCS11, x500Principa
         }
         keyPairGenerator.initialize(params)
         return keyPairGenerator
-    }
-
-
-    @VisibleForTesting
-    fun delete(alias: String) {
-        withAuthentication {
-            keyStore.deleteEntry(alias)
-        }
     }
 
     companion object {
