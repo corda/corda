@@ -160,3 +160,35 @@ Example configuration file:
     clientId: "a3d72387-egfa-4bc2-9cba-b0b27c63540e"
     protection: "HARDWARE"
 
+Securosys Primus X
+------------
+
+Corda Enterprise nodes can be configured to store their legal identity keys in `Securosys Primus X <https://www.securosys.ch/product/high-availability-high-performance-hardware-security-module>`_ HSMs running firmware version 2.7.3.
+
+In the ``node.conf``, the ``cryptoServiceName`` needs to be set to "PRIMUS_X", and ``cryptoServiceConf`` should contain the path to a configuration file, the content of which is explained further down.
+
+.. parsed-literal::
+
+    cryptoServiceName : "PRIMUS_X"
+    cryptoServiceConf : "primusx.conf"
+
+The configuration file for Securosys Primus X has the following fields:
+
+:host: address of the device
+
+:port: port of the device
+
+:username: the username of the account
+
+:password: the login password of the account
+
+Example configuration file:
+
+.. parsed-literal::
+
+      host: "some-address.securosys.ch"
+      port: 2000
+      username: "my-username"
+      password: "my-password"
+
+In addition to the configuration, the Securosys' Primus X JCA provider (version 1.8.0) needs to be placed in the node's drivers folder.

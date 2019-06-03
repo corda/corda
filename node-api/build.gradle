@@ -102,6 +102,10 @@ dependencies {
     // Futurex HSM
     compileOnly fileTree(dir: 'lib', include: 'sunpkcs11-fx.jar')
     testCompile fileTree(dir: 'lib', include: 'sunpkcs11-fx.jar')
+
+    // Securosys PrimusX
+    compileOnly fileTree(dir: 'lib', include: 'primusX.jar')
+    testCompile fileTree(dir: 'lib', include: 'primusX.jar')
 }
 
 configurations {

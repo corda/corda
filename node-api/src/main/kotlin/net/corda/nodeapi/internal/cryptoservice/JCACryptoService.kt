@@ -3,6 +3,7 @@ package net.corda.nodeapi.internal.cryptoservice
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SignatureScheme
 import net.corda.core.crypto.random63BitValue
+import net.corda.core.internal.VisibleForTesting
 import net.corda.nodeapi.internal.crypto.ContentSignerBuilder
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.toJca
@@ -130,4 +131,12 @@ abstract class JCACryptoService(internal val keyStore: KeyStore, internal val pr
     companion object {
         val DUMMY_X500_PRINCIPAL = X500Principal("CN=DUMMY")
     }
+
+    @VisibleForTesting
+    fun delete(alias: String) {
+        withAuthentication {
+            keyStore.deleteEntry(alias)
+        }
+    }
+
 }
