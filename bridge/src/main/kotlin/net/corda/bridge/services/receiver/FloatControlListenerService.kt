@@ -135,6 +135,7 @@ class FloatControlListenerService(val conf: FirewallConfiguration,
             incomingMessageSubscriber?.unsubscribe()
             incomingMessageSubscriber = null
             p2pSigningService?.stop()
+            p2pSigningService = null
             tunnelSigningService.stop()
         }
     }
@@ -191,7 +192,8 @@ class FloatControlListenerService(val conf: FirewallConfiguration,
                             log.info("Received Tunnel Activate message")
                             val trustStore = CertificateStore.of(loadKeyStore(controlMessage.trustStoreBytes, controlMessage.trustStorePassword), String(controlMessage.trustStorePassword), String(controlMessage.trustStorePassword))
                                     .also { wipeKeys(controlMessage.trustStoreBytes, controlMessage.trustStorePassword) }
-                            p2pSigningService = AMQPSigningService(amqpControlServer!!, floatClientName, receivedMessage.sourceLink, receivedMessage.sourceLegalName, controlMessage.certificates, trustStore, auditService)
+                            p2pSigningService = AMQPSigningService(amqpControlServer!!, floatClientName, receivedMessage.sourceLink,
+                                    receivedMessage.sourceLegalName, controlMessage.certificates, trustStore, auditService, controlMessage.bridgeCommTimeout)
                             p2pSigningService!!.start()
 
                             maxMessageSize = controlMessage.maxMessageSize

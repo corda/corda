@@ -6,8 +6,11 @@ import net.corda.bridge.services.receiver.FloatControlTopics.FLOAT_SIGNING_TOPIC
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.minutes
 import net.corda.nodeapi.internal.protonwrapper.messages.ReceivedMessage
 import java.security.cert.X509Certificate
+import java.time.Duration
+import java.util.concurrent.atomic.AtomicLong
 
 @CordaSerializable
 sealed class TunnelControlMessage
@@ -18,11 +21,13 @@ object FloatControlTopics {
     const val FLOAT_DATA_TOPIC = "float.forward"
 }
 
-internal class ActivateFloat(val certificates: Map<String, List<X509Certificate>>, val trustStoreBytes: ByteArray, val trustStorePassword: CharArray, val maxMessageSize: Int) : TunnelControlMessage()
+internal class ActivateFloat(val certificates: Map<String, List<X509Certificate>>, val trustStoreBytes: ByteArray, val trustStorePassword: CharArray, val maxMessageSize: Int, val bridgeCommTimeout: Duration = 1.minutes) : TunnelControlMessage()
 
 internal abstract class TunnelControlMessageWithId(val requestId: Long) : TunnelControlMessage()
 
-internal class SigningRequest(requestId: Long = System.currentTimeMillis(), val alias: String, val sigAlgo: String, val data: ByteArray) : TunnelControlMessageWithId(requestId)
+private val requestCounter = AtomicLong(System.currentTimeMillis()) // Initialise once with current ms value to avoid clash from previous start-ups
+
+internal class SigningRequest(requestId: Long = requestCounter.incrementAndGet(), val alias: String, val sigAlgo: String, val data: ByteArray) : TunnelControlMessageWithId(requestId)
 internal class SigningResponse(requestId: Long, val signature: ByteArray?) : TunnelControlMessageWithId(requestId)
 
 object DeactivateFloat : TunnelControlMessage()
