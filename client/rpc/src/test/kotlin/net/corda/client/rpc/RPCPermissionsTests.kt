@@ -14,7 +14,7 @@ import kotlin.test.assertFailsWith
 class RPCPermissionsTests : AbstractRPCTest() {
     companion object {
         const val DUMMY_FLOW = "StartFlow.net.corda.flows.DummyFlow"
-        const val WILDCARD_FLOW = "StartFlow.net.corda.flows:*"
+        const val WILDCARD_FLOW = "StartFlow.net.corda.flows.*"
         const val ALL_ALLOWED = "ALL"
     }
 
