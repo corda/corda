@@ -10,8 +10,8 @@ import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.node.services.vault.builder
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
-import net.corda.finance.DOLLARS
-import net.corda.finance.USD
+import net.corda.finance.util.DOLLARS
+import net.corda.finance.util.USD
 import net.corda.finance.contracts.CommercialPaper
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.workflows.getCashBalance

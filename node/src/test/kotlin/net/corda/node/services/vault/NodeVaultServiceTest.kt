@@ -20,7 +20,7 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.toNonEmptySet
-import net.corda.finance.*
+import net.corda.finance.util.*
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.contracts.utils.sumCash
 import net.corda.finance.schemas.CashSchemaV1

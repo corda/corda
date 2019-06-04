@@ -9,11 +9,11 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
-import net.corda.finance.DOLLARS
-import net.corda.finance.`issued by`
+import net.corda.finance.util.DOLLARS
+import net.corda.finance.util.`issued by`
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.AbstractCashFlow
-import net.corda.finance.issuedBy
+import net.corda.finance.util.issuedBy
 import net.corda.node.migration.VaultStateMigrationTest.Companion.bankOfCorda
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.BasicHSMKeyManagementService

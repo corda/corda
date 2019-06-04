@@ -6,7 +6,7 @@ import net.corda.core.contracts.TransactionState
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.finance.DOLLARS
+import net.corda.finance.util.DOLLARS
 import net.corda.finance.contracts.Fix
 import net.corda.finance.contracts.asset.CASH
 import net.corda.finance.contracts.asset.Cash

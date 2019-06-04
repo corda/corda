@@ -10,9 +10,9 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
-import net.corda.finance.DOLLARS
+import net.corda.finance.util.DOLLARS
 import net.corda.finance.contracts.asset.Cash
-import net.corda.finance.issuedBy
+import net.corda.finance.util.issuedBy
 import net.corda.testing.node.internal.FINANCE_CONTRACTS_CORDAPP
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.startFlow

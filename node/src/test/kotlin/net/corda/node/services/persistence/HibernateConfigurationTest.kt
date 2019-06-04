@@ -19,9 +19,7 @@ import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.toBase58String
-import net.corda.finance.DOLLARS
-import net.corda.finance.POUNDS
-import net.corda.finance.SWISS_FRANCS
+import net.corda.finance.util.*
 import net.corda.finance.contracts.asset.Cash
 import net.corda.node.testing.DummyFungibleContract
 import net.corda.finance.schemas.CashSchemaV1

@@ -11,9 +11,7 @@ import net.corda.core.messaging.*
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
-import net.corda.finance.DOLLARS
-import net.corda.finance.POUNDS
-import net.corda.finance.USD
+import net.corda.finance.util.*
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.workflows.getCashBalance
 import net.corda.finance.workflows.getCashBalances

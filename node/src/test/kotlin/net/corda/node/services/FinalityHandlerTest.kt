@@ -10,9 +10,9 @@ import net.corda.core.toFuture
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
-import net.corda.finance.POUNDS
+import net.corda.finance.util.POUNDS
 import net.corda.finance.contracts.asset.Cash
-import net.corda.finance.issuedBy
+import net.corda.finance.util.issuedBy
 import net.corda.node.services.statemachine.StaffedFlowHospital.*
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
