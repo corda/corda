@@ -8,7 +8,7 @@ import net.corda.core.contracts.Issued
 import net.corda.core.contracts.withoutIssuer
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
-import net.corda.finance.util.DOLLARS
+import net.corda.finance.DOLLARS
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashIssueAndPaymentFlow
 import net.corda.node.services.Permissions.Companion.all

@@ -3,7 +3,7 @@ package net.corda.node.logging
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
-import net.corda.finance.util.DOLLARS
+import net.corda.finance.DOLLARS
 import net.corda.finance.flows.CashIssueAndPaymentFlow
 import net.corda.node.services.Permissions.Companion.all
 import net.corda.testing.driver.DriverParameters

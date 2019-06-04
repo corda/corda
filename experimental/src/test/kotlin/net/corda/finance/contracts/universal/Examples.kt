@@ -1,6 +1,6 @@
 package net.corda.finance.contracts.universal
 
-import net.corda.finance.util.USD
+import net.corda.finance.USD
 import org.junit.Ignore
 import org.junit.Test
 

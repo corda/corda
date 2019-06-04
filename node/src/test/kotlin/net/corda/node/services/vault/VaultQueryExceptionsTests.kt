@@ -4,7 +4,7 @@ import net.corda.core.internal.packageName
 import net.corda.core.node.services.*
 import net.corda.core.node.services.vault.*
 import net.corda.core.node.services.vault.QueryCriteria.*
-import net.corda.finance.util.*
+import net.corda.finance.*
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.test.SampleCashSchemaV3
 import net.corda.testing.core.*

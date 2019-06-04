@@ -20,7 +20,7 @@ import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.contextLogger
-import net.corda.finance.util.DOLLARS
+import net.corda.finance.DOLLARS
 import net.corda.finance.contracts.Commodity
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.contracts.asset.Obligation
