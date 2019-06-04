@@ -12,8 +12,8 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.ReferenceStateRef
 import net.corda.core.transactions.WireTransaction
-import net.corda.finance.util.DOLLARS
-import net.corda.finance.util.`issued by`
+import net.corda.finance.DOLLARS
+import net.corda.finance.`issued by`
 import net.corda.finance.contracts.asset.Cash
 import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.testing.common.internal.testNetworkParameters

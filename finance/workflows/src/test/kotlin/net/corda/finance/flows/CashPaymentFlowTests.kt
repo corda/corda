@@ -6,8 +6,8 @@ import net.corda.core.node.services.trackBy
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
-import net.corda.finance.util.DOLLARS
-import net.corda.finance.util.`issued by`
+import net.corda.finance.DOLLARS
+import net.corda.finance.`issued by`
 import net.corda.finance.contracts.asset.Cash
 import net.corda.testing.core.*
 import net.corda.testing.node.InMemoryMessagingNetwork.ServicePeerAllocationStrategy.RoundRobin

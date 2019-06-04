@@ -8,10 +8,10 @@ import net.corda.core.node.AppServiceHub
 import net.corda.core.node.services.CordaService
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SingletonSerializeAsToken
-import net.corda.finance.util.CHF
-import net.corda.finance.util.EUR
-import net.corda.finance.util.GBP
-import net.corda.finance.util.USD
+import net.corda.finance.CHF
+import net.corda.finance.EUR
+import net.corda.finance.GBP
+import net.corda.finance.USD
 import net.corda.finance.internal.ConfigHolder.Companion.supportedCurrencies
 import java.util.*
 

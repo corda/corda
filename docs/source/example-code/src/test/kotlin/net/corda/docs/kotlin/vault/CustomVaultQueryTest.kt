@@ -9,9 +9,9 @@ import net.corda.core.node.services.vault.*
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.docs.kotlin.tutorial.helloworld.IOUFlow
-import net.corda.finance.flows.CashIssueFlow
-import net.corda.finance.util.*
+import net.corda.finance.*
 import net.corda.finance.workflows.getCashBalances
+import net.corda.finance.flows.CashIssueFlow
 import net.corda.node.services.vault.VaultSchemaV1
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.MockNetwork

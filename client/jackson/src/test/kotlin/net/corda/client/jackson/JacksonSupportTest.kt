@@ -35,7 +35,7 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.*
-import net.corda.finance.util.USD
+import net.corda.finance.USD
 import net.corda.nodeapi.internal.crypto.x509Certificates
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.contracts.DummyContract

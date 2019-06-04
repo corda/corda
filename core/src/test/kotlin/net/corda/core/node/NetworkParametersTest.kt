@@ -8,7 +8,7 @@ import net.corda.core.node.services.AttachmentId
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.days
 import net.corda.core.utilities.getOrThrow
-import net.corda.finance.util.DOLLARS
+import net.corda.finance.DOLLARS
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.node.services.config.NotaryConfig
 import net.corda.nodeapi.internal.network.NetworkParametersCopier

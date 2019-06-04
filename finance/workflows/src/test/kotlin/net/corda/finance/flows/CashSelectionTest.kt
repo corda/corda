@@ -6,11 +6,11 @@ import net.corda.core.identity.Party
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
-import net.corda.finance.util.DOLLARS
+import net.corda.finance.DOLLARS
 import net.corda.finance.workflows.asset.selection.AbstractCashSelection
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.workflows.getCashBalance
-import net.corda.finance.util.issuedBy
+import net.corda.finance.issuedBy
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.internal.FINANCE_CORDAPPS
 import net.corda.testing.node.internal.InternalMockNetwork

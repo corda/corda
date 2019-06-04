@@ -24,7 +24,7 @@ import java.util.List;
 
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
-import static net.corda.finance.util.Currencies.DOLLARS;
+import static net.corda.finance.Currencies.DOLLARS;
 import static net.corda.node.services.Permissions.invokeRpc;
 import static net.corda.node.services.Permissions.startFlow;
 import static net.corda.testing.core.ExpectKt.expect;

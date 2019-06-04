@@ -9,14 +9,15 @@ import net.corda.core.internal.cordapp.CordappResolver
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
-import net.corda.finance.util.POUNDS
+import net.corda.finance.POUNDS
 import net.corda.finance.contracts.asset.Cash
-import net.corda.finance.util.issuedBy
+import net.corda.finance.issuedBy
 import net.corda.testing.core.*
 import net.corda.testing.internal.matchers.flow.willReturn
 import net.corda.testing.internal.matchers.flow.willThrow
 import net.corda.testing.node.internal.*
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import org.junit.After
 import org.junit.Test
 

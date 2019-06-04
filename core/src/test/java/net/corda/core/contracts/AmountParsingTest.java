@@ -2,7 +2,7 @@ package net.corda.core.contracts;
 
 import org.junit.Test;
 
-import static net.corda.finance.util.Currencies.POUNDS;
+import static net.corda.finance.Currencies.POUNDS;
 import static org.junit.Assert.assertEquals;
 
 public class AmountParsingTest {

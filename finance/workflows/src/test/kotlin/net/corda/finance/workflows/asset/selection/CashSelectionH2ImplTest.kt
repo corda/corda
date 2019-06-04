@@ -3,8 +3,8 @@ package net.corda.finance.workflows.asset.selection
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
-import net.corda.finance.util.DOLLARS
-import net.corda.finance.util.POUNDS
+import net.corda.finance.DOLLARS
+import net.corda.finance.POUNDS
 import net.corda.finance.flows.CashException
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow

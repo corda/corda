@@ -16,10 +16,10 @@ import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.days
 import net.corda.core.utilities.hours
+import net.corda.finance.*
 import net.corda.finance.contracts.Commodity
 import net.corda.finance.contracts.NetType
 import net.corda.finance.contracts.asset.Obligation.Lifecycle
-import net.corda.finance.util.*
 import net.corda.finance.workflows.asset.ObligationUtils
 import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.testing.contracts.DummyContract

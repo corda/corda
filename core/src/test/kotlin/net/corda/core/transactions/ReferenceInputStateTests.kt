@@ -10,8 +10,8 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.node.NotaryInfo
-import net.corda.finance.util.DOLLARS
-import net.corda.finance.util.`issued by`
+import net.corda.finance.DOLLARS
+import net.corda.finance.`issued by`
 import net.corda.finance.contracts.asset.Cash
 import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.testing.common.internal.testNetworkParameters

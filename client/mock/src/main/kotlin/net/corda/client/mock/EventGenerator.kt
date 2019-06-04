@@ -3,8 +3,8 @@ package net.corda.client.mock
 import net.corda.core.contracts.Amount
 import net.corda.core.identity.Party
 import net.corda.core.utilities.OpaqueBytes
-import net.corda.finance.util.GBP
-import net.corda.finance.util.USD
+import net.corda.finance.GBP
+import net.corda.finance.USD
 import java.util.*
 import net.corda.finance.flows.CashIssueAndPaymentFlow.IssueAndPaymentRequest
 import net.corda.finance.flows.CashExitFlow.ExitRequest

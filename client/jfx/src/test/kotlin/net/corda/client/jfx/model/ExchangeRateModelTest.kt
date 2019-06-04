@@ -1,10 +1,10 @@
 package net.corda.client.jfx.model
 
 import net.corda.core.contracts.Amount
-import net.corda.finance.util.CHF
-import net.corda.finance.util.GBP
-import net.corda.finance.util.RUB
-import net.corda.finance.util.USD
+import net.corda.finance.CHF
+import net.corda.finance.GBP
+import net.corda.finance.RUB
+import net.corda.finance.USD
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
 import java.math.BigDecimal

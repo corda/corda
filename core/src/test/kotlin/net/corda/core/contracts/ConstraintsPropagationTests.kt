@@ -19,8 +19,8 @@ import net.corda.core.node.NotaryInfo
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
-import net.corda.finance.util.POUNDS
-import net.corda.finance.util.`issued by`
+import net.corda.finance.POUNDS
+import net.corda.finance.`issued by`
 import net.corda.finance.contracts.asset.Cash
 import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.testing.common.internal.testNetworkParameters

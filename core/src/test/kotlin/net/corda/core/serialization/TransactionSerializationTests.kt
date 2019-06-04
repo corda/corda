@@ -8,7 +8,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.node.NotaryInfo
 import net.corda.core.transactions.*
 import net.corda.core.utilities.seconds
-import net.corda.finance.util.POUNDS
+import net.corda.finance.POUNDS
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.SerializationEnvironmentRule

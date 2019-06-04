@@ -17,7 +17,7 @@ import net.corda.finance.workflows.asset.selection.AbstractCashSelection
 import net.corda.finance.flows.AbstractCashFlow.Companion.FINALISING_TX
 import net.corda.finance.flows.AbstractCashFlow.Companion.GENERATING_TX
 import net.corda.finance.flows.AbstractCashFlow.Companion.SIGNING_TX
-import net.corda.finance.util.issuedBy
+import net.corda.finance.issuedBy
 import java.util.*
 
 /**
