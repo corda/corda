@@ -22,8 +22,8 @@ import net.corda.nodeapi.internal.protonwrapper.messages.ReceivedMessage
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPConfiguration
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPServer
 import net.corda.nodeapi.internal.protonwrapper.netty.ConnectionChange
-import net.corda.nodeapi.internal.provider.extractCertificates
 import net.corda.nodeapi.internal.protonwrapper.netty.RevocationConfig
+import net.corda.nodeapi.internal.provider.extractCertificates
 import rx.Subscription
 import java.io.ByteArrayInputStream
 import java.security.KeyStore
@@ -263,6 +263,7 @@ class FloatControlListenerService(val conf: FirewallConfiguration,
                     forwardLegalName!!,
                     forwardAddress!!,
                     emptyMap())
+            message.release()
             amqpForwardMessage.onComplete.then { message.complete(it.get() == MessageStatus.Acknowledged) }
             amqpControl.write(amqpForwardMessage)
             auditService.packetAcceptedEvent(message, RoutingDirection.INBOUND)

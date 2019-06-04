@@ -456,7 +456,9 @@ internal class ConnectionStateMachine(private val serverMode: Boolean,
     }
 
     fun transportWriteMessage(msg: SendableMessageImpl) {
-        msg.buf = encodePayloadBytes(msg)
+        val encoded = encodePayloadBytes(msg)
+        msg.release()
+        msg.buf = encoded
         val messageQueue = messageQueues.getOrPut(msg.topic, { LinkedList() })
         messageQueue.offer(msg)
         if (session != null) {

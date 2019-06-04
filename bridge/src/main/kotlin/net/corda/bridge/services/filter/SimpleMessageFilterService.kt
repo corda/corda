@@ -93,6 +93,7 @@ class SimpleMessageFilterService(val conf: FirewallConfiguration,
             artemisMessage.writeBodyBufferBytes(inboundMessage.payload)
             producer.send(SimpleString(inboundMessage.topic), artemisMessage) { _ -> inboundMessage.complete(true) }
             auditService.packetAcceptedEvent(inboundMessage, RoutingDirection.INBOUND)
+            inboundMessage.release()
         } catch (ex: Exception) {
             log.error("Error trying to forward message", ex)
             inboundMessage.complete(false) // delivery failure. NAK back to source and await re-delivery attempts

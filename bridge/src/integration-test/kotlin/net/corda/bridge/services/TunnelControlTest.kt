@@ -203,6 +203,7 @@ class TunnelControlTest {
         val testPayload = ByteArray(1) { 0x11 }
         val receivedMessage = rigorousMock<ReceivedMessage>().also {
             doNothing().whenever(it).complete(true) // ACK was called
+            doNothing().whenever(it).release()
             doReturn(DUMMY_BANK_B_NAME.toString()).whenever(it).sourceLegalName
             doReturn(NetworkHostAndPort("localhost", 12345)).whenever(it).sourceLink
             doReturn(inboxTopic).whenever(it).topic
@@ -226,6 +227,7 @@ class TunnelControlTest {
                 ackLatch.countDown()
                 Unit
             }.whenever(it).complete(false) // NAK was called
+            doNothing().whenever(it).release()
             doReturn(DUMMY_BANK_B_NAME.toString()).whenever(it).sourceLegalName
             doReturn(NetworkHostAndPort("localhost", 12345)).whenever(it).sourceLink
             doReturn(inboxTopic).whenever(it).topic
@@ -250,6 +252,7 @@ class TunnelControlTest {
                 ackLatch2.countDown()
                 Unit
             }.whenever(it).complete(false) // NAK was called
+            doNothing().whenever(it).release()
             doReturn(DUMMY_BANK_B_NAME.toString()).whenever(it).sourceLegalName
             doReturn(NetworkHostAndPort("localhost", 12345)).whenever(it).sourceLink
             doReturn(inboxTopic).whenever(it).topic
