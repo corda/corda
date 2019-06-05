@@ -36,6 +36,16 @@ class DbSchemaInitialisationTest : IntegrationTest() {
         }
     }
 
+    @Test
+    fun `database is not initialised`() {
+        driver(DriverParameters(startNodesInProcess = isQuasarAgentSpecified())){
+            assertFailsWith(DatabaseIncompatibleException::class) {
+                startNode(NodeParameters(customOverrides = mapOf("database.initialiseSchema" to "false",
+                        "database.runMigration" to "false")), ALICE_NAME).getOrThrow()
+            }
+        }
+    }
+
     // Enterprise only test  - when running against database other than H2, runMigration flag is be used
     @Test
     fun `remote database is not initialised as runMigration flag takes precedence`() {
@@ -43,16 +53,6 @@ class DbSchemaInitialisationTest : IntegrationTest() {
         driver(DriverParameters(startNodesInProcess = isQuasarAgentSpecified())){
             assertFailsWith(DatabaseIncompatibleException::class) {
                 startNode(NodeParameters(customOverrides = mapOf("database.initialiseSchema" to "true",
-                        "database.runMigration" to "false")), ALICE_NAME).getOrThrow()
-            }
-        }
-    }
-
-    @Test
-    fun `database is not initialised`() {
-        driver(DriverParameters(startNodesInProcess = isQuasarAgentSpecified())){
-            assertFailsWith(DatabaseIncompatibleException::class) {
-                startNode(NodeParameters(customOverrides = mapOf("database.initialiseSchema" to "false",
                         "database.runMigration" to "false")), ALICE_NAME).getOrThrow()
             }
         }

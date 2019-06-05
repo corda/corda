@@ -285,6 +285,10 @@ It usually takes around 60 seconds for the nodes to finish starting up. Each nod
 
 Running the example CorDapp from IntelliJ
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+* Load the project by opening the project folder (Do not use "Import Project" functionality by IntelliJ because it will overwrite the pre-existing configuration) 
+
+* Follow the prompt to ``import Gradle project``
+
 * Select the ``Run Example CorDapp - Kotlin`` run configuration from the drop-down menu at the top right-hand side of
   the IDE
 
@@ -292,6 +296,8 @@ Running the example CorDapp from IntelliJ
 
   .. image:: resources/run-config-drop-down.png
     :width: 400
+
+* Select ``cordapp-example.workflows-kotlin.test`` for the Use classpath of module field, and then click Run
 
 * To stop the nodes, press the red square button at the top right-hand side of the IDE, next to the run configurations
 
@@ -329,7 +335,7 @@ To create an IOU between PartyA and PartyB, run the following command from the c
 
 .. sourcecode:: bash
 
-   curl -X PUT 'http://localhost:50005/api/example/create-iou?iouValue=1&partyName=O=PartyB,L=New%20York,C=US'
+   curl -X POST -H 'Content-Type: application/x-www-form-urlencoded' 'http://localhost:50005/api/example/create-iou?iouValue=1&partyName=O=PartyB,L=New%20York,C=US'
 
 Note that both PartyA's port number (``50005``) and PartyB are referenced in the PUT request path. This command
 instructs PartyA to agree an IOU with PartyB. Once the process is complete, both nodes will have a signed, notarised
