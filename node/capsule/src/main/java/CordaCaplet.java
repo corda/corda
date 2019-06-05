@@ -30,7 +30,7 @@ public class CordaCaplet extends Capsule {
             Config nodeConfig = ConfigFactory.parseFile(configFile, parseOptions);
             return baseDirectoryConfig.withFallback(nodeConfig).withFallback(defaultConfig).resolve();
         } catch (ConfigException e) {
-            log(LOG_DEBUG, e);
+            Capsule.log(Capsule.LOG_DEBUG, e);
             return ConfigFactory.empty();
         }
     }
@@ -103,7 +103,7 @@ public class CordaCaplet extends Capsule {
     protected <T> T attribute(Map.Entry<String, T> attr) {
         // Equality is used here because Capsule never instantiates these attributes but instead reuses the ones
         // defined as public static final fields on the Capsule class, therefore referential equality is safe.
-        if (ATTR_APP_CLASS_PATH == attr) {
+        if (Capsule.ATTR_APP_CLASS_PATH == attr) {
             T cp = super.attribute(attr);
 
             File cordappsDir = new File(baseDir, "cordapps");
@@ -114,43 +114,43 @@ public class CordaCaplet extends Capsule {
             }
             try {
                 List<String> jarDirs = nodeConfig.getStringList("jarDirs");
-                log(LOG_VERBOSE, "Configured JAR directories = " + jarDirs);
+                Capsule.log(Capsule.LOG_VERBOSE, "Configured JAR directories = " + jarDirs);
                 for (String jarDir : jarDirs) {
                     augmentClasspath((List<Path>) cp, new File(jarDir));
                 }
             } catch (ConfigException.Missing e) {
                 // Ignore since it's ok to be Missing. Other errors would be unexpected.
             } catch (ConfigException e) {
-                log(LOG_QUIET, e);
+                Capsule.log(Capsule.LOG_QUIET, e);
             }
             return cp;
-        } else if (ATTR_JVM_ARGS == attr) {
+        } else if (Capsule.ATTR_JVM_ARGS == attr) {
             // Read JVM args from the config if specified, else leave alone.
             List<String> jvmArgs = new ArrayList<>((List<String>) super.attribute(attr));
             try {
                 List<String> configJvmArgs = nodeConfig.getStringList("custom.jvmArgs");
                 jvmArgs.clear();
                 jvmArgs.addAll(configJvmArgs);
-                log(LOG_VERBOSE, "Configured JVM args = " + jvmArgs);
+                Capsule.log(Capsule.LOG_VERBOSE, "Configured JVM args = " + jvmArgs);
             } catch (ConfigException.Missing e) {
                 // Ignore since it's ok to be Missing. Other errors would be unexpected.
             } catch (ConfigException e) {
-                log(LOG_QUIET, e);
+                Capsule.log(Capsule.LOG_QUIET, e);
             }
             return (T) jvmArgs;
-        } else if (ATTR_SYSTEM_PROPERTIES == attr) {
+        } else if (Capsule.ATTR_SYSTEM_PROPERTIES == attr) {
             // Add system properties, if specified, from the config.
             Map<String, String> systemProps = new LinkedHashMap<>((Map<String, String>) super.attribute(attr));
             try {
                 Config overrideSystemProps = nodeConfig.getConfig("systemProperties");
-                log(LOG_VERBOSE, "Configured system properties = " + overrideSystemProps);
+                Capsule.log(Capsule.LOG_VERBOSE, "Configured system properties = " + overrideSystemProps);
                 for (Map.Entry<String, ConfigValue> entry : overrideSystemProps.entrySet()) {
                     systemProps.put(entry.getKey(), entry.getValue().unwrapped().toString());
                 }
             } catch (ConfigException.Missing e) {
                 // Ignore since it's ok to be Missing. Other errors would be unexpected.
             } catch (ConfigException e) {
-                log(LOG_QUIET, e);
+                Capsule.log(Capsule.LOG_QUIET, e);
             }
             return (T) systemProps;
         } else return super.attribute(attr);
@@ -164,10 +164,10 @@ public class CordaCaplet extends Capsule {
                     addToClasspath(classpath, file);
                 }
             } else {
-                log(LOG_VERBOSE, "Directory to add in Classpath was not found " + dir.getAbsolutePath());
+                Capsule.log(Capsule.LOG_VERBOSE, "Directory to add in Classpath was not found " + dir.getAbsolutePath());
             }
         } catch (SecurityException | NullPointerException e) {
-            log(LOG_QUIET, e);
+            Capsule.log(Capsule.LOG_QUIET, e);
         }
     }
 
@@ -194,7 +194,7 @@ public class CordaCaplet extends Capsule {
     }
 
     private void logOnFailedCordappDir() {
-        log(LOG_VERBOSE, "Cordapps dir could not be created");
+        Capsule.log(Capsule.LOG_VERBOSE, "Cordapps dir could not be created");
     }
 
     private void addToClasspath(List<Path> classpath, File file) {
@@ -206,10 +206,10 @@ public class CordaCaplet extends Capsule {
                     augmentClasspath(classpath, file);
                 }
             } else {
-                log(LOG_VERBOSE, "File or directory to add in Classpath could not be read " + file.getAbsolutePath());
+                Capsule.log(Capsule.LOG_VERBOSE, "File or directory to add in Classpath could not be read " + file.getAbsolutePath());
             }
         } catch (SecurityException | NullPointerException e) {
-            log(LOG_QUIET, e);
+            Capsule.log(Capsule.LOG_QUIET, e);
         }
     }
 
