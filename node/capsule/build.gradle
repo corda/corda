@@ -41,8 +41,8 @@ task buildCordaJAR(type: FatCapsule, dependsOn: project(':node').tasks.jar) {
     applicationSource = files(
         project(':node').configurations.runtimeClasspath,
         project(':node').tasks.jar,
-        project(':node').sourceSets.main.java.outputDir.toString() + '/CordaCaplet.class',
-        project(':node').sourceSets.main.java.outputDir.toString() + '/CordaCaplet$1.class',
+        project(':node:capsule').sourceSets.main.java.outputDir.toString() + '/CordaCaplet.class',
+        project(':node:capsule').sourceSets.main.java.outputDir.toString() + '/CordaCaplet$1.class',
         project(':node').buildDir.toString() + '/resources/main/reference.conf',
         "$rootDir/config/dev/log4j2.xml",
         'NOTICE' // Copy CDDL notice
