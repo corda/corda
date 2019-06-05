@@ -511,7 +511,6 @@ class RPCStabilityTests {
             val consumer = session.createConsumer(myQueue, null, -1, -1, false)
             consumer.setMessageHandler {
                 Thread.sleep(5000) // Needs to be slower than one per second to get kicked.
-                println("Ack $it")
                 it.acknowledge()
             }
             val producer = session.createProducer(RPCApi.RPC_SERVER_QUEUE_NAME)
