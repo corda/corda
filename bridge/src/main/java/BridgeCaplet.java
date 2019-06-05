@@ -28,10 +28,18 @@ public class BridgeCaplet extends Capsule {
         if (null == config || config.isEmpty()) {
             config = getOption(args, "-config-file");
         }
-        File configFile = (config == null) ? new File(baseDir, "bridge.conf") : new File(config);
+        File configFile = new File(baseDir, "firewall.conf");
+        if (config != null) {
+            configFile = new File(config);
+        } else if (!configFile.exists()) {
+            File oldConfigFile = new File(baseDir, "bridge.conf");
+            if (oldConfigFile.exists()) {
+                configFile = oldConfigFile;
+            }
+        }
         try {
             ConfigParseOptions parseOptions = ConfigParseOptions.defaults().setAllowMissing(false);
-            Config defaultConfig = ConfigFactory.parseResources("bridgedefault.conf", parseOptions);
+            Config defaultConfig = ConfigFactory.parseResources("firewalldefault.conf", parseOptions);
             Config baseDirectoryConfig = ConfigFactory.parseMap(Collections.singletonMap("baseDirectory", baseDir));
             Config nodeConfig = ConfigFactory.parseFile(configFile, parseOptions);
             return baseDirectoryConfig.withFallback(nodeConfig).withFallback(defaultConfig).resolve();
