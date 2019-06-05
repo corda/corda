@@ -108,21 +108,53 @@ template CorDapp, for example, would automatically build and add the template Co
 
 The configuration values available in ``deployNodes`` task are as follows:
 
-* ``name`` the name of the Corda node (see :ref:`myLegalName <corda_configuration_file_myLegalName>`)
-* ``notary`` for notaries only (see :ref:`notary <corda_configuration_file_notary>`)
-* ``p2pAddress`` the address to open for the p2p connection (see :ref:`p2pAddress <corda_configuration_file_p2pAddress>`)
-* ``p2pPort`` the port to open for the p2p connection (see :ref:`p2pAddress <corda_configuration_file_p2pAddress>`)
-* ``devMode`` when true enables development mode (see :ref:`devMode <corda_configuration_file_dev_mode>`)
-* ``webPort`` (see :ref:`Specifying a custom webserver<specify-custom-webserver>`)
-* ``webAddress`` (see :ref:`Specifying a custom webserver<specify-custom-webserver>`)
-* ``rpcSettings`` (see :ref:`rpcSettings <corda_configuration_file_rpc_settings>`)
-* ``rpcUsers`` (see :ref:`rpcUsers <corda_configuration_file_rpc_users>`)
-* ``configFile`` for extending configuration of nodes (see below)
-* ``https`` when true enables HTTPS communication
-* ``h2Settings`` (see :ref:`h2Settings <corda_configuration_file_h2_settings>`)
-* ``sshdPort`` Specifies the port for sshd communication (see :ref:`sshd <corda_configuration_file_sshd>`)
+* ``name`` <**required**> (see :ref:`myLegalName <corda_configuration_file_myLegalName>`)
 
-You can extend ``deployNodes`` to generate additional nodes.
+  * The legal identity name of the Corda node.
+
+* ``notary`` (see :ref:`notary <corda_configuration_file_notary>`)
+
+  * Optional configuration which specifies the node is a notary.
+  * .. note:: required for notary nodes
+
+* ``p2pAddress``/``p2pPort`` <**p2pPort required**> (see :ref:`p2pAddress <corda_configuration_file_p2pAddress>`)
+
+  * The address/port the node uses for inbound communication from other nodes.
+
+* ``devMode`` (see :ref:`devMode <corda_configuration_file_dev_mode>`)
+
+  * When true enables development mode.
+
+* ``webAddress``/``webPort`` (see :ref:`Specifying a custom webserver<specify-custom-webserver>`)
+
+  * Configure a webserver to connect to the node via RPC. This will specify the address and port it will listen on. The node must have an RPC address configured.
+
+* ``rpcSettings`` <**required**> (see :ref:`rpcSettings <corda_configuration_file_rpc_settings>`)
+
+  * Specifies RPC settings for the node.
+
+* ``rpcUsers`` (see :ref:`rpcUsers <corda_configuration_file_rpc_users>`)
+
+  * Set the RPC users for this node.
+  * This configuration block allows arbitrary configuration. Incorrect configurations will not cause a DSL error.
+
+* ``configFile`` (see below)
+
+  * For extending configuration of nodes.
+
+* ``https``
+
+  * When true enables HTTPS communication from the node webserver.
+
+* ``h2Settings`` (see :ref:`h2Settings <corda_configuration_file_h2_settings>`)
+
+  * Sets the H2 JDBC server host and port.
+
+* ``sshdPort`` (see :ref:`sshd <corda_configuration_file_sshd>`)
+
+  * Specifies the port for sshd communication.
+
+You can extend the task ``deployNodes`` with more ``node {}`` blocks to generate as many nodes as necessary for your application.
 
 .. warning:: When adding nodes, make sure that there are no port clashes!
 
