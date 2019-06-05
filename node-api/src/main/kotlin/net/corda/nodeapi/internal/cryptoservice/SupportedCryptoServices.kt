@@ -12,7 +12,7 @@ enum class SupportedCryptoServices {
     // AZURE_KV // Azure key Vault.
 
     companion object {
-        fun makeCryptoService(legalName: CordaX500Name, signingCertificateStore: FileBasedCertificateStoreSupplier): CryptoService {
+        fun makeCryptoService(legalName: CordaX500Name, signingCertificateStore: FileBasedCertificateStoreSupplier, cryptoServiceName: SupportedCryptoServices? = null): CryptoService {
             return BCCryptoService(legalName.x500Principal, signingCertificateStore)
         }
     }
