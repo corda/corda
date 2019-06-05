@@ -125,7 +125,7 @@ see changes to this list.
 * Lee Braine (Barclays)
 * Lucas Salmen (Itau)
 * Lulu Ren (Monad-Labs)
-* Maksymilian Pawlak (R3)
+* Maksymilian Pawlak (R3, B3i)
 * Manila Gauns (Persistent Systems Limited)
 * Manos Batsis
 * Marek Scocovsky (ABSA)
