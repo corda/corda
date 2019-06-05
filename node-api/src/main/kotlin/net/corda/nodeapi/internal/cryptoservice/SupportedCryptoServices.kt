@@ -18,7 +18,7 @@ enum class SupportedCryptoServices {
             if (signingCertificateStore == null) {
                 throw IllegalArgumentException("Currently only BouncyCastle is used as a crypto service. A valid signing certificate store is required.")
             }
-            return BCCryptoService(legalName.x500Principal, signingCertificateStore!!)
+            return BCCryptoService(legalName.x500Principal, signingCertificateStore)
         }
     }
 }
