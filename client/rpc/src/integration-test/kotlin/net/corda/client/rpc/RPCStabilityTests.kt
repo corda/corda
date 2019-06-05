@@ -499,7 +499,7 @@ class RPCStabilityTests {
     }
 
     @Test
-    @Ignore // This is ignored because Artemis slow consumers are broken.  I'm not deleting it in case we can get the feature fixed.
+    @Ignore // TODO: This is ignored because Artemis slow consumers are broken.  I'm not deleting it in case we can get the feature fixed.
     fun `slow consumers are kicked`() {
         rpcDriver {
             val server = startRpcServer(maxBufferedBytesPerClient = 10 * 1024 * 1024, ops = SlowConsumerRPCOpsImpl()).get()
