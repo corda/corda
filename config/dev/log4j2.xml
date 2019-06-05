@@ -22,41 +22,12 @@
 
                 <!-- The default console appender - prints no exception information -->
                 <Console name="Console-Appender" target="SYSTEM_OUT">
-                    <PatternLayout>
-                        <ScriptPatternSelector
-                                defaultPattern="%highlight{[%level{length=5}] %date{HH:mm:ssZ} [%t] %c{2}.%method - %msg%n%throwable{0}}{INFO=white,WARN=red,FATAL=bright red}">
-                            <Script name="MDCSelector" language="javascript"><![CDATA[
-                                result = null;
-                                if (!logEvent.getContextData().size() == 0) {
-                                    result = "WithMDC";
-                                } else {
-                                    result = null;
-                                }
-                                result;
-                                ]]>
-                            </Script>
-                            <PatternMatch key="WithMDC" pattern="%highlight{[%level{length=5}] %date{HH:mm:ssZ} [%t] %c{2}.%method - %msg %X%n%throwable{0}}{INFO=white,WARN=red,FATAL=bright red}"/>
-                        </ScriptPatternSelector>
-                    </PatternLayout>
+                    <PatternLayout pattern="%highlight{[%level{length=5}] %date{HH:mm:ssZ} [%t] %c{2}.%method - %msg%n%throwable{0}}{INFO=white,WARN=red,FATAL=bright red}"/>
                 </Console>
 
                 <!-- The console appender when debug or trace level logging is specified. Prints full stack trace -->
                 <Console name="Console-Debug-Appender" target="SYSTEM_OUT">
-                    <PatternLayout>
-                        <ScriptPatternSelector defaultPattern="%highlight{[%level{length=5}] %date{HH:mm:ssZ} [%t] %c{2}.%method - %msg%n%throwable{}}{INFO=white,WARN=red,FATAL=bright red}">
-                            <Script name="MDCSelector" language="javascript"><![CDATA[
-                                result = null;
-                                if (!logEvent.getContextData().size() == 0) {
-                                    result = "WithMDC";
-                                } else {
-                                    result = null;
-                                }
-                                result;
-                                ]]>
-                            </Script>
-                            <PatternMatch key="WithMDC" pattern="%highlight{[%level{length=5}] %date{HH:mm:ssZ} [%t] %c{2}.%method - %msg %X%n%throwable{}}{INFO=white,WARN=red,FATAL=bright red}"/>
-                        </ScriptPatternSelector>
-                    </PatternLayout>
+                    <PatternLayout pattern="%highlight{[%level{length=5}] %date{HH:mm:ssZ} [%t] %c{2}.%method - %msg%n%throwable{}}{INFO=white,WARN=red,FATAL=bright red}"/>
                 </Console>
             </AppenderSet>
         </ScriptAppenderSelector>
@@ -72,22 +43,7 @@
                      fileName="${log-path}/${log-name}.log"
                      filePattern="${archive}/${log-name}.%date{yyyy-MM-dd}-%i.log.gz">
 
-            <PatternLayout>
-                <ScriptPatternSelector defaultPattern="[%-5level] %date{ISO8601}{UTC}Z [%t] %c{2}.%method - %msg%n">
-                    <Script name="MDCSelector" language="javascript"><![CDATA[
-                    result = null;
-                    if (!logEvent.getContextData().size() == 0) {
-                        result = "WithMDC";
-                    } else {
-                        result = null;
-                    }
-                    result;
-               ]]>
-                    </Script>
-                    <PatternMatch key="WithMDC" pattern="[%-5level] %date{ISO8601}{UTC}Z [%t] %c{2}.%method - %msg %X%n"/>
-                </ScriptPatternSelector>
-            </PatternLayout>
-
+            <PatternLayout pattern="[%-5level] %date{ISO8601}{UTC}Z [%t] %c{2}.%method - %msg%n"/>
             <Policies>
                 <TimeBasedTriggeringPolicy/>
                 <SizeBasedTriggeringPolicy size="100MB"/>
@@ -112,21 +68,7 @@
                      fileName="${log-path}/${diagnostic-log-name}.log"
                      filePattern="${archive}/${diagnostic-log-name}.%date{yyyy-MM-dd}-%i.log.gz">
 
-            <PatternLayout>
-                <ScriptPatternSelector defaultPattern="[%-5level] %date{ISO8601}{UTC}Z [%t] %c{2}.%method - %msg%n">
-                    <Script name="MDCSelector" language="javascript"><![CDATA[
-                    result = null;
-                    if (!logEvent.getContextData().size() == 0) {
-                        result = "WithMDC";
-                    } else {
-                        result = null;
-                    }
-                    result;
-               ]]>
-                    </Script>
-                    <PatternMatch key="WithMDC" pattern="[%-5level] %date{ISO8601}{UTC}Z [%t] %c{2}.%method - %msg %X%n"/>
-                </ScriptPatternSelector>
-            </PatternLayout>
+            <PatternLayout pattern="[%-5level] %date{ISO8601}{UTC}Z [%t] %c{2}.%method - %msg%n"/>
 
             <Policies>
                 <TimeBasedTriggeringPolicy/>
