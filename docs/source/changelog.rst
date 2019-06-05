@@ -15,6 +15,7 @@ Version 5.0
 
 * Removed ``finance-workflows`` dependency on jackson library.  The functions that used jackson (e.g. ``FinanceJSONSupport``) have been moved
   into IRS Demo.
+* Artemis broker logging below error level is re-enabled but directed at the diagnostic log files.
 
 * Information about checkpointed flows can be retrieved from the shell. Calling ``dumpCheckpoints`` will create a zip file inside the node's
   ``log`` directory. This zip will contain a JSON representation of each checkpointed flow. This information can then be used to determine the
