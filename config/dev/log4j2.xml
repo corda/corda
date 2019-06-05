@@ -182,9 +182,9 @@
             <AppenderRef ref="Console-ErrorCode-Selector"/>
             <AppenderRef ref="RollingFile-ErrorCode-Appender"/>
         </Logger>
-        <Logger name="org.apache.activemq.artemis.core.server" level="error" additivity="false">
-            <AppenderRef ref="Console-ErrorCode-Selector"/>
-            <AppenderRef ref="RollingFile-ErrorCode-Appender"/>
+        <Logger name="org.apache.activemq.artemis.core.server" level="${defaultLogLevel}" additivity="false">
+            <AppenderRef ref="Console-ErrorCode-Selector" level="${consoleLogLevel}"/>
+            <AppenderRef ref="Diagnostic-RollingFile-ErrorCode-Appender"/>
         </Logger>
         <Logger name="org.jolokia" additivity="true" level="warn">
             <AppenderRef ref="Console-ErrorCode-Appender-Println"/>
