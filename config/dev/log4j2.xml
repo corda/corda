@@ -184,6 +184,7 @@
         </Logger>
         <Logger name="org.apache.activemq.artemis.core.server" level="${defaultLogLevel}" additivity="false">
             <AppenderRef ref="Console-ErrorCode-Selector" level="${consoleLogLevel}"/>
+            <AppenderRef ref="RollingFile-ErrorCode-Appender" level="error"/>
             <AppenderRef ref="Diagnostic-RollingFile-ErrorCode-Appender"/>
         </Logger>
         <Logger name="org.jolokia" additivity="true" level="warn">
