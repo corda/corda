@@ -84,6 +84,8 @@ class HibernateConfiguration(
         // necessarily remain and would likely be replaced by something like Liquibase.  For now it is very convenient though.
         val config = Configuration(metadataSources).setProperty("hibernate.connection.provider_class", NodeDatabaseConnectionProvider::class.java.name)
                 .setProperty("hibernate.connection.isolation", databaseConfig.transactionIsolationLevel.jdbcValue.toString())
+                .setProperty("javax.persistence.validation.mode", "none")
+
         if (isH2Database(jdbcUrl)) {
             val hbm2dll: String =
                     if (databaseConfig.initialiseSchema && databaseConfig.initialiseAppSchema == SchemaInitializationType.UPDATE) {

@@ -83,6 +83,18 @@ dependencies {
         // Gains our proton-j version from core module.
         exclude group: 'org.apache.qpid', module: 'proton-j'
     }
+
+    // Utimaco HSM
+    compileOnly fileTree(dir: 'lib', include: 'CryptoServer*.jar')
+    testCompile fileTree(dir: 'lib', include: 'CryptoServer*.jar')
+
+    // Gemalto Luna HSM
+    compileOnly fileTree(dir: 'lib', include: 'LunaProvider.jar')
+    testCompile fileTree(dir: 'lib', include: 'LunaProvider.jar')
+
+    // Futurex HSM
+    compileOnly fileTree(dir: 'lib', include: 'sunpkcs11-fx.jar')
+    testCompile fileTree(dir: 'lib', include: 'sunpkcs11-fx.jar')
 }
 
 configurations {

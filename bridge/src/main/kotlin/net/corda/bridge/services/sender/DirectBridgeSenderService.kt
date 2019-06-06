@@ -49,7 +49,7 @@ class DirectBridgeSenderService(val conf: FirewallConfiguration,
         override fun bridgeConnected(targets: List<NetworkHostAndPort>, legalNames: Set<CordaX500Name>) {
             val firstHostPort = targets.first()
             auditService.successfulConnectionEvent(InetSocketAddress(firstHostPort.host, firstHostPort.port),
-                    legalNames.first().toString(), "BridgeConnected", RoutingDirection.OUTGOING)
+                    legalNames.first().toString(), "BridgeConnected", RoutingDirection.OUTBOUND)
         }
 
         override fun bridgeDisconnected(targets: List<NetworkHostAndPort>, legalNames: Set<CordaX500Name>) {
@@ -63,11 +63,11 @@ class DirectBridgeSenderService(val conf: FirewallConfiguration,
         override fun packetDropEvent(artemisMessage: ClientMessage, msg: String) {
             // Too much of a hassle to translate `ClientMessage` into `ApplicationMessage?`, especially given that receiving side is likely
             // to be doing counting only.
-            auditService.packetDropEvent(null, msg, RoutingDirection.OUTGOING)
+            auditService.packetDropEvent(null, msg, RoutingDirection.OUTBOUND)
         }
 
         override fun packetAcceptedEvent(sendableMessage: SendableMessage) {
-            auditService.packetAcceptedEvent(sendableMessage, RoutingDirection.OUTGOING)
+            auditService.packetAcceptedEvent(sendableMessage, RoutingDirection.OUTBOUND)
         }
     }
 
