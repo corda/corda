@@ -16,14 +16,13 @@ configurations {
 dependencies {
     // TypeSafe Config: for simple and human friendly config files.
     capsuleRuntime "com.typesafe:config:$typesafe_config_version"
+    compileOnly "com.typesafe:config:$typesafe_config_version"
+    testRuntimeOnly "com.typesafe:config:$typesafe_config_version"
 
     // Capsule is a library for building independently executable fat JARs.
     // We only need this dependency to compile our Caplet against.
     compileOnly "co.paralleluniverse:capsule:$capsule_version"
     testCompile "co.paralleluniverse:capsule:$capsule_version"
-
-    // TypeSafe Config: for simple and human friendly config files.
-    compile "com.typesafe:config:$typesafe_config_version"
 
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
     testImplementation "junit:junit:$junit_version"
@@ -41,13 +40,12 @@ task buildCordaJAR(type: FatCapsule, dependsOn: project(':node').tasks.jar) {
     applicationSource = files(
         project(':node').configurations.runtimeClasspath,
         project(':node').tasks.jar,
-        project(':node:capsule').sourceSets.main.java.outputDir.toString() + '/CordaCaplet.class',
-        project(':node:capsule').sourceSets.main.java.outputDir.toString() + '/CordaCaplet$1.class',
         project(':node').buildDir.toString() + '/resources/main/reference.conf',
         "$rootDir/config/dev/log4j2.xml",
         'NOTICE' // Copy CDDL notice
     )
     from configurations.capsuleRuntime.files.collect { zipTree(it) }
+    with jar
 
     capsuleManifest {
         applicationVersion = corda_release_version
