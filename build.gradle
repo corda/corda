@@ -74,7 +74,6 @@ buildscript {
     ext.docker_compose_rule_version = '0.33.0'
     ext.selenium_version = '3.8.1'
     ext.ghostdriver_version = '2.1.0'
-    ext.eaagentloader_version = '1.0.3'
     ext.proguard_version = constants.getProperty('proguardVersion')
     ext.jsch_version = '0.1.54'
     ext.commons_cli_version = '1.4'
