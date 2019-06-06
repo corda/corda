@@ -263,6 +263,12 @@ absolute path to the firewall's base directory.
     This is equivalent to specifying ``-Dcapsule.jvm.args="-Xmx2G"`` on the command line, but is easier to track with other configuration and does not risk
     accidentally setting the properties onto the capsule parent process (e.g. wasting 2Gbyte of memory).
 
+:revocationConfig: Please see `revocationConfig`_ parameter above.
+    This is a fallback ``revocationConfig`` settings unless more ``revocationConfig`` defined on specific SSL configurations above.
+    There is one additional ``mode`` that can be provided here ``EXTERNAL_SOURCE`` which will only makes sense for Float component i.e. with ``firewallMode = FloatOuter``.
+    When ``mode = EXTERNAL_SOURCE`` is specified, Float component will fetch CRLs using tunnel connection it maintains with Bridge. This allows Float to correctly obtain CRLs without
+    initiating direct outgoing connections to the Delivery Points specified in TLS certificates.
+
 Complete example
 ================
 As an example to show all features, the following is a walk-through of the configuration steps to set-up a pair of HA hot-cold nodes for two separate legal identities,

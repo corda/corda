@@ -293,4 +293,11 @@ class ConfigTest {
         val config = createAndLoadConfigFromResource(tempFolder.root.toPath(), configResource)
         assertEquals(RevocationConfig.Mode.OFF, config.revocationConfig.mode)
     }
+
+    @Test
+    fun `External CRL config`() {
+        val configResource = "/net/corda/bridge/externalSourceCrl/firewall.conf"
+        val config = createAndLoadConfigFromResource(tempFolder.root.toPath(), configResource)
+        assertEquals(RevocationConfig.Mode.EXTERNAL_SOURCE, config.revocationConfig.mode)
+    }
 }

@@ -78,7 +78,7 @@ dependencies {
     // Bouncy castle support needed for X509 certificate manipulation
     compile "org.bouncycastle:bcprov-jdk15on:${bouncycastle_version}"
     compile "org.bouncycastle:bcpkix-jdk15on:${bouncycastle_version}"
-    // Seems to be needed?
+    // Needed for CRLs caching
     compile "com.github.ben-manes.caffeine:caffeine:$caffeine_version"
 
     // Log4J: logging framework (with SLF4J bindings)

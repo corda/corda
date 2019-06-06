@@ -1,7 +1,9 @@
 package net.corda.bridge.services.receiver
 
 import net.corda.bridge.services.api.*
+import net.corda.bridge.services.crl.CrlFetcher
 import net.corda.bridge.services.receiver.FloatControlTopics.FLOAT_CONTROL_TOPIC
+import net.corda.bridge.services.receiver.FloatControlTopics.FLOAT_CRL_TOPIC
 import net.corda.bridge.services.receiver.FloatControlTopics.FLOAT_DATA_TOPIC
 import net.corda.bridge.services.receiver.FloatControlTopics.FLOAT_SIGNING_TOPIC
 import net.corda.bridge.services.util.ServiceStateCombiner
@@ -25,6 +27,9 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 import kotlin.concurrent.thread
 
+/**
+ * @see BridgeReceiverService
+ */
 class TunnelingBridgeReceiverService(val conf: FirewallConfiguration,
                                      private val maximumMessageSize: Int,
                                      val auditService: FirewallAuditService,
@@ -44,6 +49,7 @@ class TunnelingBridgeReceiverService(val conf: FirewallConfiguration,
     private var receiveSubscriber: Subscription? = null
     private var amqpControlClient: AMQPClient? = null
     private val expectedCertificateSubject: CordaX500Name = conf.bridgeInnerConfig!!.expectedCertificateSubject
+    private val crlFetcher = CrlFetcher(conf.outboundConfig?.proxyConfig)
 
     override fun start() {
         statusSubscriber = statusFollower.activeChange.subscribe({
@@ -138,6 +144,7 @@ class TunnelingBridgeReceiverService(val conf: FirewallConfiguration,
         when (receivedMessage.topic) {
             FLOAT_DATA_TOPIC -> processDataTopic(receivedMessage)
             FLOAT_SIGNING_TOPIC -> processSigningTopic(receivedMessage)
+            FLOAT_CRL_TOPIC -> processCrlTopic(receivedMessage)
             else -> {
                 auditService.packetDropEvent(receivedMessage, "Invalid float inbound topic received ${receivedMessage.topic}!!", RoutingDirection.INBOUND)
                 receivedMessage.complete(true)
@@ -181,7 +188,9 @@ class TunnelingBridgeReceiverService(val conf: FirewallConfiguration,
         val request = try {
             receivedMessage.payload.deserialize<SigningRequest>()
         } catch (ex: Exception) {
-            auditService.packetDropEvent(receivedMessage, "Unable to decode signing request message", RoutingDirection.INBOUND)
+            val msg = "Unable to decode signing request message"
+            log.error(msg, ex)
+            auditService.packetDropEvent(receivedMessage, msg, RoutingDirection.INBOUND)
             receivedMessage.complete(true)
             return
         }
@@ -196,5 +205,28 @@ class TunnelingBridgeReceiverService(val conf: FirewallConfiguration,
             amqpControlClient!!.write(amqpSigningResponse)
             log.info("Sent signing response '${request.requestId}' using key ${request.alias}.")
         }
+    }
+
+    private fun processCrlTopic(receivedMessage: ReceivedMessage) {
+        val request = try {
+            receivedMessage.payload.deserialize<CrlRequest>()
+        } catch (ex: Exception) {
+            val msg = "Unable to decode CRL request message"
+            log.error(msg, ex)
+            auditService.packetDropEvent(receivedMessage, msg, RoutingDirection.INBOUND)
+            receivedMessage.complete(true)
+            return
+        }
+        val certificate = request.certificate
+        log.info("Received CRL request '${request.requestId}' for certificate with X.500 name: '${certificate.subjectX500Principal}'")
+        val crls = crlFetcher.fetch(certificate)
+        log.info("Obtained the following CRLs: $crls")
+        val response = CrlResponse(request.requestId, crls)
+        val amqpCrlResponse = amqpControlClient!!.createMessage(response.serialize(context = SerializationDefaults.P2P_CONTEXT).bytes,
+                FloatControlTopics.FLOAT_CRL_TOPIC,
+                expectedCertificateSubject.toString(),
+                emptyMap())
+        amqpControlClient!!.write(amqpCrlResponse)
+        log.info("Sent CRL response '${request.requestId}'")
     }
 }

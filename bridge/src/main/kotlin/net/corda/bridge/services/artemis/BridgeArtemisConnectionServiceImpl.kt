@@ -51,8 +51,11 @@ class BridgeArtemisConnectionServiceImpl(artemisSigningService: TLSSigningServic
         sslConfiguration = conf.outboundConfig?.artemisSSLConfiguration ?: conf.publicSSLConfiguration
 
         val provider = Security.getProvider(DelegatedKeystoreProvider.PROVIDER_NAME)
-        val delegatedKeystoreProvider = if (provider != null) provider as DelegatedKeystoreProvider
-                                        else DelegatedKeystoreProvider().apply { Security.addProvider(this) }
+        val delegatedKeystoreProvider = if (provider != null) {
+            provider as DelegatedKeystoreProvider
+        } else {
+            DelegatedKeystoreProvider().apply { Security.addProvider(this) }
+        }
         delegatedKeystoreProvider.putService(signingServiceName, artemisSigningService)
     }
 

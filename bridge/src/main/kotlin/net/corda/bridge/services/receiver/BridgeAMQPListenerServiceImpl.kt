@@ -5,25 +5,21 @@ import net.corda.bridge.services.util.ServiceStateCombiner
 import net.corda.bridge.services.util.ServiceStateHelper
 import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.config.CertificateStore
-import net.corda.nodeapi.internal.crypto.KEYSTORE_TYPE
-import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.protonwrapper.messages.ReceivedMessage
-import net.corda.nodeapi.internal.protonwrapper.netty.AMQPConfiguration
-import net.corda.nodeapi.internal.protonwrapper.netty.AMQPServer
-import net.corda.nodeapi.internal.protonwrapper.netty.ConnectionChange
-import net.corda.nodeapi.internal.protonwrapper.netty.RevocationConfig
+import net.corda.nodeapi.internal.protonwrapper.netty.*
 import org.slf4j.LoggerFactory
 import rx.Observable
 import rx.Subscription
 import rx.subjects.PublishSubject
-import java.io.ByteArrayInputStream
-import java.lang.String.valueOf
-import java.security.KeyStore
 import java.util.*
 
+/**
+ * Responsible for performing actions when Float component is being activated and de-activated.
+ */
 class BridgeAMQPListenerServiceImpl(val conf: FirewallConfiguration,
                                     val auditService: FirewallAuditService,
-                                    private val stateHelper: ServiceStateHelper = ServiceStateHelper(log)) : BridgeAMQPListenerService, ServiceStateSupport by stateHelper {
+                                    private val stateHelper: ServiceStateHelper = ServiceStateHelper(log),
+                                    private val extSourceSupplier: (() -> ExternalCrlSource)? = null) : BridgeAMQPListenerService, ServiceStateSupport by stateHelper {
     companion object {
         private val log = contextLogger()
         private val consoleLogger = LoggerFactory.getLogger("BasicInfo")
@@ -37,20 +33,20 @@ class BridgeAMQPListenerServiceImpl(val conf: FirewallConfiguration,
     private var onConnectAuditSubscription: Subscription? = null
     private var onReceiveSubscription: Subscription? = null
 
-    override fun provisionKeysAndActivate(keyStore: CertificateStore, trustStore:CertificateStore, maximumMessageSize: Int) {
+    override fun provisionKeysAndActivate(keyStore: CertificateStore, trustStore:CertificateStore, maxMessageSize: Int) {
         require(active) { "AuditService must be active" }
         val bindAddress = conf.inboundConfig!!.listeningAddress
         val amqpConfiguration = object : AMQPConfiguration {
             //TODO: No password for delegated keystore. Refactor this?
             override val keyStore = keyStore
             override val trustStore = trustStore
-            override val maxMessageSize: Int = maximumMessageSize
+            override val maxMessageSize: Int = maxMessageSize
             override val trace: Boolean = conf.enableAMQPPacketTrace
             override val enableSNI: Boolean = conf.bridgeInnerConfig?.enableSNI ?: true
             override val healthCheckPhrase = conf.healthCheckPhrase
             override val silencedIPs: Set<String> = conf.silencedIPs
             override val sslHandshakeTimeout: Long = conf.sslHandshakeTimeout
-            override val revocationConfig: RevocationConfig = conf.revocationConfig
+            override val revocationConfig: RevocationConfig = conf.revocationConfig.enrichExternalCrlSource(extSourceSupplier)
         }
         val server = AMQPServer(bindAddress.host,
                 bindAddress.port,

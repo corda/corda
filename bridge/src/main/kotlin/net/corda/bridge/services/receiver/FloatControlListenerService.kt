@@ -19,10 +19,7 @@ import net.corda.nodeapi.internal.crypto.KEYSTORE_TYPE
 import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.protonwrapper.messages.MessageStatus
 import net.corda.nodeapi.internal.protonwrapper.messages.ReceivedMessage
-import net.corda.nodeapi.internal.protonwrapper.netty.AMQPConfiguration
-import net.corda.nodeapi.internal.protonwrapper.netty.AMQPServer
-import net.corda.nodeapi.internal.protonwrapper.netty.ConnectionChange
-import net.corda.nodeapi.internal.protonwrapper.netty.RevocationConfig
+import net.corda.nodeapi.internal.protonwrapper.netty.*
 import net.corda.nodeapi.internal.provider.extractCertificates
 import rx.Subscription
 import java.io.ByteArrayInputStream
@@ -31,6 +28,9 @@ import java.util.*
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 
+/**
+ * @see FloatControlService
+ */
 class FloatControlListenerService(val conf: FirewallConfiguration,
                                   val auditService: FirewallAuditService,
                                   private val amqpListener: BridgeAMQPListenerService,
@@ -52,12 +52,15 @@ class FloatControlListenerService(val conf: FirewallConfiguration,
     private var forwardLegalName: String? = null
 
     private var p2pSigningService: TLSSigningService? = null
+    private var tunnelExternalCrlSourceService: TunnelExternalCrlSourceService? = null
     private val tunnelSigningService: TLSSigningService
     private val tunnelingTruststore: CertificateStore
     private val statusFollower:ServiceStateCombiner
 
     private var maxMessageSize :Int? = null
 
+    val extCrlSource: ExternalCrlSource
+        get() = tunnelExternalCrlSourceService!!
 
     init {
         val sslConfiguration: MutualSslConfiguration = conf.floatOuterConfig?.tunnelSSLConfiguration ?: conf.publicSSLConfiguration
@@ -137,6 +140,8 @@ class FloatControlListenerService(val conf: FirewallConfiguration,
             p2pSigningService?.stop()
             p2pSigningService = null
             tunnelSigningService.stop()
+            tunnelExternalCrlSourceService?.stop()
+            tunnelExternalCrlSourceService = null
         }
     }
 
@@ -195,6 +200,9 @@ class FloatControlListenerService(val conf: FirewallConfiguration,
                             p2pSigningService = AMQPSigningService(amqpControlServer!!, floatClientName, receivedMessage.sourceLink,
                                     receivedMessage.sourceLegalName, controlMessage.certificates, trustStore, auditService, controlMessage.bridgeCommTimeout)
                             p2pSigningService!!.start()
+
+                            tunnelExternalCrlSourceService = TunnelExternalCrlSourceService(amqpControlServer!!, floatClientName, receivedMessage.sourceLink, receivedMessage.sourceLegalName, auditService, controlMessage.bridgeCommTimeout)
+                            tunnelExternalCrlSourceService!!.start()
 
                             maxMessageSize = controlMessage.maxMessageSize
                             amqpListener.provisionKeysAndActivate(p2pSigningService!!.keyStore(), trustStore, maxMessageSize!!)

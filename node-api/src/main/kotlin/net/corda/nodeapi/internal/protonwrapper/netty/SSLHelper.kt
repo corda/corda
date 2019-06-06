@@ -13,6 +13,7 @@ import net.corda.nodeapi.internal.ArtemisTcpTransport
 import net.corda.nodeapi.internal.config.CertificateStore
 import net.corda.nodeapi.internal.crypto.toBc
 import net.corda.nodeapi.internal.crypto.x509
+import net.corda.nodeapi.internal.protonwrapper.netty.revocation.ExternalSourceRevocationChecker
 import org.bouncycastle.asn1.x509.AuthorityKeyIdentifier
 import org.bouncycastle.asn1.x509.Extension
 import org.bouncycastle.asn1.x509.SubjectKeyIdentifier
@@ -170,22 +171,27 @@ internal fun createServerSslHandler(keyStore: CertificateStore,
 
 internal fun initialiseTrustStoreAndEnableCrlChecking(trustStore: CertificateStore, revocationConfig: RevocationConfig): ManagerFactoryParameters {
     val pkixParams = PKIXBuilderParameters(trustStore.value.internal, X509CertSelector())
-    val revocationChecker = if (revocationConfig.mode == RevocationConfig.Mode.OFF) {
-        AllowAllRevocationChecker  // Custom PKIXRevocationChecker
-    } else {
-        val certPathBuilder = CertPathBuilder.getInstance("PKIX")
-        val pkixRevocationChecker = certPathBuilder.revocationChecker as PKIXRevocationChecker
-        pkixRevocationChecker.options = EnumSet.of(
-                // Prefer CRL over OCSP
-                PKIXRevocationChecker.Option.PREFER_CRLS,
-                // Don't fall back to OCSP checking
-                PKIXRevocationChecker.Option.NO_FALLBACK)
-        if (revocationConfig.mode == RevocationConfig.Mode.SOFT_FAIL) {
-            // Allow revocation check to succeed if the revocation status cannot be determined for one of
-            // the following reasons: The CRL or OCSP response cannot be obtained because of a network error.
-            pkixRevocationChecker.options = pkixRevocationChecker.options + PKIXRevocationChecker.Option.SOFT_FAIL
+    val revocationChecker = when (revocationConfig.mode) {
+        RevocationConfig.Mode.OFF -> AllowAllRevocationChecker  // Custom PKIXRevocationChecker skipping CRL check
+        RevocationConfig.Mode.EXTERNAL_SOURCE -> {
+            assert(revocationConfig.externalCrlSource != null) { "externalCrlSource must not be null" }
+            ExternalSourceRevocationChecker(revocationConfig.externalCrlSource!!) { pkixParams.date } // Custom PKIXRevocationChecker which uses `externalCrlSource`
         }
-        pkixRevocationChecker
+        else -> {
+            val certPathBuilder = CertPathBuilder.getInstance("PKIX")
+            val pkixRevocationChecker = certPathBuilder.revocationChecker as PKIXRevocationChecker
+            pkixRevocationChecker.options = EnumSet.of(
+                    // Prefer CRL over OCSP
+                    PKIXRevocationChecker.Option.PREFER_CRLS,
+                    // Don't fall back to OCSP checking
+                    PKIXRevocationChecker.Option.NO_FALLBACK)
+            if (revocationConfig.mode == RevocationConfig.Mode.SOFT_FAIL) {
+                // Allow revocation check to succeed if the revocation status cannot be determined for one of
+                // the following reasons: The CRL or OCSP response cannot be obtained because of a network error.
+                pkixRevocationChecker.options = pkixRevocationChecker.options + PKIXRevocationChecker.Option.SOFT_FAIL
+            }
+            pkixRevocationChecker
+        }
     }
     pkixParams.addCertPathChecker(revocationChecker)
     return CertPathTrustManagerParameters(pkixParams)

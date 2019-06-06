@@ -5,7 +5,7 @@ import net.corda.nodeapi.internal.config.ConfigParser
 import net.corda.nodeapi.internal.config.CustomConfigParser
 
 /**
- * Data structure for controlling the wy how Certificate Revocation Lists are handled.
+ * Data structure for controlling the way how Certificate Revocation Lists are handled.
  */
 @CustomConfigParser(RevocationConfigParser::class)
 interface RevocationConfig {
@@ -25,12 +25,28 @@ interface RevocationConfig {
         HARD_FAIL,
 
         /**
+         * CRLs are obtained from external source
+         * @see ExternalCrlSource
+         */
+        EXTERNAL_SOURCE,
+
+        /**
          * Switch CRL check off.
          */
         OFF
     }
 
-    val mode : Mode
+    val mode: Mode
+
+    /**
+     * Optional `ExternalCrlSource` which only makes sense with `mode` = `EXTERNAL_SOURCE`
+     */
+    val externalCrlSource: ExternalCrlSource?
+
+    /**
+     * Creates a copy of `RevocationConfig` with ExternalCrlSource enriched
+     */
+    fun enrichExternalCrlSource(sourceFunc: (() -> ExternalCrlSource)?): RevocationConfig
 }
 
 /**
@@ -38,7 +54,16 @@ interface RevocationConfig {
  */
 fun Boolean.toRevocationConfig() = if(this) RevocationConfigImpl(RevocationConfig.Mode.SOFT_FAIL) else RevocationConfigImpl(RevocationConfig.Mode.HARD_FAIL)
 
-data class RevocationConfigImpl(override val mode: RevocationConfig.Mode) : RevocationConfig
+data class RevocationConfigImpl(override val mode: RevocationConfig.Mode, override val externalCrlSource: ExternalCrlSource? = null) : RevocationConfig {
+    override fun enrichExternalCrlSource(sourceFunc: (() -> ExternalCrlSource)?): RevocationConfig {
+        return if(mode != RevocationConfig.Mode.EXTERNAL_SOURCE) {
+            this
+        } else {
+            assert(sourceFunc != null) { "There should be a way to obtain ExternalCrlSource" }
+            copy(externalCrlSource = sourceFunc!!())
+        }
+    }
+}
 
 class RevocationConfigParser : ConfigParser<RevocationConfig> {
     override fun parse(config: Config): RevocationConfig {
@@ -46,6 +71,7 @@ class RevocationConfigParser : ConfigParser<RevocationConfig> {
         return when (mode.toUpperCase()) {
             "SOFT_FAIL" -> RevocationConfigImpl(RevocationConfig.Mode.SOFT_FAIL)
             "HARD_FAIL" -> RevocationConfigImpl(RevocationConfig.Mode.HARD_FAIL)
+            "EXTERNAL_SOURCE" -> RevocationConfigImpl(RevocationConfig.Mode.EXTERNAL_SOURCE, null) // null for now till `enrichExternalCrlSource` is called
             "OFF" -> RevocationConfigImpl(RevocationConfig.Mode.OFF)
             else -> throw IllegalArgumentException("Unsupported mode : '$mode'")
         }

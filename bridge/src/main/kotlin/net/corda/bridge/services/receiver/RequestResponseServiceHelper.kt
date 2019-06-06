@@ -22,16 +22,19 @@ import java.time.Duration
 import java.util.concurrent.TimeUnit
 import kotlin.reflect.KClass
 
-internal class RequestResponseServiceHelper<in REQ : TunnelControlMessageWithId, out RESP : TunnelControlMessageWithId>(private val amqpControl: AMQPServer,
-                                                                                                                        private val floatClientName: CordaX500Name,
-                                                                                                                        private val sourceLink: NetworkHostAndPort,
-                                                                                                                        private val sourceLegalName: String,
-                                                                                                                        private val auditService: FirewallAuditService,
-                                                                                                                        private val log: Logger,
-                                                                                                                        private val stateHelper: ServiceStateHelper,
-                                                                                                                        private val topic: String,
-                                                                                                                        private val responseClass: KClass<RESP>,
-                                                                                                                        private val responseTimeOut: Duration) : ServiceLifecycleSupport, ServiceStateSupport by stateHelper {
+/**
+ * General helper class which facilitates request/response mechanism of data exchange between Float and Bridge.
+ */
+internal class RequestResponseServiceHelper<in REQ : RequestIdContainer, out RESP : RequestIdContainer>(private val amqpControl: AMQPServer,
+                                                                                                        private val floatClientName: CordaX500Name,
+                                                                                                        private val sourceLink: NetworkHostAndPort,
+                                                                                                        private val sourceLegalName: String,
+                                                                                                        private val auditService: FirewallAuditService,
+                                                                                                        private val log: Logger,
+                                                                                                        private val stateHelper: ServiceStateHelper,
+                                                                                                        private val topic: String,
+                                                                                                        private val responseClass: KClass<RESP>,
+                                                                                                        private val responseTimeOut: Duration) : ServiceLifecycleSupport, ServiceStateSupport by stateHelper {
 
     private lateinit var responseSubject: Subject<RESP, RESP>
     private lateinit var receiveSubscriber: Subscription
