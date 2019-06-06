@@ -4,6 +4,7 @@ import com.ea.agentloader.AgentLoader
 import net.corda.core.internal.exists
 import net.corda.core.internal.isRegularFile
 import net.corda.core.internal.toPath
+import java.io.File
 import java.net.URL
 import java.net.URLClassLoader
 import java.nio.file.Path
@@ -43,10 +44,10 @@ object JVMAgentRegistry {
         return if (path.exists() && path.isRegularFile()) {
             path
         } else {
-            (this::class.java.classLoader as? URLClassLoader)
-                    ?.urLs
-                    ?.map(URL::toPath)
-                    ?.firstOrNull { it.fileName.toString() == jarFileName }
+            val pathOnClasspath = defaultClassPath.firstOrNull { it.endsWith(jarFileName) }
+            if (pathOnClasspath != null) Paths.get(pathOnClasspath) else null
         }
     }
+
+    private val defaultClassPath: List<String> = System.getProperty("java.class.path").split(File.pathSeparator)
 }
