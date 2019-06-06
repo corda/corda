@@ -8,7 +8,7 @@ cordapp {
     minimumPlatformVersion 1
     signing {
         // Cordapp is signed after the "shrink" task.
-        enabled false
+        enabled true
     }
     sealing {
         // Cannot seal JAR because other module also defines classes in the package net.corda.vega.analytics
@@ -87,6 +87,7 @@ task sign(type: net.corda.plugins.SignJar) {
     inputJars shrink
 }
 
+// JDK11 disabled ProGuard shrinking due to bytecode incompatibility: Unsupported version number [55.0] (maximum 54.0, Java 10)
 if (!JavaVersion.current().java8Compatible)
     jar.finalizedBy shrink
 shrink.finalizedBy sign
