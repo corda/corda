@@ -100,6 +100,31 @@ Example configuration file:
 
 Note that the Gemalto's JCA provider has to be installed as described in the documentation for the Gemalto Luna.
 
+Futurex
+-------
+
+Corda Enterprise nodes can be configured to store their legal identity keys in `FutureX Excrypt SSP9000 <https://www.futurex.com/products/excrypt-ssp9000>`_ HSMs running firmware version 3.1.
+
+In the ``node.conf``, the ``cryptoServiceName`` needs to be set to "FUTUREX", and ``cryptoServiceConf`` should contain the path to a configuration file, the content of which is explained further down.
+
+.. parsed-literal::
+
+    cryptoServiceName : "FUTUREX"
+    cryptoServiceConf : "futurex.conf"
+
+The configuration file for Futurex has one field, ``credentials`` that contains the password (PIN) required to authenticate with the HSM.
+
+Example configuration file:
+
+.. parsed-literal::
+
+      credentials: "password"
+
+When starting Corda the environment variables ``FXPKCS11_CFG`` and ``FXPKCS11_MODULE`` need to be set as detailed in Futurex's documentation.
+Corda must be running with the system property ``java.library.path`` pointing to the directory that contains the FutureX binaries (e.g. ``libfxjp11.so`` for Linux).
+Additionaly, The JAR containing the Futurex JCA provider must be put on the class path, or copied to the node's ``drivers`` directory.
+
+
 Azure KeyVault
 --------------
 
