@@ -34,6 +34,7 @@ import net.corda.core.serialization.internal.CheckpointSerializationDefaults
 import net.corda.core.serialization.internal.checkpointDeserialize
 import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.ProgressTracker
+import net.corda.core.utilities.contextLogger
 import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.statemachine.*
@@ -41,17 +42,20 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.serialization.internal.CheckpointSerializeAsTokenContextImpl
 import net.corda.serialization.internal.withTokenContext
 import java.time.Instant
-import java.time.LocalTime
 import java.time.ZoneOffset.UTC
 import java.time.format.DateTimeFormatter
 import java.util.*
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
 class CheckpointDumper(private val checkpointStorage: CheckpointStorage, private val database: CordaPersistence, private val serviceHub: ServiceHubInternal) {
     companion object {
         private val TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss").withZone(UTC)
+        private val log = contextLogger()
     }
+
+    private val lock = AtomicInteger(0)
 
     private lateinit var checkpointSerializationContext: CheckpointSerializationContext
     private lateinit var writer: ObjectWriter
@@ -82,20 +86,28 @@ class CheckpointDumper(private val checkpointStorage: CheckpointStorage, private
     }
 
     fun dump() {
-        val file = serviceHub.configuration.baseDirectory / "checkpoints_dump-${TIME_FORMATTER.format(serviceHub.clock.instant())}.zip"
-        database.transaction {
-            checkpointStorage.getAllCheckpoints().use { stream ->
-                ZipOutputStream(file.outputStream()).use { zip ->
-                    stream.forEach { (runId, serialisedCheckpoint) ->
-                        val checkpoint = serialisedCheckpoint.checkpointDeserialize(context = checkpointSerializationContext)
-                        val json = checkpoint.toJson(runId.uuid)
-                        val jsonBytes = writer.writeValueAsBytes(json)
-                        zip.putNextEntry(ZipEntry("${runId.uuid}.json"))
-                        zip.write(jsonBytes)
-                        zip.closeEntry()
+        try {
+            val file = serviceHub.configuration.baseDirectory / "logs" / "checkpoints_dump-${TIME_FORMATTER.format(serviceHub.clock.instant())}.zip"
+            if (lock.getAndIncrement() == 0 && !file.exists()) {
+                database.transaction {
+                    checkpointStorage.getAllCheckpoints().use { stream ->
+                        ZipOutputStream(file.outputStream()).use { zip ->
+                            stream.forEach { (runId, serialisedCheckpoint) ->
+                                val checkpoint = serialisedCheckpoint.checkpointDeserialize(context = checkpointSerializationContext)
+                                val json = checkpoint.toJson(runId.uuid)
+                                val jsonBytes = writer.writeValueAsBytes(json)
+                                zip.putNextEntry(ZipEntry("${runId.uuid}.json"))
+                                zip.write(jsonBytes)
+                                zip.closeEntry()
+                            }
+                        }
                     }
                 }
+            } else {
+                log.info("Flow dump already in progress, skipping current call")
             }
+        } finally {
+            lock.decrementAndGet()
         }
     }
 
