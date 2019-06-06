@@ -61,7 +61,7 @@ class DoormanDbManagerConfiguration(cmdLineOptions: SharedDbManagerOptions) : Db
 
 class NodeDbManagerConfiguration(cmdLineOptions: SharedDbManagerOptions) : DbManagerConfiguration(cmdLineOptions) {
     private val cordappsFolder by lazy { baseDirectory / "cordapps" }
-    private val cordappSchemas by lazy { cordappLoader.cordappSchemas }
+    private val cordappSchemas by lazy { cordappLoader.cordappSchemas.union(notaryLoader?.builtInNotary?.customSchemas ?: emptySet()) }
 
     override val cordappLoader by lazy { JarScanningCordappLoader.fromDirectories(setOf(cordappsFolder)) }
     override val defaultConfigFileName get() = "node.conf"

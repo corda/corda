@@ -3,16 +3,18 @@
 package com.r3.corda.dbmigration
 
 import com.typesafe.config.Config
-import net.corda.cliutils.CordaCliWrapper
-import net.corda.cliutils.ExitCodes
-import net.corda.cliutils.ShellConstants
-import net.corda.cliutils.start
+import net.corda.cliutils.*
+import net.corda.common.logging.CordaVersion
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.Emoji
+import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.internal.div
 import net.corda.core.internal.exists
 import net.corda.core.schemas.MappedSchema
+import net.corda.node.VersionInfo
 import net.corda.node.internal.DataSourceFactory.createDatasourceFromDriverJarFolders
+import net.corda.node.services.config.NotaryConfig
+import net.corda.node.utilities.NotaryLoader
 import net.corda.nodeapi.internal.config.UnknownConfigKeysPolicy
 import net.corda.nodeapi.internal.config.parseAs
 import net.corda.nodeapi.internal.cordapp.CordappLoader
@@ -99,7 +101,7 @@ private class DbManagementTool : CordaCliWrapper("database-manager", "The Corda 
     }
 }
 
-data class Configuration(val dataSourceProperties: Properties, val database: DatabaseConfig, val jarDirs: List<String> = emptyList(), val myLegalName: CordaX500Name)
+data class Configuration(val dataSourceProperties: Properties, val database: DatabaseConfig, val jarDirs: List<String> = emptyList(), val myLegalName: CordaX500Name, val notary: NotaryConfig?)
 
 abstract class DbManagerConfiguration(private val cmdLineOptions: SharedDbManagerOptions) {
     protected abstract val defaultConfigFileName: String
@@ -108,6 +110,11 @@ abstract class DbManagerConfiguration(private val cmdLineOptions: SharedDbManage
     abstract val cordappLoader: CordappLoader?
     abstract val parsedConfig: Config
     val config by lazy { parsedConfig.parseAs(Configuration::class, UnknownConfigKeysPolicy.IGNORE::handle) }
+    val notaryLoader by lazy {
+        config.notary?.let {
+            NotaryLoader(it, VersionInfo(PLATFORM_VERSION, CordaVersion.releaseVersion, CordaVersion.revision, CordaVersion.vendor))
+        }
+    }
     val baseDirectory: Path by lazy {
         val dir = cmdLineOptions.baseDirectory?.toAbsolutePath()?.normalize()
                 ?: throw error("You must specify a base-directory")

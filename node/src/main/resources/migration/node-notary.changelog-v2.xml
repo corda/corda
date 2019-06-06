@@ -9,7 +9,7 @@
         <renameTable oldTableName="node_notary_commit_log"  newTableName="node_notary_committed_states" />
     </changeSet>
     <changeSet author="R3.Corda" id="create-notary-request-log-table">
-        <preConditions onFail="MARK_RAN" onSqlOutput="TEST">
+        <preConditions onFail="MARK_RAN" onSqlOutput="FAIL">
             <not>
                 <tableExists tableName="node_notary_request_log"/>
             </not>
