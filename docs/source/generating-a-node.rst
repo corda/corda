@@ -109,7 +109,7 @@ template CorDapp, for example, would automatically build and add the template Co
 The configuration values available in ``deployNodes`` task are as follows:
 
 Required configuration
-""""""""""""""""""""""
+^^^^^^^^^^^^^^^^^^^^^^
 
 * ``name`` <string>
 
@@ -147,7 +147,7 @@ Required configuration
         }
 
 Optional configuration
-""""""""""""""""""""""
+^^^^^^^^^^^^^^^^^^^^^^
 
 * ``notary`` <config> (see :ref:`notary <corda_configuration_file_notary>`)
 
@@ -198,7 +198,7 @@ Optional configuration
 
 * ``https`` <boolean>
 
-  * When true enables HTTPS communication from the node webserver. e.g.
+  * When true enables HTTPS communication from the node webserver.
   * e.g.
     ::
 
