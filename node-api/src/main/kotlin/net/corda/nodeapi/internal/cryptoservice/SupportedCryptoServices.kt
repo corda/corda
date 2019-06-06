@@ -1,7 +1,5 @@
 package net.corda.nodeapi.internal.cryptoservice
 
-import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
-
 enum class SupportedCryptoServices {
     /** Identifier for [BCCryptoService]. */
     BC_SIMPLE
