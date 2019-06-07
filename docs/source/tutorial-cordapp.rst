@@ -390,11 +390,7 @@ following list:
     net.corda.core.flows.ContractUpgradeFlow$Authorise
     net.corda.core.flows.ContractUpgradeFlow$Deauthorise
     net.corda.core.flows.ContractUpgradeFlow$Initiate
-    net.corda.finance.flows.CashExitFlow
-    net.corda.finance.flows.CashIssueAndPaymentFlow
-    net.corda.finance.flows.CashIssueFlow
-    net.corda.finance.flows.CashPaymentFlow
-    net.corda.finance.internal.CashConfigDataFlow
+
 
 Creating an IOU via the interactive shell
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
