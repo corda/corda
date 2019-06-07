@@ -69,7 +69,7 @@ class GemaltoLunaCryptoService(keyStore: KeyStore, provider: Provider, x500Princ
             return GemaltoLunaCryptoService(keyStore, provider, legalName) { config }
         }
 
-        private fun parseConfigFile(cryptoServiceConf: Path): GemaltoLunaConfiguration {
+        fun parseConfigFile(cryptoServiceConf: Path): GemaltoLunaConfiguration {
             try {
                 val config = ConfigFactory.parseFile(cryptoServiceConf.toFile()).resolve()
                 return config.parseAs(GemaltoLunaConfiguration::class)

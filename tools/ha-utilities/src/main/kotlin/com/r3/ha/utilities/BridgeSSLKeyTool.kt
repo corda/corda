@@ -22,7 +22,7 @@ class BridgeSSLKeyTool : CliWrapperBase("import-ssl-key", "Key copying tool for 
     @Option(names = ["-k", "--bridge-keystore"], paramLabel = "FILES", description = ["The path to the bridge SSL keystore."])
     private var _bridgeKeystore: Path? = null
     val bridgeKeystore: Path get() = _bridgeKeystore ?: (baseDirectory / "bridge.jks")
-    @Option(names = ["-p", "--bridge-keystore-password"], paramLabel = "PASSWORDS", description = ["The password of the bridge SSL keystore."], required = true)
+    @Option(names = ["-p", "--bridge-keystore-password"], paramLabel = "PASSWORD", description = ["The password of the bridge SSL keystore."], required = true)
     lateinit var bridgeKeystorePassword: String
 
     override fun runProgram(): Int {

@@ -33,7 +33,7 @@ Node Registration Tool
 ----------------------
 
 The registration tool can be used to register multiple Corda nodes with the network operator, it is useful when managing multiple identities and setting up multiple Corda nodes sharing Corda firewall infrastructures.
-For convenience the tool is also downloading network parameters.
+For convenience the tool is also downloading network parameters. Additionally, the tool can use the crypto services configured in the bridge(if any) to generate SSL keys and import them into the bridge.
 
 Command-line options
 ~~~~~~~~~~~~~~~~~~~~
@@ -47,6 +47,8 @@ Command-line options
 * ``-f``, ``--config-files=FILE...``: The path to the config file
 * ``-t``, ``--network-root-truststore=FILE``: Network root trust store obtained from network operator.
 * ``-p``, ``--network-root-truststore-password=PASSWORD``: Network root trust store password obtained from network operator.
+* ``-g``, ``--bridge-config-file``: The path to the bridge configuration file.
+* ``-r``, ``--bridge-keystore-password=PASSWORD``: The password of the bridge SSLK keystore.
 * ``-h``, ``--help``: Show this help message and exit.
 * ``-V``, ``--version``: Print version information and exit.
 

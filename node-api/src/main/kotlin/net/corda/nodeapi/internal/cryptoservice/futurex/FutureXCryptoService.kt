@@ -112,7 +112,7 @@ class FutureXCryptoService(keyStore: KeyStore, provider: SunPKCS11, x500Principa
     companion object {
         val KEYSTORE_TYPE = "PKCS11"
 
-        private fun parseConfigFile(cryptoServiceConf: Path): FutureXConfiguration {
+        fun parseConfigFile(cryptoServiceConf: Path): FutureXConfiguration {
             try {
                 val config = ConfigFactory.parseFile(cryptoServiceConf.toFile()).resolve()
                 return config.parseAs(FutureXConfiguration::class)
