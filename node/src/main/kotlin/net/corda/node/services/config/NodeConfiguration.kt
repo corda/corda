@@ -10,11 +10,9 @@ import net.corda.core.internal.notary.NotaryServiceFlow
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.services.config.rpc.NodeRpcOptions
 import net.corda.node.services.config.schema.v1.V1NodeConfigurationSpec
-import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
 import net.corda.nodeapi.internal.config.FileBasedCertificateStoreSupplier
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.config.User
-import net.corda.nodeapi.internal.cryptoservice.CryptoService
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.notary.experimental.bftsmart.BFTSmartConfig
 import net.corda.notary.experimental.raft.RaftConfig
@@ -103,10 +101,6 @@ interface NodeConfiguration {
         const val cordappDirectoriesKey = "cordappDirectories"
 
         internal val defaultJmxReporterType = JmxReporterType.JOLOKIA
-    }
-
-    fun makeCryptoService(): CryptoService {
-        return BCCryptoService(this.myLegalName.x500Principal, this.signingCertificateStore)
     }
 }
 
