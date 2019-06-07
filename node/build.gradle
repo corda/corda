@@ -162,11 +162,6 @@ dependencies {
     compile "org.hibernate:hibernate-core:$hibernate_version"
     compile "org.hibernate:hibernate-java8:$hibernate_version"
 
-    // Capsule is a library for building independently executable fat JARs.
-    // We only need this dependency to compile our Caplet against.
-    compileOnly "co.paralleluniverse:capsule:$capsule_version"
-    testCompile "co.paralleluniverse:capsule:$capsule_version"
-
     // OkHTTP: Simple HTTP library.
     compile "com.squareup.okhttp3:okhttp:$okhttp_version"
 
@@ -234,6 +229,35 @@ task integrationTest(type: Test) {
 
     systemProperty 'testing.global.port.allocation.enabled', true
     systemProperty 'testing.global.port.allocation.starting.port', 10000
+}
+
+// quasar exclusions upon agent code instrumentation at run-time
+quasar {
+    excludePackages.addAll(
+            "antlr**",
+            "com.codahale**",
+            "com.fasterxml.**",
+            "com.github.benmanes.caffeine.**",
+            "com.google.**",
+            "com.lmax.**",
+            "com.zaxxer.**",
+            "net.bytebuddy**",
+            "io.github.classgraph**",
+            "io.netty*",
+            "liquibase**",
+            "net.i2p.crypto.**",
+            "nonapi.io.github.classgraph.**",
+            "org.apiguardian.**",
+            "org.bouncycastle**",
+            "org.codehaus.**",
+            "org.h2**",
+            "org.hibernate**",
+            "org.jboss.**",
+            "org.objenesis**",
+            "org.w3c.**",
+            "org.xml**",
+            "org.yaml**",
+            "rx**")
 }
 
 jar {

@@ -18,6 +18,26 @@ buildscript {
 
     ext.quasar_group = 'co.paralleluniverse'
     ext.quasar_version = constants.getProperty("quasarVersion")
+    ext.quasar_exclusions = [
+                'co.paralleluniverse**',
+                'groovy**',
+                'com.esotericsoftware.**',
+                'jdk**',
+                'junit**',
+                'kotlin**',
+                'net.rubygrapefruit.**',
+                'org.gradle.**',
+                'org.apache.**',
+                'org.jacoco.**',
+                'org.junit**',
+                'org.slf4j**',
+                'worker.org.gradle.**',
+                'com.nhaarman.mockito_kotlin**',
+                'org.assertj**',
+                'org.hamcrest**',
+                'org.mockito**',
+                'org.opentest4j**'
+        ]
 
     // gradle-capsule-plugin:1.0.2 contains capsule:1.0.1 by default.
     // We must configure it manually to use the latest capsule version.
@@ -25,7 +45,8 @@ buildscript {
 
     ext.asm_version = '5.0.4'
     ext.artemis_version = '2.6.2'
-    ext.jackson_version = '2.9.8'
+    // upgrade Jackson only when corda is using kotlin 1.3.10
+    ext.jackson_version = '2.9.5'
     ext.jetty_version = '9.4.7.v20170914'
     ext.jersey_version = '2.25'
     ext.assertj_version = '3.8.0'
@@ -60,7 +81,7 @@ buildscript {
     ext.rxjava_version = '1.3.8'
     ext.dokka_version = '0.9.17'
     ext.eddsa_version = '0.2.0'
-    ext.dependency_checker_version = '4.0.0'
+    ext.dependency_checker_version = '4.0.2'
     ext.commons_collections_version = '4.1'
     ext.beanutils_version = '1.9.3'
     ext.crash_version = '810d2b774b85d4938be01b9b65e29e4fddbc450b'

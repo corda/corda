@@ -151,14 +151,19 @@ class NewTransaction : Fragment() {
             val anonymous = true
             val defaultRef = OpaqueBytes.of(1)
             val issueRef = if (issueRef.value != null) OpaqueBytes.of(issueRef.value) else defaultRef
-            when (it) {
-                executeButton -> when (transactionTypeCB.value) {
-                    CashTransaction.Issue -> IssueAndPaymentRequest(Amount.fromDecimal(amount.value, currencyChoiceBox.value), issueRef, partyBChoiceBox.value.party, selectNotary(), anonymous)
-                    CashTransaction.Pay -> PaymentRequest(Amount.fromDecimal(amount.value, currencyChoiceBox.value), partyBChoiceBox.value.party, anonymous = anonymous, notary = selectNotary())
-                    CashTransaction.Exit -> ExitRequest(Amount.fromDecimal(amount.value, currencyChoiceBox.value), issueRef)
+            try {
+                when (it) {
+                    executeButton -> when (transactionTypeCB.value) {
+                        CashTransaction.Issue -> IssueAndPaymentRequest(Amount.fromDecimal(amount.value, currencyChoiceBox.value), issueRef, partyBChoiceBox.value.party, selectNotary(), anonymous)
+                        CashTransaction.Pay -> PaymentRequest(Amount.fromDecimal(amount.value, currencyChoiceBox.value), partyBChoiceBox.value.party, anonymous = anonymous, notary = selectNotary())
+                        CashTransaction.Exit -> ExitRequest(Amount.fromDecimal(amount.value, currencyChoiceBox.value), issueRef)
+                        else -> null
+                    }
                     else -> null
                 }
-                else -> null
+            } catch (e: IllegalArgumentException) {
+                ExceptionDialog(e).showAndWait()
+                null
             }
         }
     }
