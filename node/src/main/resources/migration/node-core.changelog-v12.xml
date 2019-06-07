@@ -5,7 +5,7 @@
                    logicalFilePath="migration/node-services.changelog-init.xml">
 
     <changeSet author="R3.Corda" id="lower-case-column-names-for-node_mutual_exclusion">
-        <preConditions onFail="MARK_RAN">
+        <preConditions onFail="MARK_RAN" onSqlOutput="TEST">
             <dbms type="mssql" />
             <dbms type="azure" />
         </preConditions>

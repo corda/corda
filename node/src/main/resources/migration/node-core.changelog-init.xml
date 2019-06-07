@@ -189,7 +189,7 @@
                                  referencedColumnNames="party_name" referencedTableName="node_info_party_cert"/>
     </changeSet>
     <changeSet author="R3.Corda" id="add index att_id">
-        <preConditions onFail="MARK_RAN">
+        <preConditions onFail="MARK_RAN" onSqlOutput="TEST">
             <not>
                 <dbms type="oracle"/>
             </not>
