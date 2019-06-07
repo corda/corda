@@ -6,6 +6,7 @@ description 'HA Utilities'
 
 dependencies {
     compile project(':node')
+    compile project(':bridge')
     compile project(':tools:cliutils')
     compile "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
 

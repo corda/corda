@@ -11,6 +11,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import picocli.CommandLine
+import java.nio.file.Path
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
@@ -40,12 +41,15 @@ class InternalKeystoreGeneratorTest {
         assertEquals(trustStorePassword, generator.trustStorePassword)
         generator.runProgram()
 
-        listOf("float.jks", "bridge.jks").map { workingDirectory / "tunnel" / it }.forEach {
-            assertTrue(it.exists())
-            assertTrue(X509KeyStore.fromFile(it, keyStorePassword).contains(CORDA_CLIENT_TLS))
-            assertTrue(X509KeyStore.fromFile(it, keyStorePassword).internal.isKeyEntry(CORDA_CLIENT_TLS))
-            assertNotNull(X509KeyStore.fromFile(it, keyStorePassword).internal.getCertificateAndKeyPair(CORDA_CLIENT_TLS, entryPassword))
+        fun checkKeystore(keyStoreFile: Path, alias: String) {
+            assertTrue(keyStoreFile.exists())
+            assertTrue(X509KeyStore.fromFile(keyStoreFile, keyStorePassword).contains(alias))
+            assertTrue(X509KeyStore.fromFile(keyStoreFile, keyStorePassword).internal.isKeyEntry(alias))
+            assertNotNull(X509KeyStore.fromFile(keyStoreFile, keyStorePassword).internal.getCertificateAndKeyPair(alias, entryPassword))
         }
+
+        checkKeystore(workingDirectory / "tunnel/float.jks", "${CORDA_CLIENT_TLS}float")
+        checkKeystore(workingDirectory / "tunnel/bridge.jks", "${CORDA_CLIENT_TLS}bridge")
 
         X509KeyStore.fromFile(workingDirectory / "tunnel" / "tunnel-root.jks", keyStorePassword).update {
             assertTrue(contains(CORDA_ROOT_CA))
