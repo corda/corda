@@ -105,6 +105,8 @@ task apiJar(type: Jar, dependsOn: runtimeJar) {
         exclude 'java/net/*Content*.class'
         exclude 'java/net/Host*.class'
         exclude 'java/net/Inet*.class'
+        exclude 'java/nio/channels/FileChannel*.class'
+        exclude 'java/nio/channels/spi/'
         exclude 'java/nio/file/Path.class'
         exclude 'java/nio/file/attribute/'
         exclude 'java/util/SplittableRandom*.class'
