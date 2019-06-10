@@ -318,7 +318,7 @@ class ConfigTest {
     fun `load hsm configs from FloatOuter mode`() {
         val configResource = "/net/corda/bridge/hsm/all_hsms_float_outer.conf"
         val config = createAndLoadConfigFromResource(tempFolder.root.toPath(), configResource)
-        assertEquals(SupportedCryptoServices.AZURE_KEY_VAULT, config.tunnelingCryptoServiceConfig?.name)
-        assertEquals(Paths.get("./azure.conf"), config.tunnelingCryptoServiceConfig?.conf)
+        assertEquals(SupportedCryptoServices.FUTUREX, config.tunnelingCryptoServiceConfig?.name)
+        assertEquals(Paths.get("./futurex.conf"), config.tunnelingCryptoServiceConfig?.conf)
     }
 }
