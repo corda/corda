@@ -1,7 +1,5 @@
 package com.r3.ha.utilities
 
-import net.corda.bridge.services.config.CryptoServiceConfigImpl
-import net.corda.bridge.services.config.CryptoServiceFactory
 import net.corda.cliutils.CliWrapperBase
 import net.corda.cliutils.CommonCliConstants.BASE_DIR
 import net.corda.cliutils.ExitCodes
@@ -15,6 +13,7 @@ import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.cryptoservice.CryptoService
+import net.corda.nodeapi.internal.cryptoservice.CryptoServiceFactory
 import net.corda.nodeapi.internal.cryptoservice.SupportedCryptoServices
 import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
 import picocli.CommandLine.Option
@@ -24,7 +23,12 @@ import java.nio.file.Paths
 import javax.security.auth.x500.X500Principal
 
 private const val DEFAULT_PASSWORD = "changeit"
-private const val HSM_LIST = "Azure, Utimaco, Gemalto"
+private const val HSM_LIST = "Azure, Utimaco, Gemalto, Futurex"
+private val hsmOptionMap = mapOf(
+        'a' to SupportedCryptoServices.AZURE_KEY_VAULT,
+        'u' to SupportedCryptoServices.UTIMACO,
+        'g' to SupportedCryptoServices.GEMALTO_LUNA,
+        'f' to SupportedCryptoServices.FUTUREX)
 
 class InternalArtemisKeystoreGenerator : AbstractInternalKeystoreGenerator("generate-internal-artemis-ssl-keystores", "Generate self-signed root and SSL certificates for internal communication between the services and external Artemis broker.") {
 
@@ -56,8 +60,9 @@ class InternalArtemisKeystoreGenerator : AbstractInternalKeystoreGenerator("gene
             keystoreFileName = "artemis.jks"
         }
 
+        val x500Name = CordaX500Name("Bridge", organizationUnit, organization, locality, null, country )
         val cryptoService = createCryptoService(cryptoServiceName, cryptoServiceConfigFile,
-                artemisCertDir / keystoreFileName, keyStorePassword, keyStorePassword)
+                artemisCertDir / keystoreFileName, keyStorePassword, keyStorePassword, x500Name)
 
         createTLSKeystore("artemis", root, artemisCertDir / keystoreFileName, keyStorePassword, keyStorePassword,
                            X509Utilities.CORDA_CLIENT_TLS, cryptoService)
@@ -104,11 +109,13 @@ class InternalTunnelKeystoreGenerator : AbstractInternalKeystoreGenerator("gener
         val tunnelRoot = createRootKeystore("Internal Tunnel Root", tunnelCertDir / "tunnel-root.jks", tunnelCertDir / "tunnel-truststore.jks",
                 keyStorePassword, entryPassword, trustStorePassword).getCertificateAndKeyPair(X509Utilities.CORDA_ROOT_CA, entryPassword)
 
+        val floatX500Name = CordaX500Name("Float", organizationUnit, organization, locality, null, country)
         val floatCryptoService = createCryptoService(cryptoServiceNameFloat, cryptoServiceConfigFileFloat,
-                tunnelCertDir / "float.jks", keyStorePassword, entryPassword)
+                tunnelCertDir / "float.jks", keyStorePassword, entryPassword, floatX500Name)
 
+        val bridgeX500Name = CordaX500Name("Bridge", organizationUnit, organization, locality, null, country)
         val bridgeCryptoService = createCryptoService(cryptoServiceNameBridge, cryptoServiceConfigFileBridge,
-                tunnelCertDir / "bridge.jks", keyStorePassword, entryPassword)
+                tunnelCertDir / "bridge.jks", keyStorePassword, entryPassword, bridgeX500Name)
 
         createTLSKeystore("float", tunnelRoot, tunnelCertDir / "float.jks", keyStorePassword, entryPassword,
                            "${X509Utilities.CORDA_CLIENT_TLS}float", floatCryptoService)
@@ -201,28 +208,21 @@ abstract class AbstractInternalKeystoreGenerator(alias: String, description: Str
     }
 
     fun createCryptoService(cryptoServiceName: String?, cryptoServiceConfigPath: Path?,
-                            keystorePath: Path, storePassword: String, entryPassword: String): CryptoService {
-        val cryptoServiceConfig = CryptoServiceConfigImpl(resolveCryptoServiceName(cryptoServiceName), cryptoServiceConfigPath)
-        return when(cryptoServiceConfig.name) {
-            SupportedCryptoServices.BC_SIMPLE -> {
-                val certificateStoreSupplier = FileBasedCertificateStoreSupplier(keystorePath, storePassword, entryPassword)
-                CryptoServiceFactory.get(cryptoServiceConfig, certificateStoreSupplier)
-            }
-            else -> CryptoServiceFactory.get(cryptoServiceConfig)
+                            keystorePath: Path, storePassword: String, entryPassword: String, x500Name: CordaX500Name): CryptoService {
+
+        val supportedCryptoServiceName = resolveCryptoServiceName(cryptoServiceName)
+        val certificateStoreSupplier = when (supportedCryptoServiceName) {
+            SupportedCryptoServices.BC_SIMPLE -> FileBasedCertificateStoreSupplier(keystorePath, storePassword, entryPassword)
+            else -> null
         }
+        return CryptoServiceFactory.makeCryptoService(supportedCryptoServiceName, x500Name, certificateStoreSupplier, cryptoServiceConfigPath)
     }
 
     fun resolveCryptoServiceName(cryptoServiceName: String?): SupportedCryptoServices {
         if (cryptoServiceName.isNullOrEmpty()) {
             return SupportedCryptoServices.BC_SIMPLE
         }
-
-        return when(cryptoServiceName!!.toLowerCase()[0]) {
-            'a' -> SupportedCryptoServices.AZURE_KEY_VAULT
-            'u' -> SupportedCryptoServices.UTIMACO
-            'g' -> SupportedCryptoServices.GEMALTO_LUNA
-            else -> SupportedCryptoServices.BC_SIMPLE
-        }
+        return hsmOptionMap.getOrDefault(cryptoServiceName!!.toLowerCase()[0], SupportedCryptoServices.BC_SIMPLE)
     }
 
     // When we move to Picocli 4.0 delete this and use @ArgGroup instead.

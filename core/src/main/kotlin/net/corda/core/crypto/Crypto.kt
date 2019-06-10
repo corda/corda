@@ -1,5 +1,6 @@
 package net.corda.core.crypto
 
+import net.corda.core.CordaOID
 import net.corda.core.DeleteForDJVM
 import net.corda.core.KeepForDJVM
 import net.corda.core.StubOutForDJVM
@@ -13,9 +14,7 @@ import net.i2p.crypto.eddsa.spec.EdDSANamedCurveSpec
 import net.i2p.crypto.eddsa.spec.EdDSANamedCurveTable
 import net.i2p.crypto.eddsa.spec.EdDSAPrivateKeySpec
 import net.i2p.crypto.eddsa.spec.EdDSAPublicKeySpec
-import org.bouncycastle.asn1.ASN1Integer
-import org.bouncycastle.asn1.DERNull
-import org.bouncycastle.asn1.DLSequence
+import org.bouncycastle.asn1.*
 import org.bouncycastle.asn1.bc.BCObjectIdentifiers
 import org.bouncycastle.asn1.nist.NISTObjectIdentifiers
 import org.bouncycastle.asn1.pkcs.PKCSObjectIdentifiers
@@ -289,9 +288,19 @@ object Crypto {
     @JvmStatic
     fun decodePrivateKey(encodedKey: ByteArray): PrivateKey {
         val keyInfo = PrivateKeyInfo.getInstance(encodedKey)
+        if (keyInfo.privateKeyAlgorithm.algorithm == ASN1ObjectIdentifier(CordaOID.ALIAS_PRIVATE_KEY)) {
+            return decodeAliasPrivateKey(keyInfo)
+        }
         val signatureScheme = findSignatureScheme(keyInfo.privateKeyAlgorithm)
         val keyFactory = keyFactory(signatureScheme)
         return keyFactory.generatePrivate(PKCS8EncodedKeySpec(encodedKey))
+    }
+
+    private fun decodeAliasPrivateKey(keyInfo: PrivateKeyInfo): PrivateKey {
+        val encodable = keyInfo.parsePrivateKey() as DLSequence
+        val derutF8String = encodable.getObjectAt(0)
+        val alias = (derutF8String as DERUTF8String).string
+        return AliasPrivateKey(alias)
     }
 
     /**
