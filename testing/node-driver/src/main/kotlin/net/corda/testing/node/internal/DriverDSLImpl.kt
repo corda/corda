@@ -307,7 +307,7 @@ class DriverDSLImpl(
 
         while (process.isAlive) try {
             val response = client.newCall(Request.Builder().url(url).build()).execute()
-            if (response.isSuccessful && (response.body().string() == "started")) {
+            if (response.isSuccessful && (response.body()?.string() == "started")) {
                 return WebserverHandle(handle.webAddress, process)
             }
         } catch (e: ConnectException) {
