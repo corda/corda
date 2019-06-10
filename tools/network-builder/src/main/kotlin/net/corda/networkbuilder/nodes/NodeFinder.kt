@@ -1,0 +1,32 @@
+package net.corda.networkbuilder.nodes
+
+import com.typesafe.config.ConfigException
+import com.typesafe.config.ConfigFactory
+import net.corda.networkbuilder.Constants
+import net.corda.core.utilities.contextLogger
+import java.io.File
+
+class NodeFinder(private val scratchDir: File) {
+
+    fun findNodes(): List<FoundNode> {
+        return scratchDir.walkBottomUp().filter { it.name == "node.conf" && !it.absolutePath.contains(Constants.BOOTSTRAPPER_DIR_NAME) }.map {
+            try {
+                ConfigFactory.parseFile(it) to it
+            } catch (e: ConfigException) {
+                null
+            }
+        }.filterNotNull()
+                .filter { !it.first.hasPath("notary") }
+                .map { (_, nodeConfigFile) ->
+                    LOG.info("We've found a node with name: ${nodeConfigFile.parentFile.name}")
+                    FoundNode(nodeConfigFile, nodeConfigFile.parentFile)
+                }.toList()
+
+    }
+
+    companion object {
+        val LOG = contextLogger()
+    }
+
+}
+
