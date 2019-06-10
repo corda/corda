@@ -89,6 +89,7 @@ class CheckpointDumper(private val checkpointStorage: CheckpointStorage, private
         try {
             val file = serviceHub.configuration.baseDirectory / "logs" / "checkpoints_dump-${TIME_FORMATTER.format(serviceHub.clock.instant())}.zip"
             if (lock.getAndIncrement() == 0 && !file.exists()) {
+                file.parent.toFile().mkdirs()
                 database.transaction {
                     checkpointStorage.getAllCheckpoints().use { stream ->
                         ZipOutputStream(file.outputStream()).use { zip ->
