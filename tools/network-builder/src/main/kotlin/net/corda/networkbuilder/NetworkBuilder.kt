@@ -5,8 +5,10 @@ import net.corda.networkbuilder.context.Context
 import net.corda.networkbuilder.nodes.*
 import net.corda.networkbuilder.notaries.NotaryCopier
 import net.corda.networkbuilder.notaries.NotaryFinder
+import net.corda.node.utilities.NamedThreadFactory
 import java.io.File
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.Executors
 
 interface NetworkBuilder {
 
@@ -31,11 +33,9 @@ interface NetworkBuilder {
     fun onNodeStartBuild(callback: (FoundNode) -> Unit): NetworkBuilder
     fun onNodePushStart(callback: (BuiltNode) -> Unit): NetworkBuilder
     fun onNodeInstancesRequested(callback: (List<NodeInstanceRequest>) -> Unit): NetworkBuilder
-
 }
 
 private class NetworkBuilderImpl : NetworkBuilder {
-
 
     @Volatile
     private var onNodeLocatedCallback: ((FoundNode) -> Unit) = {}
@@ -75,7 +75,6 @@ private class NetworkBuilderImpl : NetworkBuilder {
         this.onNodeCopiedCallback = callback
         return this
     }
-
 
     override fun onNodeStartBuild(callback: (FoundNode) -> Unit): NetworkBuilder {
         this.onNodeBuildStartCallback = callback
@@ -127,8 +126,10 @@ private class NetworkBuilderImpl : NetworkBuilder {
         return this;
     }
 
-
     override fun build(): CompletableFuture<Pair<List<NodeInstance>, Context>> {
+
+        val executor = Executors.newCachedThreadPool(NamedThreadFactory("network-builder"))
+
         val cacheDir = File(workingDir, cacheDirName)
         val baseDir = workingDir!!
         val context = Context(networkName, backendType, backendOptions)
@@ -163,12 +164,21 @@ private class NetworkBuilderImpl : NetworkBuilder {
         val notariesFuture = notaryDiscoveryFuture.thenCompose { copiedNotaries ->
             copiedNotaries
                     .map { copiedNotary ->
-                        nodeBuilder.buildNode(copiedNotary).also(onNodeBuiltCallback)
-                    }.map { builtNotary ->
-                        onNodePushStartCallback(builtNotary)
-                        nodePusher.pushNode(builtNotary).thenApply { it.also(onNodePushedCallback) }
+                        nodeBuilder.buildNode(copiedNotary).thenAlsoAsync {
+                            onNodeBuildStartCallback.invoke(it)
+                        }
+                    }.map { builtNotaryFuture ->
+                        builtNotaryFuture.thenComposeAsync { builtNotary ->
+                            onNodeBuiltCallback(builtNotary)
+                            onNodePushStartCallback(builtNotary)
+                            nodePusher.pushNode(builtNotary).thenAlsoAsync { pushedNotary ->
+                                onNodePushedCallback(pushedNotary)
+                            }
+                        }
                     }.map { pushedNotary ->
-                        pushedNotary.thenApplyAsync { nodeInstantiator.createInstanceRequest(it).also { onNodeInstanceRequestedCallback.invoke(listOf(it)) } }
+                        pushedNotary.thenApplyAsync {
+                            nodeInstantiator.createInstanceRequest(it).also { onNodeInstanceRequestedCallback(listOf(it)) }
+                        }
                     }.map { instanceRequest ->
                         instanceRequest.thenComposeAsync { request ->
                             nodeInstantiator.instantiateNotaryInstance(request).thenApply { it.also(onNodeInstanceCallback) }
@@ -185,17 +195,16 @@ private class NetworkBuilderImpl : NetworkBuilder {
                         }
                     }.map { copiedNode: CopiedNode ->
                         onNodeBuildStartCallback.invoke(copiedNode)
-                        nodeBuilder.buildNode(copiedNode).let {
-                            onNodeBuiltCallback.invoke(it)
-                            it
+                        nodeBuilder.buildNode(copiedNode)
+                    }.map { builtNodeFuture ->
+                        builtNodeFuture.thenComposeAsync { builtNode ->
+                            onNodeBuiltCallback.invoke(builtNode)
+                            nodePusher.pushNode(builtNode).thenAlsoAsync { pushedNode ->
+                                onNodePushedCallback.invoke(pushedNode)
+                            }
                         }
-                    }.map { builtNode ->
-                        nodePusher.pushNode(builtNode).thenApplyAsync {
-                            onNodePushedCallback.invoke(it)
-                            it
-                        }
-                    }.map { pushedNode ->
-                        pushedNode.thenApplyAsync {
+                    }.map { pushedNodeFuture ->
+                        pushedNodeFuture.thenApplyAsync {
                             nodeInstantiator.createInstanceRequests(it, nodeCount).also(onNodeInstanceRequestedCallback)
 
                         }
@@ -213,15 +222,22 @@ private class NetworkBuilderImpl : NetworkBuilder {
                     }.toSingleFuture()
         }.thenCompose { it }.thenApplyAsync { it.flatten() }
 
-        return notariesFuture.thenCombineAsync(nodesFuture, { _, nodeInstances ->
+        return notariesFuture.thenCombineAsync(nodesFuture) { _, nodeInstances ->
             context.networkInitiated = true
             nodeInstances to context
-        })
+        }
     }
 }
 
 fun <T> List<CompletableFuture<T>>.toSingleFuture(): CompletableFuture<List<T>> {
     return CompletableFuture.allOf(*this.toTypedArray()).thenApplyAsync {
         this.map { it.getNow(null) }
+    }
+}
+
+fun <T> CompletableFuture<T>.thenAlsoAsync(consumer: (T) -> Unit): CompletableFuture<T> {
+    return this.thenApplyAsync {
+        consumer(it)
+        it
     }
 }
