@@ -1,15 +1,19 @@
 package net.corda.tools.shell
 
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.type.TypeFactory
 import com.google.common.io.Files
 import com.jcraft.jsch.ChannelExec
 import com.jcraft.jsch.JSch
 import com.nhaarman.mockito_kotlin.any
 import com.nhaarman.mockito_kotlin.doAnswer
 import com.nhaarman.mockito_kotlin.mock
+import net.corda.client.jackson.JacksonSupport
 import net.corda.client.rpc.RPCException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.internal.div
+import net.corda.core.internal.messaging.InternalCordaRPCOps
 import net.corda.core.messaging.ClientRpcSslOptions
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.utilities.ProgressTracker
@@ -33,11 +37,13 @@ import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.bouncycastle.util.io.Streams
 import org.crsh.text.RenderPrintWriter
+import org.junit.Before
 import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import javax.security.auth.x500.X500Principal
+import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
 class InteractiveShellIntegrationTest {
@@ -46,6 +52,13 @@ class InteractiveShellIntegrationTest {
     val tempFolder = TemporaryFolder()
 
     private val testName = X500Principal("CN=Test,O=R3 Ltd,L=London,C=GB")
+
+    private lateinit var inputObjectMapper: ObjectMapper
+
+    @Before
+    fun setup() {
+        inputObjectMapper = objectMapperWithClassLoader(InteractiveShell.getCordappsClassloader())
+    }
 
     @Test
     fun `shell should not log in with invalid credentials`() {
@@ -278,6 +291,30 @@ class InteractiveShellIntegrationTest {
     }
 
     @Test
+    fun `can run dumpCheckpoints`() {
+        val user = User("u", "p", setOf(all()))
+        driver(DriverParameters(notarySpecs = emptyList())) {
+            val nodeFuture = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user), startInSameProcess = true)
+            val node = nodeFuture.getOrThrow()
+
+            val conf = ShellConfiguration(commandsDirectory = Files.createTempDir().toPath(),
+                    user = user.username, password = user.password,
+                    hostAndPort = node.rpcAddress)
+            InteractiveShell.startShell(conf)
+            // setup and configure some mocks required by InteractiveShell.runFlowByNameFragment()
+            val output = mock<RenderPrintWriter> {
+                on { println(any<String>()) } doAnswer {
+                    val line = it.arguments[0]
+                    assertNotEquals("Please try 'man run' to learn what syntax is acceptable", line)
+                }
+            }
+            // can call without causing any errors, no output to easily check
+            InteractiveShell.runRPCFromString(
+                    listOf("dumpCheckpoints"), output, mock(), node.rpc as InternalCordaRPCOps, inputObjectMapper)
+        }
+    }
+
+    @Test
     fun `shell should start flow with unique un-qualified class name`() {
         val user = User("u", "p", setOf(all()))
         var successful = false
@@ -371,6 +408,14 @@ class InteractiveShellIntegrationTest {
                     "", output, node.rpc, ansiProgressRenderer)
         }
         assertThat(successful).isTrue()
+    }
+
+    private fun objectMapperWithClassLoader(classLoader: ClassLoader?): ObjectMapper {
+        val objectMapper = JacksonSupport.createNonRpcMapper()
+        val tf = TypeFactory.defaultInstance().withClassLoader(classLoader)
+        objectMapper.typeFactory = tf
+
+        return objectMapper
     }
 }
 

@@ -21,6 +21,7 @@ import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.concurrent.openFuture
+import net.corda.core.internal.messaging.InternalCordaRPCOps
 import net.corda.core.internal.notary.NotaryService
 import net.corda.core.messaging.*
 import net.corda.core.node.*
@@ -259,7 +260,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
     /** The implementation of the [CordaRPCOps] interface used by this node. */
     open fun makeRPCOps(cordappLoader: CordappLoader, checkpointDumper: CheckpointDumper): CordaRPCOps {
-        val ops: CordaRPCOps = CordaRPCOpsImpl(
+        val ops: InternalCordaRPCOps = CordaRPCOpsImpl(
                 services,
                 smm,
                 flowStarter,
@@ -267,7 +268,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         ) {
             shutdownExecutor.submit(::stop)
         }.also { it.closeOnStop() }
-        val proxies = mutableListOf<(CordaRPCOps) -> CordaRPCOps>()
+        val proxies = mutableListOf<(InternalCordaRPCOps) -> InternalCordaRPCOps>()
         // Mind that order is relevant here.
         proxies += ::AuthenticatedRpcOpsProxy
         if (!configuration.devMode) {
