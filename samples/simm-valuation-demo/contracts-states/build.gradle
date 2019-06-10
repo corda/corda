@@ -46,13 +46,18 @@ jar {
     classifier = 'fat'
 }
 
+import org.gradle.api.JavaVersion
 import proguard.gradle.ProGuardTask
 task shrink(type: ProGuardTask) {
     injars jar
     outjars shrinkJar
 
-    libraryjars "$javaHome/lib/rt.jar"
-    libraryjars "$javaHome/lib/jce.jar"
+    if (JavaVersion.current().isJava9Compatible()) {
+        libraryjars(System.getProperty("java.home") + "/jmods")
+    } else {
+        libraryjars(System.getProperty("java.home") + "/lib/rt.jar")
+        libraryjars "$javaHome/lib/jce.jar"
+    }
     configurations.runtimeClasspath.forEach {
         libraryjars it.path, filter: '!META-INF/versions/**'
     }
@@ -87,9 +92,7 @@ task sign(type: net.corda.plugins.SignJar) {
     inputJars shrink
 }
 
-// JDK11 disabled ProGuard shrinking due to bytecode incompatibility: Unsupported version number [55.0] (maximum 54.0, Java 10)
-if (!JavaVersion.current().java8Compatible)
-    jar.finalizedBy shrink
+jar.finalizedBy shrink
 shrink.finalizedBy sign
 
 artifacts {
