@@ -35,6 +35,8 @@ interface FlowStateMachine<FLOWRETURN> {
 
     fun updateTimedFlowTimeout(timeoutSeconds: Long)
 
+    fun sendFlowKilledNotification()
+
     val logic: FlowLogic<FLOWRETURN>
     val serviceHub: ServiceHub
     val logger: Logger

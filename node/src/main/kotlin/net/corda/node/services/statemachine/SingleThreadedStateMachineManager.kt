@@ -54,9 +54,24 @@ import java.util.concurrent.*
 import javax.annotation.concurrent.ThreadSafe
 import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
+import kotlin.collections.List
+import kotlin.collections.Set
 import kotlin.collections.component1
 import kotlin.collections.component2
+import kotlin.collections.emptyList
+import kotlin.collections.filterNotNull
+import kotlin.collections.first
+import kotlin.collections.fold
+import kotlin.collections.isNotEmpty
+import kotlin.collections.iterator
+import kotlin.collections.listOf
+import kotlin.collections.map
+import kotlin.collections.mapNotNull
+import kotlin.collections.mutableListOf
+import kotlin.collections.plus
+import kotlin.collections.plusAssign
 import kotlin.collections.set
+import kotlin.collections.toSet
 import kotlin.streams.toList
 
 /**
@@ -229,6 +244,7 @@ class SingleThreadedStateMachineManager(
                 decrementLiveFibers()
                 totalFinishedFlows.inc()
                 try {
+                    flow.fiber.sendFlowKilledNotification()
                     flow.fiber.interrupt()
                     true
                 } finally {
@@ -532,7 +548,7 @@ class SingleThreadedStateMachineManager(
 
         // Before we construct the state machine state by freezing the FlowLogic we need to make sure that lazy properties
         // have access to the fiber (and thereby the service hub)
-        val flowStateMachineImpl = FlowStateMachineImpl(flowId, flowLogic, scheduler)
+        val flowStateMachineImpl = FlowStateMachineImpl(flowId, flowLogic, scheduler, flowMessaging)
         val resultFuture = openFuture<Any?>()
         flowStateMachineImpl.transientValues = TransientReference(createTransientValues(flowId, resultFuture))
         flowLogic.stateMachine = flowStateMachineImpl
@@ -716,7 +732,7 @@ class SingleThreadedStateMachineManager(
                         flowLogic = logic,
                         senderUUID = null
                 )
-                val fiber = FlowStateMachineImpl(id, logic, scheduler)
+                val fiber = FlowStateMachineImpl(id, logic, scheduler, flowMessaging)
                 fiber.transientValues = TransientReference(createTransientValues(id, resultFuture))
                 fiber.transientState = TransientReference(state)
                 fiber.logic.stateMachine = fiber
