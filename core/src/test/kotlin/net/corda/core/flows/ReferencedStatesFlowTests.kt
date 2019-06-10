@@ -32,7 +32,7 @@ class ReferencedStatesFlowTests {
 
     @Before
     fun setup() {
-        nodes = (0..1).map {
+        nodes = (0..2).map {
             mockNet.createNode(
                     parameters = InternalMockNodeParameters(version = VersionInfo(4, "Blah", "Blah", "Blah"))
             )
@@ -167,6 +167,37 @@ class ReferencedStatesFlowTests {
         assertEquals(Vault.StateStatus.CONSUMED, theOriginalReferencedStateOnNodeZero.statesMetadata.single().status)
     }
 
+    @Test
+    fun `check consumed reference state is found if a transaction refers to it`() {
+        // 1. Create a state to be used as a reference state. Don't share it.
+        val newRefTx = nodes[0].services.startFlow(CreateRefState()).resultFuture.getOrThrow()
+        val newRefState = newRefTx.tx.outRefsOfType<RefState.State>().single()
+
+        // 2. Use the "newRefState" in a transaction involving another party (nodes[1]) which creates a new state. They should store the new state and the reference state.
+        val newTx = nodes[0].services.startFlow(UseRefState(nodes[1].info.legalIdentities.first(), newRefState.state.data.linearId))
+                .resultFuture.getOrThrow()
+
+        // Wait until node 1 stores the new tx.
+        nodes[1].services.validatedTransactions.updates.filter { it.id == newTx.id }.toFuture().getOrThrow()
+        // Check that nodes[1] has finished recording the transaction (and updating the vault.. hopefully!).
+        // nodes[1] should have two states. The newly created output of type "Regular.State" and the reference state created by nodes[0].
+        assertEquals(2, nodes[1].services.vaultService.queryBy<LinearState>().states.size)
+
+        // 3. Update the reference state but don't share the update.
+        val updatedRefTx = nodes[0].services.startFlow(UpdateRefState(newRefState)).resultFuture.getOrThrow()
+
+        // 4. Now report the transactions that created the two reference states to a third party.
+        nodes[0].services.startFlow(ReportTransactionFlow(nodes[2].info.legalIdentities.first(), newRefTx)).resultFuture.getOrThrow()
+        nodes[0].services.startFlow(ReportTransactionFlow(nodes[2].info.legalIdentities.first(), updatedRefTx)).resultFuture.getOrThrow()
+        // Check that there are two linear states in the vault (note that one is consumed)
+        assertEquals(2, nodes[2].services.vaultService.queryBy<LinearState>(QueryCriteria.VaultQueryCriteria(status = Vault.StateStatus.ALL)).states.size)
+
+        // 5. Report the transaction that uses the consumed reference state
+        nodes[0].services.startFlow(ReportTransactionFlow(nodes[2].info.legalIdentities.first(), newTx)).resultFuture.getOrThrow()
+        // There should be 3 linear states in the vault
+        assertEquals(3, nodes[2].services.vaultService.queryBy<LinearState>(QueryCriteria.VaultQueryCriteria(status = Vault.StateStatus.ALL)).states.size)
+    }
+
     // A dummy reference state contract.
     class RefState : Contract {
         companion object {
@@ -282,6 +313,29 @@ class ReferencedStatesFlowTests {
         override fun call(): SignedTransaction {
             // This should also store the reference state if one is there.
             return subFlow(ReceiveFinalityFlow(otherSession, statesToRecord = StatesToRecord.ONLY_RELEVANT))
+        }
+    }
+
+    // A flow to report a transaction to a third party.
+    @InitiatingFlow
+    @StartableByRPC
+    class ReportTransactionFlow(private val reportee: Party,
+                                private val signedTx: SignedTransaction) : FlowLogic<Unit>() {
+        @Suspendable
+        override fun call() {
+            val session = initiateFlow(reportee)
+            subFlow(SendTransactionFlow(session, signedTx))
+            session.receive<Unit>()
+        }
+    }
+
+    @InitiatedBy(ReportTransactionFlow::class)
+    class ReceiveReportedTransactionFlow(private val otherSideSession: FlowSession) : FlowLogic<Unit>() {
+
+        @Suspendable
+        override fun call() {
+            subFlow(ReceiveTransactionFlow(otherSideSession, true, StatesToRecord.ALL_VISIBLE))
+            otherSideSession.send(Unit)
         }
     }
 }

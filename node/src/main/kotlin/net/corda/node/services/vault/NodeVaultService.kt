@@ -181,15 +181,19 @@ class NodeVaultService(
             consumedStateRefs.forEach { stateRef ->
                 val state = session.get<VaultSchemaV1.VaultStates>(VaultSchemaV1.VaultStates::class.java, PersistentStateRef(stateRef))
                 state?.run {
-                    stateStatus = Vault.StateStatus.CONSUMED
-                    consumedTime = clock.instant()
-                    // remove lock (if held)
-                    if (lockId != null) {
-                        lockId = null
-                        lockUpdateTime = clock.instant()
-                        log.trace("Releasing soft lock on consumed state: $stateRef")
+                    // Only update the state if it has not previously been consumed (this could have happened if the transaction is being
+                    // re-recorded.
+                    if (stateStatus != Vault.StateStatus.CONSUMED) {
+                        stateStatus = Vault.StateStatus.CONSUMED
+                        consumedTime = clock.instant()
+                        // remove lock (if held)
+                        if (lockId != null) {
+                            lockId = null
+                            lockUpdateTime = clock.instant()
+                            log.trace("Releasing soft lock on consumed state: $stateRef")
+                        }
+                        session.save(state)
                     }
-                    session.save(state)
                 }
             }
 
@@ -260,7 +264,7 @@ class NodeVaultService(
                     // that some of the outputs previously seen may have been consumed in the meantime, so the check must look for all state
                     // statuses.
                     val outputRefs = tx.outRefsOfType<ContractState>().map { it.ref }
-                    val seenRefs = loadStates(outputRefs, stateStatus = Vault.StateStatus.ALL).map { it.ref }
+                    val seenRefs = loadStates(outputRefs).map { it.ref }
                     val unseenRefs = outputRefs - seenRefs
                     val unseenOutputIdxs = unseenRefs.map { it.index }.toSet()
                     outputs.filter { it.key in unseenOutputIdxs }
@@ -341,8 +345,7 @@ class NodeVaultService(
         }
     }
 
-    private fun loadStates(refs: Collection<StateRef>,
-                           stateStatus: Vault.StateStatus = Vault.StateStatus.UNCONSUMED): Collection<StateAndRef<ContractState>> {
+    private fun loadStates(refs: Collection<StateRef>): Collection<StateAndRef<ContractState>> {
         val states = mutableListOf<StateAndRef<ContractState>>()
         if (refs.isNotEmpty()) {
             val refsList = refs.toList()
@@ -352,7 +355,7 @@ class NodeVaultService(
                 val limit = minOf(offset + pageSize, refsList.size)
                 val page = queryBy<ContractState>(QueryCriteria.VaultQueryCriteria(
                         stateRefs = refsList.subList(offset, limit),
-                        status = stateStatus)).states
+                        status = Vault.StateStatus.ALL)).states
                 states.addAll(page)
             }
         }
