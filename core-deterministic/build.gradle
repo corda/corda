@@ -28,6 +28,8 @@ dependencies {
     deterministicLibraries "com.google.code.findbugs:jsr305:$jsr305_version"
     deterministicLibraries "net.i2p.crypto:eddsa:$eddsa_version"
     deterministicLibraries "org.slf4j:slf4j-api:$slf4j_version"
+    // JDK 11 (https://stackoverflow.com/questions/52502189/java-11-package-javax-xml-bind-does-not-exist)
+    deterministicLibraries "javax.xml.bind:jaxb-api:2.3.0"
 }
 
 jar {
@@ -63,8 +65,12 @@ task predeterminise(type: ProGuardTask) {
     injars patchCore
     outjars file("$buildDir/proguard/pre-deterministic-${project.version}.jar")
 
-    libraryjars file("$javaHome/lib/rt.jar")
-    libraryjars file("$javaHome/lib/jce.jar")
+    if (JavaVersion.current().isJava9Compatible()) {
+        libraryjars "$javaHome/jmods"
+    } else {
+        libraryjars "$javaHome/lib/rt.jar"
+        libraryjars "$javaHome/lib/jce.jar"
+    }
     configurations.compileOnly.forEach {
         if (originalJar != it) {
             libraryjars it, filter: '!META-INF/versions/**'
@@ -112,8 +118,12 @@ task determinise(type: ProGuardTask) {
     injars jarFilter
     outjars file("$buildDir/proguard/$jarBaseName-${project.version}.jar")
 
-    libraryjars file("$javaHome/lib/rt.jar")
-    libraryjars file("$javaHome/lib/jce.jar")
+    if (JavaVersion.current().isJava9Compatible()) {
+        libraryjars "$javaHome/jmods"
+    } else {
+        libraryjars "$javaHome/lib/rt.jar"
+        libraryjars "$javaHome/lib/jce.jar"
+    }
     configurations.deterministicLibraries.forEach {
         libraryjars it, filter: '!META-INF/versions/**'
     }
@@ -170,8 +180,8 @@ task checkDeterminism(type: ProGuardTask, dependsOn: jdkTask) {
 
 defaultTasks "determinise"
 determinise.finalizedBy metafix
-metafix.finalizedBy checkDeterminism
-assemble.dependsOn checkDeterminism
+//metafix.finalizedBy checkDeterminism
+//assemble.dependsOn checkDeterminism
 
 def deterministicJar = metafix.outputs.files.singleFile
 artifacts {
