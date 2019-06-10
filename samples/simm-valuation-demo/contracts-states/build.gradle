@@ -46,16 +46,15 @@ jar {
     classifier = 'fat'
 }
 
-import org.gradle.api.JavaVersion
 import proguard.gradle.ProGuardTask
 task shrink(type: ProGuardTask) {
     injars jar
     outjars shrinkJar
 
     if (JavaVersion.current().isJava9Compatible()) {
-        libraryjars(System.getProperty("java.home") + "/jmods")
+        libraryjars "$javaHome/jmods"
     } else {
-        libraryjars(System.getProperty("java.home") + "/lib/rt.jar")
+        libraryjars "$javaHome/lib/rt.jar"
         libraryjars "$javaHome/lib/jce.jar"
     }
     configurations.runtimeClasspath.forEach {
