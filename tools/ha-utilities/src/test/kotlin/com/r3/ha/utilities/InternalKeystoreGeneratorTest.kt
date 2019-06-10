@@ -1,5 +1,6 @@
 package com.r3.ha.utilities
 
+import io.mockk.clearAllMocks
 import io.mockk.every
 import io.mockk.mockkObject
 import net.corda.cliutils.CommonCliConstants.BASE_DIR
@@ -17,6 +18,7 @@ import net.corda.nodeapi.internal.cryptoservice.CryptoService
 import net.corda.nodeapi.internal.cryptoservice.CryptoServiceFactory
 import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
 import org.bouncycastle.operator.ContentSigner
+import org.junit.After
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -33,6 +35,11 @@ class InternalKeystoreGeneratorTest {
     @Rule
     @JvmField
     val tempFolder: TemporaryFolder = TemporaryFolder()
+
+    @After
+    fun after() {
+        clearAllMocks()
+    }
 
     @Test
     fun `generate tunnel keystores correctly`() {
