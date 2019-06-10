@@ -14,7 +14,11 @@ import net.i2p.crypto.eddsa.spec.EdDSANamedCurveSpec
 import net.i2p.crypto.eddsa.spec.EdDSANamedCurveTable
 import net.i2p.crypto.eddsa.spec.EdDSAPrivateKeySpec
 import net.i2p.crypto.eddsa.spec.EdDSAPublicKeySpec
-import org.bouncycastle.asn1.*
+import org.bouncycastle.asn1.DLSequence
+import org.bouncycastle.asn1.ASN1ObjectIdentifier
+import org.bouncycastle.asn1.ASN1Integer
+import org.bouncycastle.asn1.DERUTF8String
+import org.bouncycastle.asn1.DERNull
 import org.bouncycastle.asn1.bc.BCObjectIdentifiers
 import org.bouncycastle.asn1.nist.NISTObjectIdentifiers
 import org.bouncycastle.asn1.pkcs.PKCSObjectIdentifiers
