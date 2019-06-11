@@ -205,7 +205,7 @@ dependencies {
 
 tasks.withType(JavaCompile) {
     // Resolves a Gradle warning about not scanning for pre-processors.
-    options.compilerArgs << '-proc:none' << '--add-exports' << 'java.unsupported/sun.misc=ALL-UNNAMED'  << '--add-exports' << 'java.base/sun.security.util=ALL-UNNAMED' << '--add-exports' << 'java.base/sun.security.x509=ALL-UNNAMED'
+//    options.compilerArgs << '-proc:none' << '--add-exports' << 'java.unsupported/sun.misc=ALL-UNNAMED'  << '--add-exports' << 'java.base/sun.security.util=ALL-UNNAMED' << '--add-exports' << 'java.base/sun.security.x509=ALL-UNNAMED'
 
 //    moduleOptions {
 //        addExports = [

@@ -219,7 +219,7 @@ tasks.withType(Test) {
 
 tasks.withType(JavaCompile) {
     // Relaxes JPMS visibility constraints across module boundaries
-    options.compilerArgs << '--add-exports' << 'java.base/sun.security.util=ALL-UNNAMED' << '--add-exports' << 'java.base/sun.security.x509=ALL-UNNAMED'
+//    options.compilerArgs << '--add-exports' << 'java.base/sun.security.util=ALL-UNNAMED' << '--add-exports' << 'java.base/sun.security.x509=ALL-UNNAMED'
 }
 
 tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile) {

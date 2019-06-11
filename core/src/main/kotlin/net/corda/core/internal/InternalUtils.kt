@@ -387,8 +387,8 @@ fun <K, V> Iterable<Pair<K, V>>.toMultiMap(): Map<K, List<V>> = this.groupBy({ i
 val Class<*>.location: URL get() = protectionDomain.codeSource.location
 
 /** Convenience method to get the package name of a class literal. */
-val KClass<*>.packageName: String get() = java.packageName
-val Class<*>.packageName: String get() = requireNotNull(this.packageNameOrNull) { "$this not defined inside a package" }
+val KClass<*>.packageName: String get() = java.packageName_
+val Class<*>.packageName_: String get() = requireNotNull(this.packageNameOrNull) { "$this not defined inside a package" }
 val Class<*>.packageNameOrNull: String? // This intentionally does not go via `package` as that code path is slow and contended and just ends up doing this.
     get() {
         val name = this.getName()
