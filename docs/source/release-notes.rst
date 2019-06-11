@@ -6,20 +6,18 @@ Release notes for Corda 4.1
 .. _release_notes_v4_1:
 
 Its been a little under 3 1/2 months since the release of Corda 4.0 and all of the brand new features that added to the powerful suite
-of tools Corda offers. Now, following the release of Corda Enterprise, we are proud to release Corda 4.1, brining over 150 fixes
+of tools Corda offers. Now, following the release of Corda Enterprise 4.0, we are proud to release Corda 4.1, bringing over 150 fixes
 and documentation updates to bring stability and quality of life improvements to those developing on the Corda platform.
 
 Normally this document would have started with a comment about whether or not you'd been recently domiciled under some solidified mineral material
-regarding the release of Corda Enterprise 4. Alas, we made that joke when we shipped the first release of Corda after Enterprise 3.0 shipped,
+regarding the release of Corda Enterprise 4.0. Alas, we made that joke when we shipped the first release of Corda after Enterprise 3.0 shipped,
 so the thunder has been stolen and repeating ourselves would be terribly gauche. For those not aware this event occurred, lots of information can be found
 `here <https://www.r3.com/wp-content/uploads/2019/05/CordaEnterprise4_Enhancements_FS.pdf`>_ and
 `here <https://docs.corda.r3.com/releases/4.0/release-notes.html>`_.
 
-Corda 4.1 brings the lessons and bug fixes discovered during the process of build Enterprise back to the open source community. As mentioned above
-there are over 150 fixes and tweaks here. Additionally, the two have been tested together to ensure smooth operation as well as parity of
-features, as problem we understand and recognised that existed between Corda 3 and Corda Enterprise 3. That confusion was our fault and the release
-of Corda 4.1 to bring clarity is one of those lessons we've learned to make your lives as developers on the Corda platform easier, no matter which
-flavour you're using.
+Corda 4.1 brings the lessons and bug fixes discovered during the process of building Enterprise 4.0 back to the open source community. As mentioned above
+there are over 150 fixes and tweaks here. With this release the core feature sets of both entities are far closer aligned than past major
+releases of the Corda that should make testing your CorDapps in mixed type environments much easier.
 
 As such, we recommend you upgrade from Corda 4.0 to Corda 4.1 as soon possible.
 
