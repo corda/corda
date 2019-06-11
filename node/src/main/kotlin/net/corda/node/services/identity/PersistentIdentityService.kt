@@ -1,9 +1,8 @@
 package net.corda.node.services.identity
 
-import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.*
 import net.corda.core.internal.NamedCacheFactory
-import net.corda.core.internal.hash
 import net.corda.core.node.services.UnknownAnonymousPartyException
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.MAX_HASH_HEX_SIZE
@@ -15,7 +14,7 @@ import net.corda.nodeapi.internal.crypto.X509CertificateFactory
 import net.corda.nodeapi.internal.crypto.x509Certificates
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
-import org.apache.commons.lang3.ArrayUtils.EMPTY_BYTE_ARRAY
+import org.hibernate.internal.util.collections.ArrayHelper.EMPTY_BYTE_ARRAY
 import java.security.InvalidAlgorithmParameterException
 import java.security.PublicKey
 import java.security.cert.*
@@ -34,39 +33,40 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
     companion object {
         private val log = contextLogger()
 
-        fun createPKMap(cacheFactory: NamedCacheFactory): AppendOnlyPersistentMap<SecureHash, PartyAndCertificate, PersistentIdentity, String> {
+        fun createPKMap(cacheFactory: NamedCacheFactory): AppendOnlyPersistentMap<String, PartyAndCertificate, PersistentIdentity, String> {
             return AppendOnlyPersistentMap(
                     cacheFactory = cacheFactory,
                     name = "PersistentIdentityService_partyByKey",
-                    toPersistentEntityKey = { it.toString() },
+                    toPersistentEntityKey = { it },
                     fromPersistentEntity = {
                         Pair(
-                                SecureHash.parse(it.publicKeyHash),
+                                it.publicKeyHash,
                                 PartyAndCertificate(X509CertificateFactory().delegate.generateCertPath(it.identity.inputStream()))
                         )
                     },
-                    toPersistentEntity = { key: SecureHash, value: PartyAndCertificate ->
-                        PersistentIdentity(key.toString(), value.certPath.encoded)
+                    toPersistentEntity = { key: String, value: PartyAndCertificate ->
+                        PersistentIdentity(key, value.certPath.encoded)
                     },
                     persistentEntityClass = PersistentIdentity::class.java
             )
         }
 
-        fun createX500Map(cacheFactory: NamedCacheFactory): AppendOnlyPersistentMap<CordaX500Name, SecureHash, PersistentIdentityNames, String> {
+        fun createX500Map(cacheFactory: NamedCacheFactory): AppendOnlyPersistentMap<CordaX500Name, String, PersistentIdentityNames, String> {
             return AppendOnlyPersistentMap(
                     cacheFactory = cacheFactory,
                     name = "PersistentIdentityService_partyByName",
                     toPersistentEntityKey = { it.toString() },
-                    fromPersistentEntity = { Pair(CordaX500Name.parse(it.name), SecureHash.parse(it.publicKeyHash)) },
-                    toPersistentEntity = { key: CordaX500Name, value: SecureHash ->
-                        PersistentIdentityNames(key.toString(), value.toString())
+                    fromPersistentEntity = {
+                        Pair(CordaX500Name.parse(it.name), it.publicKeyHash)
+                    },
+                    toPersistentEntity = { key: CordaX500Name, value: String ->
+                        PersistentIdentityNames(key.toString(), value)
                     },
                     persistentEntityClass = PersistentIdentityNames::class.java
             )
         }
 
-        private fun mapToKey(owningKey: PublicKey) = owningKey.hash
-        private fun mapToKey(party: PartyAndCertificate) = mapToKey(party.owningKey)
+        private fun mapToKey(party: PartyAndCertificate) = party.owningKey.toStringShort()
     }
 
     @Entity
@@ -89,7 +89,7 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
             var name: String = "",
 
             @Column(name = "pk_hash", length = MAX_HASH_HEX_SIZE, nullable = true)
-            var publicKeyHash: String? = ""
+            var publicKeyHash: String = ""
     )
 
     private lateinit var _caCertStore: CertStore
@@ -154,11 +154,11 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
             principalToParties.addWithDuplicatesAllowed(identity.name, key, false)
         }
 
-        val parentId = mapToKey(identityCertChain[1].publicKey)
+        val parentId = identityCertChain[1].publicKey.toStringShort()
         return keyToParties[parentId]
     }
 
-    override fun certificateFromKey(owningKey: PublicKey): PartyAndCertificate? = database.transaction { keyToParties[mapToKey(owningKey)] }
+    override fun certificateFromKey(owningKey: PublicKey): PartyAndCertificate? = database.transaction { keyToParties[owningKey.toStringShort()] }
 
     private fun certificateFromCordaX500Name(name: CordaX500Name): PartyAndCertificate? {
         return database.transaction {
