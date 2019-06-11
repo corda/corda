@@ -2,7 +2,7 @@ package net.corda.core.flows
 
 import com.natpryce.hamkrest.and
 import com.natpryce.hamkrest.anything
-import com.natpryce.hamkrest.assertion.assert
+import com.natpryce.hamkrest.assertion.assertThat
 import com.natpryce.hamkrest.has
 import com.natpryce.hamkrest.isA
 import net.corda.core.CordaRuntimeException
@@ -52,30 +52,30 @@ class ContractUpgradeFlowRPCTest : WithContracts, WithFinality {
         // Create, sign and finalise dummy contract.
         val signedByA = aliceNode.signDummyContract(alice.ref(1), 0, bob.ref(1))
         val stx = bobNode.addSignatureTo(signedByA)
-        assert.that(rpcA.finalise(stx, bob), willReturn())
+        assertThat(rpcA.finalise(stx, bob), willReturn())
 
         val atx = aliceNode.getValidatedTransaction(stx)
         val btx = bobNode.getValidatedTransaction(stx)
 
         // Cannot upgrade contract without prior authorisation from counterparty
-        assert.that(
+        assertThat(
                 rpcA.initiateDummyContractUpgrade(atx),
                 willThrow<CordaRuntimeException>())
 
         // Party B authorises the contract state upgrade, and immediately deauthorises the same.
-        assert.that(rpcB.authoriseDummyContractUpgrade(btx), willReturn())
-        assert.that(rpcB.deauthoriseContractUpgrade(btx), willReturn())
+        assertThat(rpcB.authoriseDummyContractUpgrade(btx), willReturn())
+        assertThat(rpcB.deauthoriseContractUpgrade(btx), willReturn())
 
         // Cannot upgrade contract if counterparty has deauthorised a previously-given authority
-        assert.that(
+        assertThat(
                 rpcA.initiateDummyContractUpgrade(atx),
                 willThrow<CordaRuntimeException>())
 
         // Party B authorise the contract state upgrade.
-        assert.that(rpcB.authoriseDummyContractUpgrade(btx), willReturn())
+        assertThat(rpcB.authoriseDummyContractUpgrade(btx), willReturn())
 
         // Party A initiates contract upgrade flow, expected to succeed this time.
-        assert.that(
+        assertThat(
             rpcA.initiateDummyContractUpgrade(atx),
                 willReturn(
                         aliceNode.hasDummyContractUpgradeTransaction()
