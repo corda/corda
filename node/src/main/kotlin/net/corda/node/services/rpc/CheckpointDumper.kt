@@ -97,7 +97,7 @@ class CheckpointDumper(private val checkpointStorage: CheckpointStorage, private
                                 val checkpoint = serialisedCheckpoint.checkpointDeserialize(context = checkpointSerializationContext)
                                 val json = checkpoint.toJson(runId.uuid)
                                 val jsonBytes = writer.writeValueAsBytes(json)
-                                zip.putNextEntry(ZipEntry("${runId.uuid}.json"))
+                                zip.putNextEntry(ZipEntry("${json.flowLogicClass.simpleName}-${runId.uuid}.json"))
                                 zip.write(jsonBytes)
                                 zip.closeEntry()
                             }
