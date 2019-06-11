@@ -8,6 +8,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.internal.config.toConfig
+import net.corda.nodeapi.internal.cryptoservice.SupportedCryptoServices
 import net.corda.nodeapi.internal.protonwrapper.netty.ProxyVersion
 import net.corda.nodeapi.internal.protonwrapper.netty.RevocationConfig
 import net.corda.testing.core.SerializationEnvironmentRule
@@ -299,5 +300,25 @@ class ConfigTest {
         val configResource = "/net/corda/bridge/externalSourceCrl/firewall.conf"
         val config = createAndLoadConfigFromResource(tempFolder.root.toPath(), configResource)
         assertEquals(RevocationConfig.Mode.EXTERNAL_SOURCE, config.revocationConfig.mode)
+    }
+
+    @Test
+    fun `load hsm configs from BridgeInner mode`() {
+        val configResource = "/net/corda/bridge/hsm/all_hsms_bridge_inner.conf"
+        val config = createAndLoadConfigFromResource(tempFolder.root.toPath(), configResource)
+        assertEquals(SupportedCryptoServices.UTIMACO, config.publicCryptoServiceConfig?.name)
+        assertEquals(Paths.get("./utimaco.conf"), config.publicCryptoServiceConfig?.conf)
+        assertEquals(SupportedCryptoServices.AZURE_KEY_VAULT, config.artemisCryptoServiceConfig?.name)
+        assertEquals(Paths.get("./azure.conf"), config.artemisCryptoServiceConfig?.conf)
+        assertEquals(SupportedCryptoServices.GEMALTO_LUNA, config.tunnelingCryptoServiceConfig?.name)
+        assertEquals(Paths.get("./gemalto.conf"), config.tunnelingCryptoServiceConfig?.conf)
+    }
+
+    @Test
+    fun `load hsm configs from FloatOuter mode`() {
+        val configResource = "/net/corda/bridge/hsm/all_hsms_float_outer.conf"
+        val config = createAndLoadConfigFromResource(tempFolder.root.toPath(), configResource)
+        assertEquals(SupportedCryptoServices.FUTUREX, config.tunnelingCryptoServiceConfig?.name)
+        assertEquals(Paths.get("./futurex.conf"), config.tunnelingCryptoServiceConfig?.conf)
     }
 }

@@ -17,6 +17,8 @@ dependencies {
     testCompile(project(':node-driver'))
 
     testCompile project(path: ':node-api', configuration: 'testArtifacts')
+
+    testImplementation "io.mockk:mockk:1.9.kotlin12"
 }
 
 processResources {
