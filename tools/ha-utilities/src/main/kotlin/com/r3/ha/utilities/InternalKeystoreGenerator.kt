@@ -23,12 +23,13 @@ import java.nio.file.Paths
 import javax.security.auth.x500.X500Principal
 
 private const val DEFAULT_PASSWORD = "changeit"
-private const val HSM_LIST = "Azure, Utimaco, Gemalto, Futurex"
+private const val HSM_LIST = "Azure, Utimaco, Gemalto, Futurex, Securosys"
 private val hsmOptionMap = mapOf(
         'a' to SupportedCryptoServices.AZURE_KEY_VAULT,
         'u' to SupportedCryptoServices.UTIMACO,
         'g' to SupportedCryptoServices.GEMALTO_LUNA,
-        'f' to SupportedCryptoServices.FUTUREX)
+        'f' to SupportedCryptoServices.FUTUREX,
+        's' to SupportedCryptoServices.PRIMUS_X)
 
 class InternalArtemisKeystoreGenerator : AbstractInternalKeystoreGenerator("generate-internal-artemis-ssl-keystores", "Generate self-signed root and SSL certificates for internal communication between the services and external Artemis broker.") {
 

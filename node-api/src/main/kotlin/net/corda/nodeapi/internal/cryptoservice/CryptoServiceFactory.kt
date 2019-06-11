@@ -6,6 +6,7 @@ import net.corda.nodeapi.internal.cryptoservice.azure.AzureKeyVaultCryptoService
 import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
 import net.corda.nodeapi.internal.cryptoservice.futurex.FutureXCryptoService
 import net.corda.nodeapi.internal.cryptoservice.gemalto.GemaltoLunaCryptoService
+import net.corda.nodeapi.internal.cryptoservice.securosys.PrimusXCryptoService
 import net.corda.nodeapi.internal.cryptoservice.utimaco.UtimacoCryptoService
 import java.nio.file.Path
 
@@ -26,6 +27,7 @@ class CryptoServiceFactory {
                     AzureKeyVaultCryptoService.fromConfigurationFile(configPath)
                 }
                 SupportedCryptoServices.FUTUREX -> FutureXCryptoService.fromConfigurationFile(legalName.x500Principal, cryptoServiceConf)
+                SupportedCryptoServices.PRIMUS_X -> PrimusXCryptoService.fromConfigurationFile(legalName.x500Principal, cryptoServiceConf)
             }
         }
     }
