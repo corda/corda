@@ -10,7 +10,7 @@ of tools Corda offers. Now, following the release of Corda Enterprise 4.0, we ar
 and documentation updates to bring stability and quality of life improvements to those developing on the Corda platform.
 
 Information on Corda Enterprise 4.0 can be found `here <https://www.r3.com/wp-content/uploads/2019/05/CordaEnterprise4_Enhancements_FS.pdf`>_ and
-`here <https://docs.corda.r3.com/releases/4.0/release-notes.html>`_. (It's worth noting that ormally this document would have started with a comment
+`here <https://docs.corda.r3.com/releases/4.0/release-notes.html>`_. (Its worth noting that ormally this document would have started with a comment
 about whether or not you'd been recently domiciled under some solidified mineral material regarding the release of Corda Enterprise 4.0. Alas, we made
 that joke when we shipped the first release of Corda after Enterprise 3.0 shipped, so the thunder has been stolen and repeating ourselves would be terribly gauche.)
 
