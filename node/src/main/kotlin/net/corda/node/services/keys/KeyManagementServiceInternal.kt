@@ -14,7 +14,7 @@ interface KeyManagementServiceInternal : KeyManagementService {
 
 @Entity
 @Table(name = "pk_hash_to_ext_id_map", indexes = [
-    Index(name = "external_id_idx", columnList = "external_id")
+    Index(name = "ext_id_idx", columnList = "external_id")
 ])
 class PublicKeyHashToExternalId(
         @Column(name = "external_id", nullable = false)
