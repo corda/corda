@@ -68,10 +68,10 @@ class PersistentIdentityMigration : CustomTaskChange {
     }
 
     private fun updateNameToHashRow(connection: JdbcConnection, migrationData: MigrationData) {
-        connection.prepareStatement("UPDATE $X500_NAME_TO_PUB_KEY_HASH_TABLE SET pk_hash = ? WHERE pk_hash = ? AND name= ?").use {
+        connection.prepareStatement("UPDATE $X500_NAME_TO_PUB_KEY_HASH_TABLE SET pk_hash = ? WHERE pk_hash = ? AND name = ?").use {
             it.setString(1, migrationData.newPkHash)
             it.setString(2, migrationData.oldPkHash)
-            it.setString(2, migrationData.x500.toString())
+            it.setString(3, migrationData.x500.toString())
             it.executeUpdate()
         }
     }
