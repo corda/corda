@@ -13,20 +13,20 @@ interface KeyManagementServiceInternal : KeyManagementService {
 }
 
 @Entity
-@Table(name = "pk_hash_to_ext_id_map", indexes = [Index(name = "pk_hash_to_xid_idx", columnList = "public_key_hash")])
+@Table(name = "pk_hash_to_ext_id_map", indexes = [
+    Index(name = "external_id_idx", columnList = "external_id")
+])
 class PublicKeyHashToExternalId(
-        @Id
-        @GeneratedValue
-        @Column(name = "id", unique = true, nullable = false)
-        val key: Long?,
-
         @Column(name = "external_id", nullable = false)
         @Type(type = "uuid-char")
         val externalId: UUID,
 
+        @Id
         @Column(name = "public_key_hash", nullable = false)
         val publicKeyHash: String
+
 ) {
     constructor(accountId: UUID, publicKey: PublicKey)
-            : this(null, accountId, publicKey.toStringShort())
+            : this(accountId, publicKey.toStringShort())
+
 }

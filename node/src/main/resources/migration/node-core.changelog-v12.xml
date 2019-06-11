@@ -1,0 +1,26 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd"
+                   logicalFilePath="migration/node-services.changelog-init.xml">
+
+    <changeSet author="R3.Corda" id="migrate_pk_hash_to_ext_id">
+        <!-- drop existing "ID" column -->
+        <dropColumn columnName="id"
+                    tableName="pk_hash_to_ext_id_map"/>
+
+        <!-- create new primary key constraint on key hash -->
+        <addPrimaryKey columnNames="public_key_hash" constraintName="pub_key_hash_to_external_id_pkey" tableName="pk_hash_to_ext_id_map"/>
+
+        <createIndex indexName="external_id_idx" tableName="pk_hash_to_ext_id_map">
+            <column name="external_id"/>
+        </createIndex>
+    </changeSet>
+
+
+    <changeSet author="R3.Corda" id="migrate_identity_service_to_use_publicKey.toShortString()">
+        <customChange class="net.corda.nodeapi.internal.persistence.ExternalIdTableMigration">
+        </customChange>
+    </changeSet>
+
+</databaseChangeLog>
