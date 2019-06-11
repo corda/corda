@@ -15,7 +15,7 @@ so the thunder has been stolen and repeating ourselves would be terribly gauche.
 `here <https://www.r3.com/wp-content/uploads/2019/05/CordaEnterprise4_Enhancements_FS.pdf`>_ and
 `here <https://docs.corda.r3.com/releases/4.0/release-notes.html>`_.
 
-Corda 4.1 brings the lessons and bug fixes discovered during the process of building Enterprise 4.0 back to the open source community. As mentioned above
+Corda 4.1 brings the lessons and bug fixes discovered during the process of building and shipping Enterprise 4.0 back to the open source community. As mentioned above
 there are over 150 fixes and tweaks here. With this release the core feature sets of both entities are far closer aligned than past major
 releases of the Corda that should make testing your CorDapps in mixed type environments much easier.
 
