@@ -1,13 +1,6 @@
 package net.corda.bridge.services.config
 
-import com.typesafe.config.Config
-import com.typesafe.config.ConfigException
-import com.typesafe.config.ConfigRenderOptions
-import net.corda.bridge.FirewallCmdLineOptions
 import net.corda.bridge.services.api.*
-import net.corda.bridge.services.config.BridgeConfigHelper.maskPassword
-import net.corda.bridge.services.config.internal.Version3BridgeConfigurationImpl
-import net.corda.bridge.services.config.internal.Version4FirewallConfiguration
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
@@ -17,33 +10,6 @@ import net.corda.nodeapi.internal.cryptoservice.SupportedCryptoServices
 import net.corda.nodeapi.internal.protonwrapper.netty.ProxyConfig
 import net.corda.nodeapi.internal.protonwrapper.netty.RevocationConfig
 import java.nio.file.Path
-
-fun Config.parseAsFirewallConfiguration(): FirewallConfiguration {
-    return try {
-        parseAs<FirewallConfigurationImpl>()
-    } catch (ex: UnknownConfigurationKeysException) {
-
-        FirewallCmdLineOptions.logger.info("Attempting to parse using old formats. Modern format parsing failed due to:", ex)
-
-        listOf(Version4FirewallConfiguration::class, Version3BridgeConfigurationImpl::class).forEach {
-            try {
-                // Note: "Ignore" is needed to disregard any default properties from "firewalldefault.conf" that are not applicable to previous versions
-                val oldStyleConfig = parseAs(it, UnknownConfigKeysPolicy.IGNORE::handle)
-                val newStyleConfig = oldStyleConfig.toConfig()
-
-                val configAsString = newStyleConfig.toConfig().root().maskPassword().render(ConfigRenderOptions.defaults())
-                FirewallCmdLineOptions.logger.warn("Old style config used. To avoid seeing this warning in the future, please upgrade to new style. " +
-                        "New style config will look as follows:\n$configAsString")
-                return newStyleConfig
-            } catch (oldFormatEx: ConfigException) {
-                FirewallCmdLineOptions.logger.debug("Parsing with $it failed", oldFormatEx)
-            }
-        }
-
-        FirewallCmdLineOptions.logger.error("Old formats parsing failed as well.")
-        throw ex
-    }
-}
 
 data class BridgeSSLConfigurationImpl(private val sslKeystore: Path,
                                       private val keyStorePassword: String,

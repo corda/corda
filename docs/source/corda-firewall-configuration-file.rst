@@ -43,7 +43,7 @@ Defaults
 A set of default configuration options are loaded from the built-in resource file. Any options you do not specify in
 your own ``firewall.conf`` file will use these defaults:
 
-.. literalinclude:: ../../bridge/src/main/resources/firewalldefault.conf
+.. literalinclude:: ../../bridge/src/main/resources/firewalldefault_latest.conf
     :language: javascript
    
 Firewall operating modes

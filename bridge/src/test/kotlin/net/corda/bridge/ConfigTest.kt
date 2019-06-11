@@ -3,15 +3,17 @@ package net.corda.bridge
 import com.typesafe.config.ConfigException
 import com.typesafe.config.ConfigRenderOptions
 import net.corda.bridge.services.api.FirewallMode
-import net.corda.bridge.services.config.BridgeConfigHelper.maskPassword
+import net.corda.bridge.services.config.BridgeConfigHelper.asString
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.nodeapi.internal.config.UnknownConfigurationKeysException
 import net.corda.nodeapi.internal.config.toConfig
 import net.corda.nodeapi.internal.cryptoservice.SupportedCryptoServices
 import net.corda.nodeapi.internal.protonwrapper.netty.ProxyVersion
 import net.corda.nodeapi.internal.protonwrapper.netty.RevocationConfig
 import net.corda.testing.core.SerializationEnvironmentRule
+import org.assertj.core.api.Assertions
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Rule
@@ -224,6 +226,15 @@ class ConfigTest {
     }
 
     @Test
+    fun `Load invalid option config`() {
+        val configResource = "/net/corda/bridge/invalidoption/firewall.conf"
+
+        Assertions.assertThatThrownBy { createAndLoadConfigFromResource(tempFolder.root.toPath(), configResource) }
+                .isInstanceOf(UnknownConfigurationKeysException::class.java)
+                .hasMessageContaining("invalidOption")
+    }
+
+    @Test
     fun `Load with sslKeystore path overridden`() {
         val configResource = "/net/corda/bridge/keystoreoverride/firewall.conf"
         val config = createAndLoadConfigFromResource(tempFolder.root.toPath(), configResource)
@@ -251,7 +262,7 @@ class ConfigTest {
                 "/net/corda/bridge/keystoreoverride/firewall.conf")
                 .forEachIndexed { index, path ->
                     val config = createAndLoadConfigFromResource(tempFolder.root.toPath() / "test$index", path)
-                    val configString = config.toConfig().root().maskPassword().render(ConfigRenderOptions.defaults())
+                    val configString = config.toConfig().asString()
 
                     val possiblePasswordFromConfig = listOf("pwd",
                             "mySecretArtemisKeyStorePassword",

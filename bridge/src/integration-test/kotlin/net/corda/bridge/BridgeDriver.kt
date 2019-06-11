@@ -4,7 +4,6 @@ import com.r3.ha.utilities.BridgeSSLKeyTool
 import com.typesafe.config.ConfigFactory
 import net.corda.bridge.services.api.FirewallConfiguration
 import net.corda.bridge.services.config.BridgeConfigHelper
-import net.corda.bridge.services.config.parseAsFirewallConfiguration
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.concurrent.flatMap
@@ -164,7 +163,7 @@ private fun DriverDSLImpl.startBridge(baseDirectory: Path,
 
     val config = ConfigFactory.parseMap(configOverrides).withFallback(portConfig).withFallback(initialConfig)
     writeConfig(baseDirectory, "firewall.conf", config)
-    val bridgeConfig = BridgeConfigHelper.loadConfig(baseDirectory).parseAsFirewallConfiguration()
+    val bridgeConfig = BridgeConfigHelper.loadConfig(baseDirectory)
     val bridgeDebugPort = if (isDebug) debugPortAllocation.nextPort() else null
 
     val bridgeProcess = startBridgeProcess(baseDirectory, bridgeDebugPort)
@@ -215,7 +214,7 @@ private fun DriverDSLImpl.startFloat(baseDirectory: Path,
 
     val config = ConfigFactory.parseMap(configOverrides).withFallback(portConfig).withFallback(initialConfig)
     writeConfig(baseDirectory, "firewall.conf", config)
-    val floatConfig = BridgeConfigHelper.loadConfig(baseDirectory).parseAsFirewallConfiguration()
+    val floatConfig = BridgeConfigHelper.loadConfig(baseDirectory)
     val bridgeDebugPort = if (isDebug) debugPortAllocation.nextPort() else null
 
     val bridgeProcess = startBridgeProcess(baseDirectory, bridgeDebugPort)
@@ -273,7 +272,7 @@ private fun DriverDSLImpl.startSingleProcessBridgeAndFloat(baseDirectory: Path,
     )
     val config = ConfigFactory.parseMap(configOverrides).withFallback(portConfig).withFallback(initialConfig)
     writeConfig(baseDirectory, "firewall.conf", config)
-    val bridgeConfig = BridgeConfigHelper.loadConfig(baseDirectory).parseAsFirewallConfiguration()
+    val bridgeConfig = BridgeConfigHelper.loadConfig(baseDirectory)
     val bridgeDebugPort = if (isDebug) debugPortAllocation.nextPort() else null
 
     val bridgeProcess = startBridgeProcess(baseDirectory, bridgeDebugPort)

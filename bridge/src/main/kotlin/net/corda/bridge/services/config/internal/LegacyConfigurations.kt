@@ -111,7 +111,7 @@ internal data class Version3BridgeConfigurationImpl(
                 politeShutdownPeriod,
                 p2pConfirmationWindowSize,
                 whitelistedHeaders,
-                AuditServiceConfigurationImpl(60), // Same as `firewalldefault.conf`, new in v4
+                AuditServiceConfigurationImpl(60), // Same as `firewalldefault_latest.conf`, new in v4
                 healthCheckPhrase,
                 silencedIPs,
                 null,
@@ -196,7 +196,7 @@ data class Version4FirewallConfiguration(
                 politeShutdownPeriod,
                 p2pConfirmationWindowSize,
                 whitelistedHeaders,
-                AuditServiceConfigurationImpl(60), // Same as `firewalldefault.conf`, new in v4
+                AuditServiceConfigurationImpl(60), // Same as `firewalldefault_latest.conf`, new in v4
                 healthCheckPhrase,
                 silencedIPs,
                 null,

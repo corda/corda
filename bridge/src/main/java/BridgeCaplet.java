@@ -39,7 +39,7 @@ public class BridgeCaplet extends Capsule {
         }
         try {
             ConfigParseOptions parseOptions = ConfigParseOptions.defaults().setAllowMissing(false);
-            Config defaultConfig = ConfigFactory.parseResources("firewalldefault.conf", parseOptions);
+            Config defaultConfig = ConfigFactory.parseResources("firewalldefault_latest.conf", parseOptions);
             Config baseDirectoryConfig = ConfigFactory.parseMap(Collections.singletonMap("baseDirectory", baseDir));
             Config nodeConfig = ConfigFactory.parseFile(configFile, parseOptions);
             return baseDirectoryConfig.withFallback(nodeConfig).withFallback(defaultConfig).resolve();
