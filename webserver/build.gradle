@@ -34,7 +34,7 @@ dependencies {
     // Web stuff: for HTTP[S] servlets
     compile "org.eclipse.jetty:jetty-servlet:$jetty_version"
     compile "org.eclipse.jetty:jetty-webapp:$jetty_version"
-    compile "javax.servlet:javax.servlet-api:3.1.0"
+    compile "javax.servlet:javax.servlet-api:${servlet_version}"
     compile "commons-fileupload:commons-fileupload:$fileupload_version"
 
     // Log4J: logging framework (with SLF4J bindings)
@@ -54,7 +54,7 @@ dependencies {
     compile "org.glassfish.jersey.media:jersey-media-json-jackson:$jersey_version"
 
     // For rendering the index page.
-    compile "org.jetbrains.kotlinx:kotlinx-html-jvm:0.6.3"
+    compile "org.jetbrains.kotlinx:kotlinx-html-jvm:0.6.12"
 
     // Capsule is a library for building independently executable fat JARs.
     // We only need this dependency to compile our Caplet against.

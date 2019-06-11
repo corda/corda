@@ -2,7 +2,7 @@ package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import com.natpryce.hamkrest.*
-import com.natpryce.hamkrest.assertion.assert
+import com.natpryce.hamkrest.assertion.assertThat
 import net.corda.core.contracts.Attachment
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.mixins.WithMockNet
@@ -48,18 +48,18 @@ class AttachmentTests : WithMockNet {
         val id = aliceNode.importAttachment(fakeAttachment("file1.txt", "Some useful content"))
 
         // Get node one to run a flow to fetch it and insert it.
-        assert.that(
+        assertThat(
             bobNode.startAttachmentFlow(id, alice),
                 willReturn(noAttachments()))
 
         // Verify it was inserted into node one's store.
         val attachment = bobNode.getAttachmentWithId(id)
-        assert.that(attachment, hashesTo(id))
+        assertThat(attachment, hashesTo(id))
 
         // Shut down node zero and ensure node one can still resolve the attachment.
         aliceNode.dispose()
 
-        assert.that(
+        assertThat(
             bobNode.startAttachmentFlow(id, alice),
                 willReturn(soleAttachment(attachment)))
     }
@@ -69,7 +69,7 @@ class AttachmentTests : WithMockNet {
         val hash: SecureHash = SecureHash.randomSHA256()
 
         // Get node one to fetch a non-existent attachment.
-        assert.that(
+        assertThat(
             bobNode.startAttachmentFlow(hash, alice),
                 willThrow(withRequestedHash(hash)))
     }
@@ -97,7 +97,7 @@ class AttachmentTests : WithMockNet {
         badAliceNode.updateAttachment(corruptAttachment)
 
         // Get n1 to fetch the attachment. Should receive corrupted bytes.
-        assert.that(
+        assertThat(
             bobNode.startAttachmentFlow(id, badAlice),
                 willThrow<FetchDataFlow.DownloadedVsRequestedDataMismatch>()
         )

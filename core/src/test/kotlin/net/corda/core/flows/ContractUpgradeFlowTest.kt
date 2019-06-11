@@ -1,7 +1,7 @@
 package net.corda.core.flows
 
 import com.natpryce.hamkrest.*
-import com.natpryce.hamkrest.assertion.assert
+import com.natpryce.hamkrest.assertion.assertThat
 import net.corda.core.contracts.*
 import net.corda.core.flows.mixins.WithContracts
 import net.corda.core.flows.mixins.WithFinality
@@ -59,24 +59,24 @@ class ContractUpgradeFlowTest : WithContracts, WithFinality {
         val bobTx = bobNode.getValidatedTransaction(stx)
 
         // The request is expected to be rejected because party B hasn't authorised the upgrade yet.
-        assert.that(
+        assertThat(
                 aliceNode.initiateContractUpgrade(aliceTx, DummyContractV2::class),
                 willThrow<UnexpectedFlowEndException>())
 
         // Party B authorises the contract state upgrade, and immediately de-authorises the same.
-        assert.that(bobNode.authoriseContractUpgrade(bobTx, DummyContractV2::class), willReturn())
-        assert.that(bobNode.deauthoriseContractUpgrade(bobTx), willReturn())
+        assertThat(bobNode.authoriseContractUpgrade(bobTx, DummyContractV2::class), willReturn())
+        assertThat(bobNode.deauthoriseContractUpgrade(bobTx), willReturn())
 
         // The request is expected to be rejected because party B has subsequently de-authorised a previously authorised upgrade.
-        assert.that(
+        assertThat(
                 aliceNode.initiateContractUpgrade(aliceTx, DummyContractV2::class),
                 willThrow<UnexpectedFlowEndException>())
 
         // Party B authorises the contract state upgrade.
-        assert.that(bobNode.authoriseContractUpgrade(bobTx, DummyContractV2::class), willReturn())
+        assertThat(bobNode.authoriseContractUpgrade(bobTx, DummyContractV2::class), willReturn())
 
         // Party A initiates contract upgrade flow, expected to succeed this time.
-        assert.that(
+        assertThat(
                 aliceNode.initiateContractUpgrade(aliceTx, DummyContractV2::class),
                 willReturn(
                         aliceNode.hasContractUpgradeTransaction<DummyContract.State, DummyContractV2.State>()
@@ -86,10 +86,10 @@ class ContractUpgradeFlowTest : WithContracts, WithFinality {
 
         // We now test that the upgraded state can be upgraded further, to V3.
         // Party B authorises the contract state upgrade.
-        assert.that(bobNode.authoriseContractUpgrade(upgradedState, DummyContractV3::class), willReturn())
+        assertThat(bobNode.authoriseContractUpgrade(upgradedState, DummyContractV3::class), willReturn())
 
         // Party A initiates contract upgrade flow which is expected to succeed.
-        assert.that(
+        assertThat(
                 aliceNode.initiateContractUpgrade(upgradedState, DummyContractV3::class),
                 willReturn(
                         aliceNode.hasContractUpgradeTransaction<DummyContractV2.State, DummyContractV3.State>()
@@ -125,14 +125,14 @@ class ContractUpgradeFlowTest : WithContracts, WithFinality {
         val stateAndRef = cashFlowResult.stx.tx.outRef<Cash.State>(0)
 
         // The un-upgraded state is Cash.State
-        assert.that(aliceNode.getBaseStateFromVault(), hasContractState(isA<Cash.State>(anything)))
+        assertThat(aliceNode.getBaseStateFromVault(), hasContractState(isA<Cash.State>(anything)))
 
         // Starts contract upgrade flow.
-        assert.that(aliceNode.initiateContractUpgrade(stateAndRef, CashV2::class), willReturn())
+        assertThat(aliceNode.initiateContractUpgrade(stateAndRef, CashV2::class), willReturn())
 
         // Get contract state from the vault.
         val upgradedState = aliceNode.getCashStateFromVault()
-        assert.that(upgradedState,
+        assertThat(upgradedState,
                 hasIssuedAmount(Amount(1000000, USD) `issued by` (alice.ref(1)))
                         and belongsTo(anonymisedRecipient))
 
@@ -146,8 +146,8 @@ class ContractUpgradeFlowTest : WithContracts, WithFinality {
             addCommand(CashV2.Move(), alice.owningKey)
         }
 
-        assert.that(aliceNode.finalise(spendUpgradedTx), willReturn())
-        assert.that(aliceNode.getCashStateFromVault(), hasContractState(equalTo(movedState)))
+        assertThat(aliceNode.finalise(spendUpgradedTx), willReturn())
+        assertThat(aliceNode.getCashStateFromVault(), hasContractState(equalTo(movedState)))
     }
 
     class CashV2 : UpgradedContractWithLegacyConstraint<Cash.State, CashV2.State> {

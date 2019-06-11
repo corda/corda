@@ -1,7 +1,7 @@
 package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
-import com.natpryce.hamkrest.assertion.assert
+import com.natpryce.hamkrest.assertion.assertThat
 import net.corda.core.flows.mixins.WithMockNet
 import net.corda.core.identity.Party
 import net.corda.core.utilities.UntrustworthyData
@@ -10,11 +10,10 @@ import net.corda.testing.core.singleIdentity
 import net.corda.testing.internal.matchers.flow.willReturn
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.TestStartedNode
-import org.assertj.core.api.Assertions.assertThat
 import org.junit.AfterClass
 import org.junit.Test
 import kotlin.reflect.KClass
-
+import kotlin.test.assertEquals
 
 class ReceiveMultipleFlowTests : WithMockNet {
     companion object {
@@ -52,13 +51,13 @@ class ReceiveMultipleFlowTests : WithMockNet {
                     // this is a closure, meaning you can access variables outside its scope e.g., `answer`.
                     val receivedMessage = session.receive<String>().unwrap { it }
                     logger.info("Got message from counterParty: $receivedMessage.")
-                    assertThat(receivedMessage).isEqualTo(message)
+                    assertEquals(message, receivedMessage)
                     session.send(answer)
                 }
             } as FlowLogic<Unit>
         }
 
-        assert.that(
+        assertThat(
                 nodes[0].startFlowAndRunNetwork(initiatingFlow),
                 willReturn(answer as Any))
     }
@@ -70,7 +69,7 @@ class ReceiveMultipleFlowTests : WithMockNet {
         val stringValue = "Thriller"
         nodes[2].registerAnswer(AlgorithmDefinition::class, stringValue)
 
-        assert.that(
+        assertThat(
                 nodes[0].startFlowAndRunNetwork(ParallelAlgorithmMap(nodes[1].info.singleIdentity(), nodes[2].info.singleIdentity())),
                 willReturn(doubleValue * stringValue.length))
     }
@@ -82,7 +81,7 @@ class ReceiveMultipleFlowTests : WithMockNet {
         val value2 = 6.0
         nodes[2].registerAnswer(ParallelAlgorithmList::class, value2)
 
-        assert.that(
+        assertThat(
                 nodes[0].startFlowAndRunNetwork(ParallelAlgorithmList(nodes[1].info.singleIdentity(), nodes[2].info.singleIdentity())),
                 willReturn(listOf(value1, value2)))
     }

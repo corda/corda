@@ -187,7 +187,7 @@ dependencies {
     // Web stuff: for HTTP[S] servlets
     testCompile "org.eclipse.jetty:jetty-servlet:${jetty_version}"
     testCompile "org.eclipse.jetty:jetty-webapp:${jetty_version}"
-    testCompile "javax.servlet:javax.servlet-api:3.1.0"
+    testCompile "javax.servlet:javax.servlet-api:${servlet_version}"
 
     // Jersey for JAX-RS implementation for use in Jetty
     testCompile "org.glassfish.jersey.core:jersey-server:${jersey_version}"

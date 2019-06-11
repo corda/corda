@@ -23,7 +23,7 @@ dependencies {
 
     // Cordapp dependencies
     // Specify your cordapp's dependencies below, including dependent cordapps
-    compile group: 'commons-io', name: 'commons-io', version: '2.5'
+    compile "commons-io:commons-io:$commons_io_version"
 
     testCompile project(':node-driver')
     
