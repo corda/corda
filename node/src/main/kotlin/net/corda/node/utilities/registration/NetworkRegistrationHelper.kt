@@ -30,6 +30,7 @@ import org.bouncycastle.operator.ContentSigner
 import org.bouncycastle.util.io.pem.PemObject
 import java.io.IOException
 import java.io.StringWriter
+import java.lang.IllegalStateException
 import java.net.ConnectException
 import java.nio.file.Path
 import java.security.KeyPair
@@ -123,7 +124,7 @@ open class NetworkRegistrationHelper(
             is FutureXCryptoService -> logProgress("Private key '$nodeCaKeyAlias' stored in FutureX HSM. Certificate-chain stored in node keystore.")
             is BCCryptoService -> logProgress("Private key '$nodeCaKeyAlias' and its certificate-chain stored successfully.")
             is PrimusXCryptoService -> logProgress("Private key '$nodeCaKeyAlias' stored in PrimusX HSM. Certificate-chain stored in node keystore.")
-            else -> logProgress("Private key '$nodeCaKeyAlias' and its certificate-chain stored successfully.")
+            else -> throw IllegalStateException("Unknown cryptoservice type found: ${cryptoService.javaClass.kotlin.qualifiedName}")
         }
 
 

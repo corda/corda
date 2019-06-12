@@ -1000,8 +1000,9 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             is AzureKeyVaultCryptoService -> log.info("Private key '$alias' stored in Azure KeyVault. Certificate-chain stored in node keystore.")
             is UtimacoCryptoService -> log.info("Private key '$alias' stored in Utimaco HSM.  Certificate-chain stored in node keystore.")
             is FutureXCryptoService -> log.info("Private key '$alias' stored in FutureX HSM.  Certificate-chain stored in node keystore.")
+            is BCCryptoService -> log.info("Private key '$alias' and its certificate-chain stored successfully.")
             is PrimusXCryptoService -> log.info("Private key '$alias' stored in PrimusX HSM.  Certificate-chain stored in node keystore.")
-            else -> log.info("Private key '$alias' and its certificate-chain stored successfully.")
+            else -> throw java.lang.IllegalStateException("Unknown cryptoservice type found: ${cryptoService.javaClass.kotlin.qualifiedName}")
         }
         return PartyAndCertificate(X509Utilities.buildCertPath(identityCertPath))
     }
