@@ -98,7 +98,7 @@ buildscript {
     ext.commons_cli_version = '1.4'
     ext.protonj_version = '0.33.0' // Overide Artemis version
     ext.snappy_version = '0.4'
-    ext.class_graph_version = '4.6.12'
+    ext.class_graph_version = '4.8.38'
     ext.jcabi_manifests_version = '1.1'
     ext.picocli_version = '3.8.0'
     ext.commons_io_version = '2.6'
