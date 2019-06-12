@@ -16,20 +16,22 @@ configurations {
 dependencies {
     // TypeSafe Config: for simple and human friendly config files.
     capsuleRuntime "com.typesafe:config:$typesafe_config_version"
+    compileOnly "com.typesafe:config:$typesafe_config_version"
+    testRuntimeOnly "com.typesafe:config:$typesafe_config_version"
+
+    // Capsule is a library for building independently executable fat JARs.
+    // We only need this dependency to compile our Caplet against.
+    compileOnly "co.paralleluniverse:capsule:$capsule_version"
+    testCompile "co.paralleluniverse:capsule:$capsule_version"
+
+    testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
+    testImplementation "junit:junit:$junit_version"
 }
 
 ext {
     quasarExcludeExpression = "x(antlr**;bftsmart**;ch**;co.paralleluniverse**;com.codahale**;com.esotericsoftware**;com.fasterxml**;com.google**;com.ibm**;com.intellij**;com.jcabi**;com.nhaarman**;com.opengamma**;com.typesafe**;com.zaxxer**;de.javakaffee**;groovy**;groovyjarjarantlr**;groovyjarjarasm**;io.atomix**;io.github**;io.netty**;jdk**;junit**;kotlin**;net.bytebuddy**;net.i2p**;org.apache**;org.assertj**;org.bouncycastle**;org.codehaus**;org.crsh**;org.dom4j**;org.fusesource**;org.h2**;org.hamcrest**;org.hibernate**;org.jboss**;org.jcp**;org.joda**;org.junit**;org.mockito**;org.objectweb**;org.objenesis**;org.slf4j**;org.w3c**;org.xml**;org.yaml**;reflectasm**;rx**;org.jolokia**)"
     applicationClass = 'net.corda.node.Corda'
 }
-
-// Force the Caplet to target Java 6. This ensures that running 'java -jar corda.jar' on any Java 6 VM upwards
-// will get as far as the Capsule version checks, meaning that if your JVM is too old, you will at least get
-// a sensible error message telling you what to do rather than a bytecode version exception that doesn't.
-// If we introduce .java files into this module that need Java 8+ then we will have to push the caplet into
-// its own module so its target can be controlled individually, but for now this suffices.
-sourceCompatibility = 1.6
-targetCompatibility = 1.6
 
 jar.enabled = false
 
@@ -43,13 +45,12 @@ task buildCordaJAR(type: FatCapsule, dependsOn: project(':node').tasks.jar) {
     applicationSource = files(
         project(':node').configurations.runtimeClasspath,
         project(':node').tasks.jar,
-        project(':node').sourceSets.main.java.outputDir.toString() + '/CordaCaplet.class',
-        project(':node').sourceSets.main.java.outputDir.toString() + '/CordaCaplet$1.class',
         project(':node').buildDir.toString() + '/resources/main/reference.conf',
         "$rootDir/config/dev/log4j2.xml",
         'NOTICE' // Copy CDDL notice
     )
     from configurations.capsuleRuntime.files.collect { zipTree(it) }
+    with jar
 
     // Exclude the binaries for the Utimaco HSM as we cannot distribute them.
     exclude('**/CryptoServer*.jar')
@@ -59,7 +60,7 @@ task buildCordaJAR(type: FatCapsule, dependsOn: project(':node').tasks.jar) {
     exclude('**/sunpkcs11-fx.jar')
     // Exclude the binaries for the PrimusX HSM as we cannot distribute them.
     exclude('**/primusX.jar')
-    
+
     capsuleManifest {
         applicationVersion = corda_release_version
         applicationId = "net.corda.node.CordaEnterprise"
