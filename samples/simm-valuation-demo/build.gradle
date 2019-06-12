@@ -76,7 +76,8 @@ dependencies {
 
     // Test dependencies
     testCompile project(':node-driver')
-    scenarioCompile project(path: ":experimental:behave", configuration: 'testArtifacts')
+    // TODO: Adjust the following dependency to use maven coordinates of internally published Behave artifacts in Artifactory (now that Corda Behave is maintained in a separate repository: https://github.com/corda/behave)
+    // scenarioCompile project(path: ":experimental:behave", configuration: 'testArtifacts')
 
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
     testImplementation "junit:junit:$junit_version"
