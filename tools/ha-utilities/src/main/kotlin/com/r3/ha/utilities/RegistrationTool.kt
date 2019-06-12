@@ -34,6 +34,7 @@ import net.corda.nodeapi.internal.cryptoservice.azure.AzureKeyVaultCryptoService
 import net.corda.nodeapi.internal.cryptoservice.futurex.FutureXCryptoService
 import net.corda.nodeapi.internal.cryptoservice.gemalto.GemaltoLunaCryptoService
 import net.corda.nodeapi.internal.cryptoservice.gemalto.GemaltoLunaCryptoService.GemaltoLunaConfiguration
+import net.corda.nodeapi.internal.cryptoservice.securosys.PrimusXCryptoService
 import net.corda.nodeapi.internal.cryptoservice.utimaco.UtimacoCryptoService
 import net.corda.nodeapi.internal.cryptoservice.utimaco.UtimacoCryptoService.UtimacoConfig
 import net.corda.serialization.internal.AMQP_P2P_CONTEXT
@@ -216,6 +217,13 @@ class RegistrationTool : CordaCliWrapper("node-registration", "Corda registratio
                             it as FutureXCryptoService.FutureXConfiguration
                             require(toProcess.credentials != it.credentials) { errorMessage }
                         }
+                        SupportedCryptoServices.PRIMUS_X -> {
+                            toProcess as PrimusXCryptoService.PrimusXConfiguration
+                            it as PrimusXCryptoService.PrimusXConfiguration
+                            if (toProcess.host == it.host && toProcess.port == it.port) {
+                                require (toProcess.username != it.username) { errorMessage }
+                            }
+                        }
                         SupportedCryptoServices.BC_SIMPLE -> {
                             // Nothing to be done for BC
                             Any()
@@ -234,6 +242,7 @@ class RegistrationTool : CordaCliWrapper("node-registration", "Corda registratio
             SupportedCryptoServices.GEMALTO_LUNA -> GemaltoLunaCryptoService.parseConfigFile(path)
             SupportedCryptoServices.AZURE_KEY_VAULT -> AzureKeyVaultCryptoService.parseConfigFile(path)
             SupportedCryptoServices.FUTUREX -> FutureXCryptoService.parseConfigFile(path)
+            SupportedCryptoServices.PRIMUS_X -> PrimusXCryptoService.parseConfigFile(path)
             SupportedCryptoServices.BC_SIMPLE -> Any()
         }
     }

@@ -46,7 +46,6 @@ abstract class CryptoServiceSpec {
         assertFalse { cryptoService.containsKey(alias) }
         val data = UUID.randomUUID().toString().toByteArray()
         assertFailsWith<CryptoServiceException> { cryptoService.sign(alias, data) }
-        delete(alias)
     }
 
     @Test
@@ -99,6 +98,14 @@ abstract class CryptoServiceSpec {
     @Test
     fun `Generate ECDSA key with r1 curve, then sign and verify data`() {
         val scheme = Crypto.ECDSA_SECP256R1_SHA256
+
+        assumeTrue(scheme in getSupportedSchemes())
+        generateKeySignVerifyAndCleanup(scheme)
+    }
+
+    @Test
+    fun `Generate ECDSA key with k1 curve, then sign and verify data`() {
+        val scheme = Crypto.ECDSA_SECP256K1_SHA256
 
         assumeTrue(scheme in getSupportedSchemes())
         generateKeySignVerifyAndCleanup(scheme)
