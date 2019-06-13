@@ -33,6 +33,12 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
     companion object {
         private val log = contextLogger()
 
+        const val HASH_TO_IDENTITY_TABLE_NAME = "${NODE_DATABASE_PREFIX}identities"
+        const val NAME_TO_HASH_TABLE_NAME = "${NODE_DATABASE_PREFIX}named_identities"
+        const val PK_HASH_COLUMN_NAME = "pk_hash"
+        const val IDENTITY_COLUMN_NAME = "identity_value"
+        const val NAME_COLUMN_NAME = "name"
+
         fun createPKMap(cacheFactory: NamedCacheFactory): AppendOnlyPersistentMap<String, PartyAndCertificate, PersistentIdentity, String> {
             return AppendOnlyPersistentMap(
                     cacheFactory = cacheFactory,
@@ -70,25 +76,25 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
     }
 
     @Entity
-    @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}identities")
+    @javax.persistence.Table(name = HASH_TO_IDENTITY_TABLE_NAME)
     class PersistentIdentity(
             @Id
-            @Column(name = "pk_hash", length = MAX_HASH_HEX_SIZE, nullable = false)
+            @Column(name = PK_HASH_COLUMN_NAME, length = MAX_HASH_HEX_SIZE, nullable = false)
             var publicKeyHash: String = "",
 
             @Lob
-            @Column(name = "identity_value", nullable = false)
+            @Column(name = IDENTITY_COLUMN_NAME, nullable = false)
             var identity: ByteArray = EMPTY_BYTE_ARRAY
     )
 
     @Entity
-    @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}named_identities")
+    @javax.persistence.Table(name = NAME_TO_HASH_TABLE_NAME)
     class PersistentIdentityNames(
             @Id
-            @Column(name = "name", length = 128, nullable = false)
+            @Column(name = NAME_COLUMN_NAME, length = 128, nullable = false)
             var name: String = "",
 
-            @Column(name = "pk_hash", length = MAX_HASH_HEX_SIZE, nullable = true)
+            @Column(name = PK_HASH_COLUMN_NAME, length = MAX_HASH_HEX_SIZE, nullable = true)
             var publicKeyHash: String = ""
     )
 
@@ -170,7 +176,9 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
     }
 
     // We give the caller a copy of the data set to avoid any locking problems
-    override fun getAllIdentities(): Iterable<PartyAndCertificate> = database.transaction { keyToParties.allPersisted().map { it.second }.asIterable() }
+    override fun getAllIdentities(): Iterable<PartyAndCertificate> = database.transaction {
+        keyToParties.allPersisted().map { it.second }.asIterable()
+    }
 
     override fun wellKnownPartyFromX500Name(name: CordaX500Name): Party? = certificateFromCordaX500Name(name)?.party
 

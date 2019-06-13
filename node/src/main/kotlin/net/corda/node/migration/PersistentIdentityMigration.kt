@@ -1,43 +1,29 @@
 package net.corda.node.migration
 
-import liquibase.change.custom.CustomTaskChange
+import liquibase.change.custom.CustomSqlChange
+import liquibase.change.custom.CustomSqlRollback
 import liquibase.database.Database
 import liquibase.exception.ValidationErrors
 import liquibase.resource.ResourceAccessor
+import liquibase.statement.SqlStatement
+import liquibase.statement.core.UpdateStatement
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.utilities.contextLogger
+import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
-import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
-import java.sql.Connection
 
-class PersistentIdentityMigration : CustomTaskChange {
-    companion object {
-        private val logger = contextLogger()
-        const val PUB_KEY_HASH_TO_PARTY_AND_CERT_TABLE = "${NODE_DATABASE_PREFIX}identities"
-        const val X500_NAME_TO_PUB_KEY_HASH_TABLE = "${NODE_DATABASE_PREFIX}named_identities"
+class PersistentIdentityMigration : CustomSqlChange, CustomSqlRollback {
+
+    override fun generateRollbackStatements(database: Database?): Array<SqlStatement> {
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
-    override fun execute(db: Database?) {
-        val dataSource = MigrationDataSource(db!!)
-        val connection = dataSource.connection
-        val statement = connection.prepareStatement("SELECT * FROM ${NODE_DATABASE_PREFIX}identities")
-        val resultSet = statement.executeQuery()
-        val mappedResults = mutableListOf<MigrationData>()
-        while (resultSet.next()) {
-            val oldPkHash = resultSet.getString(1)
-            val identityBytes = resultSet.getBytes(2)
-            val partyAndCertificate = PartyAndCertificate(X509CertificateFactory().delegate.generateCertPath(identityBytes.inputStream()))
-            mappedResults.add(MigrationData(oldPkHash, partyAndCertificate))
-        }
-        mappedResults.forEach {
-            updateHashToIdentityRow(connection, it)
-            updateNameToHashRow(connection, it)
-        }
-
-
-        logger.info("Migrating PersistentIdentityService to use PublicKey.toShortString()")
+    companion object {
+        private val logger = contextLogger()
+        const val PUB_KEY_HASH_TO_PARTY_AND_CERT_TABLE = PersistentIdentityService.HASH_TO_IDENTITY_TABLE_NAME
+        const val X500_NAME_TO_PUB_KEY_HASH_TABLE = PersistentIdentityService.NAME_TO_HASH_TABLE_NAME
     }
 
     override fun validate(database: Database?): ValidationErrors? {
@@ -54,21 +40,33 @@ class PersistentIdentityMigration : CustomTaskChange {
     override fun setUp() {
     }
 
-    private fun updateHashToIdentityRow(connection: Connection, migrationData: MigrationData) {
-        connection.prepareStatement("UPDATE $PUB_KEY_HASH_TO_PARTY_AND_CERT_TABLE SET pk_hash = ? WHERE pk_hash = ?").use {
-            it.setString(1, migrationData.newPkHash)
-            it.setString(2, migrationData.oldPkHash)
-            it.executeUpdate()
+    override fun generateStatements(database: Database?): Array<SqlStatement> {
+        val dataSource = MigrationDataSource(database!!)
+        val connection = dataSource.connection
+        val statement = connection.prepareStatement("SELECT * FROM $PUB_KEY_HASH_TO_PARTY_AND_CERT_TABLE")
+        val resultSet = statement.executeQuery()
+        val generatedStatements = mutableListOf<SqlStatement>()
+        while (resultSet.next()) {
+            val oldPkHash = resultSet.getString(1)
+            val identityBytes = resultSet.getBytes(2)
+            val partyAndCertificate = PartyAndCertificate(X509CertificateFactory().delegate.generateCertPath(identityBytes.inputStream()))
+            generatedStatements.addAll(MigrationData(oldPkHash, partyAndCertificate).let { listOf(updateHashToIdentityRow(it, database), updateNameToHashRow(it)) })
         }
+        return generatedStatements.toTypedArray()
     }
 
-    private fun updateNameToHashRow(connection: Connection, migrationData: MigrationData) {
-        connection.prepareStatement("UPDATE $X500_NAME_TO_PUB_KEY_HASH_TABLE SET pk_hash = ? WHERE pk_hash = ? AND name= ?").use {
-            it.setString(1, migrationData.newPkHash)
-            it.setString(2, migrationData.oldPkHash)
-            it.setString(3, migrationData.x500.toString())
-            it.executeUpdate()
-        }
+    private fun updateHashToIdentityRow(migrationData: MigrationData, database: Database): SqlStatement {
+        return UpdateStatement(null, null, PUB_KEY_HASH_TO_PARTY_AND_CERT_TABLE)
+                .setWhereClause("pk_hash=?")
+                .addNewColumnValue("pk_hash", migrationData.newPkHash)
+                .addWhereParameter(migrationData.oldPkHash)
+    }
+
+    private fun updateNameToHashRow(migrationData: MigrationData): UpdateStatement {
+        return UpdateStatement(null, null, X500_NAME_TO_PUB_KEY_HASH_TABLE)
+                .setWhereClause("pk_hash=? AND name=?")
+                .addNewColumnValue("pk_hash", migrationData.newPkHash)
+                .addWhereParameters(migrationData.oldPkHash, migrationData.x500.toString())
     }
 
     data class MigrationData(val oldPkHash: String,

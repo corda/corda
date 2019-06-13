@@ -1,35 +1,28 @@
 package net.corda.node.migration
 
-import liquibase.database.Database
+import liquibase.database.core.H2Database
 import liquibase.database.jvm.JdbcConnection
 import net.corda.core.crypto.toStringShort
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.hash
 import net.corda.core.utilities.contextLogger
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
-import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.nodeapi.internal.persistence.contextTransactionOrNull
 import net.corda.testing.core.*
 import net.corda.testing.internal.configureDatabase
-import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
-import net.corda.testing.node.TestClock
-import org.hamcrest.Matchers.`is`
-import org.junit.*
-import org.mockito.Mockito
-import java.time.Clock
+import org.hamcrest.CoreMatchers
+import org.hamcrest.Matcher
+import org.hamcrest.Matchers.*
+import org.junit.After
+import org.junit.Assert
+import org.junit.Before
+import org.junit.Test
 
 /**
- * These tests aim to verify that migrating vault states from V3 to later versions works correctly. While these unit tests verify the
- * migrating behaviour is correct (tables populated, columns updated for the right states), it comes with a caveat: they do not test that
- * deserialising states with the attachment classloader works correctly.
- *
- * The reason for this is that it is impossible to do so. There is no real way of writing a unit or integration test to upgrade from one
- * version to another (at the time of writing). These tests simulate a small part of the upgrade process by directly using hibernate to
- * populate a database as a V3 node would, then running the migration class. However, it is impossible to do this for attachments as there
- * is no contract state jar to serialise.
  */
 class IdentityServiceToStringShortMigrationTest {
     companion object {
@@ -43,39 +36,30 @@ class IdentityServiceToStringShortMigrationTest {
         val BOC_IDENTITY get() = bankOfCorda.identity
         val bob2 = TestIdentity(BOB_NAME, 40)
         val BOB2_IDENTITY = bob2.identity
-
-        val clock: TestClock = TestClock(Clock.systemUTC())
-
-        @ClassRule
-        @JvmField
-        val testSerialization = SerializationEnvironmentRule()
-
         val logger = contextLogger()
     }
 
-    lateinit var liquibaseDB: Database
+    lateinit var liquibaseDB: H2Database
     lateinit var cordaDB: CordaPersistence
-    lateinit var notaryServices: MockServices
 
     @Before
     fun setUp() {
         cordaDB = configureDatabase(
                 makeTestDataSourceProperties(),
                 DatabaseConfig(),
-                { _ -> null },
-                { _ -> null },
+                { null },
+                { null },
                 ourName = BOB_IDENTITY.name)
-        val liquibaseConnection = Mockito.mock(JdbcConnection::class.java)
-        Mockito.`when`(liquibaseConnection.url).thenReturn(cordaDB.jdbcUrl)
-        Mockito.`when`(liquibaseConnection.wrappedConnection).thenReturn(cordaDB.dataSource.connection)
-        liquibaseDB = Mockito.mock(Database::class.java)
-        Mockito.`when`(liquibaseDB.connection).thenReturn(liquibaseConnection)
+        liquibaseDB = H2Database()
+        liquibaseDB.connection = JdbcConnection(cordaDB.dataSource.connection)
+        liquibaseDB.isAutoCommit = true
     }
 
     @After
     fun close() {
         contextTransactionOrNull?.close()
         cordaDB.close()
+        liquibaseDB.close()
     }
 
     private fun saveAllIdentitiesWithOldHashString(identities: List<PartyAndCertificate>) {
@@ -93,21 +77,43 @@ class IdentityServiceToStringShortMigrationTest {
     }
 
     @Test
-    fun `Check a simple migration works`() {
+    fun `it should be possible to migrate all existing identities to new hash function`() {
         val identities = listOf(BOB_IDENTITY, ALICE_IDENTITY, BOC_IDENTITY, dummyNotary.identity, BOB2_IDENTITY)
+        val groupedByNameIdentities = identities.groupBy { it.name }
         saveAllIdentitiesWithOldHashString(identities)
         val migration = PersistentIdentityMigration()
-        migration.execute(liquibaseDB)
-
+        liquibaseDB.execute(migration.generateStatements(liquibaseDB), listOf())
+        val listOfNamesWithoutPkHash = mutableListOf<CordaX500Name>()
         identities.forEach {
-            println("Checking: ${it.name}")
+            logger.info("Checking: ${it.name}")
             cordaDB.transaction {
-                val statement = database.dataSource.connection.prepareStatement("SELECT pk_hash FROM ${NODE_DATABASE_PREFIX}identities WHERE pk_hash=?")
-                statement.setString(1, it.owningKey.toStringShort())
-                val rs = statement.executeQuery()
-                Assert.assertThat(rs.next(), `is`(true))
-                Assert.assertThat(rs.getString(1), `is`(it.owningKey.toStringShort()))
+                val hashToIdentityStatement = database.dataSource.connection.prepareStatement("SELECT ${PersistentIdentityService.PK_HASH_COLUMN_NAME} FROM ${PersistentIdentityService.HASH_TO_IDENTITY_TABLE_NAME} WHERE pk_hash=?")
+                hashToIdentityStatement.setString(1, it.owningKey.toStringShort())
+                val hashToIdentityResultSet = hashToIdentityStatement.executeQuery()
+
+                //check that there is a row for every "new" hash
+                Assert.assertThat(hashToIdentityResultSet.next(), `is`(true))
+                //check that the pk_hash actually matches what we expect (kinda redundant, but deserializing the whole PartyAndCertificate feels like overkill)
+                Assert.assertThat(hashToIdentityResultSet.getString(1), `is`(it.owningKey.toStringShort()))
+
+                val nameToHashStatement = connection.prepareStatement("SELECT ${PersistentIdentityService.NAME_COLUMN_NAME} FROM ${PersistentIdentityService.NAME_TO_HASH_TABLE_NAME} WHERE pk_hash=?")
+                nameToHashStatement.setString(1, it.owningKey.toStringShort())
+                val nameToHashResultSet = nameToHashStatement.executeQuery()
+
+                //if there is no result for this key, this means its an identity that is not stored in the DB (IE, it's been seen after another identity has already been mapped to it)
+                if (nameToHashResultSet.next()) {
+                    Assert.assertThat(nameToHashResultSet.getString(1), `is`(anyOf(groupedByNameIdentities.getValue(it.name).map<PartyAndCertificate, Matcher<String>?> { identity -> CoreMatchers.equalTo(identity.name.toString()) })))
+                } else {
+                    logger.warn("did not find a PK_HASH for ${it.name}")
+                    listOfNamesWithoutPkHash.add(it.name)
+                }
             }
+        }
+
+
+        listOfNamesWithoutPkHash.forEach {
+            //the only time an identity name does not have a PK_HASH is if there are multiple identities associated with that name
+            Assert.assertThat(groupedByNameIdentities[it]?.size, `is`(greaterThan(1)))
         }
     }
 }

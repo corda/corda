@@ -7,15 +7,18 @@ We wish to move the `PersistentIdentityService` away from using `PublicKey.hash.
 
 This requires modifying the `PersistentIdentityService` and an accompanying Database Migration. 
 
+**It is important to note that the underlying hash function will be sha256 both in the old and new implementations, the only difference is the stored representation.** 
+
 ## Background
 
 In Corda4 we introduced an ability to map a given `PublicKey` to a UUID. Internally this builds a database table which maintains a mapping 
-between `H(PublicKey)` -> UUID. Where `H()` is `PublicKey.toStringShort()`. 
+between `H(PublicKey)` -> UUID. Where `H()` is `PublicKey.toStringShort()`.
 
 There is a reasonable requirement that for a given `UUID` you would want to find all the keys that are associated with that UUID. 
 To do this, we would need to join the `PublicKeyHashToExternalId` table with the `PersistentIdentity` table. 
 
 This is currently impossible due to the fact that the two tables use different hashes. 
+
 
 ## Goals
 

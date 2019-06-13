@@ -269,7 +269,7 @@ class VaultStateMigrationTest {
 
     private fun addLinearStates(statesToAdd: Int, parties: List<AbstractParty>) {
         cordaDB.transaction {
-            (1..statesToAdd).map { createLinearStateTransaction("A".repeat(it), parties)}.forEach {
+            (1..statesToAdd).map { createLinearStateTransaction("A".repeat(it), parties) }.forEach {
                 storeTransaction(it)
                 createVaultStatesFromTransaction(it)
             }
@@ -284,7 +284,7 @@ class VaultStateMigrationTest {
 
     private fun addCommodityStates(statesToAdd: Int, owner: AbstractParty) {
         cordaDB.transaction {
-            (1..statesToAdd).map{
+            (1..statesToAdd).map {
                 createCommodityTransaction(Amount(it.toLong(), Issued(bankOfCorda.ref(2), Commodity.getInstance("FCOJ")!!)), owner)
             }.forEach {
                 storeTransaction(it)
@@ -529,6 +529,7 @@ class VaultStateMigrationTest {
 
     // Used to test migration performance
     @Test
+    @Ignore
     fun `Migrate large database`() {
         val statesAtOnce = 500L
         val stateMultiplier = 300L
