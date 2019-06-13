@@ -26,9 +26,14 @@ import net.corda.testing.node.internal.genericDriver
 import net.corda.testing.node.internal.getTimestampAsDirectoryName
 import net.corda.testing.node.internal.newContext
 import rx.Observable
+import sun.misc.Unsafe
+import sun.nio.ch.DirectBuffer
+import java.io.File
+import java.io.RandomAccessFile
+import java.nio.MappedByteBuffer
+import java.nio.channels.FileChannel
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Object ecapsulating a notary started automatically by the driver.
@@ -65,7 +70,6 @@ interface NodeHandle : AutoCloseable {
      */
     fun stop()
 }
-
 
 /** Interface which represents an out of process node and exposes its process handle. **/
 @DoNotImplement
@@ -107,10 +111,7 @@ data class WebserverHandle(
 /**
  * An abstract helper class which is used within the driver to allocate unused ports for testing.
  */
-@DoNotImplement
-abstract class PortAllocation {
-    /** Get the next available port **/
-    abstract fun nextPort(): Int
+class PortAllocation(val startingPoint: Int = 10000, fileName: File? = File(System.getProperty("user.home"), "allocator.bin")) {
 
     /** Get the next available port via [nextPort] and then return a [NetworkHostAndPort] **/
     fun nextHostAndPort() = NetworkHostAndPort("localhost", nextPort())
@@ -118,24 +119,41 @@ abstract class PortAllocation {
     /**
      * An implementation of [PortAllocation] which allocates ports sequentially
      */
-    open class Incremental(private val startingPort: Int) : PortAllocation() {
-        private companion object {
-            private const val FIRST_EPHEMERAL_PORT = 49152
+    companion object {
+        const val FIRST_EPHEMERAL_PORT = 49152L
+        private val UNSAFE: Unsafe = getUnsafe()
+        private fun getUnsafe(): Unsafe {
+            val f = Unsafe::class.java.getDeclaredField("theUnsafe")
+            f.isAccessible = true
+            return f.get(null) as Unsafe
         }
+    }
 
-        /** The backing [AtomicInteger] used to keep track of the currently allocated port */
-        val portCounter = AtomicInteger(startingPort)
+    private val backingFile = RandomAccessFile(fileName, "rw")
+    private val mb: MappedByteBuffer = backingFile.channel.map(FileChannel.MapMode.READ_WRITE, 0, 16)
+    private val startingAddress = (mb as DirectBuffer).address()
 
-        override fun nextPort(): Int {
-            return portCounter.getAndUpdate { i ->
-                val next = i + 1
-                if (next >= FIRST_EPHEMERAL_PORT) {
-                    startingPort
-                } else {
-                    next
-                }
+    fun nextPort(): Int {
+        var oldValue: Long
+        var newValue: Long
+        do {
+            oldValue = UNSAFE.getLongVolatile(null, startingAddress)
+            newValue = if (oldValue + 1 >= FIRST_EPHEMERAL_PORT || oldValue < startingPoint) {
+                //we have gone past the point of no return
+                startingPoint.toLong()
+            } else {
+                (oldValue + 1)
             }
-        }
+        } while (!UNSAFE.compareAndSwapLong(null, startingAddress, oldValue, newValue))
+
+        return newValue.toInt()
+    }
+
+    /**
+     * ONLY EVER CALL THIS FOR TESTING PURPOSES
+     */
+    internal fun globalReset() {
+        UNSAFE.getAndSetLong(null, startingAddress, startingPoint.toLong())
     }
 }
 
@@ -245,7 +263,7 @@ fun <A> driver(defaultParameters: DriverParameters = DriverParameters(), dsl: Dr
 @Suppress("unused")
 data class DriverParameters(
         val isDebug: Boolean = false,
-        val driverDirectory: Path = Paths.get("build") / "node-driver" /  getTimestampAsDirectoryName(),
+        val driverDirectory: Path = Paths.get("build") / "node-driver" / getTimestampAsDirectoryName(),
         val portAllocation: PortAllocation = incrementalPortAllocation(10000),
         val debugPortAllocation: PortAllocation = incrementalPortAllocation(5005),
         val systemProperties: Map<String, String> = emptyMap(),
@@ -266,7 +284,7 @@ data class DriverParameters(
 
     constructor(
             isDebug: Boolean = false,
-            driverDirectory: Path = Paths.get("build") / "node-driver" /  getTimestampAsDirectoryName(),
+            driverDirectory: Path = Paths.get("build") / "node-driver" / getTimestampAsDirectoryName(),
             portAllocation: PortAllocation = incrementalPortAllocation(10000),
             debugPortAllocation: PortAllocation = incrementalPortAllocation(5005),
             systemProperties: Map<String, String> = emptyMap(),
@@ -372,6 +390,7 @@ data class DriverParameters(
     @Deprecated("extraCordappPackagesToScan does not preserve the original CorDapp's versioning and metadata, which may lead to " +
             "misleading results in tests. Use withCordappsForAllNodes instead.")
     fun withExtraCordappPackagesToScan(extraCordappPackagesToScan: List<String>): DriverParameters = copy(extraCordappPackagesToScan = extraCordappPackagesToScan)
+
     fun withJmxPolicy(jmxPolicy: JmxPolicy): DriverParameters = copy(jmxPolicy = jmxPolicy)
     fun withNetworkParameters(networkParameters: NetworkParameters): DriverParameters = copy(networkParameters = networkParameters)
     fun withNotaryCustomOverrides(notaryCustomOverrides: Map<String, Any?>): DriverParameters = copy(notaryCustomOverrides = notaryCustomOverrides)
