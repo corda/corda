@@ -62,24 +62,26 @@ class PortAllocationTest {
         val process1Output = process1.inputStream.reader().readLines().toSet()
         val process2Output = process2.inputStream.reader().readLines().toSet()
 
+        Assert.assertThat(process1Output.size, `is`(10_000))
+        Assert.assertThat(process2Output.size, `is`(10_000))
+
         //there should be no overlap between the outputs as each process should have been allocated a unique set of ports
         Assert.assertThat(process1Output.intersect(process2Output), `is`(emptySet()))
     }
 
-    private fun buildJvmProcess(allocationFile: String, spinnerFile: String, i: Int): Process {
+    private fun buildJvmProcess(allocationFile: String, spinnerFile: String, reportingIndex: Int): Process {
         val separator = System.getProperty("file.separator")
         val classpath = System.getProperty("java.class.path")
         val path = (System.getProperty("java.home")
                 + separator + "bin" + separator + "java")
         val processBuilder = ProcessBuilder(path, "-cp",
                 classpath,
-                PortAllocationRunner::class.java!!.name,
+                PortAllocationRunner::class.java.name,
                 allocationFile,
                 spinnerFile,
-                i.toString())
-        val process = processBuilder.start()
+                reportingIndex.toString())
 
-        return process
+        return processBuilder.start()
     }
 }
 

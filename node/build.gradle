@@ -219,6 +219,8 @@ task integrationTest(type: Test) {
 
     systemProperty 'testing.global.port.allocation.enabled', true
     systemProperty 'testing.global.port.allocation.starting.port', 10000
+    
+    maxParallelForks = 2
 }
 
 // quasar exclusions upon agent code instrumentation at run-time
