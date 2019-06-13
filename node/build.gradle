@@ -181,9 +181,6 @@ dependencies {
     compile 'io.atomix.copycat:copycat-server:1.2.3'
     compile 'io.atomix.catalyst:catalyst-netty:1.1.2'
 
-    // For the MySQLUniquenessProvider
-    compile group: 'mysql', name: 'mysql-connector-java', version: '6.0.6'
-
     // Jetty dependencies for NetworkMapClient test.
     // Web stuff: for HTTP[S] servlets
     testCompile "org.eclipse.jetty:jetty-servlet:${jetty_version}"

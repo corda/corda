@@ -7,6 +7,9 @@ release, see :doc:`upgrade-notes`.
 Unreleased
 ----------
 
+* Changes in HA notary setup: the MySQL JDBC driver now needs to be installed manually for every worker node, otherwise nodes will fail to start.
+  See :ref:`notary installation page <mysql_driver>` for more information.
+
 Version 4.0
 -----------
 
