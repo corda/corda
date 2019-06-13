@@ -40,7 +40,7 @@ buildscript {
     ext.disruptor_version = constants.getProperty("disruptorVersion")
     ext.metrics_version = constants.getProperty("metricsVersion")
     ext.metrics_new_relic_version = constants.getProperty("metricsNewRelicVersion")
-    ext.okhttp_version = '3.5.0'
+    ext.okhttp_version = '3.14.1'
     ext.netty_version = '4.1.29.Final'
     ext.tcnative_version = '2.0.14.Final'
     ext.typesafe_config_version = constants.getProperty("typesafeConfigVersion")
