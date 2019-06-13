@@ -148,13 +148,6 @@ class PortAllocation(val startingPoint: Int = 10000, fileName: File? = File(Syst
 
         return newValue.toInt()
     }
-
-    /**
-     * ONLY EVER CALL THIS FOR TESTING PURPOSES
-     */
-    internal fun globalReset() {
-        UNSAFE.getAndSetLong(null, startingAddress, startingPoint.toLong())
-    }
 }
 
 /**
