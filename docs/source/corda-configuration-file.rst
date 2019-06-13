@@ -193,6 +193,8 @@ detectPublicIp
 
   *Default:* false
 
+.. _corda_configuration_file_dev_mode:
+
 devMode
   This flag sets the node to run in development mode.
   On startup, if the keystore ``<workspace>/certificates/sslkeystore.jks``
@@ -381,6 +383,8 @@ h2Port (deprecated)
 
   **Important: Deprecated please use h2Setting instead**
 
+.. _corda_configuration_file_h2_settings:
+
 h2Settings
   Sets the H2 JDBC server host and port.
   See :doc:`node-database-access-h2`.
@@ -449,6 +453,8 @@ messagingServerExternal
 
   *Default:* not defined
 
+.. _corda_configuration_file_myLegalName:
+
 myLegalName
   The legal identity of the node.
   This acts as a human-readable alias to the node's public key and can be used with the network map to look up the node's info.
@@ -457,6 +463,8 @@ myLegalName
   For more details please read :ref:`node-naming` chapter.
 
   *Default:* not defined
+
+.. _corda_configuration_file_notary:
 
 notary
   Optional configuration object which if present configures the node to run as a notary. If running as part of a HA notary cluster, please
@@ -637,6 +645,8 @@ rpcAddress (deprecated)
 
   *Default:* not defined
 
+.. _corda_configuration_file_rpc_settings:
+
 rpcSettings
   Options for the RPC server exposed by the Node.
 
@@ -675,6 +685,8 @@ rpcSettings
 
         *Default:* not defined
 
+.. _corda_configuration_file_rpc_users:
+
 rpcUsers
   A list of users who are authorised to access the RPC system.
   Each user in the list is a configuration object with the following fields:
@@ -700,6 +712,8 @@ rpcUsers
 security
   Contains various nested fields controlling user authentication/authorization, in particular for RPC accesses.
   See :doc:`clientrpc` for details.
+
+.. _corda_configuration_file_sshd:
 
 sshd
   If provided, node will start internal SSH server which will provide a management shell.

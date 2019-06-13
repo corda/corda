@@ -18,24 +18,11 @@ sourceSets {
             srcDir file('src/integration-test/kotlin')
         }
     }
-    scenario {
-        kotlin {
-            compileClasspath += main.output + test.output
-            runtimeClasspath += main.output + test.output
-            srcDir file('src/system-test/scenario/kotlin')
-        }
-        resources {
-            srcDir 'src/system-test/scenario/resources'
-        }
-    }
 }
 
 configurations {
     integrationTestCompile.extendsFrom testCompile
     integrationTestRuntime.extendsFrom testRuntimeOnly
-
-    scenarioCompile.extendsFrom testCompile
-    scenarioRuntime.extendsFrom testRuntimeOnly
 }
 
 dependencies {
@@ -76,7 +63,6 @@ dependencies {
 
     // Test dependencies
     testCompile project(':node-driver')
-    scenarioCompile project(path: ":experimental:behave", configuration: 'testArtifacts')
 
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
     testImplementation "junit:junit:$junit_version"
@@ -171,11 +157,6 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask, 
 task integrationTest(type: Test, dependsOn: []) {
     testClassesDirs = sourceSets.integrationTest.output.classesDirs
     classpath = sourceSets.integrationTest.runtimeClasspath
-}
-
-task scenarioJar(type: Jar, dependsOn: classes) {
-    classifier "behave-test"
-    from sourceSets.scenario.output
 }
 
 cordapp {
