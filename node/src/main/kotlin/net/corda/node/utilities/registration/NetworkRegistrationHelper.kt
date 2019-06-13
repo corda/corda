@@ -21,6 +21,7 @@ import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_CLIENT_CA
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_CLIENT_TLS
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_ROOT_CA
 import net.corda.nodeapi.internal.crypto.X509Utilities.DEFAULT_VALIDITY_WINDOW
+import net.corda.nodeapi.internal.cryptoservice.securosys.PrimusXCryptoService
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.openssl.jcajce.JcaPEMWriter
 import org.bouncycastle.operator.ContentSigner
@@ -117,6 +118,7 @@ open class NetworkRegistrationHelper(
             is AzureKeyVaultCryptoService -> logProgress("Private key '$nodeCaKeyAlias' stored in Azure KeyVault. Certificate-chain stored in node keystore.")
             is UtimacoCryptoService -> logProgress("Private key '$nodeCaKeyAlias' stored in Utimaco HSM. Certificate-chain stored in node keystore.")
             is FutureXCryptoService -> logProgress("Private key '$nodeCaKeyAlias' stored in FutureX HSM. Certificate-chain stored in node keystore.")
+            is PrimusXCryptoService -> logProgress("Private key '$nodeCaKeyAlias' stored in PrimusX HSM. Certificate-chain stored in node keystore.")
             else -> logProgress("Private key '$nodeCaKeyAlias' and its certificate-chain stored successfully.")
         }
 
