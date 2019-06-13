@@ -52,28 +52,27 @@ cordapp {
     }
 }
 
-task deployNodesJDBC(type: Cordform, dependsOn: ['jar', nodeTask]) {
-    directory file("$buildDir/nodes/nodesJDBC")
-    def dbAddress = "127.0.0.1:3306"
-    def notaryConfig = [
-            validating      : false,
-            serviceLegalName: "O=HA Notary,L=Zurich,C=CH",
-            extraConfig     : [
-                    connectionRetries: 1,
-                    dataSource       : [
-                            autoCommit: false,
-                            jdbcUrl   : "jdbc:mysql://127.0.0.1:3306/corda?rewriteBatchedStatements=true&useSSL=false&failOverReadOnly=false",
-                            username  : "root",
-                            password  : "root"
-                    ]
-            ],
-            className: "net.corda.notarytest.service.JDBCNotaryService"
-
-    ]
+task deployNodesMySQL(type: Cordform, dependsOn: ['jar', nodeTask]) {
+    directory file("$buildDir/nodes/nodesMySQL")
     nodeDefaults {
-//        projectCordapp {
-//            deploy = true
-//        }
+        projectCordapp {
+            deploy = true
+            config '''
+                notary {
+                    validating = false
+                    serviceLegalName = "O=HA Notary,L=Zurich,C=CH",
+                    mysql {
+                            connectionRetries = 1
+                            dataSource {
+                                    autoCommit = false,
+                                    jdbcUrl = "jdbc:mysql://127.0.0.1:3306/corda?rewriteBatchedStatements=true&useSSL=false&failOverReadOnly=false",
+                                    username = "root",
+                                    password ="root"
+                            }
+                    }
+                }
+            '''
+        }
         extraConfig = [h2Settings: [address: "localhost:0"]]
     }
     node {
@@ -83,29 +82,6 @@ task deployNodesJDBC(type: Cordform, dependsOn: ['jar', nodeTask]) {
             address "localhost:10010"
             adminAddress "localhost:10110"
         }
-        notary = notaryConfig
-        rpcUsers = [[user: "demou", password: "demop", permissions: ["ALL"]]]
-
-    }
-    node {
-        name "O=Notary Service 1,L=Zurich,C=CH"
-        p2pPort 10013
-        rpcSettings {
-            address "localhost:10014"
-            adminAddress "localhost:10114"
-        }
-        notary = notaryConfig
-        rpcUsers = [[user: "demou", password: "demop", permissions: ["ALL"]]]
-
-    }
-    node {
-        name "O=Notary Service 2,L=Zurich,C=CH"
-        p2pPort 10017
-        rpcSettings {
-            address "localhost:10018"
-            adminAddress "localhost:10118"
-        }
-        notary = notaryConfig
         rpcUsers = [[user: "demou", password: "demop", permissions: ["ALL"]]]
     }
 }

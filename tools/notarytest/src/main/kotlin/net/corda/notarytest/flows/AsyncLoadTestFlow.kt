@@ -13,22 +13,16 @@ import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.transpose
-import net.corda.core.internal.notary.NotaryService
-import net.corda.core.internal.notary.SinglePartyNotaryService
 import net.corda.core.internal.notary.UniquenessProvider
 import net.corda.core.internal.notary.generateSignature
-import net.corda.node.VersionInfo
-import net.corda.node.internal.cordapp.CordappProviderImpl
 import net.corda.node.services.api.ServiceHubInternal
-import net.corda.node.utilities.NotaryLoader
 import net.corda.notarytest.Generator
 import java.math.BigInteger
 import java.util.*
 import java.util.concurrent.TimeUnit
 
 @StartableByRPC
-open class AsyncLoadTestFlow<T : SinglePartyNotaryService>(
-        private val serviceType: Class<T>,
+abstract class AsyncLoadTestFlow(
         private val transactionCount: Int,
         private val batchSize: Int = 100,
         /**
@@ -37,6 +31,10 @@ open class AsyncLoadTestFlow<T : SinglePartyNotaryService>(
          */
         private val inputStateCount: Int? = null
 ) : FlowLogic<Long>() {
+    companion object {
+        private var uniquenessProvider: UniquenessProvider? = null
+    }
+
     private val keyPairGenerator = Generator.long().map { entropyToKeyPair(BigInteger.valueOf(it)) }
     private val publicKeyGeneratorSingle = Generator.pure(generateKeyPair().public)
     private val partyGenerator: Generator<Party> = Generator.int().combine(publicKeyGeneratorSingle) { n, key ->
@@ -63,7 +61,7 @@ open class AsyncLoadTestFlow<T : SinglePartyNotaryService>(
         val stopwatch = Stopwatch.createStarted()
         val futures = mutableListOf<CordaFuture<UniquenessProvider.Result>>()
 
-        val service = loadService() as SinglePartyNotaryService
+        if (uniquenessProvider == null) uniquenessProvider = startUniquenessProvider(serviceHub as ServiceHubInternal)
 
         for (i in 1..batchSize) {
             val txId: SecureHash = txIdGenerator.generateOrFail(random)
@@ -77,8 +75,8 @@ open class AsyncLoadTestFlow<T : SinglePartyNotaryService>(
             val requestSignature = NotarisationRequest(inputs, txId).generateSignature(serviceHub)
 
 
-            futures += SinglePartyNotaryService.CommitOperation(service, inputs, txId, callerParty, requestSignature,
-                    null, emptyList()).execute("")
+            futures += uniquenessProvider!!.commit(inputs, txId, callerParty, requestSignature,
+                    null, emptyList())
         }
 
         futures.transpose().get()
@@ -90,10 +88,6 @@ open class AsyncLoadTestFlow<T : SinglePartyNotaryService>(
         return duration
     }
 
-    private fun loadService(): NotaryService {
-        val serviceHubInternal = serviceHub as ServiceHubInternal
-        val cordappLoader = (serviceHub.cordappProvider as CordappProviderImpl).cordappLoader
-        val notaryLoader = NotaryLoader(serviceHubInternal.configuration.notary!!, VersionInfo.UNKNOWN)
-        return notaryLoader.loadService(serviceHub.myInfo.legalIdentitiesAndCerts.last(), serviceHubInternal, cordappLoader)
-    }
+    protected abstract fun startUniquenessProvider(serviceHubInternal: ServiceHubInternal): UniquenessProvider
 }
+
