@@ -230,10 +230,10 @@ allprojects {
             attributes('Automatic-Module-Name': "net.corda.${task.project.name.replaceAll('-', '.')}")
         }
     }
-    
+
     tasks.withType(Test){
         if (name.contains("integrationTest")){
-            maxParallelForks = 6
+            maxParallelForks = 1
         }
     }
 
