@@ -6,6 +6,7 @@ import net.corda.cliutils.ExitCodes
 import net.corda.core.crypto.Crypto
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.div
+import net.corda.core.internal.exists
 import net.corda.nodeapi.internal.config.CertificateStore
 import net.corda.nodeapi.internal.config.FileBasedCertificateStoreSupplier
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
@@ -18,6 +19,10 @@ import net.corda.nodeapi.internal.cryptoservice.SupportedCryptoServices
 import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
 import picocli.CommandLine.Option
 import sun.security.x509.X500Name
+import java.io.File
+import java.lang.IllegalStateException
+import java.net.URL
+import java.net.URLClassLoader
 import java.nio.file.Path
 import java.nio.file.Paths
 import javax.security.auth.x500.X500Principal
@@ -148,6 +153,8 @@ abstract class AbstractInternalKeystoreGenerator(alias: String, description: Str
 
     override fun runProgram(): Int {
 
+        addJarsInDriversDirectoryToSystemClasspath(baseDirectory)
+
         createKeyStores()
 
         listOf(keyStorePassword to "keyStorePassword", trustStorePassword to "trustStorePassword").forEach {
@@ -155,6 +162,25 @@ abstract class AbstractInternalKeystoreGenerator(alias: String, description: Str
         }
 
         return ExitCodes.SUCCESS
+    }
+
+    private fun addJarsInDriversDirectoryToSystemClasspath(baseDirectory: Path) {
+        val driversDir: Path = baseDirectory / "drivers"
+        if (driversDir.exists()) {
+            driversDir.toFile().listFiles().filter { it.name.endsWith(".jar") }.forEach{ addToClasspath(it)}
+        }
+    }
+
+    private fun addToClasspath(file: File) {
+        try {
+            val url = file.toURI().toURL()
+            val classLoader = ClassLoader.getSystemClassLoader() as URLClassLoader
+            val method = URLClassLoader::class.java.getDeclaredMethod("addURL", URL::class.java)
+            method.isAccessible = true
+            method.invoke(classLoader, url)
+        } catch (e: Exception) {
+            throw IllegalStateException("Unable to add to system class loader", e)
+        }
     }
 
     protected fun warnOnDefaultPassword(password: String, paramName: String) {
