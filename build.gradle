@@ -238,21 +238,14 @@ allprojects {
     }
 
     tasks.withType(Test) {
+        maxParallelForks = 6
+        forkEvery = 6
         failFast = project.hasProperty('tests.failFast') ? project.property('tests.failFast').toBoolean() : false
 
         // Prevent the project from creating temporary files outside of the build directory.
         systemProperty 'java.io.tmpdir', buildDir.absolutePath
 
         maxHeapSize = "1g"
-
-        if (project.hasProperty('test.parallel') && project.property('test.parallel').toBoolean()) {
-            maxParallelForks = Runtime.runtime.availableProcessors().intdiv(2) as int ?: 1
-        }
-
-        if (System.getProperty("test.maxParallelForks") != null) {
-            maxParallelForks = Integer.getInteger('test.maxParallelForks')
-            logger.debug("System property test.maxParallelForks found - setting max parallel forks to $maxParallelForks for $project")
-        }
 
         if (project.path.startsWith(':experimental') && System.getProperty("experimental.test.enable") == null) {
             enabled = false
