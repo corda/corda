@@ -28,6 +28,7 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.MAX_MESSAGE_SIZE
 import net.corda.testing.core.SerializationEnvironmentRule
+import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.internal.stubs.CertificateStoreStubs
 import org.apache.activemq.artemis.api.core.RoutingType
@@ -37,6 +38,11 @@ import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import org.mockito.Mockito
+import java.net.InetSocketAddress
+import java.nio.ByteBuffer
+import java.nio.channels.AsynchronousSocketChannel
+import java.util.concurrent.TimeUnit
 
 class BridgeIntegrationTest {
     @Rule
@@ -46,6 +52,8 @@ class BridgeIntegrationTest {
     @Rule
     @JvmField
     val serializationEnvironment = SerializationEnvironmentRule(true)
+
+    private val portAllocation = incrementalPortAllocation(10000)
 
     private abstract class AbstractNodeConfiguration : NodeConfiguration
 
@@ -522,6 +530,65 @@ class BridgeIntegrationTest {
         }
     }
 
+    @Test
+    fun `Health check for inbound port in echo mode`() {
+        val configResource = "/net/corda/bridge/singleprocess/firewall.conf"
+        createNetworkParams(tempFolder.root.toPath())
+        val config = createAndLoadConfigFromResource(tempFolder.root.toPath(), configResource)
+        config.createBridgeKeyStores(DUMMY_BANK_A_NAME)
+
+        // Override some properties from the resource and use dynamically allocated ports
+        val healthCheckPhrase = "ISpeakAMQP!"
+        val sslHandshakeTimeout = 1000L
+        var inboundPort = portAllocation.nextPort()
+        // Use partial mocking to substitute overridden properties; note: they won't be reflected in log when loading config
+        val inboundConfig = Mockito.spy(config.inboundConfig)
+        whenever(inboundConfig?.listeningAddress).thenReturn(NetworkHostAndPort("0.0.0.0", inboundPort))
+        val configMock = Mockito.spy(config)
+        whenever(configMock.sslHandshakeTimeout).thenReturn(sslHandshakeTimeout)
+        whenever(configMock.healthCheckPhrase).thenReturn(healthCheckPhrase)
+        whenever(configMock.inboundConfig).thenReturn(inboundConfig)
+
+        val (artemisServer, artemisClient) = createArtemis()
+        try {
+            installBridgeControlResponder(artemisClient)
+            val bridge = FirewallInstance(configMock, FirewallVersionInfo(1, "1.1", "Dummy", "Test"))
+            val stateFollower = bridge.activeChange.toBlocking().iterator
+            assertEquals(false, stateFollower.next())
+            assertEquals(false, bridge.active)
+            bridge.start()
+            assertEquals(true, stateFollower.next())
+            assertEquals(true, bridge.active)
+            assertEquals(true, serverListening("localhost", inboundPort))
+
+            val address = InetSocketAddress("localhost", inboundPort)
+            // NORMAL_MODE: socket should be closed by SSL handshake timeout
+            AsynchronousSocketChannel.open().use {
+                it.connect(address).get()
+                it.write(ByteBuffer.wrap("XXXX".toByteArray()))
+                assertEquals(-1, it.read(ByteBuffer.allocate(32)).get(2*sslHandshakeTimeout, TimeUnit.MILLISECONDS))
+            }
+            // ECHO_MODE: SSH handshake timeout is not applicable here
+            AsynchronousSocketChannel.open().use {
+                it.connect(address).get()
+                it.write(ByteBuffer.wrap(healthCheckPhrase.toByteArray()))
+                val buf = ByteBuffer.allocate(32)
+                assertEquals(healthCheckPhrase.length, it.read(buf).get(sslHandshakeTimeout, TimeUnit.MILLISECONDS))
+                assertEquals(healthCheckPhrase, String(buf.array(), 0, healthCheckPhrase.length))
+                val nextBytes = it.read(buf);
+                Thread.sleep((sslHandshakeTimeout * 3) / 2);
+                assertEquals(false, nextBytes.isDone) // Make sure that socket is still alive after timeout
+            }
+
+            bridge.stop()
+            assertEquals(false, stateFollower.next())
+            assertEquals(false, bridge.active)
+            assertEquals(false, serverListening("localhost", inboundPort))
+        } finally {
+            artemisClient.stop()
+            artemisServer.stop()
+        }
+    }
 
     private fun createArtemis(): Pair<ArtemisMessagingServer, ArtemisMessagingClient> {
         val baseDirectory = tempFolder.root.toPath()
