@@ -28,6 +28,17 @@ class ErrorCodeLoggingTests {
         }
     }
 
+    @Test
+    fun `When logging is set to error level, there are no other levels logged after node startup`() {
+        driver(DriverParameters(notarySpecs = emptyList())) {
+            val node = startNode(startInSameProcess = false, logLevelOverride = "ERROR").getOrThrow()
+            val logFile = node.logFile()
+
+            val text = logFile.readText()
+            assertThat(text.isEmpty()).isTrue()
+        }
+    }
+
     @StartableByRPC
     @InitiatingFlow
     class MyFlow : FlowLogic<String>() {

@@ -99,7 +99,8 @@ interface DriverDSL {
             verifierType: VerifierType = defaultParameters.verifierType,
             customOverrides: Map<String, Any?> = defaultParameters.customOverrides,
             startInSameProcess: Boolean? = defaultParameters.startInSameProcess,
-            maximumHeapSize: String = defaultParameters.maximumHeapSize
+            maximumHeapSize: String = defaultParameters.maximumHeapSize,
+            logLevelOverride: String? = defaultParameters.logLevelOverride
     ): CordaFuture<NodeHandle> {
         return startNode(defaultParameters.copy(
                 providedName = providedName,
@@ -107,7 +108,8 @@ interface DriverDSL {
                 verifierType = verifierType,
                 customOverrides = customOverrides,
                 startInSameProcess = startInSameProcess,
-                maximumHeapSize = maximumHeapSize
+                maximumHeapSize = maximumHeapSize,
+                logLevelOverride = logLevelOverride
         ))
     }
 

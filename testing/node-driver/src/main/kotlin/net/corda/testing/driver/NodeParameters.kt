@@ -20,6 +20,8 @@ import net.corda.testing.node.User
  * @property maximumHeapSize The maximum JVM heap size to use for the node. Defaults to 512 MB.
  * @property additionalCordapps Additional [TestCordapp]s that this node will have available, in addition to the ones common to all nodes
  * managed by the [DriverDSL].
+ * @property logLevelOverride log level to be passed as parameter to an out of process node. ERROR, WARN, INFO, DEBUG, TRACE. This overrides debug port
+ * log level argument.
  */
 @Suppress("unused")
 data class NodeParameters(
@@ -30,7 +32,8 @@ data class NodeParameters(
         val startInSameProcess: Boolean? = null,
         val maximumHeapSize: String = "512m",
         val additionalCordapps: Collection<TestCordapp> = emptySet(),
-        val flowOverrides: Map<out Class<out FlowLogic<*>>, Class<out FlowLogic<*>>> = emptyMap()
+        val flowOverrides: Map<out Class<out FlowLogic<*>>, Class<out FlowLogic<*>>> = emptyMap(),
+        val logLevelOverride : String? = null
 ) {
     /**
      * Create a new node parameters object with default values. Each parameter can be specified with its wither method which returns a copy
