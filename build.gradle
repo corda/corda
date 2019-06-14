@@ -230,6 +230,12 @@ allprojects {
             attributes('Automatic-Module-Name': "net.corda.${task.project.name.replaceAll('-', '.')}")
         }
     }
+    
+    tasks.withType(Test){
+        if (name.contains("integrationTest")){
+            maxParallelForks = 6
+        }
+    }
 
     tasks.withType(Test) {
         failFast = project.hasProperty('tests.failFast') ? project.property('tests.failFast').toBoolean() : false
