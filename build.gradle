@@ -233,7 +233,7 @@ allprojects {
 
     tasks.withType(Test){
         if (name.contains("integrationTest")){
-            maxParallelForks = 1
+            maxParallelForks = 2
             forkEvery = 10
         }
     }

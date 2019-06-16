@@ -111,7 +111,9 @@ data class WebserverHandle(
 /**
  * An abstract helper class which is used within the driver to allocate unused ports for testing.
  */
-class PortAllocation(val startingPoint: Int = 10000, fileName: File? = File(System.getProperty("user.home"), "allocator.bin")) {
+class PortAllocation(val ignored: Int = 10000, fileName: File? = File(System.getProperty("user.home"), "allocator.bin")) {
+
+    val startingPoint: Int = 10_000
 
     /** Get the next available port via [nextPort] and then return a [NetworkHostAndPort] **/
     fun nextHostAndPort() = NetworkHostAndPort("localhost", nextPort())
@@ -120,7 +122,7 @@ class PortAllocation(val startingPoint: Int = 10000, fileName: File? = File(Syst
      * An implementation of [PortAllocation] which allocates ports sequentially
      */
     companion object {
-        const val FIRST_EPHEMERAL_PORT = 49152L
+        const val FIRST_EPHEMERAL_PORT = 20_000L
         private val UNSAFE: Unsafe = getUnsafe()
         private fun getUnsafe(): Unsafe {
             val f = Unsafe::class.java.getDeclaredField("theUnsafe")
