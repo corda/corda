@@ -210,7 +210,7 @@ tasks.withType(JavaCompile) {
 tasks.withType(Test) {
     maxHeapSize = "2g"
     // fork a new test process for every test class
-    forkEvery = 10
+    forkEvery = 5
 }
 
 task integrationTest(type: Test) {

@@ -28,7 +28,7 @@ data class NodeParameters(
         val verifierType: VerifierType = VerifierType.InMemory,
         val customOverrides: Map<String, Any?> = emptyMap(),
         val startInSameProcess: Boolean? = null,
-        val maximumHeapSize: String = "512m",
+        val maximumHeapSize: String = "1024m",
         val additionalCordapps: Collection<TestCordapp> = emptySet(),
         val flowOverrides: Map<out Class<out FlowLogic<*>>, Class<out FlowLogic<*>>> = emptyMap()
 ) {

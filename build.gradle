@@ -234,6 +234,7 @@ allprojects {
     tasks.withType(Test){
         if (name.contains("integrationTest")){
             maxParallelForks = 2
+            forkEvery = 5
         }
     }
 
