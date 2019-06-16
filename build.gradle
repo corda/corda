@@ -231,12 +231,7 @@ allprojects {
         }
     }
 
-    tasks.withType(Test){
-        if (name.contains("integrationTest")){
-            maxParallelForks = 2
-            forkEvery = 10
-        }
-    }
+
 
     tasks.withType(Test) {
         maxParallelForks = 6
@@ -256,6 +251,13 @@ allprojects {
         // See https://github.com/gradle/gradle/issues/5269 and https://github.com/gradle/gradle/pull/6419
         extensions.configure(TypeOf.typeOf(JacocoTaskExtension)) { ex ->
             ex.append = false
+        }
+    }
+
+    tasks.withType(Test){
+        if (name.contains("integrationTest")){
+            maxParallelForks = 2
+            forkEvery = 10
         }
     }
 

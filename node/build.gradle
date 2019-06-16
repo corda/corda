@@ -218,7 +218,7 @@ task integrationTest(type: Test) {
     classpath = sourceSets.integrationTest.runtimeClasspath
     systemProperty 'testing.global.port.allocation.enabled', true
     systemProperty 'testing.global.port.allocation.starting.port', 10000
-    maxParallelForks = 6
+    maxParallelForks = 8
 }
 
 // quasar exclusions upon agent code instrumentation at run-time
