@@ -233,14 +233,14 @@ allprojects {
 
     tasks.withType(Test){
         if (name.contains("integrationTest")){
-            maxParallelForks = 2
-            forkEvery = 5
+            maxParallelForks = 1
+            forkEvery = 10
         }
     }
 
     tasks.withType(Test) {
         maxParallelForks = 6
-        forkEvery = 6
+        forkEvery = 10
         failFast = project.hasProperty('tests.failFast') ? project.property('tests.failFast').toBoolean() : false
 
         // Prevent the project from creating temporary files outside of the build directory.
