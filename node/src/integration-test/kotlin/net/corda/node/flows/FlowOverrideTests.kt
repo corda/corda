@@ -15,6 +15,7 @@ import net.corda.testing.driver.driver
 import net.corda.testing.node.internal.cordappForClasses
 import org.hamcrest.CoreMatchers.`is`
 import org.junit.Assert.assertThat
+import org.junit.Ignore
 import org.junit.Test
 
 class FlowOverrideTests {
@@ -80,6 +81,7 @@ class FlowOverrideTests {
         }
     }
 
+    @Ignore("Keeps hanging in TC environment")
     @Test
     fun `should use the overriden implementation of a responding flow`() {
         val flowOverrides = mapOf(Ping::class.java to Pong::class.java)
