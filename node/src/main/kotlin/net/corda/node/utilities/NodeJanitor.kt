@@ -8,7 +8,6 @@ import net.corda.node.services.config.ProcessedMessageCleanup
 import net.corda.node.services.messaging.P2PMessageDeduplicator
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import org.hibernate.Session
-import java.sql.SQLException
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
@@ -16,12 +15,13 @@ import java.util.stream.Stream
 
 object NodeJanitor {
     private val log = loggerFor<NodeJanitor>()
+    const val maxRetainForDays = 365 // One year
 
     /** Removes old processed message records from the database, maintained by the [P2PMessageDeduplicator]. */
     fun cleanUpProcessedMessages(database: CordaPersistence, clock: Clock, retainForDays: Int, retainPerSender: Int) {
-        if (retainForDays < 1 || retainPerSender < 1) {
+        if (retainForDays < 1 || retainForDays > maxRetainForDays || retainPerSender < 1) {
             log.error("Unable to perform processed message id table cleanup, incorrect configuration values specified: " +
-                    "both ${ProcessedMessageCleanup::retainForDays.name} and ${ProcessedMessageCleanup::retainPerSender.name} must be positive. " +
+                    "${ProcessedMessageCleanup::retainForDays.name} must be within the range of [1, $maxRetainForDays] and ${ProcessedMessageCleanup::retainPerSender.name} must be positive. " +
                     "Given: ${ProcessedMessageCleanup::retainForDays.name} = $retainForDays, " +
                     "${ProcessedMessageCleanup::retainPerSender.name} = $retainPerSender")
             return
@@ -44,11 +44,10 @@ object NodeJanitor {
                     removed += leaveOnlyLatestPerSender(session, retainPerSender)
                 }
             }
-        } catch (e: SQLException) {
+            log.info("Finished cleaning up processed message id table, total records removed: $removed, total duration: $totalElapsedTime")
+        } catch (e: Exception) {
             log.warn("Unable to perform deduplicated message cleanup", e)
         }
-
-        log.info("Finished cleaning up processed message id table, total records removed: $removed, total duration: $totalElapsedTime")
     }
 
     /** Removes all processed messages older than the specified time. */

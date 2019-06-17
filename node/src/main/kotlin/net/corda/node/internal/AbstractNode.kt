@@ -84,6 +84,7 @@ import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_ROOT_CA
 import net.corda.nodeapi.internal.crypto.X509Utilities.DEFAULT_VALIDITY_WINDOW
 import net.corda.nodeapi.internal.crypto.X509Utilities.DISTRIBUTED_NOTARY_ALIAS_PREFIX
 import net.corda.nodeapi.internal.crypto.X509Utilities.NODE_IDENTITY_ALIAS_PREFIX
+import net.corda.nodeapi.internal.cryptoservice.securosys.PrimusXCryptoService
 import net.corda.nodeapi.internal.persistence.*
 import net.corda.tools.shell.InteractiveShell
 import org.apache.activemq.artemis.utils.ReusableLatch
@@ -112,6 +113,7 @@ import java.util.concurrent.TimeUnit.SECONDS
 import java.util.function.Consumer
 import javax.persistence.EntityManager
 import kotlin.math.max
+import kotlin.math.min
 import net.corda.core.crypto.generateKeyPair as cryptoGenerateKeyPair
 
 /**
@@ -428,6 +430,19 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         return max(
                 1000, // The minimum number of messages to retain for the default configuration
                 (configuration.enterpriseConfiguration.tuning.p2pConfirmationWindowSize / 512) + 1 // Assumed message size is 0.5 KB
+        )
+    }
+
+    /**
+     * By default the node will retain entries in the message deduplication table for up to the number of days specified by the event
+     * horizon value – this is the number of days a node is allowed to be offline before being evicted from the network.
+     *
+     * However, since some networks may set the event horizon be arbitrarily large, we cap the retain for days value to 1 year.
+     */
+    private fun defaultRetainForDays(eventHorizon: Duration): Int {
+        return min(
+                NodeJanitor.maxRetainForDays,
+                eventHorizon.toDays().toInt()
         )
     }
 
@@ -878,7 +893,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         val retainPerSender = messageCleanupConfig?.retainPerSender
                 ?: defaultRetainPerSender()
         val retainForDays = messageCleanupConfig?.retainForDays
-                ?: eventHorizon.toDays().toInt()
+                ?: defaultRetainForDays(eventHorizon)
 
         NodeJanitor.cleanUpProcessedMessages(database, platformClock, retainForDays, retainPerSender)
     }
@@ -997,6 +1012,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             is AzureKeyVaultCryptoService -> log.info("Private key '$alias' stored in Azure KeyVault. Certificate-chain stored in node keystore.")
             is UtimacoCryptoService -> log.info("Private key '$alias' stored in Utimaco HSM.  Certificate-chain stored in node keystore.")
             is FutureXCryptoService -> log.info("Private key '$alias' stored in FutureX HSM.  Certificate-chain stored in node keystore.")
+            is PrimusXCryptoService -> log.info("Private key '$alias' stored in PrimusX HSM.  Certificate-chain stored in node keystore.")
             else -> log.info("Private key '$alias' and its certificate-chain stored successfully.")
         }
         return PartyAndCertificate(X509Utilities.buildCertPath(identityCertPath))

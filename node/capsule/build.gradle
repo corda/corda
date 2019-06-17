@@ -57,6 +57,8 @@ task buildCordaJAR(type: FatCapsule, dependsOn: project(':node').tasks.jar) {
     exclude('**/LunaProvider.jar')
     // Exclude the binaries for the Futurex HSM as we cannot distribute them.
     exclude('**/sunpkcs11-fx.jar')
+    // Exclude the binaries for the PrimusX HSM as we cannot distribute them.
+    exclude('**/primusX.jar')
     
     capsuleManifest {
         applicationVersion = corda_release_version

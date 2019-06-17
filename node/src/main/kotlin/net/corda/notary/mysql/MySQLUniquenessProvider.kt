@@ -6,8 +6,6 @@ import com.codahale.metrics.SlidingWindowReservoir
 import com.google.common.annotations.VisibleForTesting
 import com.google.common.base.Stopwatch
 import com.google.common.collect.Queues
-import com.mysql.cj.jdbc.exceptions.CommunicationsException
-import com.mysql.cj.jdbc.exceptions.MySQLTransactionRollbackException
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import net.corda.core.concurrent.CordaFuture
@@ -129,7 +127,13 @@ class MySQLUniquenessProvider(
     /** Track the number of states in the queue at insert. **/
     private val requestQueueStateCount = metrics.histogram("$metricPrefix.requestQueue.queuedStates")
 
-    private val dataSource = HikariDataSource(HikariConfig(config.dataSource))
+    private val dataSource = try {
+        HikariDataSource(HikariConfig(config.dataSource))
+    } catch (e: Exception) {
+        handleDriverNotFound(e.cause)
+        throw e
+    }
+
     private val connectionRetries = config.connectionRetries
 
     /**
@@ -525,13 +529,13 @@ class MySQLUniquenessProvider(
                     } catch (e: Exception) {
                         when (e) {
                             is BatchUpdateException, // Occurs when a competing transaction commits conflicting input states
-                            is MySQLTransactionRollbackException -> {
+                            is SQLTransactionRollbackException -> {
                                 log.warn("Database transaction conflict, retrying", e)
                                 it.rollback()
                                 rollbackCounter.inc()
                                 continue@sameConnection // Retrying using the same connection
                             }
-                            is SQLRecoverableException, is CommunicationsException, // Occurs when an issue is encountered during execute() (e.g. connection lost)
+                            is SQLRecoverableException, // Occurs when an issue is encountered during execute() (e.g. connection lost)
                             is SQLNonTransientConnectionException -> { // Occurs when an issue is encountered during commit() (e.g. connection lost)
                                 log.warn("Lost connection to the database, retrying", e)
                                 break@sameConnection // Retrying using a new connection
@@ -557,6 +561,17 @@ class MySQLUniquenessProvider(
             it.createStatement().execute(createRequestLogTable)
             it.createStatement().execute(createCommittedTransactionsTable)
             it.commit()
+        }
+    }
+
+    /** Throw a more helpful exception explaining how to fix the issue. */
+    private fun handleDriverNotFound(e: Throwable?) {
+        if (e is SQLException) {
+            val causeMessage = e.message
+            if (causeMessage != null && causeMessage.contains("No suitable driver")) {
+                throw IllegalStateException("Unable to start the notary service – JDBC driver for MySQL not found." +
+                        " Please place the appropriate driver JAR into the drivers/ directory and try again.")
+            }
         }
     }
 
