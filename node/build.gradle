@@ -174,16 +174,12 @@ dependencies {
     compile group: 'com.ea.agentloader', name: 'ea-agent-loader', version: "${eaagentloader_version}"
 
     // BFT-Smart dependencies
-    compile 'commons-codec:commons-codec:1.10'
     compile 'com.github.bft-smart:library:master-v1.1-beta-g6215ec8-87'
 
     // Java Atomix: RAFT library
     compile 'io.atomix.copycat:copycat-client:1.2.3'
     compile 'io.atomix.copycat:copycat-server:1.2.3'
     compile 'io.atomix.catalyst:catalyst-netty:1.1.2'
-
-    // For the MySQLUniquenessProvider
-    compile group: 'mysql', name: 'mysql-connector-java', version: '6.0.6'
 
     // Jetty dependencies for NetworkMapClient test.
     // Web stuff: for HTTP[S] servlets

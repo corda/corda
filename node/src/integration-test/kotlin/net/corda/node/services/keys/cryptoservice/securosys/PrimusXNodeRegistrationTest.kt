@@ -25,7 +25,7 @@ class PrimusXNodeRegistrationTest: AbstractNodeRegistrationTest() {
     override fun configPath(): Path = javaClass.getResource("primusx.conf").toPath()
 
     override fun getCryptoService(x500Principal: X500Principal, config: Path): CryptoService {
-        val config = ConfigFactory.parseFile(configPath().toFile()).resolve().parseAs(PrimusXCryptoService.PrimusXConfiguration::class)
+        val config = ConfigFactory.parseFile(configPath().toFile()).resolve().parseAs(PrimusXCryptoService.Companion.PrimusXConfiguration::class)
 
         val provider = PrimusProvider()
         val keyStore = KeyStore.getInstance(PrimusProvider.getKeyStoreTypeName(), provider)
@@ -33,7 +33,7 @@ class PrimusXNodeRegistrationTest: AbstractNodeRegistrationTest() {
     }
 
     override fun deleteExistingEntries() {
-        val config = ConfigFactory.parseFile(configPath().toFile()).resolve().parseAs(PrimusXCryptoService.PrimusXConfiguration::class)
+        val config = ConfigFactory.parseFile(configPath().toFile()).resolve().parseAs(PrimusXCryptoService.Companion.PrimusXConfiguration::class)
         val provider = PrimusProvider()
         val keyStore = KeyStore.getInstance(PrimusProvider.getKeyStoreTypeName(), provider)
         val securosysCryptoService = PrimusXCryptoService(keyStore, PrimusProvider(), auth = { config })

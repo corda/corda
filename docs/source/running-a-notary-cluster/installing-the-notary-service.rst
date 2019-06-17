@@ -4,7 +4,7 @@ Setting up the Notary Service
 
 In the previous section of this tutorial we set up a Percona cluster.
 
-On top of the Percona cluster we're deploying three notary worker nodes ``notary-{1,2,3}`` and
+On top of the Percona XtraDB Cluster we're deploying three notary worker nodes ``notary-{1,2,3}`` and
 a single regular Corda node ``node-1`` that runs the notary health-check CorDapp.
 
 If you're deploying VMs in your environment you might need to adjust the host names accordingly.
@@ -32,6 +32,13 @@ each notary worker needs to have access to its own local node DB. See the
 
   Omit ``compatibilityZoneURL`` and set ``devMode = true`` when using the bootstrapper.
 
+.. _mysql_driver:
+
+MySQL JDBC Driver
++++++++++++++++++
+
+Each worker node requires a MySQL JDBC driver to be placed in the ``drivers`` directory to be able to communicate with the Percona XtraDB Cluster.
+The official driver can be obtained from Maven or the `MySQL Connector/J download page <https://dev.mysql.com/doc/connector-j/8.0/en/connector-j-installing.html>`_.
 
 Next Steps
 ++++++++++
