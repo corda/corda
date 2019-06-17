@@ -36,15 +36,20 @@ class PortAllocationTest {
     @Test(timeout = 120_000)
     fun `should support multiprocess port allocation`() {
 
+        println("Starting multiprocess port allocation test")
         val allocationFile = Files.newTemporaryFile().also { it.deleteOnExit() }.absolutePath
         val spinnerFile = Files.newTemporaryFile().also { it.deleteOnExit() }.absolutePath
         val process1 = buildJvmProcess(allocationFile, spinnerFile, 1)
         val process2 = buildJvmProcess(allocationFile, spinnerFile, 2)
 
+        println("Started child processes")
+
         val processes = listOf(process1, process2)
 
         val spinnerBackingFile = RandomAccessFile(spinnerFile, "rw")
+        println("Mapped spinner file")
         val spinnerBuffer = spinnerBackingFile.channel.map(FileChannel.MapMode.READ_WRITE, 0, 512)
+        println("Created spinner buffer")
 
         var timeWaited = 0L
         val timeStartedWaiting = System.currentTimeMillis()
@@ -56,11 +61,15 @@ class PortAllocationTest {
         }
 
         //GO!
+        println("Instructing child processes to start allocating ports")
         spinnerBuffer.putShort(0, 8)
+        println("Waiting for child processes to terminate")
         processes.forEach { it.waitFor(1, TimeUnit.MINUTES) }
 
         val process1Output = process1.inputStream.reader().readLines().toSet()
         val process2Output = process2.inputStream.reader().readLines().toSet()
+
+        println("child process captured")
 
         Assert.assertThat(process1Output.size, `is`(10_000))
         Assert.assertThat(process2Output.size, `is`(10_000))
