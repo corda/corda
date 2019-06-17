@@ -8,7 +8,6 @@ import net.corda.core.node.StatesToRecord
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.QueryCriteria
-import net.corda.core.toFuture
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
@@ -77,7 +76,7 @@ class ReferencedStatesFlowTests {
         // 2. Use the "newRefState" a transaction involving another party (nodes[1]) which creates a new state. They should store the new state and the reference state.
         val newTx = nodes[0].services.startFlow(UseRefState(nodes[1].info.legalIdentities.first(), newRefState.state.data.linearId)).resultFuture.getOrThrow()
         // Wait until node 1 stores the new tx.
-        nodes[1].services.validatedTransactions.updates.filter { it.id == newTx.id }.toFuture().getOrThrow()
+        nodes[1].services.validatedTransactions.trackTransaction(newTx.id).getOrThrow()
         // Check that nodes[1] has finished recording the transaction (and updating the vault.. hopefully!).
         // nodes[1] should have two states. The newly created output of type "Regular.State" and the reference state created by nodes[0].
         assertEquals(2, nodes[1].services.vaultService.queryBy<LinearState>().states.size)
@@ -108,7 +107,7 @@ class ReferencedStatesFlowTests {
         // 2. Use the "newRefState" a transaction involving another party (nodes[1]) which creates a new state. They should store the new state and the reference state.
         val newTx = nodes[0].services.startFlow(UseRefState(nodes[1].info.legalIdentities.first(), newRefState.state.data.linearId)).resultFuture.getOrThrow()
         // Wait until node 1 stores the new tx.
-        nodes[1].services.validatedTransactions.updates.filter { it.id == newTx.id }.toFuture().getOrThrow()
+        nodes[1].services.validatedTransactions.trackTransaction(newTx.id).getOrThrow()
         // Check that nodes[1] has finished recording the transaction (and updating the vault.. hopefully!).
         val allRefStates = nodes[1].services.vaultService.queryBy<LinearState>()
         // nodes[1] should have two states. The newly created output and the reference state created by nodes[0].
@@ -125,7 +124,7 @@ class ReferencedStatesFlowTests {
         val newTx = nodes[0].services.startFlow(UseRefState(nodes[1].info.legalIdentities.first(), newRefState.state.data.linearId))
                 .resultFuture.getOrThrow()
         // Wait until node 1 stores the new tx.
-        nodes[1].services.validatedTransactions.updates.filter { it.id == newTx.id }.toFuture().getOrThrow()
+        nodes[1].services.validatedTransactions.trackTransaction(newTx.id).getOrThrow()
         // Check that nodes[1] has finished recording the transaction (and updating the vault.. hopefully!).
         // nodes[1] should have two states. The newly created output of type "Regular.State" and the reference state created by nodes[0].
         assertEquals(2, nodes[1].services.vaultService.queryBy<LinearState>().states.size)
@@ -144,13 +143,13 @@ class ReferencedStatesFlowTests {
         assertEquals(Vault.StateStatus.UNCONSUMED, theReferencedStateOnNodeZero.statesMetadata.single().status)
 
         // 3. Update the reference state but don't share the update.
-        val updatedRefTx = nodes[0].services.startFlow(UpdateRefState(newRefState)).resultFuture.getOrThrow()
+        nodes[0].services.startFlow(UpdateRefState(newRefState)).resultFuture.getOrThrow()
 
         // 4. Use the evolved state as a reference state.
         val updatedTx = nodes[0].services.startFlow(UseRefState(nodes[1].info.legalIdentities.first(), newRefState.state.data.linearId))
                 .resultFuture.getOrThrow()
         // Wait until node 1 stores the new tx.
-        nodes[1].services.validatedTransactions.updates.filter { it.id == updatedTx.id }.toFuture().getOrThrow()
+        nodes[1].services.validatedTransactions.trackTransaction(updatedTx.id).getOrThrow()
         // Check that nodes[1] has finished recording the transaction (and updating the vault.. hopefully!).
         // nodes[1] should have four states. The originals, plus the newly created output of type "Regular.State" and the reference state created by nodes[0].
         assertEquals(4, nodes[1].services.vaultService.queryBy<LinearState>(QueryCriteria.VaultQueryCriteria(status = Vault.StateStatus.ALL)).states.size)
@@ -178,7 +177,7 @@ class ReferencedStatesFlowTests {
                 .resultFuture.getOrThrow()
 
         // Wait until node 1 stores the new tx.
-        nodes[1].services.validatedTransactions.updates.filter { it.id == newTx.id }.toFuture().getOrThrow()
+        nodes[1].services.validatedTransactions.trackTransaction(newTx.id).getOrThrow()
         // Check that nodes[1] has finished recording the transaction (and updating the vault.. hopefully!).
         // nodes[1] should have two states. The newly created output of type "Regular.State" and the reference state created by nodes[0].
         assertEquals(2, nodes[1].services.vaultService.queryBy<LinearState>().states.size)
