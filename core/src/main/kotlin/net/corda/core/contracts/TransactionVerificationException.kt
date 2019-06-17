@@ -266,7 +266,6 @@ abstract class TransactionVerificationException(val txId: SecureHash, message: S
     /**
      * Thrown when multiple attachments provide the same file when building the AttachmentsClassloader for a transaction.
      */
-    @CordaSerializable
     @KeepForDJVM
     class OverlappingAttachmentsException(txId: SecureHash, val path: String) : TransactionVerificationException(txId, "Multiple attachments define a file at $path.", null)
 
@@ -275,20 +274,17 @@ abstract class TransactionVerificationException(val txId: SecureHash, message: S
      * the [txId] will always be [SecureHash.zeroHash] because package ownership is an error with a particular attachment,
      * and because attachment classloaders are reused this is independent of any particular transaction.
      */
-    @CordaSerializable
     class PackageOwnershipException(txId: SecureHash, @Suppress("unused") val attachmentHash: AttachmentId, @Suppress("unused") val invalidClassName: String, val packageName: String) : TransactionVerificationException(txId,
             """The attachment JAR: $attachmentHash containing the class: $invalidClassName is not signed by the owner of package $packageName specified in the network parameters.
            Please check the source of this attachment and if it is malicious contact your zone operator to report this incident.
            For details see: https://docs.corda.net/network-map.html#network-parameters""".trimIndent(), null)
 
-    @CordaSerializable
     class InvalidAttachmentException(txId: SecureHash, @Suppress("unused") val attachmentHash: AttachmentId) : TransactionVerificationException(txId,
             "The attachment $attachmentHash is not a valid ZIP or JAR file.".trimIndent(), null)
 
     // TODO: Make this descend from TransactionVerificationException so that untrusted attachments cause flows to be hospitalized.
     /** Thrown during classloading upon encountering an untrusted attachment (eg. not in the [TRUSTED_UPLOADERS] list) */
     @KeepForDJVM
-    @CordaSerializable
     class UntrustedAttachmentsException(val txId: SecureHash, val ids: List<SecureHash>) :
             CordaException("Attempting to load untrusted transaction attachments: $ids. " +
                     "At this time these are not loadable because the DJVM sandbox has not yet been integrated. " +

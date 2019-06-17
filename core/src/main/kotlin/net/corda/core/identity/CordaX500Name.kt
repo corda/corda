@@ -83,12 +83,12 @@ data class CordaX500Name(val commonName: String?,
         @JvmStatic
         fun build(principal: X500Principal): CordaX500Name {
             val attrsMap = principal.toAttributesMap(supportedAttributes)
-            val CN = attrsMap[BCStyle.CN]?.toString()
-            val OU = attrsMap[BCStyle.OU]?.toString()
-            val O = requireNotNull(attrsMap[BCStyle.O]?.toString()) { "Corda X.500 names must include an O attribute" }
-            val L = requireNotNull(attrsMap[BCStyle.L]?.toString()) { "Corda X.500 names must include an L attribute" }
-            val ST = attrsMap[BCStyle.ST]?.toString()
-            val C = requireNotNull(attrsMap[BCStyle.C]?.toString()) { "Corda X.500 names must include an C attribute" }
+            val CN = attrsMap[BCStyle.CN]
+            val OU = attrsMap[BCStyle.OU]
+            val O = requireNotNull(attrsMap[BCStyle.O]) { "Corda X.500 names must include an O attribute" }
+            val L = requireNotNull(attrsMap[BCStyle.L]) { "Corda X.500 names must include an L attribute" }
+            val ST = attrsMap[BCStyle.ST]
+            val C = requireNotNull(attrsMap[BCStyle.C]) { "Corda X.500 names must include an C attribute" }
             return CordaX500Name(CN, OU, O, L, ST, C)
         }
 
