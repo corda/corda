@@ -1,8 +1,8 @@
 package com.r3.ha.utilities
 
+import com.r3.ha.utilities.RegistrationTool.Companion.x500PrincipalToTLSAlias
 import net.corda.cliutils.CommonCliConstants.BASE_DIR
 import net.corda.cliutils.ExitCodes
-import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.copyTo
 import net.corda.core.internal.div
 import net.corda.core.internal.exists
@@ -113,8 +113,7 @@ class RegistrationToolTest {
         val cryptoService = UtimacoCryptoService.fromConfigurationFile((workingDirectory / "utimaco_config.yml"))
         val bridgeKeyStore = X509KeyStore.fromFile((workingDirectory / "bridge.jks"), "password", createNew = false)
         listOf("PartyA", "PartyB", "PartyC").forEach {
-            val nameHash = SecureHash.sha256(X500Principal("O=$it,L=London,C=GB").toString())
-            val alias = "$CORDA_CLIENT_TLS-$nameHash"
+            val alias = x500PrincipalToTLSAlias(X500Principal("O=$it,L=London,C=GB"))
             val nodeKeyStore = X509KeyStore.fromFile((workingDirectory / it / "certificates" / "sslkeystore.jks"), "cordacadevpass", createNew = false)
             assertTrue(bridgeKeyStore.contains(alias))
             assertEquals(nodeKeyStore.getPublicKey(CORDA_CLIENT_TLS), bridgeKeyStore.getPublicKey(alias))

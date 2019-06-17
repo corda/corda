@@ -34,8 +34,8 @@ import sun.security.x509.X500Name
 import java.nio.charset.Charset
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.util.*
 import javax.security.auth.x500.X500Principal
-import java.util.UUID
 
 const val ARTEMIS_HSM_KEYSTORE = "artemishsm.jks"  // Store only the public key for Bridge Artemis link
 
@@ -245,8 +245,8 @@ class BridgeHSMTest : IntegrationTest() {
     }
 
     private fun getTLSKeyAlias(x500Principal: X500Principal): String {
-        val nameHash = SecureHash.sha256(x500Principal.toString()).toString().toLowerCase()
-        // Key password need to be same as the keystore password
-        return "${X509Utilities.CORDA_CLIENT_TLS}-$nameHash"
+        val nameHash = SecureHash.sha256(x500Principal.toString()).toString()
+        // Must also be lower case to prevent problems with .JKS aliases.
+        return "${X509Utilities.CORDA_CLIENT_TLS}-$nameHash".toLowerCase()
     }
 }

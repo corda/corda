@@ -42,11 +42,10 @@ import net.corda.serialization.internal.AMQP_RPC_CLIENT_CONTEXT
 import net.corda.serialization.internal.SerializationFactoryImpl
 import picocli.CommandLine
 import picocli.CommandLine.Option
-import java.lang.IllegalArgumentException
-import java.lang.IllegalStateException
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.ConcurrentLinkedQueue
+import javax.security.auth.x500.X500Principal
 import kotlin.concurrent.thread
 
 class RegistrationTool : CordaCliWrapper("node-registration", "Corda registration tool for registering 1 or more node with the Corda Network, using provided node configuration(s)." +
@@ -60,6 +59,12 @@ class RegistrationTool : CordaCliWrapper("node-registration", "Corda registratio
                 CordaVersionProvider.vendor)
 
         private val logger by lazy { contextLogger() }
+
+        internal fun x500PrincipalToTLSAlias(x500Principal: X500Principal): String {
+            val nameHash = SecureHash.sha256(x500Principal.toString())
+            // Note we use lower case as .JKS aliases are squashed to lowercase during the insert procedure and this breaks any link to the HSM alias.
+            return "${X509Utilities.CORDA_CLIENT_TLS}-$nameHash".toLowerCase()
+        }
     }
 
     @Option(names = ["-b", BASE_DIR], paramLabel = "FOLDER", description = ["The node working directory where all the files are kept."])
@@ -112,8 +117,7 @@ class RegistrationTool : CordaCliWrapper("node-registration", "Corda registratio
                                     .parseAsNodeConfiguration()
                                     .value()
                             val sslPublicKey = if (bridgeCryptoService != null) {
-                                val nameHash = SecureHash.sha256(legalName.x500Principal.toString())
-                                val alias = "${X509Utilities.CORDA_CLIENT_TLS}-$nameHash"
+                                val alias = x500PrincipalToTLSAlias(legalName.x500Principal) // must be lower case to stay consistent with public .JKS file
                                 bridgeCryptoService.generateKeyPair(alias, X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
                             } else {
                                 null
