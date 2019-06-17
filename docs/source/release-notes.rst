@@ -1,9 +1,16 @@
-.. contents::
+Release notes
+-------------
 
-Release notes for Corda 4.1
-===========================
+.. contents:: 
+    :depth: 2
+
 
 .. _release_notes_v4_1:
+
+
+
+Corda 4.1
+=========
 
 It's been a little under 3 1/2 months since the release of Corda 4.0 and all of the brand new features that added to the powerful suite
 of tools Corda offers. Now, following the release of Corda Enterprise 4.0, we are proud to release Corda 4.1, bringing over 150 fixes
@@ -159,10 +166,10 @@ Issues Fixed
 * RPC client disconnects shouldn't be a warning
 * Hibernate logs warning and errors for some conditions we handle
 
-Release notes for Corda 4
-=========================
-
 .. _release_notes_v4_0:
+
+Corda 4
+=======
 
 Welcome to the Corda 4 release notes. Please read these carefully to understand what's new in this
 release and how the changes can help you. Just as prior releases have brought with them commitments
