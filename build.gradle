@@ -51,8 +51,8 @@ buildscript {
     ext.jersey_version = '2.28'
     ext.servlet_version = '4.0.1'
     ext.assertj_version = '3.12.2'
-    ext.slf4j_version = '1.7.25'
-    ext.log4j_version = '2.9.1'
+    ext.slf4j_version = '1.7.26'
+    ext.log4j_version = '2.11.2'
     ext.bouncycastle_version = constants.getProperty("bouncycastleVersion")
     ext.guava_version = constants.getProperty("guavaVersion")
     ext.caffeine_version = constants.getProperty("caffeineVersion")
