@@ -287,6 +287,10 @@ can query the 'status' end-point located at ``http://localhost:[port]/api/status
 
 Running the example CorDapp from IntelliJ
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+* Load the project by opening the project folder (Do not use "Import Project" functionality by IntelliJ because it will overwrite the pre-existing configuration) 
+
+* Follow the prompt to ``import Graddle project``
+
 * Select the ``Run Example CorDapp - Kotlin`` run configuration from the drop-down menu at the top right-hand side of
   the IDE
 
@@ -294,6 +298,8 @@ Running the example CorDapp from IntelliJ
 
   .. image:: resources/run-config-drop-down.png
     :width: 400
+
+* Select ``cordapp-example.workflows-kotlin.test`` for the Use classpath of module field, and then click Run
 
 * To stop the nodes, press the red square button at the top right-hand side of the IDE, next to the run configurations
 
@@ -386,11 +392,6 @@ following list:
     net.corda.core.flows.ContractUpgradeFlow$Authorise
     net.corda.core.flows.ContractUpgradeFlow$Deauthorise
     net.corda.core.flows.ContractUpgradeFlow$Initiate
-    net.corda.finance.flows.CashExitFlow
-    net.corda.finance.flows.CashIssueAndPaymentFlow
-    net.corda.finance.flows.CashIssueFlow
-    net.corda.finance.flows.CashPaymentFlow
-    net.corda.finance.internal.CashConfigDataFlow
 
 Creating an IOU via the interactive shell
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
