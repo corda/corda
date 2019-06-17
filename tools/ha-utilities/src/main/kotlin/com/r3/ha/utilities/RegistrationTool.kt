@@ -93,6 +93,7 @@ class RegistrationTool : CordaCliWrapper("node-registration", "Corda registratio
 
     override fun runProgram(): Int {
         return try {
+            HAUtilities.addJarsInDriversDirectoryToSystemClasspath(baseDirectory)
             validateNodeHsmConfigs(configFiles)
             val bridgeCryptoService = makeBridgeCryptoService(bridgeConfigFile)
             // Parallel processing is beneficial as it is possible to submit multiple CSR in close succession
@@ -268,19 +269,27 @@ class RegistrationTool : CordaCliWrapper("node-registration", "Corda registratio
 
     private fun makeBridgeCryptoService(configFile: Path?): CryptoService? {
         return if (configFile != null) {
-            // Get CryptoService type from bridge configuration
-            val bridgeConfig = ConfigHelper.loadConfig(configFile.parent, configFile)
-            if (bridgeConfig.isEmpty || !bridgeConfig.hasPath("publicCryptoServiceConfig")) {
-                throw IllegalArgumentException("Bridge configuration file missing publicCryptoServiceConfig property.")
-            }
+            var bridgeCryptoServiceName: SupportedCryptoServices? = null
+            try {
+                // Get CryptoService type from bridge configuration
+                val bridgeConfig = ConfigHelper.loadConfig(configFile.parent, configFile)
+                if (bridgeConfig.isEmpty || !bridgeConfig.hasPath("publicCryptoServiceConfig")) {
+                    throw IllegalArgumentException("Bridge configuration file missing publicCryptoServiceConfig property.")
+                }
 
-            val bridgeCryptoServiceConfig = bridgeConfig.getConfig("publicCryptoServiceConfig")
-            if (bridgeCryptoServiceConfig.isEmpty || !bridgeCryptoServiceConfig.hasPath("name") || !bridgeCryptoServiceConfig.hasPath("conf")) {
-                throw IllegalArgumentException("Bridge publicCryptoServiceConfig is incomplete.")
+                val bridgeCryptoServiceConfig = bridgeConfig.getConfig("publicCryptoServiceConfig")
+                if (bridgeCryptoServiceConfig.isEmpty || !bridgeCryptoServiceConfig.hasPath("name") || !bridgeCryptoServiceConfig.hasPath("conf")) {
+                    throw IllegalArgumentException("Bridge publicCryptoServiceConfig is incomplete.")
+                }
+                bridgeCryptoServiceName = SupportedCryptoServices.valueOf(bridgeCryptoServiceConfig.getString("name"))
+                val bridgeCryptoServiceConfigFile = Paths.get(bridgeCryptoServiceConfig.getString("conf"))
+                CryptoServiceFactory.makeCryptoService(bridgeCryptoServiceName, DUMMY_X500_NAME, null, (configFile.parent / bridgeCryptoServiceConfigFile.fileName.toString()))
             }
-            val bridgeCryptoServiceName = SupportedCryptoServices.valueOf(bridgeCryptoServiceConfig.getString("name"))
-            val bridgeCryptoServiceConfigFile = Paths.get(bridgeCryptoServiceConfig.getString("conf"))
-            CryptoServiceFactory.makeCryptoService(bridgeCryptoServiceName, DUMMY_X500_NAME, null, (configFile.parent / bridgeCryptoServiceConfigFile.fileName.toString()))
+            catch (ex: NoClassDefFoundError) {
+                logger.error ("Caught a NoClassDefFoundError exception when trying to load the ${bridgeCryptoServiceName?.name} crypto service")
+                logger.error("Please check that the ${baseDirectory / "drivers"} directory contains the client side jar for the HSM")
+                throw ex
+            }
         } else {
             null
         }

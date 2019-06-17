@@ -26,6 +26,7 @@ class BridgeSSLKeyTool : CliWrapperBase("import-ssl-key", "Key copying tool for 
     lateinit var bridgeKeystorePassword: String
 
     override fun runProgram(): Int {
+        HAUtilities.addJarsInDriversDirectoryToSystemClasspath(baseDirectory)
         if (!bridgeKeystore.exists()) {
             println("Creating new bridge SSL keystore.")
         } else {
