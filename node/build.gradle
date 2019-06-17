@@ -224,6 +224,10 @@ tasks.withType(Test) {
 }
 
 task integrationTest(type: Test) {
+    maxHeapSize = "1536m"
+    // fork a new test process for every test class
+    forkEvery = 10
+    
     testClassesDirs = sourceSets.integrationTest.output.classesDirs
     classpath = sourceSets.integrationTest.runtimeClasspath
 
