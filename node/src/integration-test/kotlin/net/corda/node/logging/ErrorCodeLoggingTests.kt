@@ -6,7 +6,9 @@ import net.corda.core.flows.StartableByRPC
 import net.corda.core.internal.div
 import net.corda.core.messaging.FlowHandle
 import net.corda.core.messaging.startFlow
+import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.loggerFor
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.driver
@@ -32,10 +34,20 @@ class ErrorCodeLoggingTests {
     fun `When logging is set to error level, there are no other levels logged after node startup`() {
         driver(DriverParameters(notarySpecs = emptyList())) {
             val node = startNode(startInSameProcess = false, logLevelOverride = "ERROR").getOrThrow()
+            node.rpc.startFlow(::MyFlow).waitForCompletion()
             val logFile = node.logFile()
 
-            val text = logFile.readText()
-            assertThat(text.isEmpty()).isTrue()
+            val linesWithoutError = logFile.useLines { lines ->
+                lines.filterNot {
+                    it.contains("[ERROR")
+                }.filter{
+                    it.contains("[INFO")
+                        .or(it.contains("[WARN"))
+                        .or(it.contains("[DEBUG"))
+                        .or(it.contains("[TRACE"))
+                }.toList()
+            }
+            assertThat(linesWithoutError.isEmpty()).isTrue()
         }
     }
 

@@ -49,6 +49,7 @@ data class NodeParameters(
     fun withMaximumHeapSize(maximumHeapSize: String): NodeParameters = copy(maximumHeapSize = maximumHeapSize)
     fun withAdditionalCordapps(additionalCordapps: Set<TestCordapp>): NodeParameters = copy(additionalCordapps = additionalCordapps)
     fun withFlowOverrides(flowOverrides: Map<Class<out FlowLogic<*>>, Class<out FlowLogic<*>>>): NodeParameters = copy(flowOverrides = flowOverrides)
+    fun withLogLevelOverride(logLevelOverride : String?) : NodeParameters = copy(logLevelOverride = logLevelOverride)
 
     constructor(
             providedName: CordaX500Name?,
@@ -82,4 +83,44 @@ data class NodeParameters(
             maximumHeapSize = maximumHeapSize,
             additionalCordapps = additionalCordapps
     )
+    constructor(
+            providedName: CordaX500Name?,
+            rpcUsers: List<User>,
+            verifierType: VerifierType,
+            customOverrides: Map<String, Any?>,
+            startInSameProcess: Boolean?,
+            maximumHeapSize: String,
+            additionalCordapps: Collection<TestCordapp> = emptySet(),
+            flowOverrides: Map<out Class<out FlowLogic<*>>, Class<out FlowLogic<*>>>
+    ) : this(
+            providedName,
+            rpcUsers,
+            verifierType,
+            customOverrides,
+            startInSameProcess,
+            maximumHeapSize,
+            additionalCordapps,
+            flowOverrides,
+            logLevelOverride = null)
+
+    fun copy(
+            providedName: CordaX500Name?,
+            rpcUsers: List<User>,
+            verifierType: VerifierType,
+            customOverrides: Map<String, Any?>,
+            startInSameProcess: Boolean?,
+            maximumHeapSize: String,
+            additionalCordapps: Collection<TestCordapp> = emptySet(),
+            flowOverrides: Map<out Class<out FlowLogic<*>>, Class<out FlowLogic<*>>>
+    ) = this.copy(
+            providedName = providedName,
+            rpcUsers = rpcUsers,
+            verifierType = verifierType,
+            customOverrides = customOverrides,
+            startInSameProcess = startInSameProcess,
+            maximumHeapSize = maximumHeapSize,
+            additionalCordapps = additionalCordapps,
+            flowOverrides = flowOverrides,
+            logLevelOverride = logLevelOverride)
+
 }
