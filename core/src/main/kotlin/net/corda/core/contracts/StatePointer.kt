@@ -1,5 +1,7 @@
 package net.corda.core.contracts
 
+import net.corda.core.DeleteForDJVM
+import net.corda.core.KeepForDJVM
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.queryBy
@@ -14,6 +16,7 @@ import net.corda.core.transactions.LedgerTransaction
  * [StaticPointer]s are for use with any type of [ContractState].
  */
 @CordaSerializable
+@KeepForDJVM
 sealed class StatePointer<T : ContractState> {
     /**
      * An identifier for the [ContractState] that this [StatePointer] points to.
@@ -31,6 +34,7 @@ sealed class StatePointer<T : ContractState> {
      *
      * @param services a [ServiceHub] implementation is required to resolve the pointer.
      */
+    @DeleteForDJVM
     abstract fun resolve(services: ServiceHub): StateAndRef<T>
 
     /**
@@ -49,12 +53,14 @@ sealed class StatePointer<T : ContractState> {
  * - The [ContractState] may not be known by the node performing the look-up in which case the [resolve] method will
  *   throw a [TransactionResolutionException]
  */
+@KeepForDJVM
 class StaticPointer<T : ContractState>(override val pointer: StateRef, override val type: Class<T>) : StatePointer<T>() {
     /**
      * Resolves a [StaticPointer] to a [StateAndRef] via a [StateRef] look-up.
      */
     @Throws(TransactionResolutionException::class)
     @Suppress("UNCHECKED_CAST")
+    @DeleteForDJVM
     override fun resolve(services: ServiceHub): StateAndRef<T> {
         val transactionState = services.loadState(pointer) as TransactionState<T>
         val castState: T = type.cast(transactionState.data)
@@ -92,6 +98,7 @@ class StaticPointer<T : ContractState>(override val pointer: StateRef, override 
  *   then the transaction with such a reference state cannot be committed to the ledger until the most up-to-date version
  *   of the [LinearState] is available. See reference states documentation on docs.corda.net for more info.
  */
+@KeepForDJVM
 class LinearPointer<T : LinearState>(override val pointer: UniqueIdentifier, override val type: Class<T>) : StatePointer<T>() {
     /**
      * Resolves a [LinearPointer] using the [UniqueIdentifier] contained in the [pointer] property. Returns a
@@ -100,6 +107,7 @@ class LinearPointer<T : LinearState>(override val pointer: UniqueIdentifier, ove
      * @param services a [ServiceHub] implementation is required to perform a vault query.
      */
     @Suppress("UNCHECKED_CAST")
+    @DeleteForDJVM
     override fun resolve(services: ServiceHub): StateAndRef<T> {
         // Return the latest version of the linear state.
         // This query will only ever return one or zero states.
