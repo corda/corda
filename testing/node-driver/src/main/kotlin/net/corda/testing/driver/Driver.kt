@@ -111,9 +111,8 @@ data class WebserverHandle(
 /**
  * An abstract helper class which is used within the driver to allocate unused ports for testing.
  */
-class PortAllocation(val ignored: Int = 10000, fileName: File? = File(System.getProperty("user.home"), "allocator.bin")) {
+class PortAllocation(val startingPoint: Int = 10_000, fileName: File? = File(System.getProperty("user.home"), "allocator.bin")) {
 
-    val startingPoint: Int = 10_000
 
     /** Get the next available port via [nextPort] and then return a [NetworkHostAndPort] **/
     fun nextHostAndPort() = NetworkHostAndPort("localhost", nextPort())

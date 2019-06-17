@@ -11,8 +11,7 @@ import java.nio.channels.FileChannel;
 
 public class PortAllocationRunner {
 
-    public static void main(@NotNull String[] args) throws IOException, InterruptedException {
-
+    public static void main(@NotNull String[] args) throws IOException {
         //each JVM will be launched with [allocationFile, spinnerFile, reportingIndex]
         int reportingIndex = Integer.parseInt(args[2]);
 
@@ -24,7 +23,6 @@ public class PortAllocationRunner {
 
         //wait for parent process to notify us that all waiting processes are good to go
         while (spinnerBuffer.getShort(0) != 8) {
-            Thread.sleep(10);
         }
 
         //allocate ports

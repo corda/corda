@@ -6,13 +6,11 @@ import org.hamcrest.CoreMatchers.`is`
 import org.hamcrest.core.IsNot.not
 import org.hamcrest.number.OrderingComparison
 import org.junit.Assert
-import org.junit.Ignore
 import org.junit.Test
 import java.io.RandomAccessFile
 import java.nio.channels.FileChannel
 import java.util.concurrent.TimeUnit
 
-@Ignore
 class PortAllocationTest {
 
     @Test
@@ -35,7 +33,7 @@ class PortAllocationTest {
         }
     }
 
-    @Test
+    @Test(timeout = 120_000)
     fun `should support multiprocess port allocation`() {
 
         val allocationFile = Files.newTemporaryFile().also { it.deleteOnExit() }.absolutePath

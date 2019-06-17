@@ -15,10 +15,10 @@ import net.corda.finance.DOLLARS
 import net.corda.finance.POUNDS
 import net.corda.finance.USD
 import net.corda.finance.contracts.asset.Cash
-import net.corda.finance.workflows.getCashBalance
-import net.corda.finance.workflows.getCashBalances
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
+import net.corda.finance.workflows.getCashBalance
+import net.corda.finance.workflows.getCashBalances
 import net.corda.node.internal.NodeWithInfo
 import net.corda.node.services.Permissions.Companion.all
 import net.corda.testing.common.internal.checkNotOnClasspath
@@ -97,7 +97,7 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance"), notaries =
         val nodeIsShut: PublishSubject<Unit> = PublishSubject.create()
         val latch = CountDownLatch(1)
         var successful = false
-        val maxCount = 20
+        val maxCount = 120
         var count = 0
         CloseableExecutor(Executors.newSingleThreadScheduledExecutor()).use { scheduler ->
 
