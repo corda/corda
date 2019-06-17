@@ -216,8 +216,7 @@ open class StringToMethodCallParser<in T : Any> @JvmOverloads constructor(
     /** Returns a string-to-string map of commands to a string describing available parameter types. */
     val availableCommands: Map<String, String>
         get() {
-            return methodMap.entries().mapNotNull { entry ->
-                val (name, args) = entry   // TODO: Kotlin 1.1
+            return methodMap.entries().mapNotNull { (name, args) ->
                 if (args.parameterCount == 0) {
                     Pair(name, "")
                 } else {
