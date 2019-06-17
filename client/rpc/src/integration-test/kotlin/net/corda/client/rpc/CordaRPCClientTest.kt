@@ -10,6 +10,7 @@ import net.corda.core.internal.toPath
 import net.corda.core.messaging.*
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
 import net.corda.finance.DOLLARS
 import net.corda.finance.POUNDS
@@ -47,6 +48,7 @@ import kotlin.test.assertTrue
 class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance"), notaries = listOf(DUMMY_NOTARY_NAME)) {
     companion object {
         val rpcUser = User("user1", "test", permissions = setOf(all()))
+        val log = contextLogger()
     }
 
     private lateinit var node: NodeWithInfo
@@ -103,7 +105,7 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance"), notaries =
 
             val task = scheduler.scheduleAtFixedRate({
                 try {
-                    println("Checking whether node is still running...")
+                    log.info("Checking whether node is still running...")
                     client.start(rpcUser.username, rpcUser.password).use {
                         println("... node is still running.")
                         if (count == maxCount) {
@@ -112,7 +114,7 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance"), notaries =
                         count++
                     }
                 } catch (e: RPCException) {
-                    println("... node is not running.")
+                    log.info("... node is not running.")
                     nodeIsShut.onCompleted()
                 } catch (e: ActiveMQSecurityException) {
                     // nothing here - this happens if trying to connect before the node is started
@@ -122,7 +124,7 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance"), notaries =
             }, 1, 1, TimeUnit.SECONDS)
 
             nodeIsShut.doOnError { error ->
-                error.printStackTrace()
+                log.error("FAILED TO SHUT DOWN NODE DUE TO", error)
                 successful = false
                 task.cancel(true)
                 latch.countDown()
