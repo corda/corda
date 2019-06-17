@@ -26,10 +26,21 @@ sourceSets {
 compileTestJava.dependsOn tasks.getByPath(':node:capsule:buildCordaJAR')
 
 dependencies {
+    // Cordformation needs a SLF4J implementation when executing the Network
+    // Bootstrapper, but Log4J doesn't shutdown completely from within Gradle.
+    // Use a much simpler SLF4J implementation here instead.
+    cordaRuntime "org.slf4j:slf4j-simple:$slf4j_version"
+
     compile project(':core')
     compile project(':client:jfx')
-    compile project(':node-driver')
-    compile project(':webserver')
+    compile (project(':node-driver')) {
+        // We already have a SLF4J implementation on our runtime classpath,
+        // and we don't need another one.
+        exclude group: 'org.apache.logging.log4j'
+    }
+    compile (project(':webserver')) {
+        exclude group: "org.apache.logging.log4j"
+    }
     testCompile project(':test-utils')
 
     compile "org.graphstream:gs-core:1.3"
