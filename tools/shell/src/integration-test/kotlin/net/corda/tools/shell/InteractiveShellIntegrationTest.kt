@@ -14,6 +14,7 @@ import net.corda.client.rpc.RPCException
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.div
+import net.corda.core.internal.list
 import net.corda.core.internal.messaging.InternalCordaRPCOps
 import net.corda.core.messaging.ClientRpcSslOptions
 import net.corda.core.messaging.CordaRPCOps
@@ -21,6 +22,7 @@ import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
+import net.corda.node.internal.NodeStartup
 import net.corda.node.services.Permissions
 import net.corda.node.services.Permissions.Companion.all
 import net.corda.node.services.config.shell.toShellConfig
@@ -413,6 +415,9 @@ class InteractiveShellIntegrationTest : IntegrationTest() {
             val bobNode = startNode(providedName = BOB_NAME, rpcUsers = listOf(user), startInSameProcess = true).getOrThrow()
             bobNode.stop()
 
+            // create logs directory since the driver is not creating it
+            (aliceNode.baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME).toFile().mkdir()
+
             val conf = ShellConfiguration(commandsDirectory = Files.createTempDir().toPath(),
                     user = user.username, password = user.password,
                     hostAndPort = aliceNode.rpcAddress)
@@ -431,10 +436,11 @@ class InteractiveShellIntegrationTest : IntegrationTest() {
                     listOf("dumpCheckpoints"), output, mock(), aliceNode.rpc as InternalCordaRPCOps, inputObjectMapper)
 
             // assert that the checkpoint dump zip has been created
-            val zip = (aliceNode.baseDirectory / "logs").toFile().list().find { it.contains("checkpoints_dump-") }
+            val zip = (aliceNode.baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME).list()
+                    .find { it.toString().contains("checkpoints_dump-") }
             assertNotNull(zip)
             // assert that a json file has been created for the suspended flow
-            val json = ZipFile((aliceNode.baseDirectory / "logs" / zip!!).toFile()).entries().asSequence()
+            val json = ZipFile((zip!!).toFile()).entries().asSequence()
                     .find { it.name.contains(SendFlow::class.simpleName!!) }
             assertNotNull(json)
         }
