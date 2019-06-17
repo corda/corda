@@ -36,6 +36,7 @@ import net.corda.core.serialization.internal.checkpointDeserialize
 import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.contextLogger
+import net.corda.node.internal.NodeStartup
 import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.statemachine.*
@@ -91,9 +92,8 @@ class CheckpointDumper(private val checkpointStorage: CheckpointStorage, private
     fun dump() {
         try {
             val now = serviceHub.clock.instant()
-            val file = serviceHub.configuration.baseDirectory / "logs" / "checkpoints_dump-${TIME_FORMATTER.format(now)}.zip"
+            val file = serviceHub.configuration.baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME / "checkpoints_dump-${TIME_FORMATTER.format(now)}.zip"
             if (lock.getAndIncrement() == 0 && !file.exists()) {
-                file.parent.toFile().mkdirs()
                 database.transaction {
                     checkpointStorage.getAllCheckpoints().use { stream ->
                         ZipOutputStream(file.outputStream()).use { zip ->

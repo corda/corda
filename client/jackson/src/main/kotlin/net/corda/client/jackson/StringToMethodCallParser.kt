@@ -241,15 +241,16 @@ open class StringToMethodCallParser<in T : Any> @JvmOverloads constructor(
         get() {
             return methodMap.entries().mapNotNull { entry ->
                 val (name, args) = entry   // TODO: Kotlin 1.1
-                val argStr: String? = if (args.parameterCount == 0) "" else {
-                    val paramNames = methodParamNames[name]?. let { params ->
+                if (args.parameterCount == 0) {
+                    Pair(name, "")
+                } else {
+                    methodParamNames[name]?. let { params ->
                         val typeNames = args.parameters.map { it.type.simpleName }
                         val paramTypes = params.zip(typeNames)
-                        paramTypes.joinToString(", ") { "${it.first}: ${it.second}" }
+                        val paramNames = paramTypes.joinToString(", ") { "${it.first}: ${it.second}" }
+                        Pair(name, paramNames)
                     }
-                    paramNames
                 }
-                if(argStr == null) null else Pair(name, argStr)
             }.toMap()
         }
 }
