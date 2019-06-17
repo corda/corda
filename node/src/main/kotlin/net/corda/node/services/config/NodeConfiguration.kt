@@ -115,21 +115,6 @@ interface NodeConfiguration {
 
         internal val defaultJmxReporterType = JmxReporterType.JOLOKIA
     }
-
-    fun makeCryptoService(): CryptoService {
-        return when (cryptoServiceName) {
-            SupportedCryptoServices.BC_SIMPLE -> BCCryptoService(this.myLegalName.x500Principal, this.signingCertificateStore)
-            SupportedCryptoServices.UTIMACO -> UtimacoCryptoService.fromConfigurationFile(cryptoServiceConf)
-            SupportedCryptoServices.GEMALTO_LUNA -> GemaltoLunaCryptoService.fromConfigurationFile(this.myLegalName.x500Principal, cryptoServiceConf)
-            SupportedCryptoServices.FUTUREX -> FutureXCryptoService.fromConfigurationFile(this.myLegalName.x500Principal, cryptoServiceConf)
-            SupportedCryptoServices.PRIMUS_X -> PrimusXCryptoService.fromConfigurationFile(this.myLegalName.x500Principal, cryptoServiceConf)
-            SupportedCryptoServices.AZURE_KEY_VAULT -> {
-                val configPath = requireNotNull(cryptoServiceConf) { "When cryptoServiceName is set to AZURE_KEY_VAULT, cryptoServiceConf must specify the path to the configuration file."}
-                AzureKeyVaultCryptoService.fromConfigurationFile(configPath)
-            }
-            null -> BCCryptoService(this.myLegalName.x500Principal, this.signingCertificateStore) // Pick default BCCryptoService when null.
-        }
-    }
 }
 
 data class FlowOverrideConfig(val overrides: List<FlowOverride> = listOf())
