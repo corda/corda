@@ -56,7 +56,7 @@ class PortAllocationTest {
 
         while (spinnerBuffer.getShort(1) != 10.toShort() && spinnerBuffer.getShort(2) != 10.toShort() && timeWaited < 60_000) {
             Thread.sleep(100)
-            println("Waiting to childProcesses to report back")
+            println("Waiting to childProcesses to report back. waited ${timeWaited}ms")
             timeWaited = System.currentTimeMillis() - timeStartedWaiting
         }
 
