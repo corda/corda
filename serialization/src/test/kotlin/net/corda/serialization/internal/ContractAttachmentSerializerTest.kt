@@ -10,7 +10,7 @@ import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.internal.CheckpointSerializationEnvironmentRule
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices
-import org.apache.commons.lang.ArrayUtils.EMPTY_BYTE_ARRAY
+import org.apache.commons.lang3.ArrayUtils.EMPTY_BYTE_ARRAY
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Assert.assertArrayEquals

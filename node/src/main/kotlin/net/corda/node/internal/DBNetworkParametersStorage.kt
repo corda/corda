@@ -20,7 +20,7 @@ import net.corda.nodeapi.internal.network.verifiedNetworkMapCert
 import net.corda.nodeapi.internal.network.verifiedNetworkParametersCert
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
-import org.apache.commons.lang.ArrayUtils
+import org.apache.commons.lang3.ArrayUtils
 import java.security.cert.X509Certificate
 import javax.persistence.*
 

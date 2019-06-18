@@ -27,4 +27,8 @@ class ComposedSerializerFactory(
 ) : SerializerFactory,
         LocalSerializerFactory by localSerializerFactory,
         RemoteSerializerFactory by remoteSerializerFactory,
-        CustomSerializerRegistry by customSerializerRegistry
+        CustomSerializerRegistry by customSerializerRegistry {
+
+        override val customSerializerNames: List<String>
+                get() = customSerializerRegistry.customSerializerNames
+}

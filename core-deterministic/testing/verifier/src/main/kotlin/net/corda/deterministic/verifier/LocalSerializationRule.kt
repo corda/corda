@@ -1,6 +1,5 @@
 package net.corda.deterministic.verifier
 
-import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationContext.UseCase.P2P
 import net.corda.core.serialization.SerializationCustomSerializer

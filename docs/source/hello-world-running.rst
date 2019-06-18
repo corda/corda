@@ -126,7 +126,7 @@ We can check the contents of each node's vault by running:
 
 .. code-block:: bash
 
-    run vaultQuery contractStateType: com.template.IOUState
+    run vaultQuery contractStateType: com.template.states.IOUState
 
 The vaults of PartyA and PartyB should both display the following output:
 

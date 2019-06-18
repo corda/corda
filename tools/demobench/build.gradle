@@ -66,6 +66,7 @@ dependencies {
 
     // FontAwesomeFX: icons in the form of a font.
     compile "de.jensd:fontawesomefx-fontawesome:4.7.0-5"
+    compile 'de.jensd:fontawesomefx-commons:8.15'
 
     // JediTerm: the terminal emulator used in IntelliJ. We have forked it and tweaked it, see https://github.com/corda/jediterm
     compile ':terminal-331a005d6793e52cefc9e2cec6774e62d5a546b1'
@@ -74,9 +75,12 @@ dependencies {
     testCompile project(':test-utils')
     testCompile project(':webserver')
 
-    testCompile "junit:junit:$junit_version"
+    testRuntimeOnly "org.junit.vintage:junit-vintage-engine:${junit_vintage_version}"
+    testRuntimeOnly "org.junit.platform:junit-platform-launcher:${junit_platform_version}"
+
     testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
     testCompile "org.assertj:assertj-core:$assertj_version"
+    testCompile "junit:junit:$junit_version"
 }
 
 tasks.withType(JavaCompile) {

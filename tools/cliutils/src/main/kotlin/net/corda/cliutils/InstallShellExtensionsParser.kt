@@ -3,7 +3,7 @@ package net.corda.cliutils
 import net.corda.core.internal.*
 import net.corda.core.utilities.loggerFor
 import org.apache.commons.io.IOUtils
-import org.apache.commons.lang.SystemUtils
+import org.apache.commons.lang3.SystemUtils
 import picocli.CommandLine
 import picocli.CommandLine.Command
 import java.nio.file.Path

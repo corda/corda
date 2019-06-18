@@ -107,8 +107,8 @@ class AttachmentsClassLoaderTests {
 
     @Test
     fun `Test valid overlapping file condition`() {
-        val att1 = importAttachment(fakeAttachment("file1.txt", "same data").inputStream(), "app", "file1.jar")
-        val att2 = importAttachment(fakeAttachment("file1.txt", "same data").inputStream(), "app", "file2.jar")
+        val att1 = importAttachment(fakeAttachment("file1.txt", "same data", "file2.txt", "same other data" ).inputStream(), "app", "file1.jar")
+        val att2 = importAttachment(fakeAttachment("file1.txt", "same data", "file3.txt", "same totally different").inputStream(), "app", "file2.jar")
 
         val cl = make(arrayOf(att1, att2).map { storage.openAttachment(it)!! })
         val txt = IOUtils.toString(cl.getResourceAsStream("file1.txt"), Charsets.UTF_8.name())

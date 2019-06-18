@@ -3,6 +3,7 @@ package net.corda.node.utilities
 import net.corda.core.flows.FlowLogic
 import net.corda.core.utilities.ProgressTracker
 import net.corda.node.services.statemachine.StateMachineManagerInternal
+import org.apache.commons.lang3.reflect.FieldUtils
 import java.lang.reflect.Field
 
 /**
@@ -59,17 +60,7 @@ private fun replaceTracker(newFlowLogic: FlowLogic<*>, oldProgressTracker: Progr
 }
 
 private fun getProgressTrackerField(newFlowLogic: FlowLogic<*>): Field? {
-    var clazz: Class<*> = newFlowLogic::class.java
-    var field: Field? = null
     // The progress tracker field may have been overridden in an abstract superclass, so we have to traverse up
     // the hierarchy.
-    while (clazz != FlowLogic::class.java) {
-        field = clazz.declaredFields.firstOrNull { it.name == "progressTracker" }
-        if (field == null) {
-            clazz = clazz.superclass
-        } else {
-            break
-        }
-    }
-    return field
+    return FieldUtils.getAllFieldsList(newFlowLogic::class.java).find { it.name == "progressTracker" }
 }

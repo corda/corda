@@ -171,6 +171,8 @@ states in its vault. The default vault implementation makes the decision based o
 States that are not considered relevant are not stored in the node's vault. However, the node will still store the
 transactions that created the states in its transaction storage.
 
+.. _transaction_state:
+
 TransactionState
 ----------------
 When a ``ContractState`` is added to a ``TransactionBuilder``, it is wrapped in a ``TransactionState``:
