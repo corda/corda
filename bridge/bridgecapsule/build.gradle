@@ -78,7 +78,7 @@ task buildFirewallJar(type: FatCapsule, dependsOn: project(':bridge').jar) {
             project(':bridge').jar,
             project(':bridge').sourceSets.main.java.outputDir.toString() + '/BridgeCaplet.class',
             project(':bridge').sourceSets.main.java.outputDir.toString() + '/BridgeCaplet$1.class',
-            "$rootDir/config/dev/log4j2.xml",
+            "$rootDir/bridge/build/resources/main/log4j2.xml",
             "$rootDir/bridge/build/resources/main/firewalldefault_v3.conf",
             "$rootDir/bridge/build/resources/main/firewalldefault_v4.conf",
             "$rootDir/bridge/build/resources/main/firewalldefault_latest.conf"

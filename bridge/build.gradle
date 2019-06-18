@@ -23,10 +23,6 @@ sourceSets {
     }
 }
 
-processResources {
-    from file("$rootDir/config/dev/log4j2.xml")
-}
-
 dependencies {
 
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
