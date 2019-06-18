@@ -1,5 +1,6 @@
 package net.corda.core.node.services
 
+import net.corda.SignedKeyToPartyMapping
 import net.corda.core.CordaException
 import net.corda.core.DoNotImplement
 import net.corda.core.contracts.PartyAndReference
@@ -10,7 +11,6 @@ import net.corda.core.utilities.contextLogger
 import java.security.InvalidAlgorithmParameterException
 import java.security.PublicKey
 import java.security.cert.*
-
 /**
  * An identity service maintains a directory of parties by their associated distinguished name/public keys and thus
  * supports lookup of a party given its key, or name. The service also manages the certificates linking confidential

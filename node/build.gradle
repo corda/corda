@@ -18,6 +18,7 @@ apply plugin: 'java'
 apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'com.jfrog.artifactory'
+apply plugin: 'net.corda.plugins.cordapp'
 
 description 'Corda node modules'
 
@@ -74,6 +75,7 @@ dependencies {
     compile project(':common-validation')
     compile project(':common-configuration-parsing')
     compile project(':common-logging')
+    compile project(':core')
     
     // Log4J: logging framework (with SLF4J bindings)
     compile "org.apache.logging.log4j:log4j-slf4j-impl:${log4j_version}"
@@ -196,6 +198,8 @@ dependencies {
 
     testCompile(project(':test-cli'))
     testCompile(project(':test-utils'))
+
+    cordapp "com.r3.corda.lib.ci:workflows:1.0"
 }
 
 tasks.withType(JavaCompile) {

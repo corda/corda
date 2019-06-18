@@ -7,10 +7,6 @@ apply plugin: 'com.jfrog.artifactory'
 
 description 'Corda Experimental Confidential Identities'
 
-dependencies {
-    cordaCompile project(':core')
-}
-
 jar {
     baseName 'corda-confidential-identities'
 }

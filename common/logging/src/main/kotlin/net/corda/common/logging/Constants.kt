@@ -8,4 +8,4 @@ package net.corda.common.logging
  * the generated file does not need to be committed to source control (originally added to source control for ease of use)
  */
 
-internal const val CURRENT_MAJOR_RELEASE = "5.0-SNAPSHOT"
+internal const val CURRENT_MAJOR_RELEASE = "5.0-SNAPSHOT-WILLH"

@@ -139,8 +139,8 @@
       <module name="corda-project.node-driver.integrationTest" target="1.8" />
       <module name="corda-project.node-driver.main" target="1.8" />
       <module name="corda-project.node-driver.test" target="1.8" />
-      <module name="corda-project.node.capsule.main" target="1.6" />
-      <module name="corda-project.node.capsule.test" target="1.6" />
+      <module name="corda-project.node.capsule.main" target="1.8" />
+      <module name="corda-project.node.capsule.test" target="1.8" />
       <module name="corda-project.node.integrationTest" target="1.8" />
       <module name="corda-project.node.main" target="1.8" />
       <module name="corda-project.node.test" target="1.8" />

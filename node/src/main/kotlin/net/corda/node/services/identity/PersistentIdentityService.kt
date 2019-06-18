@@ -1,5 +1,6 @@
 package net.corda.node.services.identity
 
+import net.corda.SignedKeyToPartyMapping
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.*
 import net.corda.core.internal.CertRole
@@ -19,7 +20,7 @@ import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.x509Certificates
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
-import org.apache.commons.lang.ArrayUtils.EMPTY_BYTE_ARRAY
+import org.apache.commons.lang3.ArrayUtils.EMPTY_BYTE_ARRAY
 import java.security.InvalidAlgorithmParameterException
 import java.security.PublicKey
 import java.security.cert.*

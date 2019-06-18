@@ -79,12 +79,3 @@ fun <T> excludeHostNode(serviceHub: ServiceHub, map: Map<Party, T>): Map<Party, 
  * @return a new copy of the map, with the well known [Party] for the notary removed.
  */
 fun <T> excludeNotary(map: Map<Party, T>, stx: SignedTransaction): Map<Party, T> = map.filterKeys { it != stx.notary }
-
-@CordaSerializable
-data class KeyToPartyMapping(val key: PublicKey, val party: Party)
-
-@CordaSerializable
-data class SignedKeyToPartyMapping(
-        val mapping: KeyToPartyMapping,
-        val signature: DigitalSignature.WithKey
-)

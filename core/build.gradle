@@ -4,6 +4,7 @@ apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'net.corda.plugins.api-scanner'
 apply plugin: 'com.jfrog.artifactory'
+apply plugin: 'net.corda.plugins.cordapp'
 
 description 'Corda core'
 
@@ -54,7 +55,6 @@ processSmokeTestResources {
 }
 
 dependencies {
-
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
     testImplementation "junit:junit:$junit_version"
     testRuntimeOnly "org.junit.vintage:junit-vintage-engine:${junit_vintage_version}"
@@ -126,6 +126,8 @@ dependencies {
     compile "org.hibernate:hibernate-core:$hibernate_version"
 
     compile group: "io.github.classgraph", name: "classgraph", version: class_graph_version
+
+    cordapp "com.r3.corda.lib.ci:workflows:1.0"
 }
 
 // TODO Consider moving it to quasar-utils in the future (introduced with PR-1388)
