@@ -4,6 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.DoNotImplement
 import net.corda.core.identity.Party
 import net.corda.core.utilities.UntrustworthyData
+import java.security.PublicKey
 
 /**
  *
@@ -44,6 +45,13 @@ import net.corda.core.utilities.UntrustworthyData
  */
 @DoNotImplement
 abstract class FlowSession {
+
+    /**
+     * The current [sessionOwningKey] in the context of this session. It is not guaranteed to be [counterparty.owningKey] as the session
+     * may have been initiated with an [net.corda.core.identity.AnonymousParty] useful for grouping sessions vs signing requests
+     */
+    abstract val sessionOwningKey: PublicKey
+
     /**
      * The [Party] on the other side of this session. In the case of a session created by [FlowLogic.initiateFlow]
      *   [counterparty] is the same Party as the one passed to that function.
