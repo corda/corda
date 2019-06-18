@@ -9,8 +9,8 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
 import net.corda.core.flows.FlowStackSnapshot
 import net.corda.core.flows.StateMachineRunId
+import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
-import net.corda.core.messaging.NetworkDestination
 import net.corda.core.node.ServiceHub
 import org.slf4j.Logger
 
@@ -25,7 +25,7 @@ interface FlowStateMachine<FLOWRETURN> {
     fun initiateFlow(party: Party): FlowSession = initiateFlow(wellKnown = party, requested = null)
 
     @Suspendable
-    fun initiateFlow(wellKnown: Party, requested: NetworkDestination?): FlowSession
+    fun initiateFlow(wellKnown: Party, requested: AbstractParty?): FlowSession
 
     fun checkFlowPermission(permissionName: String, extraAuditData: Map<String, String>)
 

@@ -11,7 +11,7 @@ import java.security.PublicKey
  * information such as name. It is intended to represent a party on the distributed ledger.
  */
 @KeepForDJVM
-class AnonymousParty(override val owningKey: PublicKey) : AbstractParty() {
+class AnonymousParty(owningKey: PublicKey) : AbstractParty(owningKey) {
     override fun nameOrNull(): CordaX500Name? = null
     override fun ref(bytes: OpaqueBytes): PartyAndReference = PartyAndReference(this, bytes)
     override fun toString() = "Anonymous(${owningKey.toStringShort()})"

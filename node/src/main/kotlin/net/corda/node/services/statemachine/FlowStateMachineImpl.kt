@@ -10,9 +10,9 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
 import net.corda.core.cordapp.Cordapp
 import net.corda.core.flows.*
+import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
-import net.corda.core.messaging.NetworkDestination
 import net.corda.core.serialization.internal.CheckpointSerializationContext
 import net.corda.core.serialization.internal.checkpointSerialize
 import net.corda.core.utilities.ProgressTracker
@@ -355,7 +355,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     }
 
     @Suspendable
-    override fun initiateFlow(wellKnown: Party, requested: NetworkDestination?): FlowSession {
+    override fun initiateFlow(wellKnown: Party, requested: AbstractParty?): FlowSession {
         val resume = processEventImmediately(
                 Event.InitiateFlow(wellKnownParty = wellKnown, requestedParty = requested),
                 isDbTransactionOpenOnEntry = true,
