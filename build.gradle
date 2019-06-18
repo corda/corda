@@ -234,7 +234,6 @@ allprojects {
 
 
     tasks.withType(Test) {
-        maxParallelForks = 6
         forkEvery = 10
         failFast = project.hasProperty('tests.failFast') ? project.property('tests.failFast').toBoolean() : false
 
@@ -252,12 +251,13 @@ allprojects {
         extensions.configure(TypeOf.typeOf(JacocoTaskExtension)) { ex ->
             ex.append = false
         }
+
+        maxParallelForks = (System.env.TESTING_FORKS == null) ? 1 :  "$System.env.TESTING_FORKS".toInteger()
     }
 
     tasks.withType(Test){
         if (name.contains("integrationTest")){
-            maxParallelForks = 2
-            forkEvery = 10
+            maxParallelForks = (System.env.INT_TESTING_FORKS == null) ? 1 :  "$System.env.INT_TESTING_FORKS".toInteger()
         }
     }
 

@@ -207,18 +207,15 @@ tasks.withType(JavaCompile) {
     options.compilerArgs << '-proc:none'
 }
 
-tasks.withType(Test) {
+test {
     maxHeapSize = "2g"
-    // fork a new test process for every test class
-    forkEvery = 5
+    maxParallelForks = (System.env.NODE_TESTING_FORKS == null) ? 1 : "$System.env.NODE_TESTING_FORKS".toInteger()
 }
 
 task integrationTest(type: Test) {
     testClassesDirs = sourceSets.integrationTest.output.classesDirs
     classpath = sourceSets.integrationTest.runtimeClasspath
-    systemProperty 'testing.global.port.allocation.enabled', true
-    systemProperty 'testing.global.port.allocation.starting.port', 10000
-    maxParallelForks = 8
+    maxParallelForks = (System.env.NODE_INT_TESTING_FORKS == null) ? 1 :  "$System.env.NODE_INT_TESTING_FORKS".toInteger()
 }
 
 // quasar exclusions upon agent code instrumentation at run-time

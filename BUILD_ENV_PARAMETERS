@@ -1,0 +1,7 @@
+CORE_TESTING_FORKS : Number of JVMS to fork for running unit tests in :core
+
+NODE_INT_TESTING_FORKS : Number of JVMS to fork for running integration tests in :node
+NODE_TESTING_FORKS : Number of JVMS to fork for running unit tests in :node
+
+INT_TESTING_FORKS : Global number of JVMS to fork for running integration tests
+TESTING_FORKS : Global number of JVMS to fork for running unit tests
