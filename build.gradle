@@ -50,9 +50,10 @@ buildscript {
     ext.artemis_version = '2.6.2'
     // upgrade Jackson only when corda is using kotlin 1.3.10
     ext.jackson_version = '2.9.5'
-    ext.jetty_version = '9.4.7.v20170914'
+    ext.jetty_version = '9.4.18.v20190429'
     ext.jersey_version = '2.25'
-    ext.assertj_version = '3.8.0'
+    ext.servlet_version = '4.0.1'
+    ext.assertj_version = '3.12.2'
     ext.slf4j_version = '1.7.25'
     ext.log4j_version = '2.9.1'
     ext.bouncycastle_version = constants.getProperty("bouncycastleVersion")
@@ -65,18 +66,19 @@ buildscript {
     ext.netty_version = '4.1.29.Final'
     ext.tcnative_version = '2.0.14.Final'
     ext.typesafe_config_version = constants.getProperty("typesafeConfigVersion")
-    ext.fileupload_version = '1.3.3'
+    ext.fileupload_version = '1.4'
     // Legacy JUnit 4 version
     ext.junit_version = '4.12'
     // Need this version to access classpath scanning error handling fix -
     // see https://github.com/junit-team/junit5/commit/389de48c2a18c5a93a7203ef424aa47a8a835a74
     // Upgrade to 5.5.x when GA release is available.
-    ext.junit_vintage_version = '5.5.0-M1'
-    ext.junit_jupiter_version = '5.5.0-M1'
-    ext.junit_platform_version = '1.4.2'
+    ext.junit_vintage_version = '5.5.0-RC1'
+    ext.junit_jupiter_version = '5.5.0-RC1'
+    ext.junit_platform_version = '1.5.0-RC1'
+    // TODO Update this to the latest version when hibernate is updated
     ext.mockito_version = '2.18.3'
-    ext.mockito_kotlin_version = '1.5.0'
-    ext.hamkrest_version = '1.4.2.2'
+    ext.mockito_kotlin_version = '1.6.0'
+    ext.hamkrest_version = '1.7.0.0'
     ext.jopt_simple_version = '5.0.2'
     ext.jansi_version = '1.14'
     ext.hibernate_version = '5.3.10.Final'
@@ -97,8 +99,8 @@ buildscript {
     ext.liquibase_version = '3.5.5'
     ext.artifactory_contextUrl = 'https://ci-artifactory.corda.r3cev.com/artifactory'
     ext.snake_yaml_version = constants.getProperty('snakeYamlVersion')
-    ext.docker_compose_rule_version = '0.33.0'
-    ext.selenium_version = '3.8.1'
+    ext.docker_compose_rule_version = '0.35.0'
+    ext.selenium_version = '3.141.59'
     ext.ghostdriver_version = '2.1.0'
     ext.eaagentloader_version = '1.0.3'
     ext.curator_version = '4.2.0'

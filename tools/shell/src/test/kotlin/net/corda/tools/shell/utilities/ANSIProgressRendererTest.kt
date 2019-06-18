@@ -65,7 +65,7 @@ class ANSIProgressRendererTest {
 
     private fun checkTrackingState(captor: KArgumentCaptor<Ansi>, updates: Int, trackerState: List<String>) {
         verify(printWriter, times(updates)).print(captor.capture())
-        assertThat(captor.lastValue.toString()).containsSequence(trackerState)
+        assertThat(captor.lastValue.toString()).containsSubsequence(trackerState)
         verify(printWriter, times(updates)).flush()
     }
 
