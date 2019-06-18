@@ -52,11 +52,14 @@ class RegistrationTool : CordaCliWrapper("node-registration", "Corda registratio
         " For convenience the tool is also downloading network parameters. Additionally, it can import the TLS keys into the bridge.") {
     companion object {
         private val DUMMY_X500_NAME = CordaX500Name("Bridge", "London", "GB")
-        private val VERSION_INFO = VersionInfo(
-                PLATFORM_VERSION,
-                CordaVersionProvider.releaseVersion,
-                CordaVersionProvider.revision,
-                CordaVersionProvider.vendor)
+        private val VERSION_INFO by lazy {
+            // Use lazy init to ensure that CliWrapperBase.initLogging() is called before accessing CordaVersionProvider
+            VersionInfo(
+                    PLATFORM_VERSION,
+                    CordaVersionProvider.releaseVersion,
+                    CordaVersionProvider.revision,
+                    CordaVersionProvider.vendor)
+        }
 
         private val logger by lazy { contextLogger() }
 
@@ -80,10 +83,6 @@ class RegistrationTool : CordaCliWrapper("node-registration", "Corda registratio
     @Option(names = ["-r", "--bridge-keystore-password"], paramLabel = "PASSWORDS", description = ["The password of the bridge SSL keystore."])
     var bridgeKeystorePassword: String? = null
 
-    init {
-        initialiseSerialization()
-    }
-
     private fun initialiseSerialization() {
         if (nodeSerializationEnv == null) {
             nodeSerializationEnv =
@@ -97,6 +96,7 @@ class RegistrationTool : CordaCliWrapper("node-registration", "Corda registratio
     }
 
     override fun runProgram(): Int {
+        initialiseSerialization() // Should be called after CliWrapperBase.initLogging()
         return try {
             validateNodeHsmConfigs(configFiles)
             val bridgeCryptoService = makeBridgeCryptoService(bridgeConfigFile)
