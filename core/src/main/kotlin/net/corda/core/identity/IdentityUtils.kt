@@ -2,10 +2,8 @@
 
 package net.corda.core.identity
 
-import net.corda.core.crypto.DigitalSignature
 import net.corda.core.internal.toMultiMap
 import net.corda.core.node.ServiceHub
-import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import java.security.PublicKey
 
