@@ -20,6 +20,12 @@ Version 5.0
   ``log`` directory. This zip will contain a JSON representation of each checkpointed flow. This information can then be used to determine the
   state of stuck flows or flows that experienced internal errors and were kept in the node for manual intervention.
 
+* It is now possible to re-record transactions if a node wishes to record as an observer a transaction it has participated in. If this is
+  done, then the node may record new output states that are not relevant to the node.
+
+.. warning:: As the node is unable to resolve the forward chain of transactions, the node cannot know if these new output states have been
+   consumed. To resolve this, any consuming transaction must be sent to the node after the transaction that created the state.
+
 .. _changelog_v4.2:
 
 Version 4.2
