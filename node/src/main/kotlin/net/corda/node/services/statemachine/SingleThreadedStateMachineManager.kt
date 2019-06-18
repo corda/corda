@@ -37,11 +37,7 @@ import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.config.shouldCheckCheckpoints
 import net.corda.node.services.messaging.DeduplicationHandler
 import net.corda.node.services.statemachine.FlowStateMachineImpl.Companion.createSubFlowVersion
-import net.corda.node.services.statemachine.interceptors.DumpHistoryOnErrorInterceptor
-import net.corda.node.services.statemachine.interceptors.FiberDeserializationChecker
-import net.corda.node.services.statemachine.interceptors.FiberDeserializationCheckingInterceptor
-import net.corda.node.services.statemachine.interceptors.HospitalisingInterceptor
-import net.corda.node.services.statemachine.interceptors.PrintingInterceptor
+import net.corda.node.services.statemachine.interceptors.*
 import net.corda.node.services.statemachine.transitions.StateMachine
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.errorAndTerminate
@@ -57,12 +53,13 @@ import rx.subjects.PublishSubject
 import java.lang.Integer.min
 import java.security.SecureRandom
 import java.util.HashSet
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.Executors
-import java.util.concurrent.ScheduledFuture
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.*
 import javax.annotation.concurrent.ThreadSafe
+import kotlin.collections.ArrayList
+import kotlin.collections.HashMap
+import kotlin.collections.component1
+import kotlin.collections.component2
+import kotlin.collections.set
 import kotlin.streams.toList
 
 /**
@@ -469,7 +466,7 @@ class SingleThreadedStateMachineManager(
         try {
             val initiatedFlowFactory = getInitiatedFlowFactory(sessionMessage)
             val initiatedSessionId = SessionId.createRandom(secureRandom)
-            val senderSession = FlowSessionImpl(sender, initiatedSessionId)
+            val senderSession = FlowSessionImpl(sender, sender.owningKey, initiatedSessionId)
             val flowLogic = initiatedFlowFactory.createFlow(senderSession)
             val initiatedFlowInfo = when (initiatedFlowFactory) {
                 is InitiatedFlowFactory.Core -> FlowInfo(serviceHub.myInfo.platformVersion, "corda")
