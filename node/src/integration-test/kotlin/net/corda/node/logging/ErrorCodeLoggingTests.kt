@@ -30,6 +30,8 @@ class ErrorCodeLoggingTests {
         }
     }
 
+    //This is used to detect broken logging which can be caused by loggers being initialized
+    // before the initLogging() call is made
     @Test
     fun `When logging is set to error level, there are no other levels logged after node startup`() {
         driver(DriverParameters(notarySpecs = emptyList())) {
