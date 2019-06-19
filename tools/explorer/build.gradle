@@ -46,22 +46,20 @@ dependencies {
     compileOnly "co.paralleluniverse:capsule:$capsule_version"
 
     // FontAwesomeFX: The "FontAwesome" icon library.
-    compile 'de.jensd:fontawesomefx-fontawesome:4.7.0'
-    compile 'de.jensd:fontawesomefx-commons:8.13'
+    compile "de.jensd:fontawesomefx-fontawesome:$fontawesomefx_fontawesome_version"
+    compile "de.jensd:fontawesomefx-commons:$fontawesomefx_commons_version"
 
     // ReactFX: Functional reactive UI programming.
     compile 'org.reactfx:reactfx:2.0-M5'
     compile 'org.fxmisc.easybind:easybind:1.0.3'
 
-    // JFXtras: useful widgets including a calendar control.
-    compile 'org.jfxtras:jfxtras-agenda:8.0-r5'
-    compile 'org.jfxtras:jfxtras-font-roboto:8.0-r5'
+    compile 'org.jfxtras:jfxtras-font-roboto:8.0-r6'
 
     // Humanize: formatting
     compile 'com.github.mfornos:humanize-icu:1.2.2'
 
     // Controls FX: more java FX components http://fxexperience.com/controlsfx/
-    compile 'org.controlsfx:controlsfx:8.40.12'
+    compile "org.controlsfx:controlsfx:$controlsfx_version"
     // This provide com.apple.eawt stub for non-mac system.
     compile 'com.yuvimasory:orange-extensions:1.3.0'
 

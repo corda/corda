@@ -94,8 +94,8 @@ dependencies {
     testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
 
     // Kryo: object graph serialization.
-    compile "com.esotericsoftware:kryo:4.0.0"
-    compile "de.javakaffee:kryo-serializers:0.42"
+    compile "com.esotericsoftware:kryo:4.0.2"
+    compile "de.javakaffee:kryo-serializers:0.43"
 
     compile "com.google.guava:guava:$guava_version"
 
@@ -124,7 +124,7 @@ dependencies {
     }
 
     // Coda Hale's Metrics: for monitoring of key statistics
-    compile "io.dropwizard.metrics:metrics-core:$metrics_version"
+    compile "io.dropwizard.metrics:metrics-jmx:$metrics_version"
 
     // JimFS: in memory java.nio filesystem. Used for test and simulation utilities.
     compile "com.google.jimfs:jimfs:1.1"

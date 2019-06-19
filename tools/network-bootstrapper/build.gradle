@@ -12,7 +12,6 @@ javafx {
 
 ext {
     tornadofx_version = '1.7.15'
-    controlsfx_version = '8.40.12'
 }
 
 apply plugin: 'kotlin'
@@ -35,7 +34,7 @@ configurations {
 }
 
 dependencies {
-    compile "com.microsoft.azure:azure:1.8.0"
+    compile "com.microsoft.azure:azure:1.22.0"
     compile "com.github.docker-java:docker-java:3.0.6"
 
     testCompile "org.jetbrains.kotlin:kotlin-test"
