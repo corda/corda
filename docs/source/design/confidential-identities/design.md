@@ -9,8 +9,6 @@ public keys to `Party`s) by:
 * replacing the use of certificate chains with signed mappings of public
   keys to `Party`s
 
-* eliminate a dependency on the `IdentityService` by the `BasicHSMKeyManagementService`
-
 * eliminate the need for an `IdentityServiceInternal` interface
 
 The key motivation driving these changes is the accounts feature which is
@@ -101,7 +99,8 @@ a node operator hosts "accounts" for its users.
 
 ## Non-goals
 
-Accounts will be tackled as part of a separate piece of work.
+Accounts will be tackled as part of a separate piece of work, as will the
+new "CI" flows.
 
 ## Timeline
 
