@@ -1,6 +1,5 @@
 package net.corda.node.services.identity
 
-import net.corda.SignedKeyToPartyMapping
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.*
 import net.corda.core.internal.CertRole

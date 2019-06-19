@@ -1,6 +1,5 @@
 package net.corda.core.node.services
 
-import net.corda.SignedKeyToPartyMapping
 import net.corda.core.CordaException
 import net.corda.core.DoNotImplement
 import net.corda.core.contracts.PartyAndReference

@@ -1,9 +1,9 @@
 package net.corda.node.services.identity
 
-import net.corda.SignedKeyToPartyMapping
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.identity.SignedKeyToPartyMapping
 import net.corda.core.internal.CertRole
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.x500Matches
