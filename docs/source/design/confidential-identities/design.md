@@ -47,9 +47,7 @@ Currently there are two identity service interfaces `IdentityService` and
 `IdentityServiceInternal`. `IdentityService` is intended to be used by CorDapp
 developers and `IdentityServiceInternal` is used by the current "confidential
 identities" feature. Both interfaces can be merged together, simplifying
-the API. Unfortunately the API does exist in a package named `net.corda.node.services.api`
-implying that it's a public API, yet the name of it "Internal..." implies
-it is not a public facing API. What's going on here?
+the API.
 
 The `PersistentIdentityService` and `InMemoryIdentityService` both contain
 two maps:
@@ -66,23 +64,6 @@ to the network and when a new "confidential identity" is created.
 The network map driven updates to both maps are required. However, the updates
 created to `principalToParties` when a new confidential identity is created
 are unnecessary and shouldn't happen.
-
-### Spurious dependencies
-
-The persistent key management service implementation has a dependency on
-the identity service.
-
-For some reason, the `BasicHSMKeyManagementService` currently depends on
-`IdentityServiceInternal` for some functionality to implement the `filterMyKeys`
-function. However, as the `KeyManagementService` stores all the node's keys
-this dependency is not required! This dependency can be removed, which will
-simplify things at start-up a little.
-
-**Update:** It looks like we won't be able to remove this dependency after
-all since `KeyManagementService.freshKeyAndCert` uses the identityService
-to register CIs and our new way of doing this needs to be done from within
-a flow so we have decided to deprecate this method instead of removing the
-dependency.
 
 ### Unnecessary use of x.509 certificates
 
@@ -230,16 +211,11 @@ there will be a set of flows for:
 
 `KeyManagementService` interface and implementation changes:
 
-1. Remove the `PersistentIdentityService` as a dependency of the `BasicHSMKeyManagementService`.
-   This means that the `filterMyKeys` method must use the `keysMap`. This
-   is a one-line change. `AbstractNode` and some tests will also need to
-   be updated.
-
-2. Deprecate `freshKeyAndCert` methods because they are not required any
+1. Deprecate `freshKeyAndCert` methods because they are not required any
    more. Instead, CorDapp developers will use a new method which returns
    a `SignedPublicKeyToPartyMapping`.
 
-3. Add a new API called `fun freshKey(externalID: UUID): SignedKeyToPartyMapping`
+2. Add a new API called `fun freshKey(externalID: UUID): SignedKeyToPartyMapping`
    which creates a new key pair, adds an entry to the `PublicKeyHashToExternalId`
    entity (if an externalId is specified) and returns a `SignedKeyToPartyMapping`.
    **Note:** that the `SignedKeyToPartyMapping` must be registered with the `IdentityService`
@@ -249,25 +225,19 @@ there will be a set of flows for:
 
 #### `PersistentIdentityService` changes
 
-1. Retain the `principalToParties` map and ensure it is only updated when
-   a new node is added to the network map cache. It doesn't need to be updated
-   when new `SignedKeyToPartyMapping` are stored.
+1. Retain the existing mappings; `principalToParties` and `keysToParties`
+   as the data they contain serves the existing APIs. Deprecate the old
+   APIs:
 
-2. Retain the `keysToParties` map. However, as above, it should only be
-   updated when a new `Party` is added to the network map cache. It doesn't
-   need to be updated when new `SignedKeyToPartyMapping` are stored.
+   1. `IdentityService.verifyAndRegisterIdentity`
+   2. `IdentityServiceInternal.justVerifyAndRegisterIdentity`
+   3. `IdentityServiceInternal.verifyAndRegisterIdentity` (all overloads)
+   4. `IdentityServiceInternal.registerIdentity`
 
-3. Add a new `AppendOnlyPersistentMap` called `keyToPartyMapping` which
+2. Add a new `AppendOnlyPersistentMap` called `keyToPartyMapping` which
    should contain **all** public keys hashes mapped to the x500 name of
    the node where it is associated with. All legal identity keys as well
    as newly created anonymous keys should be stored in this map.
-
-The `principalToParties` map and the `keysToParties` map are required because
-the party information in the network map cache is ephemeral - parties can
-be removed from the network map cache. This might happen if they leave the
-network. Therefore, the legal identity key to party mapping data for old
-parties is required to perform operations with data pertaining to parties
-which were once on the network.
 
 The `IdentityService` should always verify `SignedKeyToPartyMapping`s before
 storing the mapping.
@@ -293,8 +263,9 @@ behaviour whilst supporting a new API for key to party mappings:
    be associated with a single x500 name.
 
 2. `verifyAndRegisterIdentity` should now only be called by the network
-   map cache. Registering new public key to party mappings (or "confidential
-   identities") should be done using the new method outlined above.
+   map cache (and any old CorDapps). Registering new public key to party
+   mappings (or "confidential identities") should be done using the new
+   method outlined above. As such this will be deprecated (see above).
 
 3. `certificateFromKey` should return the `PartyAndCertificate` for
    any supplied `PublicKey`. This will require multiple map look-ups:
@@ -338,14 +309,12 @@ These changes should impact performance positively:
 
 A database migration script will be required to populate the new hibernate
 entity which backs the `keyToPartyMapping`. The existing "confidential identity"
-mappings in the `keysToParties` entity must be moved to the `keyToPartyMapping`
-entity. Once moved, they can be removed from the `keysToParties` table.
-Furthermore, any non-legal identity key mappings in the `principalToParties`
-can be removed, as they are not required.
+mappings in the `keysToParties` entity must be copied to the `keyToPartyMapping`
+entity.
 
 ### UI requirements, if any. Illustrate with UI Mockups and/or wireframes.
 
-Keys with no mapping must be rendered as a substring of the public key.
+Keys with no mapping must be rendered using `toStringShort` on the public key.
 Keys with mappings to an x500name can be rendered used the x500 name.
 
 #### Flows
