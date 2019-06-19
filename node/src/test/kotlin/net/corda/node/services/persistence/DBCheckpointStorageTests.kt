@@ -31,8 +31,9 @@ import org.junit.Test
 import kotlin.streams.toList
 
 internal fun CheckpointStorage.checkpoints(): List<SerializedBytes<Checkpoint>> {
-    val checkpoints = getAllCheckpoints().toList()
-    return checkpoints.map { it.second }
+    return getAllCheckpoints().use {
+        it.map { it.second }.toList()
+    }
 }
 
 class DBCheckpointStorageTests {
