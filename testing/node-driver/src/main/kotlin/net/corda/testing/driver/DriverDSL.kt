@@ -91,7 +91,7 @@ interface DriverDSL {
      *     megabytes, and 'g' or 'G' to indicate gigabytes. The default value is "512m" = 512 megabytes.
      * @param logLevelOverride log4j log level used to override the default value of info.
      * @return A [CordaFuture] on the [NodeHandle] to the node. The future will complete when the node is available and
-     * it sees all previously started nodes, including the notaries.
+     *     it sees all previously started nodes, including the notaries.
      */
     fun startNode(
             defaultParameters: NodeParameters = NodeParameters(),
@@ -133,7 +133,7 @@ interface DriverDSL {
      *     as being in bytes. Append the letter 'k' or 'K' to the value to indicate Kilobytes, 'm' or 'M' to indicate
      *     megabytes, and 'g' or 'G' to indicate gigabytes. The default value is "512m" = 512 megabytes.
      * @return A [CordaFuture] on the [NodeHandle] to the node. The future will complete when the node is available and
-     * it sees all previously started nodes, including the notaries.
+     *     it sees all previously started nodes, including the notaries.
      */
     fun startNode(
             defaultParameters: NodeParameters = NodeParameters(),
