@@ -1,15 +1,11 @@
 package net.corda.finance.flows
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.confidential.identities.RequestKeyFlow
-import net.corda.confidential.identities.RequestKeyFlowHandler
+import net.corda.confidential.identities.SwapIdentitiesFlow
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.InsufficientBalanceException
-import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.flows.*
-import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
-import net.corda.core.identity.SignedKeyToPartyMapping
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
@@ -57,14 +53,14 @@ open class CashPaymentFlow(
         val recipientSession = initiateFlow(recipient)
         recipientSession.send(anonymous)
         val anonymousRecipient = if (anonymous) {
-            val keyToPartyMapping = subFlow(RequestKeyFlow(recipientSession, UniqueIdentifier().id))
-            AnonymousParty(keyToPartyMapping.mapping.key)
+            subFlow(SwapIdentitiesFlow(recipientSession))[recipient]!!
         } else {
             recipient
         }
         progressTracker.currentStep = GENERATING_TX
         val builder = TransactionBuilder(notary = notary ?: serviceHub.networkMapCache.notaryIdentities.first())
         logger.info("Generating spend for: ${builder.lockId}")
+        // TODO: Have some way of restricting this to states the caller controls
         val (spendTX, keysForSigning) = try {
             CashUtils.generateSpend(
                     serviceHub,
@@ -104,7 +100,7 @@ class CashPaymentReceiverFlow(private val otherSide: FlowSession) : FlowLogic<Un
     override fun call() {
         val anonymous = otherSide.receive<Boolean>().unwrap { it }
         if (anonymous) {
-            subFlow(RequestKeyFlowHandler(otherSide))
+            subFlow(SwapIdentitiesFlow(otherSide))
         }
         // Not ideal that we have to do this check, but we must as FinalityFlow does not send locally
         if (!serviceHub.myInfo.isLegalIdentity(otherSide.counterparty)) {

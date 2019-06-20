@@ -295,7 +295,7 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
         return keys.filter { certificateFromKey(it)?.name in ourNames }
     }
 
-    override fun registerPublicKeyToPartyMapping(party: Party, key: PublicKey): Boolean {
+    override fun registerPublicKeyToPartyMapping(key: PublicKey, party: Party): Boolean {
 
         var willRegisterNewMapping = true
 

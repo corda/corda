@@ -148,7 +148,11 @@ interface IdentityService {
 
     fun registerIdentity(identity: PartyAndCertificate, isNewRandomIdentity: Boolean = false): PartyAndCertificate?
 
-    fun registerPublicKeyToPartyMapping(party: Party, key: PublicKey) : Boolean
+    /**
+     * Returns true if an existing mapping for the specified [PublicKey] and [Party] does not already exist and will add a new entry
+     * to the database for this mapping.
+     */
+    fun registerPublicKeyToPartyMapping(key: PublicKey, party: Party) : Boolean
 }
 
 class UnknownAnonymousPartyException(message: String) : CordaException(message)

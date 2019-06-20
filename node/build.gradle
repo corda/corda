@@ -76,6 +76,10 @@ dependencies {
     compile project(':common-logging')
     compile project(':core')
     
+    // Backwards compatibility goo: Apps expect confidential-identities to be loaded by default.
+    // We could eventually gate this on a target-version check.
+    compile project(':confidential-identities')
+
     // Log4J: logging framework (with SLF4J bindings)
     compile "org.apache.logging.log4j:log4j-slf4j-impl:${log4j_version}"
     compile "org.apache.logging.log4j:log4j-web:${log4j_version}"

@@ -3,7 +3,6 @@ package net.corda.node.services.identity
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.identity.SignedKeyToPartyMapping
 import net.corda.core.internal.CertRole
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.x500Matches
@@ -130,7 +129,7 @@ class InMemoryIdentityService(identities: List<PartyAndCertificate> = emptyList(
         return results
     }
 
-    override fun registerPublicKeyToPartyMapping(party: Party, key: PublicKey): Boolean {
+    override fun registerPublicKeyToPartyMapping(key: PublicKey, party: Party): Boolean {
 
         var willRegisterNewMapping = true
 

@@ -4,7 +4,6 @@ apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'net.corda.plugins.api-scanner'
 apply plugin: 'com.jfrog.artifactory'
-apply plugin: 'net.corda.plugins.cordapp'
 
 description 'Corda core'
 
@@ -126,8 +125,6 @@ dependencies {
     compile "org.hibernate:hibernate-core:$hibernate_version"
 
     compile group: "io.github.classgraph", name: "classgraph", version: class_graph_version
-
-    cordapp "com.r3.corda.lib.ci:workflows:1.0"
 }
 
 // TODO Consider moving it to quasar-utils in the future (introduced with PR-1388)
