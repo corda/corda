@@ -1,7 +1,0 @@
----
-networkName: "corda-network"
-backendType: "LOCAL_DOCKER"
-safeNetworkName: "cordanetwork"
-nodes: {}
-networkInitiated: true
-extraParams: {}

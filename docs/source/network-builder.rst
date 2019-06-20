@@ -41,9 +41,9 @@ the following layout:
 An easy way to build a valid set of nodes is by running ``deployNodes``. In this document, we will be using
 the output of running ``deployNodes`` for the `Example CorDapp <https://github.com/corda/cordapp-example>`_:
 
-1. ``git clone https://github.com/corda/cordapp-example``
-2. ``cd cordapp-example``
-3. ``./gradlew clean deployNodes``
+1. ``git clone https://github.com/corda/samples``
+2. ``cd samples/cordapp-example``
+3. ``./gradlew clean workflows-java:deployNodes``
 
 Building a network via the command line
 ---------------------------------------
@@ -54,7 +54,7 @@ Starting the nodes
 Quickstart Local Docker
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-1. ``cd kotlin-source/build/nodes``
+1. ``cd workflows-java/build/nodes``
 2. ``java -jar <path/to/network-builder-jar> -d .``
 
 If you run ``docker ps`` to see the running containers, the following output should be displayed:

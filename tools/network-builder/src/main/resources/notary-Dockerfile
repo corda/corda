@@ -11,14 +11,14 @@ RUN apk upgrade --update && \
     mkdir -p /opt/corda/plugins && \
     mkdir -p /opt/corda/logs && \
     mkdir -p /opt/corda/additional-node-infos && \
-    mkdir -p /opt/node-setup
+    mkdir -p /opt/node-setup && \
+    mkdir -p /opt/corda/cordapps
 
 # Copy corda files
 ADD --chown=corda:corda corda.jar               /opt/corda/corda.jar
 ADD --chown=corda:corda node.conf               /opt/corda/node.conf
 ADD --chown=corda:corda cordapps/               /opt/corda/cordapps
 ADD --chown=corda:corda certificates/           /opt/corda/certificates
-#ADD --chown=corda:corda nodeInfo-*              /opt/corda/
 
 # Copy node info watcher script
 ADD --chown=corda:corda node_info_watcher.sh    /opt/corda/
