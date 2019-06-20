@@ -1,4 +1,4 @@
-package net.corda.core.internal
+package net.corda.coretests.internal
 
 import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.crypto.Crypto
@@ -6,6 +6,8 @@ import net.corda.core.crypto.SignableData
 import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
+import net.corda.core.internal.NetworkParametersStorage
+import net.corda.core.internal.createComponentGroups
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NotaryInfo
 import net.corda.core.node.ServiceHub

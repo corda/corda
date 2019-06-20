@@ -1,6 +1,7 @@
-package net.corda.core.internal
+package net.corda.coretests.internal
 
 import net.corda.core.crypto.Crypto
+import net.corda.core.internal.CertRole
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import org.bouncycastle.asn1.ASN1Integer

@@ -1,4 +1,4 @@
-package net.corda.core.internal
+package net.corda.coretests.internal
 
 import net.corda.client.mock.Generator
 import net.corda.core.contracts.*
@@ -8,6 +8,7 @@ import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.sign
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
+import net.corda.core.internal.topologicalSort
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.CoreTransaction
 import net.corda.core.transactions.SignedTransaction
