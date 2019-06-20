@@ -32,6 +32,18 @@ each notary worker needs to have access to its own local node DB. See the
 
   Omit ``compatibilityZoneURL`` and set ``devMode = true`` when using the bootstrapper.
 
+Configuration Obfuscation
++++++++++++++++++++++++++
+
+Corda Enterprise comes with a tool for obfuscating secret values in configuration files, which is strongly recommended for production deployments.
+For a notary worker node, the Percona XtraDB cluster IP addresses, database user credentials, ``keyStore`` and ``trustStore`` password fields in
+the configuration file should be obfuscated. Usage instructions can be found on the :doc:`/tools-config-obfuscator` page.
+
+Your configuration should look something like this:
+
+.. literalinclude:: resources/config_obfuscator
+   :name: config-obfuscator-notary
+
 .. _mysql_driver:
 
 MySQL JDBC Driver
