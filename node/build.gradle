@@ -74,6 +74,7 @@ dependencies {
     compile project(':common-validation')
     compile project(':common-configuration-parsing')
     compile project(':common-logging')
+    compile project(':core')
     
     // Backwards compatibility goo: Apps expect confidential-identities to be loaded by default.
     // We could eventually gate this on a target-version check.

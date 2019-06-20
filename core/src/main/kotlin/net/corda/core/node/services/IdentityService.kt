@@ -5,10 +5,11 @@ import net.corda.core.DoNotImplement
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.*
+import net.corda.core.internal.hash
+import net.corda.core.utilities.contextLogger
 import java.security.InvalidAlgorithmParameterException
 import java.security.PublicKey
 import java.security.cert.*
-
 /**
  * An identity service maintains a directory of parties by their associated distinguished name/public keys and thus
  * supports lookup of a party given its key, or name. The service also manages the certificates linking confidential
@@ -23,6 +24,10 @@ interface IdentityService {
     val trustRoot: X509Certificate
     val trustAnchor: TrustAnchor
     val caCertStore: CertStore
+
+    companion object {
+        val log = contextLogger()
+    }
 
     /**
      * Verify and then store an identity.
@@ -62,6 +67,7 @@ interface IdentityService {
      * @param owningKey The [PublicKey] to determine well known identity for.
      * @return the party and certificate, or null if unknown.
      */
+    @Deprecated("This should be removed but must be retained for backwards compatibility. Please do not use. ")
     fun certificateFromKey(owningKey: PublicKey): PartyAndCertificate?
 
     /**
@@ -94,6 +100,7 @@ interface IdentityService {
         // The original version of this would return the party as-is if it was a Party (rather than AnonymousParty),
         // however that means that we don't verify that we know who owns the key. As such as now enforce turning the key
         // into a party, and from there figure out the well known party.
+        log.debug("Attempting to find wellKnownParty for: ${party.owningKey.hash}")
         val candidate = partyFromKey(party.owningKey)
         // TODO: This should be done via the network map cache, which is the authoritative source of well known identities
         return if (candidate != null) {
@@ -138,6 +145,23 @@ interface IdentityService {
      * @param exactMatch If true, a case sensitive match is done against each component of each X.500 name.
      */
     fun partiesFromName(query: String, exactMatch: Boolean): Set<Party>
+
+    fun registerIdentity(identity: PartyAndCertificate, isNewRandomIdentity: Boolean = false): PartyAndCertificate?
+
+    /**
+     * Returns true if an existing mapping for the specified [PublicKey] and [Party] does not already exist and will add a new entry
+     * to the database for this mapping.
+     */
+    fun registerPublicKeyToPartyMapping(key: PublicKey, party: Party) : Boolean
 }
 
 class UnknownAnonymousPartyException(message: String) : CordaException(message)
+
+/**
+ * Check if [x500name] matches the [query].
+ */
+fun x500Matches(query: String, exactMatch: Boolean, x500name: CordaX500Name): Boolean {
+    val components = listOfNotNull(x500name.commonName, x500name.organisationUnit, x500name.organisation, x500name.locality, x500name.state, x500name.country)
+    return components.any { (exactMatch && it == query)
+            || (!exactMatch && it.contains(query, ignoreCase = true)) }
+}

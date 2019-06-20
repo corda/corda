@@ -10,22 +10,19 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.node.NotaryInfo
+import net.corda.core.node.services.IdentityService
 import net.corda.finance.DOLLARS
 import net.corda.finance.`issued by`
 import net.corda.finance.contracts.asset.Cash
-import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
-import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.ledger
-import org.assertj.core.api.Assertions
-import org.assertj.core.api.Assertions.*
+import org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import org.junit.Rule
 import org.junit.Test
-import kotlin.test.assertFailsWith
 
 const val CONTRACT_ID = "net.corda.core.transactions.ReferenceStateTests\$ExampleContract"
 
@@ -49,7 +46,7 @@ class ReferenceStateTests {
     private val ledgerServices = MockServices(
             cordappPackages = listOf("net.corda.core.transactions", "net.corda.finance.contracts.asset"),
             initialIdentity = ALICE,
-            identityService = mock<IdentityServiceInternal>().also {
+            identityService = mock<IdentityService>().also {
                 doReturn(ALICE_PARTY).whenever(it).partyFromKey(ALICE_PUBKEY)
                 doReturn(BOB_PARTY).whenever(it).partyFromKey(BOB_PUBKEY)
             },

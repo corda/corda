@@ -1,4 +1,4 @@
-package net.corda.confidential
+package net.corda.confidential.identities
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.FlowLogic
@@ -120,7 +120,7 @@ class IdentitySyncFlowTests {
         }
     }
 
-    @InitiatedBy(IdentitySyncFlowTests.Initiator::class)
+    @InitiatedBy(Initiator::class)
     class Receive(private val otherSideSession: FlowSession) : FlowLogic<Unit>() {
         @Suspendable
         override fun call() {

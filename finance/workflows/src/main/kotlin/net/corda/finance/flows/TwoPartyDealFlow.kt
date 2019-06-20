@@ -1,7 +1,7 @@
 package net.corda.finance.flows
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.confidential.SwapIdentitiesFlow
+import net.corda.confidential.identities.SwapIdentitiesFlow
 import net.corda.core.contracts.requireThat
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.*
