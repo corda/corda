@@ -67,6 +67,9 @@ If you run ``docker ps`` to see the running containers, the following output sho
     c8c44c515bdb        node-partya:corda-network   "/run-corda.sh"     17 seconds ago      Up 17 seconds       0.0.0.0:32894->10003/tcp, 0.0.0.0:32897->10005/tcp, 0.0.0.0:32892->10020/tcp, 0.0.0.0:32893->12222/tcp   partya0
     cf7ab689f493        node-notary:corda-network   "/run-corda.sh"     30 seconds ago      Up 31 seconds       0.0.0.0:32888->10003/tcp, 0.0.0.0:32889->10005/tcp, 0.0.0.0:32890->10020/tcp, 0.0.0.0:32891->12222/tcp   notary0
 
+Depending on you machine performance, even after all containers are reported as running,
+the underlying Corda nodes may be still starting and SSHing to a node may be not available immediately.
+
 Quickstart Remote Azure
 ~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -95,13 +98,19 @@ You can interact with the nodes by SSHing into them on the port that is mapped t
 
     >>> run networkMapSnapshot
     [
-      { "addresses" : [ "partya0:10020" ], "legalIdentitiesAndCerts" : [ "O=PartyA, L=London, C=GB" ], "platformVersion" : 3, "serial" : 1532701330613 },
-      { "addresses" : [ "notary0:10020" ], "legalIdentitiesAndCerts" : [ "O=Notary, L=London, C=GB" ], "platformVersion" : 3, "serial" : 1532701305115 },
-      { "addresses" : [ "partyc0:10020" ], "legalIdentitiesAndCerts" : [ "O=PartyC, L=Paris, C=FR" ], "platformVersion" : 3, "serial" : 1532701331608 },
-      { "addresses" : [ "partyb0:10020" ], "legalIdentitiesAndCerts" : [ "O=PartyB, L=New York, C=US" ], "platformVersion" : 3, "serial" : 1532701330118 }
+      { "addresses" : [ "partya0:10020" ], "legalIdentitiesAndCerts" : [ "O=PartyA, L=London, C=GB" ], "platformVersion" : 4, "serial" : 1532701330613 },
+      { "addresses" : [ "notary0:10020" ], "legalIdentitiesAndCerts" : [ "O=Notary, L=London, C=GB" ], "platformVersion" : 4, "serial" : 1532701305115 },
+      { "addresses" : [ "partyc0:10020" ], "legalIdentitiesAndCerts" : [ "O=PartyC, L=Paris, C=FR" ], "platformVersion" : 4, "serial" : 1532701331608 },
+      { "addresses" : [ "partyb0:10020" ], "legalIdentitiesAndCerts" : [ "O=PartyB, L=New York, C=US" ], "platformVersion" : 4, "serial" : 1532701330118 }
     ]
 
     >>>
+
+You can also run a flow from cordapp-example: ``flow start com.example.flow.ExampleFlow$Initiator iouValue: 20, otherParty: "PartyB"``
+
+To verify it, connect  itno ``partyb0`` and run ``run vaultQuery contractStateType: "com.example.state.IOUState"``
+It should return one state form the vault.
+
 
 Adding additional nodes
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -117,11 +126,11 @@ To confirm the node has been started correctly, run the following in the previou
 
     Tue Jul 17 15:47:14 GMT 2018>>> run networkMapSnapshot
     [
-      { "addresses" : [ "partya0:10020" ], "legalIdentitiesAndCerts" : [ "O=PartyA, L=London, C=GB" ], "platformVersion" : 3, "serial" : 1532701330613 },
-      { "addresses" : [ "notary0:10020" ], "legalIdentitiesAndCerts" : [ "O=Notary, L=London, C=GB" ], "platformVersion" : 3, "serial" : 1532701305115 },
-      { "addresses" : [ "partyc0:10020" ], "legalIdentitiesAndCerts" : [ "O=PartyC, L=Paris, C=FR" ], "platformVersion" : 3, "serial" : 1532701331608 },
-      { "addresses" : [ "partyb0:10020" ], "legalIdentitiesAndCerts" : [ "O=PartyB, L=New York, C=US" ], "platformVersion" : 3, "serial" : 1532701330118 },
-      { "addresses" : [ "partya1:10020" ], "legalIdentitiesAndCerts" : [ "O=PartyZ, L=London, C=GB" ], "platformVersion" : 3, "serial" : 1532701630861 }
+      { "addresses" : [ "partya0:10020" ], "legalIdentitiesAndCerts" : [ "O=PartyA, L=London, C=GB" ], "platformVersion" : 4, "serial" : 1532701330613 },
+      { "addresses" : [ "notary0:10020" ], "legalIdentitiesAndCerts" : [ "O=Notary, L=London, C=GB" ], "platformVersion" : 4, "serial" : 1532701305115 },
+      { "addresses" : [ "partyc0:10020" ], "legalIdentitiesAndCerts" : [ "O=PartyC, L=Paris, C=FR" ], "platformVersion" : 4, "serial" : 1532701331608 },
+      { "addresses" : [ "partyb0:10020" ], "legalIdentitiesAndCerts" : [ "O=PartyB, L=New York, C=US" ], "platformVersion" : 4, "serial" : 1532701330118 },
+      { "addresses" : [ "partya1:10020" ], "legalIdentitiesAndCerts" : [ "O=PartyZ, L=London, C=GB" ], "platformVersion" : 4, "serial" : 1532701630861 }
     ]
 
 Building a network in Graphical User Mode
@@ -133,7 +142,7 @@ The Corda Network Builder also provides a GUI for when automated interactions ar
 Starting the nodes
 ^^^^^^^^^^^^^^^^^^
 
-1. Click ``Open nodes ...`` and select the folder where you built your nodes in :ref:`creating_the_base_nodes` and
+1. Click ``Open nodes ...`` and select jar the folder where you built your nodes in :ref:`creating_the_base_nodes` and
    click ``Open``
 2. Select ``Local Docker`` or ``Azure``
 3. Click ``Build``
