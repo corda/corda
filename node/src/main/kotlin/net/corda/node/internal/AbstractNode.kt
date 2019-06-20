@@ -83,7 +83,7 @@ import net.corda.nodeapi.internal.crypto.X509Utilities.DISTRIBUTED_NOTARY_ALIAS_
 import net.corda.nodeapi.internal.crypto.X509Utilities.NODE_IDENTITY_ALIAS_PREFIX
 import net.corda.nodeapi.internal.cryptoservice.CryptoServiceFactory
 import net.corda.nodeapi.internal.cryptoservice.SupportedCryptoServices
-import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
+import net.corda.nodeapi.internal.cryptoservice.bouncycastle.SignOnlyBCCryptoService
 import net.corda.nodeapi.internal.persistence.*
 import net.corda.tools.shell.InteractiveShell
 import org.apache.activemq.artemis.utils.ReusableLatch
@@ -277,7 +277,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             configuration.configureWithDevSSLCertificate(cryptoService)
             // configureWithDevSSLCertificate is a devMode process that writes directly to keystore files, so
             // we should re-synchronise BCCryptoService with the updated keystore file.
-            if (cryptoService is BCCryptoService) {
+            if (cryptoService is SignOnlyBCCryptoService) {
                 cryptoService.resyncKeystore()
             }
         }
