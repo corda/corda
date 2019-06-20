@@ -154,6 +154,7 @@ abstract class AbstractInternalKeystoreGenerator(alias: String, description: Str
     override fun runProgram(): Int {
 
         HAUtilities.addJarsInDriversDirectoryToSystemClasspath(baseDirectory)
+        HAUtilities.addJarsInDriversDirectoryToSystemClasspath(Paths.get("."))
 
         createKeyStores()
 
