@@ -6,7 +6,6 @@ import org.hamcrest.CoreMatchers.`is`
 import org.hamcrest.core.IsNot.not
 import org.hamcrest.number.OrderingComparison
 import org.junit.Assert
-import org.junit.Ignore
 import org.junit.Test
 import java.io.RandomAccessFile
 import java.nio.channels.FileChannel
@@ -17,16 +16,16 @@ class PortAllocationTest {
     @Test
     fun `should allocate a port whilst cycling back round if exceeding start of ephemeral range`() {
         val startingPoint = 10000
-        val portAllocator = PortAllocation(startingPoint, Files.newTemporaryFile().also { it.deleteOnExit() })
+        val portAllocator = SharedMemoryPortAllocation.INSTANCE
 
         var previous = portAllocator.nextPort()
         (0 until 1000000).forEach { _ ->
             val next = portAllocator.nextPort()
             Assert.assertThat(next, `is`(not(previous)))
-            Assert.assertThat(next, `is`(OrderingComparison.lessThan(PortAllocation.FIRST_EPHEMERAL_PORT.toInt())))
+            Assert.assertThat(next, `is`(OrderingComparison.lessThan(SharedMemoryPortAllocation.FIRST_EPHEMERAL_PORT)))
 
             if (next == startingPoint) {
-                Assert.assertThat(previous.toLong(), `is`(PortAllocation.FIRST_EPHEMERAL_PORT - 1))
+                Assert.assertThat(previous, `is`(SharedMemoryPortAllocation.FIRST_EPHEMERAL_PORT - 1))
             } else {
                 Assert.assertThat(next, `is`(previous + 1))
             }
@@ -35,14 +34,12 @@ class PortAllocationTest {
     }
 
     @Test(timeout = 120_000)
-    @Ignore
     fun `should support multiprocess port allocation`() {
 
         println("Starting multiprocess port allocation test")
-        val allocationFile = Files.newTemporaryFile().also { it.deleteOnExit() }.absolutePath
         val spinnerFile = Files.newTemporaryFile().also { it.deleteOnExit() }.absolutePath
-        val process1 = buildJvmProcess(allocationFile, spinnerFile, 1)
-        val process2 = buildJvmProcess(allocationFile, spinnerFile, 2)
+        val process1 = buildJvmProcess(spinnerFile, 1)
+        val process2 = buildJvmProcess(spinnerFile, 2)
 
         println("Started child processes")
 
@@ -80,7 +77,7 @@ class PortAllocationTest {
         Assert.assertThat(process1Output.intersect(process2Output), `is`(emptySet()))
     }
 
-    private fun buildJvmProcess(allocationFile: String, spinnerFile: String, reportingIndex: Int): Process {
+    private fun buildJvmProcess(spinnerFile: String, reportingIndex: Int): Process {
         val separator = System.getProperty("file.separator")
         val classpath = System.getProperty("java.class.path")
         val path = (System.getProperty("java.home")
@@ -88,7 +85,6 @@ class PortAllocationTest {
         val processBuilder = ProcessBuilder(path, "-cp",
                 classpath,
                 PortAllocationRunner::class.java.name,
-                allocationFile,
                 spinnerFile,
                 reportingIndex.toString())
 

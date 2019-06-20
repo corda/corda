@@ -108,38 +108,50 @@ data class WebserverHandle(
         val process: Process
 )
 
-/**
- * An abstract helper class which is used within the driver to allocate unused ports for testing.
- */
-class PortAllocation(val startingPoint: Int = 10_000, fileName: File? = File(System.getProperty("user.home"), "allocator.bin")) {
-
-
+@DoNotImplement
+abstract class PortAllocation {
     /** Get the next available port via [nextPort] and then return a [NetworkHostAndPort] **/
-    fun nextHostAndPort() = NetworkHostAndPort("localhost", nextPort())
+    fun nextHostAndPort(): NetworkHostAndPort = NetworkHostAndPort("localhost", nextPort())
+
+    abstract fun nextPort(): Int
+
+    open class Incremental(private val startingPort: Int) : PortAllocation() {
+        override fun nextPort(): Int {
+            return SharedMemoryPortAllocation.INSTANCE.nextPort()
+        }
+    }
+}
+
+class SharedMemoryPortAllocation private constructor(startPort: Int, endPort: Int, file: File = File(System.getProperty("user.home"), "$startPort-to-$endPort-allocator.bin")) : PortAllocation() {
+
+    private val startingPoint: Int = startPort
+    private val endPoint: Int = endPort
+
+    private val backingFile: RandomAccessFile = RandomAccessFile(file, "rw")
+    private val mb: MappedByteBuffer
+    private val startingAddress: Long
 
     /**
      * An implementation of [PortAllocation] which allocates ports sequentially
      */
     companion object {
-        const val FIRST_EPHEMERAL_PORT = 20_000L
+        const val FIRST_EPHEMERAL_PORT = 30_000
         private val UNSAFE: Unsafe = getUnsafe()
         private fun getUnsafe(): Unsafe {
             val f = Unsafe::class.java.getDeclaredField("theUnsafe")
             f.isAccessible = true
             return f.get(null) as Unsafe
         }
+
+        val INSTANCE = SharedMemoryPortAllocation(10000, FIRST_EPHEMERAL_PORT)
     }
 
-    private val backingFile = RandomAccessFile(fileName, "rw")
-    private val mb: MappedByteBuffer = backingFile.channel.map(FileChannel.MapMode.READ_WRITE, 0, 16)
-    private val startingAddress = (mb as DirectBuffer).address()
-
-    fun nextPort(): Int {
+    override fun nextPort(): Int {
         var oldValue: Long
         var newValue: Long
         do {
             oldValue = UNSAFE.getLongVolatile(null, startingAddress)
-            newValue = if (oldValue + 1 >= FIRST_EPHEMERAL_PORT || oldValue < startingPoint) {
+            newValue = if (oldValue + 1 >= endPoint || oldValue < startingPoint) {
                 //we have gone past the point of no return
                 startingPoint.toLong()
             } else {
@@ -149,7 +161,13 @@ class PortAllocation(val startingPoint: Int = 10_000, fileName: File? = File(Sys
 
         return newValue.toInt()
     }
+
+    init {
+        mb = backingFile.channel.map(FileChannel.MapMode.READ_WRITE, 0, 16)
+        startingAddress = (mb as DirectBuffer).address()
+    }
 }
+
 
 /**
  * A class containing configuration information for Jolokia JMX, to be used when creating a node via the [driver].
