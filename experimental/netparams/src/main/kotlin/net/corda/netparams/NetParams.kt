@@ -130,13 +130,6 @@ class NetParamsSigner : CordaCliWrapper("netparams-signer", "Sign network parame
                 AMQP_P2P_CONTEXT)
     }
 
-    fun <T : Any> signData(data: T, signingKey: KeyPair, certPath: List<X509Certificate>): SignedDataWithCert<T> {
-        val raw = data.serialize()
-        val sig = DigitalSignatureWithCert(certPath.first(), certPath.takeLast(certPath.size - 1),
-                Crypto.doSign(signingKey.private, raw.bytes))
-        return SignedDataWithCert(raw, sig)
-    }
-
     class CertificatePathAndKeyPair(val certPath: List<X509Certificate>, private val certificateAndKeyPair: CertificateAndKeyPair) {
         val keyPair: KeyPair
             get() = certificateAndKeyPair.keyPair
@@ -184,7 +177,7 @@ class NetParamsSigner : CordaCliWrapper("netparams-signer", "Sign network parame
         }
 
         // sign and include the certificate path
-        val signedNetParams = signData(networkParameters, signingkey.keyPair, signingkey.certPath)
+        val signedNetParams = networkParameters.signWithCertPath(signingkey.keyPair.private, signingkey.certPath)
 
         if (outputFile != null) {
             print("\nWriting: " + outputFile)
