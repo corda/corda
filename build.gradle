@@ -71,8 +71,7 @@ buildscript {
     ext.junit_vintage_version = '5.5.0-RC1'
     ext.junit_jupiter_version = '5.5.0-RC1'
     ext.junit_platform_version = '1.5.0-RC1'
-    // TODO Update this to the latest version when hibernate is updated
-    ext.mockito_version = '2.18.3'
+    ext.mockito_version = '2.28.2'
     ext.mockito_kotlin_version = '1.6.0'
     ext.hamkrest_version = '1.7.0.0'
     ext.jopt_simple_version = '5.0.2'
