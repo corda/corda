@@ -148,7 +148,7 @@ interface IdentityService {
 
     fun registerIdentity(identity: PartyAndCertificate, isNewRandomIdentity: Boolean = false): PartyAndCertificate?
 
-    fun registerPublicKeyToPartyMapping(keyMapping: SignedKeyToPartyMapping) : Boolean
+    fun registerPublicKeyToPartyMapping(party: Party, key: PublicKey) : Boolean
 }
 
 class UnknownAnonymousPartyException(message: String) : CordaException(message)

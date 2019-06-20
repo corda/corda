@@ -7,6 +7,7 @@ import net.corda.core.internal.toMultiMap
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.utilities.OpaqueBytes
 import java.security.PublicKey
 
 /**
@@ -80,11 +81,8 @@ fun <T> excludeHostNode(serviceHub: ServiceHub, map: Map<Party, T>): Map<Party, 
  */
 fun <T> excludeNotary(map: Map<Party, T>, stx: SignedTransaction): Map<Party, T> = map.filterKeys { it != stx.notary }
 
+/**
+ * TODO
+ */
 @CordaSerializable
-data class KeyToPartyMapping(val key: PublicKey, val party: Party)
-
-@CordaSerializable
-data class SignedKeyToPartyMapping(
-        val mapping: KeyToPartyMapping,
-        val signature: DigitalSignature.WithKey
-)
+data class OwnershipClaim(val nonce: OpaqueBytes, val key: PublicKey)

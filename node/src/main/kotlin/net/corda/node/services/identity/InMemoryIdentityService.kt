@@ -130,18 +130,16 @@ class InMemoryIdentityService(identities: List<PartyAndCertificate> = emptyList(
         return results
     }
 
-    override fun registerPublicKeyToPartyMapping(keyMapping: SignedKeyToPartyMapping): Boolean {
-        val k = keyMapping.mapping.key
-        val p = keyMapping.mapping.party
+    override fun registerPublicKeyToPartyMapping(party: Party, key: PublicKey): Boolean {
 
         var willRegisterNewMapping = true
 
-        when (keyToParties[k]) {
+        when (keyToParties[key]) {
             null -> {
-                keyToParties.putIfAbsent(k, p.name)
+                keyToParties.putIfAbsent(key, party.name)
             }
             else -> {
-                if (p.name != keyToParties[k]) {
+                if (party.name != keyToParties[key]) {
                     return false
                 }
                 willRegisterNewMapping = false

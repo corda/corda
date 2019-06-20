@@ -295,21 +295,19 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
         return keys.filter { certificateFromKey(it)?.name in ourNames }
     }
 
-    override fun registerPublicKeyToPartyMapping(keyMapping: SignedKeyToPartyMapping): Boolean {
-        val k = keyMapping.mapping.key
-        val p = keyMapping.mapping.party
+    override fun registerPublicKeyToPartyMapping(party: Party, key: PublicKey): Boolean {
 
         var willRegisterNewMapping = true
 
         database.transaction {
-            val existingEntryForKey = keyToParty[k.hash]
+            val existingEntryForKey = keyToParty[key.hash]
             if (existingEntryForKey == null) {
-                log.info("Linking: ${k.hash} to ${p.name}")
-                keyToParty[k.hash] = p.name
+                log.info("Linking: ${key.hash} to ${party.name}")
+                keyToParty[key.hash] = party.name
             } else {
-                log.info("An existing entry for ${k.hash} already exists.")
-                if (p.name != keyToParty[k.hash]) {
-                    log.error("The public key ${k.hash} is already assigned to a party.")
+                log.info("An existing entry for ${key.hash} already exists.")
+                if (party.name != keyToParty[key.hash]) {
+                    log.error("The public key ${key.hash} is already assigned to a party.")
                 }
                 willRegisterNewMapping = false
             }
