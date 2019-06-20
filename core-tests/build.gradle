@@ -3,11 +3,8 @@ apply plugin: 'kotlin-jpa'
 apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'net.corda.plugins.api-scanner'
-apply plugin: 'com.jfrog.artifactory'
 
-description 'Corda core'
-
-evaluationDependsOn(':node:capsule')
+description 'Corda core tests'
 
 configurations {
     integrationTestCompile.extendsFrom testCompile
@@ -15,6 +12,38 @@ configurations {
 
     smokeTestCompile.extendsFrom compile
     smokeTestRuntimeOnly.extendsFrom runtimeOnly
+}
+
+sourceSets {
+    integrationTest {
+        kotlin {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test/kotlin')
+        }
+        java {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test/java')
+        }
+    }
+    smokeTest {
+        kotlin {
+            // We must NOT have any Node code on the classpath, so do NOT
+            // include the test or integrationTest dependencies here.
+            srcDir file('src/smoke-test/kotlin')
+        }
+        java {
+            srcDir file('src/smoke-test/java')
+        }
+    }
+}
+
+processSmokeTestResources {
+    // Bring in the fully built corda.jar for use by NodeFactory in the smoke tests
+    from(project(':node:capsule').tasks['buildCordaJAR']) {
+        rename 'corda-(.*)', 'corda.jar'
+    }
 }
 
 dependencies {
@@ -26,6 +55,7 @@ dependencies {
     testRuntimeOnly "org.junit.platform:junit-platform-launcher:${junit_platform_version}"
 
     testCompile "commons-fileupload:commons-fileupload:$fileupload_version"
+    testCompile project(":core")
 
     // Guava: Google test library (collections test suite)
     testCompile "com.google.guava:guava-testlib:$guava_version"
@@ -40,9 +70,6 @@ dependencies {
     // Hamkrest, for fluent, composable matchers
     testCompile "com.natpryce:hamkrest:$hamkrest_version"
 
-    // Thread safety annotations
-    compile "com.google.code.findbugs:jsr305:$jsr305_version"
-
     // SLF4J: commons-logging bindings for a SLF4J back end
     compile "org.slf4j:jcl-over-slf4j:$slf4j_version"
     compile "org.slf4j:slf4j-api:$slf4j_version"
@@ -53,40 +80,17 @@ dependencies {
     // Guava: Google utilities library.
     testCompile "com.google.guava:guava:$guava_version"
 
-    // For caches rather than guava
-    compile "com.github.ben-manes.caffeine:caffeine:$caffeine_version"
+    // Smoke tests do NOT have any Node code on the classpath!
+    smokeTestImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
+    smokeTestImplementation "junit:junit:$junit_version"
 
-    // RxJava: observable streams of events.
-    compile "io.reactivex:rxjava:$rxjava_version"
-    
-    compile "org.apache.commons:commons-lang3:3.9"
+    smokeTestRuntimeOnly "org.junit.vintage:junit-vintage-engine:${junit_vintage_version}"
+    smokeTestRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${junit_jupiter_version}"
+    smokeTestRuntimeOnly "org.junit.platform:junit-platform-launcher:${junit_platform_version}"
 
-    // Java ed25519 implementation. See https://github.com/str4d/ed25519-java/
-    compile "net.i2p.crypto:eddsa:$eddsa_version"
+    smokeTestCompile project(':smoke-test-utils')
+    smokeTestCompile "org.assertj:assertj-core:${assertj_version}"
 
-    // Bouncy castle support needed for X509 certificate manipulation
-    compile "org.bouncycastle:bcprov-jdk15on:${bouncycastle_version}"
-    compile "org.bouncycastle:bcpkix-jdk15on:${bouncycastle_version}"
-
-    // JPA 2.2 annotations.
-    compile "javax.persistence:javax.persistence-api:2.2"
-
-    // required to use @Type annotation
-    compile "org.hibernate:hibernate-core:$hibernate_version"
-
-    compile group: "io.github.classgraph", name: "classgraph", version: class_graph_version
-}
-
-// TODO Consider moving it to quasar-utils in the future (introduced with PR-1388)
-task copyQuasarJar(type: Copy) {
-    from configurations.quasar
-    into "$project.rootProject.projectDir/lib"
-    rename { filename -> "quasar.jar"}
-}
-
-jar {
-    finalizedBy(copyQuasarJar)
-    baseName 'corda-core'
 }
 
 configurations {
@@ -101,6 +105,22 @@ tasks.withType(Test) {
 task testJar(type: Jar) {
     classifier "tests"
     from sourceSets.test.output
+}
+
+task integrationTest(type: Test) {
+    testClassesDirs = sourceSets.integrationTest.output.classesDirs
+    classpath = sourceSets.integrationTest.runtimeClasspath
+}
+
+task smokeTestJar(type: Jar) {
+    classifier 'smokeTests'
+    from sourceSets.smokeTest.output
+}
+
+task smokeTest(type: Test) {
+    dependsOn smokeTestJar
+    testClassesDirs = sourceSets.smokeTest.output.classesDirs
+    classpath = sourceSets.smokeTest.runtimeClasspath
 }
 
 // quasar exclusions upon agent code instrumentation at run-time
@@ -134,15 +154,4 @@ quasar {
 
 artifacts {
     testArtifacts testJar
-}
-
-scanApi {
-    excludeClasses = [
-        // Kotlin should probably have declared this class as "synthetic".
-        "net.corda.core.Utils\$toFuture\$1\$subscription\$1"
-    ]
-}
-
-publish {
-    name jar.baseName
 }
