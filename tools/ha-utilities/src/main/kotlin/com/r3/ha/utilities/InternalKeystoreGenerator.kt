@@ -6,7 +6,7 @@ import net.corda.cliutils.ExitCodes
 import net.corda.core.crypto.Crypto
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.div
-import net.corda.core.internal.exists
+import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.config.CertificateStore
 import net.corda.nodeapi.internal.config.FileBasedCertificateStoreSupplier
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
@@ -19,10 +19,6 @@ import net.corda.nodeapi.internal.cryptoservice.SupportedCryptoServices
 import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
 import picocli.CommandLine.Option
 import sun.security.x509.X500Name
-import java.io.File
-import java.lang.IllegalStateException
-import java.net.URL
-import java.net.URLClassLoader
 import java.nio.file.Path
 import java.nio.file.Paths
 import javax.security.auth.x500.X500Principal
@@ -151,9 +147,15 @@ abstract class AbstractInternalKeystoreGenerator(alias: String, description: Str
 
     protected abstract fun createKeyStores()
 
+    companion object {
+        private val logger by lazy { contextLogger() }
+    }
+
     override fun runProgram(): Int {
 
-        addJarsInDriversDirectoryToSystemClasspath(baseDirectory)
+        if (!HAUtilities.addJarsInDriversDirectoryToSystemClasspath(baseDirectory)) {
+            HAUtilities.addJarsInDriversDirectoryToSystemClasspath(Paths.get("."))
+        }
 
         createKeyStores()
 
@@ -162,25 +164,6 @@ abstract class AbstractInternalKeystoreGenerator(alias: String, description: Str
         }
 
         return ExitCodes.SUCCESS
-    }
-
-    private fun addJarsInDriversDirectoryToSystemClasspath(baseDirectory: Path) {
-        val driversDir: Path = baseDirectory / "drivers"
-        if (driversDir.exists()) {
-            driversDir.toFile().listFiles().filter { it.name.endsWith(".jar") }.forEach{ addToClasspath(it)}
-        }
-    }
-
-    private fun addToClasspath(file: File) {
-        try {
-            val url = file.toURI().toURL()
-            val classLoader = ClassLoader.getSystemClassLoader() as URLClassLoader
-            val method = URLClassLoader::class.java.getDeclaredMethod("addURL", URL::class.java)
-            method.isAccessible = true
-            method.invoke(classLoader, url)
-        } catch (e: Exception) {
-            throw IllegalStateException("Unable to add to system class loader", e)
-        }
     }
 
     protected fun warnOnDefaultPassword(password: String, paramName: String) {
@@ -238,11 +221,18 @@ abstract class AbstractInternalKeystoreGenerator(alias: String, description: Str
                             keystorePath: Path, storePassword: String, entryPassword: String, x500Name: CordaX500Name): CryptoService {
 
         val supportedCryptoServiceName = resolveCryptoServiceName(cryptoServiceName)
-        val certificateStoreSupplier = when (supportedCryptoServiceName) {
-            SupportedCryptoServices.BC_SIMPLE -> FileBasedCertificateStoreSupplier(keystorePath, storePassword, entryPassword)
-            else -> null
+        try {
+            val certificateStoreSupplier = when (supportedCryptoServiceName) {
+                SupportedCryptoServices.BC_SIMPLE -> FileBasedCertificateStoreSupplier(keystorePath, storePassword, entryPassword)
+                else -> null
+            }
+            return CryptoServiceFactory.makeCryptoService(supportedCryptoServiceName, x500Name, certificateStoreSupplier, cryptoServiceConfigPath)
         }
-        return CryptoServiceFactory.makeCryptoService(supportedCryptoServiceName, x500Name, certificateStoreSupplier, cryptoServiceConfigPath)
+        catch (ex: NoClassDefFoundError) {
+            logger.error ("Caught a NoClassDefFoundError exception when trying to load the ${supportedCryptoServiceName.name} crypto service")
+            logger.error("Please check that the ${baseDirectory / "drivers"} directory contains the client side jar for the HSM")
+            throw ex
+        }
     }
 
     fun resolveCryptoServiceName(cryptoServiceName: String?): SupportedCryptoServices {
