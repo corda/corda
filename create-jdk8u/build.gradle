@@ -50,9 +50,10 @@ task runtimeJar(type: Jar, dependsOn: makeJdk) {
     baseName 'deterministic-rt'
     inputs.dir "libs"
 
-    from(zipTree("libs/rt.jar"))
-    from(zipTree("libs/jce.jar"))
-    from(zipTree("libs/jsse.jar"))
+    from(zipTree('libs/rt.jar'))
+    from(zipTree('libs/jce.jar'))
+    from(zipTree('libs/jsse.jar'))
+    from 'libs/currency.data'
 
     reproducibleFileOrder = true
     includeEmptyDirs = false

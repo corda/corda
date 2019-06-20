@@ -12,7 +12,7 @@ jdk8u/build/%/spec.gmk: jdk8u/common/autoconf/configure
 jdk-image: jdk8u/build/linux-x86_64-normal-server-release/spec.gmk
 	$(MAKE) -C jdk8u images docs
 
-all: libs/rt.jar libs/jce.jar libs/jsse.jar
+all: libs/rt.jar libs/jce.jar libs/jsse.jar libs/currency.data
 
 clean:
 	$(MAKE) -C jdk8u clean
@@ -20,6 +20,6 @@ clean:
 libs:
 	mkdir $@
 
-libs/rt.jar libs/jce.jar libs/jsse.jar: libs jdk-image
+libs/rt.jar libs/jce.jar libs/jsse.jar libs/currency.data: libs jdk-image
 	cp -f jdk8u/build/*/images/j2re-image/lib/$(@F) $@
 
