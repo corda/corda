@@ -24,10 +24,14 @@ class HAUtilities : CordaCliWrapper("ha-utilities", "HA utilities contains tools
     }
 
     companion object {
-        fun addJarsInDriversDirectoryToSystemClasspath(baseDirectory: Path) {
+        fun addJarsInDriversDirectoryToSystemClasspath(baseDirectory: Path): Boolean {
             val driversDir: Path = baseDirectory / "drivers"
             if (driversDir.exists()) {
                 driversDir.toFile().listFiles().filter { it.name.endsWith(".jar") }.forEach{ addToClasspath(it)}
+                return true
+            }
+            else {
+                return false
             }
         }
 

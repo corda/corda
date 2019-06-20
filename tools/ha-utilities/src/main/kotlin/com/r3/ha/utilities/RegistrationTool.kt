@@ -93,8 +93,9 @@ class RegistrationTool : CordaCliWrapper("node-registration", "Corda registratio
 
     override fun runProgram(): Int {
         return try {
-            HAUtilities.addJarsInDriversDirectoryToSystemClasspath(baseDirectory)
-            HAUtilities.addJarsInDriversDirectoryToSystemClasspath(Paths.get("."))
+            if (!HAUtilities.addJarsInDriversDirectoryToSystemClasspath(baseDirectory)) {
+                HAUtilities.addJarsInDriversDirectoryToSystemClasspath(Paths.get("."))
+            }
             validateNodeHsmConfigs(configFiles)
             val bridgeCryptoService = makeBridgeCryptoService(bridgeConfigFile)
             // Parallel processing is beneficial as it is possible to submit multiple CSR in close succession
