@@ -184,7 +184,7 @@ class NetParamsSigner : CordaCliWrapper("netparams-signer", "Sign network parame
         }
 
         // sign and include the certificate path
-        val signedNetParams = signData(networkParameters, signingkey.keyPair, signingkey.certPath).serialize()
+        val signedNetParams = signData(networkParameters, signingkey.keyPair, signingkey.certPath)
 
         if (outputFile != null) {
             print("\nWriting: " + outputFile)
