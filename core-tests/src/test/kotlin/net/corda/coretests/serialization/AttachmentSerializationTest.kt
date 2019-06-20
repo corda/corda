@@ -1,4 +1,4 @@
-package net.corda.core.serialization
+package net.corda.coretests.serialization
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.Attachment
@@ -9,6 +9,8 @@ import net.corda.core.internal.FetchAttachmentsFlow
 import net.corda.core.internal.FetchDataFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
+import net.corda.coretests.flows.TestNoSecurityDataVendingFlow
+import net.corda.coretests.flows.registerCordappFlowFactory
 import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.nodeapi.internal.persistence.currentDBSession
 import net.corda.testing.core.ALICE_NAME

@@ -1,9 +1,11 @@
-package net.corda.core.node
+package net.corda.coretests.node
 
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.internal.getPackageOwnerOf
+import net.corda.core.node.NetworkParameters
+import net.corda.core.node.NotaryInfo
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.days

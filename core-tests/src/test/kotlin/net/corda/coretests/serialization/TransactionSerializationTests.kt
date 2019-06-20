@@ -1,4 +1,4 @@
-package net.corda.core.serialization
+package net.corda.coretests.serialization
 
 import com.nhaarman.mockito_kotlin.mock
 import net.corda.core.contracts.*
@@ -6,6 +6,8 @@ import net.corda.core.crypto.*
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.node.NotaryInfo
+import net.corda.core.serialization.deserialize
+import net.corda.core.serialization.serialize
 import net.corda.core.transactions.*
 import net.corda.core.utilities.seconds
 import net.corda.finance.POUNDS
@@ -39,7 +41,7 @@ class TransactionSerializationTests {
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
-    private val TEST_CASH_PROGRAM_ID = "net.corda.core.serialization.TransactionSerializationTests\$TestCash"
+    private val TEST_CASH_PROGRAM_ID = "net.corda.coretests.serialization.TransactionSerializationTests\$TestCash"
 
     class TestCash : Contract {
         override fun verify(tx: LedgerTransaction) {
@@ -70,11 +72,11 @@ class TransactionSerializationTests {
     val outputState = TransactionState(TestCash.State(depositRef, 600.POUNDS, MEGA_CORP), TEST_CASH_PROGRAM_ID, DUMMY_NOTARY)
     val changeState = TransactionState(TestCash.State(depositRef, 400.POUNDS, MEGA_CORP), TEST_CASH_PROGRAM_ID, DUMMY_NOTARY)
 
-    val megaCorpServices = object : MockServices(listOf("net.corda.core.serialization"), MEGA_CORP.name, mock(), testNetworkParameters(notaries = listOf(NotaryInfo(DUMMY_NOTARY, true))), MEGA_CORP_KEY) {
+    val megaCorpServices = object : MockServices(listOf("net.corda.coretests.serialization"), MEGA_CORP.name, mock(), testNetworkParameters(notaries = listOf(NotaryInfo(DUMMY_NOTARY, true))), MEGA_CORP_KEY) {
         //override mock implementation with a real one
         override fun loadContractAttachment(stateRef: StateRef): Attachment = servicesForResolution.loadContractAttachment(stateRef)
     }
-    val notaryServices = MockServices(listOf("net.corda.core.serialization"), DUMMY_NOTARY.name, rigorousMock(), DUMMY_NOTARY_KEY)
+    val notaryServices = MockServices(listOf("net.corda.coretests.serialization"), DUMMY_NOTARY.name, rigorousMock(), DUMMY_NOTARY_KEY)
     lateinit var tx: TransactionBuilder
 
     @Before

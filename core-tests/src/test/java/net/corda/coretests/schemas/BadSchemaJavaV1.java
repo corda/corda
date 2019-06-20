@@ -1,13 +1,14 @@
-package net.corda.core.schemas;
+package net.corda.coretests.schemas;
 
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.Transient;
+import net.corda.core.schemas.MappedSchema;
+import net.corda.core.schemas.PersistentState;
+
+import javax.persistence.*;
 import java.util.Arrays;
 
-public class PoliteSchemaJavaV1 extends MappedSchema {
+public class BadSchemaJavaV1 extends MappedSchema {
 
-    public PoliteSchemaJavaV1() {
+    public BadSchemaJavaV1() {
         super(TestJavaSchemaFamily.class, 1, Arrays.asList(State.class));
     }
 
@@ -25,7 +26,9 @@ public class PoliteSchemaJavaV1 extends MappedSchema {
             this.id = id;
         }
 
-        @Transient
+        @JoinColumns({@JoinColumn(name = "itid"), @JoinColumn(name = "outid")})
+        @OneToOne
+        @MapsId
         public GoodSchemaJavaV1.State getOther() {
             return other;
         }

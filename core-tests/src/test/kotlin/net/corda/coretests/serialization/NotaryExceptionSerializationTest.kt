@@ -1,4 +1,4 @@
-package net.corda.core.serialization
+package net.corda.coretests.serialization
 
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.SecureHash
@@ -6,6 +6,8 @@ import net.corda.core.crypto.sha256
 import net.corda.core.flows.NotaryError
 import net.corda.core.flows.NotaryException
 import net.corda.core.flows.StateConsumptionDetails
+import net.corda.core.serialization.deserialize
+import net.corda.core.serialization.serialize
 import net.corda.testing.core.SerializationEnvironmentRule
 import org.junit.Rule
 import org.junit.Test

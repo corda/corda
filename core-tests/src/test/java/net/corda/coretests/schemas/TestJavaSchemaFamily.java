@@ -1,4 +1,4 @@
-package net.corda.core.schemas;
+package net.corda.coretests.schemas;
 
 public class TestJavaSchemaFamily {
 }

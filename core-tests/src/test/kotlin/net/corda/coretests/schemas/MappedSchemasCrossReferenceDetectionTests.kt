@@ -1,7 +1,9 @@
-package net.corda.core.schemas
+package net.corda.coretests.schemas
 
+import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.MappedSchemaValidator.fieldsFromOtherMappedSchema
 import net.corda.core.schemas.MappedSchemaValidator.methodsFromOtherMappedSchema
+import net.corda.core.schemas.PersistentState
 import net.corda.finance.schemas.CashSchema
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
@@ -9,7 +11,7 @@ import javax.persistence.*
 
 class MappedSchemasCrossReferenceDetectionTests {
 
-    object GoodSchema : MappedSchema(schemaFamily = CashSchema.javaClass, version = 1, mappedTypes = listOf(State::class.java)) {
+    object GoodSchema : MappedSchema(schemaFamily = CashSchema.javaClass, version = 1, mappedTypes = listOf(GoodSchema.State::class.java)) {
         @Entity
         class State(
                 @Column
@@ -17,7 +19,7 @@ class MappedSchemasCrossReferenceDetectionTests {
         ) : PersistentState()
     }
 
-    object BadSchema : MappedSchema(schemaFamily = CashSchema.javaClass, version = 1, mappedTypes = listOf(State::class.java)) {
+    object BadSchema : MappedSchema(schemaFamily = CashSchema.javaClass, version = 1, mappedTypes = listOf(BadSchema.State::class.java)) {
         @Entity
         class State(
                 @Column
@@ -30,7 +32,7 @@ class MappedSchemasCrossReferenceDetectionTests {
         ) : PersistentState()
     }
 
-    object TrickySchema : MappedSchema(schemaFamily = CashSchema.javaClass, version = 1, mappedTypes = listOf(State::class.java)) {
+    object TrickySchema : MappedSchema(schemaFamily = CashSchema.javaClass, version = 1, mappedTypes = listOf(TrickySchema.State::class.java)) {
         @Entity
         class State(
                 @Column
@@ -41,7 +43,7 @@ class MappedSchemasCrossReferenceDetectionTests {
         ) : PersistentState()
     }
 
-    object PoliteSchema : MappedSchema(schemaFamily = CashSchema.javaClass, version = 1, mappedTypes = listOf(State::class.java)) {
+    object PoliteSchema : MappedSchema(schemaFamily = CashSchema.javaClass, version = 1, mappedTypes = listOf(PoliteSchema.State::class.java)) {
         @Entity
         class State(
                 @Column

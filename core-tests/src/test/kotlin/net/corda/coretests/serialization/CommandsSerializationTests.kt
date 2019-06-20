@@ -1,5 +1,7 @@
-package net.corda.core.serialization
+package net.corda.coretests.serialization
 
+import net.corda.core.serialization.deserialize
+import net.corda.core.serialization.serialize
 import net.corda.finance.contracts.CommercialPaper
 import net.corda.finance.contracts.asset.Cash
 import net.corda.testing.core.SerializationEnvironmentRule

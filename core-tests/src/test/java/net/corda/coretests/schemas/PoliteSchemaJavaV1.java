@@ -1,13 +1,17 @@
-package net.corda.core.schemas;
+package net.corda.coretests.schemas;
+
+import net.corda.core.schemas.MappedSchema;
+import net.corda.core.schemas.PersistentState;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.Transient;
 import java.util.Arrays;
 
-public class TrickySchemaJavaV1 extends MappedSchema {
+public class PoliteSchemaJavaV1 extends MappedSchema {
 
-    public TrickySchemaJavaV1() {
-        super(TestJavaSchemaFamily.class, 1, Arrays.asList(TrickySchemaJavaV1.State.class));
+    public PoliteSchemaJavaV1() {
+        super(TestJavaSchemaFamily.class, 1, Arrays.asList(State.class));
     }
 
     @Entity
@@ -24,7 +28,7 @@ public class TrickySchemaJavaV1 extends MappedSchema {
             this.id = id;
         }
 
-        //the field is a cross-reference to other MappedSchema however the field is not persistent (no JPA annotation)
+        @Transient
         public GoodSchemaJavaV1.State getOther() {
             return other;
         }
