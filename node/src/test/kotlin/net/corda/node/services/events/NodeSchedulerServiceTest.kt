@@ -312,15 +312,13 @@ class NodeSchedulerPersistenceTest : NodeSchedulerServiceTestBase() {
 
             // Force the thread to shut down with operations waiting
             scheduler.cancelAndWait()
-        }
 
-        val flowLogic = rigorousMock<FlowLogic<*>>()
-        val logicRef = rigorousMock<FlowLogicRef>()
+            val flowLogic = rigorousMock<FlowLogic<*>>()
+            val logicRef = rigorousMock<FlowLogicRef>()
 
-        transactionStates[stateRef] = transactionStateMock(logicRef, timeInTheFuture)
-        flows[logicRef] = flowLogic
+            transactionStates[stateRef] = transactionStateMock(logicRef, timeInTheFuture)
+            flows[logicRef] = flowLogic
 
-        configureDatabase(dataSourceProps, DatabaseConfig(), { null }, { null }).use { database ->
             val newScheduler = database.transaction {
                 createScheduler(database)
             }
@@ -328,6 +326,7 @@ class NodeSchedulerPersistenceTest : NodeSchedulerServiceTestBase() {
             assertStarted(flowLogic)
 
             newScheduler.close()
+
         }
     }
 
