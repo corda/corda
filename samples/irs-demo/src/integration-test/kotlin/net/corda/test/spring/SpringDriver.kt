@@ -89,7 +89,8 @@ data class SpringBootDriverDSL(private val driverDSL: DriverDSLImpl) : InternalD
                         "--corda.host=${handle.rpcAddress}",
                         "--corda.user=${handle.rpcUsers.first().username}",
                         "--corda.password=${handle.rpcUsers.first().password}"
-                )
+                ),
+                maximumHeapSize = "256M"
         )
     }
 }

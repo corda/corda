@@ -9,6 +9,9 @@ dependencies {
 
     cordapp ("net.corda:corda-finance-contracts:$os_corda_release_version")
 
+    // Apache JEXL: An embeddable expression evaluation library.
+    compile "org.apache.commons:commons-jexl3:3.1"
+    
     compile "com.fasterxml.jackson.core:jackson-annotations:${jackson_version}"
 
     testCompile project(':node-driver')
