@@ -43,7 +43,7 @@ data class FloatOuterConfigurationImpl(override val floatAddress: NetworkHostAnd
 
 data class BridgeHAConfigImpl(override val haConnectionString: String, override val haPriority: Int = 10, override val haTopic: String = "/bridge/ha") : BridgeHAConfig
 
-data class CryptoServiceConfigImpl(override val name: SupportedCryptoServices?, override val conf: Path?) : CryptoServiceConfig
+data class CryptoServiceConfigImpl(override val name: SupportedCryptoServices, override val conf: Path?) : CryptoServiceConfig
 
 data class AuditServiceConfigurationImpl(override val loggingIntervalSec: Long) : AuditServiceConfiguration
 

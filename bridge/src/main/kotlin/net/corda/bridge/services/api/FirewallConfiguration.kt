@@ -133,6 +133,6 @@ interface FirewallConfiguration {
 }
 
 interface CryptoServiceConfig {
-    val name: SupportedCryptoServices?
+    val name: SupportedCryptoServices
     val conf: Path?
 }

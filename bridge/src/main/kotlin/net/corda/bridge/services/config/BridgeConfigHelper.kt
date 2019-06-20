@@ -3,11 +3,16 @@ package net.corda.bridge.services.config
 import com.typesafe.config.*
 import com.typesafe.config.ConfigFactory.systemEnvironment
 import com.typesafe.config.ConfigFactory.systemProperties
+import net.corda.bridge.services.api.CryptoServiceConfig
 import net.corda.bridge.services.api.FirewallConfiguration
 import net.corda.bridge.services.config.internal.Version3BridgeConfigurationImpl
 import net.corda.bridge.services.config.internal.Version4FirewallConfiguration
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.div
 import net.corda.nodeapi.internal.config.*
+import net.corda.nodeapi.internal.cryptoservice.CryptoService
+import net.corda.nodeapi.internal.cryptoservice.CryptoServiceFactory
+import net.corda.nodeapi.internal.cryptoservice.SupportedCryptoServices
 import org.slf4j.LoggerFactory
 import java.nio.file.Path
 
@@ -17,6 +22,9 @@ operator fun Config.plus(overrides: Map<String, Any?>): Config = ConfigFactory.p
 object BridgeConfigHelper {
     private const val BRIDGE_PROPERTY_PREFIX = "bridge."
     private val passwordRegex = ".*(pass|password|pwd)$".toRegex(RegexOption.IGNORE_CASE)
+
+    internal val FLOAT_NAME = CordaX500Name(commonName = "Float", organisation = "Corda", locality = "London", country = "GB")
+    internal val BRIDGE_NAME = CordaX500Name(commonName = "Bridge", organisation = "Corda", locality = "London", country = "GB")
 
     private val log = LoggerFactory.getLogger(javaClass)
 
@@ -94,6 +102,12 @@ object BridgeConfigHelper {
             }
         }
     }
+
+    fun makeCryptoService(csConf: CryptoServiceConfig?, legalName: CordaX500Name, keyStoreSupplier: FileBasedCertificateStoreSupplier? = null): CryptoService {
+        return CryptoServiceFactory.makeCryptoService(
+                csConf?.name ?: SupportedCryptoServices.BC_SIMPLE,
+                legalName,
+                keyStoreSupplier,
+                csConf?.conf)
+    }
 }
-
-

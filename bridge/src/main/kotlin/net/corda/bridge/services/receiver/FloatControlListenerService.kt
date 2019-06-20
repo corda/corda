@@ -1,7 +1,8 @@
 package net.corda.bridge.services.receiver
 
 import net.corda.bridge.services.api.*
-import net.corda.bridge.services.config.CryptoServiceFactory
+import net.corda.bridge.services.config.BridgeConfigHelper.FLOAT_NAME
+import net.corda.bridge.services.config.BridgeConfigHelper.makeCryptoService
 import net.corda.bridge.services.receiver.FloatControlTopics.FLOAT_CONTROL_TOPIC
 import net.corda.bridge.services.receiver.FloatControlTopics.FLOAT_DATA_TOPIC
 import net.corda.bridge.services.util.ServiceStateCombiner
@@ -64,7 +65,8 @@ class FloatControlListenerService(val conf: FirewallConfiguration,
 
     init {
         val sslConfiguration: MutualSslConfiguration = conf.floatOuterConfig?.tunnelSSLConfiguration ?: conf.publicSSLConfiguration
-        val cryptoService = CryptoServiceFactory.get(conf.tunnelingCryptoServiceConfig, sslConfiguration.keyStore)
+        // The fact that we pass FLOAT_NAME has no effect as Crypto service obtained will only be used to sign data and never to create new key pairs
+        val cryptoService = makeCryptoService(conf.tunnelingCryptoServiceConfig, FLOAT_NAME, sslConfiguration.keyStore)
         tunnelSigningService = CryptoServiceSigningService(cryptoService, sslConfiguration.keyStore.get().extractCertificates(), sslConfiguration.trustStore.get(), auditService = auditService)
         tunnelingTruststore = sslConfiguration.trustStore.get()
         statusFollower = ServiceStateCombiner(listOf(auditService, amqpListener, tunnelSigningService))

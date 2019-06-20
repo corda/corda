@@ -1,8 +1,8 @@
 package net.corda.bridge
 
 import com.typesafe.config.ConfigFactory
+import net.corda.bridge.services.config.BridgeConfigHelper.makeCryptoService
 import net.corda.bridge.services.config.CryptoServiceConfigImpl
-import net.corda.bridge.services.config.CryptoServiceFactory
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.copyToDirectory
@@ -75,14 +75,13 @@ class BridgeHSMTest : IntegrationTest() {
             val bridgePath = driverDirectory / "bridge"
 
             val nodeAUtimacoConfig = createTempUtimacoConfig(bankAPath, nodeAHSM.address)
-            val nodeAcryptoService = CryptoServiceFactory.get(CryptoServiceConfigImpl(SupportedCryptoServices.UTIMACO, Paths.get(nodeAUtimacoConfig)))
+            val nodeAcryptoService = makeCryptoService(CryptoServiceConfigImpl(SupportedCryptoServices.UTIMACO, Paths.get(nodeAUtimacoConfig)), DUMMY_BANK_A_NAME)
             val nodeBUtimacoConfig = createTempUtimacoConfig(bankBPath, nodeBHSM.address)
-            val nodeBCryptoService = CryptoServiceFactory.get(CryptoServiceConfigImpl(SupportedCryptoServices.UTIMACO, Paths.get(nodeBUtimacoConfig)))
+            val nodeBCryptoService = makeCryptoService(CryptoServiceConfigImpl(SupportedCryptoServices.UTIMACO, Paths.get(nodeBUtimacoConfig)), DUMMY_BANK_B_NAME)
             val bridgeUtimacoConfig = createTempUtimacoConfig(bridgePath, bridgeHSM.address)
-            val bridgeCryptoService = CryptoServiceFactory.get(CryptoServiceConfigImpl(SupportedCryptoServices.UTIMACO, Paths.get(bridgeUtimacoConfig)))
+            val bridgeCryptoService = makeCryptoService(CryptoServiceConfigImpl(SupportedCryptoServices.UTIMACO, Paths.get(bridgeUtimacoConfig)), DUMMY_BANK_C_NAME)
             val bridgeArtemisUtimacoConfig = createTempUtimacoConfig(bridgePath, bridgeArtemisHSM.address)
-            val bridgeArtemisCryptoService = CryptoServiceFactory.get(CryptoServiceConfigImpl(SupportedCryptoServices.UTIMACO, Paths.get(bridgeArtemisUtimacoConfig)))
-
+            val bridgeArtemisCryptoService = makeCryptoService(CryptoServiceConfigImpl(SupportedCryptoServices.UTIMACO, Paths.get(bridgeArtemisUtimacoConfig)), DUMMY_BANK_A_NAME)
 
             // Create node's certificates without starting up the nodes.
             createNodeDevCertificates(DUMMY_BANK_A_NAME, bankAPath, cryptoService = nodeAcryptoService)

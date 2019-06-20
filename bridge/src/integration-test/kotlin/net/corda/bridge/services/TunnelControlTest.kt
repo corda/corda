@@ -4,7 +4,7 @@ import com.nhaarman.mockito_kotlin.*
 import net.corda.bridge.*
 import net.corda.bridge.services.api.BridgeAMQPListenerService
 import net.corda.bridge.services.api.IncomingMessageFilterService
-import net.corda.bridge.services.config.CryptoServiceFactory
+import net.corda.bridge.services.config.BridgeConfigHelper.makeCryptoService
 import net.corda.bridge.services.ha.SingleInstanceMasterService
 import net.corda.bridge.services.receiver.CryptoServiceSigningService
 import net.corda.bridge.services.receiver.FloatControlListenerService
@@ -70,10 +70,10 @@ class TunnelControlTest {
         bridgeConfig.createBridgeKeyStores(DUMMY_BANK_A_NAME)
         val bridgeAuditService = TestAuditService()
         val haService = SingleInstanceMasterService(bridgeConfig, bridgeAuditService)
-        val cryptoService = CryptoServiceFactory.get(bridgeConfig.publicCryptoServiceConfig, bridgeConfig.publicSSLConfiguration.keyStore)
+        val cryptoService = makeCryptoService(bridgeConfig.publicCryptoServiceConfig, DUMMY_BANK_A_NAME, bridgeConfig.publicSSLConfiguration.keyStore)
 
         val controlLinkSSLConfiguration = bridgeConfig.bridgeInnerConfig?.tunnelSSLConfiguration ?: bridgeConfig.publicSSLConfiguration
-        val tunnelingCryptoService = CryptoServiceFactory.get(bridgeConfig.tunnelingCryptoServiceConfig, controlLinkSSLConfiguration.keyStore)
+        val tunnelingCryptoService = makeCryptoService(bridgeConfig.tunnelingCryptoServiceConfig, DUMMY_BANK_A_NAME, controlLinkSSLConfiguration.keyStore)
         val signingService = CryptoServiceSigningService(cryptoService, bridgeConfig.publicSSLConfiguration.keyStore.get().extractCertificates(), bridgeConfig.publicSSLConfiguration.trustStore.get(), bridgeConfig.sslHandshakeTimeout, bridgeAuditService)
         val tunnelingSigningService = CryptoServiceSigningService(tunnelingCryptoService, controlLinkSSLConfiguration.keyStore.get().extractCertificates(), controlLinkSSLConfiguration.trustStore.get(), auditService = bridgeAuditService)
         val filterService = createPartialMock<TestIncomingMessageFilterService>()
@@ -163,11 +163,11 @@ class TunnelControlTest {
                 Unit
             }.whenever(it).sendMessageToLocalBroker(any())
         }
-        val cryptoService = CryptoServiceFactory.get(bridgeConfig.publicCryptoServiceConfig, bridgeConfig.publicSSLConfiguration.keyStore)
+        val cryptoService = makeCryptoService(bridgeConfig.publicCryptoServiceConfig, DUMMY_BANK_A_NAME, bridgeConfig.publicSSLConfiguration.keyStore)
         val signingService = CryptoServiceSigningService(cryptoService, bridgeConfig.publicSSLConfiguration.keyStore.get().extractCertificates(), bridgeConfig.publicSSLConfiguration.trustStore.get(), bridgeConfig.sslHandshakeTimeout, bridgeAuditService)
 
         val controlLinkSSLConfiguration = bridgeConfig.bridgeInnerConfig?.tunnelSSLConfiguration ?: bridgeConfig.publicSSLConfiguration
-        val tunnelingCryptoService = CryptoServiceFactory.get(bridgeConfig.tunnelingCryptoServiceConfig, controlLinkSSLConfiguration.keyStore)
+        val tunnelingCryptoService = makeCryptoService(bridgeConfig.tunnelingCryptoServiceConfig, DUMMY_BANK_A_NAME, controlLinkSSLConfiguration.keyStore)
         val tunnelingSigningService = CryptoServiceSigningService(tunnelingCryptoService, controlLinkSSLConfiguration.keyStore.get().extractCertificates(), controlLinkSSLConfiguration.trustStore.get(), auditService = bridgeAuditService)
         signingService.start()
         tunnelingSigningService.start()
