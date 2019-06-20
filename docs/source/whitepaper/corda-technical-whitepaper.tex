@@ -103,7 +103,7 @@ another node on demand, but there is no global broadcast of \emph{all} transacti
 \item Bytecode-to-bytecode transpilation is used to allow complex, multi-step transaction building protocols called
 \emph{flows} to be modelled as blocking code. The code is transformed into an asynchronous state machine, with
 checkpoints written to the node's backing database when messages are sent and received. A node may potentially have
-millions of flows active at once and they may last days, across node restarts and even upgrades. Flows expose progress
+millions of flows active at once and they may last days, across node restarts and even certain kinds of upgrade. Flows expose progress
 information to node administrators and users and may interact with people as well as other nodes. A library of flows is provided
 to enable developers to re-use common protocols such as notarisation, membership broadcast and so on.
 \item The data model allows for arbitrary object graphs to be stored in the ledger. These graphs are called \emph{states} and are the atomic unit of data.
@@ -126,7 +126,7 @@ Comparisons with Bitcoin and Ethereum will be provided throughout.
 
 \section{Overview}
 
-Corda is a platform for the writing of ``CorDapps'': applications that extend the global database with new capabilities.
+Corda is a platform for the writing and execution of ``CorDapps'': applications that extend the global database with new capabilities.
 Such apps define new data types, new inter-node protocol flows and the so-called ``smart contracts'' that determine
 allowed changes.
 
@@ -322,7 +322,7 @@ form of communication is global broadcast, in Corda \emph{all} communication tak
 called flows.
 
 The flow framework presents a programming model that looks to the developer as if they have the ability to run millions
-of long lived threads which can survive node restarts, and even node upgrades. APIs are provided to send and receive
+of long lived threads which can survive node restarts. APIs are provided to send and receive
 serialized object graphs to and from other identities on the network, embed sub-flows, handle version evolution and
 report progress to observers. In this way business logic can be expressed at a very high level, with the details of
 making it reliable and efficient abstracted away. This is achieved with the following components.
@@ -435,11 +435,12 @@ transition functions and finally the data itself.
 states' are not consumed by the act of referencing them. Reference states are useful for importing data that gives
 context to other states but which is only changed from time to time. Note that the pointed to state must be unconsumed
 at the time the transaction is notarised: if it's been consumed itself as part of a different transaction, the referencing
-transaction will not be notarised.
+transaction will not be notarised. In this way, non-consuming input references can help prevent the execution of
+transactions that rely on out-of-date reference data.
 \item [Attachments.] Transactions specify an ordered list of zip file hashes. Each zip file may contain
 code, data or supporting documentation for the transaction. Contract code has access to the contents
 of the attachments when checking the transaction for validity. Attachments have no concept of `spentness' and are useful
-for things like holiday calendars, timezone data, bytecode that defines the state objects and so on.
+for things like holiday calendars, timezone data, bytecode that defines the contract logic and state objects, and so on.
 \item [Commands.] There may be multiple allowed output states from any given input state. For instance
 an asset can be moved to a new owner on the ledger, or issued, or exited from the ledger if the asset has been
 redeemed by the owner and no longer needs to be tracked. A command is essentially a parameter to the contract
@@ -631,7 +632,7 @@ which are discussed below.
 
 In Bitcoin contract logic is embedded inside every transaction. Programs are small and data is inlined into the
 bytecode, so upgrading code that's been added to the ledger is neither possible nor necessary. There's no need for a
-mechanism to tie code and data together. In Corda contract logic may be far more complex, it will usually reflect a
+mechanism to tie code and data together. In Corda contract logic may be far more complex. It will usually reflect a
 changing business world which means it may need to be upgraded from time to time.
 
 The easiest way of tying states to the contract code that defines them is by hash. This is equivalent to other
@@ -646,7 +647,7 @@ developer publishing a bad contract version, at the cost of increased difficulty
 creators may also specify third parties they wish to review contract code. Regardless of which set of tradeoffs is
 chosen, the framework can accommodate them.
 
-A contract constraint may use a composite key of the type described in \cref{sec:composite-keys}. The standard JAR
+A contract constraint may use a composite key of the type described in~\cref{sec:composite-keys}. The standard JAR
 signing protocol allows for multiple signatures from different private keys, thus being able to satisfy composite
 keys. The allowed signing algorithms are \texttt{SHA256withRSA} and \texttt{SHA256withECDSA}. Note that the
 cryptographic algorithms used for code signing may not always be the same as those used for transaction signing, as
