@@ -113,6 +113,7 @@ application development please continue to refer to `the main project documentat
 
    hot-cold-deployment
    node-database-intro
+   cryptoservice-configuration
    corda-firewall
    sizing-and-performance
    running-a-notary-cluster/toctree
