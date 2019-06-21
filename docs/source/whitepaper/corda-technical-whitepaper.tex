@@ -977,18 +977,19 @@ work.
 \section{Notaries and consensus}\label{sec:notaries}
 
 Corda does not organise time into blocks. This is sometimes considered strange, given that it can be described as a
-block chain system or `block chain inspired'. Instead a Corda network has one or more notary services which provide
+block chain system or `block chain inspired'. Instead a Corda network has one or more notary clusters that provide
 transaction ordering and timestamping services, thus abstracting the role miners play in other systems into a
 pluggable component.
 
-Notaries are expected to be composed of multiple mutually distrusting parties who use a standard consensus
-algorithm. Notaries are identified by and sign with composite public keys (\cref{sec:composite-keys})that
-conceptually follow the Interledger Crypto-Conditions specification\cite{ILPCC}. Note that whilst it would be
-conventional to use a BFT algorithm for a notary service, there is no requirement to do so and in cases where the
-legal system is sufficient to ensure protocol compliance a higher performance algorithm like
-Raft\cite{Ongaro:2014:SUC:2643634.2643666} may be used. Because multiple notaries can co-exist a single network may
-provide a single global BFT notary for general use and region-specific Raft notaries for lower latency trading
-within a unified regulatory area, for example London or New York.
+A notary is expected to be composed of multiple mutually distrusting parties who use a crash or byzantine fault
+tolerant consensus algorithm. Notaries are identified by and sign with composite public keys
+(\cref{sec:composite-keys})that conceptually follow the Interledger Crypto-Conditions specification\cite{ILPCC}.
+Note that whilst it would be conventional to use a BFT algorithm for a notary service, there is no requirement to
+do so and in cases where the legal system is sufficient to ensure protocol compliance a higher performance
+algorithm like Raft\cite{Ongaro:2014:SUC:2643634.2643666} or ordinary database replication may be used. Because
+multiple notaries can co-exist a single network may provide a single global BFT notary for general use and
+region-specific Raft notaries for lower latency trading within a unified regulatory area, for example London or New
+York.
 
 Notaries accept transactions submitted to them for processing and either return a signature over the transaction,
 or a rejection error that states that a double spend has occurred. The presence of a notary signature from the
@@ -1126,8 +1127,8 @@ to the stream of broadcasts and learn if they have the latest data. Alas, nothin
 a miner who has a known location with a transaction that they agree not to broadcast. The first time the rest of
 the network finds out about this transaction is when a block containing it is broadcast. When used to do double
 spending fraud this type of attack is known as a Finney Attack\cite{FinneyAttack}. Proof-of-work based systems rely
-on aligned incentives to discourage such attacks: to quote the Bitcoin white paper, \blockquote{He ought to find it
-more profitable to play by the rules ... than to undermine the system and the validity of his own wealth.} In
+on aligned incentives to discourage such attacks: to quote the Bitcoin white paper, \emph{``He ought to find it
+more profitable to play by the rules ... than to undermine the system and the validity of his own wealth.''} In
 practice this approach appears to work well enough most of the time, given that miners typically do not accept
 privately submitted transactions.
 
@@ -1236,7 +1237,7 @@ annotated in other ways, for instance to customise its mapping to XML/JSON, or t
 constraints~\cite{BeanValidation}. These annotations won't affect the behaviour of the node directly but may be
 useful when working with states in surrounding software.
 
-\subsection{Key randomisation}\label{sec:key-randomisation}
+\subsection{Confidential identities}\label{sec:confidential-identities}
 
 A standard privacy technique in block chain systems is the use of randomised unlinkable public keys to stand in for
 actual verified identities. Ownership of these pseudonyms may be revealed to a counterparty using a simple
@@ -1257,25 +1258,6 @@ Corda does not place any constraints on the mathematical properties of the digit
 use. However, implementations are recommended to use hierarchical deterministic key derivation when possible.
 
 \section{Domain specific languages}
-
-\subsection{Clauses}
-When writing a smart contract, many desired features and patterns crop up repeatedly. For example it is expected
-that all production quality asset contracts would want the following features:
-
-\begin{itemize}
-\item Issuance and exit transactions.
-\item Movement transactions (reassignment of ownership).
-\item Fungibility management (see~\cref{sec:tokens}).
-\item Support for upgrading to new versions of the contract.
-\end{itemize}
-
-Many of these seemingly simple features have obscure edge cases. One example is a need to prevent the creation of
-asset states that contain zero or negative quantities of the asset. Another is to ensure that states are summed
-for fungibility purposes without accidentally assuming that the transaction only moves one type of asset at once.
-Rather than expect contract developers to reimplement these pieces of low level logic the Corda standard library
-provides \emph{clauses}, a small class library that implement reusable pieces of contract logic. A contract writer
-may create their own clauses and then pass the set of contract clauses together to a library function that
-interprets them.
 
 \subsection{Combinator libraries}
 
@@ -1334,15 +1316,6 @@ of smart contracts. A good example of this is the Whiley language by Dr David Pe
 checks program-integrated proofs at compile time. By building on industry-standard platforms, we gain access to
 cutting edge research from the computer science community outside of the distributed systems world.
 
-\subsection{Projectional editing}
-
-Custom languages and type systems for the expression of contract logic can be naturally combined with
-\emph{projectional editing}, in which source code is not edited textually but rather by a structure aware
-editor\cite{DBLP:conf/models/VoelterL14}. Such languages can consist not only of traditional grammar-driven text
-oriented structures but also diagrams, tables and recursive compositions of them together. Given the frequent
-occurrence of data tables and English-oriented nature of many financial contracts, a dedicated environment for the
-construction of smart contract logic may be appreciated by the users.
-
 \section{Secure signing devices}\label{sec:secure-signing-devices}
 
 \subsection{Background}
@@ -1373,7 +1346,7 @@ This setup means that rather than having a small device that authorises to a pow
 your assets), the device itself controls the assets. As there is no smartcard equivalent the private key can be
 exported off the device by writing it down in the form of ``wallet words'': 12 random words derived from the
 contents of the key. Because elliptic curve private keys are small (256 bits), this is not as tedious as it would
-be with the much larger RSA keys the financial industry is typically using.
+be with the much larger RSA keys that were standard until recently.
 
 There are clear benefits to having signing keys be kept on personal, employee-controlled devices only, with the
 organisation's node not having any ability to sign for transactions itself:
@@ -1382,7 +1355,7 @@ organisation's node not having any ability to sign for transactions itself:
 \item If the node is hacked by a malicious intruder or bad insider they cannot steal assets, modify agreements,
 or do anything else that requires human approval, because they don't have access to the signing keys. There is no single
 point of failure from a key management perspective.
-\item It's more clear who signed off on a particular action -- the signatures prove which devices were used to sign off
+\item It's clearer who signed off on a particular action -- the signatures prove which devices were used to sign off
 on an action. There can't be any back doors or administrator tools which can create transactions on behalf of someone else.
 \item Devices that integrate fingerprint readers and other biometric authentication could further increase trust by
 making it harder for employees to share/swap devices. A smartphone or tablet could be also used as a transaction authenticator.
@@ -1472,7 +1445,7 @@ authenticated, robust against transient node outages and restarts, and speed dif
 being faster than completion of work) will be handled transparently.
 
 To meet these needs, Corda nodes expose a simple RPC mechanism that has a couple of unusual features. The
-underlying transport is message queues (AMQP) and methods can return object graphs that contain Rx
+underlying transport is message queues (AMQP) and methods can return object graphs that contain ReactiveX
 observables\cite{Rx} which may in turn emit more observables.
 
 It is a common pattern for RPCs to return a snapshot of some data structure, along with an observable that emits
@@ -1482,13 +1455,6 @@ In this way, rendering data structures in the global ledger in a rich client app
 straightforward operation that requires minimal work from the developer: simply wiring the pieces together in a
 functional way is sufficient. Reactive transforms over these observable collections such as mappings, filterings,
 sortings and so on make it easy to build user interfaces in a functional programming style.
-
-Because RPC transport takes place via the node's message queue broker, the framework automatically recovers from
-restarts of the node/node components, IP addresses changes on the client and similar interruptions to
-communication. Likewise, programs that need to live for a long time and survive restarts, upgrades and moves can
-request that observations be sent to a persistent queue. Backpressure and queue management is supplied by the
-broker. Additional capacity for processing RPCs can be added by attaching more RPC processors to the broker which
-load balances between them automatically.
 
 It can be asked why Corda does not use the typical REST+JSON approach to communicating with the node. The reasons
 are:
@@ -1502,9 +1468,6 @@ differences and so on.
 \item REST based protocols have multiple conventions for streaming of results back to the client, none of which
 are ideal for the task.
 \end{itemize}
-
-% TODO: current RPC framework doesn't configure persistence or backpressure management.
-% TODO: currently you can't bring online rpc processors independently of the rest of the node.
 
 Being able to connect live data structures directly to UI toolkits also contributes to the avoidance of XSS
 exploits, XSRF exploits and similar security problems based on losing track of buffer boundaries.
@@ -1626,9 +1589,8 @@ assigning the object a random number. This can surface as different iteration or
 \end{itemize}
 
 To ensure that the contract verify function is fully pure even in the face of infinite loops we construct a new
-type of JVM sandbox. It utilises a bytecode static analysis and rewriting pass, along with a small JVM patch that
-allows the sandbox to control the behaviour of hashcode generation. Contract code is rewritten the first time it
-needs to be executed and then stored for future use.
+type of JVM sandbox. It utilises a set of bytecode static analyses and rewriting passes.
+Classes are rewritten the first time they are loaded.
 
 The bytecode analysis and rewrite performs the following tasks:
 
@@ -1639,7 +1601,8 @@ bytecodes include method invocation, allocation, backwards jumps and throwing ex
 \item Prevents exception handlers from catching \texttt{Throwable}, \texttt{Error} or \texttt{ThreadDeath}.
 \item Adjusts constant pool references to relink the code against a `shadow' JDK, which duplicates a subset of the regular
 JDK but inside a dedicated sandbox package. The shadow JDK is missing functionality that contract code shouldn't have access
-to, such as file IO or external entropy.
+to, such as file IO or external entropy. It can be loaded into an IDE like IntellJ IDEA to give developers interactive
+feedback whilst coding, so they can avoid non-deterministic code.
 \item Sets the \texttt{strictfp} flag on all methods, which requires the JVM to do floating point arithmetic in a hardware
 independent fashion. Whilst we anticipate that floating point arithmetic is unlikely to feature in most smart contracts
 (big integer and big decimal libraries are available), it is available for those who want to use it.
@@ -1660,7 +1623,7 @@ transaction size) that all nodes agree precisely on when to quit. It is \emph{no
 denial of service attacks. If a node is sending you transactions that appear designed to simply waste your CPU time
 then simply blocking that node is sufficient to solve the problem, given the lack of global broadcast.
 
-Opcode budgets are separate per opcode type, so there is no unified cost model. Additionally the instrumentation is
+Opcode budgets are separated into a few categories, so there is no unified cost model. Additionally the instrumentation is
 high overhead. A more sophisticated design would be to statically calculate bytecode costs as much as possible
 ahead of time, by instrumenting only the entry point of `accounting blocks', i.e. runs of basic blocks that end
 with either a method return or a backwards jump. Because only an abstract cost matters (this is not a profiler
@@ -1675,36 +1638,17 @@ unnecessarily harsh on smart contracts that churn large quantities of garbage ye
 sizes and, again, it may be that in practice a more sophisticated strategy that integrates with the garbage
 collector is required in order to set quotas to a usefully generic level.
 
-Control over \texttt{Object.hashCode()} takes the form of new JNI calls that allow the JVM's thread local random
-number generator to be reseeded before execution begins. The seed is derived from the hash of the transaction being
-verified.
-
-Finally, it is important to note that not just smart contract code is instrumented, but all code that it can
-transitively reach. In particular this means that the `shadow JDK' is also instrumented and stored on disk ahead of
-time.
-
 \section{Scalability}
 
 Scalability of block chains and block chain inspired systems has been a constant topic of discussion since Nakamoto
 first proposed the technology in 2008. We make a variety of choices and tradeoffs that affect and ensure
-scalability. As most of the initial intended use cases do not involve very high levels of traffic, the reference
-implementation is not heavily optimised. However, the architecture allows for much greater levels of scalability to
-be achieved when desired.
+scalability.
 
 \paragraph{Partial visibility.}Nodes only encounter transactions if they are involved in some way, or if the
 transactions are dependencies of transactions that involve them in some way. This loosely connected design means
 that it is entirely possible for most nodes to never see most of the transaction graph, and thus they do not need
 to process it. This makes direct scaling comparisons with other distributed and decentralised database systems
-difficult, as they invariably measure performance in transctions/second. For Corda, as writes are lazily replicated
-on demand, it is difficult to quote a transactions/second figure for the whole network.
-
-\paragraph{Distributed node.}At the center of a Corda node is a message queue broker. Nodes are logically
-structured as a series of microservices and have the potential in future to be run on separate machines. For
-example, the embedded relational database can be swapped out for an external database that runs on dedicated
-hardware. Whilst a single flow cannot be parallelised, a node under heavy load would typically be running many
-flows in parallel. As flows access the network via the broker and local state via an ordinary database connection,
-more flow processing capacity could be added by just bringing online additional flow workers. This is likewise the
-case for RPC processing.
+difficult, as they invariably measure performance in transactions/second per network rather than per node.
 
 \paragraph{Signatures outside the transactions.}Corda transaction identifiers are the root of a Merkle tree
 calculated over its contents excluding signatures. This has the downside that a signed and partially signed
@@ -1737,27 +1681,13 @@ using a BFT protocol is beneficial is when there is no shared legal system which
 other disputes, i.e. when cluster participants are spread around the world and thus the speed of light becomes a
 major limiting factor.
 
-The primary bottleneck in a Corda node is expected to be flow checkpointing, as this process involves walking the
-stack and heap then writing out the snapshotted state to stable storage. Both of these operations are
-computationally intensive. This may seem unexpected, as other platforms typically bottleneck on signature checking
-operations. It is worth noting though that the main reason other platforms do not bottleneck on checkpointing
-operations is that they typically don't provide any kind of app-level robustness services at all, and so the cost
-of checkpointing state (which must be paid eventually!) is accounted to the application developer rather than the
-platform. When a flow developer knows that a network communication is idempotent and thus can be replayed, they can
-opt out of the checkpointing process to gain throughput at the cost of additional wasted work if the flow needs to
-be evicted to disk. Note that checkpoints and transaction data can be stored in any NoSQL database (such as
-Cassandra), at the cost of a more complex backup strategy.
-
-% TODO: Opting out of checkpointing isn't available yet.
-% TODO: Ref impl doesn't support using a NoSQL store for flow checkpoints.
-
 Due to partial visibility nodes check transaction graphs `just in time' rather than as a steady stream of
 announcements by other participants. This complicates the question of how to measure the scalability of a Corda
 node. Other block chain systems quote performance as a constant rate of transactions per unit time. However, our
 `unit time' is not evenly distributed: being able to check 1000 transactions/sec is not necessarily good enough if
-on presentation of a valuable asset you need to check a transation graph that consists of many more transactions
+on presentation of a valuable asset you need to check a transaction graph that consists of many more transactions
 and the user is expecting the transaction to show up instantly. Future versions of the platform may provide
-features that allow developers to smooth out the spikey nature of Corda transaction checking by, for example,
+features that allow developers to smooth out the spiky nature of Corda transaction checking by, for example,
 pre-pushing transactions to a node when the developer knows they will soon request the data anyway.
 
 \section{Privacy}\label{sec:privacy}
@@ -1770,8 +1700,7 @@ distributed ledger systems:
 \paragraph{Transaction tear-offs.}Transactions are structured as Merkle trees, and may have individual subcomponents be
 revealed to parties who already know the Merkle root hash. Additionally, they may sign the transaction without being
 able to see all of it. See~\cref{sec:tear-offs}
-\paragraph{Key randomisation.}The vault generates and uses random keys that are unlinkable to an identity without the
-corresponding linkage certificate. See~\cref{sec:vault}.
+\paragraph{Key randomisation.}The vault generates and uses random keys that are unlinkable to an identity. See~\cref{sec:vault}.
 \paragraph{Graph pruning.}Large transaction graphs that involve liquid assets can be `pruned' by requesting the asset
 issuer to re-issue the asset onto the ledger with a new reference field. This operation is not atomic, but effectively
 unlinks the new version of the asset from the old, meaning that nodes won't attempt to explore the original dependency
