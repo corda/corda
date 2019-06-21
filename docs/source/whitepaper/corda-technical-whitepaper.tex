@@ -872,7 +872,7 @@ To request scheduled events, a state may implement the \texttt{SchedulableState}
 request from the \texttt{nextScheduledActivity} function. The state will be queried when it is committed to the
 vault and the scheduler will ensure the relevant flow is started at the right time.
 
-\section{Tokens}\label{sec:tokens}
+\subsection{Tokens}\label{sec:tokens}
 
 Some basic concepts occur in many kinds of application, regardless of what industry or use case it is for. The
 platform provides a comprehensive type system for modelling of \emph{tokens}: abstract countable objects highly
@@ -1257,186 +1257,6 @@ able to sign with those keys, enabling better security along with operational ef
 Corda does not place any constraints on the mathematical properties of the digital signature algorithms parties
 use. However, implementations are recommended to use hierarchical deterministic key derivation when possible.
 
-\section{Domain specific languages}
-
-\subsection{Combinator libraries}
-
-Domain specific languages for the expression of financial contracts are a popular area of research. A seminal work
-is `Composing contracts' by Peyton-Jones, Seward and Eber [PJSE2000\cite{PeytonJones:2000:CCA:357766.351267}] in
-which financial contracts are modelled with a small library of Haskell combinators. These models can then be used
-for valuation of the underlying deals. Block chain systems use the term `contract' in a slightly different sense to
-how PJSE do but the underlying concepts can be adapted to our context as well. The platform provides an
-experimental \emph{universal contract} that builds on the language extension features of the Kotlin programming
-language. To avoid linguistic confusion it refers to the combined code/data bundle as an `arrangement' rather than
-a contract. A European FX call option expressed in this language looks like this:
-
-\newpage
-
-\begin{kotlincode}
-    val european_fx_option = arrange {
-        actions {
-            acmeCorp may {
-                "exercise" anytime {
-                    actions {
-                        (acmeCorp or highStreetBank) may {
-                            "execute".givenThat(after("2017-09-01")) {
-                                highStreetBank.owes(acmeCorp, 1.M, EUR)
-                                acmeCorp.owes(highStreetBank, 1200.K, USD)
-                            }
-                        }
-                    }
-                }
-            }
-            highStreetBank may {
-                "expire".givenThat(after("2017-09-01")) {
-                    zero
-                }
-            }
-        }
-    }
-\end{kotlincode}
-
-The programmer may define arbitrary `actions' along with constraints on when the actions may be invoked. The
-\texttt{zero} token indicates the termination of the deal.
-
-As can be seen, this DSL combines both \emph{what} is allowed and deal-specific data like \emph{when} and \emph{how
-much} is allowed, therefore blurring the distinction the core model has between code and data. It builds on prior
-work to enable not only valuation/cash flow calculations, but also direct enforcement of the contract's logic at
-the database level as well.
-
-\subsection{Formally verifiable languages}
-
-Corda contracts can be upgraded. However, given the coordination problems inherent in convincing many participants
-in a large network to accept a new version of a contract, a frequently cited desire is for formally verifiable
-languages to be used to try and guarantee the correctness of the implementations.
-
-We do not attempt to tackle this problem ourselves. However, because Corda focuses on deterministic execution of
-any JVM bytecode, formally verifiable languages that target this instruction set are usable for the expression
-of smart contracts. A good example of this is the Whiley language by Dr David Pearce\cite{Pearce2015191}, which
-checks program-integrated proofs at compile time. By building on industry-standard platforms, we gain access to
-cutting edge research from the computer science community outside of the distributed systems world.
-
-\section{Secure signing devices}\label{sec:secure-signing-devices}
-
-\subsection{Background}
-
-A common feature of digital financial systems and block chain-type systems in particular is the use of secure
-client-side hardware to hold private keys and perform signing operations with them. Combined with a zero tolerance
-approach to transaction rollbacks, this is one of the ways they reduce overheads: by attempting to ensure that
-transaction authorisation is robust and secure, and thus that signatures are reliable.
-
-Many banks have rolled out CAP (chip authentication program) readers to consumers which allow logins to online
-banking using a challenge/response protocol to a smartcard. The user is expected to type in the right codes and
-copy the responses back to the computer by hand. These devices are cheap, but tend to have small, unreliable, low
-resolution screens and can be subject to confusion attacks if there is malware on the PC, e.g. if the malware
-convinces the user they are performing a login challenge whereas in fact they are authorising a payment to a new
-account. The primary advantage is that the signing key is held in a robust and cheap smart card, so the device can
-be replaced without replacing the key.
-
-The state-of-the-art in this space are devices like the TREZOR\cite{TREZOR} by Satoshi Labs or the Ledger Blue.
-These were developed by and for the Bitcoin community. They are more expensive than CAP readers and feature better
-screens and USB connections to eliminate typing. Advanced devices like the Ledger Blue support NFC and Bluetooth as
-well. These devices differ from CAP readers in another key respect: instead of signing arbitrary, small challenge
-numbers, they actually understand the native transaction format of the network to which they're specialised and
-parse the transaction to figure out the message to present to the user, who then confirms that they wish to perform
-the action printed on the screen by simply pressing a button. The transaction is then signed internally before
-being passed back to the PC via the USB/NFC/Bluetooth connection.
-
-This setup means that rather than having a small device that authorises to a powerful server (which controls all
-your assets), the device itself controls the assets. As there is no smartcard equivalent the private key can be
-exported off the device by writing it down in the form of ``wallet words'': 12 random words derived from the
-contents of the key. Because elliptic curve private keys are small (256 bits), this is not as tedious as it would
-be with the much larger RSA keys that were standard until recently.
-
-There are clear benefits to having signing keys be kept on personal, employee-controlled devices only, with the
-organisation's node not having any ability to sign for transactions itself:
-
-\begin{itemize}
-\item If the node is hacked by a malicious intruder or bad insider they cannot steal assets, modify agreements,
-or do anything else that requires human approval, because they don't have access to the signing keys. There is no single
-point of failure from a key management perspective.
-\item It's clearer who signed off on a particular action -- the signatures prove which devices were used to sign off
-on an action. There can't be any back doors or administrator tools which can create transactions on behalf of someone else.
-\item Devices that integrate fingerprint readers and other biometric authentication could further increase trust by
-making it harder for employees to share/swap devices. A smartphone or tablet could be also used as a transaction authenticator.
-\end{itemize}
-
-\subsection{Confusion attacks}
-
-The biggest problem facing anyone wanting to integrate smart signing devices into a distributed ledger system is
-how the device processes transactions. For Bitcoin it's straightforward for devices to process transactions
-directly because their format is very small and simple (in theory -- in practice a fixable quirk of the Bitcoin
-protocol actually significantly complicates how these devices must work). Thus turning a Bitcoin transaction into a
-human meaningful confirmation screen is quite easy:
-
-\indent\texttt{Confirm payment of 1.23 BTC to 1AbCd0123456.......}
-
-This confirmation message is susceptible to confusion attacks because the opaque payment address is unpredictable.
-A sufficiently smart virus/attacker could have swapped out a legitimate address of a legitimate counterparty you
-are expecting to pay with one of their own, thus you'd pay the right amount to the wrong place. The same problem
-can affect financial authenticators that verify IBANs and other account numbers: the user's source of the IBAN may
-be an email or website they are viewing through the compromised machine. The BIP 70\cite{BIP70} protocol was
-designed to address this attack by allowing a certificate chain to be presented that linked a target key with a
-stable, human meaningful and verified identity.
-
-For a generic ledger we are faced with the additional problem that transactions may be of many different types,
-including new types created after the device was manufactured. Thus creating a succinct confirmation message inside
-the device would become an ever-changing problem requiring frequent firmware updates. As firmware upgrades are a
-potential weak point in any secure hardware scheme, it would be ideal to minimise their number.
-
-\subsection{Transaction summaries}
-
-To solve this problem we add a top level summaries field to the transaction format (joining inputs, outputs,
-commands, attachments etc). This new top level field is a list of strings. Smart contracts get a new
-responsibility. They are expected to generate an English message describing what the transaction is doing, and then
-check that it is present in the transaction. The platform ensures no unexpected messages are present. The field is
-a list of strings rather than a single string because a transaction may do multiple things simultaneously in
-advanced use cases.
-
-Because the calculation of the confirmation message has now been moved to the smart contract itself, and is a part
-of the transaction, the transaction can be sent to the signing device: all it needs to do is extract the messages
-and print them to the screen with YES/NO buttons available to decide whether to sign or not. Because the device's
-signature covers the messages, and the messages are checked by the contract based on the machine readable data in
-the states, we can know that the message was correct and legitimate.
-
-The design above is simple but has the issue that large amounts of data are sent to the device which it doesn't
-need. As it's common for signing devices to have constrained memory, it would be unfortunate if the complexity of a
-transaction ended up being limited by the RAM available in the users' signing devices. To solve this we can use the
-tear-offs mechanism (see~\cref{sec:tear-offs}) to present only the summaries and the Merkle branch connecting them
-to the root. The device can then sign the entire transaction contents having seen only the textual summaries,
-knowing that the states will trigger the contracts which will trigger the summary checks, thus the signature covers
-the machine-understandable version of the transaction as well.
-
-Note, we assume here that contracts are not themselves malicious. Whilst a malicious user could construct a
-contract that generated misleading messages, for a user to see states in their vault and work with them requires
-the accompanying CorDapp to be loaded into the node as a plugin and thus whitelisted. There is never a case where
-the user may be asked to sign a transaction involving contracts they have not previously approved, even though the
-node may execute such contracts as part of verifying transaction dependencies.
-
-\subsection{Identity substitution}
-
-Contract code only works with opaque representations of public keys. Because transactions in a chain of custody may
-need to be anonymised, it isn't possible for a contract to access identity information from inside the sandbox.
-Therefore it cannot generate a complete message that includes human meaningful identity names even if the node
-itself does have this information.
-
-To solve this the transaction is provided to the device along with the X.509 certificate chains linking the
-pseudonymous public keys to the long term identity certificates, which for transactions involving the user should
-always be available (as they by definition know who their trading counterparties are). The device can verify those
-certificate chains to build up a mapping of index to human readable name. The messages placed inside a transaction
-may contain numeric indexes of the public keys required by the commands using backslash syntax, and the device must
-perform the message substitution before rendering. Care must be taken to ensure that the X.500 names issued to
-network participants do not contain text chosen to deliberately confuse users, e.g. names that contain quote marks,
-partial instructions, special symbols and so on. This can be enforced at the network permissioning level.
-
-\subsection{Multi-lingual support}
-
-The contract is expected to generate a human readable version of the transaction. This should be in English, by
-convention. In theory, we could define the transaction format to support messages in different languages, and if
-the contract supported that the right language could then be picked by the signing device. However, care must be
-taken to ensure that the message the user sees in alternative languages is correctly translated and not subject to
-ambiguity or confusion, as otherwise exploitable confusion attacks may arise.
-
 \section{Client RPC and reactive collections}
 
 Any realistic deployment of a distributed ledger faces the issue of integration with an existing ecosystem of
@@ -1472,103 +1292,6 @@ are ideal for the task.
 Being able to connect live data structures directly to UI toolkits also contributes to the avoidance of XSS
 exploits, XSRF exploits and similar security problems based on losing track of buffer boundaries.
 
-\section{Data distribution groups}
-
-By default, distribution of transaction data is defined by app-provided flows (see~\cref{sec:flows}). Flows specify
-when and to which peers transactions should be sent. Typically these destinations will be calculated based on the
-content of the states and the available identity lookup certificates, as the intended use case of financial data
-usually contains the identities of the relevant parties within it. Sometimes though, the set of parties that should
-receive data isn't known ahead of time and may change after a transaction has been created. For these cases partial
-data visibility is not a good fit and an alternative mechanism is needed.
-
-A data distribution group (DDG) is created by generating a keypair and a self-signed certificate for it. Groups are
-identified internally by their public key and may be given string names in the certificate, but nothing in the
-software assumes the name is unique: it's intended only for human consumption and it may conflict with other
-independent groups. In case of conflict user interfaces disambiguate by appending a few characters of the base58
-encoded public key to the name like so:  "My popular group name (a4T)". As groups are not globally visible anyway,
-it is unlikely that conflicts will be common or require many code letters to deconflict, and some groups may not
-even be intended for human consumption at all.
-
-Once a group is created other nodes can be invited to join it by using an invitation flow. Membership can be either
-read only or read/write. To add a node as read-only, the certificate i.e. pubkey alone is sent. To add a node as
-read/write the certificate and private key are sent. A future elaboration on the design may support giving each
-member a separate private key which would allow tracing who added transactions to a group, but this is left for
-future work. In either case the node records in its local database which other nodes it has invited to the group
-once they accept the invitation.
-
-When the invite is received the target node runs the other side of the flow as normal, which may either
-automatically accept membership if it's configured to trust the inviting node, or send a message to a message queue
-for processing by an external system, or kick it up to a human administrator for approval. Invites to groups the
-node is already a member of are rejected. The accepting node also records which node invited it. So, there ends up
-being a two-way recorded relationship between inviter and invitee stored in their vaults. Finally the inviter side
-of the invitation flow pushes a list of all the transaction IDs that exist in the group and the invitee side
-resolves all of them. The end result is that all the transactions that are in the group are sent to the new node
-(along with all dependencies).
-
-Note that this initial download is potentially infinite if transactions are added to the group as fast or faster
-than the new node is downloading and checking them. Thus whilst it may be tempting to try and expose a notion of
-`doneness' to the act of joining a group, it's better to see the act of joining as happening at a specific point in
-time and the resultant flood of transaction data as an ongoing stream, rather than being like a traditional file
-download.
-
-When a transaction is sent to the vault, it always undergoes a relevancy test, regardless of whether it is in a
-group or not (see~\cref{sec:vault}). This test is extended to check also for the signatures of any groups the node
-is a member of. If there's a match then the transaction's states are all considered relevant. In addition, the
-vault looks up which nodes it invited to this group, and also which nodes invited it, removes any nodes that have
-recently sent us this transaction and then kicks off a \texttt{PropagateTransactionToGroup} flow with each of them.
-The other side of this flow checks if the transaction is already known, if not requests it, checks that it is
-indeed signed by the group in question, resolves it and then assuming success, sends it to the vault. In this way a
-transaction added by any member of the group propagates up and down the membership tree until all the members have
-seen it. Propagation is idempotent -- if the vault has already seen a transaction before then it isn't processed
-again.
-
-The structure we have so far has some advantages and one big disadvantage. The advantages are:
-
-\begin{itemize}
-\item [Simplicity] The core data model is unchanged. Access control is handled using existing tools like signatures, certificates and flows.
-\item [Privacy] It is possible to join a group without the other members being aware that you have done so. It is possible to create groups without non-members knowing the group exists.
-\item [Scalability] Groups are not registered in any central directory. A group that exists between four parties imposes costs only on those four.
-\item [Performance] Groups can be created as fast as you can generate keypairs and invite other nodes to join you.
-\item [Responsibility] For every member of the group there is always a node that has a responsibility for sending you
-new data under the protocol (the inviting node). Unlike with Kademlia style distributed hash tables, or Bitcoin style
-global broadcast, you can never find yourself in a position where you didn't receive data yet nobody has violated the
-protocol. There are no points at which you pick a random selection of nodes and politely ask them to do something for
-you, hoping that they'll choose to stick around.
-\end{itemize}
-
-The big disadvantage is that it's brittle. If you have a membership tree and a node goes offline for a while, then
-propagation of data will split and back up in the outbound queues of the parents and children of the offline node
-until it comes back.
-
-To strengthen groups we can add a new feature, membership broadcasts. Members of the group that have write access
-may choose to sign a membership announcement and propagate it through the tree. These announcements are recorded in
-the local database of each node in the group. Nodes may include these announced members when sending newly added
-transactions. This converts the membership tree to a graph that may contain cycles, but infinite propagation loops
-are not possible because nodes ignore announcements of new transactions/attachments they've already received.
-Whether a group prefers privacy or availability may be hinted in the certificate that defines it: if availability
-is preferred, this is a signal that members should always announce themselves (which would lead to a mesh).
-
-The network map for a network defines the event horizon, the span of time that is allowed to elapse before an
-offline node is considered to be permanently gone. Once a peer has been offline for longer than the event horizon
-any nodes that invited it remove it from their local tables. If a node was invited to a group by a gone peer and
-there are no other nodes that announced their membership it can use, the node should post a message to a queue
-and/or notify the administrator, as it's now effectively been evicted from the group.
-
-The resulting arrangement may appear similar to a gossip network. However the underlying membership tree structure
-remains. Thus when all nodes are online (or online enough) messages are guaranteed to propagate to everyone in the
-network. You can't get situations where a part of the group has become split from the rest without anyone being
-aware of that fact; an unlikely but possible occurrence in a gossip network. It also isn't like a distributed hash
-table where data isn't fully replicated, so we avoid situations where data has been added to the group but stops
-being available due to node outages. It is always possible to reason about the behaviour of the network and always
-possible to assign responsibility if something goes wrong.
-
-Note that it is not possible to remove members after they have been added to a group. We could provide a remove
-announcement but it'd be advisory only: nothing stops nodes from ignoring it. It is also not possible to enumerate
-members of a group because there is no requirement to do a membership broadcast when you join and no way to enforce
-such a requirement.
-
-% TODO: Nothing related to data distribution groups is implemented.
-
 \section{Deterministic JVM}\label{sec:djvm}
 
 It is important that all nodes that process a transaction always agree on whether it is valid or not. Because
@@ -1577,15 +1300,15 @@ deterministic. Out of the box a standard JVM is not fully deterministic, thus we
 order to satisfy our requirements. Non-determinism could come from the following sources:
 
 \begin{itemize}
-\item Sources of external input e.g. the file system, network, system properties, clocks.
-\item Random number generators.
-\item Different decisions about when to terminate long running programs.
-\item \texttt{Object.hashCode()}, which is typically implemented either by returning a pointer address or by
-assigning the object a random number. This can surface as different iteration orders over hash maps and hash sets.
-\item Differences in hardware floating point arithmetic.
-\item Multi-threading.
-\item Differences in API implementations between nodes.
-\item Garbage collector callbacks.
+    \item Sources of external input e.g. the file system, network, system properties, clocks.
+    \item Random number generators.
+    \item Different decisions about when to terminate long running programs.
+    \item \texttt{Object.hashCode()}, which is typically implemented either by returning a pointer address or by
+    assigning the object a random number. This can surface as different iteration orders over hash maps and hash sets.
+    \item Differences in hardware floating point arithmetic.
+    \item Multi-threading.
+    \item Differences in API implementations between nodes.
+    \item Garbage collector callbacks.
 \end{itemize}
 
 To ensure that the contract verify function is fully pure even in the face of infinite loops we construct a new
@@ -1595,23 +1318,23 @@ Classes are rewritten the first time they are loaded.
 The bytecode analysis and rewrite performs the following tasks:
 
 \begin{itemize}
-\item Inserts calls to an accounting object before expensive bytecodes. The goal of this rewrite is to deterministically
-terminate code that has run for an unacceptably long amount of time or used an unacceptable amount of memory. Expensive
-bytecodes include method invocation, allocation, backwards jumps and throwing exceptions.
-\item Prevents exception handlers from catching \texttt{Throwable}, \texttt{Error} or \texttt{ThreadDeath}.
-\item Adjusts constant pool references to relink the code against a `shadow' JDK, which duplicates a subset of the regular
-JDK but inside a dedicated sandbox package. The shadow JDK is missing functionality that contract code shouldn't have access
-to, such as file IO or external entropy. It can be loaded into an IDE like IntellJ IDEA to give developers interactive
-feedback whilst coding, so they can avoid non-deterministic code.
-\item Sets the \texttt{strictfp} flag on all methods, which requires the JVM to do floating point arithmetic in a hardware
-independent fashion. Whilst we anticipate that floating point arithmetic is unlikely to feature in most smart contracts
-(big integer and big decimal libraries are available), it is available for those who want to use it.
-\item Forbids \texttt{invokedynamic} bytecode except in special cases, as the libraries that support this functionality have
-historically had security problems and it is primarily needed only by scripting languages. Support for the specific
-lambda and string concatenation metafactories used by Java code itself are allowed.
-% TODO: The sandbox doesn't allow lambda/string concat(j9) metafactories at the moment.
-\item Forbids native methods.
-\item Forbids finalizers.
+    \item Inserts calls to an accounting object before expensive bytecodes. The goal of this rewrite is to deterministically
+    terminate code that has run for an unacceptably long amount of time or used an unacceptable amount of memory. Expensive
+    bytecodes include method invocation, allocation, backwards jumps and throwing exceptions.
+    \item Prevents exception handlers from catching \texttt{Throwable}, \texttt{Error} or \texttt{ThreadDeath}.
+    \item Adjusts constant pool references to relink the code against a `shadow' JDK, which duplicates a subset of the regular
+    JDK but inside a dedicated sandbox package. The shadow JDK is missing functionality that contract code shouldn't have access
+    to, such as file IO or external entropy. It can be loaded into an IDE like IntellJ IDEA to give developers interactive
+    feedback whilst coding, so they can avoid non-deterministic code.
+    \item Sets the \texttt{strictfp} flag on all methods, which requires the JVM to do floating point arithmetic in a hardware
+    independent fashion. Whilst we anticipate that floating point arithmetic is unlikely to feature in most smart contracts
+    (big integer and big decimal libraries are available), it is available for those who want to use it.
+    \item Forbids \texttt{invokedynamic} bytecode except in special cases, as the libraries that support this functionality have
+    historically had security problems and it is primarily needed only by scripting languages. Support for the specific
+    lambda and string concatenation metafactories used by Java code itself are allowed.
+    % TODO: The sandbox doesn't allow lambda/string concat(j9) metafactories at the moment.
+    \item Forbids native methods.
+    \item Forbids finalizers.
 \end{itemize}
 
 The cost instrumentation strategy used is a simple one: just counting bytecodes that are known to be expensive to
@@ -1757,6 +1480,285 @@ ahead of time JVM bytecode compiler, such as Graal\cite{Graal}, or a direct tran
 intermediate representation into systems of constraints. Direct translation of an SSA-form compiler IR to
 constraints would be best integrated with recent research into `scalable probabilistically checkable
 proofs'\cite{cryptoeprint:2016:646}, and is an open research problem.
+
+\section{Future work}
+
+Corda has a long term roadmap with many planned extensions. In this section we explore a variety of planned upgrades
+that solve common technical or business problems.
+
+\subsection{Domain specific languages}
+
+Domain specific languages for the expression of financial contracts are a popular area of research. A seminal work
+is `Composing contracts' by Peyton-Jones, Seward and Eber [PJSE2000\cite{PeytonJones:2000:CCA:357766.351267}] in
+which financial contracts are modelled with a small library of Haskell combinators. These models can then be used
+for valuation of the underlying deals. Block chain systems use the term `contract' in a slightly different sense to
+how PJSE do but the underlying concepts can be adapted to our context as well. The platform provides an
+experimental \emph{universal contract} that builds on the language extension features of the Kotlin programming
+language. To avoid linguistic confusion it refers to the combined code/data bundle as an `arrangement' rather than
+a contract. A European FX call option expressed in this language looks like this:
+
+\begin{kotlincode}
+    val european_fx_option = arrange {
+        actions {
+            acmeCorp may {
+                "exercise" anytime {
+                    actions {
+                        (acmeCorp or highStreetBank) may {
+                            "execute".givenThat(after("2017-09-01")) {
+                                highStreetBank.owes(acmeCorp, 1.M, EUR)
+                                acmeCorp.owes(highStreetBank, 1200.K, USD)
+                            }
+                        }
+                    }
+                }
+            }
+            highStreetBank may {
+                "expire".givenThat(after("2017-09-01")) {
+                    zero
+                }
+            }
+        }
+    }
+\end{kotlincode}
+
+The programmer may define arbitrary `actions' along with constraints on when the actions may be invoked. The
+\texttt{zero} token indicates the termination of the deal.
+
+As can be seen, this DSL combines both \emph{what} is allowed and deal-specific data like \emph{when} and \emph{how
+much} is allowed, therefore blurring the distinction the core model has between code and data. It builds on prior
+work to enable not only valuation/cash flow calculations, but also direct enforcement of the contract's logic at
+the database level as well.
+
+\subsubsection{Formally verifiable languages}
+
+Corda contracts can be upgraded. However, given the coordination problems inherent in convincing many participants
+in a large network to accept a new version of a contract, a frequently cited desire is for formally verifiable
+languages to be used to try and guarantee the correctness of the implementations.
+
+We do not attempt to tackle this problem ourselves. However, because Corda focuses on deterministic execution of
+any JVM bytecode, formally verifiable languages that target this instruction set are usable for the expression
+of smart contracts. A good example of this is the Whiley language by Dr David Pearce\cite{Pearce2015191}, which
+checks program-integrated proofs at compile time. By building on industry-standard platforms, we gain access to
+cutting edge research from the computer science community outside of the distributed systems world.
+
+\subsection{Secure signing devices}\label{sec:secure-signing-devices}
+
+\subsubsection{Background}
+
+A common feature of digital financial systems and block chain-type systems in particular is the use of secure
+client-side hardware to hold private keys and perform signing operations with them. Combined with a zero tolerance
+approach to transaction rollbacks, this is one of the ways they reduce overheads: by attempting to ensure that
+transaction authorisation is robust and secure, and thus that signatures are reliable.
+
+Many banks have rolled out CAP (chip authentication program) readers to consumers which allow logins to online
+banking using a challenge/response protocol to a smartcard. The user is expected to type in the right codes and
+copy the responses back to the computer by hand. These devices are cheap, but tend to have small, unreliable, low
+resolution screens and can be subject to confusion attacks if there is malware on the PC, e.g. if the malware
+convinces the user they are performing a login challenge whereas in fact they are authorising a payment to a new
+account. The primary advantage is that the signing key is held in a robust and cheap smart card, so the device can
+be replaced without replacing the key.
+
+The state-of-the-art in this space are devices like the TREZOR\cite{TREZOR} by Satoshi Labs or the Ledger Blue.
+These were developed by and for the Bitcoin community. They are more expensive than CAP readers and feature better
+screens and USB connections to eliminate typing. Advanced devices like the Ledger Blue support NFC and Bluetooth as
+well. These devices differ from CAP readers in another key respect: instead of signing arbitrary, small challenge
+numbers, they actually understand the native transaction format of the network to which they're specialised and
+parse the transaction to figure out the message to present to the user, who then confirms that they wish to perform
+the action printed on the screen by simply pressing a button. The transaction is then signed internally before
+being passed back to the PC via the USB/NFC/Bluetooth connection.
+
+This setup means that rather than having a small device that authorises to a powerful server (which controls all
+your assets), the device itself controls the assets. As there is no smartcard equivalent the private key can be
+exported off the device by writing it down in the form of ``wallet words'': 12 random words derived from the
+contents of the key. Because elliptic curve private keys are small (256 bits), this is not as tedious as it would
+be with the much larger RSA keys that were standard until recently.
+
+There are clear benefits to having signing keys be kept on personal, employee-controlled devices only, with the
+organisation's node not having any ability to sign for transactions itself:
+
+\begin{itemize}
+    \item If the node is hacked by a malicious intruder or bad insider they cannot steal assets, modify agreements,
+    or do anything else that requires human approval, because they don't have access to the signing keys. There is no single
+    point of failure from a key management perspective.
+    \item It's clearer who signed off on a particular action -- the signatures prove which devices were used to sign off
+    on an action. There can't be any back doors or administrator tools which can create transactions on behalf of someone else.
+    \item Devices that integrate fingerprint readers and other biometric authentication could further increase trust by
+    making it harder for employees to share/swap devices. A smartphone or tablet could be also used as a transaction authenticator.
+\end{itemize}
+
+\subsubsection{Confusion attacks}
+
+The biggest problem facing anyone wanting to integrate smart signing devices into a distributed ledger system is
+how the device processes transactions. For Bitcoin it's straightforward for devices to process transactions
+directly because their format is very small and simple (in theory -- in practice a fixable quirk of the Bitcoin
+protocol actually significantly complicates how these devices must work). Thus turning a Bitcoin transaction into a
+human meaningful confirmation screen is quite easy:
+
+\indent\texttt{Confirm payment of 1.23 BTC to 1AbCd0123456.......}
+
+This confirmation message is susceptible to confusion attacks because the opaque payment address is unpredictable.
+A sufficiently smart virus/attacker could have swapped out a legitimate address of a legitimate counterparty you
+are expecting to pay with one of their own, thus you'd pay the right amount to the wrong place. The same problem
+can affect financial authenticators that verify IBANs and other account numbers: the user's source of the IBAN may
+be an email or website they are viewing through the compromised machine. The BIP 70\cite{BIP70} protocol was
+designed to address this attack by allowing a certificate chain to be presented that linked a target key with a
+stable, human meaningful and verified identity.
+
+For a generic ledger we are faced with the additional problem that transactions may be of many different types,
+including new types created after the device was manufactured. Thus creating a succinct confirmation message inside
+the device would become an ever-changing problem requiring frequent firmware updates. As firmware upgrades are a
+potential weak point in any secure hardware scheme, it would be ideal to minimise their number.
+
+\subsubsection{Transaction summaries}
+
+To solve this problem we add a top level summaries field to the transaction format (joining inputs, outputs,
+commands, attachments etc). This new top level field is a list of strings. Smart contracts get a new
+responsibility. They are expected to generate an English message describing what the transaction is doing, and then
+check that it is present in the transaction. The platform ensures no unexpected messages are present. The field is
+a list of strings rather than a single string because a transaction may do multiple things simultaneously in
+advanced use cases.
+
+Because the calculation of the confirmation message has now been moved to the smart contract itself, and is a part
+of the transaction, the transaction can be sent to the signing device: all it needs to do is extract the messages
+and print them to the screen with YES/NO buttons available to decide whether to sign or not. Because the device's
+signature covers the messages, and the messages are checked by the contract based on the machine readable data in
+the states, we can know that the message was correct and legitimate.
+
+The design above is simple but has the issue that large amounts of data are sent to the device which it doesn't
+need. As it's common for signing devices to have constrained memory, it would be unfortunate if the complexity of a
+transaction ended up being limited by the RAM available in the users' signing devices. To solve this we can use the
+tear-offs mechanism (see~\cref{sec:tear-offs}) to present only the summaries and the Merkle branch connecting them
+to the root. The device can then sign the entire transaction contents having seen only the textual summaries,
+knowing that the states will trigger the contracts which will trigger the summary checks, thus the signature covers
+the machine-understandable version of the transaction as well.
+
+Note, we assume here that contracts are not themselves malicious. Whilst a malicious user could construct a
+contract that generated misleading messages, for a user to see states in their vault and work with them requires
+the accompanying CorDapp to be loaded into the node as a plugin and thus whitelisted. There is never a case where
+the user may be asked to sign a transaction involving contracts they have not previously approved, even though the
+node may execute such contracts as part of verifying transaction dependencies.
+
+\subsubsection{Identity substitution}
+
+Contract code only works with opaque representations of public keys. Because transactions in a chain of custody may
+need to be anonymised, it isn't possible for a contract to access identity information from inside the sandbox.
+Therefore it cannot generate a complete message that includes human meaningful identity names even if the node
+itself does have this information.
+
+To solve this the transaction is provided to the device along with the X.509 certificate chains linking the
+pseudonymous public keys to the long term identity certificates, which for transactions involving the user should
+always be available (as they by definition know who their trading counterparties are). The device can verify those
+certificate chains to build up a mapping of index to human readable name. The messages placed inside a transaction
+may contain numeric indexes of the public keys required by the commands using backslash syntax, and the device must
+perform the message substitution before rendering. Care must be taken to ensure that the X.500 names issued to
+network participants do not contain text chosen to deliberately confuse users, e.g. names that contain quote marks,
+partial instructions, special symbols and so on. This can be enforced at the network permissioning level.
+
+\subsubsection{Multi-lingual support}
+
+The contract is expected to generate a human readable version of the transaction. This should be in English, by
+convention. In theory, we could define the transaction format to support messages in different languages, and if
+the contract supported that the right language could then be picked by the signing device. However, care must be
+taken to ensure that the message the user sees in alternative languages is correctly translated and not subject to
+ambiguity or confusion, as otherwise exploitable confusion attacks may arise.
+
+
+\subsection{Data distribution groups}
+
+By default, distribution of transaction data is defined by app-provided flows (see~\cref{sec:flows}). Flows specify
+when and to which peers transactions should be sent. Typically these destinations will be calculated based on the
+content of the states and the available identity lookup certificates, as the intended use case of financial data
+usually contains the identities of the relevant parties within it. Sometimes though, the set of parties that should
+receive data isn't known ahead of time and may change after a transaction has been created. For these cases partial
+data visibility is not a good fit and an alternative mechanism is needed.
+
+A data distribution group (DDG) is created by generating a keypair and a self-signed certificate for it. Groups are
+identified internally by their public key and may be given string names in the certificate, but nothing in the
+software assumes the name is unique: it's intended only for human consumption and it may conflict with other
+independent groups. In case of conflict user interfaces disambiguate by appending a few characters of the base58
+encoded public key to the name like so:  "My popular group name (a4T)". As groups are not globally visible anyway,
+it is unlikely that conflicts will be common or require many code letters to deconflict, and some groups may not
+even be intended for human consumption at all.
+
+Once a group is created other nodes can be invited to join it by using an invitation flow. Membership can be either
+read only or read/write. To add a node as read-only, the certificate i.e. pubkey alone is sent. To add a node as
+read/write the certificate and private key are sent. A future elaboration on the design may support giving each
+member a separate private key which would allow tracing who added transactions to a group, but this is left for
+future work. In either case the node records in its local database which other nodes it has invited to the group
+once they accept the invitation.
+
+When the invite is received the target node runs the other side of the flow as normal, which may either
+automatically accept membership if it's configured to trust the inviting node, or send a message to a message queue
+for processing by an external system, or kick it up to a human administrator for approval. Invites to groups the
+node is already a member of are rejected. The accepting node also records which node invited it. So, there ends up
+being a two-way recorded relationship between inviter and invitee stored in their vaults. Finally the inviter side
+of the invitation flow pushes a list of all the transaction IDs that exist in the group and the invitee side
+resolves all of them. The end result is that all the transactions that are in the group are sent to the new node
+(along with all dependencies).
+
+Note that this initial download is potentially infinite if transactions are added to the group as fast or faster
+than the new node is downloading and checking them. Thus whilst it may be tempting to try and expose a notion of
+`doneness' to the act of joining a group, it's better to see the act of joining as happening at a specific point in
+time and the resultant flood of transaction data as an ongoing stream, rather than being like a traditional file
+download.
+
+When a transaction is sent to the vault, it always undergoes a relevancy test, regardless of whether it is in a
+group or not (see~\cref{sec:vault}). This test is extended to check also for the signatures of any groups the node
+is a member of. If there's a match then the transaction's states are all considered relevant. In addition, the
+vault looks up which nodes it invited to this group, and also which nodes invited it, removes any nodes that have
+recently sent us this transaction and then kicks off a \texttt{PropagateTransactionToGroup} flow with each of them.
+The other side of this flow checks if the transaction is already known, if not requests it, checks that it is
+indeed signed by the group in question, resolves it and then assuming success, sends it to the vault. In this way a
+transaction added by any member of the group propagates up and down the membership tree until all the members have
+seen it. Propagation is idempotent -- if the vault has already seen a transaction before then it isn't processed
+again.
+
+The structure we have so far has some advantages and one big disadvantage. The advantages are:
+
+\begin{itemize}
+\item [Simplicity] The core data model is unchanged. Access control is handled using existing tools like signatures, certificates and flows.
+\item [Privacy] It is possible to join a group without the other members being aware that you have done so. It is possible to create groups without non-members knowing the group exists.
+\item [Scalability] Groups are not registered in any central directory. A group that exists between four parties imposes costs only on those four.
+\item [Performance] Groups can be created as fast as you can generate keypairs and invite other nodes to join you.
+\item [Responsibility] For every member of the group there is always a node that has a responsibility for sending you
+new data under the protocol (the inviting node). Unlike with Kademlia style distributed hash tables, or Bitcoin style
+global broadcast, you can never find yourself in a position where you didn't receive data yet nobody has violated the
+protocol. There are no points at which you pick a random selection of nodes and politely ask them to do something for
+you, hoping that they'll choose to stick around.
+\end{itemize}
+
+The big disadvantage is that it's brittle. If you have a membership tree and a node goes offline for a while, then
+propagation of data will split and back up in the outbound queues of the parents and children of the offline node
+until it comes back.
+
+To strengthen groups we can add a new feature, membership broadcasts. Members of the group that have write access
+may choose to sign a membership announcement and propagate it through the tree. These announcements are recorded in
+the local database of each node in the group. Nodes may include these announced members when sending newly added
+transactions. This converts the membership tree to a graph that may contain cycles, but infinite propagation loops
+are not possible because nodes ignore announcements of new transactions/attachments they've already received.
+Whether a group prefers privacy or availability may be hinted in the certificate that defines it: if availability
+is preferred, this is a signal that members should always announce themselves (which would lead to a mesh).
+
+The network map for a network defines the event horizon, the span of time that is allowed to elapse before an
+offline node is considered to be permanently gone. Once a peer has been offline for longer than the event horizon
+any nodes that invited it remove it from their local tables. If a node was invited to a group by a gone peer and
+there are no other nodes that announced their membership it can use, the node should post a message to a queue
+and/or notify the administrator, as it's now effectively been evicted from the group.
+
+The resulting arrangement may appear similar to a gossip network. However the underlying membership tree structure
+remains. Thus when all nodes are online (or online enough) messages are guaranteed to propagate to everyone in the
+network. You can't get situations where a part of the group has become split from the rest without anyone being
+aware of that fact; an unlikely but possible occurrence in a gossip network. It also isn't like a distributed hash
+table where data isn't fully replicated, so we avoid situations where data has been added to the group but stops
+being available due to node outages. It is always possible to reason about the behaviour of the network and always
+possible to assign responsibility if something goes wrong.
+
+Note that it is not possible to remove members after they have been added to a group. We could provide a remove
+announcement but it'd be advisory only: nothing stops nodes from ignoring it. It is also not possible to enumerate
+members of a group because there is no requirement to do a membership broadcast when you join and no way to enforce
+such a requirement.
+
+% TODO: Nothing related to data distribution groups is implemented.
 
 \section{Conclusion}
 
