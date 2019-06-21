@@ -46,10 +46,10 @@ sourceSets {
 }
 
 jib.container {
-  mainClass = "net.corda.node.Corda"
-  args = ['--log-to-console', '--no-local-shell', '--config-file=/config/node.conf']
-  // The Groovy string needs to be converted to a `java.lang.String` below.
-  jvmFlags = ['-Xmx1g', "-javaagent:/app/libs/quasar-core-${quasar_version}-jdk8.jar".toString()]
+    mainClass = "net.corda.node.Corda"
+    args = ['--log-to-console', '--no-local-shell', '--config-file=/config/node.conf']
+    // The Groovy string needs to be converted to a `java.lang.String` below.
+    jvmFlags = ['-Xmx1g', "-javaagent:/app/libs/quasar-core-${quasar_version}-jdk8.jar".toString()]
 }
 
 // Use manual resource copying of log4j2.xml rather than source sets.
@@ -74,8 +74,7 @@ dependencies {
     compile project(':common-validation')
     compile project(':common-configuration-parsing')
     compile project(':common-logging')
-    compile project(':core')
-    
+
     // Backwards compatibility goo: Apps expect confidential-identities to be loaded by default.
     // We could eventually gate this on a target-version check.
     compile project(':confidential-identities')
@@ -91,8 +90,8 @@ dependencies {
     testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
 
     // Kryo: object graph serialization.
-    compile "com.esotericsoftware:kryo:4.0.2"
-    compile "de.javakaffee:kryo-serializers:0.43"
+    compile "com.esotericsoftware:kryo:4.0.0"
+    compile "de.javakaffee:kryo-serializers:0.42"
 
     compile "com.google.guava:guava:$guava_version"
 
@@ -121,7 +120,7 @@ dependencies {
     }
 
     // Coda Hale's Metrics: for monitoring of key statistics
-    compile "io.dropwizard.metrics:metrics-jmx:$metrics_version"
+    compile "io.dropwizard.metrics:metrics-core:$metrics_version"
 
     // JimFS: in memory java.nio filesystem. Used for test and simulation utilities.
     compile "com.google.jimfs:jimfs:1.1"
