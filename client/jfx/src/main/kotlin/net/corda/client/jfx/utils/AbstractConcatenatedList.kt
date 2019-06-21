@@ -7,17 +7,14 @@ import javafx.collections.transformation.TransformationList
 import java.util.*
 
 /**
- * [ConcatenatedList] takes a list of lists and concatenates them. Any change to the underlying lists or the outer list
+ * [AbstractConcatenatedList] takes a list of lists and concatenates them. Any change to the underlying lists or the outer list
  * is propagated as expected.
  */
-class ConcatenatedList<A>(sourceList: ObservableList<ObservableList<A>>) : TransformationList<A, ObservableList<A>>(sourceList) {
-    override fun getViewIndex(p0: Int): Int {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
+abstract class AbstractConcatenatedList<A>(sourceList: ObservableList<ObservableList<A>>) : TransformationList<A, ObservableList<A>>(sourceList) {
 
     // A wrapper for input lists so we hash differently even if a list is reused in the input.
     @VisibleForTesting
-    internal class WrappedObservableList<A>(
+    class WrappedObservableList<A>(
             val observableList: ObservableList<A>
     )
     // First let's clarify some concepts as it's easy to confuse which list we're handling where.
@@ -41,9 +38,9 @@ class ConcatenatedList<A>(sourceList: ObservableList<ObservableList<A>>) : Trans
     // Note that similar to 'nestedIndexOffsets', 'startingOffsetOf' also isn't a one-to-one mapping because of
     // potentially several empty nested lists.
     @VisibleForTesting
-    internal val indexMap = HashMap<WrappedObservableList<out A>, Pair<Int, ListChangeListener<A>>>()
+    val indexMap = HashMap<WrappedObservableList<out A>, Pair<Int, ListChangeListener<A>>>()
     @VisibleForTesting
-    internal val nestedIndexOffsets = ArrayList<Int>(sourceList.size)
+    val nestedIndexOffsets = ArrayList<Int>(sourceList.size)
 
     init {
         var offset = 0

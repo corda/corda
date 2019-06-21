@@ -9,10 +9,7 @@ import java.util.*
  * This list type just replays changes propagated from the underlying source list. Used for testing changes and backing a
  * non-backed observable
  */
-class ReplayedList<A>(sourceList: ObservableList<A>) : TransformationList<A, A>(sourceList) {
-    override fun getViewIndex(p0: Int): Int {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
+abstract class AbstractReplayedList<A>(sourceList: ObservableList<A>) : TransformationList<A, A>(sourceList) {
 
     val replayedList = ArrayList<A>(sourceList)
 

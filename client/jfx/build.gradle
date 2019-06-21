@@ -1,14 +1,18 @@
 // JDK 11 JavaFX
 plugins {
-    id 'org.openjfx.javafxplugin' version '0.0.7'
-}
-javafx {
-    version = "11.0.2"
-    modules = [ 'javafx.controls',
-                'javafx.fxml'
-    ]
+    id 'org.openjfx.javafxplugin' version '0.0.7' apply false
 }
 
+if (JavaVersion.current().isJava9Compatible()) {
+    println("Applying JFX plugin")
+    apply plugin: 'org.openjfx.javafxplugin'
+    javafx {
+        version = "11.0.2"
+        modules = ['javafx.controls',
+                   'javafx.fxml'
+        ]
+    }
+}
 apply plugin: 'kotlin'
 apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'net.corda.plugins.publish-utils'
