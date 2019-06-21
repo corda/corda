@@ -1,36 +1,33 @@
 package net.corda.node.utilities.registration
 
-import net.corda.core.crypto.internal.AliasPrivateKey
 import net.corda.core.crypto.Crypto
+import net.corda.core.crypto.internal.AliasPrivateKey
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.*
 import net.corda.core.utilities.contextLogger
 import net.corda.node.NodeRegistrationOption
 import net.corda.node.services.config.NodeConfiguration
-import net.corda.nodeapi.internal.cryptoservice.azure.AzureKeyVaultCryptoService
-import net.corda.nodeapi.internal.cryptoservice.gemalto.GemaltoLunaCryptoService
-import net.corda.nodeapi.internal.cryptoservice.utimaco.UtimacoCryptoService
-import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
-import net.corda.nodeapi.internal.cryptoservice.futurex.FutureXCryptoService
 import net.corda.nodeapi.internal.config.CertificateStore
-import net.corda.nodeapi.internal.crypto.CertificateType
-import net.corda.nodeapi.internal.crypto.NOT_YET_REGISTERED_MARKER_KEYS_AND_CERTS
-import net.corda.nodeapi.internal.crypto.X509KeyStore
-import net.corda.nodeapi.internal.crypto.X509Utilities
+import net.corda.nodeapi.internal.crypto.*
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_CLIENT_CA
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_CLIENT_TLS
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_ROOT_CA
 import net.corda.nodeapi.internal.crypto.X509Utilities.DEFAULT_VALIDITY_WINDOW
+import net.corda.nodeapi.internal.crypto.X509Utilities.NODE_IDENTITY_ALIAS_PREFIX
 import net.corda.nodeapi.internal.cryptoservice.CryptoServiceFactory
 import net.corda.nodeapi.internal.cryptoservice.SupportedCryptoServices
+import net.corda.nodeapi.internal.cryptoservice.azure.AzureKeyVaultCryptoService
+import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
+import net.corda.nodeapi.internal.cryptoservice.futurex.FutureXCryptoService
+import net.corda.nodeapi.internal.cryptoservice.gemalto.GemaltoLunaCryptoService
 import net.corda.nodeapi.internal.cryptoservice.securosys.PrimusXCryptoService
+import net.corda.nodeapi.internal.cryptoservice.utimaco.UtimacoCryptoService
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.openssl.jcajce.JcaPEMWriter
 import org.bouncycastle.operator.ContentSigner
 import org.bouncycastle.util.io.pem.PemObject
 import java.io.IOException
 import java.io.StringWriter
-import java.lang.IllegalStateException
 import java.net.ConnectException
 import java.nio.file.Path
 import java.security.KeyPair
@@ -117,7 +114,7 @@ open class NetworkRegistrationHelper(
         certStore.setCertPathOnly(nodeCaKeyAlias, nodeCaCertificates)
         certStore.value.internal.deleteEntry(SELF_SIGNED_PRIVATE_KEY)
         certStore.value.save()
-        when(cryptoService) {
+        when (cryptoService) {
             is GemaltoLunaCryptoService -> logProgress("Private key '$nodeCaKeyAlias' stored in Gemalto HSM. Certificate-chain stored in node keystore.")
             is AzureKeyVaultCryptoService -> logProgress("Private key '$nodeCaKeyAlias' stored in Azure KeyVault. Certificate-chain stored in node keystore.")
             is UtimacoCryptoService -> logProgress("Private key '$nodeCaKeyAlias' stored in Utimaco HSM. Certificate-chain stored in node keystore.")
@@ -131,6 +128,55 @@ open class NetworkRegistrationHelper(
         onSuccess(nodeCaPublicKey, tslPublicKey, cryptoService.getSigner(nodeCaKeyAlias), nodeCaCertificates, tlsCrlIssuerCert?.subjectX500Principal?.toX500Name())
         // All done, clean up temp files.
         requestIdStore.deleteIfExists()
+    }
+
+    fun generateNodeIdentity() {
+        certificatesDirectory.createDirectories()
+        // We need this in case cryptoService and certificateStore share the same KeyStore (for backwards compatibility purposes).
+        // If we didn't, then an update to cryptoService wouldn't be reflected to certificateStore that is already loaded in memory.
+        val certStore: CertificateStore = if (cryptoService is BCCryptoService) cryptoService.certificateStore else certificateStore
+
+        if (!certStore.contains(nodeCaKeyAlias)) {
+            logProgress("Node CA key doesn't exist, program will now terminate...")
+            throw IllegalStateException("Node CA not found")
+        }
+
+        val nodeIdentityAlias = "${NODE_IDENTITY_ALIAS_PREFIX}-private-key"
+        if (certStore.contains(nodeIdentityAlias)) {
+            logProgress("Node identity already exists, Corda node will now terminate...")
+            return
+        }
+
+        certStore.update {
+            logProgress("Generating SSL certificate for node messaging service.")
+            val nodeIdentityPublicKey = cryptoService.generateKeyPair(nodeIdentityAlias, cryptoService.defaultIdentitySignatureScheme())
+            val nodeCaCertChain = getCertificateChain(nodeCaKeyAlias)
+            val nodeCaCertificate = nodeCaCertChain.first()
+            val validityWindow = X509Utilities.getCertificateValidityWindow(DEFAULT_VALIDITY_WINDOW.first, DEFAULT_VALIDITY_WINDOW.second, nodeCaCertificate)
+
+            val nodeIdentityCert = X509Utilities.createCertificate(
+                    CertificateType.LEGAL_IDENTITY,
+                    nodeCaCertificate.subjectX500Principal,
+                    nodeCaCertificate.x509.publicKey,
+                    cryptoService.getSigner(nodeCaKeyAlias),
+                    nodeCaCertificate.subjectX500Principal,
+                    nodeIdentityPublicKey,
+                    validityWindow,
+                    crlDistPoint = null,
+                    crlIssuer = null)
+
+            logger.info("Generated Node Identity certificate: $nodeIdentityCert")
+
+            val nodeIdentityCertificateChain: List<X509Certificate> = listOf(nodeIdentityCert) + nodeCaCertChain
+            X509Utilities.validateCertificateChain(rootCert, nodeIdentityCertificateChain)
+            val privateKey = if (contains(nodeIdentityAlias)) {
+                getPrivateKey(nodeIdentityAlias, certStore.entryPassword)
+            } else {
+                Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME).private // dummy value
+            }
+            setPrivateKey(nodeIdentityAlias, privateKey, nodeIdentityCertificateChain, certStore.entryPassword)
+        }
+        logProgress("Node identity private key and certificate chain stored in $nodeIdentityAlias.")
     }
 
     private fun loadOrGenerateKeyPair(): PublicKey {
@@ -296,14 +342,14 @@ class NodeRegistrationHelper(
         computeNextIdleDoormanConnectionPollInterval: (Duration?) -> Duration? = FixedPeriodLimitedRetrialStrategy(10, Duration.ofMinutes(1)),
         logProgress: (String) -> Unit = ::println,
         logError: (String) -> Unit = System.err::println) :
-            NetworkRegistrationHelper(
-                    config,
-                    certService,
-                    regConfig.networkRootTrustStorePath,
-                    regConfig.networkRootTrustStorePassword,
-                    CORDA_CLIENT_CA,
-                    CertRole.NODE_CA,
-                    computeNextIdleDoormanConnectionPollInterval, logProgress, logError) {
+        NetworkRegistrationHelper(
+                config,
+                certService,
+                regConfig.networkRootTrustStorePath,
+                regConfig.networkRootTrustStorePassword,
+                CORDA_CLIENT_CA,
+                CertRole.NODE_CA,
+                computeNextIdleDoormanConnectionPollInterval, logProgress, logError) {
 
     companion object {
         val logger = contextLogger()
@@ -398,7 +444,7 @@ class NodeRegistrationHelper(
 private class FixedPeriodLimitedRetrialStrategy(times: Int, private val period: Duration) : (Duration?) -> Duration? {
 
     init {
-        require(times > 0){"Retry attempts must be larger than zero"}
+        require(times > 0) { "Retry attempts must be larger than zero" }
     }
 
     private var counter = times
