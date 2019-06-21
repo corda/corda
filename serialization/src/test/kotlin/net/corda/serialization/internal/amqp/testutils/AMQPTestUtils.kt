@@ -2,7 +2,7 @@ package net.corda.serialization.internal.amqp.testutils
 
 import net.corda.core.internal.copyTo
 import net.corda.core.internal.div
-import net.corda.core.internal.packageName
+import net.corda.core.internal.packageName_
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationEncoding
 import net.corda.core.serialization.SerializedBytes
@@ -100,7 +100,7 @@ fun testName(): String {
 fun Any.testResourceName(): String = "${javaClass.simpleName}.${testName()}"
 
 fun Any.writeTestResource(bytes: OpaqueBytes) {
-    val dir = ProjectStructure.projectRootDir / "serialization" / "src" / "test" / "resources" / javaClass.packageName.replace('.', separatorChar)
+    val dir = ProjectStructure.projectRootDir / "serialization" / "src" / "test" / "resources" / javaClass.packageName_.replace('.', separatorChar)
     bytes.open().copyTo(dir / testResourceName(), REPLACE_EXISTING)
 }
 

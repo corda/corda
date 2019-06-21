@@ -4,6 +4,7 @@ import net.corda.core.contracts.Amount
 import net.corda.core.contracts.ContractState
 import net.corda.core.identity.Party
 import net.corda.core.internal.packageName
+import net.corda.core.internal.packageName_
 import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.*
 import net.corda.core.utilities.OpaqueBytes
@@ -31,7 +32,7 @@ class CustomVaultQueryTest {
 
     @Before
     fun setup() {
-        mockNet = MockNetwork(threadPerNode = true, cordappPackages = listOf("net.corda.finance", IOUFlow::class.packageName, javaClass.packageName, "com.template"))
+        mockNet = MockNetwork(threadPerNode = true, cordappPackages = listOf("net.corda.finance", IOUFlow::class.packageName, javaClass.packageName_, "com.template"))
         nodeA = mockNet.createPartyNode()
         nodeB = mockNet.createPartyNode()
         notary = mockNet.defaultNotaryIdentity

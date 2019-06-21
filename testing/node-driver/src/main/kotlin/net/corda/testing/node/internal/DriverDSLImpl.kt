@@ -38,7 +38,6 @@ import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.nodeapi.internal.network.NodeInfoFilesCopier
 import net.corda.notary.experimental.raft.RaftConfig
-import net.corda.serialization.internal.amqp.AbstractAMQPSerializationScheme
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.DUMMY_BANK_A_NAME
@@ -57,7 +56,6 @@ import java.io.File
 import java.lang.management.ManagementFactory
 import java.net.ConnectException
 import java.net.URL
-import java.net.URLClassLoader
 import java.nio.file.Path
 import java.security.cert.X509Certificate
 import java.time.Duration
@@ -389,7 +387,7 @@ class DriverDSLImpl(
             // In this case we're dealing with the the RPCDriver or one of it's cousins which are internal and we don't care about them
             emptyList()
         } else {
-            listOf(Class.forName(stackTrace[index + 1].className).packageName)
+            listOf(Class.forName(stackTrace[index + 1].className).packageName_)
         }
     }
 
