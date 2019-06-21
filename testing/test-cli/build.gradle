@@ -4,8 +4,8 @@ apply plugin: 'kotlin'
 dependencies {
     compile "info.picocli:picocli:$picocli_version"
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
-    compile group: "com.fasterxml.jackson.dataformat", name: "jackson-dataformat-yaml", version: "2.9.0"
-    compile group: "com.fasterxml.jackson.core", name: "jackson-databind", version: "2.9.0"
+    compile "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:$jackson_version"
+    compile "com.fasterxml.jackson.core:jackson-databind:$jackson_version"
     compile "com.fasterxml.jackson.module:jackson-module-kotlin:2.9.+"
     
     compile "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"

@@ -9,7 +9,7 @@ dependencies {
     compile project(':node-driver')
 
     // https://mvnrepository.com/artifact/com.jcraft/jsch
-    compile group: 'com.jcraft', name: 'jsch', version: '0.1.54'
+    compile "com.jcraft:jsch:$jsch_version"
     compile group: 'com.jcraft', name: 'jsch.agentproxy.core', version: '0.0.9'
     compile group: 'com.jcraft', name: 'jsch.agentproxy.sshagent', version: '0.0.9'
     compile group: 'com.jcraft', name: 'jsch.agentproxy.usocket-jna', version: '0.0.9'

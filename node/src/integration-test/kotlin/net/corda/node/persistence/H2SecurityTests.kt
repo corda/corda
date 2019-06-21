@@ -14,6 +14,7 @@ import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.node.User
 import org.junit.Assume.assumeTrue
+import org.h2.jdbc.JdbcSQLNonTransientException
 import org.junit.Test
 import java.net.InetAddress
 import java.sql.DriverManager
@@ -106,7 +107,7 @@ class H2SecurityTests {
             val port = getFreePort()
             startNode(customOverrides = mapOf(h2AddressKey to "localhost:$port", dbPasswordKey to "x")).getOrThrow()
             DriverManager.getConnection("jdbc:h2:tcp://localhost:$port/node", "sa", "x").use {
-                assertFailsWith(org.h2.jdbc.JdbcSQLException::class) {
+                assertFailsWith(JdbcSQLNonTransientException::class) {
                     it.createStatement().execute("CREATE ALIAS SET_PROPERTY FOR \"java.lang.System.setProperty\"")
                     it.createStatement().execute("CALL SET_PROPERTY('abc', '1')")
                 }
@@ -127,7 +128,7 @@ class H2SecurityTests {
                 it.proxy.startFlow(::MaliciousFlow).returnValue.getOrThrow()
             }
             DriverManager.getConnection("jdbc:h2:tcp://localhost:$port/node", "sa", "x").use {
-                assertFailsWith(org.h2.jdbc.JdbcSQLException::class) {
+                assertFailsWith(JdbcSQLNonTransientException::class) {
                     it.createStatement().execute("CREATE ALIAS SET_PROPERTY FOR \"java.lang.System.setProperty\"")
                     it.createStatement().execute("CALL SET_PROPERTY('abc', '1')")
                 }

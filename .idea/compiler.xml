@@ -355,6 +355,8 @@
       <module name="test-cli_test" target="1.8" />
       <module name="test-common_main" target="1.8" />
       <module name="test-common_test" target="1.8" />
+      <module name="test-db_main" target="1.8" />
+      <module name="test-db_test" target="1.8" />
       <module name="test-utils_integrationTest" target="1.8" />
       <module name="test-utils_main" target="1.8" />
       <module name="test-utils_test" target="1.8" />
