@@ -195,7 +195,7 @@ class CollectSignaturesFlowTests : WithContracts {
 }
 
 @InitiatingFlow
-class AnonymousSessionTestFlow(val cis: List<PartyAndCertificate>) : FlowLogic<SignedTransaction>() {
+class AnonymousSessionTestFlow(private val cis: List<PartyAndCertificate>) : FlowLogic<SignedTransaction>() {
     @Suspendable
     override fun call(): SignedTransaction {
 
@@ -227,14 +227,14 @@ class AnonymousSessionTestFlowResponder(private val otherSideSession: FlowSessio
             override fun checkTransaction(stx: SignedTransaction) = requireThat {
             }
         }
-        val stxId = subFlow(signFlow).id
+        subFlow(signFlow)
     }
 }
 
 @InitiatingFlow
-class MixAndMatchAnonymousSessionTestFlow(val cis: List<PartyAndCertificate>,
-                                          val keysToLookUp: Set<PublicKey>,
-                                          val keysToKeepAnonymous: Set<PublicKey>) : FlowLogic<SignedTransaction>() {
+class MixAndMatchAnonymousSessionTestFlow(private val cis: List<PartyAndCertificate>,
+                                          private val keysToLookUp: Set<PublicKey>,
+                                          private val keysToKeepAnonymous: Set<PublicKey>) : FlowLogic<SignedTransaction>() {
     @Suspendable
     override fun call(): SignedTransaction {
 
@@ -255,7 +255,7 @@ class MixAndMatchAnonymousSessionTestFlow(val cis: List<PartyAndCertificate>,
 
         val resolvedParties = keysToLookUp.map { serviceHub.identityService.wellKnownPartyFromAnonymous(AnonymousParty(it))!! }.toSet()
         val anonymousParties = keysToKeepAnonymous.map { AnonymousParty(it) }
-        val sessionsToCollectFrom = (resolvedParties + anonymousParties).map { initiateFlow(it) }
+        val sessionsToCollectFrom = (resolvedParties + anonymousParties).map { initiateFlow(it as Destination) }
         return subFlow(CollectSignaturesFlow(signedByUsTx, sessionsToCollectFrom, myOptionalKeys = listOf(ourKey)))
     }
 }
@@ -269,6 +269,6 @@ class MixAndMatchAnonymousSessionTestFlowResponder(private val otherSideSession:
             override fun checkTransaction(stx: SignedTransaction) = requireThat {
             }
         }
-        val stxId = subFlow(signFlow).id
+        subFlow(signFlow)
     }
 }
