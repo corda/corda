@@ -377,6 +377,10 @@ itself, for example in case of database deadlocks that require a retry. The abil
 useful for cases where the other side isn't sure why you are contacting them, for example, the specified reason for
 sending a payment is not recognised, or when the asset used for a payment is not considered acceptable.
 
+For performance reasons messages sent over flows are protected only with TLS. This means messages sent via flows
+are deniable unless explicitly signed by the application. Automatic signing and recording of flow contents may be
+added in future.
+
 Flows are identified using Java class names i.e. reverse DNS notation, and several are defined by the base
 protocol. Note that the framework is not required to implement the wire protocols, it is just a development aid.
 
