@@ -116,15 +116,14 @@ abstract class PortAllocation {
 
     abstract fun nextPort(): Int
 
-    @Deprecated("This has been superseded by net.corda.testing.driver.SharedMemoryPortAllocation.INSTANCE")
+    @Deprecated("This has been superseded by net.corda.testing.driver.SharedMemoryPortAllocation.INSTANCE", ReplaceWith("SharedMemoryPortAllocation.INSTANCE.nextPort()"))
+    @DoNotImplement
     open class Incremental(private val startingPort: Int) : PortAllocation() {
 
         /** The backing [AtomicInteger] used to keep track of the currently allocated port */
-        fun getPortCounter(): AtomicInteger {
-            throw UnsupportedOperationException("This has been superseded by net.corda.testing.driver.SharedMemoryPortAllocation.INSTANCE " +
-                    "which provides cross-process port allocation and therefore does not allow access to the underlying port counter")
-        }
+        val portCounter: AtomicInteger = AtomicInteger()
 
+        @Deprecated("This has been superseded by net.corda.testing.driver.SharedMemoryPortAllocation.INSTANCE", ReplaceWith("SharedMemoryPortAllocation.INSTANCE.nextPort()"))
         override fun nextPort(): Int {
             return SharedMemoryPortAllocation.INSTANCE.nextPort()
         }
