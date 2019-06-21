@@ -433,7 +433,8 @@ class CordaRPCClient private constructor(
      * @param reconnecting whether the connection will try to reconnect automatically
      * @throws RPCException if the server version is too low or if the server isn't reachable within a reasonable timeout.
      */
-    fun start(username: String, password: String, externalTrace: Trace?, impersonatedActor: Actor?, targetLegalIdentity: CordaX500Name?, reconnecting: Boolean): CordaRPCConnection {
+    @JvmOverloads
+    fun start(username: String, password: String, externalTrace: Trace?, impersonatedActor: Actor?, targetLegalIdentity: CordaX500Name?, reconnecting: Boolean = true): CordaRPCConnection {
         val addresses = if (haAddressPool.isEmpty())
             listOf(hostAndPort!!)
         else
