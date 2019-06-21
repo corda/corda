@@ -63,7 +63,7 @@ class NodeInfoWatcher(private val nodePath: Path,
     val processedNodeInfoHashes: Set<SecureHash> get() = nodeInfoFilesMap.values.map { it.nodeInfohash }.toSet()
 
     init {
-        //require(pollInterval >= 5.seconds) { "Poll interval must be 5 seconds or longer." }
+        require(pollInterval >= 1.seconds) { "Poll interval must be 5 seconds or longer." }
         nodeInfosDir.createDirectories()
     }
 
