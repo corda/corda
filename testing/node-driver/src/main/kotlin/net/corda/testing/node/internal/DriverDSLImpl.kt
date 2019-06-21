@@ -168,7 +168,7 @@ class DriverDSLImpl(
         val client = CordaRPCClient(rpcAddress, sslConfiguration = clientRpcSslOptions)
         val connectionFuture = poll(executorService, "RPC connection") {
             try {
-                config.corda.rpcUsers[0].run { client.start(username, password) }
+                config.corda.rpcUsers[0].run { client.start(username, password, false) }
             } catch (e: Exception) {
                 if (processDeathFuture.isDone) throw e
                 log.info("Exception while connecting to RPC, retrying to connect at $rpcAddress", e)
