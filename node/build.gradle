@@ -8,7 +8,6 @@ buildscript {
 
 plugins {
     id 'com.google.cloud.tools.jib' version '0.9.4'
-    id 'org.javamodularity.moduleplugin' version '1.5.0' apply true
 }
 
 apply plugin: 'kotlin'
@@ -21,7 +20,6 @@ apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'com.jfrog.artifactory'
 
 // CordaCaplet using 'sun.misc.Signal'
-apply plugin: "org.javamodularity.moduleplugin"
 
 description 'Corda node modules'
 
