@@ -296,13 +296,11 @@ fun <A> ObservableList<A>.last(): ObservableValue<A?> {
 }
 
 fun <T : Any> ObservableList<T>.unique(): ObservableList<T> {
-    @Suppress("UNCHECKED_CAST")
-    return AggregatedList(this, { it }, { key, _ -> key }) as ObservableList<T>
+    return AggregatedList(this, { it }, { key, _ -> key })
 }
 
 fun <T : Any, K : Any> ObservableList<T>.distinctBy(toKey: (T) -> K): ObservableList<T> {
-    @Suppress("UNCHECKED_CAST")
-    return AggregatedList(this, toKey, { _, entryList -> entryList[0] }) as ObservableList<T>
+    return AggregatedList(this, toKey, { _, entryList -> entryList[0] })
 }
 
 fun ObservableValue<*>.isNotNull(): BooleanBinding {
