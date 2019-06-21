@@ -4,10 +4,7 @@ Release notes
 .. contents:: 
     :depth: 2
 
-
 .. _release_notes_v4_1:
-
-
 
 Corda 4.1
 =========
@@ -16,7 +13,7 @@ It's been a little under 3 1/2 months since the release of Corda 4.0 and all of 
 of tools Corda offers. Now, following the release of Corda Enterprise 4.0, we are proud to release Corda 4.1, bringing over 150 fixes
 and documentation updates to bring additional stability and quality of life improvements to those developing on the Corda platform.
 
-Information on Corda Enterprise 4.0 can be found `here <https://www.r3.com/wp-content/uploads/2019/05/CordaEnterprise4_Enhancements_FS.pdf`>_ and
+Information on Corda Enterprise 4.0 can be found `here <https://www.r3.com/wp-content/uploads/2019/05/CordaEnterprise4_Enhancements_FS.pdf>`_ and
 `here <https://docs.corda.r3.com/releases/4.0/release-notes.html>`_. (It's worth noting that normally this document would have started with a comment
 about whether or not you'd been recently domiciled under some solidified mineral material regarding the release of Corda Enterprise 4.0. Alas, we made
 that joke when we shipped the first release of Corda after Enterprise 3.0 shipped, so the thunder has been stolen and repeating ourselves would be terribly gauche.)
