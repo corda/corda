@@ -2,6 +2,7 @@ package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.DoNotImplement
+import net.corda.core.KeepForDJVM
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.utilities.UntrustworthyData
@@ -200,4 +201,5 @@ abstract class FlowSession {
  * in future releases.
  */
 @DoNotImplement
+@KeepForDJVM
 interface Destination
