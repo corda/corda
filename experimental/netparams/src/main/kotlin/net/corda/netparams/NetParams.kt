@@ -5,6 +5,7 @@ import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigParseOptions
 import net.corda.cliutils.CordaCliWrapper
 import net.corda.cliutils.start
+import net.corda.core.crypto.Crypto
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
 import net.corda.core.node.NetworkParameters
@@ -17,6 +18,7 @@ import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.serialization.serialize
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.createDevNetworkMapCa
+import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.serialization.internal.*
 import net.corda.serialization.internal.amqp.*
@@ -24,6 +26,8 @@ import picocli.CommandLine.*
 import java.io.File
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
+import java.security.KeyPair
+import java.security.cert.X509Certificate
 import java.time.Instant
 
 /**
@@ -87,13 +91,13 @@ class NetParamsSigner : CordaCliWrapper("netparams-signer", "Sign network parame
     @Option(names = ["--notary-keypass"], paramLabel = "password", description = ["Password to node keystore"])
     private var notaryKeyPasswords: MutableList<String> = mutableListOf<String>()
 
-    @Option(names = ["--keystore"],  description = ["Keystore containing NetworkParameters signing key"])
+    @Option(names = ["--keystore"], description = ["Keystore containing NetworkParameters signing key"])
     private var keyStorePath: Path? = null
 
     @Option(names = ["--keystore-pass"], description = ["Keystore password"])
     private var keyStorePass: String? = null
 
-    @Option(names = ["--keyalias"],  description = ["Alias of signing key"])
+    @Option(names = ["--keyalias"], description = ["Alias of signing key"])
     private var keyAlias: String? = null
 
     @Option(names = ["--keypass"], description = ["Password of signing key"])
@@ -103,7 +107,7 @@ class NetParamsSigner : CordaCliWrapper("netparams-signer", "Sign network parame
         print(prompt)
         System.out.flush()
         val console = System.console()
-        if(console != null)
+        if (console != null)
             return console.readPassword().toString()
         else
             return readLine()!!
@@ -126,8 +130,13 @@ class NetParamsSigner : CordaCliWrapper("netparams-signer", "Sign network parame
                 AMQP_P2P_CONTEXT)
     }
 
+    class CertificatePathAndKeyPair(val certPath: List<X509Certificate>, private val certificateAndKeyPair: CertificateAndKeyPair) {
+        val keyPair: KeyPair
+            get() = certificateAndKeyPair.keyPair
+    }
+
     override fun runProgram(): Int {
-        require(configFile != null ) { "The --config parameter must be specified" }
+        require(configFile != null) { "The --config parameter must be specified" }
 
         initialiseSerialization()
 
@@ -147,54 +156,55 @@ class NetParamsSigner : CordaCliWrapper("netparams-signer", "Sign network parame
         val networkParameters = parametersFromConfig(configFile!!, n1 + n2)
         print(networkParameters.toString())
 
-        val signingkey = if(keyStorePath != null) {
+        val signingkey = if (keyStorePath != null) {
 
             require(keyAlias != null) { "The --keyAlias parameters must be specified" }
 
-            if(keyStorePass == null)
+            if (keyStorePass == null)
                 keyStorePass = getInput("Store password (${keyStorePath?.fileName}): ")
 
-            if(keyPass == null)
+            if (keyPass == null)
                 keyPass = getInput("Key password (${keyAlias}): ")
 
             val keyStore = X509KeyStore.fromFile(keyStorePath!!, keyStorePass!!)
-            keyStore.getCertificateAndKeyPair(keyAlias!!, keyPass!!)
-        }
-        else {
+            val signingKey = keyStore.getCertificateAndKeyPair(keyAlias!!, keyPass!!)
+            val x509Chain = keyStore.getCertificateChain(keyAlias!!)
+
+            CertificatePathAndKeyPair(x509Chain, signingKey)
+        } else {
             // issue from the development root
-            createDevNetworkMapCa()
+            CertificatePathAndKeyPair(emptyList(), createDevNetworkMapCa())
         }
 
-        // sign & serialise
-        val serializedSignedNetParams = signingkey.sign(networkParameters).serialize()
+        // sign and include the certificate path
+        val signedNetParams = networkParameters.signWithCertPath(signingkey.keyPair.private, signingkey.certPath)
 
-        if(outputFile != null) {
+        if (outputFile != null) {
             print("\nWriting: " + outputFile)
-            serializedSignedNetParams.open().copyTo(outputFile!!, StandardCopyOption.REPLACE_EXISTING)
-        }
-        else {
+            val ssnp = signedNetParams.serialize()
+            ssnp.open().copyTo(outputFile!!, StandardCopyOption.REPLACE_EXISTING)
+        } else {
             print("\nUse --output to write results")
         }
 
         return 0
     }
 
-    fun identityFromKeyStore(keyStorePath: File, keyStorePass: String, alias: String = "identity-private-key") : Party {
+    fun identityFromKeyStore(keyStorePath: File, keyStorePass: String, alias: String = "identity-private-key"): Party {
 
         val keyStore = X509KeyStore.fromFile(keyStorePath.toPath(), keyStorePass)
         return Party(keyStore.getCertificate(alias))
     }
 
-    fun identityFromNodeInfoPath(nodeInfoPath: File) : Party{
+    fun identityFromNodeInfoPath(nodeInfoPath: File): Party {
 
-        val serializedNodeInfo = SerializedBytes<SignedNodeInfo>(nodeInfoPath.toPath().readAll())
-        val signedNodeInfo = serializedNodeInfo.deserialize()
+        val signedNodeInfo = nodeInfoPath.toPath().readObject<SignedNodeInfo>()
         val nodeInfo = signedNodeInfo.verified()
 
         return nodeInfo.legalIdentities.last()
     }
 
-    fun parseConfig(config: Config, optionalNotaryList: List<NotaryInfo>) : NetworkParameters {
+    fun parseConfig(config: Config, optionalNotaryList: List<NotaryInfo>): NetworkParameters {
 
         // convert the notary list (of nodeinfo paths) to NotaryInfos
         val notaryList: List<NotaryInfo> = config.getConfigList("notaries").map {
@@ -215,7 +225,7 @@ class NetParamsSigner : CordaCliWrapper("netparams-signer", "Sign network parame
         )
     }
 
-    fun parametersFromConfig(file: Path, notaryList: List<NotaryInfo>) : NetworkParameters {
+    fun parametersFromConfig(file: Path, notaryList: List<NotaryInfo>): NetworkParameters {
 
         val parseOptions = ConfigParseOptions.defaults().setAllowMissing(true)
         val config = ConfigFactory.parseFile(file.toFile(), parseOptions).resolve()
