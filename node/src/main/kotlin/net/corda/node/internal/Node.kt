@@ -1,6 +1,5 @@
 package net.corda.node.internal
 
-import com.codahale.metrics.JmxReporter
 import com.codahale.metrics.MetricFilter
 import com.codahale.metrics.MetricRegistry
 import com.github.benmanes.caffeine.cache.Caffeine
@@ -64,7 +63,6 @@ import net.corda.serialization.internal.*
 import net.corda.serialization.internal.amqp.SerializationFactoryCacheKey
 import net.corda.serialization.internal.amqp.SerializerFactory
 import org.apache.commons.lang3.SystemUtils
-import org.h2.jdbc.JdbcSQLException
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import rx.Scheduler
@@ -405,7 +403,7 @@ open class Node(configuration: NodeConfiguration,
                 runOnStop += server::stop
                 val url = try {
                     server.start().url
-                } catch (e: JdbcSQLException) {
+                } catch (e: JdbcSQLNonTransientConnectionException) {
                     if (e.cause is BindException) {
                         throw AddressBindingException(effectiveH2Settings.address)
                     } else {
