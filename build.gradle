@@ -17,7 +17,8 @@ buildscript {
     ext.kotlin_version = constants.getProperty("kotlinVersion")
 
     ext.quasar_group = 'co.paralleluniverse'
-    ext.quasar_version = constants.getProperty("quasarVersion")
+    ext.quasar_version = System.getProperty("quasarVersion") ?: constants.getProperty("quasarVersion")
+    ext.quasar_classifier = System.getProperty("quasarClassifier") ?: constants.getProperty("quasarClassifier")
     ext.quasar_exclusions = [
                 'co.paralleluniverse**',
                 'groovy**',
@@ -190,7 +191,8 @@ targetCompatibility = VERSION_1_8
 println "Java version: " + JavaVersion.current()
 println "Java source compatibility: " + sourceCompatibility
 println "Java target compatibility: " + targetCompatibility
-
+println "Quasar version: " + quasar_version
+println "Quasar classifier: " + quasar_classifier
 
 // allprojects not allowed ???
 // Could not find method kotlinCompile() for arguments [build_1cxylkaspro03mtms9c9xoxft$_run_closure2$_closure16@2dd8b9f2] on root project 'corda-project' of type org.gradle.api.Project.
@@ -265,7 +267,6 @@ allprojects {
     
     tasks.withType(JavaCompile) {
         options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation" << "-Xlint:-options" << "-parameters" 
-        //<<  "--illegal-access=warn"
         options.encoding = 'UTF-8'
         options.verbose = true
 //        moduleOptions {
