@@ -6,7 +6,6 @@ import net.corda.core.CordaInternal
 import net.corda.core.DeleteForDJVM
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.SecureHash
-import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.*
@@ -117,17 +116,11 @@ abstract class FlowLogic<out T> {
     val serviceHub: ServiceHub get() = stateMachine.serviceHub
 
     /**
-     * Creates a communication session with [party]. Subsequently you may send/receive using this session object. Note
-     * that this function does not communicate in itself, the counter-flow will be kicked off by the first send/receive.
+     * Creates a communication session with [destination]. Subsequently you may send/receive using this session object. How the messaging
+     * is routed depends on the [Destination] type, including whether this call does any initial communication.
      */
     @Suspendable
-    fun initiateFlow(requested: AbstractParty): FlowSession {
-        val wellKnown = serviceHub.identityService.wellKnownPartyFromAnonymous(requested)
-        if (wellKnown == null) {
-            throw IllegalStateException("could not initiate flow with party $requested as they are not in the node identity service")
-        }
-        return stateMachine.initiateFlow(wellKnown = wellKnown, requested = requested)
-    }
+    fun initiateFlow(destination: Destination): FlowSession = stateMachine.initiateFlow(destination)
 
     /**
      * Creates a communication session with [party]. Subsequently you may send/receive using this session object. Note
