@@ -2,7 +2,6 @@ package net.corda.node.services.statemachine
 
 import co.paralleluniverse.fibers.Fiber
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.flows.Destination
 import net.corda.core.flows.FlowInfo
 import net.corda.core.flows.FlowSession
 import net.corda.core.identity.Party
@@ -14,30 +13,34 @@ import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.UntrustworthyData
+import java.security.PublicKey
 
 class FlowSessionImpl(
-        override val destination: Destination,
+        override val counterparty: Party,
+        override val sessionOwningKey: PublicKey,
         val sourceSessionId: SessionId
 ) : FlowSession() {
 
-    override val counterparty: Party get() = checkNotNull(destination as? Party) { "$destination is not a Party" }
+    override fun toString() = "FlowSessionImpl(counterparty=$counterparty, sourceSessionId=$sourceSessionId)"
 
-    override fun toString(): String = "FlowSessionImpl(destination=$destination, sourceSessionId=$sourceSessionId)"
+    override fun equals(other: Any?): Boolean {
+        return (other as? FlowSessionImpl)?.sourceSessionId == sourceSessionId
+    }
 
-    override fun equals(other: Any?): Boolean = other === this || other is FlowSessionImpl && other.sourceSessionId == sourceSessionId
+    override fun hashCode() = sourceSessionId.hashCode()
 
-    override fun hashCode(): Int = sourceSessionId.hashCode()
-
-    private val flowStateMachine: FlowStateMachine<*> get() = Fiber.currentFiber() as FlowStateMachine<*>
+    private fun getFlowStateMachine(): FlowStateMachine<*> {
+        return Fiber.currentFiber() as FlowStateMachine<*>
+    }
 
     @Suspendable
     override fun getCounterpartyFlowInfo(maySkipCheckpoint: Boolean): FlowInfo {
         val request = FlowIORequest.GetFlowInfo(NonEmptySet.of(this))
-        return flowStateMachine.suspend(request, maySkipCheckpoint).getValue(this)
+        return getFlowStateMachine().suspend(request, maySkipCheckpoint)[this]!!
     }
 
     @Suspendable
-    override fun getCounterpartyFlowInfo(): FlowInfo = getCounterpartyFlowInfo(maySkipCheckpoint = false)
+    override fun getCounterpartyFlowInfo() = getCounterpartyFlowInfo(maySkipCheckpoint = false)
 
     @Suspendable
     override fun <R : Any> sendAndReceive(
@@ -50,8 +53,8 @@ class FlowSessionImpl(
                 sessionToMessage = mapOf(this to payload.serialize(context = SerializationDefaults.P2P_CONTEXT)),
                 shouldRetrySend = false
         )
-        val responseValues: Map<FlowSession, SerializedBytes<Any>> = flowStateMachine.suspend(request, maySkipCheckpoint)
-        val responseForCurrentSession = responseValues.getValue(this)
+        val responseValues: Map<FlowSession, SerializedBytes<Any>> = getFlowStateMachine().suspend(request, maySkipCheckpoint)
+        val responseForCurrentSession = responseValues[this]!!
 
         return responseForCurrentSession.checkPayloadIs(receiveType)
     }
@@ -63,7 +66,7 @@ class FlowSessionImpl(
     override fun <R : Any> receive(receiveType: Class<R>, maySkipCheckpoint: Boolean): UntrustworthyData<R> {
         enforceNotPrimitive(receiveType)
         val request = FlowIORequest.Receive(NonEmptySet.of(this))
-        return flowStateMachine.suspend(request, maySkipCheckpoint).getValue(this).checkPayloadIs(receiveType)
+        return getFlowStateMachine().suspend(request, maySkipCheckpoint)[this]!!.checkPayloadIs(receiveType)
     }
 
     @Suspendable
@@ -74,7 +77,7 @@ class FlowSessionImpl(
         val request = FlowIORequest.Send(
                 sessionToMessage = mapOf(this to payload.serialize(context = SerializationDefaults.P2P_CONTEXT))
         )
-        return flowStateMachine.suspend(request, maySkipCheckpoint)
+        return getFlowStateMachine().suspend(request, maySkipCheckpoint)
     }
 
     @Suspendable

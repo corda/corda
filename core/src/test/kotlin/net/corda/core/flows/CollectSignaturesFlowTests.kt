@@ -10,6 +10,7 @@ import net.corda.core.identity.*
 import net.corda.core.node.services.IdentityService
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
+import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.*
 import net.corda.testing.internal.matchers.flow.willReturn
@@ -194,13 +195,13 @@ class CollectSignaturesFlowTests : WithContracts {
 }
 
 @InitiatingFlow
-class AnonymousSessionTestFlow(private val cis: List<PartyAndCertificate>) : FlowLogic<SignedTransaction>() {
+class AnonymousSessionTestFlow(val cis: List<PartyAndCertificate>) : FlowLogic<SignedTransaction>() {
     @Suspendable
     override fun call(): SignedTransaction {
 
         for (ci in cis) {
             if (ci.name != ourIdentity.name) {
-                (serviceHub.identityService as IdentityServiceInternal).verifyAndRegisterIdentity(ci)
+                serviceHub.identityService.verifyAndRegisterIdentity(ci)
             }
         }
         val state = DummyContract.MultiOwnerState(owners = cis.map { AnonymousParty(it.owningKey) })
@@ -226,24 +227,24 @@ class AnonymousSessionTestFlowResponder(private val otherSideSession: FlowSessio
             override fun checkTransaction(stx: SignedTransaction) = requireThat {
             }
         }
-        subFlow(signFlow)
+        val stxId = subFlow(signFlow).id
     }
 }
 
 @InitiatingFlow
-class MixAndMatchAnonymousSessionTestFlow(private val cis: List<PartyAndCertificate>,
-                                          private val keysToLookUp: Set<PublicKey>,
-                                          private val keysToKeepAnonymous: Set<PublicKey>) : FlowLogic<SignedTransaction>() {
+class MixAndMatchAnonymousSessionTestFlow(val cis: List<PartyAndCertificate>,
+                                          val keysToLookUp: Set<PublicKey>,
+                                          val keysToKeepAnonymous: Set<PublicKey>) : FlowLogic<SignedTransaction>() {
     @Suspendable
     override fun call(): SignedTransaction {
 
         for (ci  in cis) {
             if (ci.name != ourIdentity.name) {
-                (serviceHub.identityService as IdentityServiceInternal).verifyAndRegisterIdentity(ci)
+                serviceHub.identityService.verifyAndRegisterIdentity(ci)
             }
         }
         val state = DummyContract.MultiOwnerState(owners = cis.map { AnonymousParty(it.owningKey) })
-        val create = net.corda.testing.contracts.DummyContract.Commands.Create()
+        val create = DummyContract.Commands.Create()
         val txBuilder = TransactionBuilder(notary = serviceHub.networkMapCache.notaryIdentities.first())
                 .addOutputState(state)
                 .addCommand(create, cis.map { it.owningKey })
@@ -254,7 +255,7 @@ class MixAndMatchAnonymousSessionTestFlow(private val cis: List<PartyAndCertific
 
         val resolvedParties = keysToLookUp.map { serviceHub.identityService.wellKnownPartyFromAnonymous(AnonymousParty(it))!! }.toSet()
         val anonymousParties = keysToKeepAnonymous.map { AnonymousParty(it) }
-        val sessionsToCollectFrom = (resolvedParties + anonymousParties).map { initiateFlow(it as Destination) }
+        val sessionsToCollectFrom = (resolvedParties + anonymousParties).map { initiateFlow(it) }
         return subFlow(CollectSignaturesFlow(signedByUsTx, sessionsToCollectFrom, myOptionalKeys = listOf(ourKey)))
     }
 }
@@ -268,6 +269,6 @@ class MixAndMatchAnonymousSessionTestFlowResponder(private val otherSideSession:
             override fun checkTransaction(stx: SignedTransaction) = requireThat {
             }
         }
-        subFlow(signFlow)
+        val stxId = subFlow(signFlow).id
     }
 }

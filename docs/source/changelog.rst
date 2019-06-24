@@ -9,10 +9,6 @@ release, see :doc:`app-upgrade-notes`.
 Version 5.0
 -----------
 
-* Introduced a new ``Destination`` abstraction for communicating with non-Party destinations using the new ``FlowLogic.initateFlow(Destination)``
-  method. ``Party`` and ``AnonymousParty`` have been retrofitted to implement ``Destination``. Initiating a flow to an ``AnonymousParty``
-  means resolving to the well-known identity ``Party`` and then communicating with that.
-
 * Removed ``finance-workflows`` dependency on jackson library.  The functions that used jackson (e.g. ``FinanceJSONSupport``) have been moved
   into IRS Demo.
 

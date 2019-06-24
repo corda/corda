@@ -168,7 +168,7 @@ class ActionExecutorImpl(
 
     @Suspendable
     private fun executeSendInitial(action: Action.SendInitial) {
-        flowMessaging.sendSessionMessage(action.destination, action.initialise, action.deduplicationId)
+        flowMessaging.sendSessionMessage(action.party, action.initialise, action.deduplicationId)
     }
 
     @Suspendable

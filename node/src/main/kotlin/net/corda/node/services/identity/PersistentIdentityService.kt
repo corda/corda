@@ -229,7 +229,6 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
     }
 
     override fun certificateFromKey(owningKey: PublicKey): PartyAndCertificate? = database.transaction {
-        //TODO make this less ugly
         val name = keyToParty[owningKey.hash]
         if (name != null) {
             val legalIdentityKey = partyToKey[name!!]

@@ -142,8 +142,8 @@ class RetryFlowMockTest {
         val alice = TestIdentity(CordaX500Name.parse("L=London,O=Alice Ltd,OU=Trade,C=GB")).party
         val records = nodeA.smm.flowHospital.track().updates.toBlocking().toIterable().iterator()
         val flow: FlowStateMachine<Unit> = nodeA.services.startFlow(FinalityHandler(object : FlowSession() {
-            override val destination: Destination get() = alice
-            override val counterparty: Party get() = alice
+            override val sessionOwningKey = alice.owningKey
+            override val counterparty = alice
 
             override fun getCounterpartyFlowInfo(maySkipCheckpoint: Boolean): FlowInfo {
                 TODO("not implemented")
@@ -276,7 +276,7 @@ class RetryFlowMockTest {
             logger.info("Hello")
             doInsert()
             // Checkpoint so we roll back to here
-            FlowLogic.sleep(Duration.ofSeconds(0))
+            sleep(Duration.ofSeconds(0))
             if (count++ < i) {
                 doInsert()
             }
