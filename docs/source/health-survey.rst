@@ -39,12 +39,10 @@ Usage:
 
 Running the tool with no arguments assumes that the base-directory argument is the current working directory.
 
-.. image:: resources/health-survey/health-survey-photo.png
-   :scale: 100 %
-
 Output
 ------
 
 The tool generates the archive of the collected files in the same directory it is ran in. The names are in the format: ``report-date-time.zip``
 
-
+.. image:: resources/health-survey/health-survey-photo.png
+   :scale: 100 %
