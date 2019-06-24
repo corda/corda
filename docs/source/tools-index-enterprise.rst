@@ -9,4 +9,5 @@ Corda Enterprise provides additional command line and GUI tools to help you mana
    notary-healthcheck
    ha-utilities
    tools-config-obfuscator
+   notary-health-survey
 
