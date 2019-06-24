@@ -5,6 +5,7 @@ import net.corda.confidential.SwapIdentitiesFlow
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.InsufficientBalanceException
 import net.corda.core.flows.*
+import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.TransactionBuilder
@@ -52,7 +53,7 @@ open class CashPaymentFlow(
         progressTracker.currentStep = GENERATING_ID
         val recipientSession = initiateFlow(recipient)
         recipientSession.send(anonymous)
-        val anonymousRecipient = if (anonymous) {
+        val anonymousRecipient: AbstractParty = if (anonymous) {
             subFlow(SwapIdentitiesFlow(recipientSession))[recipient]!!
         } else {
             recipient
