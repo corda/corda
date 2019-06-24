@@ -1,6 +1,7 @@
 package net.corda.networkbuilder.gui
 
 import com.microsoft.azure.management.resources.fluentcore.arm.Region
+import javafx.beans.binding.Bindings
 import javafx.beans.property.SimpleObjectProperty
 import javafx.beans.property.SimpleStringProperty
 import javafx.collections.ObservableListBase
@@ -50,7 +51,7 @@ class BootstrapperView : View("Corda Network Builder") {
         visuallyTweakBackendSelector()
 
         buildButton.run {
-            enableWhen { controller.baseDir.isNotNull }
+            enableWhen { controller.hasNodesOrNotaries.and(controller.baseDir.isNotNull) }
             action {
                 var networkName = "corda-network"
 
@@ -261,7 +262,7 @@ class BootstrapperView : View("Corda Network Builder") {
         val foundNodes = Collections.synchronizedList(ArrayList<FoundNodeTableEntry>()).observable()
         val foundNotaries = Collections.synchronizedList(ArrayList<FoundNode>()).observable()
         val networkContext = SimpleObjectProperty<Context>(null)
-
+        var hasNodesOrNotaries = Bindings.size(foundNotaries).greaterThan(0).or(Bindings.size(foundNotaries).greaterThan(0))
         val unsortedNodes = Collections.synchronizedList(ArrayList<NodeTemplateInfo>()).observable()
         val sortedNodes = SortedList(unsortedNodes, Comparator<NodeTemplateInfo> { o1, o2 ->
             compareValues(o1.nodeType.toString() + o1.templateId, o2.nodeType.toString() + o2.templateId) * -1
