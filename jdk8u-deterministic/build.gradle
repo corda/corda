@@ -32,7 +32,7 @@ task copyJdk(type: Copy) {
     into "$jdk_home/jre/lib"
 
     doLast {
-        def eol = System.getProperty('line.separator')
+        def eol = System.lineSeparator()
         file("$jdk_home/release").write "JAVA_VERSION=\"1.8.0_172\"$eol"
         mkdir "$jdk_home/bin"
         file("$jdk_home/bin/javac").with {
