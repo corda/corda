@@ -111,6 +111,13 @@ data class WebserverHandle(
 
 @DoNotImplement
 abstract class PortAllocation {
+
+    companion object {
+        @JvmStatic
+        val defaultAllocator: PortAllocation = SharedMemoryIncremental.INSTANCE
+    }
+
+
     /** Get the next available port via [nextPort] and then return a [NetworkHostAndPort] **/
     fun nextHostAndPort(): NetworkHostAndPort = NetworkHostAndPort("localhost", nextPort())
 
@@ -130,7 +137,7 @@ abstract class PortAllocation {
         }
     }
 
-    class SharedMemoryIncremental private constructor(startPort: Int, endPort: Int, file: File = File(System.getProperty("java.io.tmpdir"), "$startPort-to-$endPort-allocator.bin")) : PortAllocation() {
+    private class SharedMemoryIncremental private constructor(startPort: Int, endPort: Int, file: File = File(System.getProperty("java.io.tmpdir"), "$startPort-to-$endPort-allocator.bin")) : PortAllocation() {
 
         private val startingPoint: Int = startPort
         private val endPoint: Int = endPort
@@ -142,9 +149,10 @@ abstract class PortAllocation {
         /**
          * An implementation of [PortAllocation] which allocates ports sequentially
          */
+
         companion object {
             const val FIRST_EPHEMERAL_PORT = 30_000
-            const val DEFAULT_START_PORT = 10000
+            const val DEFAULT_START_PORT = 10_000
             private val UNSAFE: Unsafe = getUnsafe()
             private fun getUnsafe(): Unsafe {
                 val f = Unsafe::class.java.getDeclaredField("theUnsafe")

@@ -132,5 +132,5 @@ interface DriverDSL {
     /**
      * Returns the next port to use when instantiating test processes that must not conflict on the same machine
      */
-    fun nextPort() = PortAllocation.SharedMemoryIncremental.INSTANCE.nextPort()
+    fun nextPort() = PortAllocation.defaultAllocator.nextPort()
 }
