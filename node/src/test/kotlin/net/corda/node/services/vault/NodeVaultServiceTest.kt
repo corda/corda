@@ -1,7 +1,10 @@
 package net.corda.node.services.vault
 
 import co.paralleluniverse.fibers.Suspendable
-import com.nhaarman.mockito_kotlin.*
+import com.nhaarman.mockito_kotlin.argThat
+import com.nhaarman.mockito_kotlin.doNothing
+import com.nhaarman.mockito_kotlin.mock
+import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.*
 import net.corda.core.crypto.NullKeys
 import net.corda.core.crypto.generateKeyPair
@@ -26,7 +29,6 @@ import net.corda.finance.contracts.utils.sumCash
 import net.corda.finance.schemas.CashSchemaV1
 import net.corda.finance.workflows.asset.CashUtils
 import net.corda.finance.workflows.getCashBalance
-import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.testing.common.internal.testNetworkParameters
@@ -565,17 +567,17 @@ class NodeVaultServiceTest {
 
     @Test
     fun `is ownable state relevant`() {
-            val myAnonymousIdentity = services.keyManagementService.freshKeyAndCert(identity, false)
-            val myKeys = services.keyManagementService.filterMyKeys(listOf(identity.owningKey, myAnonymousIdentity.owningKey)).toSet()
+        val myAnonymousIdentity = services.keyManagementService.freshKeyAndCert(identity, false)
+        val myKeys = services.keyManagementService.filterMyKeys(listOf(identity.owningKey, myAnonymousIdentity.owningKey)).toSet()
 
-            // Well-known owner
-            assertTrue { myKeys.isOwnableStateRelevant(identity.party, participants = emptyList()) }
-            // Anonymous owner
-            assertTrue { myKeys.isOwnableStateRelevant(myAnonymousIdentity.party, participants = emptyList()) }
-            // Unknown owner
-            assertFalse { myKeys.isOwnableStateRelevant(createUnknownIdentity(), participants = emptyList()) }
-            // Under target version 3 only the owner is relevant. This is to preserve backwards compatibility
-            assertFalse { myKeys.isOwnableStateRelevant(createUnknownIdentity(), participants = listOf(identity.party)) }
+        // Well-known owner
+        assertTrue { myKeys.isOwnableStateRelevant(identity.party, participants = emptyList()) }
+        // Anonymous owner
+        assertTrue { myKeys.isOwnableStateRelevant(myAnonymousIdentity.party, participants = emptyList()) }
+        // Unknown owner
+        assertFalse { myKeys.isOwnableStateRelevant(createUnknownIdentity(), participants = emptyList()) }
+        // Under target version 3 only the owner is relevant. This is to preserve backwards compatibility
+        assertFalse { myKeys.isOwnableStateRelevant(createUnknownIdentity(), participants = listOf(identity.party)) }
     }
 
     private fun createUnknownIdentity() = AnonymousParty(generateKeyPair().public)
@@ -647,8 +649,8 @@ class NodeVaultServiceTest {
         val identity = services.myInfo.singleIdentityAndCert()
         assertEquals(services.identityService.partyFromKey(identity.owningKey), identity.party)
         val anonymousIdentity = services.keyManagementService.freshKeyAndCert(identity, false)
-        val thirdPartyServices = MockServices(emptyList(), MEGA_CORP.name, mock<IdentityServiceInternal>().also {
-            doNothing().whenever(it).justVerifyAndRegisterIdentity(argThat { name == MEGA_CORP.name }, any())
+        val thirdPartyServices = MockServices(emptyList(), MEGA_CORP.name, mock<IdentityService>().also {
+            doNothing().whenever(it).verifyAndRegisterIdentity(argThat { name == MEGA_CORP.name })
         })
         val thirdPartyIdentity = thirdPartyServices.keyManagementService.freshKeyAndCert(thirdPartyServices.myInfo.singleIdentityAndCert(), false)
         val amount = Amount(1000, Issued(BOC.ref(1), GBP))

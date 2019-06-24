@@ -48,6 +48,9 @@ interface KeyManagementService {
      * @return X.509 certificate and path to the trust root.
      */
     @Suspendable
+    @Deprecated("This is being deprecated in favour of a new utility to generated key-party mappings in the new " +
+            "confidential identities repo. [SignedKeyUtilities.createSignedOwnershipClaim]." +
+            "This requires the keys to be generated from within a flow. See [RequestKeyFlow] and [ShareKeyFlow].")
     fun freshKeyAndCert(identity: PartyAndCertificate, revocationEnabled: Boolean): PartyAndCertificate
 
     /**
@@ -60,6 +63,9 @@ interface KeyManagementService {
      * @return X.509 certificate and path to the trust root.
      */
     @Suspendable
+    @Deprecated("This is being deprecated in favour of a new utility to generated key-party mappings in the new " +
+            "confidential identities repo. [SignedKeyUtilities.createSignedOwnershipClaim]." +
+            "This requires the keys to be generated from within a flow. See [RequestKeyFlow] and [ShareKeyFlow].")
     fun freshKeyAndCert(identity: PartyAndCertificate, revocationEnabled: Boolean, externalId: UUID): PartyAndCertificate
 
     /**

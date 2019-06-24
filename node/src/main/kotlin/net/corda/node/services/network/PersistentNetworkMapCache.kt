@@ -274,14 +274,16 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
     }
 
     private fun queryIdentityByLegalName(session: Session, name: CordaX500Name): PartyAndCertificate? {
-        val query = session.createQuery(
-                // We do the JOIN here to restrict results to those present in the network map
-                "SELECT DISTINCT l FROM ${NodeInfoSchemaV1.PersistentNodeInfo::class.java.name} n JOIN n.legalIdentitiesAndCerts l WHERE l.name = :name",
-                NodeInfoSchemaV1.DBPartyAndCertificate::class.java)
-        query.setParameter("name", name.toString())
-        val candidates = query.resultList.map { it.toLegalIdentityAndCert() }
-        // The map is restricted to holding a single identity for any X.500 name, so firstOrNull() is correct here.
-        return candidates.firstOrNull()
+        return database.transaction {
+            val query = session.createQuery(
+                    // We do the JOIN here to restrict results to those present in the network map
+                    "SELECT DISTINCT l FROM ${NodeInfoSchemaV1.PersistentNodeInfo::class.java.name} n JOIN n.legalIdentitiesAndCerts l WHERE l.name = :name",
+                    NodeInfoSchemaV1.DBPartyAndCertificate::class.java)
+            query.setParameter("name", name.toString())
+            val candidates = query.resultList.map { it.toLegalIdentityAndCert() }
+            // The map is restricted to holding a single identity for any X.500 name, so firstOrNull() is correct here.
+            candidates.firstOrNull()
+        }
     }
 
     private fun queryByLegalName(session: Session, name: CordaX500Name): List<NodeInfo> {

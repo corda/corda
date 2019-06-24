@@ -1,7 +1,7 @@
 package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
-import com.natpryce.hamkrest.assertion.assert
+import com.natpryce.hamkrest.assertion.assertThat
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.StateAndContract
 import net.corda.core.contracts.requireThat
@@ -10,7 +10,6 @@ import net.corda.core.identity.*
 import net.corda.core.node.services.IdentityService
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.*
 import net.corda.testing.internal.matchers.flow.willReturn
@@ -55,7 +54,7 @@ class CollectSignaturesFlowTests : WithContracts {
         val bConfidentialIdentity = bobNode.createConfidentialIdentity(bob)
         aliceNode.verifyAndRegister(bConfidentialIdentity)
 
-        assert.that(
+        assertThat(
                 aliceNode.startTestFlow(alice, bConfidentialIdentity.party, charlie),
                 willReturn(requiredSignatures(3))
         )
@@ -113,7 +112,7 @@ class CollectSignaturesFlowTests : WithContracts {
     fun `no need to collect any signatures`() {
         val ptx = aliceNode.signDummyContract(alice.ref(1))
 
-        assert.that(
+        assertThat(
                 aliceNode.collectSignatures(ptx),
                 willReturn(requiredSignatures(1))
         )
@@ -123,7 +122,7 @@ class CollectSignaturesFlowTests : WithContracts {
     fun `fails when not signed by initiator`() {
         val ptx = miniCorpServices.signDummyContract(alice.ref(1))
 
-        assert.that(
+        assertThat(
                 aliceNode.collectSignatures(ptx),
                 willThrow(errorMessage("The Initiator of CollectSignaturesFlow must have signed the transaction.")))
     }
@@ -137,7 +136,7 @@ class CollectSignaturesFlowTests : WithContracts {
                 bob.ref(3))
         val signedByBoth = bobNode.addSignatureTo(signedByA)
 
-        assert.that(
+        assertThat(
                 aliceNode.collectSignatures(signedByBoth),
                 willReturn(requiredSignatures(2))
         )

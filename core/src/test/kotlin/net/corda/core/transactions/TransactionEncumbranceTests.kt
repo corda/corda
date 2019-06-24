@@ -7,15 +7,14 @@ import net.corda.core.contracts.*
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.node.NotaryInfo
+import net.corda.core.node.services.IdentityService
 import net.corda.finance.DOLLARS
 import net.corda.finance.`issued by`
 import net.corda.finance.contracts.asset.Cash
-import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
-import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.ledger
 import org.assertj.core.api.AssertionsForClassTypes.assertThatExceptionOfType
@@ -57,7 +56,7 @@ class TransactionEncumbranceTests {
         val ledgerServices = MockServices(
                 listOf("net.corda.core.transactions", "net.corda.finance.contracts.asset"),
                 MEGA_CORP.name,
-                mock<IdentityServiceInternal>().also {
+                mock<IdentityService>().also {
                     doReturn(MEGA_CORP).whenever(it).partyFromKey(MEGA_CORP_PUBKEY)
                 },
                 testNetworkParameters(notaries = listOf(NotaryInfo(DUMMY_NOTARY, true)))

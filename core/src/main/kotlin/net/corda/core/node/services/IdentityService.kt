@@ -11,7 +11,6 @@ import net.corda.core.utilities.debug
 import java.security.InvalidAlgorithmParameterException
 import java.security.PublicKey
 import java.security.cert.*
-
 /**
  * An identity service maintains a directory of parties by their associated distinguished name/public keys and thus
  * supports lookup of a party given its key, or name. The service also manages the certificates linking confidential
@@ -69,6 +68,8 @@ interface IdentityService {
      * @param owningKey The [PublicKey] to determine well known identity for.
      * @return the party and certificate, or null if unknown.
      */
+    @Deprecated("This method has been deprecated in favour of using a new way to generate and use confidential identities. See the new " +
+            "confidential identities repository.")
     fun certificateFromKey(owningKey: PublicKey): PartyAndCertificate?
 
     /**
@@ -146,6 +147,25 @@ interface IdentityService {
      * @param exactMatch If true, a case sensitive match is done against each component of each X.500 name.
      */
     fun partiesFromName(query: String, exactMatch: Boolean): Set<Party>
+
+    /**
+     * Returns true if an existing mapping for the specified [PublicKey] and [Party] does not already exist and will add a new entry
+     * to the database for this mapping. First we check if an existing entry exists for the supplied [PublicKey] exists in the
+     * database. If there is no mapping, then a new entry in the database is registered linking the [PublicKey] to the supplied [Party].
+     *
+     * @param key The public key of that will be registered to the supplied [Party]
+     * @param party The party that the supplied public key will be registered to
+     */
+    fun registerKeyToParty(key: PublicKey, party: Party) : Boolean
 }
 
 class UnknownAnonymousPartyException(message: String) : CordaException(message)
+
+/**
+ * Check if [x500name] matches the [query].
+ */
+fun x500Matches(query: String, exactMatch: Boolean, x500name: CordaX500Name): Boolean {
+    val components = listOfNotNull(x500name.commonName, x500name.organisationUnit, x500name.organisation, x500name.locality, x500name.state, x500name.country)
+    return components.any { (exactMatch && it == query)
+            || (!exactMatch && it.contains(query, ignoreCase = true)) }
+}

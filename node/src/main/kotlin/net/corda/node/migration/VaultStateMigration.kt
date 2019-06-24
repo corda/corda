@@ -57,7 +57,7 @@ class VaultStateMigration : CordaMigration() {
 
     private fun getStateAndRef(persistentState: VaultSchemaV1.VaultStates): StateAndRef<ContractState> {
         val persistentStateRef = persistentState.stateRef ?:
-                throw VaultStateMigrationException("Persistent state ref missing from state")
+        throw VaultStateMigrationException("Persistent state ref missing from state")
         val txHash = SecureHash.parse(persistentStateRef.txId)
         val stateRef = StateRef(txHash, persistentStateRef.index)
         val state = try {
@@ -79,7 +79,7 @@ class VaultStateMigration : CordaMigration() {
         val persistentStates = VaultStateIterator(cordaDB)
         if (persistentStates.numStates > 0) {
             logger.warn("Found ${persistentStates.numStates} states to update from a previous version. This may take a while for large "
-            + "volumes of data.")
+                    + "volumes of data.")
         }
         VaultStateIterator.withSerializationEnv {
             persistentStates.forEach {
@@ -107,7 +107,7 @@ class VaultStateMigration : CordaMigration() {
         if (statesSkipped > 0) {
             logger.error("$statesSkipped states could not be migrated as there was no class available for them.")
             throw VaultStateMigrationException("Failed to migrate $statesSkipped states in the vault. Check the logs for details of the " +
-                "error for each state.")
+                    "error for each state.")
         }
         logger.info("Finished performing vault state data migration for ${persistentStates.numStates - statesSkipped} states")
     }
@@ -126,8 +126,9 @@ object VaultMigrationSchema
 object VaultMigrationSchemaV1 : MappedSchema(schemaFamily = VaultMigrationSchema.javaClass, version = 1,
         mappedTypes = listOf(
                 DBTransactionStorage.DBTransaction::class.java,
-                PersistentIdentityService.PersistentIdentity::class.java,
+                PersistentIdentityService.PersistentIdentityCert::class.java,
                 PersistentIdentityService.PersistentIdentityNames::class.java,
+                PersistentIdentityService.PersistentIdentity::class.java,
                 BasicHSMKeyManagementService.PersistentKey::class.java,
                 NodeAttachmentService.DBAttachment::class.java,
                 DBNetworkParametersStorage.PersistentNetworkParameters::class.java

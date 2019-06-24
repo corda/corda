@@ -2897,6 +2897,7 @@ public abstract class net.corda.core.identity.AbstractParty extends java.lang.Ob
 ##
 @DoNotImplement
 @CordaSerializable
+
 public final class net.corda.core.identity.AnonymousParty extends net.corda.core.identity.AbstractParty implements net.corda.core.flows.Destination
   public <init>(java.security.PublicKey)
   @Nullable
