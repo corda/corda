@@ -1,8 +1,10 @@
 package com.r3.ha.utilities
 
+import com.r3.ha.utilities.RegistrationTool.Companion.toFolderName
 import com.r3.ha.utilities.RegistrationTool.Companion.x500PrincipalToTLSAlias
 import net.corda.cliutils.CommonCliConstants.BASE_DIR
 import net.corda.cliutils.ExitCodes
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.copyTo
 import net.corda.core.internal.div
 import net.corda.core.internal.exists
@@ -19,7 +21,6 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import picocli.CommandLine
-import javax.security.auth.x500.X500Principal
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -64,7 +65,7 @@ class RegistrationToolTest {
 
         assertFalse((workingDirectory / "PartyD" / "certificates" / "sslkeystore.jks").exists())
 
-        listOf("PartyA", "PartyB", "PartyC").forEach {
+        listOf("PartyA", "Party_B", "PartyC").forEach {
             assertTrue(it) {(workingDirectory / it / "certificates" / "sslkeystore.jks").exists()}
             assertTrue(it) {(workingDirectory / it / "certificates" / "truststore.jks").exists()}
             assertTrue(it) {(workingDirectory / it / "certificates" / "nodekeystore.jks").exists()}
@@ -101,10 +102,13 @@ class RegistrationToolTest {
 
         assertEquals(ExitCodes.SUCCESS, runResult)
 
-        listOf("PartyA", "PartyB", "PartyC").forEach {
-            assertTrue(it) {(workingDirectory / it / "certificates" / "sslkeystore.jks").exists()}
-            assertTrue(it) {(workingDirectory / it / "certificates" / "truststore.jks").exists()}
-            assertTrue(it) {(workingDirectory / it / "certificates" / "nodekeystore.jks").exists()}
+        val legalNames = listOf("PartyA", "Party B", "PartyC").map { CordaX500Name(it, "London", "GB") }
+
+        legalNames.forEach {
+            val certsPath = workingDirectory / it.toFolderName() / "certificates"
+            assertTrue(it.toString()) {(certsPath / "sslkeystore.jks").exists()}
+            assertTrue(it.toString()) {(certsPath / "truststore.jks").exists()}
+            assertTrue(it.toString()) {(certsPath / "nodekeystore.jks").exists()}
         }
 
         assertTrue((workingDirectory / "bridge.jks").exists())
@@ -112,11 +116,11 @@ class RegistrationToolTest {
         // Compare the contents of each keystore against the bridge and bridge HSM
         val cryptoService = UtimacoCryptoService.fromConfigurationFile((workingDirectory / "utimaco_config.yml"))
         val bridgeKeyStore = X509KeyStore.fromFile((workingDirectory / "bridge.jks"), "password", createNew = false)
-        listOf("PartyA", "PartyB", "PartyC").forEach {
-            val alias = x500PrincipalToTLSAlias(X500Principal("O=$it,L=London,C=GB"))
-            val nodeKeyStore = X509KeyStore.fromFile((workingDirectory / it / "certificates" / "sslkeystore.jks"), "cordacadevpass", createNew = false)
+        legalNames.forEach {
+            val alias = x500PrincipalToTLSAlias(it.x500Principal)
+            val sslKeyStore = X509KeyStore.fromFile((workingDirectory / it.toFolderName() / "certificates" / "sslkeystore.jks"), "cordacadevpass", createNew = false)
             assertTrue(bridgeKeyStore.contains(alias))
-            assertEquals(nodeKeyStore.getPublicKey(CORDA_CLIENT_TLS), bridgeKeyStore.getPublicKey(alias))
+            assertEquals(sslKeyStore.getPublicKey(CORDA_CLIENT_TLS), bridgeKeyStore.getPublicKey(alias))
             assertTrue(cryptoService.containsKey(alias))
             assertEquals(bridgeKeyStore.getPublicKey(alias), cryptoService.getPublicKey(alias))
         }

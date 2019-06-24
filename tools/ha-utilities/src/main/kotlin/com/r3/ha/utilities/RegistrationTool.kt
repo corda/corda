@@ -69,6 +69,15 @@ class RegistrationTool : CordaCliWrapper("node-registration", "Corda registratio
             // Note we use lower case as .JKS aliases are squashed to lowercase during the insert procedure and this breaks any link to the HSM alias.
             return "${X509Utilities.CORDA_CLIENT_TLS}-$nameHash".toLowerCase()
         }
+
+        fun CordaX500Name.toFolderName() : String {
+            val folderName = if (commonName == null) organisation else "$commonName,$organisation"
+            return folderName.toFileName()
+        }
+
+        private fun String.toFileName(): String {
+            return replace("[^a-zA-Z0-9-_.]".toRegex(), "_")
+        }
     }
 
     @Option(names = ["-b", BASE_DIR], paramLabel = "FOLDER", description = ["The node working directory where all the files are kept."])
@@ -170,9 +179,10 @@ class RegistrationTool : CordaCliWrapper("node-registration", "Corda registratio
             }
 
             bridgeKeystorePassword?.let {
-                // Run the BridgeSSLKeyTool on the resulting sslkeystores.
-                val toolArgs = generateBriddgeSSLKeyToolArguments(baseDirectory, success, bridgeKeystorePassword!!)
+                logger.info("Running BridgeSSLKeyTool to distribute sslkeystores")
+                val toolArgs = generateBridgeSSLKeyToolArguments(baseDirectory, success, bridgeKeystorePassword!!)
                 val sslKeyTool = BridgeSSLKeyTool()
+                logger.info("Params for BridgeSSLKeyTool are: $toolArgs")
                 CommandLine.populateCommand(sslKeyTool, *toolArgs.toTypedArray())
                 sslKeyTool.runProgram()
             }
@@ -279,7 +289,7 @@ class RegistrationTool : CordaCliWrapper("node-registration", "Corda registratio
         }
     }
 
-    private fun generateBriddgeSSLKeyToolArguments(dir: Path, nodeConfigs: List<Pair<CordaX500Name, Try<NodeConfiguration>>>, bridgeKeyStorePassword: String): List<String> {
+    private fun generateBridgeSSLKeyToolArguments(dir: Path, nodeConfigs: List<Pair<CordaX500Name, Try<NodeConfiguration>>>, bridgeKeyStorePassword: String): List<String> {
         val args = mutableListOf<String>()
         args.add("--base-directory")
         args.add(dir.toString())
@@ -291,7 +301,7 @@ class RegistrationTool : CordaCliWrapper("node-registration", "Corda registratio
         nodeConfigs.forEach {
             val x500Name = it.first
             val config = it.second.getOrThrow()
-            args.add((dir / x500Name.organisation / "certificates/sslkeystore.jks").toString())
+            args.add((dir / x500Name.toFolderName() / "certificates/sslkeystore.jks").toString())
             passwords.add(config.p2pSslOptions.keyStore.storePassword)
         }
         args.addAll(passwords)
