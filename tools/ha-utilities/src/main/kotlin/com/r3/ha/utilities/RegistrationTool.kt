@@ -137,9 +137,11 @@ class RegistrationTool : CordaCliWrapper("node-registration", "Corda registratio
                                 null
                             }
                             with(parsedConfig) {
-                                NodeRegistrationHelper(this, HTTPNetworkRegistrationService(networkServices!!, VERSION_INFO),
+                                val helper = NodeRegistrationHelper(this, HTTPNetworkRegistrationService(networkServices!!, VERSION_INFO),
                                         NodeRegistrationOption(networkRootTrustStorePath, networkRootTrustStorePassword),
-                                        logProgress = logger::info, logError = logger::error).generateKeysAndRegister(sslPublicKey)
+                                        logProgress = logger::info, logError = logger::error)
+                                helper.generateKeysAndRegister(sslPublicKey)
+                                helper.generateNodeIdentity()
                             }
                             parsedConfig
                         } catch (ex: Throwable) {
