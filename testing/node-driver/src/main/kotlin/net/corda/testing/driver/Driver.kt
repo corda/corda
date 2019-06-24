@@ -139,7 +139,7 @@ abstract class PortAllocation {
         }
     }
 
-    private class SharedMemoryIncremental private constructor(startPort: Int, endPort: Int, file: File = File(System.getProperty("java.io.tmpdir"), "$startPort-to-$endPort-allocator.bin")) : PortAllocation() {
+    private class SharedMemoryIncremental private constructor(startPort: Int, endPort: Int, file: File = File(System.getProperty("user.home"), "corda-$startPort-to-$endPort-port-allocator.bin")) : PortAllocation() {
 
         private val startingPoint: Int = startPort
         private val endPoint: Int = endPort

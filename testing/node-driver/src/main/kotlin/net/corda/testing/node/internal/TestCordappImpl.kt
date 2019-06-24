@@ -79,7 +79,7 @@ data class TestCordappImpl(val scanPackage: String, override val config: Map<Str
         }
 
         private fun buildCordappJar(projectRoot: Path): Path {
-            val gradleLockFile = RandomAccessFile(File(System.getProperty("java.io.tmpdir"), "corda-gradle.lock"), "rw")
+            val gradleLockFile = RandomAccessFile(File(System.getProperty("user.home"), "corda-gradle.lock"), "rw")
             return gradleLockFile.use {
                 val lock = gradleLockFile.channel.lock()
                 lock.use {
