@@ -209,13 +209,13 @@ tasks.withType(JavaCompile) {
 
 test {
     maxHeapSize = "2g"
-    maxParallelForks = (System.env.NODE_TESTING_FORKS == null) ? 1 : "$System.env.NODE_TESTING_FORKS".toInteger()
+    maxParallelForks = (System.env.CORDA_NODE_TESTING_FORKS == null) ? 1 : "$System.env.CORDA_NODE_TESTING_FORKS".toInteger()
 }
 
 task integrationTest(type: Test) {
     testClassesDirs = sourceSets.integrationTest.output.classesDirs
     classpath = sourceSets.integrationTest.runtimeClasspath
-    maxParallelForks = (System.env.NODE_INT_TESTING_FORKS == null) ? 1 :  "$System.env.NODE_INT_TESTING_FORKS".toInteger()
+    maxParallelForks = (System.env.CORDA_NODE_INT_TESTING_FORKS == null) ? 1 :  "$System.env.CORDA_NODE_INT_TESTING_FORKS".toInteger()
 }
 
 // quasar exclusions upon agent code instrumentation at run-time

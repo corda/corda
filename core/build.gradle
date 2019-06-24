@@ -142,7 +142,7 @@ configurations {
 
 
 test{
-    maxParallelForks = (System.env.CORE_TESTING_FORKS == null) ? 1 :  "$System.env.CORE_TESTING_FORKS".toInteger()
+    maxParallelForks = (System.env.CORDA_CORE_TESTING_FORKS == null) ? 1 :  "$System.env.CORDA_CORE_TESTING_FORKS".toInteger()
 }
 
 task testJar(type: Jar) {

@@ -116,65 +116,67 @@ abstract class PortAllocation {
 
     abstract fun nextPort(): Int
 
-    @Deprecated("This has been superseded by net.corda.testing.driver.SharedMemoryPortAllocation.INSTANCE", ReplaceWith("SharedMemoryPortAllocation.INSTANCE.nextPort()"))
     @DoNotImplement
+    @Deprecated("This has been superseded by net.corda.testing.driver.SharedMemoryIncremental.INSTANCE", ReplaceWith("SharedMemoryIncremental.INSTANCE"))
     open class Incremental(private val startingPort: Int) : PortAllocation() {
 
         /** The backing [AtomicInteger] used to keep track of the currently allocated port */
+        @Deprecated("This has been superseded by net.corda.testing.driver.SharedMemoryIncremental.INSTANCE", ReplaceWith("net.corda.testing.driver.DriverDSL.nextPort()"))
         val portCounter: AtomicInteger = AtomicInteger()
 
-        @Deprecated("This has been superseded by net.corda.testing.driver.SharedMemoryPortAllocation.INSTANCE", ReplaceWith("SharedMemoryPortAllocation.INSTANCE.nextPort()"))
+        @Deprecated("This has been superseded by net.corda.testing.driver.SharedMemoryIncremental.INSTANCE", ReplaceWith("net.corda.testing.driver.DriverDSL.nextPort()"))
         override fun nextPort(): Int {
-            return SharedMemoryPortAllocation.INSTANCE.nextPort()
+            return SharedMemoryIncremental.INSTANCE.nextPort()
         }
     }
-}
 
-class SharedMemoryPortAllocation private constructor(startPort: Int, endPort: Int, file: File = File(System.getProperty("user.home"), "$startPort-to-$endPort-allocator.bin")) : PortAllocation() {
+    class SharedMemoryIncremental private constructor(startPort: Int, endPort: Int, file: File = File(System.getProperty("java.io.tmpdir"), "$startPort-to-$endPort-allocator.bin")) : PortAllocation() {
 
-    private val startingPoint: Int = startPort
-    private val endPoint: Int = endPort
+        private val startingPoint: Int = startPort
+        private val endPoint: Int = endPort
 
-    private val backingFile: RandomAccessFile = RandomAccessFile(file, "rw")
-    private val mb: MappedByteBuffer
-    private val startingAddress: Long
+        private val backingFile: RandomAccessFile = RandomAccessFile(file, "rw")
+        private val mb: MappedByteBuffer
+        private val startingAddress: Long
 
-    /**
-     * An implementation of [PortAllocation] which allocates ports sequentially
-     */
-    companion object {
-        const val FIRST_EPHEMERAL_PORT = 30_000
-        private val UNSAFE: Unsafe = getUnsafe()
-        private fun getUnsafe(): Unsafe {
-            val f = Unsafe::class.java.getDeclaredField("theUnsafe")
-            f.isAccessible = true
-            return f.get(null) as Unsafe
-        }
-
-        val INSTANCE = SharedMemoryPortAllocation(10000, FIRST_EPHEMERAL_PORT)
-    }
-
-    override fun nextPort(): Int {
-        var oldValue: Long
-        var newValue: Long
-        do {
-            oldValue = UNSAFE.getLongVolatile(null, startingAddress)
-            newValue = if (oldValue + 1 >= endPoint || oldValue < startingPoint) {
-                //we have gone past the point of no return
-                startingPoint.toLong()
-            } else {
-                (oldValue + 1)
+        /**
+         * An implementation of [PortAllocation] which allocates ports sequentially
+         */
+        companion object {
+            const val FIRST_EPHEMERAL_PORT = 30_000
+            const val DEFAULT_START_PORT = 10000
+            private val UNSAFE: Unsafe = getUnsafe()
+            private fun getUnsafe(): Unsafe {
+                val f = Unsafe::class.java.getDeclaredField("theUnsafe")
+                f.isAccessible = true
+                return f.get(null) as Unsafe
             }
-        } while (!UNSAFE.compareAndSwapLong(null, startingAddress, oldValue, newValue))
 
-        return newValue.toInt()
-    }
+            val INSTANCE = SharedMemoryIncremental(DEFAULT_START_PORT, FIRST_EPHEMERAL_PORT)
+        }
 
-    init {
-        mb = backingFile.channel.map(FileChannel.MapMode.READ_WRITE, 0, 16)
-        startingAddress = (mb as DirectBuffer).address()
+        override fun nextPort(): Int {
+            var oldValue: Long
+            var newValue: Long
+            do {
+                oldValue = UNSAFE.getLongVolatile(null, startingAddress)
+                newValue = if (oldValue + 1 >= endPoint || oldValue < startingPoint) {
+                    startingPoint.toLong()
+                } else {
+                    (oldValue + 1)
+                }
+            } while (!UNSAFE.compareAndSwapLong(null, startingAddress, oldValue, newValue))
+
+            return newValue.toInt()
+        }
+
+        init {
+            mb = backingFile.channel.map(FileChannel.MapMode.READ_WRITE, 0, 16)
+            startingAddress = (mb as DirectBuffer).address()
+        }
     }
 }
+
 
 
 /**
@@ -190,7 +192,7 @@ data class JmxPolicy
 @Deprecated("Use the constructor that just takes in the jmxHttpServerPortAllocation or use JmxPolicy.defaultEnabled()")
 constructor(
         val startJmxHttpServer: Boolean = false,
-        val jmxHttpServerPortAllocation: PortAllocation = incrementalPortAllocation(7005)
+        val jmxHttpServerPortAllocation: PortAllocation = incrementalPortAllocation()
 ) {
     @Deprecated("The default constructor does not turn on monitoring. Simply leave the jmxPolicy parameter unspecified if you wish to not " +
             "have monitoring turned on.")
@@ -284,8 +286,8 @@ fun <A> driver(defaultParameters: DriverParameters = DriverParameters(), dsl: Dr
 data class DriverParameters(
         val isDebug: Boolean = false,
         val driverDirectory: Path = Paths.get("build") / "node-driver" / getTimestampAsDirectoryName(),
-        val portAllocation: PortAllocation = incrementalPortAllocation(10000),
-        val debugPortAllocation: PortAllocation = incrementalPortAllocation(5005),
+        val portAllocation: PortAllocation = incrementalPortAllocation(),
+        val debugPortAllocation: PortAllocation = incrementalPortAllocation(),
         val systemProperties: Map<String, String> = emptyMap(),
         val useTestClock: Boolean = false,
         val startNodesInProcess: Boolean = false,
@@ -305,8 +307,8 @@ data class DriverParameters(
     constructor(
             isDebug: Boolean = false,
             driverDirectory: Path = Paths.get("build") / "node-driver" / getTimestampAsDirectoryName(),
-            portAllocation: PortAllocation = incrementalPortAllocation(10000),
-            debugPortAllocation: PortAllocation = incrementalPortAllocation(5005),
+            portAllocation: PortAllocation = incrementalPortAllocation(),
+            debugPortAllocation: PortAllocation = incrementalPortAllocation(),
             systemProperties: Map<String, String> = emptyMap(),
             useTestClock: Boolean = false,
             startNodesInProcess: Boolean = false,
