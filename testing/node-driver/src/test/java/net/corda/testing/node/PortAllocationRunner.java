@@ -35,7 +35,7 @@ public class PortAllocationRunner {
         /*
          * allocate ports and print out for later consumption by the spawning test
          */
-        PortAllocation pa = PortAllocation.SharedMemoryIncremental.Companion.getINSTANCE();
+        PortAllocation pa = PortAllocation.getDefaultAllocator();
         for (int i = 0; i < 10000; i++) {
             System.out.println(pa.nextPort());
         }
