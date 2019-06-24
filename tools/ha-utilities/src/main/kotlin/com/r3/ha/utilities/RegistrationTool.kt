@@ -1,5 +1,6 @@
 package com.r3.ha.utilities
 
+import com.typesafe.config.Config
 import com.typesafe.config.ConfigValueFactory
 import net.corda.client.rpc.internal.serialization.amqp.AMQPClientSerializationScheme
 import net.corda.cliutils.CommonCliConstants.BASE_DIR
@@ -115,7 +116,8 @@ class RegistrationTool : CordaCliWrapper("node-registration", "Corda registratio
                             // Load the config again with modified base directory.
                             val folderName = if (legalName.commonName == null) legalName.organisation else "${legalName.commonName},${legalName.organisation}"
                             val baseDir = baseDirectory / folderName.toFileName()
-                            val parsedConfig = ConfigHelper.loadConfig(it.parent, it)
+                            val parsedConfig = resolveCryptoServiceConfPathToAbsolutePath(it.parent,
+                                                                                          ConfigHelper.loadConfig(it.parent, it))
                                     .withValue("baseDirectory", ConfigValueFactory.fromAnyRef(baseDir.toString()))
                                     .parseAsNodeConfiguration()
                                     .value()
@@ -131,8 +133,8 @@ class RegistrationTool : CordaCliWrapper("node-registration", "Corda registratio
                                         logProgress = logger::info, logError = logger::error).generateKeysAndRegister(sslPublicKey)
                             }
                             parsedConfig
-                        } catch (ex: Exception) {
-                            logger.error("Failed to process $legalName", ex)
+                        } catch (ex: Throwable) {
+                            logger.error("Failed to process the following X500 name [$legalName]", ex)
                             throw ex
                         }
                     }))
@@ -182,6 +184,29 @@ class RegistrationTool : CordaCliWrapper("node-registration", "Corda registratio
         }
     }
 
+    private fun resolveCryptoServiceConfPathToAbsolutePath(configFileParentPath: Path, config: Config): Config {
+        if (config.hasPath("cryptoServiceConf")) {
+            val cryptoServiceConfPath = Paths.get(config.getString("cryptoServiceConf"))
+            if (!cryptoServiceConfPath.isAbsolute) {
+                return config.withValue("cryptoServiceConf",
+                        ConfigValueFactory.fromAnyRef(resolveRelativeCryptoConfPath(configFileParentPath, cryptoServiceConfPath).toString()))
+            }
+        }
+        return config
+    }
+
+    private fun resolveCryptoConfPath(configFileParentPath: Path, configFilePath: Path): Path {
+        if (!configFilePath.isAbsolute) {
+            return resolveRelativeCryptoConfPath(configFileParentPath, configFilePath)
+        }
+        return configFilePath
+    }
+
+    private fun resolveRelativeCryptoConfPath(configFileParentPath: Path, relativeConfigFilePath: Path): Path {
+        val absoluteParentPath = configFileParentPath.toAbsolutePath()
+        return absoluteParentPath.resolve(relativeConfigFilePath)
+    }
+
     private fun String.toFileName(): String {
         return replace("[^a-zA-Z0-9-_.]".toRegex(), "_")
     }
@@ -194,7 +219,7 @@ class RegistrationTool : CordaCliWrapper("node-registration", "Corda registratio
             val errorMessage = "Node ${nodeConfig.myLegalName} has conflicting crypto service configuration."
             nodeConfig.cryptoServiceName?.let { nodeCryptoServiceName ->
                 val configs = cryptoServicesTypes.getOrDefault(nodeCryptoServiceName, mutableListOf())
-                val cryptoServiceConfigPath = configPath.parent / nodeConfig.cryptoServiceConf!!.fileName.toString()
+                val cryptoServiceConfigPath = resolveCryptoConfPath(configPath.parent, nodeConfig.cryptoServiceConf!!)
                 val toProcess = readCryptoConfigFile(nodeCryptoServiceName, cryptoServiceConfigPath)
                 configs.forEach {
                     when(nodeCryptoServiceName) {
