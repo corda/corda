@@ -125,9 +125,6 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
             var name: String = ""
     )
 
-    // CordaPersistence is not a c'tor parameter to work around the cyclic dependency
-    lateinit var database: CordaPersistence
-
     private lateinit var _caCertStore: CertStore
     override val caCertStore: CertStore get() = _caCertStore
 
@@ -139,6 +136,9 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
 
     /** Stores notary identities obtained from the network parameters, for which we don't need to perform a database lookup. */
     private val notaryIdentityCache = HashSet<Party>()
+
+    // CordaPersistence is not a c'tor parameter to work around the cyclic dependency
+    lateinit var database: CordaPersistence
 
     private val keyToPartyAndCert = createKeyToPartyAndCertMap(cacheFactory)
     private val partyToKey = createX500ToKeyMap(cacheFactory)

@@ -4,7 +4,7 @@ import com.codahale.metrics.MetricRegistry
 import com.google.common.collect.MutableClassToInstanceMap
 import com.google.common.util.concurrent.MoreExecutors
 import com.zaxxer.hikari.pool.HikariPool
-import net.corda.confidential.identities.SwapIdentitiesFlow
+import net.corda.confidential.SwapIdentitiesFlow
 import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
