@@ -26,7 +26,7 @@ import javax.annotation.concurrent.ThreadSafe
 @ThreadSafe
 class InMemoryIdentityService(identities: List<PartyAndCertificate> = emptyList(),
                               override val trustRoot: X509Certificate) : SingletonSerializeAsToken(), IdentityService {
-
+feature/CID-878-non_party_flow_sessions
     companion object {
         private val log = contextLogger()
     }
