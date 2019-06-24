@@ -139,12 +139,20 @@ class FloatControlListenerService(val conf: FirewallConfiguration,
             forwardLegalName = null
             incomingMessageSubscriber?.unsubscribe()
             incomingMessageSubscriber = null
-            p2pSigningService?.stop()
-            p2pSigningService = null
+            destroyP2pSigningService()
             tunnelSigningService.stop()
-            tunnelExternalCrlSourceService?.stop()
-            tunnelExternalCrlSourceService = null
+            destroyTunnelExternalCrlSourceService()
         }
+    }
+
+    private fun destroyTunnelExternalCrlSourceService() {
+        tunnelExternalCrlSourceService?.stop()
+        tunnelExternalCrlSourceService = null
+    }
+
+    private fun destroyP2pSigningService() {
+        p2pSigningService?.stop()
+        p2pSigningService = null
     }
 
     private fun onConnectToControl(connectionChange: ConnectionChange) {
@@ -218,6 +226,8 @@ class FloatControlListenerService(val conf: FirewallConfiguration,
                             }
                             forwardAddress = null
                             forwardLegalName = null
+                            destroyTunnelExternalCrlSourceService()
+                            destroyP2pSigningService()
                         }
                     }
                 }
