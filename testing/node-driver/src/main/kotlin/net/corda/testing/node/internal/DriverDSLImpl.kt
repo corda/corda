@@ -947,9 +947,6 @@ interface InternalDriverDSL : DriverDSL {
     private companion object {
         private val DEFAULT_POLL_INTERVAL = 500.millis
         private const val DEFAULT_WARN_COUNT = 120
-        val timeoutExecutor = Executors.newSingleThreadScheduledExecutor {
-            Thread().also { it.isDaemon = true }
-        }
         private val log = contextLogger()
     }
 
