@@ -19,10 +19,7 @@ import org.assertj.core.api.Assertions.*
 import org.json.simple.JSONObject
 import org.junit.Test
 import java.util.*
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.Executors
-import java.util.concurrent.ForkJoinPool
-import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.*
 import kotlin.streams.toList
 import kotlin.test.assertEquals
 
@@ -175,6 +172,22 @@ class DriverTests {
         }
         driverExit.countDown()
         testFuture.getOrThrow()
+    }
+
+    @Test(expected = TimeoutException::class)
+    fun `driver allows setting timeout for tests using in-process nodes`() {
+        driver(DriverParameters(startNodesInProcess = true, testTimeout = TimeUnit.MINUTES.toMillis(1))) {
+            val nodeA = newNode(DUMMY_BANK_A_NAME)().getOrThrow()
+            Thread.sleep(TimeUnit.MINUTES.toMillis(2))
+        }
+    }
+
+    @Test(expected = TimeoutException::class)
+    fun `driver allows setting timeout for tests using out-of-process nodes`() {
+        driver(DriverParameters(startNodesInProcess = false, testTimeout = TimeUnit.MINUTES.toMillis(1))) {
+            val nodeA = newNode(DUMMY_BANK_A_NAME)().getOrThrow()
+            Thread.sleep(TimeUnit.MINUTES.toMillis(2))
+        }
     }
 
     private fun DriverDSL.newNode(name: CordaX500Name) = { startNode(NodeParameters(providedName = name)) }

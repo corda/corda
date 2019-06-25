@@ -118,6 +118,8 @@ class DriverDSLImpl(
     interface Waitable {
         @Throws(InterruptedException::class)
         fun waitFor()
+
+        fun interrupt()
     }
 
     class State {
@@ -152,9 +154,12 @@ class DriverDSLImpl(
         }
     }
 
-    override fun shutdown() {
+    override fun shutdown(force: Boolean) {
         if (waitForAllNodesToFinish) {
             state.locked {
+                if (force) {
+                    processes.forEach { it.interrupt() }
+                }
                 processes.forEach { it.waitFor() }
             }
         }
@@ -381,18 +386,26 @@ class DriverDSLImpl(
      *
      * This returns List<String> rather than String? to make it easier to bolt onto extraCordappPackagesToScan.
      */
-    private fun getCallerPackage(): List<String> {
+    internal fun getCallerPackage(): List<String> {
         if (cordappsForAllNodes != null) {
             // We turn this feature off if cordappsForAllNodes is being used
             return emptyList()
         }
-        val stackTrace = Throwable().stackTrace
-        val index = stackTrace.indexOfLast { it.className == "net.corda.testing.driver.Driver" }
-        return if (index == -1) {
-            // In this case we're dealing with the the RPCDriver or one of it's cousins which are internal and we don't care about them
-            emptyList()
-        } else {
-            listOf(Class.forName(stackTrace[index + 1].className).packageName)
+
+        return when (Thread.currentThread()) {
+            is DriverTestingThread -> {
+                return (Thread.currentThread() as DriverTestingThread).callerPackage
+            }
+            else -> {
+                val stackTrace = Throwable().stackTrace
+                val index = stackTrace.indexOfLast { it.className == "net.corda.testing.driver.Driver" }
+                if (index == -1) {
+                    // In this case we're dealing with the the RPCDriver or one of it's cousins which are internal and we don't care about them
+                    emptyList()
+                } else {
+                    listOf(Class.forName(stackTrace[index + 1].className).packageName)
+                }
+            }
         }
     }
 
@@ -599,6 +612,10 @@ class DriverDSLImpl(
             }
             state.locked {
                 processes += object : Waitable {
+                    override fun interrupt() {
+                        nodeAndThreadFuture.getOrThrow().second.interrupt()
+                    }
+
                     override fun waitFor() {
                         nodeAndThreadFuture.getOrThrow().second.join()
                     }
@@ -617,6 +634,10 @@ class DriverDSLImpl(
             if (waitForAllNodesToFinish) {
                 state.locked {
                     processes += object : Waitable {
+                        override fun interrupt() {
+                            process.destroyForcibly()
+                        }
+
                         override fun waitFor() {
                             process.waitFor()
                         }
@@ -929,6 +950,7 @@ interface InternalDriverDSL : DriverDSL {
         val timeoutExecutor = Executors.newSingleThreadScheduledExecutor {
             Thread().also { it.isDaemon = true }
         }
+        private val log = contextLogger()
     }
 
     val timeoutInMillies: Long?
@@ -958,24 +980,24 @@ interface InternalDriverDSL : DriverDSL {
 
     fun start()
 
-    fun shutdown()
+    fun shutdown(force: Boolean)
 
     fun <DI : DriverDSL, A> executeWithTimeout(coerce1: DI, dsl: DI.() -> A): A {
 
         val completed: AtomicReference<Boolean> = AtomicReference(false)
         val serializationEnv = setDriverSerialization()
-        val shutdownHook = addShutdownHook(this::shutdown)
+        val shutdownHook = addShutdownHook { this.shutdown(true) }
         val resultHolder = AtomicReference<Any>()
 
-        val tidyUpCode = {
+        val tidyUpCode = { force: Boolean ->
             if (completed.compareAndSet(false, true)) {
-                this.shutdown()
+                this.shutdown(force)
                 shutdownHook.cancel()
                 serializationEnv?.close()
             }
         }
-
-        val t = Thread {
+        val callingPackage = (this as DriverDSLImpl).getCallerPackage()
+        val testExecutionThread = DriverTestingThread(callingPackage) {
             try {
                 this.start()
                 resultHolder.set(dsl(coerce1))
@@ -983,13 +1005,21 @@ interface InternalDriverDSL : DriverDSL {
                 resultHolder.set(e)
             }
         }
-        t.start()
-        t.join(timeoutInMillies ?: 0)
-        if (t.isAlive) {
-            t.interrupt()
-            resultHolder.set(TimeoutException())
+        testExecutionThread.contextClassLoader = Thread.currentThread().contextClassLoader
+        testExecutionThread.start()
+        try {
+            testExecutionThread.join(timeoutInMillies ?: 0)
+        } catch (e: InterruptedException) {
         }
-        tidyUpCode()
+        if (testExecutionThread.isAlive) {
+            log.warn("Test did not complete within timeout of ${TimeUnit.MILLISECONDS.toSeconds(timeoutInMillies ?: 0)} seconds")
+            tidyUpCode(true)
+            resultHolder.set(TimeoutException())
+            testExecutionThread.interrupt()
+        } else {
+            log.debug("Test completed successfully within timeout")
+            tidyUpCode(false)
+        }
         return when (resultHolder.get()) {
             is Throwable -> {
                 throw resultHolder.get() as Throwable
@@ -1000,6 +1030,12 @@ interface InternalDriverDSL : DriverDSL {
         }
     }
 
+}
+
+class DriverTestingThread(val callerPackage: List<String>, block: () -> Unit) : Thread(block, "Driver-Test-ExecutionThread") {
+    init {
+        this.isDaemon = true
+    }
 }
 
 /**
@@ -1054,7 +1090,7 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
                     timeoutInMillies = defaultParameters.testTimeout
             )
     )
-    val shutdownHook = addShutdownHook(driverDsl::shutdown)
+    val shutdownHook = addShutdownHook { driverDsl.shutdown(true) }
     try {
         driverDsl.start()
         return dsl(coerce(driverDsl))
@@ -1062,7 +1098,7 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
         DriverDSLImpl.log.error("Driver shutting down because of exception", exception)
         throw exception
     } finally {
-        driverDsl.shutdown()
+        driverDsl.shutdown(false)
         shutdownHook.cancel()
         serializationEnv?.close()
     }
