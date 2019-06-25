@@ -1,4 +1,4 @@
-package net.corda.core.transactions
+package net.corda.coretests.transactions
 
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.mock
@@ -10,6 +10,8 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.node.NotaryInfo
+import net.corda.core.transactions.LedgerTransaction
+import net.corda.core.transactions.TransactionBuilder
 import net.corda.finance.DOLLARS
 import net.corda.finance.`issued by`
 import net.corda.finance.contracts.asset.Cash
@@ -18,16 +20,13 @@ import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
-import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.ledger
-import org.assertj.core.api.Assertions
 import org.assertj.core.api.Assertions.*
 import org.junit.Rule
 import org.junit.Test
-import kotlin.test.assertFailsWith
 
-const val CONTRACT_ID = "net.corda.core.transactions.ReferenceStateTests\$ExampleContract"
+const val CONTRACT_ID = "net.corda.coretests.transactions.ReferenceStateTests\$ExampleContract"
 
 class ReferenceStateTests {
     private companion object {
@@ -47,7 +46,7 @@ class ReferenceStateTests {
     val defaultIssuer = ISSUER.ref(1)
     val bobCash = Cash.State(amount = 1000.DOLLARS `issued by` defaultIssuer, owner = BOB_PARTY)
     private val ledgerServices = MockServices(
-            cordappPackages = listOf("net.corda.core.transactions", "net.corda.finance.contracts.asset"),
+            cordappPackages = listOf("net.corda.coretests.transactions", "net.corda.finance.contracts.asset"),
             initialIdentity = ALICE,
             identityService = mock<IdentityServiceInternal>().also {
                 doReturn(ALICE_PARTY).whenever(it).partyFromKey(ALICE_PUBKEY)
@@ -203,7 +202,8 @@ class ReferenceStateTests {
         val state = ExampleState(ALICE_PARTY, "HELLO CORDA")
         val stateAndRef = StateAndRef(TransactionState(state, CONTRACT_ID, DUMMY_NOTARY, constraint = AlwaysAcceptAttachmentConstraint), StateRef(SecureHash.zeroHash, 0))
         assertThatIllegalArgumentException().isThrownBy {
-            TransactionBuilder(notary = DUMMY_NOTARY).addInputState(stateAndRef).addReferenceState(stateAndRef.referenced())
+            TransactionBuilder(notary = DUMMY_NOTARY)
+                    .addInputState(stateAndRef).addReferenceState(stateAndRef.referenced())
         }.withMessage("A StateRef cannot be both an input and a reference input in the same transaction.")
     }
 }

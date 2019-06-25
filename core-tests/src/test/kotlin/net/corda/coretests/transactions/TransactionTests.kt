@@ -1,4 +1,4 @@
-package net.corda.core.transactions
+package net.corda.coretests.transactions
 
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
@@ -8,7 +8,11 @@ import net.corda.core.crypto.CompositeKey
 import net.corda.core.identity.Party
 import net.corda.core.internal.AbstractAttachment
 import net.corda.core.internal.TESTDSL_UPLOADER
+import net.corda.core.internal.testutils.createLedgerTransaction
 import net.corda.core.node.NotaryInfo
+import net.corda.core.transactions.LedgerTransaction
+import net.corda.core.transactions.SignedTransaction
+import net.corda.core.transactions.WireTransaction
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.*
@@ -17,7 +21,6 @@ import net.corda.testing.internal.fakeAttachment
 import net.corda.testing.internal.rigorousMock
 import org.junit.Rule
 import org.junit.Test
-import java.io.InputStream
 import java.math.BigInteger
 import java.security.KeyPair
 import java.security.PublicKey
@@ -129,7 +132,7 @@ class TransactionTests {
         val id = SecureHash.randomSHA256()
         val timeWindow: TimeWindow? = null
         val privacySalt = PrivacySalt()
-        val transaction = LedgerTransaction.create(
+        val transaction = createLedgerTransaction(
                 inputs,
                 outputs,
                 commands,
@@ -182,7 +185,7 @@ class TransactionTests {
         val timeWindow: TimeWindow? = null
         val privacySalt = PrivacySalt()
 
-        fun buildTransaction() = LedgerTransaction.create(
+        fun buildTransaction() = createLedgerTransaction(
                 inputs,
                 outputs,
                 commands,
@@ -193,7 +196,7 @@ class TransactionTests {
                 privacySalt,
                 testNetworkParameters(notaries = listOf(NotaryInfo(DUMMY_NOTARY, true))),
                 emptyList(),
-                isAttachmentTrusted = {true}
+                isAttachmentTrusted = { true }
         )
 
         assertFailsWith<TransactionVerificationException.NotaryChangeInWrongTransactionType> { buildTransaction().verify() }

@@ -1,4 +1,4 @@
-package net.corda.core.transactions
+package net.corda.coretests.transactions
 
 import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.Contract

@@ -1,12 +1,15 @@
-package net.corda.core.transactions
+package net.corda.coretests.transactions
 
 import net.corda.core.contracts.*
 import net.corda.core.contracts.ComponentGroupEnum.*
 import net.corda.core.crypto.*
 import net.corda.core.internal.createComponentGroups
+import net.corda.core.internal.testutils.accessAvailableComponentHashes
+import net.corda.core.internal.testutils.accessGroupHashes
+import net.corda.core.internal.testutils.accessGroupMerkleRoots
 import net.corda.core.serialization.serialize
+import net.corda.core.transactions.*
 import net.corda.core.utilities.OpaqueBytes
-import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
 import net.corda.testing.core.*
@@ -14,6 +17,7 @@ import org.junit.Rule
 import org.junit.Test
 import java.time.Instant
 import java.util.function.Predicate
+import kotlin.reflect.KVisibility
 import kotlin.test.*
 
 class CompatibleTransactionTests {
@@ -77,7 +81,7 @@ class CompatibleTransactionTests {
         assertNotEquals(wireTransactionA, wireTransactionOtherPrivacySalt)
 
         // Full Merkle root is computed from the list of Merkle roots of each component group.
-        assertEquals(wireTransactionA.merkleTree.hash, MerkleTree.getMerkleTree(wireTransactionA.groupHashes).hash)
+        assertEquals(wireTransactionA.merkleTree.hash, MerkleTree.getMerkleTree(wireTransactionA.accessGroupHashes()).hash)
 
         // Trying to add an empty component group (not allowed), e.g. the empty attachmentGroup.
         val componentGroupsEmptyAttachment = listOf(
@@ -107,12 +111,12 @@ class CompatibleTransactionTests {
         assertNotEquals(wireTransaction1ShuffledInputs, wireTransactionA)
 
         // Inputs group Merkle roots are not equal.
-        assertNotEquals(wireTransactionA.groupsMerkleRoots[INPUTS_GROUP.ordinal], wireTransaction1ShuffledInputs.groupsMerkleRoots[INPUTS_GROUP.ordinal])
+        assertNotEquals(wireTransactionA.accessGroupMerkleRoots()[INPUTS_GROUP.ordinal], wireTransaction1ShuffledInputs.accessGroupMerkleRoots()[INPUTS_GROUP.ordinal])
         // But outputs group Merkle leaf (and the rest) remained the same.
-        assertEquals(wireTransactionA.groupsMerkleRoots[OUTPUTS_GROUP.ordinal], wireTransaction1ShuffledInputs.groupsMerkleRoots[OUTPUTS_GROUP.ordinal])
-        assertEquals(wireTransactionA.groupsMerkleRoots[NOTARY_GROUP.ordinal], wireTransaction1ShuffledInputs.groupsMerkleRoots[NOTARY_GROUP.ordinal])
-        assertNull(wireTransactionA.groupsMerkleRoots[ATTACHMENTS_GROUP.ordinal])
-        assertNull(wireTransaction1ShuffledInputs.groupsMerkleRoots[ATTACHMENTS_GROUP.ordinal])
+        assertEquals(wireTransactionA.accessGroupMerkleRoots()[OUTPUTS_GROUP.ordinal], wireTransaction1ShuffledInputs.accessGroupMerkleRoots()[OUTPUTS_GROUP.ordinal])
+        assertEquals(wireTransactionA.accessGroupMerkleRoots()[NOTARY_GROUP.ordinal], wireTransaction1ShuffledInputs.accessGroupMerkleRoots()[NOTARY_GROUP.ordinal])
+        assertNull(wireTransactionA.accessGroupMerkleRoots()[ATTACHMENTS_GROUP.ordinal])
+        assertNull(wireTransaction1ShuffledInputs.accessGroupMerkleRoots()[ATTACHMENTS_GROUP.ordinal])
 
         // Group leaves (components) ordering does not affect the id. In this case, we added outputs group before inputs.
         val shuffledComponentGroupsA = listOf(
@@ -414,7 +418,8 @@ class CompatibleTransactionTests {
     @Test
     fun `FilteredTransaction signer manipulation tests`() {
         // Required to call the private constructor.
-        val ftxConstructor = ::FilteredTransaction
+        val ftxConstructor = FilteredTransaction::class.constructors.first()
+
 
         // 1st and 3rd commands require a signature from KEY_1.
         val twoCommandsforKey1 = listOf(dummyCommand(DUMMY_KEY_1.public, DUMMY_KEY_2.public), dummyCommand(DUMMY_KEY_2.public), dummyCommand(DUMMY_KEY_1.public))
@@ -448,7 +453,7 @@ class CompatibleTransactionTests {
         val key2CommandsFtx = wtx.buildFilteredTransaction(Predicate(::filterKEY2Commands))
 
         // val commandDataComponents = key1CommandsFtx.filteredComponentGroups[0].components
-        val commandDataHashes = wtx.availableComponentHashes[ComponentGroupEnum.COMMANDS_GROUP.ordinal]!!
+        val commandDataHashes = wtx.accessAvailableComponentHashes()[ComponentGroupEnum.COMMANDS_GROUP.ordinal]!!
         val noLastCommandDataPMT = PartialMerkleTree.build(
                 MerkleTree.getMerkleTree(commandDataHashes),
                 commandDataHashes.subList(0, 1)
@@ -456,14 +461,14 @@ class CompatibleTransactionTests {
         val noLastCommandDataComponents = key1CommandsFtx.filteredComponentGroups[0].components.subList(0, 1)
         val noLastCommandDataNonces = key1CommandsFtx.filteredComponentGroups[0].nonces.subList(0, 1)
         val noLastCommandDataGroup = FilteredComponentGroup(
-                ComponentGroupEnum.COMMANDS_GROUP.ordinal,
+                COMMANDS_GROUP.ordinal,
                 noLastCommandDataComponents,
                 noLastCommandDataNonces,
                 noLastCommandDataPMT
         )
 
         val signerComponents = key1CommandsFtx.filteredComponentGroups[1].components
-        val signerHashes = wtx.availableComponentHashes[ComponentGroupEnum.SIGNERS_GROUP.ordinal]!!
+        val signerHashes = wtx.accessAvailableComponentHashes()[ComponentGroupEnum.SIGNERS_GROUP.ordinal]!!
         val noLastSignerPMT = PartialMerkleTree.build(
                 MerkleTree.getMerkleTree(signerHashes),
                 signerHashes.subList(0, 2)
@@ -471,13 +476,13 @@ class CompatibleTransactionTests {
         val noLastSignerComponents = key1CommandsFtx.filteredComponentGroups[1].components.subList(0, 2)
         val noLastSignerNonces = key1CommandsFtx.filteredComponentGroups[1].nonces.subList(0, 2)
         val noLastSignerGroup = FilteredComponentGroup(
-                ComponentGroupEnum.SIGNERS_GROUP.ordinal,
+                SIGNERS_GROUP.ordinal,
                 noLastSignerComponents,
                 noLastSignerNonces,
                 noLastSignerPMT
         )
         val noLastSignerGroupSamePartialTree = FilteredComponentGroup(
-                ComponentGroupEnum.SIGNERS_GROUP.ordinal,
+                SIGNERS_GROUP.ordinal,
                 noLastSignerComponents,
                 noLastSignerNonces,
                 key1CommandsFtx.filteredComponentGroups[1].partialMerkleTree) // We don't update that, so we can catch the index mismatch.
@@ -493,12 +498,12 @@ class CompatibleTransactionTests {
         // A command with no corresponding signer detected
         // because the pointer of CommandData (3rd leaf) cannot find a corresponding (3rd) signer.
         val updatedFilteredComponentsNoSignersKey1SamePMT = listOf(key1CommandsFtx.filteredComponentGroups[0], noLastSignerGroupSamePartialTree)
-        assertFails { ftxConstructor.invoke(key1CommandsFtx.id, updatedFilteredComponentsNoSignersKey1SamePMT, key1CommandsFtx.groupHashes) }
+        assertFails { ftxConstructor.call(key1CommandsFtx.id, updatedFilteredComponentsNoSignersKey1SamePMT, key1CommandsFtx.groupHashes) }
 
         // Remove both last signer (KEY1) and related command.
         // Update partial Merkle tree for signers.
         val updatedFilteredComponentsNoLastCommandAndSigners = listOf(noLastCommandDataGroup, noLastSignerGroup)
-        val ftxNoLastCommandAndSigners = ftxConstructor.invoke(key1CommandsFtx.id, updatedFilteredComponentsNoLastCommandAndSigners, key1CommandsFtx.groupHashes)
+        val ftxNoLastCommandAndSigners = ftxConstructor.call(key1CommandsFtx.id, updatedFilteredComponentsNoLastCommandAndSigners, key1CommandsFtx.groupHashes)
         // verify() will pass as the transaction is well-formed.
         ftxNoLastCommandAndSigners.verify()
         // checkCommandVisibility() will not pass, because checkAllComponentsVisible(ComponentGroupEnum.SIGNERS_GROUP) will fail.
@@ -507,7 +512,7 @@ class CompatibleTransactionTests {
         // Remove last signer for which there is no pointer from a visible commandData. This is the case of Key2.
         // Do not change partial Merkle tree for signers.
         // This time the object can be constructed as there is no pointer mismatch.
-        val ftxNoLastSigner = ftxConstructor.invoke(key2CommandsFtx.id, updatedFilteredComponentsNoSignersKey2SamePMT, key2CommandsFtx.groupHashes)
+        val ftxNoLastSigner = ftxConstructor.call(key2CommandsFtx.id, updatedFilteredComponentsNoSignersKey2SamePMT, key2CommandsFtx.groupHashes)
         // verify() will fail as we didn't change the partial Merkle tree.
         assertFailsWith<FilteredTransactionVerificationException> { ftxNoLastSigner.verify() }
         // checkCommandVisibility() will not pass.
@@ -515,7 +520,7 @@ class CompatibleTransactionTests {
 
         // Remove last signer for which there is no pointer from a visible commandData. This is the case of Key2.
         // Update partial Merkle tree for signers.
-        val ftxNoLastSignerB = ftxConstructor.invoke(key2CommandsFtx.id, updatedFilteredComponentsNoSignersKey2, key2CommandsFtx.groupHashes)
+        val ftxNoLastSignerB = ftxConstructor.call(key2CommandsFtx.id, updatedFilteredComponentsNoSignersKey2, key2CommandsFtx.groupHashes)
         // verify() will pass, the transaction is well-formed.
         ftxNoLastSignerB.verify()
         // But, checkAllComponentsVisible() will not pass.
@@ -524,7 +529,7 @@ class CompatibleTransactionTests {
         // Modify last signer (we have a pointer from commandData).
         // Update partial Merkle tree for signers.
         val alterSignerComponents = signerComponents.subList(0, 2) + signerComponents[1] // Third one is removed and the 2nd command is added twice.
-        val alterSignersHashes = wtx.availableComponentHashes[ComponentGroupEnum.SIGNERS_GROUP.ordinal]!!.subList(0, 2) + componentHash(key1CommandsFtx.filteredComponentGroups[1].nonces[2], alterSignerComponents[2])
+        val alterSignersHashes = wtx.accessAvailableComponentHashes()[ComponentGroupEnum.SIGNERS_GROUP.ordinal]!!.subList(0, 2) + componentHash(key1CommandsFtx.filteredComponentGroups[1].nonces[2], alterSignerComponents[2])
         val alterMTree = MerkleTree.getMerkleTree(alterSignersHashes)
         val alterSignerPMTK = PartialMerkleTree.build(
                 alterMTree,
@@ -532,7 +537,7 @@ class CompatibleTransactionTests {
         )
 
         val alterSignerGroup = FilteredComponentGroup(
-                ComponentGroupEnum.SIGNERS_GROUP.ordinal,
+                SIGNERS_GROUP.ordinal,
                 alterSignerComponents,
                 key1CommandsFtx.filteredComponentGroups[1].nonces,
                 alterSignerPMTK
@@ -540,14 +545,14 @@ class CompatibleTransactionTests {
         val alterFilteredComponents = listOf(key1CommandsFtx.filteredComponentGroups[0], alterSignerGroup)
 
         // Do not update groupHashes.
-        val ftxAlterSigner = ftxConstructor.invoke(key1CommandsFtx.id, alterFilteredComponents, key1CommandsFtx.groupHashes)
+        val ftxAlterSigner = ftxConstructor.call(key1CommandsFtx.id, alterFilteredComponents, key1CommandsFtx.groupHashes)
         // Visible components in signers group cannot be verified against their partial Merkle tree.
         assertFailsWith<FilteredTransactionVerificationException> { ftxAlterSigner.verify() }
         // Also, checkAllComponentsVisible() will not pass (groupHash matching will fail).
         assertFailsWith<ComponentVisibilityException> { ftxAlterSigner.checkCommandVisibility(DUMMY_KEY_1.public) }
 
         // Update groupHashes.
-        val ftxAlterSignerB = ftxConstructor.invoke(key1CommandsFtx.id, alterFilteredComponents, key1CommandsFtx.groupHashes.subList(0, 6) + alterMTree.hash)
+        val ftxAlterSignerB = ftxConstructor.call(key1CommandsFtx.id, alterFilteredComponents, key1CommandsFtx.groupHashes.subList(0, 6) + alterMTree.hash)
         // Visible components in signers group cannot be verified against their partial Merkle tree.
         assertFailsWith<FilteredTransactionVerificationException> { ftxAlterSignerB.verify() }
         // Also, checkAllComponentsVisible() will not pass (top level Merkle tree cannot be verified against transaction's id).

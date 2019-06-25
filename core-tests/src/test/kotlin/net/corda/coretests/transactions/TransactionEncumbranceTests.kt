@@ -1,4 +1,4 @@
-package net.corda.core.transactions
+package net.corda.coretests.transactions
 
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.mock
@@ -7,6 +7,8 @@ import net.corda.core.contracts.*
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.node.NotaryInfo
+import net.corda.core.transactions.LedgerTransaction
+import net.corda.core.transactions.TransactionBuilder
 import net.corda.finance.DOLLARS
 import net.corda.finance.`issued by`
 import net.corda.finance.contracts.asset.Cash
@@ -15,7 +17,6 @@ import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
-import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.ledger
 import org.assertj.core.api.AssertionsForClassTypes.assertThatExceptionOfType
@@ -25,7 +26,7 @@ import java.time.Instant
 import java.time.temporal.ChronoUnit
 import kotlin.test.assertFailsWith
 
-const val TEST_TIMELOCK_ID = "net.corda.core.transactions.TransactionEncumbranceTests\$DummyTimeLock"
+const val TEST_TIMELOCK_ID = "net.corda.coretests.transactions.TransactionEncumbranceTests\$DummyTimeLock"
 
 class TransactionEncumbranceTests {
     @Rule

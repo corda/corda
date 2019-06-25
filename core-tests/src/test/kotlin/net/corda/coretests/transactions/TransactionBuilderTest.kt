@@ -1,4 +1,4 @@
-package net.corda.core.transactions
+package net.corda.coretests.transactions
 
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.mock
@@ -15,6 +15,7 @@ import net.corda.core.node.ZoneVersionTooLowException
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.node.services.NetworkParametersService
 import net.corda.core.serialization.serialize
+import net.corda.core.transactions.TransactionBuilder
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
