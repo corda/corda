@@ -57,6 +57,7 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.time.Duration
 import java.util.*
+import java.util.concurrent.TimeUnit
 import net.corda.nodeapi.internal.config.User as InternalUser
 
 inline fun <reified I : RPCOps> RPCDriverDSL.startInVmRpcClient(
@@ -121,6 +122,8 @@ fun <A> rpcDriver(
         notaryCustomOverrides: Map<String, Any?> = emptyMap(),
         inMemoryDB: Boolean = true,
         cordappsForAllNodes: Collection<TestCordappInternal>? = null,
+        timeout: Long? = null,
+        timeoutUnit: TimeUnit = TimeUnit.MINUTES,
         dsl: RPCDriverDSL.() -> A
 ): A {
     return genericDriver(
@@ -141,7 +144,8 @@ fun <A> rpcDriver(
                             networkParameters = networkParameters,
                             notaryCustomOverrides = notaryCustomOverrides,
                             inMemoryDB = inMemoryDB,
-                            cordappsForAllNodes = cordappsForAllNodes
+                            cordappsForAllNodes = cordappsForAllNodes,
+                            timeoutInMillies = timeout?.let { timeoutUnit.toMillis(it) }
                     ), externalTrace
             ),
             coerce = { it },

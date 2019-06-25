@@ -49,8 +49,7 @@ class CordappConstraintsTests {
     fun `issue cash using signature constraints`() {
         driver(DriverParameters(
                 networkParameters = testNetworkParameters(minimumPlatformVersion = 4),
-                cordappsForAllNodes = emptyList(),
-                inMemoryDB = false
+                cordappsForAllNodes = emptyList()
         )) {
             val alice = startNode(NodeParameters(
                     additionalCordapps = listOf(SIGNED_FINANCE_CORDAPP),

@@ -28,6 +28,7 @@ import net.corda.testing.node.internal.newContext
 import rx.Observable
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
@@ -204,7 +205,8 @@ fun <A> driver(defaultParameters: DriverParameters = DriverParameters(), dsl: Dr
                     networkParameters = defaultParameters.networkParameters,
                     notaryCustomOverrides = defaultParameters.notaryCustomOverrides,
                     inMemoryDB = defaultParameters.inMemoryDB,
-                    cordappsForAllNodes = uncheckedCast(defaultParameters.cordappsForAllNodes)
+                    cordappsForAllNodes = uncheckedCast(defaultParameters.cordappsForAllNodes),
+                    timeoutInMillies = defaultParameters.testTimeout
             ),
             coerce = { it },
             dsl = dsl
@@ -260,7 +262,8 @@ data class DriverParameters(
         val networkParameters: NetworkParameters = testNetworkParameters(notaries = emptyList()),
         val notaryCustomOverrides: Map<String, Any?> = emptyMap(),
         val inMemoryDB: Boolean = true,
-        val cordappsForAllNodes: Collection<TestCordapp>? = null
+        val cordappsForAllNodes: Collection<TestCordapp>? = null,
+        val testTimeout: Long = TimeUnit.MINUTES.toMillis(5)
 ) {
     constructor(cordappsForAllNodes: Collection<TestCordapp>) : this(isDebug = false, cordappsForAllNodes = cordappsForAllNodes)
 

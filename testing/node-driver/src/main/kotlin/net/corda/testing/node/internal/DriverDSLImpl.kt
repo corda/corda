@@ -38,7 +38,6 @@ import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.nodeapi.internal.network.NodeInfoFilesCopier
 import net.corda.notary.experimental.raft.RaftConfig
-import net.corda.serialization.internal.amqp.AbstractAMQPSerializationScheme
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.DUMMY_BANK_A_NAME
@@ -70,6 +69,7 @@ import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
 import kotlin.collections.HashSet
@@ -92,7 +92,8 @@ class DriverDSLImpl(
         val networkParameters: NetworkParameters,
         val notaryCustomOverrides: Map<String, Any?>,
         val inMemoryDB: Boolean,
-        val cordappsForAllNodes: Collection<TestCordappInternal>?
+        val cordappsForAllNodes: Collection<TestCordappInternal>?,
+        override val timeoutInMillies: Long?
 ) : InternalDriverDSL {
 
     private var _executorService: ScheduledExecutorService? = null
@@ -925,7 +926,12 @@ interface InternalDriverDSL : DriverDSL {
     private companion object {
         private val DEFAULT_POLL_INTERVAL = 500.millis
         private const val DEFAULT_WARN_COUNT = 120
+        val timeoutExecutor = Executors.newSingleThreadScheduledExecutor {
+            Thread().also { it.isDaemon = true }
+        }
     }
+
+    val timeoutInMillies: Long?
 
     val shutdownManager: ShutdownManager
 
@@ -953,6 +959,47 @@ interface InternalDriverDSL : DriverDSL {
     fun start()
 
     fun shutdown()
+
+    fun <DI : DriverDSL, A> executeWithTimeout(coerce1: DI, dsl: DI.() -> A): A {
+
+        val completed: AtomicReference<Boolean> = AtomicReference(false)
+        val serializationEnv = setDriverSerialization()
+        val shutdownHook = addShutdownHook(this::shutdown)
+        val resultHolder = AtomicReference<Any>()
+
+        val tidyUpCode = {
+            if (completed.compareAndSet(false, true)) {
+                this.shutdown()
+                shutdownHook.cancel()
+                serializationEnv?.close()
+            }
+        }
+
+        val t = Thread {
+            try {
+                this.start()
+                resultHolder.set(dsl(coerce1))
+            } catch (e: Throwable) {
+                resultHolder.set(e)
+            }
+        }
+        t.start()
+        t.join(timeoutInMillies ?: 0)
+        if (t.isAlive) {
+            t.interrupt()
+            resultHolder.set(TimeoutException())
+        }
+        tidyUpCode()
+        return when (resultHolder.get()) {
+            is Throwable -> {
+                throw resultHolder.get() as Throwable
+            }
+            else -> {
+                return resultHolder.get() as A
+            }
+        }
+    }
+
 }
 
 /**
@@ -968,19 +1015,8 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
         coerce: (D) -> DI,
         dsl: DI.() -> A
 ): A {
-    val serializationEnv = setDriverSerialization()
-    val shutdownHook = addShutdownHook(driverDsl::shutdown)
-    try {
-        driverDsl.start()
-        return dsl(coerce(driverDsl))
-    } catch (exception: Throwable) {
-        DriverDSLImpl.log.error("Driver shutting down because of exception", exception)
-        throw exception
-    } finally {
-        driverDsl.shutdown()
-        shutdownHook.cancel()
-        serializationEnv?.close()
-    }
+    val coercedDriverDsl = coerce(driverDsl)
+    return driverDsl.executeWithTimeout(coercedDriverDsl, dsl)
 }
 
 /**
@@ -1014,7 +1050,8 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
                     networkParameters = defaultParameters.networkParameters,
                     notaryCustomOverrides = defaultParameters.notaryCustomOverrides,
                     inMemoryDB = defaultParameters.inMemoryDB,
-                    cordappsForAllNodes = uncheckedCast(defaultParameters.cordappsForAllNodes)
+                    cordappsForAllNodes = uncheckedCast(defaultParameters.cordappsForAllNodes),
+                    timeoutInMillies = defaultParameters.testTimeout
             )
     )
     val shutdownHook = addShutdownHook(driverDsl::shutdown)
@@ -1108,6 +1145,8 @@ fun <A> internalDriver(
         notaryCustomOverrides: Map<String, Any?> = DriverParameters().notaryCustomOverrides,
         inMemoryDB: Boolean = DriverParameters().inMemoryDB,
         cordappsForAllNodes: Collection<TestCordappInternal>? = null,
+        timeout: Long? = null,
+        timeoutUnit: TimeUnit = TimeUnit.MINUTES,
         dsl: DriverDSLImpl.() -> A
 ): A {
     return genericDriver(
@@ -1127,7 +1166,8 @@ fun <A> internalDriver(
                     networkParameters = networkParameters,
                     notaryCustomOverrides = notaryCustomOverrides,
                     inMemoryDB = inMemoryDB,
-                    cordappsForAllNodes = cordappsForAllNodes
+                    cordappsForAllNodes = cordappsForAllNodes,
+                    timeoutInMillies = timeout?.let { timeoutUnit.toMillis(it) }
             ),
             coerce = { it },
             dsl = dsl
