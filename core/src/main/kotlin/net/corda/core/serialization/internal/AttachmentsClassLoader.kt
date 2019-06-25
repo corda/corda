@@ -38,72 +38,15 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
                              private val sampleTxId: SecureHash,
                              isAttachmentTrusted: (Attachment) -> Boolean,
                              parent: ClassLoader = ClassLoader.getSystemClassLoader()) :
-        URLClassLoader(attachments.map(::toUrl).toTypedArray(), parent) {
+        URLClassLoader(attachments.map(::toUrl).toTypedArray(), parent, AttachmentURLStreamHandlerFactory) {
 
     companion object {
         private val log = contextLogger()
-
-        init {
-            // Apply our own URLStreamHandlerFactory to resolve attachments
-            setOrDecorateURLStreamHandlerFactory()
-        }
 
         // Jolokia and Json-simple are dependencies that were bundled by mistake within contract jars.
         // In the AttachmentsClassLoader we just block any class in those 2 packages.
         private val ignoreDirectories = listOf("org/jolokia/", "org/json/simple/")
         private val ignorePackages = ignoreDirectories.map { it.replace("/", ".") }
-
-        @VisibleForTesting
-        private fun readAttachment(attachment: Attachment, filepath: String): ByteArray {
-            ByteArrayOutputStream().use {
-                attachment.extractFile(filepath, it)
-                return it.toByteArray()
-            }
-        }
-
-        /**
-         * Apply our custom factory either directly, if `URL.setURLStreamHandlerFactory` has not been called yet,
-         * or use a decorator and reflection to bypass the single-call-per-JVM restriction otherwise.
-         */
-        private fun setOrDecorateURLStreamHandlerFactory() {
-            // Retrieve the `URL.factory` field
-            val factoryField = URL::class.java.getDeclaredField("factory")
-            // Make it accessible
-            factoryField.isAccessible = true
-
-            // Check for preset factory, set directly if missing
-            val existingFactory: URLStreamHandlerFactory? = factoryField.get(null) as URLStreamHandlerFactory?
-            if (existingFactory == null) {
-                URL.setURLStreamHandlerFactory(AttachmentURLStreamHandlerFactory)
-            }
-            // Otherwise, decorate the existing and replace via reflection
-            // as calling `URL.setURLStreamHandlerFactory` again will throw an error
-            else {
-                log.warn("The URLStreamHandlerFactory was already set in the JVM. Please be aware that this is not recommended.")
-                // Retrieve the field "streamHandlerLock" of the class URL that
-                // is the lock used to synchronize access to the protocol handlers
-                val lockField = URL::class.java.getDeclaredField("streamHandlerLock")
-                // It is a private field so we need to make it accessible
-                // Note: this will only work as-is in JDK8.
-                lockField.isAccessible = true
-                // Use the same lock to reset the factory
-                synchronized(lockField.get(null)) {
-                    // Reset the value to prevent Error due to a factory already defined
-                    factoryField.set(null, null)
-                    // Set our custom factory and wrap the current one into it
-                    URL.setURLStreamHandlerFactory(
-                            // Set the factory to a decorator
-                            object : URLStreamHandlerFactory {
-                                // route between our own and the pre-existing factory
-                                override fun createURLStreamHandler(protocol: String): URLStreamHandler? {
-                                    return AttachmentURLStreamHandlerFactory.createURLStreamHandler(protocol)
-                                            ?: existingFactory.createURLStreamHandler(protocol)
-                                }
-                            }
-                    )
-                }
-            }
-        }
     }
 
     init {
