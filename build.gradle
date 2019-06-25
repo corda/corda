@@ -115,6 +115,7 @@ buildscript {
     ext.controlsfx_version = '8.40.15'
     ext.fontawesomefx_commons_version = '8.15'
     ext.fontawesomefx_fontawesome_version = '4.7.0-5'
+    ext.mssql_version = '6.4.0.jre8'
 
     // Name of the IntelliJ SDK created for the deterministic Java rt.jar.
     // ext.deterministic_idea_sdk = '1.8 (Deterministic)'

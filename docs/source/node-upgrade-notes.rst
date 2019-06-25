@@ -108,8 +108,8 @@ The ``myLegalName`` field is obligatory, however, it is used in Step 3.4 only
 (the tool doesn't understand the context of the run and always requires the field to be present).
 For this step you can use any valid dummy name e.g. *O=Dummy,L=London,C=GB* for *<node_legal_name>*.
 
-The Microsoft SQL JDBC driver can be downloaded from `Microsoft Download Center <https://www.microsoft.com/en-us/download/details.aspx?id=55539>`_.
-Extract the archive, and copy the single file *mssql-jdbc-6.2.2.jre8.jar* into the ``drivers`` directory.
+The Microsoft SQL JDBC driver can be downloaded from `Microsoft Download Center <https://www.microsoft.com/en-us/download/details.aspx?id=56615>`_.
+Extract the archive, and copy the single file *mssql-jdbc-6.4.0.jre8.jar* into the ``drivers`` directory.
 
 SQL Server
 ''''''''''
@@ -137,8 +137,8 @@ The ``myLegalName`` field is obligatory however it is used in Step 3.4 only
 (the tool doesn't understand the context of the run and always requires the field to be present).
 For this step you can use any valid dummy name e.g. *O=Dummy,L=London,C=GB* for *<node_legal_name>*.
 
-The Microsoft JDBC 6.2 driver can be downloaded from `Microsoft Download Center <https://www.microsoft.com/en-us/download/details.aspx?id=55539>`_.
-Extract the archive, and copy the single file *mssql-jdbc-6.2.2.jre8.jar* into the ``drivers`` directory.
+The Microsoft JDBC 6.4 driver can be downloaded from `Microsoft Download Center <https://www.microsoft.com/en-us/download/details.aspx?id=56615>`_.
+Extract the archive, and copy the single file *mssql-jdbc-6.4.0.jre8.jar* into the ``drivers`` directory.
 
 Oracle
 ''''''

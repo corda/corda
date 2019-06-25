@@ -356,8 +356,8 @@ The required ``node.conf`` settings for the Database Management Tool using Azure
 Replace the placeholders *<database_server>* and *<my_database>* with appropriate values (*<my_database>* is a user database).
 The ``database.schema`` is the database schema name assigned to both administrative and restrictive users.
 
-The Microsoft SQL JDBC driver can be downloaded from `Microsoft Download Center <https://www.microsoft.com/en-us/download/details.aspx?id=55539>`_,
-extract the archive and copy the single file *mssql-jdbc-6.2.2.jre8.jar* into the ``drivers`` directory.
+The Microsoft SQL JDBC driver can be downloaded from `Microsoft Download Center <https://www.microsoft.com/en-us/download/details.aspx?id=56615>`_,
+extract the archive and copy the single file *mssql-jdbc-6.4.0.jre8.jar* into the ``drivers`` directory.
 
 .. _db_setup_configure_db_tool_sqlserver_ref:
 
@@ -381,8 +381,8 @@ The required ``node.conf`` settings for the Database Management Tool using Azure
 
 Replace placeholders *<host>*, *<port>* with appropriate values, the default SQL Server port is 1433.
 
-The Microsoft JDBC 6.2 driver can be downloaded from `Microsoft Download Center <https://www.microsoft.com/en-us/download/details.aspx?id=55539>`_,
-extract the archive and copy the single file *mssql-jdbc-6.2.2.jre8.jar* into the ``drivers`` directory.
+The Microsoft JDBC 6.4 driver can be downloaded from `Microsoft Download Center <https://www.microsoft.com/en-us/download/details.aspx?id=56615>`_,
+extract the archive and copy the single file *mssql-jdbc-6.4.0.jre8.jar* into the ``drivers`` directory.
 
 .. _db_setup_configure_db_tool_oracle_ref:
 
@@ -618,8 +618,8 @@ Do not change the default isolation for this database (*READ_COMMITTED*) as the 
 and performance using this level.
 The ``database.schema`` is the database schema name assigned to the user.
 
-The Microsoft SQL JDBC driver can be downloaded from `Microsoft Download Center <https://www.microsoft.com/en-us/download/details.aspx?id=55539>`_,
-extract the archive and copy the single file *mssql-jdbc-6.2.2.jre8.jar* (the archive comes with two JARs).
+The Microsoft SQL JDBC driver can be downloaded from `Microsoft Download Center <https://www.microsoft.com/en-us/download/details.aspx?id=56615>`_,
+extract the archive and copy the single file *mssql-jdbc-6.4.0.jre8.jar* (the archive comes with two JARs).
 :ref:`Common Configuration Steps paragraph <db_setup_step_3_ref>` explains the correct location for the driver JAR in the node installation structure.
 
 .. _db_setup_configure_node_sqlserver_ref:
@@ -650,8 +650,8 @@ By default the connection to the database is not SSL. To secure the JDBC connect
 Do not change the default isolation for this database (*READ_COMMITTED*) as the Corda platform has been validated for functional correctness and performance using this level.
 The ``database.schema`` is the database schema name assigned to the user.
 
-The Microsoft JDBC 6.2 driver can be downloaded from `Microsoft Download Center <https://www.microsoft.com/en-us/download/details.aspx?id=55539>`_,
-extract the archive and copy the single file ``mssql-jdbc-6.2.2.jre8.jar`` (the archive comes with two JARs).
+The Microsoft JDBC 6.4 driver can be downloaded from `Microsoft Download Center <https://www.microsoft.com/en-us/download/details.aspx?id=56615>`_,
+extract the archive and copy the single file ``mssql-jdbc-6.4.0.jre8.jar`` (the archive comes with two JARs).
 :ref:`Common Configuration Steps <db_setup_step_3_ref>` explains the correct location for the driver JAR in the node installation structure.
 
 Ensure JDBC connection properties match the SQL Server setup. Especially when trying to reuse Azure SQL JDBC URLs

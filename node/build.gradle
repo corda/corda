@@ -204,10 +204,10 @@ dependencies {
         case null: //DB provider not provided, use default H2 driver (already in the classpath)
             break
         case "integration-sql-server" :
-            runtime "com.microsoft.sqlserver:mssql-jdbc:6.2.1.jre8"
+            runtime "com.microsoft.sqlserver:mssql-jdbc:${mssql_version}"
             break
         case "integration-azure-sql" :
-            runtime "com.microsoft.sqlserver:mssql-jdbc:6.2.1.jre8"
+            runtime "com.microsoft.sqlserver:mssql-jdbc:${mssql_version}"
             break
         case "integration-oracle" :
             runtime files("lib/ojdbc8.jar")
