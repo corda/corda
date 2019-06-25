@@ -4,9 +4,9 @@ import net.corda.core.contracts.*
 import net.corda.core.contracts.ComponentGroupEnum.*
 import net.corda.core.crypto.*
 import net.corda.core.internal.createComponentGroups
-import net.corda.core.internal.testutils.accessAvailableComponentHashes
-import net.corda.core.internal.testutils.accessGroupHashes
-import net.corda.core.internal.testutils.accessGroupMerkleRoots
+import net.corda.core.internal.accessAvailableComponentHashes
+import net.corda.core.internal.accessGroupHashes
+import net.corda.core.internal.accessGroupMerkleRoots
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.*
 import net.corda.core.utilities.OpaqueBytes

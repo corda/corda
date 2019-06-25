@@ -56,7 +56,8 @@ dependencies {
 
     testCompile "commons-fileupload:commons-fileupload:$fileupload_version"
     testCompile project(":core")
-
+    testCompile project(path: ':core', configuration: 'testArtifacts')
+    
     // Guava: Google test library (collections test suite)
     testCompile "com.google.guava:guava-testlib:$guava_version"
 

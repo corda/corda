@@ -8,9 +8,8 @@ import net.corda.core.crypto.CompositeKey
 import net.corda.core.identity.Party
 import net.corda.core.internal.AbstractAttachment
 import net.corda.core.internal.TESTDSL_UPLOADER
-import net.corda.core.internal.testutils.createLedgerTransaction
+import net.corda.core.internal.createLedgerTransaction
 import net.corda.core.node.NotaryInfo
-import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.testing.common.internal.testNetworkParameters
