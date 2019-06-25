@@ -41,7 +41,7 @@ import kotlin.reflect.KProperty1
 
 class FlowPermissionException(message: String) : FlowException(message)
 
-class FlowKilledException: FlowException("Flow terminated by RPC")
+class FlowKilledException: FlowException("Flow was manually terminated")
 
 class TransientReference<out A>(@Transient val value: A)
 
