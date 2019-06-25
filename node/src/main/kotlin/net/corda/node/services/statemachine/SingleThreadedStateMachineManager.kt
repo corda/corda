@@ -54,24 +54,9 @@ import java.util.concurrent.*
 import javax.annotation.concurrent.ThreadSafe
 import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
-import kotlin.collections.List
-import kotlin.collections.Set
 import kotlin.collections.component1
 import kotlin.collections.component2
-import kotlin.collections.emptyList
-import kotlin.collections.filterNotNull
-import kotlin.collections.first
-import kotlin.collections.fold
-import kotlin.collections.isNotEmpty
-import kotlin.collections.iterator
-import kotlin.collections.listOf
-import kotlin.collections.map
-import kotlin.collections.mapNotNull
-import kotlin.collections.mutableListOf
-import kotlin.collections.plus
-import kotlin.collections.plusAssign
 import kotlin.collections.set
-import kotlin.collections.toSet
 import kotlin.streams.toList
 
 /**
@@ -235,6 +220,32 @@ class SingleThreadedStateMachineManager(
         )
     }
 
+    private fun sendFlowKilledToSession(peerSessionId: SessionId, peer: Party, senderUUID: String?) {
+        val errorId = secureRandom.nextLong()
+        val payload = ErrorSessionMessage(FlowKilledException(), errorId)
+        val message = ExistingSessionMessage(peerSessionId, payload)
+        val deduplicationId = DeduplicationId.createForError(errorId, peerSessionId)
+        flowMessaging.sendSessionMessage(peer, message, SenderDeduplicationId(deduplicationId, senderUUID))
+    }
+
+    private fun sendFlowKilledNotifications(flow: Flow) {
+        val sessions = flow.fiber.transientState?.value?.checkpoint?.sessions ?: mapOf()
+        val activeSessions = sessions
+                .filter {
+                    val state = it.value
+                    state is SessionState.Initiated && state.initiatedState is InitiatedSessionState.Live
+                }.map {
+                    Pair(it.key, it.value as SessionState.Initiated)
+                }
+
+
+        for ((localSessionId, sessionState) in activeSessions) {
+            val peerSessionId = (sessionState.initiatedState as InitiatedSessionState.Live).peerSinkSessionId
+            sendFlowKilledToSession(peerSessionId, sessionState.peerParty, flow.fiber.transientState?.value?.senderUUID)
+            sessionToFlow.remove(localSessionId)
+        }
+    }
+
     override fun killFlow(id: StateMachineRunId): Boolean {
         return mutex.locked {
             cancelTimeoutIfScheduled(id)
@@ -244,7 +255,7 @@ class SingleThreadedStateMachineManager(
                 decrementLiveFibers()
                 totalFinishedFlows.inc()
                 try {
-                    flow.fiber.sendFlowKilledNotification()
+                    sendFlowKilledNotifications(flow)
                     flow.fiber.interrupt()
                     true
                 } finally {
@@ -468,8 +479,17 @@ class SingleThreadedStateMachineManager(
                 }
             } else {
                 val flow = mutex.locked { flows[flowId] }
-                        ?: throw IllegalStateException("Cannot find fiber corresponding to ID $flowId")
-                flow.fiber.scheduleEvent(Event.DeliverSessionMessage(sessionMessage, deduplicationHandler, sender))
+                if (flow == null && sessionMessage.payload is ConfirmSessionMessage) {
+                    // This occurs if the flow is killed after the session has been initiated but before confirmation has been received.
+                    // This is the first point that a peer session ID is available for sending back a message indicating that the flow has
+                    // been killed.
+                    sendFlowKilledToSession(sessionMessage.payload.initiatedSessionId, sender, null)
+                    sessionToFlow.remove(recipientId)
+                } else if (flow == null) {
+                    throw IllegalStateException("Cannot find fiber corresponding to ID $flowId")
+                } else {
+                    flow.fiber.scheduleEvent(Event.DeliverSessionMessage(sessionMessage, deduplicationHandler, sender))
+                }
             }
         } catch (exception: Exception) {
             logger.error("Exception while routing $sessionMessage", exception)
@@ -548,7 +568,7 @@ class SingleThreadedStateMachineManager(
 
         // Before we construct the state machine state by freezing the FlowLogic we need to make sure that lazy properties
         // have access to the fiber (and thereby the service hub)
-        val flowStateMachineImpl = FlowStateMachineImpl(flowId, flowLogic, scheduler, flowMessaging)
+        val flowStateMachineImpl = FlowStateMachineImpl(flowId, flowLogic, scheduler)
         val resultFuture = openFuture<Any?>()
         flowStateMachineImpl.transientValues = TransientReference(createTransientValues(flowId, resultFuture))
         flowLogic.stateMachine = flowStateMachineImpl
@@ -732,7 +752,7 @@ class SingleThreadedStateMachineManager(
                         flowLogic = logic,
                         senderUUID = null
                 )
-                val fiber = FlowStateMachineImpl(id, logic, scheduler, flowMessaging)
+                val fiber = FlowStateMachineImpl(id, logic, scheduler)
                 fiber.transientValues = TransientReference(createTransientValues(id, resultFuture))
                 fiber.transientState = TransientReference(state)
                 fiber.logic.stateMachine = fiber

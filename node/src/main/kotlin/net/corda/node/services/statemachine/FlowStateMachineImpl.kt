@@ -47,8 +47,7 @@ class TransientReference<out A>(@Transient val value: A)
 
 class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                               override val logic: FlowLogic<R>,
-                              scheduler: FiberScheduler,
-                              private val flowMessaging: FlowMessaging
+                              scheduler: FiberScheduler
 ) : Fiber<Unit>(id.toString(), scheduler), FlowStateMachine<R>, FlowFiber {
     companion object {
         /**
@@ -489,25 +488,6 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         // Start time gets serialized along with the fiber when it suspends
         val duration = System.nanoTime() - startTime
         timer.update(duration, TimeUnit.NANOSECONDS)
-    }
-
-    override fun sendFlowKilledNotification() {
-        val sessions = transientState?.value?.checkpoint?.sessions?.values ?: listOf()
-        val errorId = getTransientField(TransientValues::stateMachine).secureRandom.nextLong()
-        val activeSessions = sessions
-                .filter { it is SessionState.Initiated && it.initiatedState is InitiatedSessionState.Live }
-                .map {
-                    val initiatedState = it as SessionState.Initiated
-                    val liveState = initiatedState.initiatedState as InitiatedSessionState.Live
-                    Pair(it, liveState.peerSinkSessionId)
-                }
-        val payload = ErrorSessionMessage(FlowKilledException(), errorId)
-
-        for ((session, sessionId) in activeSessions) {
-            val message = ExistingSessionMessage(sessionId, payload)
-            val deduplicationId = DeduplicationId.createForError(errorId, sessionId)
-            flowMessaging.sendSessionMessage(session.peerParty, message, SenderDeduplicationId(deduplicationId, transientState?.value?.senderUUID))
-        }
     }
 }
 

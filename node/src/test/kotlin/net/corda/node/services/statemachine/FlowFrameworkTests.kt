@@ -48,6 +48,7 @@ import java.time.Instant
 import java.util.*
 import java.util.function.Predicate
 import kotlin.reflect.KClass
+import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class FlowFrameworkTests {
@@ -482,6 +483,52 @@ class FlowFrameworkTests {
         mockNet.runNetwork()
         bobResponderFlow.getOrThrow()
         assertThat(result.getOrThrow()).isEqualTo("HelloHello")
+    }
+
+    @Test
+    fun `killed flow propagates error to other side`() {
+        bobNode.registerCordappFlowFactory(PingPongFlow::class) { PingPongFlow(it, 20L) }
+        val sm = aliceNode.services.startFlow(PingPongFlow(bob, 10L))
+        mockNet.runNetwork(2)
+
+        aliceNode.smm.killFlow(sm.id)
+        mockNet.runNetwork()
+
+        assertEquals(0, bobNode.smm.allStateMachines.size)
+
+        val exception = FlowKilledException()
+        exception.stackTrace = arrayOf()
+        assertSessionTransfers(
+                aliceNode sent sessionInit(PingPongFlow::class, payload = 10L) to bobNode,
+                bobNode sent sessionConfirm() to aliceNode,
+                bobNode sent sessionData(20L) to aliceNode,
+                aliceNode sent errorMessage(exception) to bobNode,
+                bobNode sent sessionData(21L) to aliceNode
+        )
+    }
+
+    @Test
+    fun `killed flow propagates error to other side even if session not created yet`() {
+        bobNode.registerCordappFlowFactory(PingPongFlow::class) { PingPongFlow(it, 20L) }
+        val sm = aliceNode.services.startFlow(PingPongFlow(bob, 10L))
+        // The first round sends the session init message. The flow is then killed on Alice's side, to ensure that the session is not fully
+        // set up before the flow is killed.
+        mockNet.runNetwork(1)
+
+        aliceNode.smm.killFlow(sm.id)
+        mockNet.runNetwork()
+
+        assertEquals(0, bobNode.smm.allStateMachines.size)
+
+        val exception = FlowKilledException()
+        exception.stackTrace = arrayOf()
+        assertSessionTransfers(
+                aliceNode sent sessionInit(PingPongFlow::class, payload = 10L) to bobNode,
+                bobNode sent sessionConfirm() to aliceNode,
+                aliceNode sent errorMessage(exception) to bobNode,
+                bobNode sent sessionData(20L) to aliceNode,
+                bobNode sent sessionData(21L) to aliceNode
+        )
     }
 
     //region Helpers
