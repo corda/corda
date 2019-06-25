@@ -1,6 +1,10 @@
-package net.corda.core.contracts
+package net.corda.coretests.contracts
 
+import net.corda.core.contracts.Contract
+import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.crypto.SecureHash
+import net.corda.core.internal.createContractCreationError
+import net.corda.core.internal.createContractRejection
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.serialization.internal.AMQP_RPC_CLIENT_CONTEXT
 import net.corda.serialization.internal.AllWhitelist
@@ -48,7 +52,7 @@ class TransactionVerificationExceptionSerialisationTests {
         val contract = TestContract(12)
         val cause = Throwable("wibble")
 
-        val exception = TransactionVerificationException.ContractRejection(txid, contract, cause)
+        val exception = createContractRejection(txid, contract, cause)
         val exception2 = DeserializationInput(factory).deserialize(
                 SerializationOutput(factory).serialize(exception, context),
                 context)
@@ -85,7 +89,7 @@ class TransactionVerificationExceptionSerialisationTests {
     @Test
     fun contractCreationErrorTest() {
         val cause = Throwable("wibble")
-        val exception = TransactionVerificationException.ContractCreationError(txid, "Some contract class", cause)
+        val exception = createContractCreationError(txid, "Some contract class", cause)
         val exception2 = DeserializationInput(factory).deserialize(
                 SerializationOutput(factory).serialize(exception, context),
                 context)

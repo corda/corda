@@ -1,8 +1,11 @@
-package net.corda.core.identity
+package net.corda.coretests.indentity
 
 import com.google.common.jimfs.Configuration.unix
 import com.google.common.jimfs.Jimfs
 import net.corda.core.crypto.entropyToKeyPair
+import net.corda.core.identity.CordaX500Name
+import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.nodeapi.internal.crypto.X509KeyStore

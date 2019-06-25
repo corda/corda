@@ -1,5 +1,6 @@
-package net.corda.core.node
+package net.corda.coretests.node
 
+import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.core.getTestPartyAndCertificate

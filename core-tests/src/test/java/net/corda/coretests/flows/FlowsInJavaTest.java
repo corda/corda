@@ -1,7 +1,8 @@
-package net.corda.core.flows;
+package net.corda.coretests.flows;
 
 import co.paralleluniverse.fibers.Suspendable;
 import com.google.common.primitives.Primitives;
+import net.corda.core.flows.*;
 import net.corda.core.identity.Party;
 import net.corda.testing.core.TestConstants;
 import net.corda.testing.node.MockNetwork;

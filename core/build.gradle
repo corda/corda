@@ -30,9 +30,6 @@ dependencies {
     // Guava: Google test library (collections test suite)
     testCompile "com.google.guava:guava-testlib:$guava_version"
 
-    // Bring in the MockNode infrastructure for writing protocol unit tests.
-    testCompile project(":node-driver")
-
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
     testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
@@ -75,6 +72,11 @@ dependencies {
     compile "org.hibernate:hibernate-core:$hibernate_version"
 
     compile group: "io.github.classgraph", name: "classgraph", version: class_graph_version
+
+    testCompile "com.nhaarman:mockito-kotlin:$mockito_kotlin_version"
+    testCompile "org.mockito:mockito-core:$mockito_version"
+    testCompile "org.assertj:assertj-core:$assertj_version"
+    testCompile "com.natpryce:hamkrest:$hamkrest_version"
 }
 
 // TODO Consider moving it to quasar-utils in the future (introduced with PR-1388)

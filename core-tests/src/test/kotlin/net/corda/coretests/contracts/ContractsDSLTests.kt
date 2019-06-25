@@ -1,5 +1,6 @@
-package net.corda.core.contracts
+package net.corda.coretests.contracts
 
+import net.corda.core.contracts.*
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
@@ -57,7 +58,7 @@ class RequireSingleCommandTests(private val testFunction: (Collection<CommandWit
         val commands = listOf(invalidCommand)
         Assertions.assertThatThrownBy { testFunction(commands) }
                 .isInstanceOf(IllegalStateException::class.java)
-                .hasMessage("Required net.corda.core.contracts.TestCommands command")
+                .hasMessage("Required net.corda.coretests.contracts.TestCommands command")
     }
 }
 

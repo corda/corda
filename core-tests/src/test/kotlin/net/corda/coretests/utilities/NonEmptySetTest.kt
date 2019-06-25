@@ -1,4 +1,4 @@
-package net.corda.core.utilities
+package net.corda.coretests.utilities
 
 import com.google.common.collect.testing.SetTestSuiteBuilder
 import com.google.common.collect.testing.TestIntegerSetGenerator
@@ -7,6 +7,7 @@ import com.google.common.collect.testing.features.CollectionSize
 import junit.framework.TestSuite
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
+import net.corda.core.utilities.NonEmptySet
 import net.corda.testing.core.SerializationEnvironmentRule
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy

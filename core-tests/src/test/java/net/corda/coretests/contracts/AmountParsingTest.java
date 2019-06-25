@@ -1,5 +1,6 @@
-package net.corda.core.contracts;
+package net.corda.coretests.contracts;
 
+import net.corda.core.contracts.Amount;
 import org.junit.Test;
 
 import static net.corda.finance.Currencies.POUNDS;

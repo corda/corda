@@ -1,5 +1,6 @@
-package net.corda.core.crypto
+package net.corda.coretests.crypto
 
+import net.corda.core.crypto.*
 import net.corda.core.crypto.CompositeKey.NodeAndWeight
 import net.corda.core.internal.declaredField
 import net.corda.core.internal.div

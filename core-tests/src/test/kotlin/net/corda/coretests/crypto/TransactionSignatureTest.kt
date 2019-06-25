@@ -1,5 +1,6 @@
-package net.corda.core.crypto
+package net.corda.coretests.crypto
 
+import net.corda.core.crypto.*
 import net.corda.testing.core.SerializationEnvironmentRule
 import org.junit.Rule
 import org.junit.Test

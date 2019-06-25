@@ -1,5 +1,6 @@
-package net.corda.core.crypto
+package net.corda.coretests.crypto
 
+import net.corda.core.crypto.Crypto
 import net.corda.core.identity.CordaX500Name
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509KeyStore

@@ -1,10 +1,11 @@
-package net.corda.core.utilities
+package net.corda.coretests.utilities
 
 import com.esotericsoftware.kryo.KryoException
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.serialization.*
 import net.corda.core.serialization.internal.checkpointDeserialize
 import net.corda.core.serialization.internal.checkpointSerialize
+import net.corda.core.utilities.transient
 import net.corda.node.serialization.kryo.KRYO_CHECKPOINT_CONTEXT
 import net.corda.serialization.internal.CheckpointSerializationContextImpl
 import net.corda.testing.core.SerializationEnvironmentRule

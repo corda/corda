@@ -1,5 +1,8 @@
-package net.corda.core.crypto
+package net.corda.coretests.crypto
 
+import net.corda.core.crypto.SignedData
+import net.corda.core.crypto.generateKeyPair
+import net.corda.core.crypto.sign
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.serialize
 import net.corda.testing.core.SerializationEnvironmentRule

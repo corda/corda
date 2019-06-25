@@ -1,4 +1,4 @@
-package net.corda.core.node
+package net.corda.coretests.node
 
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
@@ -14,7 +14,7 @@ import kotlin.test.assertFailsWith
 
 class VaultUpdateTests {
     private companion object {
-        const val DUMMY_PROGRAM_ID = "net.corda.core.node.VaultUpdateTests\$DummyContract"
+        const val DUMMY_PROGRAM_ID = "net.corda.coretests.node.VaultUpdateTests\$DummyContract"
         val DUMMY_NOTARY = TestIdentity(DUMMY_NOTARY_NAME, 20).party
         val emptyUpdate = Vault.Update(emptySet(), emptySet(), type = Vault.UpdateType.GENERAL, references = emptySet())
     }

@@ -1,4 +1,4 @@
-package net.corda.core.flows;
+package net.corda.coretests.flows;
 
 import net.corda.core.serialization.SerializationDefaults;
 import net.corda.core.serialization.SerializationFactory;
