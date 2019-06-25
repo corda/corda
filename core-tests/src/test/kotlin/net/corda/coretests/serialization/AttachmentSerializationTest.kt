@@ -10,12 +10,12 @@ import net.corda.core.internal.FetchDataFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
 import net.corda.coretests.flows.TestNoSecurityDataVendingFlow
-import net.corda.coretests.flows.registerCordappFlowFactory
 import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.nodeapi.internal.persistence.currentDBSession
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.singleIdentity
+import net.corda.testing.flows.registerCordappFlowFactory
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.InternalMockNodeParameters
 import net.corda.testing.node.internal.TestStartedNode

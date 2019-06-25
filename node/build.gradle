@@ -137,6 +137,7 @@ dependencies {
 
     // Unit testing helpers.
     testCompile "org.assertj:assertj-core:${assertj_version}"
+    testCompile project(':node-driver')
     testCompile project(':test-utils')
     testCompile project(':client:jfx')
     testCompile project(':finance:contracts')

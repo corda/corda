@@ -23,6 +23,7 @@ import net.corda.nodeapi.internal.cordapp.CordappLoader
 import net.corda.node.services.api.VaultServiceInternal
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.testing.core.singleIdentity
+import net.corda.testing.flows.registerCoreFlowFactory
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.enclosedCordapp

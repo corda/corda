@@ -1,4 +1,4 @@
-package net.corda.coretests.flows
+package net.corda.testing.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.concurrent.CordaFuture
