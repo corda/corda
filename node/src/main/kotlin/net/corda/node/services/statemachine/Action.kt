@@ -1,6 +1,7 @@
 package net.corda.node.services.statemachine
 
 import net.corda.core.crypto.SecureHash
+import net.corda.core.flows.Destination
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowAsyncOperation
@@ -19,10 +20,10 @@ sealed class Action {
     data class TrackTransaction(val hash: SecureHash) : Action()
 
     /**
-     * Send an initial session message to [party].
+     * Send an initial session message to [destination].
      */
     data class SendInitial(
-            val party: Party,
+            val destination: Destination,
             val initialise: InitialSessionMessage,
             val deduplicationId: SenderDeduplicationId
     ) : Action()

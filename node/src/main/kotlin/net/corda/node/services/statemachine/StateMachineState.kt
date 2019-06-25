@@ -2,6 +2,7 @@ package net.corda.node.services.statemachine
 
 import net.corda.core.context.InvocationContext
 import net.corda.core.crypto.SecureHash
+import net.corda.core.flows.Destination
 import net.corda.core.flows.FlowInfo
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.Party
@@ -98,7 +99,7 @@ sealed class SessionState {
      * We haven't yet sent the initialisation message
      */
     data class Uninitiated(
-            val party: Party,
+            val destination: Destination,
             val initiatingSubFlow: SubFlow.Initiating,
             val sourceSessionId: SessionId,
             val additionalEntropy: Long
