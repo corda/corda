@@ -11,7 +11,6 @@ import net.corda.nodeapi.internal.crypto.ContentSignerBuilder
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.cryptoservice.CryptoService
 import net.corda.nodeapi.internal.cryptoservice.CryptoServiceException
-import net.corda.nodeapi.internal.cryptoservice.SignOnlyCryptoService
 import org.bouncycastle.operator.ContentSigner
 import java.security.KeyPair
 import java.security.KeyStore
@@ -24,11 +23,21 @@ import javax.security.auth.x500.X500Principal
  * and a Java KeyStore in the form of [CertificateStore] to store private keys.
  * This service reuses the [NodeConfiguration.signingCertificateStore] to store keys.
  */
-open class SignOnlyBCCryptoService(protected val certificateStoreSupplier: CertificateStoreSupplier) : SignOnlyCryptoService {
+class BCCryptoService(private val legalName: X500Principal, private val certificateStoreSupplier: CertificateStoreSupplier) : CryptoService {
 
     // TODO check if keyStore exists.
     // TODO make it private when E2ETestKeyManagementService does not require direct access to the private key.
     var certificateStore: CertificateStore = certificateStoreSupplier.get(true)
+
+    override fun generateKeyPair(alias: String, scheme: SignatureScheme): PublicKey {
+        try {
+            val keyPair = Crypto.generateKeyPair(scheme)
+            importKey(alias, keyPair)
+            return keyPair.public
+        } catch (e: Exception) {
+            throw CryptoServiceException("Cannot generate key for alias $alias and signature scheme ${scheme.schemeCodeName} (id ${scheme.schemeNumberID})", e)
+        }
+    }
 
     override fun containsKey(alias: String): Boolean {
         return certificateStore.contains(alias)
@@ -42,6 +51,7 @@ open class SignOnlyBCCryptoService(protected val certificateStoreSupplier: Certi
         }
     }
 
+    @JvmOverloads
     override fun sign(alias: String, data: ByteArray, signAlgorithm: String?): ByteArray {
         try {
             return when(signAlgorithm) {
@@ -54,11 +64,11 @@ open class SignOnlyBCCryptoService(protected val certificateStoreSupplier: Certi
     }
 
     private fun signWithAlgorithm(alias: String, data: ByteArray, signAlgorithm: String): ByteArray {
-        val privateKey = certificateStore.query { getPrivateKey(alias, certificateStore.entryPassword) }
-        val signature = Signature.getInstance(signAlgorithm, cordaBouncyCastleProvider)
-        signature.initSign(privateKey, newSecureRandom())
-        signature.update(data)
-        return signature.sign()
+            val privateKey = certificateStore.query { getPrivateKey(alias, certificateStore.entryPassword) }
+            val signature = Signature.getInstance(signAlgorithm, cordaBouncyCastleProvider)
+            signature.initSign(privateKey, newSecureRandom())
+            signature.update(data)
+            return signature.sign()
     }
 
     override fun getSigner(alias: String): ContentSigner {
@@ -86,19 +96,6 @@ open class SignOnlyBCCryptoService(protected val certificateStoreSupplier: Certi
      */
     fun resyncKeystore() {
         certificateStore = certificateStoreSupplier.get(true)
-    }
-}
-
-class BCCryptoService(private val legalName: X500Principal, certificateStoreSupplier: CertificateStoreSupplier) : SignOnlyBCCryptoService(certificateStoreSupplier), CryptoService {
-
-    override fun generateKeyPair(alias: String, scheme: SignatureScheme): PublicKey {
-        try {
-            val keyPair = Crypto.generateKeyPair(scheme)
-            importKey(alias, keyPair)
-            return keyPair.public
-        } catch (e: Exception) {
-            throw CryptoServiceException("Cannot generate key for alias $alias and signature scheme ${scheme.schemeCodeName} (id ${scheme.schemeNumberID})", e)
-        }
     }
 
     /** Import an already existing [KeyPair] to this [CryptoService]. */
