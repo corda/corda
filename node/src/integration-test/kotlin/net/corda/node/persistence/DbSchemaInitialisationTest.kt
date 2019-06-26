@@ -6,6 +6,7 @@ import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.NodeParameters
 import net.corda.testing.driver.driver
 import org.junit.Test
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 
 class DbSchemaInitialisationTest {
@@ -20,10 +21,12 @@ class DbSchemaInitialisationTest {
         }
     }
 
-    @Test(expected = DatabaseIncompatibleException::class)
+    @Test
     fun `database is not initialised`() {
         driver(DriverParameters(startNodesInProcess = isQuasarAgentSpecified())) {
-            startNode(NodeParameters(customOverrides = mapOf("database.initialiseSchema" to "false"))).getOrThrow()
+            assertFailsWith(DatabaseIncompatibleException::class) {
+                startNode(NodeParameters(customOverrides = mapOf("database.initialiseSchema" to "false"))).getOrThrow()
+            }
         }
     }
 }

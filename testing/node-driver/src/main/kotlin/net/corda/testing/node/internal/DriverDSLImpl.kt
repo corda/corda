@@ -984,7 +984,8 @@ interface InternalDriverDSL : DriverDSL {
         val completed: AtomicReference<Boolean> = AtomicReference(false)
         val serializationEnv = setDriverSerialization()
         val shutdownHook = addShutdownHook { this.shutdown(true) }
-        val resultHolder = AtomicReference<Any>()
+        val resultHolder = AtomicReference<A>()
+        val exceptionHolder = AtomicReference<Throwable>()
 
         val tidyUpCode = { force: Boolean ->
             if (completed.compareAndSet(false, true)) {
@@ -993,37 +994,46 @@ interface InternalDriverDSL : DriverDSL {
                 serializationEnv?.close()
             }
         }
-        val callingPackage = (this as DriverDSLImpl).getCallerPackage()
-        val testExecutionThread = DriverTestingThread(callingPackage) {
+
+        if (timeoutInMillies != null && timeoutInMillies!! > 0) {
+            val callingPackage = (this as DriverDSLImpl).getCallerPackage()
+            val testExecutionThread = DriverTestingThread(callingPackage) {
+                try {
+                    start()
+                    val resultOfExecution = dsl(coerce1)
+                    resultHolder.set(resultOfExecution)
+                } catch (e: Throwable) {
+                    exceptionHolder.set(e)
+                }
+            }
+            testExecutionThread.contextClassLoader = Thread.currentThread().contextClassLoader
+            testExecutionThread.start()
             try {
-                this.start()
-                val resultOfExecution = dsl(coerce1)
-                resultHolder.set(resultOfExecution)
-            } catch (e: Throwable) {
-                resultHolder.set(e)
+                testExecutionThread.join(timeoutInMillies ?: 0)
+            } catch (e: InterruptedException) {
             }
-        }
-        testExecutionThread.contextClassLoader = Thread.currentThread().contextClassLoader
-        testExecutionThread.start()
-        try {
-            testExecutionThread.join(timeoutInMillies ?: 0)
-        } catch (e: InterruptedException) {
-        }
-        if (testExecutionThread.isAlive) {
-            log.warn("Test did not complete within timeout of ${TimeUnit.MILLISECONDS.toSeconds(timeoutInMillies ?: 0)} seconds")
-            tidyUpCode(true)
-            resultHolder.set(TimeoutException())
-            testExecutionThread.interrupt()
+            if (testExecutionThread.isAlive) {
+                log.warn("Test did not complete within timeout of ${TimeUnit.MILLISECONDS.toSeconds(timeoutInMillies ?: 0)} seconds")
+                tidyUpCode(true)
+                exceptionHolder.set(TimeoutException())
+                testExecutionThread.interrupt()
+            } else {
+                log.debug("Test completed successfully within timeout")
+                tidyUpCode(false)
+            }
+            if (exceptionHolder.get() != null) {
+                throw exceptionHolder.get()
+            } else {
+                return resultHolder.get()
+            }
         } else {
-            log.debug("Test completed successfully within timeout")
-            tidyUpCode(false)
-        }
-        return when (resultHolder.get()) {
-            is Throwable -> {
-                throw resultHolder.get() as Throwable
-            }
-            else -> {
-                return resultHolder.get() as A
+            try {
+                start()
+                return dsl(coerce1)
+            } catch (e: Throwable) {
+                throw e
+            } finally {
+                tidyUpCode(false)
             }
         }
     }
