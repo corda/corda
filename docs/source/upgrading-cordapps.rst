@@ -278,7 +278,11 @@ the standard ``run`` command to invoke the RPC. See :doc:`shell` to learn more.
 To assist in draining a node, the ``dumpCheckpoints`` shell command will output JSON representations of each checkpointed flow.
 A zip containing the JSON files is created in the ``logs`` directory of the node. This information can then be used to determine the
 state of stuck flows or flows that experienced internal errors and were kept in the node for manual intervention. To drain these flows,
-the node will need to be restarted or the checkpoint record will need to be manually deleted from the checkpoint table.
+the node will need to be restarted or the flow will need to be removed using ``killFlow``.
+
+.. warning:: Deleting checkpoints manually or via ``killFlow`` can lead to an inconsistent ledger among transacting parties. Great care
+             and coordination with a flow's counterparties must be taken to ensure that a initiating flow and flows responding to it are correctly
+             removed. This experience will be improved in the future. Making it easier to kill flows while notifying their counterparties.
 
 .. _contract_upgrading_ref:
 
