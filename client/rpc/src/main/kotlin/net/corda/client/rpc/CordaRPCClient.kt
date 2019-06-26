@@ -380,7 +380,7 @@ class CordaRPCClient private constructor(
      * @throws RPCException if the server version is too low or if the server isn't reachable within a reasonable timeout.
      */
     @JvmOverloads
-    fun start(username: String, password: String, reconnecting: Boolean = true): CordaRPCConnection {
+    fun start(username: String, password: String, reconnecting: Boolean = false): CordaRPCConnection {
         return start(username, password, null, null, reconnecting)
     }
 
@@ -397,7 +397,7 @@ class CordaRPCClient private constructor(
      * @throws RPCException if the server version is too low or if the server isn't reachable within a reasonable timeout.
      */
     @JvmOverloads
-    fun start(username: String, password: String, targetLegalIdentity: CordaX500Name, reconnecting: Boolean = true): CordaRPCConnection {
+    fun start(username: String, password: String, targetLegalIdentity: CordaX500Name, reconnecting: Boolean = false): CordaRPCConnection {
         return start(username, password, null, null, targetLegalIdentity, reconnecting)
     }
 
@@ -415,7 +415,7 @@ class CordaRPCClient private constructor(
      * @throws RPCException if the server version is too low or if the server isn't reachable within a reasonable timeout.
      */
     @JvmOverloads
-    fun start(username: String, password: String, externalTrace: Trace?, impersonatedActor: Actor?, reconnecting: Boolean = true): CordaRPCConnection {
+    fun start(username: String, password: String, externalTrace: Trace?, impersonatedActor: Actor?, reconnecting: Boolean = false): CordaRPCConnection {
         return start(username, password, externalTrace, impersonatedActor, null, reconnecting)
     }
 
@@ -434,7 +434,7 @@ class CordaRPCClient private constructor(
      * @throws RPCException if the server version is too low or if the server isn't reachable within a reasonable timeout.
      */
     @JvmOverloads
-    fun start(username: String, password: String, externalTrace: Trace?, impersonatedActor: Actor?, targetLegalIdentity: CordaX500Name?, reconnecting: Boolean = true): CordaRPCConnection {
+    fun start(username: String, password: String, externalTrace: Trace?, impersonatedActor: Actor?, targetLegalIdentity: CordaX500Name?, reconnecting: Boolean = false): CordaRPCConnection {
         val addresses = if (haAddressPool.isEmpty())
             listOf(hostAndPort!!)
         else

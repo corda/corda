@@ -190,7 +190,7 @@ class ReconnectingCordaRPCOps private constructor(
             try {
                 return CordaRPCClient(
                         nodeHostAndPorts, CordaRPCClientConfiguration(connectionMaxRetryInterval = retryInterval), sslConfiguration, classLoader
-                ).start(username, password, false).also {
+                ).start(username, password).also {
                     // Check connection is truly operational before returning it.
                     require(it.proxy.nodeInfo().legalIdentitiesAndCerts.isNotEmpty()) {
                         "Could not establish connection to ${nodeHostAndPorts}."

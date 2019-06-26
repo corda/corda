@@ -10,6 +10,7 @@ import net.corda.core.node.services.Vault
 import net.corda.core.node.services.vault.PageSpecification
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.node.services.vault.builder
+import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
@@ -17,18 +18,16 @@ import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashIssueAndPaymentFlow
 import net.corda.finance.schemas.CashSchemaV1
 import net.corda.node.services.Permissions
-import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.DUMMY_BANK_B_NAME
-import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.driver.DriverParameters
+import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.OutOfProcess
 import net.corda.testing.driver.driver
 import net.corda.testing.driver.internal.OutOfProcessImpl
 import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.FINANCE_CORDAPPS
-import org.junit.ClassRule
 import org.junit.Test
 import java.util.*
 import java.util.concurrent.CountDownLatch
@@ -49,6 +48,10 @@ class RpcReconnectTests {
 
     private val portAllocator = incrementalPortAllocation(20006)
 
+    private lateinit var proxy: RandomFailingProxy
+    private lateinit var node: NodeHandle
+    private lateinit var currentAddressPair: AddressPair
+
     /**
      * This test showcases and stress tests the demo [ReconnectingCordaRPCOps].
      *
@@ -64,10 +67,6 @@ class RpcReconnectTests {
         val nodeRunningTime = { Random().nextInt(12000) + 8000 }
 
         val demoUser = User("demo", "demo", setOf(Permissions.all()))
-
-        val nodePort = portAllocator.nextPort()
-        val proxyPort = portAllocator.nextPort()
-        val tcpProxy = RandomFailingProxy(serverPort = proxyPort, remotePort = nodePort).start()
 
         // When this reaches 0 - the test will end.
         val flowsCountdownLatch = CountDownLatch(nrOfFlowsToRun)
@@ -93,21 +92,26 @@ class RpcReconnectTests {
         )
 
         driver(DriverParameters(cordappsForAllNodes = FINANCE_CORDAPPS, startNodesInProcess = false, inMemoryDB = false)) {
-            fun startBankA() = startNode(providedName = DUMMY_BANK_A_NAME, rpcUsers = listOf(demoUser), customOverrides = mapOf("rpcSettings.address" to "localhost:$nodePort"))
+            fun startBankA(address: NetworkHostAndPort) = startNode(providedName = DUMMY_BANK_A_NAME, rpcUsers = listOf(demoUser), customOverrides = mapOf("rpcSettings.address" to address.toString()))
+            fun startProxy(addressPair: AddressPair) = RandomFailingProxy(serverPort = addressPair.proxyAddress.port, remotePort = addressPair.nodeAddress.port).start()
 
+            val addresses = (1..3).map { getRandomAddressPair() }
+            currentAddressPair = addresses[0]
+
+            proxy = startProxy(currentAddressPair)
             var (bankA, bankB) = listOf(
-                    startBankA(),
+                    startBankA(currentAddressPair.nodeAddress),
                     startNode(providedName = DUMMY_BANK_B_NAME, rpcUsers = listOf(demoUser))
             ).transpose().getOrThrow()
+            node = bankA
 
             val notary = defaultNotaryIdentity
             val baseAmount = Amount.parseCurrency("0 USD")
             val issuerRef = OpaqueBytes.of(0x01)
 
-            // Create a reconnecting rpc client through the TCP proxy.
-            val bankAAddress = bankA.rpcAddress.copy(port = proxyPort)
+            val addressesForRpc = addresses.map { it.proxyAddress }
             // DOCSTART rpcReconnectingRPC
-            val bankAReconnectingRpc = ReconnectingCordaRPCOps(bankAAddress, demoUser.username, demoUser.password)
+            val bankAReconnectingRpc = ReconnectingCordaRPCOps(addressesForRpc, demoUser.username, demoUser.password)
             // DOCEND rpcReconnectingRPC
 
             // Observe the vault and collect the observations.
@@ -117,7 +121,7 @@ class RpcReconnectTests {
                     Cash.State::class.java,
                     QueryCriteria.VaultQueryCriteria(),
                     PageSpecification(1, 1))
-            val vaultObserverHandle = vaultFeed.updates.subscribe { update: Vault.Update<Cash.State> ->
+            val vaultObserverHandle = vaultFeed.updates.asReconnecting().subscribe { update: Vault.Update<Cash.State> ->
                 log.info("vault update produced ${update.produced.map { it.state.data.amount }} consumed ${update.consumed.map { it.ref }}")
                 vaultEvents.add(update)
             }
@@ -125,7 +129,7 @@ class RpcReconnectTests {
 
             // Observe the stateMachine and collect the observations.
             val stateMachineEvents = Collections.synchronizedList(mutableListOf<StateMachineUpdate>())
-            val stateMachineObserverHandle = bankAReconnectingRpc.stateMachinesFeed().updates.subscribe { update ->
+            val stateMachineObserverHandle = bankAReconnectingRpc.stateMachinesFeed().updates.asReconnecting().subscribe { update ->
                 log.info(update.toString())
                 stateMachineEvents.add(update)
             }
@@ -144,37 +148,45 @@ class RpcReconnectTests {
 
                     if (flowsCountdownLatch.count == 0L) break
 
-                    when (Random().nextInt().rem(6).absoluteValue) {
+                    when (Random().nextInt().rem(7).absoluteValue) {
                         0 -> {
                             log.info("Forcefully killing node and proxy.")
-                            (bankA as OutOfProcessImpl).onStopCallback()
-                            (bankA as OutOfProcess).process.destroyForcibly()
-                            tcpProxy.stop()
-                            bankA = startBankA().get()
-                            tcpProxy.start()
+                            (node as OutOfProcessImpl).onStopCallback()
+                            (node as OutOfProcess).process.destroyForcibly()
+                            proxy.stop()
+                            node = startBankA(currentAddressPair.nodeAddress).get()
+                            proxy.start()
                         }
                         1 -> {
                             log.info("Forcefully killing node.")
-                            (bankA as OutOfProcessImpl).onStopCallback()
-                            (bankA as OutOfProcess).process.destroyForcibly()
-                            bankA = startBankA().get()
+                            (node as OutOfProcessImpl).onStopCallback()
+                            (node as OutOfProcess).process.destroyForcibly()
+                            node = startBankA(currentAddressPair.nodeAddress).get()
                         }
                         2 -> {
                             log.info("Shutting down node.")
-                            bankA.stop()
-                            tcpProxy.stop()
-                            bankA = startBankA().get()
-                            tcpProxy.start()
+                            node.stop()
+                            proxy.stop()
+                            node = startBankA(currentAddressPair.nodeAddress).get()
+                            proxy.start()
                         }
                         3, 4 -> {
                             log.info("Killing proxy.")
-                            tcpProxy.stop()
+                            proxy.stop()
                             Thread.sleep(Random().nextInt(5000).toLong())
-                            tcpProxy.start()
+                            proxy.start()
                         }
                         5 -> {
                             log.info("Dropping connection.")
-                            tcpProxy.failConnection()
+                            proxy.failConnection()
+                        }
+                        6 -> {
+                            log.info("Performing failover to a different node")
+                            node.stop()
+                            proxy.stop()
+                            currentAddressPair = addresses[Random().nextInt(addresses.size)]
+                            node = startBankA(currentAddressPair.nodeAddress).get()
+                            proxy = startProxy(currentAddressPair)
                         }
                     }
                     nrRestarts.incrementAndGet()
@@ -283,17 +295,22 @@ class RpcReconnectTests {
             assertTrue(stateMachineEvents.count { it is StateMachineUpdate.Removed } > nrOfFlowsToRun / 3, "Too many Removed state machine events lost.")
 
             // Stop the observers.
-            vaultObserverHandle.unsubscribe()
-            stateMachineObserverHandle.unsubscribe()
+            vaultObserverHandle.stop()
+            stateMachineObserverHandle.stop()
 
             bankAReconnectingRpc.close()
         }
 
-        tcpProxy.close()
+        proxy.close()
     }
 
     @Synchronized
     fun MutableMap<StateMachineRunId, MutableList<String>>.addEvent(id: StateMachineRunId, progress: String?): Boolean {
         return getOrPut(id) { mutableListOf() }.let { if (progress != null) it.add(progress) else false }
     }
+
+    private fun getRandomAddressPair() = AddressPair(getRandomAddress(), getRandomAddress())
+    private fun getRandomAddress() = NetworkHostAndPort("localhost", portAllocator.nextPort())
+
+    data class AddressPair(val proxyAddress: NetworkHostAndPort, val nodeAddress: NetworkHostAndPort) {}
 }
