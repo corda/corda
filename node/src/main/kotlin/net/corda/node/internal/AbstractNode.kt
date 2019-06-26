@@ -180,7 +180,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     val transactionStorage = makeTransactionStorage(configuration.transactionCacheSizeBytes).tokenize()
     val networkMapClient: NetworkMapClient? = configuration.networkServices?.let { NetworkMapClient(it.networkMapURL, versionInfo) }
     val attachments = NodeAttachmentService(metricRegistry, cacheFactory, database, configuration.devMode).tokenize()
-    val cryptoService = CryptoServiceFactory.makeCryptoService(SupportedCryptoServices.BC_SIMPLE, configuration.myLegalName, configuration.signingCertificateStore)
+    val cryptoService = CryptoServiceFactory.makeCryptoService(configuration.cryptoServiceName ?: SupportedCryptoServices.BC_SIMPLE , configuration.myLegalName, configuration.signingCertificateStore, configuration.cryptoServiceConf)
     @Suppress("LeakingThis")
     val networkParametersStorage = makeNetworkParametersStorage()
     val cordappProvider = CordappProviderImpl(cordappLoader, CordappConfigFileProvider(configuration.cordappDirectories), attachments).tokenize()
@@ -1025,7 +1025,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             is UtimacoCryptoService -> log.info("Private key '$alias' stored in Utimaco HSM.  Certificate-chain stored in node keystore.")
             is FutureXCryptoService -> log.info("Private key '$alias' stored in FutureX HSM.  Certificate-chain stored in node keystore.")
             is PrimusXCryptoService -> log.info("Private key '$alias' stored in PrimusX HSM.  Certificate-chain stored in node keystore.")
-            else -> log.info("Private key '$alias' and its certificate-chain stored successfully.")
+            is BCCryptoService -> log.info("Private key '$alias' and its certificate-chain stored successfully.")
         }
         return PartyAndCertificate(X509Utilities.buildCertPath(identityCertPath))
     }
