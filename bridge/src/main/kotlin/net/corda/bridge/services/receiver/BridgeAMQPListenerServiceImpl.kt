@@ -57,8 +57,8 @@ class BridgeAMQPListenerServiceImpl(val conf: FirewallConfiguration,
                 auditService.successfulConnectionEvent(it.remoteAddress, it.remoteCert?.subjectDN?.name
                         ?: "", "Successful AMQP inbound connection", RoutingDirection.INBOUND)
             } else {
-                auditService.failedConnectionEvent(it.remoteAddress, it.remoteCert?.subjectDN?.name
-                        ?: "", "Failed AMQP inbound connection", RoutingDirection.INBOUND)
+                auditService.terminatedConnectionEvent(it.remoteAddress, it.remoteCert?.subjectDN?.name
+                        ?: "", "Terminated AMQP inbound connection", RoutingDirection.INBOUND)
             }
         }, { log.error("Connection event error", it) })
         onReceiveSubscription = server.onReceive.subscribe(_onReceive)

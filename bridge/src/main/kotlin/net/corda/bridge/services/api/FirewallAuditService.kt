@@ -10,7 +10,7 @@ import java.net.InetSocketAddress
  */
 interface FirewallAuditService : ServiceLifecycleSupport {
     fun successfulConnectionEvent(address: InetSocketAddress, certificateSubject: String, msg: String, direction: RoutingDirection)
-    fun failedConnectionEvent(address: InetSocketAddress, certificateSubject: String?, msg: String, direction: RoutingDirection)
+    fun terminatedConnectionEvent(address: InetSocketAddress, certificateSubject: String?, msg: String, direction: RoutingDirection)
     fun packetDropEvent(packet: ApplicationMessage?, msg: String, direction: RoutingDirection)
     fun packetAcceptedEvent(packet: ApplicationMessage, direction: RoutingDirection)
     fun statusChangeEvent(msg: String)

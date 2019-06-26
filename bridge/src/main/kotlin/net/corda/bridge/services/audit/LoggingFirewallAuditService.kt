@@ -36,7 +36,7 @@ class LoggingFirewallAuditService(val conf: FirewallConfiguration,
             val keys = inbound.keys.union(outbound.keys)
             val leftPad = "\t".repeat(tabsCount)
             return keys.joinToString(separator = "\n") { key ->
-                leftPad + "$key -> in: ${nf.format(inbound.getOrDefault(key, AtomicLong(0))?.get())} out: ${nf.format(outbound.getOrDefault(key, AtomicLong(0))?.get())}"
+                leftPad + "$key -> in: ${nf.format(inbound.getOrDefault(key, AtomicLong(0)).get())} out: ${nf.format(outbound.getOrDefault(key, AtomicLong(0)).get())}"
             }
         }
 
@@ -72,12 +72,12 @@ class LoggingFirewallAuditService(val conf: FirewallConfiguration,
 
         fun reset() : State {
             val newStatsMap = forEveryRoutingDirection()
-            directionalStatsMap.entries.forEach {
-                val currentStats = it.value
+            directionalStatsMap.entries.forEach { entry ->
+                val currentStats = entry.value
                 val newStats = DirectionalStats().apply {
-                    activeConnectionCount.putAll(currentStats.activeConnectionCount)
+                    activeConnectionCount.putAll(currentStats.activeConnectionCount.filterValues { it.get() != 0L })
                 }
-                newStatsMap[it.key] = newStats
+                newStatsMap[entry.key] = newStats
             }
             return State(newStatsMap)
         }
@@ -112,11 +112,16 @@ class LoggingFirewallAuditService(val conf: FirewallConfiguration,
         }
     }
 
-    override fun failedConnectionEvent(address: InetSocketAddress, certificateSubject: String?, msg: String, direction: RoutingDirection) {
+    override fun terminatedConnectionEvent(address: InetSocketAddress, certificateSubject: String?, msg: String, direction: RoutingDirection) {
         logWithSuppression(address, certificateSubject, msg, direction) { log.info(it) }
         withDirectionalStatsOf(direction) {
-            failedConnectionCount.getOrPut(address, ::AtomicLong).incrementAndGet()
-            activeConnectionCount.getOrPut(address, ::AtomicLong).decrementAndGet()
+            if(activeConnectionCount.containsKey(address)) {
+                // Connection was active at one point in time
+                activeConnectionCount[address]?.decrementAndGet()
+            } else {
+                // There was never an active connection on this address, it must be initial attempt to connect has failed
+                failedConnectionCount.getOrPut(address, ::AtomicLong).incrementAndGet()
+            }
         }
     }
 

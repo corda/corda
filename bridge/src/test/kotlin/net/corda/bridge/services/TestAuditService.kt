@@ -28,7 +28,7 @@ class TestAuditService() : FirewallAuditService, TestServiceBase() {
         _onAuditEvent.onNext(AuditEvent.SUCCESSFUL_CONNECTION)
     }
 
-    override fun failedConnectionEvent(address: InetSocketAddress, certificateSubject: String?, msg: String, direction: RoutingDirection) {
+    override fun terminatedConnectionEvent(address: InetSocketAddress, certificateSubject: String?, msg: String, direction: RoutingDirection) {
         ++eventCount
         _onAuditEvent.onNext(AuditEvent.FAILED_CONNECTION)
     }

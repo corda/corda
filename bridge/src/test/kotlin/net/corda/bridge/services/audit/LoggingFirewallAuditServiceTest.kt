@@ -34,45 +34,39 @@ class LoggingFirewallAuditServiceTest {
 
     @Test
     fun testActiveConnectionsTracking() {
-        var t1 = thread {
-            (1..20).forEach { instance.successfulConnectionEvent(it.toAddress(), "connectionTrackingTest", "connectionSuccess", it.toDirection())}
-            (1..10).forEach { instance.failedConnectionEvent(it.toAddress(), "connectionTrackingTest", "connectionClose", it.toDirection())}
+
+        fun triggerActivity() {
+            val t1 = thread {
+                (1..20).forEach { instance.successfulConnectionEvent(it.toAddress(), "connectionTrackingTest", "connectionSuccess", it.toDirection()) }
+                (1..10).forEach { instance.terminatedConnectionEvent(it.toAddress(), "connectionTrackingTest", "connectionClose", it.toDirection()) }
+            }
+
+            val t2 = thread {
+                (1..10).forEach { instance.successfulConnectionEvent(it.toAddress(), "connectionTrackingTest", "connectionSuccess", it.toDirection()) }
+                (1..5).forEach { instance.terminatedConnectionEvent(it.toAddress(), "connectionTrackingTest", "connectionClose", it.toDirection()) }
+            }
+
+            t1.join()
+            t2.join()
         }
 
-        var t2 = thread {
-            (1..10).forEach { instance.successfulConnectionEvent(it.toAddress(), "connectionTrackingTest", "connectionSuccess", it.toDirection())}
-            (1..5).forEach { instance.failedConnectionEvent(it.toAddress(), "connectionTrackingTest", "connectionClose", it.toDirection())}
-        }
-
-        t1.join()
-        t2.join()
+        triggerActivity()
 
         with(instance.prepareStatsAndReset()) {
             assertThat(this, containsSubstring("Successful connection count: 9(inbound), 21(outbound)"))
-            assertThat(this, containsSubstring("Failed connection count: 4(inbound), 11(outbound)"))
+            assertThat(this, containsSubstring("Failed connection count: 0(inbound), 0(outbound)"))
             assertThat(this, containsSubstring("Active connection count: 5(inbound), 10(outbound)"))
             assertThat(this, containsSubstring("Packets accepted count: 0(inbound), 0(outbound)"))
             assertThat(this, containsSubstring("Bytes transmitted: 0(inbound), 0(outbound)"))
             assertThat(this, containsSubstring("Packets dropped count: 0(inbound), 0(outbound)"))
         }
 
-        t1 = thread {
-            (1..20).forEach { instance.successfulConnectionEvent(it.toAddress(), "connectionTrackingTest", "connectionSuccess", it.toDirection())}
-            (1..10).forEach { instance.failedConnectionEvent(it.toAddress(), "connectionTrackingTest", "connectionClose", it.toDirection())}
-        }
-
-        t2 = thread {
-            (1..10).forEach { instance.successfulConnectionEvent(it.toAddress(), "connectionTrackingTest", "connectionSuccess", it.toDirection())}
-            (1..5).forEach { instance.failedConnectionEvent(it.toAddress(), "connectionTrackingTest", "connectionClose", it.toDirection())}
-        }
-
-        t1.join()
-        t2.join()
+        triggerActivity()
 
         // Verify that after another round of connection shuffling, the temporary stats are properly reset while active connections are only updated correctly
         with(instance.prepareStatsAndReset()) {
             assertThat(this, containsSubstring("Successful connection count: 9(inbound), 21(outbound)"))
-            assertThat(this, containsSubstring("Failed connection count: 4(inbound), 11(outbound)"))
+            assertThat(this, containsSubstring("Failed connection count: 0(inbound), 0(outbound)"))
             assertThat(this, containsSubstring("Active connection count: 10(inbound), 20(outbound)"))
             assertThat(this, containsSubstring("Packets accepted count: 0(inbound), 0(outbound)"))
             assertThat(this, containsSubstring("Bytes transmitted: 0(inbound), 0(outbound)"))
@@ -84,7 +78,7 @@ class LoggingFirewallAuditServiceTest {
     fun testStatsOutput() {
 
         val failedConnCount = 7
-        (1..failedConnCount).forEach { instance.failedConnectionEvent(it.toAddress(), null, "test", it.toDirection()) }
+        (1..failedConnCount).forEach { instance.terminatedConnectionEvent(it.toAddress(), null, "test", it.toDirection()) }
         val succConnCount = 40
         (1..succConnCount).forEach { instance.successfulConnectionEvent(it.toAddress(), "test2", "test", it.toDirection()) }
 
@@ -103,7 +97,7 @@ class LoggingFirewallAuditServiceTest {
        with(instance.prepareStatsAndReset()) {
            assertThat(this, containsSubstring("Successful connection count: 13(inbound), 27(outbound)"))
            assertThat(this, containsSubstring("Failed connection count: 2(inbound), 5(outbound)"))
-           assertThat(this, containsSubstring("Active connection count: 11(inbound), 22(outbound)"))
+           assertThat(this, containsSubstring("Active connection count: 13(inbound), 27(outbound)"))
            assertThat(this, containsSubstring("Packets accepted count: 3,000(inbound), 6,000(outbound)"))
            assertThat(this, containsSubstring("Bytes transmitted: 60,000(inbound), 120,000(outbound)"))
            assertThat(this, containsSubstring("Packets dropped count: 6(inbound), 14(outbound)"))
@@ -114,7 +108,7 @@ class LoggingFirewallAuditServiceTest {
         // Ensure reset stats
         with(instance.prepareStatsAndReset()) {
             assertThat(this, containsSubstring("Successful connection count: 0"))
-            assertThat(this, containsSubstring("Active connection count: 11(inbound), 22(outbound)"))
+            assertThat(this, containsSubstring("Active connection count: 13(inbound), 27(outbound)"))
             assertThat(this, containsSubstring("Packets dropped count: 0(inbound), 0(outbound)"))
             assertThat(this, containsSubstring("Failed connections:").not())
             assertThat(this, containsSubstring("Accepted packets:").not())
