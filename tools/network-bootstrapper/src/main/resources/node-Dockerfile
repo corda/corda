@@ -1,5 +1,4 @@
-# Base image from (http://phusion.github.io/baseimage-docker)
-FROM openjdk:8u151-jre-alpine
+FROM openjdk:8u212-jre-alpine
 
 RUN apk upgrade --update && \
     apk add --update --no-cache bash iputils && \
