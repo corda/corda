@@ -39,11 +39,13 @@ Re-compiling your CorDapp requires updating its associated Gradle build file as 
     ext.kotlin_version = '|kotlin_version|'
     ext.quasar_version = '|quasar_version|'
 
-and specifying an additional repository entry to point to the location of the Corda Enterprise distribution and Corda dependencies. As an example:
+and specifying an additional repository entry to point to the location of the Corda Enterprise distribution and Corda dependencies.
 
 If your project is based on one of the official cordapp templates, it is likely you have a ``lib/quasar.jar`` checked in.  It is worth noting
 that you only use this if you use the JUnit runner in IntelliJ.  In the latest release of the cordapp templates, this directory has
 been removed.
+
+As an example:
 
 .. sourcecode:: shell
 
