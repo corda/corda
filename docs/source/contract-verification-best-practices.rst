@@ -2,13 +2,13 @@ Writing smart contracts - Best practices
 ========================================
 
 The contract verification logic is likely the most security sensitive code that CorDapp developers will write.
-This code will be run by all nodes that must verify transactions with no restrictions to the inputs other that was is coded in the contract.
+This code will be run by all nodes that must verify transactions with no restrictions to the inputs other than what is coded in the contract.
 
-An important thing to remember when writing this code is that transactions can be handcrafted by colluding malicious participants that will try to
+An important thing to remember when writing this code is that transactions can be handcrafted by colluding malicious participants that may try to
 exploit any vulnerability in the contract logic to their advantage.
 
-Also, remember that this code will eventually run in a sandboxed deterministic environment (the Deterministic JVM), which will prevent access to any source of randomness.
-When writing a contract, there is no way to access the database, the local file system, the network, the time, etc..
+Contract logic will eventually run in a sandboxed deterministic environment (the Deterministic JVM), which will prevent access to any source of randomness.
+Which means that when writing a contract, there is no way to access the database, the local file system, the network, the time, etc..
 
 
 General guidelines
@@ -29,9 +29,12 @@ Given the nature of this code, the usual guidelines for writing secure software 
     E.g: A dependency method calculates the maximum of 2 values. But has a bug that if a value is negative it returns it. An attacker might
     try to exploit this by engineering a state that will end up calling this method with a negative value.
 
-    * Avoid, if possible, text parsing and regex. Or dependencies that rely on that. This means that creating a JSON type field should be avoided.
+    * Avoid, if possible, text parsing and regex. Or dependencies that rely on that. This means for example, that it is preferable to use a typed data model
+    instead of creating a ``JSON`` text field that. The reason is that JSON has a loose spec that is very open to ambiguous parsing. A malicious
+    user might craft a JSON that validates the contract but parses slightly differently when displayed in a UI and confuse end users.
+    Also parsing JSON inside the DJVM environment is expensive.
 
-    * Prefer un-ambiguous types for State fields. Avoid ``Map<String,String>`` type objects.
+    * Prefer un-ambiguous types for State fields. Avoid ``Map<String,String>`` or ``Map<String,Map<..>>`` type objects.
 
 
 
@@ -41,7 +44,7 @@ Step 1: Validate fields of States
 The verify methods main responsibility is to ensure that the output states are valid transitions from the input states. Obviously the first
 prerequisite for this is that both the input and the output states are themselves logically valid objects.
 
-Similar to JPA Entity objects that are mapped and persisted to database tables, the ``ContractState`` objects are persisted on the ``Ledger``.
+Similar to JPA Entity objects that are mapped and persisted to database tables, the ``ContractState`` objects are persisted on the Ledger.
 This means that similar concerns apply around their inner validity.
 E.g.: Some fields have to be ``NotNull``, other fields can only go to a maximum size, others must be valid emails, etc.
 
