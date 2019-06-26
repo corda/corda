@@ -318,7 +318,7 @@ object AttachmentsClassLoaderBuilder {
                                               isAttachmentTrusted: (Attachment) -> Boolean,
                                               parent: ClassLoader = ClassLoader.getSystemClassLoader(),
                                               block: (ClassLoader) -> T): T {
-        val attachmentIds = attachments.map { it.id }.toSet()
+        val attachmentIds = attachments.filterIsInstance<ContractAttachment>().map { it.id }.toSet()
 
         val serializationContext = cache.computeIfAbsent(Key(attachmentIds, params)) {
             // Create classloader and load serializers, whitelisted classes
