@@ -11,9 +11,13 @@ import net.corda.nodeapi.internal.config.UnknownConfigurationKeysException
 import net.corda.nodeapi.internal.config.parseAs
 import net.corda.nodeapi.internal.cryptoservice.CryptoService
 import net.corda.nodeapi.internal.cryptoservice.JCACryptoService
+import net.corda.nodeapi.internal.cryptoservice.WrappedPrivateKey
+import net.corda.nodeapi.internal.cryptoservice.WrappingMode
+import java.lang.UnsupportedOperationException
 import java.nio.file.Path
 import java.security.KeyStore
 import java.security.Provider
+import java.security.PublicKey
 import javax.security.auth.x500.X500Principal
 
 
@@ -37,6 +41,19 @@ class PrimusXCryptoService(keyStore: KeyStore, provider: Provider, x500Principal
         return DEFAULT_TLS_SIGNATURE_SCHEME
     }
 
+    override fun createWrappingKey(alias: String, failIfExists: Boolean) {
+        throw UnsupportedOperationException()
+    }
+
+    override fun generateWrappedKeyPair(masterKeyAlias: String, childKeyScheme: SignatureScheme): Pair<PublicKey, WrappedPrivateKey> {
+        throw UnsupportedOperationException()
+    }
+
+    override fun sign(masterKeyAlias: String, wrappedPrivateKey: WrappedPrivateKey, payloadToSign: ByteArray): ByteArray {
+        throw UnsupportedOperationException()
+    }
+
+    override fun getWrappingMode(): WrappingMode? = null
     companion object {
 
         val DEFAULT_IDENTITY_SIGNATURE_SCHEME = Crypto.ECDSA_SECP256R1_SHA256

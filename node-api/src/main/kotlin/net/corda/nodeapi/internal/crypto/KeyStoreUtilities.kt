@@ -21,11 +21,12 @@ const val KEYSTORE_TYPE = "JKS"
  * @param keyStoreFilePath location of KeyStore file.
  * @param storePassword password to open the store. This does not have to be the same password as any keys stored,
  * but for SSL purposes this is recommended.
+ * @param keystoreType the type of the keystore to be loaded. Defaults to "JKS".
  * @return returns the KeyStore opened/created.
  */
-fun loadOrCreateKeyStore(keyStoreFilePath: Path, storePassword: String): KeyStore {
+fun loadOrCreateKeyStore(keyStoreFilePath: Path, storePassword: String, keystoreType: String = KEYSTORE_TYPE): KeyStore {
     val pass = storePassword.toCharArray()
-    val keyStore = KeyStore.getInstance(KEYSTORE_TYPE)
+    val keyStore = KeyStore.getInstance(keystoreType)
     if (keyStoreFilePath.exists()) {
         keyStoreFilePath.read { keyStore.load(it, pass) }
     } else {

@@ -59,9 +59,11 @@ class NetworkRegistrationHelperTest {
         abstract class AbstractNodeConfiguration : NodeConfiguration
 
         val certificatesDirectory = baseDirectory / "certificates"
+        val wrappingKeyStorePath = certificatesDirectory / "wrappingkeystore.pkcs12"
         config = rigorousMock<AbstractNodeConfiguration>().also {
             doReturn(baseDirectory).whenever(it).baseDirectory
             doReturn(certificatesDirectory).whenever(it).certificatesDirectory
+            doReturn(wrappingKeyStorePath).whenever(it).wrappingKeyStorePath
             doReturn(CertificateStoreStubs.P2P.withCertificatesDirectory(certificatesDirectory)).whenever(it).p2pSslOptions
             doReturn(CertificateStoreStubs.Signing.withCertificatesDirectory(certificatesDirectory)).whenever(it).signingCertificateStore
             doReturn(nodeLegalName).whenever(it).myLegalName

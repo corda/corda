@@ -14,6 +14,8 @@ import net.corda.nodeapi.internal.cryptoservice.CryptoServiceException
 import net.corda.nodeapi.internal.cryptoservice.JCACryptoService
 import net.corda.core.utilities.detailedLogger
 import net.corda.core.utilities.trace
+import net.corda.nodeapi.internal.cryptoservice.*
+import java.lang.UnsupportedOperationException
 import java.nio.file.Path
 import java.security.*
 import java.util.concurrent.ConcurrentHashMap
@@ -104,6 +106,20 @@ class FutureXCryptoService(keyStore: KeyStore, provider: SunPKCS11, x500Principa
         keyPairGenerator.initialize(params)
         return keyPairGenerator
     }
+
+    override fun createWrappingKey(alias: String, failIfExists: Boolean) {
+        throw UnsupportedOperationException()
+    }
+
+    override fun generateWrappedKeyPair(masterKeyAlias: String, childKeyScheme: SignatureScheme): Pair<PublicKey, WrappedPrivateKey> {
+        throw UnsupportedOperationException()
+    }
+
+    override fun sign(masterKeyAlias: String, wrappedPrivateKey: WrappedPrivateKey, payloadToSign: ByteArray): ByteArray {
+        throw UnsupportedOperationException()
+    }
+
+    override fun getWrappingMode(): WrappingMode? = null
 
     companion object {
         val KEYSTORE_TYPE = "PKCS11"

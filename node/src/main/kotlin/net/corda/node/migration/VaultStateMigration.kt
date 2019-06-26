@@ -137,7 +137,6 @@ object VaultMigrationSchemaBuilder {
                         DBTransactionStorage.DBTransaction::class.java,
                         PersistentIdentityService.PersistentIdentity::class.java,
                         PersistentIdentityService.PersistentIdentityNames::class.java,
-                        BasicHSMKeyManagementService.PersistentKey::class.java,
                         NodeAttachmentService.DBAttachment::class.java,
                         DBNetworkParametersStorage.PersistentNetworkParameters::class.java
                 ))
