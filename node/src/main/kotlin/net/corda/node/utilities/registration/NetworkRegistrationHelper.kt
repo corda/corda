@@ -62,7 +62,7 @@ open class NetworkRegistrationHelper(
     private val certificatesDirectory: Path = config.certificatesDirectory
     private val myLegalName: CordaX500Name = config.myLegalName
     private val emailAddress: String = config.emailAddress
-    private val cryptoService = CryptoServiceFactory.makeCryptoService(SupportedCryptoServices.BC_SIMPLE, config.myLegalName, config.signingCertificateStore)
+    private val cryptoService = CryptoServiceFactory.makeCryptoService(config.cryptoServiceName ?: SupportedCryptoServices.BC_SIMPLE, config.myLegalName, config.signingCertificateStore, config.cryptoServiceConf)
     private val certificateStore = config.signingCertificateStore.get(true)
     private val requestIdStore = certificatesDirectory / "certificate-request-id.txt"
     protected val rootTrustStore: X509KeyStore
@@ -121,7 +121,7 @@ open class NetworkRegistrationHelper(
             is UtimacoCryptoService -> logProgress("Private key '$nodeCaKeyAlias' stored in Utimaco HSM. Certificate-chain stored in node keystore.")
             is FutureXCryptoService -> logProgress("Private key '$nodeCaKeyAlias' stored in FutureX HSM. Certificate-chain stored in node keystore.")
             is PrimusXCryptoService -> logProgress("Private key '$nodeCaKeyAlias' stored in PrimusX HSM. Certificate-chain stored in node keystore.")
-            else -> logProgress("Private key '$nodeCaKeyAlias' and its certificate-chain stored successfully.")
+            is BCCryptoService -> logProgress("Private key '$nodeCaKeyAlias' and its certificate-chain stored successfully.")
         }
 
 
