@@ -21,7 +21,6 @@ import rx.subjects.PublishSubject
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.LinkedBlockingQueue
 import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 @RunWith(Parameterized::class)
@@ -180,11 +179,11 @@ class ClientRPCInfrastructureTests : AbstractRPCTest() {
         }
     }
 
-    @Test
+    @Test(expected = UnsupportedOperationException::class)
     fun versioning() {
         rpcDriver {
             val proxy = testProxy()
-            assertFailsWith<UnsupportedOperationException> { proxy.addedLater() }
+            proxy.addedLater()
         }
     }
 

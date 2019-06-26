@@ -997,7 +997,8 @@ interface InternalDriverDSL : DriverDSL {
         val testExecutionThread = DriverTestingThread(callingPackage) {
             try {
                 this.start()
-                resultHolder.set(dsl(coerce1))
+                val resultOfExecution = dsl(coerce1)
+                resultHolder.set(resultOfExecution)
             } catch (e: Throwable) {
                 resultHolder.set(e)
             }
