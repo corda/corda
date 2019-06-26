@@ -152,17 +152,16 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
     }
 
     fun loadIdentities(identities: Collection<PartyAndCertificate> = emptySet(), confidentialIdentities: Collection<PartyAndCertificate> = emptySet()) {
-        database.transaction {
             identities.forEach {
                 val key = mapToKey(it)
                 keyToPartyAndCert.addWithDuplicatesAllowed(key, it, false)
                 partyToKey.addWithDuplicatesAllowed(it.name, key, true)
+                keyToParty.addWithDuplicatesAllowed(mapToKey(it), it.name, false)
             }
             confidentialIdentities.forEach {
                 keyToParty.addWithDuplicatesAllowed(mapToKey(it), it.name, false)
             }
             log.debug("Identities loaded")
-        }
     }
 
     @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
