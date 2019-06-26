@@ -50,22 +50,35 @@ class ArtemisConnectionTest {
         val artemisSigningService = createArtemisSigningService(bridgeConfig)
         val artemisService = BridgeArtemisConnectionServiceImpl(artemisSigningService, bridgeConfig, MAX_MESSAGE_SIZE, auditService)
         val stateFollower = artemisService.activeChange.toBlocking().iterator
+
+        // Starting artemisService on it own is not enough for it to be active. *All* the dependencies should be started as well.
         artemisService.start()
         assertEquals(false, stateFollower.next())
         assertEquals(false, artemisService.active)
         assertNull(artemisService.started)
+
+        // Starting Audit Service - but this is still not enough
         auditService.start()
         assertEquals(false, artemisService.active)
         assertNull(artemisService.started)
+
+        // Starting Signing Service - but this is still not enough
+        artemisSigningService.start()
+        assertEquals(false, artemisService.active)
+        assertNull(artemisService.started)
+
+        // Finally creating Artemis bus should trigger it into the active state
         var artemisServer = createArtemis()
         try {
             assertEquals(true, stateFollower.next())
             assertEquals(true, artemisService.active)
             assertNotNull(artemisService.started)
+            // Ensure status correct after stop
             auditService.stop()
             assertEquals(false, stateFollower.next())
             assertEquals(false, artemisService.active)
             assertNull(artemisService.started)
+            // Ensure status correctly reflected after re-start
             auditService.start()
             assertEquals(true, stateFollower.next())
             assertEquals(true, artemisService.active)
@@ -73,9 +86,13 @@ class ArtemisConnectionTest {
         } finally {
             artemisServer.stop()
         }
+
+        // Since Artemis been stopped check status.
         assertEquals(false, stateFollower.next())
         assertEquals(false, artemisService.active)
         assertNull(artemisService.started)
+
+        // Re-create message bus and ensure active status correctly reflects that.
         artemisServer = createArtemis()
         try {
             assertEquals(true, stateFollower.next())
@@ -84,12 +101,15 @@ class ArtemisConnectionTest {
         } finally {
             artemisServer.stop()
         }
+
+        // Ensure no longer active and tidy-up
         assertEquals(false, stateFollower.next())
         assertEquals(false, artemisService.active)
         assertNull(artemisService.started)
+        auditService.stop()
+        artemisSigningService.stop()
         artemisService.stop()
     }
-
 
     private fun createArtemis(): ArtemisMessagingServer {
 

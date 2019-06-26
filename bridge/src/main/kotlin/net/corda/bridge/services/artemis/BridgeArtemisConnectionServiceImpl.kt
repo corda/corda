@@ -47,7 +47,7 @@ class BridgeArtemisConnectionServiceImpl(artemisSigningService: TLSSigningServic
     private var statusSubscriber: Subscription? = null
 
     init {
-        statusFollower = ServiceStateCombiner(listOf(auditService))
+        statusFollower = ServiceStateCombiner(listOf(auditService, artemisSigningService))
         sslConfiguration = conf.outboundConfig?.artemisSSLConfiguration ?: conf.publicSSLConfiguration
 
         val provider = Security.getProvider(DelegatedKeystoreProvider.PROVIDER_NAME)
