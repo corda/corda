@@ -1,6 +1,10 @@
 package net.corda.client.rpc.internal
 
 import net.corda.client.rpc.*
+import net.corda.client.rpc.reconnect.CouldNotStartFlowException
+import net.corda.client.rpc.reconnect.ReconnectingObservable
+import net.corda.client.rpc.reconnect.ReconnectingObservableImpl
+import net.corda.client.rpc.reconnect.asReconnecting
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.div
 import net.corda.core.internal.messaging.InternalCordaRPCOps
@@ -21,10 +25,8 @@ import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Method
 import java.lang.reflect.Proxy
 import java.time.Duration
-import java.util.*
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
-import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 
 /**
@@ -256,68 +258,6 @@ class ReconnectingCordaRPCOps private constructor(
         }
     }
 
-    class ReconnectingObservableImpl<T> internal constructor(
-            val reconnectingSubscriber: ReconnectingSubscriber<T>
-    ) : Observable<T>(reconnectingSubscriber), ReconnectingObservable<T> by reconnectingSubscriber {
-
-        constructor(reconnectingRPCConnection: ReconnectingRPCConnection, observersPool: ExecutorService, initial: DataFeed<*, T>, createDataFeed: () -> DataFeed<*, T>):
-                this(ReconnectingSubscriber(reconnectingRPCConnection, observersPool, initial, createDataFeed))
-
-        class ReconnectingSubscriber<T>(private val reconnectingRPCConnection: ReconnectingRPCConnection,
-                                        private val observersPool: ExecutorService,
-                                        val initial: DataFeed<*, T>,
-                                        val createDataFeed: () -> DataFeed<*, T>): OnSubscribe<T>, ReconnectingObservable<T> {
-            override fun call(child: rx.Subscriber<in T>?) {
-                subscribe( {t -> child!!.onNext(t) }, {}, {}, {})
-            }
-
-            private var initialStartWith: Iterable<T>? = null
-            fun _subscribeWithReconnect(observerHandle: ObserverHandle, onNext: (T) -> Unit, onStop: () -> Unit, onDisconnect: () -> Unit, onReconnect: () -> Unit, startWithValues: Iterable<T>? = null) {
-                var subscriptionError: Throwable?
-                try {
-                    val subscription = initial.updates.let { if (startWithValues != null) it.startWith(startWithValues) else it }
-                            .subscribe(onNext, observerHandle::fail, observerHandle::stop)
-                    subscriptionError = observerHandle.await()
-                    subscription.unsubscribe()
-                } catch (e: Exception) {
-                    log.error("Failed to register subscriber .", e)
-                    subscriptionError = e
-                }
-
-                // In case there was no exception the observer has finished gracefully.
-                if (subscriptionError == null) {
-                    onStop()
-                    return
-                }
-
-                onDisconnect()
-                // Only continue if the subscription failed.
-                reconnectingRPCConnection.error(subscriptionError)
-                log.debug { "Recreating data feed." }
-
-                val newObservable = createDataFeed().updates as ReconnectingObservableImpl<T>
-                onReconnect()
-                return newObservable.reconnectingSubscriber._subscribeWithReconnect(observerHandle, onNext, onStop, onDisconnect, onReconnect)
-            }
-
-            override fun subscribe(onNext: (T) -> Unit, onStop: () -> Unit, onDisconnect: () -> Unit, onReconnect: () -> Unit): ObserverHandle {
-                val observerNotifier = ObserverHandle()
-                // TODO - change the establish connection method to be non-blocking
-                observersPool.execute {
-                    _subscribeWithReconnect(observerNotifier, onNext, onStop, onDisconnect, onReconnect, initialStartWith)
-                }
-                return observerNotifier
-            }
-
-            override fun startWithValues(values: Iterable<T>): ReconnectingObservable<T> {
-                initialStartWith = values
-                return this
-            }
-
-        }
-
-    }
-
     private class ErrorInterceptingHandler(val reconnectingRPCConnection: ReconnectingRPCConnection, val observersPool: ExecutorService) : InvocationHandler {
         private fun Method.isStartFlow() = name.startsWith("startFlow") || name.startsWith("startTrackedFlow")
 
@@ -382,42 +322,5 @@ class ReconnectingCordaRPCOps private constructor(
         reconnectingRPCConnection.forceClose()
     }
 }
-
-/**
- * Returned as the `updates` field when calling methods that return a [DataFeed] on the [ReconnectingCordaRPCOps].
- *
- * TODO - provide a logical function to know how to retrieve missing events that happened during disconnects.
- */
-interface ReconnectingObservable<T> {
-    fun subscribe(onNext: (T) -> Unit): ObserverHandle = subscribe(onNext, {}, {}, {})
-    fun subscribe(onNext: (T) -> Unit, onStop: () -> Unit, onDisconnect: () -> Unit, onReconnect: () -> Unit): ObserverHandle
-    fun startWithValues(values: Iterable<T>): ReconnectingObservable<T>
-}
-
-/**
- * Utility to externally control a subscribed observer.
- */
-class ObserverHandle {
-    private val terminated = LinkedBlockingQueue<Optional<Throwable>>(1)
-
-    fun stop() = terminated.put(Optional.empty())
-    internal fun fail(e: Throwable) = terminated.put(Optional.of(e))
-
-    /**
-     * Returns null if the observation ended successfully.
-     */
-    internal fun await(): Throwable? = terminated.take().orElse(null)
-}
-
-/**
- * Thrown when a flow start command died before receiving a [net.corda.core.messaging.FlowHandle].
- * On catching this exception, the typical behaviour is to run a "logical retry", meaning only retry the flow if the expected outcome did not occur.
- */
-class CouldNotStartFlowException(cause: Throwable? = null) : RPCException("Could not start flow as connection failed", cause)
-
-/**
- * Mainly for Kotlin users.
- */
-fun <T> Observable<T>.asReconnecting(): ReconnectingObservable<T> = uncheckedCast(this)
 
 fun <T> Observable<T>.asReconnectingWithInitialValues(values: Iterable<T>): ReconnectingObservable<T> = asReconnecting().startWithValues(values)

@@ -1,5 +1,6 @@
 package net.corda.client.rpc
 
+import net.corda.client.rpc.reconnect.asReconnecting
 import net.corda.core.messaging.startTrackedFlow
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.queryBy
@@ -21,6 +22,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class CordaRPCClientReconnectionTest {
@@ -58,6 +60,36 @@ class CordaRPCClientReconnectionTest {
             assertThat(networkParameters).isEqualTo(networkParametersAfterCrash)
             assertTrue {
                 latch.await(2, TimeUnit.SECONDS)
+            }
+        }
+    }
+
+    @Test
+    fun `a client can successfully unsubscribe a reconnecting observable, when using the observer handle API`() {
+        driver(DriverParameters(cordappsForAllNodes = FINANCE_CORDAPPS, startNodesInProcess = false, inMemoryDB = false)) {
+            val latch = CountDownLatch(2)
+            val address = NetworkHostAndPort("localhost", portAllocator.nextPort())
+            fun startNode() = startNode(providedName = CHARLIE_NAME, rpcUsers = listOf(CordaRPCClientTest.rpcUser), customOverrides = mapOf("rpcSettings.address" to address.toString())).getOrThrow()
+
+            val node = startNode()
+            val client = CordaRPCClient(node.rpcAddress, CordaRPCClientConfiguration.DEFAULT.copy(
+                    maxReconnectAttempts = 5
+            ))
+
+            val rpcOps = client.start(rpcUser.username, rpcUser.password, true).proxy
+            val cashStatesFeed = rpcOps.vaultTrack(Cash.State::class.java)
+            val observerHandle = cashStatesFeed.updates.asReconnecting().subscribe { latch.countDown() }
+            rpcOps.startTrackedFlow(::CashIssueFlow, 10.DOLLARS, OpaqueBytes.of(0), defaultNotaryIdentity).returnValue.get()
+
+            node.stop()
+            startNode()
+
+            observerHandle.stop()
+
+            rpcOps.startTrackedFlow(::CashIssueFlow, 10.DOLLARS, OpaqueBytes.of(0), defaultNotaryIdentity).returnValue.get()
+
+            assertFalse {
+                latch.await(4, TimeUnit.SECONDS)
             }
         }
     }

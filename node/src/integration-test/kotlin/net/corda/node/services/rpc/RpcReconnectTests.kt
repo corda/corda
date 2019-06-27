@@ -1,7 +1,7 @@
 package net.corda.node.services.rpc
 
 import net.corda.client.rpc.internal.ReconnectingCordaRPCOps
-import net.corda.client.rpc.internal.asReconnecting
+import net.corda.client.rpc.reconnect.asReconnecting
 import net.corda.core.contracts.Amount
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.concurrent.transpose
@@ -38,11 +38,16 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
- * This is a slow test!
+ * This is a stress test for the rpc reconnection logic, which triggers failures in a probabilistic way.
+ *
+ * You can adjust the variable [NUMBER_OF_FLOWS_TO_RUN] to adjust the number of flows to run and the duration of the test.
  */
 class RpcReconnectTests {
 
     companion object {
+        // 150 flows take ~5 minutes
+        const val NUMBER_OF_FLOWS_TO_RUN = 150
+
         private val log = contextLogger()
     }
 
@@ -63,13 +68,12 @@ class RpcReconnectTests {
      */
     @Test
     fun `test that the RPC client is able to reconnect and proceed after node failure, restart, or connection reset`() {
-        val nrOfFlowsToRun = 150 // Takes around 5 minutes.
         val nodeRunningTime = { Random().nextInt(12000) + 8000 }
 
         val demoUser = User("demo", "demo", setOf(Permissions.all()))
 
         // When this reaches 0 - the test will end.
-        val flowsCountdownLatch = CountDownLatch(nrOfFlowsToRun)
+        val flowsCountdownLatch = CountDownLatch(NUMBER_OF_FLOWS_TO_RUN)
 
         // These are the expected progress steps for the CashIssueAndPayFlow.
         val expectedProgress = listOf(
@@ -195,7 +199,7 @@ class RpcReconnectTests {
 
             // Start nrOfFlowsToRun and provide a logical retry function that checks the vault.
             val flowProgressEvents = mutableMapOf<StateMachineRunId, MutableList<String>>()
-            for (amount in (1..nrOfFlowsToRun)) {
+            for (amount in (1..NUMBER_OF_FLOWS_TO_RUN)) {
                 // DOCSTART rpcReconnectingRPCFlowStarting
                 bankAReconnectingRpc.runFlowWithLogicalRetry(
                         runFlow = { rpc ->
@@ -263,16 +267,16 @@ class RpcReconnectTests {
             var nrRetries = 0
 
             // It might be necessary to wait more for all events to arrive when the node is slow.
-            while (allCashStates.size < nrOfFlowsToRun && nrRetries++ < 50) {
+            while (allCashStates.size < NUMBER_OF_FLOWS_TO_RUN && nrRetries++ < 50) {
                 Thread.sleep(2000)
                 allCashStates = readCashStates()
             }
 
             val allCash = allCashStates.map { it.state.data.amount.quantity }.toSet()
-            val missingCash = (1..nrOfFlowsToRun).filterNot { allCash.contains(it.toLong() * 100) }
+            val missingCash = (1..NUMBER_OF_FLOWS_TO_RUN).filterNot { allCash.contains(it.toLong() * 100) }
             log.info("MISSING: $missingCash")
 
-            assertEquals(nrOfFlowsToRun, allCashStates.size, "Not all flows were executed successfully")
+            assertEquals(NUMBER_OF_FLOWS_TO_RUN, allCashStates.size, "Not all flows were executed successfully")
 
             // The progress status for each flow can only miss the last events, because the node might have been killed.
             val missingProgressEvents = flowProgressEvents.filterValues { expectedProgress.subList(0, it.size) != it }
@@ -282,7 +286,7 @@ class RpcReconnectTests {
             // Check that enough vault events were received.
             // This check is fuzzy because events can go missing during node restarts.
             // Ideally there should be nrOfFlowsToRun events receive but some might get lost for each restart.
-            assertTrue(vaultEvents!!.size + nrFailures * 3 >= nrOfFlowsToRun, "Not all vault events were received")
+            assertTrue(vaultEvents!!.size + nrFailures * 3 >= NUMBER_OF_FLOWS_TO_RUN, "Not all vault events were received")
             // DOCEND missingVaultEvents
 
             // Check that no flow was triggered twice.
@@ -291,8 +295,8 @@ class RpcReconnectTests {
 
             log.info("SM EVENTS: ${stateMachineEvents!!.size}")
             // State machine events are very likely to get lost more often because they seem to be sent with a delay.
-            assertTrue(stateMachineEvents.count { it is StateMachineUpdate.Added } > nrOfFlowsToRun / 3, "Too many Added state machine events lost.")
-            assertTrue(stateMachineEvents.count { it is StateMachineUpdate.Removed } > nrOfFlowsToRun / 3, "Too many Removed state machine events lost.")
+            assertTrue(stateMachineEvents.count { it is StateMachineUpdate.Added } > NUMBER_OF_FLOWS_TO_RUN / 3, "Too many Added state machine events lost.")
+            assertTrue(stateMachineEvents.count { it is StateMachineUpdate.Removed } > NUMBER_OF_FLOWS_TO_RUN / 3, "Too many Removed state machine events lost.")
 
             // Stop the observers.
             vaultObserverHandle.stop()

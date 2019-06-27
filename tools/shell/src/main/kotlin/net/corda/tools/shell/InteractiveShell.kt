@@ -13,7 +13,7 @@ import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.client.rpc.PermissionException
 import net.corda.client.rpc.internal.ReconnectingCordaRPCOps
-import net.corda.client.rpc.internal.ReconnectingObservable
+import net.corda.client.rpc.reconnect.ReconnectingObservable
 import net.corda.client.rpc.internal.asReconnectingWithInitialValues
 import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture

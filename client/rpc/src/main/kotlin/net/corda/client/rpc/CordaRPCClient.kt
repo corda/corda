@@ -4,6 +4,7 @@ import com.github.benmanes.caffeine.cache.Caffeine
 import net.corda.client.rpc.internal.RPCClient
 import net.corda.client.rpc.internal.ReconnectingCordaRPCOps
 import net.corda.client.rpc.internal.serialization.amqp.AMQPClientSerializationScheme
+import net.corda.core.CordaInternal
 import net.corda.core.internal.createInstancesOfClassesImplementing
 import net.corda.core.context.Actor
 import net.corda.core.context.Trace
@@ -31,44 +32,41 @@ import java.util.ServiceLoader
  *
  * @see RPCConnection
  */
-class CordaRPCConnection internal constructor(val connection: RPCConnection<CordaRPCOps>) : RPCConnection<CordaRPCOps> {
+class CordaRPCConnection internal constructor(private val connection: RPCConnection<CordaRPCOps>) : RPCConnection<CordaRPCOps> {
+
+    companion object {
+        @CordaInternal
+        internal fun createWithReconnection(connection: RPCConnection<CordaRPCOps>, username: String, password: String, addresses: List<NetworkHostAndPort>): CordaRPCConnection {
+            val cordaRpcConnection = CordaRPCConnection(connection)
+            cordaRpcConnection.reconnectingCordaRPCOps = ReconnectingCordaRPCOps(addresses, username, password)
+            return cordaRpcConnection
+        }
+    }
 
     private var reconnectingCordaRPCOps: ReconnectingCordaRPCOps? = null
 
-    constructor(connection: RPCConnection<CordaRPCOps>, username: String, password: String, addresses: List<NetworkHostAndPort>): this(connection) {
-        this.reconnectingCordaRPCOps = ReconnectingCordaRPCOps(addresses, username, password)
-    }
-
-    private val actualConnection: RPCConnection<CordaRPCOps> by lazy {
-        if (reconnectingCordaRPCOps != null) {
-            reconnectingCordaRPCOps!!.reconnectingRPCConnection
-        } else {
-            connection
-        }
+    private fun actualConnection(): RPCConnection<CordaRPCOps> {
+        return reconnectingCordaRPCOps?.reconnectingRPCConnection ?: connection
     }
 
     override val proxy: CordaRPCOps get() {
-        return if (reconnectingCordaRPCOps != null) {
-            reconnectingCordaRPCOps!!
-        } else {
-            connection.proxy
-        }
+        return reconnectingCordaRPCOps ?: connection.proxy
     }
 
     override val serverProtocolVersion: Int get() {
-        return actualConnection.serverProtocolVersion
+        return actualConnection().serverProtocolVersion
     }
 
     override fun notifyServerAndClose() {
-        return actualConnection.notifyServerAndClose()
+        return actualConnection().notifyServerAndClose()
     }
 
     override fun forceClose() {
-        return actualConnection.forceClose()
+        return actualConnection().forceClose()
     }
 
     override fun close() {
-        return actualConnection.close()
+        return actualConnection().close()
     }
 
 }
@@ -435,13 +433,15 @@ class CordaRPCClient private constructor(
      */
     @JvmOverloads
     fun start(username: String, password: String, externalTrace: Trace?, impersonatedActor: Actor?, targetLegalIdentity: CordaX500Name?, reconnecting: Boolean = false): CordaRPCConnection {
-        val addresses = if (haAddressPool.isEmpty())
+        val addresses = if (haAddressPool.isEmpty()) {
             listOf(hostAndPort!!)
-        else
+        }
+        else {
             haAddressPool
+        }
 
         return if (reconnecting)
-            CordaRPCConnection(getRpcClient().start(InternalCordaRPCOps::class.java, username, password, externalTrace, impersonatedActor, targetLegalIdentity), username, password, addresses)
+            CordaRPCConnection.createWithReconnection(getRpcClient().start(InternalCordaRPCOps::class.java, username, password, externalTrace, impersonatedActor, targetLegalIdentity), username, password, addresses)
         else
             CordaRPCConnection(getRpcClient().start(InternalCordaRPCOps::class.java, username, password, externalTrace, impersonatedActor, targetLegalIdentity))
     }
