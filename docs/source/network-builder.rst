@@ -9,7 +9,11 @@ containers to abstract the complexity of managing a distributed network away fro
 .. image:: _static/images/network-builder-v4.png
 
 The network you build will either be made up of local ``docker`` nodes *or* of nodes spread across Azure
-containers. More backends may be added in future. The tool is open source, so contributions to add more
+containers.
+For each node a separate Docker image is built based on `corda/corda-zulu-4.0 <https://hub.docker.com/r/corda/corda-zulu-4.0>`.
+Unlike the official image, a `node.conf` file and CorDapps are embedded into an image
+(they are not externally provided to the running container via volumes/mount points).
+More backends may be added in future. The tool is open source, so contributions to add more
 destinations for the containers are welcome!
 
 `Download the Corda Network Builder <https://ci-artifactory.corda.r3cev.com/artifactory/corda-releases/net/corda/corda-network-builder/3.2.1847-corda/corda-network-builder-3.2.1847-corda-executable.jar>`_.
@@ -61,11 +65,11 @@ If you run ``docker ps`` to see the running containers, the following output sho
 
 .. sourcecode:: shell
 
-    CONTAINER ID        IMAGE                       COMMAND             CREATED             STATUS              PORTS                                                                                                    NAMES
-    406868b4ba69        node-partyc:corda-network   "/run-corda.sh"     17 seconds ago      Up 16 seconds       0.0.0.0:32902->10003/tcp, 0.0.0.0:32895->10005/tcp, 0.0.0.0:32898->10020/tcp, 0.0.0.0:32900->12222/tcp   partyc0
-    4546a2fa8de7        node-partyb:corda-network   "/run-corda.sh"     17 seconds ago      Up 17 seconds       0.0.0.0:32896->10003/tcp, 0.0.0.0:32899->10005/tcp, 0.0.0.0:32901->10020/tcp, 0.0.0.0:32903->12222/tcp   partyb0
-    c8c44c515bdb        node-partya:corda-network   "/run-corda.sh"     17 seconds ago      Up 17 seconds       0.0.0.0:32894->10003/tcp, 0.0.0.0:32897->10005/tcp, 0.0.0.0:32892->10020/tcp, 0.0.0.0:32893->12222/tcp   partya0
-    cf7ab689f493        node-notary:corda-network   "/run-corda.sh"     30 seconds ago      Up 31 seconds       0.0.0.0:32888->10003/tcp, 0.0.0.0:32889->10005/tcp, 0.0.0.0:32890->10020/tcp, 0.0.0.0:32891->12222/tcp   notary0
+    CONTAINER ID        IMAGE                       COMMAND         CREATED             STATUS              PORTS                                                                                                    NAMES
+    406868b4ba69        node-partyc:corda-network   "run-corda"     17 seconds ago      Up 16 seconds       0.0.0.0:32902->10003/tcp, 0.0.0.0:32895->10005/tcp, 0.0.0.0:32898->10020/tcp, 0.0.0.0:32900->12222/tcp   partyc0
+    4546a2fa8de7        node-partyb:corda-network   "run-corda"     17 seconds ago      Up 17 seconds       0.0.0.0:32896->10003/tcp, 0.0.0.0:32899->10005/tcp, 0.0.0.0:32901->10020/tcp, 0.0.0.0:32903->12222/tcp   partyb0
+    c8c44c515bdb        node-partya:corda-network   "run-corda"     17 seconds ago      Up 17 seconds       0.0.0.0:32894->10003/tcp, 0.0.0.0:32897->10005/tcp, 0.0.0.0:32892->10020/tcp, 0.0.0.0:32893->12222/tcp   partya0
+    cf7ab689f493        node-notary:corda-network   "run-corda"     30 seconds ago      Up 31 seconds       0.0.0.0:32888->10003/tcp, 0.0.0.0:32889->10005/tcp, 0.0.0.0:32890->10020/tcp, 0.0.0.0:32891->12222/tcp   notary0
 
 Depending on you machine performance, even after all containers are reported as running,
 the underlying Corda nodes may be still starting and SSHing to a node may be not available immediately.
@@ -108,9 +112,8 @@ You can interact with the nodes by SSHing into them on the port that is mapped t
 
 You can also run a flow from cordapp-example: ``flow start com.example.flow.ExampleFlow$Initiator iouValue: 20, otherParty: "PartyB"``
 
-To verify it, connect  itno ``partyb0`` and run ``run vaultQuery contractStateType: "com.example.state.IOUState"``
-It should return one state form the vault.
-
+To verify it, connect into the ``partyb0`` node and run ``run vaultQuery contractStateType: "com.example.state.IOUState"``.
+The ``partyb0`` vault should contain ``IOUState``.
 
 Adding additional nodes
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -154,11 +157,11 @@ see the running containers, the following output should be displayed:
 
 .. sourcecode:: shell
 
-    CONTAINER ID        IMAGE                       COMMAND             CREATED             STATUS              PORTS                                                                                                    NAMES
-    406868b4ba69        node-partyc:corda-network   "/run-corda.sh"     17 seconds ago      Up 16 seconds       0.0.0.0:32902->10003/tcp, 0.0.0.0:32895->10005/tcp, 0.0.0.0:32898->10020/tcp, 0.0.0.0:32900->12222/tcp   partyc0
-    4546a2fa8de7        node-partyb:corda-network   "/run-corda.sh"     17 seconds ago      Up 17 seconds       0.0.0.0:32896->10003/tcp, 0.0.0.0:32899->10005/tcp, 0.0.0.0:32901->10020/tcp, 0.0.0.0:32903->12222/tcp   partyb0
-    c8c44c515bdb        node-partya:corda-network   "/run-corda.sh"     17 seconds ago      Up 17 seconds       0.0.0.0:32894->10003/tcp, 0.0.0.0:32897->10005/tcp, 0.0.0.0:32892->10020/tcp, 0.0.0.0:32893->12222/tcp   partya0
-    cf7ab689f493        node-notary:corda-network   "/run-corda.sh"     30 seconds ago      Up 31 seconds       0.0.0.0:32888->10003/tcp, 0.0.0.0:32889->10005/tcp, 0.0.0.0:32890->10020/tcp, 0.0.0.0:32891->12222/tcp   notary0
+    CONTAINER ID        IMAGE                       COMMAND         CREATED             STATUS              PORTS                                                                                                    NAMES
+    406868b4ba69        node-partyc:corda-network   "run-corda"     17 seconds ago      Up 16 seconds       0.0.0.0:32902->10003/tcp, 0.0.0.0:32895->10005/tcp, 0.0.0.0:32898->10020/tcp, 0.0.0.0:32900->12222/tcp   partyc0
+    4546a2fa8de7        node-partyb:corda-network   "run-corda"     17 seconds ago      Up 17 seconds       0.0.0.0:32896->10003/tcp, 0.0.0.0:32899->10005/tcp, 0.0.0.0:32901->10020/tcp, 0.0.0.0:32903->12222/tcp   partyb0
+    c8c44c515bdb        node-partya:corda-network   "run-corda"     17 seconds ago      Up 17 seconds       0.0.0.0:32894->10003/tcp, 0.0.0.0:32897->10005/tcp, 0.0.0.0:32892->10020/tcp, 0.0.0.0:32893->12222/tcp   partya0
+    cf7ab689f493        node-notary:corda-network   "run-corda"     30 seconds ago      Up 31 seconds       0.0.0.0:32888->10003/tcp, 0.0.0.0:32889->10005/tcp, 0.0.0.0:32890->10020/tcp, 0.0.0.0:32891->12222/tcp   notary0
 
 Interacting with the nodes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^

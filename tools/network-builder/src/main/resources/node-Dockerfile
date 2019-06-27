@@ -1,17 +1,4 @@
-FROM openjdk:8u212-jre-alpine
-
-RUN apk upgrade --update && \
-    apk add --update --no-cache bash iputils && \
-    rm -rf /var/cache/apk/* && \
-    # Add user to run the app && \
-    addgroup corda && \
-    adduser -G corda -D -s /bin/bash corda && \
-    # Create /opt/corda directory && \
-    mkdir -p /opt/corda/plugins && \
-    mkdir -p /opt/corda/logs && \
-    mkdir -p /opt/corda/additional-node-infos && \
-    mkdir -p /opt/node-setup  && \
-    mkdir -p /opt/corda/cordapps
+FROM corda/corda-zulu-4.0
 
 # Copy corda files
 ADD --chown=corda:corda corda.jar               /opt/corda/corda.jar
@@ -21,17 +8,15 @@ ADD --chown=corda:corda cordapps/               /opt/corda/cordapps
 # Copy node info watcher script
 ADD --chown=corda:corda node_info_watcher.sh    /opt/corda/
 
-COPY run-corda.sh /run-corda.sh
+COPY --chown=corda:corda run-corda.sh /opt/corda/bin/run-corda
 
-RUN chmod +x /run-corda.sh && \
+RUN chmod +x /opt/corda/bin/run-corda && \
     chmod +x /opt/corda/node_info_watcher.sh && \
-    sync && \
-    chown -R corda:corda /opt/corda
+    sync
 
 # Working directory for Corda
 WORKDIR /opt/corda
 ENV HOME=/opt/corda
-USER corda
 
 # Start it
-CMD ["/run-corda.sh"]
+CMD ["run-corda"]

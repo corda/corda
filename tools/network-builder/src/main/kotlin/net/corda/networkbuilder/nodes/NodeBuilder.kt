@@ -48,6 +48,9 @@ open class NodeBuilder {
                     override fun onComplete() {
                         super.onComplete()
                         LOG.info("finished building docker image for: $nodeDir with id: ${result?.imageId}")
+                        if (result == null || (result?.id == null && result?.errorDetail != null)) {
+                            future.completeExceptionally(IllegalStateException("Could not build image for: $nodeDir, reason: ${result?.errorDetail}"))
+                        }
                         val config = nodeConfig.parseAsNodeConfigWithFallback(ConfigFactory.parseFile(copiedNode.configFile)).value()
                         future.complete(copiedNode.builtNode(config, result?.imageId!!))
                     }
