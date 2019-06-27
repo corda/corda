@@ -1,4 +1,4 @@
-package net.corda.node.flows
+package net.corda.node.flows.overrides
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.*
@@ -19,6 +19,11 @@ import org.junit.Test
 
 class FlowOverrideTests {
 
+    companion object {
+        const val PONG = "PONG"
+        const val GORGONZOLA = "Gorgonzola"
+    }
+
     @StartableByRPC
     @InitiatingFlow
     class Ping(private val pongParty: Party) : FlowLogic<String>() {
@@ -31,10 +36,6 @@ class FlowOverrideTests {
 
     @InitiatedBy(Ping::class)
     open class Pong(private val pingSession: FlowSession) : FlowLogic<Unit>() {
-        companion object {
-            const val PONG = "PONG"
-        }
-
         @Suspendable
         override fun call() {
             pingSession.send(PONG)
@@ -42,58 +43,45 @@ class FlowOverrideTests {
     }
 
     @InitiatedBy(Ping::class)
-    class Pong2(private val pingSession: FlowSession) : FlowLogic<Unit>() {
-        @Suspendable
-        override fun call() {
-            pingSession.send("PONGPONG")
-        }
-    }
-
-    @InitiatedBy(Ping::class)
     class Pongiest(private val pingSession: FlowSession) : Pong(pingSession) {
-
-        companion object {
-            const val GORGONZOLA = "Gorgonzola"
-        }
-
         @Suspendable
         override fun call() {
             pingSession.send(GORGONZOLA)
         }
     }
 
-    private val nodeAClasses = setOf(Ping::class.java, Pong::class.java, Pongiest::class.java)
-    private val nodeBClasses = setOf(Ping::class.java, Pong::class.java)
+    private val nodeAClasses = setOf(Ping::class.java, Pong::class.java, Pongiest::class.java, FlowOverrideTests::class.java)
+    private val nodeBClasses = setOf(Ping::class.java, Pong::class.java, FlowOverrideTests::class.java)
 
     @Test
     fun `should use the most specific implementation of a responding flow`() {
-        driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = emptySet())) {
-            val nodeA = startNode(NodeParameters(
+        driver(DriverParameters(startNodesInProcess = false, cordappsForAllNodes = emptyList())) {
+            val nodeAFuture = startNode(NodeParameters(
                     providedName = ALICE_NAME,
                     additionalCordapps = setOf(cordappForClasses(*nodeAClasses.toTypedArray()))
-            )).getOrThrow()
-            val nodeB = startNode(NodeParameters(
+            ))
+            val nodeBFuture = startNode(NodeParameters(
                     providedName = BOB_NAME,
                     additionalCordapps = setOf(cordappForClasses(*nodeBClasses.toTypedArray()))
-            )).getOrThrow()
-            assertThat(nodeB.rpc.startFlow(::Ping, nodeA.nodeInfo.singleIdentity()).returnValue.getOrThrow(), `is`(Pongiest.GORGONZOLA))
+            ))
+            assertThat(nodeBFuture.get().rpc.startFlow(FlowOverrideTests::Ping, nodeAFuture.get().nodeInfo.singleIdentity()).returnValue.getOrThrow(), `is`(GORGONZOLA))
         }
     }
 
     @Test
     fun `should use the overriden implementation of a responding flow`() {
         val flowOverrides = mapOf(Ping::class.java to Pong::class.java)
-        driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = emptySet())) {
-            val nodeA = startNode(NodeParameters(
+        driver(DriverParameters(startNodesInProcess = false, cordappsForAllNodes = emptyList())) {
+            val nodeAFuture = startNode(NodeParameters(
                     providedName = ALICE_NAME,
                     additionalCordapps = setOf(cordappForClasses(*nodeAClasses.toTypedArray())),
                     flowOverrides = flowOverrides
-            )).getOrThrow()
-            val nodeB = startNode(NodeParameters(
+            ))
+            val nodeBFuture = startNode(NodeParameters(
                     providedName = BOB_NAME,
                     additionalCordapps = setOf(cordappForClasses(*nodeBClasses.toTypedArray()))
-            )).getOrThrow()
-            assertThat(nodeB.rpc.startFlow(::Ping, nodeA.nodeInfo.singleIdentity()).returnValue.getOrThrow(), `is`(Pong.PONG))
+            ))
+            assertThat(nodeBFuture.get().rpc.startFlow(FlowOverrideTests::Ping, nodeAFuture.get().nodeInfo.singleIdentity()).returnValue.getOrThrow(), `is`(PONG))
         }
     }
 

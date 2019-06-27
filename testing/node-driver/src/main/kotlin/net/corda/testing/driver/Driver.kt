@@ -268,6 +268,41 @@ data class DriverParameters(
     constructor(cordappsForAllNodes: Collection<TestCordapp>) : this(isDebug = false, cordappsForAllNodes = cordappsForAllNodes)
 
     constructor(
+            isDebug: Boolean,
+            driverDirectory: Path,
+            portAllocation: PortAllocation,
+            debugPortAllocation: PortAllocation,
+            systemProperties: Map<String, String>,
+            useTestClock: Boolean,
+            startNodesInProcess: Boolean,
+            waitForAllNodesToFinish: Boolean,
+            notarySpecs: List<NotarySpec>,
+            extraCordappPackagesToScan: List<String>,
+            jmxPolicy: JmxPolicy,
+            networkParameters: NetworkParameters,
+            notaryCustomOverrides: Map<String, Any?>,
+            inMemoryDB: Boolean,
+            cordappsForAllNodes: Collection<TestCordapp>
+    ) : this(
+            isDebug,
+            driverDirectory,
+            portAllocation,
+            debugPortAllocation,
+            systemProperties,
+            useTestClock,
+            startNodesInProcess,
+            waitForAllNodesToFinish,
+            notarySpecs,
+            extraCordappPackagesToScan,
+            @Suppress("DEPRECATION") jmxPolicy,
+            networkParameters,
+            notaryCustomOverrides,
+            inMemoryDB,
+            cordappsForAllNodes,
+            testTimeout = TimeUnit.MINUTES.toMillis(5)
+    )
+
+    constructor(
             isDebug: Boolean = false,
             driverDirectory: Path = Paths.get("build") / "node-driver" /  getTimestampAsDirectoryName(),
             portAllocation: PortAllocation = incrementalPortAllocation(10000),

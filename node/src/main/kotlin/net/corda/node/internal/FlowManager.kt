@@ -12,6 +12,7 @@ import net.corda.node.internal.classloading.requireAnnotation
 import net.corda.node.services.config.FlowOverrideConfig
 import net.corda.node.services.statemachine.appName
 import net.corda.node.services.statemachine.flowVersionAndInitiatingClass
+import java.util.*
 import javax.annotation.concurrent.ThreadSafe
 import kotlin.reflect.KClass
 
@@ -53,7 +54,7 @@ interface FlowManager {
 @ThreadSafe
 open class NodeFlowManager(flowOverrides: FlowOverrideConfig? = null) : FlowManager {
 
-    private val flowFactories = HashMap<Class<out FlowLogic<*>>, MutableList<RegisteredFlowContainer>>()
+    private val flowFactories = HashMap<Class<out FlowLogic<*>>, SortedSet<RegisteredFlowContainer>>()
     private val flowOverrides = (flowOverrides
             ?: FlowOverrideConfig()).overrides.map { it.initiator to it.responder }.toMutableMap()
 
@@ -102,16 +103,16 @@ open class NodeFlowManager(flowOverrides: FlowOverrideConfig? = null) : FlowMana
                                                                 flowFactory: InitiatedFlowFactory<F>,
                                                                 initiatedFlowClass: Class<F>?) {
 
+        log.info("Attempting to register $initiatedFlowClass from jar: ${initiatedFlowClass?.protectionDomain?.codeSource?.location} as a responder to $initiatingFlowClass")
+
         check(flowFactory !is InitiatedFlowFactory.Core) { "This should only be used for Cordapp flows" }
-        val listOfFlowsForInitiator = flowFactories.computeIfAbsent(initiatingFlowClass) { mutableListOf() }
+        val listOfFlowsForInitiator = flowFactories.computeIfAbsent(initiatingFlowClass) { TreeSet<RegisteredFlowContainer>(FlowWeightComparator(initiatingFlowClass, flowOverrides)) }
         if (listOfFlowsForInitiator.isNotEmpty() && listOfFlowsForInitiator.first().type == FlowType.CORE) {
             throw IllegalStateException("Attempting to register over an existing platform flow: $initiatingFlowClass")
         }
         synchronized(listOfFlowsForInitiator) {
             val flowToAdd = RegisteredFlowContainer(initiatingFlowClass, initiatedFlowClass, flowFactory, FlowType.CORDAPP)
-            val flowWeightComparator = FlowWeightComparator(initiatingFlowClass, flowOverrides)
             listOfFlowsForInitiator.add(flowToAdd)
-            listOfFlowsForInitiator.sortWith(flowWeightComparator)
             if (listOfFlowsForInitiator.size > 1) {
                 log.warn("Multiple flows are registered for InitiatingFlow: $initiatingFlowClass, currently using: ${listOfFlowsForInitiator.first().initiatedFlowClass}")
             }
@@ -135,7 +136,8 @@ open class NodeFlowManager(flowOverrides: FlowOverrideConfig? = null) : FlowMana
         require(initiatingFlowClass.java.flowVersionAndInitiatingClass.first == 1) {
             "${InitiatingFlow::class.java.name}.version not applicable for core flows; their version is the node's platform version"
         }
-        flowFactories.computeIfAbsent(initiatingFlowClass.java) { mutableListOf() }.add(
+        flowFactories.computeIfAbsent(initiatingFlowClass.java) { TreeSet<RegisteredFlowContainer>(FlowWeightComparator(initiatingFlowClass.java, flowOverrides)) }
+                .add(
                 RegisteredFlowContainer(
                         initiatingFlowClass.java,
                         initiatedFlowClass?.java,
@@ -147,7 +149,7 @@ open class NodeFlowManager(flowOverrides: FlowOverrideConfig? = null) : FlowMana
 
     // To verify the integrity of the current state, it is important that the tip of the responders is a unique weight
     // if there are multiple flows with the same weight as the tip, it means that it is impossible to reliably pick one as the responder
-    private fun validateInvariants(toValidate: List<RegisteredFlowContainer>) {
+    private fun validateInvariants(toValidate: SortedSet<RegisteredFlowContainer>) {
         val currentTip = toValidate.first()
         val flowWeightComparator = FlowWeightComparator(currentTip.initiatingFlowClass, flowOverrides)
         val equalWeightAsCurrentTip = toValidate.map { flowWeightComparator.compare(currentTip, it) to it }.filter { it.first == 0 }.map { it.second }
@@ -189,6 +191,10 @@ open class NodeFlowManager(flowOverrides: FlowOverrideConfig? = null) : FlowMana
             }
 
             if (o1.initiatedFlowClass == null && o2.initiatedFlowClass == null) {
+                return 0
+            }
+
+            if (o1 == o2) {
                 return 0
             }
 
