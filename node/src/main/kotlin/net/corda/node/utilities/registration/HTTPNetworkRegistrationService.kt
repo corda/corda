@@ -7,6 +7,7 @@ import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.seconds
 import net.corda.node.VersionInfo
 import net.corda.node.services.config.NetworkServicesConfig
+import net.corda.node.utilities.createProxy
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
 import okhttp3.CacheControl
 import okhttp3.Headers
@@ -30,10 +31,12 @@ class HTTPNetworkRegistrationService(
         private val TRANSIENT_ERROR_STATUS_CODES = setOf(HTTP_BAD_GATEWAY, HTTP_UNAVAILABLE, HTTP_GATEWAY_TIMEOUT)
     }
 
+    private val proxy = createProxy(config)
+
     @Throws(CertificateRequestException::class)
     override fun retrieveCertificates(requestId: String): CertificateResponse {
         // Poll server to download the signed certificate once request has been approved.
-        val conn = URL("$registrationURL/$requestId").openHttpConnection()
+        val conn = URL("$registrationURL/$requestId").openHttpConnection(proxy)
         conn.requestMethod = "GET"
         val maxAge = conn.cacheControl.maxAgeSeconds()
         // Default poll interval to 10 seconds if not specified by the server, for backward compatibility.
@@ -59,7 +62,7 @@ class HTTPNetworkRegistrationService(
         return String(registrationURL.post(OpaqueBytes(request.encoded),
                 "Platform-Version" to "${versionInfo.platformVersion}",
                 "Client-Version" to versionInfo.releaseVersion,
-                "Private-Network-Map" to (config.pnm?.toString() ?: "")))
+                "Private-Network-Map" to (config.pnm?.toString() ?: ""), proxy = proxy))
     }
 }
 

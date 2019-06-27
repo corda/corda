@@ -595,6 +595,25 @@ networkServices
 
     *Default:* not defined
 
+  proxyType
+    Optional - this can be used to turn on using a proxy for the http connections to doorman and network map. Allowed
+    values are ``DIRECT``, ``HTTP`` and ``SOCKS``. If set to anything else than ``DIRECT``, the proxyAddress must also
+    be set.
+
+    *Default:* ``DIRECT`` (i.e. no proxy)
+
+  proxyAddress
+    Optional hostname and port of a HTTP or SOCKS proxy to be used for connections to the network map or doorman.
+
+    *Default:* not defined
+
+  proxyUser
+    Optional user name for authentication with the proxy. Note that Corda only supports username/password based
+    basic authentication.
+
+  proxyPassword
+    Optional password for authentication with the proxy. The password can be obfuscated using the :doc:`tools-config-obfuscator`.
+
 .. _corda_configuration_file_p2pAddress:
 
 p2pAddress
