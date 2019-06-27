@@ -7,11 +7,11 @@
 Health Survey Tool
 ==================
 
-The health survey tool is a command line utility that initialises a prompt based process of collecting information about a node
-that can be used by the R3 Support to identify issues regarding support requests. It works by scanning through a provided
+The Health Survey Tool is a command line utility that can be used to collect information about a node,
+which can be used by the R3 support Team as an aid to diagnose support issues. It works by scanning through a provided
 node base directory and archiving some of the important files:
 
-* Stripped ``node.conf`` - passwords are removed.
+* A sanitised ``node.conf`` with passwords removed.
 * Version and environment information - Java version, Corda version, OS version.
 * Network information - DNS lookup to databases, network map, doorman and external addresses.
 * Network parameters file.
@@ -27,15 +27,13 @@ Running
 
 .. parsed-literal::
 
-    > java -jar |jar_name| -d {BASE_DIRECTORY_OF_THE_NODE} -c {CONFIG_FILE_OF_THE_NODE}
+    > java -jar |jar_name| --base-directory DIRECTORY [--node-configuration DIRECTORY]
 ..
 
 Usage:
 
-.. parsed-literal::
-     -c,--node-configuration <arg>   Path to the Corda node configuration file, this is optional in the case the config is not in the base directory
-     -d,--base-directory <arg>       Path to the Corda node base directory
-..
+   *  ``-c``, ``--node-configuration`` <arg>:   Path to the Corda node configuration file, optional
+   *  ``-d``, ``--base-directory`` <arg>:       Path to the Corda node base directory
 
 Running the tool with no arguments assumes that the base-directory argument is the current working directory.
 
