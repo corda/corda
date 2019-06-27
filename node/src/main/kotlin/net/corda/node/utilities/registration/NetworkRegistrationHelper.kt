@@ -301,7 +301,7 @@ class NodeRegistrationConfiguration (
             tlsCertCrlDistPoint = config.tlsCertCrlDistPoint,
             certificatesDirectory = config.certificatesDirectory,
             emailAddress = config.emailAddress,
-            cryptoService = CryptoServiceFactory.makeCryptoService(SupportedCryptoServices.BC_SIMPLE, config.myLegalName, config.signingCertificateStore),
+            cryptoService = CryptoServiceFactory.makeCryptoService(config.cryptoServiceName ?: SupportedCryptoServices.BC_SIMPLE, config.myLegalName, config.signingCertificateStore, config.cryptoServiceConf),
             certificateStore = config.signingCertificateStore.get(true)
     )
 }
