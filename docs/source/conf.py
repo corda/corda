@@ -23,7 +23,9 @@ corda_substitutions = {
     "|kotlin_version|" : constants_properties_dict["kotlinVersion"],
     "|gradle_plugins_version|" : constants_properties_dict["gradlePluginsVersion"],
     "|quasar_version|" : constants_properties_dict["quasarVersion"],
-    "|platform_version|" : constants_properties_dict["platformVersion"]
+    "|platform_version|" : constants_properties_dict["platformVersion"],
+    "|os_branch_name|" : constants_properties_dict["openSourceBranchName"],
+    "|os_samples_branch_name|" : constants_properties_dict["openSourceSamplesBranchName"]
 }
 
 def setup(app):
