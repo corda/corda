@@ -53,27 +53,6 @@ open class NetworkRegistrationHelper(
         protected val logError: (String) -> Unit = System.err::println
 ) {
 
-    constructor(
-            config: NodeConfiguration,
-            certService: NetworkRegistrationService,
-            networkRootTrustStorePath: Path,
-            networkRootTrustStorePassword: String,
-            nodeCaKeyAlias: String,
-            certRole: CertRole,
-            nextIdleDuration: (Duration?) -> Duration? = FixedPeriodLimitedRetrialStrategy(10, Duration.ofMinutes(1)),
-            logProgress: (String) -> Unit = ::println,
-            logError: (String) -> Unit = System.err::println) :this (
-
-            NodeRegistrationConfiguration(config),
-            certService,
-            networkRootTrustStorePath,
-            networkRootTrustStorePassword,
-            nodeCaKeyAlias,
-            certRole,
-            nextIdleDuration,
-            logProgress,
-            logError)
-
     companion object {
         const val SELF_SIGNED_PRIVATE_KEY = "SelfSignedPrivateKey"
         val logger = contextLogger()
