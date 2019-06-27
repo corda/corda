@@ -91,21 +91,22 @@ class InMemoryIdentityService(identities: List<PartyAndCertificate> = emptyList(
         return keyToPartyAndCerts[identityCertChain[1].publicKey]
     }
 
-    override fun certificateFromKey(owningKey: PublicKey): PartyAndCertificate? {
-        val name = keyToParties[owningKey]
-        return if (name != null) {
-            val legalIdentityKey = partyToKeys[name]
-            if (legalIdentityKey != null) {
-                keyToPartyAndCerts[legalIdentityKey!!]
-            } else {
-                log.info("Unable to find a valid party and certificate from public key: ${owningKey.toBase58String()}")
-                null
-            }
-        } else {
-            log.info("Unable to find a valid CordaX500 name from public key: ${owningKey.toBase58String()}")
-            null
-        }
-    }
+    override fun certificateFromKey(owningKey: PublicKey): PartyAndCertificate? = keyToPartyAndCerts[owningKey]
+//    override fun certificateFromKey(owningKey: PublicKey): PartyAndCertificate? {
+//        val name = keyToParties[owningKey]
+//        return if (name != null) {
+//            val legalIdentityKey = partyToKeys[name]
+//            if (legalIdentityKey != null) {
+//                keyToPartyAndCerts[legalIdentityKey!!]
+//            } else {
+//                log.info("Unable to find a valid party and certificate from public key: ${owningKey.toBase58String()}")
+//                null
+//            }
+//        } else {
+//            log.info("Unable to find a valid CordaX500 name from public key: ${owningKey.toBase58String()}")
+//            null
+//        }
+//    }
 
     // We give the caller a copy of the data set to avoid any locking problems
     override fun getAllIdentities(): Iterable<PartyAndCertificate> = ArrayList(keyToPartyAndCerts.values)

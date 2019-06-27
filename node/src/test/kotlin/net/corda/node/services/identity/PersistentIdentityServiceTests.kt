@@ -149,6 +149,7 @@ class PersistentIdentityServiceTests {
         identityService.verifyAndRegisterIdentity(aliceTxIdentity)
 
         var actual = identityService.certificateFromKey(aliceTxIdentity.party.owningKey)
+
         assertEquals(aliceTxIdentity, actual!!)
 
         assertNull(identityService.certificateFromKey(bobTxIdentity.party.owningKey))

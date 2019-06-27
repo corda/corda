@@ -12,7 +12,6 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.MAX_HASH_HEX_SIZE
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
-import net.corda.core.utilities.toBase58String
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
 import net.corda.nodeapi.internal.crypto.X509Utilities
@@ -152,16 +151,16 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
     }
 
     fun loadIdentities(identities: Collection<PartyAndCertificate> = emptySet(), confidentialIdentities: Collection<PartyAndCertificate> = emptySet()) {
-            identities.forEach {
-                val key = mapToKey(it)
-                keyToPartyAndCert.addWithDuplicatesAllowed(key, it, false)
-                partyToKey.addWithDuplicatesAllowed(it.name, key, true)
-                keyToParty.addWithDuplicatesAllowed(mapToKey(it), it.name, false)
-            }
-            confidentialIdentities.forEach {
-                keyToParty.addWithDuplicatesAllowed(mapToKey(it), it.name, false)
-            }
-            log.debug("Identities loaded")
+        identities.forEach {
+            val key = mapToKey(it)
+            keyToPartyAndCert.addWithDuplicatesAllowed(key, it, false)
+            partyToKey.addWithDuplicatesAllowed(it.name, key, true)
+            keyToParty.addWithDuplicatesAllowed(mapToKey(it), it.name, false)
+        }
+        confidentialIdentities.forEach {
+            keyToParty.addWithDuplicatesAllowed(mapToKey(it), it.name, false)
+        }
+        log.debug("Identities loaded")
     }
 
     @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
@@ -208,7 +207,6 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
         return registerIdentity(identity, isNewRandomIdentity)
     }
 
-
     private fun registerIdentity(identity: PartyAndCertificate, isNewRandomIdentity: Boolean): PartyAndCertificate? {
         log.debug { "Registering identity $identity" }
         val identityCertChain = identity.certPath.x509Certificates
@@ -228,19 +226,7 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
     }
 
     override fun certificateFromKey(owningKey: PublicKey): PartyAndCertificate? = database.transaction {
-        val name = keyToParty[owningKey.hash]
-        if (name != null) {
-            val legalIdentityKey = partyToKey[name!!]
-            if (legalIdentityKey !=null) {
-                keyToPartyAndCert[legalIdentityKey!!]
-            } else {
-                log.info("Unable to find a valid party and certificate from public key: ${owningKey.toBase58String()}")
-                null
-            }
-        } else {
-            log.info("Unable to find a valid CordaX500 name from public key: ${owningKey.toBase58String()}")
-            null
-        }
+        keyToPartyAndCert[owningKey.hash]
     }
 
     private fun certificateFromCordaX500Name(name: CordaX500Name): PartyAndCertificate? {
@@ -257,7 +243,9 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
         keyToPartyAndCert.allPersisted().map { it.second }.asIterable()
     }
 
-    override fun wellKnownPartyFromX500Name(name: CordaX500Name): Party? = database.transaction { certificateFromCordaX500Name(name)?.party }
+    override fun wellKnownPartyFromX500Name(name: CordaX500Name): Party? = database.transaction {
+        certificateFromCordaX500Name(name)?.party
+    }
 
     override fun wellKnownPartyFromAnonymous(party: AbstractParty): Party? {
         // Skip database lookup if the party is a notary identity.
@@ -266,7 +254,21 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
         return if (party is Party && party in notaryIdentityCache) {
             party
         } else {
-            database.transaction { super.wellKnownPartyFromAnonymous(party) }
+            database.transaction {
+                // Try and resolve the party from the table to public keys to party and certificates
+                // If we cannot find it then we perform a lookup on the public key to X500 name table
+                val legalIdentity = super.wellKnownPartyFromAnonymous(party)
+                if (legalIdentity == null) {
+                    val name = keyToParty[party.owningKey.hash]
+                    if (name != null) {
+                        wellKnownPartyFromX500Name(name)
+                    } else {
+                        null
+                    }
+                } else {
+                    legalIdentity
+                }
+            }
         }
     }
 

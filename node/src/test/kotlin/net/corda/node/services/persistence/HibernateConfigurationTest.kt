@@ -119,7 +119,7 @@ class HibernateConfigurationTest {
 
             // `consumeCash` expects we can self-notarise transactions
             services = object : MockServices(cordappPackages, BOB_NAME, mock<IdentityService>().also {
-                doNothing().whenever(it).verifyAndRegisterIdentity(argThat { name == BOB_NAME })
+                doReturn(null).whenever(it).verifyAndRegisterIdentity(argThat { name == BOB_NAME })
             }, generateKeyPair(), dummyNotary.keyPair) {
                 override val vaultService = NodeVaultService(Clock.systemUTC(), keyManagementService, servicesForResolution, database, schemaService, cordappClassloader).apply { start() }
                 override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {

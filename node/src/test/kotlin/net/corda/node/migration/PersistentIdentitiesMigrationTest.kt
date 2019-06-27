@@ -31,7 +31,8 @@ import java.security.KeyPair
 import java.time.Clock
 import java.time.Duration
 
-class PersistentIdentitiesMigrationTest {
+class
+PersistentIdentitiesMigrationTest {
     companion object {
         val alice = TestIdentity(ALICE_NAME, 70)
         val bankOfCorda = TestIdentity(BOC_NAME)
