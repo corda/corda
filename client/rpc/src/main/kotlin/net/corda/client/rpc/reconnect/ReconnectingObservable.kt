@@ -1,6 +1,7 @@
 package net.corda.client.rpc.reconnect
 
 import net.corda.client.rpc.internal.ReconnectingCordaRPCOps
+import net.corda.core.DoNotImplement
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.DataFeed
 import net.corda.core.utilities.contextLogger
@@ -79,6 +80,7 @@ class ReconnectingObservableImpl<T> internal constructor(
  *
  * TODO - provide a logical function to know how to retrieve missing events that happened during disconnects.
  */
+@DoNotImplement
 interface ReconnectingObservable<T> {
     fun subscribe(onNext: (T) -> Unit): ObserverHandle = subscribe(onNext, {}, {}, {})
     fun subscribe(onNext: (T) -> Unit, onStop: () -> Unit, onDisconnect: () -> Unit, onReconnect: () -> Unit): ObserverHandle
