@@ -655,7 +655,9 @@ attachments along with size limits, to avoid people placing inappropriate files 
 PowerPoints etc).
 
 Note that the creator of a transaction gets to choose which files are attached. Therefore, it is typical that
-states place constraints on the data they're willing to accept. These mechanisms are discussed
+states place constraints on the application JARs they're willing to accept. This enables the software that imposes
+logic on the ledger to evolve independently of the stored data, whilst still remaining secure against malicious
+evolutions that would, for example, allow an adversary to print money. These mechanisms are discussed
 in~\cref{sec:contract-constraints}.
 
 \paragraph{Signing.}Attachments may be signed using the JAR signing standard. No particular certificate is
