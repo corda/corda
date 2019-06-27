@@ -1,22 +1,14 @@
 package net.corda.node.internal.rpc.proxies
 
-import net.corda.core.ClientRelevantError
-import net.corda.core.CordaException
-import net.corda.core.CordaRuntimeException
+import net.corda.core.*
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.TransactionVerificationException
-import net.corda.core.doOnError
 import net.corda.core.flows.IdentifiableException
 import net.corda.core.internal.concurrent.doOnError
 import net.corda.core.internal.concurrent.mapError
 import net.corda.core.internal.declaredField
-import net.corda.core.mapErrors
-import net.corda.core.messaging.CordaRPCOps
-import net.corda.core.messaging.DataFeed
-import net.corda.core.messaging.FlowHandle
-import net.corda.core.messaging.FlowHandleImpl
-import net.corda.core.messaging.FlowProgressHandle
-import net.corda.core.messaging.FlowProgressHandleImpl
+import net.corda.core.internal.messaging.InternalCordaRPCOps
+import net.corda.core.messaging.*
 import net.corda.core.utilities.loggerFor
 import net.corda.node.internal.InvocationHandlerTemplate
 import net.corda.nodeapi.exceptions.InternalNodeException
@@ -25,7 +17,7 @@ import java.lang.reflect.Method
 import java.lang.reflect.Proxy.newProxyInstance
 import kotlin.reflect.KClass
 
-internal class ExceptionMaskingRpcOpsProxy(private val delegate: CordaRPCOps, doLog: Boolean) : CordaRPCOps by proxy(delegate, doLog) {
+internal class ExceptionMaskingRpcOpsProxy(private val delegate: InternalCordaRPCOps, doLog: Boolean) : InternalCordaRPCOps by proxy(delegate, doLog) {
     private companion object {
         private val logger = loggerFor<ExceptionMaskingRpcOpsProxy>()
 
@@ -34,13 +26,13 @@ internal class ExceptionMaskingRpcOpsProxy(private val delegate: CordaRPCOps, do
                 TransactionVerificationException::class
         )
 
-        private fun proxy(delegate: CordaRPCOps, doLog: Boolean): CordaRPCOps {
+        private fun proxy(delegate: InternalCordaRPCOps, doLog: Boolean): InternalCordaRPCOps {
             val handler = ErrorObfuscatingInvocationHandler(delegate, whitelist, doLog)
-            return newProxyInstance(delegate::class.java.classLoader, arrayOf(CordaRPCOps::class.java), handler) as CordaRPCOps
+            return newProxyInstance(delegate::class.java.classLoader, arrayOf(InternalCordaRPCOps::class.java), handler) as InternalCordaRPCOps
         }
     }
 
-    private class ErrorObfuscatingInvocationHandler(override val delegate: CordaRPCOps, private val whitelist: Set<KClass<*>>, private val doLog: Boolean) : InvocationHandlerTemplate {
+    private class ErrorObfuscatingInvocationHandler(override val delegate: InternalCordaRPCOps, private val whitelist: Set<KClass<*>>, private val doLog: Boolean) : InvocationHandlerTemplate {
         override fun invoke(proxy: Any, method: Method, arguments: Array<out Any?>?): Any? {
             try {
                 val result = super.invoke(proxy, method, arguments)
