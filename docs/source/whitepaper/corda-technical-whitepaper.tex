@@ -484,7 +484,7 @@ have occurred. This is discussed in more detail below.
 
 The platform provides a \texttt{TransactionBuilder} class which, amongst many other features, automatically searches
 the object graph of each state and command to locate linear pointers, resolve them to the latest known state and add
-that state as a non-consumed input. Note that the `latest' version is determined relative to an individual node's
+that state as a non-consumed input, then searches the resolved state recursively. Note that the `latest' version is determined relative to an individual node's
 viewpoint, thus, it may not be truly the latest version at the time the transaction is built. The state's notary
 cluster will reject the transaction if this occurs, at which point the node may take some action to discover the
 latest version of the state and try again.
@@ -866,16 +866,12 @@ vault and the scheduler will ensure the relevant flow is started at the right ti
 
 Some basic concepts occur in many kinds of application, regardless of what industry or use case it is for. The
 platform provides a comprehensive type system for modelling of \emph{tokens}: abstract countable objects highly
-suited to representing value-oriented agreements. Despite the apparent similarity tokens are not cryptocurrencies.
-All tokens in Corda ultimately represent claims upon something.
+suited to representing value.
 
-Tokens can be used to model money, securities, derivatives, debts and other financial instruments. They could also
-be used to model any sort of claim on physical resources, like CPU time, network bandwidth, barrels of oil and so
-on.
-
-Note that cryptocurrencies are not tokens, in Corda's terminology. Cryptocurrencies are different to almost
-anything else you may model on a distributed ledger, because (native) cryptocurrencies do \emph{not} represent a
-claim on an issuer - mere possession of the relevant database entry is, itself, the entire value.
+Tokens can be used to model agreements with an issuer, like fiat money, securities, derivatives, debts and
+other financial instruments. They could also  be used to model any sort of claim on physical resources,
+like CPU time, network bandwidth, barrels of oil and so on. Finally, as a special case tokens can be used to
+implement cryptocurrencies (this is modelled as a claim on a null issuer).
 
 We define the notion of an \texttt{OwnableState}, implemented as an interface which any state may conform to.
 Ownable states are required to have an \texttt{owner} field which is a composite key
@@ -898,8 +894,8 @@ Amounts may not be negative as in many critical contexts a negative quantity is 
 through an error condition. Transfers of value are modelled explicitly with an \texttt{AmountTransfer} type that
 encodes direction.
 
-On top of these universal core types, Corda provides a dedicated `token software development kit' module that
-extends the type system with more sophisticated concepts.
+\paragraph{Token SDK.}On top of these universal core types, Corda provides a dedicated `token software development
+kit' module that  extends the type system with more sophisticated concepts.
 
 \begin{figure}[H]
 \includegraphics[width=\textwidth]{state-class-hierarchy}
@@ -914,14 +910,18 @@ issuing party. Whilst static token types never change, an \texttt{EvolvableToken
 that contains data defining the rules of the token or reference data related to it. For example a token type
 representing a stock may include various metadata about that stock, such as regional identifiers. Token states are
 linked to their defining token type states (when evolvable) using linear pointers
-(see~\cref{subsec:transaction-structure}).
+(see~\cref{subsec:transaction-structure}). This enables reference data about a token to be evolved such that
+everyone always uses the latest version, ensuring a `golden source'. The lack of such global yet evolvable
+definitions is a frequent problem in industry. Tokens with an issuer are \emph{not} fungible with each other: two
+pools of pound sterling are considered to be separate types of token if they come from different issuers. This is
+to avoid commingling and losing track of counterparty risk.
 
 The token SDK provides APIs and flows to do standard tasks for UTXO based ledgers, such as moving tokens between
 parties, issuing tokens, updating the definition of an evolvable token and efficient coin selection. This is the
 task of selecting a group of states from the vault that add up to a certain value whilst minimising fragmentation,
 transaction size and optimising other desirable characteristics. Although the term ``coin selection'' is an
 anachronistic holdover from Bitcoin, Corda continues to use it due to the wealth of published literature exploring
-algorithms for this task under this name.
+algorithms for the task under this name.
 
 Together, this functionality provides Corda's equivalent of the Ethereum ERC-20 standard\cite{ERC20}.
 
