@@ -394,7 +394,7 @@ class ObserverHandle {
     /**
      * Returns null if the observation ended successfully.
      */
-    internal fun await(): Throwable? = terminated.take().orElse(null)}
+    internal fun await(): Throwable? = terminated.take().orElse(null)
 }
 
 /**
