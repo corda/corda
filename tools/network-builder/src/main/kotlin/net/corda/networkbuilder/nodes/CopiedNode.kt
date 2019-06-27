@@ -12,11 +12,11 @@ open class CopiedNode(configFile: File, baseDirectory: File,
     )
 
     operator fun component4(): File {
-        return copiedNodeDir;
+        return copiedNodeDir
     }
 
     operator fun component5(): File {
-        return copiedNodeConfig;
+        return copiedNodeConfig
     }
 
 
@@ -35,6 +35,4 @@ open class CopiedNode(configFile: File, baseDirectory: File,
     fun toBuiltNode(nodeConfig: NodeConfiguration, localImageId: String): BuiltNode {
         return BuiltNode(this.configFile, this.baseDirectory, this.copiedNodeConfig, this.copiedNodeDir, nodeConfig, localImageId)
     }
-
-
 }

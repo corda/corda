@@ -2,7 +2,6 @@ package net.corda.networkbuilder.containers.push.azure
 
 import com.github.dockerjava.api.async.ResultCallback
 import com.github.dockerjava.api.model.PushResponseItem
-import com.microsoft.azure.management.Azure
 import com.microsoft.azure.management.containerregistry.Registry
 import net.corda.networkbuilder.containers.push.ContainerPusher
 import net.corda.networkbuilder.containers.push.azure.RegistryLocator.Companion.parseCredentials
@@ -11,14 +10,11 @@ import org.slf4j.LoggerFactory
 import java.io.Closeable
 import java.util.concurrent.CompletableFuture
 
-
-class AzureContainerPusher(private val azure: Azure, private val azureRegistry: Registry) : ContainerPusher {
-
+class AzureContainerPusher(private val azureRegistry: Registry) : ContainerPusher {
 
     override fun pushContainerToImageRepository(localImageId: String,
                                                 remoteImageName: String,
                                                 networkName: String): CompletableFuture<String> {
-
 
         val (registryUser, registryPassword) = azureRegistry.parseCredentials()
         val dockerClient = DockerUtils.createDockerClient(
@@ -57,6 +53,4 @@ class AzureContainerPusher(private val azure: Azure, private val azureRegistry: 
     companion object {
         val LOG = LoggerFactory.getLogger(AzureContainerPusher::class.java)
     }
-
 }
-

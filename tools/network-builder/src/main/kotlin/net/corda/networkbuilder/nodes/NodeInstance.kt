@@ -26,6 +26,4 @@ class NodeInstance(configFile: File,
                 nodeInstanceName,
                 actualX500,
                 expectedFqName
-        ) {
-}
-
+        )

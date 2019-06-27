@@ -7,17 +7,16 @@ open class FoundNode(open val configFile: File,
                      open val baseDirectory: File = configFile.parentFile,
                      val name: String = configFile.parentFile.name.toLowerCase().replace(Constants.ALPHA_NUMERIC_ONLY_REGEX, "")) {
 
-
     operator fun component1(): File {
-        return baseDirectory;
+        return baseDirectory
     }
 
     operator fun component2(): File {
-        return configFile;
+        return configFile
     }
 
     operator fun component3(): String {
-        return name;
+        return name
     }
 
     override fun equals(other: Any?): Boolean {
@@ -47,8 +46,4 @@ open class FoundNode(open val configFile: File,
     fun toCopiedNode(copiedNodeConfig: File, copiedNodeDir: File): CopiedNode {
         return CopiedNode(this.configFile, this.baseDirectory, copiedNodeConfig, copiedNodeDir)
     }
-
-
 }
-
-

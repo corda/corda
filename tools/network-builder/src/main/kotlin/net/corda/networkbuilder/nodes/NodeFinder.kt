@@ -9,24 +9,23 @@ import java.io.File
 class NodeFinder(private val scratchDir: File) {
 
     fun findNodes(): List<FoundNode> {
-        return scratchDir.walkBottomUp().filter { it.name == "node.conf" && !it.absolutePath.contains(Constants.BOOTSTRAPPER_DIR_NAME) }.map {
+        return scratchDir.walkBottomUp().filter {
+            it.name == "node.conf" && !it.absolutePath.contains(Constants.BOOTSTRAPPER_DIR_NAME)
+        }.mapNotNull {
             try {
                 ConfigFactory.parseFile(it) to it
             } catch (e: ConfigException) {
                 null
             }
-        }.filterNotNull()
-                .filter { !it.first.hasPath("notary") }
-                .map { (_, nodeConfigFile) ->
-                    LOG.info("We've found a node with name: ${nodeConfigFile.parentFile.name}")
-                    FoundNode(nodeConfigFile, nodeConfigFile.parentFile)
-                }.toList()
-
+        }.filter {
+            !it.first.hasPath("notary")
+        }.map { (_, nodeConfigFile) ->
+            LOG.info("We've found a node with name: ${nodeConfigFile.parentFile.name}")
+            FoundNode(nodeConfigFile, nodeConfigFile.parentFile)
+        }.toList()
     }
 
     companion object {
         val LOG = contextLogger()
     }
-
 }
-

@@ -5,10 +5,8 @@ import net.corda.networkbuilder.context.Context
 import net.corda.networkbuilder.nodes.*
 import net.corda.networkbuilder.notaries.NotaryCopier
 import net.corda.networkbuilder.notaries.NotaryFinder
-import net.corda.node.utilities.NamedThreadFactory
 import java.io.File
 import java.util.concurrent.CompletableFuture
-import java.util.concurrent.Executors
 
 interface NetworkBuilder {
 
@@ -24,7 +22,7 @@ interface NetworkBuilder {
     fun onNodePushed(callback: (PushedNode) -> Unit): NetworkBuilder
     fun onNodeInstance(callback: (NodeInstance) -> Unit): NetworkBuilder
 
-    fun withNetworkName(networtName: String): NetworkBuilder
+    fun withNetworkName(networkName: String): NetworkBuilder
     fun withBasedir(baseDir: File): NetworkBuilder
     fun withBackend(backendType: Backend.BackendType): NetworkBuilder
     fun withBackendOptions(options: Map<String, String>): NetworkBuilder
@@ -78,7 +76,7 @@ private class NetworkBuilderImpl : NetworkBuilder {
 
     override fun onNodeStartBuild(callback: (FoundNode) -> Unit): NetworkBuilder {
         this.onNodeBuildStartCallback = callback
-        return this;
+        return this
     }
 
     override fun onNodeBuild(callback: (BuiltNode) -> Unit): NetworkBuilder {
@@ -97,12 +95,12 @@ private class NetworkBuilderImpl : NetworkBuilder {
     }
 
     override fun onNodeInstance(callback: (NodeInstance) -> Unit): NetworkBuilder {
-        this.onNodeInstanceCallback = callback;
+        this.onNodeInstanceCallback = callback
         return this
     }
 
-    override fun withNetworkName(networtName: String): NetworkBuilder {
-        this.networkName = networtName
+    override fun withNetworkName(networkName: String): NetworkBuilder {
+        this.networkName = networkName
         return this
     }
 
@@ -122,13 +120,11 @@ private class NetworkBuilderImpl : NetworkBuilder {
     }
 
     override fun onNodePushStart(callback: (BuiltNode) -> Unit): NetworkBuilder {
-        this.onNodePushStartCallback = callback;
-        return this;
+        this.onNodePushStartCallback = callback
+        return this
     }
 
     override fun build(): CompletableFuture<Pair<List<NodeInstance>, Context>> {
-
-        val executor = Executors.newCachedThreadPool(NamedThreadFactory("network-builder"))
 
         val cacheDir = File(workingDir, cacheDirName)
         val baseDir = workingDir!!

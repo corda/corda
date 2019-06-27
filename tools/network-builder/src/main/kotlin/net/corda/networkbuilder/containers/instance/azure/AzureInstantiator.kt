@@ -28,9 +28,9 @@ class AzureInstantiator(private val azure: Azure,
 
         LOG.info("Starting instantiation of container: $instanceName using $imageId")
         val registryAddress = registry.loginServerUrl()
-        val (username, password) = registry.parseCredentials();
+        val (username, password) = registry.parseCredentials()
         val mountName = "node-setup"
-        val future = CompletableFuture<Pair<String, Map<Int, Int>>>().also {
+        return CompletableFuture<Pair<String, Map<Int, Int>>>().also {
             azure.containerGroups().define(buildIdent(instanceName))
                     .withRegion(resourceGroup.region())
                     .withExistingResourceGroup(resourceGroup)
@@ -56,11 +56,10 @@ class AzureInstantiator(private val azure: Azure,
                         override fun success(result: ContainerGroup) {
                             val fqdn = result.fqdn()
                             LOG.info("Completed instantiation: $instanceName is running at $fqdn with port(s) $portsToOpen exposed")
-                            it.complete(result.fqdn() to portsToOpen.map { it to it }.toMap())
+                            it.complete(result.fqdn() to portsToOpen.map { port -> port to port }.toMap())
                         }
                     })
         }
-        return future
     }
 
     private fun buildIdent(instanceName: String) = "$instanceName-${resourceGroup.restFriendlyName()}"
@@ -75,11 +74,10 @@ class AzureInstantiator(private val azure: Azure,
             LOG.info("Found an existing instance of: $containerName destroying ContainerGroup")
             azure.containerGroups().deleteByResourceGroup(resourceGroup.name(), containerName)
         }
-        return existingContainer;
+        return existingContainer
     }
 
     companion object {
         val LOG = LoggerFactory.getLogger(AzureInstantiator::class.java)
     }
-
 }

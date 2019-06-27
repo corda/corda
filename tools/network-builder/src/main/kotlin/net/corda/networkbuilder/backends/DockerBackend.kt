@@ -10,7 +10,6 @@ class DockerBackend(override val containerPusher: DockerContainerPusher,
                     override val instantiator: DockerInstantiator,
                     override val volume: LocalVolume) : Backend {
 
-
     companion object {
         fun fromContext(context: Context, baseDir: File): DockerBackend {
             val dockerContainerPusher = DockerContainerPusher()
@@ -19,7 +18,4 @@ class DockerBackend(override val containerPusher: DockerContainerPusher,
             return DockerBackend(dockerContainerPusher, dockerInstantiator, localVolume)
         }
     }
-
 }
-
-

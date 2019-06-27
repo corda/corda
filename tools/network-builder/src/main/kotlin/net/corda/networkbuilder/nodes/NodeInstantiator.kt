@@ -10,7 +10,6 @@ import java.util.concurrent.CompletableFuture
 class NodeInstantiator(val instantiator: Instantiator,
                        val context: Context) {
 
-
     fun createInstanceRequests(pushedNode: PushedNode, nodeCount: Map<FoundNode, Int>): List<NodeInstanceRequest> {
 
         val namedMap = nodeCount.map { it.key.name.toLowerCase() to it.value }.toMap()
@@ -29,7 +28,6 @@ class NodeInstantiator(val instantiator: Instantiator,
     fun createInstanceRequest(node: PushedNode): NodeInstanceRequest {
         return createInstanceRequest(node, 0)
     }
-
 
     private fun buildX500(baseX500: CordaX500Name, i: Int): String {
         if (i == 0) {
@@ -87,6 +85,4 @@ class NodeInstantiator(val instantiator: Instantiator,
     fun expectedFqdn(newInstanceName: String): String {
         return instantiator.getExpectedFQDN(newInstanceName)
     }
-
-
 }

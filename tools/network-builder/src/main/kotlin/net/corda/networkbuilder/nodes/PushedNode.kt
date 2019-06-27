@@ -20,6 +20,4 @@ open class PushedNode(configFile: File, baseDirectory: File,
     override fun toString(): String {
         return "PushedNode(remoteImageName='$remoteImageName') ${super.toString()}"
     }
-
-
 }

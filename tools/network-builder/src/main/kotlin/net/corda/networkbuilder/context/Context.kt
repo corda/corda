@@ -9,7 +9,6 @@ import java.util.concurrent.ConcurrentHashMap
 
 class Context(val networkName: String, val backendType: Backend.BackendType, backendOptions: Map<String, String> = emptyMap()) {
 
-
     @Volatile
     var safeNetworkName: String = networkName.replace(Constants.ALPHA_NUMERIC_ONLY_REGEX, "").toLowerCase()
 
@@ -30,7 +29,6 @@ class Context(val networkName: String, val backendType: Backend.BackendType, bac
         registerNode(request.name, request)
     }
 
-
     data class PersistableNodeInstance(
             val groupName: String,
             val groupX500: CordaX500Name?,
@@ -42,7 +40,6 @@ class Context(val networkName: String, val backendType: Backend.BackendType, bac
             val fqdn: String,
             val rpcUser: String,
             val rpcPassword: String)
-
 
     companion object {
         fun fromInstanceRequest(nodeInstanceRequest: NodeInstanceRequest): PersistableNodeInstance {
@@ -58,7 +55,6 @@ class Context(val networkName: String, val backendType: Backend.BackendType, bac
                     "",
                     ""
             )
-
         }
     }
 

@@ -44,13 +44,12 @@ class CommandLineInterface {
             }.toSingleFuture().getOrThrow()
             persistContext(contextFile, objectMapper, context)
         }
-
     }
 
     private fun setupContextFromExisting(contextFile: File, objectMapper: ObjectMapper): Context {
-        return contextFile.let {
-            if (it.exists()) {
-                it.inputStream().use {
+        return contextFile.let { file ->
+            if (file.exists()) {
+                file.inputStream().use {
                     objectMapper.readValue(it, Context::class.java)
                 }
             } else {
@@ -58,7 +57,6 @@ class CommandLineInterface {
             }
         }
     }
-
 
     private fun persistContext(contextFile: File, objectMapper: ObjectMapper, context: Context?) {
         contextFile.outputStream().use {

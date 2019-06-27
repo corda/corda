@@ -49,14 +49,12 @@ data class AzureBackend(override val containerPusher: AzureContainerPusher,
                 RegistryLocator(azure, resourceGroup)
             }
             val containerPusherFuture = registryLocatorFuture.thenApplyAsync {
-                AzureContainerPusher(azure, it.registry)
+                AzureContainerPusher(it.registry)
             }
             val azureNetworkStore = CompletableFuture.supplyAsync { AzureSmbVolume(azure, resourceGroup) }
-            val azureInstantiatorFuture = azureNetworkStore.thenCombine(registryLocatorFuture,
-                    { azureVolume, registryLocator ->
-                        AzureInstantiator(azure, registryLocator.registry, azureVolume, resourceGroup)
-                    }
-            )
+            val azureInstantiatorFuture = azureNetworkStore.thenCombine(registryLocatorFuture) { azureVolume, registryLocator ->
+                AzureInstantiator(azure, registryLocator.registry, azureVolume, resourceGroup)
+            }
             return AzureBackend(containerPusherFuture.get(), azureInstantiatorFuture.get(), azureNetworkStore.get())
         }
     }

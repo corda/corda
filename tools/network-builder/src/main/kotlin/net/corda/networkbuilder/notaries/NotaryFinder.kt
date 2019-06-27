@@ -9,18 +9,19 @@ import java.io.File
 class NotaryFinder(private val dirToSearch: File) {
 
     fun findNotaries(): List<FoundNode> {
-        return dirToSearch.walkBottomUp().filter { it.name == "node.conf" && !it.absolutePath.contains(Constants.BOOTSTRAPPER_DIR_NAME) }
-                .map {
-                    try {
-                        ConfigFactory.parseFile(it) to it
-                    } catch (e: ConfigException) {
-                        null
-                    }
-                }.filterNotNull()
-                .filter { it.first.hasPath("notary") }
-                .map { (_, nodeConfigFile) ->
-                    FoundNode(nodeConfigFile)
-                }.toList()
+        return dirToSearch.walkBottomUp().filter {
+            it.name == "node.conf" && !it.absolutePath.contains(Constants.BOOTSTRAPPER_DIR_NAME)
+        }.mapNotNull {
+            try {
+                ConfigFactory.parseFile(it) to it
+            } catch (e: ConfigException) {
+                null
+            }
+        }.filter {
+            it.first.hasPath("notary")
+        }.map { (_, nodeConfigFile) ->
+            FoundNode(nodeConfigFile)
+        }.toList()
     }
 }
 

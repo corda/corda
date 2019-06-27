@@ -6,7 +6,6 @@ import java.util.concurrent.CompletableFuture
 
 class DockerContainerPusher : ContainerPusher {
 
-
     override fun pushContainerToImageRepository(localImageId: String, remoteImageName: String, networkName: String): CompletableFuture<String> {
         val dockerClient = DockerUtils.createLocalDockerClient()
         dockerClient.tagImageCmd(localImageId, remoteImageName, networkName).withForce().exec()

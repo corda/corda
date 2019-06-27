@@ -7,7 +7,6 @@ import java.util.concurrent.CompletableFuture
 class NodePusher(private val containerPusher: ContainerPusher,
                  private val context: Context) {
 
-
     fun pushNode(builtNode: BuiltNode): CompletableFuture<PushedNode> {
 
         val localImageId = builtNode.localImageId

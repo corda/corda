@@ -22,7 +22,6 @@ class SerializationEngine {
                             p2pContext = AMQP_P2P_CONTEXT.withClassLoader(classloader),
                             rpcServerContext = AMQP_P2P_CONTEXT.withClassLoader(classloader),
                             storageContext = AMQP_STORAGE_CONTEXT.withClassLoader(classloader),
-
                             checkpointContext = KRYO_CHECKPOINT_CONTEXT.withClassLoader(classloader),
                             checkpointSerializer = KryoCheckpointSerializer
                     )

@@ -26,12 +26,9 @@ interface Backend {
 
         AZURE("Azure Containers"), LOCAL_DOCKER("Local Docker");
 
-
         override fun toString(): String {
             return this.displayName
         }
-
-
     }
 
     operator fun component1(): ContainerPusher {

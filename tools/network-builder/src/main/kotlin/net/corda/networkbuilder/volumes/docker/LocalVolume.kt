@@ -24,7 +24,6 @@ class LocalVolume(scratchDir: File, context: Context) : Volume {
         LOG.info("wrote network params to local file: ${networkParamsFile.absolutePath}")
     }
 
-
     fun getPath(): String {
         return volumeDir.absolutePath
     }

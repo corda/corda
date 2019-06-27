@@ -17,8 +17,7 @@ open class NodeInstanceRequest(configFile: File, baseDirectory: File,
     }
 
     fun toNodeInstance(reachableAddress: String, portMapping: Map<Int, Int>): NodeInstance {
-        return NodeInstance(configFile, baseDirectory, copiedNodeConfig, copiedNodeDir, nodeConfig, localImageId, remoteImageName, nodeInstanceName, actualX500, expectedFqName, reachableAddress, portMapping)
+        return NodeInstance(configFile, baseDirectory, copiedNodeConfig, copiedNodeDir, nodeConfig,
+                localImageId, remoteImageName, nodeInstanceName, actualX500, expectedFqName, reachableAddress, portMapping)
     }
-
-
 }

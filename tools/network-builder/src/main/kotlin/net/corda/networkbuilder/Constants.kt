@@ -12,12 +12,12 @@ import com.microsoft.azure.management.resources.fluentcore.arm.Region
 class Constants {
 
     companion object {
-        val NODE_P2P_PORT = 10020
-        val NODE_SSHD_PORT = 12222
-        val NODE_RPC_PORT = 10003
-        val NODE_RPC_ADMIN_PORT = 10005
+        const val NODE_P2P_PORT = 10020
+        const val NODE_SSHD_PORT = 12222
+        const val NODE_RPC_PORT = 10003
+        const val NODE_RPC_ADMIN_PORT = 10005
 
-        val BOOTSTRAPPER_DIR_NAME = ".bootstrapper"
+        const val BOOTSTRAPPER_DIR_NAME = ".bootstrapper"
 
         fun getContextMapper(): ObjectMapper {
             val objectMapper = ObjectMapper(YAMLFactory()).registerKotlinModule()
@@ -39,12 +39,10 @@ class Constants {
 
         val ALPHA_NUMERIC_ONLY_REGEX = "[^\\p{IsAlphabetic}\\p{IsDigit}]".toRegex()
         val ALPHA_NUMERIC_DOT_AND_UNDERSCORE_ONLY_REGEX = "[^\\p{IsAlphabetic}\\p{IsDigit}._]".toRegex()
-        val REGION_ARG_NAME = "REGION"
+        const val REGION_ARG_NAME = "REGION"
 
         fun ResourceGroup.restFriendlyName(): String {
             return this.name().replace(ALPHA_NUMERIC_ONLY_REGEX, "").toLowerCase()
         }
     }
-
-
 }

@@ -26,14 +26,12 @@ interface Volume {
         internal val networkMapCa = createDevNetworkMapCa(DEV_ROOT_CA)
         internal val networkMapCert: X509Certificate = networkMapCa.certificate
         internal val keyPair = networkMapCa.keyPair
-
     }
 
 
     fun CloudFile.uploadFromByteArray(array: ByteArray) {
         this.uploadFromByteArray(array, 0, array.size)
     }
-
 
     fun convertNodeIntoToNetworkParams(notaryFiles: List<Pair<File, File>>): NetworkParameters {
         val notaryInfos = notaryFiles.map { (configFile, nodeInfoFile) ->
@@ -52,6 +50,4 @@ interface Volume {
                     whitelistedContractImplementations = emptyMap())
         }
     }
-
-
 }

@@ -38,7 +38,6 @@ class AzureSmbVolume(private val azure: Azure, private val resourceGroup: Resour
     val storageAccountKey: String
         get() = accKeys.value()
 
-
     init {
         while (true) {
             try {
@@ -64,18 +63,12 @@ class AzureSmbVolume(private val azure: Azure, private val resourceGroup: Resour
     override fun notariesForNetworkParams(notaries: List<CopiedNotary>) {
         val networkParamsFile = networkParamsFolder.getFileReference(NETWORK_PARAMS_FILE_NAME)
         networkParamsFile.deleteIfExists()
-        LOG.info("Storing network-params in AzureFile location: " + networkParamsFile.uri)
+        LOG.info("Storing network-params in AzureFile location: ${networkParamsFile.uri}")
         val networkParameters = convertNodeIntoToNetworkParams(notaries.map { it.configFile to it.nodeInfoFile })
         networkParamsFile.uploadFromByteArray(networkParameters.signWithCert(keyPair.private, networkMapCert).serialize().bytes)
     }
 
-
     companion object {
         val LOG = LoggerFactory.getLogger(AzureSmbVolume::class.java)
     }
-
 }
-
-
-
-

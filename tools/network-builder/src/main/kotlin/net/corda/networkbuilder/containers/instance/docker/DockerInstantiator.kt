@@ -9,11 +9,10 @@ import net.corda.networkbuilder.volumes.docker.LocalVolume
 import org.slf4j.LoggerFactory
 import java.util.concurrent.CompletableFuture
 
-
 class DockerInstantiator(private val volume: LocalVolume,
                          private val context: Context) : Instantiator {
 
-    val networkId = setupNetwork();
+    private val networkId = setupNetwork()
 
     override fun instantiateContainer(imageId: String,
                                       portsToOpen: List<Int>,
@@ -43,7 +42,9 @@ class DockerInstantiator(private val volume: LocalVolume,
 
         }
         LOG.info("starting local docker instance of: $imageId with name $instanceName and env: $env")
-        val ports = (portsToOpen + Constants.NODE_RPC_ADMIN_PORT).map { ExposedPort.tcp(it) }.map { PortBinding(null, it) }.let { Ports(*it.toTypedArray()) }
+        val ports = (portsToOpen + Constants.NODE_RPC_ADMIN_PORT).map { ExposedPort.tcp(it) }
+                .map { PortBinding(null, it) }
+                .let { Ports(*it.toTypedArray()) }
         val createCmd = localClient.createContainerCmd(imageId)
                 .withName(instanceName)
                 .withVolumes(nodeInfosVolume)
@@ -56,15 +57,12 @@ class DockerInstantiator(private val volume: LocalVolume,
 
         localClient.startContainerCmd(createCmd.id).exec()
         val foundContainer = localClient.listContainersCmd().exec()
-                .filter { it.id == (createCmd.id) }
-                .firstOrNull()
+                .firstOrNull { it.id == createCmd.id }
 
         val portMappings = foundContainer?.ports?.map {
             (it.privatePort ?: 0) to (it.publicPort ?: 0)
         }?.toMap()?.toMap()
                 ?: portsToOpen.map { it to it }.toMap()
-
-
 
         return CompletableFuture.completedFuture(("localhost") to portMappings)
     }
@@ -72,9 +70,7 @@ class DockerInstantiator(private val volume: LocalVolume,
     private fun buildDockerEnv(env: Map<String, String>?) =
             (env ?: emptyMap()).entries.map { (key, value) -> "$key=$value" }.toList()
 
-    override fun getExpectedFQDN(instanceName: String): String {
-        return instanceName
-    }
+    override fun getExpectedFQDN(instanceName: String): String = instanceName
 
     private fun setupNetwork(): String {
         val createLocalDockerClient = DockerUtils.createLocalDockerClient()

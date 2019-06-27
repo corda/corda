@@ -30,6 +30,4 @@ object DockerUtils {
                 .withRegistryPassword(password)
                 .build()
     }
-
-
 }

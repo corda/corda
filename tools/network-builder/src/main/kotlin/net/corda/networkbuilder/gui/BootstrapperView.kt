@@ -105,7 +105,6 @@ class BootstrapperView : View("Corda Network Builder") {
                         override fun get(index: Int): String {
                             return controller.foundNodes[index].id
                         }
-
                         override val size: Int
                             get() = controller.foundNodes.size
                     }
@@ -162,7 +161,7 @@ class BootstrapperView : View("Corda Network Builder") {
             columnResizePolicy = TableView.CONSTRAINED_RESIZE_POLICY
             hgrow = Priority.ALWAYS
 
-            onMouseClicked = EventHandler<MouseEvent> { _ ->
+            onMouseClicked = EventHandler<MouseEvent> {
                 val selectedItem: NodeTemplateInfo = selectionModel.selectedItem ?: return@EventHandler
                 infoTextArea.text = YAML_MAPPER.writeValueAsString(translateForPrinting(selectedItem))
             }
@@ -228,12 +227,12 @@ class BootstrapperView : View("Corda Network Builder") {
         }
         foundNodes.thenCombine(foundNotaries) { nodes, notaries ->
             notaries to nodes
-        }.thenAcceptAsync({ (notaries: List<FoundNode>, nodes: List<FoundNode>) ->
+        }.thenAcceptAsync { (notaries: List<FoundNode>, nodes: List<FoundNode>) ->
             runLater {
                 controller.foundNodes(nodes)
                 controller.notaries(notaries)
             }
-        })
+        }
     }
 
     class NodeTemplateInfo(templateId: String, type: NodeType) {

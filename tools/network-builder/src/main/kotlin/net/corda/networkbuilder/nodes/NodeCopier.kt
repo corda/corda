@@ -8,7 +8,6 @@ import java.io.File
 
 open class NodeCopier(private val cacheDir: File) {
 
-
     fun copyNode(foundNode: FoundNode): CopiedNode {
         val nodeCacheDir = File(cacheDir, foundNode.baseDirectory.name)
         nodeCacheDir.deleteRecursively()
@@ -16,13 +15,12 @@ open class NodeCopier(private val cacheDir: File) {
         foundNode.baseDirectory.copyRecursively(nodeCacheDir, overwrite = true)
         copyBootstrapperFiles(nodeCacheDir)
         val configInCacheDir = File(nodeCacheDir, "node.conf")
-        LOG.info("Applying precanned config " + configInCacheDir)
+        LOG.info("Applying precanned config $configInCacheDir")
         val rpcSettings = getDefaultRpcSettings()
-        val sshSettings = getDefaultSshSettings();
+        val sshSettings = getDefaultSshSettings()
         mergeConfigs(configInCacheDir, rpcSettings, sshSettings)
         return CopiedNode(foundNode, configInCacheDir, nodeCacheDir)
     }
-
 
     fun copyBootstrapperFiles(nodeCacheDir: File) {
         this.javaClass.classLoader.getResourceAsStream("node-Dockerfile").use { nodeDockerFileInStream ->
@@ -88,14 +86,11 @@ open class NodeCopier(private val cacheDir: File) {
         }
     }
 
-
     internal enum class Mode {
         NOTARY, NODE
     }
-
 
     companion object {
         val LOG = LoggerFactory.getLogger(NodeCopier::class.java)
     }
 }
-

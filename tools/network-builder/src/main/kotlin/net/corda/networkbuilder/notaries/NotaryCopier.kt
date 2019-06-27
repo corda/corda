@@ -6,7 +6,7 @@ import net.corda.networkbuilder.nodes.NodeCopier
 import org.slf4j.LoggerFactory
 import java.io.File
 
-class NotaryCopier(val cacheDir: File) : NodeCopier(cacheDir) {
+class NotaryCopier(private val cacheDir: File) : NodeCopier(cacheDir) {
 
     fun copyNotary(foundNotary: FoundNode): CopiedNotary {
         val nodeCacheDir = File(cacheDir, foundNotary.baseDirectory.name)
@@ -15,9 +15,9 @@ class NotaryCopier(val cacheDir: File) : NodeCopier(cacheDir) {
         foundNotary.baseDirectory.copyRecursively(nodeCacheDir, overwrite = true)
         copyNotaryBootstrapperFiles(nodeCacheDir)
         val configInCacheDir = File(nodeCacheDir, "node.conf")
-        LOG.info("Applying precanned config " + configInCacheDir)
+        LOG.info("Applying precanned config $configInCacheDir")
         val rpcSettings = getDefaultRpcSettings()
-        val sshSettings = getDefaultSshSettings();
+        val sshSettings = getDefaultSshSettings()
         mergeConfigs(configInCacheDir, rpcSettings, sshSettings, Mode.NOTARY)
         val generatedNodeInfo = generateNodeInfo(nodeCacheDir)
         return CopiedNode(foundNotary, configInCacheDir, nodeCacheDir).toNotary(generatedNodeInfo)
@@ -32,10 +32,9 @@ class NotaryCopier(val cacheDir: File) : NodeCopier(cacheDir) {
 
         val exitCode = nodeInfoGeneratorProcess.waitFor()
         if (exitCode != 0) {
-            throw IllegalStateException("Failed to generate nodeInfo for notary: " + dirToGenerateFrom)
+            throw IllegalStateException("Failed to generate nodeInfo for notary: $dirToGenerateFrom")
         }
-        val nodeInfoFile = dirToGenerateFrom.listFiles().filter { it.name.startsWith("nodeInfo") }.single()
-        return nodeInfoFile;
+        return dirToGenerateFrom.listFiles().single { it.name.startsWith("nodeInfo") }
     }
 
     private fun copyNotaryBootstrapperFiles(nodeCacheDir: File) {
@@ -64,6 +63,4 @@ class NotaryCopier(val cacheDir: File) : NodeCopier(cacheDir) {
     companion object {
         val LOG = LoggerFactory.getLogger(NotaryCopier::class.java)
     }
-
-
 }

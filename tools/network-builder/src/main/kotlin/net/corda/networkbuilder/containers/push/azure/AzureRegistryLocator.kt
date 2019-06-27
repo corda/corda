@@ -11,27 +11,24 @@ import org.slf4j.LoggerFactory
 class RegistryLocator(private val azure: Azure,
                       private val resourceGroup: ResourceGroup) {
 
-
     val registry: Registry = locateRegistry()
-
 
     private fun locateRegistry(): Registry {
         LOG.info("Attempting to find existing registry with name: ${resourceGroup.restFriendlyName()}")
         val found = azure.containerRegistries().getByResourceGroup(resourceGroup.name(), resourceGroup.restFriendlyName())
 
-        if (found == null) {
+        return if (found == null) {
             LOG.info("Did not find existing container registry - creating new registry with name ${resourceGroup.restFriendlyName()}")
-            return azure.containerRegistries()
+            azure.containerRegistries()
                     .define(resourceGroup.restFriendlyName())
                     .withRegion(resourceGroup.region().name())
                     .withExistingResourceGroup(resourceGroup)
                     .withBasicSku()
                     .withRegistryNameAsAdminUser()
                     .create()
-
         } else {
             LOG.info("found existing registry with name: ${resourceGroup.restFriendlyName()} reusing")
-            return found
+            found
         }
     }
 
@@ -44,12 +41,5 @@ class RegistryLocator(private val azure: Azure,
         }
 
         val LOG = LoggerFactory.getLogger(AzureInstantiator::class.java)
-
     }
-
-
 }
-
-
-
-
