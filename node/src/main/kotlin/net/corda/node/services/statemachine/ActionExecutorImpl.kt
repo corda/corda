@@ -173,7 +173,7 @@ class ActionExecutorImpl(
     @Suspendable
     private fun executeSendInitial(action: Action.SendInitial) {
         detailedLogger.trace { "SendInitial(flowId=$currentFlowId;initiatorFlow=${action.initialise.initiatorFlowClassName};id=${action.deduplicationId.deduplicationId.toString};appName=${action.initialise.appName};flowVersion=${action.initialise.flowVersion};recipient=${action.party})" }
-        flowMessaging.sendSessionMessage(action.party, action.initialise, action.deduplicationId)
+        flowMessaging.sendSessionMessage(action.destination, action.initialise, action.deduplicationId)
     }
 
     @Suspendable

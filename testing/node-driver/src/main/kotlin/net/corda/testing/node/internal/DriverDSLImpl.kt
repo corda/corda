@@ -565,6 +565,7 @@ class DriverDSLImpl(
                 null,
                 systemProperties,
                 "512m",
+                null,
                 *extraCmdLineFlag
         )
 
@@ -623,7 +624,7 @@ class DriverDSLImpl(
             nodeFuture
         } else {
             val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
-            val process = startOutOfProcessNode(config, quasarJarPath, debugPort, bytemanJarPath, bytemanPort, systemProperties, parameters.maximumHeapSize)
+            val process = startOutOfProcessNode(config, quasarJarPath, debugPort, bytemanJarPath, bytemanPort, systemProperties, parameters.maximumHeapSize, parameters.logLevelOverride)
 
             // Destroy the child process when the parent exits.This is needed even when `waitForAllNodesToFinish` is
             // true because we don't want orphaned processes in the case that the parent process is terminated by the
@@ -752,6 +753,7 @@ class DriverDSLImpl(
                 bytemanPort: Int?,
                 overriddenSystemProperties: Map<String, String>,
                 maximumHeapSize: String,
+                logLevelOverride: String?,
                 vararg extraCmdLineFlag: String
         ): Process {
             log.info("Starting out-of-process Node ${config.corda.myLegalName.organisation}, " +
@@ -784,7 +786,13 @@ class DriverDSLImpl(
                     "com.lmax**;picocli**;liquibase**;com.github.benmanes**;org.json**;org.postgresql**;nonapi.io.github.classgraph**;)"
             val extraJvmArguments = systemProperties.removeResolvedClasspath().map { "-D${it.key}=${it.value}" } +
                     "-javaagent:$quasarJarPath=$excludePattern"
-            val loggingLevel = if (debugPort == null) "INFO" else "DEBUG"
+
+            val loggingLevel = when {
+                logLevelOverride != null -> logLevelOverride
+                debugPort == null -> "INFO"
+                else -> "DEBUG"
+            }
+
 
             val arguments = mutableListOf(
                     "--base-directory=${config.corda.baseDirectory}",
