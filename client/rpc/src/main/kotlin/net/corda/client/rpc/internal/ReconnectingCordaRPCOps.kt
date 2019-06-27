@@ -394,7 +394,8 @@ class ObserverHandle {
     /**
      * Returns null if the observation ended successfully.
      */
-    internal fun await(duration: Duration = 60.minutes): Throwable? = terminated.poll(duration.seconds, TimeUnit.SECONDS).orElse(null)
+    internal fun await(): Throwable? = terminated.take().orElse(null)}
+
 }
 
 /**
