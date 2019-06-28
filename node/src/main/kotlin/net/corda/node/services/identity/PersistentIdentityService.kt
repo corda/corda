@@ -154,7 +154,7 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
         identities.forEach {
             val key = mapToKey(it)
             keyToPartyAndCert.addWithDuplicatesAllowed(key, it, false)
-            partyToKey.addWithDuplicatesAllowed(it.name, key, true)
+            partyToKey.addWithDuplicatesAllowed(it.name, key, false)
             keyToParty.addWithDuplicatesAllowed(mapToKey(it), it.name, false)
         }
         confidentialIdentities.forEach {
@@ -218,7 +218,7 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
             } else {
                 keyToPartyAndCert.addWithDuplicatesAllowed(key, identity, false)
                 partyToKey.addWithDuplicatesAllowed(identity.name, key, false)
-                keyToParty.addWithDuplicatesAllowed(key, identity.name)
+                keyToParty.addWithDuplicatesAllowed(key, identity.name, false)
             }
             val parentId = mapToKey(identityCertChain[1].publicKey)
             keyToPartyAndCert[parentId]
