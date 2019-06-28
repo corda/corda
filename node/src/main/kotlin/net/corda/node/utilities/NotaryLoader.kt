@@ -13,6 +13,7 @@ import net.corda.node.services.config.NotaryConfig
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.notary.experimental.bftsmart.BFTSmartNotaryService
 import net.corda.notary.experimental.raft.RaftNotaryService
+import java.lang.reflect.InvocationTargetException
 import net.corda.notary.mysql.MySQLNotaryService
 import java.security.PublicKey
 
@@ -66,7 +67,7 @@ class NotaryLoader(
         log.info("Starting notary service: $serviceClass")
 
         val notaryKey = myNotaryIdentity?.owningKey
-                ?: throw IllegalArgumentException("Unable to start notary service $serviceClass: notary identity not found")
+                ?: throw IllegalArgumentException("Unable to start notary service: notary identity not found")
 
         /** Some notary implementations only work with Java serialization. */
         maybeInstallSerializationFilter(serviceClass)
@@ -74,7 +75,12 @@ class NotaryLoader(
         val constructor = serviceClass
                 .getDeclaredConstructor(ServiceHubInternal::class.java, PublicKey::class.java)
                 .apply { isAccessible = true }
-        return constructor.newInstance(services, notaryKey)
+        try {
+            return constructor.newInstance(services, notaryKey)
+        } catch (e: InvocationTargetException) {
+            log.error("Exception occurred when starting notary service")
+            throw e.cause ?: e
+        }
     }
 
     /** Validates that the notary is correctly configured by comparing the configured type against the type advertised in the network map cache */

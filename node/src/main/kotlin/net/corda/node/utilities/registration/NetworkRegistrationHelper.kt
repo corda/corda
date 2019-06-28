@@ -13,6 +13,7 @@ import net.corda.nodeapi.internal.cryptoservice.utimaco.UtimacoCryptoService
 import net.corda.nodeapi.internal.cryptoservice.futurex.FutureXCryptoService
 import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
 import net.corda.nodeapi.internal.config.CertificateStore
+import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.NOT_YET_REGISTERED_MARKER_KEYS_AND_CERTS
 import net.corda.nodeapi.internal.crypto.X509KeyStore
@@ -23,6 +24,7 @@ import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_ROOT_CA
 import net.corda.nodeapi.internal.crypto.X509Utilities.DEFAULT_VALIDITY_WINDOW
 import net.corda.nodeapi.internal.cryptoservice.CryptoServiceFactory
 import net.corda.nodeapi.internal.cryptoservice.SupportedCryptoServices
+import net.corda.nodeapi.internal.cryptoservice.CryptoService
 import net.corda.nodeapi.internal.cryptoservice.securosys.PrimusXCryptoService
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.openssl.jcajce.JcaPEMWriter
@@ -31,6 +33,7 @@ import org.bouncycastle.util.io.pem.PemObject
 import java.io.IOException
 import java.io.StringWriter
 import java.net.ConnectException
+import java.net.URL
 import java.nio.file.Path
 import java.security.KeyPair
 import java.security.PublicKey
@@ -44,7 +47,7 @@ import javax.security.auth.x500.X500Principal
  * needed.
  */
 open class NetworkRegistrationHelper(
-        config: NodeConfiguration,
+        config: NodeRegistrationConfiguration,
         private val certService: NetworkRegistrationService,
         private val networkRootTrustStorePath: Path,
         networkRootTrustStorePassword: String,
@@ -62,8 +65,8 @@ open class NetworkRegistrationHelper(
     private val certificatesDirectory: Path = config.certificatesDirectory
     private val myLegalName: CordaX500Name = config.myLegalName
     private val emailAddress: String = config.emailAddress
-    private val cryptoService = CryptoServiceFactory.makeCryptoService(config.cryptoServiceName ?: SupportedCryptoServices.BC_SIMPLE, config.myLegalName, config.signingCertificateStore, config.cryptoServiceConf)
-    private val certificateStore = config.signingCertificateStore.get(true)
+    private val cryptoService = config.cryptoService
+    private val certificateStore = config.certificateStore
     private val requestIdStore = certificatesDirectory / "certificate-request-id.txt"
     protected val rootTrustStore: X509KeyStore
     protected val rootCert: X509Certificate
@@ -281,13 +284,35 @@ open class NetworkRegistrationHelper(
     protected open fun isTlsCrlIssuerCertRequired(): Boolean = false
 }
 
+class NodeRegistrationConfiguration (
+        val p2pSslOptions: MutualSslConfiguration,
+        val myLegalName : CordaX500Name,
+        val tlsCertCrlIssuer : X500Principal?,
+        val tlsCertCrlDistPoint: URL?,
+        val certificatesDirectory: Path,
+        val emailAddress: String,
+        val cryptoService: CryptoService,
+        val certificateStore: CertificateStore) {
+
+    constructor(config: NodeConfiguration) : this(
+            p2pSslOptions = config.p2pSslOptions,
+            myLegalName = config.myLegalName,
+            tlsCertCrlIssuer = config.tlsCertCrlIssuer,
+            tlsCertCrlDistPoint = config.tlsCertCrlDistPoint,
+            certificatesDirectory = config.certificatesDirectory,
+            emailAddress = config.emailAddress,
+            cryptoService = CryptoServiceFactory.makeCryptoService(config.cryptoServiceName ?: SupportedCryptoServices.BC_SIMPLE, config.myLegalName, config.signingCertificateStore, config.cryptoServiceConf),
+            certificateStore = config.signingCertificateStore.get(true)
+    )
+}
+
 class NodeRegistrationException(
         message: String?,
         cause: Throwable?
 ) : IOException(message ?: "Unable to contact node registration service", cause)
 
 class NodeRegistrationHelper(
-        private val config: NodeConfiguration,
+        private val config: NodeRegistrationConfiguration,
         certService: NetworkRegistrationService,
         regConfig: NodeRegistrationOption,
         computeNextIdleDoormanConnectionPollInterval: (Duration?) -> Duration? = FixedPeriodLimitedRetrialStrategy(10, Duration.ofMinutes(1)),
@@ -301,6 +326,13 @@ class NodeRegistrationHelper(
                     CORDA_CLIENT_CA,
                     CertRole.NODE_CA,
                     computeNextIdleDoormanConnectionPollInterval, logProgress, logError) {
+
+    @Deprecated("Prefer to use NodeRegistrationConfiguration instead of NodeConfiguration")
+    constructor(
+            config: NodeConfiguration,
+            certService: NetworkRegistrationService,
+            regConfig: NodeRegistrationOption
+    ) : this(NodeRegistrationConfiguration(config), certService, regConfig)
 
     companion object {
         val logger = contextLogger()

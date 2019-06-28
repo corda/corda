@@ -8,6 +8,7 @@ import net.corda.core.context.Actor
 import net.corda.core.context.Trace
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.PLATFORM_VERSION
+import net.corda.core.internal.messaging.InternalCordaRPCOps
 import net.corda.core.messaging.ClientRpcSslOptions
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.serialization.SerializationCustomSerializer
@@ -310,7 +311,7 @@ class CordaRPCClient private constructor(
         }
     }
 
-    private fun getRpcClient(): RPCClient<CordaRPCOps> {
+    private fun getRpcClient(): RPCClient<InternalCordaRPCOps> {
         return when {
         // Client->RPC broker
             haAddressPool.isEmpty() -> RPCClient(
@@ -385,7 +386,7 @@ class CordaRPCClient private constructor(
      * @throws RPCException if the server version is too low or if the server isn't reachable within a reasonable timeout.
      */
     fun start(username: String, password: String, externalTrace: Trace?, impersonatedActor: Actor?, targetLegalIdentity: CordaX500Name?): CordaRPCConnection {
-        return CordaRPCConnection(getRpcClient().start(CordaRPCOps::class.java, username, password, externalTrace, impersonatedActor, targetLegalIdentity))
+        return CordaRPCConnection(getRpcClient().start(InternalCordaRPCOps::class.java, username, password, externalTrace, impersonatedActor, targetLegalIdentity))
     }
 
     /**

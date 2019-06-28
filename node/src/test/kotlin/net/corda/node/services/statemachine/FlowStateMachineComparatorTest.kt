@@ -7,10 +7,7 @@ import co.paralleluniverse.fibers.Suspendable
 import com.codahale.metrics.MetricRegistry
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.FlowSession
-import net.corda.core.flows.FlowStackSnapshot
-import net.corda.core.flows.StateMachineRunId
+import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowIORequest
 import net.corda.core.internal.FlowStateMachine
@@ -104,7 +101,7 @@ class FlowStateMachineComparatorTest {
             throw NotImplementedError()
         }
 
-        override fun initiateFlow(party: Party): FlowSession {
+        override fun initiateFlow(destination: Destination): FlowSession {
             throw NotImplementedError()
         }
 

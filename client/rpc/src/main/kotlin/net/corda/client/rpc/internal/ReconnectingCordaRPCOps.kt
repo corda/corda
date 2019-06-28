@@ -3,6 +3,7 @@ package net.corda.client.rpc.internal
 import net.corda.client.rpc.*
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.div
+import net.corda.core.internal.messaging.InternalCordaRPCOps
 import net.corda.core.internal.times
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.ClientRpcSslOptions
@@ -44,7 +45,7 @@ class ReconnectingCordaRPCOps private constructor(
         private val reconnectingRPCConnection: ReconnectingRPCConnection,
         private val observersPool: ExecutorService,
         private val userPool: Boolean
-) : AutoCloseable, CordaRPCOps by proxy(reconnectingRPCConnection, observersPool) {
+) : AutoCloseable, InternalCordaRPCOps by proxy(reconnectingRPCConnection, observersPool) {
 
     // Constructors that mirror CordaRPCClient.
     constructor(
@@ -77,11 +78,11 @@ class ReconnectingCordaRPCOps private constructor(
         const val MAX_RETRY_ATTEMPTS_ON_AUTH_ERROR = 3
 
         private val log = contextLogger()
-        private fun proxy(reconnectingRPCConnection: ReconnectingRPCConnection, observersPool: ExecutorService): CordaRPCOps {
+        private fun proxy(reconnectingRPCConnection: ReconnectingRPCConnection, observersPool: ExecutorService): InternalCordaRPCOps {
             return Proxy.newProxyInstance(
                     this::class.java.classLoader,
-                    arrayOf(CordaRPCOps::class.java),
-                    ErrorInterceptingHandler(reconnectingRPCConnection, observersPool)) as CordaRPCOps
+                    arrayOf(InternalCordaRPCOps::class.java),
+                    ErrorInterceptingHandler(reconnectingRPCConnection, observersPool)) as InternalCordaRPCOps
         }
     }
 
@@ -394,7 +395,7 @@ class ObserverHandle {
     /**
      * Returns null if the observation ended successfully.
      */
-    internal fun await(duration: Duration = 60.minutes): Throwable? = terminated.poll(duration.seconds, TimeUnit.SECONDS).orElse(null)
+    internal fun await(): Throwable? = terminated.take().orElse(null)
 }
 
 /**

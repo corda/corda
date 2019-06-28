@@ -21,6 +21,7 @@ import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.parseAsNodeConfiguration
 import net.corda.node.services.network.NetworkMapClient
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
+import net.corda.node.utilities.registration.NodeRegistrationConfiguration
 import net.corda.node.utilities.registration.NodeRegistrationHelper
 import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_ROOT_CA
@@ -90,7 +91,7 @@ class RegistrationTool : CordaCliWrapper("node-registration", "Corda registratio
                                     .parseAsNodeConfiguration()
                                     .value()
                             with(parsedConfig) {
-                                NodeRegistrationHelper(this, HTTPNetworkRegistrationService(networkServices!!, VERSION_INFO),
+                                NodeRegistrationHelper(NodeRegistrationConfiguration(this), HTTPNetworkRegistrationService(networkServices!!, VERSION_INFO),
                                         NodeRegistrationOption(networkRootTrustStorePath, networkRootTrustStorePassword),
                                         logProgress = logger::info, logError = logger::error).generateKeysAndRegister()
                             }
