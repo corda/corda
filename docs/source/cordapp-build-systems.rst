@@ -377,7 +377,7 @@ CorDapp configuration files should be placed in ``<node_dir>/cordapps/config``. 
 name of the JAR of the CorDapp (eg; if your CorDapp is called ``hello-0.1.jar`` the config should be ``config/hello-0.1.conf``).
 
 Config files are currently only available in the `Typesafe/Lightbend <https://github.com/lightbend/config>`_ config format.
-These files are loaded when a CorDapp context is created and so can change during runtime.
+These files are loaded during node startup.
 
 CorDapp configuration can be accessed from ``CordappContext::config`` whenever a ``CordappContext`` is available. For example:
 
