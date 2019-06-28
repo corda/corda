@@ -3,8 +3,11 @@ package net.corda.networkbuilder.nodes
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigRenderOptions
 import com.typesafe.config.ConfigValue
+import net.corda.core.internal.div
 import org.slf4j.LoggerFactory
 import java.io.File
+import java.nio.file.Files
+import java.nio.file.Path
 
 open class NodeCopier(private val cacheDir: File) {
 
@@ -13,6 +16,8 @@ open class NodeCopier(private val cacheDir: File) {
         nodeCacheDir.deleteRecursively()
         LOG.info("copying: ${foundNode.baseDirectory} to $nodeCacheDir")
         foundNode.baseDirectory.copyRecursively(nodeCacheDir, overwrite = true)
+        //docker-java lib doesn't copy an empty folder, so if it's empty add a dummy file
+        ensureDirectoryIsNonEmpty(nodeCacheDir.toPath()/("cordapps"))
         copyBootstrapperFiles(nodeCacheDir)
         val configInCacheDir = File(nodeCacheDir, "node.conf")
         LOG.info("Applying precanned config $configInCacheDir")
@@ -83,6 +88,16 @@ open class NodeCopier(private val cacheDir: File) {
                     .setComments(false)
                     .setFormatted(true)
                     .setJson(false)).byteInputStream().copyTo(it)
+        }
+    }
+
+    /** Adds a dummy file if the directory is empty. Creates a directory if it doesn't exists. */
+    internal fun ensureDirectoryIsNonEmpty(path: Path, dummyFileName: String = "dummy.txt") {
+        if (!Files.exists(path)) {
+            Files.createDirectories(path)
+        }
+        if (Files.list(path).noneMatch { !Files.isDirectory(it) }) {
+            Files.createFile(path / dummyFileName)
         }
     }
 

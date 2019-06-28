@@ -1,5 +1,6 @@
 package net.corda.networkbuilder.notaries
 
+import net.corda.core.internal.div
 import net.corda.networkbuilder.nodes.CopiedNode
 import net.corda.networkbuilder.nodes.FoundNode
 import net.corda.networkbuilder.nodes.NodeCopier
@@ -13,6 +14,8 @@ class NotaryCopier(private val cacheDir: File) : NodeCopier(cacheDir) {
         nodeCacheDir.deleteRecursively()
         LOG.info("copying: ${foundNotary.baseDirectory} to $nodeCacheDir")
         foundNotary.baseDirectory.copyRecursively(nodeCacheDir, overwrite = true)
+        //docker-java lib doesn't copy an empty folder, so if it's empty add a dummy file
+        ensureDirectoryIsNonEmpty(nodeCacheDir.toPath()/("cordapps"))
         copyNotaryBootstrapperFiles(nodeCacheDir)
         val configInCacheDir = File(nodeCacheDir, "node.conf")
         LOG.info("Applying precanned config $configInCacheDir")
