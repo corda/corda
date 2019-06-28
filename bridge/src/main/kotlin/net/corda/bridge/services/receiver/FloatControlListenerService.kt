@@ -130,6 +130,9 @@ class FloatControlListenerService(val conf: FirewallConfiguration,
             }
             connectSubscriber?.unsubscribe()
             connectSubscriber = null
+            destroyP2pSigningService()
+            tunnelSigningService.stop()
+            destroyTunnelExternalCrlSourceService()
             amqpControlServer?.stop()
             receiveSubscriber?.unsubscribe()
             receiveSubscriber = null
@@ -139,9 +142,6 @@ class FloatControlListenerService(val conf: FirewallConfiguration,
             forwardLegalName = null
             incomingMessageSubscriber?.unsubscribe()
             incomingMessageSubscriber = null
-            destroyP2pSigningService()
-            tunnelSigningService.stop()
-            destroyTunnelExternalCrlSourceService()
         }
     }
 
@@ -166,6 +166,8 @@ class FloatControlListenerService(val conf: FirewallConfiguration,
                     if (amqpListener.running) {
                         amqpListener.wipeKeysAndDeactivate()
                     }
+                    destroyTunnelExternalCrlSourceService()
+                    destroyP2pSigningService()
                     amqpControlServer?.dropConnection(currentConnection.remoteAddress)
                     activeConnectionInfo = null
                     forwardAddress = null
