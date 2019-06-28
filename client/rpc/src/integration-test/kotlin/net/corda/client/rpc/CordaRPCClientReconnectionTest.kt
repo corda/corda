@@ -2,9 +2,6 @@ package net.corda.client.rpc
 
 import net.corda.client.rpc.reconnect.asReconnecting
 import net.corda.core.messaging.startTrackedFlow
-import net.corda.core.node.services.Vault
-import net.corda.core.node.services.queryBy
-import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
@@ -84,7 +81,7 @@ class CordaRPCClientReconnectionTest {
             node.stop()
             startNode()
 
-            observerHandle.stop()
+            observerHandle.unsubscribe()
 
             rpcOps.startTrackedFlow(::CashIssueFlow, 10.DOLLARS, OpaqueBytes.of(0), defaultNotaryIdentity).returnValue.get()
 

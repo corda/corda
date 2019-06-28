@@ -24,15 +24,15 @@ class ReconnectingObservableImpl<T> internal constructor(
                                     val initial: DataFeed<*, T>,
                                     val createDataFeed: () -> DataFeed<*, T>): OnSubscribe<T>, ReconnectingObservable<T> {
         override fun call(child: rx.Subscriber<in T>) {
-            subscribe( {t -> child.onNext(t) }, {}, {}, {})
+            subscribe(child::onNext, {}, {}, {})
         }
 
         private var initialStartWith: Iterable<T>? = null
-        fun _subscribeWithReconnect(observerHandle: ObserverHandle, onNext: (T) -> Unit, onStop: () -> Unit, onDisconnect: () -> Unit, onReconnect: () -> Unit, startWithValues: Iterable<T>? = null) {
+        private fun subscribeWithReconnect(observerHandle: ObserverHandle, onNext: (T) -> Unit, onStop: () -> Unit, onDisconnect: () -> Unit, onReconnect: () -> Unit, startWithValues: Iterable<T>? = null) {
             var subscriptionError: Throwable?
             try {
                 val subscription = initial.updates.let { if (startWithValues != null) it.startWith(startWithValues) else it }
-                        .subscribe(onNext, observerHandle::fail, observerHandle::stop)
+                        .subscribe(onNext, observerHandle::fail, observerHandle::unsubscribe)
                 subscriptionError = observerHandle.await()
                 subscription.unsubscribe()
             } catch (e: Exception) {
@@ -53,14 +53,14 @@ class ReconnectingObservableImpl<T> internal constructor(
 
             val newObservable = createDataFeed().updates as ReconnectingObservableImpl<T>
             onReconnect()
-            return newObservable.reconnectingSubscriber._subscribeWithReconnect(observerHandle, onNext, onStop, onDisconnect, onReconnect)
+            return newObservable.reconnectingSubscriber.subscribeWithReconnect(observerHandle, onNext, onStop, onDisconnect, onReconnect)
         }
 
         override fun subscribe(onNext: (T) -> Unit, onStop: () -> Unit, onDisconnect: () -> Unit, onReconnect: () -> Unit): ObserverHandle {
             val observerNotifier = ObserverHandle()
             // TODO - change the establish connection method to be non-blocking
             observersPool.execute {
-                _subscribeWithReconnect(observerNotifier, onNext, onStop, onDisconnect, onReconnect, initialStartWith)
+                subscribeWithReconnect(observerNotifier, onNext, onStop, onDisconnect, onReconnect, initialStartWith)
             }
             return observerNotifier
         }

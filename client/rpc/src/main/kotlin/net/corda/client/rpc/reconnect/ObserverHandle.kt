@@ -8,7 +8,7 @@ import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 
 /**
- * Utility to externally control a subscribed observer.
+ * Handle to externally control a subscribed observer for [ReconnectingObservable]s.
  */
 class ObserverHandle {
     private val terminated = LinkedBlockingQueue<Optional<Throwable>>(1)
@@ -16,7 +16,7 @@ class ObserverHandle {
     /**
      * Unsubscribes the associated subscribed observer.
      */
-    fun stop() = terminated.put(Optional.empty())
+    fun unsubscribe() = terminated.put(Optional.empty())
 
     @CordaInternal
     internal fun fail(e: Throwable) = terminated.put(Optional.of(e))

@@ -299,8 +299,8 @@ class RpcReconnectTests {
             assertTrue(stateMachineEvents.count { it is StateMachineUpdate.Removed } > NUMBER_OF_FLOWS_TO_RUN / 3, "Too many Removed state machine events lost.")
 
             // Stop the observers.
-            vaultObserverHandle.stop()
-            stateMachineObserverHandle.stop()
+            vaultObserverHandle.unsubscribe()
+            stateMachineObserverHandle.unsubscribe()
 
             bankAReconnectingRpc.close()
         }
