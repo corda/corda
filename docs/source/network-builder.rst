@@ -8,7 +8,7 @@ containers to abstract the complexity of managing a distributed network away fro
 
 .. image:: _static/images/network-builder-v4.png
 
-The network you build will either be made up of local ``docker`` nodes *or* of nodes spread across Azure
+The network you build will either be made up of local ``Docker`` nodes *or* of nodes spread across Azure
 containers.
 For each node a separate Docker image is built based on `corda/corda-zulu-4.0 <https://hub.docker.com/r/corda/corda-zulu-4.0>`_.
 Unlike the official image, a `node.conf` file and CorDapps are embedded into an image
@@ -59,7 +59,7 @@ Quickstart Local Docker
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 1. ``cd workflows-java/build/nodes``
-2. ``java -jar <path/to/network-builder-jar> -d .``
+2. ``java -jar <path/to/corda-tools-network-builder.jar> -d .``
 
 If you run ``docker ps`` to see the running containers, the following output should be displayed:
 
@@ -78,7 +78,7 @@ Quickstart Remote Azure
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 1. ``cd kotlin-source/build/nodes``
-2. ``java -jar <path/to/network-builder-jar> -b AZURE -d .``
+2. ``java -jar <path/to/corda-tools-network-builder.jar> -b AZURE -d .``
 
 .. note:: The Azure configuration is handled by the az-cli utility. See the :ref:`pre-requisites`.
 
@@ -121,7 +121,7 @@ Adding additional nodes
 It is possible to add additional nodes to the network by reusing the nodes you built earlier. For example, to add a
 node by reusing the existing ``PartyA`` node, you would run:
 
-``java -jar <network-builder-jar> --add "PartyA=O=PartyZ,L=London,C=GB"``
+``java -jar <path/to/corda-tools-network-builder.jar> --add "PartyA=O=PartyZ,L=London,C=GB"``
 
 To confirm the node has been started correctly, run the following in the previously connected SSH session:
 
@@ -140,7 +140,7 @@ Building a network in Graphical User Mode
 -----------------------------------------
 
 The Corda Network Builder also provides a GUI for when automated interactions are not required. To launch it, run
-``java -jar <path/to/network-builder-jar> -g``.
+``java -jar <path/to/corda-tools-network-builder.jar> -g``.
 
 Starting the nodes
 ^^^^^^^^^^^^^^^^^^
