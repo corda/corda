@@ -23,9 +23,10 @@ import net.corda.nodeapi.internal.protonwrapper.netty.ConnectionChange
 import net.corda.nodeapi.internal.protonwrapper.netty.RevocationConfig
 import rx.Subscription
 import java.io.ByteArrayOutputStream
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
-import kotlin.concurrent.thread
 
 /**
  * @see BridgeReceiverService
@@ -50,6 +51,7 @@ class TunnelingBridgeReceiverService(val conf: FirewallConfiguration,
     private var amqpControlClient: AMQPClient? = null
     private val expectedCertificateSubject: CordaX500Name = conf.bridgeInnerConfig!!.expectedCertificateSubject
     private val crlFetcher = CrlFetcher(conf.outboundConfig?.proxyConfig)
+    private val executor: ExecutorService = Executors.newSingleThreadExecutor()
 
     override fun start() {
         statusSubscriber = statusFollower.activeChange.subscribe({
@@ -191,11 +193,12 @@ class TunnelingBridgeReceiverService(val conf: FirewallConfiguration,
             val msg = "Unable to decode signing request message"
             log.error(msg, ex)
             auditService.packetDropEvent(receivedMessage, msg, RoutingDirection.INBOUND)
-            receivedMessage.complete(true)
             return
+        } finally {
+            receivedMessage.complete(true)
         }
         log.info("Received signing request '${request.requestId}' using key ${request.alias}. Algo: ${request.sigAlgo}")
-        thread {
+        executor.submit {
             val response = SigningResponse(request.requestId, signingService.sign(request.alias, request.sigAlgo, request.data))
 
             val amqpSigningResponse = amqpControlClient!!.createMessage(response.serialize(context = SerializationDefaults.P2P_CONTEXT).bytes,
@@ -216,6 +219,8 @@ class TunnelingBridgeReceiverService(val conf: FirewallConfiguration,
             auditService.packetDropEvent(receivedMessage, msg, RoutingDirection.INBOUND)
             receivedMessage.complete(true)
             return
+        } finally {
+            receivedMessage.complete(true)
         }
         val certificate = request.certificate
         log.info("Received CRL request '${request.requestId}' for certificate with X.500 name: '${certificate.subjectX500Principal}'")
