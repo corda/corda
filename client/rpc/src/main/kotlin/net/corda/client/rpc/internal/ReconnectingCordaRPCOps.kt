@@ -3,7 +3,6 @@ package net.corda.client.rpc.internal
 import net.corda.client.rpc.*
 import net.corda.client.rpc.reconnect.CouldNotStartFlowException
 import net.corda.client.rpc.reconnect.ReconnectingObservable
-import net.corda.client.rpc.reconnect.ReconnectingObservableImpl
 import net.corda.client.rpc.reconnect.asReconnecting
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.div
