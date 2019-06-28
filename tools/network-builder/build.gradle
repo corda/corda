@@ -10,6 +10,8 @@ apply plugin: 'application'
 mainClassName = 'net.corda.networkbuilder.Main'
 
 apply plugin: 'com.github.johnrengelman.shadow'
+apply plugin: 'net.corda.plugins.publish-utils'
+apply plugin: 'com.jfrog.artifactory'
 
 configurations {
     compile {
@@ -49,7 +51,9 @@ tasks.withType(JavaCompile) {
     options.compilerArgs << '-proc:none'
 }
 
-jar.enabled = false
+processResources {
+    from file("$rootDir/config/dev/log4j2.xml")
+}
 
 shadowJar {
     baseName = 'network-builder'
@@ -60,3 +64,19 @@ shadowJar {
 
 task buildNetworkBuilder(dependsOn: shadowJar)
 assemble.dependsOn buildNetworkBuilder
+
+artifacts {
+    publish shadowJar {
+        classifier = ""
+    }
+}
+
+jar {
+    classifier "ignore"
+    enabled = false
+}
+
+publish {
+    disableDefaultJar = true
+    name 'corda-tools-network-builder'
+}
