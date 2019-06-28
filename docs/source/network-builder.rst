@@ -11,7 +11,7 @@ containers to abstract the complexity of managing a distributed network away fro
 The network you build will either be made up of local ``Docker`` nodes *or* of nodes spread across Azure
 containers.
 For each node a separate Docker image is built based on `corda/corda-zulu-4.0 <https://hub.docker.com/r/corda/corda-zulu-4.0>`_.
-Unlike the official image, a `node.conf` file and CorDapps are embedded into an image
+Unlike the official image, a `node.conf` file and CorDapps are embedded into the image
 (they are not externally provided to the running container via volumes/mount points).
 More backends may be added in future. The tool is open source, so contributions to add more
 destinations for the containers are welcome!
@@ -102,10 +102,10 @@ You can interact with the nodes by SSHing into them on the port that is mapped t
 
     >>> run networkMapSnapshot
     [
-      { "addresses" : [ "partya0:10020" ], "legalIdentitiesAndCerts" : [ "O=PartyA, L=London, C=GB" ], "platformVersion" : 4, "serial" : 1532701330613 },
-      { "addresses" : [ "notary0:10020" ], "legalIdentitiesAndCerts" : [ "O=Notary, L=London, C=GB" ], "platformVersion" : 4, "serial" : 1532701305115 },
-      { "addresses" : [ "partyc0:10020" ], "legalIdentitiesAndCerts" : [ "O=PartyC, L=Paris, C=FR" ], "platformVersion" : 4, "serial" : 1532701331608 },
-      { "addresses" : [ "partyb0:10020" ], "legalIdentitiesAndCerts" : [ "O=PartyB, L=New York, C=US" ], "platformVersion" : 4, "serial" : 1532701330118 }
+      { "addresses" : [ "partya0:10020" ], "legalIdentitiesAndCerts" : [ "O=PartyA, L=London, C=GB" ], "platformVersion" : |platform_version|, "serial" : 1532701330613 },
+      { "addresses" : [ "notary0:10020" ], "legalIdentitiesAndCerts" : [ "O=Notary, L=London, C=GB" ], "platformVersion" : |platform_version|, "serial" : 1532701305115 },
+      { "addresses" : [ "partyc0:10020" ], "legalIdentitiesAndCerts" : [ "O=PartyC, L=Paris, C=FR" ], "platformVersion" : |platform_version|, "serial" : 1532701331608 },
+      { "addresses" : [ "partyb0:10020" ], "legalIdentitiesAndCerts" : [ "O=PartyB, L=New York, C=US" ], "platformVersion" : |platform_version|, "serial" : 1532701330118 }
     ]
 
     >>>
@@ -129,11 +129,11 @@ To confirm the node has been started correctly, run the following in the previou
 
     Tue Jul 17 15:47:14 GMT 2018>>> run networkMapSnapshot
     [
-      { "addresses" : [ "partya0:10020" ], "legalIdentitiesAndCerts" : [ "O=PartyA, L=London, C=GB" ], "platformVersion" : 4, "serial" : 1532701330613 },
-      { "addresses" : [ "notary0:10020" ], "legalIdentitiesAndCerts" : [ "O=Notary, L=London, C=GB" ], "platformVersion" : 4, "serial" : 1532701305115 },
-      { "addresses" : [ "partyc0:10020" ], "legalIdentitiesAndCerts" : [ "O=PartyC, L=Paris, C=FR" ], "platformVersion" : 4, "serial" : 1532701331608 },
-      { "addresses" : [ "partyb0:10020" ], "legalIdentitiesAndCerts" : [ "O=PartyB, L=New York, C=US" ], "platformVersion" : 4, "serial" : 1532701330118 },
-      { "addresses" : [ "partya1:10020" ], "legalIdentitiesAndCerts" : [ "O=PartyZ, L=London, C=GB" ], "platformVersion" : 4, "serial" : 1532701630861 }
+      { "addresses" : [ "partya0:10020" ], "legalIdentitiesAndCerts" : [ "O=PartyA, L=London, C=GB" ], "platformVersion" : |platform_version|, "serial" : 1532701330613 },
+      { "addresses" : [ "notary0:10020" ], "legalIdentitiesAndCerts" : [ "O=Notary, L=London, C=GB" ], "platformVersion" : |platform_version|, "serial" : 1532701305115 },
+      { "addresses" : [ "partyc0:10020" ], "legalIdentitiesAndCerts" : [ "O=PartyC, L=Paris, C=FR" ], "platformVersion" : |platform_version|, "serial" : 1532701331608 },
+      { "addresses" : [ "partyb0:10020" ], "legalIdentitiesAndCerts" : [ "O=PartyB, L=New York, C=US" ], "platformVersion" : |platform_version|, "serial" : 1532701330118 },
+      { "addresses" : [ "partya1:10020" ], "legalIdentitiesAndCerts" : [ "O=PartyZ, L=London, C=GB" ], "platformVersion" : |platform_version|, "serial" : 1532701630861 }
     ]
 
 Building a network in Graphical User Mode
@@ -185,11 +185,11 @@ node has been started correctly, run the following in the previously connected S
 
     Tue Jul 17 15:47:14 GMT 2018>>> run networkMapSnapshot
     [
-      { "addresses" : [ "partya0:10020" ], "legalIdentitiesAndCerts" : [ "O=PartyA, L=London, C=GB" ], "platformVersion" : 3, "serial" : 1532701330613 },
-      { "addresses" : [ "notary0:10020" ], "legalIdentitiesAndCerts" : [ "O=Notary, L=London, C=GB" ], "platformVersion" : 3, "serial" : 1532701305115 },
-      { "addresses" : [ "partyc0:10020" ], "legalIdentitiesAndCerts" : [ "O=PartyC, L=Paris, C=FR" ], "platformVersion" : 3, "serial" : 1532701331608 },
-      { "addresses" : [ "partyb0:10020" ], "legalIdentitiesAndCerts" : [ "O=PartyB, L=New York, C=US" ], "platformVersion" : 3, "serial" : 1532701330118 },
-      { "addresses" : [ "partya1:10020" ], "legalIdentitiesAndCerts" : [ "O=PartyZ, L=London, C=GB" ], "platformVersion" : 3, "serial" : 1532701630861 }
+      { "addresses" : [ "partya0:10020" ], "legalIdentitiesAndCerts" : [ "O=PartyA, L=London, C=GB" ], "platformVersion" : |platform_version|, "serial" : 1532701330613 },
+      { "addresses" : [ "notary0:10020" ], "legalIdentitiesAndCerts" : [ "O=Notary, L=London, C=GB" ], "platformVersion" : |platform_version|, "serial" : 1532701305115 },
+      { "addresses" : [ "partyc0:10020" ], "legalIdentitiesAndCerts" : [ "O=PartyC, L=Paris, C=FR" ], "platformVersion" : |platform_version|, "serial" : 1532701331608 },
+      { "addresses" : [ "partyb0:10020" ], "legalIdentitiesAndCerts" : [ "O=PartyB, L=New York, C=US" ], "platformVersion" : |platform_version|, "serial" : 1532701330118 },
+      { "addresses" : [ "partya1:10020" ], "legalIdentitiesAndCerts" : [ "O=PartyZ, L=London, C=GB" ], "platformVersion" : |platform_version|, "serial" : 1532701630861 }
     ]
 
 Shutting down the nodes

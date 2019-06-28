@@ -21,7 +21,7 @@ interface NetworkBuilder {
     fun onNodeBuild(callback: (BuiltNode) -> Unit): NetworkBuilder
     fun onNodePushed(callback: (PushedNode) -> Unit): NetworkBuilder
     fun onNodeInstance(callback: (NodeInstance) -> Unit): NetworkBuilder
-
+    /** Sets network name */
     fun withNetworkName(networkName: String): NetworkBuilder
     fun withBasedir(baseDir: File): NetworkBuilder
     fun withBackend(backendType: Backend.BackendType): NetworkBuilder
@@ -231,6 +231,7 @@ fun <T> List<CompletableFuture<T>>.toSingleFuture(): CompletableFuture<List<T>> 
     }
 }
 
+/** Asynchronously runs `consumer` on the receiver CompletableFuture.*/
 fun <T> CompletableFuture<T>.thenAlsoAsync(consumer: (T) -> Unit): CompletableFuture<T> {
     return this.thenApplyAsync {
         consumer(it)
