@@ -1,6 +1,5 @@
 package net.corda.client.rpc
 
-import net.corda.client.rpc.reconnect.asReconnecting
 import net.corda.core.messaging.startTrackedFlow
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.OpaqueBytes
@@ -75,13 +74,13 @@ class CordaRPCClientReconnectionTest {
 
             val rpcOps = client.start(rpcUser.username, rpcUser.password, true).proxy
             val cashStatesFeed = rpcOps.vaultTrack(Cash.State::class.java)
-            val observerHandle = cashStatesFeed.updates.asReconnecting().subscribe { latch.countDown() }
+            val subscription = cashStatesFeed.updates.subscribe { latch.countDown() }
             rpcOps.startTrackedFlow(::CashIssueFlow, 10.DOLLARS, OpaqueBytes.of(0), defaultNotaryIdentity).returnValue.get()
 
             node.stop()
             startNode()
 
-            observerHandle.unsubscribe()
+            subscription.unsubscribe()
 
             rpcOps.startTrackedFlow(::CashIssueFlow, 10.DOLLARS, OpaqueBytes.of(0), defaultNotaryIdentity).returnValue.get()
 

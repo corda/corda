@@ -2,8 +2,6 @@ package net.corda.client.rpc.internal
 
 import net.corda.client.rpc.*
 import net.corda.client.rpc.reconnect.CouldNotStartFlowException
-import net.corda.client.rpc.reconnect.ReconnectingObservable
-import net.corda.client.rpc.reconnect.asReconnecting
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.div
 import net.corda.core.internal.messaging.InternalCordaRPCOps
@@ -116,22 +114,6 @@ class ReconnectingCordaRPCOps private constructor(
                     },
                     timeout.seconds, TimeUnit.SECONDS
             )
-        }
-    }
-
-    /**
-     * This function is similar to [runFlowWithLogicalRetry] but is blocking and it returns the result of the flow.
-     *
-     * [runFlow] - starts a flow and returns the [FlowHandle].
-     * [hasFlowCompleted] - Runs a vault query and is able to recreate the result of the flow.
-     */
-    fun <T> runFlowAndReturnResultWithLogicalRetry(runFlow: (CordaRPCOps) -> FlowHandle<T>, hasFlowCompleted: (CordaRPCOps) -> T?, timeout: Duration = 4.seconds): T {
-        return try {
-            runFlow(this).returnValue.get()
-        } catch (e: CouldNotStartFlowException) {
-            log.error("Couldn't start flow: ${e.message}")
-            Thread.sleep(timeout.toMillis())
-            hasFlowCompleted(this) ?: runFlowAndReturnResultWithLogicalRetry(runFlow, hasFlowCompleted, timeout)
         }
     }
 
@@ -321,5 +303,7 @@ class ReconnectingCordaRPCOps private constructor(
         reconnectingRPCConnection.forceClose()
     }
 }
+
+fun <T> Observable<T>.asReconnecting(): ReconnectingObservable<T> = uncheckedCast(this)
 
 fun <T> Observable<T>.asReconnectingWithInitialValues(values: Iterable<T>): ReconnectingObservable<T> = asReconnecting().startWithValues(values)

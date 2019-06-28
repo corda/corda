@@ -381,22 +381,6 @@ The consequences of this are the following:
 * RPC calls that return ``Observable``\s (e.g. ``vaultTrack``) will automatically reconnect and keep sending events for the subscribed ``Observable``\s.
 * RPC calls that invoke flows (e.g. ``startTrackedFlow``) will fail during a disconnection throwing a ``CouldNotStartFlowException``.
 
-If you enable automatic reconnection, you will also have to cast any ``Observable``\s returned from RPC calls to ``ReconnectingObservable`` and perform subscribe/unsubscribe in the following way:
-
-.. container:: codeset
-
-    .. sourcecode:: kotlin
-
-        val observerHandle = rpcOps.vaultTrack(Cash.State::class.java).updates.asReconnecting().subscribe { /* your handler code */ }
-
-        observerHandle.unsubscribe()
-
-    .. sourcecode:: java
-
-        ObserverHandle observerHandle = (rpcOps.vaultTrack(Cash.State::class.java).updates as ReconnectingObservable).subscribe { /* your handler code */ }
-
-        observerHandle.unsubscribe()
-
 .. warning:: In this approach, some events might be lost during a re-connection and not sent in the subscribed ``Observable``\s.
 
 Logical retries for flow invocation

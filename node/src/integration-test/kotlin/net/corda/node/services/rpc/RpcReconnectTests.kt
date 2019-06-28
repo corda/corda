@@ -1,7 +1,6 @@
 package net.corda.node.services.rpc
 
 import net.corda.client.rpc.internal.ReconnectingCordaRPCOps
-import net.corda.client.rpc.reconnect.asReconnecting
 import net.corda.core.contracts.Amount
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.concurrent.transpose
@@ -125,7 +124,7 @@ class RpcReconnectTests {
                     Cash.State::class.java,
                     QueryCriteria.VaultQueryCriteria(),
                     PageSpecification(1, 1))
-            val vaultObserverHandle = vaultFeed.updates.asReconnecting().subscribe { update: Vault.Update<Cash.State> ->
+            val vaultSubscription = vaultFeed.updates.subscribe { update: Vault.Update<Cash.State> ->
                 log.info("vault update produced ${update.produced.map { it.state.data.amount }} consumed ${update.consumed.map { it.ref }}")
                 vaultEvents.add(update)
             }
@@ -133,7 +132,7 @@ class RpcReconnectTests {
 
             // Observe the stateMachine and collect the observations.
             val stateMachineEvents = Collections.synchronizedList(mutableListOf<StateMachineUpdate>())
-            val stateMachineObserverHandle = bankAReconnectingRpc.stateMachinesFeed().updates.asReconnecting().subscribe { update ->
+            val stateMachineSubscription = bankAReconnectingRpc.stateMachinesFeed().updates.subscribe { update ->
                 log.info(update.toString())
                 stateMachineEvents.add(update)
             }
@@ -299,8 +298,8 @@ class RpcReconnectTests {
             assertTrue(stateMachineEvents.count { it is StateMachineUpdate.Removed } > NUMBER_OF_FLOWS_TO_RUN / 3, "Too many Removed state machine events lost.")
 
             // Stop the observers.
-            vaultObserverHandle.unsubscribe()
-            stateMachineObserverHandle.unsubscribe()
+            vaultSubscription.unsubscribe()
+            stateMachineSubscription.unsubscribe()
 
             bankAReconnectingRpc.close()
         }

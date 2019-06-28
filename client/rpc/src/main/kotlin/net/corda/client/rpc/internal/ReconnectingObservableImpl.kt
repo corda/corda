@@ -1,11 +1,10 @@
 package net.corda.client.rpc.internal
 
-import net.corda.client.rpc.reconnect.ObserverHandle
-import net.corda.client.rpc.reconnect.ReconnectingObservable
 import net.corda.core.messaging.DataFeed
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import rx.Observable
+import rx.Subscription
 import java.util.concurrent.ExecutorService
 
 class ReconnectingObservableImpl<T> internal constructor(
@@ -24,7 +23,21 @@ class ReconnectingObservableImpl<T> internal constructor(
                                     val initial: DataFeed<*, T>,
                                     val createDataFeed: () -> DataFeed<*, T>): OnSubscribe<T>, ReconnectingObservable<T> {
         override fun call(child: rx.Subscriber<in T>) {
-            subscribe(child::onNext, {}, {}, {})
+            val handle = subscribe(child::onNext, {}, {}, {})
+            // this additional subscription allows us to detect un-subscription calls from clients and un-subscribe any subscription that resulted from re-connections.
+            child.add(object: Subscription {
+                @Volatile
+                var unsubscribed: Boolean = false
+
+                override fun unsubscribe() {
+                    handle.stop()
+                    unsubscribed = true
+                }
+
+                override fun isUnsubscribed(): Boolean {
+                    return unsubscribed
+                }
+            })
         }
 
         private var initialStartWith: Iterable<T>? = null
@@ -32,7 +45,7 @@ class ReconnectingObservableImpl<T> internal constructor(
             var subscriptionError: Throwable?
             try {
                 val subscription = initial.updates.let { if (startWithValues != null) it.startWith(startWithValues) else it }
-                        .subscribe(onNext, observerHandle::fail, observerHandle::unsubscribe)
+                        .subscribe(onNext, observerHandle::fail, observerHandle::stop)
                 subscriptionError = observerHandle.await()
                 subscription.unsubscribe()
             } catch (e: Exception) {
