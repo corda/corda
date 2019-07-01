@@ -32,12 +32,12 @@ import java.util.ServiceLoader
  *
  * @see RPCConnection
  */
-class CordaRPCConnection internal constructor(private val connection: RPCConnection<CordaRPCOps>) : RPCConnection<CordaRPCOps> {
+class CordaRPCConnection internal constructor(private val connection: RPCConnection<CordaRPCOps>?) : RPCConnection<CordaRPCOps> {
 
     companion object {
         @CordaInternal
-        internal fun createWithReconnection(connection: RPCConnection<CordaRPCOps>, username: String, password: String, addresses: List<NetworkHostAndPort>): CordaRPCConnection {
-            val cordaRpcConnection = CordaRPCConnection(connection)
+        internal fun createWithGracefulReconnection(username: String, password: String, addresses: List<NetworkHostAndPort>): CordaRPCConnection {
+            val cordaRpcConnection = CordaRPCConnection(null)
             cordaRpcConnection.reconnectingCordaRPCOps = ReconnectingCordaRPCOps(addresses, username, password)
             return cordaRpcConnection
         }
@@ -46,11 +46,11 @@ class CordaRPCConnection internal constructor(private val connection: RPCConnect
     private var reconnectingCordaRPCOps: ReconnectingCordaRPCOps? = null
 
     private fun actualConnection(): RPCConnection<CordaRPCOps> {
-        return reconnectingCordaRPCOps?.reconnectingRPCConnection ?: connection
+        return reconnectingCordaRPCOps?.reconnectingRPCConnection ?: connection!!
     }
 
     override val proxy: CordaRPCOps get() {
-        return reconnectingCordaRPCOps ?: connection.proxy
+        return reconnectingCordaRPCOps ?: connection!!.proxy
     }
 
     override val serverProtocolVersion: Int get() {
@@ -274,11 +274,17 @@ open class CordaRPCClientConfiguration @JvmOverloads constructor(
  * observable with another RPC.
  *
  * In case of loss of connection to the server, the client will try to reconnect using the settings provided via
- * [CordaRPCClientConfiguration]. While attempting failover, current and future RPC calls will throw
+ * [CordaRPCClientConfiguration]. If the client was created using a list of hosts via [haAddressPool], automatic failover will occur
+ * (the servers have to be started in HA mode). While attempting failover, current and future RPC calls will throw
  * [RPCException] and previously returned observables will call onError().
  *
- * If the client was created using a list of hosts, automatic failover will occur (the servers have to be started in
- * HA mode).
+ * If you want to enable a more graceful form of reconnection, you can make use of the gracefulReconnect argument of the [start] method.
+ * If this is set to true, then:
+ * - The client will automatically reconnect, when the connection is broken regardless of whether you provided a single or multiple addresses.
+ * - Simple RPC calls that return data (e.g. [CordaRPCOps.networkParameters]) will block and return after the connection has been re-established and the node is up.
+ * - RPC calls that return [rx.Observable]s (e.g. [CordaRPCOps.vaultTrack]) will automatically reconnect and keep sending events for the subscribed [rx.Observable]s.
+ *   Note: In this approach, some events might be lost during a re-connection and not sent in the subscribed [rx.Observable]s.
+ * - RPC calls that invoke flows (e.g. [CordaRPCOps.startFlowDynamic]) will fail during a disconnection throwing a [CouldNotStartFlowException].
  *
  * @param hostAndPort The network address to connect to.
  * @param configuration An optional configuration used to tweak client behaviour.
@@ -374,12 +380,12 @@ class CordaRPCClient private constructor(
      *
      * @param username The username to authenticate with.
      * @param password The password to authenticate with.
-     * @param autoReconnect whether the connection will try to reconnect automatically
+     * @param gracefulReconnect whether the connection will reconnect gracefully.
      * @throws RPCException if the server version is too low or if the server isn't reachable within a reasonable timeout.
      */
     @JvmOverloads
-    fun start(username: String, password: String, autoReconnect: Boolean = false): CordaRPCConnection {
-        return start(username, password, null, null, autoReconnect)
+    fun start(username: String, password: String, gracefulReconnect: Boolean = false): CordaRPCConnection {
+        return start(username, password, null, null, gracefulReconnect)
     }
 
     /**
@@ -391,12 +397,12 @@ class CordaRPCClient private constructor(
      * @param username The username to authenticate with.
      * @param password The password to authenticate with.
      * @param targetLegalIdentity in case of multi-identity RPC endpoint specific legal identity to which the calls must be addressed.
-     * @param autoReconnect whether the connection will try to reconnect automatically
+     * @param gracefulReconnect whether the connection will reconnect gracefully.
      * @throws RPCException if the server version is too low or if the server isn't reachable within a reasonable timeout.
      */
     @JvmOverloads
-    fun start(username: String, password: String, targetLegalIdentity: CordaX500Name, autoReconnect: Boolean = false): CordaRPCConnection {
-        return start(username, password, null, null, targetLegalIdentity, autoReconnect)
+    fun start(username: String, password: String, targetLegalIdentity: CordaX500Name, gracefulReconnect: Boolean = false): CordaRPCConnection {
+        return start(username, password, null, null, targetLegalIdentity, gracefulReconnect)
     }
 
     /**
@@ -409,12 +415,12 @@ class CordaRPCClient private constructor(
      * @param password The password to authenticate with.
      * @param externalTrace external [Trace] for correlation.
      * @param impersonatedActor the actor on behalf of which all the invocations will be made.
-     * @param autoReconnect whether the connection will try to reconnect automatically
+     * @param gracefulReconnect whether the connection will reconnect gracefully.
      * @throws RPCException if the server version is too low or if the server isn't reachable within a reasonable timeout.
      */
     @JvmOverloads
-    fun start(username: String, password: String, externalTrace: Trace?, impersonatedActor: Actor?, autoReconnect: Boolean = false): CordaRPCConnection {
-        return start(username, password, externalTrace, impersonatedActor, null, autoReconnect)
+    fun start(username: String, password: String, externalTrace: Trace?, impersonatedActor: Actor?, gracefulReconnect: Boolean = false): CordaRPCConnection {
+        return start(username, password, externalTrace, impersonatedActor, null, gracefulReconnect)
     }
 
     /**
@@ -428,19 +434,19 @@ class CordaRPCClient private constructor(
      * @param externalTrace external [Trace] for correlation.
      * @param impersonatedActor the actor on behalf of which all the invocations will be made.
      * @param targetLegalIdentity in case of multi-identity RPC endpoint specific legal identity to which the calls must be addressed.
-     * @param autoReconnect whether the connection will try to reconnect automatically
+     * @param gracefulReconnect whether the connection will reconnect gracefully.
      * @throws RPCException if the server version is too low or if the server isn't reachable within a reasonable timeout.
      */
     @JvmOverloads
-    fun start(username: String, password: String, externalTrace: Trace?, impersonatedActor: Actor?, targetLegalIdentity: CordaX500Name?, autoReconnect: Boolean = false): CordaRPCConnection {
+    fun start(username: String, password: String, externalTrace: Trace?, impersonatedActor: Actor?, targetLegalIdentity: CordaX500Name?, gracefulReconnect: Boolean = false): CordaRPCConnection {
         val addresses = if (haAddressPool.isEmpty()) {
             listOf(hostAndPort!!)
         } else {
             haAddressPool
         }
 
-        return if (autoReconnect) {
-            CordaRPCConnection.createWithReconnection(getRpcClient().start(InternalCordaRPCOps::class.java, username, password, externalTrace, impersonatedActor, targetLegalIdentity), username, password, addresses)
+        return if (gracefulReconnect) {
+            CordaRPCConnection.createWithGracefulReconnection(username, password, addresses)
         } else {
             CordaRPCConnection(getRpcClient().start(InternalCordaRPCOps::class.java, username, password, externalTrace, impersonatedActor, targetLegalIdentity))
         }

@@ -367,21 +367,24 @@ Clients can make use of the options described below in order to take advantage o
 Enabling automatic reconnection
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-You can enable automatic reconnection in the RPC client provided by Corda in the following way:
+If you provide a list of addresses via the ``haAddressPool`` argument when instantiating a ``CordaRPCClient``, then automatic reconnection will be performed when the existing connection is dropped.
+However, any in-flight calls during reconnection will fail and previously returned observables will call ``onError``. The client code is responsible for waiting for the connection to be established
+in order to retry any calls, retrieve new observables and re-subscribe to them.
+
+Enabling graceful reconnection
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A more graceful form of reconnection is also available, which will block all in-flight calls until the connection is re-established and
+will also reconnect the existing ``Observable``\s, so that they keep emitting events to the existing subscribers.
+
+.. warning:: In this approach, some events might be lost during a re-connection and not sent from the subscribed ``Observable``\s.
+
+You can enable this graceful form of reconnection by using the ``gracefulReconnect`` parameter in the following way:
 
 .. sourcecode:: kotlin
 
    val cordaClient = CordaRPCClient(nodeRpcAddress)
-   val cordaRpcOps = cordaClient.start(rpcUserName, rpcUserPassword, autoReconnect = true).proxy
-
-The consequences of this are the following:
-
-* The client will automatically reconnect, when the connection is broken. Your code can keep using the same instance.
-* Simple RPC calls that return data (e.g. ``networkParameters``) will block and return after the connection has been re-established and the node is up.
-* RPC calls that return ``Observable``\s (e.g. ``vaultTrack``) will automatically reconnect and keep sending events for the subscribed ``Observable``\s.
-* RPC calls that invoke flows (e.g. ``startTrackedFlow``) will fail during a disconnection throwing a ``CouldNotStartFlowException``.
-
-.. warning:: In this approach, some events might be lost during a re-connection and not sent in the subscribed ``Observable``\s.
+   val cordaRpcOps = cordaClient.start(rpcUserName, rpcUserPassword, gracefulReconnect = true).proxy
 
 Logical retries for flow invocation
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
