@@ -1,7 +1,6 @@
 FROM corda/corda-zulu-4.0
 
 # Copy corda files
-ADD --chown=corda:corda corda.jar               /opt/corda/corda.jar
 ADD --chown=corda:corda node.conf               /opt/corda/node.conf
 ADD --chown=corda:corda cordapps/               /opt/corda/cordapps
 

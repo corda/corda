@@ -4,7 +4,6 @@ import net.corda.networkbuilder.backends.Backend
 import net.corda.networkbuilder.context.Context
 import net.corda.networkbuilder.nodes.*
 import net.corda.networkbuilder.notaries.NotaryCopier
-import net.corda.networkbuilder.notaries.NotaryFinder
 import java.io.File
 import java.util.concurrent.CompletableFuture
 
@@ -132,7 +131,7 @@ private class NetworkBuilderImpl : NetworkBuilder {
         if (cacheDir.exists()) cacheDir.deleteRecursively()
         val (containerPusher, instantiator, volume) = Backend.fromContext(context, cacheDir)
         val nodeFinder = NodeFinder(baseDir)
-        val notaryFinder = NotaryFinder(baseDir)
+        val notaryFinder = NodeFinder(baseDir)
         val notaryCopier = NotaryCopier(cacheDir)
 
         val nodeInstantiator = NodeInstantiator(instantiator, context)

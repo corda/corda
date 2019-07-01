@@ -145,7 +145,7 @@ The Corda Network Builder also provides a GUI for when automated interactions ar
 Starting the nodes
 ^^^^^^^^^^^^^^^^^^
 
-1. Click ``Open nodes ...`` and select jar the folder where you built your nodes in :ref:`creating_the_base_nodes` and
+1. Click ``Open nodes ...`` and select the folder where you built your nodes in :ref:`creating_the_base_nodes` and
    click ``Open``
 2. Select ``Local Docker`` or ``Azure``
 3. Click ``Build``

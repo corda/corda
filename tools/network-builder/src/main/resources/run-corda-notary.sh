@@ -14,7 +14,7 @@ bash node_info_watcher.sh &
 cd ${CORDA_HOME}
 
 
-if java ${JAVA_OPTIONS} -jar ${CORDA_HOME}/corda.jar 2>&1 ; then
+if java ${JAVA_OPTIONS} -jar ${CORDA_HOME}/bin/corda.jar 2>&1 ; then
     echo "Corda exited with zero exit code"
 else
     echo "Corda exited with nonzero exit code, sleeping to allow log collection"

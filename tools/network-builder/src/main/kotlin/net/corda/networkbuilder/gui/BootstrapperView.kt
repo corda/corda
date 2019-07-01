@@ -21,7 +21,6 @@ import net.corda.networkbuilder.backends.Backend
 import net.corda.networkbuilder.baseArgs
 import net.corda.networkbuilder.context.Context
 import net.corda.networkbuilder.nodes.*
-import net.corda.networkbuilder.notaries.NotaryFinder
 import net.corda.core.identity.CordaX500Name
 import org.apache.commons.lang3.RandomStringUtils
 import org.controlsfx.control.SegmentedButton
@@ -222,7 +221,7 @@ class BootstrapperView : View("Corda Network Builder") {
             nodeFinder.findNodes()
         }
         val foundNotaries = CompletableFuture.supplyAsync {
-            val notaryFinder = NotaryFinder(dir)
+            val notaryFinder = NodeFinder(dir)
             notaryFinder.findNotaries()
         }
         foundNodes.thenCombine(foundNotaries) { nodes, notaries ->
