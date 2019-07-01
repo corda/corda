@@ -10,7 +10,7 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
 import net.corda.core.cordapp.Cordapp
 import net.corda.core.flows.*
-import net.corda.core.identity.AbstractParty
+import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
 import net.corda.core.serialization.internal.CheckpointSerializationContext
@@ -355,9 +355,10 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     }
 
     @Suspendable
-    override fun initiateFlow(wellKnown: Party, requested: AbstractParty?): FlowSession {
+    override fun initiateFlow(destination: Destination): FlowSession {
+        require(destination is Party || destination is AnonymousParty) { "Unsupported destination type ${destination.javaClass.name}" }
         val resume = processEventImmediately(
-                Event.InitiateFlow(wellKnownParty = wellKnown, requestedParty = requested),
+                Event.InitiateFlow(destination),
                 isDbTransactionOpenOnEntry = true,
                 isDbTransactionOpenOnExit = true
         ) as FlowContinuation.Resume
@@ -367,7 +368,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     @Suspendable
     private fun abortFiber(): Nothing {
         while (true) {
-            park()
+            Fiber.park()
         }
     }
 
