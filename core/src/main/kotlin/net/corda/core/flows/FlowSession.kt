@@ -6,7 +6,6 @@ import net.corda.core.KeepForDJVM
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.utilities.UntrustworthyData
-import java.security.PublicKey
 
 /**
  * A [FlowSession] is a handle on a communication sequence between two paired flows, possibly running on separate nodes.
@@ -46,13 +45,6 @@ import java.security.PublicKey
  */
 @DoNotImplement
 abstract class FlowSession {
-
-    /**
-     * The current [sessionOwningKey] in the context of this session. It is not guaranteed to be [counterparty.owningKey] as the session
-     * may have been initiated with an [net.corda.core.identity.AnonymousParty] useful for grouping sessions vs signing requests
-     */
-    abstract val sessionOwningKey: PublicKey
-
     /**
      * The [Destination] on the other side of this session. In the case of a session created by [FlowLogic.initiateFlow] this is the same
      * destination as the one passed to that function.
