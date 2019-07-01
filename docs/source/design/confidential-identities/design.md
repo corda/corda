@@ -110,7 +110,7 @@ new "CI" flows.
 
 3. DONE Formalise a design.
 
-4. TODO Get design reviewed by the DRB.
+4. DONE Get design reviewed by the DRB.
 
 5. TODO Implement the design using the PoC as a basis.
 
@@ -177,33 +177,29 @@ No changes.
 #### New public types
 
     @CordaSerializable
-    data class KeyToPartyMapping(val key: PublicKey, val party: PartyAndCertificate)
+    data class OwnershipClaim(val nonce: OpaqueBytes, val key: PublicKey)
 
-    @CordaSerializable
-    data class SignedKeyToPartyMapping(
-            val mapping: KeyToPartyMapping,
-            val signature: DigitalSignature.WithKey
-    )
+  
 
-The new type `KeyToPartyMapping` simply maps a `PublicKey` to a `PartyAndCertificate`
+The new type `OwnershipClaim` simply stores the `PublicKey` of the confidential identity. It is to be wrapped with `SignedData<T>` when the data is to be parsed by the new flows. 
 object. The type makes no assumptions about _who_ the `PublicKey` is for.
 Indeed, it could be for an account or a legal identity, if a company wishes
-to self-host Corda. The `KeyToPartyMapping` should be signed by a node operator's
+to self-host Corda. The `SignedData<OwnershipClaim>` should be signed by a node operator's
 "legal identity" key only.
 
-The `SignedKeyToPartyMapping` is intended to be:
+The `SignedData<OwnershipClaim>` is intended to be:
 
 1. Returned by the `KeyManagementService` when a particular method
    is called to generate a new signed `PublicKey`.
 
-2. Ingested by the `IdentityService` to register a new `KeyToPartyMapping`.
+2. The `PublicKey` and `Party` objects will be extracted before being consumed by the `IdentityService` to register a new the mapping between the `PublicKey` and `Party`.
 
 It is unlikely that CorDapp developers will use these types directly. Instead,
 there will be a set of flows for:
 
-1. Requesting another node generate a new key pair then share a `SignedKeyToPartyMapping`.
+1. Requesting another node generate a new key pair then share a `SignedData<OwnershipClaim>`.
 
-2. Generating a new key pair, then sharing a `SignedKeyToPartyMapping` with
+2. Generating a new key pair, then sharing a `SignedData<OwnershipClaim>` with
    another node.
 
 ####  `KeyManagementService` changes
@@ -214,13 +210,13 @@ there will be a set of flows for:
    more. Instead, CorDapp developers will use a new method which returns
    a `SignedPublicKeyToPartyMapping`.
 
-2. Add a new API called `fun freshKey(externalID: UUID): SignedKeyToPartyMapping`
+2. Add a new API called `fun freshKey(externalID: UUID): PublicKey`
    which creates a new key pair, adds an entry to the `PublicKeyHashToExternalId`
-   entity (if an externalId is specified) and returns a `SignedKeyToPartyMapping`.
-   **Note:** that the `SignedKeyToPartyMapping` must be registered with the `IdentityService`
+   entity (if an externalId is specified) and returns the `PublicKey`.
+   **Note:** that the `PublicKey` must be registered with the `IdentityService`
    separately. Failing to do this will result in your node being unable
    to resolve `AnonymousParty` objects to `Party` objects for unregistered
-   `KeyToPartyMapping`s.
+   `PublicKey` to `Party` mappings.
 
 #### `PersistentIdentityService` changes
 
@@ -238,8 +234,6 @@ there will be a set of flows for:
    the node where it is associated with. All legal identity keys as well
    as newly created anonymous keys should be stored in this map.
 
-The `IdentityService` should always verify `SignedKeyToPartyMapping`s before
-storing the mapping.
 
 #### `IdentityService` changes
 
@@ -247,13 +241,11 @@ These points detail changes which must be made to ensure backwards compatible
 behaviour whilst supporting a new API for key to party mappings:
 
 1. Add a new method to `IdentityService` (and implementation in
-   `PersistentIdentityService` and `InMemoryIdentityService`)
+   `PersistentIdentityService` and `InMemoryIdentityService`).
 
-        fun registerPublicKeyToPartyMapping(mapping: SignedKeyToPartyMapping)
+        fun registerKeyToParty(key: PublicKey, party: Party) : Boolean
 
-   which verifies and registers a `SignedKeyToPartyMapping`. This method
-   only updates the `keyToPartyMapping` mapping. If a mapping has already
-   been stored for the same `Party` then the method call is idempotent.
+   This method only updates the `keyToParties` mapping. If a mapping has    already been stored for the same `Party` then the method call is idempotent.
    If it turns out that another x500 name has been stored for the same key
    then the method will throw an exception for now. In the future, it might
    be the case that client-side generated key pairs can moved from one node
@@ -320,12 +312,12 @@ Keys with mappings to an x500name can be rendered used the x500 name.
 
 Three sets of flows will be added:
 
-1. `RequestNewKey` where a `Party` and an optional externalId `UUID` are
-   specified as parameters. The `Party` is then asked to generate a new
+1. `RequestKeyFlow` where a `Party` and an optional externalId `UUID` are
+   specified as parameters. An optional `PublicKey` parameter may be provided if we we wish to store a mapping between a known `PublicKey` and the `Party`. The `Party` is then asked to generate a new
    key pair, then map the public key to it's own `Party` object. This mapping
    will then be stored locally and shared with the requesting node, which
    then verifies and stores the mapping.
-2. `GenerateAndShareNewKey` which implements the above but in reverse. This
+2. `ShareKeyFlow` which implements the above but in reverse. This
    flow requests a new key pair and key to `Party` mapping, stores the mapping
    then shares it with the specified `Party`s.
 3. `SyncKeyMappings` which takes the following format:
@@ -339,8 +331,8 @@ Three sets of flows will be added:
        keyed with `AnonymousParty`s. The initiator cannot create a signed
        assertion that the mapping is correct. Instead, the responder must
        contact each `Party` individually and ask them for a signed assertion.
-    4. The Responder asks each `Party` for a `SignedKeyMapping`. The responders
-       will return a `SignedKeyMapping` if they own the key, otherwise, they'll
+    4. The Responder asks each `Party` for a `SignedData<OwnershipClaim>`. The responders
+       will return a `SignedData<OwnershipClaim>` if they own the key, otherwise, they'll
        return a `null`.
     5. The key difference to the old `SyncIdentitiesFlow` is that when we
        used certificates, the initiator of the flow could just send the
@@ -352,9 +344,3 @@ Three sets of flows will be added:
 
 The current flows can be left as they are. However my view is that they
 should be deprecated.
-
-
-
-
-
-
