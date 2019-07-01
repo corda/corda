@@ -29,9 +29,6 @@ repositories {
         dirs 'libs'
     }
     jcenter()
-    maven {
-        url 'http://www.sparetimelabs.com/maven2'
-    }
 }
 
 configurations {
@@ -56,7 +53,6 @@ dependencies {
     compile "com.h2database:h2:$h2_version"
     compile "net.java.dev.jna:jna-platform:$jna_version"
     compile "com.google.guava:guava:$guava_version"
-    compile "com.sparetimelabs:purejavacomm:$purejavacomm_version"
     compile "org.slf4j:log4j-over-slf4j:$slf4j_version"
     compile "org.slf4j:jul-to-slf4j:$slf4j_version"
     compile "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
