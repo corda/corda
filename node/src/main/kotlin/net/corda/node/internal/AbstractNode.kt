@@ -175,7 +175,12 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     val transactionStorage = makeTransactionStorage(configuration.transactionCacheSizeBytes).tokenize()
     val networkMapClient: NetworkMapClient? = configuration.networkServices?.let { NetworkMapClient(it.networkMapURL, versionInfo) }
     val attachments = NodeAttachmentService(metricRegistry, cacheFactory, database, configuration.devMode).tokenize()
-    val cryptoService = CryptoServiceFactory.makeCryptoService(SupportedCryptoServices.BC_SIMPLE, configuration.myLegalName, configuration.signingCertificateStore, configuration.cryptoServiceTimeout)
+    val cryptoService = CryptoServiceFactory.makeCryptoService(
+            SupportedCryptoServices.BC_SIMPLE,
+            configuration.myLegalName,
+            configuration.signingCertificateStore,
+            configuration.cryptoServiceTimeout
+    ).closeOnStop()
     @Suppress("LeakingThis")
     val networkParametersStorage = makeNetworkParametersStorage()
     val cordappProvider = CordappProviderImpl(cordappLoader, CordappConfigFileProvider(configuration.cordappDirectories), attachments).tokenize()
