@@ -1,111 +1,68 @@
-Quickstart
-==========
+Getting started developing CorDapps
+===================================
 
-Welcome to the Corda Quickstart Guide. Follow the links below to help get going quickly with Corda.
+.. toctree::
+  :hidden:
+  :titlesonly:
+  :maxdepth: 0
 
-I want to:
+  quickstart-deploy
+  quickstart-build
 
-* :ref:`Learn <quickstart-learn>` about Corda for the first time
-* :ref:`Develop <quickstart-develop>` a CorDapp
-* :ref:`Run <quickstart-run>` and test a CorDapp on a local Corda network
-* :ref:`Add <quickstart-add>` a node to an existing test Corda network
-* :ref:`Add <quickstart-production>` a node to an existing production network
+Getting started with Corda will walk you through the process of setting up a development environment, deploying an example CorDapp, and building your own CorDapp based on the example.
 
-.. _quickstart-learn:
+1. Setting up a development environment
+2. Deploying an example CorDapp
+3. Understanding CorDapp contents
+4. Building your own CorDapp
 
-Learn about Corda for the first time
+The getting started experience is designed to be lightweight and get to code as quickly as possible, for more detail, see the following documentation:
+
+* CorDapp design best practice
+* Testing CorDapps
+
+For a more operations-focused experience, see the following operations documentation:
+
+* Node structure and configuration
+* Deploying a node
+* Notary docs
+* HSM configuration
+
+Setting up a development environment
 ------------------------------------
 
-+--------------------------------------------+--------------------------------------------------------------------------------------------+
-| Useful links                               | Description                                                                                |
-+============================================+============================================================================================+
-| :doc:`key-concepts`                        | The key concepts and features of the Corda Platform                                        |
-+--------------------------------------------+--------------------------------------------------------------------------------------------+
-| :doc:`getting-set-up`                      | Set up your machine for running and developing CorDapps                                    |
-+--------------------------------------------+--------------------------------------------------------------------------------------------+
-| :doc:`tutorial-cordapp`                    | A guide to running a simple CorDapp                                                        |
-+--------------------------------------------+--------------------------------------------------------------------------------------------+
+**write some text here**
 
-.. _quickstart-develop:
+Prerequisites
+~~~~~~~~~~~~~
 
-Develop a CorDapp
------------------
+* **Java 8 JVK** - We require at least version |java_version|, but do not currently support Java 9 or higher.
+* **IntelliJ IDEA** - IntelliJ is an IDE that offers strong support for Kotlin and Java development. We support versions **2017.x**, **2018.x** and **2019.x** (with Kotlin plugin version |kotlin_version|)
+* **Gradle** - Gradle is a build automation tool that we use for dependency management. We use version 4.10 and the ``gradlew`` script in the project/samples directories will download it for you.
+* **Git** - We use Git to host our sample CorDapp and provide version control.
 
-+--------------------------------------------+--------------------------------------------------------------------------------------------+
-| Useful links                               | Description                                                                                |
-+============================================+============================================================================================+
-| :doc:`hello-world-introduction`            | A coding walk-through of a basic CorDapp                                                   |
-+--------------------------------------------+--------------------------------------------------------------------------------------------+
-| :doc:`cordapp-overview`                    | An introduction to CordApps                                                                |
-+--------------------------------------------+--------------------------------------------------------------------------------------------+
-| :doc:`writing-a-cordapp`                   | How to structure a CorDapp project                                                         |
-+--------------------------------------------+--------------------------------------------------------------------------------------------+
-| :doc:`cordapp-build-systems`               | How to build a CorDapp                                                                     |
-+--------------------------------------------+--------------------------------------------------------------------------------------------+
-| :doc:`corda-api`                           | A guide to the CorDapp API                                                                 |
-+--------------------------------------------+--------------------------------------------------------------------------------------------+
 
-.. _quickstart-run:
+Step One: Downloading a sample project
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Run and test a CorDapp on local Corda network
----------------------------------------------
+1. Open a command prompt or terminal.
+2. Clone the CorDapp example repo by running ``git clone https://github.com/corda/cordapp-example``
+3. Move into the ``cordapp-example`` folder by running ``cd cordapp-example``
+4. Checkout the corresponding branch for Corda Enterprise by running ``git checkout release-enterprise-V3`` in the current directory.
 
-+------------------------------------------------+----------------------------------------------------------------------------------------+
-| Useful links                                   | Description                                                                            |
-+================================================+========================================================================================+
-| :doc:`generating-a-node`                       | Guidance on creating Corda nodes for development and testing locally and on Docker     |
-+------------------------------------------------+----------------------------------------------------------------------------------------+
-| :doc:`node-structure`                          | The Corda node folder structure and how to name your node                              |
-+------------------------------------------------+----------------------------------------------------------------------------------------+
-| :doc:`corda-configuration-file`                | A detailed description of the Corda node configuration file with examples              |
-+------------------------------------------------+----------------------------------------------------------------------------------------+
-| :doc:`running-a-node`                          | Guidance on running Corda nodes locally and on Docker                                  |
-+------------------------------------------------+----------------------------------------------------------------------------------------+
-| :doc:`setting-up-a-dynamic-compatibility-zone` | Considerations for setting up a Corda network                                          |
-+------------------------------------------------+----------------------------------------------------------------------------------------+
-| :doc:`shell`                                   | Guidance on using an embedded command line to control and monitor a node               |
-+------------------------------------------------+----------------------------------------------------------------------------------------+
-| :doc:`node-administration`                     | How to monitor a Corda node using an RPC interface                                     |
-+------------------------------------------------+----------------------------------------------------------------------------------------+
-| :doc:`node-explorer`                           | A GUI-based tool to view transactional data and transactional history for a node       |
-+------------------------------------------------+----------------------------------------------------------------------------------------+
 
-.. _quickstart-add:
+Step Two: Creating an IntelliJ project
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Add a node to an existing test Corda network
---------------------------------------------
+1. Open IntelliJ. From the splash screen, click **Open**, navigate to and select the ``cordapp-example`` folder, and click **Ok**. This creates an IntelliJ project to work from.
 
-+--------------------------------------------+--------------------------------------------------------------------------------------------+
-| Useful links                               | Description                                                                                |
-+============================================+============================================================================================+
-| :doc:`node-structure`                      | The Corda node folder structure and how to name your node                                  |
-+--------------------------------------------+--------------------------------------------------------------------------------------------+
-| :doc:`corda-configuration-file`            | A detailed description of the Corda node configuration file with examples                  |
-+--------------------------------------------+--------------------------------------------------------------------------------------------+
-| :doc:`deploying-a-node`                    | A step-by-step guide on deploying a Corda node to your own server                          |
-+--------------------------------------------+--------------------------------------------------------------------------------------------+
-| :doc:`azure-vm`                            | A step-by-step guide on creating a Corda Network on Azure                                  |
-+--------------------------------------------+--------------------------------------------------------------------------------------------+
-| :doc:`aws-vm`                              | A step-by-step guide on creating a Corda Network on AWS                                    |
-+--------------------------------------------+--------------------------------------------------------------------------------------------+
-| :doc:`shell`                               | Guidance on using an embedded command line to control and monitor a node                   |
-+--------------------------------------------+--------------------------------------------------------------------------------------------+
-| :doc:`node-administration`                 | How to monitor a Corda node using an RPC interface                                         |
-+--------------------------------------------+--------------------------------------------------------------------------------------------+
-| :doc:`node-explorer`                       | A GUI-based tool to view transactional data and transactional history for a node           |
-+--------------------------------------------+--------------------------------------------------------------------------------------------+
-| :doc:`blob-inspector`                      | A troubleshooting tool allowing you to read the contents of a binary blob file             |
-+--------------------------------------------+--------------------------------------------------------------------------------------------+
+2. Once the project is open, click **File**, then **Project Structure**. Under **Project SDK:**, set the project SDK by clicking **New...**, clicking **JDK**, and navigating to ``C:\Program Files\Java\jdk1.8.0_XXX`` on Windows or ``Library/Java/JavaVirtualMachines/jdk1.8.XXX`` on MacOSX, where ``XXX`` is the latest minor version number. Click **Apply** followed by **Ok**. This instructs IntelliJ to use the version of the Java JDK downloaded in the prerequisites.
 
-.. _quickstart-production:
+3. Click **File** then **Project Structure**, select **Modules**. Click **+**, then **Import Module**, then select the ``cordapp-example`` folder and click **Open**. Select **Import module from external model**, select **Gradle**, click **Next** then **Finish** and **Ok**. Gradle will now download all the project dependencies and perform some indexing.
 
-Add a node to an existing production network
---------------------------------------------
+Your CorDapp development environment is now complete.
 
-+---------------------------------------------------------------------------------------------------------+
-| Corda Network is a global production network of Corda nodes, operated by the independent                |
-| Corda Network Foundation. You can learn more here: https://corda.network/participation/index.html       |
-+---------------------------------------------------------------------------------------------------------+
-| Corda Testnet is a test network, operated for the community by R3. You can learn                        |
-| more here: https://testnet.corda.network                                                                |
-+---------------------------------------------------------------------------------------------------------+
+Next steps
+----------
+
+Now that you've successfully set up your CorDapp development environment, we'll cover deploying the example CorDapp locally.
