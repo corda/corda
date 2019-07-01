@@ -6,6 +6,7 @@ import net.corda.core.internal.sign
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.seconds
 import net.corda.node.VersionInfo
+import net.corda.node.services.config.NetworkServicesConfig
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
@@ -41,7 +42,7 @@ class NetworkMapClientTest {
     fun setUp() {
         server = NetworkMapServer(cacheTimeout)
         val address = server.start()
-        networkMapClient = NetworkMapClient(URL("http://$address"),
+        networkMapClient = NetworkMapClient(NetworkServicesConfig(URL("http://no.such.address"), URL("http://$address")),
                 VersionInfo(1, "TEST", "TEST", "TEST")).apply { start(DEV_ROOT_CA.certificate) }
     }
 
