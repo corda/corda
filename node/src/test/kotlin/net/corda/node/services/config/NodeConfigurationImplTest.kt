@@ -19,6 +19,7 @@ import org.junit.Assert.assertNotNull
 import org.junit.Test
 import java.io.File
 import java.net.InetAddress
+import java.net.Proxy
 import java.net.URI
 import java.net.URL
 import java.nio.file.Paths
@@ -219,6 +220,39 @@ class NodeConfigurationImplTest {
             error.contains("Cannot configure both compatibilityZoneUrl and networkServices simultaneously")
         }
     }
+
+    @Test
+    fun `test reading proxy configuration`() {
+        val configuration = testConfiguration.copy(
+                devMode = false,
+                networkServices = NetworkServicesConfig(
+                        URL("https://r3.com.doorman"),
+                        URL("https://r3.com/nm"),
+                        proxyType = Proxy.Type.HTTP,
+                        proxyAddress = NetworkHostAndPort("localhost", 8080),
+                        proxyUser = "user",
+                        proxyPassword = "password"
+                ))
+
+        val errors = configuration.validate()
+        assertThat(errors).isEmpty()
+    }
+
+    @Test
+    fun `can't specify proxy type without address`() {
+        val configuration = testConfiguration.copy(
+                devMode = false,
+                networkServices = NetworkServicesConfig(
+                        URL("https://r3.com.doorman"),
+                        URL("https://r3.com/nm"),
+                        proxyType = Proxy.Type.HTTP
+                ))
+
+        val errors = configuration.validate()
+        assertThat(errors).contains("cannot enable network proxy by specifying 'networkServices.proxyType without providing 'networkServices.'proxyAddress'")
+    }
+
+
 
     @Test
     fun `validation has error on non-null cryptoServiceConf for null cryptoServiceName`() {

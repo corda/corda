@@ -147,7 +147,7 @@ class FlowWorkerServiceHub(override val configuration: NodeConfiguration,
     val flowLogicRefFactory = EnterpriseFlowLogicRefFactoryImpl(cordappLoader.appClassLoader, cacheFactory)
     override val monitoringService = MonitoringService(metricRegistry).tokenize()
 
-    private val networkMapClient: NetworkMapClient? = configuration.networkServices?.let { NetworkMapClient(it.networkMapURL, versionInfo) }
+    private val networkMapClient: NetworkMapClient? = configuration.networkServices?.let { NetworkMapClient(it, versionInfo) }
     override val networkParametersService = DBNetworkParametersStorage(cacheFactory, database, networkMapClient).tokenize()
     private val servicesForResolution = ServicesForResolutionImpl(identityService, attachments, cordappProvider, networkParametersService, validatedTransactions).also {
         // circular dependency, hurr durr..
