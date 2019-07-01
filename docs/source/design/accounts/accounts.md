@@ -9,7 +9,7 @@ This document outlines the requirements and design for a Corda accounts library.
 The accounts library is presented to CorDapp developers and node operators to meet the following high-level requirements:
 
 1. Flows and vault queries on behalf of customer facing operations must only show data relevant to specific customers.
-2. On-ledger activities must correlated with external systems and assure stakeholders that the transactions *are* happening. E.g. accounts which can be reconciled to an organisation's trial balance.
+2. On-ledger activities must correlate with external systems and assure stakeholders that the transactions *are* happening. E.g. accounts which can be reconciled to an organisation's trial balance.
 3. Individual customers must have individual balances, but the node operating organisation is responsible for netting these flows and providing supporting liquidity i.e. fractional reserve banking.
 4. An organisation must support custody relationships with its customers, such that individual states need to be allocated to a particular customer.
 5. To check node local metadata that affects whether customer actions should be authorised, or whether actions should be priced differently, or more generally, to determine how a flow should behave.
@@ -52,7 +52,7 @@ In the context of Corda, the accounts library allows a Corda node to partition t
 * Node operators can reduce costs by hosting multiple entities, as accounts, on one node
 * Node operators can partition the vault on a per entity basis
 
-Accounts are created by host nodes, which are just regular Corda nodes. Hosts can create accounts for a range of purposes such as customer accounts, balance sheet or P&L accounts, employee accounts, etc.
+Accounts are created by host nodes, which are just regular Corda nodes. Hosts can create accounts for a range of purposes such as customer accounts, balance sheets or P&L accounts, employee accounts, etc.
 
 The accounts library takes the form of a JAR which can be dropped into the CorDapps folder. Use of it is optional. This means that some nodes will support accounts but others will not. This is intentional by design as not all nodes will need to support accounts and the optional nature of accounts reduces the learning curve for new CorDapp developers.
 
@@ -70,7 +70,7 @@ Accounts can be created by node operators, via a flow, when a new account is req
 
 The `AccountInfo` state contains the account ID (the `linearId` of the `AccountInfo` state), account name, account description and the host `Party`. The account ID is used to refer to the account going forward, even if the account moves to another host. 
 
-Account IDs can be assumed to be unique at the network level as UUIDs provide 128 bits of entropy, so it's unlikely there will be a clash with another account ID. Whilst, account IDs and node x500 names are unique at the network level, account names cannot be asusmed to be unique at the network level. Care must be taken by CorDapp developers to ensure they are dealing with the correct account. A tuple of host node and account name _can_ be assumed to be unique, as the accounts library will not permit duplicate account names on a common host node.
+Account IDs can be assumed to be unique at the network level as UUIDs provide 128 bits of entropy, so it's unlikely there will be a clash with another account ID. Whilst, account IDs and node x500 names are unique at the network level, account names cannot be assumed to be unique at the network level. Care must be taken by CorDapp developers to ensure they are dealing with the correct account. A tuple of host node and account name _can_ be assumed to be unique, as the accounts library will not permit duplicate account names on a common host node.
 
 As the `AccountInfo` is a `LinearState`, the latest version of `AccountInfo` will always specify the correct host node `Party`. `AccountInfo`s can be updated to change the account name, description. Also, the host node can be changed if the account is moved to another host.
 
@@ -105,16 +105,16 @@ Account holders—legal entities or natural persons—can hold multiple accounts
 
 #### Transacting with accounts
 
-When required, accounts have the capability to request the host node generate new key pairs on their behalf. When generated, these key pairs will be mapped to the account ID in an off-ledger database table, this allows states participated in by accout holders to be mapped to the account holder's account ID. This is useful for querying the vault on a per account basis. See Appendix 1, for further information.
+When required, accounts have the capability to request the host node generate new key pairs on their behalf. When generated, these key pairs will be mapped to the account ID in an off-ledger database table, this allows states participated in by account holders to be mapped to the account holder's account ID. This is useful for querying the vault on a per account basis. See Appendix 1, for further information.
 
-When accounts are created, they are _not_ supplied with a "default" key pair equivelant to a regular node's legal identity key. As such an account holders should generate keys on a per transaction basis, although keys can be re-used if desired. It is not recommended to re-use keys in case an account is moved and states are tranferred to a key pair no longer in use by the account holder. Flows will exist for:
+When accounts are created, they are _not_ supplied with a "default" key pair equivalent to a regular node's legal identity key. As such account holders should generate keys on a per transaction basis, although keys can be re-used if desired. It is not recommended to re-use keys in case an account is moved and states are transferred to a key pair no longer in use by the account holder. Flows will exist for:
 
 * Requesting accounts to generate new key pairs and send the public key back to the requesting node. 
-* Generating a new pay kair and sharing the public key with a specified regular node or account.
+* Generating a new key pair and sharing the public key with a specified regular node or account.
 
 When receiving a public key generated by a host node on behalf of an account, the receiving node must map the newly generated public key to the host node's identity—this is to aid with performing look-ups from account key to host node. These features form part of the updates "confidential identities" library. See Appendix 2.
 
-In addition, a couple of features have been added to the core platform—which will be introduced in Corda 4.1—to support ease of transacting with accounts, so that the coding model doesn't substantially vary from what CorDapp developers are currently used to. See appendix 3 for further information. As with regular nodes, accounts can participate in state objects. No changes in the programming model are required. Regular nodes can participant in states with `Party` or `AnonymousParty` objects. Accounts can participate in states only with `AnonymousParty` objects. 
+In addition, a couple of features have been added to the core platform—which will be introduced in Corda 4.1—to support ease of transacting with accounts, so that the coding model doesn't substantially vary from what CorDapp developers are currently used to. See Appendix 3 for further information. As with regular nodes, accounts can participate in state objects. No changes in the programming model are required. Regular nodes can be participants in states with `Party` or `AnonymousParty` objects. Accounts can participate in states only with `AnonymousParty` objects. 
 
 Even though host nodes can assign key pairs to accounts, the private keys remain under the control of the host node. This is not appropriate for all use-cases where the account owner must be responsible for signing a transaction. This refers to requirement 7, *"All customers must hold their own keys and be able to portably spend/authorise the spending of individual states in the future, possibly even using a different provider"*. Future versions of Corda will support the generation of key pairs by a client—on a desktop, mobile phone, or other device—and sharing of the public key with a host node. With this approach, the account holder remains in control of the private keys, so transaction signing is at their discretion.
 
@@ -126,7 +126,7 @@ Host nodes can add additional off-ledger database tables to supply additional in
 
 Host nodes will keep a local database table which records the information of other accounts or regular nodes that should be updated in the event that an `AccountInfo` state is updated.  This table can be populated by another node or account requesting that they be updated in the case that an `AccountInfo` changes. When an `AccountInfo` does change, then the host node, sends the updated `AccountInfo` state to all the nodes in the database table.
 
-When the data distribution groups feature has been released, it will superceed this feature.
+When the data distribution groups feature has been released, it will supersede this feature.
 
 #### Moving hosts
 
@@ -142,11 +142,11 @@ The accounts library supports the situation where an account holder wishes to mo
 
 #### Transactions between accounts hosted on the same node
 
-As public keys are used to deliniate states in one account or another, a ledger transaction must be used to transfer states between accounts, even if those accounts are hosted on the same node. 
+As public keys are used to delineate states in one account or another, a ledger transaction must be used to transfer states between accounts, even if those accounts are hosted on the same node. 
 
 #### Migrating accounts to regular nodes
 
-If an account is being migrated to a regular node which will not suoport accounts then this can be done in a similar way to moving host nodes but with the following differences:
+If an account is being migrated to a regular node which will not support accounts then this can be done in a similar way to moving host nodes but with the following differences:
 
 * Instead of updating the `AccountInfo` with a new host node, the `AccountInfo` state will be exited from the ledger.
 * Instead of asking a new host node to generate keys, the regular node which is being migrated to will generate new keys
@@ -157,7 +157,7 @@ Even if the regular node does not wish to support accounts, they must have the a
 
 ### Technical detail
 
-We will guarantee API backwards compatibility from the V1 release. So ,as APIs cannot be removed, the surface area has deliberately been kept minimal. Additional APIs can be added in the future, if necessary.
+We will guarantee API backwards compatibility from the V1 release. So, as APIs cannot be removed, the surface area has deliberately been kept minimal. Additional APIs can be added in the future, if necessary.
 
 #### AccountInfo
 
@@ -226,7 +226,7 @@ class RequestAccountInfoHandler(val otherSession: FlowSession) : FlowLogic<Unit>
 * These flows are `StartableByRPC`.
 * To request an `AccountInfo`, The requesting node must know the account ID and host `Party` or the account name and the host `Party`.
 * The host node uses the `AccountsService` to request the `AccountInfo` and sends it to the requesting node via `SendTransactionFlow`/`RecieveTransactionFlow`.
-* The requesting node returns the `AccountInfo` so it can be used in subequent flows.
+* The requesting node returns the `AccountInfo` so it can be used in subsequent flows.
 
 #### Sharing `AccountInfo`s and other states
 
@@ -235,7 +235,7 @@ To share states (including `AccountInfo`s) with regular nodes, `SendTransactionF
 * `SendStateAndRefToAccountFlow`/`ReceiveStateAndRefToAccountFlow`
 * `SendTransactionFlowToAccountFlow`/`ReceiveTransactionToAccountFlow`
 
-Different flows are required for sharing states with accounts because if a state is to be stored by a specific account, then the state should be permissioned to that account only such that no other accounts on the same host node can see the state. To do this requires updating an off-ldger database table.
+Different flows are required for sharing states with accounts because if a state is to be stored by a specific account, then the state should be permissioned to that account only such that no other accounts on the same host node can see the state. To do this requires updating an off-ledger database table.
 
 ```kotlin
 // StateRefs.
@@ -263,7 +263,7 @@ class ReceiveTransactionToAccountFlow(
 ) : FlowLogic<SignedTransaction>()
 ```
 
-The new flows wrap the existing flows and—as mentinoed above—add some additional behaviour which is required for permissioning observed states or transactions to a specified account. View permissioning for observed states is recorded in the following entity:
+The new flows wrap the existing flows and—as mentioned above—add some additional behaviour which is required for permissioning observed states or transactions to a specified account. View permissioning for observed states is recorded in the following entity:
 
 ```kotlin
 @Entity
@@ -360,12 +360,12 @@ Once an account has been moved, it is at the discretion of the previous host nod
 
 #### Requirements
 
-- Each state participant, as neccessary for accounts, must be mapped to some unique external ID. Most likely this will be an account ID. **Note:** that the requirement is to map participants and *not* the state itself. This is because two or more participants may have external IDs on the same node.
+- Each state participant, as necessary for accounts, must be mapped to some unique external ID. Most likely this will be an account ID. **Note:** that the requirement is to map participants and *not* the state itself. This is because two or more participants may have external IDs on the same node.
 - Node operators must be able to perform vault queries, restricting the results to a single external ID or set of external IDs.
 - Node operators must be able to perform token selection over some fungible state type for a specific external ID, or set of external IDs.
 - No changes should be required to existing flows. For example: supplying a mapping of output states to external IDs when states are being recorded is an unacceptable change due to the increased complexity this approach brings.  
 - The performance impact of mapping state participants to external IDs should be minimal.
-- Node oeprators must be able to add arbitrary tags to external IDs. Such that they can perform queries across multiple accounts. E.g. "give me all the obligation states for accounts whose holder's favourite colour is RED".
+- Node operators must be able to add arbitrary tags to external IDs. Such that they can perform queries across multiple accounts. E.g. "give me all the obligation states for accounts whose holder's favourite colour is RED".
 
 ### Design
 
@@ -515,7 +515,7 @@ interface IdentityServiceInternal : IdentityService {
 }
 ```
 
-This allows a node to store a mapping from a public key to a `Party` without requiring a certificate chain (old confidential identities API). With the mapping stored, `IdentityService.wellKnownPartyFromAnonymous` can be called to look-up the `Party` object associated with aspecific `PublicKey`. Whilst this is an internal API, it will be accessible from the accounts library as it will be compiled against the `corda-node` JAR. In Corda 5, a public API will be added to register identity mappings, so there will be no dependency on `corda-node`. In addition, three new flows will be added; `RequestNewKey`,  `ShareNewKey` and `SyncKeyMappings`.
+This allows a node to store a mapping from a public key to a `Party` without requiring a certificate chain (old confidential identities API). With the mapping stored, `IdentityService.wellKnownPartyFromAnonymous` can be called to look-up the `Party` object associated with a specific `PublicKey`. Whilst this is an internal API, it will be accessible from the accounts library as it will be compiled against the `corda-node` JAR. In Corda 5, a public API will be added to register identity mappings, so there will be no dependency on `corda-node`. In addition, three new flows will be added; `RequestNewKey`,  `ShareNewKey` and `SyncKeyMappings`.
 
 **`RequestKey` / `RequestKeyHandler`**
 
@@ -527,7 +527,7 @@ class RequestNewKey(val party: Party, val externalId: UUID) : FlowLogic<SignedPu
 class RequestNewKeyHandler(val otherSession: FlowSession) : FlowLogic<Unit>()
 ```
 
-This flow is used when performing a unilateral spend/move of some tokens from one party to another, and the recipient requests that a new key be used. The initating side of the flow requests the handler generate a new key pair, assigned it to an external ID, if specified, then create a signed mapping of the new key to the host node's `Party` object. The signed mapping looks as follows:
+This flow is used when performing a unilateral spend/move of some tokens from one party to another, and the recipient requests that a new key be used. The initiating side of the flow requests the handler generate a new key pair, assigned it to an external ID, if specified, then create a signed mapping of the new key to the host node's `Party` object. The signed mapping looks as follows:
 
 ```kotlin
 data class SignedPublicKey(
