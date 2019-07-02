@@ -163,8 +163,8 @@ Confidential identities without certificates
 
 The latest version of confidential identities reduces the overhead by removing the storage of the X.509 certificate when using confidential
 identities. Instead, they will be stored via a mapping between a newly generated ``PublicKey`` to ``CordaX500Name``. This is particularly
-useful in the event that a node operator hosts a large number of *accounts* and it storing the X.509 certificate for *account* would require
-a large amount of memory.
+useful in the event that a node operator hosts a large number of *accounts* and such that storing the X.509 certificate for confidential
+identities would require a large amount of memory.
 
 The use of this version confidential identities can be done through the use of three new flow; ``RequestKeyFlow``, ``ShareKeyFlow`` and
 ``SyncKeyMappingsFlow`` found in the ``confidential-identities`` repository.
@@ -179,6 +179,6 @@ node generates the ``SignedData<OwnershipClaim>`` and shares it with a counterpa
 
 The ``SyncKeyMappingsFlow`` works in exactly the same way as the existing ``IdentitySyncFlow`` whereby the unknown confidential identities
 involved in a transaction can be extracted and the identity data for them being registered in the ``IdentityService`` of the node who wishes
-to obtain this information. However, the ``SyncKeyMappingsFlow`` also us to sync up the confidential identities between two nodes without
-having to provide a transaction to extract the confidential identities from. The node can provide a list of ``AnonymousParty`` if they are already
-known.
+to obtain this information. However, the ``SyncKeyMappingsFlow`` also allows us to sync up the confidential identities between two nodes
+without having to provide a transaction to extract the confidential identities from. The node can directly provide the list of
+``AnonymousParty`` they wish to synchronise with the counterparty.
