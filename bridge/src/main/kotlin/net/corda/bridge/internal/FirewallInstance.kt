@@ -97,7 +97,7 @@ class FirewallInstance(val conf: FirewallConfiguration,
     val onExit: CordaFuture<FirewallInstance> get() = _exitFuture
 
     private fun retrieveNetworkParameters() {
-        val networkParamsFile = conf.baseDirectory / NETWORK_PARAMS_FILE_NAME
+        val networkParamsFile = conf.networkParametersPath ?: conf.baseDirectory / NETWORK_PARAMS_FILE_NAME
         require(networkParamsFile.exists()) { "No network-parameters file found." }
         val networkParameters = networkParamsFile.readObject<SignedNetworkParameters>().raw.deserialize()
         maxMessageSize = networkParameters.maxMessageSize

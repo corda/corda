@@ -101,7 +101,7 @@ interface FirewallConfiguration {
     val bridgeInnerConfig: BridgeInnerConfiguration?
     val floatOuterConfig: FloatOuterConfiguration?
     val haConfig: BridgeHAConfig?
-    val networkParametersPath: Path
+    val networkParametersPath: Path?
     val enableAMQPPacketTrace: Boolean
     // Initial reconnect interval for link to artemis after [artemisReconnectionIntervalMin] ms the default value is 5000 ms.
     val artemisReconnectionIntervalMin: Int

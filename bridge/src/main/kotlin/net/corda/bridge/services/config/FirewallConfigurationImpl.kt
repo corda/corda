@@ -55,7 +55,7 @@ data class FirewallConfigurationImpl(
         private val keyStorePassword: String,
         private val trustStorePassword: String,
         override val firewallMode: FirewallMode,
-        override val networkParametersPath: Path,
+        override val networkParametersPath: Path? = null,
         override val outboundConfig: BridgeOutboundConfigurationImpl?,
         override val inboundConfig: BridgeInboundConfigurationImpl?,
         override val bridgeInnerConfig: BridgeInnerConfigurationImpl?,
