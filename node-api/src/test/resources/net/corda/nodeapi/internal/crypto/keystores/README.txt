@@ -18,21 +18,21 @@ keytool.exe -exportcert -rfc -alias floatroot -keystore floatca.jks -storepass c
 keytool.exe -importcert -noprompt -file root.pem -alias root -keystore trust.jks -storepass trustpass
 
 // Create a chain for EC Bridge
-keytool.exe -certreq -alias bridgecert -keystore bridge_ec.jks -storepass bridgepass -keypass bridgepass |keytool.exe -gencert -ext ku:c=dig,keyEncipherment -ext: eku:true=serverAuth,clientAuth -rfc -keystore floatca.jks -alias floatroot -storepass capass -keypass cakeypass > bridge_ec.pem
+keytool.exe -certreq -alias bridgecert -keystore bridge_ec.jks -storepass bridgepass -keypass bridgepass |keytool.exe -gencert -validity 1000 -ext ku:c=dig,keyEncipherment -ext: eku:true=serverAuth,clientAuth -rfc -keystore floatca.jks -alias floatroot -storepass capass -keypass cakeypass > bridge_ec.pem
 type root.pem bridge_ec.pem >> bridgechain_ec.pem
 keytool.exe -importcert -noprompt -file bridgechain_ec.pem -alias bridgecert -keystore bridge_ec.jks -storepass bridgepass -keypass bridgepass
 
 // Create a chain for RSA Bridge
-keytool.exe -certreq -alias bridgecert -keystore bridge_rsa.jks -storepass bridgepass -keypass bridgepass |keytool.exe -gencert -ext ku:c=dig,keyEncipherment -ext: eku:true=serverAuth,clientAuth -rfc -keystore floatca.jks -alias floatroot -storepass capass -keypass cakeypass > bridge_rsa.pem
+keytool.exe -certreq -alias bridgecert -keystore bridge_rsa.jks -storepass bridgepass -keypass bridgepass |keytool.exe -gencert -validity 1000 -ext ku:c=dig,keyEncipherment -ext: eku:true=serverAuth,clientAuth -rfc -keystore floatca.jks -alias floatroot -storepass capass -keypass cakeypass > bridge_rsa.pem
 type root.pem bridge_rsa.pem >> bridgechain_rsa.pem
 keytool.exe -importcert -noprompt -file bridgechain_rsa.pem -alias bridgecert -keystore bridge_rsa.jks -storepass bridgepass -keypass bridgepass
 
 // Create a chain for EC Float
-keytool.exe -certreq -alias floatcert -keystore float_ec.jks -storepass floatpass -keypass floatpass |keytool.exe -gencert -ext ku:c=dig,keyEncipherment -ext: eku::true=serverAuth,clientAuth -rfc -keystore floatca.jks -alias floatroot -storepass capass -keypass cakeypass > float_ec.pem
+keytool.exe -certreq -alias floatcert -keystore float_ec.jks -storepass floatpass -keypass floatpass |keytool.exe -gencert -validity 1000 -ext ku:c=dig,keyEncipherment -ext: eku::true=serverAuth,clientAuth -rfc -keystore floatca.jks -alias floatroot -storepass capass -keypass cakeypass > float_ec.pem
 type root.pem float_ec.pem >> floatchain_ec.pem
 keytool.exe -importcert -noprompt -file floatchain_ec.pem -alias floatcert -keystore float_ec.jks -storepass floatpass -keypass floatpass
 
 // Create a chain for RSA Float
-keytool.exe -certreq -alias floatcert -keystore float_rsa.jks -storepass floatpass -keypass floatpass |keytool.exe -gencert -ext ku:c=dig,keyEncipherment -ext: eku::true=serverAuth,clientAuth -rfc -keystore floatca.jks -alias floatroot -storepass capass -keypass cakeypass > float_rsa.pem
+keytool.exe -certreq -alias floatcert -keystore float_rsa.jks -storepass floatpass -keypass floatpass |keytool.exe -gencert -validity 1000 -ext ku:c=dig,keyEncipherment -ext: eku::true=serverAuth,clientAuth -rfc -keystore floatca.jks -alias floatroot -storepass capass -keypass cakeypass > float_rsa.pem
 type root.pem float_rsa.pem >> floatchain_rsa.pem
 keytool.exe -importcert -noprompt -file floatchain_rsa.pem -alias floatcert -keystore float_rsa.jks -storepass floatpass -keypass floatpass
