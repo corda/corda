@@ -38,4 +38,4 @@ Step Two: Run a CorDapp transaction
 Next steps
 ----------
 
-After deploying the example CorDapp, the next step is to start writing a CorDapp containing your own contract, states, and flows.
+After deploying the example CorDapp, the next step is to start `writing a CorDapp <./quickstart-build.html>`_ containing your own contract, states, and flows.
