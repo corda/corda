@@ -15,22 +15,8 @@ Getting started with Corda will walk you through the process of setting up a dev
 2. `Deploying an example CorDapp <./quickstart-deploy.html>`_
 3. `Building your own CorDapp <./quickstart-build.html>`_
 
-The getting started experience is designed to be lightweight and get to code as quickly as possible, for more detail, see the following documentation:
-
-* CorDapp design best practice
-* Testing CorDapps
-
-For a more operations-focused experience, see the following operations documentation:
-
-* Node structure and configuration
-* Deploying a node
-* Notary docs
-* HSM configuration
-
 Setting up a development environment
 ------------------------------------
-
-**write some text here**
 
 Prerequisites
 ~~~~~~~~~~~~~
@@ -55,13 +41,13 @@ Step Two: Creating an IntelliJ project
 
 1. Open IntelliJ. From the splash screen, click **Open**, navigate to and select the ``cordapp-example`` folder, and click **Ok**. This creates an IntelliJ project to work from.
 
-2. Once the project is open, click **File**, then **Project Structure**. Under **Project SDK:**, set the project SDK by clicking **New...**, clicking **JDK**, and navigating to ``C:\Program Files\Java\jdk1.8.0_XXX`` on Windows or ``Library/Java/JavaVirtualMachines/jdk1.8.XXX`` on MacOSX, where ``XXX`` is the latest minor version number. Click **Apply** followed by **Ok**. This instructs IntelliJ to use the version of the Java JDK downloaded in the prerequisites.
+2. Once the project is open, click **File** > **Project Structure**. Under **Project SDK:**, set the project SDK by clicking **New...**, clicking **JDK**, and navigating to ``C:\Program Files\Java\jdk1.8.0_XXX`` on Windows or ``Library/Java/JavaVirtualMachines/jdk1.8.XXX`` on MacOSX, where ``XXX`` is the latest minor version number. Click **Ok**. This instructs IntelliJ to use the version of the Java JDK downloaded in the prerequisites.
 
-3. Click **File** then **Project Structure**, select **Modules**. Click **+**, then **Import Module**, then select the ``cordapp-example`` folder and click **Open**. Select **Import module from external model**, select **Gradle**, click **Next** then **Finish** and **Ok**. Gradle will now download all the project dependencies and perform some indexing.
+3. Click **File** > **Project Structure**, select **Modules**. Click **+**, > **Import Module**, then select the ``cordapp-example`` folder and click **Open**. Select **Import module from external model** > **Gradle** > **Next** > **Finish** > **Ok**. Gradle will now download all the project dependencies and perform some indexing.
 
 Your CorDapp development environment is now complete.
 
 Next steps
 ----------
 
-Now that you've successfully set up your CorDapp development environment, we'll cover deploying the example CorDapp locally.
+Now that you've successfully set up your CorDapp development environment, we'll cover deploying an example CorDapp locally, before writing a CorDapp from scratch.
