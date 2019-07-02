@@ -16,6 +16,10 @@ Version 5.0
 * Removed ``finance-workflows`` dependency on jackson library.  The functions that used jackson (e.g. ``FinanceJSONSupport``) have been moved
   into IRS Demo.
 
+* Added a new API ``IdentityService.registerKeyToParty(PublicKey, Party)`` that will store a mapping between a ``PublicKey`` and ``CordaX500Name``
+for **all** legal identities as well as created anonymous keys. If the mapping already exists then the method call is idempotent. This is only
+called from the new version of confidential identity flows found in the ``confidential-identities`` repository.
+
 .. _changelog_v4.2:
 
 Version 4.2
