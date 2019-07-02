@@ -97,7 +97,16 @@ class FirewallInstance(val conf: FirewallConfiguration,
     val onExit: CordaFuture<FirewallInstance> get() = _exitFuture
 
     private fun retrieveNetworkParameters() {
-        val networkParamsFile = conf.networkParametersPath ?: conf.baseDirectory / NETWORK_PARAMS_FILE_NAME
+        require(conf.networkParametersPath != null) { "networkParametersPath must be specified." }
+
+        val networkParamsFile = with(conf.networkParametersPath!!) {
+            if (exists()) this
+            else {
+                log.warn("Using legacy mode for interpreting 'networkParametersPath' ($this) relative to the base directory. To avoid seeing this warning in the future, please specify the absolute path.")
+                conf.baseDirectory / toString()
+            }
+        }
+
         require(networkParamsFile.exists()) { "No network-parameters file found." }
         val networkParameters = networkParamsFile.readObject<SignedNetworkParameters>().raw.deserialize()
         maxMessageSize = networkParameters.maxMessageSize

@@ -95,8 +95,7 @@ absolute path to the firewall's base directory.
     .. note:: Longer term these keys will be managed in secure hardware devices.
 
 
-:networkParametersPath: This optional parameter only makes sense in case of ``SenderReceiver`` and ``BridgeInner`` modes.
-   If missing the value is assumed to be ``<workspace>/network-parameters``.
+:networkParametersPath: This a mandatory parameter that only makes sense in case of ``SenderReceiver`` and ``BridgeInner`` modes.
    This is the absolute file path to a copy of the ``network-parameters`` as copied from a node after it has fetched the latest version from the network-map via http.
    It is used to correctly configure the maximum allowed message size. The maximum message size limit is already enforced by the P2P Artemis inside the ``node``,
    but the ``bridge`` also enforces this before forwarding messages to remote peers.
