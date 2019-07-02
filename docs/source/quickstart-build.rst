@@ -256,6 +256,7 @@ Step Four: Creating a flow
                 }
             }
 
+
   **So far you've...**
 
   **Next you must...**
@@ -278,17 +279,17 @@ Step Four: Creating a flow
 
         .. sourcecode:: kotlin
 
-        @Suspendable
-        override fun call(): SignedTransaction {
-            val signedTransactionFlow = object : SignTransactionFlow(counterpartySession) {
-                override fun checkTransaction(stx: SignedTransaction) = requireThat {
-                    val output = stx.tx.outputs.single().data
-                    "The output must be a CarState" using (output is CarState)
+            @Suspendable
+            override fun call(): SignedTransaction {
+                val signedTransactionFlow = object : SignTransactionFlow(counterpartySession) {
+                    override fun checkTransaction(stx: SignedTransaction) = requireThat {
+                        val output = stx.tx.outputs.single().data
+                        "The output must be a CarState" using (output is CarState)
+                    }
                 }
+                val txWeJustSignedId = subFlow(signedTransactionFlow)
+                return subFlow(ReceiveFinalityFlow(counterpartySession, txWeJustSignedId.id))
             }
-            val txWeJustSignedId = subFlow(signedTransactionFlow)
-            return subFlow(ReceiveFinalityFlow(counterpartySession, txWeJustSignedId.id))
-        }
 
 22. The completed ``CarFlow.kt`` should look like this:
 
