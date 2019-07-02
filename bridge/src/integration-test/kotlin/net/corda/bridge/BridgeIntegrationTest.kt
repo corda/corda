@@ -72,7 +72,9 @@ class BridgeIntegrationTest {
         val (artemisServer, artemisClient) = createArtemis()
         try {
             installBridgeControlResponder(artemisClient)
-            val bridge = FirewallInstance(config, FirewallVersionInfo(1, "1.1", "Dummy", "Test"))
+            val configMock = Mockito.spy(config)
+            whenever(configMock.networkParametersPath).thenReturn(tempFolder.root.toPath() / NETWORK_PARAMS_FILE_NAME)
+            val bridge = FirewallInstance(configMock, FirewallVersionInfo(1, "1.1", "Dummy", "Test"))
             val stateFollower = bridge.activeChange.toBlocking().iterator
             assertEquals(false, stateFollower.next())
             assertEquals(false, bridge.active)
