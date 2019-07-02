@@ -419,6 +419,7 @@ bintrayConfig {
             'corda-tools-health-survey',
             'corda-tools-config-obfuscator',
             'corda-tools-ha-utilities',
+            'corda-tools-notary-registration',
             'corda-firewall',
             'corda-ptflows',
             'jmeter-corda',

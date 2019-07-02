@@ -243,7 +243,7 @@ class AzureKeyVaultCryptoService(private val keyVaultClient: KeyVaultClient, pri
                     ?: DEFAULT_PROTECTION)
         }
 
-        internal fun parseConfigFile(configFile: Path): AzureKeyVaultConfig {
+        fun parseConfigFile(configFile: Path): AzureKeyVaultConfig {
             try {
                 val config = ConfigFactory.parseFile(configFile.toFile())
                 return config.parseAs(AzureKeyVaultConfig::class)
