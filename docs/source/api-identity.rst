@@ -62,6 +62,8 @@ manages this process. It takes as inputs a transaction and a counterparty, and f
 in that transaction for which the calling node holds the certificate path, it sends this certificate path to the
 counterparty.
 
+There is a new version of confidential identities that does not store the X.509 certificate, see `Confidential identities without certificates`_.
+
 SwapIdentitiesFlow
 ~~~~~~~~~~~~~~~~~~
 ``SwapIdentitiesFlow`` is typically run as a subflow of another flow. It takes as its sole constructor argument the
@@ -153,3 +155,30 @@ Alice may know all of the confidential identities ahead of time, but Bob not kno
 The assembled transaction therefore has three input states *x*, *y* and *z*, for which only Alice possesses
 certificates for all confidential identities. ``IdentitySyncFlow`` must send not just Alice's confidential identity but
 also any other identities in the transaction to the Bob and Charlie.
+
+.. _Confidential identities without certificates:
+
+Confidential identities without certificates
+--------------------------------------------
+
+The latest version of confidential identities reduces the overhead by removing the storage of the X.509 certificate when using confidential
+identities. Instead, they will be stored via a mapping between a newly generated ``PublicKey`` to ``CordaX500Name``. This is particularly
+useful in the event that a node operator hosts a large number of *accounts* and it storing the X.509 certificate for *account* would require
+a large amount of memory.
+
+The use of this version confidential identities can be done through the use of three new flow; ``RequestKeyFlow``, ``ShareKeyFlow`` and
+``SyncKeyMappingsFlow`` found in the ``confidential-identities`` repository.
+
+In ``RequestKeyFlow``, the generation of a ``SignedData<OwnershipClaim>`` that contains a newly generated ``PublicKey`` is delegated to a
+counterparty. For example, Charlie may issue and pay some cash to a new confidential identity. In order for Bob to resolve the confidential
+identity, he can run ``RequestKeyFlow`` providing the confidential identities owning key as a parameter, and Alice as the counterparty.
+Alice will generate a ``SignedData<OwnershipClaim>`` containing the ``PublicKey`` for the confidential identity. Alice will send this back
+to Bob, who can extract the data required to register the mapping between the ``PublicKey`` and ``CordaX500Name`` in Bob's
+``IdentityService`` and Bob can then resolve the confidential identity. ``ShareKeyFlow`` works in a similar vein, however, the initiating
+node generates the ``SignedData<OwnershipClaim>`` and shares it with a counterparty.
+
+The ``SyncKeyMappingsFlow`` works in exactly the same way as the existing ``IdentitySyncFlow`` whereby the unknown confidential identities
+involved in a transaction can be extracted and the identity data for them being registered in the ``IdentityService`` of the node who wishes
+to obtain this information. However, the ``SyncKeyMappingsFlow`` also us to sync up the confidential identities between two nodes without
+having to provide a transaction to extract the confidential identities from. The node can provide a list of ``AnonymousParty`` if they are already
+known.

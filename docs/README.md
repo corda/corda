@@ -11,7 +11,7 @@ Before you begin, you need to:
 
 ## Build process
 1. Open a cmd dialogue. 
-1. Navigate to the root location (this is the `\corda` directory)
+1. Navigate to the root location (this is the `\corda` di~~~~rectory)
 1. Run the documentation build (`gradlew makeDocs` or `./gradlew makeDocs`)
 
 **Windows users:** *If this task fails because Docker can't find make-docsite.sh, go to Settings > Shared Drives in the Docker system tray
