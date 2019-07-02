@@ -3,7 +3,6 @@ package net.corda.irs.contract
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.whenever
-import loadTestCalendar
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.crypto.generateKeyPair
@@ -15,6 +14,7 @@ import net.corda.core.utilities.seconds
 import net.corda.finance.DOLLARS
 import net.corda.finance.EUR
 import net.corda.finance.contracts.*
+import net.corda.finance.workflows.utils.loadTestCalendar
 import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.testing.common.internal.addNotary
 import net.corda.testing.common.internal.testNetworkParameters

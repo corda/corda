@@ -4,7 +4,7 @@ apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'net.corda.plugins.cordapp'
 
 configurations {
-    demoArtifacts.extendsFrom testRuntime
+    demoArtifacts.extendsFrom testRuntimeClasspath
 }
 
 dependencies {
@@ -14,6 +14,8 @@ dependencies {
 
     // Corda integration dependencies
     cordaCompile project(':core')
+
+    compile("com.fasterxml.jackson.module:jackson-module-kotlin:$jackson_version")
     
     // only included to control the `DemoClock` as part of the demo application
     // normally `:node` should not be depended on in any CorDapps
@@ -21,10 +23,17 @@ dependencies {
 
     // Cordapp dependencies
     // Specify your cordapp's dependencies below, including dependent cordapps
-    compile group: 'commons-io', name: 'commons-io', version: '2.5'
+    compile "commons-io:commons-io:$commons_io_version"
 
     testCompile project(':node-driver')
-    testCompile "junit:junit:$junit_version"
+    
+    testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
+    testImplementation "junit:junit:$junit_version"
+
+    testRuntimeOnly "org.junit.vintage:junit-vintage-engine:${junit_vintage_version}"
+    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${junit_jupiter_version}"
+    testRuntimeOnly "org.junit.platform:junit-platform-launcher:${junit_platform_version}"
+
     testCompile "org.assertj:assertj-core:${assertj_version}"
 
     cordapp project(':samples:irs-demo:cordapp:contracts-irs')

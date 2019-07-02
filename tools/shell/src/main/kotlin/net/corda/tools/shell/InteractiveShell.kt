@@ -7,7 +7,6 @@ import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.dataformat.yaml.YAMLGenerator
-import io.github.classgraph.ClassGraph
 import net.corda.client.jackson.JacksonSupport
 import net.corda.client.jackson.StringToMethodCallParser
 import net.corda.client.rpc.CordaRPCClient
@@ -24,8 +23,8 @@ import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.concurrent.openFuture
+import net.corda.core.internal.messaging.InternalCordaRPCOps
 import net.corda.core.messaging.*
-import net.corda.client.jackson.internal.CustomShellSerializationFactory
 import net.corda.tools.shell.utlities.ANSIProgressRenderer
 import net.corda.tools.shell.utlities.StdoutANSIProgressRenderer
 import org.crsh.command.InvocationContext
@@ -75,8 +74,8 @@ import kotlin.concurrent.thread
 
 object InteractiveShell {
     private val log = LoggerFactory.getLogger(javaClass)
-    private lateinit var rpcOps: (username: String, password: String) -> CordaRPCOps
-    private lateinit var ops: CordaRPCOps
+    private lateinit var rpcOps: (username: String, password: String) -> InternalCordaRPCOps
+    private lateinit var ops: InternalCordaRPCOps
     private lateinit var rpcConn: AutoCloseable
     private var shell: Shell? = null
     private var classLoader: ClassLoader? = null
@@ -106,7 +105,7 @@ object InteractiveShell {
                         classLoader = classLoader)
                 val connection = client.start(username, password)
                 rpcConn = connection
-                connection.proxy
+                connection.proxy as InternalCordaRPCOps
             }
         }
         _startShell(configuration, classLoader)
@@ -185,7 +184,7 @@ object InteractiveShell {
                     // Don't use the Java language plugin (we may not have tools.jar available at runtime), this
                     // will cause any commands using JIT Java compilation to be suppressed. In CRaSH upstream that
                     // is only the 'jmx' command.
-                    return super.getPlugins().filterNot { it is JavaLanguage } + CordaAuthenticationPlugin(rpcOps, InteractiveShell.classLoader)
+                    return super.getPlugins().filterNot { it is JavaLanguage } + CordaAuthenticationPlugin(rpcOps)
                 }
             }
             val attributes = emptyMap<String, Any>()
@@ -194,8 +193,7 @@ object InteractiveShell {
             this.config = config
             start(context)
             ops = makeRPCOps(rpcOps, localUserName, localUserPassword)
-            return context.getPlugin(ShellFactory::class.java)
-                    .create(null, CordaSSHAuthInfo(false, ops, InteractiveShell.classLoader, StdoutANSIProgressRenderer))
+            return context.getPlugin(ShellFactory::class.java).create(null, CordaSSHAuthInfo(false, ops, StdoutANSIProgressRenderer))
         }
     }
 
@@ -215,22 +213,13 @@ object InteractiveShell {
         return outputFormat
     }
 
-    fun createYamlInputMapper(rpcOps: CordaRPCOps, classLoader: ClassLoader?): ObjectMapper {
+    fun createYamlInputMapper(rpcOps: CordaRPCOps): ObjectMapper {
         // Return a standard Corda Jackson object mapper, configured to use YAML by default and with extra
         // serializers.
         return JacksonSupport.createDefaultMapper(rpcOps, YAMLFactory(), true).apply {
             val rpcModule = SimpleModule().apply {
                 addDeserializer(InputStream::class.java, InputStreamDeserializer)
                 addDeserializer(UniqueIdentifier::class.java, UniqueIdentifierDeserializer)
-            }
-            if(classLoader != null){
-                // Scan for CustomShellSerializationFactory on the classloader and register them as modules.
-                val customModules = ClassGraph().addClassLoader(classLoader).enableClassInfo().pooledScan().use { scan ->
-                    scan.getClassesImplementing(CustomShellSerializationFactory::class.java.name)
-                            .map { it.loadClass().newInstance() as CustomShellSerializationFactory }
-                }
-                log.info("Found the following custom shell serialization modules: ${customModules.map { it.javaClass.name }}")
-                customModules.forEach { registerModule(it.createJacksonModule()) }
             }
             registerModule(rpcModule)
         }
@@ -274,7 +263,7 @@ object InteractiveShell {
                               output: RenderPrintWriter,
                               rpcOps: CordaRPCOps,
                               ansiProgressRenderer: ANSIProgressRenderer,
-                              inputObjectMapper: ObjectMapper) {
+                              inputObjectMapper: ObjectMapper = createYamlInputMapper(rpcOps)) {
         val matches = try {
             rpcOps.registeredFlows().filter { nameFragment in it }
         } catch (e: PermissionException) {
@@ -371,7 +360,7 @@ object InteractiveShell {
     fun killFlowById(id: String,
                      output: RenderPrintWriter,
                      rpcOps: CordaRPCOps,
-                     inputObjectMapper: ObjectMapper) {
+                     inputObjectMapper: ObjectMapper = createYamlInputMapper(rpcOps)) {
         try {
             val runId = try {
                 inputObjectMapper.readValue(id, StateMachineRunId::class.java)
@@ -500,7 +489,7 @@ object InteractiveShell {
     }
 
     @JvmStatic
-    fun runRPCFromString(input: List<String>, out: RenderPrintWriter, context: InvocationContext<out Any>, cordaRPCOps: CordaRPCOps,
+    fun runRPCFromString(input: List<String>, out: RenderPrintWriter, context: InvocationContext<out Any>, cordaRPCOps: InternalCordaRPCOps,
                          inputObjectMapper: ObjectMapper): Any? {
         val cmd = input.joinToString(" ").trim { it <= ' ' }
         if (cmd.startsWith("startflow", ignoreCase = true)) {
@@ -516,7 +505,7 @@ object InteractiveShell {
         var result: Any? = null
         try {
             InputStreamSerializer.invokeContext = context
-            val parser = StringToMethodCallParser(CordaRPCOps::class.java, inputObjectMapper)
+            val parser = StringToMethodCallParser(InternalCordaRPCOps::class.java, inputObjectMapper)
             val call = parser.parse(cordaRPCOps, cmd)
             result = call.call()
             if (result != null && result !== kotlin.Unit && result !is Void) {

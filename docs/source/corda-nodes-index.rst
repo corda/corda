@@ -13,6 +13,7 @@ Nodes
    node-database
    node-database-access-h2
    node-database-tables
+   node-operations-upgrade-cordapps
    shell
    clientrpc
    generating-a-node

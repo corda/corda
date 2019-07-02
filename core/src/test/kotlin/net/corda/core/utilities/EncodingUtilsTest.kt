@@ -1,7 +1,7 @@
 package net.corda.core.utilities
 
 import net.corda.core.crypto.AddressFormatException
-import org.apache.commons.lang.ArrayUtils.EMPTY_BYTE_ARRAY
+import org.apache.commons.lang3.ArrayUtils.EMPTY_BYTE_ARRAY
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.fail

@@ -621,37 +621,38 @@ open class TransactionBuilder(
     /** Adds an output state, with associated contract code (and constraints), and notary, to the transaction. */
     @JvmOverloads
     fun addOutputState(
-            state: ContractState,
-            contract: ContractClassName = requireNotNull(state.requiredContractClassName) {
-                //TODO: add link to docsite page, when there is one.
-                """
-Unable to infer Contract class name because state class ${state::class.java.name} is not annotated with
-@BelongsToContract, and does not have an enclosing class which implements Contract. Either annotate ${state::class.java.name}
-with @BelongsToContract, or supply an explicit contract parameter to addOutputState().
-""".trimIndent().replace('\n', ' ')
-            },
-            notary: Party, encumbrance: Int? = null,
-            constraint: AttachmentConstraint = AutomaticPlaceholderConstraint
-    ) = addOutputState(TransactionState(state, contract, notary, encumbrance, constraint))
+        state: ContractState,
+        contract: ContractClassName = requireNotNullContractClassName(state),
+        notary: Party, encumbrance: Int? = null,
+        constraint: AttachmentConstraint = AutomaticPlaceholderConstraint
+    ): TransactionBuilder {
+        return addOutputState(TransactionState(state, contract, notary, encumbrance, constraint))
+    }
 
-    /** A default notary must be specified during builder construction to use this method */
+    /** Adds an output state. A default notary must be specified during builder construction to use this method */
     @JvmOverloads
     fun addOutputState(
-            state: ContractState,
-            contract: ContractClassName = requireNotNull(state.requiredContractClassName) {
-                //TODO: add link to docsite page, when there is one.
-                """
-Unable to infer Contract class name because state class ${state::class.java.name} is not annotated with
-@BelongsToContract, and does not have an enclosing class which implements Contract. Either annotate ${state::class.java.name}
-with @BelongsToContract, or supply an explicit contract parameter to addOutputState().
-""".trimIndent().replace('\n', ' ')
-            },
-            constraint: AttachmentConstraint = AutomaticPlaceholderConstraint
-    ) = apply {
-        checkNotNull(notary) {
-            "Need to specify a notary for the state, or set a default one on TransactionBuilder initialisation"
-        }
+        state: ContractState,
+        contract: ContractClassName = requireNotNullContractClassName(state),
+        constraint: AttachmentConstraint = AutomaticPlaceholderConstraint
+    ): TransactionBuilder {
+        checkNotNull(notary) { "Need to specify a notary for the state, or set a default one on TransactionBuilder initialisation" }
         addOutputState(state, contract, notary!!, constraint = constraint)
+        return this
+    }
+
+    /** Adds an output state with the specified constraint. */
+    fun addOutputState(state: ContractState, constraint: AttachmentConstraint): TransactionBuilder {
+        return addOutputState(state, requireNotNullContractClassName(state), constraint)
+    }
+
+    private fun requireNotNullContractClassName(state: ContractState) = requireNotNull(state.requiredContractClassName) {
+        //TODO: add link to docsite page, when there is one.
+        """
+        Unable to infer Contract class name because state class ${state::class.java.name} is not annotated with
+        @BelongsToContract, and does not have an enclosing class which implements Contract. Either annotate ${state::class.java.name}
+        with @BelongsToContract, or supply an explicit contract parameter to addOutputState().
+        """.trimIndent().replace('\n', ' ')
     }
 
     /** Adds a [Command] to the transaction. */

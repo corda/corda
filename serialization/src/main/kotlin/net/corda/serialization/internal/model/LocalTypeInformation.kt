@@ -259,7 +259,9 @@ sealed class LocalTypeInformation {
             val properties: Map<PropertyName, LocalPropertyInformation>,
             val superclass: LocalTypeInformation,
             val interfaces: List<LocalTypeInformation>,
-            val typeParameters: List<LocalTypeInformation>) : LocalTypeInformation()
+            val typeParameters: List<LocalTypeInformation>,
+            val reason: String,
+            val remedy: String) : LocalTypeInformation()
 
     /**
      * Represents a type whose underlying class is a collection class such as [List] with a single type parameter.

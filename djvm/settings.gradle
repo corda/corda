@@ -1,4 +1,0 @@
-rootProject.name = "deterministic-jvm-sandbox"
-
-include 'djvm'
-include 'djvm:cli'

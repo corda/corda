@@ -32,7 +32,7 @@ dependencies {
 
     // Corda integration dependencies
     cordaRuntime project(path: ":node:capsule", configuration: 'runtimeArtifacts')
-    runtimeOnly "org.slf4j:slf4j-simple:$slf4j_version"
+    cordaRuntime "org.slf4j:slf4j-simple:$slf4j_version"
 
     cordapp project(':samples:irs-demo:cordapp:contracts-irs')
     cordapp project(':samples:irs-demo:cordapp:workflows-irs')

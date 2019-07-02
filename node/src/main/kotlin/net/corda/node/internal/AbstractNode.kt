@@ -21,6 +21,7 @@ import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.concurrent.openFuture
+import net.corda.core.internal.messaging.InternalCordaRPCOps
 import net.corda.core.internal.notary.NotaryService
 import net.corda.core.messaging.*
 import net.corda.core.node.*
@@ -55,7 +56,6 @@ import net.corda.node.services.events.ScheduledActivityObserver
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.BasicHSMKeyManagementService
 import net.corda.node.services.keys.KeyManagementServiceInternal
-import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
 import net.corda.node.services.messaging.DeduplicationHandler
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.network.NetworkMapClient
@@ -63,6 +63,7 @@ import net.corda.node.services.network.NetworkMapUpdater
 import net.corda.node.services.network.NodeInfoWatcher
 import net.corda.node.services.network.PersistentNetworkMapCache
 import net.corda.node.services.persistence.*
+import net.corda.node.services.rpc.CheckpointDumper
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.statemachine.*
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
@@ -82,6 +83,9 @@ import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_ROOT_CA
 import net.corda.nodeapi.internal.crypto.X509Utilities.DEFAULT_VALIDITY_WINDOW
 import net.corda.nodeapi.internal.crypto.X509Utilities.DISTRIBUTED_NOTARY_ALIAS_PREFIX
 import net.corda.nodeapi.internal.crypto.X509Utilities.NODE_IDENTITY_ALIAS_PREFIX
+import net.corda.nodeapi.internal.cryptoservice.CryptoServiceFactory
+import net.corda.nodeapi.internal.cryptoservice.SupportedCryptoServices
+import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
 import net.corda.nodeapi.internal.persistence.*
 import net.corda.tools.shell.InteractiveShell
 import org.apache.activemq.artemis.utils.ReusableLatch
@@ -172,13 +176,13 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     val transactionStorage = makeTransactionStorage(configuration.transactionCacheSizeBytes).tokenize()
     val networkMapClient: NetworkMapClient? = configuration.networkServices?.let { NetworkMapClient(it.networkMapURL, versionInfo) }
     val attachments = NodeAttachmentService(metricRegistry, cacheFactory, database, configuration.devMode).tokenize()
-    val cryptoService = configuration.makeCryptoService()
+    val cryptoService = CryptoServiceFactory.makeCryptoService(SupportedCryptoServices.BC_SIMPLE, configuration.myLegalName, configuration.signingCertificateStore)
     @Suppress("LeakingThis")
     val networkParametersStorage = makeNetworkParametersStorage()
     val cordappProvider = CordappProviderImpl(cordappLoader, CordappConfigFileProvider(configuration.cordappDirectories), attachments).tokenize()
     @Suppress("LeakingThis")
     val keyManagementService = makeKeyManagementService(identityService).tokenize()
-    val servicesForResolution = ServicesForResolutionImpl(identityService, attachments, cordappProvider, networkParametersStorage, transactionStorage, configuration.whitelistedKeysForAttachments).also {
+    val servicesForResolution = ServicesForResolutionImpl(identityService, attachments, cordappProvider, networkParametersStorage, transactionStorage).also {
         attachments.servicesForResolution = it
     }
     @Suppress("LeakingThis")
@@ -257,16 +261,23 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     }
 
     /** The implementation of the [CordaRPCOps] interface used by this node. */
-    open fun makeRPCOps(cordappLoader: CordappLoader): CordaRPCOps {
-        val ops: CordaRPCOps = CordaRPCOpsImpl(services, smm, flowStarter) { shutdownExecutor.submit { stop() } }.also { it.closeOnStop() }
-        val proxies = mutableListOf<(CordaRPCOps) -> CordaRPCOps>()
+    open fun makeRPCOps(cordappLoader: CordappLoader, checkpointDumper: CheckpointDumper): CordaRPCOps {
+        val ops: InternalCordaRPCOps = CordaRPCOpsImpl(
+                services,
+                smm,
+                flowStarter,
+                checkpointDumper
+        ) {
+            shutdownExecutor.submit(::stop)
+        }.also { it.closeOnStop() }
+        val proxies = mutableListOf<(InternalCordaRPCOps) -> InternalCordaRPCOps>()
         // Mind that order is relevant here.
         proxies += ::AuthenticatedRpcOpsProxy
         if (!configuration.devMode) {
-            proxies += { it -> ExceptionMaskingRpcOpsProxy(it, true) }
+            proxies += { ExceptionMaskingRpcOpsProxy(it, true) }
         }
-        proxies += { it -> ExceptionSerialisingRpcOpsProxy(it, configuration.devMode) }
-        proxies += { it -> ThreadContextAdjustingRpcOpsProxy(it, cordappLoader.appClassLoader) }
+        proxies += { ExceptionSerialisingRpcOpsProxy(it, configuration.devMode) }
+        proxies += { ThreadContextAdjustingRpcOpsProxy(it, cordappLoader.appClassLoader) }
         return proxies.fold(ops) { delegate, decorate -> decorate(delegate) }
     }
 
@@ -286,8 +297,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         check(started == null) { "Node has already been started" }
         log.info("Generating nodeInfo ...")
         val trustRoot = initKeyStores()
-        val (identity, identityKeyPair) = obtainIdentity()
         startDatabase()
+        val (identity, identityKeyPair) = obtainIdentity()
         val nodeCa = configuration.signingCertificateStore.get()[CORDA_CLIENT_CA]
         identityService.start(trustRoot, listOf(identity.certificate, nodeCa))
         return database.use {
@@ -327,7 +338,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         installCoreFlows()
         registerCordappFlows()
         services.rpcFlows += cordappLoader.cordapps.flatMap { it.rpcFlows }
-        val rpcOps = makeRPCOps(cordappLoader)
+        val checkpointDumper = CheckpointDumper(checkpointStorage, database, services)
+        val rpcOps = makeRPCOps(cordappLoader, checkpointDumper)
         startShell()
         networkMapClient?.start(trustRoot)
 
@@ -388,7 +400,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             tokenizableServices = null
 
             verifyCheckpointsCompatible(frozenTokenizableServices)
-
+            checkpointDumper.start(frozenTokenizableServices)
             smm.start(frozenTokenizableServices)
             // Shut down the SMM so no Fibers are scheduled.
             runOnStop += { smm.stop(acceptableLiveFiberCountOnStop()) }
@@ -838,6 +850,16 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
         var signingCertificateStore = configuration.signingCertificateStore.get()
         if (!cryptoService.containsKey(legalIdentityPrivateKeyAlias) && !signingCertificateStore.contains(legalIdentityPrivateKeyAlias)) {
+            // Directly use the X500 name to public key map, as the identity service requires the node identity to start correctly.
+            database.transaction {
+                val x500Map = PersistentIdentityService.createX500Map(cacheFactory)
+                require(configuration.myLegalName !in x500Map) {
+                    // There is already a party in the identity store for this node, but the key has been lost. If this node starts up, it will
+                    // publish it's new key to the network map, which Corda cannot currently handle. To prevent this, stop the node from starting.
+                    "Private key for the node legal identity not found (alias $legalIdentityPrivateKeyAlias) but the corresponding public key" +
+                            " for it exists in the database. This suggests the identity for this node has been lost. Shutting down to prevent network map issues."
+                }
+            }
             log.info("$legalIdentityPrivateKeyAlias not found in key store, generating fresh key!")
             createAndStoreLegalIdentity(legalIdentityPrivateKeyAlias)
             signingCertificateStore = configuration.signingCertificateStore.get() // We need to resync after [createAndStoreLegalIdentity].
@@ -959,7 +981,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
     }
 
-    inner class ServiceHubInternalImpl : SingletonSerializeAsToken(), ServiceHubInternal, ServicesForResolutionInternal by servicesForResolution {
+    inner class ServiceHubInternalImpl : SingletonSerializeAsToken(), ServiceHubInternal, ServicesForResolution by servicesForResolution {
         override val rpcFlows = ArrayList<Class<out FlowLogic<*>>>()
         override val stateMachineRecordedTransactionMapping = DBTransactionMappingStorage(database)
         override val identityService: IdentityService get() = this@AbstractNode.identityService

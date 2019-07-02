@@ -8,6 +8,7 @@ description 'Corda node API'
 dependencies {
     compile project(":core")
     compile project(":serialization")  // TODO Remove this once the NetworkBootstrapper class is moved into the tools:bootstrapper module
+    compile project(':common-configuration-parsing') // TODO Remove this dependency once NetworkBootsrapper is moved into tools:bootstrapper
 
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
@@ -37,8 +38,13 @@ dependencies {
     compile "com.fasterxml.jackson.core:jackson-databind:$jackson_version"
     runtime 'com.mattbertolini:liquibase-slf4j:2.0.0'
 
+    testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
+    testImplementation "junit:junit:$junit_version"
+
+    testRuntimeOnly "org.junit.vintage:junit-vintage-engine:${junit_vintage_version}"
+    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${junit_jupiter_version}"
+    testRuntimeOnly "org.junit.platform:junit-platform-launcher:${junit_platform_version}"
     // Unit testing helpers.
-    testCompile "junit:junit:$junit_version"
     testCompile "org.assertj:assertj-core:$assertj_version"
     testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
     testCompile project(':node-driver')
@@ -50,7 +56,7 @@ dependencies {
 }
 
 configurations {
-    testArtifacts.extendsFrom testRuntime
+    testArtifacts.extendsFrom testRuntimeClasspath
 }
 
 task testJar(type: Jar) {

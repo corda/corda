@@ -11,9 +11,8 @@
         <createSequence sequenceName="hibernate_sequence"/>
     </changeSet>
 
-   <changeSet author="R3.Corda" id="1511451595465-1.3" onValidationFail="MARK_RAN">
+   <changeSet author="R3.Corda" id="1511451595465-1.3" onValidationFail="MARK_RAN" dbms="postgresql,mssql">
         <preConditions onFail="MARK_RAN" onSqlOutput="TEST">
-            <not><dbms type="h2"/></not>
             <not><sequenceExists sequenceName="hibernate_sequence"/></not>
         </preConditions>
         <createSequence sequenceName="hibernate_sequence" minValue="1"/>

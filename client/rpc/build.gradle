@@ -9,10 +9,10 @@ description 'Corda client RPC modules'
 //noinspection GroovyAssignabilityCheck
 configurations {
     integrationTestCompile.extendsFrom testCompile
-    integrationTestRuntime.extendsFrom testRuntime
+    integrationTestRuntimeOnly.extendsFrom testRuntimeOnly
 
     smokeTestCompile.extendsFrom compile
-    smokeTestRuntime.extendsFrom runtime
+    smokeTestRuntimeOnly.extendsFrom runtimeOnly
 }
 
 compileKotlin {
@@ -74,9 +74,13 @@ dependencies {
     // For caches rather than guava
     compile "com.github.ben-manes.caffeine:caffeine:$caffeine_version"
 
+    testImplementation "junit:junit:$junit_version"
+
+    testRuntimeOnly "org.junit.vintage:junit-vintage-engine:${junit_vintage_version}"
+    testRuntimeOnly "org.junit.platform:junit-platform-launcher:${junit_platform_version}"
+
     // Unit testing helpers.
     testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
-    testCompile "junit:junit:$junit_version"
     testCompile "org.assertj:assertj-core:${assertj_version}"
 
     testCompile project(':node-driver')
@@ -91,7 +95,9 @@ dependencies {
     smokeTestCompile "org.apache.logging.log4j:log4j-core:$log4j_version"
     smokeTestCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
     smokeTestCompile "org.assertj:assertj-core:${assertj_version}"
-    smokeTestCompile "junit:junit:$junit_version"
+    smokeTestImplementation "junit:junit:$junit_version"
+    smokeTestRuntimeOnly "org.junit.vintage:junit-vintage-engine:${junit_vintage_version}"
+    smokeTestRuntimeOnly "org.junit.platform:junit-platform-launcher:${junit_platform_version}"
 }
 
 task integrationTest(type: Test) {

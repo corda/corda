@@ -16,15 +16,17 @@ configurations {
 dependencies {
     // TypeSafe Config: for simple and human friendly config files.
     capsuleRuntime "com.typesafe:config:$typesafe_config_version"
-}
+    compileOnly "com.typesafe:config:$typesafe_config_version"
+    testRuntimeOnly "com.typesafe:config:$typesafe_config_version"
 
-// Force the Caplet to target Java 6. This ensures that running 'java -jar corda.jar' on any Java 6 VM upwards
-// will get as far as the Capsule version checks, meaning that if your JVM is too old, you will at least get
-// a sensible error message telling you what to do rather than a bytecode version exception that doesn't.
-// If we introduce .java files into this module that need Java 8+ then we will have to push the caplet into
-// its own module so its target can be controlled individually, but for now this suffices.
-sourceCompatibility = 1.6
-targetCompatibility = 1.6
+    // Capsule is a library for building independently executable fat JARs.
+    // We only need this dependency to compile our Caplet against.
+    compileOnly "co.paralleluniverse:capsule:$capsule_version"
+    testCompile "co.paralleluniverse:capsule:$capsule_version"
+
+    testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
+    testImplementation "junit:junit:$junit_version"
+}
 
 jar.enabled = false
 
@@ -38,13 +40,12 @@ task buildCordaJAR(type: FatCapsule, dependsOn: project(':node').tasks.jar) {
     applicationSource = files(
         project(':node').configurations.runtimeClasspath,
         project(':node').tasks.jar,
-        project(':node').sourceSets.main.java.outputDir.toString() + '/CordaCaplet.class',
-        project(':node').sourceSets.main.java.outputDir.toString() + '/CordaCaplet$1.class',
         project(':node').buildDir.toString() + '/resources/main/reference.conf',
         "$rootDir/config/dev/log4j2.xml",
         'NOTICE' // Copy CDDL notice
     )
     from configurations.capsuleRuntime.files.collect { zipTree(it) }
+    with jar
 
     capsuleManifest {
         applicationVersion = corda_release_version

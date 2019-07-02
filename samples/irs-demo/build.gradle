@@ -1,13 +1,13 @@
 buildscript {
     ext {
-        springBootVersion = '1.5.10.RELEASE'
+        springBootVersion = '1.5.21.RELEASE'
     }
     repositories {
         mavenCentral()
     }
     dependencies {
         classpath "org.springframework.boot:spring-boot-gradle-plugin:$springBootVersion"
-        classpath "io.spring.gradle:dependency-management-plugin:1.0.4.RELEASE"
+        classpath "io.spring.gradle:dependency-management-plugin:1.0.8.RELEASE"
     }
 }
 
@@ -48,8 +48,8 @@ sourceSets {
 
 configurations {
     integrationTestCompile.extendsFrom testCompile
-    integrationTestRuntime.extendsFrom testRuntime
-    demoArtifacts.extendsFrom testRuntime
+    integrationTestRuntimeOnly.extendsFrom testRuntimeOnly
+    demoArtifacts.extendsFrom testRuntimeClasspath
     systemTestCompile.extendsFrom testCompile
 }
 
@@ -61,7 +61,7 @@ repositories {
 }
 
 dependencies {
-    compile group: 'commons-io', name: 'commons-io', version: '2.5'
+    compile "commons-io:commons-io:$commons_io_version"
     compile project(":samples:irs-demo:web")
     compile('org.springframework.boot:spring-boot-starter-web') {
         exclude module: "spring-boot-starter-logging"
@@ -69,7 +69,14 @@ dependencies {
     }
 
     testCompile project(':node-driver')
-    testCompile "junit:junit:$junit_version"
+    
+    testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
+    testImplementation "junit:junit:$junit_version"
+
+    testRuntimeOnly "org.junit.vintage:junit-vintage-engine:${junit_vintage_version}"
+    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${junit_jupiter_version}"
+    testRuntimeOnly "org.junit.platform:junit-platform-launcher:${junit_platform_version}"
+
     testCompile "org.assertj:assertj-core:${assertj_version}"
 
     integrationTestCompile project(path: ":samples:irs-demo:web", configuration: "demoArtifacts")

@@ -222,7 +222,7 @@ class StartedFlowTransition(
                     deduplicationSeed = sessionState.deduplicationSeed
             )
             val deduplicationId = DeduplicationId.createForNormal(checkpoint, index++, newSessionState)
-            actions.add(Action.SendInitial(sessionState.party, initialMessage, SenderDeduplicationId(deduplicationId, startingState.senderUUID)))
+            actions.add(Action.SendInitial(sessionState.destination, initialMessage, SenderDeduplicationId(deduplicationId, startingState.senderUUID)))
             newSessions[sourceSessionId] = newSessionState
         }
         currentState = currentState.copy(checkpoint = checkpoint.copy(sessions = newSessions))
@@ -256,7 +256,7 @@ class StartedFlowTransition(
                 when (existingSessionState) {
                     is SessionState.Uninitiated -> {
                         val initialMessage = createInitialSessionMessage(existingSessionState.initiatingSubFlow, sourceSessionId, existingSessionState.additionalEntropy, message)
-                        actions.add(Action.SendInitial(existingSessionState.party, initialMessage, SenderDeduplicationId(deduplicationId, startingState.senderUUID)))
+                        actions.add(Action.SendInitial(existingSessionState.destination, initialMessage, SenderDeduplicationId(deduplicationId, startingState.senderUUID)))
                         newSessions[sourceSessionId] = SessionState.Initiating(
                                 bufferedMessages = emptyList(),
                                 rejectionError = null,
