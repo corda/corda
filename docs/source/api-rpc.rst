@@ -17,6 +17,8 @@ The key RPC operations exposed by the node are:
     * Start one of the node's registered flows
 * ``CordaRPCOps.startTrackedFlowDynamic``
     * As above, but also returns a progress handle for the flow
+* ``CordaRPCOps.nodeDiagnosticInfo``
+    * Returns diagnostic information about the node, including the version and CorDapp details
 * ``CordaRPCOps.nodeInfo``
     * Returns information about the node
 * ``CordaRPCOps.currentNodeTime``
