@@ -64,6 +64,7 @@ class ConfigTest {
         assertNull(config.bridgeInnerConfig)
         assertEquals(NetworkHostAndPort("localhost", 12005), config.floatOuterConfig!!.floatAddress)
         assertEquals(CordaX500Name.parse("O=Bank A, L=London, C=GB"), config.floatOuterConfig!!.expectedCertificateSubject)
+        assertNull(config.networkParametersPath)
     }
 
     @Test
@@ -322,6 +323,7 @@ class ConfigTest {
         assertEquals(Paths.get("./azure.conf"), config.artemisCryptoServiceConfig?.conf)
         assertEquals(SupportedCryptoServices.GEMALTO_LUNA, config.tunnelingCryptoServiceConfig?.name)
         assertEquals(Paths.get("./gemalto.conf"), config.tunnelingCryptoServiceConfig?.conf)
+        assertEquals("my" / "network-parameters", config.networkParametersPath)
     }
 
     @Test

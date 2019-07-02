@@ -23,6 +23,7 @@ import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEERS_PREF
 import net.corda.nodeapi.internal.bridging.BridgeControl
 import net.corda.nodeapi.internal.bridging.BridgeEntry
 import net.corda.nodeapi.internal.bully.BullyLeaderClient
+import net.corda.nodeapi.internal.network.NETWORK_PARAMS_FILE_NAME
 import net.corda.nodeapi.internal.zookeeper.ZkClient
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.DUMMY_BANK_A_NAME
@@ -548,6 +549,7 @@ class BridgeIntegrationTest {
         whenever(configMock.sslHandshakeTimeout).thenReturn(sslHandshakeTimeout)
         whenever(configMock.healthCheckPhrase).thenReturn(healthCheckPhrase)
         whenever(configMock.inboundConfig).thenReturn(inboundConfig)
+        whenever(configMock.networkParametersPath).thenReturn(tempFolder.root.toPath() / NETWORK_PARAMS_FILE_NAME)
 
         val (artemisServer, artemisClient) = createArtemis()
         try {

@@ -97,7 +97,7 @@ absolute path to the firewall's base directory.
 
 :networkParametersPath: This optional parameter only makes sense in case of ``SenderReceiver`` and ``BridgeInner`` modes.
    If missing the value is assumed to be ``<workspace>/network-parameters``.
-   This is the file path to a copy of the ``network-parameters`` as copied from a node after it has fetched the latest version from the network-map via http.
+   This is the absolute file path to a copy of the ``network-parameters`` as copied from a node after it has fetched the latest version from the network-map via http.
    It is used to correctly configure the maximum allowed message size. The maximum message size limit is already enforced by the P2P Artemis inside the ``node``,
    but the ``bridge`` also enforces this before forwarding messages to remote peers.
    ``Float`` learns about maximum message size from ``bridge`` and enforces this on received packets. If the size limit is breached these messages will be consumed and discarded, so that they are not replayed forever.
