@@ -70,7 +70,7 @@ class TunnelControlTest {
         bridgeConfig.createBridgeKeyStores(DUMMY_BANK_A_NAME)
         val bridgeAuditService = TestAuditService()
         val haService = SingleInstanceMasterService(bridgeConfig, bridgeAuditService)
-        val cryptoService = makeCryptoService(bridgeConfig.publicCryptoServiceConfig, DUMMY_BANK_A_NAME, bridgeConfig.publicSSLConfiguration.keyStore)
+        val cryptoService = makeCryptoService(bridgeConfig.p2pTlsSigningCryptoServiceConfig, DUMMY_BANK_A_NAME, bridgeConfig.publicSSLConfiguration.keyStore)
 
         val controlLinkSSLConfiguration = bridgeConfig.bridgeInnerConfig?.tunnelSSLConfiguration ?: bridgeConfig.publicSSLConfiguration
         val tunnelingCryptoService = makeCryptoService(bridgeConfig.tunnelingCryptoServiceConfig, DUMMY_BANK_A_NAME, controlLinkSSLConfiguration.keyStore)
@@ -163,7 +163,7 @@ class TunnelControlTest {
                 Unit
             }.whenever(it).sendMessageToLocalBroker(any())
         }
-        val cryptoService = makeCryptoService(bridgeConfig.publicCryptoServiceConfig, DUMMY_BANK_A_NAME, bridgeConfig.publicSSLConfiguration.keyStore)
+        val cryptoService = makeCryptoService(bridgeConfig.p2pTlsSigningCryptoServiceConfig, DUMMY_BANK_A_NAME, bridgeConfig.publicSSLConfiguration.keyStore)
         val signingService = CryptoServiceSigningService(cryptoService, bridgeConfig.publicSSLConfiguration.keyStore.get().extractCertificates(), bridgeConfig.publicSSLConfiguration.trustStore.get(), bridgeConfig.sslHandshakeTimeout, bridgeAuditService)
 
         val controlLinkSSLConfiguration = bridgeConfig.bridgeInnerConfig?.tunnelSSLConfiguration ?: bridgeConfig.publicSSLConfiguration

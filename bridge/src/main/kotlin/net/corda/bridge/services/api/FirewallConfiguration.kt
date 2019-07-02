@@ -119,7 +119,7 @@ interface FirewallConfiguration {
     val p2pConfirmationWindowSize: Int
     val whitelistedHeaders: List<String>
     val publicSSLConfiguration: MutualSslConfiguration
-    val publicCryptoServiceConfig: CryptoServiceConfig?
+    val p2pTlsSigningCryptoServiceConfig: CryptoServiceConfig?
     val tunnelingCryptoServiceConfig: CryptoServiceConfig? // Location for the cryptoService conf file.
     val artemisCryptoServiceConfig: CryptoServiceConfig?
 

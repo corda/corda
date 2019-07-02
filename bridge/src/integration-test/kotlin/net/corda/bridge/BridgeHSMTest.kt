@@ -190,7 +190,7 @@ class BridgeHSMTest : IntegrationTest() {
                     artemisPort,
                     advertisedP2PPort,
                     floatPort = floatPort,
-                    configOverrides = mapOf("publicCryptoServiceConfig" to mapOf("name" to "UTIMACO", "conf" to bridgeUtimacoConfig),
+                    configOverrides = mapOf("p2pTlsSigningCryptoServiceConfig" to mapOf("name" to "UTIMACO", "conf" to bridgeUtimacoConfig),
                                             "artemisCryptoServiceConfig" to mapOf("name" to "UTIMACO", "conf" to bridgeArtemisUtimacoConfig),
                                             "outboundConfig" to outboundConfig)).getOrThrow()
 

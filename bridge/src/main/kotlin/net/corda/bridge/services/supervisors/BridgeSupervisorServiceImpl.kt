@@ -57,7 +57,7 @@ class BridgeSupervisorServiceImpl(conf: FirewallConfiguration,
         }
 
         // TODO: get keystore public data from crypto service? or from config?
-        val cryptoService = makeCryptoService(conf.publicCryptoServiceConfig, legalName, conf.publicSSLConfiguration.keyStore)
+        val cryptoService = makeCryptoService(conf.p2pTlsSigningCryptoServiceConfig, legalName, conf.publicSSLConfiguration.keyStore)
         signingService = CryptoServiceSigningService(cryptoService, conf.publicSSLConfiguration.keyStore.get().extractCertificates(), conf.publicSSLConfiguration.trustStore.get(), conf.sslHandshakeTimeout, auditService)
 
         val controlLinkSSLConfiguration = conf.bridgeInnerConfig?.tunnelSSLConfiguration ?: conf.publicSSLConfiguration

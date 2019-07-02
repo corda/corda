@@ -1,7 +1,6 @@
 package net.corda.bridge
 
 import com.typesafe.config.ConfigException
-import com.typesafe.config.ConfigRenderOptions
 import net.corda.bridge.services.api.FirewallMode
 import net.corda.bridge.services.config.BridgeConfigHelper.asString
 import net.corda.core.identity.CordaX500Name
@@ -317,8 +316,8 @@ class ConfigTest {
     fun `load hsm configs from BridgeInner mode`() {
         val configResource = "/net/corda/bridge/hsm/all_hsms_bridge_inner.conf"
         val config = createAndLoadConfigFromResource(tempFolder.root.toPath(), configResource)
-        assertEquals(SupportedCryptoServices.UTIMACO, config.publicCryptoServiceConfig?.name)
-        assertEquals(Paths.get("./utimaco.conf"), config.publicCryptoServiceConfig?.conf)
+        assertEquals(SupportedCryptoServices.UTIMACO, config.p2pTlsSigningCryptoServiceConfig?.name)
+        assertEquals(Paths.get("./utimaco.conf"), config.p2pTlsSigningCryptoServiceConfig?.conf)
         assertEquals(SupportedCryptoServices.AZURE_KEY_VAULT, config.artemisCryptoServiceConfig?.name)
         assertEquals(Paths.get("./azure.conf"), config.artemisCryptoServiceConfig?.conf)
         assertEquals(SupportedCryptoServices.GEMALTO_LUNA, config.tunnelingCryptoServiceConfig?.name)

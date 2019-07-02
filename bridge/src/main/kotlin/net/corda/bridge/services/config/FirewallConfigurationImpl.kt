@@ -70,7 +70,7 @@ data class FirewallConfigurationImpl(
         override val auditServiceConfiguration: AuditServiceConfigurationImpl,
         override val healthCheckPhrase: String? = null,
         override val silencedIPs: Set<String> = emptySet(),
-        override val publicCryptoServiceConfig: CryptoServiceConfigImpl?,
+        override val p2pTlsSigningCryptoServiceConfig: CryptoServiceConfigImpl?,
         override val tunnelingCryptoServiceConfig: CryptoServiceConfigImpl?,
         override val artemisCryptoServiceConfig: CryptoServiceConfigImpl?,
         override val revocationConfig: RevocationConfig,

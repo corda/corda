@@ -316,13 +316,13 @@ class RegistrationTool : CordaCliWrapper("node-registration", "Corda registratio
             try {
                 // Get CryptoService type from bridge configuration
                 val bridgeConfig = ConfigHelper.loadConfig(configFile.parent, configFile)
-                if (bridgeConfig.isEmpty || !bridgeConfig.hasPath("publicCryptoServiceConfig")) {
-                    throw IllegalArgumentException("Bridge configuration file missing publicCryptoServiceConfig property.")
+                if (bridgeConfig.isEmpty || !bridgeConfig.hasPath("p2pTlsSigningCryptoServiceConfig")) {
+                    throw IllegalArgumentException("Bridge configuration file missing 'p2pTlsSigningCryptoServiceConfig' property.")
                 }
 
-                val bridgeCryptoServiceConfig = bridgeConfig.getConfig("publicCryptoServiceConfig")
+                val bridgeCryptoServiceConfig = bridgeConfig.getConfig("p2pTlsSigningCryptoServiceConfig")
                 if (bridgeCryptoServiceConfig.isEmpty || !bridgeCryptoServiceConfig.hasPath("name") || !bridgeCryptoServiceConfig.hasPath("conf")) {
-                    throw IllegalArgumentException("Bridge publicCryptoServiceConfig is incomplete.")
+                    throw IllegalArgumentException("Bridge 'p2pTlsSigningCryptoServiceConfig' is incomplete.")
                 }
                 bridgeCryptoServiceName = SupportedCryptoServices.valueOf(bridgeCryptoServiceConfig.getString("name"))
                 val bridgeCryptoServiceConfigFile = Paths.get(bridgeCryptoServiceConfig.getString("conf"))
