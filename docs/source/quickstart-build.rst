@@ -25,7 +25,7 @@ The first thing you need to do is clone a CorDapp template to modify.
 Step Two: Creating states
 -------------------------
 
-Since the CorDapp models a car dealership network, a state must be created to represent cars.
+Since the CorDapp models a car dealership network, a state must be created to represent cars. States are immutable objects representing on-ledger facts. A state might represent a physical asset like a car, or an intangible asset or agreement like an IOU. For more information on states, see the `state documentation <./key-concepts-states.html>`_.
 
 1. From IntelliJ expand the source files and navigate to ``contracts > src > main > kotlin > com.template > states > TemplateState.kt``.
 
@@ -46,32 +46,34 @@ Since the CorDapp models a car dealership network, a state must be created to re
   * ``dealershipLocation`` of type ``String``
   * ``linearId`` of type ``UniqueIdentifier``
 
+  Don't worry if you're not sure exactly how these should appear, you can check your code shortly.
+
 5. Remove the ``data`` and ``participants`` parameters.
 
 6. Add a body to the ``CarState`` class that overrides participants to contain a list of ``owningBank``, ``holdingDealer``, and ``manufacturer``.
 
 7. The ``CarState`` file should now appear as follows:
 
-.. container:: codeset
+    .. container:: codeset
 
-    .. sourcecode:: kotlin
+        .. sourcecode:: kotlin
 
-        @BelongsToContract(TemplateContract::class)
-        data class CarState(val owningbank: Party,
-                            val holdingDealer: Party,
-                            val manufacturer: Party,
-                            val vin: String,
-                            val licensePlateNumber: String,
-                            val make: String,
-                            val model: String,
-                            val dealershipLocation: String,
-                            val linearId: UniqueIdentifier) : ContractState {
-            override val participants: List<AbstractParty> = listOf(owningBank, holdingDealer, manufacturer)
-        }
+            @BelongsToContract(TemplateContract::class)
+            data class CarState(val owningbank: Party,
+                                val holdingDealer: Party,
+                                val manufacturer: Party,
+                                val vin: String,
+                                val licensePlateNumber: String,
+                                val make: String,
+                                val model: String,
+                                val dealershipLocation: String,
+                                val linearId: UniqueIdentifier) : ContractState {
+                override val participants: List<AbstractParty> = listOf(owningBank, holdingDealer, manufacturer)
+            }
 
 8. Save the ``CarState.kt`` file.
 
-The ``CarState`` definition has now been created. It lists the properties required of all instances of this state and their types.
+The ``CarState`` definition has now been created. It lists the properties and associated types required of all instances of this state.
 
 
 Step Three: Creating contracts
@@ -102,31 +104,31 @@ After creating a state, you must create a contract to dictate how the state can 
 
 9. The ``CarContract.kt`` file should look as follows:
 
-.. container:: codeset
+    .. container:: codeset
 
-    .. sourcecode:: kotlin
+        .. sourcecode:: kotlin
 
-        class CarContract : Contract {
-            companion object {
-                const val ID = "com.template.contracts.CarContract"
-            }
+            class CarContract : Contract {
+                companion object {
+                    const val ID = "com.template.contracts.CarContract"
+                }
 
-            override fun verify(tx: LedgerTransaction) {
+                override fun verify(tx: LedgerTransaction) {
 
-                val command = tx.commands.requireSingleCommand<Commands.Issue>()
-                requireThat {
-                    "There should be no input state" using (tx.inputs.isEmpty())
-                    "There should be one input state" using (tx.outputs.size == 1)
-                    "The output state must be of type CarState" using (tx.outputs.get(0).data is CarState)
-                    val outputState = tx.outputs.get(0).data as CarState
-                    "The licensePlateNumber must be seven characters long" using (outputState.licensePlateNumber.length == 7)
+                    val command = tx.commands.requireSingleCommand<Commands.Issue>()
+                    requireThat {
+                        "There should be no input state" using (tx.inputs.isEmpty())
+                        "There should be one input state" using (tx.outputs.size == 1)
+                        "The output state must be of type CarState" using (tx.outputs.get(0).data is CarState)
+                        val outputState = tx.outputs.get(0).data as CarState
+                        "The licensePlateNumber must be seven characters long" using (outputState.licensePlateNumber.length == 7)
+                    }
+                }
+
+                interface Commands : CommandData {
+                    class Issue : Commands
                 }
             }
-
-            interface Commands : CommandData {
-                class Issue : Commands
-            }
-        }
 
 10. Save the ``CarContract.kt`` file.
 
@@ -163,38 +165,38 @@ Step Four: Creating a flow
 
 12. The ``CarFlow.kt`` file should look like this:
 
-  .. container:: codeset
+    .. container:: codeset
 
-      .. sourcecode:: kotlin
+        .. sourcecode:: kotlin
 
-          @InitiatingFlow
-          @StartableByRPC
-          class CarIssueInitiator(val owningBank: Party,
-                                  val holdingDealer: Party,
-                                  val manufacturer: Party,
-                                  val vin: String,
-                                  val licensePlateNumber: String,
-                                  val make: String,
-                                  val model: String,
-                                  val dealershipLocation: String) : FlowLogic<Unit>() {
-              override val progressTracker = ProgressTracker()
+            @InitiatingFlow
+            @StartableByRPC
+            class CarIssueInitiator(val owningBank: Party,
+                                    val holdingDealer: Party,
+                                    val manufacturer: Party,
+                                    val vin: String,
+                                    val licensePlateNumber: String,
+                                    val make: String,
+                                    val model: String,
+                                    val dealershipLocation: String) : FlowLogic<Unit>() {
+                override val progressTracker = ProgressTracker()
 
-              @Suspendable
-              override fun call() {
-                  val notary = serviceHub.networkMapCache.notaryIdentities.single()
-                  val command = Command(CarContract.Commands.Issue(), listOf(owningBank, holdingDealer, manufacturer).map { it.owningKey })
-                  val carState = CarState(owningBank, holdingDealer, manufacturer, vin, licensePlateNumber, make, model, dealershipLocation, UniqueIdentifier())
-              }
-          }
+                @Suspendable
+                override fun call() {
+                    val notary = serviceHub.networkMapCache.notaryIdentities.single()
+                    val command = Command(CarContract.Commands.Issue(), listOf(owningBank, holdingDealer, manufacturer).map { it.owningKey })
+                    val carState = CarState(owningBank, holdingDealer, manufacturer, vin, licensePlateNumber, make, model, dealershipLocation, UniqueIdentifier())
+                }
+            }
 
-          @InitiatedBy(CarIssueInitiator::class)
-          class CarIssueResponder(val counterpartySession: FlowSession) : FlowLogic<Unit>() {
-              @Suspendable
-              override fun call(){
+            @InitiatedBy(CarIssueInitiator::class)
+            class CarIssueResponder(val counterpartySession: FlowSession) : FlowLogic<Unit>() {
+                @Suspendable
+                override fun call(){
 
-                  }
-              }
-          }
+                    }
+                }
+            }
 
 
   **So far you've...**
@@ -405,8 +407,6 @@ Now that the the CorDapp code has been completed and the build file updated, the
 2. Run ``./gradlew clean deployNodes``
 
 3. Run ``build/nodes/runNodes``
-
-  The nodes should open in terminal windows.
 
 4. To run flows in your CorDapp, enter the following flow command from any node terminal window: ``flow start CarIssueInitiator owningBank: Bank of America, holdingDealer: Dealership, manufacturer: Manufacturer, vin:"abc", licensePlateNumber: "abc1234", make: "Honda", model: "Civic", dealershipLocation: "NYC"``
 
