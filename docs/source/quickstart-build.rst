@@ -415,3 +415,17 @@ Now that the the CorDapp code has been completed and the build file updated, the
   ``run vaultQuery contractStateType: com.template.states.CarState``
 
   The vault is the node's repository of all information from the ledger that involves that node, stored in a relational model. After running the query, the terminal should display the state created by the flow command. This command can be run from the terminal window of any node, as all parties are participants in this transaction.
+
+Next steps
+----------
+
+The getting started experience is designed to be lightweight and get to code as quickly as possible, for more detail, see the following documentation:
+
+* `CorDapp design best practice <./writing-a-cordapp.html>`_
+* `Testing CorDapp contracts <./tutorial-test-dsl.html>`_
+
+For operational users, see the following documentation:
+
+* `Node structure and configuration </corda-nodes-index.html>`_
+* `Deploying a node to a server <deploying-a-node.html>`_
+* `Notary documentation <running-a-notary.html>`_
