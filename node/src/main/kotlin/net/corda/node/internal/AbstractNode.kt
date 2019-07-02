@@ -178,8 +178,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     val cryptoService = CryptoServiceFactory.makeCryptoService(
             SupportedCryptoServices.BC_SIMPLE,
             configuration.myLegalName,
-            configuration.signingCertificateStore,
-            configuration.cryptoServiceTimeout
+            configuration.signingCertificateStore
     ).closeOnStop()
     @Suppress("LeakingThis")
     val networkParametersStorage = makeNetworkParametersStorage()

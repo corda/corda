@@ -16,7 +16,6 @@ import java.security.KeyPair
 import java.security.KeyStore
 import java.security.PublicKey
 import java.security.Signature
-import java.time.Duration
 import javax.security.auth.x500.X500Principal
 
 /**
@@ -25,8 +24,7 @@ import javax.security.auth.x500.X500Principal
  * This service reuses the [NodeConfiguration.signingCertificateStore] to store keys.
  */
 class BCCryptoService(private val legalName: X500Principal,
-                      private val certificateStoreSupplier: CertificateStoreSupplier,
-                      timeout: Duration? = null) : CryptoService(timeout) {
+                      private val certificateStoreSupplier: CertificateStoreSupplier) : CryptoService() {
 
     // TODO check if keyStore exists.
     // TODO make it private when E2ETestKeyManagementService does not require direct access to the private key.
