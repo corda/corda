@@ -36,7 +36,7 @@ import java.nio.file.Path
 import javax.security.auth.x500.X500Principal
 
 class ArtemisRpcTests {
-    private val ports: PortAllocation = incrementalPortAllocation(10000)
+    private val ports: PortAllocation = incrementalPortAllocation()
 
     private val user = User("mark", "dadada", setOf(all()))
     private val users = listOf(user)

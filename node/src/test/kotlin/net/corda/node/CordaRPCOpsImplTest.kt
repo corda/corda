@@ -109,7 +109,9 @@ class CordaRPCOpsImplTest {
 
     @After
     fun cleanUp() {
-        mockNet.stopNodes()
+        if (::mockNet.isInitialized) {
+            mockNet.stopNodes()
+        }
     }
 
     @Test

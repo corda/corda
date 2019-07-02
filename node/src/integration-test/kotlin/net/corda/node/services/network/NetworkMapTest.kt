@@ -40,7 +40,7 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
     val testSerialization = SerializationEnvironmentRule(true)
 
     private val cacheTimeout = 1.seconds
-    private val portAllocation = incrementalPortAllocation(10000)
+    private val portAllocation = incrementalPortAllocation()
 
     private lateinit var networkMapServer: NetworkMapServer
     private lateinit var compatibilityZone: CompatibilityZoneParams
