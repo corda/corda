@@ -543,7 +543,7 @@ class BridgeIntegrationTest {
         // Override some properties from the resource and use dynamically allocated ports
         val healthCheckPhrase = "ISpeakAMQP!"
         val sslHandshakeTimeout = 1000L
-        var inboundPort = portAllocation.nextPort()
+        val inboundPort = portAllocation.nextPort()
         // Use partial mocking to substitute overridden properties; note: they won't be reflected in log when loading config
         val inboundConfig = Mockito.spy(config.inboundConfig)
         whenever(inboundConfig?.listeningAddress).thenReturn(NetworkHostAndPort("0.0.0.0", inboundPort))
@@ -579,8 +579,8 @@ class BridgeIntegrationTest {
                 val buf = ByteBuffer.allocate(32)
                 assertEquals(healthCheckPhrase.length, it.read(buf).get(sslHandshakeTimeout, TimeUnit.MILLISECONDS))
                 assertEquals(healthCheckPhrase, String(buf.array(), 0, healthCheckPhrase.length))
-                val nextBytes = it.read(buf);
-                Thread.sleep((sslHandshakeTimeout * 3) / 2);
+                val nextBytes = it.read(buf)
+                Thread.sleep((sslHandshakeTimeout * 3) / 2)
                 assertEquals(false, nextBytes.isDone) // Make sure that socket is still alive after timeout
             }
 
