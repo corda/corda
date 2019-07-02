@@ -1,8 +1,7 @@
 ext {
     tornadofx_version = '1.7.15'
     jna_version = '4.5.2'
-    purejavacomm_version = '0.0.18'
-
+    
     java_home = System.properties.'java.home'
     pkg_source = "$buildDir/packagesrc"
     pkg_outDir = "$buildDir/javapackage"
