@@ -3,6 +3,8 @@ package net.corda.nodeapi.internal.cryptoservice
 import net.corda.core.crypto.SignatureScheme
 import net.corda.core.internal.times
 import org.bouncycastle.operator.ContentSigner
+import org.junit.After
+import org.junit.Before
 import org.junit.Test
 import java.security.PublicKey
 import java.time.Duration
@@ -13,6 +15,17 @@ class CryptoServiceTest {
 
     private val TEST_TIMEOUT = Duration.ofMillis(500)
     private var sleepTime = TEST_TIMEOUT
+    private lateinit var stub: CryptoService
+
+    @Before
+    fun setUp() {
+        stub = CryptoServiceStub()
+    }
+
+    @After
+    fun tearDown() {
+        stub.close()
+    }
 
     inner class CryptoServiceStub : CryptoService(TEST_TIMEOUT) {
         private fun sleeper() {
@@ -42,17 +55,13 @@ class CryptoServiceTest {
 
     @Test
     fun `if no timeout is reached then correct value is returned`() {
-        val stub = CryptoServiceStub()
         sleepTime = Duration.ZERO
-
         expect(true) { stub.containsKey("Test") }
     }
 
     @Test
     fun `when timeout is reached the correct exception is thrown`() {
-        val stub = CryptoServiceStub()
         sleepTime = TEST_TIMEOUT.times(2)
-
         assertFailsWith(TimedCryptoServiceException::class) { stub.containsKey("Test") }
     }
 }
