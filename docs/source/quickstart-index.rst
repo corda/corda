@@ -11,10 +11,9 @@ Getting started developing CorDapps
 
 Getting started with Corda will walk you through the process of setting up a development environment, deploying an example CorDapp, and building your own CorDapp based on the example.
 
-1. Setting up a development environment
-2. Deploying an example CorDapp
-3. Understanding CorDapp contents
-4. Building your own CorDapp
+1. `Setting up a development environment`_
+2. `Deploying an example CorDapp <./quickstart-deploy.html>`_
+3. `Building your own CorDapp <./quickstart-build.html>`_
 
 The getting started experience is designed to be lightweight and get to code as quickly as possible, for more detail, see the following documentation:
 
@@ -46,9 +45,9 @@ Step One: Downloading a sample project
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 1. Open a command prompt or terminal.
-2. Clone the CorDapp example repo by running ``git clone https://github.com/corda/cordapp-example``
-3. Move into the ``cordapp-example`` folder by running ``cd cordapp-example``
-4. Checkout the corresponding branch for Corda Enterprise by running ``git checkout release-enterprise-V3`` in the current directory.
+2. Clone the CorDapp example repo by running: ``git clone https://github.com/corda/cordapp-example``
+3. Move into the ``cordapp-example`` folder by running: ``cd cordapp-example``
+4. Checkout the corresponding branch by running: ``git checkout release-V4`` in the current directory.
 
 
 Step Two: Creating an IntelliJ project
