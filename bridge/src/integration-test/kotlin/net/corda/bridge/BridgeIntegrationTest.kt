@@ -23,6 +23,7 @@ import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEERS_PREF
 import net.corda.nodeapi.internal.bridging.BridgeControl
 import net.corda.nodeapi.internal.bridging.BridgeEntry
 import net.corda.nodeapi.internal.bully.BullyLeaderClient
+import net.corda.nodeapi.internal.network.NETWORK_PARAMS_FILE_NAME
 import net.corda.nodeapi.internal.zookeeper.ZkClient
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.DUMMY_BANK_A_NAME
@@ -71,7 +72,9 @@ class BridgeIntegrationTest {
         val (artemisServer, artemisClient) = createArtemis()
         try {
             installBridgeControlResponder(artemisClient)
-            val bridge = FirewallInstance(config, FirewallVersionInfo(1, "1.1", "Dummy", "Test"))
+            val configMock = Mockito.spy(config)
+            whenever(configMock.networkParametersPath).thenReturn(tempFolder.root.toPath() / NETWORK_PARAMS_FILE_NAME)
+            val bridge = FirewallInstance(configMock, FirewallVersionInfo(1, "1.1", "Dummy", "Test"))
             val stateFollower = bridge.activeChange.toBlocking().iterator
             assertEquals(false, stateFollower.next())
             assertEquals(false, bridge.active)
@@ -540,7 +543,7 @@ class BridgeIntegrationTest {
         // Override some properties from the resource and use dynamically allocated ports
         val healthCheckPhrase = "ISpeakAMQP!"
         val sslHandshakeTimeout = 1000L
-        var inboundPort = portAllocation.nextPort()
+        val inboundPort = portAllocation.nextPort()
         // Use partial mocking to substitute overridden properties; note: they won't be reflected in log when loading config
         val inboundConfig = Mockito.spy(config.inboundConfig)
         whenever(inboundConfig?.listeningAddress).thenReturn(NetworkHostAndPort("0.0.0.0", inboundPort))
@@ -548,6 +551,7 @@ class BridgeIntegrationTest {
         whenever(configMock.sslHandshakeTimeout).thenReturn(sslHandshakeTimeout)
         whenever(configMock.healthCheckPhrase).thenReturn(healthCheckPhrase)
         whenever(configMock.inboundConfig).thenReturn(inboundConfig)
+        whenever(configMock.networkParametersPath).thenReturn(tempFolder.root.toPath() / NETWORK_PARAMS_FILE_NAME)
 
         val (artemisServer, artemisClient) = createArtemis()
         try {
@@ -575,8 +579,8 @@ class BridgeIntegrationTest {
                 val buf = ByteBuffer.allocate(32)
                 assertEquals(healthCheckPhrase.length, it.read(buf).get(sslHandshakeTimeout, TimeUnit.MILLISECONDS))
                 assertEquals(healthCheckPhrase, String(buf.array(), 0, healthCheckPhrase.length))
-                val nextBytes = it.read(buf);
-                Thread.sleep((sslHandshakeTimeout * 3) / 2);
+                val nextBytes = it.read(buf)
+                Thread.sleep((sslHandshakeTimeout * 3) / 2)
                 assertEquals(false, nextBytes.isDone) // Make sure that socket is still alive after timeout
             }
 

@@ -145,7 +145,7 @@ DMZ ready (node + bridge + float)
 |                                                                                  |             }                                                                    |
 |         }                                                                        |         }                                                                        |
 |     }                                                                            |     }                                                                            |
-|     networkParametersPath = network-parameters                                   |     networkParametersPath = network-parameters                                   |
+|     networkParametersPath = network-parameters                                   |                                                                                  |
 +----------------------------------------------------------------------------------+----------------------------------------------------------------------------------+
 
 DMZ ready with outbound SOCKS
@@ -265,7 +265,7 @@ Full production HA DMZ ready (hot/cold node, hot/warm bridge)
 |                                                                                  |             }                                                                    |
 |         }                                                                        |         }                                                                        |
 |     }                                                                            |     }                                                                            |
-|     networkParametersPath = network-parameters                                   |     networkParametersPath = network-parameters                                   |
+|     networkParametersPath = network-parameters                                   |                                                                                  |
 +----------------------------------------------------------------------------------+----------------------------------------------------------------------------------+
 
 +----------------------------------------------------------------------------------+----------------------------------------------------------------------------------+
@@ -291,7 +291,7 @@ Full production HA DMZ ready (hot/cold node, hot/warm bridge)
 |                                                                                  |             }                                                                    |
 |         }                                                                        |         }                                                                        |
 |     }                                                                            |     }                                                                            |
-|     networkParametersPath = network-parameters                                   |     networkParametersPath = network-parameters                                   |
+|     networkParametersPath = network-parameters                                   |                                                                                  |
 +----------------------------------------------------------------------------------+----------------------------------------------------------------------------------+
 
 

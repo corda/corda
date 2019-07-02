@@ -95,10 +95,11 @@ absolute path to the firewall's base directory.
     .. note:: Longer term these keys will be managed in secure hardware devices.
 
 
-:networkParametersPath: This is the file path to a copy of the ``network-parameters`` as copied from a node after it has fetched the latest version from the network-map via http.
+:networkParametersPath: This a mandatory parameter that only makes sense in case of ``SenderReceiver`` and ``BridgeInner`` modes.
+   This is the absolute file path to a copy of the ``network-parameters`` as copied from a node after it has fetched the latest version from the network-map via http.
    It is used to correctly configure the maximum allowed message size. The maximum message size limit is already enforced by the P2P Artemis inside the ``node``,
-   but the ``bridge`` also enforces this before forwarding messages to remote peers and also the ``float`` enforces this on received packets.
-   If the size limit is breached these messages will be consumed and discarded, so that they are not replayed forever.
+   but the ``bridge`` also enforces this before forwarding messages to remote peers.
+   ``Float`` learns about maximum message size from ``bridge`` and enforces this on received packets. If the size limit is breached these messages will be consumed and discarded, so that they are not replayed forever.
 
 :outboundConfig:  This section is used to configure the processing of outbound messages. It is required for ``SenderReceiver`` and ``BridgeInner`` modes and must be absent for ``FloatOuter`` mode:
 
@@ -689,7 +690,6 @@ Configuration file: ``firewall.conf`` for ``vmFloat1`` should look as follows:
             }
         }
     }
-    networkParametersPath = network-parameters // The network-parameters file is expected to be copied from the node registration phase and here is expected in the workspace folder.
     healthCheckPhrase = "HelloCorda"
 
 Files ``tunnel/float.jks`` and ``tunnel/tunnel-truststore.jks`` should be copied from `Tunnel keystore generation`_ stage.
