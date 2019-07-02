@@ -18,6 +18,7 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.SchemaInitializationType
 import net.corda.tools.shell.SSHDConfiguration
+import java.net.Proxy
 import java.net.URL
 import java.nio.file.Path
 import java.time.Duration
@@ -320,6 +321,10 @@ data class NodeConfigurationImpl(
 
         if (compatibilityZoneURL != null && networkServices != null && !(networkServices!!.inferred)) {
             errors += "cannot specify both 'compatibilityZoneUrl' and 'networkServices'"
+        }
+
+        if (networkServices != null && networkServices!!.proxyType != Proxy.Type.DIRECT && networkServices!!.proxyAddress == null) {
+            errors += "cannot enable network proxy by specifying 'networkServices.proxyType' without providing 'networkServices.proxyAddress'"
         }
 
         return errors

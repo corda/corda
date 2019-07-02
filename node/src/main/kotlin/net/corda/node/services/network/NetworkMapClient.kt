@@ -12,6 +12,8 @@ import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.seconds
 import net.corda.core.utilities.trace
 import net.corda.node.VersionInfo
+import net.corda.node.services.config.NetworkServicesConfig
+import net.corda.node.utilities.createProxy
 import net.corda.node.utilities.registration.cacheControl
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.network.NetworkMap
@@ -24,12 +26,13 @@ import java.security.cert.X509Certificate
 import java.time.Duration
 import java.util.*
 
-class NetworkMapClient(compatibilityZoneURL: URL, private val versionInfo: VersionInfo) {
+class NetworkMapClient(config: NetworkServicesConfig, private val versionInfo: VersionInfo) {
     companion object {
         private val logger = contextLogger()
     }
 
-    private val networkMapUrl = URL("$compatibilityZoneURL/network-map")
+    private val networkMapUrl = URL("${config.networkMapURL}/network-map")
+    private val proxy = createProxy(config)
     private lateinit var trustRoot: X509Certificate
 
     fun start(trustRoot: X509Certificate) {
@@ -41,7 +44,7 @@ class NetworkMapClient(compatibilityZoneURL: URL, private val versionInfo: Versi
         logger.trace { "Publishing NodeInfo to $publishURL." }
         publishURL.post(signedNodeInfo.serialize(),
                 "Platform-Version" to "${versionInfo.platformVersion}",
-                "Client-Version" to versionInfo.releaseVersion)
+                "Client-Version" to versionInfo.releaseVersion, proxy = proxy)
         logger.trace { "Published NodeInfo to $publishURL successfully." }
     }
 
@@ -50,14 +53,14 @@ class NetworkMapClient(compatibilityZoneURL: URL, private val versionInfo: Versi
         logger.trace { "Sending network parameters with hash ${signedParametersHash.raw.deserialize()} approval to $ackURL." }
         ackURL.post(signedParametersHash.serialize(),
                 "Platform-Version" to "${versionInfo.platformVersion}",
-                "Client-Version" to versionInfo.releaseVersion)
+                "Client-Version" to versionInfo.releaseVersion, proxy = proxy)
         logger.trace { "Sent network parameters approval to $ackURL successfully." }
     }
 
     fun getNetworkMap(networkMapKey: UUID? = null): NetworkMapResponse {
         val url = networkMapKey?.let { URL("$networkMapUrl/$networkMapKey") } ?: networkMapUrl
         logger.trace { "Fetching network map update from $url." }
-        val connection = url.openHttpConnection()
+        val connection = url.openHttpConnection(proxy)
         val signedNetworkMap = connection.responseAs<SignedNetworkMap>()
         val networkMap = signedNetworkMap.verifiedNetworkMapCert(trustRoot)
         val timeout = connection.cacheControl.maxAgeSeconds().seconds
@@ -68,7 +71,7 @@ class NetworkMapClient(compatibilityZoneURL: URL, private val versionInfo: Versi
     fun getNodeInfo(nodeInfoHash: SecureHash): NodeInfo {
         val url = URL("$networkMapUrl/node-info/$nodeInfoHash")
         logger.trace { "Fetching node info: '$nodeInfoHash' from $url." }
-        val verifiedNodeInfo = url.openHttpConnection().responseAs<SignedNodeInfo>().verified()
+        val verifiedNodeInfo = url.openHttpConnection(proxy).responseAs<SignedNodeInfo>().verified()
         logger.trace { "Fetched node info: '$nodeInfoHash' successfully. Node Info: $verifiedNodeInfo" }
         return verifiedNodeInfo
     }
@@ -76,7 +79,7 @@ class NetworkMapClient(compatibilityZoneURL: URL, private val versionInfo: Versi
     fun getNetworkParameters(networkParameterHash: SecureHash): SignedNetworkParameters {
         val url = URL("$networkMapUrl/network-parameters/$networkParameterHash")
         logger.trace { "Fetching network parameters: '$networkParameterHash' from $url." }
-        val networkParameter = url.openHttpConnection().responseAs<SignedNetworkParameters>()
+        val networkParameter = url.openHttpConnection(proxy).responseAs<SignedNetworkParameters>()
         logger.trace { "Fetched network parameters: '$networkParameterHash' successfully. Network Parameters: $networkParameter" }
         return networkParameter
     }
@@ -84,7 +87,7 @@ class NetworkMapClient(compatibilityZoneURL: URL, private val versionInfo: Versi
     fun myPublicHostname(): String {
         val url = URL("$networkMapUrl/my-hostname")
         logger.trace { "Resolving public hostname from '$url'." }
-        val hostName = url.openHttpConnection().inputStream.bufferedReader().use(BufferedReader::readLine)
+        val hostName = url.openHttpConnection(proxy).inputStream.bufferedReader().use(BufferedReader::readLine)
         logger.trace { "My public hostname is $hostName." }
         return hostName
     }

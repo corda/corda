@@ -9,6 +9,7 @@ import net.corda.common.validation.internal.Validated.Companion.invalid
 import net.corda.common.validation.internal.Validated.Companion.valid
 import net.corda.core.context.AuthServiceId
 import net.corda.core.internal.notary.NotaryServiceFlow
+import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.services.config.*
 import net.corda.node.services.config.SecurityConfiguration.AuthService.Companion.defaultAuthServiceId
 import net.corda.node.services.config.Valid
@@ -23,6 +24,7 @@ import net.corda.notary.experimental.bftsmart.BFTSmartConfig
 import net.corda.notary.experimental.raft.RaftConfig
 import net.corda.notary.mysql.MySQLNotaryConfig
 import net.corda.tools.shell.SSHDConfiguration
+import java.net.Proxy
 
 internal object UserSpec : Configuration.Specification<User>("User") {
     private val username by string().optional()
@@ -121,10 +123,14 @@ internal object NetworkServicesConfigSpec : Configuration.Specification<NetworkS
     private val networkMapURL by string().mapValid(::toURL)
     private val pnm by string().mapValid(::toUUID).optional()
     private val inferred by boolean().optional().withDefaultValue(false)
+    private val proxyType by enum(Proxy.Type::class).optional().withDefaultValue(Proxy.Type.DIRECT)
+    private val proxyAddress by string().mapValid(::toNetworkHostAndPort).optional()
+    private val proxyUser by string().optional()
+    private val proxyPassword by string(sensitive = true).optional()
 
     override fun parseValid(configuration: Config, options: Configuration.Options): Valid<NetworkServicesConfig> {
         val config = configuration.withOptions(options)
-        return valid(NetworkServicesConfig(config[doormanURL], config[networkMapURL], config[pnm], config[inferred]))
+        return valid(NetworkServicesConfig(config[doormanURL], config[networkMapURL], config[pnm], config[inferred], config[proxyType], config[proxyAddress], config[proxyUser], config[proxyPassword]))
     }
 }
 

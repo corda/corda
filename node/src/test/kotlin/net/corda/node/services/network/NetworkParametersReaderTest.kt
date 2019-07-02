@@ -8,6 +8,7 @@ import net.corda.core.utilities.days
 import net.corda.core.utilities.seconds
 import net.corda.node.VersionInfo
 import net.corda.node.internal.NetworkParametersReader
+import net.corda.node.services.config.NetworkServicesConfig
 import net.corda.nodeapi.internal.network.*
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.SerializationEnvironmentRule
@@ -39,7 +40,7 @@ class NetworkParametersReaderTest {
     fun setUp() {
         server = NetworkMapServer(cacheTimeout)
         val address = server.start()
-        networkMapClient = NetworkMapClient(URL("http://$address"), VersionInfo(1, "TEST", "TEST", "TEST"))
+        networkMapClient = NetworkMapClient(NetworkServicesConfig(URL("http://no.such.address"), URL("http://$address")), VersionInfo(1, "TEST", "TEST", "TEST"))
         networkMapClient.start(DEV_ROOT_CA.certificate)
     }
 

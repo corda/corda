@@ -26,6 +26,7 @@ import net.corda.notary.experimental.bftsmart.BFTSmartConfig
 import net.corda.notary.experimental.raft.RaftConfig
 import net.corda.notary.mysql.MySQLNotaryConfig
 import net.corda.tools.shell.SSHDConfiguration
+import java.net.Proxy
 import java.net.URL
 import java.nio.file.Path
 import java.time.Duration
@@ -198,12 +199,20 @@ data class NotaryConfig(
  * set explicitly ([inferred] == false) or weather they have been inferred via the compatibilityZoneURL parameter
  * ([inferred] == true) where both the network map and doorman are running on the same endpoint. Only one,
  * compatibilityZoneURL or networkServices, can be set at any one time.
+ *  @property proxyType optional type of the proxy to use - possible values are HTTP and SOCKS. If set, the proxyAddress needs to be set as well
+ *  @property proxyAddress optional address of a proxy server to use. This will only be used if the type is set as well
+ *  @property proxyUser optional user name for authentication on the proxy
+ *  @property proxyPassword optional password for authentication on the proxy
  */
 data class NetworkServicesConfig(
         val doormanURL: URL,
         val networkMapURL: URL,
         val pnm: UUID? = null,
-        val inferred: Boolean = false
+        val inferred: Boolean = false,
+        val proxyType: Proxy.Type = Proxy.Type.DIRECT,
+        val proxyAddress: NetworkHostAndPort? = null,
+        val proxyUser: String? = null,
+        val proxyPassword: String? = null
 )
 
 /**

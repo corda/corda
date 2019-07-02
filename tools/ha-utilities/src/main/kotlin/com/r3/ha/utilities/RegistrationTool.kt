@@ -109,10 +109,10 @@ class RegistrationTool : CordaCliWrapper("node-registration", "Corda registratio
 
             val (success, fail) = nodeConfigurations.partition { it.second.isSuccess }
 
-            if(success.isNotEmpty()) {
+            if (success.isNotEmpty()) {
                 // Fetch the network params and store them in the `baseDirectory`
                 val versionInfo = VersionInfo(PLATFORM_VERSION, CordaVersion.releaseVersion, CordaVersion.revision, CordaVersion.vendor)
-                val networkMapClient = NetworkMapClient(success.first().second.getOrThrow().networkServices!!.networkMapURL, versionInfo)
+                val networkMapClient = NetworkMapClient(success.first().second.getOrThrow().networkServices!!, versionInfo)
                 val trustRootCertificate = X509KeyStore.fromFile(networkRootTrustStorePath, networkRootTrustStorePassword)
                         .getCertificate(CORDA_ROOT_CA)
                 networkMapClient.start(trustRootCertificate)

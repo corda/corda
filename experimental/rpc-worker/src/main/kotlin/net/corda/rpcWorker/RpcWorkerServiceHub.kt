@@ -100,7 +100,7 @@ class RpcWorkerServiceHub(override val configuration: NodeConfiguration,
     override val networkMapCache = PersistentNetworkMapCache(cacheFactory, database, identityService)
     @Suppress("LeakingThis")
     override val validatedTransactions: WritableTransactionStorage = DBTransactionStorage(database, cacheFactory)
-    private val networkMapClient: NetworkMapClient? = configuration.networkServices?.let { NetworkMapClient(it.networkMapURL, versionInfo) }
+    private val networkMapClient: NetworkMapClient? = configuration.networkServices?.let { NetworkMapClient(it, versionInfo) }
     override val attachments = NodeAttachmentService(metricRegistry, cacheFactory, database)
 
     override val cordappProvider = CordappProviderImpl(cordappLoader, CordappConfigFileProvider(emptyList()), attachments)
