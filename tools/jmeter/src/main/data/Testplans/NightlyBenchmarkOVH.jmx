@@ -15,7 +15,7 @@
         <collectionProp name="Arguments.arguments">
           <elementProp name="host" elementType="Argument">
             <stringProp name="Argument.name">host</stringProp>
-            <stringProp name="Argument.value">ns31051737.ip-54-38-85.eu</stringProp>
+            <stringProp name="Argument.value">node01.ovh.perf.r3.com</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="port" elementType="Argument">
@@ -40,7 +40,7 @@
           </elementProp>
           <elementProp name="otherPartyName" elementType="Argument">
             <stringProp name="Argument.name">otherPartyName</stringProp>
-            <stringProp name="Argument.value">O=Perf-193.70.35.191, OU=Corda, L=London, C=GB</stringProp>
+            <stringProp name="Argument.value">O=Perf-54.38.85.135, OU=Corda, L=London, C=GB</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="duration" elementType="Argument">
@@ -60,7 +60,7 @@
           </elementProp>
           <elementProp name="firewallHost" elementType="Argument">
             <stringProp name="Argument.name">firewallHost</stringProp>
-            <stringProp name="Argument.value">ns3064148.ip-193-70-47.eu</stringProp>
+            <stringProp name="Argument.value">node03.ovh.perf.r3.com</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
         </collectionProp>
