@@ -27,15 +27,31 @@ Step Two: Creating states
 
 Since the CorDapp models a car dealership network, a state must be created to represent cars. States are immutable objects representing on-ledger facts. A state might represent a physical asset like a car, or an intangible asset or agreement like an IOU. For more information on states, see the `state documentation <./key-concepts-states.html>`_.
 
-1. From IntelliJ expand the source files and navigate to ``contracts > src > main > kotlin > com.template > states > TemplateState.kt``.
+1. From IntelliJ expand the source files and navigate to the following state template file: ``contracts > src > main > kotlin > com > template > states > TemplateState.kt``.
 
-  This file contains a skeleton state definition.
-
-2. Right-click on **TemplateState.kt** in the project navigation on the left. Select **Refactor > Copy**.
+2. Right-click on **TemplateState.kt** in the project navigation on the left. Select **Refactor** > **Copy**.
 
 3. Rename the file to ``CarState`` and click **OK**.
 
-4. Double-click the new state file to open it. Add the following fields to the state:
+4. Add the following imports to the top of the state file:
+
+    .. container:: codeset
+
+        .. sourcecode:: kotlin
+
+            import com.template.contracts.CarContract
+            import com.template.contracts.TemplateContract
+            import net.corda.core.contracts.BelongsToContract
+            import net.corda.core.contracts.ContractState
+            import net.corda.core.contracts.UniqueIdentifier
+            import net.corda.core.identity.AbstractParty
+            import net.corda.core.identity.Party
+
+  It's important to specify what classes are required in each state, contract, and flow. This process must be repeated with each file as it is created.
+
+5. Update ``@BelongsToContract(TemplateContract:class)`` to specify ``CarContract::class``.
+
+6. Double-click the new state file to open it. Add the following fields to the state:
   * ``owningBank`` of type ``Party``
   * ``holdingDealer`` of type ``Party``
   * ``manufacturer`` of type ``Party``
@@ -48,18 +64,32 @@ Since the CorDapp models a car dealership network, a state must be created to re
 
   Don't worry if you're not sure exactly how these should appear, you can check your code shortly.
 
-5. Remove the ``data`` and ``participants`` parameters.
+7. Remove the ``data`` and ``participants`` parameters.
 
-6. Add a body to the ``CarState`` class that overrides participants to contain a list of ``owningBank``, ``holdingDealer``, and ``manufacturer``.
+8. Add a body to the ``CarState`` class that overrides participants to contain a list of ``owningBank``, ``holdingDealer``, and ``manufacturer``.
 
-7. The ``CarState`` file should now appear as follows:
+9. The ``CarState`` file should now appear as follows:
 
     .. container:: codeset
 
         .. sourcecode:: kotlin
 
-            @BelongsToContract(TemplateContract::class)
-            data class CarState(val owningbank: Party,
+            package com.template.states
+
+            import com.template.contracts.CarContract
+            import com.template.contracts.TemplateContract
+            import net.corda.core.contracts.BelongsToContract
+            import net.corda.core.contracts.ContractState
+            import net.corda.core.contracts.UniqueIdentifier
+            import net.corda.core.identity.AbstractParty
+            import net.corda.core.identity.Party
+
+            // *********
+            // * State *
+            // *********
+
+            @BelongsToContract(CarContract::class)
+            data class CarState(val owningBank: Party,
                                 val holdingDealer: Party,
                                 val manufacturer: Party,
                                 val vin: String,
@@ -71,7 +101,7 @@ Since the CorDapp models a car dealership network, a state must be created to re
                 override val participants: List<AbstractParty> = listOf(owningBank, holdingDealer, manufacturer)
             }
 
-8. Save the ``CarState.kt`` file.
+10. Save the ``CarState.kt`` file.
 
 The ``CarState`` definition has now been created. It lists the properties and associated types required of all instances of this state.
 
@@ -79,9 +109,9 @@ The ``CarState`` definition has now been created. It lists the properties and as
 Step Three: Creating contracts
 ------------------------------
 
-After creating a state, you must create a contract to dictate how the state can operate.
+After creating a state, you must create a contract. Contracts define the rules that transactions are validated against, for example, a contract might define that an issue transaction must have no input states, and one output state of a specified type. To learn more about contracts, see the `contracts documentation <./key-concepts-contracts.html>`_.
 
-1. From IntelliJ, expand the project source and navigate to: ``contracts > src > main > kotlin > com.template > contracts > TemplateContract.kt``
+1. From IntelliJ, expand the project source and navigate to: ``contracts > src > main > kotlin > com > template > contracts > TemplateContract.kt``
 
 2. Right-click on **TemplateContract.kt** in the project navigation on the left. Select **Refactor > Copy**.
 
@@ -89,20 +119,46 @@ After creating a state, you must create a contract to dictate how the state can 
 
 4. Double-click the new contract file to open it.
 
-5. Update the ID field to ``com.template.contracts.CarContract``. This ID field is used to identify contracts when building a transaction.
+5. Add the following imports to the top of the file:
 
-6. Update the ``Action`` command to an ``Issue`` command. This represents an issuance of an instance of the ``CarState`` state.
+    .. container:: codeset
 
-7. Add ``val command=tx.commands.requireSingleCommand<Commands.Issue>()`` at the beginning of the ``verify()`` method. This line ensures that the command to issue a car state is called.
+        .. sourcecode:: kotlin
 
-8. The final function of the contract is to prevent unwanted behaviour during the flow. Add the following requirements to the contract:
+            package com.template.contracts
 
-  * There should be no input state to the transaction.
+            import com.template.states.CarState
+            import net.corda.core.contracts.CommandData
+            import net.corda.core.contracts.Contract
+            import net.corda.core.contracts.requireSingleCommand
+            import net.corda.core.contracts.requireThat
+            import net.corda.core.transactions.LedgerTransaction
+
+6. Update the class name to: ``CarContract``
+
+7. Update the ID field to ``com.template.contracts.CarContract``. This ID field is used to identify contracts when building a transaction.
+
+8. Update the ``Action`` command to an ``Issue`` command. This represents an issuance of an instance of the ``CarState`` state.
+
+9. Add ``val command=tx.commands.requireSingleCommand<Commands.Issue>()`` at the beginning of the ``verify()`` method. This line ensures that the command to issue a car state is called.
+
+10. The final function of the contract is to prevent unwanted behaviour during the flow. After the ``val command=tx.commands...`` line, add the following requirement code:
+
+    .. container:: codeset
+
+        .. sourcecode:: kotlin
+
+            requireThat {
+                "There should be no input state" using (tx.inputs.isEmpty())
+            }
+
+11. Inside the ``requireThat`` block add additional lines defining the following requirements:
+
   * There should be one output state.
   * The output state must be of the type ``CarState``.
   * The ``licensePlateNumber`` must be seven characters long.
 
-9. The ``CarContract.kt`` file should look as follows:
+12. The ``CarContract.kt`` file should look as follows:
 
     .. container:: codeset
 
@@ -130,40 +186,58 @@ After creating a state, you must create a contract to dictate how the state can 
                 }
             }
 
-10. Save the ``CarContract.kt`` file.
+13. Save the ``CarContract.kt`` file. The contract file now defines rules that all transactions creating car states must follow.
 
 Step Four: Creating a flow
 --------------------------
 
-1. From IntelliJ, expand the project source and navigate to: ``contracts > src > main > kotlin > com.template > contracts > Flows.kt``
+1. From IntelliJ, expand the project source and navigate to: ``workflows > src > main > kotlin > com > template > flows > Flows.kt``
 
 2. Right-click on **Flows.kt** in the project navigation on the left. Select **Refactor > Copy**.
 
 3. Rename the file to ``CarFlow`` and click **OK**.
 
-4. Double-click the new contract file to open it.
+4. Add the following imports to the top of the file:
 
-5. Update the name of the ``Initiator`` class to ``CarIssueInitiator``.
+    .. container:: codeset
 
-6. Update the name of the ``Responder`` class to ``CarIssueResponder``.
+        .. sourcecode:: kotlin
 
-7. Update the ``@InitiatedBy`` property of ``CarIssueResponder`` to ``CarIssueInitiator::class``.
+            import co.paralleluniverse.fibers.Suspendable
+            import com.template.contracts.CarContract
+            import com.template.states.CarState
+            import net.corda.core.contracts.Command
+            import net.corda.core.contracts.UniqueIdentifier
+            import net.corda.core.contracts.requireThat
+            import net.corda.core.flows.*
+            import net.corda.core.identity.Party
+            import net.corda.core.node.ServiceHub
+            import net.corda.core.transactions.SignedTransaction
+            import net.corda.core.transactions.TransactionBuilder
 
-8. Add parameters to the ``CarIssueInitiator`` class for all the fields of the ``CarState`` definition, except for ``linearId``.
+5. Double-click the new contract file to open it.
 
-9. Inside the ``call()`` function of the initiator, create a variable for the notary node. **expand this with some code**
+6. Update the name of the ``Initiator`` class to ``CarIssueInitiator``.
 
-10. Create a variable for an ``Issue`` command.
+7. Update the name of the ``Responder`` class to ``CarIssueResponder``.
+
+8. Update the ``@InitiatedBy`` property of ``CarIssueResponder`` to ``CarIssueInitiator::class``.
+
+9. Add parameters to the ``CarIssueInitiator`` class for all the fields of the ``CarState`` definition, except for ``linearId``.
+
+10. Inside the ``call()`` function of the initiator, create a variable for the notary node. **expand this with some code**
+
+11. Create a variable for an ``Issue`` command.
 
   The first parameter of the command must be the command type, in this case ``Issue``.
 
   The second parameter of the command must be a list of keys from the relevant parties, in this case ``owningBank``, ``holdingDealer``, and ``manufacturer``.
 
-11. Create a ``CarState`` object using the parameters of ``CarIssueInitiator``.
+12. Create a ``CarState`` object using the parameters of ``CarIssueInitiator``.
 
   The last parameter for ``CarState`` must be a new ``UniqueIdentifier()`` object.
 
-12. The ``CarFlow.kt`` file should look like this:
+13. The ``CarFlow.kt`` file should look like this:
 
     .. container:: codeset
 
@@ -179,7 +253,6 @@ Step Four: Creating a flow
                                     val make: String,
                                     val model: String,
                                     val dealershipLocation: String) : FlowLogic<Unit>() {
-                override val progressTracker = ProgressTracker()
 
                 @Suspendable
                 override fun call() {
@@ -198,24 +271,19 @@ Step Four: Creating a flow
                 }
             }
 
+14. Update the ``FlowLogic<Unit>`` to ``FlowLogic<SignedTransaction>`` in both the initiator and responder class.
 
-  **So far you've...**
+15. Update the return type of both ``call()`` transactions to be of type ``SignedTransaction``.
 
-  **Next you must...**
+16. In the ``call()`` function, create a ``TransactionBuilder`` object similarly. The ``TransactionBuilder`` class should take in the notary node. The output state and command must be added to the ``TransactionBuilder``.
 
-13. Update the ``FlowLogic<Unit>`` to ``FlowLogic<SignedTransaction>`` in both the initiator and responder class.
+17. Verify the transaction by calling ``verify(serviceHub)`` on the ``TransactionBuilder``.
 
-14. Update the return type of both ``call()`` transactions to be of type ``SignedTransaction``.
+18. Sign the transaction and store the result in a variable.
 
-15. In the ``call()`` function, create a ``TransactionBuilder`` object similarly. The ``TransactionBuilder`` class should take in the notary node. The output state and command must be added to the ``TransactionBuilder``.
+19. Delete the ``progressTracker`` as it won't be used in this tutorial.
 
-16. Verify the transaction by calling ``verify(serviceHub)`` on the ``TransactionBuilder``.
-
-17. Sign the transaction and store the result in a variable.
-
-18. Delete the ``progressTracker`` as it won't be used in this tutorial.
-
-19. The ``CarFlow.kt`` file should now look like this:
+20. The ``CarFlow.kt`` file should now look like this:
 
     .. container:: codeset
 
@@ -258,12 +326,7 @@ Step Four: Creating a flow
                 }
             }
 
-
-  **So far you've...**
-
-  **Next you must...**
-
-20. To finish the initiators ``call()`` function, other parties must sign the transaction. Add the following code to send the transaction to the other relevant parties:
+21. To finish the initiators ``call()`` function, other parties must sign the transaction. Add the following code to send the transaction to the other relevant parties:
 
     .. container:: codeset
 
@@ -275,7 +338,7 @@ Step Four: Creating a flow
 
   The first line creates a ``List<FlowSession>`` object by calling ``initiateFlow()`` for each party. The second line collects signatures from the relevant parties and returns a signed transaction. The third line calls ``FinalityFlow()``, finalizes the transaction using the notary or notary pool.
 
-21. Lastly, the body of the responder flow must be completed. The following code checks the transaction contents, signs it, and sends it back to the initiator:
+22. Lastly, the body of the responder flow must be completed. The following code checks the transaction contents, signs it, and sends it back to the initiator:
 
     .. container:: codeset
 
@@ -293,7 +356,7 @@ Step Four: Creating a flow
                 return subFlow(ReceiveFinalityFlow(counterpartySession, txWeJustSignedId.id))
             }
 
-22. The completed ``CarFlow.kt`` should look like this:
+23. The completed ``CarFlow.kt`` should look like this:
 
     .. container:: codeset
 
@@ -383,7 +446,7 @@ The Gradle build files must be updated to change how the nodes are deployed.  (*
                     address("localhost:10009")
                     adminAddress("localhost:10049")
                 }
-                rpcUsers = [[ user:: "user1", "password": "test", "permissions": ["ALL"]]]
+                rpcUsers = [[ user: "user1", "password": "test", "permissions": ["ALL"]]]
             }
             node {
                 name "O=BankofAmerica,L=New York,C=US"
@@ -404,9 +467,13 @@ Now that the the CorDapp code has been completed and the build file updated, the
 
 1. Open a terminal and navigate to the root directory of the project.
 
-2. Run ``./gradlew clean deployNodes``
+2. To deploy the nodes on Windows run the following command: ``gradlew clean deployNodes``
 
-3. Run ``build/nodes/runNodes``
+  To deploy the nodes on Mac or Linux run the following command: ``./gradlew clean deployNodes``
+
+3. To start the nodes on Windows run the following command: ``build\nodes\runnodes``
+
+  To start the nodes on Mac/Linux run the following command: ``build/nodes/runnodes``
 
 4. To run flows in your CorDapp, enter the following flow command from any node terminal window: ``flow start CarIssueInitiator owningBank: Bank of America, holdingDealer: Dealership, manufacturer: Manufacturer, vin:"abc", licensePlateNumber: "abc1234", make: "Honda", model: "Civic", dealershipLocation: "NYC"``
 
