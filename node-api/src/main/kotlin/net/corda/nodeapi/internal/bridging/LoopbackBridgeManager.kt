@@ -86,7 +86,6 @@ class LoopbackBridgeManager(config: MutualSslConfiguration,
         private val artemis = ConcurrentBox(artemis)
         private var consumerSession: ClientSession? = null
         private var producerSession: ClientSession? = null
-        private var session: ClientSession? = null
         private var consumer: ClientConsumer? = null
         private var producer: ClientProducer? = null
 

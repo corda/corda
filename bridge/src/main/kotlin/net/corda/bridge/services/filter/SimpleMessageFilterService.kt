@@ -57,9 +57,6 @@ class SimpleMessageFilterService(val conf: FirewallConfiguration,
     }
 
     private fun validateMessage(inboundMessage: ReceivedMessage) {
-        if (!active) {
-            throw IllegalStateException("Unable to forward message as Service Dependencies down")
-        }
         val sourceLegalName = try {
             CordaX500Name.parse(inboundMessage.sourceLegalName)
         } catch (ex: IllegalArgumentException) {
@@ -72,6 +69,11 @@ class SimpleMessageFilterService(val conf: FirewallConfiguration,
     }
 
     override fun sendMessageToLocalBroker(inboundMessage: ReceivedMessage) {
+        if (!active) {
+            auditService.packetDropEvent(inboundMessage, "Packet arrived while dependencies down.", RoutingDirection.INBOUND)
+            inboundMessage.complete(false) // redeliver.
+            return
+        }
         try {
             validateMessage(inboundMessage)
         } catch (ex: Exception) {
