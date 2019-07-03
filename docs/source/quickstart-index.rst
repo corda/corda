@@ -22,10 +22,9 @@ Prerequisites
 ~~~~~~~~~~~~~
 
 * **Java 8 JVK** - We require at least version |java_version|, but do not currently support Java 9 or higher.
-* **IntelliJ IDEA** - IntelliJ is an IDE that offers strong support for Kotlin and Java development. We support versions **2017.x**, **2018.x** and **2019.x** (with Kotlin plugin version |kotlin_version|)
-* **Gradle** - Gradle is a build automation tool that we use for dependency management. We use version 4.10 and the ``gradlew`` script in the project/samples directories will download it for you.
+* **IntelliJ IDEA** - IntelliJ is an IDE that offers strong support for Kotlin and Java development. We support versions **2017.x**, **2018.x** and **2019.x** (with Kotlin plugin version |kotlin_version|).
 * **Git** - We use Git to host our sample CorDapp and provide version control.
-
+* **Gradle** - Gradle is a build automation tool that we use for dependency management. We use version 4.10 and the ``gradlew`` script in the project/samples directories will download it for you.
 
 Step One: Downloading a sample project
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -41,9 +40,9 @@ Step Two: Creating an IntelliJ project
 
 1. Open IntelliJ. From the splash screen, click **Open**, navigate to and select the ``cordapp-example`` folder, and click **Ok**. This creates an IntelliJ project to work from.
 
-2. Once the project is open, click **File** > **Project Structure**. Under **Project SDK:**, set the project SDK by clicking **New...**, clicking **JDK**, and navigating to ``C:\Program Files\Java\jdk1.8.0_XXX`` on Windows or ``Library/Java/JavaVirtualMachines/jdk1.8.XXX`` on MacOSX, where ``XXX`` is the latest minor version number. Click **Ok**. This instructs IntelliJ to use the version of the Java JDK downloaded in the prerequisites.
+2. Click **File** >  **Project Structure**. To set the project SDK click **New...** > **JDK**, and navigating to the installation directory of your JDK. Click **Apply**.
 
-3. Click **File** > **Project Structure**, select **Modules**. Click **+**, > **Import Module**, then select the ``cordapp-example`` folder and click **Open**. Select **Import module from external model** > **Gradle** > **Next** > **Finish** > **Ok**. Gradle will now download all the project dependencies and perform some indexing.
+3. Select **Modules** > **+** > **Import Module**. Select the ``cordapp-example`` folder and click **Open**. Select **Import module from external model** > **Gradle** > **Next** > **Finish** > **Ok**. Gradle will now download all the project dependencies and perform some indexing.
 
 Your CorDapp development environment is now complete.
 
