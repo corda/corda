@@ -463,7 +463,7 @@ The Gradle build files must be updated to change how the nodes are deployed.  (*
 Step Six: Deploying your CorDapp locally
 ----------------------------------------
 
-Now that the the CorDapp code has been completed and the build file updated, the CorDapp can be deployed.
+Now that the CorDapp code has been completed and the build file updated, the CorDapp can be deployed.
 
 1. Open a terminal and navigate to the root directory of the project.
 

@@ -14,9 +14,13 @@ The first step is to deploy the CorDapp to nodes running locally.
 
 1. Navigate to the root directory of the example CorDapp.
 
-2. Deploy the CorDapp by running the following command: ``./gradlew deployNodes``
+2. To deploy the nodes on Windows run the following command: ``gradlew clean deployNodes``
 
-3. To best understand the deployment process, there are several perspectives it is helpful to see. Run the following command: ``build/nodes/runnodes``
+  To deploy the nodes on Mac or Linux run the following command: ``./gradlew clean deployNodes``
+
+3. To best understand the deployment process, there are several perspectives it is helpful to see. On Windows run the following command: ``build\nodes\runnodes``
+
+  On Mac/Linux run the following command: ``build/nodes/runnodes``
 
   This command opens four terminal windows: the notary, and a node each for PartyA, PartyB, and PartyC. A notary is a validation service that prevents double-spending, enforces timestamping, and may also validate transactions. For more information on notaries, see the `notary documentation <./key-concepts-notaries.html>`_.
 
