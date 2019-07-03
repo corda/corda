@@ -2,10 +2,14 @@ package net.corda.nodeapi.internal.cryptoservice
 
 import net.corda.core.DoNotImplement
 import net.corda.core.crypto.SignatureScheme
+import net.corda.core.utilities.getOrThrow
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import org.bouncycastle.operator.ContentSigner
 import java.security.KeyPair
 import java.security.PublicKey
+import java.time.Duration
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeoutException
 
 /**
  * Unlike [CryptoService] can only perform "read-only" operations but never create new key pairs.
@@ -48,7 +52,27 @@ interface SignOnlyCryptoService {
  * Fully-powered crypto service which can sign as well as create new key pairs.
  */
 @DoNotImplement
-interface CryptoService : SignOnlyCryptoService {
+abstract class CryptoService(private val timeout: Duration? = null) : AutoCloseable, SignOnlyCryptoService {
+    private val executor = Executors.newCachedThreadPool()
+
+    override fun close() {
+        executor.shutdown()
+    }
+
+    /**
+     * Adds a timeout for the given [func].
+     * @param timeout The time to wait on the function completing (in milliseconds)
+     * @param func The call that we're waiting on
+     * @return the return value of the function call
+     * @throws TimedCryptoServiceException if we reach the timeout
+     */
+    private fun <A> withTimeout(timeout: Duration?, func: () -> A) : A {
+        try {
+            return executor.submit(func).getOrThrow(timeout)
+        } catch (e: TimeoutException) {
+            throw TimedCryptoServiceException("Timed-out while waiting for ${timeout?.toMillis()} milliseconds")
+        }
+    }
 
     /**
      * Generate and store a new [KeyPair].
@@ -58,7 +82,39 @@ interface CryptoService : SignOnlyCryptoService {
      *
      * Returns the [PublicKey] of the generated [KeyPair].
      */
-    fun generateKeyPair(alias: String, scheme: SignatureScheme): PublicKey
+    fun generateKeyPair(alias: String, scheme: SignatureScheme): PublicKey =
+            withTimeout(timeout) { _generateKeyPair(alias, scheme) }
+    protected abstract fun _generateKeyPair(alias: String, scheme: SignatureScheme): PublicKey
+
+    /** Check if this [CryptoService] has a private key entry for the input alias. */
+    override fun containsKey(alias: String): Boolean =
+            withTimeout(timeout) { _containsKey(alias) }
+    protected abstract fun _containsKey(alias: String): Boolean
+
+    /**
+     * Returns the [PublicKey] of the input alias or null if it doesn't exist.
+     */
+    override fun getPublicKey(alias: String): PublicKey =
+            withTimeout(timeout) { _getPublicKey(alias) }
+    protected abstract fun _getPublicKey(alias: String): PublicKey
+
+    /**
+     * Sign a [ByteArray] using the private key identified by the input alias.
+     * Returns the signature bytes formatted according to the signature scheme.
+     * The signAlgorithm if specified determines the signature scheme used for signing, if
+     * not specified then the signature scheme is based on the private key scheme.
+     */
+    override fun sign(alias: String, data: ByteArray, signAlgorithm: String?): ByteArray =
+            withTimeout(timeout) { _sign(alias, data, signAlgorithm) }
+    protected abstract fun _sign(alias: String, data: ByteArray, signAlgorithm: String?): ByteArray
+
+    /**
+     * Returns [ContentSigner] for the key identified by the input alias.
+     */
+    override fun getSigner(alias: String): ContentSigner =
+            withTimeout(timeout) { _getSigner(alias) }
+    protected abstract fun _getSigner(alias: String): ContentSigner
 }
 
 open class CryptoServiceException(message: String?, cause: Throwable? = null) : Exception(message, cause)
+class TimedCryptoServiceException(message: String?, cause: Throwable? = null) : CryptoServiceException(message, cause)
