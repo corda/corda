@@ -9,11 +9,13 @@ import net.corda.testing.core.singleIdentityAndCert
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.makeTestIdentityService
 import org.bouncycastle.asn1.DEROctetString
+import org.junit.Ignore
 import org.junit.Test
 import kotlin.test.assertEquals
 
 class KMSUtilsTests {
     @Test
+    @Ignore
     fun `should generate certificates with the correct role`() {
         val aliceKey = generateKeyPair()
         val alice = getTestPartyAndCertificate(ALICE_NAME, aliceKey.public)

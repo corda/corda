@@ -82,7 +82,7 @@ class AMQPBridgeTest(private val useOpenSsl: Boolean, private val enableSNI: Boo
 
     private val BOB = TestIdentity(BOB_NAME)
 
-    private val portAllocation = incrementalPortAllocation(10000)
+    private val portAllocation = incrementalPortAllocation()
     private val artemisAddress = portAllocation.nextHostAndPort()
     private val amqpAddress = portAllocation.nextHostAndPort()
 

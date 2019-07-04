@@ -70,7 +70,7 @@ class HardRestartTest : IntegrationTest() {
     fun restartShortPingPongFlowRandomly() {
         val demoUser = User("demo", "demo", setOf(Permissions.startFlow<Ping>(), Permissions.all()))
         driver(DriverParameters(
-                portAllocation = incrementalPortAllocation(10000),
+                portAllocation = incrementalPortAllocation(),
                 startNodesInProcess = false,
                 inMemoryDB = false,
                 notarySpecs = emptyList(),
@@ -108,7 +108,7 @@ class HardRestartTest : IntegrationTest() {
     fun restartLongPingPongFlowRandomly() {
         val demoUser = User("demo", "demo", setOf(Permissions.startFlow<Ping>(), Permissions.all()))
         driver(DriverParameters(
-                portAllocation = incrementalPortAllocation(10000),
+                portAllocation = incrementalPortAllocation(),
                 startNodesInProcess = false,
                 inMemoryDB = false,
                 notarySpecs = emptyList(),
@@ -146,7 +146,7 @@ class HardRestartTest : IntegrationTest() {
     fun softRestartLongPingPongFlowRandomly() {
         val demoUser = User("demo", "demo", setOf(Permissions.startFlow<Ping>(), Permissions.all()))
         driver(DriverParameters(
-                portAllocation = incrementalPortAllocation(10000),
+                portAllocation = incrementalPortAllocation(),
                 startNodesInProcess = false,
                 inMemoryDB = false,
                 notarySpecs = emptyList(),
@@ -228,7 +228,7 @@ class HardRestartTest : IntegrationTest() {
     fun restartRecursiveFlowRandomly() {
         val demoUser = User("demo", "demo", setOf(Permissions.startFlow<RecursiveA>(), Permissions.all()))
         driver(DriverParameters(
-                portAllocation = incrementalPortAllocation(10000),
+                portAllocation = incrementalPortAllocation(),
                 startNodesInProcess = false,
                 inMemoryDB = false,
                 notarySpecs = emptyList(),

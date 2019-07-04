@@ -7,9 +7,11 @@ import net.corda.core.internal.createDirectories
 import net.corda.core.internal.exists
 import net.corda.core.internal.read
 import net.corda.core.internal.write
+import net.corda.core.internal.safeSymbolicRead
 import java.io.IOException
 import java.io.InputStream
 import java.nio.file.Path
+import java.nio.file.Files
 import java.security.*
 import java.security.cert.Certificate
 import java.security.cert.X509Certificate
@@ -30,7 +32,7 @@ fun loadOrCreateKeyStore(keyStoreFilePath: Path, storePassword: String): KeyStor
         keyStoreFilePath.read { keyStore.load(it, pass) }
     } else {
         keyStore.load(null, pass)
-        keyStoreFilePath.toAbsolutePath().parent?.createDirectories()
+        keyStoreFilePath.toAbsolutePath().parent?.safeSymbolicRead()?.createDirectories()
         keyStoreFilePath.write { keyStore.store(it, pass) }
     }
     return keyStore

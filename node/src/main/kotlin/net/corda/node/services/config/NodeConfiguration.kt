@@ -101,6 +101,7 @@ interface NodeConfiguration {
     //      to allow for pluggable implementations.
     val cryptoServiceName: SupportedCryptoServices?
     val cryptoServiceConf: Path? // Location for the cryptoService conf file.
+    val cryptoServiceTimeout: Duration get() = DEFAULT_CRYPTO_SERVICE_TIMEOUT
 
     val networkParameterAcceptanceSettings: NetworkParameterAcceptanceSettings
 
@@ -118,6 +119,8 @@ interface NodeConfiguration {
 
         internal val defaultAttachmentContentCacheSize: Long = 10.MB
         internal const val defaultAttachmentCacheBound = 1024L
+
+        internal val DEFAULT_CRYPTO_SERVICE_TIMEOUT = Duration.ofSeconds(1)
 
         const val cordappDirectoriesKey = "cordappDirectories"
 

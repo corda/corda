@@ -17,6 +17,7 @@ import java.math.BigInteger
 import java.security.*
 import java.security.cert.Certificate
 import java.security.spec.ECGenParameterSpec
+import java.time.Duration
 import javax.security.auth.x500.X500Principal
 
 /*
@@ -26,9 +27,14 @@ import javax.security.auth.x500.X500Principal
  * will have to be overridden with vendor-specific implementations.
  * It is required that @keyStore is initialized.
  */
-abstract class JCACryptoService(internal val keyStore: KeyStore, internal val provider: Provider, internal val x500PrincipalForCerts: X500Principal = DUMMY_X500_PRINCIPAL) : CryptoService {
+abstract class JCACryptoService(
+        internal val keyStore: KeyStore,
+        internal val provider: Provider,
+        internal val x500PrincipalForCerts: X500Principal = DUMMY_X500_PRINCIPAL,
+        timeout: Duration? = null
+) : CryptoService(timeout) {
 
-    override fun generateKeyPair(alias: String, scheme: SignatureScheme): PublicKey {
+    override fun _generateKeyPair(alias: String, scheme: SignatureScheme): PublicKey {
         return withAuthentication {
             val keyPairGenerator = keyPairGeneratorFromScheme(scheme)
             val keyPair = keyPairGenerator.generateKeyPair()
@@ -38,13 +44,13 @@ abstract class JCACryptoService(internal val keyStore: KeyStore, internal val pr
         }
     }
 
-    override fun containsKey(alias: String): Boolean {
+    override fun _containsKey(alias: String): Boolean {
         return withAuthentication {
             keyStore.containsAlias(alias)
         }
     }
 
-    override fun getPublicKey(alias: String): PublicKey? {
+    override fun _getPublicKey(alias: String): PublicKey? {
         return withAuthentication {
             keyStore.getCertificate(alias)?.publicKey?.let {
                 Crypto.toSupportedPublicKey(it)
@@ -55,7 +61,7 @@ abstract class JCACryptoService(internal val keyStore: KeyStore, internal val pr
     /**
      * We _could_ consider doing the digest locally and then signing over the hash remotely with NONEwithALGO as a performance optimization.
      */
-    override fun sign(alias: String, data: ByteArray, signAlgorithm: String?): ByteArray {
+    override fun _sign(alias: String, data: ByteArray, signAlgorithm: String?): ByteArray {
         return withAuthentication {
             (keyStore.getKey(alias, null) as PrivateKey?)?.let {
                 val algorithm = signAlgorithm ?: if (it.algorithm == "RSA") {
@@ -71,7 +77,7 @@ abstract class JCACryptoService(internal val keyStore: KeyStore, internal val pr
         }
     }
 
-    override fun getSigner(alias: String): ContentSigner {
+    override fun _getSigner(alias: String): ContentSigner {
         return object : ContentSigner {
             private val publicKey: PublicKey = getPublicKey(alias) ?: throw CryptoServiceException("No key found for alias $alias")
             private val sigAlgID: AlgorithmIdentifier = Crypto.findSignatureScheme(publicKey).signatureOID

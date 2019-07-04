@@ -12,6 +12,7 @@ import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.internal.cordapp.CordappImpl
 import net.corda.core.internal.errors.AddressBindingException
+import net.corda.core.internal.safeSymbolicRead
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.loggerFor
@@ -497,11 +498,7 @@ fun CliWrapperBase.initLogging(baseDirectory: Path): Boolean {
     //Test for access to the logging path and shutdown if we are unable to reach it.
     val logPath = baseDirectory / NodeCliCommand.LOGS_DIRECTORY_NAME
     try {
-        if (Files.isSymbolicLink(logPath)){
-            Files.readSymbolicLink(logPath).createDirectories()
-        } else {
-            logPath.createDirectories()
-        }
+        logPath.safeSymbolicRead()?.createDirectories()
     } catch (e: IOException) {
         printError("Unable to create logging directory ${logPath.toString()}. Node will now shutdown.")
         return false
