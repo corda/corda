@@ -23,8 +23,9 @@ Version 5.0
 * It is now possible to re-record transactions if a node wishes to record as an observer a transaction it has participated in. If this is
   done, then the node may record new output states that are not relevant to the node.
 
-.. warning:: As the node is unable to resolve the forward chain of transactions, the node cannot know if these new output states have been
-   consumed. To resolve this, any consuming transaction must be sent to the node after the transaction that created the state.
+.. warning:: Nodes may re-record transactions if they have previously recorded them as a participant and wish to record them as an observer.
+   However, the node cannot resolve the forward chain of transactions if this is done. This means that if you wish to re-record a chain of
+   transactions and get the new output states to be correctly marked as consumed, the full chain must be sent to the node *in order*.
 
 .. _changelog_v4.2:
 
