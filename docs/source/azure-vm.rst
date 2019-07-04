@@ -101,7 +101,7 @@ The nodes you will use to send and receive Yo messages require the Yo! CorDapp j
 
 Connect to one of your Corda nodes (make sure this is not the Notary node) using an SSH client of your choice (e.g. Putty) and log into the virtual machine using the public IP address and your SSH key or username / password combination you defined in Step 1 of the Azure build process. Type the following command:
 
-Build the yo cordapp sample which you can find here: https://github.com/corda/samples/tree/release-V|platform_version|/yo-cordapp and install it in the cordapp directory.
+Build the yo cordapp sample which you can find here: |os_samples_branch|/yo-cordapp and install it in the cordapp directory.
 
 Now restart Corda and the Corda webserver using the following commands or restart your Corda VM from the Azure portal:
 
