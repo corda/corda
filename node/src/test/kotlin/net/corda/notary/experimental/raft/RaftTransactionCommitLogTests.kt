@@ -17,7 +17,6 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
-import net.corda.notary.experimental.raft.RaftNotarySchemaV1
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.driver.internal.incrementalPortAllocation
@@ -45,7 +44,7 @@ class RaftTransactionCommitLogTests {
     val testSerialization = SerializationEnvironmentRule(true)
 
     private val databases: MutableList<CordaPersistence> = mutableListOf()
-    private val portAllocation = incrementalPortAllocation(10000)
+    private val portAllocation = incrementalPortAllocation()
 
     private lateinit var cluster: List<Member>
 

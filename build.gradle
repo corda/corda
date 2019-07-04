@@ -47,7 +47,7 @@ buildscript {
     ext.asm_version = '7.1'
     ext.artemis_version = '2.6.2'
     // TODO Upgrade Jackson only when corda is using kotlin 1.3.10
-    ext.jackson_version = '2.9.5'
+    ext.jackson_version = '2.9.7'
     ext.jetty_version = '9.4.19.v20190610'
     ext.jersey_version = '2.25'
     ext.servlet_version = '4.0.1'
@@ -108,7 +108,6 @@ buildscript {
     ext.controlsfx_version = '8.40.15'
     ext.fontawesomefx_commons_version = '8.15'
     ext.fontawesomefx_fontawesome_version = '4.7.0-5'
-    ext.gradle_modules_plugin_version = constants.getProperty('gradleModulesPluginVersion')
 
     // Name of the IntelliJ SDK created for the deterministic Java rt.jar.
     // ext.deterministic_idea_sdk = '1.8 (Deterministic)'
@@ -300,6 +299,7 @@ allprojects {
     }
 
     tasks.withType(Test) {
+        forkEvery = 10
         ignoreFailures = project.hasProperty('tests.ignoreFailures') ? project.property('tests.ignoreFailures').toBoolean() : false
         failFast = project.hasProperty('tests.failFast') ? project.property('tests.failFast').toBoolean() : false
 
@@ -307,15 +307,6 @@ allprojects {
         systemProperty 'java.io.tmpdir', buildDir.absolutePath
 
         maxHeapSize = "1g"
-
-        if (project.hasProperty('test.parallel') && project.property('test.parallel').toBoolean()) {
-            maxParallelForks = Runtime.runtime.availableProcessors().intdiv(2) as int ?: 1
-        }
-
-        if (System.getProperty("test.maxParallelForks") != null) {
-            maxParallelForks = Integer.getInteger('test.maxParallelForks')
-            logger.debug("System property test.maxParallelForks found - setting max parallel forks to $maxParallelForks for $project")
-        }
 
         if (project.path.startsWith(':experimental') && System.getProperty("experimental.test.enable") == null) {
             enabled = false
@@ -325,6 +316,16 @@ allprojects {
         // See https://github.com/gradle/gradle/issues/5269 and https://github.com/gradle/gradle/pull/6419
         extensions.configure(TypeOf.typeOf(JacocoTaskExtension)) { ex ->
             ex.append = false
+        }
+
+        maxParallelForks = (System.env.CORDA_TESTING_FORKS == null) ? 1 :  "$System.env.CORDA_TESTING_FORKS".toInteger()
+
+        systemProperty 'java.security.egd', 'file:/dev/./urandom'
+    }
+
+    tasks.withType(Test){
+        if (name.contains("integrationTest")){
+            maxParallelForks = (System.env.CORDA_INT_TESTING_FORKS == null) ? 1 :  "$System.env.CORDA_INT_TESTING_FORKS".toInteger()
         }
     }
 
@@ -483,7 +484,8 @@ bintrayConfig {
             'corda-tools-cliutils',
             'corda-common-configuration-parsing',
             'corda-common-validation',
-            'corda-common-logging'
+            'corda-common-logging',
+            'corda-tools-network-builder'
     ]
     license {
         name = 'Apache-2.0'

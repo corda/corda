@@ -23,13 +23,14 @@ import javax.security.auth.x500.X500Principal
  * and a Java KeyStore in the form of [CertificateStore] to store private keys.
  * This service reuses the [NodeConfiguration.signingCertificateStore] to store keys.
  */
-class BCCryptoService(private val legalName: X500Principal, private val certificateStoreSupplier: CertificateStoreSupplier) : CryptoService {
+class BCCryptoService(private val legalName: X500Principal,
+                      private val certificateStoreSupplier: CertificateStoreSupplier) : CryptoService() {
 
     // TODO check if keyStore exists.
     // TODO make it private when E2ETestKeyManagementService does not require direct access to the private key.
     var certificateStore: CertificateStore = certificateStoreSupplier.get(true)
 
-    override fun generateKeyPair(alias: String, scheme: SignatureScheme): PublicKey {
+    override fun _generateKeyPair(alias: String, scheme: SignatureScheme): PublicKey {
         try {
             val keyPair = Crypto.generateKeyPair(scheme)
             importKey(alias, keyPair)
@@ -39,11 +40,11 @@ class BCCryptoService(private val legalName: X500Principal, private val certific
         }
     }
 
-    override fun containsKey(alias: String): Boolean {
+    override fun _containsKey(alias: String): Boolean {
         return certificateStore.contains(alias)
     }
 
-    override fun getPublicKey(alias: String): PublicKey {
+    override fun _getPublicKey(alias: String): PublicKey {
         try {
             return certificateStore.query { getPublicKey(alias) }
         } catch (e: Exception) {
@@ -51,8 +52,7 @@ class BCCryptoService(private val legalName: X500Principal, private val certific
         }
     }
 
-    @JvmOverloads
-    override fun sign(alias: String, data: ByteArray, signAlgorithm: String?): ByteArray {
+    override fun _sign(alias: String, data: ByteArray, signAlgorithm: String?): ByteArray {
         try {
             return when(signAlgorithm) {
                 null -> Crypto.doSign(certificateStore.query { getPrivateKey(alias, certificateStore.entryPassword) }, data)
@@ -71,7 +71,7 @@ class BCCryptoService(private val legalName: X500Principal, private val certific
             return signature.sign()
     }
 
-    override fun getSigner(alias: String): ContentSigner {
+    override fun _getSigner(alias: String): ContentSigner {
         try {
             val privateKey = certificateStore.query { getPrivateKey(alias, certificateStore.entryPassword) }
             val signatureScheme = Crypto.findSignatureScheme(privateKey)

@@ -23,6 +23,7 @@ import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.concurrent.openFuture
+import net.corda.core.internal.messaging.InternalCordaRPCOps
 import net.corda.core.internal.packageName_
 import net.corda.core.messaging.*
 import net.corda.tools.shell.utlities.ANSIProgressRenderer
@@ -74,8 +75,8 @@ import kotlin.concurrent.thread
 
 object InteractiveShell {
     private val log = LoggerFactory.getLogger(javaClass)
-    private lateinit var rpcOps: (username: String, password: String) -> CordaRPCOps
-    private lateinit var ops: CordaRPCOps
+    private lateinit var rpcOps: (username: String, password: String) -> InternalCordaRPCOps
+    private lateinit var ops: InternalCordaRPCOps
     private lateinit var rpcConn: AutoCloseable
     private var shell: Shell? = null
     private var classLoader: ClassLoader? = null
@@ -105,7 +106,7 @@ object InteractiveShell {
                         classLoader = classLoader)
                 val connection = client.start(username, password)
                 rpcConn = connection
-                connection.proxy
+                connection.proxy as InternalCordaRPCOps
             }
         }
         _startShell(configuration, classLoader)
@@ -489,7 +490,7 @@ object InteractiveShell {
     }
 
     @JvmStatic
-    fun runRPCFromString(input: List<String>, out: RenderPrintWriter, context: InvocationContext<out Any>, cordaRPCOps: CordaRPCOps,
+    fun runRPCFromString(input: List<String>, out: RenderPrintWriter, context: InvocationContext<out Any>, cordaRPCOps: InternalCordaRPCOps,
                          inputObjectMapper: ObjectMapper): Any? {
         val cmd = input.joinToString(" ").trim { it <= ' ' }
         if (cmd.startsWith("startflow", ignoreCase = true)) {
@@ -505,7 +506,7 @@ object InteractiveShell {
         var result: Any? = null
         try {
             InputStreamSerializer.invokeContext = context
-            val parser = StringToMethodCallParser(CordaRPCOps::class.java, inputObjectMapper)
+            val parser = StringToMethodCallParser(InternalCordaRPCOps::class.java, inputObjectMapper)
             val call = parser.parse(cordaRPCOps, cmd)
             result = call.call()
             if (result != null && result !== kotlin.Unit && result !is Void) {

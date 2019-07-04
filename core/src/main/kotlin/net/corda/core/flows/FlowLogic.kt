@@ -116,6 +116,13 @@ abstract class FlowLogic<out T> {
     val serviceHub: ServiceHub get() = stateMachine.serviceHub
 
     /**
+     * Creates a communication session with [destination]. Subsequently you may send/receive using this session object. How the messaging
+     * is routed depends on the [Destination] type, including whether this call does any initial communication.
+     */
+    @Suspendable
+    fun initiateFlow(destination: Destination): FlowSession = stateMachine.initiateFlow(destination)
+
+    /**
      * Creates a communication session with [party]. Subsequently you may send/receive using this session object. Note
      * that this function does not communicate in itself, the counter-flow will be kicked off by the first send/receive.
      */
@@ -251,7 +258,6 @@ abstract class FlowLogic<out T> {
     internal inline fun <reified R : Any> FlowSession.sendAndReceiveWithRetry(payload: Any): UntrustworthyData<R> {
         return sendAndReceiveWithRetry(R::class.java, payload)
     }
-
 
     /** Suspends until a message has been received for each session in the specified [sessions].
      *

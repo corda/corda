@@ -17,10 +17,8 @@ import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashIssueAndPaymentFlow
 import net.corda.finance.schemas.CashSchemaV1
 import net.corda.node.services.Permissions
-import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.DUMMY_BANK_B_NAME
-import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.OutOfProcess
 import net.corda.testing.driver.driver
@@ -28,7 +26,6 @@ import net.corda.testing.driver.internal.OutOfProcessImpl
 import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.FINANCE_CORDAPPS
-import org.junit.ClassRule
 import org.junit.Test
 import java.util.*
 import java.util.concurrent.CountDownLatch
@@ -47,7 +44,7 @@ class RpcReconnectTests {
         private val log = contextLogger()
     }
 
-    private val portAllocator = incrementalPortAllocation(20006)
+    private val portAllocator = incrementalPortAllocation()
 
     /**
      * This test showcases and stress tests the demo [ReconnectingCordaRPCOps].

@@ -9,8 +9,16 @@ release, see :doc:`app-upgrade-notes`.
 Version 5.0
 -----------
 
+* Introduced a new ``Destination`` abstraction for communicating with non-Party destinations using the new ``FlowLogic.initateFlow(Destination)``
+  method. ``Party`` and ``AnonymousParty`` have been retrofitted to implement ``Destination``. Initiating a flow to an ``AnonymousParty``
+  means resolving to the well-known identity ``Party`` and then communicating with that.
+
 * Removed ``finance-workflows`` dependency on jackson library.  The functions that used jackson (e.g. ``FinanceJSONSupport``) have been moved
   into IRS Demo.
+
+* Information about checkpointed flows can be retrieved from the shell. Calling ``dumpCheckpoints`` will create a zip file inside the node's
+  ``log`` directory. This zip will contain a JSON representation of each checkpointed flow. This information can then be used to determine the
+  state of stuck flows or flows that experienced internal errors and were kept in the node for manual intervention.
 
 .. _changelog_v4.2:
 
