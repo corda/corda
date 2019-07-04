@@ -21,6 +21,16 @@
 \usepackage[export]{adjustbox}
 \usepackage{float}
 \usepackage{hyperref}
+
+% Get rid of ugly boxes around clickable links
+\usepackage{xcolor}
+\hypersetup{
+    colorlinks,
+    linkcolor={blue!50!black},
+    citecolor={blue!50!black},
+    urlcolor={blue!80!black}
+}
+
 \usepackage[super,comma,sort&compress]{natbib}
 \usepackage[nottoc]{tocbibind}
 \usepackage[parfill]{parskip}
@@ -151,7 +161,7 @@ In contrast to both Bitcoin and Ethereum, Corda does not order transactions usin
 not use miners or proof-of-work. Instead each state points to a \emph{notary}, which is a service that guarantees it
 will sign a transaction only if all the input states are un-consumed. A transaction is not allowed to consume states
 controlled by multiple notaries and thus there is never any need for two-phase commit between notaries. If a combination of
-states would cross notaries then a special transaction type is used to move them onto a single notary first. See \cref{sec:notaries}
+states would cross notaries then a special transaction type is used to move them onto a single notary first. See~\cref{sec:notaries}
 for more information.
 
 The Corda transaction format has various other features which are described in later sections.
@@ -417,12 +427,22 @@ be an issue.
 
 \section{Data model}
 
-\subsection{Transaction structure}
+\subsection{Transaction structure}\label{subsec:transaction-structure}
 
 States are the atomic unit of information in Corda. They are never altered: they are either current (`unspent') or
-consumed (`spent') and hence no longer valid.  Transactions consume zero or more states (inputs) and create zero or more
-new states (outputs). Because states cannot exist outside of the transactions that created them, any state whether consumed
-or not can be identified by the identifier of the creating transaction and the index of the state in the outputs list.
+consumed (`spent') and hence no longer valid.  Transactions read zero or more states (inputs), consume zero or more of
+the read states, and create zero or more new states (outputs). Because states cannot exist outside of the transactions
+that created them, any state whether consumed or not can be identified by the identifier of the creating transaction
+and the index of the state in the outputs list.
+
+A basic need is to represent pointers to data on the ledger. A \texttt{StateRef} type models the combination of a
+transaction identifier and an output index. StateRefs can identify any piece of data on the ledger at any point in its
+history in a compact, unified form. The \texttt{StatePointer} type unifies a standard JVM memory reference with its
+cryptographic ledger counterpart. There are two kinds of pointer: static and linear. A static pointer is simply a
+wrapped \texttt{StateRef} which can be easily resolved to the pointed-to state if it's available in the vault. A
+linear pointer contains a UUID (universally unique identifier, a 128-bit random number) that identifies a chain of
+\emph{linear states}. Linear states copy the UUID from input to output, thus allowing you to talk about the latest
+version of a piece of data independent of its hash-based ledger coordinates.
 
 Transactions consist of the following components:
 
@@ -462,13 +482,20 @@ have occurred. This is discussed in more detail below.
 % TODO: This description ignores the participants field in states, because it probably needs a rethink.
 % TODO: Summaries aren't implemented.
 
+The platform provides a \texttt{TransactionBuilder} class which, amongst many other features, automatically searches
+the object graph of each state and command to locate linear pointers, resolve them to the latest known state and add
+that state as a non-consumed input, then searches the resolved state recursively. Note that the `latest' version is determined relative to an individual node's
+viewpoint, thus, it may not be truly the latest version at the time the transaction is built. The state's notary
+cluster will reject the transaction if this occurs, at which point the node may take some action to discover the
+latest version of the state and try again.
+
 Transactions are identified by the root of a Merkle tree computed over the components. The transaction format is
 structured so that it's possible to deserialize some components but not others: a \emph{filtered transaction} is one
 in which only some components are retained (e.g. the inputs) and a Merkle branch is provided that proves the
 inclusion of those components in the original full transaction. We say these components have been `torn off'. This
-feature is particularly useful for keeping data private from notaries and oracles. See \cref{sec:tear-offs}.
+feature is particularly useful for keeping data private from notaries and oracles. See~\cref{sec:tear-offs}.
 
-Signatures are appended to the end of a transaction. Thus signature malleability as seen in the Bitcoin protocol is
+Signatures are appended to the end of a transaction thus signature malleability as seen in the Bitcoin protocol is
 not a problem. There is never a need to identify a transaction with its accompanying signatures by hash. Signatures
 can be both checked and generated in parallel, and they are not directly exposed to contract code. Instead contracts
 check that the set of public keys specified by a command is appropriate, knowing that the transaction will not be
@@ -571,7 +598,7 @@ specified in a specific time zone. This allows ensure correct handling of daylig
 definition changes. Future versions of the platform will allow timezone data files to be attached to transactions,
 to make such calculations entirely deterministic.
 
-\subsection{Attachments and contract bytecodes}
+\subsection{Attachments and contract bytecodes}\label{subsec:attachments-and-contract-bytecodes}
 
 Transactions may have a number of \emph{attachments}, identified by the hash of the file. Attachments are stored
 and transmitted separately to transaction data and are fetched by the standard resolution flow only when the
@@ -586,7 +613,7 @@ with some small differences that are described in a later section. A contract is
 the \texttt{Contract} interface, which in turn exposes a single function called \texttt{verify}. The verify
 function is passed a transaction and either throws an exception if the transaction is considered to be invalid,
 or returns with no result if the transaction is valid. The set of verify functions to use is the union of the contracts
-specified by each state, which are expressed as a class name combined with a \emph{constraint} (see \cref{sec:contract-constraints}).
+specified by each state, which are expressed as a class name combined with a \emph{constraint} (see~\cref{sec:contract-constraints}).
 Embedding the JVM specification in the Corda specification enables developers to write code in a variety of
 languages, use well developed toolchains, and to reuse code already authored in Java or other JVM compatible languages.
 A good example of this feature in action is the ability to embed the ISDA Common Domain Model directly into CorDapps.
@@ -596,7 +623,7 @@ It is common for industry groups to define such domain models and for them to ha
 Current versions of the platform only execute attachments that have been previously installed (and thus
 whitelisted), or attachments that are signed by the same signer as a previously installed attachment. Thus
 nodes may fail to reach consensus on long transaction chains that involve apps your counterparty has not seen.
-Future versions of the platform will run contract bytecode inside a deterministic JVM. See \cref{sec:djvm}.
+Future versions of the platform will run contract bytecode inside a deterministic JVM. See~\cref{sec:djvm}.
 
 The Java standards also specify a comprehensive type system for expressing common business data. Time and calendar
 handling is provided by an implementation of the JSR 310 specification, decimal calculations can be performed either
@@ -619,8 +646,7 @@ would be accessed. The platform imposes some restrictions on what kinds of data 
 along with size limits, to avoid people placing inappropriate files on the global ledger (videos, PowerPoints etc).
 
 Note that the creator of a transaction gets to choose which files are attached. Therefore, it is typical that
-states place constraints on the data they're willing to accept. These mechanisms are discussed in
-\cref{sec:contract-constraints}.
+states place constraints on the data they're willing to accept. These mechanisms are discussed in~\cref{sec:contract-constraints}.
 
 \paragraph{Signing.}Attachments may be signed using the JAR signing standard. No particular certificate is necessary
 for this: Corda accepts self signed certificates for JARs. The signatures are useful for two purposes. Firstly, it
@@ -708,7 +734,7 @@ ledger really uses.
 % TODO: Discuss confidential identities.
 % TODO: Discuss the crypto suites used in Corda.
 
-\subsection{Hard forks, bug fixes and dispute resolution}
+\subsection{Hard forks, bug fixes and dispute resolution}\label{subsec:hard-forks,-bug-fixes-and-dispute-resolution}
 
 Decentralised ledger systems often differ in their underlying political ideology as well as their technical
 choices. The Ethereum project originally promised ``unstoppable apps'' which would implement ``code as law''. After
@@ -730,10 +756,12 @@ leave discussion of the wisdom of this concept to political scientists and reddi
 
 \subsection{Oracles and tear-offs}\label{sec:tear-offs}
 
-It is sometimes convenient to reveal a small part of a transaction to a counterparty in a way that allows them
-to check the signatures and sign it themselves. A typical use case for this is an \emph{oracle}, defined as a
-network service that is trusted to sign transactions containing statements about the world outside the ledger
-only if the statements are true.
+It is sometimes convenient to reveal a small part of a transaction to a counterparty in a way that allows them to
+both check and create signatures over the entire transaction. One typical use case for this is an \emph{oracle},
+defined as a network service that is trusted to sign transactions containing statements about the world outside the
+ledger only if the statements are true. Another use case is to outsource signing to small devices that can't or
+won't process the entire transaction, which can potentially get very large for multi-party transactions. To make
+this safe additional infrastructure is required, described in~\cref{sec:secure-signing-devices}.
 
 Here are some example statements an oracle might check:
 
@@ -758,7 +786,7 @@ in a transaction (in a state or command). We take a different approach in which 
 and data the oracle doesn't need to see is ``torn off'' before the transaction is sent. This is done by structuring
 the transaction as a Merkle hash tree so that the hash used for the signing operation is the root. By presenting a
 counterparty with the data elements that are needed along with the Merkle branches linking them to the root hash,
-as seen in the diagrams below,  that counterparty can sign the entire transaction whilst only being able to see some of it. Additionally, if the
+as seen in the diagrams below, that counterparty can sign the entire transaction whilst only being able to see some of it. Additionally, if the
 counterparty needs to be convinced that some third party has already signed the transaction, that is also
 straightforward. Typically an oracle will be presented with the Merkle branches for the command or state that
 contains the data, and the timestamp field, and nothing else. The resulting signature contains flag bits indicating which
@@ -776,7 +804,7 @@ parts of the structure were presented for signing to avoid a single signature co
 
 % TODO: The flag bits are unused in the current reference implementation.
 
-There are a couple of reasons to take this more indirect approach. One is to keep a single signature checking
+There are several reasons to take this more indirect approach. One is to keep a single signature checking
 code path. By ensuring there is only one place in a transaction where signatures may be found, algorithmic
 agility and parallel/batch verification are easy to implement. When a signature may be found in any arbitrary
 location in a transaction's data structures, and where verification may be controlled by the contract code itself (as in Bitcoin),
@@ -791,12 +819,16 @@ unworkably high. Because oracles sign specific transactions, not specific statem
 for its services can amortise the cost of determining the truth of a statement over many users who cannot then
 share the signature itself (because it covers a one-time-use structure by definition).
 
+A final reason is that by signing transactions, the signature automatically covers the embedded time window,
+as discussed in~\cref{sec:timestamps}. This provides a theoretically robust method of anchoring the oracle's
+statement into the ledger's timeline.
+
 \subsection{Encumbrances}\label{sec:encumbrances}
 
 Each state in a transaction specifies a contract (boolean function) that is invoked with the entire transaction as input. All contracts must accept
 in order for the transaction to be considered valid. Sometimes we would like to compose the behaviours of multiple
 different contracts. Consider the notion of a ``time lock'' -- a restriction on a state that prevents it being
-modified (i.e. sold) until a certain time. This is a general piece of logic that could apply to many kinds of
+modified (e.g. sold) until a certain time. This is a general piece of logic that could apply to many kinds of
 assets. Whilst such logic could be implemented in a library and then called from every contract that might want
 to benefit from it, that requires all contract authors to think ahead and include the functionality. It would be
 better if we could mandate that the time lock logic ran along side the contract that governs the locked state.
@@ -818,11 +850,10 @@ by index alone.
 
 % TODO: Interaction of enumbrances with notary change transactions.
 
-
 \subsection{Event scheduling}\label{sec:event-scheduling}
 
 State classes may request flows to be started at given times. When a state is considered relevant by the vault and the
-implementing CorDapp is installed and whitelisted by the administrator (e.g. in the config file), the node may react to
+implementing CorDapp is installed and whitelisted by the administrator, the node may react to
 the passage of time by starting new interactions with other nodes, people, or internal systems. As financial contracts
 often have a notion of time in them this feature can be useful for many kinds of state transitions, for example, expiry
 of an option contract, management of a default event, re-fixing of an interest rate swap and so on.
@@ -831,110 +862,107 @@ To request scheduled events, a state may implement the \texttt{SchedulableState}
 request from the \texttt{nextScheduledActivity} function. The state will be queried when it is committed to the
 vault and the scheduler will ensure the relevant flow is started at the right time.
 
-\section{Common financial constructs}\label{sec:assets}
+\section{Tokens}\label{sec:tokens}
 
-\subsection{Assets}
-A ledger that cannot record the ownership of assets is not very useful. We define a set of classes that model
-asset-like behaviour and provide some platform contracts to ensure interoperable notions of cash and obligations.
+Some basic concepts occur in many kinds of application, regardless of what industry or use case it is for. The
+platform provides a comprehensive type system for modelling of \emph{tokens}: abstract countable objects highly
+suited to representing value.
 
-We define the notion of an \texttt{OwnableState}, implemented as an interface which any state may conform to. Ownable
-states are required to have an \texttt{owner} field which is a composite key (see \cref{sec:composite-keys}). This is
-utilised by generic code in the vault (see \cref{sec:vault}) to manipulate ownable states.
+Tokens can be used to model agreements with an issuer, like fiat money, securities, derivatives, debts and
+other financial instruments. They could also  be used to model any sort of claim on physical resources,
+like CPU time, network bandwidth, barrels of oil and so on. Finally, as a special case tokens can be used to
+implement cryptocurrencies (this is modelled as a claim on a null issuer).
 
-% TODO: Currently OwnableState.owner is just a regular CompositeKey.
+We define the notion of an \texttt{OwnableState}, implemented as an interface which any state may conform to.
+Ownable states are required to have an \texttt{owner} field which is a composite key
+(see~\cref{sec:composite-keys}). This is utilised by generic code in the vault (see~\cref{sec:vault}) to manipulate
+ownable states.
 
-From \texttt{OwnableState} we derive a \texttt{FungibleAsset} concept to represent assets of measurable quantity, in
-which units are sufficiently similar to be represented together in a single ledger state. Making that concrete, pound notes
-are a fungible asset: regardless of whether you represent \pounds10 as a single \pounds10 note or two notes of \pounds5
+From \texttt{OwnableState} we derive a \texttt{FungibleState} concept to represent an aggregation in which units
+are sufficiently similar to be represented together in a single ledger state. Making that concrete, pound notes are
+a fungible asset: regardless of whether you represent \pounds10 as a single \pounds10 note or two notes of \pounds5
 each the total value is the same. Other kinds of fungible asset could be barrels of Brent Oil (but not all kinds of
 crude oil worldwide, because oil comes in different grades which are not interchangeable), litres of clean water,
 kilograms of bananas, units of a stock and so on.
 
-When cash is represented on a digital ledger an additional complication can arise: for national ``fiat'' currencies
-the ledger merely records an entity that has a liability which may be redeemed for some other form (physical currency,
-a wire transfer via some other ledger system, etc). This means that two ledger entries of \pounds1000 may \emph{not}
-be entirely fungible because all the entries really represent is a claim on an issuer, which -- if it is not a central
-bank -- may go bankrupt. Even assuming defaults never happen, the data representing where an asset may be redeemed
-must be tracked through the chain of custody, so `exiting' the asset from the ledger and thus claiming physical
-ownership can be done.
+Quantities are represented with an \texttt{Amount<T>} type which defines an integer amount parameterised by some
+other type, usually a singleton object. To support tokens that have a fractional part, as some national currencies
+do, the ``display token size'' is tracked explicitly. \texttt{Amount<T>} provides operator overloads to allow
+addition, subtraction and multiplication with safety checks to prevent different tokens being combined together and
+to catch integer overflow/underflow. These conditions normally indicate a programmer error or attack attempt.
+Amounts may not be negative as in many critical contexts a negative quantity is undefined and reachable only
+through an error condition. Transfers of value are modelled explicitly with an \texttt{AmountTransfer} type that
+encodes direction.
 
-The Corda type system supports the encoding of this complexity. The \texttt{Amount<T>} type defines an integer
-quantity of some token. This type does not support fractional quantities so when used to represent national
-currencies the quantity must be measured in pennies, with sub-penny amount requiring the use of some other type.
-The token can be represented by any type. A common token type to use is \texttt{Issued<T>}, which defines a token
-issued by some party. It encapsulates what the asset is, who issued it, and an opaque reference field that is not
-parsed by the platform -- it is intended to help the issuer keep track of e.g. an account number, the location where
-the asset can be found in storage, etc.
-
-\subsection{Obligations}
-
-It is common in finance to be paid with an IOU rather than hard cash (note that in this section `hard cash' means a
-balance with the central bank). This is frequently done to minimise the amount of cash on hand when trading institutions
-have some degree of trust in each other: if you make a payment to a counterparty that you know will soon be making a
-payment back to you as part of some other deal, then there is an incentive to simply note the fact that you owe the
-other institution and then `net out' these obligations at a later time, either bilaterally or multilaterally. Netting is
-a process by which a set of gross obligations is replaced by an economically-equivalent set where eligible offsetting
-obligations have been elided. The process is conceptually similar to trade compression, whereby a set of trades between
-two or more parties are replaced with an economically similar, but simpler, set. The final output is the amount of money
-that needs to actually be transferred.
-
-Corda models a nettable obligation with the \texttt{Obligation} contract, which is a subclass of
-\texttt{FungibleAsset}. Obligations have a lifecycle and can express constraints on the on-ledger assets used
-for settlement. The contract allows not only for trading and fungibility of obligations but also bi-lateral and
-multi-lateral netting.
-
-It is important to note here that netting calculations can get very complex and the financial industry contains
-firms that compete on the quality of their netting algorithms. The \texttt{Obligation} contract provides methods
-to calculate  simple bi-lateral nettings, and verify the correctness of both bi and multi-lateral nettings. For
-very large, complex multi-lateral nettings it is expected that institutions would use pre-existing netting
-implementations.
-
-Netting is usually done when markets are closed. This is because it is hard to calculate nettings and settle up
-concurrently with the trading positions changing. The problem can be seen as analagous to garbage collection in
-a managed runtime: compacting the heap requires the running program to be stopped so the contents of the heap
-can be rewritten. If a group of trading institutions wish to implement a checked form of `market close' then they
-can use an encumbrance (see \cref{sec:encumbrances}) to prevent an obligation being changed during certain hours,
-as determined by the clocks of the notaries (see \cref{sec:timestamps}).
+\paragraph{Token SDK.}On top of these universal core types, Corda provides a dedicated `token software development
+kit' module that  extends the type system with more sophisticated concepts.
 
 \begin{figure}[H]
 \includegraphics[width=\textwidth]{state-class-hierarchy}
 \caption{Class hierarchy diagram showing the relationships between different state types}
 \end{figure}
 
-\subsection{Market infrastructure}
+\texttt{TokenType} refers to a ``type of thing'' as opposed to the vehicle which is used to assign units of a token
+to a particular owner. For that we use the \texttt{NonFungibleToken} state for assigning non-fungible tokens to a
+holder and the \texttt{FungibleToken} state for assigning amounts of some fungible token to a holder. Because
+tokens frequently represent claims on an issuer the \texttt{IssuedTokenType} class links a token type with an
+issuing party. Whilst static token types never change, an \texttt{EvolvableTokenType} is an abstract linear state
+that contains data defining the rules of the token or reference data related to it. For example a token type
+representing a stock may include various metadata about that stock, such as regional identifiers. Token states are
+linked to their defining token type states (when evolvable) using linear pointers
+(see~\cref{subsec:transaction-structure}). This enables reference data about a token to be evolved such that
+everyone always uses the latest version, ensuring a `golden source'. The lack of such global yet evolvable
+definitions is a frequent problem in industry. Tokens with an issuer are \emph{not} fungible with each other: two
+pools of pound sterling are considered to be separate types of token if they come from different issuers. This is
+to avoid commingling and losing track of counterparty risk.
 
-Trade is the lifeblood of the economy. A distributed ledger needs to provide a vibrant platform on which trading may
-take place. However, the decentralised nature of such a network makes it difficult to build competitive
-market infrastructure on top of it, especially for highly liquid assets like securities. Markets typically provide
-features like a low latency order book, integrated regulatory compliance, price feeds and other things that benefit
-from a central meeting point.
+The token SDK provides APIs and flows to do standard tasks for UTXO based ledgers, such as moving tokens between
+parties, issuing tokens, updating the definition of an evolvable token and efficient coin selection. This is the
+task of selecting a group of states from the vault that add up to a certain value whilst minimising fragmentation,
+transaction size and optimising other desirable characteristics. Although the term ``coin selection'' is an
+anachronistic holdover from Bitcoin, Corda continues to use it due to the wealth of published literature exploring
+algorithms for the task under this name.
 
-The Corda data model allows for integration of the ledger with existing markets and exchanges. A sell order for
-an asset that exists on-ledger can have a \emph{partially signed transaction} attached to it. A partial
-signature is a signature that allows the signed data to be changed in controlled ways after signing. Partial signatures
-are directly equivalent to Bitcoin's \texttt{SIGHASH} flags and work in the same way -- signatures contain metadata
-describing which parts of the transaction are covered. Normally all of a transaction would be covered, but using this
-metadata it is possible to create a signature that only covers some inputs and outputs, whilst allowing more to be
-added later.
+Together, this functionality provides Corda's equivalent of the Ethereum ERC-20 standard\cite{ERC20}.
 
-This feature is intended for integration of the ledger with the order books of markets and exchanges. Consider a stock
-exchange. A buy order can be submitted along with a partially signed transaction that signs a cash input state
-and a output state representing some quantity of the stock owned by the buyer. By itself this transaction is invalid,
-as the cash does not appear in the outputs list and there is no input for the stock. A sell order can be combined with
-a mirror-image partially signed transaction that has a stock state as the input and a cash state as the output. When
-the two orders cross on the order book, the exchange itself can take the two partially signed transactions and merge
-them together, creating a valid transaction that it then notarises and distributes to both buyer and seller. In this
-way trading and settlement become atomic, with the ownership of assets on the ledger being synchronised with the view
-of market participants. Note that in this design the distributed ledger itself is \emph{not} a marketplace, and does
-not handle distribution or matching of orders. Rather, it focuses on management of the pre- and post- trade lifecycles.
+Having defined various kinds of abstract token, the SDK goes on to define (finally!) \texttt{Money} and
+\texttt{FiatCurrency} types. Interop with the JSR 354 standard for representing financial amounts is left to future
+work.
 
-\paragraph{Central counterparties.}In many markets, central infrastructures such as clearing houses (also known as
-Central Counterparties, or CCPs) and Central Securities Depositories (CSD) have been created. They provide governance,
-rules definition and enforcement, risk management and shared data and processing services. The partial data visibility,
-flexible transaction verification logic and pluggable notary design means Corda could be a particularly good fit for
-future distributed ledger services contemplated by CCPs and CSDs.
-
-% TODO: Partial signatures are not implemented.
+%\subsection{Market infrastructure}
+%
+%Trade is the lifeblood of the economy. A distributed ledger needs to provide a vibrant platform on which trading may
+%take place. However, the decentralised nature of such a network makes it difficult to build competitive
+%market infrastructure on top of it, especially for highly liquid assets like securities. Markets typically provide
+%features like a low latency order book, integrated regulatory compliance, price feeds and other things that benefit
+%from a central meeting point.
+%
+%The Corda data model allows for integration of the ledger with existing markets and exchanges. A sell order for
+%an asset that exists on-ledger can have a \emph{partially signed transaction} attached to it. A partial
+%signature is a signature that allows the signed data to be changed in controlled ways after signing. Partial signatures
+%are directly equivalent to Bitcoin's \texttt{SIGHASH} flags and work in the same way -- signatures contain metadata
+%describing which parts of the transaction are covered. Normally all of a transaction would be covered, but using this
+%metadata it is possible to create a signature that only covers some inputs and outputs, whilst allowing more to be
+%added later.
+%
+%This feature is intended for integration of the ledger with the order books of markets and exchanges. Consider a stock
+%exchange. A buy order can be submitted along with a partially signed transaction that signs a cash input state
+%and a output state representing some quantity of the stock owned by the buyer. By itself this transaction is invalid,
+%as the cash does not appear in the outputs list and there is no input for the stock. A sell order can be combined with
+%a mirror-image partially signed transaction that has a stock state as the input and a cash state as the output. When
+%the two orders cross on the order book, the exchange itself can take the two partially signed transactions and merge
+%them together, creating a valid transaction that it then notarises and distributes to both buyer and seller. In this
+%way trading and settlement become atomic, with the ownership of assets on the ledger being synchronised with the view
+%of market participants. Note that in this design the distributed ledger itself is \emph{not} a marketplace, and does
+%not handle distribution or matching of orders. Rather, it focuses on management of the pre- and post- trade lifecycles.
+%
+%\paragraph{Central counterparties.}In many markets, central infrastructures such as clearing houses (also known as
+%Central Counterparties, or CCPs) and Central Securities Depositories (CSD) have been created. They provide governance,
+%rules definition and enforcement, risk management and shared data and processing services. The partial data visibility,
+%flexible transaction verification logic and pluggable notary design means Corda could be a particularly good fit for
+%future distributed ledger services contemplated by CCPs and CSDs.
+%
+%% TODO: Partial signatures are not implemented.
 
 \section{Notaries and consensus}\label{sec:notaries}
 
@@ -1109,13 +1137,12 @@ assumptions or legal assurances are sufficiently strong that peers can be truste
 of their regular flows.
 
 To solve this, app developers can choose whether to request transaction distribution by the notary or not. This works
-by simply piggybacking on the standard identity lookup flows (see \cref{sec:identity-lookups}). If a node wishes to be
+by simply piggybacking on the standard identity lookup flows (see~\cref{sec:identity-lookups}). If a node wishes to be
 informed by the notary when a state is consumed, it can send the certificates linking the random keys in the state
 to the notary cluster, which then stores it in the local databases as per usual. Once the notary cluster has committed
 the transaction, key identities are looked up and any which resolve successfully are sent copies of the transaction. In
 normal operation the notary is not provided with the certificates linking the random keys to the long term identity keys
-and thus does not know who is involved with the operation (assuming source IP address obfuscation is in use, see
-\cref{sec:privacy}).
+and thus does not know who is involved with the operation (assuming source IP address obfuscation is in use, see~\cref{sec:privacy}).
 
 \section{The vault}\label{sec:vault}
 
@@ -1132,7 +1159,7 @@ as the assets pass from hand to hand.
 
 Advanced vault implementations may also perform splitting and merging of states in the background. The purpose of this
 is to increase the amount of transaction creation parallelism supported. Because signing a transaction may involve
-human intervention (see \cref{sec:secure-signing-devices}) and thus may take a significant amount of time, it can
+human intervention (see~\cref{sec:secure-signing-devices}) and thus may take a significant amount of time, it can
 become important to be able to create multiple transactions in parallel. The vault must manage state `soft locks' to
 prevent multiple transactions trying to use the same output simultaneously. Violation of a soft lock would result in
 a double spend being created and rejected by the notary. If a vault were to contain the entire cash balance
@@ -1144,7 +1171,7 @@ in order to avoid hitting transaction size limits. Finally, in some cases the va
 to the issuer for re-issuance, thus pruning long transaction chains and improving privacy.
 
 The vault is also responsible for managing scheduled events requested by node-relevant states when the implementing app
-has been installed (see \cref{sec:event-scheduling}).
+has been installed (see~\cref{sec:event-scheduling}).
 
 \subsection{Direct SQL access}
 
@@ -1190,8 +1217,7 @@ data that's irrelevant to the user like opaque public keys and may expand single
 type into multiple database columns.
 
 It's worth noting here that although the vault only responds to JPA annotations it is often useful for states to be
-annotated in other ways, for instance to customise its mapping to XML/JSON, or to impose validation constraints
-\cite{BeanValidation}. These annotations won't affect the behaviour of the node directly but may be useful when working
+annotated in other ways, for instance to customise its mapping to XML/JSON, or to impose validation constraints~\cite{BeanValidation}. These annotations won't affect the behaviour of the node directly but may be useful when working
 with states in surrounding software.
 
 \subsection{Key randomisation}\label{sec:key-randomisation}
@@ -1223,7 +1249,7 @@ that all production quality asset contracts would want the following features:
 \begin{itemize}
 \item Issuance and exit transactions.
 \item Movement transactions (reassignment of ownership).
-\item Fungibility management (see \cref{sec:assets}).
+\item Fungibility management (see~\cref{sec:tokens}).
 \item Support for upgrading to new versions of the contract.
 \end{itemize}
 
@@ -1385,7 +1411,7 @@ can know that the message was correct and legitimate.
 The design above is simple but has the issue that large amounts of data are sent to the device which it doesn't need.
 As it's common for signing devices to have constrained memory, it would be unfortunate if the complexity of a transaction
 ended up being limited by the RAM available in the users' signing devices. To solve this we can use the tear-offs
-mechanism (see \cref{sec:tear-offs}) to present only the summaries and the Merkle branch connecting them to the root.
+mechanism (see~\cref{sec:tear-offs}) to present only the summaries and the Merkle branch connecting them to the root.
 The device can then sign the entire transaction contents having seen only the textual summaries, knowing that the states
 will trigger the contracts which will trigger the summary checks, thus the signature covers the machine-understandable
 version of the transaction as well.
@@ -1467,7 +1493,7 @@ of XSS exploits, XSRF exploits and similar security problems based on losing tra
 
 \section{Data distribution groups}
 
-By default, distribution of transaction data is defined by app-provided flows (see \cref{sec:flows}). Flows specify
+By default, distribution of transaction data is defined by app-provided flows (see~\cref{sec:flows}). Flows specify
 when and to which peers transactions should be sent. Typically these destinations will be calculated based on the content
 of the states and the available identity lookup certificates, as the intended use case of financial data usually
 contains the identities of the relevant parties within it. Sometimes though, the set of parties that should receive
@@ -1504,7 +1530,7 @@ the act of joining a group, it's better to see the act of joining as happening a
 resultant flood of transaction data as an ongoing stream, rather than being like a traditional file download.
 
 When a transaction is sent to the vault, it always undergoes a relevancy test, regardless of whether it is in a group
-or not (see \cref{sec:vault}). This test is extended to check also for the
+or not (see~\cref{sec:vault}). This test is extended to check also for the
 signatures of any groups the node is a member of. If there's a match then the transaction's states are all considered
 relevant. In addition, the vault looks up which nodes it invited to this group, and also which nodes invited it, removes
 any nodes that have recently sent us this transaction and then kicks off a \texttt{PropagateTransactionToGroup} flow
@@ -1679,7 +1705,7 @@ is possible for the issuer to exit the asset but not re-issue it, either through
 
 \paragraph{Non-validating notaries.}The overhead of checking a transaction for validity before it is notarised is
 likely to be the main overhead for non-BFT notaries. In the case where raw throughput is more important than
-ledger integrity it is possible to use a non-validating notary. See \cref{sec:non-validating-notaries}.
+ledger integrity it is possible to use a non-validating notary. See~\cref{sec:non-validating-notaries}.
 
 The primary bottleneck in a Corda network is expected to be the notary clusters, especially for byzantine fault
 tolerant (BFT) clusters made up of mutually distrusting nodes. BFT clusters are likely to be slower partly because the
@@ -1721,9 +1747,9 @@ distributed ledger systems:
 \paragraph{Partial data visibility.}Transactions are not globally broadcast as in many other systems.
 \paragraph{Transaction tear-offs.}Transactions are structured as Merkle trees, and may have individual subcomponents be
 revealed to parties who already know the Merkle root hash. Additionally, they may sign the transaction without being
-able to see all of it. See \cref{sec:tear-offs}
+able to see all of it. See~\cref{sec:tear-offs}
 \paragraph{Key randomisation.}The vault generates and uses random keys that are unlinkable to an identity without the
-corresponding linkage certificate. See \cref{sec:vault}.
+corresponding linkage certificate. See~\cref{sec:vault}.
 \paragraph{Graph pruning.}Large transaction graphs that involve liquid assets can be `pruned' by requesting the asset
 issuer to re-issue the asset onto the ledger with a new reference field. This operation is not atomic, but effectively
 unlinks the new version of the asset from the old, meaning that nodes won't attempt to explore the original dependency
