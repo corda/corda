@@ -28,7 +28,7 @@ class UtimacoCryptoServiceIntegrationTest {
     companion object {
         @ClassRule
         @JvmField
-        val hsmSimulator: HsmSimulator = HsmSimulator(incrementalPortAllocation(12300))
+        val hsmSimulator: HsmSimulator = HsmSimulator(incrementalPortAllocation())
     }
 
     private val config = testConfig(hsmSimulator.address.port)

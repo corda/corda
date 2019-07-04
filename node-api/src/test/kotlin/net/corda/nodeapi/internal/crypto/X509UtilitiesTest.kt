@@ -76,7 +76,7 @@ class X509UtilitiesTest {
                 "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
         )
 
-        val portAllocation = incrementalPortAllocation(10000)
+        val portAllocation = incrementalPortAllocation()
 
         // We ensure that all of the algorithms are both used (at least once) as first and second in the following [Pair]s.
         // We also add [DEFAULT_TLS_SIGNATURE_SCHEME] and [DEFAULT_IDENTITY_SIGNATURE_SCHEME] combinations for consistency.

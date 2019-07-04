@@ -35,7 +35,7 @@ class LoopbackBridgeTest : IntegrationTest() {
     fun `Nodes behind one bridge can communicate with each other using loopback bridge - with bridge starts after nodes`() {
         val demoUser = User("demo", "demo", setOf(Permissions.startFlow<Ping>(), Permissions.all()))
         var artemis: ActiveMQServer? = null
-        internalDriver(startNodesInProcess = true, cordappsForAllNodes = cordappsForPackages("net.corda.bridge"), notarySpecs = emptyList(), portAllocation = incrementalPortAllocation(20000)) {
+        internalDriver(startNodesInProcess = true, cordappsForAllNodes = cordappsForPackages("net.corda.bridge"), notarySpecs = emptyList(), portAllocation = incrementalPortAllocation()) {
             val artemisPort = portAllocation.nextPort()
             val advertisedP2PPort = portAllocation.nextPort()
 
@@ -113,7 +113,7 @@ class LoopbackBridgeTest : IntegrationTest() {
         Assume.assumeTrue(!isRemoteDatabaseMode()) // Enterprise only - disable test when running against remote database, reported in ENT-3470
         val demoUser = User("demo", "demo", setOf(Permissions.startFlow<Ping>(), Permissions.all()))
         var artemis: ActiveMQServer? = null
-        internalDriver(startNodesInProcess = true, cordappsForAllNodes = cordappsForPackages("net.corda.bridge"), notarySpecs = emptyList(), portAllocation = incrementalPortAllocation(20000)) {
+        internalDriver(startNodesInProcess = true, cordappsForAllNodes = cordappsForPackages("net.corda.bridge"), notarySpecs = emptyList(), portAllocation = incrementalPortAllocation()) {
             val artemisPort = portAllocation.nextPort()
             val advertisedP2PPort = portAllocation.nextPort()
 

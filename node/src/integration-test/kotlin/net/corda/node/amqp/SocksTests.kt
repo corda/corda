@@ -44,7 +44,7 @@ class SocksTests {
     @JvmField
     val temporaryFolder = TemporaryFolder()
 
-    private val portAllocator = incrementalPortAllocation(10000)
+    private val portAllocator = incrementalPortAllocation()
     private val socksPort = portAllocator.nextPort()
     private val serverPort = portAllocator.nextPort()
     private val serverPort2 = portAllocator.nextPort()

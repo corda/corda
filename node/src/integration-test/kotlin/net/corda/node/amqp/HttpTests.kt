@@ -38,7 +38,7 @@ class HttpTests {
     @JvmField
     val temporaryFolder = TemporaryFolder()
 
-    private val portAllocator = incrementalPortAllocation(10000)
+    private val portAllocator = incrementalPortAllocation()
     private val httpProxyPort = portAllocator.nextPort()
     private val serverPort = portAllocator.nextPort()
     private val serverPort2 = portAllocator.nextPort()

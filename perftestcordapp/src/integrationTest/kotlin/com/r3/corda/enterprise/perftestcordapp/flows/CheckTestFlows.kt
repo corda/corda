@@ -32,7 +32,7 @@ class CheckAllTheTestFlows {
         private val driverParameters = DriverParameters(
                 startNodesInProcess = true,
                 extraCordappPackagesToScan = listOf("com.r3.corda.enterprise.perftestcordapp"),
-                portAllocation = incrementalPortAllocation(20000)
+                portAllocation = incrementalPortAllocation()
         )
         val driver = DriverDSLImpl(
                 portAllocation = driverParameters.portAllocation,

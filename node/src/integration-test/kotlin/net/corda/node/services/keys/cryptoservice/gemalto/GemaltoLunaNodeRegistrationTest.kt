@@ -47,7 +47,7 @@ class GemaltoLunaNodeRegistrationTest : IntegrationTest() {
     @JvmField
     val testSerialization = SerializationEnvironmentRule(true)
 
-    private val portAllocation = incrementalPortAllocation(13900)
+    private val portAllocation = incrementalPortAllocation()
 
     @Rule
     @JvmField
