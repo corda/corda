@@ -388,3 +388,31 @@ ZooKeeper alternative
 It is possible to have the hot-warm capability of the bridge and float clusters without the added deployment complexity of a ZooKeeper cluster. The firewall provides a ``Bully Algorithm`` implementation for master election which can be enabled
 by simply changing the ``haConnectionString`` configuration property from ``zk://<host>:<port>`` to the pseudo-url``bully://localhost`` (the host is a dummy string). This feature uses Publish/Subscribe messages on the P2P Artemis messaging broker for coordination. Please be aware that
 this approach does not protect against network partitioning problems, therefore it is strongly recommended to use ZooKeeper in production environments.
+
+.. _hsm-in-corda-firewall :
+
+Use of HSM in Corda Firewall
+----------------------------
+There are several private keys necessary for Corda Firewall to function:
+
+    1. Private key to enable TLS signing when external party connects into Float using P2P protocol. Also this key is used when Bridge performs an outgoing communication to external party;
+
+    2. Private key to enable TLS signing when Bridge connecting into Artemis.
+
+    3. A pair of distinct private keys to enable TLS signing when two way communication is performed between Bridge and Float, also known as tunnel communication;
+
+Historically, those private keys were stored in keystore files on local disk. Depending on the firm's IT security policy, applications may be required to store private keys in HSM.
+
+To address this requirement Corda Firewall has a facility to enable TLS signing using HSM. The key principle here is that private key is generated on HSM and never leaves HSM to avoid being compromised.
+When it comes to use of private key for signing - this operation is performed on HSM device itself.
+
+This mode of operation is very similar to what is happening on the Corda Node for identity private key, please see: :doc:`Crypto service configuration <cryptoservice-configuration>`.
+
+:doc:`HA Utilities <ha-utilities>` tool been extended such that during initial generation of TLS keys they are created on HSM.
+
+.. note:: Even though Corda Firewall has a facility to store Artemis private key in HSM, out-of-process Artemis and Corda Node do not yet have facility to store their private keys on HSM.
+          This feature is likely to be implemented in the future releases of Corda Enterprise.
+
+.. note:: Since tunnel is an internal communication channel between Bridge and Float secured by self-signed certificate using custom trust root,
+          there is little benefit in protecting private keys for this particular communication channel using HSM. Also this would require to have ``Float`` (a DMZ side component) to be connecting to HSM, which might
+          be undesired given that ``Float`` is an externally-facing component and will be on a forefront should an adversary decides to attack Corda Firewall.

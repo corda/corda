@@ -270,6 +270,25 @@ absolute path to the firewall's base directory.
     When ``mode = EXTERNAL_SOURCE`` is specified, Float component will fetch CRLs using tunnel connection it maintains with Bridge. This allows Float to correctly obtain CRLs without
     initiating direct outgoing connections to the Delivery Points specified in TLS certificates.
 
+.. _p2pTlsSigningCryptoServiceConfig :
+
+:p2pTlsSigningCryptoServiceConfig: This is an optional crypto service configuration which will be used for HSM TLS signing when incoming P2P connection by external party attempted into
+    Float. Please see: :ref:`corda-firewall-component:Use of HSM in Corda Firewall` for the overview.
+    Since Float is by design a lightweight component which does not store any sensitive information locally, when it comes to TLS signing, Float will talk to the Bridge for TLS signing to take place.
+    Therefore, this option only makes sense for ``BridgeInner`` and ``SenderReceiver`` modes.
+
+    :name: The name of HSM provider to be used. E.g.: ``UTIMACO``, ``GEMALTO_LUNA``, etc. Please see: :doc:`Crypto service configuration <cryptoservice-configuration>`.
+
+    :conf: Absolute path to HSM provider specific configuration which will contain everything necessary to establish connection with HSM.
+
+:artemisCryptoServiceConfig: This is an optional crypto service configuration which will be used for HSM TLS signing when interacting with Artemis message bus.
+    This option only makes sense for ``SenderReceiver`` and ``BridgeInner`` modes. In terms of structure it is very similar to `p2pTlsSigningCryptoServiceConfig`_ above.
+    If this option is missing, local file system will be used to store private keys inside ``JKS`` key stores.
+
+:tunnelingCryptoServiceConfig: This is an optional crypto service configuration which will be used for HSM TLS signing during communication between Bridge and Float.
+    This option only makes sense for ``BridgeInner`` and ``FloatOuter``. In terms of structure it is very similar to `p2pTlsSigningCryptoServiceConfig`_ above.
+    If this option is missing, local file system will be used to store private keys inside ``JKS`` key stores.
+
 Complete example
 ================
 As an example to show all features, the following is a walk-through of the configuration steps to set-up a pair of HA hot-cold nodes for two separate legal identities,
