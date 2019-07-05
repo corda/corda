@@ -23,7 +23,7 @@ class NodeRPCTests {
 
     @Test
     fun `run nodeDiagnosticInfo`() {
-        driver(DriverParameters(cordappsForAllNodes = CORDAPPS)) {
+        driver(DriverParameters(notarySpecs = emptyList(), cordappsForAllNodes = CORDAPPS)) {
             val nodeDiagnosticInfo = startNode().get().rpc.nodeDiagnosticInfo()
             assertTrue(nodeDiagnosticInfo.version.matches(CORDA_VERSION_REGEX))
             assertTrue(nodeDiagnosticInfo.revision.matches(HEXADECIMAL_REGEX))
