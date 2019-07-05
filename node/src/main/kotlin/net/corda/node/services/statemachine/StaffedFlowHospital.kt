@@ -277,8 +277,7 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val 
         }
 
         private fun mentionsDeadlock(exception: Throwable?): Boolean {
-            return exception != null && (exception is SQLException && ((exception.message?.toLowerCase()?.contains("deadlock")
-                    ?: false)) || mentionsDeadlock(exception.cause))
+            return exception.mentionsThrowable(SQLException::class.java, "deadlock")
         }
     }
 
@@ -287,15 +286,11 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val 
      */
     object DuplicateInsertSpecialist : Staff {
         override fun consult(flowFiber: FlowFiber, currentState: StateMachineState, newError: Throwable, history: FlowMedicalHistory): Diagnosis {
-            return if (mentionsConstraintViolation(newError) && history.notDischargedForTheSameThingMoreThan(3, this, currentState)) {
+            return if (newError.mentionsThrowable(ConstraintViolationException::class.java) && history.notDischargedForTheSameThingMoreThan(3, this, currentState)) {
                 Diagnosis.DISCHARGE
             } else {
                 Diagnosis.NOT_MY_SPECIALTY
             }
-        }
-
-        private fun mentionsConstraintViolation(exception: Throwable?): Boolean {
-            return exception != null && (exception is ConstraintViolationException || mentionsConstraintViolation(exception.cause))
         }
     }
 
