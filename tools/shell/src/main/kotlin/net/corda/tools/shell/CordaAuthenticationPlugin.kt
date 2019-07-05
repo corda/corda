@@ -1,13 +1,13 @@
 package net.corda.tools.shell
 
-import net.corda.core.messaging.CordaRPCOps
+import net.corda.core.internal.messaging.InternalCordaRPCOps
 import net.corda.core.utilities.loggerFor
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import org.crsh.auth.AuthInfo
 import org.crsh.auth.AuthenticationPlugin
 import org.crsh.plugin.CRaSHPlugin
 
-class CordaAuthenticationPlugin(private val rpcOps: (username: String, credential: String) -> CordaRPCOps) : CRaSHPlugin<AuthenticationPlugin<String>>(), AuthenticationPlugin<String> {
+class CordaAuthenticationPlugin(private val rpcOps: (username: String, credential: String) -> InternalCordaRPCOps) : CRaSHPlugin<AuthenticationPlugin<String>>(), AuthenticationPlugin<String> {
 
     companion object {
         private val logger = loggerFor<CordaAuthenticationPlugin>()

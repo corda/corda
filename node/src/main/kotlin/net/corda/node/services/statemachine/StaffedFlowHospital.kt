@@ -11,6 +11,7 @@ import net.corda.core.messaging.DataFeed
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.seconds
 import net.corda.node.services.FinalityHandler
+import net.corda.nodeapi.internal.cryptoservice.TimedCryptoServiceException
 import org.hibernate.exception.ConstraintViolationException
 import rx.subjects.PublishSubject
 import java.sql.SQLException
@@ -25,7 +26,7 @@ import kotlin.math.pow
 class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val ourSenderUUID: String) {
     private companion object {
         private val log = contextLogger()
-        private val staff = listOf(DeadlockNurse, DuplicateInsertSpecialist, DoctorTimeout, FinalityDoctor)
+        private val staff = listOf(DeadlockNurse, DuplicateInsertSpecialist, DoctorTimeout, CryptoServiceTimeout, FinalityDoctor)
     }
 
     private val mutex = ThreadBox(object {
@@ -300,6 +301,24 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val 
                 return Diagnosis.DISCHARGE
             }
             return Diagnosis.NOT_MY_SPECIALTY
+        }
+    }
+
+    /**
+     * Restarts [TimedFlow], keeping track of the number of retries and making sure it does not
+     * exceed the limit specified by the [FlowTimeoutException].
+     */
+    object CryptoServiceTimeout : Staff {
+        override fun consult(flowFiber: FlowFiber, currentState: StateMachineState, newError: Throwable, history: FlowMedicalHistory): Diagnosis {
+            return if (newError is TimedCryptoServiceException) {
+                if (history.notDischargedForTheSameThingMoreThan(2, this, currentState)) {
+                    Diagnosis.DISCHARGE
+                } else {
+                    Diagnosis.OVERNIGHT_OBSERVATION
+                }
+            } else {
+                Diagnosis.NOT_MY_SPECIALTY
+            }
         }
     }
 

@@ -28,6 +28,7 @@ import net.corda.node.internal.clientSslOptionsCompatibleWith
 import net.corda.node.services.Permissions
 import net.corda.node.services.config.*
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
+import net.corda.node.utilities.registration.NodeRegistrationConfiguration
 import net.corda.node.utilities.registration.NodeRegistrationHelper
 import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.SignedNodeInfo
@@ -263,6 +264,7 @@ class DriverDSLImpl(
                         "address" to portAllocation.nextHostAndPort().toString(),
                         "adminAddress" to portAllocation.nextHostAndPort().toString()
                 ),
+                "additionalNodeInfoPollingFrequencyMsec" to 1000,
                 "devMode" to false) + customOverrides
         val config = NodeConfig(ConfigHelper.loadConfig(
                 baseDirectory = baseDirectory,
@@ -283,7 +285,7 @@ class DriverDSLImpl(
         return if (startNodesInProcess) {
             executorService.fork {
                 NodeRegistrationHelper(
-                        config.corda,
+                        NodeRegistrationConfiguration(config.corda),
                         HTTPNetworkRegistrationService(networkServicesConfig, versionInfo),
                         NodeRegistrationOption(rootTruststorePath, rootTruststorePassword)
                 ).generateKeysAndRegister()

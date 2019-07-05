@@ -37,7 +37,7 @@ class NodeInfoFilesCopier(scheduler: Scheduler = Schedulers.io()) : AutoCloseabl
     private val subscription: Subscription
 
     init {
-        this.subscription = Observable.interval(5, TimeUnit.SECONDS, scheduler)
+        this.subscription = Observable.interval(1, TimeUnit.SECONDS, scheduler)
                 .subscribe { poll() }
     }
 

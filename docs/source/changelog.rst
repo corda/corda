@@ -16,6 +16,17 @@ Version 5.0
 * Removed ``finance-workflows`` dependency on jackson library.  The functions that used jackson (e.g. ``FinanceJSONSupport``) have been moved
   into IRS Demo.
 
+* Information about checkpointed flows can be retrieved from the shell. Calling ``dumpCheckpoints`` will create a zip file inside the node's
+  ``log`` directory. This zip will contain a JSON representation of each checkpointed flow. This information can then be used to determine the
+  state of stuck flows or flows that experienced internal errors and were kept in the node for manual intervention.
+
+* It is now possible to re-record transactions if a node wishes to record as an observer a transaction it has participated in. If this is
+  done, then the node may record new output states that are not relevant to the node.
+
+.. warning:: Nodes may re-record transactions if they have previously recorded them as a participant and wish to record them as an observer.
+   However, the node cannot resolve the forward chain of transactions if this is done. This means that if you wish to re-record a chain of
+   transactions and get the new output states to be correctly marked as consumed, the full chain must be sent to the node *in order*.
+
 .. _changelog_v4.2:
 
 Version 4.2

@@ -26,6 +26,7 @@ import net.corda.core.utilities.ProgressTracker.Change
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
 import net.corda.node.services.persistence.checkpoints
+import net.corda.nodeapi.internal.cryptoservice.TimedCryptoServiceException
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
 import net.corda.testing.core.ALICE_NAME
@@ -423,6 +424,25 @@ class FlowFrameworkTests {
         val result = aliceNode.services.startFlow(SendAndReceiveFlow(bob, "Hello")).resultFuture
         mockNet.runNetwork()
         assertThat(result.getOrThrow()).isEqualTo("HelloHello")
+    }
+
+    @Test
+    fun `timed out CryptoService is sent to the flow hospital`() {
+        bobNode.registerCordappFlowFactory(ReceiveFlow::class) {
+            ExceptionFlow { TimedCryptoServiceException("We timed out!") }
+        }
+
+        aliceNode.services.startFlow(ReceiveFlow(bob)).resultFuture
+
+        mockNet.runNetwork()
+
+        assertThat(receivedSessionMessages.filter { it.message is ExistingSessionMessage && it.message.payload is ErrorSessionMessage }).hasSize(1)
+        val medicalRecords = bobNode.smm.flowHospital.track().apply { updates.notUsed() }.snapshot
+
+        // We expect three discharges and then overnight observation (in that order)
+        assertThat(medicalRecords).hasSize(4)
+        assertThat(medicalRecords.filter { it.outcome == StaffedFlowHospital.Outcome.DISCHARGE }).hasSize(3)
+        assertThat(medicalRecords.last().outcome == StaffedFlowHospital.Outcome.OVERNIGHT_OBSERVATION)
     }
 
     @Test

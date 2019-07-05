@@ -1,0 +1,82 @@
+ext {
+    tornadofx_version = '1.7.15'
+}
+
+apply plugin: 'kotlin'
+apply plugin: 'idea'
+apply plugin: 'java'
+apply plugin: 'application'
+// We need to set mainClassName before applying the shadow plugin.
+mainClassName = 'net.corda.networkbuilder.Main'
+
+apply plugin: 'com.github.johnrengelman.shadow'
+apply plugin: 'net.corda.plugins.publish-utils'
+apply plugin: 'com.jfrog.artifactory'
+
+configurations {
+    compile {
+        exclude group: "log4j", module: "log4j"
+        exclude group: "org.apache.logging.log4j"
+
+        // The Node only needs this for binary compatibility with Cordapps written in Kotlin 1.1.
+        exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jre8'
+    }
+}
+
+dependencies {
+    compile "com.microsoft.azure:azure:1.22.0"
+    compile "com.github.docker-java:docker-java:3.0.6"
+
+    testCompile "org.jetbrains.kotlin:kotlin-test"
+    testCompile "org.jetbrains.kotlin:kotlin-test-junit"
+
+    compile project(':node-api')
+    compile project(':node')
+
+    compile "com.typesafe:config:$typesafe_config_version"
+    compile "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:$jackson_version"
+    compile "com.fasterxml.jackson.core:jackson-databind:$jackson_version"
+    compile "com.fasterxml.jackson.module:jackson-module-kotlin:$jackson_version"
+    compile "info.picocli:picocli:$picocli_version"
+
+    // TornadoFX: A lightweight Kotlin framework for working with JavaFX UI's.
+    compile "no.tornado:tornadofx:$tornadofx_version"
+
+    // ControlsFX: Extra controls for JavaFX.
+    compile "org.controlsfx:controlsfx:$controlsfx_version"
+}
+
+tasks.withType(JavaCompile) {
+    // Resolves a Gradle warning about not scanning for pre-processors.
+    options.compilerArgs << '-proc:none'
+}
+
+processResources {
+    from file("$rootDir/config/dev/log4j2.xml")
+}
+
+shadowJar {
+    baseName = 'network-builder'
+    classifier = null
+    version = null
+    zip64 true
+}
+
+task buildNetworkBuilder(dependsOn: shadowJar)
+assemble.dependsOn buildNetworkBuilder
+
+artifacts {
+    publish shadowJar {
+        classifier = ""
+    }
+}
+
+jar {
+    classifier "ignore"
+    enabled = false
+}
+
+publish {
+    disableDefaultJar = true
+    name 'corda-tools-network-builder'
+}

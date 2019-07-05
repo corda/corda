@@ -33,7 +33,7 @@ import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 
 class FlowsDrainingModeContentionTest {
-    private val portAllocation = incrementalPortAllocation(10000)
+    private val portAllocation = incrementalPortAllocation()
     private val user = User("mark", "dadada", setOf(all()))
     private val users = listOf(user)
 
