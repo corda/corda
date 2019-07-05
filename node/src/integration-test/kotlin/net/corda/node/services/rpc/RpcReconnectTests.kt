@@ -19,6 +19,7 @@ import net.corda.finance.schemas.CashSchemaV1
 import net.corda.node.services.Permissions
 import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.DUMMY_BANK_B_NAME
+import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.OutOfProcess
 import net.corda.testing.driver.driver
@@ -28,6 +29,7 @@ import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.FINANCE_CORDAPPS
+import org.junit.ClassRule
 import org.junit.Test
 import java.util.*
 import java.util.concurrent.CountDownLatch
