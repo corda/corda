@@ -256,9 +256,9 @@ Here is a sample output displayed by the ``run nodeDiagnosticInfo`` command exec
 
 .. code-block:: none
 
-    version: "5.0-SNAPSHOT"
+    version: "|corda_version|"
     revision: "d7e4a0050049be357999f57f69d8bca41a2b8274"
-    platformVersion: 5
+    platformVersion: 4
     vendor: "Corda Open Source"
     cordapps:
     - type: "Contract CorDapp"
