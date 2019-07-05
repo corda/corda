@@ -55,7 +55,7 @@ class CryptoServiceSigningService(private val cryptoService: CryptoService,
                 log.trace { "Crypto service online." }
                 true
             } catch (e: Exception) {
-                log.trace("Crypto service offline.", e)
+                log.error("Crypto service offline.", e)
                 false
             }
         }

@@ -27,6 +27,7 @@ import org.bouncycastle.asn1.x509.AlgorithmIdentifier
 import org.bouncycastle.operator.ContentSigner
 import java.io.ByteArrayOutputStream
 import java.io.FileInputStream
+import java.io.FileNotFoundException
 import java.io.OutputStream
 import java.lang.IllegalArgumentException
 import java.math.BigInteger
@@ -283,6 +284,9 @@ class AzureKeyVaultCryptoService(private val keyVaultClient: KeyVaultClient, pri
 
         fun parseConfigFile(configFile: Path): AzureKeyVaultConfig {
             try {
+                if (!configFile.toFile().exists()) {
+                    throw FileNotFoundException("Configured crypto configuration file [${configFile.toFile().absolutePath}] does not exist")
+                }
                 val config = ConfigFactory.parseFile(configFile.toFile())
                 return config.parseAs(AzureKeyVaultConfig::class)
             } catch (e: Exception) {

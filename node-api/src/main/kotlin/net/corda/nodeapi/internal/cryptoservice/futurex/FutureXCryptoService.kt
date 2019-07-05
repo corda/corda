@@ -105,6 +105,7 @@ class FutureXCryptoService(keyStore: KeyStore, provider: SunPKCS11, x500Principa
 
         fun parseConfigFile(cryptoServiceConf: Path): FutureXConfiguration {
             try {
+                checkConfigurationFileExists(cryptoServiceConf)
                 val config = ConfigFactory.parseFile(cryptoServiceConf.toFile()).resolve()
                 return config.parseAs(FutureXConfiguration::class)
             } catch (e: Exception) {

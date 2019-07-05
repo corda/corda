@@ -51,6 +51,7 @@ class PrimusXCryptoService(keyStore: KeyStore, provider: Provider, x500Principal
 
         fun parseConfigFile(cryptoServiceConf: Path): PrimusXConfiguration {
             try {
+                checkConfigurationFileExists(cryptoServiceConf)
                 val config = ConfigFactory.parseFile(cryptoServiceConf.toFile()).resolve()
                 return config.parseAs(PrimusXConfiguration::class)
             } catch (e: Exception) {
