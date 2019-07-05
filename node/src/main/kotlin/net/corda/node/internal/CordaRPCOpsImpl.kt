@@ -1,14 +1,14 @@
 package net.corda.node.internal
 
 import net.corda.client.rpc.notUsed
-import net.corda.cliutils.CordaVersionProvider
+import net.corda.common.logging.CordaVersion
 import net.corda.core.CordaRuntimeException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
 import net.corda.core.context.InvocationOrigin
 import net.corda.core.contracts.ContractState
-import net.corda.core.contracts.requireThat
-import net.corda.core.cordapp.CordappDiagnosticInfo
+import net.corda.core.cordapp.Cordapp
+import net.corda.core.cordapp.CordappInfo
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
@@ -23,7 +23,6 @@ import net.corda.core.internal.STRUCTURAL_STEP_PREFIX
 import net.corda.core.internal.messaging.InternalCordaRPCOps
 import net.corda.core.internal.sign
 import net.corda.core.messaging.*
-import net.corda.core.node.CordaVersionInfo
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeDiagnosticInfo
 import net.corda.core.node.NodeInfo
@@ -171,25 +170,29 @@ internal class CordaRPCOpsImpl(
     }
 
     override fun nodeDiagnosticInfo(): NodeDiagnosticInfo {
-        val cordaVersion = CordaVersionProvider().getVersion()
-        val delimiter = ": "
-        requireThat {
-            "Corda version must contain four components" using (cordaVersion.size == 4)
-            "Each component must contain 'key: value'" using (cordaVersion.all { it.contains(delimiter) })
-        }
-        val (version, revision, platformVersion, vendor) = cordaVersion.map { it.split(delimiter)[1] }
         return NodeDiagnosticInfo(
-                CordaVersionInfo(version, revision, platformVersion.toInt(), vendor),
-                services.cordappProvider.cordapps.filter { !it.jarPath.toString().endsWith("corda-core-$version.jar") }
-                        .map { CordappDiagnosticInfo(
-                            it.name,
-                            it.info.shortName,
-                            it.minimumPlatformVersion,
-                            it.targetPlatformVersion,
-                            it.info.version,
-                            it.info.vendor,
-                            it.info.licence)
-                })
+                version = CordaVersion.releaseVersion,
+                revision = CordaVersion.revision,
+                platformVersion = CordaVersion.platformVersion,
+                vendor = CordaVersion.vendor,
+                cordapps = services.cordappProvider.cordapps
+                            .filter { !it.jarPath.toString().endsWith("corda-core-${CordaVersion.releaseVersion}.jar") }
+                            .map { CordappInfo(
+                                    type = when (it.info) {
+                                        is Cordapp.Info.Contract -> "Contract CorDapp"
+                                        is Cordapp.Info.Workflow -> "Workflow CorDapp"
+                                        else -> "CorDapp"
+                                    },
+                                    name = it.name,
+                                    shortName = it.info.shortName,
+                                    minimumPlatformVersion = it.minimumPlatformVersion,
+                                    targetPlatformVersion = it.targetPlatformVersion,
+                                    version = it.info.version,
+                                    vendor = it.info.vendor,
+                                    licence = it.info.licence,
+                                    jarHash = it.jarHash)
+                            }
+        )
     }
 
     override fun notaryIdentities(): List<Party> {
