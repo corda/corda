@@ -261,29 +261,20 @@ Here is a sample output displayed by the ``run nodeDiagnosticInfo`` command exec
     platformVersion: 5
     vendor: "Corda Open Source"
     cordapps:
-    - type: "CorDapp"
-      name: "bank-of-corda-demo-5.0-SNAPSHOT"
-      shortName: "Bank of Corda Demo"
-      minimumPlatformVersion: 1
-      targetPlatformVersion: 5
-      version: "1"
-      vendor: "R3"
-      licence: "Unknown"
-      jarHash: "09B0B4D332DE437F202A79E0185185E5D971B68AF85A72AB8BF166534D596981"
     - type: "Contract CorDapp"
-      name: "corda-finance-contracts-5.0-SNAPSHOT"
+      name: "corda-finance-contracts-|corda_version|"
       shortName: "Corda Finance Demo"
       minimumPlatformVersion: 1
-      targetPlatformVersion: 5
+      targetPlatformVersion: 4
       version: "1"
       vendor: "R3"
       licence: "Open Source (Apache 2)"
       jarHash: "570EEB9DF4B43680586F3BE663F9C5844518BC2E410EAF9904E8DEE930B7E45C"
     - type: "Workflow CorDapp"
-      name: "corda-finance-workflows-5.0-SNAPSHOT"
+      name: "corda-finance-workflows-|corda_version|"
       shortName: "Corda Finance Demo"
       minimumPlatformVersion: 1
-      targetPlatformVersion: 5
+      targetPlatformVersion: 4
       version: "1"
       vendor: "R3"
       licence: "Open Source (Apache 2)"
