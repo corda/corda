@@ -162,10 +162,8 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
         if (networkMapClient == null) {
             throw CordaRuntimeException("Network map cache can be updated only if network map/compatibility zone URL is specified")
         }
-
         val (globalNetworkMap, cacheTimeout) = networkMapClient.getNetworkMap()
         globalNetworkMap.parametersUpdate?.let { handleUpdateNetworkParameters(networkMapClient, it) }
-
         val additionalHashes = extraNetworkMapKeys.flatMap {
             try {
                 networkMapClient.getNetworkMap(it).payload.nodeInfoHashes
@@ -175,20 +173,15 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
                 emptyList<SecureHash>()
             }
         }
-
         val allHashesFromNetworkMap = (globalNetworkMap.nodeInfoHashes + additionalHashes).toSet()
-
         if (currentParametersHash != globalNetworkMap.networkParameterHash) {
             exitOnParametersMismatch(globalNetworkMap)
         }
-
         val currentNodeHashes = networkMapCache.allNodeHashes
-
         // Remove node info from network map.
         (currentNodeHashes - allHashesFromNetworkMap - nodeInfoWatcher.processedNodeInfoHashes)
                 .mapNotNull { if (it != ourNodeInfoHash) networkMapCache.getNodeByHash(it) else null }
                 .forEach(networkMapCache::removeNode)
-
         //at the moment we use a blocking HTTP library - but under the covers, the OS will interleave threads waiting for IO
         //as HTTP GET is mostly IO bound, use more threads than CPU's
         //maximum threads to use = 24, as if we did not limit this on large machines it could result in 100's of concurrent requests
@@ -196,7 +189,6 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
         val executorToUseForDownloadingNodeInfos = Executors.newFixedThreadPool(threadsToUseForNetworkMapDownload, NamedThreadFactory("NetworkMapUpdaterNodeInfoDownloadThread"))
         //DB insert is single threaded - use a single threaded executor for it.
         val executorToUseForInsertionIntoDB = Executors.newSingleThreadExecutor(NamedThreadFactory("NetworkMapUpdateDBInsertThread"))
-
         val hashesToFetch = (allHashesFromNetworkMap - currentNodeHashes)
         val networkMapDownloadStartTime = System.currentTimeMillis()
         if (hashesToFetch.isNotEmpty()) {
@@ -218,7 +210,6 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
                             networkMapCache.addNodes(retrievedNodeInfos)
                         }, executorToUseForInsertionIntoDB)
                     }.toTypedArray()
-
             //wait for all the futures to complete
             val waitForAllHashes = CompletableFuture.allOf(*networkMapDownloadFutures)
             waitForAllHashes.thenRunAsync {
@@ -227,11 +218,9 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
                 executorToUseForInsertionIntoDB.shutdown()
             }.getOrThrow()
         }
-
         // Mark the network map cache as ready on a successful poll of the HTTP network map, even on the odd chance that
         // it's empty
         networkMapCache.nodeReady.set(null)
-
         return cacheTimeout
     }
 
