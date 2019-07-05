@@ -24,10 +24,18 @@ data class BridgeSSLConfigurationImpl(private val sslKeystore: Path,
     override val trustStore = FileBasedCertificateStoreSupplier(trustStoreFile, trustStorePassword, trustStorePassword)
 }
 
+private const val ZERO_ADDRESS = "0.0.0.0"
+
 data class BridgeOutboundConfigurationImpl(override val artemisBrokerAddress: NetworkHostAndPort,
                                            override val alternateArtemisBrokerAddresses: List<NetworkHostAndPort>,
                                            override val artemisSSLConfiguration: BridgeSSLConfigurationImpl?,
-                                           override val proxyConfig: ProxyConfig? = null) : BridgeOutboundConfiguration
+                                           override val proxyConfig: ProxyConfig? = null) : BridgeOutboundConfiguration {
+
+    init {
+        require(artemisBrokerAddress.host != ZERO_ADDRESS) { "$ZERO_ADDRESS is not allowed as artemisBrokerAddress" }
+        require(alternateArtemisBrokerAddresses.all { it.host != ZERO_ADDRESS }) { "$ZERO_ADDRESS is not allowed in alternateArtemisBrokerAddresses" }
+    }
+}
 
 data class BridgeInboundConfigurationImpl(override val listeningAddress: NetworkHostAndPort,
                                           override val customSSLConfiguration: BridgeSSLConfigurationImpl?) : BridgeInboundConfiguration
@@ -35,7 +43,11 @@ data class BridgeInboundConfigurationImpl(override val listeningAddress: Network
 data class BridgeInnerConfigurationImpl(override val floatAddresses: List<NetworkHostAndPort>,
                                         override val expectedCertificateSubject: CordaX500Name,
                                         override val tunnelSSLConfiguration: BridgeSSLConfigurationImpl?,
-                                        override val enableSNI: Boolean = true) : BridgeInnerConfiguration
+                                        override val enableSNI: Boolean = true) : BridgeInnerConfiguration {
+    init {
+        require(floatAddresses.all { it.host != ZERO_ADDRESS }) { "$ZERO_ADDRESS is not allowed in floatAddresses" }
+    }
+}
 
 data class FloatOuterConfigurationImpl(override val floatAddress: NetworkHostAndPort,
                                        override val expectedCertificateSubject: CordaX500Name,

@@ -333,4 +333,11 @@ class ConfigTest {
         assertEquals(SupportedCryptoServices.FUTUREX, config.tunnelingCryptoServiceConfig?.name)
         assertEquals(Paths.get("./futurex.conf"), config.tunnelingCryptoServiceConfig?.conf)
     }
+
+    @Test
+    fun `Invalid Zero address config`() {
+        val configResource = "/net/corda/bridge/zeroAddress/bridge/firewall.conf"
+        Assertions.assertThatThrownBy { createAndLoadConfigFromResource(tempFolder.root.toPath(), configResource) }
+                .hasMessage("0.0.0.0 is not allowed in floatAddresses")
+    }
 }
