@@ -111,7 +111,7 @@ Corda network may contain multiple notaries that provide their guarantees using 
 Corda is not tied to any particular consensus algorithm. (\cref{sec:notaries})
 \item Data is shared on a need-to-know basis. Nodes provide the dependency graph of a transaction they are sending to
 another node on demand, but there is no global broadcast of \emph{all} transactions.
-\item Bytecode-to-bytecode transpilation is used to allow complex, multi-step transaction building protocols called
+\item Bytecode-to-bytecode transformation is used to allow complex, multi-step transaction building protocols called
 \emph{flows} to be modelled as blocking code. The code is transformed into an asynchronous state machine, with
 checkpoints written to the node's backing database when messages are sent and received. A node may potentially have
 millions of flows active at once and they may last days, across node restarts and even certain kinds of upgrade. Flows expose progress
@@ -170,14 +170,15 @@ The Corda transaction format has various other features which are described in l
 
 \section{The peer to peer network}
 
-\subsection{Network overview}
+\subsection{Overview}
+
 A Corda network consists of the following components:
 
 \begin{itemize}
 \item Nodes, operated by \emph{parties}, communicating using AMQP/1.0 over TLS.
-\item An \emph{doorman} service, that grants parties permission to use the network by provisioning identity certificates.
+\item An \emph{identity} service which runs an X.509 certificate authority.
 \item A network map service that publishes information about how to connect to nodes on the network.
-\item One or more notary services. A notary may itself be distributed over a coalition of different parties.
+\item One or more notary services. A notary may be decentralised over a coalition of different parties.
 \item Zero or more oracle services. An oracle is a well known service that signs transactions if they state a fact
 and that fact is considered to be true. They may also optionally also provide the facts. This is how the ledger can be
 connected to the real world, despite being fully deterministic.
@@ -185,36 +186,33 @@ connected to the real world, despite being fully deterministic.
 
 % TODO: Add section on zones and network parameters
 
-A purely in-memory implementation of the messaging subsystem is provided which can inject simulated latency between
-nodes and visualise communications between them. This can be useful for debugging, testing and educational
-purposes.
-
 Oracles and notaries are covered in later sections.
 
-\subsection{Identity and the permissioning service}
+\subsection{The identity root}\label{subsec:the-identity-root}
 
-Unlike Bitcoin and Ethereum, Corda is designed for semi-private networks in which admission requires obtaining an
-identity signed by a root authority. This assumption is pervasive -- the flow API provides messaging in terms of
-identities, with routing and delivery to underlying nodes being handled automatically. There is no global broadcast
-at any point.
+Taking part in a Corda network as a node requires an identity certificate. These certificates bind a human readable
+name to a public key and are signed by the network operator. Having a signed identity grants the ability to take
+part in the top layer of the network, but it's important to understand that users can participate in the ledger
+\emph{without} having an issued identity. Only a raw key pair is necessary if a node that \emph{does} have an
+identity is willing to route traffic on your behalf. This structure is similar to the email network, in which users
+without servers can take part by convincing a server operator to grant them an account. How network identities and
+accounts relate to each other is discussed in a later section (section~\cref{sec:identity}).
 
-This `identity' does not have to be a legal or true identity. In the same way that an email address is a globally
-unique pseudonym that is ultimately rooted by the top of the DNS hierarchy, so too can a Corda network work with
+This `identity' does not have to be a legal or true name. In the same way that an email address is a globally
+unique pseudonym that is ultimately rooted by the top of the DNS hierarchy, so too can a Corda network use
 arbitrary self-selected usernames. The permissioning service can implement any policy it likes as long as the
-identities it signs are globally unique. Thus an entirely anonymous Corda network is possible if a suitable IP
-obfuscation system like Tor\cite{Dingledine:2004:TSO:1251375.1251396} is also used.
+identities it signs are globally unique. Thus it's possible to build an entirely pseudonymous Corda network.
 
-Whilst simple string identities are likely sufficient for some networks, industrial deployments typically require
-some level of identity verification, as well as differentiation between different legal entities, branches and
-desks that may share the same brand name. Corda reuses the standard PKIX infrastructure for connecting public keys
-to identities and thus names are actually X.500 names. Because legal names are unique only within a jurisdiction,
-the additional structure X.500 provides is useful  to differentiate between entities with the same name. For
-example there are at least five different companies called \emph{American Bank} and in the past there may have been
-more than 40 independent banks with that name.
+However, when a network has a way to map identities to some sort of real world thing that's difficult to bulk create
+many efficient and useful algorithms become available. Most importantly, all efficient byzantine fault tolerant
+consensus algorithms require nodes to be usefully distinct such that users can reason about the likelihood of cluster
+members going bad simultaneously. In the worst case where a BFT cluster consists of a single player pretending to be
+several, the security of the system is completely voided in an undetectable manner. Useful privacy techniques like
+mix networks and Tor\cite{Dingledine:2004:TSO:1251375.1251396} also make the assumption of unique, sybil-free
+identities. For these reasons the mainline Corda network performs identity verification and requires that
+top-level members be companies, and it's recommended that all networks do so.
 
-More complex notions of identity that may attest to many time-varying attributes are not handled at this layer of
-the system: the base identity is always just an X.500 name. Note that even though messaging is always identified,
-ledger data itself may contain only anonymised public keys.
+Identity is covered further in section~\cref{sec:identity}.
 
 \subsection{The network map}
 
@@ -433,6 +431,106 @@ the issuer is trusted to behave atomically even when the ledger isn't forcing at
 `exited' from the ledger and then re-issued. Because there are no links between the exit and reissue transactions
 this shortens the chain. In practice most issuers of highly liquid assets are already trusted with far more
 sensitive tasks than reliably issuing pairs of signed data structures, so this approach is unlikely to be an issue.
+
+\section{Identity}\label{sec:identity}
+
+In all decentralised ledger systems data access is controlled using asymmetric key pairs. Because public keys are
+difficult for humans to reliably remember or write down, a naming layer is added on top based on X.509 certificate
+hierarchies rooted at a single certificate authority for each network (see~\cref{subsec:the-identity-root}).
+
+More complex notions of identity that may attest to many time-varying attributes are not handled at this layer of
+the system: the base identity is always just an X.500 name. Note that even though messaging is always identified,
+ledger data itself may contain anonymous public keys that aren't linked to any part of the network's PKI.
+
+In most implementations, the network map will only agree to list nodes that have a valid identity certificate.
+Because nodes will only accept connections from other nodes in the network map by default, this provides a form of
+abuse control in which abusive parties can be evicted from the network. `Abuse' in this context has a technical
+connotation, for example, mounting application level denial of service attacks, being discovered using a
+fraudulently obtained identity or failing to meet network policy, for example by falling too far behind the
+minimum required platform version.
+
+The design attempts to constrain what malicious or compromised network operators can do.  A compromised network
+operator may decide to delist a node for reasons that were not previously agreed to. Such an operator can be
+overridden locally by providing signed \texttt{NodeInfo} files to a node, which would allow flows and transactions
+to continue. It's possible that in future a way to override the identity root may also be provided.
+
+An important point is that naming is only used for \emph{resolution} to public keys or IP addresses, however, names
+are not \emph{required} for this resolution. They're just a convenience. The ledger is intended to contain resolved
+public keys for access control purposes: this design creates an important limitation on the power of the naming
+authority. Maliciously issuing a certificate binding a pre-existing name to a new key owned by the attacker doesn't
+allow them to edit any of the existing data on the ledger, nor steal assets, as the states contain only keys which
+cannot be changed after a state is created. This in turn implies that, like with all block chain systems, there's
+no way to recover from losing your keys. A future version of the platform may add limited support for key rotation
+by having both key owner and identity root sign a key change message, but the design does not anticipate ever
+allowing the identity root to unilaterally re-assign identities to someone else.
+
+An additional impact of this decision is that public keys can be discovered via alternate means and then used on
+ledger. QR codes, Bluetooth discovery, alternate or even competing naming services and direct input are all
+possible ways to obtain public keys.
+
+\subsection{Hierarchical identity}\label{subsec:hierarchical-identity}
+
+The peer-to-peer network is flat and requires that any node can directly connect to any other. However it would be
+useful to extend the network to be multi-level, such that entities without nodes can nonetheless take part in a
+limited way via a proxy or hosting node of some kind. This requires a way to identify these entities such that they
+can be linked to their hosting node.
+
+The certificate hierarchy is designed to create a flexible global namespace in which organisations, individuals,
+devices and groups can all be bound to public keys. The standard web PKI uses X.509 path length constraints to
+prevent holders of certificates issuing themselves more sub-certificates, but Corda uses X.509 name constraints to
+enable sub-certificates. A holder of a certificate with a name like \texttt{C=US, S=CA, O=MegaCorp} (a company
+called MegaCorp in California) can issue certificates for names with additional components, for example,
+\texttt{C=US, S=CA, O=MegaCorp, CN=user@megacorp.com}. These components could reflect employees, account holders or
+machines manufactured by the firm. Future versions of the flow framework will understand how to route flow sessions
+based on these names via their controlling organisational nodes by simply finding the most precise match for the
+name (after discarding suffixes) in the network map, thus enabling apps to start structured conversations with
+those entities.
+
+\subsection{Confidential identities}\label{subsec:confidential-identities}
+
+A standard privacy technique in block chain systems is the use of randomised unlinkable public keys to stand in for
+actual verified identities. The platform allows an identity to be obfuscated on the ledger by generating keys not
+linked anywhere in the PKI and then using them in the ledger. Ownership of these pseudonyms may be revealed to a
+counterparty using a simple interactive protocol in which Alice selects a random nonce (`number used once') and
+sends it to Bob, who then signs the nonce with the private key corresponding to the public key he is proving
+ownership of. The resulting signature is then checked and the association between the anonymous key and the primary
+identity key is recorded by the requesting node. This protocol is provided to application developers as a set of
+subflows they can incorporate into their apps. Resolution of transaction chains thus doesn't reveal anything about
+who took part in the transaction.
+
+Generating fresh keys for each new deal or asset transfer rapidly results in many private keys being created. These
+keys must all be backed up and kept safe, which poses a significant management problem when done at scale. The
+canonical way to resolve this problem is through the use of deterministic key derivation, as pioneered by the
+Bitcoin community in BIP 32 `Hierarchical Deterministic Wallets'\cite{BIP32}. Deterministic key derivation allows
+all private key material needed to be derived from a single, small pool of entropy (e.g. a carefully protected and
+backed up 128 bits of random data). More importantly, when the full BIP 32 technique is used in combination with an
+elliptic curve that supports it, public keys may also be deterministically derived \emph{without} access to the
+underlying private key material. This allows devices to provide fresh public keys to counterparties without being
+able to sign with those keys, enabling better security along with operational efficiencies.
+
+There are constraints on the mathematical properties of the digital signature algorithms parties use, and the
+protocol signature algorithms for which deterministic derivation isn't possible. Additionally it's common for nodes
+to keep their private keys in hardware security modules that may also not support deterministic derivation.
+However, implementations are recommended to use hierarchical deterministic key derivation when possible.
+
+% CODEME: The platform doesn't do suffix stripping at the moment.
+
+\subsection{Accounts}\label{subsec:accounts}
+
+The ability for nodes to use confidential identities isn't only useful for anonymising the node owner. It's
+possible to locally mark anonymous keys with private, randomly generated \emph{universally unique identifiers}
+(UUIDs). These UUIDs can be used for any purpose, but a typical use is to assign keys as owned by some node user
+that isn't otherwise exposed to the ledger. The flow framework understands how to start a flow with a
+confidential identity if the subflows discussed above have been used to establish ownership beforehand.
+
+This feature must be used with care. There's no way for the private key to be held outside the node at the time
+of writing and enabling non-node software to safely sign transactions requires some subtle enhancements
+(see~\cref{sec:secure-signing-devices}). Moreover it's only reasonable to do this in specific situations, such
+as when the signer of a transaction is an employee of the organisation hosting the node. This is because whilst
+signing external to the node may reduce the impact of a compromised server the node itself still has full access
+to all the data (account holder has no privacy from the node operator), and the node may mis-report
+the contents of the ledger at any time. Thus the node still has considerable power, even in a situation where
+the signing keys are no longer directly accessible.
 
 \section{Data model}
 
@@ -1127,7 +1225,7 @@ game-theoretic assumptions or legal assurances are sufficiently strong that peer
 transaction data as part of their regular flows.
 
 To solve this, app developers can choose whether to request transaction distribution by the notary or not. This
-works by simply piggybacking on the standard identity lookup flows (see~\cref{sec:identity-lookups}). If a node
+works by simply piggybacking on the standard identity lookup flows (see~\cref{sec:identity}). If a node
 wishes to be informed by the notary when a state is consumed, it can send the certificates linking the random keys
 in the state to the notary cluster, which then stores it in the local databases as per usual. Once the notary
 cluster has committed the transaction, key identities are looked up and any which resolve successfully are sent
@@ -1210,27 +1308,7 @@ annotated in other ways, for instance to customise its mapping to XML/JSON, or t
 constraints~\cite{BeanValidation}. These annotations won't affect the behaviour of the node directly but may be
 useful when working with states in surrounding software.
 
-\subsection{Confidential identities}\label{sec:confidential-identities}
-
-A standard privacy technique in block chain systems is the use of randomised unlinkable public keys to stand in for
-actual verified identities. Ownership of these pseudonyms may be revealed to a counterparty using a simple
-interactive protocol in which Alice selects a random nonce (`number used once') and sends it to Bob, who then signs
-the nonce with the private key corresponding to the public key he is proving ownership of.
-
-Generating fresh keys for each new deal or asset transfer rapidly results in many private keys being created. These
-keys must all be backed up and kept safe, which poses a significant management problem when done at scale. The
-canonical way to resolve this problem is through the use of deterministic key derivation, as pioneered by the
-Bitcoin community in BIP 32 `Hierarchical Deterministic Wallets'\cite{BIP32}. Deterministic key derivation allows
-all private key material needed to be derived from a single, small pool of entropy (e.g. a carefully protected and
-backed up 128 bits of random data). More importantly, when the full BIP 32 technique is used in combination with an
-elliptic curve that supports it, public keys may also be deterministically derived \emph{without} access to the
-underlying private key material. This allows devices to provide fresh public keys to counterparties without being
-able to sign with those keys, enabling better security along with operational efficiencies.
-
-Corda does not place any constraints on the mathematical properties of the digital signature algorithms parties
-use. However, implementations are recommended to use hierarchical deterministic key derivation when possible.
-
-\section{Client RPC and reactive collections}
+\section{Client RPC and reactive collections}\label{sec:client-rpc-and-reactive-collections}
 
 Any realistic deployment of a distributed ledger faces the issue of integration with an existing ecosystem of
 surrounding tools and processes. Ideally, programs that interact with the node will be loosely coupled,
@@ -1760,6 +1838,35 @@ intermediate representation into systems of constraints. Direct translation of a
 constraints would be best integrated with recent research into `scalable probabilistically checkable
 proofs'\cite{cryptoeprint:2016:646}, and is an open research problem.
 
+\subsection{Machine identity}\label{subsec:machine-identity}
+
+On-ledger transactions may sometimes be intimately connected to the state of physical objects. Consider the example
+of an electric car being plugged into a recharging port. The owner of the port wishes to bill the owner of the
+vehicle for consumed power, but in a manner that minimises trust. Minimising trust is useful as it allows the
+owner of the recharging port to do without any expensive brand-building and keeps enrollment overheads for the
+vehicle owners low. The result would be an open access charging network. To achieve this various security and
+privacy requirements should be met, for example:
+
+\begin{itemize}
+    \item The recharging port may over-bill the vehicle owner.
+    \item The vehicle owner may misreport their identity, to stick someone else with the costs.
+    \item The machine being plugged in might not be a vehicle at all, which could be problematic if the business
+          model of the port owner assumes a temporary stop by the driver (for instance, nearby shops may be
+          subsidising power).
+    \item The vehicle owner may not pay.
+    \item Vehicle manufacturers should not learn anything about where the drivers are going.
+\end{itemize}
+
+Solving this requires authenticated data from identified sensors to be integrated with the flows and states of an
+application. One way to do this would be for the manufacturer to embed a key pair into the sensors and then issuing
+a sub-certificate at the factory which chains to the manufacturer's identity. Device-specific connectivity to the
+manufacturer node would allow the sensors to be reached via the flow framework, and they can then act as oracles
+for the state of the physical system e.g. how much power has flowed through the recharging cable. The identity
+framework solves the question of device authenticity, filtered transactions solve the question of how to check and
+sign transactions on lower power devices, and the flow framework solves the challenge of having nodes contact
+sensors or vice-versa across potentially multiple layers of routers, proxies, message queues etc. Because the Corda
+protocol is built on top of standard AMQP, a subset of it can be implemented in C++ for lightweight devices without
+much CPU power. A prototype of such a library already exists.
 
 \section{Conclusion}
 
