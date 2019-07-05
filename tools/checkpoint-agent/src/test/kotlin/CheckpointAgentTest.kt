@@ -1,5 +1,17 @@
+import co.paralleluniverse.strands.Strand
+import com.sun.tools.attach.VirtualMachine
+import net.corda.core.internal.*
 import net.corda.tools.CheckpointAgent
+import net.corda.tools.CheckpointHook
 import org.junit.Test
+import sun.misc.VMSupport
+import java.lang.Thread.sleep
+import java.lang.management.ManagementFactory
+import kotlin.reflect.KMutableProperty
+import kotlin.reflect.KProperty
+import kotlin.reflect.full.memberProperties
+import kotlin.reflect.jvm.isAccessible
+import kotlin.reflect.jvm.javaField
 
 class CheckpointAgentTest {
 
@@ -42,4 +54,88 @@ class CheckpointAgentTest {
         CheckpointAgent.instrumentType = CheckpointAgent.DEFAULT_INSTRUMENT_TYPE
         CheckpointAgent.fiberName = null
     }
+
+    @Test
+    fun testReflection() {
+        try {
+            println("CheckpointAgent (C)")
+            val checkpointAgent = Class.forName("net.corda.tools.CheckpointAgent").kotlin
+            println(checkpointAgent.memberProperties)
+
+            println("CheckpointHook (O)")
+            val checkpointHook = Class.forName("net.corda.tools.CheckpointHook").kotlin
+            checkpointHook.memberProperties.forEach { println(it) }
+
+            val fieldStrandId = checkpointHook.memberProperties.first { it.name == "strand" }
+            println("Field name: ${fieldStrandId.javaField}")
+
+            fieldStrandId.javaField?.isAccessible = true
+            println("Field value: ${fieldStrandId.javaField?.get(checkpointHook)}")
+            fieldStrandId.javaField?.set(checkpointHook, Strand.of(Thread.currentThread()))
+            println("Field value: ${fieldStrandId.javaField?.get(checkpointHook)}")
+        }
+        catch (e: Exception) {
+            println(e)
+        }
+    }
+
+    @Test
+    fun testReflectionUtils() {
+        try {
+            val instance = CheckpointHook::class.objectOrNewInstance()
+            println(instance.strand)
+            instance.strand = Strand.of(Thread.currentThread())
+            println(instance.strand)
+        }
+        catch (e: Exception) {
+            println(e)
+        }
+    }
+
+    @Test
+    fun testReflectionUtilsDynamically() {
+        try {
+            val checkpointHook = Class.forName("net.corda.tools.CheckpointHook").kotlin
+            val instance = checkpointHook.objectOrNewInstance()
+            val strand = instance.declaredField<Strand>(instance.javaClass, "strand")
+            println("${strand.name} = ${strand.value}")
+            strand.value = Strand.of(Thread.currentThread())
+            println("${strand.name} = ${strand.value}")
+        }
+        catch (e: Exception) {
+            println(e)
+        }
+    }
+
+    @Test
+    fun testAgentRunningInVM() {
+        val agentProperties = VMSupport.getAgentProperties()
+        val isRunning = agentProperties.values.any { value ->
+            (value is String && value.contains("checkpoint-agent.jar"))
+        }
+        if (isRunning) {
+            println("\nAgent is running")
+        }
+        else {
+            println("\nAgent is not running")
+        }
+    }
+
+    @Test
+    fun testAgentRunningInVMwithAttach() {
+        val vms = VirtualMachine.list()
+        vms.forEach { println(it) }
+
+        val pid = ManagementFactory.getRuntimeMXBean().name.substringBefore("@")
+        println(pid)
+
+        val vm = VirtualMachine.attach(pid)
+        if (vm.agentProperties.values.any { value ->
+                    (value is String && value.contains("checkpoint-agent.jar"))
+                })
+            println("\nAgent is running")
+        else
+            println("\nAgent is not running")
+    }
+
 }

@@ -12,7 +12,6 @@ import net.corda.tools.CheckpointAgent.Companion.instrumentClassname
 import net.corda.tools.CheckpointAgent.Companion.instrumentType
 import net.corda.tools.CheckpointAgent.Companion.maximumSize
 import net.corda.tools.CheckpointAgent.Companion.minimumSize
-import net.corda.tools.CheckpointAgent.Companion.strand
 import org.slf4j.LoggerFactory
 import java.io.ByteArrayInputStream
 import java.lang.instrument.ClassFileTransformer
@@ -43,13 +42,6 @@ class CheckpointAgent {
         var instrumentType = DEFAULT_INSTRUMENT_TYPE
         var fiberName : UUID? = null
 
-        // Global static variable that can be set programmatically by 3rd party tools/code (eg. CheckpointDumper)
-        var strand : Strand? = null
-            set(value) {
-                println("Instrumenting strand: ${strand?.id}")
-                strand = value
-            }
-
         val log by lazy {
             LoggerFactory.getLogger("CheckpointAgent")
         }
@@ -78,7 +70,7 @@ class CheckpointAgent {
                     else println("Missing value for argument: $nvpItem")
                 }
             }
-            println("Running Checkpoint agent with following arguments: instrumentClassname = $instrumentClassname, instrumentType = $instrumentType, minimumSize = $minimumSize, maximumSize = $maximumSize")
+            println("Running Checkpoint agent with following arguments: instrumentClassname = $instrumentClassname, instrumentType = $instrumentType, minimumSize = $minimumSize, maximumSize = $maximumSize\n")
             fiberName?.let { println("Diagnosing checkpoints for fiberName: $fiberName") }
         }
     }
@@ -92,8 +84,14 @@ class CheckpointAgent {
  */
 object CheckpointHook : ClassFileTransformer {
     val classPool = ClassPool.getDefault()
-
     val hookClassName = javaClass.name
+
+    // Global static variable that can be set programmatically by 3rd party tools/code (eg. CheckpointDumper)
+    var strand : Strand? = null
+        set(value) {
+            println("Instrumenting strand: $value")
+            field = value
+        }
 
     override fun transform(
             loader: ClassLoader?,
@@ -122,7 +120,7 @@ object CheckpointHook : ClassFileTransformer {
                     val parameterTypeNames = method.parameterTypes.map { it.name }
                     if (parameterTypeNames == listOf("com.esotericsoftware.kryo.Kryo", "com.esotericsoftware.kryo.io.Output", "java.lang.Object")) {
                         if (method.isEmpty) continue
-//                        println("Instrumenting on write: ${clazz.name}")
+                        println("Instrumenting on write: ${clazz.name}")
                         method.insertBefore("$hookClassName.${this::writeEnter.name}($1, $2, $3);")
                         method.insertAfter("$hookClassName.${this::writeExit.name}($1, $2, $3);")
                         return clazz
@@ -134,7 +132,7 @@ object CheckpointHook : ClassFileTransformer {
                     val parameterTypeNames = method.parameterTypes.map { it.name }
                     if (parameterTypeNames == listOf("com.esotericsoftware.kryo.Kryo", "com.esotericsoftware.kryo.io.Input", "java.lang.Class")) {
                         if (method.isEmpty) continue
-//                        println("Instrumenting on read: ${clazz.name}")
+                        println("Instrumenting on read: ${clazz.name}")
                         method.insertBefore("$hookClassName.${this::readEnter.name}($1, $2, $3);")
                         method.insertAfter("$hookClassName.${this::readExit.name}($1, $2, $3);")
                         return clazz
@@ -188,7 +186,7 @@ object CheckpointHook : ClassFileTransformer {
         if (strand != null && strand != Strand.currentStrand())
             return
         val (list, count) = events.getOrPut(Strand.currentStrand().id) { Pair(ArrayList(), AtomicInteger(0)) }
-//        println("readEnter: $clazz, ${input.total()}")
+        println("readEnter: COUNT:$count, $clazz, ${input.total()}")
         list.add(StatsEvent.Enter(clazz.name, input.total()))
         count.incrementAndGet()
     }
@@ -198,7 +196,7 @@ object CheckpointHook : ClassFileTransformer {
             return
         val (list, count) = events[Strand.currentStrand().id]!!
         list.add(StatsEvent.Exit(clazz.name, input.total()))
-        println("readExit: $clazz, ${input.total()}")
+        println("readExit: COUNT:$count, $clazz, ${input.total()}")
         if ((count.decrementAndGet() == 0) &&
                 (clazz.name == instrumentClassname) &&
                 (input.total() >= minimumSize) &&

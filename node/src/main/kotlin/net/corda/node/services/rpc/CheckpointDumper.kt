@@ -1,6 +1,7 @@
 package net.corda.node.services.rpc
 
 import co.paralleluniverse.fibers.Stack
+import co.paralleluniverse.strands.Strand
 import com.fasterxml.jackson.annotation.JsonAutoDetect
 import com.fasterxml.jackson.annotation.JsonAutoDetect.Visibility
 import com.fasterxml.jackson.annotation.JsonFormat
@@ -24,9 +25,11 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowInfo
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
+import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
+import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
@@ -43,6 +46,8 @@ import net.corda.node.services.statemachine.*
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.serialization.internal.CheckpointSerializeAsTokenContextImpl
 import net.corda.serialization.internal.withTokenContext
+import sun.misc.VMSupport
+import java.nio.file.Path
 import java.time.Duration
 import java.time.Instant
 import java.time.ZoneOffset.UTC
@@ -53,7 +58,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
-class CheckpointDumper(private val checkpointStorage: CheckpointStorage, private val database: CordaPersistence, private val serviceHub: ServiceHubInternal) {
+class CheckpointDumper(private val checkpointStorage: CheckpointStorage, private val database: CordaPersistence, private val serviceHub: ServiceHub, val baseDirectory: Path) {
     companion object {
         private val TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss").withZone(UTC)
         private val log = contextLogger()
@@ -91,13 +96,15 @@ class CheckpointDumper(private val checkpointStorage: CheckpointStorage, private
 
     fun dump() {
         val now = serviceHub.clock.instant()
-        val file = serviceHub.configuration.baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME / "checkpoints_dump-${TIME_FORMATTER.format(now)}.zip"
+        val file = baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME / "checkpoints_dump-${TIME_FORMATTER.format(now)}.zip"
         try {
             if (lock.getAndIncrement() == 0 && !file.exists()) {
                 database.transaction {
                     checkpointStorage.getAllCheckpoints().use { stream ->
                         ZipOutputStream(file.outputStream()).use { zip ->
                             stream.forEach { (runId, serialisedCheckpoint) ->
+                                if (checkpointAgentRunning())
+                                    instrumentCheckpointAgent(runId)
                                 val checkpoint = serialisedCheckpoint.checkpointDeserialize(context = checkpointSerializationContext)
                                 val json = checkpoint.toJson(runId.uuid, now)
                                 val jsonBytes = writer.writeValueAsBytes(json)
@@ -113,6 +120,28 @@ class CheckpointDumper(private val checkpointStorage: CheckpointStorage, private
             }
         } finally {
             lock.decrementAndGet()
+        }
+    }
+
+    private fun instrumentCheckpointAgent(checkpointId: StateMachineRunId) {
+        log.info("Checkpoint agent processing checkpointId: $checkpointId")
+        try {
+            val checkpointHook = Class.forName("net.corda.tools.CheckpointHook").kotlin
+            val instance = checkpointHook.objectOrNewInstance()
+            val strand = instance.declaredField<Strand>(instance.javaClass, "strand")
+            println("${strand.name} = ${strand.value}")
+            strand.value = Strand.currentStrand()
+            println("${strand.name} = ${strand.value}")
+        }
+        catch (e: Exception) {
+            log.error("Checkpoint agent instrumentation failed for checkpointId: $checkpointId\n. ${e.message}")
+        }
+    }
+
+    private fun checkpointAgentRunning(): Boolean {
+        val agentProperties = VMSupport.getAgentProperties()
+        return agentProperties.values.any { value ->
+            (value is String && value.contains("checkpoint-agent.jar"))
         }
     }
 
