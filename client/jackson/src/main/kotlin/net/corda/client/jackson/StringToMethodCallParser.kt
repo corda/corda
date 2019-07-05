@@ -239,14 +239,17 @@ open class StringToMethodCallParser<in T : Any> @JvmOverloads constructor(
     /** Returns a string-to-string map of commands to a string describing available parameter types. */
     val availableCommands: Map<String, String>
         get() {
-            return methodMap.entries().map { (name, args) ->
-                val argStr = if (args.parameterCount == 0) "" else {
-                    val paramNames = methodParamNames[name]!!
-                    val typeNames = args.parameters.map { it.type.simpleName }
-                    val paramTypes = paramNames.zip(typeNames)
-                    paramTypes.joinToString(", ") { "${it.first}: ${it.second}" }
+            return methodMap.entries().mapNotNull { (name, args) ->
+                if (args.parameterCount == 0) {
+                    Pair(name, "")
+                } else {
+                    methodParamNames[name]?. let { params ->
+                        val typeNames = args.parameters.map { it.type.simpleName }
+                        val paramTypes = params.zip(typeNames)
+                        val paramNames = paramTypes.joinToString(", ") { "${it.first}: ${it.second}" }
+                        Pair(name, paramNames)
+                    }
                 }
-                Pair(name, argStr)
             }.toMap()
         }
 }

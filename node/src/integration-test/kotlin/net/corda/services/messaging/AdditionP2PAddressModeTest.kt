@@ -25,7 +25,7 @@ import org.junit.Test
 import java.util.*
 
 class AdditionP2PAddressModeTest {
-    private val portAllocation = incrementalPortAllocation(27182)
+    private val portAllocation = incrementalPortAllocation()
     @Test
     fun `runs nodes with one configured to use additionalP2PAddresses`() {
         val testUser = User("test", "test", setOf(all()))

@@ -194,3 +194,12 @@ inline fun <reified T : Any> Path.readObject(): T = readAll().deserialize()
 
 /** Calculate the hash of the contents of this file. */
 inline val Path.hash: SecureHash get() = read { it.hash() }
+
+/* Check if the Path is symbolic link */
+fun Path.safeSymbolicRead(): Path {
+    if (Files.isSymbolicLink(this)) {
+        return (Files.readSymbolicLink(this))
+    } else {
+        return (this)
+    }
+}

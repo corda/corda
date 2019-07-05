@@ -1,6 +1,6 @@
 package net.corda.core.crypto
 
-import org.apache.commons.lang.ArrayUtils.EMPTY_BYTE_ARRAY
+import org.apache.commons.lang3.ArrayUtils.EMPTY_BYTE_ARRAY
 import org.junit.Test
 import java.math.BigInteger
 import java.util.*

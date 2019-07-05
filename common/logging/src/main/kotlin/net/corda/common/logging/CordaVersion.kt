@@ -5,7 +5,6 @@ import com.jcabi.manifests.Manifests
 class CordaVersion  {
     companion object {
         private const val UNKNOWN = "Unknown"
-        const val current_major_release = "4.0-SNAPSHOT"
         const val platformEditionCode = "OS"
 
         private fun manifestValue(name: String): String? = if (Manifests.exists(name)) Manifests.read(name) else null
@@ -15,7 +14,7 @@ class CordaVersion  {
         val vendor: String by lazy { manifestValue("Corda-Vendor") ?: UNKNOWN }
         val platformVersion: Int by lazy { manifestValue("Corda-Platform-Version")?.toInt() ?: 1 }
 
-        internal val semanticVersion: String by lazy { if(releaseVersion == UNKNOWN) current_major_release else releaseVersion }
+        internal val semanticVersion: String by lazy { if(releaseVersion == UNKNOWN) CURRENT_MAJOR_RELEASE else releaseVersion }
     }
 
     fun getVersion(): Array<String> {

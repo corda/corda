@@ -3,6 +3,7 @@ description 'Corda serialization (deterministic)'
 apply from: '../deterministic.gradle'
 apply plugin: 'com.jfrog.artifactory'
 apply plugin: 'net.corda.plugins.publish-utils'
+apply plugin: 'java-library'
 apply plugin: 'idea'
 
 evaluationDependsOn(":serialization")
@@ -11,7 +12,7 @@ def javaHome = System.getProperty('java.home')
 def jarBaseName = "corda-${project.name}".toString()
 
 configurations {
-    deterministicLibraries
+    deterministicLibraries.extendsFrom implementation
     deterministicArtifacts.extendsFrom deterministicLibraries
 }
 
@@ -20,14 +21,19 @@ dependencies {
 
     // Configure these by hand. It should be a minimal subset of dependencies,
     // and without any obviously non-deterministic ones such as Hibernate.
+
+    // This dependency will become "compile" scoped in our published POM.
+    // See publish.dependenciesFrom.defaultScope.
     deterministicLibraries project(path: ':core-deterministic', configuration: 'deterministicArtifacts')
-    deterministicLibraries "org.apache.qpid:proton-j:$protonj_version"
-    deterministicLibraries "org.iq80.snappy:snappy:$snappy_version"
-    deterministicLibraries "com.google.guava:guava:$guava_version"
+
+    // These "implementation" dependencies will become "runtime" scoped in our published POM.
+    implementation "org.apache.qpid:proton-j:$protonj_version"
+    implementation "org.iq80.snappy:snappy:$snappy_version"
+    implementation "com.google.guava:guava:$guava_version"
 }
 
 jar {
-    baseName 'DOES-NOT-EXIST'
+    archiveBaseName = 'DOES-NOT-EXIST'
     // Don't build a jar here because it would be the wrong one.
     // The jar we really want will be built by the metafix task.
     enabled = false
@@ -37,10 +43,10 @@ def serializationJarTask = tasks.getByPath(':serialization:jar')
 def originalJar = serializationJarTask.outputs.files.singleFile
 
 task patchSerialization(type: Zip, dependsOn: serializationJarTask) {
-    destinationDir file("$buildDir/source-libs")
+    destinationDirectory = file("$buildDir/source-libs")
     metadataCharset 'UTF-8'
-    classifier 'transient'
-    extension 'jar'
+    archiveClassifier = 'transient'
+    archiveExtension = 'jar'
 
     from(compileKotlin)
     from(zipTree(originalJar)) {
@@ -65,7 +71,7 @@ task predeterminise(type: ProGuardTask, dependsOn: project(':core-deterministic'
     libraryjars file("$javaHome/lib/rt.jar")
     libraryjars file("$javaHome/lib/jce.jar")
     libraryjars file("$javaHome/lib/ext/sunec.jar")
-    configurations.compileOnly.forEach {
+    configurations.compileClasspath.forEach {
         if (originalJar != it) {
             libraryjars it, filter: '!META-INF/versions/**'
         }
@@ -168,7 +174,9 @@ artifacts {
 }
 
 publish {
-    dependenciesFrom configurations.deterministicArtifacts
+    dependenciesFrom(configurations.deterministicArtifacts) {
+        defaultScope = 'compile'
+    }
     publishSources = false
     publishJavadoc = false
     name jarBaseName

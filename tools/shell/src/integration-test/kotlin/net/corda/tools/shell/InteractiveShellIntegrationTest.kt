@@ -1,25 +1,28 @@
 package net.corda.tools.shell
 
-import com.fasterxml.jackson.databind.DeserializationContext
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize
-import com.fasterxml.jackson.databind.deser.std.FromStringDeserializer
-import com.fasterxml.jackson.databind.module.SimpleModule
+import co.paralleluniverse.fibers.Suspendable
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.type.TypeFactory
 import com.google.common.io.Files
 import com.jcraft.jsch.ChannelExec
 import com.jcraft.jsch.JSch
 import com.nhaarman.mockito_kotlin.any
 import com.nhaarman.mockito_kotlin.doAnswer
 import com.nhaarman.mockito_kotlin.mock
-import net.corda.client.jackson.internal.CustomShellSerializationFactory
+import net.corda.client.jackson.JacksonSupport
 import net.corda.client.rpc.RPCException
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.StartableByRPC
+import net.corda.core.flows.*
+import net.corda.core.identity.Party
 import net.corda.core.internal.div
+import net.corda.core.internal.list
+import net.corda.core.internal.messaging.InternalCordaRPCOps
 import net.corda.core.messaging.ClientRpcSslOptions
 import net.corda.core.messaging.CordaRPCOps
-import net.corda.core.serialization.CordaSerializable
+import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.unwrap
+import net.corda.node.internal.NodeStartup
 import net.corda.node.services.Permissions
 import net.corda.node.services.Permissions.Companion.all
 import net.corda.node.services.config.shell.toShellConfig
@@ -28,24 +31,28 @@ import net.corda.node.utilities.saveToKeyStore
 import net.corda.node.utilities.saveToTrustStore
 import net.corda.nodeapi.BrokerRpcSslOptions
 import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
+import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.driver.internal.NodeHandleInternal
 import net.corda.testing.internal.useSslRpcOverrides
 import net.corda.testing.node.User
-import net.corda.tools.shell.InteractiveShell.createYamlInputMapper
-import net.corda.tools.shell.InteractiveShell.runFlowByNameFragment
 import net.corda.tools.shell.utlities.ANSIProgressRenderer
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.bouncycastle.util.io.Streams
 import org.crsh.text.RenderPrintWriter
+import org.junit.Before
 import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import java.util.zip.ZipFile
 import javax.security.auth.x500.X500Principal
+import kotlin.test.assertNotEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class InteractiveShellIntegrationTest {
@@ -54,6 +61,13 @@ class InteractiveShellIntegrationTest {
     val tempFolder = TemporaryFolder()
 
     private val testName = X500Principal("CN=Test,O=R3 Ltd,L=London,C=GB")
+
+    private lateinit var inputObjectMapper: ObjectMapper
+
+    @Before
+    fun setup() {
+        inputObjectMapper = objectMapperWithClassLoader(InteractiveShell.getCordappsClassloader())
+    }
 
     @Test
     fun `shell should not log in with invalid credentials`() {
@@ -276,11 +290,11 @@ class InteractiveShellIntegrationTest {
                 }
             }
             val ansiProgressRenderer = mock<ANSIProgressRenderer> {
-                on { render(any(), any()) } doAnswer { InteractiveShell.latch.countDown() }
+                on { render(any(), any()) }  doAnswer { InteractiveShell.latch.countDown() }
             }
-            runFlowByNameFragment(
+            InteractiveShell.runFlowByNameFragment(
                     "NoOpFlow",
-                    "", output, node.rpc, ansiProgressRenderer, createYamlInputMapper(node.rpc, null))
+                    "", output, node.rpc, ansiProgressRenderer)
         }
         assertThat(successful).isTrue()
     }
@@ -308,11 +322,11 @@ class InteractiveShellIntegrationTest {
                 }
             }
             val ansiProgressRenderer = mock<ANSIProgressRenderer> {
-                on { render(any(), any()) } doAnswer { InteractiveShell.latch.countDown() }
+                on { render(any(), any()) }  doAnswer { InteractiveShell.latch.countDown() }
             }
-            runFlowByNameFragment(
+            InteractiveShell.runFlowByNameFragment(
                     "NoOpFlowA",
-                    "", output, node.rpc, ansiProgressRenderer, createYamlInputMapper(node.rpc, null))
+                    "", output, node.rpc, ansiProgressRenderer)
         }
         assertThat(successful).isTrue()
     }
@@ -340,11 +354,11 @@ class InteractiveShellIntegrationTest {
                 }
             }
             val ansiProgressRenderer = mock<ANSIProgressRenderer> {
-                on { render(any(), any()) } doAnswer { InteractiveShell.latch.countDown() }
+                on { render(any(), any()) }  doAnswer { InteractiveShell.latch.countDown() }
             }
-            runFlowByNameFragment(
+            InteractiveShell.runFlowByNameFragment(
                     "NoOpFlo",
-                    "", output, node.rpc, ansiProgressRenderer, createYamlInputMapper(node.rpc, null))
+                    "", output, node.rpc, ansiProgressRenderer)
         }
         assertThat(successful).isTrue()
     }
@@ -372,45 +386,60 @@ class InteractiveShellIntegrationTest {
                 }
             }
             val ansiProgressRenderer = mock<ANSIProgressRenderer> {
-                on { render(any(), any()) } doAnswer { InteractiveShell.latch.countDown() }
+                on { render(any(), any()) }  doAnswer { InteractiveShell.latch.countDown() }
             }
-            runFlowByNameFragment(
+            InteractiveShell.runFlowByNameFragment(
                     "Burble",
-                    "", output, node.rpc, ansiProgressRenderer, createYamlInputMapper(node.rpc, null))
+                    "", output, node.rpc, ansiProgressRenderer)
         }
         assertThat(successful).isTrue()
     }
 
     @Test
-    fun `shell should start flow with custom json deserializer`() {
+    fun `dumpCheckpoints creates zip with json file for suspended flow`() {
         val user = User("u", "p", setOf(all()))
-        var successful = false
         driver(DriverParameters(notarySpecs = emptyList())) {
-            val nodeFuture = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user), startInSameProcess = true)
-            val node = nodeFuture.getOrThrow()
+            val aliceNode = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user), startInSameProcess = true).getOrThrow()
+            val bobNode = startNode(providedName = BOB_NAME, rpcUsers = listOf(user), startInSameProcess = true).getOrThrow()
+            bobNode.stop()
+
+            // create logs directory since the driver is not creating it
+            (aliceNode.baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME).toFile().mkdir()
 
             val conf = ShellConfiguration(commandsDirectory = Files.createTempDir().toPath(),
                     user = user.username, password = user.password,
-                    hostAndPort = node.rpcAddress)
+                    hostAndPort = aliceNode.rpcAddress)
             InteractiveShell.startShell(conf)
-
             // setup and configure some mocks required by InteractiveShell.runFlowByNameFragment()
             val output = mock<RenderPrintWriter> {
                 on { println(any<String>()) } doAnswer {
                     val line = it.arguments[0]
-                    println("$line")
-                    if ((line is String) && (line.startsWith("Flow completed with result: ${FirstAndLastName("John", "Doe")}")))
-                        successful = true
+                    assertNotEquals("Please try 'man run' to learn what syntax is acceptable", line)
                 }
             }
-            val ansiProgressRenderer = mock<ANSIProgressRenderer> {
-                on { render(any(), any()) } doAnswer { InteractiveShell.latch.countDown() }
-            }
-            runFlowByNameFragment(
-                    "DeserializeFlow",
-                    "firstAndLastName: John Doe", output, node.rpc, ansiProgressRenderer, createYamlInputMapper(node.rpc, this::class.java.classLoader))
+
+            aliceNode.rpc.startFlow(::SendFlow, bobNode.nodeInfo.singleIdentity())
+
+            InteractiveShell.runRPCFromString(
+                    listOf("dumpCheckpoints"), output, mock(), aliceNode.rpc as InternalCordaRPCOps, inputObjectMapper)
+
+            // assert that the checkpoint dump zip has been created
+            val zip = (aliceNode.baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME).list()
+                    .find { it.toString().contains("checkpoints_dump-") }
+            assertNotNull(zip)
+            // assert that a json file has been created for the suspended flow
+            val json = ZipFile((zip!!).toFile()).entries().asSequence()
+                    .find { it.name.contains(SendFlow::class.simpleName!!) }
+            assertNotNull(json)
         }
-        assertThat(successful).isTrue()
+    }
+
+    private fun objectMapperWithClassLoader(classLoader: ClassLoader?): ObjectMapper {
+        val objectMapper = JacksonSupport.createNonRpcMapper()
+        val tf = TypeFactory.defaultInstance().withClassLoader(classLoader)
+        objectMapper.typeFactory = tf
+
+        return objectMapper
     }
 }
 
@@ -441,35 +470,23 @@ class BurbleFlow : FlowLogic<Unit>() {
     }
 }
 
-@CordaSerializable
-data class FirstAndLastName(val firstName: String, val lastName: String)
-
-@Suppress("UNUSED")
 @StartableByRPC
-class DeserializeFlow(private val firstAndLastName: FirstAndLastName) : FlowLogic<FirstAndLastName>() {
+@InitiatingFlow
+class SendFlow(private val party: Party) : FlowLogic<Unit>() {
     override val progressTracker = ProgressTracker()
-    override fun call(): FirstAndLastName {
-        return firstAndLastName
+    @Suspendable
+    override fun call() {
+        initiateFlow(party).sendAndReceive<String>("hi").unwrap { it }
     }
 }
 
-@Suppress("UNUSED")
-class MyCustomJackson : CustomShellSerializationFactory {
-    override fun createJacksonModule() = object : SimpleModule() {
-
-        override fun setupModule(context: SetupContext) {
-            super.setupModule(context)
-            context.setMixInAnnotations(FirstAndLastName::class.java, FirstLastNameMixin::class.java)
-        }
-    }
-
-    @JsonDeserialize(using = FirstLastNameDeserializer::class)
-    private interface FirstLastNameMixin
-
-    object FirstLastNameDeserializer : FromStringDeserializer<FirstAndLastName>(FirstAndLastName::class.java) {
-        override fun _deserialize(value: String, ctxt: DeserializationContext?): FirstAndLastName {
-            val (firstName, lastName) = value.split(" ")
-            return FirstAndLastName(firstName, lastName)
-        }
+@InitiatedBy(SendFlow::class)
+class ReceiveFlow(private val session: FlowSession) : FlowLogic<Unit>() {
+    override val progressTracker = ProgressTracker()
+    @Suspendable
+    override fun call() {
+        session.receive<String>().unwrap { it }
+        session.send("hi")
     }
 }
+

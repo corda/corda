@@ -1,7 +1,7 @@
 package net.corda.core.flows
 
 import com.natpryce.hamkrest.and
-import com.natpryce.hamkrest.assertion.assert
+import com.natpryce.hamkrest.assertion.assertThat
 import net.corda.core.flows.mixins.WithFinality
 import net.corda.core.flows.mixins.WithFinality.FinalityInvoker
 import net.corda.core.identity.Party
@@ -17,7 +17,6 @@ import net.corda.testing.internal.matchers.flow.willReturn
 import net.corda.testing.internal.matchers.flow.willThrow
 import net.corda.testing.node.internal.*
 import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import org.junit.After
 import org.junit.Test
 
@@ -40,7 +39,7 @@ class FinalityFlowTests : WithFinality {
         val bob = createBob()
         val stx = aliceNode.issuesCashTo(bob)
 
-        assert.that(
+        assertThat(
             aliceNode.finalise(stx, bob.info.singleIdentity()),
                 willReturn(
                         requiredSignatures(1)
@@ -52,7 +51,7 @@ class FinalityFlowTests : WithFinality {
         // Charlie isn't part of this network, so node A won't recognise them
         val stx = aliceNode.issuesCashTo(CHARLIE)
 
-        assert.that(
+        assertThat(
             aliceNode.finalise(stx),
                 willThrow<IllegalArgumentException>())
     }

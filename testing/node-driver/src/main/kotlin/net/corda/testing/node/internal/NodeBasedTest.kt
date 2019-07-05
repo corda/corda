@@ -24,7 +24,7 @@ import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.internal.testThreadFactory
 import net.corda.testing.node.User
-import org.apache.commons.lang.SystemUtils
+import org.apache.commons.lang3.SystemUtils
 import org.apache.logging.log4j.Level
 import org.junit.After
 import org.junit.Before
@@ -56,7 +56,7 @@ constructor(private val cordappPackages: List<String> = emptyList(), private val
     private lateinit var defaultNetworkParameters: NetworkParametersCopier
     protected val notaryNodes = mutableListOf<NodeWithInfo>()
     private val nodes = mutableListOf<NodeWithInfo>()
-    private val portAllocation = incrementalPortAllocation(10000)
+    private val portAllocation = incrementalPortAllocation()
 
     init {
         System.setProperty("consoleLogLevel", Level.DEBUG.name().toLowerCase())

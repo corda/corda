@@ -9,3 +9,4 @@ Serialization
    serialization-default-evolution.rst
    serialization-enum-evolution.rst
    blob-inspector
+   wire-format.rst

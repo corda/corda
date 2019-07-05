@@ -4,7 +4,7 @@ import net.corda.core.internal.Emoji
 import net.corda.core.messaging.FlowProgressHandle
 import net.corda.core.utilities.loggerFor
 import net.corda.tools.shell.utlities.StdoutANSIProgressRenderer.draw
-import org.apache.commons.lang.SystemUtils
+import org.apache.commons.lang3.SystemUtils
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.core.LogEvent
 import org.apache.logging.log4j.core.LoggerContext

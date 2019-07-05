@@ -6,7 +6,7 @@ import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.RPCException
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.finance.workflows.plugin.registerFinanceJSONMappers
+import net.corda.irs.flows.plugin.registerFinanceJSONMappers
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value

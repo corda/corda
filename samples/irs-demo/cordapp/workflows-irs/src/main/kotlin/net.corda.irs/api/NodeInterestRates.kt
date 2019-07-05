@@ -1,7 +1,6 @@
 package net.corda.irs.api
 
 import co.paralleluniverse.fibers.Suspendable
-import loadTestCalendar
 import net.corda.core.contracts.Command
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.*
@@ -16,6 +15,7 @@ import net.corda.finance.contracts.BusinessCalendar
 import net.corda.finance.contracts.Fix
 import net.corda.finance.contracts.FixOf
 import net.corda.finance.contracts.Tenor
+import net.corda.finance.workflows.utils.loadTestCalendar
 import net.corda.irs.flows.RatesFixFlow
 import net.corda.irs.math.CubicSplineInterpolator
 import net.corda.irs.math.Interpolator

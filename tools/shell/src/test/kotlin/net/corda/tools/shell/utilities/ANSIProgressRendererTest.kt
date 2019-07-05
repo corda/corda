@@ -7,7 +7,7 @@ import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.FlowProgressHandleImpl
 import net.corda.tools.shell.utlities.ANSIProgressRenderer
 import net.corda.tools.shell.utlities.CRaSHANSIProgressRenderer
-import org.apache.commons.lang.SystemUtils
+import org.apache.commons.lang3.SystemUtils
 import org.assertj.core.api.Assertions.assertThat
 import org.crsh.text.RenderPrintWriter
 import org.junit.Test
@@ -65,7 +65,7 @@ class ANSIProgressRendererTest {
 
     private fun checkTrackingState(captor: KArgumentCaptor<Ansi>, updates: Int, trackerState: List<String>) {
         verify(printWriter, times(updates)).print(captor.capture())
-        assertThat(captor.lastValue.toString()).containsSequence(trackerState)
+        assertThat(captor.lastValue.toString()).containsSubsequence(trackerState)
         verify(printWriter, times(updates)).flush()
     }
 

@@ -19,7 +19,7 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
-import net.corda.finance.workflows.plugin.registerFinanceJSONMappers
+import net.corda.irs.flows.plugin.registerFinanceJSONMappers
 import net.corda.irs.contract.InterestRateSwap
 import net.corda.irs.web.IrsDemoWebApplication
 import net.corda.test.spring.springDriver

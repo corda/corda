@@ -41,14 +41,14 @@ fun X500Principal.toX500Name(): X500Name = X500Name.getInstance(this.encoded)
  * @throws IllegalArgumentException if this principal consists of duplicated attributes or the attribute is not supported.
  *
  */
-fun X500Principal.toAttributesMap(supportedAttributes: Set<ASN1ObjectIdentifier> = emptySet()): Map<ASN1ObjectIdentifier, ASN1Encodable> {
+fun X500Principal.toAttributesMap(supportedAttributes: Set<ASN1ObjectIdentifier> = emptySet()): Map<ASN1ObjectIdentifier, String> {
     val x500Name = this.toX500Name()
-    val attrsMap: Map<ASN1ObjectIdentifier, ASN1Encodable> = x500Name.rdNs
+    val attrsMap: Map<ASN1ObjectIdentifier, String> = x500Name.rdNs
             .flatMap { it.typesAndValues.asList() }
             .groupBy(AttributeTypeAndValue::getType, AttributeTypeAndValue::getValue)
             .mapValues {
                 require(it.value.size == 1) { "Duplicate attribute ${it.key}" }
-                it.value[0]
+                it.value[0].toString()
             }
     if (supportedAttributes.isNotEmpty()) {
         (attrsMap.keys - supportedAttributes).let { unsupported ->

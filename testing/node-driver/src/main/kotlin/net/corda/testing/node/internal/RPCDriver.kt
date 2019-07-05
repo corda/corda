@@ -101,8 +101,8 @@ val rpcTestUser = User("user1", "test", permissions = emptySet())
 val fakeNodeLegalName = CordaX500Name(organisation = "Not:a:real:name", locality = "Nowhere", country = "GB")
 
 // Use a global pool so that we can run RPC tests in parallel
-private val globalPortAllocation = incrementalPortAllocation(10000)
-private val globalDebugPortAllocation = incrementalPortAllocation(5005)
+private val globalPortAllocation = incrementalPortAllocation()
+private val globalDebugPortAllocation = incrementalPortAllocation()
 
 fun <A> rpcDriver(
         isDebug: Boolean = false,
@@ -176,6 +176,7 @@ data class RPCDriverDSL(
         const val notificationAddress = "notifications"
 
         private fun ConfigurationImpl.configureCommonSettings(maxFileSize: Int, maxBufferedBytesPerClient: Long) {
+            name = "RPCDriver"
             managementNotificationAddress = SimpleString(notificationAddress)
             isPopulateValidatedUser = true
             journalBufferSize_NIO = maxFileSize
@@ -203,7 +204,8 @@ data class RPCDriverDSL(
             addressesSettings = mapOf(
                     "${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.#" to AddressSettings().apply {
                         maxSizeBytes = maxBufferedBytesPerClient
-                        addressFullMessagePolicy = AddressFullMessagePolicy.FAIL
+                        addressFullMessagePolicy = AddressFullMessagePolicy.PAGE
+                        pageSizeBytes = maxSizeBytes / 10
                     }
             )
         }
@@ -222,6 +224,7 @@ data class RPCDriverDSL(
                 bindingsDirectory = "$artemisDir/bindings"
                 journalDirectory = "$artemisDir/journal"
                 largeMessagesDirectory = "$artemisDir/large-messages"
+                pagingDirectory = "$artemisDir/paging"
                 acceptorConfigurations = setOf(ArtemisTcpTransport.rpcAcceptorTcpTransport(hostAndPort, null))
                 configureCommonSettings(maxFileSize, maxBufferedBytesPerClient)
             }
@@ -314,7 +317,7 @@ data class RPCDriverDSL(
             rpcUser: User = rpcTestUser,
             nodeLegalName: CordaX500Name = fakeNodeLegalName,
             maxFileSize: Int = MAX_MESSAGE_SIZE,
-            maxBufferedBytesPerClient: Long = 10L * MAX_MESSAGE_SIZE,
+            maxBufferedBytesPerClient: Long = 5L * MAX_MESSAGE_SIZE,
             configuration: RPCServerConfiguration = RPCServerConfiguration.DEFAULT,
             customPort: NetworkHostAndPort? = null,
             ops: I

@@ -236,7 +236,7 @@ at boot, and means the Corda service stays running with no users connected to th
 
 5. Copy the required Java keystores to the node. See :doc:`permissioning`
 
-6. Download the `NSSM service manager <nssm.cc>`_
+6. Download the `NSSM service manager <https://nssm.cc/>`_
 
 7. Unzip ``nssm-2.24\win64\nssm.exe`` to ``C:\Corda``
 
