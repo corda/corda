@@ -191,7 +191,7 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
 
         //at the moment we use a blocking HTTP library - but under the covers, the OS will interleave threads waiting for IO
         //as HTTP GET is mostly IO bound, use more threads than CPU's
-        //maximum threads to use = 24.
+        //maximum threads to use = 24, as if we did not limit this on large machines it could result in 100's of concurrent requests
         val threadsToUseForNetworkMapDownload = min(Runtime.getRuntime().availableProcessors() * 4, 24)
         val executorToUseForDownloadingNodeInfos = Executors.newFixedThreadPool(threadsToUseForNetworkMapDownload, NamedThreadFactory("NetworkMapUpdaterNodeInfoDownloadThread"))
         //DB insert is single threaded - use a single threaded executor for it.

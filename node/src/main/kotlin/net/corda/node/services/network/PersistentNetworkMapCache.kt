@@ -41,48 +41,6 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
                                      private val database: CordaPersistence,
                                      private val identityService: IdentityService) : NetworkMapCacheInternal, SingletonSerializeAsToken() {
 
-    override fun addNodes(nodes: List<NodeInfo>) {
-        synchronized(_changed) {
-            val newNodes = mutableListOf<NodeInfo>()
-            val updatedNodes = mutableListOf<Pair<NodeInfo, NodeInfo>>()
-            nodes.map { it to getNodesByLegalIdentityKey(it.legalIdentities.first().owningKey).firstOrNull() }
-                    .forEach { (node, previousNode) ->
-                        when {
-                            previousNode == null -> {
-                                logger.info("No previous node found for ${node.legalIdentities.first().name}")
-                                if (verifyAndRegisterIdentities(node)) {
-                                    newNodes.add(node)
-                                }
-                            }
-                            previousNode.serial > node.serial -> {
-                                logger.info("Discarding older nodeInfo for ${node.legalIdentities.first().name}")
-                            }
-                            previousNode != node -> {
-                                logger.info("Previous node was found for ${node.legalIdentities.first().name} as: $previousNode")
-                                // TODO We should be adding any new identities as well
-                                if (verifyIdentities(node)) {
-                                    updatedNodes.add(node to previousNode)
-                                }
-                            }
-                            else -> logger.info("Previous node was identical to incoming one - doing nothing")
-                        }
-                    }
-
-            database.transaction {
-                updatedNodes.forEach { (node, previousNode) ->
-                    //updated
-                    updateInfoDB(node, session)
-                    changePublisher.onNext(MapChange.Modified(node, previousNode))
-                }
-                newNodes.forEach { node ->
-                    //new
-                    updateInfoDB(node, session)
-                    changePublisher.onNext(MapChange.Added(node))
-                }
-            }
-
-        }
-    }
 
     companion object {
         private val logger = contextLogger()
@@ -198,6 +156,49 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
     override fun track(): DataFeed<List<NodeInfo>, MapChange> {
         synchronized(_changed) {
             return DataFeed(allNodes, _changed.bufferUntilSubscribed().wrapWithDatabaseTransaction())
+        }
+    }
+
+    override fun addNodes(nodes: List<NodeInfo>) {
+        synchronized(_changed) {
+            val newNodes = mutableListOf<NodeInfo>()
+            val updatedNodes = mutableListOf<Pair<NodeInfo, NodeInfo>>()
+            nodes.map { it to getNodesByLegalIdentityKey(it.legalIdentities.first().owningKey).firstOrNull() }
+                    .forEach { (node, previousNode) ->
+                        when {
+                            previousNode == null -> {
+                                logger.info("No previous node found for ${node.legalIdentities.first().name}")
+                                if (verifyAndRegisterIdentities(node)) {
+                                    newNodes.add(node)
+                                }
+                            }
+                            previousNode.serial > node.serial -> {
+                                logger.info("Discarding older nodeInfo for ${node.legalIdentities.first().name}")
+                            }
+                            previousNode != node -> {
+                                logger.info("Previous node was found for ${node.legalIdentities.first().name} as: $previousNode")
+                                // TODO We should be adding any new identities as well
+                                if (verifyIdentities(node)) {
+                                    updatedNodes.add(node to previousNode)
+                                }
+                            }
+                            else -> logger.info("Previous node was identical to incoming one - doing nothing")
+                        }
+                    }
+
+            database.transaction {
+                updatedNodes.forEach { (node, previousNode) ->
+                    //updated
+                    updateInfoDB(node, session)
+                    changePublisher.onNext(MapChange.Modified(node, previousNode))
+                }
+                newNodes.forEach { node ->
+                    //new
+                    updateInfoDB(node, session)
+                    changePublisher.onNext(MapChange.Added(node))
+                }
+            }
+
         }
     }
 
