@@ -213,7 +213,21 @@ class NodeVaultService(
                     updateQuery.set(root.get<Vault.StateStatus>(VaultSchemaV1.VaultStates::stateStatus.name), Vault.StateStatus.CONSUMED)
                     updateQuery.set(root.get<Instant>(VaultSchemaV1.VaultStates::consumedTime.name), now)
                     updateQuery.set(root.get<String>(VaultSchemaV1.VaultStates::lockId.name), criteriaBuilder.nullLiteral(String::class.java))
-                    updateQuery.where(root.get<PersistentStateRef>(VaultSchemaV1.VaultStates::stateRef.name).`in`(consumedStateRefsBatch.map { PersistentStateRef(it) }))
+                    // If this transaction has been seen before, then add an extra term to the where clause excluding those states that are
+                    // already consumed. This prevents the timestamp for already consumed states from being updated.
+                    if (previouslySeen) {
+                        updateQuery.where(
+                                criteriaBuilder.and(
+                                        root.get<PersistentStateRef>(VaultSchemaV1.VaultStates::stateRef.name).`in`(consumedStateRefsBatch.map { PersistentStateRef(it) }),
+                                        criteriaBuilder.equal(
+                                                root.get<Vault.StateStatus>(VaultSchemaV1.VaultStates::stateStatus.name),
+                                                Vault.StateStatus.UNCONSUMED
+                                        )
+                                )
+                        )
+                    } else {
+                        updateQuery.where(root.get<PersistentStateRef>(VaultSchemaV1.VaultStates::stateRef.name).`in`(consumedStateRefsBatch.map { PersistentStateRef(it) }))
+                    }
                     session.createQuery(updateQuery).executeUpdate()
                 }
             }
