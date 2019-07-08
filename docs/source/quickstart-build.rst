@@ -95,15 +95,17 @@ Since the CorDapp models a car dealership network, a state must be created to re
             // *********
 
             @BelongsToContract(CarContract::class)
-            data class CarState(val owningBank: Party,
-                                val holdingDealer: Party,
-                                val manufacturer: Party,
-                                val vin: String,
-                                val licensePlateNumber: String,
-                                val make: String,
-                                val model: String,
-                                val dealershipLocation: String,
-                                val linearId: UniqueIdentifier) : ContractState {
+            data class CarState(
+                    val owningBank: Party,
+                    val holdingDealer: Party,
+                    val manufacturer: Party,
+                    val vin: String,
+                    val licensePlateNumber: String,
+                    val make: String,
+                    val model: String,
+                    val dealershipLocation: String,
+                    val linearId: UniqueIdentifier
+            ) : ContractState {
                 override val participants: List<AbstractParty> = listOf(owningBank, holdingDealer, manufacturer)
             }
 
@@ -264,14 +266,16 @@ Step Four: Creating a flow
 
             @InitiatingFlow
             @StartableByRPC
-            class CarIssueInitiator(val owningBank: Party,
-                                    val holdingDealer: Party,
-                                    val manufacturer: Party,
-                                    val vin: String,
-                                    val licensePlateNumber: String,
-                                    val make: String,
-                                    val model: String,
-                                    val dealershipLocation: String) : FlowLogic<Unit>() {
+            class CarIssueInitiator(
+                    val owningBank: Party,
+                    val holdingDealer: Party,
+                    val manufacturer: Party,
+                    val vin: String,
+                    val licensePlateNumber: String,
+                    val make: String,
+                    val model: String,
+                    val dealershipLocation: String
+            ) : FlowLogic<Unit>() {
 
                 @Suspendable
                 override fun call() {
@@ -310,14 +314,16 @@ Step Four: Creating a flow
 
             @InitiatingFlow
             @StartableByRPC
-            class CarIssueInitiator(val owningBank: Party,
-                                    val holdingDealer: Party,
-                                    val manufacturer: Party,
-                                    val vin: String,
-                                    val licensePlateNumber: String,
-                                    val make: String,
-                                    val model: String,
-                                    val dealershipLocation: String) : FlowLogic<SignedTransaction>() {
+            class CarIssueInitiator(
+                    val owningBank: Party,
+                    val holdingDealer: Party,
+                    val manufacturer: Party,
+                    val vin: String,
+                    val licensePlateNumber: String,
+                    val make: String,
+                    val model: String,
+                    val dealershipLocation: String
+            ) : FlowLogic<SignedTransaction>() {
                 override val progressTracker = ProgressTracker()
 
                 @Suspendable
@@ -325,7 +331,17 @@ Step Four: Creating a flow
 
                     val notary = serviceHub.networkMapCache.notaryIdentities.single()
                     val command = Command(CarContract.Commands.Issue(), listOf(owningBank, holdingDealer, manufacturer).map { it.owningKey })
-                    val carState = CarState(owningBank, holdingDealer, manufacturer, vin, licensePlateNumber, make, model, dealershipLocation, UniqueIdentifier())
+                    val carState = CarState(
+                            owningBank,
+                            holdingDealer,
+                            manufacturer,
+                            vin,
+                            licensePlateNumber,
+                            make,
+                            model,
+                            dealershipLocation,
+                            UniqueIdentifier()
+                    )
 
                     val txBuilder = TransactionBuilder(notary)
                             .addOutputState(carState, CarContract.ID)
@@ -397,20 +413,32 @@ Step Four: Creating a flow
 
             @InitiatingFlow
             @StartableByRPC
-            class CarIssueInitiator(val owningBank: Party,
-                                    val holdingDealer: Party,
-                                    val manufacturer: Party,
-                                    val vin: String,
-                                    val licensePlateNumber: String,
-                                    val make: String,
-                                    val model: String,
-                                    val dealershipLocation: String) : FlowLogic<SignedTransaction>() {
+            class CarIssueInitiator(
+                    val owningBank: Party,
+                    val holdingDealer: Party,
+                    val manufacturer: Party,
+                    val vin: String,
+                    val licensePlateNumber: String,
+                    val make: String,
+                    val model: String,
+                    val dealershipLocation: String
+            ) : FlowLogic<SignedTransaction>() {
                 @Suspendable
                 override fun call(): SignedTransaction {
 
                     val notary = serviceHub.networkMapCache.notaryIdentities.single()
                     val command = Command(CarContract.Commands.Issue(), listOf(owningBank, holdingDealer, manufacturer).map { it.owningKey })
-                    val carState = CarState(owningBank, holdingDealer, manufacturer, vin, licensePlateNumber, make, model, dealershipLocation, UniqueIdentifier())
+                    val carState = CarState(
+                            owningBank,
+                            holdingDealer,
+                            manufacturer,
+                            vin,
+                            licensePlateNumber,
+                            make,
+                            model,
+                            dealershipLocation,
+                            UniqueIdentifier()
+                    )
 
                     val txBuilder = TransactionBuilder(notary)
                             .addOutputState(carState, CarContract.ID)
