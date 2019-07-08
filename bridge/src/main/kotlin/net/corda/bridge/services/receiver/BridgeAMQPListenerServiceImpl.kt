@@ -11,7 +11,6 @@ import org.slf4j.LoggerFactory
 import rx.Observable
 import rx.Subscription
 import rx.subjects.PublishSubject
-import java.util.*
 
 /**
  * Responsible for performing actions when Float component is being activated and de-activated.
@@ -28,7 +27,6 @@ class BridgeAMQPListenerServiceImpl(val conf: FirewallConfiguration,
     private val statusFollower: ServiceStateCombiner = ServiceStateCombiner(listOf(auditService))
     private var statusSubscriber: Subscription? = null
     private var amqpServer: AMQPServer? = null
-    private var keyStorePrivateKeyPassword: CharArray? = null
     private var onConnectSubscription: Subscription? = null
     private var onConnectAuditSubscription: Subscription? = null
     private var onReceiveSubscription: Subscription? = null
@@ -83,11 +81,6 @@ class BridgeAMQPListenerServiceImpl(val conf: FirewallConfiguration,
         }
         amqpServer?.close()
         amqpServer = null
-        if (keyStorePrivateKeyPassword != null) {
-            // Wipe the old password
-            Arrays.fill(keyStorePrivateKeyPassword, 0xAA55.toChar())
-            keyStorePrivateKeyPassword = null
-        }
     }
 
     override fun start() {

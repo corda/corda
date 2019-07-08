@@ -27,18 +27,17 @@ class DelegatedSignature(private val sigAlgo: String) : SignatureSpi() {
     private val data = ByteArrayOutputStream()
     private var signingKey: DelegatedPrivateKey? = null
 
-    override fun engineInitSign(privateKey: PrivateKey?) {
+    override fun engineInitSign(privateKey: PrivateKey) {
         require(privateKey is DelegatedPrivateKey)
-        require(signingKey == null)
         data.reset()
         signingKey = privateKey as DelegatedPrivateKey
     }
 
     override fun engineUpdate(b: Byte) {
-        data.write(byteArrayOf(b))
+        data.write(b.toInt())
     }
 
-    override fun engineUpdate(b: ByteArray?, off: Int, len: Int) {
+    override fun engineUpdate(b: ByteArray, off: Int, len: Int) {
         data.write(b, off, len)
     }
 
@@ -46,7 +45,7 @@ class DelegatedSignature(private val sigAlgo: String) : SignatureSpi() {
         return try {
             signingKey?.sign(sigAlgo, data.toByteArray())
         } finally {
-            signingKey = null
+            data.reset()
         }
     }
 
