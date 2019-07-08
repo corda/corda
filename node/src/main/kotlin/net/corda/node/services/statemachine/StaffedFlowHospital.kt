@@ -15,6 +15,7 @@ import net.corda.nodeapi.internal.cryptoservice.TimedCryptoServiceException
 import org.hibernate.exception.ConstraintViolationException
 import rx.subjects.PublishSubject
 import java.sql.SQLException
+import java.sql.SQLTransientConnectionException
 import java.time.Duration
 import java.time.Instant
 import java.util.*
@@ -26,7 +27,14 @@ import kotlin.math.pow
 class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val ourSenderUUID: String) {
     private companion object {
         private val log = contextLogger()
-        private val staff = listOf(DeadlockNurse, DuplicateInsertSpecialist, DoctorTimeout, CryptoServiceTimeout, FinalityDoctor)
+        private val staff = listOf(
+                DeadlockNurse,
+                DuplicateInsertSpecialist,
+                DoctorTimeout,
+                CryptoServiceTimeout,
+                FinalityDoctor,
+                TransientConnectionCardiologist
+        )
     }
 
     private val mutex = ThreadBox(object {
@@ -269,8 +277,7 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val 
         }
 
         private fun mentionsDeadlock(exception: Throwable?): Boolean {
-            return exception != null && (exception is SQLException && ((exception.message?.toLowerCase()?.contains("deadlock")
-                    ?: false)) || mentionsDeadlock(exception.cause))
+            return exception.mentionsThrowable(SQLException::class.java, "deadlock")
         }
     }
 
@@ -279,15 +286,11 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val 
      */
     object DuplicateInsertSpecialist : Staff {
         override fun consult(flowFiber: FlowFiber, currentState: StateMachineState, newError: Throwable, history: FlowMedicalHistory): Diagnosis {
-            return if (mentionsConstraintViolation(newError) && history.notDischargedForTheSameThingMoreThan(3, this, currentState)) {
+            return if (newError.mentionsThrowable(ConstraintViolationException::class.java) && history.notDischargedForTheSameThingMoreThan(3, this, currentState)) {
                 Diagnosis.DISCHARGE
             } else {
                 Diagnosis.NOT_MY_SPECIALTY
             }
-        }
-
-        private fun mentionsConstraintViolation(exception: Throwable?): Boolean {
-            return exception != null && (exception is ConstraintViolationException || mentionsConstraintViolation(exception.cause))
         }
     }
 
@@ -337,4 +340,37 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val 
             return throwable.stackTrace.any { it.className == ReceiveFinalityFlow::class.java.name }
         }
     }
+
+    /**
+     * [SQLTransientConnectionException] detection that arise from failing to connect the underlying database/datasource
+     */
+    object TransientConnectionCardiologist : Staff {
+        override fun consult(flowFiber: FlowFiber, currentState: StateMachineState, newError: Throwable, history: FlowMedicalHistory): Diagnosis {
+            return if (mentionsTransientConnection(newError)) {
+                if (history.notDischargedForTheSameThingMoreThan(2, this, currentState)) {
+                    Diagnosis.DISCHARGE
+                } else {
+                    Diagnosis.OVERNIGHT_OBSERVATION
+                }
+            } else {
+                Diagnosis.NOT_MY_SPECIALTY
+            }
+        }
+
+        private fun mentionsTransientConnection(exception: Throwable?): Boolean {
+            return exception.mentionsThrowable(SQLTransientConnectionException::class.java, "connection is not available")
+        }
+    }
+}
+
+private fun <T : Throwable> Throwable?.mentionsThrowable(exceptionType: Class<T>, errorMessage: String? = null): Boolean {
+    if (this == null) {
+        return false
+    }
+    val containsMessage = if (errorMessage != null) {
+        message?.toLowerCase()?.contains(errorMessage) ?: false
+    } else {
+        true
+    }
+    return (exceptionType.isAssignableFrom(this::class.java) && containsMessage) || cause.mentionsThrowable(exceptionType, errorMessage)
 }
