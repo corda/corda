@@ -55,7 +55,7 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
     private lateinit var defaultNetworkParameters: NetworkParametersCopier
     protected val notaryNodes = mutableListOf<NodeWithInfo>()
     private val nodes = mutableListOf<NodeWithInfo>()
-    private val portAllocation = incrementalPortAllocation(10000)
+    private val portAllocation = incrementalPortAllocation()
 
     init {
         System.setProperty("consoleLogLevel", Level.DEBUG.name().toLowerCase())

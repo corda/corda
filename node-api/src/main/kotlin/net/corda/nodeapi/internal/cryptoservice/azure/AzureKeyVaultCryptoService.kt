@@ -36,6 +36,7 @@ import java.security.MessageDigest
 import java.security.PrivateKey
 import java.security.PublicKey
 import java.security.cert.X509Certificate
+import java.time.Duration
 import java.util.concurrent.Executors
 
 /*
@@ -43,12 +44,17 @@ import java.util.concurrent.Executors
  * Uses the Azure KeyVault Java API https://docs.microsoft.com/en-us/java/api/overview/azure/keyvault .
  * Supported algorithms are ECDSA_SECP256R1_SHA256, ECDSA_SECP256K1_SHA256 and RSA_SHA256.
  */
-class AzureKeyVaultCryptoService(private val keyVaultClient: KeyVaultClient, private val keyVaultUrl: String, private val protection: Protection = DEFAULT_PROTECTION) : CryptoService {
+class AzureKeyVaultCryptoService(
+        private val keyVaultClient: KeyVaultClient,
+        private val keyVaultUrl: String,
+        private val protection: Protection = DEFAULT_PROTECTION,
+        timeout: Duration? = null
+) : CryptoService(timeout) {
 
     /**
      * The protection parameter indicates if  KeyVault should store keys protected by an HSM or as "software-protected" keys.
      */
-    override fun generateKeyPair(alias: String, scheme: SignatureScheme): PublicKey {
+    override fun _generateKeyPair(alias: String, scheme: SignatureScheme): PublicKey {
         checkAlias(alias)
         val keyRequest: CreateKeyRequest = createKeyRequest(scheme.schemeNumberID, alias, protection)
         val keyBundle = keyVaultClient.createKey(keyRequest)
@@ -64,13 +70,13 @@ class AzureKeyVaultCryptoService(private val keyVaultClient: KeyVaultClient, pri
         }
     }
 
-    override fun containsKey(alias: String): Boolean {
+    override fun _containsKey(alias: String): Boolean {
         checkAlias(alias)
         val keyBundle = keyVaultClient.getKey(createIdentifier(alias))
         return keyBundle != null
     }
 
-    override fun getPublicKey(alias: String): PublicKey? {
+    override fun _getPublicKey(alias: String): PublicKey? {
         checkAlias(alias)
         val keyBundle = keyVaultClient.getKey(createIdentifier(alias))
         if (keyBundle?.key() == null) {
@@ -79,7 +85,7 @@ class AzureKeyVaultCryptoService(private val keyVaultClient: KeyVaultClient, pri
         return toPublicKey(keyBundle)
     }
 
-    override fun sign(alias: String, data: ByteArray, signAlgorithm: String?): ByteArray {
+    override fun _sign(alias: String, data: ByteArray, signAlgorithm: String?): ByteArray {
         checkAlias(alias)
         // KeyVault can only sign over hashed data.
         val hashAlgo = getHashAlgorithmFromSignatureAlgorithm(signAlgorithm) ?: "SHA-256"
@@ -106,7 +112,7 @@ class AzureKeyVaultCryptoService(private val keyVaultClient: KeyVaultClient, pri
         }
     }
 
-    override fun getSigner(alias: String): ContentSigner {
+    override fun _getSigner(alias: String): ContentSigner {
         return object : ContentSigner {
             init {
                 checkAlias(alias)
@@ -236,11 +242,11 @@ class AzureKeyVaultCryptoService(private val keyVaultClient: KeyVaultClient, pri
         /**
          * Parse the configuration file at the specified path configFile.
          */
-        fun fromConfigurationFile(configFile: Path): AzureKeyVaultCryptoService {
+        fun fromConfigurationFile(configFile: Path, timeout: Duration? = null): AzureKeyVaultCryptoService {
             val config = parseConfigFile(configFile)
             val keyVaultClient: KeyVaultClient = createKeyVaultClient(config.path, config.password, config.alias, config.clientId)
             return AzureKeyVaultCryptoService(keyVaultClient, config.keyVaultURL, config.protection
-                    ?: DEFAULT_PROTECTION)
+                    ?: DEFAULT_PROTECTION, timeout)
         }
 
         internal fun parseConfigFile(configFile: Path): AzureKeyVaultConfig {

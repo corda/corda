@@ -279,6 +279,7 @@ class DriverDSLImpl(
                         "address" to portAllocation.nextHostAndPort().toString(),
                         "adminAddress" to portAllocation.nextHostAndPort().toString()
                 ),
+                "additionalNodeInfoPollingFrequencyMsec" to 1000,
                 "devMode" to false) + customOverrides
         val config = NodeConfig(ConfigHelper.loadConfig(
                 baseDirectory = baseDirectory,

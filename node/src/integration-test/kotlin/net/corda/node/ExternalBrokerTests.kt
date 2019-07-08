@@ -53,7 +53,7 @@ class ExternalBrokertests : IntegrationTest() {
     @JvmField
     val tempFolder = TemporaryFolder()
 
-    private val portAllocator = incrementalPortAllocation(10000)
+    private val portAllocator = incrementalPortAllocation()
 
     private abstract class AbstractNodeConfiguration : NodeConfiguration
 

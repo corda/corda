@@ -14,12 +14,19 @@ import net.corda.nodeapi.internal.cryptoservice.CryptoServiceException
 import net.corda.nodeapi.internal.cryptoservice.JCACryptoService
 import java.nio.file.Path
 import java.security.*
+import java.time.Duration
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
 import javax.security.auth.callback.PasswordCallback
 import javax.security.auth.x500.X500Principal
 
-class FutureXCryptoService(keyStore: KeyStore, provider: SunPKCS11, x500Principal: X500Principal = DUMMY_X500_PRINCIPAL, private val auth: () -> FutureXConfiguration) : JCACryptoService(keyStore, provider, x500Principal) {
+class FutureXCryptoService(
+        keyStore: KeyStore,
+        provider: SunPKCS11,
+        x500Principal: X500Principal = DUMMY_X500_PRINCIPAL,
+        timeout:Duration? = null,
+        private val auth: () -> FutureXConfiguration
+) : JCACryptoService(keyStore, provider, x500Principal, timeout) {
 
     private val cachedKeyHandles: ConcurrentMap<String, PrivateKey> = ConcurrentHashMap()
 
@@ -43,14 +50,14 @@ class FutureXCryptoService(keyStore: KeyStore, provider: SunPKCS11, x500Principa
         keyStore.load(null, null)
     }
 
-    override fun generateKeyPair(alias: String, scheme: SignatureScheme): PublicKey {
+    override fun _generateKeyPair(alias: String, scheme: SignatureScheme): PublicKey {
         if (cachedKeyHandles.containsKey(alias)) {
             cachedKeyHandles.remove(alias)
         }
         return super.generateKeyPair(alias, scheme)
     }
 
-    override fun sign(alias: String, data: ByteArray, signAlgorithm: String?): ByteArray {
+    override fun _sign(alias: String, data: ByteArray, signAlgorithm: String?): ByteArray {
         return withAuthentication {
             val privateKeyHandle = if (cachedKeyHandles.containsKey(alias)) {
                 cachedKeyHandles[alias]!!
@@ -115,11 +122,11 @@ class FutureXCryptoService(keyStore: KeyStore, provider: SunPKCS11, x500Principa
             }
         }
 
-        fun fromConfigurationFile(legalName: X500Principal, cryptoServiceConf: Path?): CryptoService {
+        fun fromConfigurationFile(legalName: X500Principal, cryptoServiceConf: Path?, timeout: Duration? = null): CryptoService {
             val config = parseConfigFile(cryptoServiceConf!!)
             val provider = SunPKCS11()
             val keyStore = KeyStore.getInstance(KEYSTORE_TYPE, provider)
-            return FutureXCryptoService(keyStore, provider, legalName) { config }
+            return FutureXCryptoService(keyStore, provider, legalName, timeout) { config }
         }
 
         val DEFAULT_IDENTITY_SIGNATURE_SCHEME = Crypto.ECDSA_SECP256R1_SHA256

@@ -104,7 +104,7 @@ class SystematicTerminationTest(private val terminationData: TerminationData) : 
 
     private fun setup(testBlock: InternalDriverDSL.() -> Unit) {
 
-        val portAllocation = incrementalPortAllocation(10000)
+        val portAllocation = incrementalPortAllocation()
 
         internalDriver(
                 cordappsForAllNodes = FINANCE_CORDAPPS,

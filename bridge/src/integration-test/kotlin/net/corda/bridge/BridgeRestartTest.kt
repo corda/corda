@@ -44,7 +44,7 @@ class BridgeRestartTest(private val enableSNI: Boolean) : IntegrationTest() {
         val demoUser = User("demo", "demo", setOf(Permissions.startFlow<Ping>(), Permissions.all()))
         internalDriver(startNodesInProcess = true,
                        cordappsForAllNodes = cordappsForPackages("net.corda.bridge"),
-                       portAllocation = incrementalPortAllocation(20000),
+                       portAllocation = incrementalPortAllocation(),
                        enableSNI = enableSNI) {
             val bridgePort = portAllocation.nextPort()
             val brokerPort = portAllocation.nextPort()
@@ -99,7 +99,7 @@ class BridgeRestartTest(private val enableSNI: Boolean) : IntegrationTest() {
         val demoUser = User("demo", "demo", setOf(Permissions.startFlow<Ping>(), Permissions.all()))
         internalDriver(startNodesInProcess = true,
                        cordappsForAllNodes = cordappsForPackages("net.corda.bridge"),
-                       portAllocation = incrementalPortAllocation(20000),
+                       portAllocation = incrementalPortAllocation(),
                        enableSNI = enableSNI) {
             val bridgePort = portAllocation.nextPort()
             val brokerPort = portAllocation.nextPort()

@@ -126,7 +126,7 @@ class NodePerformanceTests : IntegrationTest() {
                 notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, rpcUsers = listOf(user))),
                 startNodesInProcess = true,
                 extraCordappPackagesToScan = listOf("net.corda.finance", "com.r3.corda.enterprise.perftestcordapp"),
-                portAllocation = incrementalPortAllocation(20000)
+                portAllocation = incrementalPortAllocation()
         )) {
             val notary = defaultNotaryNode.getOrThrow() as InProcess
             val metricRegistry = startReporter((this as InternalDriverDSL).shutdownManager, notary.internalServices.monitoringService.metrics)
@@ -150,7 +150,7 @@ class NodePerformanceTests : IntegrationTest() {
         driver(DriverParameters(
                 notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME)),
                 startNodesInProcess = true,
-                portAllocation = incrementalPortAllocation(20000)
+                portAllocation = incrementalPortAllocation()
         )) {
             val aliceFuture = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user), startInSameProcess = true)
             val alice = aliceFuture.getOrThrow() as InProcess
@@ -175,7 +175,7 @@ class NodePerformanceTests : IntegrationTest() {
         driver(DriverParameters(
                 notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME)),
                 startNodesInProcess = true,
-                portAllocation = incrementalPortAllocation(20000)
+                portAllocation = incrementalPortAllocation()
         )) {
             val aliceFuture = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user))
             val bobFuture = startNode(providedName = BOB_NAME, rpcUsers = listOf(user))

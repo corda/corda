@@ -68,7 +68,7 @@ class InstrumentationTest : IntegrationTest() {
     }
     private fun setup(inMemoryDB: Boolean = true, testBlock: InternalDriverDSL.() -> Unit) {
 
-        val portAllocation = incrementalPortAllocation(10000)
+        val portAllocation = incrementalPortAllocation()
 
         internalDriver(
                 cordappsForAllNodes = FINANCE_CORDAPPS,

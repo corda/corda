@@ -124,7 +124,7 @@ class BCCryptoServiceTests {
         val cryptoService = BCCryptoService(ALICE_NAME.x500Principal, createKeystore(alias, keyPair))
         assertTrue { cryptoService.containsKey(alias) }
         val signatureData = cryptoService.sign(alias, clearData, signAlgo)
-        return verify(signAlgo, cryptoService.getPublicKey(alias), signatureData, clearData)
+        return verify(signAlgo, cryptoService.getPublicKey(alias)!!, signatureData, clearData)
     }
 
     private fun verify(signAlgo: String, publicKey: PublicKey, signatureData: ByteArray, clearData: ByteArray): Boolean {

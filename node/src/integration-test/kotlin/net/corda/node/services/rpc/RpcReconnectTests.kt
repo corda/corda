@@ -17,7 +17,6 @@ import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashIssueAndPaymentFlow
 import net.corda.finance.schemas.CashSchemaV1
 import net.corda.node.services.Permissions
-import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.DUMMY_BANK_B_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME
@@ -53,7 +52,7 @@ class RpcReconnectTests : IntegrationTest() {
         val databaseSchemas = IntegrationTestSchemas(DUMMY_BANK_A_NAME, DUMMY_BANK_B_NAME, DUMMY_NOTARY_NAME)
     }
 
-    private val portAllocator = incrementalPortAllocation(20006)
+    private val portAllocator = incrementalPortAllocation()
 
     /**
      * This test showcases and stress tests the demo [ReconnectingCordaRPCOps].

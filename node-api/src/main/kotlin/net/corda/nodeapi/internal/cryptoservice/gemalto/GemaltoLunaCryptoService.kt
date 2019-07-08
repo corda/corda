@@ -14,9 +14,16 @@ import java.nio.file.Path
 import java.security.KeyStore
 import java.security.Provider
 import java.security.PublicKey
+import java.time.Duration
 import javax.security.auth.x500.X500Principal
 
-class GemaltoLunaCryptoService(keyStore: KeyStore, provider: Provider, x500Principal: X500Principal = DUMMY_X500_PRINCIPAL, private val auth: () -> GemaltoLunaConfiguration) : JCACryptoService(keyStore, provider, x500Principal) {
+class GemaltoLunaCryptoService(
+        keyStore: KeyStore,
+        provider: Provider,
+        x500Principal: X500Principal = DUMMY_X500_PRINCIPAL,
+        timeout: Duration? = null,
+        private val auth: () -> GemaltoLunaConfiguration
+) : JCACryptoService(keyStore, provider, x500Principal, timeout) {
 
     override fun isLoggedIn(): Boolean {
         return LunaSlotManager.getInstance().isLoggedIn
@@ -35,7 +42,7 @@ class GemaltoLunaCryptoService(keyStore: KeyStore, provider: Provider, x500Princ
         return DEFAULT_TLS_SIGNATURE_SCHEME
     }
 
-    override fun generateKeyPair(alias: String, scheme: SignatureScheme): PublicKey {
+    override fun _generateKeyPair(alias: String, scheme: SignatureScheme): PublicKey {
         return withAuthentication {
             val keyPairGenerator = keyPairGeneratorFromScheme(scheme)
             val keyPair = keyPairGenerator.generateKeyPair()
@@ -62,11 +69,11 @@ class GemaltoLunaCryptoService(keyStore: KeyStore, provider: Provider, x500Princ
 
     companion object {
         val KEYSTORE_TYPE = "Luna"
-        fun fromConfigurationFile(legalName: X500Principal, cryptoServiceConf: Path?): CryptoService {
+        fun fromConfigurationFile(legalName: X500Principal, cryptoServiceConf: Path?, timeout: Duration? = null): CryptoService {
             val config = parseConfigFile(cryptoServiceConf!!)
             val provider = LunaProvider.getInstance()
             val keyStore = KeyStore.getInstance(KEYSTORE_TYPE, provider)
-            return GemaltoLunaCryptoService(keyStore, provider, legalName) { config }
+            return GemaltoLunaCryptoService(keyStore, provider, legalName, timeout) { config }
         }
 
         private fun parseConfigFile(cryptoServiceConf: Path): GemaltoLunaConfiguration {
