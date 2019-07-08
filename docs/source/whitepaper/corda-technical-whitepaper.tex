@@ -457,7 +457,7 @@ protocol. Note that the framework is not required to implement the wire protocol
 %\caption{A diagram showing the two party trading flow with notarisation}
 %\end{figure}
 
-\subsection{Data visibility and dependency resolution}
+\subsection{Data visibility and dependency resolution}\label{subsec:data-visibility-and-dependency-resolution}
 
 When a transaction is presented to a node as part of a flow it may need to be checked. Simply sending you a message
 saying that I am paying you \pounds1000 is only useful if you are sure I own the money I'm using to pay you.
@@ -1855,18 +1855,8 @@ upgrades, three are particularly worth a mention.
 data, `need' can still be an unintuitive concept in a decentralised database where often data is required only to
 perform security checks. We have successfully experimented with running contract verification inside a secure
 enclave protected JVM using Intel SGX\texttrademark~, an implementation of the `trusted computing'
-concept\cite{mitchell2005trusted}. Secure hardware platforms allow computation to be performed in an undebuggable
-tamper-proof execution environment, for the software running inside that environment to derive encryption keys
-accessible only to that instance, and for the software to \emph{remotely attest} to a third party over the internet
-that it is indeed running in the secure state. By having nodes remotely attest to each other that they are running
-smart contract verification logic inside an enclave it becomes possible for the dependencies of a transaction to be
-transmitted to a peer encrypted under an enclave key, thus allowing them to verify the dependencies using software
-they have audited themselves, but without being able to see the data on which it operates.
-
-Secure hardware opens up the potential for a one-shot privacy model that would dramatically simplify the task of
-writing smart contracts. However, it does still require the sensitive data to be sent to the peer who may then
-attempt to attack the hardware or exploit side channels to extract business intelligence from inside the encrypted
-container.
+concept\cite{mitchell2005trusted}, and this work is now being integrated with the platform.
+See~\cref{subsec:global-ledger-encryption}.
 
 \paragraph{Mix networks.}Some nodes may be in the position of learning about transactions that aren't directly
 related to trades they are doing, for example notaries or regulator nodes. Even when key randomisation is used
@@ -1955,7 +1945,190 @@ the feature ideal for various kinds of file that would be inappropriate to place
     \item Photos, videos or 3D models of the items being transacted, for later use in dispute resolution.
 \end{itemize}
 
-\section{Conclusion}
+\subsection{Global ledger encryption}\label{subsec:global-ledger-encryption}
+
+All distributed ledger systems require nodes to cross-check each others changes to the ledger by verifying
+transactions, but this inherently exposes data to peers that would be best kept private. Scenario specific
+`ad-hoc' techniques can reduce leakage by homomorphically encrypting amounts and obfuscating identities
+(see~\cref{subsec:confidential-identities}), but they impose great complexity on application developers and
+don't provide a universal solution: most research has focused on tokens and provides limited or no value to
+non-token states.
+
+This section outlines a design for a platform upgrade which encrypts all transaction data, leaving only individual
+states exposed to authorised parties. The encrypted transactions are still verified and thus ledger integrity is
+still assured. This section provides details on the design which is being implemented at the moment.
+
+\subsubsection{Intel SGX}
+
+Intel \emph{Software Guard Extensions}\cite{SGX} is a new feature supported in the latest generation of Intel CPUs.
+It allows applications to create so-called \emph{enclaves}. Enclaves have the following useful properties:
+
+\begin{itemize}
+    \item They have isolated memory spaces which are accessible to nothing except code running in the enclave
+          itself.
+    \item Enclave RAM is encrypted and decrypted on the fly by the CPU core, which has anti-tamper
+          circuitry in it. Thus physical access to the hardware is not sufficient to be able to read enclave memory.
+    \item Enclaves have an identity, being either the hash of the code that is loaded into them at creation time
+          or the public key that signed the enclave.
+    \item This identity can be reported over a network to third parties via a process named \emph{remote attestation}.\
+          The CPU generates a data structure signed by a key that can be traced back to Intel's fabrication plants.
+    \item Enclaves can deterministically derive secret keys that mix together a unique, hidden per-CPU key and the
+          enclave identity itself; by implication enclaves can derive keys that no other software on the system can
+          access. These keys can be bound to remote attestations.
+\end{itemize}
+
+Combining these features enables enclaves to act almost like secure self-defending computers embedded inside other
+untrusted hosts. A client (``Alice'') can challenge an untrusted host machine (``Bob'') to create an enclave with a
+pre-agreed code hash or code signer. Bob can then prove to Alice the enclave is running by showing her a remote
+attestation `report': a data structure which includes both her challenge and an enclave key, collectively signed by
+an Intel approved key. Alice and the enclave can now execute a key agreement protocol like Elliptic
+Curve Diffie-Hellman to compute a shared AES key that Bob doesn't know, and in this way establish an encrypted
+channel to the enclave. Other parties can repeat this procedure and thus end up with a secure shared computational
+space in which they can collaborate together.
+
+SGX enclaves are secure as long as the SGX implementation in the CPU is secure, the software running inside the
+enclave is secure (e.g. no buffer overflows) and as long as side-channel attacks are sufficiently mitigated. Other
+software and hardware running on the host such as the operating system, other apps, the BIOS, video chips and so on
+are considered to be untrusted. By implication enclaves can't access the operating system or any hardware directly:
+they may communicate only by sending messages to the untrusted host software which ask it to do work. Enclaves thus
+need to encrypt and sign any data entering/leaving the enclave.
+
+SGX is designed with a sophisticated versioning scheme that allows it to be re-secured in case flaws in the
+technology are found; as of writing this ``TCB recovery'' process has been used several times.
+
+A remote attestation report can be attached to a piece of data to create a \emph{signature of attestation} (SoA).
+Such a signature is conceptually like a normal digital signature and in fact may contain a regular digital signature
+as part of its structure, however, whereas a normal digital signature proves a particular party signed the message,
+a signature of attestation proves that a piece of software signed the message. Thus a SoA transmits arbitrary
+semantic meaning that would otherwise need to be obtained via trusting a third party, such as an oracle.
+
+An objection may be raised that there's still a third party involved in this scheme, namely Intel. But this
+is not a worrying problem because in any software system you implicitly trust the CPU to calculate results
+correctly anyway, and modern CPUs certainly have sufficient flexibility in their microcode architecture to detect
+particular code sequences and calculate the wrong answer when found. Thus minimising the number of trusted parties
+to \emph{only} the CPU vendor is still a major step forward from the status quo.
+
+\subsubsection{Lose-integrity vs lose-privacy}
+
+SGX enclaves can be used in two different ways to provide ledger privacy. We name these different approaches the
+\emph{lose-integrity model} and the \emph{lose-privacy model}, after what desirable attribute you lose if the
+enclave's security is breached.
+
+Consider a scenario in which Alice wishes to transfer a state to Bob. Alice has herself received the state from
+Zack, a third party Bob should not learn anything about. The state contains complex structured business data thus
+rendering token-specific privacy techniques insufficient.
+
+\paragraph{Lose-integrity.}The simplest way to use SGX is for Alice to create an enclave on her own computer that
+knows how to deserialize and verify transactions. Enclaves produce \emph{signatures of validity}, which are
+signatures of attestation by an enclave binary marked as trusted by the Corda network operator and which sign over
+the Merkle root of the verified transaction. This implies the enclave must include a small SGX compatible JVM (such
+a JVM has been built). Alice feeds a transaction to the enclave along with signatures of validity for each of the
+transaction's inputs, and a new signature of validity is produced by the enclave which can be checked by
+any third party to convince themselves that a genuine Corda verification enclave was used.
+
+In the lose-integrity model transaction data doesn't move between peers at all. Only signatures of validity are
+transmitted over the peer-to-peer network. This has the following advantages:
+
+\begin{itemize}
+    \item Some countries have regulations that forbid transmission of financial data, even encrypted, outside their
+          own borders. The lose-integrity model can handle such cases.
+    \item Transaction resolution and verification becomes much faster, as only one transaction must be checked
+          instead of an arbitrarily deep dependency graph.
+    \item It becomes possible for nodes to check transactions `from the future' and thus maybe survive mandatory
+          software upgrades imposed by the network operator, as transaction verification can be outsourced to
+          third party enclaves.
+    \item Side channel attacks on the verification enclave are much less serious, because Alice would only be
+          attacking her own transaction. She never has other party's transaction data.
+    \item Signatures of validity allow a non-validating notary to be upgraded to being `semi-validating', thus
+          blocking denial-of-state attacks without leaking private data to the notary.
+    \item It is relatively simple to implement.
+\end{itemize}
+
+Unfortunately the lose-integrity model has one large disadvantage that makes it undesirable to support as the
+only available model: if a flaw in the enclave or SGX itself is found, it becomes possible for an attacker to edit
+the ledger as they see fit. Because nodes aren't actually cross checking each other any more, but placing full
+confidence in the enclave to assert validity, anyone who can forge signatures of validity could create money out of
+thin air.
+
+In practice both a verification enclave and SGX itself are complex systems that are unlikely to be bug free. Flaws
+will be found and fixed over the lifetime of the system, and the design of SGX anticipates that. Indeed, such flaws
+have already been found. In the lose-integrity model the ledger cannot recover from a discovered flaw: doubt over
+the integrity of the database would persist permanently.
+
+This problem motivates the desire for a second model.
+
+\paragraph{Lose-privacy.}This model is significantly more complex. In it, Bob uses remote attestation to convince
+Alice that he is running an enclave that can verify third party transaction data without leaking it to him. Once
+convinced, Alice encrypts Zack's transaction to the enclave and sends it to Bob's computer. Bob then feeds the
+encrypted transaction to the enclave, and the enclave signals to Bob that it believes the transaction to be valid.
+
+The complexity stems from the recursive nature of this process. Alice received the transaction from Zack, who may
+in turn have obtained the state via a transaction with Yvonne, thus neither Alice nor Zack may actually have a
+cleartext copy of the transaction Bob needs. Moreover Bob must be able to verify the chain of custody leading
+through Alice, Zack and Yvonne using the regular transaction resolution process
+(see section~\cref{subsec:data-visibility-and-dependency-resolution}). Thus Alice, Zack and Yvonne must all have
+enclaves themselves or be using an outsourced third party enclave, as with SGX it theoretically doesn't matter
+who owns the actual hardware on which they run. These enclaves establish encrypted channels between each other
+along the chain of custody and also save encrypted transactions to their local storage.
+
+A simplified version of the protocol looks like this:
+
+\begin{enumerate}
+    \item Alice constructs a new transaction sending the state to Bob, with arbitrary adjustments to the state
+          in question. The transaction input points to the transaction Alice received the state in from Zack.
+          She sends this new transaction to Bob.
+    \item Bob checks the inputs to see if he already knows about the chain of custody. He doesn't, so he
+          instantiates his enclave and sends a remote attestation of it to Alice. The attestation includes an enclave
+          specific encryption key.
+    \item Alice checks the attestation and sees that the enclave Bob is running is one agreed beforehand
+          to be usable for transaction checking. Typically this agreement would occur via the network parameters
+          mechanism as it must be acceptable to every node in the network (the set of allowed enclaves is a
+          consensus rule).
+    \item Alice now instructs her own enclave to load the requested transaction ID from her encrypted local storage
+          and \emph{re}-encrypt it to the key of Bob's enclave. She sends the newly re-encrypted version to Bob,
+          who then stores it. This process iteratively repeats until the dependency graph is fully explored and Bob
+          has encrypted versions of all the transactions in the chains of custody.
+    \item Bob now feeds these encrypted transactions to his enclave, oldest first. The enclave runs the contract
+          logic and does all the other tasks involved in verifying transaction validity, until the dependencies
+          of Alice's new transaction are fully verified. Bob can now verify Alice's transaction and be convinced
+          it is valid. Bob stores the new transaction locally so it can be encrypted to the next enclave in the
+          chain.
+\end{enumerate}
+
+The above description is incomplete in many ways. A real implementation will hide \emph{all} transactions and
+expose only states via the node's API - the head of the chain is never special in such a design. Enclaves need to
+store data locally under different keys than the ones used for communication, implying another re-encryption step.
+Unlike lose-integrity the lose-privacy model doesn't improve the speed or scaling of the resolution process, and
+encrypted data still moves between nodes. And side channel attacks must be mitigated, as Bob could attempt to learn
+things about the contents of encrypted transactions by taking careful measurements of the enclave's execution as it
+validates the chain of custody.
+
+Despite these disadvantages, the lose-privacy model comes with a major improvement: breaches of enclave security
+allow private data to be accessed but do \emph{not} grant any special write privileges. As data gets progressively
+less valuable as it ages this means recovery from breaches happens naturally and organically; eventually none of
+the data exposed by a breach matters much any more, and at any rate, a breach only reverts the system to the level
+of security it had pre-SGX. Therefore trading can continue even in the event of a zero-day exploit being
+discovered. In contrast, if data integrity is lost there is no way to recover it (illegally minted money may
+continue to circulate for years).
+
+\paragraph{Mixed mode.}The two modes can be combined in the same network. For example, lose-integrity can be used
+if data were to cross borders with lose-privacy being the default for when data would stay within a country.
+Semi-validating notaries could operate in a network for which other nodes are running the lose-privacy model. The
+exact blend of security tradeoffs a group of nodes may tolerate can be set by the network operator via its usual
+governance processes. Mixed mode is also useful during incremental rollout of ledger encryption to an already live
+Corda network.
+
+\paragraph{Other uses.}Enclaves can provide neutral meeting grounds in which shared calculations or negotiations
+can occur. By integrating enclave messaging and remote attestation with the flow and identity frameworks, enclave
+programming becomes significantly easier. With this type of framework integration enclaves would be exposed to
+CorDapp developers as, essentially, deterministic programmatic organisations. Enclaves would be able to communicate
+with counterparties, sign transactions, keep secrets, hold assets and potentially even move themselves around
+between generic hosting providers, whilst convincing human-operated organisations that they will behave honestly.
+Autonomous agents running inside node enclaves may also be trusted to have access to the globally encrypted ledger
+in order to derive economic statistics, detect trading optimisations and potentially speculate on the markets
+directly.
+
+\section{Conclusion}\label{sec:conclusion}
 
 We have presented Corda, a decentralised database designed for the financial sector. It allows for a unified data
 set to be distributed amongst many mutually distrusting nodes, with smart contracts running on the JVM providing
