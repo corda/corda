@@ -1337,7 +1337,33 @@ copies of the transaction. In normal operation the notary is not provided with t
 keys to the long term identity keys and thus does not know who is involved with the operation (assuming source IP
 address obfuscation would be implemented, see~\cref{subsec:privacy-upgrades}).
 
-\section{The vault}\label{sec:vault}
+\section{The node}\label{sec:node}
+
+Corda comes with an open source reference implementation of the node. A more advanced `Corda Enterprise' node is
+available on a commercial basis from R3. The node acts as an application server which loads JARs containing
+CorDapps and provides them with access to the peer-to-peer network, signing keys, a relational database that may
+be used for any purpose, and a `vault' that stores states. Although the open source reference implementation is
+a single server, more advanced nodes may be decomposed into multiple cooperating services. For example, the
+commercial node from R3 offers a cryptographic firewall component that separates the node from the internet and
+terminates/relays connections through the organisation's DMZ. The message queue broker plays an integral role
+in connecting different services together in this kind of multi-component architecture.
+
+An occasional source of confusion is related to whether the open source nature of the node has any implications for
+ledger integrity. It doesn't, because as with all DLT systems, Corda nodes cross check each other's transactions.
+When executing well written applications a node owner cannot gain any advantage by corrupting their node's code or
+state. A future version of Corda may provide a formal protocol specification, easing the task of creating
+alternatives to the reference implementation.
+
+This guarantee does not presently extend to apps installed in a node attacking each other. The reference
+implementation provides no inter-app isolation: it is assumed that (outside of contract logic) code executing in
+the node was installed by the administrator and is trusted. Applications are granted access to the underlying
+relational database and can thus read each others states directly. Nodes capable of sandboxing potentially
+malicious flows and in-process services whilst still enabling application interop are a topic for future work.
+The platform is built with a combination of JVM-level type security sandboxing and process isolation in mind; a
+plausible candidate architecture is one in which flows are load balanced by the MQ broker between multiple flow
+workers that can run on different machines and in different firewall zones.
+
+\subsection{The vault}\label{sec:vault}
 
 In any block chain based system most nodes have a wallet, or as we call it, a vault.
 
@@ -1412,7 +1438,7 @@ annotated in other ways, for instance to customise its mapping to XML/JSON, or t
 constraints~\cite{BeanValidation}. These annotations won't affect the behaviour of the node directly but may be
 useful when working with states in surrounding software.
 
-\section{Client RPC and reactive collections}\label{sec:client-rpc-and-reactive-collections}
+\subsection{Client RPC and reactive collections}\label{sec:client-rpc-and-reactive-collections}
 
 Any realistic deployment of a distributed ledger faces the issue of integration with an existing ecosystem of
 surrounding tools and processes. Ideally, programs that interact with the node will be loosely coupled,
