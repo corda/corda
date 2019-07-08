@@ -633,9 +633,9 @@ at the time the transaction is notarised: if it's been consumed itself as part o
 transaction will not be notarised. In this way, non-consuming input references can help prevent the execution of
 transactions that rely on out-of-date reference data.
 \item [Attachments.] Transactions specify an ordered list of zip file hashes. Each zip file may contain
-code, data or supporting documentation for the transaction. Contract code has access to the contents
-of the attachments when checking the transaction for validity. Attachments have no concept of `spentness' and are useful
-for things like holiday calendars, timezone data, bytecode that defines the contract logic and state objects, and so on.
+code and data for the transaction. Contract code has access to the contents of the attachments when checking the
+transaction for validity. Attachments have no concept of `spentness' and are useful for things like holiday
+calendars, timezone data, bytecode that defines the contract logic and state objects, and so on.
 \item [Commands.] There may be multiple allowed output states from any given input state. For instance
 an asset can be moved to a new owner on the ledger, or issued, or exited from the ledger if the asset has been
 redeemed by the owner and no longer needs to be tracked. A command is essentially a parameter to the contract
@@ -1929,6 +1929,31 @@ sign transactions on lower power devices, and the flow framework solves the chal
 sensors or vice-versa across potentially multiple layers of routers, proxies, message queues etc. Because the Corda
 protocol is built on top of standard AMQP, a subset of it can be implemented in C++ for lightweight devices without
 much CPU power. A prototype of such a library already exists.
+
+\subsection{Data streams}\label{subsec:data-streams}
+
+Transaction attachments are available to contract logic during verification. As a result they suffer from various
+constraints: they must be ZIP files, they must fit in memory on all nodes, they must obey various security
+properties, they must be propagated everywhere the transaction itself is, and so on. Sometimes it's desirable to
+attach raw data files to transactions that are \emph{not} used in forming consensus, but rather are only included
+for audit trail and signing purposes. This can be done today by just including the hash of a data file in a state
+but it would be convenient if the protocol took care of streaming the result between nodes and making those streams
+available to application developers. \emph{Data streams} are a proposed feature that allows Java
+\texttt{InputStream} objects to be included in transactions. The RPC client library is enhanced to support sending
+streams across RPC/MQ connections, and the node incrementally hashes the contents of the stream and stores it
+locally, embedding the final hash into the transaction where it will be covered by a signature. The data is then
+streamed across the peer-to-peer network without ever being stored fully in memory, and the stream is checked
+against the included transaction hash to ensure it matches.
+
+Importantly, the stream is transmitted only one hop: it isn't copied as part of transaction resolution. This makes
+the feature ideal for various kinds of file that would be inappropriate to place in attachments, such as:
+
+\begin{itemize}
+    \item Large PDFs, like scans of paper documents.
+    \item Audio recordings of employee conversations for compliance with trader surveillance rules.
+    \item Spreadsheets containing underlying trade models.
+    \item Photos, videos or 3D models of the items being transacted, for later use in dispute resolution.
+\end{itemize}
 
 \section{Conclusion}
 
