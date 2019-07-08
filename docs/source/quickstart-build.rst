@@ -22,22 +22,28 @@ The first thing you need to do is clone a CorDapp template to modify.
 
 3. Open IntelliJ and open the CorDapp template project.
 
+4. Click **File** >  **Project Structure**. To set the project SDK click **New...** > **JDK**, and navigating to the installation directory of your JDK. Click **Apply**.
+
+5. Select **Modules** > **+** > **Import Module**. Select the ``cordapp-template-kotlin`` folder and click **Open**. Select **Import module from external model** > **Gradle** > **Next** > **Finish** > **Ok**. Gradle will now download all the project dependencies and perform some indexing.
+
 Step Two: Creating states
 -------------------------
 
 Since the CorDapp models a car dealership network, a state must be created to represent cars. States are immutable objects representing on-ledger facts. A state might represent a physical asset like a car, or an intangible asset or agreement like an IOU. For more information on states, see the `state documentation <./key-concepts-states.html>`_.
 
-1. From IntelliJ expand the source files and navigate to the following state template file: ``contracts > src > main > kotlin > com > template > states > TemplateState.kt``.
+1. From IntelliJ expand the source files and navigate to the following state template file: ``contracts > src > main > kotlin > com.template > states > TemplateState.kt``.
 
 2. Right-click on **TemplateState.kt** in the project navigation on the left. Select **Refactor** > **Copy**.
 
 3. Rename the file to ``CarState`` and click **OK**.
 
-4. Add the following imports to the top of the state file:
+4. Double-click the new state file to open it. Add the following imports to the top of the state file:
 
     .. container:: codeset
 
         .. sourcecode:: kotlin
+
+            package com.template.states
 
             import com.template.contracts.CarContract
             import com.template.contracts.TemplateContract
@@ -51,7 +57,7 @@ Since the CorDapp models a car dealership network, a state must be created to re
 
 5. Update ``@BelongsToContract(TemplateContract:class)`` to specify ``CarContract::class``.
 
-6. Double-click the new state file to open it. Add the following fields to the state:
+6. Add the following fields to the state:
   * ``owningBank`` of type ``Party``
   * ``holdingDealer`` of type ``Party``
   * ``manufacturer`` of type ``Party``
@@ -109,7 +115,7 @@ The ``CarState`` definition has now been created. It lists the properties and as
 Step Three: Creating contracts
 ------------------------------
 
-After creating a state, you must create a contract. Contracts define the rules that transactions are validated against, for example, a contract might define that an issue transaction must have no input states, and one output state of a specified type. To learn more about contracts, see the `contracts documentation <./key-concepts-contracts.html>`_.
+After creating a state, you must create a contract. Contracts define the rules that govern how states can be created and evolved. For example, a contract for a Cash state should check that any transaction that changes the ownership of the cash is signed by the current owner and does not create cash from thin air. To learn more about contracts, see the `contracts documentation <./key-concepts-contracts.html>`_.
 
 1. From IntelliJ, expand the project source and navigate to: ``contracts > src > main > kotlin > com > template > contracts > TemplateContract.kt``
 
@@ -140,7 +146,9 @@ After creating a state, you must create a contract. Contracts define the rules t
 
 8. Update the ``Action`` command to an ``Issue`` command. This represents an issuance of an instance of the ``CarState`` state.
 
-9. Add ``val command=tx.commands.requireSingleCommand<Commands.Issue>()`` at the beginning of the ``verify()`` method. This line ensures that the command to issue a car state is called.
+  Commands are the operations that can be performed on a state. A contract will often define command logic for several operations that can be performed on the state in question, for example, issuing a state, changing ownership, and marking the state retired.
+
+9. Add ``val command=tx.commands.requireSingleCommand<Commands.Issue>()`` at the beginning of the ``verify()`` method. The ``verify()`` method defines the verification rules that commands must satisfy to be valid.
 
 10. The final function of the contract is to prevent unwanted behaviour during the flow. After the ``val command=tx.commands...`` line, add the following requirement code:
 
@@ -163,6 +171,15 @@ After creating a state, you must create a contract. Contracts define the rules t
     .. container:: codeset
 
         .. sourcecode:: kotlin
+
+            package com.template.contracts
+
+            import com.template.states.CarState
+            import net.corda.core.contracts.CommandData
+            import net.corda.core.contracts.Contract
+            import net.corda.core.contracts.requireSingleCommand
+            import net.corda.core.contracts.requireThat
+            import net.corda.core.transactions.LedgerTransaction
 
             class CarContract : Contract {
                 companion object {
@@ -191,7 +208,7 @@ After creating a state, you must create a contract. Contracts define the rules t
 Step Four: Creating a flow
 --------------------------
 
-1. From IntelliJ, expand the project source and navigate to: ``workflows > src > main > kotlin > com > template > flows > Flows.kt``
+1. From IntelliJ, expand the project source and navigate to: ``workflows > src > main > kotlin > com.template.flows > Flows.kt``
 
 2. Right-click on **Flows.kt** in the project navigation on the left. Select **Refactor > Copy**.
 
@@ -202,6 +219,8 @@ Step Four: Creating a flow
     .. container:: codeset
 
         .. sourcecode:: kotlin
+
+            package com.template.flows
 
             import co.paralleluniverse.fibers.Suspendable
             import com.template.contracts.CarContract
@@ -223,9 +242,9 @@ Step Four: Creating a flow
 
 8. Update the ``@InitiatedBy`` property of ``CarIssueResponder`` to ``CarIssueInitiator::class``.
 
-9. Add parameters to the ``CarIssueInitiator`` class for all the fields of the ``CarState`` definition, except for ``linearId``.
+9. Now that the flow structure is in place, we can begin writing the code to create a transaction to issue a car state. Add parameters to the ``CarIssueInitiator`` class for all the fields of the ``CarState`` definition, except for ``linearId``.
 
-10. Inside the ``call()`` function of the initiator, create a variable for the notary node. **expand this with some code**
+10. Inside the ``call()`` function of the initiator, create a variable for the notary node: ``val notary = serviceHub.networkMapCache.notaryIdentities.single()``
 
 11. Create a variable for an ``Issue`` command.
 
@@ -326,7 +345,7 @@ Step Four: Creating a flow
                 }
             }
 
-21. To finish the initiators ``call()`` function, other parties must sign the transaction. Add the following code to send the transaction to the other relevant parties:
+21. To finish the initiator's ``call()`` function, other parties must sign the transaction. Add the following code to send the transaction to the other relevant parties:
 
     .. container:: codeset
 
@@ -361,6 +380,20 @@ Step Four: Creating a flow
     .. container:: codeset
 
         .. sourcecode:: kotlin
+
+            package com.template.flows
+
+            import co.paralleluniverse.fibers.Suspendable
+            import com.template.contracts.CarContract
+            import com.template.states.CarState
+            import net.corda.core.contracts.Command
+            import net.corda.core.contracts.UniqueIdentifier
+            import net.corda.core.contracts.requireThat
+            import net.corda.core.flows.*
+            import net.corda.core.identity.Party
+            import net.corda.core.node.ServiceHub
+            import net.corda.core.transactions.SignedTransaction
+            import net.corda.core.transactions.TransactionBuilder
 
             @InitiatingFlow
             @StartableByRPC
@@ -411,7 +444,7 @@ Step Four: Creating a flow
 Step Five: Update the Gradle build
 ----------------------------------
 
-The Gradle build files must be updated to change how the nodes are deployed.  (**how**)
+The Gradle build files must be updated to change the node configuration.
 
 1. Navigate to the ``build.gradle`` file in the root ``cordapp-template-kotlin`` directory.
 
@@ -475,7 +508,7 @@ Now that the CorDapp code has been completed and the build file updated, the Cor
 
   To start the nodes on Mac/Linux run the following command: ``build/nodes/runnodes``
 
-4. To run flows in your CorDapp, enter the following flow command from any node terminal window: ``flow start CarIssueInitiator owningBank: Bank of America, holdingDealer: Dealership, manufacturer: Manufacturer, vin:"abc", licensePlateNumber: "abc1234", make: "Honda", model: "Civic", dealershipLocation: "NYC"``
+4. To run flows in your CorDapp, enter the following flow command from any node terminal window: ``flow start CarIssueInitiator owningBank: BankofAmerica, holdingDealer: Dealership, manufacturer: Manufacturer, vin: "abc", licensePlateNumber: "abc1234", make: "Honda", model: "Civic", dealershipLocation: "NYC"``
 
 5. To check that the state was correctly issued, query the node using the following command:
 
