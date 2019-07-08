@@ -411,7 +411,6 @@ This mode of operation is very similar to what is happening on the Corda Node fo
 :doc:`HA Utilities <ha-utilities>` tool been extended such that during initial generation of TLS keys they are created on HSM.
 
 .. note:: Even though Corda Firewall has a facility to store Artemis private key in HSM, out-of-process Artemis and Corda Node do not yet have facility to store their private keys on HSM.
-          This feature is likely to be implemented in the future releases of Corda Enterprise.
 
 .. note:: Since tunnel is an internal communication channel between Bridge and Float secured by self-signed certificate using custom trust root,
           there is little benefit in protecting private keys for this particular communication channel using HSM. Also this would require to have ``Float`` (a DMZ side component) to be connecting to HSM, which might
