@@ -308,6 +308,54 @@ Python, fed to JPA for database persistence and query or a Bean Validation engin
 used to automatically generate GUIs using a toolkit like MetaWidget\cite{MetaWidget} or
 ReflectionUI\cite{ReflectionUI}.
 
+\subsection{Network parameters}\label{subsec:network-parameters}
+
+In any DLT system there are various tunable parameters whose correct values may not be known ahead of time, may
+change, or may be things upon which reasonable people will always disagree. Corda extracts these into a notion of
+\emph{network parameters}. Network parameters are encoded in a data structure, signed by the network operator and
+distributed via the same infrastructure as the network map. All nodes in a network must follow the configuration
+provided, otherwise consensus may not be achieved.
+
+Some examples of network parameters are:
+
+\begin{itemize}
+    \item The list of notaries acceptable for use within the network.
+    \item The largest acceptable peer to peer message in bytes.
+    \item The largest acceptable transaction size in bytes.
+    \item The event horizon (see below).
+    \item The minimum platform version required to take part in the network.
+\end{itemize}
+
+This list is not exhaustive and new parameters are added from time to time.
+
+The \emph{event horizon} is the span of time that is allowed to elapse before an offline node is considered to be
+permanently gone. Once a peer has been offline for longer than the event horizon, any nodes that have been
+communicating with it may kill any outstanding flows and erase knowledge of it from their databases. Typical values
+for the event horizon are long, for example, 30 days. This gives nodes that are only intermittently connected
+plenty of time to come online and resynchronise. Shorter values may lead to business processes being interrupted
+due to transient infrastructure outages for which repairs are already in progress.
+
+\paragraph{Flag days and hard forks.}There must be a mechanism for the parameters to be updated. Each signed
+parameter structure contains an incrementing integer epoch. When a new set of parameters is being introduced, it
+starts to be referenced by hash from the current network map and an activation date is supplied. Nodes download the
+new parameters, validate them and then alert the administrator that the network is changing. For some parameters
+the administrator is expected to manually review the change and accept it. Failure to do so before the activation
+date (the ``flag day'') results in the node shutting down, as it would no longer be able to fulfil its purpose.
+Network operators are expected to communicate and coordinate this process out of band; the protocol allows nodes to
+publish what parameters they have accepted so acceptance can be monitored and the flag day can be changed if
+so desired. Unlike in proof-of-work based block chain systems, there is no way to continue past an unacceptable
+change in the network parameters and remain on the `losing side'. Thus the notion of flag days is subtly different
+to the notion of a hard fork.
+
+\paragraph{Mandatory upgrades.}The network operator may choose to require nodes to meet a minimum version number.
+In this way the network can continue to enable new protocol features that require consensus and control the rate of
+growth-induced ossification. Nodes that aren't new enough to handle the network's minimum version shut down
+automatically unless overridden.
+
+\subsection{Platform versions}\label{subsec:platform-versions}
+
+The network protocol is versioned using a simple integer version number.
+
 \section{Flow framework}\label{sec:flows}
 
 \subsection{Overview}
@@ -372,8 +420,8 @@ hierarchical and steps can have sub-trackers for invoked sub-flows.
 that has stopped appears in the \emph{flow hospital} where the node's administrator may decide to kill the flow or
 provide it with a solution. Some flows that end up in the hospital will be retried automatically by the node
 itself, for example in case of database deadlocks that require a retry. Future versions of the framework may add
-the ability to request manual solutions, which would be useful for cases where the other side isn't sure why 
-you are contacting them. For example, if the specified reason for sending a payment is not recognised, or 
+the ability to request manual solutions, which would be useful for cases where the other side isn't sure why
+you are contacting them. For example, if the specified reason for sending a payment is not recognised, or
 when the asset used for a payment is not considered acceptable.
 
 For performance reasons messages sent over flows are protected only with TLS. This means messages sent via flows
@@ -723,8 +771,8 @@ verify functions to use is the union of the contracts specified by each state, w
 combined with a \emph{constraint} (see~\cref{sec:contract-constraints}). Embedding the JVM specification in the
 Corda specification enables developers to write code in a variety of languages, use well developed toolchains, and
 to reuse code already authored in Java or other JVM compatible languages. A good example of this feature in action
-is the ability to embed the ISDA Common Domain Model\cite{ISDACDM} directly into CorDapps. The CDM is 
-a large collection of types mapped to Java classes that model derivatives trading in a standardised way. It is 
+is the ability to embed the ISDA Common Domain Model\cite{ISDACDM} directly into CorDapps. The CDM is
+a large collection of types mapped to Java classes that model derivatives trading in a standardised way. It is
 common for industry groups to define such domain models and for them to have a Java mapping.
 
 Current versions of the platform only execute attachments that have been previously installed (and thus
@@ -843,7 +891,7 @@ uses.
 % TODO: Discuss confidential identities.
 % TODO: Discuss the crypto suites used in Corda.
 
-\subsection{Hard forks, bug fixes and dispute resolution}\label{subsec:hard-forks,-bug-fixes-and-dispute-resolution}
+\subsection{Bug fixes and dispute resolution}\label{subsec:bug-fixes-and-dispute-resolution}
 
 Decentralised ledger systems often differ in their underlying political ideology as well as their technical
 choices. The Ethereum project originally promised ``unstoppable apps'' which would implement ``code as law''. After
@@ -899,7 +947,7 @@ as seen in the diagrams below, that counterparty can sign the entire transaction
 of it. Additionally, if the counterparty needs to be convinced that some third party has already signed the
 transaction, that is also straightforward. Typically an oracle will be presented with the Merkle branches for the
 command or state that contains the data, and the timestamp field, and nothing else. If an oracle also takes part
-in the ledger as a direct participant it should therefore derive a separate key for oracular usage, to avoid 
+in the ledger as a direct participant it should therefore derive a separate key for oracular usage, to avoid
 being tricked into blind-signing a transaction that might also affect its own states.
 
 \begin{figure}[H]
@@ -1737,12 +1785,6 @@ transactions. This converts the membership tree to a graph that may contain cycl
 are not possible because nodes ignore announcements of new transactions/attachments they've already received.
 Whether a group prefers privacy or availability may be hinted in the certificate that defines it: if availability
 is preferred, this is a signal that members should always announce themselves (which would lead to a mesh).
-
-The network map for a network defines the event horizon, the span of time that is allowed to elapse before an
-offline node is considered to be permanently gone. Once a peer has been offline for longer than the event horizon
-any nodes that invited it remove it from their local tables. If a node was invited to a group by a gone peer and
-there are no other nodes that announced their membership it can use, the node should post a message to a queue
-and/or notify the administrator, as it's now effectively been evicted from the group.
 
 The resulting arrangement may appear similar to a gossip network. However the underlying membership tree structure
 remains. Thus when all nodes are online (or online enough) messages are guaranteed to propagate to everyone in the
