@@ -179,7 +179,7 @@ class NodeVaultService(
         }
     }
 
-    private fun recordUpdate(update: Vault.Update<ContractState>): Vault.Update<ContractState> {
+    private fun recordUpdate(update: Vault.Update<ContractState>, previouslySeen: Boolean): Vault.Update<ContractState> {
         if (!update.isEmpty()) {
             val producedStateRefs = update.produced.map { it.ref }
             val producedStateRefsMap = update.produced.associateBy { it.ref }
@@ -213,7 +213,21 @@ class NodeVaultService(
                     updateQuery.set(root.get<Vault.StateStatus>(VaultSchemaV1.VaultStates::stateStatus.name), Vault.StateStatus.CONSUMED)
                     updateQuery.set(root.get<Instant>(VaultSchemaV1.VaultStates::consumedTime.name), now)
                     updateQuery.set(root.get<String>(VaultSchemaV1.VaultStates::lockId.name), criteriaBuilder.nullLiteral(String::class.java))
-                    updateQuery.where(root.get<PersistentStateRef>(VaultSchemaV1.VaultStates::stateRef.name).`in`(consumedStateRefsBatch.map { PersistentStateRef(it) }))
+                    // If this transaction has been seen before, then add an extra term to the where clause excluding those states that are
+                    // already consumed. This prevents the timestamp for already consumed states from being updated.
+                    if (previouslySeen) {
+                        updateQuery.where(
+                                criteriaBuilder.and(
+                                        root.get<PersistentStateRef>(VaultSchemaV1.VaultStates::stateRef.name).`in`(consumedStateRefsBatch.map { PersistentStateRef(it) }),
+                                        criteriaBuilder.equal(
+                                                root.get<Vault.StateStatus>(VaultSchemaV1.VaultStates::stateStatus.name),
+                                                Vault.StateStatus.UNCONSUMED
+                                        )
+                                )
+                        )
+                    } else {
+                        updateQuery.where(root.get<PersistentStateRef>(VaultSchemaV1.VaultStates::stateRef.name).`in`(consumedStateRefsBatch.map { PersistentStateRef(it) }))
+                    }
                     session.createQuery(updateQuery).executeUpdate()
                 }
             }
@@ -228,29 +242,33 @@ class NodeVaultService(
         get() = concurrentBox.content._updatesInDbTx
 
     /** Groups adjacent transactions into batches to generate separate net updates per transaction type. */
-    override fun notifyAll(statesToRecord: StatesToRecord, txns: Iterable<CoreTransaction>) {
-        if (statesToRecord == StatesToRecord.NONE || !txns.any()) {
+    override fun notifyAll(statesToRecord: StatesToRecord, txns: Iterable<CoreTransaction>, previouslySeenTxns: Iterable<CoreTransaction>) {
+        if (statesToRecord == StatesToRecord.NONE || (!txns.any() && !previouslySeenTxns.any())) {
             txns.forEach { producedStatesMapping.get(it.id) { BitSet(0) } }
             return
         }
         val batch = mutableListOf<CoreTransaction>()
 
-        fun flushBatch() {
-            val updates = makeUpdates(batch, statesToRecord)
-            processAndNotify(updates)
+        fun flushBatch(previouslySeen: Boolean) {
+            val updates = makeUpdates(batch, statesToRecord, previouslySeen)
+            processAndNotify(updates, previouslySeen)
             batch.clear()
         }
-
-        for (tx in txns) {
-            if (batch.isNotEmpty() && tx.javaClass != batch.last().javaClass) {
-                flushBatch()
+        fun processTransactions(txs: Iterable<CoreTransaction>, previouslySeen: Boolean) {
+            for (tx in txs) {
+                if (batch.isNotEmpty() && tx.javaClass != batch.last().javaClass) {
+                    flushBatch(previouslySeen)
+                }
+                batch.add(tx)
             }
-            batch.add(tx)
+            flushBatch(previouslySeen)
         }
-        flushBatch()
+
+        processTransactions(previouslySeenTxns, true)
+        processTransactions(txns, false)
     }
 
-    private fun makeUpdates(batch: Iterable<CoreTransaction>, statesToRecord: StatesToRecord): List<Vault.Update<ContractState>> {
+    private fun makeUpdates(batch: Iterable<CoreTransaction>, statesToRecord: StatesToRecord, previouslySeen: Boolean): List<Vault.Update<ContractState>> {
 
         fun <T> withValidDeserialization(list: List<T>, txId: SecureHash): Map<Int, T> = (0 until list.size).mapNotNull { idx ->
             try {
@@ -276,10 +294,21 @@ class NodeVaultService(
             val outputsBitSet = BitSet(outputs.size)
             val ourNewStates = when (statesToRecord) {
                 StatesToRecord.NONE -> throw AssertionError("Should not reach here")
-                StatesToRecord.ONLY_RELEVANT -> outputs.filter {(_, state)->
+                StatesToRecord.ONLY_RELEVANT -> outputs.filter { (_, state) ->
                     isRelevant(state.data, keyManagementService.filterMyKeys(outputs.flatMap { it.value.data.participants.map { it.owningKey } }).toSet())
                 }
-                StatesToRecord.ALL_VISIBLE -> outputs
+                StatesToRecord.ALL_VISIBLE -> if (previouslySeen) {
+                    // For transactions being re-recorded, the node must check its vault to find out what states it has already seen. Note
+                    // that some of the outputs previously seen may have been consumed in the meantime, so the check must look for all state
+                    // statuses.
+                    val outputRefs = tx.outRefsOfType<ContractState>().map { it.ref }
+                    val seenRefs = loadStatesWithVaultFilter(outputRefs).map { it.ref }
+                    val unseenRefs = outputRefs - seenRefs
+                    val unseenOutputIdxs = unseenRefs.map { it.index }.toSet()
+                    outputs.filter { it.key in unseenOutputIdxs }
+                } else {
+                    outputs
+                }
             }.map {
                 outputsBitSet[it.key] = true
                 tx.outRef<ContractState>(it.key)
@@ -412,11 +441,11 @@ class NodeVaultService(
         return servicesForResolution.loadStates(states)
     }
 
-    private fun processAndNotify(updates: List<Vault.Update<ContractState>>) {
+    private fun processAndNotify(updates: List<Vault.Update<ContractState>>, previouslySeen: Boolean) {
         if (updates.isEmpty()) return
         val netUpdate = updates.reduce { update1, update2 -> update1 + update2 }
         if (!netUpdate.isEmpty()) {
-            recordUpdate(netUpdate)
+            recordUpdate(netUpdate, previouslySeen)
             persistentStateService.persist(netUpdate.produced + netUpdate.references)
             // flowId was required by SoftLockManager to perform auto-registration of soft locks for new states
             val uuid = (Strand.currentStrand() as? FlowStateMachineImpl<*>)?.id?.uuid

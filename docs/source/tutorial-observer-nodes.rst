@@ -43,12 +43,12 @@ Caveats
   participant/owner. See https://docs.corda.net/api-vault-query.html#example-usage for information on how to do this. 
   This also means that ``Cash.generateSpend`` should not be used when recording ``Cash.State`` states as an observer
 
-* Nodes only record each transaction once. If a node has already recorded a transaction in non-observer mode, it cannot
-  later re-record the same transaction as an observer. This issue is tracked here:
-  https://r3-cev.atlassian.net/browse/CORDA-883
-
 * When an observer node is sent a transaction with the ALL_VISIBLE flag set, any transactions in the transaction history
   that have not already been received will also have ALL_VISIBLE states recorded. This mean a node that is both an observer
   and a participant may have some transactions with all states recorded and some with only relevant states recorded, even
   if those transactions are part of the same chain. As a result, there may be more states present in the vault than would be
   expected if just those transactions sent with the ALL_VISIBLE recording flag were processed in this way.
+
+* Nodes may re-record transaction if they have previously recorded them as a participant and wish to record them as an observer. However,
+  the node cannot resolve a forward chain of transactions if this is done. This means that if you wish to re-record a chain of transactions
+  and get the new output states to be correctly marked as consumed, the full chain must be sent to the node *in order*.

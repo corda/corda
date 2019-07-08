@@ -52,7 +52,7 @@ object MessageChainSchemaV1 : MappedSchema(
 const val MESSAGE_CHAIN_CONTRACT_PROGRAM_ID = "net.corda.node.testing.MessageChainContract"
 
 open class MessageChainContract : Contract {
-    override fun verify(tx: LedgerTransaction) {
+    private fun verifySend(tx: LedgerTransaction) {
         val command = tx.commands.requireSingleCommand<Commands.Send>()
         requireThat {
             // Generic constraints around the IOU transaction.
@@ -64,7 +64,22 @@ open class MessageChainContract : Contract {
         }
     }
 
+    private fun verifySplit(tx: LedgerTransaction) {
+        requireThat {
+            "Two output state should be created." using (tx.outputs.size == 2)
+        }
+    }
+
+    override fun verify(tx: LedgerTransaction) {
+        val command = tx.commands.requireSingleCommand<Commands>().value
+        when (command) {
+            is Commands.Send -> verifySend(tx)
+            is Commands.Split -> verifySplit(tx)
+        }
+    }
+
     interface Commands : CommandData {
         class Send : Commands
+        class Split : Commands
     }
 }
