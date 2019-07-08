@@ -1857,30 +1857,30 @@ such a requirement.
 
 % TODO: Nothing related to data distribution groups is implemented.
 
-\subsection{Merging networks}
-
-Because there is no single block chain, it is theoretically possible to merge two independent networks together by simply
-establishing two-way connectivity between their nodes then configuring each side to trust each other's network operators
-(and by extension their network parameters, certificate authorities and so on).
-
-This ability may seem pointless: isn't the goal of a decentralised ledger to have a single global database for
-everyone? It is, but a practical route to reaching this end state is still required. It is often the case that
-organisations perceived by consumers as being a single company are in fact many different entities cross-licensing
-branding, striking deals with each other and doing internal trades with each other. This sort of setup can occur
-for regulatory reasons, tax reasons, due to a history of mergers or just through a sheer masochistic love of
-paperwork. Very large companies can therefore experience all the same synchronisation problems a decentralised
-ledger is intended to fix but purely within the bounds of that organisation. In this situation the main problem to
-tackle is not malicious actors but rather heterogenous IT departments, varying software development practices,
-unlinked user directories and so on. Such organisations can benefit from gaining experience with the technology
-internally and cleaning up their own internal views of the world before tackling the larger problem of
-synchronising with the wider world as well.
-
-When merging networks, both sides must trust that each other's notaries have never signed double spends. When
-merging an organisation-private network into the global ledger it should be possible to simply rely on incentives
-to provide this guarantee: there is no point in a company double spending against itself. However, if more evidence
-is desired, a standalone notary could be run against a hardware security module with audit logging enabled. The
-notary itself would simply use a private database and run on a single machine, with the logs exported to the people
-running a global network for asynchronous post-hoc verification.
+%\subsection{Merging networks}
+%
+%Because there is no single block chain, it is theoretically possible to merge two independent networks together by simply
+%establishing two-way connectivity between their nodes then configuring each side to trust each other's network operators
+%(and by extension their network parameters, certificate authorities and so on).
+%
+%This ability may seem pointless: isn't the goal of a decentralised ledger to have a single global database for
+%everyone? It is, but a practical route to reaching this end state is still required. It is often the case that
+%organisations perceived by consumers as being a single company are in fact many different entities cross-licensing
+%branding, striking deals with each other and doing internal trades with each other. This sort of setup can occur
+%for regulatory reasons, tax reasons, due to a history of mergers or just through a sheer masochistic love of
+%paperwork. Very large companies can therefore experience all the same synchronisation problems a decentralised
+%ledger is intended to fix but purely within the bounds of that organisation. In this situation the main problem to
+%tackle is not malicious actors but rather heterogenous IT departments, varying software development practices,
+%unlinked user directories and so on. Such organisations can benefit from gaining experience with the technology
+%internally and cleaning up their own internal views of the world before tackling the larger problem of
+%synchronising with the wider world as well.
+%
+%When merging networks, both sides must trust that each other's notaries have never signed double spends. When
+%merging an organisation-private network into the global ledger it should be possible to simply rely on incentives
+%to provide this guarantee: there is no point in a company double spending against itself. However, if more evidence
+%is desired, a standalone notary could be run against a hardware security module with audit logging enabled. The
+%notary itself would simply use a private database and run on a single machine, with the logs exported to the people
+%running a global network for asynchronous post-hoc verification.
 
 \subsection{Privacy upgrades}\label{subsec:privacy-upgrades}
 
