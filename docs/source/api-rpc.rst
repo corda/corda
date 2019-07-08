@@ -20,7 +20,7 @@ The key RPC operations exposed by the node are:
 * ``CordaRPCOps.nodeDiagnosticInfo``
     * Returns diagnostic information about the node, including the version and CorDapp details
 * ``CordaRPCOps.nodeInfo``
-    * Returns information about the node
+    * Returns the network map entry of the node, including its address and identity details as well as the platform version information
 * ``CordaRPCOps.currentNodeTime``
     * Returns the current time according to the node's clock
 * ``CordaRPCOps.partyFromKey/CordaRPCOps.wellKnownPartyFromX500Name``

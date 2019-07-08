@@ -247,7 +247,7 @@ Checking node version and installed CorDapps
 --------------------------------------------
 
 A ``nodeDiagnosticInfo`` RPC call can be made to obtain version information about the Corda platform running on the node. The returned ``NodeDiagnosticInfo`` object also includes information about the CorDapps installed on the node.
-The RPC call is also available as a command executable from the Corda shell that can be accessed via the local terminal, SSH, or as the standalone shell.
+The RPC call is also available as the ``run nodeDiagnosticInfo`` command executable from the Corda shell that can be accessed via the local terminal, SSH, or as the standalone shell.
 
 Example
 +++++++
