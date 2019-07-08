@@ -414,7 +414,7 @@ Once all nodes have performed the authorisation process, a participant must be c
 This flow sub-classes ``AbstractStateReplacementFlow``, which can be used to upgrade state objects that do not need a
 contract upgrade.
 
-One the flow ends successfully, all the participants of the old state object should have the upgraded state object
+Once the flow ends successfully, all the participants of the old state object should have the upgraded state object
 which references the new contract code.
 
 10. Migrate the new upgraded state to the Signature Constraint from the zone constraint

@@ -70,6 +70,8 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
     private val useOpenSsl by boolean().optional().withDefaultValue(Defaults.useOpenSsl)
     private val graphiteOptions by nested(GraphiteOptionsSpec).optional()
     private val enterpriseConfiguration by nested(EnterpriseConfigurationSpec)
+    @Suppress("unused")
+    private val systemProperties by nestedObject().optional()
 
     override fun parseValid(configuration: Config, options: Configuration.Options): Valid<NodeConfiguration> {
         val config = configuration.withOptions(options)
