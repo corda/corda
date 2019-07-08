@@ -347,14 +347,34 @@ so desired. Unlike in proof-of-work based block chain systems, there is no way t
 change in the network parameters and remain on the `losing side'. Thus the notion of flag days is subtly different
 to the notion of a hard fork.
 
+\subsection{Protocol versioning}\label{subsec:protocol-versioning}
+
+The network protocol is versioned using a simple incrementing integer version number. There are no minor or patch
+versions in the protocol definition itself: the versioning scheme is based on a commitment for the protocol
+to always be backwards compatible. All nodes publish their current highest supported version in their signed
+\texttt{NodeInfo} structure, so peers can always known ahead of time which protocol features are available to them
+before creating or receiving connections.
+
+The protocol data structures are reflected in the platform API, which is therefore versioned in an identical
+manner. Apps may specify the minimum platform version they require, such that nodes will refuse to load apps that
+would need newer features than are supported. The decision to unify the protocol and API versions implies that some
+protocol versions may be effectively identical despite having different version numbers: this was deemed preferable
+to requiring developers to understand and keep track of two similar-but-different versioning streams.
+
 \paragraph{Mandatory upgrades.}The network operator may choose to require nodes to meet a minimum version number.
-In this way the network can continue to enable new protocol features that require consensus and control the rate of
+In this way the network can continue to enable new transaction features that require, and control the rate of
 growth-induced ossification. Nodes that aren't new enough to handle the network's minimum version shut down
-automatically unless overridden.
+automatically unless overridden. Because mandatory upgrades may be difficult to coordinate and enforce future
+versions of the platform may support outsourcing of transaction verification to third party nodes or remote SGX
+enclaves.
 
-\subsection{Platform versions}\label{subsec:platform-versions}
-
-The network protocol is versioned using a simple integer version number.
+\paragraph{Target versioning.}The node supports `target versioning', in which the latest version the app was
+tested against is advertised in its metadata. The node can use this to activate or deactivate workarounds for buggy
+apps that may have accidentally baked in dependencies on undefined platform behaviours, or to enable the semantics
+of an API to evolve without breaking backwards compatibility. For example, if an API returns a list of elements
+that happened to be sorted in previous versions, but then ceases to be sorted due to performance optimisations,
+this could potentially break apps that assumed a certain value would always be found at a certain index. Target
+versioning can be used to keep apps working even as the platform underneath it evolves.
 
 \section{Flow framework}\label{sec:flows}
 
