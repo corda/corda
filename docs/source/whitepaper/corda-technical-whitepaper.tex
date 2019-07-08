@@ -119,7 +119,7 @@ information to node administrators and users and may interact with people as wel
 to enable developers to re-use common protocols such as notarisation, membership broadcast and so on.
 \item The data model allows for arbitrary object graphs to be stored in the ledger. These graphs are called \emph{states} and are the atomic unit of data.
 \item Nodes are backed by a relational database and data placed in the ledger can be queried using SQL as well as joined
-with private tables. States can declare a relational mapping using the JPA standard.
+with private tables. States can declare a relational mapping using the Java Persistence Architecture standard (JPA)~\cite{JPA}.
 \item The platform provides a rich type system for the representation of things like dates, currencies, legal entities and
 financial entities such as cash, issuance, deals and so on.
 \item The network can support rapid bulk data imports from other database systems without placing load on the network.
@@ -319,7 +319,7 @@ channel protocol\cite{PaymentChannels} involves two parties putting money into a
 iterating with your counterparty a shared transaction that spends that pot, with extra transactions used for the
 case where one party or the other fails to terminate properly. Such protocols typically involve reliable private
 message passing, checkpointing to disk, signing of transactions, interaction with the p2p network, reporting
-progress to the user, maintaining a complex state machine with timeouts and error cases, and possibly interaction
+progress to the user, maintaining a complex state machine with timeouts and error cases, and possibly interacting
 with internal systems on either side. All this can become quite involved. The implementation of payment channels in
 the \texttt{bitcoinj} library is approximately 9000 lines of Java, very little of which involves cryptography.
 
@@ -348,8 +348,8 @@ bytecode-to-bytecode transformation occurs that rewrites the classes into a form
 machine. These state machines are sometimes called coroutines, and the transformation engine Corda uses (Quasar) is
 capable of rewriting code arbitrarily deep in the stack on the fly. The developer may thus break his or her logic
 into multiple methods and classes, use loops, and generally structure their program as if it were executing in a
-single blocking thread. There's only a small list of things they should not do: sleeping, directly accessing the
-network APIs, or doing other tasks that might block outside of the framework.
+single blocking thread. There's only a small list of things they should not do: sleeping, accessing the
+network outside of the framework, and blocking for long periods of time (upgrades require in-flight flows to finish).
 
 \paragraph{Transparent checkpointing.}When a flow wishes to wait for a message from another party (or input from a
 human being) the underlying stack frames are suspended onto the heap, then crawled and serialized into the node's
@@ -373,9 +373,10 @@ hierarchical and steps can have sub-trackers for invoked sub-flows.
 \paragraph{Flow hospital.}Flows can pause if they throw exceptions or explicitly request human assistance. A flow
 that has stopped appears in the \emph{flow hospital} where the node's administrator may decide to kill the flow or
 provide it with a solution. Some flows that end up in the hospital will be retried automatically by the node
-itself, for example in case of database deadlocks that require a retry. The ability to request manual solutions is
-useful for cases where the other side isn't sure why you are contacting them, for example, the specified reason for
-sending a payment is not recognised, or when the asset used for a payment is not considered acceptable.
+itself, for example in case of database deadlocks that require a retry. Future versions of the framework may add
+the ability to request manual solutions, which would be useful for cases where the other side isn't sure why 
+you are contacting them. For example, if the specified reason for sending a payment is not recognised, or 
+when the asset used for a payment is not considered acceptable.
 
 For performance reasons messages sent over flows are protected only with TLS. This means messages sent via flows
 are deniable unless explicitly signed by the application. Automatic signing and recording of flow contents may be
@@ -624,9 +625,9 @@ verify functions to use is the union of the contracts specified by each state, w
 combined with a \emph{constraint} (see~\cref{sec:contract-constraints}). Embedding the JVM specification in the
 Corda specification enables developers to write code in a variety of languages, use well developed toolchains, and
 to reuse code already authored in Java or other JVM compatible languages. A good example of this feature in action
-is the ability to embed the ISDA Common Domain Model directly into CorDapps. The CDM is a large collection of types
-mapped to Java classes that model derivatives trading in a standardised way. It is common for industry groups to
-define such domain models and for them to have a Java mapping.
+is the ability to embed the ISDA Common Domain Model\cite{ISDACDM} directly into CorDapps. The CDM is 
+a large collection of types mapped to Java classes that model derivatives trading in a standardised way. It is 
+common for industry groups to define such domain models and for them to have a Java mapping.
 
 Current versions of the platform only execute attachments that have been previously installed (and thus
 whitelisted), or attachments that are signed by the same signer as a previously installed attachment. Thus nodes
@@ -708,7 +709,7 @@ transaction in which two file paths overlap between attachments is invalid. A sm
 expected to overlap normally, such as files in the \texttt{META-INF} directory, are excluded.
 
 \paragraph{Package namespace ownership.} Corda allows parts of the Java package namespace to be reserved for
-particular developers, identified by a public key (which may or may not be an identity on the node's zone). Any JAR
+particular developers with a network, identified by a public key (which may or may not be linked to an identity). Any JAR
 that exports a class in an owned package namespace but which is not signed by the owning key is considered to be
 invalid. Reserving a package namespace is optional but can simplify the data model and make applications more
 secure.
@@ -799,9 +800,9 @@ counterparty with the data elements that are needed along with the Merkle branch
 as seen in the diagrams below, that counterparty can sign the entire transaction whilst only being able to see some
 of it. Additionally, if the counterparty needs to be convinced that some third party has already signed the
 transaction, that is also straightforward. Typically an oracle will be presented with the Merkle branches for the
-command or state that contains the data, and the timestamp field, and nothing else. The resulting signature
-contains flag bits indicating which parts of the structure were presented for signing to avoid a single signature
-covering more than expected.
+command or state that contains the data, and the timestamp field, and nothing else. If an oracle also takes part
+in the ledger as a direct participant it should therefore derive a separate key for oracular usage, to avoid 
+being tricked into blind-signing a transaction that might also affect its own states.
 
 \begin{figure}[H]
 \includegraphics[width=\textwidth]{tearoffs1}
@@ -812,8 +813,6 @@ covering more than expected.
 \includegraphics[width=\textwidth]{tearoffs2}
 \caption{Construction of a Merkle branch}
 \end{figure}
-
-% TODO: The flag bits are unused in the current reference implementation.
 
 There are several reasons to take this more indirect approach. One is to keep a single signature checking code
 path. By ensuring there is only one place in a transaction where signatures may be found, algorithmic agility and
@@ -1009,7 +1008,7 @@ each block contains a reward of newly issued bitcoins, an unrecognised block rep
 block typically represents a profit.
 
 Bitcoin uses proof-of-work because it has a design goal of allowing an unlimited number of identityless parties to
-join and leave the network at will, whilst simultaneously making it hard to execute Sybil attacks (attacks in which
+join and leave the consensus forming process at will, whilst simultaneously making it hard to execute Sybil attacks (attacks in which
 one party creates multiple identities to gain undue influence over the network). This is an appropriate design to
 use for a peer to peer network formed of volunteers who can't/won't commit to any long term relationships up front,
 and in which identity verification is not done. Using proof-of-work then leads naturally to a requirement to
@@ -1095,31 +1094,6 @@ propagate far and the only entities who will learn their transaction hashes are 
 select to keep the data from the notary. For liquid assets a validating notary should always be used to prevent
 value destruction and theft if the transaction identifiers leak.
 
-\subsection{Merging networks}
-
-Because there is no single block chain it becomes possible to merge two independent networks together by simply
-establishing two-way connectivity between their nodes then configuring each side to trust each other's notaries and
-certificate authorities.
-
-This ability may seem pointless: isn't the goal of a decentralised ledger to have a single global database for
-everyone? It is, but a practical route to reaching this end state is still required. It is often the case that
-organisations perceived by consumers as being a single company are in fact many different entities cross-licensing
-branding, striking deals with each other and doing internal trades with each other. This sort of setup can occur
-for regulatory reasons, tax reasons, due to a history of mergers or just through a sheer masochistic love of
-paperwork. Very large companies can therefore experience all the same synchronisation problems a decentralised
-ledger is intended to fix but purely within the bounds of that organisation. In this situation the main problem to
-tackle is not malicious actors but rather heterogenous IT departments, varying software development practices,
-unlinked user directories and so on. Such organisations can benefit from gaining experience with the technology
-internally and cleaning up their own internal views of the world before tackling the larger problem of
-synchronising with the wider world as well.
-
-When merging networks, both sides must trust that each other's notaries have never signed double spends. When
-merging an organisation-private network into the global ledger it should be possible to simply rely on incentives
-to provide this guarantee: there is no point in a company double spending against itself. However, if more evidence
-is desired, a standalone notary could be run against a hardware security module with audit logging enabled. The
-notary itself would simply use a private database and run on a single machine, with the logs exported to the people
-running a global network for asynchronous post-hoc verification.
-
 \subsection{Guaranteed data distribution}
 
 In any global consensus system the user is faced with the question of whether they have the latest state of the
@@ -1159,7 +1133,7 @@ in the state to the notary cluster, which then stores it in the local databases 
 cluster has committed the transaction, key identities are looked up and any which resolve successfully are sent
 copies of the transaction. In normal operation the notary is not provided with the certificates linking the random
 keys to the long term identity keys and thus does not know who is involved with the operation (assuming source IP
-address obfuscation is in use, see~\cref{sec:privacy}).
+address obfuscation would be implemented, see~\cref{subsec:privacy-upgrades}).
 
 \section{The vault}\label{sec:vault}
 
@@ -1206,8 +1180,7 @@ features are therefore highly desirable for improving the productivity of app de
 \end{itemize}
 
 Corda states are defined using a subset of the JVM bytecode language which includes annotations. The vault
-recognises annotations from the \emph{Java Persistence Architecture} (JPA) specification defined in JSR
-338\cite{JPA}. These annotations define how a class maps to a relational table schema including which member is the
+recognises annotations from the JPA specification defined in JSR 338\cite{JPA}. These annotations define how a class maps to a relational table schema including which member is the
 primary key, what SQL types to map the fields to and so on. When a transaction is submitted to the vault by a flow,
 the vault finds states it considers relevant (i.e. which contains a key owned by the node) and the relevant CorDapp
 has been installed into the node as a plugin, the states are fed through an object relational mapper which
@@ -1225,8 +1198,6 @@ write paths users are free to connect to the backing database directly and issue
 features of their chosen database engine that they like. They can also create their own tables and create merged
 views of the underlying data for end user applications, as long as they don't impose any constraints that would
 prevent the node from syncing the database with the actual contents of the ledger.
-
-% TODO: Artemis stores message queues separately right now, although it does have a JDBC backend we don't use it.
 
 States are arbitrary object graphs. Whilst nothing stops a state from containing multiple classes intended for
 different tables, it is typical that the relational representation will not be a direct translation of the
@@ -1430,58 +1401,6 @@ able to see all of it. See~\cref{sec:tear-offs}
 issuer to re-issue the asset onto the ledger with a new reference field. This operation is not atomic, but effectively
 unlinks the new version of the asset from the old, meaning that nodes won't attempt to explore the original dependency
 graph during verification.
-
-Corda has been designed with the future integration of additional privacy technologies in mind. Of all potential
-upgrades, three are particularly worth a mention.
-
-\paragraph{Secure hardware.}Although we narrow the scope of data propagation to only nodes that need to see that
-data, `need' can still be an unintuitive concept in a decentralised database where often data is required only to
-perform security checks. We have successfully experimented with running contract verification inside a secure
-enclave protected JVM using Intel SGX\texttrademark~, an implementation of the `trusted computing'
-concept\cite{mitchell2005trusted}. Secure hardware platforms allow computation to be performed in an undebuggable
-tamper-proof execution environment, for the software running inside that environment to derive encryption keys
-accessible only to that instance, and for the software to \emph{remotely attest} to a third party over the internet
-that it is indeed running in the secure state. By having nodes remotely attest to each other that they are running
-smart contract verification logic inside an enclave it becomes possible for the dependencies of a transaction to be
-transmitted to a peer encrypted under an enclave key, thus allowing them to verify the dependencies using software
-they have audited themselves, but without being able to see the data on which it operates.
-
-Secure hardware opens up the potential for a one-shot privacy model that would dramatically simplify the task of
-writing smart contracts. However, it does still require the sensitive data to be sent to the peer who may then
-attempt to attack the hardware or exploit side channels to extract business intelligence from inside the encrypted
-container.
-
-\paragraph{Mix networks.}Some nodes may be in the position of learning about transactions that aren't directly
-related to trades they are doing, for example notaries or regulator nodes. Even when key randomisation is used
-these nodes can still learn valuable identity information by simply examining the source IP addresses or the
-authentication certificates of the nodes sending the data for notarisation. The traditional cryptographic solution
-to this problem is a \emph{mix network}\cite{Chaum:1981:UEM:358549.358563}. The most famous mix network is Tor, but
-a more appropriate design for Corda would be that of an anonymous remailer. In a mix network a message is
-repeatedly encrypted in an onion-like fashion using keys owned by a small set of randomly selected nodes. Each
-layer in the onion contains the address of the next `hop'. Once the message is delivered to the first hop, it
-decrypts it to reveal the next encrypted layer and forwards it onwards. The return path operates in a similar
-fashion. Adding a mix network to the Corda protocol would allow users to opt-in to a privacy upgrade, at the cost
-of higher latencies and more exposure to failed network nodes.
-
-\paragraph{Zero knowledge proofs.}The holy grail of privacy in decentralised database systems is the use of zero
-knowledge proofs to convince a peer that a transaction is valid, without revealing the contents of the transaction
-to them. Although these techniques are not yet practical for execution of general purpose smart contracts, enormous
-progress has been made in recent years and we have designed our data model on the assumption that we will one day
-wish to migrate to the use of \emph{zero knowledge succinct non-interactive arguments of knowledge}\cite{184425}
-(`zkSNARKs'). These algorithms allow for the calculation of a fixed-size mathematical proof that a program was
-correctly executed with a mix of public and private inputs. Programs can be expressed either directly as a system
-of low-degree multivariate polynomials encoding an algebraic constraint system, or by execution on a simple
-simulated CPU (`vnTinyRAM') which is itself implemented as a large pre-computed set of constraints. Because the
-program is shared the combination of an agreed upon function (i.e. a smart contract) along with private input data
-is sufficient to verify correctness, as long as the prover's program may recursively verify other proofs, i.e. the
-proofs of the input transactions. The BCTV zkSNARK algorithms rely on recursive proof composition for the execution
-of vnTinyRAM opcodes, so this is not a problem. The most obvious integration with Corda would require tightly
-written assembly language versions of common smart contracts (e.g. cash) to be written by hand and aligned with the
-JVM versions. Less obvious but more powerful integrations would involve the addition of a vnTinyRAM backend to an
-ahead of time JVM bytecode compiler, such as Graal\cite{Graal}, or a direct translation of Graal's graph based
-intermediate representation into systems of constraints. Direct translation of an SSA-form compiler IR to
-constraints would be best integrated with recent research into `scalable probabilistically checkable
-proofs'\cite{cryptoeprint:2016:646}, and is an open research problem.
 
 \section{Future work}
 
@@ -1761,6 +1680,86 @@ members of a group because there is no requirement to do a membership broadcast 
 such a requirement.
 
 % TODO: Nothing related to data distribution groups is implemented.
+
+\subsection{Merging networks}
+
+Because there is no single block chain, it is theoretically possible to merge two independent networks together by simply
+establishing two-way connectivity between their nodes then configuring each side to trust each other's network operators
+(and by extension their network parameters, certificate authorities and so on).
+
+This ability may seem pointless: isn't the goal of a decentralised ledger to have a single global database for
+everyone? It is, but a practical route to reaching this end state is still required. It is often the case that
+organisations perceived by consumers as being a single company are in fact many different entities cross-licensing
+branding, striking deals with each other and doing internal trades with each other. This sort of setup can occur
+for regulatory reasons, tax reasons, due to a history of mergers or just through a sheer masochistic love of
+paperwork. Very large companies can therefore experience all the same synchronisation problems a decentralised
+ledger is intended to fix but purely within the bounds of that organisation. In this situation the main problem to
+tackle is not malicious actors but rather heterogenous IT departments, varying software development practices,
+unlinked user directories and so on. Such organisations can benefit from gaining experience with the technology
+internally and cleaning up their own internal views of the world before tackling the larger problem of
+synchronising with the wider world as well.
+
+When merging networks, both sides must trust that each other's notaries have never signed double spends. When
+merging an organisation-private network into the global ledger it should be possible to simply rely on incentives
+to provide this guarantee: there is no point in a company double spending against itself. However, if more evidence
+is desired, a standalone notary could be run against a hardware security module with audit logging enabled. The
+notary itself would simply use a private database and run on a single machine, with the logs exported to the people
+running a global network for asynchronous post-hoc verification.
+
+\subsection{Privacy upgrades}\label{subsec:privacy-upgrades}
+
+Corda has been designed with the future integration of additional privacy technologies in mind. Of all potential
+upgrades, three are particularly worth a mention.
+
+\paragraph{Secure hardware.}Although we narrow the scope of data propagation to only nodes that need to see that
+data, `need' can still be an unintuitive concept in a decentralised database where often data is required only to
+perform security checks. We have successfully experimented with running contract verification inside a secure
+enclave protected JVM using Intel SGX\texttrademark~, an implementation of the `trusted computing'
+concept\cite{mitchell2005trusted}. Secure hardware platforms allow computation to be performed in an undebuggable
+tamper-proof execution environment, for the software running inside that environment to derive encryption keys
+accessible only to that instance, and for the software to \emph{remotely attest} to a third party over the internet
+that it is indeed running in the secure state. By having nodes remotely attest to each other that they are running
+smart contract verification logic inside an enclave it becomes possible for the dependencies of a transaction to be
+transmitted to a peer encrypted under an enclave key, thus allowing them to verify the dependencies using software
+they have audited themselves, but without being able to see the data on which it operates.
+
+Secure hardware opens up the potential for a one-shot privacy model that would dramatically simplify the task of
+writing smart contracts. However, it does still require the sensitive data to be sent to the peer who may then
+attempt to attack the hardware or exploit side channels to extract business intelligence from inside the encrypted
+container.
+
+\paragraph{Mix networks.}Some nodes may be in the position of learning about transactions that aren't directly
+related to trades they are doing, for example notaries or regulator nodes. Even when key randomisation is used
+these nodes can still learn valuable identity information by simply examining the source IP addresses or the
+authentication certificates of the nodes sending the data for notarisation. The traditional cryptographic solution
+to this problem is a \emph{mix network}\cite{Chaum:1981:UEM:358549.358563}. The most famous mix network is Tor, but
+a more appropriate design for Corda would be that of an anonymous remailer. In a mix network a message is
+repeatedly encrypted in an onion-like fashion using keys owned by a small set of randomly selected nodes. Each
+layer in the onion contains the address of the next `hop'. Once the message is delivered to the first hop, it
+decrypts it to reveal the next encrypted layer and forwards it onwards. The return path operates in a similar
+fashion. Adding a mix network to the Corda protocol would allow users to opt-in to a privacy upgrade, at the cost
+of higher latencies and more exposure to failed network nodes.
+
+\paragraph{Zero knowledge proofs.}The holy grail of privacy in decentralised database systems is the use of zero
+knowledge proofs to convince a peer that a transaction is valid, without revealing the contents of the transaction
+to them. Although these techniques are not yet practical for execution of general purpose smart contracts, enormous
+progress has been made in recent years and we have designed our data model on the assumption that we will one day
+wish to migrate to the use of \emph{zero knowledge succinct non-interactive arguments of knowledge}\cite{184425}
+(`zkSNARKs'). These algorithms allow for the calculation of a fixed-size mathematical proof that a program was
+correctly executed with a mix of public and private inputs. Programs can be expressed either directly as a system
+of low-degree multivariate polynomials encoding an algebraic constraint system, or by execution on a simple
+simulated CPU (`vnTinyRAM') which is itself implemented as a large pre-computed set of constraints. Because the
+program is shared the combination of an agreed upon function (i.e. a smart contract) along with private input data
+is sufficient to verify correctness, as long as the prover's program may recursively verify other proofs, i.e. the
+proofs of the input transactions. The BCTV zkSNARK algorithms rely on recursive proof composition for the execution
+of vnTinyRAM opcodes, so this is not a problem. The most obvious integration with Corda would require tightly
+written assembly language versions of common smart contracts (e.g. cash) to be written by hand and aligned with the
+JVM versions. Less obvious but more powerful integrations would involve the addition of a vnTinyRAM backend to an
+ahead of time JVM bytecode compiler, such as Graal\cite{Graal}, or a direct translation of Graal's graph based
+intermediate representation into systems of constraints. Direct translation of an SSA-form compiler IR to
+constraints would be best integrated with recent research into `scalable probabilistically checkable
+proofs'\cite{cryptoeprint:2016:646}, and is an open research problem.
+
 
 \section{Conclusion}
 
