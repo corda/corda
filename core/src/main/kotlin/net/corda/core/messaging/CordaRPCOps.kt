@@ -282,8 +282,7 @@ interface CordaRPCOps : RPCOps {
     fun nodeInfo(): NodeInfo
 
     /**
-     * Returns Node's NodeDiagnosticInfo, assuming this will not change while the node is running.
-     * This includes the version details as well as the information about installed CorDapps.
+     * Returns Node's NodeDiagnosticInfo, including the version details as well as the information about installed CorDapps.
      */
     fun nodeDiagnosticInfo(): NodeDiagnosticInfo
 
