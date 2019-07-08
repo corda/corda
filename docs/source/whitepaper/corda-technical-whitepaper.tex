@@ -648,8 +648,8 @@ a variety of cipher suites - Corda implements cryptographic agility.
 different.
 \item [Timestamp.] When present, a timestamp defines a time range in which the transaction is considered to
 have occurred. This is discussed in more detail below.
-% \item [Network parameters.] Specifies the hash and epoch of the network parameters that were in force at the time the
-% transaction was notarised. See \cref{sec:network-params} for more details.
+\item [Network parameters.] Specifies the hash and epoch of the network parameters that were in force at the time the
+transaction was notarised. See \cref{subsec:network-parameters} for more details.
 % \item [Summaries] Textual summaries of what the transaction does, checked by the involved smart contracts. This field
 % is useful for secure signing devices (see \cref{sec:secure-signing-devices}).
 \end{labeling}
@@ -863,7 +863,7 @@ for code signing we place initial focus on being able to re-use the infrastructu
 In any system that combines typed data with potentially malicious adversaries, it's important to always ensure
 names are not allowed to become ambiguous or mixed up. Corda achieves this via a combination of different features.
 
-\paragraph{No overlap rule.} Within a transaction attachments form a Java classpath. Class names are resolved by
+\paragraph{No overlap rule.}Within a transaction attachments form a Java classpath. Class names are resolved by
 locating the defining class file within the set of attachments and loading them via the deterministic JVM.
 Unfortunately, out of the box Java allows different JAR files to define the same class name. Whichever JAR happens
 to come first on the classpath is the one that gets used, but conventionally a classpath is not meant to have an
@@ -874,7 +874,7 @@ doing another. To prevent attackers from building deliberate classpath conflicts
 transaction in which two file paths overlap between attachments is invalid. A small number of files that are
 expected to overlap normally, such as files in the \texttt{META-INF} directory, are excluded.
 
-\paragraph{Package namespace ownership.} Corda allows parts of the Java package namespace to be reserved for
+\paragraph{Package namespace ownership.}Corda allows parts of the Java package namespace to be reserved for
 particular developers with a network, identified by a public key (which may or may not be linked to an identity). Any JAR
 that exports a class in an owned package namespace but which is not signed by the owning key is considered to be
 invalid. Reserving a package namespace is optional but can simplify the data model and make applications more
