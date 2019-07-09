@@ -4,7 +4,6 @@ import com.nhaarman.mockito_kotlin.*
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.internal.join
 import net.corda.core.utilities.getOrThrow
-import net.corda.testing.internal.rigorousMock
 import org.assertj.core.api.Assertions
 import org.junit.Test
 import org.slf4j.Logger
@@ -32,7 +31,7 @@ class CordaFutureTest {
     fun `if a listener fails its throwable is logged`() {
         val f = CordaFutureImpl<Int>()
         val x = Exception()
-        val log = rigorousMock<Logger>()
+        val log = mock<Logger>()
         val flag = AtomicBoolean()
         f.thenImpl(log) { throw x }
         f.thenImpl(log) { flag.set(true) } // Must not be affected by failure of previous listener.
@@ -58,7 +57,7 @@ class CordaFutureTest {
             Assertions.assertThatThrownBy { g.getOrThrow() }.isSameAs(x)
         }
         run {
-            val block = rigorousMock<(Any?) -> Any?>()
+            val block = mock<(Any?) -> Any?>()
             val f = CordaFutureImpl<Int>()
             val g = f.map(block)
             val x = Exception()
@@ -91,7 +90,7 @@ class CordaFutureTest {
             Assertions.assertThatThrownBy { g.getOrThrow() }.isSameAs(x)
         }
         run {
-            val block = rigorousMock<(Any?) -> CordaFuture<*>>()
+            val block = mock<(Any?) -> CordaFuture<*>>()
             val f = CordaFutureImpl<Int>()
             val g = f.flatMap(block)
             val x = Exception()
@@ -103,7 +102,7 @@ class CordaFutureTest {
 
     @Test
     fun `andForget works`() {
-        val log = rigorousMock<Logger>()
+        val log = mock<Logger>()
         doNothing().whenever(log).error(any(), any<Throwable>())
         val throwable = Exception("Boom")
         val executor = Executors.newSingleThreadExecutor()

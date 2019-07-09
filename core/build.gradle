@@ -17,42 +17,6 @@ configurations {
     smokeTestRuntimeOnly.extendsFrom runtimeOnly
 }
 
-sourceSets {
-    integrationTest {
-        kotlin {
-            compileClasspath += main.output + test.output
-            runtimeClasspath += main.output + test.output
-            srcDir file('src/integration-test/kotlin')
-        }
-        java {
-            compileClasspath += main.output + test.output
-            runtimeClasspath += main.output + test.output
-            srcDir file('src/integration-test/java')
-        }
-    }
-    smokeTest {
-        kotlin {
-            // We must NOT have any Node code on the classpath, so do NOT
-            // include the test or integrationTest dependencies here.
-            compileClasspath += main.output
-            runtimeClasspath += main.output
-            srcDir file('src/smoke-test/kotlin')
-        }
-        java {
-            compileClasspath += main.output
-            runtimeClasspath += main.output
-            srcDir file('src/smoke-test/java')
-        }
-    }
-}
-
-processSmokeTestResources {
-    // Bring in the fully built corda.jar for use by NodeFactory in the smoke tests
-    from(project(':node:capsule').tasks['buildCordaJAR']) {
-        rename 'corda-(.*)', 'corda.jar'
-    }
-}
-
 dependencies {
 
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
@@ -65,9 +29,6 @@ dependencies {
 
     // Guava: Google test library (collections test suite)
     testCompile "com.google.guava:guava-testlib:$guava_version"
-
-    // Bring in the MockNode infrastructure for writing protocol unit tests.
-    testCompile project(":node-driver")
 
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
@@ -92,17 +53,6 @@ dependencies {
     // For caches rather than guava
     compile "com.github.ben-manes.caffeine:caffeine:$caffeine_version"
 
-    // Smoke tests do NOT have any Node code on the classpath!
-    smokeTestImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
-    smokeTestImplementation "junit:junit:$junit_version"
-
-    smokeTestRuntimeOnly "org.junit.vintage:junit-vintage-engine:${junit_vintage_version}"
-    smokeTestRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${junit_jupiter_version}"
-    smokeTestRuntimeOnly "org.junit.platform:junit-platform-launcher:${junit_platform_version}"
-
-    smokeTestCompile project(':smoke-test-utils')
-    smokeTestCompile "org.assertj:assertj-core:${assertj_version}"
-
     // RxJava: observable streams of events.
     compile "io.reactivex:rxjava:$rxjava_version"
     
@@ -122,6 +72,11 @@ dependencies {
     compile "org.hibernate:hibernate-core:$hibernate_version"
 
     compile group: "io.github.classgraph", name: "classgraph", version: class_graph_version
+
+    testCompile "com.nhaarman:mockito-kotlin:$mockito_kotlin_version"
+    testCompile "org.mockito:mockito-core:$mockito_version"
+    testCompile "org.assertj:assertj-core:$assertj_version"
+    testCompile "com.natpryce:hamkrest:$hamkrest_version"
 }
 
 // TODO Consider moving it to quasar-utils in the future (introduced with PR-1388)
@@ -148,22 +103,6 @@ test{
 task testJar(type: Jar) {
     classifier "tests"
     from sourceSets.test.output
-}
-
-task integrationTest(type: Test) {
-    testClassesDirs = sourceSets.integrationTest.output.classesDirs
-    classpath = sourceSets.integrationTest.runtimeClasspath
-}
-
-task smokeTestJar(type: Jar) {
-    classifier 'smokeTests'
-    from sourceSets.smokeTest.output
-}
-
-task smokeTest(type: Test) {
-    dependsOn smokeTestJar
-    testClassesDirs = sourceSets.smokeTest.output.classesDirs
-    classpath = sourceSets.smokeTest.runtimeClasspath
 }
 
 // quasar exclusions upon agent code instrumentation at run-time

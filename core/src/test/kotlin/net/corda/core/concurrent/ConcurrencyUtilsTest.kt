@@ -3,7 +3,6 @@ package net.corda.core.concurrent
 import com.nhaarman.mockito_kotlin.*
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.utilities.getOrThrow
-import net.corda.testing.internal.rigorousMock
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
 import org.slf4j.Logger
@@ -17,7 +16,7 @@ class ConcurrencyUtilsTest {
     private val f1 = openFuture<Int>()
     private val f2 = openFuture<Double>()
     private var invocations = 0
-    private val log = rigorousMock<Logger>().also {
+    private val log = mock<Logger>().also {
         doNothing().whenever(it).error(any(), any<Throwable>())
     }
 
