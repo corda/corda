@@ -141,6 +141,7 @@ dependencies {
     // Unit testing helpers.
     testCompile "org.assertj:assertj-core:${assertj_version}"
     testCompile 'com.github.stefanbirkner:system-rules:1.16.0'
+    testCompile project(':node-driver')
     testCompile project(':test-utils')
     testCompile project(':client:jfx')
     testCompile project(':node-driver')

@@ -290,3 +290,40 @@ If the above holds, Corda components will benefit from the following:
 * A timely recovery from deletion or corruption of configuration files (e.g., ``node.conf``, ``node-info`` files, etc.), database drivers, CorDapps binaries and configuration, and certificate directories, provided backups are available to restore from.
 
 .. warning:: Private keys used to sign transactions should be preserved with the utmost care. The recommendation is to keep at least two separate copies on a storage not connected to the Internet.
+
+Checking node version and installed CorDapps
+--------------------------------------------
+
+A ``nodeDiagnosticInfo`` RPC call can be made to obtain version information about the Corda platform running on the node. The returned ``NodeDiagnosticInfo`` object also includes information about the CorDapps installed on the node.
+The RPC call is also available as the ``run nodeDiagnosticInfo`` command executable from the Corda shell that can be accessed via the local terminal, SSH, or as the standalone shell.
+
+Example
++++++++
+
+Here is a sample output displayed by the ``run nodeDiagnosticInfo`` command executed from the Corda shell:
+
+.. code-block:: none
+
+    version: "|corda_version|"
+    revision: "d7e4a0050049be357999f57f69d8bca41a2b8274"
+    platformVersion: 4
+    vendor: "Corda Open Source"
+    cordapps:
+    - type: "Contract CorDapp"
+      name: "corda-finance-contracts-|corda_version|"
+      shortName: "Corda Finance Demo"
+      minimumPlatformVersion: 1
+      targetPlatformVersion: 4
+      version: "1"
+      vendor: "R3"
+      licence: "Open Source (Apache 2)"
+      jarHash: "570EEB9DF4B43680586F3BE663F9C5844518BC2E410EAF9904E8DEE930B7E45C"
+    - type: "Workflow CorDapp"
+      name: "corda-finance-workflows-|corda_version|"
+      shortName: "Corda Finance Demo"
+      minimumPlatformVersion: 1
+      targetPlatformVersion: 4
+      version: "1"
+      vendor: "R3"
+      licence: "Open Source (Apache 2)"
+      jarHash: "6EA4E0B36010F1DD27B5677F3686B4713BA40C316804A4188DCA20F477FDB23F"

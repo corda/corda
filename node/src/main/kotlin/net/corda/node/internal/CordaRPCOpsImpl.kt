@@ -1,11 +1,14 @@
 package net.corda.node.internal
 
 import net.corda.client.rpc.notUsed
+import net.corda.common.logging.CordaVersion
 import net.corda.core.CordaRuntimeException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
 import net.corda.core.context.InvocationOrigin
 import net.corda.core.contracts.ContractState
+import net.corda.core.cordapp.Cordapp
+import net.corda.core.cordapp.CordappInfo
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
@@ -21,6 +24,7 @@ import net.corda.core.internal.messaging.InternalCordaRPCOps
 import net.corda.core.internal.sign
 import net.corda.core.messaging.*
 import net.corda.core.node.NetworkParameters
+import net.corda.core.node.NodeDiagnosticInfo
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.NetworkMapCache
@@ -164,6 +168,32 @@ internal class CordaRPCOpsImpl(
 
     override fun nodeInfo(): NodeInfo {
         return services.myInfo
+    }
+
+    override fun nodeDiagnosticInfo(): NodeDiagnosticInfo {
+        return NodeDiagnosticInfo(
+                version = CordaVersion.releaseVersion,
+                revision = CordaVersion.revision,
+                platformVersion = CordaVersion.platformVersion,
+                vendor = CordaVersion.vendor,
+                cordapps = services.cordappProvider.cordapps
+                            .filter { !it.jarPath.toString().endsWith("corda-core-${CordaVersion.releaseVersion}.jar") }
+                            .map { CordappInfo(
+                                    type = when (it.info) {
+                                        is Cordapp.Info.Contract -> "Contract CorDapp"
+                                        is Cordapp.Info.Workflow -> "Workflow CorDapp"
+                                        else -> "CorDapp"
+                                    },
+                                    name = it.name,
+                                    shortName = it.info.shortName,
+                                    minimumPlatformVersion = it.minimumPlatformVersion,
+                                    targetPlatformVersion = it.targetPlatformVersion,
+                                    version = it.info.version,
+                                    vendor = it.info.vendor,
+                                    licence = it.info.licence,
+                                    jarHash = it.jarHash)
+                            }
+        )
     }
 
     override fun notaryIdentities(): List<Party> {
