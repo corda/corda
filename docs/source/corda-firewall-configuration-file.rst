@@ -818,10 +818,10 @@ Configuration file: ``firewall.conf`` for ``vmInfra1`` should look as follows:
     outboundConfig {
         artemisBrokerAddress = "vmInfra1:11005" // NB: for vmInfra2 swap artemisBrokerAddress and alternateArtemisBrokerAddresses. Note: SWAP2
         alternateArtemisBrokerAddresses = ["vmInfra2:11005"] // Note: SWAP2
-        socksProxyConfig {
+        proxyConfig {
            version = SOCKS5
            proxyAddress = "vmSocks:1080"
-           username = "proxyuser"
+           userName = "proxyuser"
            password = "password"
         }
 
