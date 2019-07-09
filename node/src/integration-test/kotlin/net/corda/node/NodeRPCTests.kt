@@ -28,7 +28,7 @@ class NodeRPCTests {
             assertTrue(nodeDiagnosticInfo.version.matches(CORDA_VERSION_REGEX))
             assertTrue(nodeDiagnosticInfo.revision.matches(HEXADECIMAL_REGEX))
             assertEquals(PLATFORM_VERSION, nodeDiagnosticInfo.platformVersion)
-            assertTrue("Corda Enterprise Edition".matches(CORDA_VENDOR_REGEX))
+            assertTrue(nodeDiagnosticInfo.vendor.matches(CORDA_VENDOR_REGEX))
             assertEquals(CORDAPPS.size, nodeDiagnosticInfo.cordapps.size)
             assertEquals(CORDAPP_TYPES, nodeDiagnosticInfo.cordapps.map { it.type }.toSet())
             assertTrue(nodeDiagnosticInfo.cordapps.any { it.name.matches(CORDAPP_CONTRACTS_NAME_REGEX) })
