@@ -53,7 +53,7 @@ internal class RequestResponseServiceHelper<in REQ : RequestIdContainer, out RES
         responseSubject.onCompleted()
     }
 
-    private fun waitForResponse(requestId: Long) = responseSubject.filter { it.requestId == requestId }.toFuture().get(responseTimeOut.toMillis(), TimeUnit.MILLISECONDS)
+    private fun getResponseFuture(requestId: Long) = responseSubject.filter { it.requestId == requestId }.toFuture()
 
     private fun onResponse(receivedMessage: ReceivedMessage) {
         val response = try {
@@ -82,10 +82,10 @@ internal class RequestResponseServiceHelper<in REQ : RequestIdContainer, out RES
                 sourceLink,
                 emptyMap())
         log.info("Sending request: ${request.requestId}")
+        val resultFuture = getResponseFuture(request.requestId)
         amqpControl.write(amqpMessage)
         // Block until response
-        val result = waitForResponse(request.requestId)
-
+        val result = resultFuture.get(responseTimeOut.toMillis(), TimeUnit.MILLISECONDS)
         log.info("returned response: $result")
         return result
     }
