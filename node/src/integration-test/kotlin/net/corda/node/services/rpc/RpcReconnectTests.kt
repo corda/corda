@@ -50,7 +50,7 @@ class RpcReconnectTests {
         private val log = contextLogger()
     }
 
-    private val portAllocator = incrementalPortAllocation(20006)
+    private val portAllocator = incrementalPortAllocation()
 
     private lateinit var proxy: RandomFailingProxy
     private lateinit var node: NodeHandle
