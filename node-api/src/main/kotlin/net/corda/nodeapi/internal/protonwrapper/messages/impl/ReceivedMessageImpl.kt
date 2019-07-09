@@ -32,7 +32,9 @@ internal class ReceivedMessageImpl(override var payload: ByteArray,
     override fun complete(accepted: Boolean) {
         release()
         val status = if (accepted) MessageStatus.Acknowledged else MessageStatus.Rejected
-        channel.writeAndFlush(MessageCompleter(status, delivery))
+        if (channel.isActive) {
+            channel.writeAndFlush(MessageCompleter(status, delivery))
+        }
     }
 
     override fun toString(): String = "Received ${String(payload)} $topic"
