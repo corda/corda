@@ -239,7 +239,8 @@ class DriverDSLImpl(
                 NodeConfiguration::useTestClock.name to useTestClock,
                 NodeConfiguration::rpcUsers.name to if (users.isEmpty()) defaultRpcUserList else users.map { it.toConfig().root().unwrapped() },
                 NodeConfiguration::verifierType.name to parameters.verifierType.name,
-                NodeConfiguration::flowOverrides.name to flowOverrideConfig.toConfig().root().unwrapped()
+                NodeConfiguration::flowOverrides.name to flowOverrideConfig.toConfig().root().unwrapped(),
+                NodeConfiguration::additionalNodeInfoPollingFrequencyMsec.name to 1000
         ) + czUrlConfig + jmxConfig + parameters.customOverrides
         val config = NodeConfig(ConfigHelper.loadConfig(
                 baseDirectory = baseDirectory(name),
