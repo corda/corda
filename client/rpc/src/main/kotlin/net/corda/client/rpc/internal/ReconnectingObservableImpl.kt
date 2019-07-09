@@ -7,50 +7,62 @@ import rx.Observable
 import rx.Subscription
 import java.util.concurrent.ExecutorService
 
-class ReconnectingObservableImpl<T> internal constructor(
-        val reconnectingSubscriber: ReconnectingSubscriber<T>
+class ReconnectingObservableImpl<T> private constructor(
+        private val reconnectingSubscriber: ReconnectingSubscriber<T>
 ) : Observable<T>(reconnectingSubscriber), ReconnectingObservable<T> by reconnectingSubscriber {
 
-    private companion object {
-        private val log = contextLogger()
-    }
+    constructor(
+            reconnectingRPCConnection: ReconnectingCordaRPCOps.ReconnectingRPCConnection,
+            observersPool: ExecutorService,
+            initial: DataFeed<*, T>,
+            createDataFeed: () -> DataFeed<*, T>
+    ) : this(ReconnectingSubscriber(reconnectingRPCConnection, observersPool, initial, createDataFeed))
 
-    constructor(reconnectingRPCConnection: ReconnectingCordaRPCOps.ReconnectingRPCConnection, observersPool: ExecutorService, initial: DataFeed<*, T>, createDataFeed: () -> DataFeed<*, T>):
-            this(ReconnectingSubscriber(reconnectingRPCConnection, observersPool, initial, createDataFeed))
+    private class ReconnectingSubscriber<T>(private val reconnectingRPCConnection: ReconnectingCordaRPCOps.ReconnectingRPCConnection,
+                                            private val observersPool: ExecutorService,
+                                            val initial: DataFeed<*, T>,
+                                            val createDataFeed: () -> DataFeed<*, T>): OnSubscribe<T>, ReconnectingObservable<T> {
+        private companion object {
+            private val log = contextLogger()
+        }
 
-    class ReconnectingSubscriber<T>(private val reconnectingRPCConnection: ReconnectingCordaRPCOps.ReconnectingRPCConnection,
-                                    private val observersPool: ExecutorService,
-                                    val initial: DataFeed<*, T>,
-                                    val createDataFeed: () -> DataFeed<*, T>): OnSubscribe<T>, ReconnectingObservable<T> {
-        override fun call(child: rx.Subscriber<in T>) {
-            val handle = subscribe(child::onNext, {}, {}, {})
-            // this additional subscription allows us to detect un-subscription calls from clients and un-subscribe any subscription that resulted from re-connections.
-            child.add(object: Subscription {
+        override fun call(subscriber: rx.Subscriber<in T>) {
+            val handle = subscribe(subscriber::onNext, {}, {}, {})
+            // This additional subscription allows us to detect un-subscription calls from clients and un-subscribe any subscription that
+            // resulted from re-connections.
+            subscriber.add(object: Subscription {
                 @Volatile
-                var unsubscribed: Boolean = false
+                private var unsubscribed: Boolean = false
 
                 override fun unsubscribe() {
                     handle.stop()
                     unsubscribed = true
                 }
 
-                override fun isUnsubscribed(): Boolean {
-                    return unsubscribed
-                }
+                override fun isUnsubscribed(): Boolean = unsubscribed
             })
         }
 
         private var initialStartWith: Iterable<T>? = null
-        private fun subscribeWithReconnect(observerHandle: ObserverHandle, onNext: (T) -> Unit, onStop: () -> Unit, onDisconnect: () -> Unit, onReconnect: () -> Unit, startWithValues: Iterable<T>? = null) {
-            var subscriptionError: Throwable?
-            try {
-                val subscription = initial.updates.let { if (startWithValues != null) it.startWith(startWithValues) else it }
+
+        private fun subscribeWithReconnect(
+                observerHandle: ObserverHandle,
+                onNext: (T) -> Unit,
+                onStop: () -> Unit,
+                onDisconnect: () -> Unit,
+                onReconnect: () -> Unit,
+                startWithValues: Iterable<T>? = null
+        ) {
+            val subscriptionError = try {
+                val subscription = initial.updates
+                        .let { if (startWithValues != null) it.startWith(startWithValues) else it }
                         .subscribe(onNext, observerHandle::fail, observerHandle::stop)
-                subscriptionError = observerHandle.await()
-                subscription.unsubscribe()
+                observerHandle.await().apply {
+                    subscription.unsubscribe()
+                }
             } catch (e: Exception) {
                 log.error("Failed to register subscriber .", e)
-                subscriptionError = e
+                e
             }
 
             // In case there was no exception the observer has finished gracefully.
@@ -82,7 +94,6 @@ class ReconnectingObservableImpl<T> internal constructor(
             initialStartWith = values
             return this
         }
-
     }
 
 }

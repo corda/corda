@@ -102,7 +102,7 @@ class RpcReconnectTests {
             currentAddressPair = addresses[0]
 
             proxy = startProxy(currentAddressPair)
-            var (bankA, bankB) = listOf(
+            val (bankA, bankB) = listOf(
                     startBankA(currentAddressPair.nodeAddress),
                     startNode(providedName = DUMMY_BANK_B_NAME, rpcUsers = listOf(demoUser))
             ).transpose().getOrThrow()
@@ -315,5 +315,5 @@ class RpcReconnectTests {
     private fun getRandomAddressPair() = AddressPair(getRandomAddress(), getRandomAddress())
     private fun getRandomAddress() = NetworkHostAndPort("localhost", portAllocator.nextPort())
 
-    data class AddressPair(val proxyAddress: NetworkHostAndPort, val nodeAddress: NetworkHostAndPort) {}
+    data class AddressPair(val proxyAddress: NetworkHostAndPort, val nodeAddress: NetworkHostAndPort)
 }
