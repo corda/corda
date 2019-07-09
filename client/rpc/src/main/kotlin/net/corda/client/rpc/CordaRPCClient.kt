@@ -4,12 +4,13 @@ import com.github.benmanes.caffeine.cache.Caffeine
 import net.corda.client.rpc.internal.RPCClient
 import net.corda.client.rpc.internal.ReconnectingCordaRPCOps
 import net.corda.client.rpc.internal.serialization.amqp.AMQPClientSerializationScheme
+import net.corda.client.rpc.reconnect.CouldNotStartFlowException
 import net.corda.core.CordaInternal
-import net.corda.core.internal.createInstancesOfClassesImplementing
 import net.corda.core.context.Actor
 import net.corda.core.context.Trace
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.PLATFORM_VERSION
+import net.corda.core.internal.createInstancesOfClassesImplementing
 import net.corda.core.internal.messaging.InternalCordaRPCOps
 import net.corda.core.messaging.ClientRpcSslOptions
 import net.corda.core.messaging.CordaRPCOps
@@ -25,50 +26,38 @@ import net.corda.serialization.internal.AMQP_RPC_CLIENT_CONTEXT
 import net.corda.serialization.internal.amqp.SerializationFactoryCacheKey
 import net.corda.serialization.internal.amqp.SerializerFactory
 import java.time.Duration
-import java.util.ServiceLoader
+import java.util.*
 
 /**
  * This class is essentially just a wrapper for an RPCConnection<CordaRPCOps> and can be treated identically.
  *
  * @see RPCConnection
  */
-class CordaRPCConnection internal constructor(private val connection: RPCConnection<CordaRPCOps>?) : RPCConnection<CordaRPCOps> {
+class CordaRPCConnection private constructor(
+        private val oneTimeConnection: RPCConnection<CordaRPCOps>?,
+        private val reconnectingCordaRPCOps: ReconnectingCordaRPCOps?
+) : RPCConnection<CordaRPCOps> {
+    internal constructor(connection: RPCConnection<CordaRPCOps>?) : this(connection, null)
 
     companion object {
         @CordaInternal
         internal fun createWithGracefulReconnection(username: String, password: String, addresses: List<NetworkHostAndPort>): CordaRPCConnection {
-            val cordaRpcConnection = CordaRPCConnection(null)
-            cordaRpcConnection.reconnectingCordaRPCOps = ReconnectingCordaRPCOps(addresses, username, password)
-            return cordaRpcConnection
+            return CordaRPCConnection(null, ReconnectingCordaRPCOps(addresses, username, password))
         }
     }
 
-    private var reconnectingCordaRPCOps: ReconnectingCordaRPCOps? = null
+    override val proxy: CordaRPCOps get() = reconnectingCordaRPCOps ?: oneTimeConnection!!.proxy
 
-    private fun actualConnection(): RPCConnection<CordaRPCOps> {
-        return reconnectingCordaRPCOps?.reconnectingRPCConnection ?: connection!!
-    }
+    private val actualConnection: RPCConnection<CordaRPCOps>
+        get() = reconnectingCordaRPCOps?.reconnectingRPCConnection ?: oneTimeConnection!!
 
-    override val proxy: CordaRPCOps get() {
-        return reconnectingCordaRPCOps ?: connection!!.proxy
-    }
+    override val serverProtocolVersion: Int get() = actualConnection.serverProtocolVersion
 
-    override val serverProtocolVersion: Int get() {
-        return actualConnection().serverProtocolVersion
-    }
+    override fun notifyServerAndClose() = actualConnection.notifyServerAndClose()
 
-    override fun notifyServerAndClose() {
-        return actualConnection().notifyServerAndClose()
-    }
+    override fun forceClose() = actualConnection.forceClose()
 
-    override fun forceClose() {
-        return actualConnection().forceClose()
-    }
-
-    override fun close() {
-        return actualConnection().close()
-    }
-
+    override fun close() = actualConnection.close()
 }
 
 /**
@@ -281,7 +270,7 @@ open class CordaRPCClientConfiguration @JvmOverloads constructor(
  * If you want to enable a more graceful form of reconnection, you can make use of the gracefulReconnect argument of the [start] method.
  * If this is set to true, then:
  * - The client will automatically reconnect, when the connection is broken regardless of whether you provided a single or multiple addresses.
- * - Simple RPC calls that return data (e.g. [CordaRPCOps.networkParameters]) will block and return after the connection has been re-established and the node is up.
+ * - Simple RPC calls that return data (e.g. [CordaRPCOps.networkParameters]) will **block** and return after the connection has been re-established and the node is up.
  * - RPC calls that return [rx.Observable]s (e.g. [CordaRPCOps.vaultTrack]) will automatically reconnect and keep sending events for the subscribed [rx.Observable]s.
  *   Note: In this approach, some events might be lost during a re-connection and not sent in the subscribed [rx.Observable]s.
  * - RPC calls that invoke flows (e.g. [CordaRPCOps.startFlowDynamic]) will fail during a disconnection throwing a [CouldNotStartFlowException].
