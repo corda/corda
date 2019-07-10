@@ -2007,6 +2007,34 @@ the feature ideal for various kinds of file that would be inappropriate to place
     \item Photos, videos or 3D models of the items being transacted, for later use in dispute resolution.
 \end{itemize}
 
+\subsection{Human interaction}
+
+The primary purpose of flows is to orchestrate changes to the ledger amongst nodes. However, a common need is
+to model with flows not just multi-party protocols but higher level business processes which may include human
+interaction. This would be helpful for:
+
+\begin{itemize}
+    \item Gaining approval to proceed with a ledger change if it meets certain criteria, like being too large
+          to automatically authorise.
+    \item Requesting simple pieces of information from users, like files, prices, quantities etc.
+    \item Notifying people of work they need to do.
+\end{itemize}
+
+Today such tasks can be achieved by splitting a flow up and having UI logic update shared database tables. But
+this would be much more convenient if flows could send and receive messages with people and not just other nodes.
+Whilst no replacement for a full GUI, many common tasks could be handled in this way.
+
+We propose a design based on message queues. The flow API would be extended to support sending and receiving serialised
+objects (or raw strings) on internal queues. A library of adapter processes can then be configured to listen on these
+queues and take requests from them, with the responses (if required) being placed back on a dedicated response queue.
+These adapters could, for example, create tickets in an internal ticketing system, push notifications to a smartphone
+app, update in-house applications, post to shared chatrooms and so on.
+
+Individuals and groups of individuals within an organisation would be modelled as parties that can be looked up via a
+directory service, similar to how parties can be resolved from the network map. Note that there'd be no requirement
+for users to have keys in this scheme: whether a user has a key and signs transactions or whether they just instruct
+the app about what to do is up to the application developer.
+
 \subsection{Global ledger encryption}\label{subsec:global-ledger-encryption}
 
 All distributed ledger systems require nodes to cross-check each others changes to the ledger by verifying
