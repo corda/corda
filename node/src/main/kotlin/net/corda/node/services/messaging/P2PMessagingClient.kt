@@ -217,6 +217,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
                 minLargeMessageSize = maxMessageSize + JOURNAL_HEADER_SIZE
                 isUseGlobalPools = nodeSerializationEnv != null
                 confirmationWindowSize = config.enterpriseConfiguration.tuning.p2pConfirmationWindowSize
+                producerWindowSize = -1
                 // Configuration for dealing with external broker failover
                 if (config.messagingServerExternal) {
                     connectionLoadBalancingPolicyClassName = RoundRobinConnectionPolicy::class.java.canonicalName

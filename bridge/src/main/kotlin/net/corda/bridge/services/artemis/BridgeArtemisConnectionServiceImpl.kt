@@ -76,6 +76,7 @@ class BridgeArtemisConnectionServiceImpl(val conf: FirewallConfiguration,
                 minLargeMessageSize = maxMessageSize
                 isUseGlobalPools = nodeSerializationEnv != null
                 confirmationWindowSize = conf.p2pConfirmationWindowSize
+                producerWindowSize = -1
             }
             connectThread = Thread({ artemisReconnectionLoop() }, "Artemis Connector Thread").apply {
                 isDaemon = true
