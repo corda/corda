@@ -10,6 +10,7 @@ import net.corda.finance.flows.CashIssueFlow
 import net.corda.node.services.Permissions
 import net.corda.testing.core.CHARLIE_NAME
 import net.corda.testing.driver.DriverParameters
+import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.driver
 import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.node.User
@@ -34,14 +35,21 @@ class CordaRPCClientReconnectionTest {
         driver(DriverParameters(cordappsForAllNodes = FINANCE_CORDAPPS, startNodesInProcess = false, inMemoryDB = false)) {
             val latch = CountDownLatch(2)
             val address = NetworkHostAndPort("localhost", portAllocator.nextPort())
-            fun startNode() = startNode(providedName = CHARLIE_NAME, rpcUsers = listOf(CordaRPCClientTest.rpcUser), customOverrides = mapOf("rpcSettings.address" to address.toString())).getOrThrow()
+
+            fun startNode(): NodeHandle {
+                return startNode(
+                        providedName = CHARLIE_NAME,
+                        rpcUsers = listOf(CordaRPCClientTest.rpcUser),
+                        customOverrides = mapOf("rpcSettings.address" to address.toString())
+                ).getOrThrow()
+            }
 
             val node = startNode()
             val client = CordaRPCClient(node.rpcAddress, CordaRPCClientConfiguration.DEFAULT.copy(
                     maxReconnectAttempts = 5
             ))
 
-            val rpcOps = client.start(rpcUser.username, rpcUser.password, true).proxy
+            val rpcOps = client.start(rpcUser.username, rpcUser.password, gracefulReconnect = true).proxy
             val networkParameters = rpcOps.networkParameters
             val cashStatesFeed = rpcOps.vaultTrack(Cash.State::class.java)
             cashStatesFeed.updates.subscribe { latch.countDown() }
@@ -61,11 +69,18 @@ class CordaRPCClientReconnectionTest {
     }
 
     @Test
-    fun `a client can successfully unsubscribe a reconnecting observable, when using the observer handle API`() {
+    fun `a client can successfully unsubscribe a reconnecting observable`() {
         driver(DriverParameters(cordappsForAllNodes = FINANCE_CORDAPPS, startNodesInProcess = false, inMemoryDB = false)) {
             val latch = CountDownLatch(2)
             val address = NetworkHostAndPort("localhost", portAllocator.nextPort())
-            fun startNode() = startNode(providedName = CHARLIE_NAME, rpcUsers = listOf(CordaRPCClientTest.rpcUser), customOverrides = mapOf("rpcSettings.address" to address.toString())).getOrThrow()
+
+            fun startNode(): NodeHandle {
+                return startNode(
+                        providedName = CHARLIE_NAME,
+                        rpcUsers = listOf(CordaRPCClientTest.rpcUser),
+                        customOverrides = mapOf("rpcSettings.address" to address.toString())
+                ).getOrThrow()
+            }
 
             val node = startNode()
             val client = CordaRPCClient(node.rpcAddress, CordaRPCClientConfiguration.DEFAULT.copy(
@@ -94,7 +109,15 @@ class CordaRPCClientReconnectionTest {
     fun `rpc client calls and returned observables continue working when there is failover between servers`() {
         driver(DriverParameters(cordappsForAllNodes = FINANCE_CORDAPPS, startNodesInProcess = false, inMemoryDB = false)) {
             val latch = CountDownLatch(2)
-            fun startNode(address: NetworkHostAndPort) = startNode(providedName = CHARLIE_NAME, rpcUsers = listOf(CordaRPCClientTest.rpcUser), customOverrides = mapOf("rpcSettings.address" to address.toString())).getOrThrow()
+
+            fun startNode(address: NetworkHostAndPort): NodeHandle {
+                return startNode(
+                        providedName = CHARLIE_NAME,
+                        rpcUsers = listOf(CordaRPCClientTest.rpcUser),
+                        customOverrides = mapOf("rpcSettings.address" to address.toString())
+                ).getOrThrow()
+            }
+
             val addresses = listOf(NetworkHostAndPort("localhost", portAllocator.nextPort()), NetworkHostAndPort("localhost", portAllocator.nextPort()))
 
             val node = startNode(addresses[0])

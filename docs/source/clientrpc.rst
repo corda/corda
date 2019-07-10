@@ -386,37 +386,14 @@ You can enable this graceful form of reconnection by using the ``gracefulReconne
    val cordaClient = CordaRPCClient(nodeRpcAddress)
    val cordaRpcOps = cordaClient.start(rpcUserName, rpcUserPassword, gracefulReconnect = true).proxy
 
-Logical retries for flow invocation
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Logical  retries for flow invocation
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 As described above, if you want to retry a flow that failed during a disconnection, you will first need to verify it has not been previously executed.
 The only way currently to confirm this is by performing a business-level query.
 
-In case users require such a functionality, we have a sample that showcases how this can be implemented and also a thorough test that demonstrates it works as expected.
-
-.. note:: This is not exposed as an official, public Corda API and must be copied directly in the client codebase and adjusted.
-
-The code that performs the reconnecting logic is: `ReconnectingCordaRPCOps.kt <https://github.com/corda/corda/blob/master/client/rpc/src/main/kotlin/net/corda/client/rpc/internal/ReconnectingCordaRPCOps.kt>`_.
-The usage is showcased in the: `RpcReconnectTests.kt <https://github.com/corda/corda/blob/master/node/src/integration-test/kotlin/net/corda/node/services/rpc/RpcReconnectTests.kt>`_.
-In case resiliency is a requirement, then it is recommended that users will write a similar test.
-
-How to initialize the ``ReconnectingCordaRPCOps``:
-
-.. literalinclude:: ../../node/src/integration-test/kotlin/net/corda/node/services/rpc/RpcReconnectTests.kt
-   :language: kotlin
-   :start-after: DOCSTART rpcReconnectingRPC
-   :end-before: DOCEND rpcReconnectingRPC
-
-How to start a flow with a logical retry function that checks for the side effects of the flow:
-
-.. literalinclude:: ../../node/src/integration-test/kotlin/net/corda/node/services/rpc/RpcReconnectTests.kt
-   :language: kotlin
-   :start-after: DOCSTART rpcReconnectingRPCFlowStarting
-   :end-before: DOCEND rpcReconnectingRPCFlowStarting
-
-.. warning:: In this approach, it's not guaranteed that the flow will be invoked exactly once because of race conditions.
-
-.. note:: Future releases of Corda are expected to contain new APIs for the use-cases above that will be able to cope with reconnection in a more resilient way providing stricter safety guarantees.
+.. note:: Future releases of Corda are expected to contain new APIs for coping with reconnection in a more resilient way providing stricter
+   safety guarantees.
 
 
 Wire security
