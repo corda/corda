@@ -5,6 +5,7 @@ import net.corda.core.internal.times
 import org.bouncycastle.operator.ContentSigner
 import org.junit.After
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Test
 import java.security.PublicKey
 import java.time.Duration
@@ -53,12 +54,14 @@ class CryptoServiceTest {
         }
     }
 
+    @Ignore("When ENT-3658 is revisited")
     @Test
     fun `if no timeout is reached then correct value is returned`() {
         sleepTime = Duration.ZERO
         expect(true) { stub.containsKey("Test") }
     }
 
+    @Ignore("When ENT-3658 is revisited")
     @Test
     fun `when timeout is reached the correct exception is thrown`() {
         sleepTime = TEST_TIMEOUT.times(2)
