@@ -28,7 +28,7 @@ class NodeRPCTests {
             assertTrue(nodeDiagnosticInfo.version.matches(CORDA_VERSION_REGEX))
             assertTrue(nodeDiagnosticInfo.revision.matches(HEXADECIMAL_REGEX))
             assertEquals(PLATFORM_VERSION, nodeDiagnosticInfo.platformVersion)
-            assertEquals(CORDA_VENDOR, nodeDiagnosticInfo.vendor)
+            assertTrue(nodeDiagnosticInfo.vendor.matches(CORDA_VENDOR_REGEX))
             nodeDiagnosticInfo.cordapps.forEach { println("${it.shortName} ${it.type}") }
             assertEquals(CORDAPPS.size, nodeDiagnosticInfo.cordapps.size)
             assertEquals(CORDAPP_TYPES, nodeDiagnosticInfo.cordapps.map { it.type }.toSet())

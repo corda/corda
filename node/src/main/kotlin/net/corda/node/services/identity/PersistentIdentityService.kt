@@ -4,12 +4,12 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.*
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.internal.hash
+import net.corda.core.internal.toSet
 import net.corda.core.node.services.UnknownAnonymousPartyException
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.MAX_HASH_HEX_SIZE
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
-import net.corda.core.utilities.toBase58String
 import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
@@ -25,6 +25,7 @@ import javax.persistence.Column
 import javax.persistence.Entity
 import javax.persistence.Id
 import javax.persistence.Lob
+import kotlin.streams.toList
 
 /**
  * An identity service that stores parties and their identities to a key value tables in the database. The entries are
@@ -171,8 +172,10 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
     }
 
     // We give the caller a copy of the data set to avoid any locking problems
-    override fun getAllIdentities(): Iterable<PartyAndCertificate> = database.transaction {
-        keyToParties.allPersisted().map { it.second }.asIterable()
+    override fun getAllIdentities(): Iterable<PartyAndCertificate> {
+        return database.transaction {
+            keyToParties.allPersisted.use { it.map { it.second }.toList() }
+        }
     }
 
     override fun wellKnownPartyFromX500Name(name: CordaX500Name): Party? = certificateFromCordaX500Name(name)?.party
@@ -190,13 +193,9 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
 
     override fun partiesFromName(query: String, exactMatch: Boolean): Set<Party> {
         return database.transaction {
-            val results = LinkedHashSet<Party>()
-            principalToParties.allPersisted().forEach { (x500name, partyId) ->
-                if (x500Matches(query, exactMatch, x500name)) {
-                    results += keyToParties[partyId]!!.party
-                }
+            principalToParties.allPersisted.use {
+                it.filter { x500Matches(query, exactMatch, it.first) }.map { keyToParties[it.second]!!.party }.toSet()
             }
-            results
         }
     }
 

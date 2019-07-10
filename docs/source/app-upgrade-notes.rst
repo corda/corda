@@ -118,7 +118,7 @@ properly for future releases.
    future not hold true. You should know the platform version of the node releases you want to target.
 
 The new ``versionId`` number is a version code for **your** app, and is unrelated to Corda's own versions.
-It is used to informative purposes only. See ":ref:`app_versioning_with_signature_constraints`" for more information.
+It is currently used for informative purposes only.
 
 **Split your app into contract and workflow JARs.** The duplication between ``contract`` and ``workflow`` blocks exists because you should split your app into
 two separate JARs/modules, one that contains on-ledger validation code like states and contracts, and one
