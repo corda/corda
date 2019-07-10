@@ -64,6 +64,15 @@ of the command:
 
 Note also that ``HARDWARE_ADDRESS`` and ``SEED`` are optional.
 
+.. note::
+
+	The tool works on both HOCON and JSON files. Include directives (i.e. ``include "other.conf"``) are not followed by the tool. If you wish to obfuscate fields in multiple files, you will need to run the tool against each file individually. The node will de-obfuscate the included files automatically.
+
+
+.. warning::
+
+	The Corda Enterprise Network Manager (https://docs.cenm.r3.com/) does not currently support obfuscated configurations.
+
 
 Configuration directives
 ~~~~~~~~~~~~~~~~~~~~~~~~
