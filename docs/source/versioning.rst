@@ -98,6 +98,6 @@ It's entirely expected and reasonable to have an open source contracts module an
 sophisticated or proprietary business logic, machine learning models, even user interface code. There's nothing that restricts it to just
 being Corda flows or services.
 
-.. important:: The ``versionId`` specified for the JAR manifest is used for informative purposes only.
+.. important:: The ``versionId`` specified for the JAR manifest is currently used for informative purposes only.
 
 .. note:: You can read the original design doc here: :doc:`design/targetversion/design`.
