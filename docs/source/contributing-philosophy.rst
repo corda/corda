@@ -72,4 +72,4 @@ Our approach is simple: if the contribution meets the standards for the project 
 implementation will not be used as a reason to reject it. In other words, it is our policy that should a community feature be contributed
 which meets the criteria above, we will accept it or work with the contributor to merge/reconcile it with the commercial feature.
 
-.. _`Corda introductory white paper`: _static/corda-platform-whitepaper.pdf
+.. _`Corda introductory white paper`: _static/corda-introductory-whitepaper.pdf
