@@ -24,7 +24,6 @@ Prerequisites
 * **Java 8 JVK** - We require at least version |java_version|, but do not currently support Java 9 or higher.
 * **IntelliJ IDEA** - IntelliJ is an IDE that offers strong support for Kotlin and Java development. We support versions **2017.x**, **2018.x** and **2019.x** (with Kotlin plugin version |kotlin_version|).
 * **Git** - We use Git to host our sample CorDapp and provide version control.
-* **Gradle** - Gradle is a build automation tool that we use for dependency management. We use version 4.10 and the ``gradlew`` script in the project/samples directories will download it for you.
 
 Step One: Downloading a sample project
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
