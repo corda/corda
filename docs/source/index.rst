@@ -13,8 +13,10 @@ Want to see Corda running? Download our demonstration application `DemoBench <ht
 follow our :doc:`quickstart guide </quickstart-index>`.
 
 If you want to start coding on Corda, then familiarise yourself with the :doc:`key concepts </key-concepts>`, then read
-our :doc:`Hello, World! tutorial </hello-world-introduction>`. For the background behind Corda, read the non-technical
-`platform white paper`_ or for more detail, the `technical white paper`_.
+our :doc:`Hello, World! tutorial </hello-world-introduction>`.
+
+* For the background behind Corda read the `introductory white paper`_ (`Simplified Chinese`_, `Traditional Chinese`_, `Japanese`_).
+* For much more architectural detail, the `technical white paper`_.
 
 If you have questions or comments, then get in touch on `Slack <https://slack.corda.net/>`_ or ask a question on
 `Stack Overflow <https://stackoverflow.com/questions/tagged/corda>`_ .
@@ -24,7 +26,10 @@ We look forward to seeing what you can do with Corda!
 .. note:: You can read this site offline. Either `download the PDF`_ or download the Corda source code, run ``gradle buildDocs`` and you will have
    a copy of this site in the ``docs/build/html`` directory.
 
-.. _`platform white paper`: _static/corda-platform-whitepaper.pdf
+.. _`introductory white paper`: _static/corda-introductory-whitepaper.pdf
+.. _`Simplified Chinese`: _static/corda-introductory-whitepaper-zhs.pdf
+.. _`Traditional Chinese`: _static/corda-introductory-whitepaper-zht.pdf
+.. _`Japanese`: _static/corda-introductory-whitepaper-jp.pdf
 .. _`technical white paper`: _static/corda-technical-whitepaper.pdf
 .. _`download the PDF`: _static/corda-developer-site.pdf
 
