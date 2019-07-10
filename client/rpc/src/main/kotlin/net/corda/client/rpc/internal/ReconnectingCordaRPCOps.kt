@@ -11,12 +11,14 @@ import net.corda.core.messaging.ClientRpcSslOptions
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.FlowHandle
-import net.corda.core.utilities.*
+import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.debug
+import net.corda.core.utilities.seconds
 import net.corda.nodeapi.exceptions.RejectedCommandException
 import org.apache.activemq.artemis.api.core.ActiveMQConnectionTimedOutException
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import org.apache.activemq.artemis.api.core.ActiveMQUnBlockedException
-import rx.Observable
 import java.lang.reflect.InvocationHandler
 import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Method
@@ -40,6 +42,8 @@ import java.util.concurrent.TimeUnit
  *
  * *This class is not a stable API. Any project that wants to use it, must copy and paste it.*
  */
+// TODO The executor service is not needed. All we need is a single thread that deals with reconnecting and onto which ReconnectingObservables
+//  and other things can attach themselves as listeners for reconnect events.
 class ReconnectingCordaRPCOps private constructor(
         val reconnectingRPCConnection: ReconnectingRPCConnection,
         private val observersPool: ExecutorService,
@@ -152,10 +156,11 @@ class ReconnectingCordaRPCOps private constructor(
          * Will block until the connection is established again.
          */
         @Synchronized
-        fun error(e: Throwable) {
+        fun reconnectOnError(e: Throwable) {
             currentState = CurrentState.DIED
             //TODO - handle error cases
             log.error("Reconnecting to ${this.nodeHostAndPorts} due to error: ${e.message}")
+            log.debug("", e)
             connect()
         }
 
@@ -176,9 +181,9 @@ class ReconnectingCordaRPCOps private constructor(
                 ).start(username, password).also {
                     // Check connection is truly operational before returning it.
                     require(it.proxy.nodeInfo().legalIdentitiesAndCerts.isNotEmpty()) {
-                        "Could not establish connection to ${nodeHostAndPorts}."
+                        "Could not establish connection to $nodeHostAndPorts."
                     }
-                    log.debug { "Connection successfully established with: ${nodeHostAndPorts}" }
+                    log.debug { "Connection successfully established with: $nodeHostAndPorts" }
                 }
             } catch (ex: Exception) {
                 when (ex) {
@@ -259,23 +264,23 @@ class ReconnectingCordaRPCOps private constructor(
                 when (e.targetException) {
                     is RejectedCommandException -> {
                         log.error("Node is being shutdown. Operation ${method.name} rejected. Retrying when node is up...", e)
-                        reconnectingRPCConnection.error(e)
+                        reconnectingRPCConnection.reconnectOnError(e)
                         this.invoke(proxy, method, args)
                     }
                     is ConnectionFailureException -> {
                         log.error("Failed to perform operation ${method.name}. Connection dropped. Retrying....", e)
-                        reconnectingRPCConnection.error(e)
+                        reconnectingRPCConnection.reconnectOnError(e)
                         retry()
                     }
                     is RPCException -> {
                         log.error("Failed to perform operation ${method.name}. RPCException. Retrying....", e)
-                        reconnectingRPCConnection.error(e)
+                        reconnectingRPCConnection.reconnectOnError(e)
                         Thread.sleep(1000) // TODO - explain why this sleep is necessary
                         retry()
                     }
                     else -> {
                         log.error("Failed to perform operation ${method.name}. Unknown error. Retrying....", e)
-                        reconnectingRPCConnection.error(e)
+                        reconnectingRPCConnection.reconnectOnError(e)
                         retry()
                     }
                 }
@@ -285,7 +290,7 @@ class ReconnectingCordaRPCOps private constructor(
                 DataFeed::class.java -> {
                     // Intercept the data feed methods and returned a ReconnectingObservable instance
                     val initialFeed: DataFeed<Any, Any?> = uncheckedCast(result)
-                    val observable = ReconnectingObservableImpl(reconnectingRPCConnection, observersPool, initialFeed) {
+                    val observable = ReconnectingObservable(reconnectingRPCConnection, observersPool, initialFeed) {
                         // This handles reconnecting and creates new feeds.
                         uncheckedCast(this.invoke(reconnectingRPCConnection.proxy, method, args))
                     }
@@ -303,7 +308,3 @@ class ReconnectingCordaRPCOps private constructor(
         reconnectingRPCConnection.forceClose()
     }
 }
-
-fun <T> Observable<T>.asReconnecting(): ReconnectingObservable<T> = uncheckedCast(this)
-
-fun <T> Observable<T>.asReconnectingWithInitialValues(values: Iterable<T>): ReconnectingObservable<T> = asReconnecting().startWithValues(values)
