@@ -16,6 +16,7 @@ import net.corda.core.internal.responseAs
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.*
 import net.corda.core.node.NetworkParameters
+import net.corda.core.node.NodeDiagnosticInfo
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.NetworkMapCache
@@ -80,6 +81,10 @@ class CordaRPCProxyClient(private val targetHostAndPort: NetworkHostAndPort) : C
     override val protocolVersion: Int get() = PLATFORM_VERSION
 
     override val networkParameters: NetworkParameters get() = testNetworkParameters()
+
+    override fun nodeDiagnosticInfo(): NodeDiagnosticInfo {
+        TODO("not implemented")
+    }
 
     override fun stateMachinesSnapshot(): List<StateMachineInfo> {
         TODO("not implemented")

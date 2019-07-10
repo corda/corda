@@ -1,7 +1,6 @@
 package net.corda.node.services.statemachine
 
 import net.corda.core.flows.UnexpectedFlowEndException
-import net.corda.core.flows.registerCordappFlowFactory
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.map
 import net.corda.core.utilities.getOrThrow
@@ -9,6 +8,7 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.CHARLIE_NAME
 import net.corda.testing.core.singleIdentity
+import net.corda.testing.flows.registerCordappFlowFactory
 import net.corda.testing.internal.LogHelper
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.internal.*

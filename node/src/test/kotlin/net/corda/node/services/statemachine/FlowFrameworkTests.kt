@@ -33,6 +33,7 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.dummyCommand
 import net.corda.testing.core.singleIdentity
+import net.corda.testing.flows.registerCordappFlowFactory
 import net.corda.testing.internal.LogHelper
 import net.corda.testing.node.InMemoryMessagingNetwork.MessageTransfer
 import net.corda.testing.node.InMemoryMessagingNetwork.ServicePeerAllocationStrategy.RoundRobin
