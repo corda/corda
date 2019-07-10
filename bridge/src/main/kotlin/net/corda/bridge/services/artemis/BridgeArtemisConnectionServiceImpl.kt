@@ -11,6 +11,8 @@ import net.corda.core.internal.ThreadBox
 import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.ArtemisMessagingClient
+import net.corda.nodeapi.internal.ArtemisMessagingClient.Companion.CORDA_ARTEMIS_CALL_TIMEOUT_DEFAULT
+import net.corda.nodeapi.internal.ArtemisMessagingClient.Companion.CORDA_ARTEMIS_CALL_TIMEOUT_PROP_NAME
 import net.corda.nodeapi.internal.ArtemisMessagingComponent
 import net.corda.nodeapi.internal.ArtemisTcpTransport
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
@@ -83,8 +85,8 @@ class BridgeArtemisConnectionServiceImpl(artemisSigningService: TLSSigningServic
                 // would be the default and the two lines below can be deleted.
                 connectionTTL = 60000
                 clientFailureCheckPeriod = 30000
-                callFailoverTimeout = 1000
-                callTimeout = 1000
+                callFailoverTimeout = java.lang.Long.getLong(CORDA_ARTEMIS_CALL_TIMEOUT_PROP_NAME, CORDA_ARTEMIS_CALL_TIMEOUT_DEFAULT)
+                callTimeout = java.lang.Long.getLong(CORDA_ARTEMIS_CALL_TIMEOUT_PROP_NAME, CORDA_ARTEMIS_CALL_TIMEOUT_DEFAULT)
                 minLargeMessageSize = maxMessageSize
                 isUseGlobalPools = nodeSerializationEnv != null
                 confirmationWindowSize = conf.p2pConfirmationWindowSize

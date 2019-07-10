@@ -597,13 +597,13 @@ networkServices
 
   proxyType
     Optional - this can be used to turn on using a proxy for the http connections to doorman and network map. Allowed
-    values are ``DIRECT``, ``HTTP`` and ``SOCKS``. If set to anything else than ``DIRECT``, the proxyAddress must also
+    values are ``DIRECT`` and ``HTTP``. If set to anything else than ``DIRECT``, the proxyAddress must also
     be set.
 
     *Default:* ``DIRECT`` (i.e. no proxy)
 
   proxyAddress
-    Optional hostname and port of a HTTP or SOCKS proxy to be used for connections to the network map or doorman.
+    Optional hostname and port of a HTTP proxy to be used for connections to the network map or doorman.
 
     *Default:* not defined
 

@@ -36,7 +36,9 @@ internal class EventProcessor(channel: Channel,
                               userName: String?,
                               password: String?) : BaseHandler() {
     companion object {
-        private const val FLOW_WINDOW_SIZE = 10
+        private const val CORDA_AMQP_FLOW_WINDOW_SIZE_PROP_NAME = "net.corda.nodeapi.eventprocessor.FlowWindowSize"
+
+        private val FLOW_WINDOW_SIZE = Integer.getInteger(CORDA_AMQP_FLOW_WINDOW_SIZE_PROP_NAME, 5)
         private val log = contextLogger()
     }
 
@@ -93,6 +95,7 @@ internal class EventProcessor(channel: Channel,
 
     private fun tick(connection: Connection) {
         lock.withLock {
+            logDebugWithMDC { "Tick" }
             try {
                 if ((connection.localState != EndpointState.CLOSED) && !connection.transport.isClosed) {
                     val now = System.currentTimeMillis()
@@ -103,6 +106,7 @@ internal class EventProcessor(channel: Channel,
                     }, tickDelay, TimeUnit.MILLISECONDS)
                 }
             } catch (ex: Exception) {
+                withMDC { log.info("Tick failed", ex) }
                 connection.transport.close()
                 connection.condition = ErrorCondition()
             }
