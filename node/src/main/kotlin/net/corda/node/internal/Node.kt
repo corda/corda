@@ -6,6 +6,7 @@ import com.codahale.metrics.MetricRegistry
 import com.github.benmanes.caffeine.cache.Caffeine
 import com.palominolabs.metrics.newrelic.AllEnabledMetricAttributeFilter
 import com.palominolabs.metrics.newrelic.NewRelicReporter
+import io.netty.util.NettyRuntime
 import net.corda.client.rpc.internal.serialization.amqp.AMQPClientSerializationScheme
 import net.corda.cliutils.ShellConstants
 import net.corda.core.concurrent.CordaFuture
@@ -71,6 +72,8 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import rx.Scheduler
 import rx.schedulers.Schedulers
+import java.lang.Long.max
+import java.lang.Long.min
 import java.net.BindException
 import java.net.InetAddress
 import java.nio.file.Path
@@ -236,6 +239,13 @@ open class Node(configuration: NodeConfiguration,
         require(nodeInfo.legalIdentities.size in 1..2) { "Currently nodes must have a primary address and optionally one serviced address" }
 
         network as P2PMessagingClient
+
+        if (System.getProperty("io.netty.allocator.numHeapArenas").isNullOrBlank()) {
+            // Netty arenas are approx 16MB each when max'd out.  Set arenas based on memory, not core count, unless memory is abundant.
+            val memBasedArenas = max(Runtime.getRuntime().maxMemory() / 256.MB, 1L)
+            // We set the min of the above and the default.
+            System.setProperty("io.netty.allocator.numHeapArenas", min(memBasedArenas, NettyRuntime.availableProcessors() * 2L).toString())
+        }
 
         // When using external Artemis for P2P messaging, the node's p2pSslOptions are no longer used.
         val sslOptions = configuration.enterpriseConfiguration.messagingServerSslConfiguration ?: configuration.p2pSslOptions
