@@ -1296,47 +1296,6 @@ propagate far and the only entities who will learn their transaction hashes are 
 select to keep the data from the notary. For liquid assets a validating notary should always be used to prevent
 value destruction and theft if the transaction identifiers leak.
 
-\subsection{Guaranteed data distribution}
-
-In any global consensus system the user is faced with the question of whether they have the latest state of the
-database. Programmers working with block chains often make the simplifying assumption that because there is no
-formal map of miner locations and thus transactions are distributed to miners via broadcast, that they can listen
-to the stream of broadcasts and learn if they have the latest data. Alas, nothing stops someone privately providing
-a miner who has a known location with a transaction that they agree not to broadcast. The first time the rest of
-the network finds out about this transaction is when a block containing it is broadcast. When used to do double
-spending fraud this type of attack is known as a Finney Attack\cite{FinneyAttack}. Proof-of-work based systems rely
-on aligned incentives to discourage such attacks: to quote the Bitcoin white paper, \emph{``He ought to find it
-more profitable to play by the rules ... than to undermine the system and the validity of his own wealth.''} In
-practice this approach appears to work well enough most of the time, given that miners typically do not accept
-privately submitted transactions.
-
-In a system without global broadcast things are very different: the notary clusters \emph{must} accept transactions
-directly and there is no mechanism to ensure that everyone sees that the transaction is occurring. Sometimes this
-doesn't matter: most transactions are irrelevant for you and having to download them just wastes resources. But
-occasionally you do wish to become aware that the ledger state has been changed by someone else. A simple example
-is an option contract in which you wish to expire the option unless the counterparty has already exercised it. Them
-exercising the option must not require the seller to sign off on it, as it may be advantageous for the seller to
-refuse if it would cause them to lose money. Whilst the seller would discover if the buyer had exercised the option
-when they attempted to expire it, due to the notary informing them that their expiry transaction was a double
-spend, it is preferable to find out immediately.
-
-The obvious way to implement this is to give notaries the responsibility for ensuring all interested parties find
-out about a transaction. However, this would require the notaries to know who the involved parties actually are,
-which would create an undesirable privacy leak. It would also place extra network load on the notaries who would
-frequently be sending transaction data to parties that may already have it, or may simply not care. In many cases
-there may be no requirement for the notary to act as a trusted third party for data distribution purposes, as
-game-theoretic assumptions or legal assurances are sufficiently strong that peers can be trusted to deliver
-transaction data as part of their regular flows.
-
-To solve this, app developers can choose whether to request transaction distribution by the notary or not. This
-works by simply piggybacking on the standard identity lookup flows (see~\cref{sec:identity}). If a node
-wishes to be informed by the notary when a state is consumed, it can send the certificates linking the random keys
-in the state to the notary cluster, which then stores it in the local databases as per usual. Once the notary
-cluster has committed the transaction, key identities are looked up and any which resolve successfully are sent
-copies of the transaction. In normal operation the notary is not provided with the certificates linking the random
-keys to the long term identity keys and thus does not know who is involved with the operation (assuming source IP
-address obfuscation would be implemented, see~\cref{subsec:privacy-upgrades}).
-
 \section{The node}\label{sec:node}
 
 Corda comes with an open source reference implementation of the node. A more advanced `Corda Enterprise' node is
@@ -1907,6 +1866,47 @@ such a requirement.
 %is desired, a standalone notary could be run against a hardware security module with audit logging enabled. The
 %notary itself would simply use a private database and run on a single machine, with the logs exported to the people
 %running a global network for asynchronous post-hoc verification.
+
+\subsection{Guaranteed data distribution}
+
+In any global consensus system the user is faced with the question of whether they have the latest state of the
+database. Programmers working with block chains often make the simplifying assumption that because there is no
+formal map of miner locations and thus transactions are distributed to miners via broadcast, that they can listen
+to the stream of broadcasts and learn if they have the latest data. Alas, nothing stops someone privately providing
+a miner who has a known location with a transaction that they agree not to broadcast. The first time the rest of
+the network finds out about this transaction is when a block containing it is broadcast. When used to do double
+spending fraud this type of attack is known as a Finney Attack\cite{FinneyAttack}. Proof-of-work based systems rely
+on aligned incentives to discourage such attacks: to quote the Bitcoin white paper, \emph{``He ought to find it
+more profitable to play by the rules ... than to undermine the system and the validity of his own wealth.''} In
+practice this approach appears to work well enough most of the time, given that miners typically do not accept
+privately submitted transactions.
+
+In a system without global broadcast things are very different: the notary clusters \emph{must} accept transactions
+directly and there is no mechanism to ensure that everyone sees that the transaction is occurring. Sometimes this
+doesn't matter: most transactions are irrelevant for you and having to download them just wastes resources. But
+occasionally you do wish to become aware that the ledger state has been changed by someone else. A simple example
+is an option contract in which you wish to expire the option unless the counterparty has already exercised it. Them
+exercising the option must not require the seller to sign off on it, as it may be advantageous for the seller to
+refuse if it would cause them to lose money. Whilst the seller would discover if the buyer had exercised the option
+when they attempted to expire it, due to the notary informing them that their expiry transaction was a double
+spend, it is preferable to find out immediately.
+
+The obvious way to implement this is to give notaries the responsibility for ensuring all interested parties find
+out about a transaction. However, this would require the notaries to know who the involved parties actually are,
+which would create an undesirable privacy leak. It would also place extra network load on the notaries who would
+frequently be sending transaction data to parties that may already have it, or may simply not care. In many cases
+there may be no requirement for the notary to act as a trusted third party for data distribution purposes, as
+game-theoretic assumptions or legal assurances are sufficiently strong that peers can be trusted to deliver
+transaction data as part of their regular flows.
+
+To solve this, app developers can choose whether to request transaction distribution by the notary or not. This
+works by simply piggybacking on the standard identity lookup flows (see~\cref{sec:identity}). If a node
+wishes to be informed by the notary when a state is consumed, it can send the certificates linking the random keys
+in the state to the notary cluster, which then stores it in the local databases as per usual. Once the notary
+cluster has committed the transaction, key identities are looked up and any which resolve successfully are sent
+copies of the transaction. In normal operation the notary is not provided with the certificates linking the random
+keys to the long term identity keys and thus does not know who is involved with the operation (assuming source IP
+address obfuscation would be implemented, see~\cref{subsec:privacy-upgrades}).
 
 \subsection{Privacy upgrades}\label{subsec:privacy-upgrades}
 
