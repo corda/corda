@@ -146,20 +146,26 @@ After creating a state, you must create a contract. Contracts define the rules t
 
 7. Update the ID field to ``com.template.contracts.CarContract``. This ID field is used to identify contracts when building a transaction.
 
+  .. note::
+
+  	This field *must* match the fully qualified pathname of the class, the package path, and the class name.
+
 8. Update the ``Action`` command to an ``Issue`` command. This represents an issuance of an instance of the ``CarState`` state.
 
   Commands are the operations that can be performed on a state. A contract will often define command logic for several operations that can be performed on the state in question, for example, issuing a state, changing ownership, and marking the state retired.
 
-9. Add ``val command=tx.commands.requireSingleCommand<Commands.Issue>()`` at the beginning of the ``verify()`` method. The ``verify()`` method defines the verification rules that commands must satisfy to be valid.
+9. Add ``val command = tx.commands.requireSingleCommand<Commands>()`` at the beginning of the ``verify()`` method. The ``verify()`` method defines the verification rules that commands must satisfy to be valid.
 
-10. The final function of the contract is to prevent unwanted behaviour during the flow. After the ``val command=tx.commands...`` line, add the following requirement code:
+10. The final function of the contract is to prevent unwanted behaviour during the flow. After the ``val command = tx.commands...`` line, add the following requirement code:
 
     .. container:: codeset
 
         .. sourcecode:: kotlin
 
-            requireThat {
+            when(command) {
+              is Commands.Issue -> requireThat {
                 "There should be no input state" using (tx.inputs.isEmpty())
+              }
             }
 
 11. Inside the ``requireThat`` block add additional lines defining the following requirements:
@@ -190,13 +196,16 @@ After creating a state, you must create a contract. Contracts define the rules t
 
                 override fun verify(tx: LedgerTransaction) {
 
-                    val command = tx.commands.requireSingleCommand<Commands.Issue>()
-                    requireThat {
+                    val command = tx.commands.requireSingleCommand<Commands>()
+
+                    when(command) {
+                      is Commands.Issue -> requireThat {
                         "There should be no input state" using (tx.inputs.isEmpty())
                         "There should be one input state" using (tx.outputs.size == 1)
                         "The output state must be of type CarState" using (tx.outputs.get(0).data is CarState)
                         val outputState = tx.outputs.get(0).data as CarState
                         "The licensePlateNumber must be seven characters long" using (outputState.licensePlateNumber.length == 7)
+                      }
                     }
                 }
 
@@ -250,9 +259,9 @@ Step Four: Creating a flow
 
 11. Create a variable for an ``Issue`` command.
 
-  The first parameter of the command must be the command type, in this case ``Issue``.
+  The first parameter of the command must be the command type, in this case ``Issue``. As discussed above, the command tells other nodes what the purpose of the transaction is.
 
-  The second parameter of the command must be a list of keys from the relevant parties, in this case ``owningBank``, ``holdingDealer``, and ``manufacturer``.
+  The second parameter of the command must be a list of keys from the relevant parties, in this case ``owningBank``, ``holdingDealer``, and ``manufacturer``. As well as informing parties what the purpose of  the transaction is, the command also specifies which signatures must be present on the associated transaction in order for it to be valid.
 
 12. Create a ``CarState`` object using the parameters of ``CarIssueInitiator``.
 
@@ -294,7 +303,7 @@ Step Four: Creating a flow
                 }
             }
 
-14. Update the ``FlowLogic<Unit>`` to ``FlowLogic<SignedTransaction>`` in both the initiator and responder class.
+14. Update the ``FlowLogic<Unit>`` to ``FlowLogic<SignedTransaction>`` in both the initiator and responder class. This indicates that the ``SignedTransaction`` produced by this flow is returned from ``call`` and sent to the caller of the flow.
 
 15. Update the return type of both ``call()`` transactions to be of type ``SignedTransaction``.
 
@@ -324,7 +333,6 @@ Step Four: Creating a flow
                     val model: String,
                     val dealershipLocation: String
             ) : FlowLogic<SignedTransaction>() {
-                override val progressTracker = ProgressTracker()
 
                 @Suspendable
                 override fun call(): SignedTransaction {
@@ -536,13 +544,19 @@ Now that the CorDapp code has been completed and the build file updated, the Cor
 
   To start the nodes on Mac/Linux run the following command: ``build/nodes/runnodes``
 
-4. To run flows in your CorDapp, enter the following flow command from any node terminal window: ``flow start CarIssueInitiator owningBank: BankofAmerica, holdingDealer: Dealership, manufacturer: Manufacturer, vin: "abc", licensePlateNumber: "abc1234", make: "Honda", model: "Civic", dealershipLocation: "NYC"``
+  .. note::
+
+  	Maintain window focus on the node windows, if the nodes fail to load ...**finish me**
+
+4. To run flows in your CorDapp, enter the following flow command from any non-notary terminal window:
+
+  ``flow start CarIssueInitiator owningBank: BankofAmerica, holdingDealer: Dealership, manufacturer: Manufacturer, vin: "abc", licensePlateNumber: "abc1234", make: "Honda", model: "Civic", dealershipLocation: "NYC"``
 
 5. To check that the state was correctly issued, query the node using the following command:
 
   ``run vaultQuery contractStateType: com.template.states.CarState``
 
-  The vault is the node's repository of all information from the ledger that involves that node, stored in a relational model. After running the query, the terminal should display the state created by the flow command. This command can be run from the terminal window of any node, as all parties are participants in this transaction.
+  The vault is the node's repository of all information from the ledger that involves that node, stored in a relational model. After running the query, the terminal should display the state created by the flow command. This command can be run from the terminal window of any non-notary node, as all parties are participants in this transaction.
 
 Next steps
 ----------
