@@ -121,14 +121,10 @@ This is expanded upon in :ref:`contract_constraints_in_transactions`.
 .. note:: Signature Constraints are used by default except when a new transaction contains an input state with a Hash Constraint. In this
           situation the Hash Constraint is used.
 
-.. _app_versioning_with_signature_constraints:
-
 App versioning with Signature Constraints
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Signed apps require a version number to be provided, see :doc:`versioning`. You can't import two different
-JARs that claim to be the same version, provide the same contract classes and which are both signed. At runtime
-the node will throw a ``DuplicateContractClassException`` exception if this condition is violated.
+Signed apps require a version number to be provided, see :doc:`versioning`.
 
 Hash Constraints
 ----------------
