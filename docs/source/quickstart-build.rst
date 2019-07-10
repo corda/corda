@@ -24,7 +24,7 @@ The first thing you need to do is clone a CorDapp template to modify.
 
 4. Click **File** >  **Project Structure**. To set the project SDK click **New...** > **JDK**, and navigating to the installation directory of your JDK. Click **Apply**.
 
-5. Select **Modules** > **+** > **Import Module**. Select the ``cordapp-template-kotlin`` folder and click **Open**. Select **Import module from external model** > **Gradle** > **Next** > **Finish** > **Ok**. Gradle will now download all the project dependencies and perform some indexing.
+5. Select **Modules** > **+** > **Import Module**. Select the ``cordapp-template-kotlin`` folder and click **Open**. Select **Import module from external model** > **Gradle** > **Next** > tick the **Use auto-import** checkbox > **Finish** > **Ok**. Gradle will now download all the project dependencies and perform some indexing.
 
 Step Two: Creating states
 -------------------------
@@ -144,11 +144,7 @@ After creating a state, you must create a contract. Contracts define the rules t
 
 6. Update the class name to: ``CarContract``
 
-7. Update the ID field to ``com.template.contracts.CarContract``. This ID field is used to identify contracts when building a transaction.
-
-  .. note::
-
-  	This field *must* match the fully qualified pathname of the class, the package path, and the class name.
+7. Replace ``const val ID = "com.template.contracts.TemplateContract"`` with ``val ID = CarContract::class.qualifiedName!!``. This ID field is used to identify contracts when building a transaction. This ID declaration ensures that the contract name is created dynamically and can simplify code refactoring.
 
 8. Update the ``Action`` command to an ``Issue`` command. This represents an issuance of an instance of the ``CarState`` state.
 
@@ -255,7 +251,11 @@ Step Four: Creating a flow
 
 9. Now that the flow structure is in place, we can begin writing the code to create a transaction to issue a car state. Add parameters to the ``CarIssueInitiator`` class for all the fields of the ``CarState`` definition, except for ``linearId``.
 
-10. Inside the ``call()`` function of the initiator, create a variable for the notary node: ``val notary = serviceHub.networkMapCache.notaryIdentities.single()``
+10. Inside the ``call()`` function of the initiator, create a variable for the notary node: ``val notary = serviceHub.networkMapCache.notaryIdentities.first()``
+
+  .. note::
+
+  	The **networkMapCache** contains information about the nodes and notaries inside the network.
 
 11. Create a variable for an ``Issue`` command.
 
@@ -288,7 +288,7 @@ Step Four: Creating a flow
 
                 @Suspendable
                 override fun call() {
-                    val notary = serviceHub.networkMapCache.notaryIdentities.single()
+                    val notary = serviceHub.networkMapCache.notaryIdentities.first()
                     val command = Command(CarContract.Commands.Issue(), listOf(owningBank, holdingDealer, manufacturer).map { it.owningKey })
                     val carState = CarState(owningBank, holdingDealer, manufacturer, vin, licensePlateNumber, make, model, dealershipLocation, UniqueIdentifier())
                 }
@@ -303,7 +303,7 @@ Step Four: Creating a flow
                 }
             }
 
-14. Update the ``FlowLogic<Unit>`` to ``FlowLogic<SignedTransaction>`` in both the initiator and responder class. This indicates that the ``SignedTransaction`` produced by this flow is returned from ``call`` and sent to the caller of the flow.
+14. Update the ``FlowLogic<Unit>`` to ``FlowLogic<SignedTransaction>`` in both the initiator and responder class. This indicates that the ``SignedTransaction`` produced by this flow is returned from ``call`` and sent to the caller of the flow. If left unchanged, ``FlowLogic<Unit>`` will return nothing.
 
 15. Update the return type of both ``call()`` transactions to be of type ``SignedTransaction``.
 
@@ -311,7 +311,7 @@ Step Four: Creating a flow
 
 17. Verify the transaction by calling ``verify(serviceHub)`` on the ``TransactionBuilder``.
 
-18. Sign the transaction and store the result in a variable.
+18. Sign the transaction and store the result in a variable, using a method found in the `**serviceHub** <./api-service-hub.html>`_.
 
 19. Delete the ``progressTracker`` as it won't be used in this tutorial.
 
@@ -337,7 +337,7 @@ Step Four: Creating a flow
                 @Suspendable
                 override fun call(): SignedTransaction {
 
-                    val notary = serviceHub.networkMapCache.notaryIdentities.single()
+                    val notary = serviceHub.networkMapCache.notaryIdentities.first()
                     val command = Command(CarContract.Commands.Issue(), listOf(owningBank, holdingDealer, manufacturer).map { it.owningKey })
                     val carState = CarState(
                             owningBank,
@@ -379,7 +379,11 @@ Step Four: Creating a flow
             val stx = subFlow(CollectSignaturesFlow(tx, sessions))
             return subFlow(FinalityFlow(stx, sessions))
 
-  The first line creates a ``List<FlowSession>`` object by calling ``initiateFlow()`` for each party. The second line collects signatures from the relevant parties and returns a signed transaction. The third line calls ``FinalityFlow()``, finalizes the transaction using the notary or notary pool.
+  The first line creates a ``List<FlowSession>`` object by calling ``initiateFlow()`` for each party other than the initiating party. The second line collects signatures from the relevant parties and returns a signed transaction. The third line calls ``FinalityFlow()``, finalizes the transaction using the notary or notary pool.
+
+  .. note::
+
+  	Sessions are used for sending and receiving objects between nodes. ``ourIdentity`` is removed from the list of participants to open sessions to because a session does not need to be opened to the initiating party.
 
 22. Lastly, the body of the responder flow must be completed. The following code checks the transaction contents, signs it, and sends it back to the initiator:
 
@@ -398,6 +402,10 @@ Step Four: Creating a flow
                 val txWeJustSignedId = subFlow(signedTransactionFlow)
                 return subFlow(ReceiveFinalityFlow(counterpartySession, txWeJustSignedId.id))
             }
+
+  .. note::
+
+  	The ``checkTransaction`` function should be used *only* to model business logic. A contract's ``verify`` function should be used to define what is and is not possible within a transaction.
 
 23. The completed ``CarFlow.kt`` should look like this:
 
@@ -434,7 +442,7 @@ Step Four: Creating a flow
                 @Suspendable
                 override fun call(): SignedTransaction {
 
-                    val notary = serviceHub.networkMapCache.notaryIdentities.single()
+                    val notary = serviceHub.networkMapCache.notaryIdentities.first()
                     val command = Command(CarContract.Commands.Issue(), listOf(owningBank, holdingDealer, manufacturer).map { it.owningKey })
                     val carState = CarState(
                             owningBank,
@@ -527,7 +535,9 @@ The Gradle build files must be updated to change the node configuration.
                 rpcUsers = [[ user: "user1", "password": "test", "permissions": ["ALL"]]]
             }
 
-3. Save the updated ``build.gradle`` file and click **Import Changes** when the pop-up message appears in the lower-right corner.
+  The ``nodeDefaults`` defines what CorDapps are installed on the nodes by default. To install additional CorDapps on the nodes, update the ``nodeDefaults`` definition, or add the CorDapps to each node definition individually.
+
+3. Save the updated ``build.gradle`` file.
 
 Step Six: Deploying your CorDapp locally
 ----------------------------------------
@@ -546,7 +556,7 @@ Now that the CorDapp code has been completed and the build file updated, the Cor
 
   .. note::
 
-  	Maintain window focus on the node windows, if the nodes fail to load ...**finish me**
+  	Maintain window focus on the node windows, if the nodes fail to load, close them using ``ctrl + d``. The ``runnodes`` script opens each node directory and runs ``java -jar corda.jar``.
 
 4. To run flows in your CorDapp, enter the following flow command from any non-notary terminal window:
 
