@@ -71,7 +71,7 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
 
     private val lock = ReentrantLock()
     @Volatile
-    private var stopping: Boolean = false
+    private var started: Boolean = false
     private var workerGroup: EventLoopGroup? = null
     @Volatile
     private var clientChannel: Channel? = null
@@ -107,7 +107,7 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
             if (!future.isSuccess) {
                 log.info("Failed to connect to $currentTarget")
 
-                if (!stopping) {
+                if (started) {
                     workerGroup?.schedule({
                         nextTarget()
                         restart()
@@ -126,7 +126,7 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
         log.info("Disconnected from $currentTarget")
         future.channel()?.disconnect()
         clientChannel = null
-        if (!stopping && !amqpActive) {
+        if (started && !amqpActive) {
             log.debug { "Scheduling restart of $currentTarget (AMQP inactive)" }
             workerGroup?.schedule({
                 nextTarget()
@@ -210,7 +210,7 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
                             parent.badCertTargets += target
                         }
                         parent.run {
-                            if (!stopping && amqpActive) {
+                            if (started && amqpActive) {
                                 log.debug { "Scheduling restart of $currentTarget (AMQP active)" }
                                 workerGroup?.schedule({
                                     nextTarget()
@@ -228,6 +228,7 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
         lock.withLock {
             log.info("connect to: $currentTarget")
             workerGroup = sharedThreadPool ?: NioEventLoopGroup(NUM_CLIENT_THREADS)
+            started = true
             restart()
         }
     }
@@ -251,19 +252,15 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
     fun stop() {
         lock.withLock {
             log.info("disconnect from: $currentTarget")
-            stopping = true
-            try {
-                if (sharedThreadPool == null) {
-                    workerGroup?.shutdownGracefully()
-                    workerGroup?.terminationFuture()?.sync()
-                } else {
-                    clientChannel?.close()?.sync()
-                }
-                clientChannel = null
-                workerGroup = null
-            } finally {
-                stopping = false
+            started = false
+            if (sharedThreadPool == null) {
+                workerGroup?.shutdownGracefully()
+                workerGroup?.terminationFuture()?.sync()
+            } else {
+                clientChannel?.close()?.sync()
             }
+            clientChannel = null
+            workerGroup = null
             log.info("stopped connection to $currentTarget")
         }
     }

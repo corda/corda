@@ -32,6 +32,8 @@ import net.corda.node.services.statemachine.SenderDeduplicationId
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.currentFlowId
 import net.corda.node.utilities.errorAndTerminate
+import net.corda.nodeapi.internal.ArtemisMessagingClient.Companion.CORDA_ARTEMIS_CALL_TIMEOUT_DEFAULT
+import net.corda.nodeapi.internal.ArtemisMessagingClient.Companion.CORDA_ARTEMIS_CALL_TIMEOUT_PROP_NAME
 import net.corda.nodeapi.internal.ArtemisMessagingComponent
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.*
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.BRIDGE_CONTROL
@@ -210,8 +212,8 @@ class P2PMessagingClient(val config: NodeConfiguration,
                 // would be the default and the two lines below can be deleted.
                 connectionTTL = 60000
                 clientFailureCheckPeriod = 30000
-                callFailoverTimeout = 1000
-                callTimeout = 1000
+                callFailoverTimeout = java.lang.Long.getLong(CORDA_ARTEMIS_CALL_TIMEOUT_PROP_NAME, CORDA_ARTEMIS_CALL_TIMEOUT_DEFAULT)
+                callTimeout = java.lang.Long.getLong(CORDA_ARTEMIS_CALL_TIMEOUT_PROP_NAME, CORDA_ARTEMIS_CALL_TIMEOUT_DEFAULT)
                 minLargeMessageSize = maxMessageSize + JOURNAL_HEADER_SIZE
                 isUseGlobalPools = nodeSerializationEnv != null
                 confirmationWindowSize = config.enterpriseConfiguration.tuning.p2pConfirmationWindowSize

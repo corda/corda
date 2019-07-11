@@ -67,6 +67,7 @@ class FilterServiceTest {
         // Not ready so packet dropped
         val fakeMessage = rigorousMock<ReceivedMessage>().also {
             doNothing().whenever(it).complete(true) // ACK was called
+            doNothing().whenever(it).complete(false) // redeliver requested
         }
         filterService.sendMessageToLocalBroker(fakeMessage)
         assertEquals(TestAuditService.AuditEvent.PACKET_DROP, auditFollower.next()) // Dropped as not ready
