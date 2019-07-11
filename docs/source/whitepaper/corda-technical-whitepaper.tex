@@ -1504,54 +1504,146 @@ collector is required in order to set quotas to a usefully generic level.
 \section{Scalability}
 
 Scalability of block chains and block chain inspired systems has been a constant topic of discussion since Nakamoto
-first proposed the technology in 2008. We make a variety of choices and tradeoffs that affect and ensure
-scalability.
+first proposed the technology in 2008. Corda provides much better scalability than other competing systems, via a
+variety of choices and tradeoffs that affect and ensure scalability. Scalability can be measured in many different
+dimensions, extending even to factors like how many apps the ecosystem can handle.
 
-\paragraph{Partial visibility.}Nodes only encounter transactions if they are involved in some way, or if the
-transactions are dependencies of transactions that involve them in some way. This loosely connected design means
-that it is entirely possible for most nodes to never see most of the transaction graph, and thus they do not need
-to process it. This makes direct scaling comparisons with other distributed and decentralised database systems
-difficult, as they invariably measure performance in transactions/second per network rather than per node.
+The primary techniques used to scale better than classical systems are as follows.
 
-\paragraph{Signatures outside the transactions.}Corda transaction identifiers are the root of a Merkle tree
-calculated over its contents excluding signatures. This has the downside that a signed and partially signed
-transaction cannot be distinguished by their canonical identifier, but means that signatures can easily be verified
-in parallel. Corda smart contracts are deliberately isolated from the underlying cryptography and are not able to
-request signature checks themselves: they are run \emph{after} signature verification has taken place and don't
-execute at all if required signatures are missing. This ensures that signatures for a single transaction can be
-checked concurrently even though the smart contract code for that transaction is not parallelisable. (note that
-unlike some other systems, transactions involving the same contracts \emph{can} be checked in parallel.)
+\subsection{Partial visibility}
 
-\paragraph{Multiple notaries.}It is possible to increase scalability in some cases by bringing online additional
-notary clusters. Note that this only adds capacity if the transaction graph has underlying exploitable structure
-(e.g. geographical biases), as a purely random transaction graph would end up constantly crossing notaries and the
-additional transactions to move states from one notary to another would negate the benefit. In real trading however
-the transaction graph is not random at all, and thus this approach may be helpful.
+Nodes only encounter transactions if they are involved in some way, or if the transactions are dependencies of
+transactions that involve them in some way. This loosely connected design means that it is entirely possible for
+most nodes to never see most of the transaction graph, and thus they do not need to process it. This makes direct
+scaling comparisons with other distributed and decentralised database systems difficult, as they invariably measure
+performance in transactions/second per network rather than per node, but Corda nodes scale depending on how much
+\emph{business relevant} work they do.
 
-\paragraph{Asset reissuance.}In the case where the issuer of an asset is both trustworthy and online, they may exit
-and re-issue an asset state back onto the ledger with a new reference field. This effectively truncates the
-dependency graph of that asset which both improves privacy and scalability, at the cost of losing atomicity (it is
-possible for the issuer to exit the asset but not re-issue it, either through incompetence or malice).
+Because of this, a group of businesses doing high-throughput traffic between each other won't affect the load on
+other nodes belonging to unrelated businesses. Nodes can handle large numbers of transactions per second.
+As of the time of writing, a node has been demonstrated doing a sustained 800 transactions per second. Very few
+businesses directly generate such large quantities of traffic - all of PayPal does only about 320 transactions per
+second on average\cite{PayPalTrafficVolume}, so we believe this is sufficient to enable virtually all business use
+cases, especially as one transaction can update many parts of the ledger simultaneously.
 
-\paragraph{Non-validating notaries.}The overhead of checking a transaction for validity before it is notarised is
-likely to be the main overhead for non-BFT notaries. In the case where raw throughput is more important than ledger
-integrity it is possible to use a non-validating notary. See~\cref{sec:non-validating-notaries}.
+\subsection{Multiple notaries}
 
-The primary bottleneck in a Corda network is expected to be the notary clusters, especially for byzantine fault
-tolerant (BFT) clusters made up of mutually distrusting nodes. BFT clusters are likely to be slower partly because
-the underlying protocols are typically chatty and latency sensitive, and partly because the primary situation when
-using a BFT protocol is beneficial is when there is no shared legal system which can be used to resolve fraud or
-other disputes, i.e. when cluster participants are spread around the world and thus the speed of light becomes a
-major limiting factor.
+The primary bottleneck on ledger update speed is how fast notaries can commit transactions to resolve conflicts.
+Whereas most blockchain systems provide a single shard and a single consensus mechanism, Corda allows multiple
+shards (in our lingo, notary clusters), which can run potentially different consensus algorithms, all
+simultaneously in the same interoperable network (see~\cref{sec:notaries}). Therefore it is possible to increase
+scalability in some cases by bringing online additional notary clusters. States can be moved between notaries if
+necessary to rebalance them.
 
-Due to partial visibility nodes check transaction graphs `just in time' rather than as a steady stream of
-announcements by other participants. This complicates the question of how to measure the scalability of a Corda
-node. Other block chain systems quote performance as a constant rate of transactions per unit time. However, our
-`unit time' is not evenly distributed: being able to check 1000 transactions/sec is not necessarily good enough if
-on presentation of a valuable asset you need to check a transaction graph that consists of many more transactions
-and the user is expecting the transaction to show up instantly. Future versions of the platform may provide
-features that allow developers to smooth out the spiky nature of Corda transaction checking by, for example,
-pre-pushing transactions to a node when the developer knows they will soon request the data anyway.
+Note that this only adds capacity if the transaction graph has underlying exploitable structure (e.g. geographical
+biases), as a purely random transaction graph would end up constantly crossing notaries and the additional
+transactions to move states from one notary to another would negate the benefit. In real trading however the
+transaction graph is not random at all, and thus this approach may be helpful.
+
+The primary constraint on this technique is that all notaries must be equally trusted by participants. If a Corda
+network were to contain one very robust, large byzantine fault tolerant notary and additionally a small notary
+which used non-BFT algorithms, the trustworthiness of the network's consensus would be equal to the weakest link,
+as states are allowed to migrate between notaries. Therefore a network operator must be careful to ensure that new
+notary clusters or the deployment of new algorithms don't undermine confidence in the existing clusters.
+
+\subsection{Parallel processing}
+
+A classic constraint on the scalability of blockchain systems is their nearly non-existent support for parallelism.
+The primary unit of parallelism in Corda is the flow. Many flows and thus ledger updates can be running
+simultaneously; some node implementations can execute flows on multiple CPU cores concurrently and the potential
+for sharding them across a multi-server node also exists. In such a design the MQ broker would take responsibility
+for load balancing inbound protocol messages and scheduling them to provide flow affinity; the checkpointing
+mechanism allows flows to migrate across flow workers transparently as workers are added and removed. Notary
+clusters can commit transactions in batches, and multiple independent notary clusters may be processing
+transactions in parallel.
+
+Not only updates (writes) are concurrent. Transactions may also be verified in parallel. Because transactions are
+not globally ordered but rather only ordered relative to each other via the input list, dependencies of a
+transaction don't depend on each other and may be verified simultaneously. Corda transaction identifiers are the
+root of a Merkle tree calculated over its contents excluding signatures. This has the downside that a signed and
+partially signed transaction cannot be distinguished by their canonical identifier, but means that signatures can
+easily be verified using multiple CPU cores and modern elliptic curve batching techniques. Signature verification
+has in the past been a bottleneck for verifying block chains, so this is a significant win. Corda smart contracts
+are deliberately isolated from the underlying cryptography: they are run \emph{after} signature verification has
+taken place and don't execute at all if required signatures are missing. This ensures that signatures for a single
+transaction can be checked concurrently even though the smart contract code for the transaction itself must be
+fully deterministic and thus doesn't have access to threading.
+
+\subsection{Chain snipping}
+
+In the case where the issuer of an asset is both trustworthy and online, they may exit and re-issue an asset state
+back onto the ledger with a new reference field. This effectively truncates the dependency graph of that asset
+which both improves privacy and scalability, at the cost of losing atomicity - it is possible for the issuer to
+exit the asset but not re-issue it, either through incompetence or malice. However, usually the asset issuer is
+trusted in much more fundamental ways than that, e.g. to not steal the money, and thus this doesn't seem likely to
+be a big problem in practice.
+
+Although the platform doesn't do this today, a node implementation could potentially snip chains automatically once
+they cross certain lengths or complexity costs - assuming the issuer is online. Because they're optional, an extended
+outage at the issuer would simply mean the snip happens later.
+
+\subsection{Signatures of validity}
+
+The overhead of checking a transaction for validity before it is notarised is likely to be the main overhead for
+both notaries and nodes. In the case where raw throughput is more important than ledger integrity it is possible to use a
+non-validating notary which doesn't do these checks. See~\cref{sec:non-validating-notaries}.
+
+Using Intel SGX it's possible to reduce the load on notaries without compromising robustness by having the node itself
+verify its own transaction using an enclave. The resulting `signature of validity' can then be checked using remote
+attestation by the notary cluster, to ensure the verification work was done correctly. See~\cref{subsec:sgx}.
+
+This outsourcing technique can also be used to run nodes on smaller devices that don't have any way to directly check
+the ledger themselves. If a transaction is signed by a fully or semi-validating notary, or has an enclave signature of
+validity on it, the transaction can be accepted as valid and the outputs processed directly. This can be considered
+a more efficient equivalent to Bitcoin's `simplified payment verification' mode, as described in the original Bitcoin
+white paper.
+
+\subsection{JIT compilation}
+
+It is common for blockchain systems to execute smart contract logic very slowly due to the lack of efficient
+optimising compilers for their custom programming languages. Because Corda runs smart contract logic on a JVM it
+benefits automatically from just-in-time compilation to machine code of contract logic. After a contract has been
+encountered a few times it will be scheduled for conversion to machine code, yielding speedups of many orders of
+magnitude. Contract logic only executed only a few times will be run interpreted, avoiding the overhead of
+compilation for rarely used business logic. The process is entirely transparent to developer, thus as JVMs improve
+over time the throughput of nodes automatically gets better too. JVMs have over thousands of accumulated man-years
+of work put into their optimising compilers already, and are still improving. The upgrade from Java 8 to Java 11
+resulted in an immediate 20\% performance boost to the throughput of one node implementation. Because JVMs are
+multi-language runtimes, these benefits also apply to a variety of non-Java languages that can also execute on it,
+thus this benefit isn't invalidated by the use of DSLs as long as they compile to bytecode.
+
+\subsubsection{Optimised and scalable data storage}
+
+It's standard for classical DLT platforms to place all data in simple key/value stores. This is especially true for
+Ethereum derivatives. This makes it difficult or impossible to do sophisticated queries, let alone do such queries
+with good performance and in parallel. App developers are expected to handle data query implementation on their own.
+
+Corda's extensive support for mapping strongly typed on-ledger data into relational database tables makes available
+the decades of optimisations for querying data in scalable storage, including but not limited to:
+
+\begin{itemize}
+    \item Query planners, which use continual profiling and statistical analysis to optimise the usage of IO
+          resources like disk seeks.
+    \item Multi-server databases with read replicas, enabling read throughput to be scaled to arbitrarily levels
+          by adding more hardware (writes of course must go through the ledger infrastructure, the scalability of
+          which is discussed above).
+    \item Multi-column indexing, JIT compilation of SQL to machine code, excellent monitoring and diagnostics tools.
+\end{itemize}
+
+\subsubsection{Additional scaling and performance techniques}
+
+Corda also utilises a variety of smaller techniques that significantly improve scalability and optimise cost:
+
+\begin{itemize}
+    \item Hardware accelerated AES/GCM encryption used for peer to peer traffic, when the CPU supports it.
+    \item Extremely modern and fast elliptic curve cryptography, using the carefully tuned Ed25519 curve.
+    \item Checkpoint elimination when flows are known to be idempotent and safely replayable. Corda is crash-safe
+          by default (something alternative platforms sometimes lack), but crash-safety can be optimised out when
+          analysis shows it is safe to do so.
+    \item Network map data is distributable via caching content delivery networks, and only changed entries are
+          fetched by nodes. This ensures the network map data for a Corda network can be easily distributed around
+          the world, making it hard to take down using denial-of-service attacks and cheap to serve.
+\end{itemize}
 
 \section{Privacy}\label{sec:privacy}
 
@@ -1749,7 +1841,6 @@ convention. In theory, we could define the transaction format to support message
 the contract supported that the right language could then be picked by the signing device. However, care must be
 taken to ensure that the message the user sees in alternative languages is correctly translated and not subject to
 ambiguity or confusion, as otherwise exploitable confusion attacks may arise.
-
 
 \subsection{Data distribution groups}
 
@@ -2048,7 +2139,7 @@ This section outlines a design for a platform upgrade which encrypts all transac
 states exposed to authorised parties. The encrypted transactions are still verified and thus ledger integrity is
 still assured. This section provides details on the design which is being implemented at the moment.
 
-\subsubsection{Intel SGX}
+\subsubsection{Intel SGX}\label{subsec:sgx}
 
 Intel \emph{Software Guard Extensions}\cite{SGX} is a new feature supported in the latest generation of Intel CPUs.
 It allows applications to create so-called \emph{enclaves}. Enclaves have the following useful properties:
