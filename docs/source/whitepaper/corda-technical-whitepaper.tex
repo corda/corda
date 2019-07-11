@@ -389,6 +389,18 @@ that happened to be sorted in previous versions, but then ceases to be sorted du
 this could potentially break apps that assumed a certain value would always be found at a certain index. Target
 versioning can be used to keep apps working even as the platform underneath it evolves.
 
+\subsection{Business networks}
+
+The infrastructure described so far is sufficient to establish a Corda network of nodes which can interoperate
+with each other from a purely technical perspective. But application authors frequently require that users
+of their software form a different kind of network layered on top; we call this a \emph{business network}.
+Business networks define their own subgroup of nodes, membership of which is required to interact with the
+others. The platform provides a notion of membership management via the `business network management service'
+but otherwise defines nothing relevant to this concept: it is up to app developers to decide on the rules for
+joining a business network and how it will be governed (if at all).
+
+Business networks are discussed further in section 5.1 of the introductory white paper.
+
 \section{Flow framework}\label{sec:flows}
 
 \subsection{Overview}
