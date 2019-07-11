@@ -396,9 +396,6 @@ class X509CertificateFactory {
 enum class CertificateType(val keyUsage: KeyUsage, vararg val purposes: KeyPurposeId, val isCA: Boolean, val role: CertRole?) {
     ROOT_CA(
             KeyUsage(KeyUsage.digitalSignature or KeyUsage.keyCertSign or KeyUsage.cRLSign),
-            KeyPurposeId.id_kp_serverAuth,
-            KeyPurposeId.id_kp_clientAuth,
-            KeyPurposeId.anyExtendedKeyUsage,
             isCA = true,
             role = null
     ),
@@ -407,7 +404,6 @@ enum class CertificateType(val keyUsage: KeyUsage, vararg val purposes: KeyPurpo
             KeyUsage(KeyUsage.digitalSignature or KeyUsage.keyCertSign or KeyUsage.cRLSign),
             KeyPurposeId.id_kp_serverAuth,
             KeyPurposeId.id_kp_clientAuth,
-            KeyPurposeId.anyExtendedKeyUsage,
             isCA = true,
             role = CertRole.DOORMAN_CA
     ),
@@ -416,7 +412,6 @@ enum class CertificateType(val keyUsage: KeyUsage, vararg val purposes: KeyPurpo
             KeyUsage(KeyUsage.digitalSignature),
             KeyPurposeId.id_kp_serverAuth,
             KeyPurposeId.id_kp_clientAuth,
-            KeyPurposeId.anyExtendedKeyUsage,
             isCA = false,
             role = CertRole.NETWORK_MAP
     ),
@@ -425,7 +420,6 @@ enum class CertificateType(val keyUsage: KeyUsage, vararg val purposes: KeyPurpo
             KeyUsage(KeyUsage.digitalSignature),
             KeyPurposeId.id_kp_serverAuth,
             KeyPurposeId.id_kp_clientAuth,
-            KeyPurposeId.anyExtendedKeyUsage,
             isCA = false,
             role = CertRole.SERVICE_IDENTITY
     ),
@@ -434,7 +428,6 @@ enum class CertificateType(val keyUsage: KeyUsage, vararg val purposes: KeyPurpo
             KeyUsage(KeyUsage.digitalSignature or KeyUsage.keyCertSign or KeyUsage.cRLSign),
             KeyPurposeId.id_kp_serverAuth,
             KeyPurposeId.id_kp_clientAuth,
-            KeyPurposeId.anyExtendedKeyUsage,
             isCA = true,
             role = CertRole.NODE_CA
     ),
@@ -443,7 +436,6 @@ enum class CertificateType(val keyUsage: KeyUsage, vararg val purposes: KeyPurpo
             KeyUsage(KeyUsage.digitalSignature or KeyUsage.keyEncipherment or KeyUsage.keyAgreement),
             KeyPurposeId.id_kp_serverAuth,
             KeyPurposeId.id_kp_clientAuth,
-            KeyPurposeId.anyExtendedKeyUsage,
             isCA = false,
             role = CertRole.TLS
     ),
@@ -451,18 +443,12 @@ enum class CertificateType(val keyUsage: KeyUsage, vararg val purposes: KeyPurpo
     // TODO: Identity certs should have tight name constraints on child certificates
     LEGAL_IDENTITY(
             KeyUsage(KeyUsage.digitalSignature or KeyUsage.keyCertSign),
-            KeyPurposeId.id_kp_serverAuth,
-            KeyPurposeId.id_kp_clientAuth,
-            KeyPurposeId.anyExtendedKeyUsage,
             isCA = true,
             role = CertRole.LEGAL_IDENTITY
     ),
 
     CONFIDENTIAL_LEGAL_IDENTITY(
             KeyUsage(KeyUsage.digitalSignature),
-            KeyPurposeId.id_kp_serverAuth,
-            KeyPurposeId.id_kp_clientAuth,
-            KeyPurposeId.anyExtendedKeyUsage,
             isCA = false,
             role = CertRole.CONFIDENTIAL_LEGAL_IDENTITY
     ),
