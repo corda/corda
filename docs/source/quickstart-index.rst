@@ -29,8 +29,8 @@ Step One: Downloading a sample project
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 1. Open a command prompt or terminal.
-2. Clone the CorDapp example repo by running: ``git clone https://github.com/corda/cordapp-example``
-3. Move into the ``cordapp-example`` folder by running: ``cd cordapp-example``
+2. Clone the CorDapp example repo by running: ``git clone https://github.com/corda/samples``
+3. Move into the ``cordapp-example`` folder by running: ``cd samples/cordapp-example``
 4. Checkout the corresponding branch by running: ``git checkout release-V4`` in the current directory.
 
 
@@ -41,7 +41,7 @@ Step Two: Creating an IntelliJ project
 
 2. Click **File** >  **Project Structure**. To set the project SDK click **New...** > **JDK**, and navigating to the installation directory of your JDK. Click **Apply**.
 
-3. Select **Modules** > **+** > **Import Module**. Select the ``cordapp-example`` folder and click **Open**. Select **Import module from external model** > **Gradle** > **Next** > **Finish** > **Ok**. Gradle will now download all the project dependencies and perform some indexing.
+3. Select **Modules** > **+** > **Import Module**. Select the ``cordapp-example`` folder and click **Open**. Select **Import module from external model** > **Gradle** > **Next** > tick the **Use auto-import** checkbox > **Finish** > **Ok**. Gradle will now download all the project dependencies and perform some indexing.
 
 Your CorDapp development environment is now complete.
 
