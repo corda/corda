@@ -1661,6 +1661,10 @@ issuer to re-issue the asset onto the ledger with a new reference field. This op
 unlinks the new version of the asset from the old, meaning that nodes won't attempt to explore the original dependency
 graph during verification.
 
+However the primary privacy effort revolves around encrypting the entire ledger and validating it using secure
+hardware enclaves, see~\cref{subsec:sgx}. This can provide the benefits of homomorphic encryption and zero
+knowledge proofs, but without sacrificing scalability/performance or (crucially) auditability in case of failure.
+
 \section{Future work}
 
 Corda has a long term roadmap with many planned extensions. In this section we explore a variety of planned upgrades
@@ -2189,17 +2193,17 @@ correctly anyway, and modern CPUs certainly have sufficient flexibility in their
 particular code sequences and calculate the wrong answer when found. Thus minimising the number of trusted parties
 to \emph{only} the CPU vendor is still a major step forward from the status quo.
 
-\subsubsection{Lose-integrity vs lose-privacy}
+\subsubsection{Attestation vs verification models}
 
 SGX enclaves can be used in two different ways to provide ledger privacy. We name these different approaches the
-\emph{lose-integrity model} and the \emph{lose-privacy model}, after what desirable attribute you lose if the
+\emph{attestation model} and the \emph{verification model}, after what desirable attribute you lose if the
 enclave's security is breached.
 
 Consider a scenario in which Alice wishes to transfer a state to Bob. Alice has herself received the state from
 Zack, a third party Bob should not learn anything about. The state contains complex structured business data thus
 rendering token-specific privacy techniques insufficient.
 
-\paragraph{Lose-integrity.}The simplest way to use SGX is for Alice to create an enclave on her own computer that
+\paragraph{Attestation model.}The simplest way to use SGX is for Alice to create an enclave on her own computer that
 knows how to deserialize and verify transactions. Enclaves produce \emph{signatures of validity}, which are
 signatures of attestation by an enclave binary marked as trusted by the Corda network operator and which sign over
 the Merkle root of the verified transaction. This implies the enclave must include a small SGX compatible JVM (such
@@ -2207,12 +2211,12 @@ a JVM has been built). Alice feeds a transaction to the enclave along with signa
 transaction's inputs, and a new signature of validity is produced by the enclave which can be checked by
 any third party to convince themselves that a genuine Corda verification enclave was used.
 
-In the lose-integrity model transaction data doesn't move between peers at all. Only signatures of validity are
+In the attestation model transaction data doesn't move between peers at all. Only signatures of validity are
 transmitted over the peer-to-peer network. This has the following advantages:
 
 \begin{itemize}
     \item Some countries have regulations that forbid transmission of financial data, even encrypted, outside their
-          own borders. The lose-integrity model can handle such cases.
+          own borders. The attestation model can handle such cases.
     \item Transaction resolution and verification becomes much faster, as only one transaction must be checked
           instead of an arbitrarily deep dependency graph.
     \item It becomes possible for nodes to check transactions `from the future' and thus maybe survive mandatory
@@ -2225,7 +2229,7 @@ transmitted over the peer-to-peer network. This has the following advantages:
     \item It is relatively simple to implement.
 \end{itemize}
 
-Unfortunately the lose-integrity model has one large disadvantage that makes it undesirable to support as the
+Unfortunately the attestation model has one large disadvantage that makes it undesirable to support as the
 only available model: if a flaw in the enclave or SGX itself is found, it becomes possible for an attacker to edit
 the ledger as they see fit. Because nodes aren't actually cross checking each other any more, but placing full
 confidence in the enclave to assert validity, anyone who can forge signatures of validity could create money out of
@@ -2234,15 +2238,16 @@ also unauditable.
 
 In practice both a verification enclave and SGX itself are complex systems that are unlikely to be bug free. Flaws
 will be found and fixed over the lifetime of the system, and the design of SGX anticipates that. Indeed, such flaws
-have already been found. In the lose-integrity model the ledger cannot recover from a discovered flaw: doubt over
+have already been found. In the attestation model the ledger cannot recover from a discovered flaw: doubt over
 the integrity of the database would persist permanently.
 
 This problem motivates the desire for a second model.
 
-\paragraph{Lose-privacy.}This model is significantly more complex. In it, Bob uses remote attestation to convince
-Alice that he is running an enclave that can verify third party transaction data without leaking it to him. Once
-convinced, Alice encrypts Zack's transaction to the enclave and sends it to Bob's computer. Bob then feeds the
-encrypted transaction to the enclave, and the enclave signals to Bob that it believes the transaction to be valid.
+\paragraph{Verification model.}This model is significantly more complex. In it, Bob uses remote attestation to
+convince Alice that he is running an enclave that can verify third party transaction data without leaking it to
+him. Once convinced, Alice encrypts Zack's transaction to the enclave and sends it to Bob's computer. Bob then
+feeds the encrypted transaction to the enclave, and the enclave signals to Bob that it believes the transaction to
+be valid.
 
 The complexity stems from the recursive nature of this process. Alice received the transaction from Zack, who may
 in turn have obtained the state via a transaction with Yvonne, thus neither Alice nor Zack may actually have a
@@ -2280,12 +2285,12 @@ A simplified version of the protocol looks like this:
 The above description is incomplete in many ways. A real implementation will hide \emph{all} transactions and
 expose only states via the node's API - the head of the chain is never special in such a design. Enclaves need to
 store data locally under different keys than the ones used for communication, implying another re-encryption step.
-Unlike lose-integrity the lose-privacy model doesn't improve the speed or scaling of the resolution process, and
-encrypted data still moves between nodes. And side channel attacks must be mitigated, as Bob could attempt to learn
-things about the contents of encrypted transactions by taking careful measurements of the enclave's execution as it
-validates the chain of custody.
+Unlike the attestation model the verification model doesn't improve the speed or scaling of the resolution
+process, and encrypted data still moves between nodes. And side channel attacks must be mitigated, as Bob could
+attempt to learn things about the contents of encrypted transactions by taking careful measurements of the
+enclave's execution as it validates the chain of custody.
 
-Despite these disadvantages, the lose-privacy model comes with a major improvement: breaches of enclave security
+Despite these disadvantages, the verification model comes with a major improvement: breaches of enclave security
 allow private data to be accessed but do \emph{not} grant any special write privileges. As data gets progressively
 less valuable as it ages this means recovery from breaches happens naturally and organically; eventually none of
 the data exposed by a breach matters much any more, and at any rate, a breach only reverts the system to the level
@@ -2293,9 +2298,9 @@ of security it had pre-SGX. Therefore trading can continue even in the event of 
 discovered. In contrast, if data integrity is lost there is no way to recover it (illegally minted money may
 continue to circulate for years).
 
-\paragraph{Mixed mode.}The two modes can be combined in the same network. For example, lose-integrity can be used
-if data were to cross borders with lose-privacy being the default for when data would stay within a country.
-Semi-validating notaries could operate in a network for which other nodes are running the lose-privacy model. The
+\paragraph{Mixed mode.}The two modes can be combined in the same network. For example, the attestation model can be used
+if data were to cross borders with verification being the default for when data would stay within a country.
+Semi-validating notaries could operate in a network for which other nodes are running verification. The
 exact blend of security tradeoffs a group of nodes may tolerate can be set by the network operator via its usual
 governance processes. Mixed mode is also useful during incremental rollout of ledger encryption to an already live
 Corda network.
