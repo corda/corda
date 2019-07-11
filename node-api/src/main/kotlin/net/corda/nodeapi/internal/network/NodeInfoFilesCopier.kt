@@ -21,7 +21,7 @@ import java.util.concurrent.TimeUnit
  * This class will create paths that it needs to poll and to where it needs to copy files in case those
  * don't exist yet.
  */
-class NodeInfoFilesCopier(scheduler: Scheduler = Schedulers.io()) : AutoCloseable {
+class NodeInfoFilesCopier(private val scheduler: Scheduler = Schedulers.io()) : AutoCloseable {
 
     companion object {
         private val log = contextLogger()
@@ -94,6 +94,7 @@ class NodeInfoFilesCopier(scheduler: Scheduler = Schedulers.io()) : AutoCloseabl
     private fun allPreviouslySeenFiles() = nodeDataMapBox.alreadyLocked { values.flatMap { it.previouslySeenFiles.keys } }
 
     private fun poll() {
+//        println("[${scheduler.now()}] poll")
         nodeDataMapBox.locked {
             for (nodeData in values) {
                 nodeData.nodeDir.list { paths ->
@@ -109,7 +110,9 @@ class NodeInfoFilesCopier(scheduler: Scheduler = Schedulers.io()) : AutoCloseabl
     // Takes a path under nodeData config dir and decides whether the file represented by that path needs to
     // be copied.
     private fun processPath(nodeData: NodeData, path: Path) {
+//        println("[${scheduler.now()}] processPath ($path)")
         nodeDataMapBox.alreadyLocked {
+//            println("${path.fileName} (${path.lastModifiedTime()}: ${nodeData.previouslySeenFiles}")
             val newTimestamp = path.lastModifiedTime()
             val previousTimestamp = nodeData.previouslySeenFiles.put(path, newTimestamp) ?: FileTime.fromMillis(-1)
             if (newTimestamp > previousTimestamp) {
@@ -122,6 +125,8 @@ class NodeInfoFilesCopier(scheduler: Scheduler = Schedulers.io()) : AutoCloseabl
     }
 
     private fun atomicCopy(source: Path, destination: Path) {
+        log.warn("[${scheduler.now()}] Copying ... $source -> $destination")
+
         val tempDestination = try {
             Files.createTempFile(destination.parent, "", null)
         } catch (exception: IOException) {
