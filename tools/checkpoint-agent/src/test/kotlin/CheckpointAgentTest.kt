@@ -1,16 +1,14 @@
 import co.paralleluniverse.strands.Strand
 import com.sun.tools.attach.VirtualMachine
-import net.corda.core.internal.*
+import net.corda.core.internal.declaredField
+import net.corda.core.internal.objectOrNewInstance
 import net.corda.tools.CheckpointAgent
 import net.corda.tools.CheckpointHook
 import org.junit.Test
 import sun.misc.VMSupport
-import java.lang.Thread.sleep
 import java.lang.management.ManagementFactory
-import kotlin.reflect.KMutableProperty
-import kotlin.reflect.KProperty
+import java.util.*
 import kotlin.reflect.full.memberProperties
-import kotlin.reflect.jvm.isAccessible
 import kotlin.reflect.jvm.javaField
 
 class CheckpointAgentTest {
@@ -18,7 +16,7 @@ class CheckpointAgentTest {
     @Test
     fun argumentParsing() {
         resetDefaults()
-        CheckpointAgent.parseArguments("instrumentClassname=net.corda.vega.flows.SimmFlow, minimumSize=1000000, instrumentType=READ,fiberName=c1694658-5df5-4267-abe7-cd8708da682a")
+        CheckpointAgent.parseArguments("instrumentClassname=net.corda.vega.flows.SimmFlow, minimumSize=1000000, instrumentType=READ,checkpointId=c1694658-5df5-4267-abe7-cd8708da682a")
         resetDefaults()
         CheckpointAgent.parseArguments("instrumentClassname=net.corda.vega.flows.SimmFlow, minimumSize=1000000, instrumentType=READ")
         resetDefaults()
@@ -42,7 +40,7 @@ class CheckpointAgentTest {
         resetDefaults()
         CheckpointAgent.parseArguments("instrumentType=WRONG")
         resetDefaults()
-        CheckpointAgent.parseArguments("instrumentType=read,fiberName=c1694658-5df5-4267-abe7-cd8708da682a")
+        CheckpointAgent.parseArguments("instrumentType=read,checkpointId=c1694658-5df5-4267-abe7-cd8708da682a")
         resetDefaults()
         CheckpointAgent.parseArguments("blablabla=net.corda.vega.flows.SimmFlow, blablabla=1000000, instrumentType=WRITE")
     }
@@ -52,7 +50,6 @@ class CheckpointAgentTest {
         CheckpointAgent.minimumSize = CheckpointAgent.DEFAULT_MINIMUM_SIZE
         CheckpointAgent.maximumSize = CheckpointAgent.DEFAULT_MAXIMUM_SIZE
         CheckpointAgent.instrumentType = CheckpointAgent.DEFAULT_INSTRUMENT_TYPE
-        CheckpointAgent.fiberName = null
     }
 
     @Test
@@ -83,9 +80,9 @@ class CheckpointAgentTest {
     fun testReflectionUtils() {
         try {
             val instance = CheckpointHook::class.objectOrNewInstance()
-            println(instance.strand)
-            instance.strand = Strand.of(Thread.currentThread())
-            println(instance.strand)
+            println(instance.checkpointId)
+            instance.checkpointId = UUID.randomUUID()
+            println(instance.checkpointId)
         }
         catch (e: Exception) {
             println(e)

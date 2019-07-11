@@ -41,7 +41,6 @@ import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.contextLogger
 import net.corda.node.internal.NodeStartup
 import net.corda.node.services.api.CheckpointStorage
-import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.statemachine.*
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.serialization.internal.CheckpointSerializeAsTokenContextImpl
@@ -68,6 +67,10 @@ class CheckpointDumper(private val checkpointStorage: CheckpointStorage, private
 
     private lateinit var checkpointSerializationContext: CheckpointSerializationContext
     private lateinit var writer: ObjectWriter
+
+    private val isCheckpointAgentRunning by lazy {
+        checkpointAgentRunning()
+    }
 
     fun start(tokenizableServices: List<Any>) {
         checkpointSerializationContext = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT.withTokenContext(
@@ -103,14 +106,14 @@ class CheckpointDumper(private val checkpointStorage: CheckpointStorage, private
                     checkpointStorage.getAllCheckpoints().use { stream ->
                         ZipOutputStream(file.outputStream()).use { zip ->
                             stream.forEach { (runId, serialisedCheckpoint) ->
-                                if (checkpointAgentRunning())
-                                    instrumentCheckpointAgent(runId)
                                 val checkpoint = serialisedCheckpoint.checkpointDeserialize(context = checkpointSerializationContext)
                                 val json = checkpoint.toJson(runId.uuid, now)
                                 val jsonBytes = writer.writeValueAsBytes(json)
                                 zip.putNextEntry(ZipEntry("${json.flowLogicClass.simpleName}-${runId.uuid}.json"))
                                 zip.write(jsonBytes)
                                 zip.closeEntry()
+                                if (isCheckpointAgentRunning)
+                                    instrumentCheckpointAgent(runId)
                             }
                         }
                     }
@@ -124,14 +127,14 @@ class CheckpointDumper(private val checkpointStorage: CheckpointStorage, private
     }
 
     private fun instrumentCheckpointAgent(checkpointId: StateMachineRunId) {
-        log.info("Checkpoint agent processing checkpointId: $checkpointId")
+        log.info("Checkpoint agent diagnostics for checkpointId: $checkpointId")
         try {
             val checkpointHook = Class.forName("net.corda.tools.CheckpointHook").kotlin
+            if (checkpointHook.objectInstance == null)
+                log.info("Instantiating checkpoint agent object instance")
             val instance = checkpointHook.objectOrNewInstance()
-            val strand = instance.declaredField<Strand>(instance.javaClass, "strand")
-            println("${strand.name} = ${strand.value}")
-            strand.value = Strand.currentStrand()
-            println("${strand.name} = ${strand.value}")
+            val checkpointIdField = instance.declaredField<UUID>(instance.javaClass, "checkpointId")
+            checkpointIdField.value = checkpointId.uuid
         }
         catch (e: Exception) {
             log.error("Checkpoint agent instrumentation failed for checkpointId: $checkpointId\n. ${e.message}")
