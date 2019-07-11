@@ -150,7 +150,7 @@ After creating a state, you must create a contract. Contracts define the rules t
 
   Commands are the operations that can be performed on a state. A contract will often define command logic for several operations that can be performed on the state in question, for example, issuing a state, changing ownership, and marking the state retired.
 
-9. Add ``val command = tx.commands.requireSingleCommand<Commands>()`` at the beginning of the ``verify()`` method. The ``verify()`` method defines the verification rules that commands must satisfy to be valid.
+9. Add ``val command = tx.commands.requireSingleCommand<Commands>().value`` at the beginning of the ``verify()`` method. The ``verify()`` method defines the verification rules that commands must satisfy to be valid.
 
 10. The final function of the contract is to prevent unwanted behaviour during the flow. After the ``val command = tx.commands...`` line, add the following requirement code:
 
@@ -192,7 +192,7 @@ After creating a state, you must create a contract. Contracts define the rules t
 
                 override fun verify(tx: LedgerTransaction) {
 
-                    val command = tx.commands.requireSingleCommand<Commands>()
+                    val command = tx.commands.requireSingleCommand<Commands>().value
 
                     when(command) {
                       is Commands.Issue -> requireThat {
@@ -311,7 +311,13 @@ Step Four: Creating a flow
 
 17. Verify the transaction by calling ``verify(serviceHub)`` on the ``TransactionBuilder``.
 
-18. Sign the transaction and store the result in a variable, using a method found in the `**serviceHub** <./api-service-hub.html>`_.
+18. Sign the transaction and store the result in a variable, using the following `serviceHub <./api-service-hub.html>`_ method:
+
+    .. container:: codeset
+
+        .. sourcecode:: kotlin
+
+            val notary = serviceHub.networkMapCache.notaryIdentities.first()
 
 19. Delete the ``progressTracker`` as it won't be used in this tutorial.
 
@@ -560,7 +566,11 @@ Now that the CorDapp code has been completed and the build file updated, the Cor
 
 4. To run flows in your CorDapp, enter the following flow command from any non-notary terminal window:
 
-  ``flow start CarIssueInitiator owningBank: BankofAmerica, holdingDealer: Dealership, manufacturer: Manufacturer, vin: "abc", licensePlateNumber: "abc1234", make: "Honda", model: "Civic", dealershipLocation: "NYC"``
+    .. container:: codeset
+
+        .. sourcecode:: kotlin
+
+            ``flow start CarIssueInitiator owningBank: BankofAmerica, holdingDealer: Dealership, manufacturer: Manufacturer, vin: "abc", licensePlateNumber: "abc1234", make: "Honda", model: "Civic", dealershipLocation: "NYC"``
 
 5. To check that the state was correctly issued, query the node using the following command:
 
