@@ -2,6 +2,7 @@ package net.corda.node.utilities
 
 import net.corda.core.internal.VisibleForTesting
 import net.corda.node.services.config.NetworkServicesConfig
+import net.corda.serialization.internal.amqp.PROXY_TYPE
 import java.net.Authenticator
 import java.net.InetSocketAddress
 import java.net.PasswordAuthentication
@@ -34,9 +35,19 @@ class ProxyAuthSetter private constructor(config: NetworkServicesConfig) {
 
         if (config.proxyType != Proxy.Type.DIRECT && config.proxyAddress != null) {
             if (config.proxyUser != null && config.proxyPassword != null) {
+
+                // Java uses different requestor types for SOCKS and HTTP proxies - we only
+                // want to return credentials when server address, port and requestor type
+                // match what has been configured
+                val allowedRequestorType =
+                        when (config.proxyType) {
+                            Proxy.Type.HTTP -> Authenticator.RequestorType.PROXY
+                            Proxy.Type.SOCKS -> Authenticator.RequestorType.SERVER
+                            else -> null
+                        }
                 Authenticator.setDefault(object : Authenticator() {
                     override fun getPasswordAuthentication(): PasswordAuthentication? {
-                        if (requestorType == RequestorType.PROXY &&
+                        if (requestorType == allowedRequestorType &&
                                 requestingHost == config.proxyAddress.host &&
                                 requestingPort == config.proxyAddress.port) {
                             return PasswordAuthentication(config.proxyUser, config.proxyPassword.toCharArray())
