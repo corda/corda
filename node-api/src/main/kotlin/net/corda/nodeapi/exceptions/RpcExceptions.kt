@@ -12,12 +12,6 @@ import net.corda.core.serialization.CordaSerializable
 class DuplicateAttachmentException(attachmentHash: String) : java.nio.file.FileAlreadyExistsException(attachmentHash), ClientRelevantError
 
 /**
- * Thrown to indicate that a contract class name of the same version was already uploaded to a Corda node.
- */
-class DuplicateContractClassException(contractClassName: String, version: Int, attachmentHashes: List<String>) :
-        Exception("Contract $contractClassName version '$version' already present in the attachments $attachmentHashes"), ClientRelevantError
-
-/**
  * Thrown to indicate that a flow was not designed for RPC and should be started from an RPC client.
  */
 class NonRpcFlowException(logicType: Class<*>) : IllegalArgumentException("${logicType.name} was not designed for RPC"), ClientRelevantError

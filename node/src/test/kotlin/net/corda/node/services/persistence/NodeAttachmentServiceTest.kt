@@ -21,7 +21,6 @@ import net.corda.core.node.services.vault.Sort
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.nodeapi.exceptions.DuplicateAttachmentException
-import net.corda.nodeapi.exceptions.DuplicateContractClassException
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.common.internal.testNetworkParameters
@@ -384,7 +383,7 @@ class NodeAttachmentServiceTest {
     }
 
     @Test
-    fun `can promote to trusted uploder the same jar if other trusted uplodaer `() {
+    fun `can promote to trusted uploader the same jar if other trusted uploader `() {
         SelfCleaningDir().use { file ->
             val (contractJar, _) = makeTestSignedContractJar(file.path, "com.example.MyContract")
             val anotherContractJar = makeTestContractJar(file.path, listOf( "com.example.MyContract", "com.example.AnotherContract"), true, generateManifest = false, jarFileName = "another-sample.jar")
@@ -410,7 +409,7 @@ class NodeAttachmentServiceTest {
     }
 
     @Test
-    fun `can import duplicated contract class and version from unsiged attachment if a signed attachment already exists`() {
+    fun `can import duplicated contract class and version from unsigned attachment if a signed attachment already exists`() {
         SelfCleaningDir().use { file ->
             val (contractJar, _) = makeTestSignedContractJar(file.path, "com.example.MyContract")
             val anotherContractJar = makeTestContractJar(file.path, listOf( "com.example.MyContract", "com.example.AnotherContract"), generateManifest = false, jarFileName = "another-sample.jar")
@@ -428,7 +427,7 @@ class NodeAttachmentServiceTest {
     }
 
     @Test
-    fun `can import duplicated contract class and version from siged attachment if an unsigned attachment already exists`() {
+    fun `can import duplicated contract class and version from signed attachment if an unsigned attachment already exists`() {
         SelfCleaningDir().use { file ->
             val contractJar = makeTestContractJar(file.path, "com.example.MyContract")
             val anotherContractJar = makeTestContractJar(file.path, listOf( "com.example.MyContract", "com.example.AnotherContract"), true, generateManifest = false, jarFileName = "another-sample.jar")
