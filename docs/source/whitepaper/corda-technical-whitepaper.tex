@@ -1501,7 +1501,7 @@ unnecessarily harsh on smart contracts that churn large quantities of garbage ye
 sizes and, again, it may be that in practice a more sophisticated strategy that integrates with the garbage
 collector is required in order to set quotas to a usefully generic level.
 
-\section{Scalability}
+\section{Scalability}\label{sec:scalability}
 
 Scalability of block chains and block chain inspired systems has been a constant topic of discussion since Nakamoto
 first proposed the technology in 2008. Corda provides much better scalability than other competing systems, via a
@@ -1510,7 +1510,7 @@ dimensions, extending even to factors like how many apps the ecosystem can handl
 
 The primary techniques used to scale better than classical systems are as follows.
 
-\subsection{Partial visibility}
+\subsection{Partial visibility}\label{subsec:partial-visibility}
 
 Nodes only encounter transactions if they are involved in some way, or if the transactions are dependencies of
 transactions that involve them in some way. This loosely connected design means that it is entirely possible for
@@ -1652,18 +1652,24 @@ summarises features described elsewhere. Corda exploits multiple techniques to i
 distributed ledger systems:
 
 \paragraph{Partial data visibility.}Transactions are not globally broadcast as in many other systems.
-\paragraph{Transaction tear-offs.}Transactions are structured as Merkle trees, and may have individual subcomponents be
-revealed to parties who already know the Merkle root hash. Additionally, they may sign the transaction without being
-able to see all of it. See~\cref{sec:tear-offs}
-\paragraph{Key randomisation.}The vault generates and uses random keys that are unlinkable to an identity. See~\cref{sec:vault}.
+See~\cref{subsec:data-visibility-and-dependency-resolution}~and~\cref{subsec:partial-visibility}.
+
+\paragraph{Transaction tear-offs.}Transactions are structured as Merkle trees, and may have individual
+subcomponents be revealed to parties who already know the Merkle root hash. Additionally, they may sign the
+transaction without being able to see all of it. See~\cref{sec:tear-offs}
+
+\paragraph{Key randomisation.}The vault generates and uses random keys that are unlinkable to an identity.
+See~\cref{sec:vault}.
+
 \paragraph{Graph pruning.}Large transaction graphs that involve liquid assets can be `pruned' by requesting the asset
 issuer to re-issue the asset onto the ledger with a new reference field. This operation is not atomic, but effectively
 unlinks the new version of the asset from the old, meaning that nodes won't attempt to explore the original dependency
-graph during verification.
+graph during verification. See~\cref{sec:privacy}.
 
-However the primary privacy effort revolves around encrypting the entire ledger and validating it using secure
-hardware enclaves, see~\cref{subsec:sgx}. This can provide the benefits of homomorphic encryption and zero
-knowledge proofs, but without sacrificing scalability/performance or (crucially) auditability in case of failure.
+\paragraph{Global ledger encryption.} However the primary privacy effort revolves around encrypting the entire
+ledger and validating it using secure hardware enclaves. This can provide the benefits of homomorphic encryption
+and zero knowledge proofs, but without sacrificing scalability/performance or (crucially) auditability in case of
+failure. See~\cref{subsec:sgx}.
 
 \section{Future work}
 
