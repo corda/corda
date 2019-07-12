@@ -35,6 +35,8 @@ Version 5.0
 Version 4.2
 -----------
 
+* The MockNet now supports setting a custom Notary class name, as was already supported by normal node config. See :doc:`tutorial-custom-notary`.
+
 * Contract attachments are now automatically whitelisted by the node if another contract attachment is present with the same contract classes,
   signed by the same public keys, and uploaded by a trusted uploader. This allows the node to resolve transactions that use earlier versions
   of a contract without having to manually install that version, provided a newer version is installed. Similarly, non-contract attachments
