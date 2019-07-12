@@ -123,8 +123,9 @@ data class MockNetworkParameters(
  *
  * @property name The name of the notary node.
  * @property validating Boolean for whether the notary is validating or non-validating.
+ * @property className String the optional name of a notary service class to load. If null, a builtin notary is loaded.
  */
-data class MockNetworkNotarySpec(val name: CordaX500Name, val validating: Boolean = true) {
+data class MockNetworkNotarySpec(val name: CordaX500Name, val validating: Boolean = true, val className: String? = null) {
     constructor(name: CordaX500Name) : this(name, validating = true)
 }
 
