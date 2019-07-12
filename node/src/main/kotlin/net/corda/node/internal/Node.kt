@@ -420,6 +420,7 @@ open class Node(configuration: NodeConfiguration,
             super.startDatabase()
         } catch(t: Throwable) {
             SchemaMigration.logger.error(SchemaMigration.formatter.format( "status", "error", "message", t?.message ?: ""))
+            throw t
         }
         database.closeOnStop()
     }
