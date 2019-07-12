@@ -207,7 +207,7 @@ class NodeConfigurationImplTest {
         // Override base directory to have predictable experience on diff OSes
         val finalConfig = configOf(
                 // Add substitution values here
-                "baseDirectory" to tempFolder.toString())
+                "baseDirectory" to tempFolder.root.canonicalPath)
                 .withFallback(rawConfig)
                 .resolve()
 
