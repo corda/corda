@@ -152,3 +152,28 @@ For example:
         maximumPoolSize = 10
         connectionTimeout = 50000
     }
+
+Database initialisation logs
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+By default upon a node startup a database initialisation or upgrade is logged in a raw Liquibase format.
+These logs may have different logger categories like 'changelog.*' or 'visitor.*' for example:
+
+.. sourcecode:: none
+
+    [INFO ] 2019-07-12T11:36:51,550Z [main] changelog.ChangeSet. - Table vault_states created {changeSet=migration/vault-schema.changelog-init.xml::1511451595465-26::R3.Corda, databaseChangeLog=master.changelog.json}
+    [INFO ] 2019-07-12T11:36:51,490Z [main] visitor.ValidatingVisitor. - Skipping change set migration/vault-schema.changelog-pkey.xml::non-clustered_pk-11::R3.Corda due to validation error(s):
+         clustered is not allowed on h2 {changeSet=migration/vault-schema.changelog-pkey.xml::non-clustered_pk-11::R3.Corda, databaseChangeLog=master.changelog.json}
+
+Liquibase logs can be disabled by a system property ``-DrawDatabaseInitialisationLogLevel=ERROR`` or ``OFF``.
+
+Independently formatted logs for database initialisation or upgrade can be enabled by a system property ``-DformattedDatabaseInitialisationLogLevel=INFO``.
+These logs are for 'databaseInitialisation' logger category and they are disabled by default.
+The formatted logs are described TODO. The example formatted log lines:
+
+.. sourcecode:: none
+
+    [INFO ] 2019-07-12T11:36:51,559Z [main] databaseInitialisation. - databaseInitialisation(id=YzKRLqTS; changeset="migration/vault-schema.changelog-init.xml::1511451595465-26::R3.Corda"; status="started")
+    [INFO ] 2019-07-12T11:36:51,559Z [main] databaseInitialisation. - databaseInitialisation(id=YzKRLqTS; changeset="migration/vault-schema.changelog-init.xml::1511451595465-26::R3.Corda"; status="successful")
+
+Note, as Cordapp custom tables are created by Hibernate, neither default Liquibase logger or a node database logger records table crration/upgrade for CorDapps.

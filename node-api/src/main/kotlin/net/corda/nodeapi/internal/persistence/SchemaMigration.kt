@@ -11,8 +11,10 @@ import liquibase.resource.ClassLoaderResourceAccessor
 import net.corda.core.identity.CordaX500Name
 import net.corda.nodeapi.internal.MigrationHelpers.getMigrationResource
 import net.corda.core.schemas.MappedSchema
-import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.info
 import net.corda.nodeapi.internal.cordapp.CordappLoader
+import net.corda.nodeapi.internal.logging.FormattedLogger
+import org.slf4j.LoggerFactory
 import java.io.ByteArrayInputStream
 import java.io.InputStream
 import java.nio.file.Path
@@ -35,11 +37,12 @@ class SchemaMigration(
         private val ourName: CordaX500Name) {
 
     companion object {
-        private val logger = contextLogger()
+        val logger = LoggerFactory.getLogger("databaseInitialisation")
         const val NODE_BASE_DIR_KEY = "liquibase.nodeDaseDir"
         const val NODE_X500_NAME = "liquibase.nodeName"
         val loader = ThreadLocal<CordappLoader>()
         private val mutex = ReentrantLock()
+        val formatter = FormattedLogger(true, logger.name )
     }
 
     init {
@@ -72,7 +75,7 @@ class SchemaMigration(
      */
     private fun checkState() = doRunMigration(run = false, check = true)
 
-    /**  Create a resourse accessor that aggregates the changelogs included in the schemas into one dynamic stream. */
+    /**  Create a resource accessor that aggregates the changelogs included in the schemas into one dynamic stream. */
     private class CustomResourceAccessor(val dynamicInclude: String, val changelogList: List<String?>, classLoader: ClassLoader) : ClassLoaderResourceAccessor(classLoader) {
         override fun getResourcesAsStream(path: String): Set<InputStream> {
             if (path == dynamicInclude) {
@@ -113,6 +116,7 @@ class SchemaMigration(
                 System.setProperty(NODE_BASE_DIR_KEY, path) // base dir for any custom change set which may need to load a file (currently AttachmentVersionNumberMigration)
             }
             System.setProperty(NODE_X500_NAME, ourName.toString())
+            logger.info(formatter.format( "status", "start"))
             val customResourceAccessor = CustomResourceAccessor(dynamicInclude, changelogList, classLoader)
             checkResourcesInClassPath(changelogList)
 
@@ -122,16 +126,29 @@ class SchemaMigration(
                 val liquibase = Liquibase(dynamicInclude, customResourceAccessor, getLiquibaseDatabase(JdbcConnection(connection)))
 
                 val unRunChanges = liquibase.listUnrunChangeSets(Contexts(), LabelExpression())
-
+                logger.info{ formatter.format( "change_set_count", unRunChanges.size.toString()) }
+                for (elem in unRunChanges) {
+                    logger.info{ formatter.format("changeset", elem.toString(), "status", "to be run") }
+                }
                 when {
                     (run && !check) && (unRunChanges.isNotEmpty() && existingCheckpoints!!) -> throw CheckpointsException() // Do not allow database migration when there are checkpoints
-                    run && !check -> liquibase.update(Contexts())
+                    run && !check -> for (elem in unRunChanges) {
+                        logger.info { formatter.format( "changeset", elem.toString(), "status", "started") }
+                        try {
+                            liquibase.update(1, Contexts().toString())
+                            logger.info { formatter.format( "changeset", elem.toString(), "status", "successful") }
+                        } catch (t: Throwable) {
+                            logger.error(formatter.format( "changeset", elem.toString(), "status", "error", "message", t.cause?.message ?: ""))
+                            throw t
+                        }
+                    }
                     check && !run && unRunChanges.isNotEmpty() -> throw OutstandingDatabaseChangesException(unRunChanges.size)
                     check && !run -> {
                     } // Do nothing will be interpreted as "check succeeded"
                     else -> throw IllegalStateException("Invalid usage.")
                 }
             }
+            logger.info { formatter.format( "status", "successful") }
         }
     }
 
