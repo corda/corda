@@ -104,6 +104,7 @@ data class MockNetworkParameters(
     fun withServicePeerAllocationStrategy(servicePeerAllocationStrategy: InMemoryMessagingNetwork.ServicePeerAllocationStrategy): MockNetworkParameters {
         return copy(servicePeerAllocationStrategy = servicePeerAllocationStrategy)
     }
+
     fun withNotarySpecs(notarySpecs: List<MockNetworkNotarySpec>): MockNetworkParameters = copy(notarySpecs = notarySpecs)
     fun withCordappsForAllNodes(cordappsForAllNodes: Collection<TestCordapp>): MockNetworkParameters = copy(cordappsForAllNodes = cordappsForAllNodes)
 
@@ -125,7 +126,13 @@ data class MockNetworkParameters(
  * @property validating Boolean for whether the notary is validating or non-validating.
  * @property className String the optional name of a notary service class to load. If null, a builtin notary is loaded.
  */
-data class MockNetworkNotarySpec @JvmOverloads constructor(val name: CordaX500Name, val validating: Boolean = true, val className: String? = null)
+data class MockNetworkNotarySpec @JvmOverloads constructor(val name: CordaX500Name, val validating: Boolean = true) {
+    var className: String? = null
+
+    constructor(name: CordaX500Name, validating: Boolean = true, className: String? = null) : this(name, validating) {
+        this.className = className
+    }
+}
 
 /** A class that represents an unstarted mock node for testing. */
 class UnstartedMockNode private constructor(private val node: InternalMockNetwork.MockNode) {
