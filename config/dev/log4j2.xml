@@ -214,7 +214,7 @@
             <AppenderRef ref="Console-ErrorCode-Appender-Println"/>
             <AppenderRef ref="RollingFile-ErrorCode-Appender"/>
         </Logger>
-        <Logger name="CheckpointAgent" level="info" additivity="false">
+        <Logger name="CheckpointAgent" level="debug" additivity="false">
             <AppenderRef ref="Checkpoint-Agent-RollingFile-Appender"/>
         </Logger>
     </Loggers>
