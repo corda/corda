@@ -1,15 +1,25 @@
 package net.corda.node
 
 import net.corda.core.internal.PLATFORM_VERSION
+import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
+import net.corda.testing.internal.IntegrationTest
+import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.node.internal.FINANCE_CONTRACTS_CORDAPP
 import net.corda.testing.node.internal.FINANCE_WORKFLOWS_CORDAPP
+import org.junit.ClassRule
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-class NodeRPCTests {
+class NodeRPCTests : IntegrationTest() {
+    companion object {
+        @ClassRule
+        @JvmField
+        val databaseSchemas = IntegrationTestSchemas(ALICE_NAME)
+    }
+
     private val CORDA_VERSION_REGEX = "\\d+(\\.\\d+)?(-\\w+)?".toRegex() // e.g. "5.0-SNAPSHOT"
     private val CORDA_VENDOR = "Corda Enterprise Edition"
     private val CORDAPPS = listOf(FINANCE_CONTRACTS_CORDAPP, FINANCE_WORKFLOWS_CORDAPP)
@@ -24,7 +34,7 @@ class NodeRPCTests {
     @Test
     fun `run nodeDiagnosticInfo`() {
         driver(DriverParameters(notarySpecs = emptyList(), cordappsForAllNodes = CORDAPPS, extraCordappPackagesToScan = emptyList())) {
-            val nodeDiagnosticInfo = startNode().get().rpc.nodeDiagnosticInfo()
+            val nodeDiagnosticInfo = startNode(providedName = ALICE_NAME).get().rpc.nodeDiagnosticInfo()
             assertTrue(nodeDiagnosticInfo.version.matches(CORDA_VERSION_REGEX))
             assertTrue(nodeDiagnosticInfo.revision.matches(HEXADECIMAL_REGEX))
             assertEquals(PLATFORM_VERSION, nodeDiagnosticInfo.platformVersion)
