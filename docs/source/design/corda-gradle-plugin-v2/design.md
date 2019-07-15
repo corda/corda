@@ -8,7 +8,7 @@
 The original CorDapp plugin was created before sophisticated library dependency and packaging requirements became apparent.
 
 To keep it simple under those requirements, its approach is to extend the functionality of the standard java plugin by giving extra packaging responsibilities to the basic dependency
-configurations. 
+configurations. (See https://docs.gradle.org/current/userguide/java_plugin.html and the newer https://docs.gradle.org/current/userguide/java_library_plugin.html)
 
 These are the current configurations and what they mean:
 
@@ -155,7 +155,7 @@ Other dependency types that are Corda specific but are only relevant for a "Cord
 - Dependency that must be on the classpath of tests. Note: Should be different types.
 
 
-#### Possibility to sign of the output jar.
+#### Possibility to sign the output jar.
 
 The output jar must be signed using the jarsigner. This is required if the jar is to be used with the ``SignatureConstraint``
 
@@ -263,10 +263,12 @@ Testing a CorDapp can be done in multiple ways:
 
 Note: Starting nodes in containers is out of scope.
 
-There are subtle differences between what should be on the test classpath when testing 1. or 3: 
+There are subtle differences between what should be on the test classpath when testing 1. or 3.: 
  - *When running a driver test, the classpath of the test is conceptually an rpc client*.
 
-Building and retrieving dependencies should be the responsibility of gradle and they should be made available for test.
+Building and retrieving dependencies should be the responsibility of gradle and they should be made available for tests. Maybe in a file that 
+can be passed as a system parameter.
+
 Also setting the classpath of the test.
 
 Question: Currently we decide if nodes should be started in-process or out-of-process when initializing the driver. 
@@ -298,7 +300,7 @@ A new ``cordapp-test`` plugin that creates new ``sourceSets``, dependency config
         profiles{
             // an implicit currentProjectCordapps is created from the current modules that the project depends on
 
-            // this combination will be used by cordformation and driver tests
+            // this combination can be used by cordformation and driver tests.
             olderCordapps  {
                 deploy "com.foo:foo:2.1"            
                 deploy "com.bar:bar:3.7"            
@@ -312,7 +314,7 @@ A new ``cordapp-test`` plugin that creates new ``sourceSets``, dependency config
     }
 ```
 
-From the driver tests, this is how one can refer to these cordapps.
+From the driver tests, this is how one can refer these cordapps.
 
 ```kotlin
     driver {
@@ -320,7 +322,6 @@ From the driver tests, this is how one can refer to these cordapps.
         startNode(providedName = DUMMY_BANK_B_NAME ) // not specifying anything will deploy the `currentProjectCordapps`
         // ..
     } 
-
 ```
 
 Note that, for a new project the implicit `currentProjectCordapps` will bind everything together.
