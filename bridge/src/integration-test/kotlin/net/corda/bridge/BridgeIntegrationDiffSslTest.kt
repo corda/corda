@@ -66,17 +66,7 @@ class BridgeIntegrationDiffSslTest {
     fun `Load bridge (bridge Inner) and float outer and stand them up`() {
         val bridgeFolder = tempFolder.root.toPath()
         val bridgeConfigResource = "/net/corda/bridge/generatedwithcustomcerts/bridge/firewall.conf"
-        val bridgeConfigInitial = createAndLoadConfigFromResource(bridgeFolder, bridgeConfigResource) as FirewallConfigurationImpl
-
-        // Amend outer config such that paths resolved correctly
-        val bridgeConfig = bridgeConfigInitial.copy(
-                outboundConfig = bridgeConfigInitial.outboundConfig!!.copy(
-                        artemisSSLConfiguration = bridgeConfigInitial.outboundConfig!!.artemisSSLConfiguration!!.resolveToBaseDir()),
-                bridgeInnerConfig = bridgeConfigInitial.bridgeInnerConfig!!.copy(
-                        tunnelSSLConfiguration = bridgeConfigInitial.bridgeInnerConfig!!.tunnelSSLConfiguration!!.resolveToBaseDir()),
-                sslKeystore = bridgeFolder / bridgeConfigInitial.sslKeystore.toString(),
-                trustStoreFile = bridgeFolder / bridgeConfigInitial.trustStoreFile.toString()
-        )
+        val bridgeConfig = createAndLoadConfigFromResource(bridgeFolder, bridgeConfigResource) as FirewallConfigurationImpl
 
         generateInternalCerts(bridgeConfig)
         installNodesCerts(bridgeConfig)
@@ -86,12 +76,7 @@ class BridgeIntegrationDiffSslTest {
         assertEquals(NetworkHostAndPort("localhost", 11005), bridgeConfig.outboundConfig!!.artemisBrokerAddress)
         val floatFolder = tempFolder.root.toPath() / "float"
         val floatConfigResource = "/net/corda/bridge/generatedwithcustomcerts/float/firewall.conf"
-        val floatConfigInitial = createAndLoadConfigFromResource(floatFolder, floatConfigResource) as FirewallConfigurationImpl
-
-        // Amend outer config such that paths resolved correctly
-        val floatConfig = floatConfigInitial.copy(
-                floatOuterConfig = floatConfigInitial.floatOuterConfig!!.copy(
-                        tunnelSSLConfiguration = floatConfigInitial.floatOuterConfig!!.tunnelSSLConfiguration!!.resolveToBaseDir()))
+        val floatConfig = createAndLoadConfigFromResource(floatFolder, floatConfigResource) as FirewallConfigurationImpl
 
         assertEquals(FirewallMode.FloatOuter, floatConfig.firewallMode)
         assertEquals(NetworkHostAndPort("0.0.0.0", 10005), floatConfig.inboundConfig!!.listeningAddress)
@@ -190,13 +175,6 @@ class BridgeIntegrationDiffSslTest {
         X509KeyStore.fromFile(path, NODE_KEYSTORE_PASSWORD, createNew = true).update {
             setPrivateKey(X509Utilities.CORDA_CLIENT_TLS, tlsKey.private, certChain, NODE_KEYSTORE_PASSWORD)
         }
-    }
-
-    private fun BridgeSSLConfigurationImpl.resolveToBaseDir(): BridgeSSLConfigurationImpl {
-        val baseDirectory = tempFolder.root.toPath()
-        return copy(
-                sslKeystore = baseDirectory / keyStore.path.toString(),
-                trustStoreFile = baseDirectory / trustStore.path.toString())
     }
 
     private fun createArtemis(artemisSSLConfiguration: BridgeSSLConfigurationImpl): Pair<ArtemisMessagingServer, ArtemisMessagingClient> {

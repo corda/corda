@@ -9,7 +9,6 @@ import net.corda.bridge.services.util.ServiceStateCombiner
 import net.corda.bridge.services.util.ServiceStateHelper
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.internal.concurrent.openFuture
-import net.corda.core.internal.div
 import net.corda.core.internal.exists
 import net.corda.core.internal.readObject
 import net.corda.core.serialization.deserialize
@@ -19,7 +18,6 @@ import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.ShutdownHook
 import net.corda.nodeapi.internal.addShutdownHook
-import net.corda.nodeapi.internal.network.NETWORK_PARAMS_FILE_NAME
 import net.corda.nodeapi.internal.network.SignedNetworkParameters
 import net.corda.serialization.internal.AMQP_P2P_CONTEXT
 import net.corda.serialization.internal.SerializationFactoryImpl
@@ -97,15 +95,7 @@ class FirewallInstance(val conf: FirewallConfiguration,
     val onExit: CordaFuture<FirewallInstance> get() = _exitFuture
 
     private fun retrieveNetworkParameters() {
-        require(conf.networkParametersPath != null) { "networkParametersPath must be specified." }
-
-        val networkParamsFile = with(conf.networkParametersPath!!) {
-            if (exists()) this
-            else {
-                log.warn("Using legacy mode for interpreting 'networkParametersPath' ($this) relative to the base directory. To avoid seeing this warning in the future, please specify the absolute path.")
-                conf.baseDirectory / toString()
-            }
-        }
+        val networkParamsFile = requireNotNull(conf.networkParametersPath) { "networkParametersPath must be specified." }
 
         require(networkParamsFile.exists()) { "No network-parameters file found." }
         val networkParameters = networkParamsFile.readObject<SignedNetworkParameters>().raw.deserialize()

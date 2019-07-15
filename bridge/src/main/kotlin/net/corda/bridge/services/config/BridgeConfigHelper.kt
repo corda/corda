@@ -31,7 +31,7 @@ object BridgeConfigHelper {
     fun loadConfig(baseDirectory: Path, configFile: Path = baseDirectory / "firewall.conf"): FirewallConfiguration {
         val latestConfig = loadConfig(baseDirectory, configFile, "firewalldefault_latest.conf")
         try {
-            val firewallConfig = latestConfig.parseAs<FirewallConfigurationImpl>()
+            val firewallConfig = latestConfig.parseAs(FirewallConfigurationImpl::class, baseDirectory = baseDirectory)
             latestConfig.log()
             return firewallConfig
         } catch (ex: UnknownConfigurationKeysException) {
@@ -44,7 +44,7 @@ object BridgeConfigHelper {
             )) {
                 try {
                     val config = loadConfig(baseDirectory, configFile, defaultConfigFile)
-                    val firewallConfig = config.parseAs(configClass).toConfig()
+                    val firewallConfig = config.parseAs(configClass, baseDirectory = baseDirectory).toConfig()
                     config.log()
                     log.warn("Old style config used. To avoid seeing this warning in the future, please upgrade to new style. " +
                             "New style config will look as follows:\n${firewallConfig.toConfig().asString()}")

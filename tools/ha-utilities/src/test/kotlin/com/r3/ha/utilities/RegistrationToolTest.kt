@@ -84,8 +84,15 @@ class RegistrationToolTest {
             setCertificate(X509Utilities.CORDA_ROOT_CA, DEV_ROOT_CA.certificate)
         }
 
-        listOf("nodeA.conf", "nodeB.conf", "nodeC.conf", "firewall.conf", "utimaco_config.yml").forEach {
+        listOf("nodeA.conf", "nodeB.conf", "nodeC.conf").forEach {
             javaClass.classLoader.getResourceAsStream(it).copyTo(workingDirectory / it)
+        }
+
+        // Store firewall files in a separate directory
+        val firewallDir = workingDirectory / "firewall"
+        firewallDir.toFile().mkdir()
+        listOf("firewall.conf", "utimaco_config.yml").forEach {
+            javaClass.classLoader.getResourceAsStream(it).copyTo(firewallDir / it)
         }
 
         val runResult = RegistrationServer(NetworkHostAndPort("localhost", 10000)).use {
@@ -94,7 +101,7 @@ class RegistrationToolTest {
                     "--network-root-truststore", trustStorePath.toString(),
                     "--network-root-truststore-password", "password",
                     "--bridge-keystore-password", "password",
-                    "--bridge-config-file", (workingDirectory / "firewall.conf").toString(),
+                    "--bridge-config-file", (firewallDir / "firewall.conf").toString(),
                     "--config-files", (workingDirectory / "nodeA.conf").toString(), (workingDirectory / "nodeB.conf").toString(),
                     (workingDirectory / "nodeC.conf").toString())
             registrationTool.runProgram()
@@ -114,7 +121,7 @@ class RegistrationToolTest {
         assertTrue((workingDirectory / "bridge.jks").exists())
 
         // Compare the contents of each keystore against the bridge and bridge HSM
-        val cryptoService = UtimacoCryptoService.fromConfigurationFile((workingDirectory / "utimaco_config.yml"))
+        val cryptoService = UtimacoCryptoService.fromConfigurationFile((firewallDir / "utimaco_config.yml"))
         val bridgeKeyStore = X509KeyStore.fromFile((workingDirectory / "bridge.jks"), "password", createNew = false)
         legalNames.forEach {
             val alias = x500PrincipalToTLSAlias(it.x500Principal)
