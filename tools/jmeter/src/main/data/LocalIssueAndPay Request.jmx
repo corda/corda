@@ -41,17 +41,17 @@
               </elementProp>
               <elementProp name="port" elementType="Argument">
                 <stringProp name="Argument.name">port</stringProp>
-                <stringProp name="Argument.value">10003</stringProp>
+                  <stringProp name="Argument.value">10033</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
               <elementProp name="username" elementType="Argument">
                 <stringProp name="Argument.name">username</stringProp>
-                <stringProp name="Argument.value">default</stringProp>
+                  <stringProp name="Argument.value">perf</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
               <elementProp name="password" elementType="Argument">
                 <stringProp name="Argument.name">password</stringProp>
-                <stringProp name="Argument.value">default</stringProp>
+                  <stringProp name="Argument.value">perf</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
               <elementProp name="notaryName" elementType="Argument">
@@ -66,9 +66,14 @@
               </elementProp>
               <elementProp name="useCoinSelection" elementType="Argument">
                 <stringProp name="Argument.name">useCoinSelection</stringProp>
-                <stringProp name="Argument.value">false</stringProp>
-                <stringProp name="Argument.metadata">=</stringProp>
+                  <stringProp name="Argument.value">false</stringProp>
+                  <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
+                <elementProp name="anonymousIdentities" elementType="Argument">
+                    <stringProp name="Argument.name">anonymousIdentities</stringProp>
+                    <stringProp name="Argument.value">false</stringProp>
+                    <stringProp name="Argument.metadata">=</stringProp>
+                </elementProp>
             </collectionProp>
           </elementProp>
           <stringProp name="classname">com.r3.corda.jmeter.CashIssueAndPaySampler</stringProp>
