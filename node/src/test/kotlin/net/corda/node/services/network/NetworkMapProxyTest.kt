@@ -6,11 +6,13 @@ import net.corda.core.utilities.base64ToRealString
 import net.corda.core.utilities.seconds
 import net.corda.node.VersionInfo
 import net.corda.node.services.config.NetworkServicesConfig
+import net.corda.node.utilities.ProxyAuthSetter
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.internal.DEV_ROOT_CA
 import net.corda.testing.node.internal.network.NetworkMapServer
 import org.apache.http.auth.AuthenticationException
+import org.assertj.core.api.Assertions
 import org.eclipse.jetty.http.HttpStatus
 import org.eclipse.jetty.proxy.ConnectHandler
 import org.eclipse.jetty.proxy.ProxyServlet
@@ -19,17 +21,18 @@ import org.eclipse.jetty.server.Server
 import org.eclipse.jetty.server.ServerConnector
 import org.eclipse.jetty.servlet.ServletContextHandler
 import org.eclipse.jetty.servlet.ServletHolder
-import org.junit.After
-import org.junit.Before
-import org.junit.Rule
-import org.junit.Test
+import org.junit.*
+import org.junit.jupiter.api.assertThrows
+import java.io.IOException
 import java.net.InetAddress
 import java.net.Proxy
 import java.net.URL
+import javax.net.ssl.SSLException
 import javax.servlet.ServletConfig
 import javax.servlet.http.HttpServletRequest
 import javax.servlet.http.HttpServletResponse
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 
 class AuthenticatedHttpProxy() : ProxyServlet() {
     override fun init(config: ServletConfig?) {
@@ -84,7 +87,7 @@ class NetworkMapProxyTest {
     private val myHostname = InetAddress.getLocalHost().hostName
 
     private lateinit var server: NetworkMapServer
-    private lateinit var networkMapClient: NetworkMapClient
+    private lateinit var serverAddress: NetworkHostAndPort
 
     private val portAllocator = incrementalPortAllocation()
     private val httpProxyPort = portAllocator.nextPort()
@@ -119,9 +122,7 @@ class NetworkMapProxyTest {
     @Before
     fun setUp() {
         server = NetworkMapServer(cacheTimeout, hostAndPort = NetworkHostAndPort(myHostname, serverPort))
-        val address = server.start()
-        networkMapClient = NetworkMapClient(NetworkServicesConfig(URL("http://no.such.address"), URL("http://$address"), proxyAddress = NetworkHostAndPort(myHostname, httpProxyPort), proxyType = Proxy.Type.HTTP, proxyPassword = "proxyPW", proxyUser = "proxyUser"),
-                VersionInfo(1, "TEST", "TEST", "TEST")).apply { start(DEV_ROOT_CA.certificate) }
+        serverAddress = server.start()
         httpProxy.start()
     }
 
@@ -129,13 +130,90 @@ class NetworkMapProxyTest {
     fun tearDown() {
         server.close()
         httpProxy.stop()
+        ProxyAuthSetter.unsetInstance()
     }
 
     @Test
-    fun `download NetworkParameters correctly`() {
+    fun `download NetworkParameters correctly directly`() {
         // The test server returns same network parameter for any hash.
+        val networkMapClient = NetworkMapClient(NetworkServicesConfig(URL("http://no.such.address"), URL("http://$serverAddress"), proxyType = Proxy.Type.DIRECT),
+                VersionInfo(1, "TEST", "TEST", "TEST")).apply { start(DEV_ROOT_CA.certificate) }
         val parametersHash = server.networkParameters.serialize().hash
         val networkParameters = networkMapClient.getNetworkParameters(parametersHash).verified()
         assertEquals(server.networkParameters, networkParameters)
     }
+
+
+    @Test
+    fun `download NetworkParameters correctly via authenticated proxy`() {
+        // The test server returns same network parameter for any hash.
+        val networkMapClient = NetworkMapClient(NetworkServicesConfig(URL("http://no.such.address"), URL("http://$serverAddress"), proxyAddress = NetworkHostAndPort(myHostname, httpProxyPort), proxyType = Proxy.Type.HTTP, proxyPassword = "proxyPW", proxyUser = "proxyUser"),
+                VersionInfo(1, "TEST", "TEST", "TEST")).apply { start(DEV_ROOT_CA.certificate) }
+        val parametersHash = server.networkParameters.serialize().hash
+        val networkParameters = networkMapClient.getNetworkParameters(parametersHash).verified()
+        assertEquals(server.networkParameters, networkParameters)
+    }
+
+    @Test
+    fun `download fails without credentials`() {
+        val networkMapClient = NetworkMapClient(NetworkServicesConfig(URL("http://no.such.address"), URL("http://$serverAddress"), proxyAddress = NetworkHostAndPort(myHostname, httpProxyPort), proxyType = Proxy.Type.HTTP),
+                VersionInfo(1, "TEST", "TEST", "TEST")).apply { start(DEV_ROOT_CA.certificate) }
+        val parametersHash = server.networkParameters.serialize().hash
+        Assertions.assertThatExceptionOfType(IOException::class.java).isThrownBy {
+            networkMapClient.getNetworkParameters(parametersHash).verified()
+        }.withMessageContaining("Error 407 Proxy Authentication Required")
+    }
+
+    @Test
+    fun `download fails wrong credentials`() {
+        val networkMapClient = NetworkMapClient(NetworkServicesConfig(URL("http://no.such.address"), URL("http://$serverAddress"), proxyAddress = NetworkHostAndPort(myHostname, httpProxyPort), proxyType = Proxy.Type.HTTP, proxyUser = "proxyUser", proxyPassword = "ThisIsNotAPassword"),
+                VersionInfo(1, "TEST", "TEST", "TEST")).apply { start(DEV_ROOT_CA.certificate) }
+        val parametersHash = server.networkParameters.serialize().hash
+        Assertions.assertThatExceptionOfType(IOException::class.java).isThrownBy {
+            networkMapClient.getNetworkParameters(parametersHash).verified()
+        }.withMessageContaining("403 Forbidden")
+    }
+
+    @Test
+    fun `download NetworkParameters directly fails via https`() {
+        // The test server returns same network parameter for any hash.
+        val networkMapClient = NetworkMapClient(NetworkServicesConfig(URL("http://no.such.address"), URL("https://$serverAddress"), proxyType = Proxy.Type.DIRECT),
+                VersionInfo(1, "TEST", "TEST", "TEST")).apply { start(DEV_ROOT_CA.certificate) }
+        val parametersHash = server.networkParameters.serialize().hash
+        Assertions.assertThatExceptionOfType(SSLException::class.java).isThrownBy {
+            networkMapClient.getNetworkParameters(parametersHash).verified()
+        }.withMessageContaining("Unrecognized SSL message, plaintext connection?")
+    }
+
+    @Test
+    fun `download NetworkParameters correctly via authenticated proxy via https`() {
+        // The test server returns same network parameter for any hash.
+        val networkMapClient = NetworkMapClient(NetworkServicesConfig(URL("https://no.such.address"), URL("http://$serverAddress"), proxyAddress = NetworkHostAndPort(myHostname, httpProxyPort), proxyType = Proxy.Type.HTTP, proxyPassword = "proxyPW", proxyUser = "proxyUser"),
+                VersionInfo(1, "TEST", "TEST", "TEST")).apply { start(DEV_ROOT_CA.certificate) }
+        val parametersHash = server.networkParameters.serialize().hash
+        val networkParameters = networkMapClient.getNetworkParameters(parametersHash).verified()
+        assertEquals(server.networkParameters, networkParameters)
+    }
+
+    @Test
+    fun `download fails without credentials via https`() {
+        val networkMapClient = NetworkMapClient(NetworkServicesConfig(URL("https://no.such.address"), URL("http://$serverAddress"), proxyAddress = NetworkHostAndPort(myHostname, httpProxyPort), proxyType = Proxy.Type.HTTP),
+                VersionInfo(1, "TEST", "TEST", "TEST")).apply { start(DEV_ROOT_CA.certificate) }
+        val parametersHash = server.networkParameters.serialize().hash
+        Assertions.assertThatExceptionOfType(IOException::class.java).isThrownBy {
+            networkMapClient.getNetworkParameters(parametersHash).verified()
+        }.withMessageContaining("Error 407 Proxy Authentication Required")
+    }
+
+    @Test
+    fun `download fails wrong credentials via https`() {
+        val networkMapClient = NetworkMapClient(NetworkServicesConfig(URL("https://no.such.address"), URL("http://$serverAddress"), proxyAddress = NetworkHostAndPort(myHostname, httpProxyPort), proxyType = Proxy.Type.HTTP, proxyUser = "proxyUser", proxyPassword = "ThisIsNotAPassword"),
+                VersionInfo(1, "TEST", "TEST", "TEST")).apply { start(DEV_ROOT_CA.certificate) }
+        val parametersHash = server.networkParameters.serialize().hash
+        Assertions.assertThatExceptionOfType(IOException::class.java).isThrownBy {
+            networkMapClient.getNetworkParameters(parametersHash).verified()
+        }.withMessageContaining("403 Forbidden")
+    }
+
+
 }
