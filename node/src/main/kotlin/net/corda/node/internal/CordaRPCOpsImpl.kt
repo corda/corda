@@ -49,7 +49,7 @@ internal class CordaRPCOpsImpl(
         private val database: CordaPersistence,
         private val flowStarter: FlowStarter,
         private val checkpointDumper: CheckpointDumper
-) : CordaRPCOps {
+) : InternalCordaRPCOps {
     override fun networkMapSnapshot(): List<NodeInfo> {
         val (snapshot, updates) = networkMapFeed()
         updates.notUsed()
