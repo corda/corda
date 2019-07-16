@@ -17,7 +17,7 @@ import java.net.ServerSocket
 class AddressBindingFailureTests {
 
     companion object {
-        private val portAllocation = incrementalPortAllocation()
+        private val portAllocation = incrementalPortAllocation(20_000)
     }
 
     @Test

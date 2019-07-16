@@ -63,7 +63,7 @@ class HardRestartTest {
     fun restartShortPingPongFlowRandomly() {
         val demoUser = User("demo", "demo", setOf(Permissions.startFlow<Ping>(), Permissions.all()))
         driver(DriverParameters(
-                portAllocation = incrementalPortAllocation(),
+                portAllocation = incrementalPortAllocation(10000),
                 startNodesInProcess = false,
                 inMemoryDB = false,
                 notarySpecs = emptyList(),
@@ -101,7 +101,7 @@ class HardRestartTest {
     fun restartLongPingPongFlowRandomly() {
         val demoUser = User("demo", "demo", setOf(Permissions.startFlow<Ping>(), Permissions.all()))
         driver(DriverParameters(
-                portAllocation = incrementalPortAllocation(),
+                portAllocation = incrementalPortAllocation(10000),
                 startNodesInProcess = false,
                 inMemoryDB = false,
                 notarySpecs = emptyList(),
@@ -139,7 +139,7 @@ class HardRestartTest {
     fun softRestartLongPingPongFlowRandomly() {
         val demoUser = User("demo", "demo", setOf(Permissions.startFlow<Ping>(), Permissions.all()))
         driver(DriverParameters(
-                portAllocation = incrementalPortAllocation(),
+                portAllocation = incrementalPortAllocation(10000),
                 startNodesInProcess = false,
                 inMemoryDB = false,
                 notarySpecs = emptyList(),
@@ -221,7 +221,7 @@ class HardRestartTest {
     fun restartRecursiveFlowRandomly() {
         val demoUser = User("demo", "demo", setOf(Permissions.startFlow<RecursiveA>(), Permissions.all()))
         driver(DriverParameters(
-                portAllocation = incrementalPortAllocation(),
+                portAllocation = incrementalPortAllocation(10000),
                 startNodesInProcess = false,
                 inMemoryDB = false,
                 notarySpecs = emptyList(),

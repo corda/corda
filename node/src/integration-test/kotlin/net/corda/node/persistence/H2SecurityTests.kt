@@ -22,7 +22,7 @@ import kotlin.test.assertTrue
 
 class H2SecurityTests {
     companion object {
-        private val port = incrementalPortAllocation()
+        private val port = incrementalPortAllocation(21_000)
         private fun getFreePort() = port.nextPort()
         private const val h2AddressKey = "h2Settings.address"
         private const val dbPasswordKey = "dataSourceProperties.dataSource.password"

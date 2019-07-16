@@ -160,8 +160,9 @@ configurations {
     testArtifacts.extendsFrom testRuntimeClasspath
 }
 
-test{
-    maxParallelForks = (System.env.CORDA_CORE_TESTING_FORKS == null) ? 1 :  "$System.env.CORDA_CORE_TESTING_FORKS".toInteger()
+tasks.withType(Test) {
+    // fork a new test process for every test class
+    forkEvery = 10
 }
 
 tasks.withType(Test) {

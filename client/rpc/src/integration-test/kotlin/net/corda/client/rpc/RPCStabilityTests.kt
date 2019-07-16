@@ -41,7 +41,7 @@ class RPCStabilityTests {
     val testSerialization = SerializationEnvironmentRule(true)
 
     private val pool = Executors.newFixedThreadPool(10, testThreadFactory())
-    private val portAllocation = incrementalPortAllocation()
+    private val portAllocation = incrementalPortAllocation(10000)
 
     @After
     fun shutdown() {

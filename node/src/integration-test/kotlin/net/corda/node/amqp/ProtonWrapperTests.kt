@@ -49,7 +49,7 @@ class ProtonWrapperTests {
     @JvmField
     val temporaryFolder = TemporaryFolder()
 
-    private val portAllocation = incrementalPortAllocation() // use 15000 to move us out of harms way
+    private val portAllocation = incrementalPortAllocation(15000) // use 15000 to move us out of harms way
     private val serverPort = portAllocation.nextPort()
     private val serverPort2 = portAllocation.nextPort()
     private val artemisPort = portAllocation.nextPort()

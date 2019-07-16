@@ -41,7 +41,7 @@ class AMQPBridgeTest {
 
     private val BOB = TestIdentity(BOB_NAME)
 
-    private val portAllocation = incrementalPortAllocation()
+    private val portAllocation = incrementalPortAllocation(10000)
     private val artemisAddress = portAllocation.nextHostAndPort()
     private val amqpAddress = portAllocation.nextHostAndPort()
 

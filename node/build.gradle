@@ -216,9 +216,10 @@ tasks.withType(JavaCompile) {
 
 }
 
-test {
+tasks.withType(Test) {
     maxHeapSize = "2g"
-    maxParallelForks = (System.env.CORDA_NODE_TESTING_FORKS == null) ? 1 : "$System.env.CORDA_NODE_TESTING_FORKS".toInteger()
+    // fork a new test process for every test class
+    forkEvery = 10
 }
 
 tasks.withType(Test) {
@@ -234,7 +235,9 @@ task integrationTest(type: Test) {
     
     testClassesDirs = sourceSets.integrationTest.output.classesDirs
     classpath = sourceSets.integrationTest.runtimeClasspath
-    maxParallelForks = (System.env.CORDA_NODE_INT_TESTING_FORKS == null) ? 1 :  "$System.env.CORDA_NODE_INT_TESTING_FORKS".toInteger()
+
+    systemProperty 'testing.global.port.allocation.enabled', true
+    systemProperty 'testing.global.port.allocation.starting.port', 10000
 }
 
 // quasar exclusions upon agent code instrumentation at run-time
