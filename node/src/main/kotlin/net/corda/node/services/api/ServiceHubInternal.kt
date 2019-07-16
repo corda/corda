@@ -7,6 +7,7 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.NamedCacheFactory
+import net.corda.core.internal.WritableTransactionStorage
 import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.StateMachineTransactionMapping
@@ -15,7 +16,6 @@ import net.corda.core.node.ServiceHub
 import net.corda.core.node.StatesToRecord
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.NetworkMapCacheBase
-import net.corda.core.node.services.TransactionStorage
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.contextLogger
 import net.corda.node.internal.InitiatedFlowFactory
@@ -51,7 +51,8 @@ interface ServiceHubInternal : ServiceHub {
     companion object {
         private val log = contextLogger()
 
-        fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>,
+        fun recordTransactions(statesToRecord: StatesToRecord,
+                               txs: Iterable<SignedTransaction>,
                                validatedTransactions: WritableTransactionStorage,
                                stateMachineRecordedTransactionMapping: StateMachineRecordedTransactionMappingStorage,
                                vaultService: VaultServiceInternal,
@@ -175,19 +176,6 @@ interface FlowStarter {
 }
 
 interface StartedNodeServices : ServiceHubInternal, FlowStarter
-/**
- * Thread-safe storage of transactions.
- */
-interface WritableTransactionStorage : TransactionStorage {
-    /**
-     * Add a new transaction to the store. If the store already has a transaction with the same id it will be
-     * overwritten.
-     * @param transaction The transaction to be recorded.
-     * @return true if the transaction was recorded successfully, false if it was already recorded.
-     */
-    // TODO: Throw an exception if trying to add a transaction with fewer signatures than an existing entry.
-    fun addTransaction(transaction: SignedTransaction): Boolean
-}
 
 /**
  * This is the interface to storage storing state machine -> recorded tx mappings. Any time a transaction is recorded

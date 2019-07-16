@@ -30,7 +30,7 @@ import net.corda.finance.test.SampleCashSchemaV2
 import net.corda.finance.test.SampleCashSchemaV3
 import net.corda.finance.contracts.utils.sumCash
 import net.corda.node.services.api.IdentityServiceInternal
-import net.corda.node.services.api.WritableTransactionStorage
+import net.corda.core.internal.WritableTransactionStorage
 import net.corda.node.services.schema.ContractStateAndRef
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.schema.PersistentStateService

@@ -803,7 +803,7 @@ class SingleThreadedStateMachineManager(
         val interceptors = ArrayList<TransitionInterceptor>()
         interceptors.add { HospitalisingInterceptor(flowHospital, it) }
         if (serviceHub.configuration.devMode) {
-            interceptors.add { DumpHistoryOnErrorInterceptor(it) }
+//            interceptors.add { DumpHistoryOnErrorInterceptor(it) }
         }
         if (serviceHub.configuration.shouldCheckCheckpoints()) {
             interceptors.add { FiberDeserializationCheckingInterceptor(fiberDeserializationChecker!!, it) }

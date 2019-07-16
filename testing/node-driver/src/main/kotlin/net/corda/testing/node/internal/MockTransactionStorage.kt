@@ -7,7 +7,7 @@ import net.corda.core.messaging.DataFeed
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.toFuture
 import net.corda.core.transactions.SignedTransaction
-import net.corda.node.services.api.WritableTransactionStorage
+import net.corda.core.internal.WritableTransactionStorage
 import rx.Observable
 import rx.subjects.PublishSubject
 import java.util.*

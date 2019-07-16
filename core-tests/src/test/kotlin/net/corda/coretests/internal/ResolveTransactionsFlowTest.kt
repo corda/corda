@@ -99,26 +99,6 @@ class ResolveTransactionsFlowTest {
     }
 
     @Test
-    fun `denial of service check`() {
-        // Chain lots of txns together.
-        val stx2 = makeTransactions().second
-        val count = 50
-        var cursor = stx2
-        repeat(count) {
-            val builder = DummyContract.move(cursor.tx.outRef(0), miniCorp)
-            val stx = megaCorpNode.services.signInitialTransaction(builder)
-            megaCorpNode.transaction {
-                megaCorpNode.services.recordTransactions(stx)
-            }
-            cursor = stx
-        }
-        val p = TestFlow(setOf(cursor.id), megaCorp, 40)
-        val future = miniCorpNode.startFlow(p)
-        mockNet.runNetwork()
-        assertFailsWith<ResolveTransactionsFlow.ExcessivelyLargeTransactionGraph> { future.getOrThrow() }
-    }
-
-    @Test
     fun `triangle of transactions resolves fine`() {
         val stx1 = makeTransactions().first
 
@@ -233,21 +213,21 @@ class ResolveTransactionsFlowTest {
 
 
     @InitiatingFlow
-    open class TestFlow(val otherSide: Party, private val resolveTransactionsFlowFactory: (FlowSession) -> ResolveTransactionsFlow, private val txCountLimit: Int? = null) : FlowLogic<Unit>() {
-        constructor(txHashes: Set<SecureHash>, otherSide: Party, txCountLimit: Int? = null) : this(otherSide, { ResolveTransactionsFlow(txHashes, it) }, txCountLimit = txCountLimit)
+    open class TestFlow(private val otherSide: Party, private val resolveTransactionsFlowFactory: (FlowSession) -> ResolveTransactionsFlow) : FlowLogic<Unit>() {
+        constructor(txHashes: Set<SecureHash>, otherSide: Party) : this(otherSide, { ResolveTransactionsFlow(txHashes, it) })
         constructor(stx: SignedTransaction, otherSide: Party) : this(otherSide, { ResolveTransactionsFlow(stx, it) })
 
         @Suspendable
         override fun call() {
             val session = initiateFlow(otherSide)
             val resolveTransactionsFlow = resolveTransactionsFlowFactory(session)
-            txCountLimit?.let { resolveTransactionsFlow.transactionCountLimit = it }
             subFlow(resolveTransactionsFlow)
         }
     }
+
     @Suppress("unused")
     @InitiatedBy(TestFlow::class)
-    class TestResponseFlow(val otherSideSession: FlowSession) : FlowLogic<Void?>() {
+    class TestResponseFlow(private val otherSideSession: FlowSession) : FlowLogic<Void?>() {
         @Suspendable
         override fun call() = subFlow(TestNoSecurityDataVendingFlow(otherSideSession))
     }

@@ -2,9 +2,15 @@ package net.corda.traderdemo
 
 import joptsimple.OptionParser
 import net.corda.client.rpc.CordaRPCClient
+import net.corda.core.internal.logElapsedTime
+import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.getOrThrow
 import net.corda.finance.DOLLARS
+import net.corda.finance.flows.CashIssueFlow
+import net.corda.finance.flows.CashPaymentFlow
 import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.DUMMY_BANK_B_NAME
 import kotlin.system.exitProcess
@@ -13,7 +19,30 @@ import kotlin.system.exitProcess
  * This entry point allows for command line running of the trader demo functions on nodes started by Main.kt.
  */
 fun main(args: Array<String>) {
-    TraderDemo().main(args)
+//    TraderDemo().main(args)
+
+    val bocProxy = CordaRPCClient(NetworkHostAndPort("localhost", 10006)).start("bankUser", "test").proxy
+    val bigProxy = CordaRPCClient(NetworkHostAndPort("localhost", 10009)).start("bigCorpUser", "test").proxy
+    val notaryProxy = CordaRPCClient(NetworkHostAndPort("localhost", 10003)).start("bankUser", "test").proxy
+
+    val boc = bocProxy.nodeInfo().legalIdentities.single()
+    val big = bigProxy.nodeInfo().legalIdentities.single()
+    val notary = notaryProxy.nodeInfo().legalIdentities.single()
+
+    for (index in 1..1000 step 10) {
+        bocProxy.startFlow(::CashIssueFlow, 1.DOLLARS, OpaqueBytes.of(1), notary).returnValue.getOrThrow()
+
+        logElapsedTime("$index: Backchain creation") {
+            repeat(index) {
+                bocProxy.startFlow(::CashPaymentFlow, 1.DOLLARS, notary, false).returnValue.getOrThrow()
+                notaryProxy.startFlow(::CashPaymentFlow, 1.DOLLARS, boc, false).returnValue.getOrThrow()
+            }
+        }
+
+        logElapsedTime("$index: BoC -> Big Corp") {
+            bocProxy.startFlow(::CashPaymentFlow, 1.DOLLARS, big, false).returnValue.getOrThrow()
+        }
+    }
 }
 
 private class TraderDemo {

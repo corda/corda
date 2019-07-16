@@ -137,6 +137,10 @@ abstract class AppendOnlyPersistentMapBase<K, V, E, out EK>(
         }
     }
 
+    fun invalidate(key: Any) {
+        cache.invalidate(key)
+    }
+
     private fun loadValue(key: K): V? {
         val session = currentDBSession()
         val flushing = contextTransaction.flushing

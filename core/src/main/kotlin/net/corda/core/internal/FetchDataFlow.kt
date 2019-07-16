@@ -110,12 +110,13 @@ sealed class FetchDataFlow<T : NamedByHash, in W : Any>(
     private fun loadWhatWeHave(): Pair<List<T>, List<SecureHash>> {
         val fromDisk = ArrayList<T>()
         val toFetch = ArrayList<SecureHash>()
-        for (txid in requests) {
-            val stx = load(txid)
-            if (stx == null)
-                toFetch += txid
-            else
-                fromDisk += stx
+        for (id in requests) {
+            val item = load(id)
+            if (item == null) {
+                toFetch += id
+            } else {
+                fromDisk += item
+            }
         }
         return Pair(fromDisk, toFetch)
     }
