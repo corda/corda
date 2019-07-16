@@ -34,6 +34,7 @@ import javax.servlet.http.HttpServletRequest
 import javax.servlet.http.HttpServletResponse
 import kotlin.test.assertEquals
 
+// For http connections, we need to check the credentials on handling the actual get request.
 class AuthenticatedHttpProxy : ProxyServlet() {
     override fun init(config: ServletConfig?) {
 
@@ -77,7 +78,32 @@ class AuthenticatedHttpProxy : ProxyServlet() {
     private lateinit var password: String
 }
 
-class NetworkMapProxyTest {
+// For https connections, we need to check the credentials when establishing the https tunnel.
+class AuthenticatedConnectHandler(private val user: String, private val password: String) : ConnectHandler() {
+    override fun handleAuthentication(request: HttpServletRequest?, response: HttpServletResponse?, address: String?): Boolean {
+
+        val auth: String? = request!!.getHeader("Proxy-Authorization")
+        if (auth == null) {
+            response!!.addHeader("Proxy-Authenticate", "Basic realm=*")
+            return false
+        }
+
+        val s = auth.split(" ")
+        if (s.size != 2 || s[0].toLowerCase() != "basic") {
+            return false
+        }
+        val credentials = s[1].base64ToRealString().split(":")
+        if (credentials.size != 2) {
+            return false
+        }
+        if (credentials[0] != user || credentials[1] != password) {
+            return false
+        }
+        return true
+    }
+}
+
+class NetworkMapHttpProxyTest {
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule(true)
@@ -104,14 +130,12 @@ class NetworkMapProxyTest {
         server.connectors = arrayOf<Connector>(connector)
 
         // Setup proxy handler to handle CONNECT methods
-        val proxy = ConnectHandler()
+        val proxy = AuthenticatedConnectHandler("proxyUser", "proxyPW")
         server.handler = proxy
 
         // Setup proxy servlet
         val context = ServletContextHandler(proxy, "/", ServletContextHandler.SESSIONS)
         val proxyServlet = ServletHolder(AuthenticatedHttpProxy::class.java)
-//        proxyServlet.setInitParameter("proxyTo", "localhost:$serverPort")
-//        proxyServlet.setInitParameter("prefix", "/")
         proxyServlet.setInitParameter("user", "proxyUser")
         proxyServlet.setInitParameter("password", "proxyPW")
         context.addServlet(proxyServlet, "/*")
@@ -142,7 +166,6 @@ class NetworkMapProxyTest {
         val networkParameters = networkMapClient.getNetworkParameters(parametersHash).verified()
         assertEquals(server.networkParameters, networkParameters)
     }
-
 
     @Test
     fun `download NetworkParameters correctly via authenticated proxy`() {
@@ -186,34 +209,33 @@ class NetworkMapProxyTest {
     }
 
     @Test
-    fun `download NetworkParameters correctly via authenticated proxy via https`() {
+    fun `download NetworkParameters fails via authenticated proxy via https`() {
         // The test server returns same network parameter for any hash.
-        val networkMapClient = NetworkMapClient(NetworkServicesConfig(URL("https://no.such.address"), URL("http://$serverAddress"), proxyAddress = NetworkHostAndPort(myHostname, httpProxyPort), proxyType = Proxy.Type.HTTP, proxyPassword = "proxyPW", proxyUser = "proxyUser"),
+        val networkMapClient = NetworkMapClient(NetworkServicesConfig(URL("https://no.such.address"), URL("https://$serverAddress"), proxyAddress = NetworkHostAndPort(myHostname, httpProxyPort), proxyType = Proxy.Type.HTTP, proxyPassword = "proxyPW", proxyUser = "proxyUser"),
                 VersionInfo(1, "TEST", "TEST", "TEST")).apply { start(DEV_ROOT_CA.certificate) }
         val parametersHash = server.networkParameters.serialize().hash
-        val networkParameters = networkMapClient.getNetworkParameters(parametersHash).verified()
-        assertEquals(server.networkParameters, networkParameters)
+        Assertions.assertThatExceptionOfType(SSLException::class.java).isThrownBy {
+            networkMapClient.getNetworkParameters(parametersHash).verified()
+        }.withMessageContaining("Unrecognized SSL message, plaintext connection?")
     }
 
     @Test
     fun `download fails without credentials via https`() {
-        val networkMapClient = NetworkMapClient(NetworkServicesConfig(URL("https://no.such.address"), URL("http://$serverAddress"), proxyAddress = NetworkHostAndPort(myHostname, httpProxyPort), proxyType = Proxy.Type.HTTP),
+        val networkMapClient = NetworkMapClient(NetworkServicesConfig(URL("https://no.such.address"), URL("https://$serverAddress"), proxyAddress = NetworkHostAndPort(myHostname, httpProxyPort), proxyType = Proxy.Type.HTTP),
                 VersionInfo(1, "TEST", "TEST", "TEST")).apply { start(DEV_ROOT_CA.certificate) }
         val parametersHash = server.networkParameters.serialize().hash
         Assertions.assertThatExceptionOfType(IOException::class.java).isThrownBy {
             networkMapClient.getNetworkParameters(parametersHash).verified()
-        }.withMessageContaining("Error 407 Proxy Authentication Required")
+        }.withMessageContaining("Response Code 407:")
     }
 
     @Test
     fun `download fails wrong credentials via https`() {
-        val networkMapClient = NetworkMapClient(NetworkServicesConfig(URL("https://no.such.address"), URL("http://$serverAddress"), proxyAddress = NetworkHostAndPort(myHostname, httpProxyPort), proxyType = Proxy.Type.HTTP, proxyUser = "proxyUser", proxyPassword = "ThisIsNotAPassword"),
+        val networkMapClient = NetworkMapClient(NetworkServicesConfig(URL("https://no.such.address"), URL("https://$serverAddress"), proxyAddress = NetworkHostAndPort(myHostname, httpProxyPort), proxyType = Proxy.Type.HTTP, proxyUser = "proxyUser", proxyPassword = "ThisIsNotAPassword"),
                 VersionInfo(1, "TEST", "TEST", "TEST")).apply { start(DEV_ROOT_CA.certificate) }
         val parametersHash = server.networkParameters.serialize().hash
         Assertions.assertThatExceptionOfType(IOException::class.java).isThrownBy {
             networkMapClient.getNetworkParameters(parametersHash).verified()
-        }.withMessageContaining("403 Forbidden")
+        }.withMessageContaining("Response Code 407:")
     }
-
-
 }
