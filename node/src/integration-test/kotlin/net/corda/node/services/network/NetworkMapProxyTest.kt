@@ -11,7 +11,6 @@ import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.internal.DEV_ROOT_CA
 import net.corda.testing.node.internal.network.NetworkMapServer
-import org.apache.http.auth.AuthenticationException
 import org.assertj.core.api.Assertions
 import org.eclipse.jetty.http.HttpStatus
 import org.eclipse.jetty.proxy.ConnectHandler
@@ -21,8 +20,10 @@ import org.eclipse.jetty.server.Server
 import org.eclipse.jetty.server.ServerConnector
 import org.eclipse.jetty.servlet.ServletContextHandler
 import org.eclipse.jetty.servlet.ServletHolder
-import org.junit.*
-import org.junit.jupiter.api.assertThrows
+import org.junit.After
+import org.junit.Before
+import org.junit.Rule
+import org.junit.Test
 import java.io.IOException
 import java.net.InetAddress
 import java.net.Proxy
@@ -32,14 +33,13 @@ import javax.servlet.ServletConfig
 import javax.servlet.http.HttpServletRequest
 import javax.servlet.http.HttpServletResponse
 import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
 
-class AuthenticatedHttpProxy() : ProxyServlet() {
+class AuthenticatedHttpProxy : ProxyServlet() {
     override fun init(config: ServletConfig?) {
 
         super.init(config)
         user = config!!.getInitParameter("user")
-        password = config!!.getInitParameter("password")
+        password = config.getInitParameter("password")
     }
 
     override fun service(clientRequest: HttpServletRequest?, proxyResponse: HttpServletResponse?) {

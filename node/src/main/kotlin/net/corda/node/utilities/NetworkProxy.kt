@@ -2,7 +2,6 @@ package net.corda.node.utilities
 
 import net.corda.core.internal.VisibleForTesting
 import net.corda.node.services.config.NetworkServicesConfig
-import net.corda.serialization.internal.amqp.PROXY_TYPE
 import java.net.Authenticator
 import java.net.InetSocketAddress
 import java.net.PasswordAuthentication
@@ -20,7 +19,7 @@ class ProxyAuthSetter private constructor(config: NetworkServicesConfig) {
         }
 
         @VisibleForTesting
-        internal fun unsetInstance() {
+        fun unsetInstance() {
             instance = null
         }
     }
