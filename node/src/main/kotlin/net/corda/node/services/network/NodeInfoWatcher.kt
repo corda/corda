@@ -78,11 +78,11 @@ class NodeInfoWatcher(private val nodePath: Path,
     }
 
     private fun pollDirectory(): List<NodeInfoUpdate> {
-        logger.info("pollDirectory $nodeInfosDir")
+        logger.debug { "pollDirectory $nodeInfosDir" }
         val processedPaths = HashSet<Path>()
         val result = nodeInfosDir.list { paths ->
             paths
-                    .filter { logger.warn("Examining $it")
+                    .filter { logger.debug { "Examining $it" }
                             true}
                     .filter { it.isRegularFile() }
                     .filter { file ->
@@ -93,7 +93,7 @@ class NodeInfoWatcher(private val nodePath: Path,
                         newOrChangedFile
                     }
                     .mapNotNull { file ->
-                        logger.warn("Reading SignedNodeInfo from $file")
+                        logger.debug { "Reading SignedNodeInfo from $file" }
                         try {
                             val nodeInfoSigned = NodeInfoAndSigned(file.readObject())
                             nodeInfoFilesMap[file] = NodeInfoFromFile(nodeInfoSigned.signed.raw.hash, file.lastModifiedTime())
@@ -109,8 +109,8 @@ class NodeInfoWatcher(private val nodePath: Path,
         val removedHashes = removedFiles.map { file ->
             NodeInfoUpdate.Remove(nodeInfoFilesMap.remove(file)!!.nodeInfohash)
         }
-        logger.warn("Read ${result.size} NodeInfo files from $nodeInfosDir")
-        logger.warn("Number of removed NodeInfo files ${removedHashes.size}")
+        logger.debug { "Read ${result.size} NodeInfo files from $nodeInfosDir" }
+        logger.debug { "Number of removed NodeInfo files ${removedHashes.size}" }
         return result.map { NodeInfoUpdate.Add(it.nodeInfo) } + removedHashes
     }
 }

@@ -3,6 +3,7 @@ package net.corda.nodeapi.internal.network
 import net.corda.core.internal.*
 import net.corda.core.utilities.contextLogger
 import net.corda.core.internal.NODE_INFO_DIRECTORY
+import net.corda.core.utilities.debug
 import rx.Observable
 import rx.Scheduler
 import rx.Subscription
@@ -94,7 +95,6 @@ class NodeInfoFilesCopier(private val scheduler: Scheduler = Schedulers.io()) : 
     private fun allPreviouslySeenFiles() = nodeDataMapBox.alreadyLocked { values.flatMap { it.previouslySeenFiles.keys } }
 
     private fun poll() {
-//        println("[${scheduler.now()}] poll")
         nodeDataMapBox.locked {
             for (nodeData in values) {
                 nodeData.nodeDir.list { paths ->
@@ -110,9 +110,7 @@ class NodeInfoFilesCopier(private val scheduler: Scheduler = Schedulers.io()) : 
     // Takes a path under nodeData config dir and decides whether the file represented by that path needs to
     // be copied.
     private fun processPath(nodeData: NodeData, path: Path) {
-//        println("[${scheduler.now()}] processPath ($path)")
         nodeDataMapBox.alreadyLocked {
-//            println("${path.fileName} (${path.lastModifiedTime()}: ${nodeData.previouslySeenFiles}")
             val newTimestamp = path.lastModifiedTime()
             val previousTimestamp = nodeData.previouslySeenFiles.put(path, newTimestamp) ?: FileTime.fromMillis(-1)
             if (newTimestamp > previousTimestamp) {
@@ -125,8 +123,7 @@ class NodeInfoFilesCopier(private val scheduler: Scheduler = Schedulers.io()) : 
     }
 
     private fun atomicCopy(source: Path, destination: Path) {
-        log.warn("[${scheduler.now()}] Copying ... $source -> $destination")
-
+        log.debug { "[${scheduler.now()}] Copying ... $source -> $destination" }
         val tempDestination = try {
             Files.createTempFile(destination.parent, "", null)
         } catch (exception: IOException) {
