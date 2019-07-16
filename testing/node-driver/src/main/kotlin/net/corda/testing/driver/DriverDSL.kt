@@ -171,9 +171,4 @@ interface DriverDSL {
      * is needed before the node is started.
      */
     fun baseDirectory(nodeName: CordaX500Name): Path
-
-    /**
-     * Returns the next port to use when instantiating test processes that must not conflict on the same machine
-     */
-    fun nextPort() = PortAllocation.defaultAllocator.nextPort()
 }
