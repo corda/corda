@@ -81,16 +81,14 @@ data class TestCordappImpl(val scanPackage: String, override val config: Map<Str
                 log.info("Generating CorDapp jar from local project in $projectRoot ...")
                 runGradleBuild(projectRoot)
 
-                        val libs = projectRoot / "build" / "libs"
-                        val jars = libs.list {
-                            it.filter { it.toString().endsWith(".jar") }
-                                    .filter { !it.toString().endsWith("sources.jar") }
-                                    .filter { !it.toString().endsWith("javadoc.jar") }
-                                    .toList()
-                        }.sortedBy { it.attributes().creationTime() }
-                        checkNotNull(jars.lastOrNull()) { "No jars were built in $libs" }
-                    }
-                }
+                val libs = projectRoot / "build" / "libs"
+                val jars = libs.list {
+                    it.filter { it.toString().endsWith(".jar") }
+                            .filter { !it.toString().endsWith("sources.jar") }
+                            .filter { !it.toString().endsWith("javadoc.jar") }
+                            .toList()
+                }.sortedBy { it.attributes().creationTime() }
+                checkNotNull(jars.lastOrNull()) { "No jars were built in $libs" }
             }
         }
 
