@@ -362,56 +362,45 @@ This does not expose internal information to clients, strengthening privacy and 
 Reconnecting RPC clients
 ------------------------
 
-In the current version of Corda the RPC connection and all the observervables that are created by a client will just throw exceptions and die
-when the node or TCP connection become unavailable.
+In the current version of Corda, an RPC client connected to a node stops functioning when the node becomes unavailable or the associated TCP connection is interrupted.
+Running RPC commands against a stopped node will just throw exceptions. Any subscriptions to ``Observable``\s that have been created before the disconnection will stop receiving events after the node restarts.
+RPCs which have a side effect, such as starting flows, may or may not have executed on the node depending on when the client was disconnected.
 
-It is the client's responsibility to handle these errors and reconnect once the node is running again. Running RPC commands against a stopped
-node will just throw exceptions. Previously created Observables will not emit any events after the node restarts. The client must explicitly re-run the command and
-re-subscribe to receive more events.
+It is the client's responsibility to handle these errors and reconnect once the node is running again. The client will have to re-subscribe to any ``Observable``\s in order to keep receiving updates.
+With regards to RPCs with side effects, the client will have to inspect the state of the node to infer whether the flow was executed or not before retrying it.
 
-RPCs which have a side effect, such as starting flows, may have executed on the node even if the return value is not received by the client.
-The only way to confirm is to perform a business-level query and retry accordingly. The sample `runFlowWithLogicalRetry` helps with this.
+Clients can make use of the options described below in order to take advantage of some automatic reconnection functionality that mitigates some of these issues.
 
-In case users require such a functionality to write a resilient RPC client we have a sample that showcases how this can be implemented and also
-a thorough test that demonstrates it works as expected.
+Enabling automatic reconnection
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The code that performs the reconnecting logic is: `ReconnectingCordaRPCOps.kt <https://github.com/corda/corda/blob/master/client/rpc/src/main/kotlin/net/corda/client/rpc/internal/ReconnectingCordaRPCOps.kt>`_.
+If you provide a list of addresses via the ``haAddressPool`` argument when instantiating a ``CordaRPCClient``, then automatic reconnection will be performed when the existing connection is dropped.
+However, any in-flight calls during reconnection will fail and previously returned observables will call ``onError``. The client code is responsible for waiting for the connection to be established
+in order to retry any calls, retrieve new observables and re-subscribe to them.
 
-.. note:: This sample code is not exposed as an official Corda API, and must be included directly in the client codebase and adjusted.
+Enabling graceful reconnection
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The usage is showcased in the: `RpcReconnectTests.kt <https://github.com/corda/corda/blob/master/node/src/integration-test/kotlin/net/corda/node/services/rpc/RpcReconnectTests.kt>`_.
-In case resiliency is a requirement, then it is recommended that users will write a similar test.
+A more graceful form of reconnection is also available, which will block all in-flight calls until the connection is re-established and
+will also reconnect the existing ``Observable``\s, so that they keep emitting events to the existing subscribers.
 
-How to initialize the `ReconnectingCordaRPCOps`:
+.. warning:: In this approach, some events might be lost during a re-connection and not sent from the subscribed ``Observable``\s.
 
-.. literalinclude:: ../../node/src/integration-test/kotlin/net/corda/node/services/rpc/RpcReconnectTests.kt
-   :language: kotlin
-   :start-after: DOCSTART rpcReconnectingRPC
-   :end-before: DOCEND rpcReconnectingRPC
+You can enable this graceful form of reconnection by using the ``gracefulReconnect`` parameter in the following way:
 
+.. sourcecode:: kotlin
 
-How to track the vault :
+   val cordaClient = CordaRPCClient(nodeRpcAddress)
+   val cordaRpcOps = cordaClient.start(rpcUserName, rpcUserPassword, gracefulReconnect = true).proxy
 
-.. literalinclude:: ../../node/src/integration-test/kotlin/net/corda/node/services/rpc/RpcReconnectTests.kt
-   :language: kotlin
-   :start-after: DOCSTART rpcReconnectingRPCVaultTracking
-   :end-before: DOCEND rpcReconnectingRPCVaultTracking
+Logical  retries for flow invocation
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+As described above, if you want to retry a flow that failed during a disconnection, you will first need to verify it has not been previously executed.
+The only way currently to confirm this is by performing a business-level query.
 
-How to start a flow with a logical retry function that checks for the side effects of the flow:
-
-.. literalinclude:: ../../node/src/integration-test/kotlin/net/corda/node/services/rpc/RpcReconnectTests.kt
-   :language: kotlin
-   :start-after: DOCSTART rpcReconnectingRPCFlowStarting
-   :end-before: DOCEND rpcReconnectingRPCFlowStarting
-
-
-Note that, as shown by the test, during reconnecting some events might be lost.
-
-.. literalinclude:: ../../node/src/integration-test/kotlin/net/corda/node/services/rpc/RpcReconnectTests.kt
-   :language: kotlin
-   :start-after: DOCSTART missingVaultEvents
-   :end-before: DOCEND missingVaultEvents
+.. note:: Future releases of Corda are expected to contain new APIs for coping with reconnection in a more resilient way providing stricter
+   safety guarantees.
 
 
 Wire security

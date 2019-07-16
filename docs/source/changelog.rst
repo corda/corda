@@ -23,12 +23,18 @@ Version 5.0
 * It is now possible to re-record transactions if a node wishes to record as an observer a transaction it has participated in. If this is
   done, then the node may record new output states that are not relevant to the node.
 
-.. warning:: Nodes may re-record transactions if they have previously recorded them as a participant and wish to record them as an observer.
-   However, the node cannot resolve the forward chain of transactions if this is done. This means that if you wish to re-record a chain of
-   transactions and get the new output states to be correctly marked as consumed, the full chain must be sent to the node *in order*.
+  .. warning:: Nodes may re-record transactions if they have previously recorded them as a participant and wish to record them as an observer.
+     However, the node cannot resolve the forward chain of transactions if this is done. This means that if you wish to re-record a chain of
+     transactions and get the new output states to be correctly marked as consumed, the full chain must be sent to the node *in order*.
 
 * Added ``nodeDiagnosticInfo`` to the RPC API. The new RPC is also available as the ``run nodeDiagnosticInfo`` command executable from
   the Corda shell. It retrieves version information about the Corda platform and the CorDapps installed on the node.
+
+* ``CordaRPCClient.start`` has a new ``gracefulReconnect`` parameter. When ``true`` (the default is ``false``) it will cause the RPC client
+  to try to automatically reconnect to the node on disconnect. Further any ``Observable`` s previously created will continue to vend new
+  events on reconnect.
+
+  .. note:: This is only best-effort and there are no guarantees of reliability.
 
 .. _changelog_v4.2:
 
