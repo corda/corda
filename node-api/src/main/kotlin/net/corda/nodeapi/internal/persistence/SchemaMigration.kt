@@ -13,7 +13,7 @@ import net.corda.nodeapi.internal.MigrationHelpers.getMigrationResource
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.utilities.info
 import net.corda.nodeapi.internal.cordapp.CordappLoader
-import net.corda.nodeapi.internal.logging.FormattedLogger
+import net.corda.nodeapi.internal.logging.KeyValueFormatter
 import org.slf4j.LoggerFactory
 import java.io.ByteArrayInputStream
 import java.io.InputStream
@@ -42,7 +42,7 @@ class SchemaMigration(
         const val NODE_X500_NAME = "liquibase.nodeName"
         val loader = ThreadLocal<CordappLoader>()
         private val mutex = ReentrantLock()
-        val formatter = FormattedLogger(true, logger.name )
+        val formatter = KeyValueFormatter(true, logger.name )
     }
 
     init {

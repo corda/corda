@@ -176,4 +176,4 @@ The formatted logs are described TODO. The example formatted log lines:
     [INFO ] 2019-07-12T11:36:51,559Z [main] databaseInitialisation. - databaseInitialisation(id=YzKRLqTS; changeset="migration/vault-schema.changelog-init.xml::1511451595465-26::R3.Corda"; status="started")
     [INFO ] 2019-07-12T11:36:51,559Z [main] databaseInitialisation. - databaseInitialisation(id=YzKRLqTS; changeset="migration/vault-schema.changelog-init.xml::1511451595465-26::R3.Corda"; status="successful")
 
-Note, as Cordapp custom tables are created by Hibernate, neither default Liquibase logger or a node database logger records table crration/upgrade for CorDapps.
+Note, as Cordapp custom tables are created by Hibernate, neither the default Liquibase logger nor the database initialisation logger records table creation/upgrade for CorDapps.
