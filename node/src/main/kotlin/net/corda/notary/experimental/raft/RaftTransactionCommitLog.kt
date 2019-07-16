@@ -175,11 +175,13 @@ class RaftTransactionCommitLog<E, EK>(
      */
     override fun snapshot(writer: SnapshotWriter) {
         db.transaction {
-            writer.writeInt(map.size)
-            map.allPersisted().forEach {
-                val bytes = it.serialize(context = SerializationDefaults.STORAGE_CONTEXT).bytes
-                writer.writeUnsignedShort(bytes.size)
-                writer.writeObject(bytes)
+            writer.writeInt(map.size.toInt())
+            map.allPersisted.use {
+                it.forEach {
+                    val bytes = it.serialize(context = SerializationDefaults.STORAGE_CONTEXT).bytes
+                    writer.writeUnsignedShort(bytes.size)
+                    writer.writeObject(bytes)
+                }
             }
 
             val criteriaQuery = session.criteriaBuilder.createQuery(PersistentUniquenessProvider.Request::class.java)

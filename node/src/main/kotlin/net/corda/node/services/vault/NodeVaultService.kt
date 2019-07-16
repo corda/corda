@@ -161,7 +161,7 @@ class NodeVaultService(
         }
     }
 
-    private fun recordUpdate(update: Vault.Update<ContractState>): Vault.Update<ContractState> {
+    private fun recordUpdate(update: Vault.Update<ContractState>, previouslySeen: Boolean): Vault.Update<ContractState> {
         if (!update.isEmpty()) {
             val producedStateRefs = update.produced.map { it.ref }
             val producedStateRefsMap = update.produced.associateBy { it.ref }
@@ -181,15 +181,19 @@ class NodeVaultService(
             consumedStateRefs.forEach { stateRef ->
                 val state = session.get<VaultSchemaV1.VaultStates>(VaultSchemaV1.VaultStates::class.java, PersistentStateRef(stateRef))
                 state?.run {
-                    stateStatus = Vault.StateStatus.CONSUMED
-                    consumedTime = clock.instant()
-                    // remove lock (if held)
-                    if (lockId != null) {
-                        lockId = null
-                        lockUpdateTime = clock.instant()
-                        log.trace("Releasing soft lock on consumed state: $stateRef")
+                    // Only update the state if it has not previously been consumed (this could have happened if the transaction is being
+                    // re-recorded.
+                    if (stateStatus != Vault.StateStatus.CONSUMED) {
+                        stateStatus = Vault.StateStatus.CONSUMED
+                        consumedTime = clock.instant()
+                        // remove lock (if held)
+                        if (lockId != null) {
+                            lockId = null
+                            lockUpdateTime = clock.instant()
+                            log.trace("Releasing soft lock on consumed state: $stateRef")
+                        }
+                        session.save(state)
                     }
-                    session.save(state)
                 }
             }
 
@@ -204,26 +208,30 @@ class NodeVaultService(
         get() = mutex.locked { _updatesInDbTx }
 
     /** Groups adjacent transactions into batches to generate separate net updates per transaction type. */
-    override fun notifyAll(statesToRecord: StatesToRecord, txns: Iterable<CoreTransaction>) {
-        if (statesToRecord == StatesToRecord.NONE || !txns.any()) return
+    override fun notifyAll(statesToRecord: StatesToRecord, txns: Iterable<CoreTransaction>, previouslySeenTxns: Iterable<CoreTransaction>) {
+        if (statesToRecord == StatesToRecord.NONE || (!txns.any() && !previouslySeenTxns.any()))  return
         val batch = mutableListOf<CoreTransaction>()
 
-        fun flushBatch() {
-            val updates = makeUpdates(batch, statesToRecord)
-            processAndNotify(updates)
+        fun flushBatch(previouslySeen: Boolean) {
+            val updates = makeUpdates(batch, statesToRecord, previouslySeen)
+            processAndNotify(updates, previouslySeen)
             batch.clear()
         }
-
-        for (tx in txns) {
-            if (batch.isNotEmpty() && tx.javaClass != batch.last().javaClass) {
-                flushBatch()
+        fun processTransactions(txs: Iterable<CoreTransaction>, previouslySeen: Boolean) {
+            for (tx in txs) {
+                if (batch.isNotEmpty() && tx.javaClass != batch.last().javaClass) {
+                    flushBatch(previouslySeen)
+                }
+                batch.add(tx)
             }
-            batch.add(tx)
+            flushBatch(previouslySeen)
         }
-        flushBatch()
+
+        processTransactions(previouslySeenTxns, true)
+        processTransactions(txns, false)
     }
 
-    private fun makeUpdates(batch: Iterable<CoreTransaction>, statesToRecord: StatesToRecord): List<Vault.Update<ContractState>> {
+    private fun makeUpdates(batch: Iterable<CoreTransaction>, statesToRecord: StatesToRecord, previouslySeen: Boolean): List<Vault.Update<ContractState>> {
 
         fun <T> withValidDeserialization(list: List<T>, txId: SecureHash): Map<Int, T> = (0 until list.size).mapNotNull { idx ->
             try {
@@ -251,7 +259,18 @@ class NodeVaultService(
                 StatesToRecord.ONLY_RELEVANT -> outputs.filter { (_, value) ->
                     isRelevant(value.data, keyManagementService.filterMyKeys(outputs.values.flatMap { it.data.participants.map { it.owningKey } }).toSet())
                 }
-                StatesToRecord.ALL_VISIBLE -> outputs
+                StatesToRecord.ALL_VISIBLE -> if (previouslySeen) {
+                    // For transactions being re-recorded, the node must check its vault to find out what states it has already seen. Note
+                    // that some of the outputs previously seen may have been consumed in the meantime, so the check must look for all state
+                    // statuses.
+                    val outputRefs = tx.outRefsOfType<ContractState>().map { it.ref }
+                    val seenRefs = loadStates(outputRefs).map { it.ref }
+                    val unseenRefs = outputRefs - seenRefs
+                    val unseenOutputIdxs = unseenRefs.map { it.index }.toSet()
+                    outputs.filter { it.key in unseenOutputIdxs }
+                } else {
+                    outputs
+                }
             }.map { (idx, _) -> tx.outRef<ContractState>(idx) }
 
             // Retrieve all unconsumed states for this transaction's inputs.
@@ -334,18 +353,20 @@ class NodeVaultService(
             (0..(refsList.size - 1) / pageSize).forEach {
                 val offset = it * pageSize
                 val limit = minOf(offset + pageSize, refsList.size)
-                val page = queryBy<ContractState>(QueryCriteria.VaultQueryCriteria(stateRefs = refsList.subList(offset, limit))).states
+                val page = queryBy<ContractState>(QueryCriteria.VaultQueryCriteria(
+                        stateRefs = refsList.subList(offset, limit),
+                        status = Vault.StateStatus.ALL)).states
                 states.addAll(page)
             }
         }
         return states
     }
 
-    private fun processAndNotify(updates: List<Vault.Update<ContractState>>) {
+    private fun processAndNotify(updates: List<Vault.Update<ContractState>>, previouslySeen: Boolean) {
         if (updates.isEmpty()) return
         val netUpdate = updates.reduce { update1, update2 -> update1 + update2 }
         if (!netUpdate.isEmpty()) {
-            recordUpdate(netUpdate)
+            recordUpdate(netUpdate, previouslySeen)
             mutex.locked {
                 // flowId was required by SoftLockManager to perform auto-registration of soft locks for new states
                 val uuid = (Strand.currentStrand() as? FlowStateMachineImpl<*>)?.id?.uuid

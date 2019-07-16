@@ -43,6 +43,40 @@ class NodeConfigTest {
 
         // No custom configuration is created by default.
         assertFailsWith<ConfigException.Missing> { nodeConfig.getConfig("custom") }
+        assertFailsWith<ConfigException.Missing> { nodeConfig.getConfig("systemProperties") }
+
+        assertEquals(myLegalName, fullConfig.myLegalName)
+        assertEquals(localPort(40002), fullConfig.rpcOptions.address)
+        assertEquals(localPort(10001), fullConfig.p2pAddress)
+        assertEquals(listOf(user("jenny")), fullConfig.rpcUsers)
+        assertTrue(fullConfig.useTestClock)
+        assertFalse(fullConfig.detectPublicIp)
+    }
+
+    @Test
+    fun `reading node configuration allows systemProperties and custom`() {
+        val config = createConfig(
+                legalName = myLegalName,
+                p2pPort = 10001,
+                rpcPort = 40002,
+                rpcAdminPort = 40005,
+                webPort = 20001,
+                h2port = 30001,
+                notary = NotaryService(validating = false),
+                users = listOf(user("jenny"))
+        )
+
+        val nodeConfig = config.nodeConf()
+                .withValue("systemProperties", valueFor(mapOf("property" to "value")))
+                .withValue("custom.jvmArgs", valueFor("-Xmx1000G"))
+                .withValue("baseDirectory", valueFor(baseDir.toString()))
+                .withFallback(ConfigFactory.parseResources("reference.conf"))
+                .withFallback(ConfigFactory.parseMap(mapOf("devMode" to true)))
+                .resolve()
+        val fullConfig = nodeConfig.parseAsNodeConfiguration().value()
+
+        assertEquals("-Xmx1000G", nodeConfig.getConfig("custom").getString("jvmArgs"))
+        assertEquals("value", nodeConfig.getConfig("systemProperties").getString("property"))
 
         assertEquals(myLegalName, fullConfig.myLegalName)
         assertEquals(localPort(40002), fullConfig.rpcOptions.address)

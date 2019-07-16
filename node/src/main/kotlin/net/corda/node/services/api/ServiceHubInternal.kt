@@ -59,7 +59,16 @@ interface ServiceHubInternal : ServiceHub {
 
             database.transaction {
                 require(txs.any()) { "No transactions passed in for recording" }
-                val recordedTransactions = txs.filter { validatedTransactions.addTransaction(it) }
+
+                // Divide transactions into those seen before and those that are new to this node if ALL_VISIBLE states are being recorded.
+                // This allows the node to re-record transactions that have previously only been seen at the ONLY_RELEVANT level. Note that
+                // for transactions being recorded at ONLY_RELEVANT, if this transaction has been seen before its outputs should already
+                // have been recorded at ONLY_RELEVANT, so there shouldn't be anything to re-record here.
+                val (recordedTransactions, previouslySeenTxs) = if (statesToRecord != StatesToRecord.ALL_VISIBLE) {
+                    Pair(txs.filter { validatedTransactions.addTransaction(it) }, emptyList())
+                } else {
+                    txs.partition { validatedTransactions.addTransaction(it) }
+                }
                 val stateMachineRunId = FlowStateMachineImpl.currentStateMachine()?.id
                 if (stateMachineRunId != null) {
                     recordedTransactions.forEach {
@@ -103,7 +112,7 @@ interface ServiceHubInternal : ServiceHub {
                 //
                 // Because the primary use case for recording irrelevant states is observer/regulator nodes, who are unlikely
                 // to make writes to the ledger very often or at all, we choose to punt this issue for the time being.
-                vaultService.notifyAll(statesToRecord, recordedTransactions.map { it.coreTransaction })
+                vaultService.notifyAll(statesToRecord, recordedTransactions.map { it.coreTransaction }, previouslySeenTxs.map { it.coreTransaction })
             }
         }
     }
