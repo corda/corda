@@ -161,7 +161,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     private var _started: StartedNode<AbstractNode>? = null
 
     /** The implementation of the [CordaRPCOps] interface used by this node. */
-    open fun makeRPCOps(flowStarter: FlowStarter, database: CordaPersistence, smm: StateMachineManager, checkpointDumper: CheckpointDumper): CordaRPCOps {
+    open fun makeRPCOps(flowStarter: FlowStarter, database: CordaPersistence, smm: StateMachineManager, checkpointDumper: CheckpointDumper): InternalCordaRPCOps {
         return SecureCordaRPCOps(services, smm, database, flowStarter, checkpointDumper)
     }
 
@@ -264,8 +264,8 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             registerCordappFlows(smm)
             _services.rpcFlows += cordappLoader.cordapps.flatMap { it.rpcFlows }
             startShell(rpcOps)
-            Pair(StartedNodeImpl(this, _services, nodeInfo, checkpointStorage, smm, attachments, network, database, rpcOps, flowStarter, notaryService), schedulerService)
             checkpointDumper.start(tokenizableServices)
+            Pair(StartedNodeImpl(this, _services, nodeInfo, checkpointStorage, smm, attachments, network, database, rpcOps, flowStarter, notaryService), schedulerService)
         }
 
         networkMapUpdater = NetworkMapUpdater(services.networkMapCache,
@@ -298,7 +298,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
      */
     protected abstract fun getRxIoScheduler(): Scheduler
 
-    open fun startShell(rpcOps: CordaRPCOps) {
+    open fun startShell(rpcOps: InternalCordaRPCOps) {
         InteractiveShell.startShell(configuration, rpcOps, securityManager, _services.identityService, _services.database)
     }
 
