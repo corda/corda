@@ -47,4 +47,8 @@ class TestAuditService() : FirewallAuditService, TestServiceBase() {
         ++eventCount
         _onAuditEvent.onNext(AuditEvent.STATUS_CHANGE)
     }
+
+    override fun reset() {
+        // Does nothing
+    }
 }

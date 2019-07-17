@@ -77,6 +77,7 @@ class BridgeAMQPListenerServiceImpl(val conf: FirewallConfiguration,
         if (running) {
             val msg = "AMQP Listener shutting down"
             auditService.statusChangeEvent(msg)
+            auditService.reset()
             consoleLogger.info(msg)
         }
         amqpServer?.close()

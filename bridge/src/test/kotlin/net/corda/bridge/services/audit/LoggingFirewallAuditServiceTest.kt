@@ -105,10 +105,20 @@ class LoggingFirewallAuditServiceTest {
            assertThat(this, containsSubstring("Server4:10001 -> in: 1 out: 0"))
        }
 
-        // Ensure reset stats
+        // Ensure active connections carry-over, whilst everything else is reset
         with(instance.prepareStatsAndReset()) {
             assertThat(this, containsSubstring("Successful connection count: 0"))
             assertThat(this, containsSubstring("Active connection count: 13(inbound), 27(outbound)"))
+            assertThat(this, containsSubstring("Packets dropped count: 0(inbound), 0(outbound)"))
+            assertThat(this, containsSubstring("Failed connections:").not())
+            assertThat(this, containsSubstring("Accepted packets:").not())
+        }
+
+        // Wipe everything out completely
+        instance.reset()
+        with(instance.prepareStatsAndReset()) {
+            assertThat(this, containsSubstring("Successful connection count: 0"))
+            assertThat(this, containsSubstring("Active connection count: 0(inbound), 0(outbound)"))
             assertThat(this, containsSubstring("Packets dropped count: 0(inbound), 0(outbound)"))
             assertThat(this, containsSubstring("Failed connections:").not())
             assertThat(this, containsSubstring("Accepted packets:").not())

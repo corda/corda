@@ -14,6 +14,7 @@ interface FirewallAuditService : ServiceLifecycleSupport {
     fun packetDropEvent(packet: ApplicationMessage?, msg: String, direction: RoutingDirection)
     fun packetAcceptedEvent(packet: ApplicationMessage, direction: RoutingDirection)
     fun statusChangeEvent(msg: String)
+    fun reset()
 }
 
 /**

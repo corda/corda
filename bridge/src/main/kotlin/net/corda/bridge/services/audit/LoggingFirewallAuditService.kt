@@ -61,19 +61,19 @@ class LoggingFirewallAuditService(val conf: FirewallConfiguration,
                                         val accepted : ConcurrentMap<String, Pair<AtomicLong, AtomicLong>> = ConcurrentHashMap<String, Pair<AtomicLong, AtomicLong>>(),
                                         val droppedPacketsCount : ConcurrentMap<String, AtomicLong> = ConcurrentHashMap<String, AtomicLong>())
 
-    private data class State(val directionalStatsMap: EnumMap<RoutingDirection, DirectionalStats> = forEveryRoutingDirection()
-    ) {
+    private data class State(val directionalStatsMap: EnumMap<RoutingDirection, DirectionalStats> = forEveryRoutingDirection()) {
         companion object {
-            private fun forEveryRoutingDirection() : EnumMap<RoutingDirection, DirectionalStats> {
+            private fun forEveryRoutingDirection(): EnumMap<RoutingDirection, DirectionalStats> {
                 val map = RoutingDirection.values().map { it to DirectionalStats() }.toMap()
                 return EnumMap(map)
             }
         }
 
-        fun reset() : State {
+        fun reset(): State {
             val newStatsMap = forEveryRoutingDirection()
             directionalStatsMap.entries.forEach { entry ->
                 val currentStats = entry.value
+                // Carry over active connection count as they may last for prolonged periods of time.
                 val newStats = DirectionalStats().apply {
                     activeConnectionCount.putAll(currentStats.activeConnectionCount.filterValues { it.get() != 0L })
                 }
@@ -168,6 +168,11 @@ class LoggingFirewallAuditService(val conf: FirewallConfiguration,
 
     override fun statusChangeEvent(msg: String) {
         log.info(msg)
+    }
+
+    override fun reset() {
+        // Completely resets all the stats held including active connection count.
+        stateRef.set(State())
     }
 
     private fun logStatsAndReset() {
