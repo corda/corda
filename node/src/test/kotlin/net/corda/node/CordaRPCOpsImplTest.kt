@@ -32,6 +32,7 @@ import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.node.services.messaging.CURRENT_RPC_CONTEXT
 import net.corda.node.services.messaging.RpcAuthContext
+import net.corda.node.services.rpc.CheckpointDumper
 import net.corda.nodeapi.internal.config.User
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.expect
@@ -82,7 +83,7 @@ class CordaRPCOpsImplTest {
     fun setup() {
         mockNet = InternalMockNetwork(cordappPackages = listOf("net.corda.finance.contracts.asset", "net.corda.finance.schemas"))
         aliceNode = mockNet.createNode(InternalMockNodeParameters(legalName = ALICE_NAME))
-        rpc = SecureCordaRPCOps(aliceNode.services, aliceNode.smm, aliceNode.database, aliceNode.services)
+        rpc = SecureCordaRPCOps(aliceNode.services, aliceNode.smm, aliceNode.database, aliceNode.services, CheckpointDumper(aliceNode.checkpointStorage, aliceNode.database, aliceNode.services))
         CURRENT_RPC_CONTEXT.set(RpcAuthContext(InvocationContext.rpc(testActor()), buildSubject("TEST_USER", emptySet())))
 
         mockNet.runNetwork()

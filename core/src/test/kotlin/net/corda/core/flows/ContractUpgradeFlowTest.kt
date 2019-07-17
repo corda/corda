@@ -20,6 +20,7 @@ import net.corda.finance.flows.CashIssueFlow
 import net.corda.node.internal.SecureCordaRPCOps
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.Permissions.Companion.startFlow
+import net.corda.node.services.rpc.CheckpointDumper
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyContractV2
 import net.corda.testing.contracts.DummyContractV3
@@ -128,7 +129,7 @@ class ContractUpgradeFlowTest {
         return startRpcClient<CordaRPCOps>(
                 rpcAddress = startRpcServer(
                         rpcUser = user,
-                        ops = SecureCordaRPCOps(node.services, node.smm, node.database, node.services)
+                        ops = SecureCordaRPCOps(node.services, node.smm, node.database, node.services, CheckpointDumper(node.checkpointStorage, node.database, node.services))
                 ).get().broker.hostAndPort!!,
                 username = user.username,
                 password = user.password
