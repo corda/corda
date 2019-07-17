@@ -28,6 +28,7 @@ class DirectBridgeSenderService(val conf: FirewallConfiguration,
     private val statusFollower: ServiceStateCombiner = ServiceStateCombiner(listOf(auditService, artemisConnectionService, haService, signingService))
     private var statusSubscriber: Subscription? = null
     private var listenerActiveSubscriber: Subscription? = null
+    private var listenerFailureSubscriber: Subscription? = null
     private var bridgeControlListener: BridgeControlListener
 
     init {
@@ -77,12 +78,18 @@ class DirectBridgeSenderService(val conf: FirewallConfiguration,
                 listenerActiveSubscriber = bridgeControlListener.activeChange.subscribe({
                     stateHelper.active = it
                 }, { log.error("Bridge event error", it) })
+                listenerFailureSubscriber = bridgeControlListener.failure.subscribe {
+                    log.warn("BridgeControlListener experienced Artemis failure. Bouncing connection.")
+                    artemisConnectionService.bounce()
+                }
                 bridgeControlListener.start()
                 auditService.statusChangeEvent("Waiting for activation by at least one bridge control inbox registration")
             } else {
                 stateHelper.active = false
                 listenerActiveSubscriber?.unsubscribe()
                 listenerActiveSubscriber = null
+                listenerFailureSubscriber?.unsubscribe()
+                listenerFailureSubscriber = null
                 bridgeControlListener.stop()
             }
         }, { log.error("Error in state change", it) })
@@ -92,6 +99,8 @@ class DirectBridgeSenderService(val conf: FirewallConfiguration,
         stateHelper.active = false
         listenerActiveSubscriber?.unsubscribe()
         listenerActiveSubscriber = null
+        listenerFailureSubscriber?.unsubscribe()
+        listenerFailureSubscriber = null
         bridgeControlListener.stop()
         statusSubscriber?.unsubscribe()
         statusSubscriber = null
