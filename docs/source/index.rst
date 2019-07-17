@@ -30,6 +30,8 @@ We look forward to seeing what you can do with Corda!
 
 .. toctree::
    :maxdepth: 1
+   :hidden:
+   :titlesonly:
 
    release-notes
    app-upgrade-notes
@@ -40,6 +42,8 @@ We look forward to seeing what you can do with Corda!
 .. toctree::
    :caption: Development
    :maxdepth: 1
+   :hidden:
+   :titlesonly:
 
    quickstart-index.rst
    key-concepts.rst
@@ -55,6 +59,8 @@ We look forward to seeing what you can do with Corda!
 .. toctree::
    :caption: Operations
    :maxdepth: 2
+   :hidden:
+   :titlesonly:
 
    corda-nodes-index.rst
    corda-networks-index.rst
@@ -70,6 +76,8 @@ We look forward to seeing what you can do with Corda!
    :caption: Corda Network
    :maxdepth: 2
    :if_tag: htmlmode
+   :hidden:
+   :titlesonly:
 
    corda-network/index.md
    corda-network/UAT.md
@@ -87,9 +95,10 @@ We look forward to seeing what you can do with Corda!
    :caption: Participate
    :maxdepth: 2
    :if_tag: htmlmode
+   :hidden:
+   :titlesonly:
 
    contributing-index.rst
    deterministic-modules.rst
    design/design-docs-index.rst
    changelog
-
