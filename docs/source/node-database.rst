@@ -152,3 +152,10 @@ For example:
         maximumPoolSize = 10
         connectionTimeout = 50000
     }
+
+
+Database Schema Initialisation Logging
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Database initialisation and upgrade logs for Corda internal tables follows a structured format
+described in :ref:`database-initialisation-logging`.

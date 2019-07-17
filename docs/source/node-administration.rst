@@ -1,7 +1,7 @@
 Node administration
 ===================
 
-.. _hiding-sensitive-data:
+.. _node-administration-logging:
 
 
 Logging
@@ -156,6 +156,8 @@ node is running out of memory, you can give it more by running the node like thi
 The example command above would give a 1 gigabyte Java heap.
 
 .. note:: Unfortunately the JVM does not let you limit the total memory usage of Java program, just the heap size.
+
+.. _hiding-sensitive-data:
 
 Hiding sensitive data
 ---------------------
