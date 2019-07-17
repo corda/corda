@@ -17,6 +17,7 @@ import org.slf4j.LoggerFactory
 import java.io.ByteArrayInputStream
 import java.lang.instrument.ClassFileTransformer
 import java.lang.instrument.Instrumentation
+import java.lang.reflect.Field
 import java.security.ProtectionDomain
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
@@ -126,8 +127,7 @@ object CheckpointHook : ClassFileTransformer {
                         method.insertBefore("$hookClassName.${this::readEnter.name}($1, $2, $3);")
                         method.insertAfter("$hookClassName.${this::readExit.name}($1, $2, $3, (java.lang.Object)\$_);")
                         return clazz
-                    }
-                    else if (parameterTypeNames == listOf("com.esotericsoftware.kryo.io.Input", "java.lang.Object")) {
+                    } else if (parameterTypeNames == listOf("com.esotericsoftware.kryo.io.Input", "java.lang.Object")) {
                         if (method.isEmpty) continue
                         log.debug("Instrumenting on field read: ${clazz.name}")
                         method.insertBefore("$hookClassName.${this::readFieldEnter.name}($1, $2, (java.lang.Object)this);")
@@ -145,7 +145,7 @@ object CheckpointHook : ClassFileTransformer {
 
     // Global static variable that can be set programmatically by 3rd party tools/code (eg. CheckpointDumper)
     // Only relevant to READ operations (as the checkpoint id must have previously been generated)
-    var checkpointId : UUID? = null
+    var checkpointId: UUID? = null
         set(value) {
             if (value != null)
                 log.debug("Diagnosing checkpoint id: $value")
@@ -169,34 +169,62 @@ object CheckpointHook : ClassFileTransformer {
         if (that is FieldSerializer.CachedField<*>) {
             val (list, count) = events.getOrPut(Strand.currentStrand().id) { Pair(ArrayList(), AtomicInteger(0)) }
             val value = that.field.get(obj)
-            if (!that.`class`.name.endsWith("ObjectField") || value == null) {
-//                    that.field.type.isArray ||
-//                    that.field.type == java.lang.String::class.java) {
-//                        if (that.field.type == ByteArray::class.java) {
-//                            val arrayValue = that.field.get(obj) as ByteArray
-//                            log.debug("readFieldExit byte array: ${that.field.name}:${that.field.type} = ${byteArrayToHex(arrayValue)}")
-//                            byteArrayToHex(arrayValue)
-//                        } else if (that.field.type == CharArray::class.java) {
-//                            val arrayValue = that.field.get(obj) as CharArray
-//                            log.debug("readFieldExit char array: ${that.field.name}:${that.field.type} = ${arrayValue.joinToString("")}")
-//                            arrayValue.joinToString("")
-//                        } else if (that.field.type.isPrimitive) {
-//                            val value = that.field.get(obj)
-//                            log.debug("readFieldExit primitive: ${that.field.name}:${that.field.type} = $value")
-//                            value
-//                        } else {
-//                            that.field.get(obj)
-//                        }
-
+            if (!that.`class`.name.endsWith("ObjectField") || that.field.type == java.lang.String::class.java || value == null) {
                 log.debug("readFieldExit basic type value: ${that.field.name}:${that.field.type} = $value")
                 list.add(StatsEvent.BasicTypeField(that.field.name, that.field.type, value))
             } else {
-//                if (value.javaClass.isArray)
-//                    log.debug("readFieldExit array: ${value.javaClass}")
-//                else
-                    list.add(StatsEvent.ObjectField(that.field.name, that.field.type, value))
+                val objectValue = getArrayValue(that.field, value) ?: value
+                log.debug("readFieldExit object value: ${that.field.name}:${that.field.type} = $objectValue")
+                list.add(StatsEvent.ObjectField(that.field.name, that.field.type, objectValue))
             }
         }
+    }
+
+    private fun getArrayValue(field: Field, value: Any?): Any? {
+        if (field.type.isArray) {
+            log.debug("readFieldExit array type: ${field.type}, value: $value]")
+            if (field.type == CharArray::class.java) {
+                val arrayValue = value as CharArray
+                log.debug("readFieldExit char array: ${field.name}:${field.type} = ${arrayValue.joinToString("")}")
+                return arrayValue.joinToString("")
+            }
+            else if (field.type == ByteArray::class.java) {
+                val arrayValue = value as ByteArray
+                log.debug("readFieldExit byte array: ${field.name}:${field.type} = ${byteArrayToHex(arrayValue)}")
+                return byteArrayToHex(arrayValue)
+            }
+            else if (field.type == ShortArray::class.java) {
+                val arrayValue = value as ShortArray
+                log.debug("readFieldExit short array: ${field.name}:${field.type} = ${arrayValue.joinToString(",")}")
+                return arrayValue.joinToString("")
+            }
+            else if (field.type == IntArray::class.java) {
+                val arrayValue = value as IntArray
+                log.debug("readFieldExit int array: ${field.name}:${field.type} = ${arrayValue.joinToString(",")}")
+                return arrayValue.joinToString("")
+            }
+            else if (field.type == LongArray::class.java) {
+                val arrayValue = value as LongArray
+                log.debug("readFieldExit long array: ${field.name}:${field.type} = ${arrayValue.joinToString(",")}")
+                return arrayValue.joinToString("")
+            }
+            else if (field.type == FloatArray::class.java) {
+                val arrayValue = value as FloatArray
+                log.debug("readFieldExit float array: ${field.name}:${field.type} = ${arrayValue.joinToString(",")}")
+                return arrayValue.joinToString("")
+            }
+            else if (field.type == DoubleArray::class.java) {
+                val arrayValue = value as DoubleArray
+                log.debug("readFieldExit double array: ${field.name}:${field.type} = ${arrayValue.joinToString(",")}")
+                return arrayValue.joinToString("")
+            }
+            else if (field.type == BooleanArray::class.java) {
+                val arrayValue = value as BooleanArray
+                log.debug("readFieldExit boolean array: ${field.name}:${field.type} = ${arrayValue.joinToString(",")}")
+                return arrayValue.joinToString("")
+            }
+        }
+        return null
     }
 
     // https://stackoverflow.com/questions/9655181/how-to-convert-a-byte-array-to-a-hex-string-in-java
@@ -228,7 +256,7 @@ object CheckpointHook : ClassFileTransformer {
                 val sb = StringBuilder()
                 if (checkpointId != null)
                     sb.append("Checkpoint id: $checkpointId\n")
-                prettyStatsTree(0, "", readTree(list, 0).second, sb)
+                prettyStatsTree(0, StatsInfo("", Any::class.java), readTree(list, 0).second, sb)
 
                 log.info("[READ] $clazz\n$sb")
                 checkpointId = null
@@ -254,11 +282,11 @@ object CheckpointHook : ClassFileTransformer {
         if (count.decrementAndGet() == 0) {
             // always log diagnostics for explicit checkpoint ids (eg. set dumpCheckpoints)
             if ((checkpointId != null) ||
-                ((obj.javaClass.name == instrumentClassname) &&
-                (output.total() >= minimumSize) &&
-                (output.total() <= maximumSize))) {
+                    ((obj.javaClass.name == instrumentClassname) &&
+                            (output.total() >= minimumSize) &&
+                            (output.total() <= maximumSize))) {
                 val sb = StringBuilder()
-                prettyStatsTree(0, "", readTree(list, 0).second, sb)
+                prettyStatsTree(0, StatsInfo("", Any::class.java), readTree(list, 0).second, sb)
                 log.info("[WRITE] $obj\n$sb")
                 checkpointId = null
             }
@@ -267,16 +295,24 @@ object CheckpointHook : ClassFileTransformer {
         }
     }
 
-    private fun prettyStatsTree(indent: Int, field: String, statsTree: StatsTree, builder: StringBuilder) {
+    private fun prettyStatsTree(indent: Int, statsInfo: StatsInfo, statsTree: StatsTree, builder: StringBuilder) {
         when (statsTree) {
             is StatsTree.Object -> {
-                builder.append(String.format("%03d:", indent / 2))
-                builder.append(CharArray(indent) { ' ' })
-                builder.append(" $field ")
-                builder.append(statsTree.className)
-                builder.append(" ")
-                builder.append(String.format("%,d", statsTree.size))
-                builder.append("\n")
+                if (statsTree.count <= 1) {
+                    builder.append(String.format("%03d:", indent / 2))
+                    builder.append(CharArray(indent) { ' ' })
+                    builder.append(" ${statsInfo.fieldName} ")
+                    builder.append(statsTree.className)
+                    builder.append(" ")
+                    builder.append(String.format("%,d", statsTree.size))
+                    builder.append("\n")
+                }
+//                else {
+//                    builder.append(String.format("%03d:", indent / 2))
+//                    builder.append(CharArray(indent+5) { ' ' })
+//                    builder.append("Skipping ${statsInfo.fieldName} as seen ${statsTree.count} times")
+//                    builder.append("\n")q
+//                }
                 for (child in statsTree.children) {
                     prettyStatsTree(indent + 2, child.first, child.second, builder)
                 }
@@ -284,15 +320,15 @@ object CheckpointHook : ClassFileTransformer {
             is StatsTree.BasicType -> {
                 builder.append(String.format("%03d:", indent / 2))
                 builder.append(CharArray(indent) { ' ' })
-                builder.append(" $field ")
+                builder.append(" ${statsInfo.fieldName} ")
                 builder.append("${statsTree.value}")
                 builder.append("\n")
             }
             is StatsTree.Loop -> {
-                builder.append(String.format("%03d:", indent / 2))
-                builder.append(CharArray(indent) { ' ' })
-                builder.append("$field LOOP ")
-                builder.append("\n")
+//                builder.append(String.format("%03d:", indent / 2))
+//                builder.append(CharArray(indent) { ' ' })
+//                builder.append("$statsInfo LOOP [${statsTree.depth}]")
+//                builder.append("\n")
             }
         }
     }
@@ -310,14 +346,15 @@ sealed class StatsTree {
     data class Object(
             val className: String,
             val size: Long,
-            val children: List<Pair<String,StatsTree>>
+            val children: List<Pair<StatsInfo, StatsTree>>,
+            var count: Int
     ) : StatsTree()
 
     data class BasicType(
             val value: Any?
     ) : StatsTree()
 
-    class Loop : StatsTree() {
+    data class Loop(var depth: Int) : StatsTree() {
         override fun toString(): String {
             return "Loop()"
         }
@@ -331,7 +368,7 @@ fun readTree(events: List<StatsEvent>, index: Int, idMap: IdentityHashMap<Any, S
             val (nextIndex, children) = readTrees(events, index + 1, idMap)
             val exit = events[nextIndex] as StatsEvent.Exit
             require(event.className == exit.className)
-            val tree = StatsTree.Object(event.className, exit.offset - event.offset, children)
+            val tree = StatsTree.Object(event.className, exit.offset - event.offset, children, 0)
             idMap[exit.value] = tree
             return Pair(nextIndex + 1, tree)
         }
@@ -341,8 +378,10 @@ fun readTree(events: List<StatsEvent>, index: Int, idMap: IdentityHashMap<Any, S
     }
 }
 
-fun readTrees(events: List<StatsEvent>, index: Int, idMap: IdentityHashMap<Any, StatsTree>): Pair<Int, List<Pair<String,StatsTree>>> {
-    val trees = ArrayList<Pair<String,StatsTree>>()
+data class StatsInfo(val fieldName: String, val fieldType: Class<*>?)
+
+fun readTrees(events: List<StatsEvent>, index: Int, idMap: IdentityHashMap<Any, StatsTree>): Pair<Int, List<Pair<StatsInfo, StatsTree>>> {
+    val trees = ArrayList<Pair<StatsInfo, StatsTree>>()
     var i = index
     var inField = false
     while (true) {
@@ -351,7 +390,7 @@ fun readTrees(events: List<StatsEvent>, index: Int, idMap: IdentityHashMap<Any, 
             is StatsEvent.Enter -> {
                 val (nextIndex, tree) = readTree(events, i, idMap)
                 if (!inField)
-                    trees += "" to tree
+                    trees += StatsInfo("", Any::class.java) to tree
                 i = nextIndex
             }
             is StatsEvent.EnterField -> {
@@ -362,13 +401,17 @@ fun readTrees(events: List<StatsEvent>, index: Int, idMap: IdentityHashMap<Any, 
                 return Pair(i, trees)
             }
             is StatsEvent.BasicTypeField -> {
-                trees += "${event.fieldName}:${event.fieldType}" to StatsTree.BasicType(event.fieldValue)
+                trees += StatsInfo(event.fieldName, event.fieldType) to StatsTree.BasicType(event.fieldValue)
                 i++
                 inField = false
             }
             is StatsEvent.ObjectField -> {
-                val tree = idMap[event.value] ?: StatsTree.Loop()
-                trees += "${event.fieldName}:${event.fieldType}" to tree
+                val tree = idMap[event.value] ?: StatsTree.Loop(0)
+                if (tree is StatsTree.Object)
+                    tree.count++
+                if (tree is StatsTree.Loop)
+                    tree.depth++
+                trees += StatsInfo(event.fieldName, event.fieldType) to tree
                 i++
                 inField = false
             }
