@@ -10,14 +10,18 @@ Logging
 By default the node log files are stored to the ``logs`` subdirectory of the working directory and are rotated from time
 to time. You can have logging printed to the console as well by passing the ``--log-to-console`` command line flag.
 The default logging level is ``INFO`` which can be adjusted by the ``--logging-level`` command line argument. This configuration
-option will affect all modules. Hibernate (the JPA provider used by Corda) specific log messages of level ``WARN`` and above 
+option will affect all modules. Hibernate (the JPA provider used by Corda) specific log messages of level ``WARN`` and above
 will be logged to the diagnostic log file, which is stored in the same location as other log files (``logs`` subdirectory 
 by default). This is because Hibernate may log messages at WARN and ERROR that are handled internally by Corda and do not 
 need operator attention. If they do, they will be logged by Corda itself in the main node log file.
+Also few other classes have the default log level set above ``INFO`` to prevent surplus logging.
 
 It may be the case that you require to amend the log level of a particular subset of modules (e.g., if you'd like to take a
-closer look at hibernate activity). So, for more bespoke logging configuration, the logger settings can be completely overridden
+closer look at hibernate activity). So, for more bespoke logging configuration, the logger settings can be modified or completely overridden
 with a `Log4j2 <https://logging.apache.org/log4j/2.x>`_ configuration file assigned to the ``log4j.configurationFile`` system property.
+To extend Corda default logging configuration the `log4j.configurationFile`` property should contain also the ``log4j2.xml`` e.g.
+``log4j.configurationFile=log4j2.xml,path_to_custom_config.xml``.
+If you list your custom configuration file only, the default log4j2 file embedded in a Corda node is ignored and replaced by your configuration file.
 
 The node is using log4j2 asynchronous logging by default (configured via log4j2 properties file in its resources)
 to ensure that log message flushing is not slowing down the actual processing.
@@ -28,7 +32,7 @@ command line or to the ``jvmArgs`` section of the node configuration (see :doc:`
 Example
 +++++++
 
-Create a file ``sql.xml`` in the current working directory. Add the following text :
+Create a file ``sql.xml`` in the current working directory. Add the following text:
 
 .. code-block:: xml
 
@@ -51,9 +55,10 @@ Create a file ``sql.xml`` in the current working directory. Add the following te
 
 Note the addition of a logger named ``org.hibernate`` that has set this particular logger level to ``debug``.
 
-Now start the node as usual but with the additional parameter ``log4j.configurationFile`` set to the filename as above, e.g.
+Now start the node as usual but with the additional parameter ``log4j.configurationFile`` set to both
+the default Corda log4j filename (log4j2.xml) and the filename as above, e.g.
 
-``java <Your existing startup options here> -Dlog4j.configurationFile=sql.xml -jar corda.jar``
+``java <Your existing startup options here> -Dlog4j.configurationFile=log4j2.xml,sql.xml -jar corda.jar``
 
 To determine the name of the logger, for Corda objects, use the fully qualified name (e.g., to look at node output
 in more detail, use ``net.corda.node.internal.Node`` although be aware that as we have marked this class ``internal`` we
