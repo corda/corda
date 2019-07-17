@@ -91,6 +91,18 @@ class BridgeArtemisConnectionServiceImpl(val conf: FirewallConfiguration,
         statusSubscriber = null
     }
 
+    override fun bounce() {
+        state.locked {
+            if (running) {
+                log.info("Bouncing artemis")
+                started?.apply {
+                    sessionFactory.close()
+                }
+                started = null
+            }
+        }
+    }
+
     private fun stopArtemisConnection() {
         stateHelper.active = false
         val connectThread = state.locked {

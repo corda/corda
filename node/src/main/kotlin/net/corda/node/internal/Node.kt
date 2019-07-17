@@ -285,7 +285,11 @@ open class Node(configuration: NodeConfiguration,
                         configuration.enterpriseConfiguration.messagingServerConnectionConfiguration,
                         configuration.enterpriseConfiguration.messagingServerBackupAddresses)
             }
-            BridgeControlListener(configuration.p2pSslOptions, null, networkParameters.maxMessageSize, configuration.crlCheckSoftFail, configuration.enableSNI, artemisClient)
+            BridgeControlListener(configuration.p2pSslOptions, null, networkParameters.maxMessageSize, configuration.crlCheckSoftFail, configuration.enableSNI, artemisClient).apply {
+                this.failure.subscribe {
+                    errorAndTerminate("BridgeControlListener has failed. Node must restart.")
+                }
+            }
         } else {
             null
         }
