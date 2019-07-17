@@ -24,7 +24,10 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import sun.net.www.protocol.http.AuthCacheImpl
+import sun.net.www.protocol.http.AuthCacheValue
 import java.io.IOException
+import java.net.Authenticator
 import java.net.InetAddress
 import java.net.Proxy
 import java.net.URL
@@ -155,6 +158,8 @@ class NetworkMapHttpProxyTest {
         server.close()
         httpProxy.stop()
         ProxyAuthSetter.unsetInstance()
+        Authenticator.setDefault(null)
+        AuthCacheValue.setAuthCache(AuthCacheImpl())
     }
 
     @Test
