@@ -5,6 +5,7 @@ import net.corda.bridge.services.api.FirewallConfiguration
 import net.corda.bridge.services.api.RoutingDirection
 import net.corda.bridge.services.api.ServiceStateSupport
 import net.corda.bridge.services.util.ServiceStateHelper
+import net.corda.core.internal.utilities.JvmStatsHelper
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.trace
 import net.corda.nodeapi.internal.protonwrapper.messages.ApplicationMessage
@@ -32,7 +33,7 @@ class LoggingFirewallAuditService(val conf: FirewallConfiguration,
             return this.values.map { it.get() }.sum()
         }
 
-        private fun <K> prettyPrint(inbound: Map<K, AtomicLong>, outbound: Map<K, AtomicLong>, tabsCount: Int, nf: NumberFormat): String {
+        private fun <K> prettyPrint(inbound: Map<K, AtomicLong>, outbound: Map<K, AtomicLong>, nf: NumberFormat, tabsCount: Int = 2): String {
             val keys = inbound.keys.union(outbound.keys)
             val leftPad = "\t".repeat(tabsCount)
             return keys.joinToString(separator = "\n") { key ->
@@ -54,6 +55,8 @@ class LoggingFirewallAuditService(val conf: FirewallConfiguration,
     private val timedExecutor = Executors.newScheduledThreadPool(1)
 
     private val executionLock = ReentrantLock()
+
+    private val jvmStatsHelper = JvmStatsHelper(dumpGcStats = true, dumpMemoryStats = true, dumpOsStats = true)
 
     private data class DirectionalStats(val successfulConnectionCount : ConcurrentMap<InetSocketAddress, AtomicLong> = ConcurrentHashMap<InetSocketAddress, AtomicLong>(),
                                         val failedConnectionCount : ConcurrentMap<InetSocketAddress, AtomicLong> = ConcurrentHashMap<InetSocketAddress, AtomicLong>(),
@@ -180,6 +183,7 @@ class LoggingFirewallAuditService(val conf: FirewallConfiguration,
             try {
                 val statsStr = prepareStatsAndReset()
                 log.info(statsStr)
+                log.info(jvmStatsHelper.stats)
             } catch (ex: Exception) {
                 // This is running by the scheduled execution service and must not fail
                 log.error("Unexpected exception when logging stats", ex)
@@ -233,11 +237,11 @@ class LoggingFirewallAuditService(val conf: FirewallConfiguration,
                                 "\tPackets dropped count: ${nf.format(dirStatsIn.droppedPacketsCount.sumValues())}(inbound), ${nf.format(dirStatsOut.droppedPacketsCount.sumValues())}(outbound)"
 
         val breakDownTrafficStr = "Traffic breakdown:\n" +
-                dirStatsIn.activeConnectionCount.keys.union(dirStatsOut.activeConnectionCount.keys).whenNonEmptyPrint {  "\tLive connections:\n" + "${prettyPrint(dirStatsIn.activeConnectionCount, dirStatsOut.activeConnectionCount, 2, nf)}\n" } +
-                dirStatsIn.successfulConnectionCount.keys.union(dirStatsOut.successfulConnectionCount.keys).whenNonEmptyPrint { "\tSuccessful connections:\n" + "${prettyPrint(dirStatsIn.successfulConnectionCount, dirStatsOut.successfulConnectionCount, 2, nf)}\n" } +
-                dirStatsIn.failedConnectionCount.keys.union(dirStatsOut.failedConnectionCount.keys).whenNonEmptyPrint { "\tFailed connections:\n" + "${prettyPrint(dirStatsIn.failedConnectionCount, dirStatsOut.failedConnectionCount, 2, nf)}\n" } +
-                inAcceptedPackets.keys.union(outAcceptedPackets.keys).whenNonEmptyPrint { "\tAccepted packets:\n" + "${prettyPrint(inAcceptedPackets, outAcceptedPackets, 2, nf)}\n" } +
-                dirStatsIn.droppedPacketsCount.keys.union(dirStatsOut.droppedPacketsCount.keys).whenNonEmptyPrint { "\tDropped packets:\n" + "${prettyPrint(dirStatsIn.droppedPacketsCount, dirStatsOut.droppedPacketsCount, 2, nf)}\n" }
+                dirStatsIn.activeConnectionCount.keys.union(dirStatsOut.activeConnectionCount.keys).whenNonEmptyPrint {  "\tLive connections:\n" + "${prettyPrint(dirStatsIn.activeConnectionCount, dirStatsOut.activeConnectionCount, nf)}\n" } +
+                dirStatsIn.successfulConnectionCount.keys.union(dirStatsOut.successfulConnectionCount.keys).whenNonEmptyPrint { "\tSuccessful connections:\n" + "${prettyPrint(dirStatsIn.successfulConnectionCount, dirStatsOut.successfulConnectionCount, nf)}\n" } +
+                dirStatsIn.failedConnectionCount.keys.union(dirStatsOut.failedConnectionCount.keys).whenNonEmptyPrint { "\tFailed connections:\n" + "${prettyPrint(dirStatsIn.failedConnectionCount, dirStatsOut.failedConnectionCount, nf)}\n" } +
+                inAcceptedPackets.keys.union(outAcceptedPackets.keys).whenNonEmptyPrint { "\tAccepted packets:\n" + "${prettyPrint(inAcceptedPackets, outAcceptedPackets, nf)}\n" } +
+                dirStatsIn.droppedPacketsCount.keys.union(dirStatsOut.droppedPacketsCount.keys).whenNonEmptyPrint { "\tDropped packets:\n" + "${prettyPrint(dirStatsIn.droppedPacketsCount, dirStatsOut.droppedPacketsCount, nf)}\n" }
 
         return durationStr + "\n" + runtimeStr + "\n" + trafficTotalsStr + "\n" + breakDownTrafficStr
     }
