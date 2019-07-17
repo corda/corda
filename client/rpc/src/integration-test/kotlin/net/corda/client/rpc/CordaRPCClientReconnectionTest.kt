@@ -49,24 +49,24 @@ class CordaRPCClientReconnectionTest {
                     maxReconnectAttempts = 5
             ))
 
-            val connection = client.start(rpcUser.username, rpcUser.password, gracefulReconnect = true)
-            val rpcOps = connection.proxy
-            val networkParameters = rpcOps.networkParameters
-            val cashStatesFeed = rpcOps.vaultTrack(Cash.State::class.java)
-            cashStatesFeed.updates.subscribe { latch.countDown() }
-            rpcOps.startTrackedFlow(::CashIssueFlow, 10.DOLLARS, OpaqueBytes.of(0), defaultNotaryIdentity).returnValue.get()
+            client.start(rpcUser.username, rpcUser.password, gracefulReconnect = true).use {
+                val rpcOps = it.proxy
+                val networkParameters = rpcOps.networkParameters
+                val cashStatesFeed = rpcOps.vaultTrack(Cash.State::class.java)
+                cashStatesFeed.updates.subscribe { latch.countDown() }
+                rpcOps.startTrackedFlow(::CashIssueFlow, 10.DOLLARS, OpaqueBytes.of(0), defaultNotaryIdentity).returnValue.get()
 
-            node.stop()
-            startNode()
+                node.stop()
+                startNode()
 
-            rpcOps.startTrackedFlow(::CashIssueFlow, 10.DOLLARS, OpaqueBytes.of(0), defaultNotaryIdentity).returnValue.get()
+                rpcOps.startTrackedFlow(::CashIssueFlow, 10.DOLLARS, OpaqueBytes.of(0), defaultNotaryIdentity).returnValue.get()
 
-            val networkParametersAfterCrash = rpcOps.networkParameters
-            assertThat(networkParameters).isEqualTo(networkParametersAfterCrash)
-            assertTrue {
-                latch.await(2, TimeUnit.SECONDS)
+                val networkParametersAfterCrash = rpcOps.networkParameters
+                assertThat(networkParameters).isEqualTo(networkParametersAfterCrash)
+                assertTrue {
+                    latch.await(2, TimeUnit.SECONDS)
+                }
             }
-            connection.close()
         }
     }
 
@@ -89,23 +89,23 @@ class CordaRPCClientReconnectionTest {
                     maxReconnectAttempts = 5
             ))
 
-            val connection = client.start(rpcUser.username, rpcUser.password, true)
-            val rpcOps = connection.proxy
-            val cashStatesFeed = rpcOps.vaultTrack(Cash.State::class.java)
-            val subscription = cashStatesFeed.updates.subscribe { latch.countDown() }
-            rpcOps.startTrackedFlow(::CashIssueFlow, 10.DOLLARS, OpaqueBytes.of(0), defaultNotaryIdentity).returnValue.get()
+            client.start(rpcUser.username, rpcUser.password, true).use {
+                val rpcOps = it.proxy
+                val cashStatesFeed = rpcOps.vaultTrack(Cash.State::class.java)
+                val subscription = cashStatesFeed.updates.subscribe { latch.countDown() }
+                rpcOps.startTrackedFlow(::CashIssueFlow, 10.DOLLARS, OpaqueBytes.of(0), defaultNotaryIdentity).returnValue.get()
 
-            node.stop()
-            startNode()
+                node.stop()
+                startNode()
 
-            subscription.unsubscribe()
+                subscription.unsubscribe()
 
-            rpcOps.startTrackedFlow(::CashIssueFlow, 10.DOLLARS, OpaqueBytes.of(0), defaultNotaryIdentity).returnValue.get()
+                rpcOps.startTrackedFlow(::CashIssueFlow, 10.DOLLARS, OpaqueBytes.of(0), defaultNotaryIdentity).returnValue.get()
 
-            assertFalse {
-                latch.await(4, TimeUnit.SECONDS)
+                assertFalse {
+                    latch.await(4, TimeUnit.SECONDS)
+                }
             }
-            connection.close()
         }
     }
 
@@ -129,24 +129,24 @@ class CordaRPCClientReconnectionTest {
                     maxReconnectAttempts = 5
             ))
 
-            val connection = client.start(rpcUser.username, rpcUser.password, true)
-            val rpcOps = connection.proxy
-            val networkParameters = rpcOps.networkParameters
-            val cashStatesFeed = rpcOps.vaultTrack(Cash.State::class.java)
-            cashStatesFeed.updates.subscribe { latch.countDown() }
-            rpcOps.startTrackedFlow(::CashIssueFlow, 10.DOLLARS, OpaqueBytes.of(0), defaultNotaryIdentity).returnValue.get()
+            client.start(rpcUser.username, rpcUser.password, true).use {
+                val rpcOps = it.proxy
+                val networkParameters = rpcOps.networkParameters
+                val cashStatesFeed = rpcOps.vaultTrack(Cash.State::class.java)
+                cashStatesFeed.updates.subscribe { latch.countDown() }
+                rpcOps.startTrackedFlow(::CashIssueFlow, 10.DOLLARS, OpaqueBytes.of(0), defaultNotaryIdentity).returnValue.get()
 
-            node.stop()
-            startNode(addresses[1])
+                node.stop()
+                startNode(addresses[1])
 
-            rpcOps.startTrackedFlow(::CashIssueFlow, 10.DOLLARS, OpaqueBytes.of(0), defaultNotaryIdentity).returnValue.get()
+                rpcOps.startTrackedFlow(::CashIssueFlow, 10.DOLLARS, OpaqueBytes.of(0), defaultNotaryIdentity).returnValue.get()
 
-            val networkParametersAfterCrash = rpcOps.networkParameters
-            assertThat(networkParameters).isEqualTo(networkParametersAfterCrash)
-            assertTrue {
-                latch.await(2, TimeUnit.SECONDS)
+                val networkParametersAfterCrash = rpcOps.networkParameters
+                assertThat(networkParameters).isEqualTo(networkParametersAfterCrash)
+                assertTrue {
+                    latch.await(2, TimeUnit.SECONDS)
+                }
             }
-            connection.close()
         }
     }
 
