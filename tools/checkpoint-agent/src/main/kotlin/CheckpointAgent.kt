@@ -21,7 +21,6 @@ import java.security.ProtectionDomain
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
-import kotlin.collections.LinkedHashMap
 
 class CheckpointAgent {
 
@@ -125,7 +124,7 @@ object CheckpointHook : ClassFileTransformer {
                         if (method.isEmpty) continue
                         log.debug("Instrumenting on read: ${clazz.name}")
                         method.insertBefore("$hookClassName.${this::readEnter.name}($1, $2, $3);")
-                        method.insertAfter("$hookClassName.${this::readExit.name}($1, $2, $3);")
+                        method.insertAfter("$hookClassName.${this::readExit.name}($1, $2, $3, (java.lang.Object)\$_);")
                         return clazz
                     }
                     else if (parameterTypeNames == listOf("com.esotericsoftware.kryo.io.Input", "java.lang.Object")) {
@@ -159,14 +158,9 @@ object CheckpointHook : ClassFileTransformer {
     @JvmStatic
     fun readFieldEnter(input: Input, obj: Any?, that: Object) {
         if (that is FieldSerializer.CachedField<*>) {
+            log.debug("readFieldEnter object: ${that.field.name}:${that.field.type}")
             val (list, count) = events.getOrPut(Strand.currentStrand().id) { Pair(ArrayList(), AtomicInteger(0)) }
-            if (that.`class`.name.endsWith("ObjectField") &&
-                    that.field.type != java.lang.String::class.java &&
-                    !that.field.type.isArray) {
-                log.debug("readFieldEnter object: ${that.field.name}:${that.field.type}")
-                list.add(StatsEvent.EnterField(that.field.name, that.field.type))
-            }
-            count.incrementAndGet()
+            list.add(StatsEvent.EnterField(that.field.name, that.field.type))
         }
     }
 
@@ -174,37 +168,34 @@ object CheckpointHook : ClassFileTransformer {
     fun readFieldExit(input: Input, obj: Any?, that: Object) {
         if (that is FieldSerializer.CachedField<*>) {
             val (list, count) = events.getOrPut(Strand.currentStrand().id) { Pair(ArrayList(), AtomicInteger(0)) }
-            if (!that.`class`.name.endsWith("ObjectField") ||
-                    that.field.type.isArray ||
-                    that.field.type == java.lang.String::class.java) {
-                val basicTypeValue =
-                    if (that.field.type == ByteArray::class.java) {
-                        val arrayValue = that.field.get(obj) as ByteArray
-                        log.debug("readFieldExit byte array: ${that.field.name}:${that.field.type} = ${byteArrayToHex(arrayValue)}")
-                        byteArrayToHex(arrayValue)
-                    }
-                    else if (that.field.type == CharArray::class.java) {
-                        val arrayValue = that.field.get(obj) as CharArray
-                        log.debug("readFieldExit char array: ${that.field.name}:${that.field.type} = ${arrayValue.joinToString("")}")
-                        arrayValue.joinToString("")
-                    }
-                    else if (that.field.type.isPrimitive){
-                        val value = that.field.get(obj)
-                        log.debug("readFieldExit primitive: ${that.field.name}:${that.field.type} = $value")
-                        value
-                    }
-                    else {
-                        null
-                    }
-                if (basicTypeValue != null) {
-                    log.debug("readFieldExit basic type value: ${that.field.name}:${that.field.type} = $basicTypeValue")
-                    list.add(StatsEvent.BasicTypeField(that.field.name, that.field.type, basicTypeValue))
-                }
+            val value = that.field.get(obj)
+            if (!that.`class`.name.endsWith("ObjectField") || value == null) {
+//                    that.field.type.isArray ||
+//                    that.field.type == java.lang.String::class.java) {
+//                        if (that.field.type == ByteArray::class.java) {
+//                            val arrayValue = that.field.get(obj) as ByteArray
+//                            log.debug("readFieldExit byte array: ${that.field.name}:${that.field.type} = ${byteArrayToHex(arrayValue)}")
+//                            byteArrayToHex(arrayValue)
+//                        } else if (that.field.type == CharArray::class.java) {
+//                            val arrayValue = that.field.get(obj) as CharArray
+//                            log.debug("readFieldExit char array: ${that.field.name}:${that.field.type} = ${arrayValue.joinToString("")}")
+//                            arrayValue.joinToString("")
+//                        } else if (that.field.type.isPrimitive) {
+//                            val value = that.field.get(obj)
+//                            log.debug("readFieldExit primitive: ${that.field.name}:${that.field.type} = $value")
+//                            value
+//                        } else {
+//                            that.field.get(obj)
+//                        }
+
+                log.debug("readFieldExit basic type value: ${that.field.name}:${that.field.type} = $value")
+                list.add(StatsEvent.BasicTypeField(that.field.name, that.field.type, value))
+            } else {
+//                if (value.javaClass.isArray)
+//                    log.debug("readFieldExit array: ${value.javaClass}")
+//                else
+                    list.add(StatsEvent.ObjectField(that.field.name, that.field.type, value))
             }
-            else {
-                list.add(StatsEvent.ObjectField(that.field.name, that.field.type))
-            }
-            count.incrementAndGet()
         }
     }
 
@@ -225,10 +216,10 @@ object CheckpointHook : ClassFileTransformer {
     }
 
     @JvmStatic
-    fun readExit(kryo: Kryo, input: Input, clazz: Class<*>) {
+    fun readExit(kryo: Kryo, input: Input, clazz: Class<*>, value: Any?) {
         val (list, count) = events[Strand.currentStrand().id]!!
-        list.add(StatsEvent.Exit(clazz.name, input.total()))
-        log.debug("readExit: strandId[${Strand.currentStrand().id}], eventCount[$count]")
+        list.add(StatsEvent.Exit(clazz.name, input.total(), value))
+        log.debug("readExit: clazz[$clazz], strandId[${Strand.currentStrand().id}], eventCount[$count]")
         if (count.decrementAndGet() == 0) {
             if ((checkpointId != null) ||
                     ((clazz.name == instrumentClassname) &&
@@ -249,7 +240,7 @@ object CheckpointHook : ClassFileTransformer {
 
     @JvmStatic
     fun writeEnter(kryo: Kryo, output: Output, obj: Any) {
-        val (list, count) = events.getOrPut(Strand.currentStrand().id) { Pair(ArrayList(), AtomicInteger(0)) }
+        val (list, count) = events.getOrPut(-Strand.currentStrand().id) { Pair(ArrayList(), AtomicInteger(0)) }
         log.debug("writeEnter: adding event for clazz: ${obj.javaClass.name} (strandId: ${Strand.currentStrand().id})")
         list.add(StatsEvent.Enter(obj.javaClass.name, output.total()))
         count.incrementAndGet()
@@ -257,8 +248,9 @@ object CheckpointHook : ClassFileTransformer {
 
     @JvmStatic
     fun writeExit(kryo: Kryo, output: Output, obj: Any) {
-        val (list, count) = events[Strand.currentStrand().id]!!
-        list.add(StatsEvent.Exit(obj.javaClass.name, output.total()))
+        val (list, count) = events[-Strand.currentStrand().id]!!
+        list.add(StatsEvent.Exit(obj.javaClass.name, output.total(), null))
+        log.debug("writeExit: clazz[${obj.javaClass.name}], strandId[${Strand.currentStrand().id}], eventCount[$count]")
         if (count.decrementAndGet() == 0) {
             // always log diagnostics for explicit checkpoint ids (eg. set dumpCheckpoints)
             if ((checkpointId != null) ||
@@ -271,7 +263,7 @@ object CheckpointHook : ClassFileTransformer {
                 checkpointId = null
             }
             log.debug("writeExit: clearing event for clazz: ${obj.javaClass.name} (strandId: ${Strand.currentStrand().id})")
-            events.remove(Strand.currentStrand().id)
+            events.remove(-Strand.currentStrand().id)
         }
     }
 
@@ -286,14 +278,20 @@ object CheckpointHook : ClassFileTransformer {
                 builder.append(String.format("%,d", statsTree.size))
                 builder.append("\n")
                 for (child in statsTree.children) {
-                    prettyStatsTree(indent + 2, child.key, child.value, builder)
+                    prettyStatsTree(indent + 2, child.first, child.second, builder)
                 }
             }
-            is StatsTree.Primitive -> {
+            is StatsTree.BasicType -> {
                 builder.append(String.format("%03d:", indent / 2))
                 builder.append(CharArray(indent) { ' ' })
                 builder.append(" $field ")
                 builder.append("${statsTree.value}")
+                builder.append("\n")
+            }
+            is StatsTree.Loop -> {
+                builder.append(String.format("%03d:", indent / 2))
+                builder.append(CharArray(indent) { ' ' })
+                builder.append("$field LOOP ")
                 builder.append("\n")
             }
         }
@@ -302,32 +300,40 @@ object CheckpointHook : ClassFileTransformer {
 
 sealed class StatsEvent {
     data class Enter(val className: String, val offset: Long) : StatsEvent()
-    data class Exit(val className: String, val offset: Long) : StatsEvent()
+    data class Exit(val className: String, val offset: Long, val value: Any?) : StatsEvent()
     data class BasicTypeField(val fieldName: String, val fieldType: Class<*>?, val fieldValue: Any?) : StatsEvent()
     data class EnterField(val fieldName: String, val fieldType: Class<*>?) : StatsEvent()
-    data class ObjectField(val fieldName: String, val fieldType: Class<*>?) : StatsEvent()
+    data class ObjectField(val fieldName: String, val fieldType: Class<*>?, val value: Any) : StatsEvent()
 }
 
 sealed class StatsTree {
     data class Object(
             val className: String,
             val size: Long,
-            val children: Map<String,StatsTree>
+            val children: List<Pair<String,StatsTree>>
     ) : StatsTree()
 
-    data class Primitive(
+    data class BasicType(
             val value: Any?
     ) : StatsTree()
+
+    class Loop : StatsTree() {
+        override fun toString(): String {
+            return "Loop()"
+        }
+    }
 }
 
-fun readTree(events: List<StatsEvent>, index: Int): Pair<Int, StatsTree> {
+fun readTree(events: List<StatsEvent>, index: Int, idMap: IdentityHashMap<Any, StatsTree> = IdentityHashMap()): Pair<Int, StatsTree> {
     val event = events[index]
     when (event) {
         is StatsEvent.Enter -> {
-            val (nextIndex, children) = readTrees(events, index + 1)
+            val (nextIndex, children) = readTrees(events, index + 1, idMap)
             val exit = events[nextIndex] as StatsEvent.Exit
             require(event.className == exit.className)
-            return Pair(nextIndex + 1, StatsTree.Object(event.className, exit.offset - event.offset, children))
+            val tree = StatsTree.Object(event.className, exit.offset - event.offset, children)
+            idMap[exit.value] = tree
+            return Pair(nextIndex + 1, tree)
         }
         else -> {
             throw IllegalStateException("Wasn't expecting event: $event")
@@ -335,32 +341,36 @@ fun readTree(events: List<StatsEvent>, index: Int): Pair<Int, StatsTree> {
     }
 }
 
-fun readTrees(events: List<StatsEvent>, index: Int): Pair<Int, Map<String,StatsTree>> {
-    val trees = LinkedHashMap<String,StatsTree>()
+fun readTrees(events: List<StatsEvent>, index: Int, idMap: IdentityHashMap<Any, StatsTree>): Pair<Int, List<Pair<String,StatsTree>>> {
+    val trees = ArrayList<Pair<String,StatsTree>>()
     var i = index
-    var namedTree: StatsTree? = null
+    var inField = false
     while (true) {
         val event = events.getOrNull(i)
         when (event) {
             is StatsEvent.Enter -> {
-                val (nextIndex, tree) = readTree(events, i)
-                namedTree = tree
+                val (nextIndex, tree) = readTree(events, i, idMap)
+                if (!inField)
+                    trees += "" to tree
                 i = nextIndex
             }
             is StatsEvent.EnterField -> {
                 i++
+                inField = true
             }
             is StatsEvent.Exit -> {
                 return Pair(i, trees)
             }
             is StatsEvent.BasicTypeField -> {
-                trees["${event.fieldName}:${event.fieldType}"] = StatsTree.Primitive(event.fieldValue)
+                trees += "${event.fieldName}:${event.fieldType}" to StatsTree.BasicType(event.fieldValue)
                 i++
+                inField = false
             }
             is StatsEvent.ObjectField -> {
-                if (namedTree != null)
-                    trees["${event.fieldName}:${event.fieldType}"] = namedTree
+                val tree = idMap[event.value] ?: StatsTree.Loop()
+                trees += "${event.fieldName}:${event.fieldType}" to tree
                 i++
+                inField = false
             }
             null -> {
                 return Pair(i, trees)
