@@ -80,6 +80,7 @@ class CheckpointDumper(private val checkpointStorage: CheckpointStorage, private
             setMixInAnnotation(SessionId::class.java, SessionIdMixin::class.java)
             setMixInAnnotation(SignedTransaction::class.java, SignedTransactionMixin::class.java)
             setMixInAnnotation(WireTransaction::class.java, WireTransactionMixin::class.java)
+            setMixInAnnotation(FlowSessionInternal::class.java, FlowSessionInternalMixin::class.java)
         })
         val prettyPrinter = DefaultPrettyPrinter().apply {
             indentArraysWith(DefaultIndenter.SYSTEM_LINEFEED_INSTANCE)
@@ -93,19 +94,6 @@ class CheckpointDumper(private val checkpointStorage: CheckpointStorage, private
         try {
             if (lock.getAndIncrement() == 0 && !file.exists()) {
                 database.transaction {
-
-                    //                    checkpointStorage.forEach { checkpoint ->
-//                        ZipOutputStream(Files.newOutputStream(file)).use { zip ->
-////                                val checkpoint = stream.serializedFiber.checkpointDeserialize(context = checkpointSerializationContext)
-//                                val json = checkpoint.toJson(checkpoint.flowId, now)
-//                                val jsonBytes = writer.writeValueAsBytes(json)
-//                                zip.putNextEntry(ZipEntry("${json.flowLogicClass.simpleName}-${runId.uuid}.json"))
-//                                zip.write(jsonBytes)
-//                                zip.closeEntry()
-//                        }
-//                        true
-//                    }
-
                     checkpointStorage.getAllCheckpoints().use { stream ->
                         ZipOutputStream(Files.newOutputStream(file)).use { zip ->
                             stream.forEach { (runId, serialisedCheckpoint) ->
@@ -113,10 +101,14 @@ class CheckpointDumper(private val checkpointStorage: CheckpointStorage, private
                                         context = SerializationDefaults.CHECKPOINT_CONTEXT.withTokenContext(checkpointSerializationContext)
                                 )
                                 val json = checkpoint.toJson(runId, now)
-                                val jsonBytes = writer.writeValueAsBytes(json)
-                                zip.putNextEntry(ZipEntry("${json.topLevelFlowClass.simpleName}-${runId}.json"))
-                                zip.write(jsonBytes)
-                                zip.closeEntry()
+                                try {
+                                    val jsonBytes = writer.writeValueAsBytes(json)
+                                    zip.putNextEntry(ZipEntry("${json.topLevelFlowClass.simpleName}-$runId.json"))
+                                    zip.write(jsonBytes)
+                                    zip.closeEntry()
+                                } catch (e: Exception) {
+                                    log.info("Failed to output json checkpoint dump for ${json.topLevelFlowClass.simpleName}-$runId", e)
+                                }
                             }
                         }
                     }
@@ -130,16 +122,6 @@ class CheckpointDumper(private val checkpointStorage: CheckpointStorage, private
     }
 
     private fun FlowStateMachineImpl<*>.toJson(id: String, now: Instant): CheckpointJson {
-        // there is no flow state value in 3.3
-//        val (fiber, flowLogic) = when (flowState) {
-//            is FlowState.Unstarted -> {
-//                null to flowState.frozenFlowLogic.checkpointDeserialize(context = checkpointSerializationContext)
-//            }
-//            is FlowState.Started -> {
-//                val fiber = flowState.frozenFiber.checkpointDeserialize(context = checkpointSerializationContext)
-//                fiber to fiber.logic
-//            }
-//        }
         val (fiber, flowLogic) = this to this.logic
         // Poke into Quasar's stack and find the object references to the sub-flows so that we can correctly get the current progress
         // step for each sub-call.
@@ -154,60 +136,28 @@ class CheckpointDumper(private val checkpointStorage: CheckpointStorage, private
                             it
                     )
                 }
+
+        val activeSessions = openSessions.mapNotNull { (key, session) ->
+            ActiveSession(
+                    key.second,
+                    session.ourSessionId,
+                    session.receivedMessages.toList(),
+                    (session.state as? FlowSessionState.Initiated)?.peerSessionId
+            )
+        }
+
         return CheckpointJson(
                 id,
                 flowLogic.javaClass,
                 stackObjects,
-//                (flowState as? FlowState.Started)?.flowIORequest?.toSuspendedOn(suspendedTimestamp(), now),
+                fiber.waitingForResponse?.toSuspendedOn(suspendedTimestamp(), now),
                 this.context.origin.toOrigin(),
                 ourIdentity,
-                openSessions.mapNotNull { (key, session) -> ActiveSession(key.second, session.ourSessionId, session.receivedMessages.toList(), (session.state as? FlowSessionState.Initiated)?.peerSessionId) }
+                activeSessions
         )
     }
 
-    fun <T> Any.declaredField(name: String): DeclaredField<T> = DeclaredField(javaClass, name, this)
-
-    class DeclaredField<T>(clazz: Class<*>, name: String, private val receiver: Any?) {
-        private val javaField = findField(name, clazz)
-        var value: T
-            get() {
-                synchronized(this) {
-                    return javaField.accessible { uncheckedCast<Any?, T>(get(receiver)) }
-                }
-            }
-            set(value) {
-                synchronized(this) {
-                    javaField.accessible {
-                        set(receiver, value)
-                    }
-                }
-            }
-        val name: String = javaField.name
-
-        private fun <RESULT> Field.accessible(action: Field.() -> RESULT): RESULT {
-            val accessible = isAccessible
-            isAccessible = true
-            try {
-                return action(this)
-            } finally {
-                isAccessible = accessible
-            }
-        }
-
-        @Throws(NoSuchFieldException::class)
-        private fun findField(fieldName: String, clazz: Class<*>?): Field {
-            if (clazz == null) {
-                throw NoSuchFieldException(fieldName)
-            }
-            return try {
-                return clazz.getDeclaredField(fieldName)
-            } catch (e: NoSuchFieldException) {
-                findField(fieldName, clazz.superclass)
-            }
-        }
-    }
-
-//    private fun Checkpoint.suspendedTimestamp(): Instant = invocationContext.trace.invocationId.timestamp
+    private fun FlowStateMachineImpl<*>.suspendedTimestamp(): Instant = context.trace.invocationId.timestamp
 
     @Suppress("unused")
     private class FlowCall(val flowClass: Class<*>, val progressStep: String?, val flowLogic: FlowLogic<*>)
@@ -237,7 +187,7 @@ class CheckpointDumper(private val checkpointStorage: CheckpointStorage, private
             val flowId: String,
             val topLevelFlowClass: Class<FlowLogic<*>>,
             val flowCallStack: List<FlowCall>,
-//            val suspendedOn: SuspendedOn?,
+            val suspendedOn: SuspendedOn?,
             val origin: Origin,
             val ourIdentity: Party,
             val activeSessions: List<ActiveSession>
@@ -246,19 +196,10 @@ class CheckpointDumper(private val checkpointStorage: CheckpointStorage, private
     @Suppress("unused")
     @JsonInclude(Include.NON_NULL)
     private class SuspendedOn(
-            val send: List<SendJson>? = null,
-//            val receive: NonEmptySet<FlowSession>? = null,
             val receive: ReceiveOnly? = null,
-//            val sendAndReceive: List<SendJson>? = null,
-            val sendAndReceive: List<SendAndReceiveJson>? = null,
+            val sendAndReceive: SendAndReceiveJson? = null,
             val waitForLedgerCommit: SecureHash? = null,
-            val receiveAll: ReceiveAll? = null,
-            val waitForStateConsumption: Set<StateRef>? = null,
-            val getFlowInfo: NonEmptySet<FlowSession>? = null,
-            val sleepTill: Instant? = null/*,
-            val waitForSessionConfirmations: FlowIORequest.WaitForSessionConfirmations? = null,
-            val customOperation: FlowIORequest.ExecuteAsyncOperation<*>? = null,
-            val forceCheckpoint: FlowIORequest.ForceCheckpoint? = null*/
+            val receiveAll: ReceiveAll? = null
     ) {
         @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss", timezone = "UTC")
         lateinit var suspendedTimestamp: Instant
@@ -266,47 +207,24 @@ class CheckpointDumper(private val checkpointStorage: CheckpointStorage, private
     }
 
     @Suppress("unused")
-    private class SendJson(val session: FlowSession, val sentPayloadType: Class<*>?, val sentPayload: Any?)
-
-    @Suppress("unused")
     private class SendAndReceiveJson(val session: FlowSession, val sentPayloadType: Class<*>?, val sentPayload: Any?, val receivedPayloadType: Class<*>?)
 
-    private fun FlowIORequest.toSuspendedOn(suspendedTimestamp: Instant, now: Instant): SuspendedOn {
-        fun SendOnly.toJson(): List<SendJson> {
+    private fun WaitingRequest.toSuspendedOn(suspendedTimestamp: Instant, now: Instant): SuspendedOn {
+        fun SendAndReceive.toJson(): SendAndReceiveJson {
             val payload = when (this.message) {
                 is ExistingSessionMessage -> (message.payload as? DataSessionMessage)?.payload?.deserialize()
                 is InitialSessionMessage -> message.firstPayload?.deserialize()
             }
-            return listOf(SendJson(session.flowSession, payload?.javaClass, payload))
-        }
-
-        fun SendAndReceive.toJson(): List<SendAndReceiveJson> {
-            val payload = when (this.message) {
-                is ExistingSessionMessage -> (message.payload as? DataSessionMessage)?.payload?.deserialize()
-                is InitialSessionMessage -> message.firstPayload?.deserialize()
-            }
-            return listOf(SendAndReceiveJson(session.flowSession, payload?.javaClass, payload, userReceiveType))
+            return SendAndReceiveJson(session.flowSession, payload?.javaClass, payload, userReceiveType)
         }
         return when (this) {
-            is SendOnly -> SuspendedOn(send = this.toJson())
             is ReceiveOnly -> SuspendedOn(receive = this)
             is SendAndReceive -> SuspendedOn(sendAndReceive = this.toJson())
             is WaitForLedgerCommit -> SuspendedOn(waitForLedgerCommit = hash)
-            // this one needs changing / not sure what it links to
             is ReceiveAll -> SuspendedOn(receiveAll = this)
-//            is FlowIORequest.GetFlowInfo -> SuspendedOn(getFlowInfo = sessions)
-            is Sleep -> SuspendedOn(sleepTill = until)
-            else -> {
-                SuspendedOn()
-            }
-//            is FlowIORequest.WaitForSessionConfirmations -> SuspendedOn(waitForSessionConfirmations = this)
-//            is FlowIORequest.ForceCheckpoint -> SuspendedOn(forceCheckpoint = this)
-//            is FlowIORequest.ExecuteAsyncOperation -> {
-//                when (operation) {
-//                    is WaitForStateConsumption -> SuspendedOn(waitForStateConsumption = (operation as WaitForStateConsumption).stateRefs)
-//                    else -> SuspendedOn(customOperation = this)
-//                }
-//            }
+            // should not be possible but the compiler wont let it through without this case
+            else -> SuspendedOn()
+
         }.also {
             it.suspendedTimestamp = suspendedTimestamp
             it.secondsSpentWaiting = TimeUnit.MILLISECONDS.toSeconds(Duration.between(suspendedTimestamp, now).toMillis())
@@ -317,29 +235,9 @@ class CheckpointDumper(private val checkpointStorage: CheckpointStorage, private
     private class ActiveSession(
             val peer: Party,
             val ourSessionId: SessionId,
-//            val receivedMessages: List<DataSessionMessage>,
             val receivedMessages: List<ReceivedSessionMessage>,
-//            val errors: List<FlowError>,
-//            val peerFlowInfo: FlowInfo,
             val peerSessionId: SessionId?
     )
-
-//    private fun SessionState.toActiveSession(sessionId: SessionId): ActiveSession? {
-//        return if (this is SessionState.Initiated) {
-//            val peerSessionId = (initiatedState as? InitiatedSessionState.Live)?.peerSinkSessionId
-//            ActiveSession(peerParty, sessionId, receivedMessages, errors, peerFlowInfo, peerSessionId)
-//        } else {
-//            null
-//        }
-//    }
-//
-//    private fun FlowSessionState.toActiveSession(sessionId: SessionId): ActiveSession? {
-//        return if (this is FlowSessionState.Initiated) {
-//            ActiveSession(peerParty, sessionId, context, peerSessionId)
-//        } else {
-//            null
-//        }
-//    }
 
     @Suppress("unused")
     private interface SessionIdMixin {
@@ -370,7 +268,6 @@ class CheckpointDumper(private val checkpointStorage: CheckpointStorage, private
         override fun serialize(value: FlowSessionImpl, gen: JsonGenerator, serializers: SerializerProvider) {
             gen.jsonObject {
                 writeObjectField("peer", value.counterparty)
-//                writeObjectField("ourSessionId", value.sourceSessionId)
             }
         }
 
@@ -458,4 +355,52 @@ class CheckpointDumper(private val checkpointStorage: CheckpointStorage, private
             val attachments: List<SecureHash>,
             val privacySalt: PrivacySalt
     )
+
+    @JsonIgnoreProperties("flow", "fiber")
+    @JsonAutoDetect(getterVisibility = Visibility.NONE, isGetterVisibility = Visibility.NONE, fieldVisibility = Visibility.ANY)
+    private interface FlowSessionInternalMixin
+}
+
+// taken from newer corda version due to parent classes not being searched for fields
+// needed to access `stack` inside `FlowStateMachineImpl`
+private fun <T> Any.declaredField(name: String): DeclaredField<T> = DeclaredField(javaClass, name, this)
+
+private class DeclaredField<T>(clazz: Class<*>, name: String, private val receiver: Any?) {
+    private val javaField = findField(name, clazz)
+    var value: T
+        get() {
+            synchronized(this) {
+                return javaField.accessible { uncheckedCast<Any?, T>(get(receiver)) }
+            }
+        }
+        set(value) {
+            synchronized(this) {
+                javaField.accessible {
+                    set(receiver, value)
+                }
+            }
+        }
+    val name: String = javaField.name
+
+    private fun <RESULT> Field.accessible(action: Field.() -> RESULT): RESULT {
+        val accessible = isAccessible
+        isAccessible = true
+        try {
+            return action(this)
+        } finally {
+            isAccessible = accessible
+        }
+    }
+
+    @Throws(NoSuchFieldException::class)
+    private fun findField(fieldName: String, clazz: Class<*>?): Field {
+        if (clazz == null) {
+            throw NoSuchFieldException(fieldName)
+        }
+        return try {
+            return clazz.getDeclaredField(fieldName)
+        } catch (e: NoSuchFieldException) {
+            findField(fieldName, clazz.superclass)
+        }
+    }
 }
