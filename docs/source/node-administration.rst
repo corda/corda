@@ -19,9 +19,10 @@ Also few other classes have the default log level set above ``INFO`` to prevent 
 It may be the case that you require to amend the log level of a particular subset of modules (e.g., if you'd like to take a
 closer look at hibernate activity). So, for more bespoke logging configuration, the logger settings can be modified or completely overridden
 with a `Log4j2 <https://logging.apache.org/log4j/2.x>`_ configuration file assigned to the ``log4j.configurationFile`` system property.
-To extend Corda default logging configuration the `log4j.configurationFile`` property should contain also the ``log4j2.xml`` e.g.
+To extend the Corda default logging configuration, the `log4j.configurationFile`` property should list additional list ``log4j2.xml`` e.g.
 ``log4j.configurationFile=log4j2.xml,path_to_custom_config.xml``.
-If you list your custom configuration file only, the default log4j2 file embedded in a Corda node is ignored and replaced by your configuration file.
+Corda contains default log4j2 settings in the ``log4j2.xml`` embedded file. If ``log4j.configurationFile`` omits the default file then
+custom configuration replace the default Corda log4j2 setting entirely.
 
 The node is using log4j2 asynchronous logging by default (configured via log4j2 properties file in its resources)
 to ensure that log message flushing is not slowing down the actual processing.
