@@ -49,7 +49,8 @@ class CordaRPCClientReconnectionTest {
                     maxReconnectAttempts = 5
             ))
 
-            val rpcOps = client.start(rpcUser.username, rpcUser.password, gracefulReconnect = true).proxy
+            val connection = client.start(rpcUser.username, rpcUser.password, gracefulReconnect = true)
+            val rpcOps = connection.proxy
             val networkParameters = rpcOps.networkParameters
             val cashStatesFeed = rpcOps.vaultTrack(Cash.State::class.java)
             cashStatesFeed.updates.subscribe { latch.countDown() }
@@ -65,6 +66,7 @@ class CordaRPCClientReconnectionTest {
             assertTrue {
                 latch.await(2, TimeUnit.SECONDS)
             }
+            connection.close()
         }
     }
 
@@ -87,7 +89,8 @@ class CordaRPCClientReconnectionTest {
                     maxReconnectAttempts = 5
             ))
 
-            val rpcOps = client.start(rpcUser.username, rpcUser.password, true).proxy
+            val connection = client.start(rpcUser.username, rpcUser.password, true)
+            val rpcOps = connection.proxy
             val cashStatesFeed = rpcOps.vaultTrack(Cash.State::class.java)
             val subscription = cashStatesFeed.updates.subscribe { latch.countDown() }
             rpcOps.startTrackedFlow(::CashIssueFlow, 10.DOLLARS, OpaqueBytes.of(0), defaultNotaryIdentity).returnValue.get()
@@ -102,6 +105,7 @@ class CordaRPCClientReconnectionTest {
             assertFalse {
                 latch.await(4, TimeUnit.SECONDS)
             }
+            connection.close()
         }
     }
 
@@ -125,7 +129,8 @@ class CordaRPCClientReconnectionTest {
                     maxReconnectAttempts = 5
             ))
 
-            val rpcOps = client.start(rpcUser.username, rpcUser.password, true).proxy
+            val connection = client.start(rpcUser.username, rpcUser.password, true)
+            val rpcOps = connection.proxy
             val networkParameters = rpcOps.networkParameters
             val cashStatesFeed = rpcOps.vaultTrack(Cash.State::class.java)
             cashStatesFeed.updates.subscribe { latch.countDown() }
@@ -141,6 +146,7 @@ class CordaRPCClientReconnectionTest {
             assertTrue {
                 latch.await(2, TimeUnit.SECONDS)
             }
+            connection.close()
         }
     }
 
