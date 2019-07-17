@@ -28,9 +28,9 @@ import net.corda.core.internal.exists
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SerializeAsToken
+import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.transactions.*
-import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.contextLogger
 import net.corda.node.internal.NodeStartup
@@ -97,17 +97,21 @@ class CheckpointDumper(private val checkpointStorage: CheckpointStorage, private
                     checkpointStorage.getAllCheckpoints().use { stream ->
                         ZipOutputStream(Files.newOutputStream(file)).use { zip ->
                             stream.forEach { (runId, serialisedCheckpoint) ->
-                                val checkpoint = serialisedCheckpoint.serializedFiber.deserialize(
-                                        context = SerializationDefaults.CHECKPOINT_CONTEXT.withTokenContext(checkpointSerializationContext)
-                                )
-                                val json = checkpoint.toJson(runId, now)
                                 try {
-                                    val jsonBytes = writer.writeValueAsBytes(json)
-                                    zip.putNextEntry(ZipEntry("${json.topLevelFlowClass.simpleName}-$runId.json"))
-                                    zip.write(jsonBytes)
-                                    zip.closeEntry()
+                                    val checkpoint = serialisedCheckpoint.serializedFiber.deserialize(
+                                            context = SerializationDefaults.CHECKPOINT_CONTEXT.withTokenContext(checkpointSerializationContext)
+                                    )
+                                    val json = checkpoint.toJson(runId, now)
+                                    try {
+                                        val jsonBytes = writer.writeValueAsBytes(json)
+                                        zip.putNextEntry(ZipEntry("${json.topLevelFlowClass.simpleName}-$runId.json"))
+                                        zip.write(jsonBytes)
+                                        zip.closeEntry()
+                                    } catch (e: Exception) {
+                                        log.info("Failed to output json checkpoint dump for ${json.topLevelFlowClass.simpleName}-$runId", e)
+                                    }
                                 } catch (e: Exception) {
-                                    log.info("Failed to output json checkpoint dump for ${json.topLevelFlowClass.simpleName}-$runId", e)
+                                    log.info("Failed to deserialise checkpoint with id: $runId")
                                 }
                             }
                         }
@@ -122,10 +126,9 @@ class CheckpointDumper(private val checkpointStorage: CheckpointStorage, private
     }
 
     private fun FlowStateMachineImpl<*>.toJson(id: String, now: Instant): CheckpointJson {
-        val (fiber, flowLogic) = this to this.logic
         // Poke into Quasar's stack and find the object references to the sub-flows so that we can correctly get the current progress
         // step for each sub-call.
-        val stackObjects = fiber.declaredField<Stack>("stack").value
+        val stackObjects = declaredField<Stack>("stack").value
                 .declaredField<Array<*>>("dataObject").value
                 .filterIsInstance<FlowLogic<*>>()
                 .toSet()
@@ -148,10 +151,10 @@ class CheckpointDumper(private val checkpointStorage: CheckpointStorage, private
 
         return CheckpointJson(
                 id,
-                flowLogic.javaClass,
+                logic.javaClass,
                 stackObjects,
-                fiber.waitingForResponse?.toSuspendedOn(suspendedTimestamp(), now),
-                this.context.origin.toOrigin(),
+                waitingForResponse?.toSuspendedOn(suspendedTimestamp(), now),
+                context.origin.toOrigin(),
                 ourIdentity,
                 activeSessions
         )
@@ -212,8 +215,8 @@ class CheckpointDumper(private val checkpointStorage: CheckpointStorage, private
     private fun WaitingRequest.toSuspendedOn(suspendedTimestamp: Instant, now: Instant): SuspendedOn {
         fun SendAndReceive.toJson(): SendAndReceiveJson {
             val payload = when (this.message) {
-                is ExistingSessionMessage -> (message.payload as? DataSessionMessage)?.payload?.deserialize()
-                is InitialSessionMessage -> message.firstPayload?.deserialize()
+                is ExistingSessionMessage -> (message.payload as? DataSessionMessage)?.payload?.deserializeOrOutputPlaceholder()
+                is InitialSessionMessage -> message.firstPayload?.deserializeOrOutputPlaceholder()
             }
             return SendAndReceiveJson(session.flowSession, payload?.javaClass, payload, userReceiveType)
         }
@@ -229,6 +232,12 @@ class CheckpointDumper(private val checkpointStorage: CheckpointStorage, private
             it.suspendedTimestamp = suspendedTimestamp
             it.secondsSpentWaiting = TimeUnit.MILLISECONDS.toSeconds(Duration.between(suspendedTimestamp, now).toMillis())
         }
+    }
+
+    private fun SerializedBytes<Any>.deserializeOrOutputPlaceholder() = try {
+        deserialize()
+    } catch (e: Exception) {
+        "*** Unable to deserialise message payload ***"
     }
 
     @Suppress("unused")
@@ -361,7 +370,7 @@ class CheckpointDumper(private val checkpointStorage: CheckpointStorage, private
     private interface FlowSessionInternalMixin
 }
 
-// taken from newer corda version due to parent classes not being searched for fields
+// Taken from newer corda version due to parent classes not being searched for fields
 // needed to access `stack` inside `FlowStateMachineImpl`
 private fun <T> Any.declaredField(name: String): DeclaredField<T> = DeclaredField(javaClass, name, this)
 

@@ -28,6 +28,9 @@ interface CheckpointStorage {
      */
     fun forEach(block: (Checkpoint) -> Boolean)
 
+    /**
+     * Added as part of [CheckpointDumper] backport. Replacement for [CheckpointStorage.forEach].
+     */
     fun getAllCheckpoints(): Stream<Pair<String, Checkpoint>>
 }
 
