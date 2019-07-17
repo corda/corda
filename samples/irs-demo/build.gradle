@@ -20,6 +20,7 @@ ext['selenium.version'] = "$selenium_version"
 ext['jackson.version'] = "$jackson_version"
 ext['dropwizard-metrics.version'] = "$metrics_version"
 ext['mockito.version'] = "$mockito_version"
+ext['mssql-jdbc.version'] = "$mssql_version"    
 
 apply plugin: 'kotlin'
 apply plugin: 'idea'
