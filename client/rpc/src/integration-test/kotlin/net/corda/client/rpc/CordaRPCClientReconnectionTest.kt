@@ -1,5 +1,6 @@
 package net.corda.client.rpc
 
+import net.corda.client.rpc.internal.ReconnectingCordaRPCOps
 import net.corda.core.messaging.startTrackedFlow
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.OpaqueBytes
@@ -49,8 +50,8 @@ class CordaRPCClientReconnectionTest {
                     maxReconnectAttempts = 5
             ))
 
-            client.start(rpcUser.username, rpcUser.password, gracefulReconnect = true).use {
-                val rpcOps = it.proxy
+            (client.start(rpcUser.username, rpcUser.password, gracefulReconnect = true).proxy as ReconnectingCordaRPCOps).use {
+                val rpcOps = it
                 val networkParameters = rpcOps.networkParameters
                 val cashStatesFeed = rpcOps.vaultTrack(Cash.State::class.java)
                 cashStatesFeed.updates.subscribe { latch.countDown() }
@@ -89,8 +90,8 @@ class CordaRPCClientReconnectionTest {
                     maxReconnectAttempts = 5
             ))
 
-            client.start(rpcUser.username, rpcUser.password, true).use {
-                val rpcOps = it.proxy
+            (client.start(rpcUser.username, rpcUser.password, gracefulReconnect = true).proxy as ReconnectingCordaRPCOps).use {
+                val rpcOps = it
                 val cashStatesFeed = rpcOps.vaultTrack(Cash.State::class.java)
                 val subscription = cashStatesFeed.updates.subscribe { latch.countDown() }
                 rpcOps.startTrackedFlow(::CashIssueFlow, 10.DOLLARS, OpaqueBytes.of(0), defaultNotaryIdentity).returnValue.get()
@@ -129,8 +130,8 @@ class CordaRPCClientReconnectionTest {
                     maxReconnectAttempts = 5
             ))
 
-            client.start(rpcUser.username, rpcUser.password, true).use {
-                val rpcOps = it.proxy
+            (client.start(rpcUser.username, rpcUser.password, gracefulReconnect = true).proxy as ReconnectingCordaRPCOps).use {
+                val rpcOps = it
                 val networkParameters = rpcOps.networkParameters
                 val cashStatesFeed = rpcOps.vaultTrack(Cash.State::class.java)
                 cashStatesFeed.updates.subscribe { latch.countDown() }
