@@ -3,6 +3,7 @@ package net.corda.node.services.api
 import net.corda.core.crypto.SecureHash
 import net.corda.core.serialization.SerializedBytes
 import net.corda.node.services.statemachine.FlowStateMachineImpl
+import java.util.stream.Stream
 
 /**
  * Thread-safe storage of fiber checkpoints.
@@ -27,6 +28,7 @@ interface CheckpointStorage {
      */
     fun forEach(block: (Checkpoint) -> Boolean)
 
+    fun getAllCheckpoints(): Stream<Pair<String, Checkpoint>>
 }
 
 // This class will be serialised, so everything it points to transitively must also be serialisable (with Kryo).

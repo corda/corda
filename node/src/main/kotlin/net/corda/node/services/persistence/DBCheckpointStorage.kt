@@ -5,11 +5,12 @@ import net.corda.node.services.api.Checkpoint
 import net.corda.node.services.api.CheckpointStorage
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.nodeapi.internal.persistence.currentDBSession
+import org.hibernate.annotations.Type
 import java.io.Serializable
+import java.util.stream.Stream
 import javax.persistence.Column
 import javax.persistence.Entity
 import javax.persistence.Id
-import org.hibernate.annotations.Type
 
 /**
  * Simple checkpoint key value storage in DB.
@@ -54,6 +55,16 @@ class DBCheckpointStorage : CheckpointStorage {
             if (!block(checkpoint)) {
                 break
             }
+        }
+    }
+
+     override fun getAllCheckpoints(): Stream<Pair<String, Checkpoint>> {
+        val session = currentDBSession()
+        val criteriaQuery = session.criteriaBuilder.createQuery(DBCheckpoint::class.java)
+        val root = criteriaQuery.from(DBCheckpoint::class.java)
+        criteriaQuery.select(root)
+        return session.createQuery(criteriaQuery).stream().map {
+            it.checkpointId to Checkpoint(SerializedBytes(it.checkpoint))
         }
     }
 }
