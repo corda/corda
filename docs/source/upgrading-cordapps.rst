@@ -280,7 +280,7 @@ A zip containing the JSON files is created in the ``logs`` directory of the node
 state of stuck flows or flows that experienced internal errors and were kept in the node for manual intervention. To drain these flows,
 the node will need to be restarted or the flow will need to be removed manually.
 
-.. warning:: Deleting checkpoints manually or via ``killFlow`` can lead to an inconsistent ledger among transacting parties. Great care
+.. warning:: Deleting checkpoints manually can lead to an inconsistent ledger among transacting parties. Great care
              and coordination with a flow's counterparties must be taken to ensure that a initiating flow and flows responding to it are correctly
              removed. This experience will be improved in the future. Making it easier to kill flows while notifying their counterparties.
 
