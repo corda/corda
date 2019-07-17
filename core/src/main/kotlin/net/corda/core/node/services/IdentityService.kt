@@ -26,7 +26,7 @@ interface IdentityService {
     val caCertStore: CertStore
 
     companion object {
-        val log = contextLogger()
+        private val log = contextLogger()
     }
 
     /**
@@ -149,22 +149,13 @@ interface IdentityService {
 
     /**
      * Returns true if an existing mapping for the specified [PublicKey] and [Party] does not already exist and will add a new entry
-     * to the database for this mapping. First we check if an existing entry exists for the supplied [PublicKey] exists in the
-     * database. If there is no mapping, then a new entry in the database is registered linking the [PublicKey] to the supplied [Party].
+     * to the database for this mapping.
      *
-     * @param key The public key of that will be registered to the supplied [Party]
+     * @param key The public key that will be registered to the supplied [Party]
      * @param party The party that the supplied public key will be registered to
      */
+    // TODO this needs changing name
     fun registerKeyToParty(key: PublicKey, party: Party) : Boolean
 }
 
 class UnknownAnonymousPartyException(message: String) : CordaException(message)
-
-/**
- * Check if [x500name] matches the [query].
- */
-fun x500Matches(query: String, exactMatch: Boolean, x500name: CordaX500Name): Boolean {
-    val components = listOfNotNull(x500name.commonName, x500name.organisationUnit, x500name.organisation, x500name.locality, x500name.state, x500name.country)
-    return components.any { (exactMatch && it == query)
-            || (!exactMatch && it.contains(query, ignoreCase = true)) }
-}

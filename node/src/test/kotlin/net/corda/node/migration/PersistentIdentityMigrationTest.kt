@@ -32,7 +32,7 @@ import java.time.Clock
 import java.time.Duration
 
 class
-PersistentIdentitiesMigrationTest {
+PersistentIdentityMigrationTest {
     companion object {
         val alice = TestIdentity(ALICE_NAME, 70)
         val bankOfCorda = TestIdentity(BOC_NAME)
@@ -40,7 +40,6 @@ PersistentIdentitiesMigrationTest {
         val dummyCashIssuer = TestIdentity(CordaX500Name("Snake Oil Issuer", "London", "GB"), 10)
         val dummyNotary = TestIdentity(DUMMY_NOTARY_NAME, 20)
         val ALICE_IDENTITY get() = alice.identity
-        val BOB get() = bob.party
         val BOB_IDENTITY get() = bob.identity
         val BOC_IDENTITY get() = bankOfCorda.identity
         val BOC_KEY get() = bankOfCorda.keyPair
@@ -50,8 +49,6 @@ PersistentIdentitiesMigrationTest {
         @ClassRule
         @JvmField
         val testSerialization = SerializationEnvironmentRule()
-
-        val logger = contextLogger()
     }
 
     lateinit var liquidBaseDB: Database
@@ -60,7 +57,7 @@ PersistentIdentitiesMigrationTest {
 
     @Before
     fun setUp() {
-        val identityService = makeTestIdentityService(PersistentIdentitiesMigrationTest.dummyNotary.identity, BOB_IDENTITY, ALICE_IDENTITY)
+        val identityService = makeTestIdentityService(PersistentIdentityMigrationTest.dummyNotary.identity, BOB_IDENTITY, ALICE_IDENTITY)
         notaryServices = MockServices(listOf("net.corda.finance.contracts"), dummyNotary, identityService, dummyCashIssuer.keyPair, BOC_KEY)
         // Runs migration tasks
         cordaDB = configureDatabase(

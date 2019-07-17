@@ -3,12 +3,11 @@ package net.corda.node.services.identity
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.identity.x500Matches
 import net.corda.core.internal.CertRole
 import net.corda.core.node.services.IdentityService
-import net.corda.core.node.services.x500Matches
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.contextLogger
-import net.corda.core.utilities.toBase58String
 import net.corda.core.utilities.trace
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.x509Certificates
@@ -42,9 +41,8 @@ class InMemoryIdentityService(identities: List<PartyAndCertificate> = emptyList(
     init {
         keyToPartyAndCerts.putAll(identities.associateBy { it.owningKey })
         partyToKeys.putAll(identities.associateBy { it.name }.mapValues { it.value.owningKey })
-        keyToParties.putAll(identities.associateBy{ it.owningKey }.mapValues { it.value.party.name })
+        keyToParties.putAll(identities.associateBy { it.owningKey }.mapValues { it.value.party.name })
     }
-
 
     @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
     override fun verifyAndRegisterIdentity(identity: PartyAndCertificate): PartyAndCertificate? {
@@ -113,7 +111,7 @@ class InMemoryIdentityService(identities: List<PartyAndCertificate> = emptyList(
 
     override fun wellKnownPartyFromX500Name(name: CordaX500Name): Party? {
         val key = partyToKeys[name]
-        return if (key!=null) {
+        return if (key != null) {
             keyToPartyAndCerts[key]?.party
         } else
             null
@@ -130,19 +128,10 @@ class InMemoryIdentityService(identities: List<PartyAndCertificate> = emptyList(
     }
 
     override fun registerKeyToParty(key: PublicKey, party: Party): Boolean {
-        var willRegisterNewMapping = true
-
-        when (keyToParties[key]) {
-            null -> {
-                keyToParties.putIfAbsent(key, party.name)
-            }
-            else -> {
-                if (party.name != keyToParties[key]) {
-                    return false
-                }
-                willRegisterNewMapping = false
-            }
+        if (keyToParties[key] == null) {
+            keyToParties.putIfAbsent(key, party.name)
+            return true
         }
-        return willRegisterNewMapping
+        return false
     }
 }

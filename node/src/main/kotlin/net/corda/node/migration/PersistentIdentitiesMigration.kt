@@ -51,21 +51,21 @@ class PersistentIdentitiesMigration : CordaMigration() {
 
         val connection = database.connection as JdbcConnection
 
-        /**
-         * TODO temporary hack to get around soul destroying mocking needed to test this properly
-         */
+        testMigration(connection)
+    }
+
+    // TODO write proper driver tests
+    /**
+     * TODO temporary hack to get around soul destroying mocking needed to test this properly
+     */
+    private fun testMigration(connection: JdbcConnection) {
         val alice = DuplicateTestIdentity(CordaX500Name("Alice Corp", "Madrid", "ES"), 70)
         val pkHash = addTestMapping(connection, alice)
 
         // Extract data from old table needed to populate the new table
-        val keys = extractKeys(connection)
-        val parties = extractParties(connection)
+        val keyPartiesMap = extractKeyParties(connection)
 
-        require(keys.size == parties.size)
-
-        val map: Map<String, CordaX500Name> = keys.zip(parties).toMap()
-
-        map.forEach {
+        keyPartiesMap.forEach {
             insertEntry(connection, it)
         }
 
@@ -76,6 +76,24 @@ class PersistentIdentitiesMigration : CordaMigration() {
         deleteTestMapping(connection, pkHash)
     }
 
+    // TODO What about DB portability?
+    // TODO Why are you using node_identities? not node_named_identities?
+    private fun extractKeyParties(connection: JdbcConnection): Map<String, CordaX500Name> {
+        val keyParties = mutableMapOf<String, CordaX500Name>()
+        connection.createStatement().use {
+            val rs = it.executeQuery("SELECT pk_hash, identity_value FROM node_identities WHERE pk_hash IS NOT NULL")
+            while (rs.next()) {
+                val key = rs.getString(1)
+                val partyBytes = rs.getBytes(2)
+                //TODO this will need to be more robust in checking checking the certificate before attempting to map to the party
+                val name = PartyAndCertificate(X509CertificateFactory().delegate.generateCertPath(partyBytes.inputStream())).party.name
+                keyParties.put(key, name)
+            }
+            rs.close()
+        }
+        return keyParties
+    }
+
     private fun insertEntry(connection: JdbcConnection, entry: Map.Entry<String, CordaX500Name>) {
         val pk = entry.key
         val name = entry.value.toString()
@@ -84,34 +102,6 @@ class PersistentIdentitiesMigration : CordaMigration() {
             it.setString(2, name)
             it.executeUpdate()
         }
-    }
-
-    private fun extractKeys(connection: JdbcConnection): List<String> {
-        val keys = mutableListOf<String>()
-        connection.createStatement().use {
-            val rs = it.executeQuery("SELECT pk_hash FROM node_identities WHERE pk_hash IS NOT NULL")
-            while (rs.next()) {
-                val key = rs.getString(1)
-                keys.add(key)
-            }
-            rs.close()
-        }
-        return keys
-    }
-
-    private fun extractParties(connection: JdbcConnection): List<CordaX500Name> {
-        val entries = mutableListOf<ByteArray>()
-        connection.createStatement().use {
-            val rs = it.executeQuery("SELECT identity_value FROM node_identities")
-            while (rs.next()) {
-                val e = rs.getBytes(1)
-                entries.add(e)
-            }
-        }
-        //TODO this will need to be more robust in checking checking the certificate before attempting to map to the party
-        return entries.map {
-            PartyAndCertificate(X509CertificateFactory().delegate.generateCertPath(it.inputStream())).party.name
-        }.toList()
     }
 
     override fun setUp() {
@@ -184,39 +174,17 @@ object PersistentIdentitiesMigrationSchemaV1 : MappedSchema(schemaFamily = Persi
 class PersistentIdentitiesMigrationException(msg: String, cause: Exception? = null) : Exception(msg, cause)
 
 /**
- * TODO - Ergh. Circular dependencies if you try and expose test-utils here.
+ * You get circular dependencies if you try and expose test-utils here. So DuplicateTestIdentity is a copy of TestIdentity for our use case.
  */
-class DuplicateTestIdentity(val name: CordaX500Name, val keyPair: KeyPair) {
-    companion object {
-        /**
-         * Creates an identity that won't equal any other. This is mostly useful as a throwaway for test helpers.
-         * @param organisation the organisation part of the new identity's name.
-         */
-        @JvmStatic
-        @JvmOverloads
-        fun fresh(organisation: String, signatureScheme: SignatureScheme = Crypto.DEFAULT_SIGNATURE_SCHEME): DuplicateTestIdentity {
-            val keyPair = Crypto.generateKeyPair(signatureScheme)
-            val name = CordaX500Name(organisation, keyPair.public.toStringShort(), CordaX500Name.unspecifiedCountry)
-            return DuplicateTestIdentity(name, keyPair)
-        }
-    }
-
+private class DuplicateTestIdentity(val name: CordaX500Name, val keyPair: KeyPair) {
     /** Creates an identity with a deterministic [keyPair] i.e. same [entropy] same keyPair. */
     @JvmOverloads
     constructor(name: CordaX500Name, entropy: Long, signatureScheme: SignatureScheme = Crypto.DEFAULT_SIGNATURE_SCHEME)
             : this(name, Crypto.deriveKeyPairFromEntropy(signatureScheme, BigInteger.valueOf(entropy)))
 
-    /** Creates an identity with the given name and a fresh keyPair. */
-    @JvmOverloads
-    constructor(name: CordaX500Name, signatureScheme: SignatureScheme = Crypto.DEFAULT_SIGNATURE_SCHEME)
-            : this(name, Crypto.generateKeyPair(signatureScheme))
-
     val publicKey: PublicKey get() = keyPair.public
     val party: Party = Party(name, publicKey)
     val identity: PartyAndCertificate by lazy { getTestPartyAndCertificate(party) } // Often not needed.
-
-    /** Returns a [PartyAndReference] for this identity and the given reference. */
-    fun ref(vararg bytes: Byte): PartyAndReference = party.ref(*bytes)
 
     fun getTestPartyAndCertificate(party: Party): PartyAndCertificate {
         val trustRoot: X509Certificate = DEV_ROOT_CA.certificate

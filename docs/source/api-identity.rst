@@ -161,17 +161,17 @@ also any other identities in the transaction to the Bob and Charlie.
 Confidential identities without certificates
 --------------------------------------------
 
-The latest version of confidential identities reduces the overhead by removing the storage of the X.509 certificate when using confidential
+The latest version of confidential identities reduces the overhead by removing the storage of the X.509 certificates when using confidential
 identities. Instead, they will be stored via a mapping between a newly generated ``PublicKey`` to ``CordaX500Name``. This is particularly
 useful in the event that a node operator hosts a large number of *accounts* and such that storing the X.509 certificate for confidential
 identities would require a large amount of memory.
 
-The use of this version confidential identities can be done through the use of three new flow; ``RequestKeyFlow``, ``ShareKeyFlow`` and
+This version of confidential identities can be used through the three new flows; ``RequestKeyFlow``, ``ShareKeyFlow`` and
 ``SyncKeyMappingsFlow`` found in the ``confidential-identities`` repository.
 
-In ``RequestKeyFlow``, the generation of a ``SignedData<OwnershipClaim>`` that contains a newly generated ``PublicKey`` is delegated to a
-counterparty. For example, Charlie may issue and pay some cash to a new confidential identity. In order for Bob to resolve the confidential
-identity, he can run ``RequestKeyFlow`` providing the confidential identities owning key as a parameter, and Alice as the counterparty.
+In ``RequestKeyFlow``, the generation of a ``SignedData<OwnershipClaim>`` that contains a newly generated ``PublicKey`` is delegated to the
+counterparty. For example, Alice may issue and pay some cash to a new confidential identity. In order for Bob to resolve the confidential
+identity, he can run ``RequestKeyFlow`` providing the confidential identity's owning key as a parameter, and Alice as the counterparty.
 Alice will generate a ``SignedData<OwnershipClaim>`` containing the ``PublicKey`` for the confidential identity. Alice will send this back
 to Bob, who can extract the data required to register the mapping between the ``PublicKey`` and ``CordaX500Name`` in Bob's
 ``IdentityService`` and Bob can then resolve the confidential identity. ``ShareKeyFlow`` works in a similar vein, however, the initiating
