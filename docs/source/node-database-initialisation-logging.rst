@@ -3,21 +3,20 @@
 Database Schema Initialisation Logging
 ======================================
 
-Database initialisation and upgrade for corda internal tables is recorded in the node's default  log file.
-The process of internal tables creation (and other database objects like sequence) is recorded
-as structured log lines in the default node's log file.
-The more fine grained, unstructured logs produced by Liquibase can be enabled
-by providing an additional log4j2 configuration file :ref:`node-administration-logging`.
+Database initialisation and upgrade for Corda internal tables (and other objects like sequences)
+is recorded in the node's default log file.
+The default logs record each change set name to be run (from Liquibase script files) in a structured format.
 
-The setup of CorDapps custom tables is not recorded in node's logs explicitly
-(it would require enabling Hibernate logger category, if a custom table is not created manually).
+The detailed, unstructured logs produced by Liquibase can be enabled by providing an additional log4j2 configuration.
+
+The setup of CorDapps' custom tables is not recorded in the node's logs explicitly
+(it would require enabling Hibernate logger category).
 
 Default logs
 ^^^^^^^^^^^^
 
-Database initialisation and upgrade logs are outputted to a standard Corda log file.
-They are denoted by 'databaseInitialisation' category name and starts with the same prefix.
-The logs consist of two parts, the sequence of the change sets to be run and the sequence of applied change sets.
+The default logs are denoted by 'databaseInitialisation' category name and starts with the same prefix.
+The log consist of two parts, the sequence of the change sets to be run and the sequence of applied change sets.
 Change set is the smallest unit of a database schema change defined in a Liquibase script,
 a single change set may contain one or more DDL statements.
 The log sequence:
@@ -32,12 +31,12 @@ The log sequence:
 
 where:
 
-* START:= a log line denoting the start of database schema setup or update
-* CHANGE_SETS_COUNT:=number of change sets detected as needed to be applied against the database
-* CHANGE_SETS:= a list of all migrations to run, specified one by log line
-* PROGRESS:= log lines before and after running each change set
-* END:= a line denoting the successful end of database initialisation
-* ERROR:= any error related to a database connection and setup e.g. the node database misconfiguration preventing the node to start, or an error related to creating database schema, a list of predefined error codes will be documented
+* START := a log line denoting the start of database schema setup or update
+* CHANGE_SETS_COUNT := number of change sets detected as needed to be applied against the database
+* CHANGE_SETS := a list of all migrations to run, specified one by log line
+* PROGRESS := log lines before and after running each change set
+* END := a line denoting the successful end of database initialisation
+* ERROR := any error related to a database connection and setup e.g. the node database misconfiguration preventing the node to start, or an error related to creating database schema, a list of predefined error codes will be documented
 
 The log line format:
 
@@ -45,18 +44,18 @@ The log line format:
 
     databaseInitialisation(id=<RANDOM_ID>;[changeset=<ID>];status=<STATUS>[;error_code=<CODE>;message=<ERROR>])
 
-Where:
+where:
 
-* RANDOM_ID:= random generated value allowing to grep all logs form withing a single migration run
-* CHANGE_SET_ID:= Liquibase change set ID
-* STATUS:= the status for the entire database schema initialisation process and a specific change sets:
+* RANDOM_ID := random generated value allowing to grep all logs from withing a single migration run
+* ID := Liquibase change set ID
+* STATUS := the status for the entire database schema initialisation process and a specific change sets:
   |        "start" - start og the whole database initialisation process,
   |        "to be run" - the list of change sets before migration run,
   |        "started" - the change set is about to be run,
-  |        "successful" - the change sets has been run, "Error" - an error occurred when running the change set
-  |        "error" - an error for the whole process or an error while running a specific changeset set
-*  ERROR:= a detailed message, for change set error it will be error produced by Liquibase
-*  CODE:= a predefined error code, the list will be published later
+  |        "successful" - the change sets has been run,
+  |        "error" - an error for the whole process or an error while running a specific change set
+*  CODE := a predefined error code, the list will be published later
+*  ERROR := a detailed message, for change set error it will be error produced by Liquibase
 
 The example database initialisation logs:
 
@@ -84,8 +83,8 @@ The example unsuccessful database initialisation logs:
 Detailed logs
 ^^^^^^^^^^^^^
 
-The native Liqubase logs are disabled by default.
-They can be enabled by adding an extra log4j2 file with 'INFO' log level for 'liqubase' package:
+The native Liquibase logs are disabled by default.
+They can be enabled by adding an extra log4j2 file with 'INFO' log level for 'liquibase' package:
 
 .. sourcecode:: xml
 
@@ -101,3 +100,5 @@ When starting the Corda node the extra config file need to be provided:
 .. sourcecode:: bash
 
     java -jar -Dlog4j.configurationFile=log4j2.xml,path_to_custom_file.xml corda.jar
+
+Enabling custom logging is also described in :ref:`node-administration-logging`.
