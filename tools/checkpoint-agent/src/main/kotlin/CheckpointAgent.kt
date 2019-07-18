@@ -8,11 +8,13 @@ import com.esotericsoftware.kryo.serializers.FieldSerializer
 import javassist.ClassPool
 import javassist.CtClass
 import net.corda.core.internal.ThreadBox
+import net.corda.core.utilities.ProgressTracker
 import net.corda.tools.CheckpointAgent.Companion.instrumentClassname
 import net.corda.tools.CheckpointAgent.Companion.instrumentType
 import net.corda.tools.CheckpointAgent.Companion.log
 import net.corda.tools.CheckpointAgent.Companion.maximumSize
 import net.corda.tools.CheckpointAgent.Companion.minimumSize
+import net.corda.tools.CheckpointAgent.Companion.stackDepth
 import org.slf4j.LoggerFactory
 import java.io.ByteArrayInputStream
 import java.lang.instrument.ClassFileTransformer
@@ -36,12 +38,14 @@ class CheckpointAgent {
         val DEFAULT_MINIMUM_SIZE = 8 * 1024
         val DEFAULT_MAXIMUM_SIZE = 1000 * 1024
         val DEFAULT_INSTRUMENT_TYPE = InstrumentationType.READ_WRITE
+        val DEFAULT_STACK_DEPTH = 12
 
         // startup arguments
         var instrumentClassname = DEFAULT_INSTRUMENT_CLASSNAME
         var minimumSize = DEFAULT_MINIMUM_SIZE
         var maximumSize = DEFAULT_MAXIMUM_SIZE
         var instrumentType = DEFAULT_INSTRUMENT_TYPE
+        var stackDepth = DEFAULT_STACK_DEPTH
 
         val log by lazy {
             LoggerFactory.getLogger("CheckpointAgent")
@@ -63,6 +67,7 @@ class CheckpointAgent {
                             "instrumentClassname" -> instrumentClassname = nvpItem[1]
                             "minimumSize" -> try { minimumSize = nvpItem[1].toInt() } catch (e: NumberFormatException) { println("Invalid value: ${nvpItem[1]}") }
                             "maximumSize" -> try { maximumSize = nvpItem[1].toInt() } catch (e: NumberFormatException) { println("Invalid value: ${nvpItem[1]}") }
+                            "stackDepth" -> try { stackDepth = nvpItem[1].toInt() } catch (e: NumberFormatException) { println("Invalid value: ${nvpItem[1]}") }
                             "instrumentType" -> try { instrumentType = InstrumentationType.valueOf(nvpItem[1].toUpperCase()) } catch (e: Exception) { println("Invalid value: ${nvpItem[1]}") }
                             else -> println("Invalid argument: $nvpItem")
                         }
@@ -70,7 +75,7 @@ class CheckpointAgent {
                     else println("Missing value for argument: $nvpItem")
                 }
             }
-            println("Running Checkpoint agent with following arguments: instrumentClassname = $instrumentClassname, instrumentType = $instrumentType, minimumSize = $minimumSize, maximumSize = $maximumSize\n")
+            println("Running Checkpoint agent with following arguments: instrumentClassname = $instrumentClassname, instrumentType = $instrumentType, minimumSize = $minimumSize, maximumSize = $maximumSize, stackDepth = $stackDepth\n")
         }
     }
 }
@@ -298,7 +303,7 @@ object CheckpointHook : ClassFileTransformer {
     private fun prettyStatsTree(indent: Int, statsInfo: StatsInfo, statsTree: StatsTree, builder: StringBuilder) {
         when (statsTree) {
             is StatsTree.Object -> {
-                if (statsTree.count <= 1) {
+                if (indent/2  < stackDepth) {
                     builder.append(String.format("%03d:", indent / 2))
                     builder.append(CharArray(indent) { ' ' })
                     builder.append(" ${statsInfo.fieldName} ")
@@ -307,31 +312,23 @@ object CheckpointHook : ClassFileTransformer {
                     builder.append(String.format("%,d", statsTree.size))
                     builder.append("\n")
                 }
-//                else {
-//                    builder.append(String.format("%03d:", indent / 2))
-//                    builder.append(CharArray(indent+5) { ' ' })
-//                    builder.append("Skipping ${statsInfo.fieldName} as seen ${statsTree.count} times")
-//                    builder.append("\n")q
-//                }
-                for (child in statsTree.children) {
-                    prettyStatsTree(indent + 2, child.first, child.second, builder)
-                }
+                if (statsInfo.fieldType != ProgressTracker::class.java)
+                    for (child in statsTree.children) {
+                        prettyStatsTree(indent + 2, child.first, child.second, builder)
+                    }
             }
             is StatsTree.BasicType -> {
-                builder.append(String.format("%03d:", indent / 2))
-                builder.append(CharArray(indent) { ' ' })
-                builder.append(" ${statsInfo.fieldName} ")
-                builder.append("${statsTree.value}")
-                builder.append("\n")
-            }
-            is StatsTree.Loop -> {
-//                builder.append(String.format("%03d:", indent / 2))
-//                builder.append(CharArray(indent) { ' ' })
-//                builder.append("$statsInfo LOOP [${statsTree.depth}]")
-//                builder.append("\n")
+                if (indent/2 < stackDepth) {
+                    builder.append(String.format("%03d:", indent / 2))
+                    builder.append(CharArray(indent) { ' ' })
+                    builder.append(" ${statsInfo.fieldName} ")
+                    builder.append("${statsTree.value}")
+                    builder.append("\n")
+                }
             }
         }
     }
+
 }
 
 sealed class StatsEvent {
