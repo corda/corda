@@ -10,6 +10,7 @@ import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.NetworkParametersService
 import net.corda.core.node.services.TransactionStorage
 import net.corda.core.transactions.ContractUpgradeWireTransaction
+import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.NotaryChangeWireTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.transactions.WireTransaction.Companion.resolveStateRefBinaryComponent
@@ -35,7 +36,7 @@ data class ServicesForResolutionImpl(
         return stateRefs.groupBy { it.txhash }.flatMap {
             val stx = validatedTransactions.getTransaction(it.key) ?: throw TransactionResolutionException(it.key)
             val baseTx = stx.resolveBaseTransaction(this)
-            it.value.map { StateAndRef(baseTx.outputs[it.index], it) }
+            it.value.map { ref -> StateAndRef(baseTx.outputs[ref.index], ref) }
         }.toSet()
     }
 
@@ -68,5 +69,11 @@ data class ServicesForResolutionImpl(
             }
         }
         return inner(stateRef, null)
+    }
+
+    override fun specialise(ltx: LedgerTransaction): LedgerTransaction {
+        // Specialise the LedgerTransaction here so that
+        // contracts are verified inside the DJVM!
+        return ltx
     }
 }

@@ -10,6 +10,7 @@ import net.corda.core.flows.ContractUpgradeFlow
 import net.corda.core.node.services.*
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.transactions.FilteredTransaction
+import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import java.security.PublicKey
@@ -71,6 +72,12 @@ interface ServicesForResolution {
      */
     @Throws(TransactionResolutionException::class, AttachmentResolutionException::class)
     fun loadContractAttachment(stateRef: StateRef): Attachment
+
+    /**
+     * Provides a callback for the Node to customise the [LedgerTransaction].
+     */
+    @JvmDefault
+    fun specialise(ltx: LedgerTransaction): LedgerTransaction = ltx
 }
 
 /**
