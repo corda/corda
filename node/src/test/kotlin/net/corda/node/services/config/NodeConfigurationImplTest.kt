@@ -4,6 +4,7 @@ import com.typesafe.config.*
 import com.zaxxer.hikari.HikariConfig
 import net.corda.common.configuration.parsing.internal.ConfigObfuscator
 import net.corda.common.configuration.parsing.internal.Configuration
+import net.corda.core.internal.div
 import net.corda.core.internal.toPath
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.seconds
@@ -16,10 +17,12 @@ import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Rule
 import org.junit.Test
 import java.io.File
 import java.net.InetAddress
 import java.net.Proxy
+import org.junit.rules.TemporaryFolder
 import java.net.URI
 import java.net.URL
 import java.nio.file.Paths
@@ -30,6 +33,11 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class NodeConfigurationImplTest {
+
+    @Rule
+    @JvmField
+    val tempFolder = TemporaryFolder()
+
     @Test
     fun `can't have dev mode options if not in dev mode`() {
         val debugOptions = DevModeOptions()
@@ -280,6 +288,24 @@ class NodeConfigurationImplTest {
         rawConfig = rawConfig.withValue("rpcAddress", ConfigValueFactory.fromAnyRef("localhost:4444"))
 
         assertThat(rawConfig.parseAsNodeConfiguration().isValid).isTrue()
+    }
+
+    @Test
+    fun `relative path correctly parsed`() {
+        val rawConfig = ConfigFactory.parseResources("working-config.conf", ConfigParseOptions.defaults().setAllowMissing(false))
+
+        // Override base directory to have predictable experience on diff OSes
+        val finalConfig = configOf(
+                // Add substitution values here
+                "baseDirectory" to tempFolder.root.canonicalPath)
+                .withFallback(rawConfig)
+                .resolve()
+
+        val nodeConfiguration = finalConfig.parseAsNodeConfiguration()
+        assertThat(nodeConfiguration.isValid).isTrue()
+
+        val baseDirPath = tempFolder.root.toPath()
+        assertEquals(listOf(baseDirPath / "./myCorDapps1", baseDirPath / "./myCorDapps2"), nodeConfiguration.value().cordappDirectories)
     }
 
     @Test

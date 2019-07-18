@@ -78,9 +78,12 @@ class NodeInfoWatcher(private val nodePath: Path,
     }
 
     private fun pollDirectory(): List<NodeInfoUpdate> {
+        logger.debug { "pollDirectory $nodeInfosDir" }
         val processedPaths = HashSet<Path>()
         val result = nodeInfosDir.list { paths ->
             paths
+                    .filter { logger.debug { "Examining $it" }
+                            true}
                     .filter { it.isRegularFile() }
                     .filter { file ->
                         val lastModifiedTime = file.lastModifiedTime()
