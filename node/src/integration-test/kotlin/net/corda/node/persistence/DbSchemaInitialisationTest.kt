@@ -38,18 +38,17 @@ class DbSchemaInitialisationTest {
         }
     }
 
-    val sampleChangeset = "migration/vault-schema.changelog-init.xml::1511451595465-22::R3.Corda"
-    val prefix = "databaseInitialisation\\(id=[a-zA-Z0-9]{8};"
+    val sampleChangesetFileName = "migration/vault-schema.changelog-init.xml"
+    val sampleChangeset = "$sampleChangesetFileName::1511451595465-22::R3.Corda"
+    val loggerPrefix = "databaseInitialisation\\(id=[a-zA-Z0-9]{8};"
 
     @Test
-    fun `database intilisation logger is disabled by default`() {
+    fun `database intilisation logger reports progress`() {
         // Temporary disable this test when executed on Windows. It is known to be sporadically failing.
         // More investigation is needed to establish why.
         Assume.assumeFalse(System.getProperty("os.name").toLowerCase().startsWith("win"))
 
-        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = false
-                // system property "formattedDatabaseInitialisationLogLevel" is not set
-        )) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = false)) {
             val logFile = {
                 val nodeHandle = startNode(providedName = ALICE_NAME).getOrThrow()
                 nodeHandle.stop()
@@ -58,40 +57,18 @@ class DbSchemaInitialisationTest {
 
             Assertions.assertThat(logFile.length()).isGreaterThan(0)
 
+            val loggerPrefixRegex = loggerPrefix.toRegex()
             val logs = logFile.useLines { lines ->
-                lines.filter { it.contains("databaseInitialisation(id=") }.toList()
-            }
-            Assertions.assertThat(logs).isEmpty()
-        }
-    }
-
-    @Test
-    fun `enabled database intilisation logger reports progress`() {
-        // Temporary disable this test when executed on Windows. It is known to be sporadically failing. More investigation is needed to establish why.
-        Assume.assumeFalse(System.getProperty("os.name").toLowerCase().startsWith("win"))
-
-        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = false,
-                systemProperties = mapOf("formattedDatabaseInitialisationLogLevel" to "INFO")
-        )) {
-            val logFile = {
-                val nodeHandle = startNode(providedName = ALICE_NAME).getOrThrow()
-                nodeHandle.stop()
-                nodeHandle.logFile()
-            }()
-
-            Assertions.assertThat(logFile.length()).isGreaterThan(0)
-
-            val logs = logFile.useLines { lines ->
-                lines.filter { it.contains("databaseInitialisation(id=") }.toList()
+                lines.filter { it.contains(loggerPrefixRegex) }.toList()
             }
             Assertions.assertThat(logs).isNotEmpty
 
-            val migrationStart = "${prefix}status=\"start\"\\)".toRegex()
-            val migrationCount = "${prefix}change_set_count=\"[0-9]+\"\\)".toRegex()
-            val migrationSuccessful = "${prefix}status=\"successful\"".toRegex()
-            val sampleChangeSetToBeRun = "${prefix}changeset=\"$sampleChangeset\";status=\"to be run\"\\)".toRegex()
-            val sampleChangeSetStarted = "${prefix}changeset=\"$sampleChangeset\";status=\"started\"\\)".toRegex()
-            val sampleChangeSetSuccessful = "${prefix}changeset=\"$sampleChangeset\";status=\"successful\"\\)".toRegex()
+            val migrationStart = "${loggerPrefix}status=\"start\"\\)".toRegex()
+            val migrationCount = "${loggerPrefix}change_set_count=\"[0-9]+\"\\)".toRegex()
+            val migrationSuccessful = "${loggerPrefix}status=\"successful\"".toRegex()
+            val sampleChangeSetToBeRun = "${loggerPrefix}changeset=\"$sampleChangeset\";status=\"to be run\"\\)".toRegex()
+            val sampleChangeSetStarted = "${loggerPrefix}changeset=\"$sampleChangeset\";status=\"started\"\\)".toRegex()
+            val sampleChangeSetSuccessful = "${loggerPrefix}changeset=\"$sampleChangeset\";status=\"successful\"\\)".toRegex()
 
             Assertions.assertThat(logs.filter { it.contains(migrationStart) }).hasSize(1)
             Assertions.assertThat(logs.filter { it.contains(migrationCount) }).hasSize(1)
@@ -103,13 +80,12 @@ class DbSchemaInitialisationTest {
     }
 
     @Test
-    fun `enabled database intilisation logger reports migration error`() {
-        // Temporary disable this test when executed on Windows. It is known to be sporadically failing. More investigation is needed to establish why.
+    fun `enabled database intilisation logger reports error`() {
+        // Temporary disable this test when executed on Windows. It is known to be sporadically failing.
+        // More investigation is needed to establish why.
         Assume.assumeFalse(System.getProperty("os.name").toLowerCase().startsWith("win"))
 
-        driver(DriverParameters(notarySpecs = emptyList(), inMemoryDB = false, startNodesInProcess = false,
-                systemProperties = mapOf("formattedDatabaseInitialisationLogLevel" to "INFO")
-        )) {
+        driver(DriverParameters(notarySpecs = emptyList(), inMemoryDB = false, startNodesInProcess = false)) {
             val (nodeName, logFile) = {
                 val nodeHandle = startNode(providedName = ALICE_NAME).getOrThrow()
                 val nodeName = nodeHandle.nodeInfo.singleIdentity().name
@@ -119,20 +95,24 @@ class DbSchemaInitialisationTest {
 
             Assertions.assertThat(logFile.length()).isGreaterThan(0)
 
-            val sampleChangeSetError = "${prefix}changeset=\"$sampleChangeset\";status=\"error\";message=\"".toRegex()
+            val sampleChangeSetError = "${loggerPrefix}changeset=\"$sampleChangeset\";status=\"error\";message=\"".toRegex()
 
-            var linesWithError = logFile.useLines { lines -> lines.filter { it.contains(sampleChangeSetError) }.toList() }
-            Assertions.assertThat(linesWithError).isEmpty()
+            var errorLines = logFile.useLines {
+                lines -> lines.filter { it.contains(sampleChangeSetError) }.count()
+            }
+            Assertions.assertThat(errorLines).isZero()
 
-            DriverManager.getConnection("jdbc:h2:file:${baseDirectory(nodeName) / "persistence"}", "sa", "").use { connection ->
-                connection.createStatement().execute("delete from databasechangelog where filename = 'migration/vault-schema.changelog-init.xml'")
+            DriverManager.getConnection("jdbc:h2:file:${baseDirectory(nodeName) / "persistence"}", "sa", "").use {
+                it.createStatement().execute("delete from databasechangelog where filename = '$sampleChangesetFileName'")
             }
 
             assertFailsWith(ListenProcessDeathException::class) { startNode(providedName = ALICE_NAME).getOrThrow() }
 
-            linesWithError = logFile.useLines { lines -> lines.filter { it.contains(sampleChangeSetError) }.toList() }
+            errorLines = logFile.useLines {
+                lines -> lines.filter { it.contains(sampleChangeSetError) }.count()
+            }
 
-            Assertions.assertThat(linesWithError.size).isEqualTo(1)
+            Assertions.assertThat(errorLines).isOne()
         }
     }
 }
