@@ -9,6 +9,8 @@ release, see :doc:`app-upgrade-notes`.
 Version 5.0
 -----------
 
+* The MockNet now supports setting a custom Notary class name, as was already supported by normal node config. See :doc:`tutorial-custom-notary`.
+
 * Introduced a new ``Destination`` abstraction for communicating with non-Party destinations using the new ``FlowLogic.initateFlow(Destination)``
   method. ``Party`` and ``AnonymousParty`` have been retrofitted to implement ``Destination``. Initiating a flow to an ``AnonymousParty``
   means resolving to the well-known identity ``Party`` and then communicating with that.

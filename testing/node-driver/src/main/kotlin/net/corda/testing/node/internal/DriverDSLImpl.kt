@@ -110,9 +110,6 @@ class DriverDSLImpl(
     private lateinit var _notaries: CordaFuture<List<NotaryHandle>>
     override val notaryHandles: List<NotaryHandle> get() = _notaries.getOrThrow()
 
-    // While starting with inProcess mode, we need to have different names to avoid clashes
-    private val inMemoryCounter = AtomicInteger()
-
     interface Waitable {
         @Throws(InterruptedException::class)
         fun waitFor()
@@ -254,7 +251,8 @@ class DriverDSLImpl(
                 NodeConfiguration::verifierType.name to parameters.verifierType.name,
                 "enterpriseConfiguration.tuning.flowThreadPoolSize" to "1",
                 NodeConfiguration::flowOverrides.name to flowOverrideConfig.toConfig().root().unwrapped(),
-                NodeConfiguration::enableSNI.name to enableSNI
+                NodeConfiguration::enableSNI.name to enableSNI,
+                        NodeConfiguration::additionalNodeInfoPollingFrequencyMsec.name to 1000
         ) + czUrlConfig + jmxConfig + parameters.customOverrides
         val config = NodeConfig(ConfigHelper.loadConfig(
                 baseDirectory = baseDirectory(name),
@@ -695,6 +693,9 @@ class DriverDSLImpl(
 
     companion object {
         internal val log = contextLogger()
+
+        // While starting with inProcess mode, we need to have different names to avoid clashes
+        private val inMemoryCounter = AtomicInteger()
 
         private val notaryHandleTimeout = Duration.ofMinutes(2)
         private val defaultRpcUserList = listOf(InternalUser("default", "default", setOf("ALL")).toConfig().root().unwrapped())
