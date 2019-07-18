@@ -75,6 +75,7 @@ private constructor(
     private var serializedInputs: List<SerializedStateAndRef>? = null
     private var serializedReferences: List<SerializedStateAndRef>? = null
     private var isAttachmentTrusted: (Attachment) -> Boolean = { it.isUploaderTrusted() }
+    private var verifierFactory: (LedgerTransaction, ClassLoader) -> Verifier = ::Verifier
 
     init {
         if (timeWindow != null) check(notary != null) { "Transactions with time-windows must be notarised" }
@@ -151,8 +152,28 @@ private constructor(
             // Create a copy of the outer LedgerTransaction which deserializes all fields inside the [transactionClassLoader].
             // Only the copy will be used for verification, and the outer shell will be discarded.
             // This artifice is required to preserve backwards compatibility.
-            Verifier(createLtxForVerification(), transactionClassLoader)
+            verifierFactory(createLtxForVerification(), transactionClassLoader)
         }
+    }
+
+    /**
+     * We need a way to customise transaction verification inside the
+     * Node without changing either the wire format or any public APIs.
+     */
+    @CordaInternal
+    fun specialise(alternateVerifier: (LedgerTransaction, ClassLoader) -> Verifier): LedgerTransaction = LedgerTransaction(
+        inputs = inputs,
+        outputs = outputs,
+        commands = commands,
+        attachments = attachments,
+        id = id,
+        notary = notary,
+        timeWindow = timeWindow,
+        privacySalt = privacySalt,
+        networkParameters = networkParameters,
+        references = references
+    ).also { ltx ->
+        ltx.verifierFactory = alternateVerifier
     }
 
     // Read network parameters with backwards compatibility goo.
