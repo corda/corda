@@ -653,7 +653,7 @@ class NodeVaultServiceTest {
         val identity = services.myInfo.singleIdentityAndCert()
         assertEquals(services.identityService.partyFromKey(identity.owningKey), identity.party)
         val anonymousIdentity = services.keyManagementService.freshKeyAndCert(identity, false)
-        val thirdPartyServices = MockServices(emptyList(), MEGA_CORP.name, mock<IdentityServiceMock>().also {
+        val thirdPartyServices = MockServices(emptyList(), MEGA_CORP.name, mock<IdentityService>().also {
             doReturn(null).whenever(it).verifyAndRegisterIdentity(argThat { name == MEGA_CORP.name })
         })
         val thirdPartyIdentity = thirdPartyServices.keyManagementService.freshKeyAndCert(thirdPartyServices.myInfo.singleIdentityAndCert(), false)
@@ -951,43 +951,4 @@ class NodeVaultServiceTest {
             assertTrue(it)
         }
     }
-}
-
-private class IdentityServiceMock : IdentityService {
-    /** This method exists so it can be mocked with doNothing, rather than having to make up a possibly invalid return value. */
-    fun justVerifyAndRegisterIdentity(identity: PartyAndCertificate) {
-        verifyAndRegisterIdentity(identity)
-    }
-
-    override val trustAnchor: TrustAnchor
-        get() = TODO("not implemented") //To change initializer of created properties use File | Settings | File Templates.
-    override val caCertStore: CertStore
-        get() = TODO("not implemented") //To change initializer of created properties use File | Settings | File Templates.
-
-    override fun verifyAndRegisterIdentity(identity: PartyAndCertificate): PartyAndCertificate? {
-       TODO("hello")
-    }
-
-    override fun getAllIdentities(): Iterable<PartyAndCertificate> {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    override fun certificateFromKey(owningKey: PublicKey): PartyAndCertificate? {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    override fun wellKnownPartyFromX500Name(name: CordaX500Name): Party? {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    override fun partiesFromName(query: String, exactMatch: Boolean): Set<Party> {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    override fun registerKeyToParty(key: PublicKey, party: Party): Boolean {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    override val trustRoot: X509Certificate
-        get() = TODO("not implemented") //To change initializer of created properties use File | Settings | File Templates.
 }

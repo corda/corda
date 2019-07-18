@@ -87,7 +87,7 @@ class ConstraintsPropagationTests {
                 },
                 networkParameters = testNetworkParameters(minimumPlatformVersion = 4)
                         .copy(whitelistedContractImplementations = mapOf(
-                                Cash.PROGRAM_ID to listOf(zeroHash, allOnesHash),
+                                Cash.PROGRAM_ID to listOf(SecureHash.zeroHash, allOnesHash),
                                 noPropagationContractClassName to listOf(zeroHash)),
                                 notaries = listOf(NotaryInfo(DUMMY_NOTARY, true)))
         ) {

@@ -7,7 +7,6 @@ import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.internal.hash
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.UnknownAnonymousPartyException
-import net.corda.core.node.services.x500Matches
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.MAX_HASH_HEX_SIZE
 import net.corda.core.utilities.contextLogger
@@ -59,7 +58,7 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
         fun createX500ToKeyMap(cacheFactory: NamedCacheFactory): AppendOnlyPersistentMap<CordaX500Name, SecureHash, PersistentIdentityNames, String> {
             return AppendOnlyPersistentMap(
                     cacheFactory = cacheFactory,
-                    name = "PersistentIdentityService_partyToKey",
+                    name = "PersistentIdentityService_nameToKey",
                     toPersistentEntityKey = { it.toString() },
                     fromPersistentEntity = { Pair(CordaX500Name.parse(it.name), SecureHash.parse(it.publicKeyHash)) },
                     toPersistentEntity = { key: CordaX500Name, value: SecureHash ->
@@ -72,7 +71,7 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
         fun createKeyToX500Map(cacheFactory: NamedCacheFactory): AppendOnlyPersistentMap<SecureHash, CordaX500Name, PersistentIdentity, String> {
             return AppendOnlyPersistentMap(
                     cacheFactory = cacheFactory,
-                    name = "PersistentIdentityService_keyToParty",
+                    name = "PersistentIdentityService_keyToNamey",
                     toPersistentEntityKey = { it.toString() },
                     fromPersistentEntity = {
                         Pair(
@@ -140,8 +139,8 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
     lateinit var database: CordaPersistence
 
     private val keyToPartyAndCert = createKeyToPartyAndCertMap(cacheFactory)
-    private val partyToKey = createX500ToKeyMap(cacheFactory)
-    private val keyToParty = createKeyToX500Map(cacheFactory)
+    private val nameToKey = createX500ToKeyMap(cacheFactory)
+    private val keyToName = createKeyToX500Map(cacheFactory)
 
     fun start(trustRoot: X509Certificate, caCertificates: List<X509Certificate> = emptyList(), notaryIdentities: List<Party> = emptyList()) {
         _trustRoot = trustRoot
@@ -154,11 +153,11 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
         identities.forEach {
             val key = mapToKey(it)
             keyToPartyAndCert.addWithDuplicatesAllowed(key, it, false)
-            partyToKey.addWithDuplicatesAllowed(it.name, key, false)
-            keyToParty.addWithDuplicatesAllowed(mapToKey(it), it.name, false)
+            nameToKey.addWithDuplicatesAllowed(it.name, key, false)
+            keyToName.addWithDuplicatesAllowed(mapToKey(it), it.name, false)
         }
         confidentialIdentities.forEach {
-            keyToParty.addWithDuplicatesAllowed(mapToKey(it), it.name, false)
+            keyToName.addWithDuplicatesAllowed(mapToKey(it), it.name, false)
         }
         log.debug("Identities loaded")
     }
@@ -176,7 +175,7 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
     }
 
     /**
-     * Verifies that an identity is valid.
+     * Verifies that an identity is valid. If it is valid, it gets registered in the database and the [PartyAndCertificate] is returned.
      *
      * @param trustAnchor The trust anchor that will verify the identity's validity
      * @param identity The identity to verify
@@ -217,8 +216,8 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
                 keyToPartyAndCert[key] = identity
             } else {
                 keyToPartyAndCert.addWithDuplicatesAllowed(key, identity, false)
-                partyToKey.addWithDuplicatesAllowed(identity.name, key, false)
-                keyToParty.addWithDuplicatesAllowed(key, identity.name, false)
+                nameToKey.addWithDuplicatesAllowed(identity.name, key, false)
+                keyToName.addWithDuplicatesAllowed(key, identity.name, false)
             }
             val parentId = mapToKey(identityCertChain[1].publicKey)
             keyToPartyAndCert[parentId]
@@ -231,7 +230,7 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
 
     private fun certificateFromCordaX500Name(name: CordaX500Name): PartyAndCertificate? {
         return database.transaction {
-            val partyId = partyToKey[name]
+            val partyId = nameToKey[name]
             if (partyId != null) {
                 keyToPartyAndCert[partyId]
             } else null
@@ -259,7 +258,7 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
                 // If we cannot find it then we perform a lookup on the public key to X500 name table
                 val legalIdentity = super.wellKnownPartyFromAnonymous(party)
                 if (legalIdentity == null) {
-                    val name = keyToParty[party.owningKey.hash]
+                    val name = keyToName[party.owningKey.hash]
                     if (name != null) {
                         wellKnownPartyFromX500Name(name)
                     } else {
@@ -275,7 +274,7 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
     override fun partiesFromName(query: String, exactMatch: Boolean): Set<Party> {
         return database.transaction {
             val results = LinkedHashSet<Party>()
-            partyToKey.allPersisted().forEach { (x500name, partyId) ->
+            nameToKey.allPersisted().forEach { (x500name, partyId) ->
                 if (x500Matches(query, exactMatch, x500name)) {
                     results += keyToPartyAndCert[partyId]!!.party
                 }
@@ -296,22 +295,19 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
     }
 
     override fun registerKeyToParty(key: PublicKey, party: Party): Boolean {
-
-        var willRegisterNewMapping = true
-
-        database.transaction {
-            val existingEntryForKey = keyToParty[key.hash]
+        return database.transaction {
+            val existingEntryForKey = keyToName[key.hash]
             if (existingEntryForKey == null) {
                 log.info("Linking: ${key.hash} to ${party.name}")
-                keyToParty[key.hash] = party.name
+                keyToName[key.hash] = party.name
+               true
             } else {
                 log.info("An existing entry for ${key.hash} already exists.")
-                if (party.name != keyToParty[key.hash]) {
+                if (party.name != keyToName[key.hash]) {
                     log.error("The public key ${key.hash} is already assigned to a party.")
                 }
-                willRegisterNewMapping = false
+                false
             }
         }
-        return willRegisterNewMapping
     }
 }

@@ -22,10 +22,7 @@ import net.corda.testing.core.*
 import net.corda.testing.internal.configureDatabase
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.makeTestIdentityService
-import org.junit.After
-import org.junit.Before
-import org.junit.ClassRule
-import org.junit.Test
+import org.junit.*
 import org.mockito.Mockito
 import java.security.KeyPair
 import java.time.Clock
@@ -83,6 +80,7 @@ PersistentIdentityMigrationTest {
         cordaDB.close()
     }
 
+//    @Ignore
     @Test
     fun `migrate identities to new table`() {
         /**
@@ -93,9 +91,9 @@ PersistentIdentityMigrationTest {
          *
          * Since [PersistentIdentitiesMigration] implements [CordaMigration] the migration will run when the DB is setup.
          *
-         * val migration = PersistentIdentitiesMigration()
-         * migration.execute(liquidBaseDB)
          */
+         val migration = PersistentIdentitiesMigration()
+         migration.execute(liquidBaseDB)
     }
 
     private fun saveAllIdentities(identities: List<PartyAndCertificate>) {

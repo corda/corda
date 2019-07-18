@@ -4,14 +4,11 @@ import liquibase.database.Database
 import liquibase.database.jvm.JdbcConnection
 import liquibase.exception.ValidationErrors
 import liquibase.resource.ResourceAccessor
-import net.corda.core.contracts.PartyAndReference
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SignatureScheme
-import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.internal.unspecifiedCountry
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.utilities.contextLogger
 import net.corda.node.internal.DBNetworkParametersStorage
@@ -59,7 +56,7 @@ class PersistentIdentitiesMigration : CordaMigration() {
      * TODO temporary hack to get around soul destroying mocking needed to test this properly
      */
     private fun testMigration(connection: JdbcConnection) {
-        val alice = DuplicateTestIdentity(CordaX500Name("Alice Corp", "Madrid", "ES"), 70)
+        val alice = TestIdentity(CordaX500Name("Alice Corp", "Madrid", "ES"), 70)
         val pkHash = addTestMapping(connection, alice)
 
         // Extract data from old table needed to populate the new table
@@ -118,7 +115,7 @@ class PersistentIdentitiesMigration : CordaMigration() {
         return null
     }
 
-    private fun addTestMapping(connection: JdbcConnection, testIdentity: DuplicateTestIdentity): String {
+    private fun addTestMapping(connection: JdbcConnection, testIdentity: TestIdentity): String {
         val pkHash = UUID.randomUUID().toString()
         val cert = testIdentity.identity.certPath.encoded
 
@@ -171,12 +168,14 @@ object PersistentIdentitiesMigrationSchemaV1 : MappedSchema(schemaFamily = Persi
         )
 )
 
-class PersistentIdentitiesMigrationException(msg: String, cause: Exception? = null) : Exception(msg, cause)
+        class PersistentIdentitiesMigrationException(msg: String, cause: Exception? = null) : Exception(msg, cause)
 
 /**
- * You get circular dependencies if you try and expose test-utils here. So DuplicateTestIdentity is a copy of TestIdentity for our use case.
+ * A class that encapsulates a test identity containing a [CordaX500Name] and a [KeyPair]. Duplicate of [net.corda.testing.core.TestIdentity]
+ * to avoid circular dependencies.
  */
-private class DuplicateTestIdentity(val name: CordaX500Name, val keyPair: KeyPair) {
+private class TestIdentity(val name: CordaX500Name, val keyPair: KeyPair) {
+
     /** Creates an identity with a deterministic [keyPair] i.e. same [entropy] same keyPair. */
     @JvmOverloads
     constructor(name: CordaX500Name, entropy: Long, signatureScheme: SignatureScheme = Crypto.DEFAULT_SIGNATURE_SCHEME)

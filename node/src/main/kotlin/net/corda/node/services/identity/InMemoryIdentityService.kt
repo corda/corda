@@ -35,14 +35,15 @@ class InMemoryIdentityService(identities: List<PartyAndCertificate> = emptyList(
     override val caCertStore: CertStore = CertStore.getInstance("Collection", CollectionCertStoreParameters(setOf(trustRoot)))
     override val trustAnchor: TrustAnchor = TrustAnchor(trustRoot, null)
     private val keyToPartyAndCerts = ConcurrentHashMap<PublicKey, PartyAndCertificate>()
-    private val partyToKeys = ConcurrentHashMap<CordaX500Name, PublicKey>()
-    private val keyToParties = ConcurrentHashMap<PublicKey, CordaX500Name>()
+    private val nameToKey = ConcurrentHashMap<CordaX500Name, PublicKey>()
+    private val keyToName = ConcurrentHashMap<PublicKey, CordaX500Name>()
 
     init {
         keyToPartyAndCerts.putAll(identities.associateBy { it.owningKey })
-        partyToKeys.putAll(identities.associateBy { it.name }.mapValues { it.value.owningKey })
-        keyToParties.putAll(identities.associateBy { it.owningKey }.mapValues { it.value.party.name })
+        nameToKey.putAll(identities.associateBy { it.name }.mapValues { it.value.owningKey })
+        keyToName.putAll(identities.associateBy{ it.owningKey }.mapValues { it.value.party.name })
     }
+
 
     @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
     override fun verifyAndRegisterIdentity(identity: PartyAndCertificate): PartyAndCertificate? {
@@ -84,33 +85,18 @@ class InMemoryIdentityService(identities: List<PartyAndCertificate> = emptyList(
         log.trace { "Registering identity $identity" }
         keyToPartyAndCerts[identity.owningKey] = identity
         // Always keep the first party we registered, as that's the well known identity
-        partyToKeys.putIfAbsent(identity.name, identity.owningKey)
-        keyToParties.putIfAbsent(identity.owningKey, identity.name)
+        nameToKey.putIfAbsent(identity.name, identity.owningKey)
+        keyToName.putIfAbsent(identity.owningKey, identity.name)
         return keyToPartyAndCerts[identityCertChain[1].publicKey]
     }
 
     override fun certificateFromKey(owningKey: PublicKey): PartyAndCertificate? = keyToPartyAndCerts[owningKey]
-//    override fun certificateFromKey(owningKey: PublicKey): PartyAndCertificate? {
-//        val name = keyToParties[owningKey]
-//        return if (name != null) {
-//            val legalIdentityKey = partyToKeys[name]
-//            if (legalIdentityKey != null) {
-//                keyToPartyAndCerts[legalIdentityKey!!]
-//            } else {
-//                log.info("Unable to find a valid party and certificate from public key: ${owningKey.toBase58String()}")
-//                null
-//            }
-//        } else {
-//            log.info("Unable to find a valid CordaX500 name from public key: ${owningKey.toBase58String()}")
-//            null
-//        }
-//    }
 
     // We give the caller a copy of the data set to avoid any locking problems
     override fun getAllIdentities(): Iterable<PartyAndCertificate> = ArrayList(keyToPartyAndCerts.values)
 
     override fun wellKnownPartyFromX500Name(name: CordaX500Name): Party? {
-        val key = partyToKeys[name]
+        val key = nameToKey[name]
         return if (key != null) {
             keyToPartyAndCerts[key]?.party
         } else
@@ -119,7 +105,7 @@ class InMemoryIdentityService(identities: List<PartyAndCertificate> = emptyList(
 
     override fun partiesFromName(query: String, exactMatch: Boolean): Set<Party> {
         val results = LinkedHashSet<Party>()
-        partyToKeys.forEach { (x500name, key) ->
+        nameToKey.forEach { (x500name, key) ->
             if (x500Matches(query, exactMatch, x500name)) {
                 results += keyToPartyAndCerts[key]!!.party
             }
@@ -128,6 +114,20 @@ class InMemoryIdentityService(identities: List<PartyAndCertificate> = emptyList(
     }
 
     override fun registerKeyToParty(key: PublicKey, party: Party): Boolean {
+        var willRegisterNewMapping = true
+
+        when (keyToName[key]) {
+            null -> {
+                keyToName.putIfAbsent(key, party.name)
+            }
+            else -> {
+                if (party.name != keyToName[key]) {
+                    return false
+                }
+                willRegisterNewMapping = false
+            }
+        }
+        return willRegisterNewMapping
         if (keyToParties[key] == null) {
             keyToParties.putIfAbsent(key, party.name)
             return true

@@ -149,7 +149,8 @@ interface IdentityService {
 
     /**
      * Returns true if an existing mapping for the specified [PublicKey] and [Party] does not already exist and will add a new entry
-     * to the database for this mapping.
+     * to the database for this mapping. First we check if an existing entry exists for the supplied [PublicKey] exists in the
+     * database. If there is no mapping, then a new entry in the database is registered linking the [PublicKey] to the supplied [Party].
      *
      * @param key The public key that will be registered to the supplied [Party]
      * @param party The party that the supplied public key will be registered to
