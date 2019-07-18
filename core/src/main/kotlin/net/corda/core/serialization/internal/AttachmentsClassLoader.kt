@@ -19,7 +19,6 @@ import java.io.IOException
 import java.io.InputStream
 import java.net.*
 import java.util.*
-import java.util.jar.JarInputStream
 
 /**
  * A custom ClassLoader that knows how to load classes from a set of attachments. The attachments themselves only
@@ -318,14 +317,14 @@ object AttachmentsClassLoaderBuilder {
                                               isAttachmentTrusted: (Attachment) -> Boolean,
                                               parent: ClassLoader = ClassLoader.getSystemClassLoader(),
                                               block: (ClassLoader) -> T): T {
-        val attachmentIds = attachments.map { it.id }.toSet()
+        val attachmentIds = attachments.map(Attachment::id).toSet()
 
         val serializationContext = cache.computeIfAbsent(Key(attachmentIds, params)) {
             // Create classloader and load serializers, whitelisted classes
             val transactionClassLoader = AttachmentsClassLoader(attachments, params, txId, isAttachmentTrusted, parent)
             val serializers = createInstancesOfClassesImplementing(transactionClassLoader, SerializationCustomSerializer::class.java)
             val whitelistedClasses = ServiceLoader.load(SerializationWhitelist::class.java, transactionClassLoader)
-                    .flatMap { it.whitelist }
+                    .flatMap(SerializationWhitelist::whitelist)
                     .toList()
 
             // Create a new serializationContext for the current transaction. In this context we will forbid

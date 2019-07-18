@@ -151,7 +151,7 @@ private constructor(
         // Switch thread local deserialization context to using a cached attachments classloader. This classloader enforces various rules
         // like no-overlap, package namespace ownership and (in future) deterministic Java.
         return AttachmentsClassLoaderBuilder.withAttachmentsClassloaderContext(
-                this.attachments + extraAttachments,
+                attachments + extraAttachments,
                 getParamsWithGoo(),
                 id,
                 isAttachmentTrusted = isAttachmentTrusted) { transactionClassLoader ->
