@@ -18,6 +18,7 @@ import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.CordaRPCOps
+import net.corda.core.internal.messaging.InternalCordaRPCOps
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.FlowProgressHandle
 import net.corda.core.messaging.StateMachineUpdate
@@ -81,7 +82,7 @@ object InteractiveShell {
     private lateinit var node: StartedNode<Node>
     @VisibleForTesting
     internal lateinit var database: CordaPersistence
-    private lateinit var rpcOps: CordaRPCOps
+    private lateinit var rpcOps: InternalCordaRPCOps
     private lateinit var securityManager: RPCSecurityManager
     private lateinit var identityService: IdentityService
     private var shell: Shell? = null
@@ -91,7 +92,7 @@ object InteractiveShell {
      * Starts an interactive shell connected to the local terminal. This shell gives administrator access to the node
      * internals.
      */
-    fun startShell(configuration: NodeConfiguration, cordaRPCOps: CordaRPCOps, securityManager: RPCSecurityManager, identityService: IdentityService, database: CordaPersistence) {
+    fun startShell(configuration: NodeConfiguration, cordaRPCOps: InternalCordaRPCOps, securityManager: RPCSecurityManager, identityService: IdentityService, database: CordaPersistence) {
         this.rpcOps = cordaRPCOps
         this.securityManager = securityManager
         this.identityService = identityService
@@ -368,8 +369,8 @@ object InteractiveShell {
     }
 
     @JvmStatic
-    fun runRPCFromString(input: List<String>, out: RenderPrintWriter, context: InvocationContext<out Any>, cordaRPCOps: CordaRPCOps): Any? {
-        val parser = StringToMethodCallParser(CordaRPCOps::class.java, context.attributes["mapper"] as ObjectMapper)
+    fun runRPCFromString(input: List<String>, out: RenderPrintWriter, context: InvocationContext<out Any>, cordaRPCOps: InternalCordaRPCOps): Any? {
+        val parser = StringToMethodCallParser(InternalCordaRPCOps::class.java, context.attributes["mapper"] as ObjectMapper)
 
         val cmd = input.joinToString(" ").trim { it <= ' ' }
         if (cmd.toLowerCase().startsWith("startflow")) {

@@ -16,6 +16,10 @@ Version 3.4
 
 * Documentation updates
 
+* Information about checkpointed flows can be retrieved from the shell. Calling ``dumpCheckpoints`` will create a zip file inside the node's
+  ``log`` directory. This zip will contain a JSON representation of each checkpointed flow. This information can then be used to determine the
+  state of stuck flows or flows that experienced internal errors and were kept in the node for manual intervention.
+
 Version 3.3
 -----------
 

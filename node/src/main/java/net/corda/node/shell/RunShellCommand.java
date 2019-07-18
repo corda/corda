@@ -1,9 +1,12 @@
 package net.corda.node.shell;
 
-import net.corda.core.messaging.*;
-import net.corda.client.jackson.*;
-import org.crsh.cli.*;
-import org.crsh.command.*;
+import net.corda.client.jackson.StringToMethodCallParser;
+import net.corda.core.internal.messaging.InternalCordaRPCOps;
+import org.crsh.cli.Argument;
+import org.crsh.cli.Command;
+import org.crsh.cli.Man;
+import org.crsh.cli.Usage;
+import org.crsh.command.InvocationContext;
 
 import java.util.*;
 
@@ -23,7 +26,7 @@ public class RunShellCommand extends InteractiveShellCommand {
             InvocationContext<Map> context,
             @Usage("The command to run") @Argument(unquote = false) List<String> command
     ) {
-        StringToMethodCallParser<CordaRPCOps> parser = new StringToMethodCallParser<>(CordaRPCOps.class, objectMapper());
+        StringToMethodCallParser<InternalCordaRPCOps> parser = new StringToMethodCallParser<>(InternalCordaRPCOps.class, objectMapper());
 
         if (command == null) {
             emitHelp(context, parser);
@@ -33,7 +36,7 @@ public class RunShellCommand extends InteractiveShellCommand {
         return InteractiveShell.runRPCFromString(command, out, context, ops());
     }
 
-    private void emitHelp(InvocationContext<Map> context, StringToMethodCallParser<CordaRPCOps> parser) {
+    private void emitHelp(InvocationContext<Map> context, StringToMethodCallParser<InternalCordaRPCOps> parser) {
         // Sends data down the pipeline about what commands are available. CRaSH will render it nicely.
         // Each element we emit is a map of column -> content.
         Set<Map.Entry<String, String>> entries = parser.getAvailableCommands().entrySet();

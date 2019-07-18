@@ -13,8 +13,8 @@ import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.createDirectory
+import net.corda.core.internal.messaging.InternalCordaRPCOps
 import net.corda.core.internal.uncheckedCast
-import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
@@ -278,7 +278,7 @@ open class InternalMockNetwork(private val cordappPackages: List<String>,
             return E2ETestKeyManagementService(identityService, keyPairs)
         }
 
-        override fun startShell(rpcOps: CordaRPCOps) {
+        override fun startShell(rpcOps: InternalCordaRPCOps) {
             //No mock shell
         }
 

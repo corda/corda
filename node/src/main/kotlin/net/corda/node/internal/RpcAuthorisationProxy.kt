@@ -7,7 +7,7 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
-import net.corda.core.messaging.CordaRPCOps
+import net.corda.core.internal.messaging.InternalCordaRPCOps
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.ParametersUpdateInfo
 import net.corda.core.node.NodeInfo
@@ -20,7 +20,7 @@ import java.io.InputStream
 import java.security.PublicKey
 
 // TODO change to KFunction reference after Kotlin fixes https://youtrack.jetbrains.com/issue/KT-12140
-class RpcAuthorisationProxy(private val implementation: CordaRPCOps, private val context: () -> RpcAuthContext) : CordaRPCOps {
+class RpcAuthorisationProxy(private val implementation: InternalCordaRPCOps, private val context: () -> RpcAuthContext) : InternalCordaRPCOps {
     override fun networkParametersFeed(): DataFeed<ParametersUpdateInfo?, ParametersUpdateInfo> = guard("networkParametersFeed") {
         implementation.networkParametersFeed()
     }
@@ -179,4 +179,6 @@ class RpcAuthorisationProxy(private val implementation: CordaRPCOps, private val
             return action()
         }
     }
+
+    override fun dumpCheckpoints() = guard("dumpCheckpoints", implementation::dumpCheckpoints)
 }
