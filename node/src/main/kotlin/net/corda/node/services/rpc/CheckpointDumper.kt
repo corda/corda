@@ -102,16 +102,21 @@ class CheckpointDumper(private val checkpointStorage: CheckpointStorage, private
                                             context = SerializationDefaults.CHECKPOINT_CONTEXT.withTokenContext(checkpointSerializationContext)
                                     )
                                     val json = checkpoint.toJson(runId, now)
-                                    try {
-                                        val jsonBytes = writer.writeValueAsBytes(json)
-                                        zip.putNextEntry(ZipEntry("${json.topLevelFlowClass.simpleName}-$runId.json"))
-                                        zip.write(jsonBytes)
-                                        zip.closeEntry()
-                                    } catch (e: Exception) {
-                                        log.info("Failed to output json checkpoint dump for ${json.topLevelFlowClass.simpleName}-$runId", e)
-                                    }
+                                    val jsonBytes = writer.writeValueAsBytes(json)
+                                    zip.putNextEntry(ZipEntry("${json.topLevelFlowClass.simpleName}-$runId.json"))
+                                    zip.write(jsonBytes)
+                                    zip.closeEntry()
                                 } catch (e: Exception) {
-                                    log.info("Failed to deserialise checkpoint with id: $runId")
+                                    log.info("Failed to deserialise checkpoint with id: $runId", e)
+                                    zip.putNextEntry(ZipEntry("Undeserialisable-checkpoint-$runId.json"))
+                                    zip.write(
+                                            """
+                                            *** Unable to deserialise checkpoint: ${e.message} ***
+                                            *** Check logs for further information, checkpoint id: $runId ***
+                                            """
+                                                    .trimIndent().toByteArray()
+                                    )
+                                    zip.closeEntry()
                                 }
                             }
                         }
@@ -237,7 +242,7 @@ class CheckpointDumper(private val checkpointStorage: CheckpointStorage, private
     private fun SerializedBytes<Any>.deserializeOrOutputPlaceholder() = try {
         deserialize()
     } catch (e: Exception) {
-        "*** Unable to deserialise message payload ***"
+        "*** Unable to deserialise message payload: ${e.message} ***"
     }
 
     @Suppress("unused")
