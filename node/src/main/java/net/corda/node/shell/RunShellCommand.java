@@ -2,6 +2,7 @@ package net.corda.node.shell;
 
 import net.corda.client.jackson.StringToMethodCallParser;
 import net.corda.core.internal.messaging.InternalCordaRPCOps;
+import net.corda.core.messaging.CordaRPCOps;
 import org.crsh.cli.Argument;
 import org.crsh.cli.Command;
 import org.crsh.cli.Man;
@@ -26,21 +27,30 @@ public class RunShellCommand extends InteractiveShellCommand {
             InvocationContext<Map> context,
             @Usage("The command to run") @Argument(unquote = false) List<String> command
     ) {
-        StringToMethodCallParser<InternalCordaRPCOps> parser = new StringToMethodCallParser<>(InternalCordaRPCOps.class, objectMapper());
 
         if (command == null) {
-            emitHelp(context, parser);
+            emitHelp(context);
             return null;
         }
 
         return InteractiveShell.runRPCFromString(command, out, context, ops());
     }
 
-    private void emitHelp(InvocationContext<Map> context, StringToMethodCallParser<InternalCordaRPCOps> parser) {
+    private void emitHelp(InvocationContext<Map> context) {
+        // to handle the lack of working inheritance in [StringToMethodCallParser] two parsers are used
+        StringToMethodCallParser<CordaRPCOps> cordaRpcOpsParser =
+                new StringToMethodCallParser<>(
+                        CordaRPCOps.class, objectMapper());
+        StringToMethodCallParser<InternalCordaRPCOps> internalCordaRpcOpsParser =
+                new StringToMethodCallParser<>(
+                        InternalCordaRPCOps.class, objectMapper());
         // Sends data down the pipeline about what commands are available. CRaSH will render it nicely.
         // Each element we emit is a map of column -> content.
-        Set<Map.Entry<String, String>> entries = parser.getAvailableCommands().entrySet();
-        ArrayList<Map.Entry<String, String>> entryList = new ArrayList<>(entries);
+        Set<Map.Entry<String, String>> entries = cordaRpcOpsParser.getAvailableCommands().entrySet();
+        Set<Map.Entry<String, String>> internalEntries = internalCordaRpcOpsParser.getAvailableCommands().entrySet();
+        Set<Map.Entry<String, String>> entrySet = new HashSet<>(entries);
+        entrySet.addAll(internalEntries);
+        List<Map.Entry<String, String>> entryList = new ArrayList<>(entrySet);
         entryList.sort(Comparator.comparing(Map.Entry::getKey));
         for (Map.Entry<String, String> entry : entryList) {
             // Skip these entries as they aren't really interesting for the user.
