@@ -209,7 +209,7 @@ consensus algorithms require nodes to be usefully distinct such that users can r
 members going bad simultaneously. In the worst case where a BFT cluster consists of a single player pretending to be
 several, the security of the system is completely voided in an undetectable manner. Useful privacy techniques like
 mix networks and Tor\cite{Dingledine:2004:TSO:1251375.1251396} also make the assumption of unique, sybil-free
-identities. For these reasons the mainline Corda network performs identity verification and requires that
+identities. For these reasons and more the mainline Corda network performs identity verification to require that
 top-level members be companies, and it's recommended that all networks do so.
 
 Identity is covered further in section~\cref{sec:identity}.
@@ -361,12 +361,25 @@ would need newer features than are supported. The decision to unify the protocol
 protocol versions may be effectively identical despite having different version numbers: this was deemed preferable
 to requiring developers to understand and keep track of two similar-but-different versioning streams.
 
-\paragraph{Mandatory upgrades.}The network operator may choose to require nodes to meet a minimum version number.
-In this way the network can continue to enable new transaction features that require, and control the rate of
-growth-induced ossification. Nodes that aren't new enough to handle the network's minimum version shut down
-automatically unless overridden. Because mandatory upgrades may be difficult to coordinate and enforce future
-versions of the platform may support outsourcing of transaction verification to third party nodes or remote SGX
-enclaves.
+\paragraph{Mandatory upgrades.}The network operator may choose to require that nodes meet a minimum version number
+via setting a network parameter.
+
+This is useful because in DLT systems some types of new feature require everyone in a network to upgrade before
+anyone can use it. This is usually because the feature affects how transactions should be validated, and thus any
+node may encounter the new data during transaction verification even if no installed app uses it itself. In this
+case the API will throw an exception if an attempt is made to use a new feature on a network where the minimum
+version number is lower than the version in which the new feature was introduced. The network can then use a flag
+day to increase the minimum platform version and thus activate the new features. Nodes that aren't new
+enough to handle the network's minimum version shut down automatically unless overridden. Because mandatory
+upgrades may be difficult to coordinate and enforce future versions of the platform may support outsourcing of
+transaction verification to third party nodes or remote SGX enclaves.
+
+Flag days mark the end of a process: it is the point by which the overwhelming majority of network participants are
+expected to have upgraded to some minimum version, and whose date is expected to be set by the network operator to
+achieve the right balance for their network between meeting the needs of those who wish to use features that
+require that version, and those for whom upgrading is difficult. It should be noted that flag days are expected to
+be relatively rare once Corda matures. In any case the majority of new features do not change the data model and so
+don't require everybody on the network to upgrade before they can be used.
 
 \paragraph{Target versioning.}The node supports `target versioning', in which the latest version the app was
 tested against is advertised in its metadata. The node can use this to activate or deactivate workarounds for buggy
@@ -504,7 +517,12 @@ sensitive tasks than reliably issuing pairs of signed data structures, so this a
 
 In all decentralised ledger systems data access is controlled using asymmetric key pairs. Because public keys are
 difficult for humans to reliably remember or write down, a naming layer is added on top based on X.509 certificate
-hierarchies rooted at a single certificate authority for each network (see~\cref{subsec:the-identity-root}).
+hierarchies rooted at a single certificate authority for each network (see~\cref{subsec:the-identity-root}). This
+is beneficial for security. Many large attacks on cryptocurrencies have exploited the fact that destination
+addresses are raw (hashes of) public keys, thus all look the same and it's up to users or app developers to map
+these to more natural forms. Phishing attacks, viruses that detect addresses being copied to the clipboard and
+substitute them, hacks on web forums to replace addresses and more have all been reported. By allowing both
+apps and users to work in terms of natural language identities, multiple avenues for attack are closed.
 
 More complex notions of identity that may attest to many time-varying attributes are not handled at this layer of
 the system: the base identity is always just an X.500 name. Note that even though messaging is always identified,
@@ -553,6 +571,18 @@ machines manufactured by the firm. Future versions of the flow framework will un
 based on these names via their controlling organisational nodes by simply finding the most precise match for the
 name (after discarding suffixes) in the network map, thus enabling apps to start structured conversations with
 those entities.
+
+The identity hierarchy has a single root: the node's network operator. In effect there is only one root certificate
+authority. This may appear different to the web PKI (in which there are many competing CAs) but is actually the
+same. On the web, the identity hierarchy root is your browser or operating system vendor. These vendors select which
+certificate authorities are a part of the `root store' and thus trusted to verify identities. Authority is ultimately
+only delegated by the software vendors. Corda doesn't ship a root store, as that would make the software maintainers
+be the ultimate identity root of all networks granting too much power. Consider a software update that added a CA
+to the trust store controlled by a rogue developer, for example - this would grant that rogue developer full read/write
+access to every Corda network. Instead, the network operator is the root and may delegate authority as they see fit.
+Whilst normally used to delegate authority over the sub-namespace of a single legal entity, as described above, it is
+theoretically also possible to delegate in other ways, for example, along national boundaries, or simply to grant
+unconstrained certificate-issuing power to other firms, as is done in the web PKI.
 
 \subsection{Confidential identities}\label{subsec:confidential-identities}
 
@@ -1901,7 +1931,7 @@ privacy requirements should be met, for example:
 
 \begin{itemize}
     \item The recharging port may over-bill the vehicle owner.
-    \item The vehicle owner may misreport their identity, to stick someone else with the costs.
+    \item The vehicle owner may misreport their identity, in order that someone else incurs the costs.
     \item The machine being plugged in might not be a vehicle at all, which could be problematic if the business
           model of the port owner assumes a temporary stop by the driver (for instance, nearby shops may be
           subsidising power).
@@ -1927,9 +1957,9 @@ constraints: they must be ZIP files, they must fit in memory on all nodes, they 
 properties, they must be propagated everywhere the transaction itself is, and so on. Sometimes it's desirable to
 attach raw data files to transactions that are \emph{not} used in forming consensus, but rather are only included
 for audit trail and signing purposes. This can be done today by just including the hash of a data file in a state
-but it would be convenient if the protocol took care of streaming the result between nodes and making those streams
+but it would be convenient if the protocol took care of sending the underlying data between nodes and making it
 available to application developers. \emph{Data streams} are a proposed feature that allows Java
-\texttt{InputStream} objects to be included in transactions. The RPC client library is enhanced to support sending
+\texttt{InputStream} objects to be added to transactions. The RPC client library is enhanced to support sending
 streams across RPC/MQ connections, and the node incrementally hashes the contents of the stream and stores it
 locally, embedding the final hash into the transaction where it will be covered by a signature. The data is then
 streamed across the peer-to-peer network without ever being stored fully in memory, and the stream is checked
@@ -2048,7 +2078,8 @@ Unfortunately the lose-integrity model has one large disadvantage that makes it 
 only available model: if a flaw in the enclave or SGX itself is found, it becomes possible for an attacker to edit
 the ledger as they see fit. Because nodes aren't actually cross checking each other any more, but placing full
 confidence in the enclave to assert validity, anyone who can forge signatures of validity could create money out of
-thin air.
+thin air. This security model is thus the same as for zero knowledge proofs, for which algorithmic failures are
+also unauditable.
 
 In practice both a verification enclave and SGX itself are complex systems that are unlikely to be bug free. Flaws
 will be found and fixed over the lifetime of the system, and the design of SGX anticipates that. Indeed, such flaws
@@ -2074,9 +2105,9 @@ along the chain of custody and also save encrypted transactions to their local s
 A simplified version of the protocol looks like this:
 
 \begin{enumerate}
-    \item Alice constructs a new transaction sending the state to Bob, with arbitrary adjustments to the state
-          in question. The transaction input points to the transaction Alice received the state in from Zack.
-          She sends this new transaction to Bob.
+    \item Alice constructs a new transaction consuming a state she previously received and outputting a new state,
+          newly involving Bob, with arbitrary adjustments to the state in question. The transaction input points
+          to the transaction Alice received the state in from Zack.
     \item Bob checks the inputs to see if he already knows about the chain of custody. He doesn't, so he
           instantiates his enclave and sends a remote attestation of it to Alice. The attestation includes an enclave
           specific encryption key.
