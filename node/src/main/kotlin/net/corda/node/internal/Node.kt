@@ -293,7 +293,11 @@ open class Node(configuration: NodeConfiguration,
                     networkParameters.maxMessageSize,
                     configuration.crlCheckSoftFail.toRevocationConfig(),
                     configuration.enableSNI,
-                    artemisClient)
+                    artemisClient).apply {
+                this.failure.subscribe {
+                    errorAndTerminate("BridgeControlListener has failed. Node must restart.")
+                }
+            }
         } else {
             null
         }

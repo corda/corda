@@ -70,31 +70,41 @@ class BridgeControlListener(private val keyStore: CertificateStore,
     val activeChange: Observable<Boolean>
         get() = _activeChange
 
+    private val _failure = PublishSubject.create<BridgeControlListener>().toSerialized()
+    val failure: Observable<BridgeControlListener>
+        get() = _failure
+
     fun start() {
-        stop()
+        try {
+            stop()
 
-        val queueDisambiguityId = UUID.randomUUID().toString()
-        bridgeControlQueue = "$BRIDGE_CONTROL.$queueDisambiguityId"
-        bridgeNotifyQueue = "$BRIDGE_NOTIFY.$queueDisambiguityId"
+            val queueDisambiguityId = UUID.randomUUID().toString()
+            bridgeControlQueue = "$BRIDGE_CONTROL.$queueDisambiguityId"
+            bridgeNotifyQueue = "$BRIDGE_NOTIFY.$queueDisambiguityId"
 
-        bridgeManager.start()
-        val artemis = artemisMessageClientFactory()
-        this.artemis = artemis
-        artemis.start()
-        val artemisClient = artemis.started!!
-        val artemisSession = artemisClient.session
-        registerBridgeControlListener(artemisSession)
-        registerBridgeDuplicateChecker(artemisSession)
-        // Attempt to read available inboxes directly from Artemis before requesting updates from connected nodes
-        validInboundQueues.addAll(artemisSession.addressQuery(SimpleString("$P2P_PREFIX#")).queueNames.map { it.toString() })
-        log.info("Found inboxes: $validInboundQueues")
-        if (active) {
-            _activeChange.onNext(true)
+            bridgeManager.start()
+            val artemis = artemisMessageClientFactory()
+            this.artemis = artemis
+            artemis.start()
+            val artemisClient = artemis.started!!
+            val artemisSession = artemisClient.session
+            registerBridgeControlListener(artemisSession)
+            registerBridgeDuplicateChecker(artemisSession)
+            // Attempt to read available inboxes directly from Artemis before requesting updates from connected nodes
+            validInboundQueues.addAll(artemisSession.addressQuery(SimpleString("$P2P_PREFIX#")).queueNames.map { it.toString() })
+            log.info("Found inboxes: $validInboundQueues")
+            if (active) {
+                _activeChange.onNext(true)
+            }
+            val startupMessage = BridgeControl.BridgeToNodeSnapshotRequest(bridgeId).serialize(context = SerializationDefaults.P2P_CONTEXT)
+                    .bytes
+            val bridgeRequest = artemisSession.createMessage(false)
+            bridgeRequest.writeBodyBufferBytes(startupMessage)
+            artemisClient.producer.send(BRIDGE_NOTIFY, bridgeRequest)
+        } catch (e: Exception) {
+            log.error("Failure to start BridgeControlListener", e)
+            _failure.onNext(this)
         }
-        val startupMessage = BridgeControl.BridgeToNodeSnapshotRequest(bridgeId).serialize(context = SerializationDefaults.P2P_CONTEXT).bytes
-        val bridgeRequest = artemisSession.createMessage(false)
-        bridgeRequest.writeBodyBufferBytes(startupMessage)
-        artemisClient.producer.send(BRIDGE_NOTIFY, bridgeRequest)
     }
 
     private fun registerBridgeControlListener(artemisSession: ClientSession) {
@@ -111,6 +121,7 @@ class BridgeControlListener(private val keyStore: CertificateStore,
                 processControlMessage(msg)
             } catch (ex: Exception) {
                 log.error("Unable to process bridge control message", ex)
+                _failure.onNext(this)
             }
             msg.acknowledge()
         }
@@ -134,36 +145,40 @@ class BridgeControlListener(private val keyStore: CertificateStore,
                 }
             } catch (ex: Exception) {
                 log.error("Unable to process bridge notification message", ex)
+                _failure.onNext(this)
             }
             msg.acknowledge()
         }
     }
 
     fun stop() {
-        if (active) {
-            _activeChange.onNext(false)
-        }
-        validInboundQueues.clear()
-        controlConsumer?.close()
-        controlConsumer = null
-        notifyConsumer?.close()
-        notifyConsumer = null
-        artemis?.apply {
-            try {
-                started?.session?.deleteQueue(bridgeControlQueue)
-            } catch(e: ActiveMQNonExistentQueueException) {
-                log.warn("Queue $bridgeControlQueue does not exist and it can't be deleted")
+        try {
+            if (active) {
+                _activeChange.onNext(false)
             }
-            try {
-                started?.session?.deleteQueue(bridgeNotifyQueue)
-            } catch(e: ActiveMQNonExistentQueueException) {
-                log.warn("Queue $bridgeNotifyQueue does not exist and it can't be deleted")
+            validInboundQueues.clear()
+            controlConsumer?.close()
+            controlConsumer = null
+            notifyConsumer?.close()
+            notifyConsumer = null
+            artemis?.apply {
+                try {
+                    started?.session?.deleteQueue(bridgeControlQueue)
+                } catch (e: ActiveMQNonExistentQueueException) {
+                    log.warn("Queue $bridgeControlQueue does not exist and it can't be deleted")
+                }
+                try {
+                    started?.session?.deleteQueue(bridgeNotifyQueue)
+                } catch (e: ActiveMQNonExistentQueueException) {
+                    log.warn("Queue $bridgeNotifyQueue does not exist and it can't be deleted")
+                }
+                stop()
             }
-
-            stop()
+            artemis = null
+            bridgeManager.stop()
+        } catch (e: Exception) {
+            log.error("Failure to stop BridgeControlListener", e)
         }
-        artemis = null
-        bridgeManager.stop()
     }
 
     override fun close() = stop()
