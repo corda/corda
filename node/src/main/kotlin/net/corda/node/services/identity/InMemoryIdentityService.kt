@@ -114,22 +114,8 @@ class InMemoryIdentityService(identities: List<PartyAndCertificate> = emptyList(
     }
 
     override fun registerKeyToParty(key: PublicKey, party: Party): Boolean {
-        var willRegisterNewMapping = true
-
-        when (keyToName[key]) {
-            null -> {
-                keyToName.putIfAbsent(key, party.name)
-            }
-            else -> {
-                if (party.name != keyToName[key]) {
-                    return false
-                }
-                willRegisterNewMapping = false
-            }
-        }
-        return willRegisterNewMapping
-        if (keyToParties[key] == null) {
-            keyToParties.putIfAbsent(key, party.name)
+        if (keyToName[key] == null) {
+            keyToName.putIfAbsent(key, party.name)
             return true
         }
         return false

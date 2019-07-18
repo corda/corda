@@ -52,9 +52,6 @@ class PersistentIdentitiesMigration : CordaMigration() {
     }
 
     // TODO write proper driver tests
-    /**
-     * TODO temporary hack to get around soul destroying mocking needed to test this properly
-     */
     private fun testMigration(connection: JdbcConnection) {
         val alice = TestIdentity(CordaX500Name("Alice Corp", "Madrid", "ES"), 70)
         val pkHash = addTestMapping(connection, alice)
@@ -66,15 +63,10 @@ class PersistentIdentitiesMigration : CordaMigration() {
             insertEntry(connection, it)
         }
 
-        /**
-         * TODO temporary hack to get around soul destroying mocking needed to test this properly
-         */
         verifyTestMigration(connection, pkHash, alice.name.toString())
         deleteTestMapping(connection, pkHash)
     }
 
-    // TODO What about DB portability?
-    // TODO Why are you using node_identities? not node_named_identities?
     private fun extractKeyParties(connection: JdbcConnection): Map<String, CordaX500Name> {
         val keyParties = mutableMapOf<String, CordaX500Name>()
         connection.createStatement().use {
