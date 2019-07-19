@@ -2,7 +2,6 @@ package net.corda.bridge.services.receiver
 
 import net.corda.bridge.services.api.*
 import net.corda.bridge.services.config.BridgeConfigHelper.FLOAT_NAME
-import net.corda.bridge.services.config.BridgeConfigHelper.makeCryptoService
 import net.corda.bridge.services.receiver.FloatControlTopics.FLOAT_CONTROL_TOPIC
 import net.corda.bridge.services.receiver.FloatControlTopics.FLOAT_DATA_TOPIC
 import net.corda.bridge.services.util.ServiceStateCombiner
@@ -21,7 +20,6 @@ import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.protonwrapper.messages.MessageStatus
 import net.corda.nodeapi.internal.protonwrapper.messages.ReceivedMessage
 import net.corda.nodeapi.internal.protonwrapper.netty.*
-import net.corda.nodeapi.internal.provider.extractCertificates
 import rx.Subscription
 import java.io.ByteArrayInputStream
 import java.security.KeyStore
@@ -66,8 +64,7 @@ class FloatControlListenerService(val conf: FirewallConfiguration,
     init {
         val sslConfiguration: MutualSslConfiguration = conf.floatOuterConfig?.tunnelSSLConfiguration ?: conf.publicSSLConfiguration
         // The fact that we pass FLOAT_NAME has no effect as Crypto service obtained will only be used to sign data and never to create new key pairs
-        val cryptoService = makeCryptoService(conf.tunnelingCryptoServiceConfig, FLOAT_NAME, sslConfiguration.keyStore)
-        tunnelSigningService = CryptoServiceSigningService(cryptoService, sslConfiguration.keyStore.get().extractCertificates(), sslConfiguration.trustStore.get(), auditService = auditService)
+        tunnelSigningService = CryptoServiceSigningService(conf.tunnelingCryptoServiceConfig, FLOAT_NAME, sslConfiguration, auditService = auditService, name = "Tunnel")
         tunnelingTruststore = sslConfiguration.trustStore.get()
         statusFollower = ServiceStateCombiner(listOf(auditService, amqpListener, tunnelSigningService))
     }
@@ -117,6 +114,9 @@ class FloatControlListenerService(val conf: FirewallConfiguration,
         lock.withLock {
             stateHelper.active = false
             stopControlListener()
+            incomingMessageSubscriber?.unsubscribe()
+            incomingMessageSubscriber = null
+            tunnelSigningService.stop()
             statusSubscriber?.unsubscribe()
             statusSubscriber = null
             maxMessageSize = null
@@ -130,19 +130,17 @@ class FloatControlListenerService(val conf: FirewallConfiguration,
             }
             connectSubscriber?.unsubscribe()
             connectSubscriber = null
-            destroyP2pSigningService()
-            tunnelSigningService.stop()
-            destroyTunnelExternalCrlSourceService()
-            amqpControlServer?.stop()
             receiveSubscriber?.unsubscribe()
             receiveSubscriber = null
+            destroyP2pSigningService()
+            destroyTunnelExternalCrlSourceService()
+            val controlServer = amqpControlServer
             amqpControlServer = null
             activeConnectionInfo = null
             forwardAddress = null
             forwardLegalName = null
-            incomingMessageSubscriber?.unsubscribe()
-            incomingMessageSubscriber = null
-        }
+            controlServer
+        }?.stop()
     }
 
     private fun destroyTunnelExternalCrlSourceService() {

@@ -1,43 +1,69 @@
 package net.corda.bridge.services.receiver
 
-import net.corda.bridge.services.api.FirewallAuditService
-import net.corda.bridge.services.api.ServiceStateSupport
-import net.corda.bridge.services.api.TLSSigningService
+import net.corda.bridge.services.api.*
+import net.corda.bridge.services.config.BridgeConfigHelper
 import net.corda.bridge.services.util.ServiceStateHelper
-import net.corda.core.toFuture
+import net.corda.core.identity.CordaX500Name
+import net.corda.core.internal.ThreadBox
+import net.corda.core.utilities.Try
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.trace
 import net.corda.nodeapi.internal.config.CertificateStore
+import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.cryptoservice.CryptoService
-import rx.Subscription
-import rx.subjects.PublishSubject
-import java.security.cert.X509Certificate
-import java.util.concurrent.TimeUnit
+import net.corda.nodeapi.internal.cryptoservice.SupportedCryptoServices
+import net.corda.nodeapi.internal.provider.extractCertificates
+import java.io.IOException
+import java.lang.Math.min
+import java.util.function.Consumer
 
-class CryptoServiceSigningService(private val cryptoService: CryptoService,
-                                  private val certificates: Map<String, List<X509Certificate>>,
-                                  private val truststore: CertificateStore,
+class CryptoServiceSigningService(private val csConfig: CryptoServiceConfig?,
+                                  private val legalName: CordaX500Name,
+                                  sslConfig: MutualSslConfiguration,
                                   private val sslHandshakeTimeout: Long? = null,
                                   private val auditService: FirewallAuditService,
+                                  private val name: String,
+                                  private val sleep: (Long) -> Unit = Thread::sleep,
+                                  private val makeCryptoService: () -> CryptoService = { BridgeConfigHelper.makeCryptoService(csConfig, legalName, sslConfig.keyStore) },
                                   private val stateHelper: ServiceStateHelper = ServiceStateHelper(log)) : TLSSigningService, ServiceStateSupport by stateHelper {
     companion object {
         private val log = contextLogger()
+        private const val HEARTBEAT_INTERVAL_SECONDS = 60
+        private const val RECONNECT_INTERVAL_MIN_SECONDS = 3
+        private const val RECONNECT_INTERVAL_MAX_SECONDS = 60
+        private const val POLITE_SHUTDOWN_INTERVAL_MILLIS = 3000L
+        private const val SSL_HANDSHAKE_TIMEOUT_EXTRA_MILLIS = 5000L
     }
 
-    private var hsmHeartbeat: Subscription? = null
+    private val certificates = sslConfig.keyStore.get().extractCertificates()
+    private val truststore = sslConfig.trustStore.get()
+    private val cryptoServiceName = csConfig?.name ?: SupportedCryptoServices.BC_SIMPLE
+
+    private class InnerState {
+        var running = false
+        var connectThread: Thread? = null
+        var cryptoService: CryptoService? = null
+    }
+
+    private val state = ThreadBox(InnerState())
 
     override fun sign(alias: String, signatureAlgorithm: String, data: ByteArray): ByteArray? {
-        return try {
-            cryptoService.sign(alias, data, signatureAlgorithm)
-        } catch (e: Exception) {
-            log.error("Error encountered while signing", e)
-            sslHandshakeTimeout?.let {
-                // Make TLS handshake timeout when error instead of throwing exception, this will allow TLS to retry connection.
-                // Throwing exception here will cause netty to terminate the connection and the client will receive a fatal alert which will block the connection.
-                Thread.sleep(sslHandshakeTimeout + 5000)
+        val cs = state.locked { cryptoService }
+        if (cs != null) {
+            try {
+                return cs.sign(alias, data, signatureAlgorithm)
+            } catch (e: Exception) {
+                log.error("Error encountered while signing", e)
             }
-            null
+        } else {
+            log.warn("Crypto service is offline while signing")
         }
+        sslHandshakeTimeout?.let {
+            // Make TLS handshake timeout when error instead of throwing exception, this will allow TLS to retry connection.
+            // Throwing exception here will cause netty to terminate the connection and the client will receive a fatal alert which will block the connection.
+            sleep(sslHandshakeTimeout + SSL_HANDSHAKE_TIMEOUT_EXTRA_MILLIS)
+        }
+        return null
     }
 
     override fun certificates() = certificates
@@ -45,33 +71,75 @@ class CryptoServiceSigningService(private val cryptoService: CryptoService,
     override fun truststore(): CertificateStore = truststore
 
     override fun start() {
-        log.info("Starting CryptoServiceSigningService with ${cryptoService.javaClass.simpleName}")
-
-        // TODO: Heartbeat interval configurable?
-        val heartbeat = PublishSubject.interval(0, 1, TimeUnit.MINUTES).onBackpressureDrop().map {
-            try {
-                // we don't care the return boolean result, just want to make sure HSM is connected.
-                cryptoService.containsKey("heartbeat")
-                log.trace { "Crypto service online." }
-                true
-            } catch (e: Exception) {
-                log.trace("Crypto service offline.", e)
-                false
+        state.locked {
+            if (!running) {
+                // Don't start if there is an exception other than IOException
+                startCryptoService().doOnFailure(Consumer {
+                    if (it !is IOException) throw it
+                })
+                running = true
+                connectThread = Thread({ loop() }, "$name-$cryptoServiceName-crypto-signing-thread").apply {
+                    isDaemon = true
+                }
+                connectThread!!.start()
             }
-        }
-
-        // Block until the first heartbeat returns
-        stateHelper.active = heartbeat.toFuture().get()
-
-        // subscribe to future heartbeats
-        hsmHeartbeat = heartbeat.subscribe {
-            stateHelper.active = it
         }
     }
 
     override fun stop() {
-        log.info("Stopping CryptoServiceSigningService")
-        hsmHeartbeat?.unsubscribe()
         stateHelper.active = false
+        val connectThread = state.locked {
+            if (running) {
+                log.info("Stopping CryptoServiceSigningService")
+                running = false
+                cryptoService = null
+                val thread = connectThread
+                connectThread = null
+                thread
+            } else null
+        }
+        connectThread?.interrupt()
+        connectThread?.join(POLITE_SHUTDOWN_INTERVAL_MILLIS)
+    }
+
+    private fun startCryptoService(): Try<CryptoService> = Try.on {
+        makeCryptoService()
+    }.doOnSuccess(Consumer {
+        log.info("Starting CryptoServiceSigningService with ${it.javaClass.simpleName}")
+        state.locked { cryptoService = it }
+    }).doOnFailure(Consumer {
+        log.warn("Unable to connect to $cryptoServiceName", it)
+    })
+
+    private fun loop() {
+        var reconnectInterval = RECONNECT_INTERVAL_MIN_SECONDS
+        while (state.locked { running }) {
+            val cs = state.locked { cryptoService }
+            if (cs != null) {
+                try {
+                    // we don't care the return boolean result, just want to make sure HSM is connected.
+                    cs.containsKey("heartbeat")
+                    log.trace { "Crypto service online." }
+                    stateHelper.active = true
+                    reconnectInterval = HEARTBEAT_INTERVAL_SECONDS
+                } catch (e: Exception) {
+                    log.warn("Crypto service offline.", e)
+                    state.locked { cryptoService = null }
+                    stateHelper.active = false
+                    reconnectInterval = RECONNECT_INTERVAL_MIN_SECONDS
+                }
+            }
+            try {
+                // Sleep before attempting reconnect or before next heartbeat
+                sleep(reconnectInterval * 1000L)
+            } catch (ex: InterruptedException) {
+                // ignore
+            }
+            if (state.locked { running && cryptoService == null }) {
+                startCryptoService()
+                reconnectInterval = min(2 * reconnectInterval, RECONNECT_INTERVAL_MAX_SECONDS)
+            }
+        }
+        log.info("Ended CryptoServiceSigningService Thread")
     }
 }
