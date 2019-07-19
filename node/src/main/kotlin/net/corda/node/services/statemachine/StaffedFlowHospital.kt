@@ -1,9 +1,9 @@
 package net.corda.node.services.statemachine
 
 import net.corda.core.crypto.newSecureRandom
-import net.corda.core.flows.ReceiveFinalityFlow
-import net.corda.core.flows.StateMachineRunId
+import net.corda.core.flows.*
 import net.corda.core.identity.Party
+import net.corda.core.internal.DeclaredField
 import net.corda.core.internal.ThreadBox
 import net.corda.core.internal.TimedFlow
 import net.corda.core.internal.bufferUntilSubscribed
@@ -306,9 +306,14 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val 
     object FinalityDoctor : Staff {
         override fun consult(flowFiber: FlowFiber, currentState: StateMachineState, newError: Throwable, history: FlowMedicalHistory): Diagnosis {
             return if (currentState.flowLogic is FinalityHandler || isFromReceiveFinalityFlow(newError)) {
-                log.warn("Flow ${flowFiber.id} failed to be finalised. Manual intervention may be required before retrying " +
-                        "the flow by re-starting the node. State machine state: $currentState", newError)
-                Diagnosis.OVERNIGHT_OBSERVATION
+                if (isErrorPropagatedFromCounterparty(newError)) {
+                    // no need to keep around the flow, since notarisation has already failed at the counterparty.
+                    Diagnosis.NOT_MY_SPECIALTY
+                } else {
+                    log.warn("Flow ${flowFiber.id} failed to be finalised. Manual intervention may be required before retrying " +
+                            "the flow by re-starting the node. State machine state: $currentState", newError)
+                    Diagnosis.OVERNIGHT_OBSERVATION
+                }
             } else {
                 Diagnosis.NOT_MY_SPECIALTY
             }
@@ -316,6 +321,20 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val 
 
         private fun isFromReceiveFinalityFlow(throwable: Throwable): Boolean {
             return throwable.stackTrace.any { it.className == ReceiveFinalityFlow::class.java.name }
+        }
+
+        private fun isErrorPropagatedFromCounterparty(throwable: Throwable): Boolean {
+            return when(throwable) {
+                is UnexpectedFlowEndException -> {
+                    val peer = DeclaredField<Party?>(UnexpectedFlowEndException::class.java, "peer", throwable).value
+                    peer != null
+                }
+                is FlowException -> {
+                    val peer = DeclaredField<Party?>(FlowException::class.java, "peer", throwable).value
+                    peer != null
+                }
+                else -> false
+            }
         }
     }
 }
