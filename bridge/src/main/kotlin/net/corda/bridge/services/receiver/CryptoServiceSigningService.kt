@@ -3,6 +3,7 @@ package net.corda.bridge.services.receiver
 import net.corda.bridge.services.api.*
 import net.corda.bridge.services.config.BridgeConfigHelper
 import net.corda.bridge.services.util.ServiceStateHelper
+import net.corda.core.crypto.Crypto
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.ThreadBox
 import net.corda.core.utilities.Try
@@ -103,12 +104,12 @@ class CryptoServiceSigningService(private val csConfig: CryptoServiceConfig?,
     }
 
     private fun startCryptoService(): Try<CryptoService> = Try.on {
-        makeCryptoService()
+        makeCryptoService().checkCanSignAllAliases()
     }.doOnSuccess(Consumer {
         log.info("Starting CryptoServiceSigningService with ${it.javaClass.simpleName}")
         state.locked { cryptoService = it }
     }).doOnFailure(Consumer {
-        log.warn("Unable to connect to $cryptoServiceName", it)
+        log.warn("$cryptoServiceName is not operational", it)
     })
 
     private fun loop() {
@@ -141,5 +142,19 @@ class CryptoServiceSigningService(private val csConfig: CryptoServiceConfig?,
             }
         }
         log.info("Ended CryptoServiceSigningService Thread")
+    }
+
+    private fun CryptoService.checkCanSignAllAliases() : CryptoService {
+        val testPhraseClearText = "testingSigning123".toByteArray()
+        aliases().forEach { alias ->
+            val cert = requireNotNull(certificate(alias))
+            val msgSuffixFn = { "for '$name' for alias: '$alias' and certificate: $cert . " +
+                    "Please check configuration file paying special attention at CryptoServiceConfigs." }
+            val signedTestPhrase = requireNotNull(sign(alias, testPhraseClearText, defaultTLSSignatureScheme().signatureName)) { "Failed to sign " + msgSuffixFn() }
+            require(Crypto.isValid(cert.publicKey, signedTestPhrase, testPhraseClearText)) {
+                "Failed to validate signature " + msgSuffixFn()
+            }
+        }
+        return this
     }
 }

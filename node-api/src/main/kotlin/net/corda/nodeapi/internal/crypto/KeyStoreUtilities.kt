@@ -147,6 +147,6 @@ fun KeyStore.getX509Certificate(alias: String): X509Certificate {
  */
 fun KeyStore.getSupportedKey(alias: String, keyPassword: String): PrivateKey {
     val keyPass = keyPassword.toCharArray()
-    val key = getKey(alias, keyPass) as PrivateKey
+    val key = requireNotNull(getKey(alias, keyPass)) { "Key for alias: '$alias' cannot be found" } as PrivateKey
     return Crypto.toSupportedPrivateKey(key)
 }

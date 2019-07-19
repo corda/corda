@@ -164,10 +164,13 @@ class BridgeIntegrationDiffSslTest {
     }
 
     private fun createTLSKeystore(name: CordaX500Name, path: Path) {
-        val nodeCAKey = Crypto.generateKeyPair()
+        // This is aligned with CryptoService.defaultTLSSignatureScheme
+        val tlsSignatureScheme = X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME
+
+        val nodeCAKey = Crypto.generateKeyPair(tlsSignatureScheme)
         val nodeCACert = X509Utilities.createCertificate(CertificateType.NODE_CA, DEV_INTERMEDIATE_CA.certificate, DEV_INTERMEDIATE_CA.keyPair, name.x500Principal, nodeCAKey.public)
 
-        val tlsKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
+        val tlsKey = Crypto.generateKeyPair(tlsSignatureScheme)
         val tlsCert = X509Utilities.createCertificate(CertificateType.TLS, nodeCACert, nodeCAKey, name.x500Principal, tlsKey.public)
 
         val certChain = listOf(tlsCert, nodeCACert, DEV_INTERMEDIATE_CA.certificate, DEV_ROOT_CA.certificate)
