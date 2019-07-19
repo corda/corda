@@ -30,7 +30,7 @@ import java.security.cert.X509Certificate
 import java.util.*
 
 /**
- * Forgive me father, for I have sinned.
+ * Migration that reads data from the [PersistentIdentityCert] table, extracts the parameters required to insert into the [PersistentIdentity] table.
  */
 class PersistentIdentitiesMigration : CordaMigration() {
     companion object {
@@ -51,7 +51,6 @@ class PersistentIdentitiesMigration : CordaMigration() {
         testMigration(connection)
     }
 
-    // TODO write proper driver tests
     private fun testMigration(connection: JdbcConnection) {
         val alice = TestIdentity(CordaX500Name("Alice Corp", "Madrid", "ES"), 70)
         val pkHash = addTestMapping(connection, alice)
@@ -74,7 +73,6 @@ class PersistentIdentitiesMigration : CordaMigration() {
             while (rs.next()) {
                 val key = rs.getString(1)
                 val partyBytes = rs.getBytes(2)
-                //TODO this will need to be more robust in checking checking the certificate before attempting to map to the party
                 val name = PartyAndCertificate(X509CertificateFactory().delegate.generateCertPath(partyBytes.inputStream())).party.name
                 keyParties.put(key, name)
             }
@@ -160,7 +158,7 @@ object PersistentIdentitiesMigrationSchemaV1 : MappedSchema(schemaFamily = Persi
         )
 )
 
-        class PersistentIdentitiesMigrationException(msg: String, cause: Exception? = null) : Exception(msg, cause)
+class PersistentIdentitiesMigrationException(msg: String, cause: Exception? = null) : Exception(msg, cause)
 
 /**
  * A class that encapsulates a test identity containing a [CordaX500Name] and a [KeyPair]. Duplicate of [net.corda.testing.core.TestIdentity]

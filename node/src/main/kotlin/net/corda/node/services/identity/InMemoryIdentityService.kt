@@ -80,7 +80,7 @@ class InMemoryIdentityService(identities: List<PartyAndCertificate> = emptyList(
         log.trace { "Registering identity $identity" }
         keyToPartyAndCerts[identity.owningKey] = identity
         // Always keep the first party we registered, as that's the well known identity
-        nameToKey.putIfAbsent(identity.name, identity.owningKey)
+        nameToKey.computeIfAbsent(identity.name) {identity.owningKey}
         keyToName.putIfAbsent(identity.owningKey, identity.name)
         return keyToPartyAndCerts[identityCertChain[1].publicKey]
     }

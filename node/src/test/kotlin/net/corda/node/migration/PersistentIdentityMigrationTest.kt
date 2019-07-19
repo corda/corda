@@ -9,7 +9,6 @@ import net.corda.core.internal.hash
 import net.corda.core.internal.signWithCert
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NotaryInfo
-import net.corda.core.utilities.contextLogger
 import net.corda.node.internal.DBNetworkParametersStorage
 import net.corda.node.migration.VaultStateMigrationTest.Companion.CHARLIE
 import net.corda.node.migration.VaultStateMigrationTest.Companion.DUMMY_NOTARY
@@ -22,14 +21,16 @@ import net.corda.testing.core.*
 import net.corda.testing.internal.configureDatabase
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.makeTestIdentityService
-import org.junit.*
+import org.junit.After
+import org.junit.Before
+import org.junit.ClassRule
+import org.junit.Test
 import org.mockito.Mockito
 import java.security.KeyPair
 import java.time.Clock
 import java.time.Duration
 
-class
-PersistentIdentityMigrationTest {
+class PersistentIdentityMigrationTest {
     companion object {
         val alice = TestIdentity(ALICE_NAME, 70)
         val bankOfCorda = TestIdentity(BOC_NAME)
@@ -80,17 +81,15 @@ PersistentIdentityMigrationTest {
         cordaDB.close()
     }
 
-//    @Ignore
     @Test
     fun `migrate identities to new table`() {
         /**
          * TODO - We have to mock every statement/ result to test this properly.
          *
-         * The workaround for now is the [PersistentIdentitiesMigration.addEmptyMapping] and
-         * [PersistentIdentitiesMigration.deleteEmptyMapping] methods that allow us to see the migration occur properly during debugging.
+         * The workaround for now is the [PersistentIdentitiesMigration.addTestMapping] and
+         * [PersistentIdentitiesMigration.deleteTestMapping] methods that allow us to see the migration occur properly during debugging.
          *
          * Since [PersistentIdentitiesMigration] implements [CordaMigration] the migration will run when the DB is setup.
-         *
          */
          val migration = PersistentIdentitiesMigration()
          migration.execute(liquidBaseDB)
