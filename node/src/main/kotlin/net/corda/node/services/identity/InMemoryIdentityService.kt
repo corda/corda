@@ -47,16 +47,11 @@ class InMemoryIdentityService(identities: List<PartyAndCertificate> = emptyList(
 
     @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
     override fun verifyAndRegisterIdentity(identity: PartyAndCertificate): PartyAndCertificate? {
-        return verifyAndRegisterIdentity(identity, false)
+        return verifyAndRegisterIdentity(trustAnchor, identity)
     }
 
     @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
-    private fun verifyAndRegisterIdentity(identity: PartyAndCertificate, isNewRandomIdentity: Boolean): PartyAndCertificate? {
-        return verifyAndRegisterIdentity(trustAnchor, identity, isNewRandomIdentity)
-    }
-
-    @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
-    private fun verifyAndRegisterIdentity(trustAnchor: TrustAnchor, identity: PartyAndCertificate, isNewRandomIdentity: Boolean = false): PartyAndCertificate? {
+    private fun verifyAndRegisterIdentity(trustAnchor: TrustAnchor, identity: PartyAndCertificate): PartyAndCertificate? {
         // Validate the chain first, before we do anything clever with it
         val identityCertChain = identity.certPath.x509Certificates
         try {
@@ -72,15 +67,15 @@ class InMemoryIdentityService(identities: List<PartyAndCertificate> = emptyList(
         }
         // Ensure we record the first identity of the same name, first
         val wellKnownCert = identityCertChain.single { CertRole.extract(it)?.isWellKnown ?: false }
-        if (wellKnownCert != identity.certificate && !isNewRandomIdentity) {
+        if (wellKnownCert != identity.certificate) {
             val idx = identityCertChain.lastIndexOf(wellKnownCert)
             val firstPath = X509Utilities.buildCertPath(identityCertChain.slice(idx until identityCertChain.size))
             verifyAndRegisterIdentity(trustAnchor, PartyAndCertificate(firstPath))
         }
-        return registerIdentity(identity, isNewRandomIdentity)
+        return registerIdentity(identity)
     }
 
-    private fun registerIdentity(identity: PartyAndCertificate, isNewRandomIdentity: Boolean): PartyAndCertificate? {
+    private fun registerIdentity(identity: PartyAndCertificate): PartyAndCertificate? {
         val identityCertChain = identity.certPath.x509Certificates
         log.trace { "Registering identity $identity" }
         keyToPartyAndCerts[identity.owningKey] = identity
