@@ -161,8 +161,8 @@ Further examples
 * See the flow testing tutorial :doc:`here <flow-testing>`
 * See the oracle tutorial :doc:`here <oracles>` for information on testing ``@CordaService`` classes
 * Further examples are available in the Example CorDapp in
-  `Java <https://github.com/corda/samples/blob/|os_samples_branch_name|/cordapp-example/workflows-java/src/test/java/com/example/test/flow/IOUFlowTests.java>`_ and
-  `Kotlin <https://github.com/corda/samples/blob/|os_samples_branch_name|/cordapp-example/workflows-kotlin/src/test/kotlin/com/example/test/flow/IOUFlowTests.kt>`_
+  `Java <|os_samples_branch|/cordapp-example/workflows-java/src/test/java/com/example/test/flow/IOUFlowTests.java>`_ and
+  `Kotlin <|os_samples_branch|/cordapp-example/workflows-kotlin/src/test/kotlin/com/example/test/flow/IOUFlowTests.kt>`_
 
 Contract testing
 ----------------
@@ -380,5 +380,5 @@ Further examples
 
 * See the flow testing tutorial :doc:`here <tutorial-test-dsl>`
 * Further examples are available in the Example CorDapp in
-  `Java <https://github.com/corda/samples/blob/|os_samples_branch_name|/cordapp-example/workflows-java/src/test/java/com/example/test/flow/IOUFlowTests.java>`_ and
-  `Kotlin <https://github.com/corda/samples/blob/|os_samples_branch_name|/cordapp-example/workflows-kotlin/src/test/kotlin/com/example/test/flow/IOUFlowTests.kt>`_
+  `Java <|os_samples_branch|/cordapp-example/workflows-java/src/test/java/com/example/test/flow/IOUFlowTests.java>`_ and
+  `Kotlin <|os_samples_branch|/cordapp-example/workflows-kotlin/src/test/kotlin/com/example/test/flow/IOUFlowTests.kt>`_
