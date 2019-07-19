@@ -40,7 +40,7 @@ class DbSchemaInitialisationTest {
 
     val sampleChangesetFileName = "migration/vault-schema.changelog-init.xml"
     val sampleChangeset = "$sampleChangesetFileName::1511451595465-22::R3.Corda"
-    val loggerPrefix = "databaseInitialisation\\(id=[a-zA-Z0-9]{8};"
+    val loggerPrefix = "DatabaseInitialisation\\(id=[a-zA-Z0-9]{8};"
 
     @Test
     fun `database intilisation logger reports progress`() {

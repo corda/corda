@@ -42,7 +42,7 @@ class SchemaMigration(
         const val NODE_X500_NAME = "liquibase.nodeName"
         val loader = ThreadLocal<CordappLoader>()
         private val mutex = ReentrantLock()
-        val formatter = KeyValueFormatter(true, logger.name )
+        val formatter = KeyValueFormatter(true, logger.name.capitalize() )
     }
 
     init {
