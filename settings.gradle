@@ -120,4 +120,5 @@ if (JavaVersion.current() == JavaVersion.VERSION_1_8) {
 include 'tools:ha-utilities'
 include 'tools:pinger'
 include 'tools:pinger:capsule'
+include 'tools:log-tracer'
 
