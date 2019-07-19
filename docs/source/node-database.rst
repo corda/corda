@@ -154,8 +154,8 @@ For example:
     }
 
 
-Database Schema Initialisation Logging
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Database Schema Migration Logging
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Database initialisation and upgrade logs for Corda internal tables follows a structured format
+Database migration logs for Corda internal tables follow a structured format
 described in :ref:`database-initialisation-logging`.
