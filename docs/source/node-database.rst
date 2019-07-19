@@ -152,3 +152,10 @@ For example:
         maximumPoolSize = 10
         connectionTimeout = 50000
     }
+
+
+Database Schema Migration Logging
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Database migration logs for Corda internal tables follow a structured format
+described in :ref:`database-schema-migration-logging`.
