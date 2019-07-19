@@ -29,9 +29,8 @@ enum class FirewallMode {
     FloatOuter
 }
 
-interface BridgeSSLConfiguration : MutualSslConfiguration {
-val revocationConfig: RevocationConfig
-}
+interface BridgeSSLConfiguration : MutualSslConfiguration
+
 /**
  * Details of the local Artemis broker.
  * Required in SenderReceiver and BridgeInner modes.
@@ -52,8 +51,6 @@ interface BridgeOutboundConfiguration {
  */
 interface BridgeInboundConfiguration {
     val listeningAddress: NetworkHostAndPort
-    // Allows override of [KeyStore] details for the AMQP listener port, otherwise the general top level details are used.
-    val customSSLConfiguration: BridgeSSLConfiguration?
 }
 
 /**

@@ -134,11 +134,6 @@ class ConfigTest {
         val configResource = "/net/corda/bridge/separatedwithcustomcerts/float/firewall.conf"
         val baseDirectory = tempFolder.root.toPath()
         val config = createAndLoadConfigFromResource(baseDirectory, configResource)
-        val customSSLConfiguration = config.inboundConfig!!.customSSLConfiguration!!
-        assertEquals(baseDirectory.resolve(Paths.get("inboundcerts/inboundkeys.jks")), customSSLConfiguration.keyStore.path)
-        assertEquals(baseDirectory.resolve(Paths.get("inboundcerts/inboundtrust.jks")), customSSLConfiguration.trustStore.path)
-        assertEquals("inboundkeypassword", customSSLConfiguration.keyStore.storePassword)
-        assertEquals("inboundtrustpassword", customSSLConfiguration.trustStore.storePassword)
         assertNull(config.outboundConfig)
         val tunnelSSLConfiguration = config.floatOuterConfig!!.tunnelSSLConfiguration!!
         assertEquals(baseDirectory.resolve(Paths.get("tunnelcerts/tunnelkeys.jks")), tunnelSSLConfiguration.keyStore.path)
@@ -153,11 +148,6 @@ class ConfigTest {
         val configResource = "/net/corda/bridge/separatedwithcustomcerts/float/firewall_v3.conf"
         val baseDirectory = tempFolder.root.toPath()
         val config = createAndLoadConfigFromResource(baseDirectory, configResource)
-        val customSSLConfiguration = config.inboundConfig!!.customSSLConfiguration!!
-        assertEquals(baseDirectory.resolve(Paths.get("inboundcerts/inboundkeys.jks")), customSSLConfiguration.keyStore.path)
-        assertEquals(baseDirectory.resolve(Paths.get("inboundcerts/inboundtrust.jks")), customSSLConfiguration.trustStore.path)
-        assertEquals("inboundkeypassword", customSSLConfiguration.keyStore.storePassword)
-        assertEquals("inboundtrustpassword", customSSLConfiguration.trustStore.storePassword)
         assertNull(config.outboundConfig)
         val tunnelSSLConfiguration = config.floatOuterConfig!!.tunnelSSLConfiguration!!
         assertEquals(baseDirectory.resolve(Paths.get("tunnelcerts/tunnelkeys.jks")), tunnelSSLConfiguration.keyStore.path)

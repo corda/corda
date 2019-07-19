@@ -215,7 +215,7 @@ data class RpcFlowWorkerDriverDSL(private val driverDSL: DriverDSLImpl, private 
         val bridgeConfig = FirewallConfigurationImpl(baseDirectory = baseDirectory,
                 bridgeInnerConfig = null, keyStorePassword = "pass", trustStorePassword = "pass", firewallMode = FirewallMode.SenderReceiver,
                 outboundConfig = BridgeOutboundConfigurationImpl(nodeConfig.messagingServerAddress!!, listOf(), null, null),
-                inboundConfig = BridgeInboundConfigurationImpl(bridgeListeningAddress, null), enableAMQPPacketTrace = false, floatOuterConfig = null, haConfig = null,
+                inboundConfig = BridgeInboundConfigurationImpl(bridgeListeningAddress), enableAMQPPacketTrace = false, floatOuterConfig = null, haConfig = null,
                 auditServiceConfiguration = AuditServiceConfigurationImpl(120), p2pTlsSigningCryptoServiceConfig = null, tunnelingCryptoServiceConfig = null, artemisCryptoServiceConfig = null, revocationConfig = RevocationConfigImpl(RevocationConfig.Mode.SOFT_FAIL))
 
         baseDirectory.createDirectories()

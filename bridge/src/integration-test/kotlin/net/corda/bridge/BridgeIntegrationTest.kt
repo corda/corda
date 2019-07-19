@@ -152,7 +152,7 @@ class BridgeIntegrationTest {
         val floatFolder = tempFolder.root.toPath() / "float"
         val floatConfigResource = "/net/corda/bridge/withfloatdiffpasswords/float/firewall.conf"
         val floatConfig = createAndLoadConfigFromResource(floatFolder, floatConfigResource)
-        listOf(floatConfig.publicSSLConfiguration, floatConfig.inboundConfig?.customSSLConfiguration, floatConfig.floatOuterConfig?.tunnelSSLConfiguration).forEach { it?.createBridgeKeyStores(DUMMY_BANK_A_NAME) }
+        listOf(floatConfig.publicSSLConfiguration, floatConfig.floatOuterConfig?.tunnelSSLConfiguration).forEach { it?.createBridgeKeyStores(DUMMY_BANK_A_NAME) }
         assertEquals(FirewallMode.FloatOuter, floatConfig.firewallMode)
         assertEquals(NetworkHostAndPort("0.0.0.0", 10005), floatConfig.inboundConfig!!.listeningAddress)
         val (artemisServer, artemisClient) = createArtemis()

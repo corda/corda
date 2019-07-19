@@ -138,8 +138,7 @@ private fun DriverDSLImpl.startBridge(baseDirectory: Path,
             "keyStorePassword" to keystorePassword,
             "trustStorePassword" to truststorePassword,
             "sslKeystore" to (artemisCertDir / ARTEMIS_KEYSTORE).toString(),
-            "trustStoreFile" to (artemisCertDir / ARTEMIS_TRUSTSTORE).toString(),
-            "revocationConfig" to mapOf("mode" to "OFF")
+            "trustStoreFile" to (artemisCertDir / ARTEMIS_TRUSTSTORE).toString()
     )
 
     baseDirectory.createDirectories()
@@ -193,8 +192,7 @@ private fun DriverDSLImpl.startFloat(baseDirectory: Path,
             "keyStorePassword" to keystorePassword,
             "trustStorePassword" to truststorePassword,
             "sslKeystore" to (artemisCertDir / ARTEMIS_KEYSTORE).toString(),
-            "trustStoreFile" to (artemisCertDir / ARTEMIS_TRUSTSTORE).toString(),
-            "revocationConfig" to mapOf("mode" to "OFF")
+            "trustStoreFile" to (artemisCertDir / ARTEMIS_TRUSTSTORE).toString()
     )
 
     baseDirectory.createDirectories()
@@ -250,10 +248,7 @@ private fun DriverDSLImpl.startSingleProcessBridgeAndFloat(baseDirectory: Path,
                         "keyStorePassword" to keystorePassword,
                         "trustStorePassword" to truststorePassword,
                         "sslKeystore" to (artemisCertDir / ARTEMIS_KEYSTORE).toString(),
-                        "trustStoreFile" to (artemisCertDir / ARTEMIS_TRUSTSTORE).toString(),
-                        "revocationConfig" to mapOf(
-                                "mode" to "SOFT_FAIL"
-                        )
+                        "trustStoreFile" to (artemisCertDir / ARTEMIS_TRUSTSTORE).toString()
                 )
         )
     } else {

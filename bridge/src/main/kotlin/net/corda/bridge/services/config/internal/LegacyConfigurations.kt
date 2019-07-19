@@ -6,6 +6,7 @@ import net.corda.bridge.services.config.*
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.loggerFor
 import net.corda.nodeapi.internal.ArtemisMessagingComponent
 import net.corda.nodeapi.internal.protonwrapper.netty.ProxyConfig
 import net.corda.nodeapi.internal.protonwrapper.netty.toRevocationConfig
@@ -55,14 +56,17 @@ data class Version3BridgeSSLConfigurationImpl(private val sslKeystore: Path,
                                               private val crlCheckSoftFail: Boolean,
                                               val useOpenSsl: Boolean = false) : ModernConfigurationAdaptor<BridgeSSLConfigurationImpl> {
     override fun toConfig(): BridgeSSLConfigurationImpl {
-        return BridgeSSLConfigurationImpl(sslKeystore, keyStorePassword, keyStorePrivateKeyPassword, trustStoreFile, trustStorePassword, crlCheckSoftFail.toRevocationConfig(), useOpenSsl)
+        return BridgeSSLConfigurationImpl(sslKeystore, keyStorePassword, keyStorePrivateKeyPassword, trustStoreFile, trustStorePassword, useOpenSsl)
     }
 }
 
 data class Version3BridgeInboundConfigurationImpl(private val listeningAddress: NetworkHostAndPort,
                                                   private val customSSLConfiguration: Version3BridgeSSLConfigurationImpl?) : ModernConfigurationAdaptor<BridgeInboundConfigurationImpl> {
     override fun toConfig(): BridgeInboundConfigurationImpl {
-        return BridgeInboundConfigurationImpl(listeningAddress, customSSLConfiguration?.toConfig())
+        if (customSSLConfiguration != null) {
+            loggerFor<Version3BridgeInboundConfigurationImpl>().warn("customSSLConfiguration is no longer supported")
+        }
+        return BridgeInboundConfigurationImpl(listeningAddress)
     }
 }
 

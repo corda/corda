@@ -16,7 +16,6 @@ data class BridgeSSLConfigurationImpl(private val sslKeystore: Path,
                                       private val keyStorePrivateKeyPassword: String = keyStorePassword,
                                       private val trustStoreFile: Path,
                                       private val trustStorePassword: String,
-                                      override val revocationConfig: RevocationConfig,
                                       override val useOpenSsl: Boolean = false) : BridgeSSLConfiguration {
 
     override val keyStore = FileBasedCertificateStoreSupplier(sslKeystore, keyStorePassword, keyStorePrivateKeyPassword)
@@ -37,8 +36,7 @@ data class BridgeOutboundConfigurationImpl(override val artemisBrokerAddress: Ne
     }
 }
 
-data class BridgeInboundConfigurationImpl(override val listeningAddress: NetworkHostAndPort,
-                                          override val customSSLConfiguration: BridgeSSLConfigurationImpl?) : BridgeInboundConfiguration
+data class BridgeInboundConfigurationImpl(override val listeningAddress: NetworkHostAndPort) : BridgeInboundConfiguration
 
 data class BridgeInnerConfigurationImpl(override val floatAddresses: List<NetworkHostAndPort>,
                                         override val expectedCertificateSubject: CordaX500Name,

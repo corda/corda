@@ -222,8 +222,7 @@ class BridgeHSMTest : IntegrationTest() {
                 "keyStorePassword" to DEV_CA_KEY_STORE_PASS,
                 "trustStorePassword" to DEV_CA_TRUST_STORE_PASS,
                 "sslKeystore" to (artemisCertDir / ARTEMIS_HSM_KEYSTORE).toString(),
-                "trustStoreFile" to (artemisCertDir / ARTEMIS_TRUSTSTORE).toString(),
-                "revocationConfig" to mapOf("mode" to "OFF")
+                "trustStoreFile" to (artemisCertDir / ARTEMIS_TRUSTSTORE).toString()
         )
 
         val outboundConfig = mapOf(

@@ -122,21 +122,6 @@ absolute path to the firewall's base directory.
 
         :trustStoreFile: The path to the TrustStore file to use in outgoing ``TLS 1.2/AMQP 1.0`` connections.
 
-.. _revocationConfig :
-
-        :revocationConfig: Controls the way Certificate Revocation Lists (CRL) are handled.
-
-            :mode: Either ``SOFT_FAIL`` or ``HARD_FAIL`` or ``OFF``
-
-                ``SOFT_FAIL`` : Causes CRL checking to use soft fail mode. Soft fail mode allows the revocation check to succeed if the revocation status cannot be determined because of a network error.
-
-                ``HARD_FAIL`` :  Rigorous CRL checking takes place. This involves each certificate in the certificate path being checked for a CRL distribution point extension, and that this extension points to a URL serving a valid CRL.
-                    This means that if any CRL URL in the certificate path is inaccessible, the connection with the other party will fail and be marked as bad.
-                    Additionally, if any certificate in the hierarchy, including the self-generated node SSL certificate, is missing a valid CRL URL, then the certificate path will be marked as invalid.
-
-                ``OFF`` : do not perform CRL check.
-
-
 .. _proxyConfig :
 
    :proxyConfig:  This section is optionally present if outgoing peer connections should go via a SOCKS4, SOCKS5, or HTTP CONNECT tunnelling proxy:
@@ -155,22 +140,6 @@ absolute path to the firewall's base directory.
 
         :listeningAddress: The host and port to bind to as ``TLS 1.2/AMQP 1.0`` listener. This may be a specific network interface on multi-homed machines.
             It may also differ from the externally exposed public ``p2pAddress`` of the port if the firewalls, or load balancers transparently reroute the traffic.
-
-   :customSSLConfiguration:  The default behaviour is that the inbound ``TLS 1.2/AMQP 1.0`` connections present certificate details from (``<workspace>/<certificatesDirectory>/sslkeystore.jks``)
-        and validate against (``<workspace>/<certificatesDirectory>/truststore.jks``), using the passwords defined in the root config. However, distinct KeyStores may be configured in this section:
-
-        :keyStorePassword: The password for the TLS KeyStore.
-
-        :keyStorePrivateKeyPassword: Optional parameter to lock the private keys within the KeyStore. If it is missing, it will be assumed that the private keys password is the same as
-            ``keyStorePassword`` above.
-
-        :trustStorePassword: The password for TLS TrustStore.
-
-        :sslKeystore: The path to the KeyStore file to use in inbound ``TLS 1.2/AMQP 1.0`` connections.
-
-        :trustStoreFile: The path to the TrustStore file to use in inbound ``TLS 1.2/AMQP 1.0`` connections.
-
-        :revocationConfig: Please see `revocationConfig`_ parameter above.
 
 :bridgeInnerConfig:  This section is required for ``BridgeInner`` mode and configures the tunnel connection to the ``FloatOuter`` (s) in the DMZ. The section should be absent in ``SenderReceiver`` and ``FloatOuter`` modes:
 
@@ -194,8 +163,6 @@ absolute path to the firewall's base directory.
 
             :trustStoreFile: The path to the TrustStore file to use in control tunnel connections.
 
-            :revocationConfig: Please see `revocationConfig`_ parameter above.
-
 :floatOuterConfig:   This section is required for ``FloatOuter`` mode and configures the control tunnel listening socket. It should be absent for ``SenderReceiver`` and ``BridgeInner`` modes:
 
         :floatAddress: The host and port to bind the control tunnel listener socket to. This can be for a specific interface if used on a multi-homed machine.
@@ -216,8 +183,6 @@ absolute path to the firewall's base directory.
             :sslKeystore: The path to the KeyStore file to use in control tunnel connections.
 
             :trustStoreFile: The path to the TrustStore file to use in control tunnel connections.
-
-            :revocationConfig: Please see `revocationConfig`_ parameter above.
             
 :haConfig: Optionally the ``SenderReceiver`` and ``BridgeInner`` modes can be run in a hot-warm configuration, which determines the active instance using an external master election service.
     Currently, the leader election process can be delegated to Zookeeper, or the firewall can use the ``Bully Algorithm`` (see `here <https://en.wikipedia.org/wiki/Bully_algorithm>`_) via Publish/Subscribe messages on the artemis broker.
@@ -264,11 +229,24 @@ absolute path to the firewall's base directory.
     This is equivalent to specifying ``-Dcapsule.jvm.args="-Xmx2G"`` on the command line, but is easier to track with other configuration and does not risk
     accidentally setting the properties onto the capsule parent process (e.g. wasting 2Gbyte of memory).
 
-:revocationConfig: Please see `revocationConfig`_ parameter above.
-    This is a fallback ``revocationConfig`` settings unless more ``revocationConfig`` defined on specific SSL configurations above.
-    There is one additional ``mode`` that can be provided here ``EXTERNAL_SOURCE`` which will only makes sense for Float component i.e. with ``firewallMode = FloatOuter``.
-    When ``mode = EXTERNAL_SOURCE`` is specified, Float component will fetch CRLs using tunnel connection it maintains with Bridge. This allows Float to correctly obtain CRLs without
-    initiating direct outgoing connections to the Delivery Points specified in TLS certificates.
+.. _revocationConfig :
+
+:revocationConfig: Controls the way Certificate Revocation Lists (CRL) are handled for TLS connections.
+
+        :revocationConfig:
+
+            :mode: Either ``SOFT_FAIL`` or ``HARD_FAIL`` or ``OFF`` or ``EXTERNAL_SOURCE``
+
+                ``SOFT_FAIL`` : Causes CRL checking to use soft fail mode. Soft fail mode allows the revocation check to succeed if the revocation status cannot be determined because of a network error.
+
+                ``HARD_FAIL`` :  Rigorous CRL checking takes place. This involves each certificate in the certificate path being checked for a CRL distribution point extension, and that this extension points to a URL serving a valid CRL.
+                    This means that if any CRL URL in the certificate path is inaccessible, the connection with the other party will fail and be marked as bad.
+                    Additionally, if any certificate in the hierarchy, including the self-generated node SSL certificate, is missing a valid CRL URL, then the certificate path will be marked as invalid.
+
+                ``OFF`` : do not perform CRL check.
+
+                ``EXTERNAL_SOURCE`` : only makes sense for Float component i.e. with ``firewallMode = FloatOuter``. When ``mode = EXTERNAL_SOURCE`` is specified, Float component will fetch CRLs using tunnel connection it maintains with Bridge. This allows Float to correctly obtain CRLs without
+                    initiating direct outgoing connections to the Delivery Points specified in TLS certificates.
 
 .. _p2pTlsSigningCryptoServiceConfig :
 
@@ -704,9 +682,6 @@ Configuration file: ``firewall.conf`` for ``vmFloat1`` should look as follows:
             trustStorePassword = "tunnelTrustpass"
             sslKeystore = "./tunnel/float.jks"
             trustStoreFile = "./tunnel/tunnel-truststore.jks"
-            revocationConfig {
-                mode = SOFT_FAIL
-            }
         }
     }
     healthCheckPhrase = "HelloCorda"
@@ -830,9 +805,6 @@ Configuration file: ``firewall.conf`` for ``vmInfra1`` should look as follows:
             trustStorePassword = "artemisTrustpass"
             sslKeystore = "artemis/artemis.jks"
             trustStoreFile = "artemis/artemis-truststore.jks"
-            revocationConfig {
-                mode = SOFT_FAIL
-            }
         }
     }
     bridgeInnerConfig {
@@ -844,9 +816,6 @@ Configuration file: ``firewall.conf`` for ``vmInfra1`` should look as follows:
             trustStorePassword = "tunnelTrustpass"
             sslKeystore = "./tunnel/bridge.jks"
             trustStoreFile = "./tunnel/tunnel-truststore.jks"
-            revocationConfig {
-                mode = SOFT_FAIL
-            }
         }
     }
     haConfig {
