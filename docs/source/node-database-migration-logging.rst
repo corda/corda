@@ -1,4 +1,4 @@
-.. _database-initialisation-logging:
+.. _database-schema-migration-logging:
 
 Database Schema Migration Logging
 =================================

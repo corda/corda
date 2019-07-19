@@ -158,4 +158,4 @@ Database Schema Migration Logging
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Database migration logs for Corda internal tables follow a structured format
-described in :ref:`database-initialisation-logging`.
+described in :ref:`database-schema-migration-logging`.
