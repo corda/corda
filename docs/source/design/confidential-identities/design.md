@@ -179,8 +179,6 @@ No changes.
     @CordaSerializable
     data class OwnershipClaim(val nonce: OpaqueBytes, val key: PublicKey)
 
-  
-
 The new type `OwnershipClaim` simply stores the `PublicKey` of the confidential identity. It is to be wrapped with `SignedData<T>` when the data is to be parsed by the new flows. 
 object. The type makes no assumptions about _who_ the `PublicKey` is for.
 Indeed, it could be for an account or a legal identity, if a company wishes
@@ -208,7 +206,7 @@ there will be a set of flows for:
 
 1. Deprecate `freshKeyAndCert` methods because they are not required any
    more. Instead, CorDapp developers will use a new method which returns
-   a `SignedPublicKeyToPartyMapping`.
+   a `SignedData<OwnershipClaim>`.
 
 2. Add a new API called `fun freshKey(externalID: UUID): PublicKey`
    which creates a new key pair, adds an entry to the `PublicKeyHashToExternalId`
@@ -228,8 +226,13 @@ there will be a set of flows for:
    2. `IdentityServiceInternal.justVerifyAndRegisterIdentity`
    3. `IdentityServiceInternal.verifyAndRegisterIdentity` (all overloads)
    4. `IdentityServiceInternal.registerIdentity`
+   
+2. Rename the existing mappings to better describe their contents:
+    
+   1. `keysToParties` will now be called `keyToPartyAndCert`
+   2. `principalToParties` will now be called `nameToKey`
 
-2. Add a new `AppendOnlyPersistentMap` called `keyToPartyMapping` which
+3. Add a new `AppendOnlyPersistentMap` called `keyToName` which
    should contain **all** public keys hashes mapped to the x500 name of
    the node where it is associated with. All legal identity keys as well
    as newly created anonymous keys should be stored in this map.
@@ -245,7 +248,7 @@ behaviour whilst supporting a new API for key to party mappings:
 
         fun registerKeyToParty(key: PublicKey, party: Party) : Boolean
 
-   This method only updates the `keyToParties` mapping. If a mapping has    already been stored for the same `Party` then the method call is idempotent.
+   This method only updates the `keyToName` mapping. If a mapping has    already been stored for the same `Party` then the method call is idempotent.
    If it turns out that another x500 name has been stored for the same key
    then the method will throw an exception for now. In the future, it might
    be the case that client-side generated key pairs can moved from one node
@@ -261,9 +264,9 @@ behaviour whilst supporting a new API for key to party mappings:
 3. `certificateFromKey` should return the `PartyAndCertificate` for
    any supplied `PublicKey`. This will require multiple map look-ups:
 
-    1. On `KeyToPartyMapping`: `PublicKey` hash -> x500Name
-    2. On `PrincipleToParty`: x500Name -> legal identity `PublicKey`
-    3. On `keyToParties`: legal identity `PublicKey` to `PartyAndCertificate`
+    1. On `keyToName`: `PublicKey` hash -> x500Name
+    2. On `nameToKey`: x500Name -> legal identity `PublicKey`
+    3. On `keyToPartyAndCert`: legal identity `PublicKey` to `PartyAndCertificate`
 
    Essentially we are trading performing an extra map lookup to storing
    the certificate chain for each confidential identity. Unfortunately we
@@ -299,8 +302,8 @@ These changes should impact performance positively:
 ### Versioning, upgradability, migration.
 
 A database migration script will be required to populate the new hibernate
-entity which backs the `keyToPartyMapping`. The existing "confidential identity"
-mappings in the `keysToParties` entity must be copied to the `keyToPartyMapping`
+entity which backs the `keyToName` mapping. The existing "confidential identity"
+mappings in the `keyToPartyAndCert` entity must be copied to the `keyToName`
 entity.
 
 ### UI requirements, if any. Illustrate with UI Mockups and/or wireframes.
