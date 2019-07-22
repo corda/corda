@@ -45,12 +45,15 @@ import java.util.*
 import java.util.Spliterator.*
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.TimeUnit
+import java.util.stream.Collectors
+import java.util.stream.Collectors.toCollection
 import java.util.stream.IntStream
 import java.util.stream.Stream
 import java.util.stream.StreamSupport
 import java.util.zip.Deflater
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
+import kotlin.collections.LinkedHashSet
 import kotlin.reflect.KClass
 import kotlin.reflect.full.createInstance
 
@@ -272,6 +275,9 @@ inline fun <T, R : Any> Stream<T>.mapNotNull(crossinline transform: (T) -> R?): 
         if (value != null) Stream.of(value) else Stream.empty()
     }
 }
+
+/** Similar to [Collectors.toSet] except the Set is guaranteed to be ordered. */
+fun <T> Stream<T>.toSet(): Set<T> = collect(toCollection { LinkedHashSet<T>() })
 
 fun <T> Class<T>.castIfPossible(obj: Any): T? = if (isInstance(obj)) cast(obj) else null
 

@@ -12,6 +12,7 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
+import java.util.stream.Stream
 
 /**
  * Implements a caching layer on top of an *append-only* table accessed via Hibernate mapping. Note that if the same key is [set] twice,
@@ -36,24 +37,24 @@ abstract class AppendOnlyPersistentMapBase<K, V, E, out EK>(
     /**
      * Returns the value associated with the key, first loading that value from the storage if necessary.
      */
-    operator fun get(key: K): V? {
-        return cache.get(key)!!.orElse(null)
-    }
+    operator fun get(key: K): V? = cache.get(key)?.orElse(null)
 
-    val size get() = allPersisted().toList().size
+    val size: Long get() = allPersisted.use { it.count() }
 
     /**
-     * Returns all key/value pairs from the underlying storage.
+     * Returns all key/value pairs from the underlying storage in a [Stream].
+     *
+     * Make sure to close the [Stream] once it's been processed.
      */
-    fun allPersisted(): Sequence<Pair<K, V>> {
-        val session = currentDBSession()
-        val criteriaQuery = session.criteriaBuilder.createQuery(persistentEntityClass)
-        val root = criteriaQuery.from(persistentEntityClass)
-        criteriaQuery.select(root)
-        val query = session.createQuery(criteriaQuery)
-        val result = query.resultList
-        return result.map { x -> fromPersistentEntity(x) }.asSequence()
-    }
+    val allPersisted: Stream<Pair<K, V>>
+        get() {
+            val session = currentDBSession()
+            val criteriaQuery = session.criteriaBuilder.createQuery(persistentEntityClass)
+            val root = criteriaQuery.from(persistentEntityClass)
+            criteriaQuery.select(root)
+            val query = session.createQuery(criteriaQuery)
+            return query.stream().map(fromPersistentEntity)
+        }
 
     private fun set(key: K, value: V, logWarning: Boolean, store: (K, V) -> V?): Boolean {
         // Will be set to true if store says it isn't in the database.
@@ -157,7 +158,7 @@ abstract class AppendOnlyPersistentMapBase<K, V, E, out EK>(
             Transactional.InFlight(this, key, { loadValue(key) }, { loadValue(key)!! })
         } else {
             // If no one is writing, then the value may or may not exist in the database.
-            Transactional.Unknown(this, key, { loadValue(key) })
+            Transactional.Unknown(this, key) { loadValue(key) }
         }
     }
 

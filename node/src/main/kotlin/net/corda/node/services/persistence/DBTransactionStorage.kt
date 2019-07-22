@@ -26,6 +26,7 @@ import org.apache.commons.lang3.ArrayUtils.EMPTY_BYTE_ARRAY
 import rx.Observable
 import rx.subjects.PublishSubject
 import javax.persistence.*
+import kotlin.streams.toList
 
 // cache value type to just store the immutable bits of a signed transaction plus conversion helpers
 typealias TxCacheValue = Pair<SerializedBytes<CoreTransaction>, List<TransactionSignature>>
@@ -88,10 +89,7 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
         private const val transactionSignatureOverheadEstimate = 1024
 
         private fun weighTx(tx: AppendOnlyPersistentMapBase.Transactional<TxCacheValue>): Int {
-            val actTx = tx.peekableValue
-            if (actTx == null) {
-                return 0
-            }
+            val actTx = tx.peekableValue ?: return 0
             return actTx.second.sumBy { it.size + transactionSignatureOverheadEstimate } + actTx.first.size
         }
     }
@@ -114,7 +112,7 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
     override fun track(): DataFeed<List<SignedTransaction>, SignedTransaction> {
         return database.transaction {
             txStorage.locked {
-                DataFeed(allPersisted().map { it.second.toSignedTx() }.toList(), updates.bufferUntilSubscribed())
+                DataFeed(snapshot(), updates.bufferUntilSubscribed())
             }
         }
     }
@@ -133,6 +131,7 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
     }
 
     @VisibleForTesting
-    val transactions: Iterable<SignedTransaction>
-        get() = database.transaction { txStorage.content.allPersisted().map { it.second.toSignedTx() }.toList() }
+    val transactions: List<SignedTransaction> get() = database.transaction { snapshot() }
+
+    private fun snapshot() = txStorage.content.allPersisted.use { it.map { it.second.toSignedTx() }.toList() }
 }

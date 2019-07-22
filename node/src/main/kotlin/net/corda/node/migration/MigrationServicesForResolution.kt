@@ -26,6 +26,7 @@ import sun.reflect.generics.reflectiveObjects.NotImplementedException
 import java.nio.file.Paths
 import java.time.Clock
 import java.time.Duration
+import java.util.Comparator.comparingInt
 
 class MigrationServicesForResolution(
         override val identityService: IdentityService,
@@ -87,8 +88,10 @@ class MigrationServicesForResolution(
         private val filedParams = getNetworkParametersFromFile()
 
         override val defaultHash: SecureHash = filedParams?.raw?.hash ?: SecureHash.getZeroHash()
-        override val currentHash: SecureHash =  cordaDB.transaction {
-            storage.allPersisted().maxBy { it.second.verified().epoch }?.first ?: defaultHash
+        override val currentHash: SecureHash = cordaDB.transaction {
+            storage.allPersisted.use {
+                it.max(comparingInt { it.second.verified().epoch }).map { it.first }.orElse(defaultHash)
+            }
         }
 
         override fun lookup(hash: SecureHash): NetworkParameters? {

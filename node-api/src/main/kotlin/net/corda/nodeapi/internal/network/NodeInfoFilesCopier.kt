@@ -3,6 +3,7 @@ package net.corda.nodeapi.internal.network
 import net.corda.core.internal.*
 import net.corda.core.utilities.contextLogger
 import net.corda.core.internal.NODE_INFO_DIRECTORY
+import net.corda.core.utilities.debug
 import rx.Observable
 import rx.Scheduler
 import rx.Subscription
@@ -21,7 +22,7 @@ import java.util.concurrent.TimeUnit
  * This class will create paths that it needs to poll and to where it needs to copy files in case those
  * don't exist yet.
  */
-class NodeInfoFilesCopier(scheduler: Scheduler = Schedulers.io()) : AutoCloseable {
+class NodeInfoFilesCopier(private val scheduler: Scheduler = Schedulers.io()) : AutoCloseable {
 
     companion object {
         private val log = contextLogger()
@@ -122,6 +123,7 @@ class NodeInfoFilesCopier(scheduler: Scheduler = Schedulers.io()) : AutoCloseabl
     }
 
     private fun atomicCopy(source: Path, destination: Path) {
+        log.debug { "[${scheduler.now()}] Copying ... $source -> $destination" }
         val tempDestination = try {
             Files.createTempFile(destination.parent, "", null)
         } catch (exception: IOException) {

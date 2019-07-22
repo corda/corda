@@ -112,9 +112,6 @@ class DriverDSLImpl(
     private lateinit var _notaries: CordaFuture<List<NotaryHandle>>
     override val notaryHandles: List<NotaryHandle> get() = _notaries.getOrThrow()
 
-    // While starting with inProcess mode, we need to have different names to avoid clashes
-    private val inMemoryCounter = AtomicInteger()
-
     interface Waitable {
         @Throws(InterruptedException::class)
         fun waitFor()
@@ -678,6 +675,9 @@ class DriverDSLImpl(
 
     companion object {
         internal val log = contextLogger()
+
+        // While starting with inProcess mode, we need to have different names to avoid clashes
+        private val inMemoryCounter = AtomicInteger()
 
         private val notaryHandleTimeout = Duration.ofMinutes(1)
         private val defaultRpcUserList = listOf(InternalUser("default", "default", setOf("ALL")).toConfig().root().unwrapped())

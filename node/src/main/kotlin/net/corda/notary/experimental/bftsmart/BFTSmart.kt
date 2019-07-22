@@ -335,7 +335,7 @@ object BFTSmart {
             // LinkedHashMap for deterministic serialisation
             val committedStates = LinkedHashMap<StateRef, SecureHash>()
             val requests = services.database.transaction {
-                commitLog.allPersisted().forEach { committedStates[it.first] = it.second }
+                commitLog.allPersisted.use { it.forEach { committedStates[it.first] = it.second } }
                 val criteriaQuery = session.criteriaBuilder.createQuery(PersistentUniquenessProvider.Request::class.java)
                 criteriaQuery.select(criteriaQuery.from(PersistentUniquenessProvider.Request::class.java))
                 session.createQuery(criteriaQuery).resultList

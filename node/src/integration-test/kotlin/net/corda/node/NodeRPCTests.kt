@@ -23,12 +23,13 @@ class NodeRPCTests {
 
     @Test
     fun `run nodeDiagnosticInfo`() {
-        driver(DriverParameters(notarySpecs = emptyList(), cordappsForAllNodes = CORDAPPS)) {
+        driver(DriverParameters(notarySpecs = emptyList(), cordappsForAllNodes = CORDAPPS, extraCordappPackagesToScan = emptyList())) {
             val nodeDiagnosticInfo = startNode().get().rpc.nodeDiagnosticInfo()
             assertTrue(nodeDiagnosticInfo.version.matches(CORDA_VERSION_REGEX))
             assertTrue(nodeDiagnosticInfo.revision.matches(HEXADECIMAL_REGEX))
             assertEquals(PLATFORM_VERSION, nodeDiagnosticInfo.platformVersion)
             assertEquals(CORDA_VENDOR, nodeDiagnosticInfo.vendor)
+            nodeDiagnosticInfo.cordapps.forEach { println("${it.shortName} ${it.type}") }
             assertEquals(CORDAPPS.size, nodeDiagnosticInfo.cordapps.size)
             assertEquals(CORDAPP_TYPES, nodeDiagnosticInfo.cordapps.map { it.type }.toSet())
             assertTrue(nodeDiagnosticInfo.cordapps.any { it.name.matches(CORDAPP_CONTRACTS_NAME_REGEX) })

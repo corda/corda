@@ -1,9 +1,7 @@
 package net.corda.client.jfx.model
 
-import javafx.application.Platform
 import javafx.beans.property.SimpleObjectProperty
 import net.corda.client.rpc.internal.ReconnectingCordaRPCOps
-import net.corda.client.rpc.internal.asReconnectingWithInitialValues
 import net.corda.core.contracts.ContractState
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.Party
@@ -85,24 +83,19 @@ class NodeMonitorModel : AutoCloseable {
         }.toSet()
         val consumedStates = statesSnapshot.states.toSet() - unconsumedStates
         val initialVaultUpdate = Vault.Update(consumedStates, unconsumedStates, references = emptySet())
-        vaultUpdates.asReconnectingWithInitialValues(listOf(initialVaultUpdate))
-                .subscribe(
-                        onNext = vaultUpdatesSubject::onNext,
-                        onDisconnect = { Platform.runLater { proxyObservable.value = null } },
-                        onReconnect = { Platform.runLater { proxyObservable.value = rpc } },
-                        onStop = {})
+        vaultUpdates.startWith(initialVaultUpdate).subscribe(vaultUpdatesSubject::onNext)
 
         // Transactions
         val (transactions, newTransactions) = rpc.internalVerifiedTransactionsFeed()
-        newTransactions.asReconnectingWithInitialValues(transactions).subscribe(transactionsSubject::onNext)
+        newTransactions.startWith(transactions).subscribe(transactionsSubject::onNext)
 
         // SM -> TX mapping
         val (smTxMappings, futureSmTxMappings) = rpc.stateMachineRecordedTransactionMappingFeed()
-        futureSmTxMappings.asReconnectingWithInitialValues(smTxMappings).subscribe(stateMachineTransactionMappingSubject::onNext)
+        futureSmTxMappings.startWith(smTxMappings).subscribe(stateMachineTransactionMappingSubject::onNext)
 
         // Parties on network
         val (parties, futurePartyUpdate) = rpc.networkMapFeed()
-        futurePartyUpdate.asReconnectingWithInitialValues(parties.map(MapChange::Added)).subscribe(networkMapSubject::onNext)
+        futurePartyUpdate.startWith(parties.map(MapChange::Added)).subscribe(networkMapSubject::onNext)
 
         val stateMachines = rpc.stateMachinesSnapshot()
 

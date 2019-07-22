@@ -249,10 +249,10 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
 
     @VisibleForTesting
     internal open fun createNotaries(): List<TestStartedNode> {
-        return notarySpecs.map { (name, validating) ->
+        return notarySpecs.map { spec ->
             createNode(InternalMockNodeParameters(
-                    legalName = name,
-                    configOverrides = { doReturn(NotaryConfig(validating)).whenever(it).notary }
+                    legalName = spec.name,
+                    configOverrides = { doReturn(NotaryConfig(spec.validating, className = spec.className)).whenever(it).notary }
             ))
         }
     }
