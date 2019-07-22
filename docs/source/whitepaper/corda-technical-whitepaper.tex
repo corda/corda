@@ -579,10 +579,16 @@ certificate authorities are a part of the `root store' and thus trusted to verif
 only delegated by the software vendors. Corda doesn't ship a root store, as that would make the software maintainers
 be the ultimate identity root of all networks granting too much power. Consider a software update that added a CA
 to the trust store controlled by a rogue developer, for example - this would grant that rogue developer full read/write
-access to every Corda network. Instead, the network operator is the root and may delegate authority as they see fit.
-Whilst normally used to delegate authority over the sub-namespace of a single legal entity, as described above, it is
-theoretically also possible to delegate in other ways, for example, along national boundaries, or simply to grant
-unconstrained certificate-issuing power to other firms, as is done in the web PKI.
+access to every Corda network.
+
+Instead, the network operator is the root and may delegate authority as they see fit. Whilst normally used to
+delegate authority over the sub-namespace of a single legal entity, as described above, it is theoretically also
+possible to delegate in other ways, for example, along national boundaries, or simply to grant unconstrained
+certificate-issuing power to other firms, as is done in the web PKI. In such a configuration care would have to be
+taken to ensure only a single certificate laying claim to a name/key pair was issued, as the platform as this time
+cannot handle the ambiguity of multiple live certificates for the same identity in different parts of the
+hierarchy. The issues involved in having multiple certificate issuers for a single network may be addressed in
+future work, but would not remove the requirement to have a single coherent set of network parameters.
 
 \subsection{Confidential identities}\label{subsec:confidential-identities}
 
