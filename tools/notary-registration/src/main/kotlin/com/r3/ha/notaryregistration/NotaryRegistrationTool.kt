@@ -1,4 +1,4 @@
-package com.r3.ha.utilities
+package com.r3.ha.notaryregistration
 
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigValueFactory
@@ -41,7 +41,7 @@ import java.net.URL
 import java.nio.file.Path
 import java.nio.file.Paths
 
-class NotaryRegistrationTool : CordaCliWrapper("notary-registration", "Corda registration tool for registering a HA notary service with the Corda Network.") {
+class NotaryRegistrationTool : CordaCliWrapper("register", "Corda registration tool for registering a HA notary service with the Corda Network.") {
     companion object {
         private const val NOTARY_PRIVATE_KEY_ALIAS = "${X509Utilities.DISTRIBUTED_NOTARY_ALIAS_PREFIX}-private-key"
         private val VERSION_INFO by lazy {
@@ -80,10 +80,6 @@ class NotaryRegistrationTool : CordaCliWrapper("notary-registration", "Corda reg
     override fun runProgram(): Int {
         initialiseSerialization() // Should be called after CliWrapperBase.initLogging()
         return try {
-            if (!HAUtilities.addJarsInDriversDirectoryToSystemClasspath(baseDirectory)) {
-                HAUtilities.addJarsInDriversDirectoryToSystemClasspath(Paths.get("."))
-            }
-
             validateNodeHsmConfigs(listOf(configFile))
 
             val parsedConfig = parseNodeConfiguration()
@@ -180,7 +176,7 @@ class NotaryRegistrationTool : CordaCliWrapper("notary-registration", "Corda reg
                             Any()
                         }
                         else -> {
-                            throw UnsupportedOperationException("Only supported HSM is Azure Key Vault")
+                            throw unsupportedHsmException()
                         }
                     }
                 }
@@ -195,8 +191,10 @@ class NotaryRegistrationTool : CordaCliWrapper("notary-registration", "Corda reg
             SupportedCryptoServices.AZURE_KEY_VAULT -> AzureKeyVaultCryptoService.parseConfigFile(path)
             SupportedCryptoServices.BC_SIMPLE -> Any()
             else -> {
-                throw UnsupportedOperationException("Only supported HSM is Azure Key Vault")
+                throw unsupportedHsmException()
             }
         }
     }
+
+    private fun unsupportedHsmException() = UnsupportedOperationException("The HA notary registration tool only supports Azure Key Vault HSM")
 }
