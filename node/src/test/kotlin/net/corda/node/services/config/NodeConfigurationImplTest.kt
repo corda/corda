@@ -8,6 +8,7 @@ import net.corda.core.internal.toPath
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.seconds
 import net.corda.nodeapi.internal.config.getBooleanCaseInsensitive
+import net.corda.nodeapi.internal.cryptoservice.SupportedCryptoServices
 import net.corda.nodeapi.internal.persistence.CordaPersistence.DataSourceConfigTag
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
@@ -348,6 +349,13 @@ class NodeConfigurationImplTest {
         val rawConfig = getConfig("working-config.conf", ConfigFactory.parseMap(mapOf("dataSourceProperties.dataSource.password" to "<{I+/c+bIYfIrhxjyP0ANK6Q==:7f46ICS1hogaB3Vfaz47xCH6zgI=}>")))
         val nodeConfig = rawConfig.parseAsNodeConfiguration(Configuration.Options(strict = true, hardwareAddress = byteArrayOf(0, 0, 0, 0, 0, 0), seed = byteArrayOf(0))).value()
         assertEquals("demo", nodeConfig.dataSourceProperties["dataSource.password"])
+    }
+
+    @Test
+    fun `can configure a notary with an hsm`() {
+        val rawConfig = getConfig("notary-config.conf", ConfigFactory.parseMap(mapOf("cryptoServiceName" to "AZURE_KEY_VAULT")))
+        val nodeConfig = rawConfig.parseAsNodeConfiguration(Configuration.Options(strict = true, hardwareAddress = byteArrayOf(0, 0, 0, 0, 0, 0), seed = byteArrayOf(0))).value()
+        assertEquals(SupportedCryptoServices.AZURE_KEY_VAULT, nodeConfig.cryptoServiceName)
     }
 
     private fun configDebugOptions(devMode: Boolean, devModeOptions: DevModeOptions?): NodeConfigurationImpl {
