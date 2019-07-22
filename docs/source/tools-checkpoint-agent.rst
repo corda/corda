@@ -1,18 +1,25 @@
 Checkpoint Agent
 ================
 
-A flow *checkpoint* is a serialised snapshot of the flow's stack frames and any objects reachable from the stack. Checkpoints are saved to
+Firstly, please ensure you understand the mechanics and principles of Corda Flows by reading :doc:`key-concepts-flows` and :doc:`flow-state-machines`.
+We also recommend you understand the purpose and behaviour of the :doc:`node-flow-hospital` in relation to *checkpoints* and flow recovery.
+An advanced explanation of :ref:`*checkpoints* <flow_internals_checkpoints_ref>` within the flow state machine can be found here: :doc:`contributing-flow-internals`.
+
+As a recap,
+
+"A flow *checkpoint* is a serialised snapshot of the flow's stack frames and any objects reachable from the stack. Checkpoints are saved to
 the database automatically when a flow suspends or resumes, which typically happens when sending or receiving messages. A flow may be replayed
 from the last checkpoint if the node restarts. Automatic checkpointing is an unusual feature of Corda and significantly helps developers write
 reliable code that can survive node restarts and crashes. It also assists with scaling up, as flows that are waiting for a response can be flushed
-from memory.
+from memory."
 
-The Checkpoint Agent is a diagnostics tool that can be used to output the type and size of flow *checkpoints* at Corda runtime.
+The Checkpoint Agent is a diagnostics tool that can be used to output the type, size and content of flow *checkpoints* at node runtime.
 
 For a given flow *checkpoint*, the agent outputs:
 
-    1. Information about the checkpoint such as a Fiber id (associated with a flow) that can be used to correlate with that flows lifecycle details in the main Corda logs.
-    2. A nested hierarchical view of its reachable objects (indented and tagged with depth size) and their associated sizes.
+    1. Information about the checkpoint such as its ``id`` (also called a ``flow id``) that can be used to correlate with that flows lifecycle details in the main Corda logs.
+    2. A nested hierarchical view of its reachable objects (indented and tagged with depth size) and their associated sizes, including the state
+       of any flows held within the checkpoint.
 
 Diagnostics information is written to standard log files (eg. log4j2 configured logger).
 
@@ -37,37 +44,35 @@ The checkpoint agent can be started with the following optional parameters:
 
 .. code-block:: shell
 
-    checkpoint-agent.jar=[instrumentType=<read|write|read_write>],[instrumentClassname=<CLASSNAME>],[minimumSize=<MIN_SIZE>],[maximumSize=<MAX_SIZ>]
+    checkpoint-agent.jar=[instrumentType=<read|write>],[instrumentClassname=<CLASSNAME>],[minimumSize=<MIN_SIZE>],[maximumSize=<MAX_SIZE>, [stackDepth=<DEPTH>], [printOnce=<true|false>]
 
-* ``instrumentType``: whether to output checkpoints on read, write or both. Possible values: [read, write, read_write]. Default: read_write.
+* ``instrumentType``: whether to output checkpoints on read, write or both. Possible values: [read, write]. Default: read.
 * ``instrumentClassname``: specify the base type of objects to log. The default setting is to process all *Flow* object types. Default: net.corda.node.services.statemachine.FlowStateMachineImpl.
 * ``minimumSize``: specifies the minimum size (in bytes) of objects to log. Default: 8192 bytes
 * ``maximumSize``: specifies the maximum size (in bytes) of objects to log. Default: 1024000 bytes
+* ``stackDepth``: specifies how many levels deep to display the stack output. Default: 12
+* ``printOnce``: specifies whether to display a full object reference (and its stack) only once or as many times as it is referenced. Default: true
 
 These arguments are passed to the JVM along with the agent specification. For example:
 
 .. code-block:: shell
 
-    -javaagent:<PATH>/checkpoint-agent.jar=instrumentClassname=net.corda.vega.flows.SimmFlow,instrumentType=read,minimumSize=10240,maximumSize=512000
+    -javaagent:<PATH>/checkpoint-agent.jar=instrumentClassname=net.corda.vega.flows.SimmFlow,instrumentType=read,minimumSize=10240,maximumSize=512000,stackDepth=6,printOnce=false
 
 .. note:: Arguments may be passed into the agent in any order and should **not** contain spaces between arguments.
 
 Checkpoint Dump support
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-Information about checkpointed flows can be retrieved from the shell. Calling ``dumpCheckpoints`` will create a zip file inside the node's
-``log`` directory. This zip will contain a JSON representation of each checkpointed flow. This information can then be used to determine the
-state of stuck flows or flows that experienced internal errors and were kept in the node for manual intervention.
-
-When used in combination with the ``dumpCheckpoints`` shell command, the checkpoint agent will automatically output additional diagnostic
-information for all checkpoints dumped by the aforementioned tool.
+When used in combination with the ``dumpCheckpoints`` shell command (see :ref:`Upgrading CorDapps <upgrading-cordapps-flow-drains>`.),
+the checkpoint agent will automatically output additional diagnostic information for all checkpoints dumped by the aforementioned tool.
 
 You should therefore see two different output files upon invoking the checkpoint dumper command:
 
 * ``<NODE_BASE>\logs\checkpoints_dump-<date>.zip`` contains zipped JSON representation of checkpoints (from ``dumpCheckpoints`` shell command)
 * ``<NODE_BASE>\logs\checkpoints_agent-<date>.log`` contains output from this agent tool (types and sizes of a checkpoint stack)
 
-.. note:: you will only see a separate `checkpoints_agent-<date>.log` file if you configure a separate log4j logger as described below.
+.. note:: You will only see a separate `checkpoints_agent-<date>.log` file if you configure a separate log4j logger as described below.
    Otherwise all diagnostics logging will be routed to the standard Corda node log file: ``node-<hostname>.log``.
 
 If you **only** wish to log checkpoint data for failing flows, start the checkpoint agent with the following arguments:
@@ -91,7 +96,7 @@ It is recommended to configure a separate log file to capture this information b
         <AppenderRef ref="Checkpoint-Agent-RollingFile-Appender"/>
     </Logger>
 
-.. warning:: you must specify "CheckpointAgent" as the logger name.
+.. warning:: You must specify "CheckpointAgent" as the logger name.
 
 In this instance we are specifying a Rolling File appender with archival rotation as follows:
 
@@ -148,15 +153,6 @@ the Corda node ``logs`` directory for a single flow execution (in this case):
     003:      [Ljava.lang.Object; 20,054
     004:        net.corda.finance.flows.CashIssueAndPaymentFlow 7,229
     005:          net.corda.core.utilities.ProgressTracker 5,664
-    006:            java.util.ArrayList 1,658
-    007:              kotlin.Pair 115
-    008:                java.lang.Integer 17
-    008:                net.corda.core.utilities.ProgressTracker$STARTING 0
-    007:              kotlin.Pair 249
-    008:                java.lang.Integer 3
-    008:                net.corda.core.utilities.ProgressTracker$Step 185
-    009:                  java.lang.String 111
-    010:                    [C 101
     etc ...
 
     [INFO ] 2019-07-11T18:35:03,198Z [rpc-server-handler-pool-2] CheckpointAgent. - [READ] class net.corda.node.services.statemachine.ErrorState$Clean
@@ -167,6 +163,7 @@ the Corda node ``logs`` directory for a single flow execution (in this case):
     001:  [Ljava.lang.Object; 20,054
     002:    java.util.ArrayList 1,658
     003:      net.corda.core.utilities.ProgressTracker$STARTING 0
+    etc ...
 
 Note,
 
@@ -178,7 +175,6 @@ Note,
 
 Flow diagnostic process
 ~~~~~~~~~~~~~~~~~~~~~~~
-Firstly, please ensure you understand the mechanics and principles of Corda Flows by reading :doc:`key-concepts-flows` and :doc:`flow-state-machines`.
 
 Lets assume a scenario where have triggered a flow from a node (eg. node acting as a flow initiator) but the flow does not appear to complete.
 
@@ -203,7 +199,7 @@ Note that "In progress" indicates the flows above have not completed (and will h
 
     [INFO ] 2019-07-11T17:56:43,227Z [pool-12-thread-1] statemachine.FlowMonitor. - Flow with id 90613d6f-be78-41bd-98e1-33a756c28808 has been waiting for 97904 seconds to receive messages from parties [O=BigCorporation, L=New York, C=US].
 
-.. note:: always search for the flow id, in this case **90613d6f-be78-41bd-98e1-33a756c28808**
+.. note:: Always search for the flow id, in this case **90613d6f-be78-41bd-98e1-33a756c28808**
 
 2. From the CRaSH shell run the ``dumpCheckpoints`` command to trigger diagnostics information.
 
@@ -296,73 +292,27 @@ And two additional files will appear in the nodes logs directory:
     003:      java.util.Collections$SingletonMap 4,536
     004:        net.corda.node.services.statemachine.FlowSessionImpl 500
     005:          net.corda.core.identity.Party 360
-    006:            net.i2p.crypto.eddsa.EdDSAPublicKey 45
-    006:            net.corda.core.identity.CordaX500Name 261
-    007:              java.lang.String 36
-    008:                [C 5
-    007:              java.lang.String 23
-    008:                [C 17
-    007:              java.lang.String 35
-    008:                [C 29
     005:          net.corda.node.services.statemachine.SessionId 28
     004:        net.corda.core.serialization.SerializedBytes 3,979
     002:    net.corda.core.serialization.SerializedBytes 21,222
     001:  net.corda.core.context.InvocationContext 905
     002:    net.corda.core.context.Actor 259
-    003:      net.corda.core.context.Actor$Id 41
-    004:        java.lang.String 27
-    005:          [C 17
-    003:      net.corda.core.identity.CordaX500Name 84
-    004:        java.lang.String 12
-    005:          [C 5
-    004:        java.lang.String 19
-    005:          [C 13
-    004:        java.lang.String 29
-    005:          [C 23
-    003:      net.corda.core.context.AuthServiceId 58
-    004:        java.lang.String 33
-    005:          [C 23
     002:    net.corda.core.context.InvocationOrigin$RPC 13
     002:    net.corda.core.context.Trace 398
-    003:      net.corda.core.context.Trace$InvocationId 185
-    004:        java.lang.String 31
-    005:          [C 21
-    004:        java.time.Instant 10
-    004:        java.lang.String 79
-    005:          [C 73
-    003:      net.corda.core.context.Trace$SessionId 159
-    004:        java.lang.String 21
-    005:          [C 15
-    004:        java.time.Instant 10
-    004:        java.lang.String 79
-    005:          [C 73
     001:  net.corda.core.identity.Party 156
     002:    net.i2p.crypto.eddsa.EdDSAPublicKey 45
     002:    net.corda.core.identity.CordaX500Name 92
-    003:      java.lang.String 12
-    004:        [C 5
-    003:      java.lang.String 23
-    004:        [C 13
-    003:      java.lang.String 33
-    004:        [C 23
     001:  java.util.LinkedHashMap 327
     002:    net.corda.node.services.statemachine.SessionState$Initiating 214
-    003:      java.util.Collections$EmptyList 0
-    003:      java.lang.String 89
-    004:        [C 83
     001:  java.util.ArrayList 1,214
     002:    net.corda.node.services.statemachine.SubFlow$Inlined 525
     003:      java.lang.Class 47
     003:      net.corda.node.services.statemachine.SubFlowVersion$CorDappFlow 328
     004:        net.corda.core.crypto.SecureHash$SHA256 118
     005:          [B 33
-    004:        java.lang.String 79
-    005:          [C 73
     002:    net.corda.node.services.statemachine.SubFlow$Initiating 322
     003:      java.lang.Class 39
     003:      net.corda.core.flows.FlowInfo 124
-    004:        java.lang.String 79
-    005:          [C 73
     003:      net.corda.node.services.statemachine.SubFlowVersion$CorDappFlow 11
     002:    net.corda.node.services.statemachine.SubFlow$Initiating 250
     003:      java.lang.Class 41
@@ -404,7 +354,7 @@ Upon re-start ensure you disable flow draining mode to allow the node to continu
 
     Thu Jul 11 19:52:56 BST 2019>>> run setFlowsDrainingModeEnabled enabled: false
 
-See also :ref:`Flow draining mode <draining-mode>` and :ref:`Upgrading CorDapps <upgrading-cordapps-flow-drains>`.
+See also :ref:`Flow draining mode <draining-mode>`.
 
 * contacting other participants in the network where their nodes are not responding to an initiated flow.
   The checkpoint dump gives good diagnostics on the reason a flow may be suspended (including the destination peer participant who is not responding):
