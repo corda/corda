@@ -85,6 +85,7 @@ class NetworkMapSocksProxyTest {
 
     @After
     fun tearDown() {
+        server.close()
         socksProxy.close()
         ProxyAuthSetter.unsetInstance()
     }
