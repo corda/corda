@@ -182,6 +182,7 @@ class CheckpointDumper(private val checkpointStorage: CheckpointStorage, private
             flowId = id,
             topLevelFlowClass = flowLogic.javaClass,
             topLevelFlowLogic = flowLogic,
+            flowCallStackSummary = flowCallStack.toSummary(),
             flowCallStack = flowCallStack,
             suspendedOn = (flowState as? FlowState.Started)?.flowIORequest?.toSuspendedOn(
                 suspendedTimestamp(),
@@ -220,6 +221,19 @@ class CheckpointDumper(private val checkpointStorage: CheckpointStorage, private
         )
     }
 
+    private fun List<FlowCall>.toSummary() = map {
+        FlowCallSummary(
+            it.flowClass,
+            it.progressStep
+        )
+    }
+
+    @Suppress("unused")
+    private class FlowCallSummary(
+        val flowClass: Class<*>,
+        val progressStep: String?
+    )
+
     @Suppress("unused")
     private class FlowCall(
         val flowClass: Class<*>,
@@ -252,8 +266,9 @@ class CheckpointDumper(private val checkpointStorage: CheckpointStorage, private
         val flowId: UUID,
         val topLevelFlowClass: Class<FlowLogic<*>>,
         val topLevelFlowLogic: FlowLogic<*>,
-        val flowCallStack: List<FlowCall>,
+        val flowCallStackSummary: List<FlowCallSummary>,
         val suspendedOn: SuspendedOn?,
+        val flowCallStack: List<FlowCall>,
         val origin: Origin,
         val ourIdentity: Party,
         val activeSessions: List<ActiveSession>,
