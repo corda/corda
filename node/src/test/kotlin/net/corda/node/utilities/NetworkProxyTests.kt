@@ -13,8 +13,12 @@ class NetworkProxyTests {
         ProxyAuthSetter.unsetInstance()
     }
 
+    /**
+     * Check we can get http proxy auth credentials if and only if server address, port and requestor type
+     * match (i.e. the requestor type is PROXY for http proxies)
+     */
     @Test
-    fun testSettingFromConfig() {
+    fun testHttpSettingFromConfig() {
         val config = NetworkServicesConfig(URL("https://doorman"), URL("http://networkmap"), proxyType = Proxy.Type.HTTP, proxyAddress = NetworkHostAndPort("localhost", 1234), proxyPassword = "pw", proxyUser = "user")
         val proxy = ProxyAuthSetter.getInstance(config)
 
@@ -24,7 +28,37 @@ class NetworkProxyTests {
         val pwAuth = Authenticator.requestPasswordAuthentication("localhost", InetAddress.getByName("localhost"), 1234, "https", "PROXY", "PROXY", URL("https://some.where.over.the/rainbow"), Authenticator.RequestorType.PROXY)
         Assert.assertNotNull(pwAuth)
         Assert.assertEquals("user", pwAuth.userName)
+
+        val pwAuthDifferentServer = Authenticator.requestPasswordAuthentication("foo.bar.com", InetAddress.getByName("localhost"), 1234, "https", "PROXY", "PROXY", URL("https://some.where.over.the/rainbow"), Authenticator.RequestorType.PROXY)
+        Assert.assertNull(pwAuthDifferentServer)
+
+        val pwAuthWrongType = Authenticator.requestPasswordAuthentication("localhost", InetAddress.getByName("localhost"), 1234, "https", "PROXY", "PROXY", URL("https://some.where.over.the/rainbow"), Authenticator.RequestorType.SERVER)
+        Assert.assertNull(pwAuthWrongType)
     }
+
+    /**
+     * Check we can get socks proxy auth credentials if and only if server address, port and requestor type
+     * match (i.e. the requestor type is SERVER for socks proxies)
+     */
+    @Test
+    fun testSocksSettingFromConfig() {
+        val config = NetworkServicesConfig(URL("https://doorman"), URL("http://networkmap"), proxyType = Proxy.Type.SOCKS, proxyAddress = NetworkHostAndPort("localhost", 1234), proxyPassword = "pw", proxyUser = "user")
+        val proxy = ProxyAuthSetter.getInstance(config)
+
+        Assert.assertNotNull(proxy.proxy)
+        Assert.assertEquals(proxy.proxy!!.address(), InetSocketAddress("localhost", 1234))
+
+        val pwAuth = Authenticator.requestPasswordAuthentication("localhost", InetAddress.getByName("localhost"), 1234, "https", "PROXY", "PROXY", URL("https://some.where.over.the/rainbow"), Authenticator.RequestorType.SERVER)
+        Assert.assertNotNull(pwAuth)
+        Assert.assertEquals("user", pwAuth.userName)
+
+        val pwAuthDifferentServer = Authenticator.requestPasswordAuthentication("foo.bar.com", InetAddress.getByName("localhost"), 1234, "https", "PROXY", "PROXY", URL("https://some.where.over.the/rainbow"), Authenticator.RequestorType.SERVER)
+        Assert.assertNull(pwAuthDifferentServer)
+
+        val pwAuthWrongType = Authenticator.requestPasswordAuthentication("localhost", InetAddress.getByName("localhost"), 1234, "https", "PROXY", "PROXY", URL("https://some.where.over.the/rainbow"), Authenticator.RequestorType.PROXY)
+        Assert.assertNull(pwAuthWrongType)
+    }
+
 
     @Test
     fun testCanSetProxyConfigOnlyOnce() {

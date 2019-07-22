@@ -136,6 +136,10 @@
       <module name="core-deterministic-testing_test" target="1.8" />
       <module name="core-deterministic_main" target="1.8" />
       <module name="core-deterministic_test" target="1.8" />
+      <module name="core-tests_integrationTest" target="1.8" />
+      <module name="core-tests_main" target="1.8" />
+      <module name="core-tests_smokeTest" target="1.8" />
+      <module name="core-tests_test" target="1.8" />
       <module name="core_extraResource" target="1.8" />
       <module name="core_integrationTest" target="1.8" />
       <module name="core_main" target="1.8" />
@@ -262,6 +266,8 @@
       <module name="net.corda_canonicalizer_test" target="1.8" />
       <module name="network-bootstrapper_main" target="1.8" />
       <module name="network-bootstrapper_test" target="1.8" />
+      <module name="network-builder_main" target="1.8" />
+      <module name="network-builder_test" target="1.8" />
       <module name="network-verifier-contracts_main" target="1.8" />
       <module name="network-verifier-contracts_test" target="1.8" />
       <module name="network-verifier-workflows_main" target="1.8" />
