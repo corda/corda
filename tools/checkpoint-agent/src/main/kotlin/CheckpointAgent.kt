@@ -203,6 +203,20 @@ object CheckpointHook : ClassFileTransformer {
                 log.debug("readFieldExit array of number: $clazz = ${numberValue.joinToString(",")}")
                 return numberValue.joinToString(",")
             }
+            else if (clazz == Array<Boolean>::class.java) {
+                val arrayValue = value as Array<Boolean>
+                log.debug("readFieldExit array of boolean: $clazz = ${arrayValue.joinToString(",")}")
+                return arrayValue.joinToString(",")
+            }
+            // N dimensional arrays
+            else if (arrayOf<Array<*>>()::class.java.isAssignableFrom(clazz)) {
+                val arrayValue = value as Array<Array<*>>
+                return arrayValue.map { arrayEntry ->
+                    log.debug("N Dimensional: $clazz, $arrayEntry, ${arrayEntry::class.java}")
+                    "[" + getArrayValue(arrayEntry::class.java, arrayEntry) + "]"
+                }.toString()
+            }
+            // Kotlin array types
             else if (clazz == CharArray::class.java) {
                 val arrayValue = value as CharArray
                 log.debug("readFieldExit char array: $clazz = ${arrayValue.joinToString("")}")
@@ -242,29 +256,6 @@ object CheckpointHook : ClassFileTransformer {
                 val arrayValue = value as BooleanArray
                 log.debug("readFieldExit boolean array: $clazz = ${arrayValue.joinToString(",")}")
                 return arrayValue.joinToString(",")
-            }
-            else if (clazz == Array<Boolean>::class.java) {
-                val arrayValue = value as Array<Boolean>
-                log.debug("readFieldExit array of boolean: $clazz = ${arrayValue.joinToString(",")}")
-                return arrayValue.joinToString(",")
-            }
-            else if (clazz == arrayOf<Array<in Any>>()::class.java) {
-                val arrayValue = value as Array<Array<in Any>>
-                log.debug("readFieldExit 2D array (in Any): $clazz = ${arrayValue.joinToString(",", prefix = "[", postfix = "]")}")
-            }
-            else if (arrayOf<Array<*>>()::class.java.isAssignableFrom(clazz)) {
-                val arrayValue = value as Array<Array<*>>
-                return arrayValue.map { arrayEntry ->
-                    log.debug("N Dimensional: $clazz, $arrayEntry, ${arrayEntry::class.java}")
-                    "[" + getArrayValue(arrayEntry::class.java, arrayEntry) + "]"
-                }.toString()
-            }
-            else if (arrayOf<Array<Array<*>>>()::class.java.isAssignableFrom(clazz)) {
-                val arrayValue = value as Array<Array<*>>
-                return arrayValue.map { arrayEntry ->
-                    log.debug("N Dimensional: $clazz, $arrayEntry, ${arrayEntry::class.java}")
-                    "[" + getArrayValue(arrayEntry::class.java, arrayEntry) + "]"
-                }.toString()
             }
             log.debug("ARRAY OF TYPE: $clazz (size: ${(value as Array<Any?>).size})")
         }
@@ -353,15 +344,6 @@ object CheckpointHook : ClassFileTransformer {
                     if (statsInfo.fieldType != null && statsInfo.fieldType.isArray) {
                         val arrayValue = (statsTree.value as Array<Any?>)
                         builder.append("${statsInfo.fieldType} (array length:${arrayValue.size})")
-                        val uniqueObjects = ConcurrentHashMap<Int, String>()  // hashcode -> class
-                        arrayValue.map {
-                            if (it != null)
-                                uniqueObjects.putIfAbsent(it.hashCode(), it::class.java.name)
-                        }
-                        uniqueObjects.map {
-                            builder.append("\n").append(CharArray(indent) { ' ' })
-                                    .append("${it.value} (hash:${it.key})")
-                        }
                     }
                     else if (statsInfo.fieldType != null && statsTree.value is Collection<*>) {
                         builder.append("${statsInfo.fieldType} (collection size:${statsTree.value.size})")
@@ -391,7 +373,6 @@ object CheckpointHook : ClassFileTransformer {
             }
         }
     }
-
 }
 
 sealed class StatsEvent {
