@@ -28,8 +28,9 @@ class CrlFetcher(val proxyConfig: ProxyConfig?) {
         private fun retrieveCrl(url: URL, proxySettings: ProxySettings): X509CRL? {
             val factory = CertificateFactory.getInstance("X.509")
             return try {
-                val (proxy, authenticator) = proxySettings
+                val (proxy, authenticator, additionalSetupFn) = proxySettings
                 authenticator?.let { Authenticator.setDefault(it) }
+                additionalSetupFn?.invoke()
                 val conn = url.openConnection(proxy)
                 conn.connectTimeout = Integer.getInteger("net.corda.bridge.services.crl.fetcher.connectTimeoutMs", 60 * 1000)
                 conn.readTimeout = Integer.getInteger("net.corda.bridge.services.crl.fetcher.readTimeoutMs", 60 * 1000)
