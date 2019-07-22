@@ -52,7 +52,7 @@ where:
   |        "started" - the start of the current change set,
   |        "successful" - the successful completion of a change set,
   |        "error" - an error for the whole process or an error while running a specific change set
-*  CODE := a predefined error code, the list will be published later
+*  CODE := a predefined error code (see :ref:`node-database-migration-logging-error-codes`)
 *  ERROR := a detailed message, for change set error it will be error produced by Liquibase
 
 An example database initialisation log:
@@ -75,8 +75,22 @@ An example unsuccessful database initialisation log:
 
     ...
     DatabaseInitialisation(id="FrSzFgm2";changeset="migration/common.changelog-init.xml::1511451595465-1.1::R3.Corda";status="started")
-    DatabaseInitialisation(id="FrSzFgm2";changeset="migration/common.changelog-init.xml::1511451595465-1.1::R3.Corda";status="error";message="Migration failed for change set migration/node-services.changelog-init.xml::1511451595465-39::R3.Corda:      Reason: liquibase.exception.DatabaseException: Table "NODE_MESSAGE_RETRY" not found; SQL statement: ALTER TABLE PUBLIC.node_message_retry ADD CONSTRAINT node_message_retry_pkey PRIMARY KEY (message_id) [42102-197] [Failed SQL: ALTER TABLE PUBLIC.node_message_retry ADD CONSTRAINT node_message_retry_pkey PRIMARY KEY (message_id)]")
-    DatabaseInitialisation(id="FrSzFgm2";status="error";message="Migration failed for change set migration/node-services.changelog-init.xml::1511451595465-39::R3.Corda:      Reason: liquibase.exception.DatabaseException: Table "NODE_MESSAGE_RETRY" not found; SQL statement: ALTER TABLE PUBLIC.node_message_retry ADD CONSTRAINT node_message_retry_pkey PRIMARY KEY (message_id) [42102-197] [Failed SQL: ALTER TABLE PUBLIC.node_message_retry ADD CONSTRAINT node_message_retry_pkey PRIMARY KEY (message_id)]")
+    DatabaseInitialisation(id="FrSzFgm2";changeset="migration/common.changelog-init.xml::1511451595465-1.1::R3.Corda";status="error";error_code="5";message="Migration failed for change set migration/node-services.changelog-init.xml::1511451595465-39::R3.Corda:      Reason: liquibase.exception.DatabaseException: Table "NODE_MESSAGE_RETRY" not found; SQL statement: ALTER TABLE PUBLIC.node_message_retry ADD CONSTRAINT node_message_retry_pkey PRIMARY KEY (message_id) [42102-197] [Failed SQL: ALTER TABLE PUBLIC.node_message_retry ADD CONSTRAINT node_message_retry_pkey PRIMARY KEY (message_id)]")
+    DatabaseInitialisation(id="FrSzFgm2";status="error";error_code="5";message="Migration failed for change set migration/node-services.changelog-init.xml::1511451595465-39::R3.Corda:      Reason: liquibase.exception.DatabaseException: Table "NODE_MESSAGE_RETRY" not found; SQL statement: ALTER TABLE PUBLIC.node_message_retry ADD CONSTRAINT node_message_retry_pkey PRIMARY KEY (message_id) [42102-197] [Failed SQL: ALTER TABLE PUBLIC.node_message_retry ADD CONSTRAINT node_message_retry_pkey PRIMARY KEY (message_id)]")
+
+.. _node-database-migration-logging-error-codes:
+
+Error codes
+^^^^^^^^^^^
+
+As mentioned above, an error log entry includes a numeric ``<CODE>`` preceded by the ``error_code=`` label. These error codes serve
+as predefined categories grouping potentially many specific errors.  The following codes are currently in use:
+
+* 1 - errors not belonging to any other category
+* 2 - errors thrown as ``ClassNotFoundException`` by the database library; for example, a missing database driver can trigger this type of error
+* 3 - initialization errors, including connection and authentication issues
+* 4 - internal Corda errors encountered during database migration
+* 5 - database migration errors reported by the liquibase library, including conflicting or duplicate change sets as well as invalid DDL data types
 
 Native Liquibase logs
 ^^^^^^^^^^^^^^^^^^^^^
