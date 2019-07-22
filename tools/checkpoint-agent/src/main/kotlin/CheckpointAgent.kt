@@ -12,6 +12,7 @@ import net.corda.tools.CheckpointAgent.Companion.instrumentType
 import net.corda.tools.CheckpointAgent.Companion.log
 import net.corda.tools.CheckpointAgent.Companion.maximumSize
 import net.corda.tools.CheckpointAgent.Companion.minimumSize
+import net.corda.tools.CheckpointAgent.Companion.printOnce
 import net.corda.tools.CheckpointAgent.Companion.stackDepth
 import org.slf4j.LoggerFactory
 import java.io.ByteArrayInputStream
@@ -197,14 +198,14 @@ object CheckpointHook : ClassFileTransformer {
     private fun <T> getArrayValue(clazz: Class<T>, value: Any?): String? {
         if (clazz.isArray) {
             log.debug("readFieldExit array type: $clazz, value: $value]")
-            if (clazz == CharArray::class.java) {
+            if (Array<Number>::class.java.isAssignableFrom(clazz)) {
+                val numberValue = value as Array<Number>
+                log.debug("readFieldExit array of number: $clazz = ${numberValue.joinToString(",")}")
+                return numberValue.joinToString(",")
+            }
+            else if (clazz == CharArray::class.java) {
                 val arrayValue = value as CharArray
                 log.debug("readFieldExit char array: $clazz = ${arrayValue.joinToString("")}")
-                return arrayValue.joinToString("")
-            }
-            else if (clazz == Array<Char>::class.java) {
-                val arrayValue = value as Array<Char>
-                log.debug("readFieldExit array of char: $clazz = ${arrayValue.joinToString("")}")
                 return arrayValue.joinToString("")
             }
             else if (clazz == ByteArray::class.java) {
@@ -212,19 +213,9 @@ object CheckpointHook : ClassFileTransformer {
                 log.debug("readFieldExit byte array: $clazz = ${byteArrayToHex(arrayValue)}")
                 return byteArrayToHex(arrayValue)
             }
-            else if (clazz == Array<Byte>::class.java) {
-                val arrayValue = value as Array<Byte>
-                log.debug("readFieldExit array of byte: $clazz = ${byteArrayToHex(arrayValue.toByteArray())}")
-                return byteArrayToHex(arrayValue.toByteArray())
-            }
             else if (clazz == ShortArray::class.java) {
                 val arrayValue = value as ShortArray
                 log.debug("readFieldExit short array: $clazz = ${arrayValue.joinToString(",")}")
-                return arrayValue.joinToString(",")
-            }
-            else if (clazz == Array<Short>::class.java) {
-                val arrayValue = value as Array<Short>
-                log.debug("readFieldExit array of short: $clazz = ${arrayValue.joinToString(",")}")
                 return arrayValue.joinToString(",")
             }
             else if (clazz == IntArray::class.java) {
@@ -232,19 +223,9 @@ object CheckpointHook : ClassFileTransformer {
                 log.debug("readFieldExit int array: $clazz = ${arrayValue.joinToString(",")}")
                 return arrayValue.joinToString(",")
             }
-            else if (clazz == Array<Int>::class.java) {
-                val arrayValue = value as Array<Int>
-                log.debug("readFieldExit array of Int: $clazz = ${arrayValue.joinToString(",")}")
-                return arrayValue.joinToString(",")
-            }
             else if (clazz == LongArray::class.java) {
                 val arrayValue = value as LongArray
                 log.debug("readFieldExit long array: $clazz = ${arrayValue.joinToString(",")}")
-                return arrayValue.joinToString(",")
-            }
-            else if (clazz == Array<Long>::class.java) {
-                val arrayValue = value as Array<Long>
-                log.debug("readFieldExit array of long: $clazz = ${arrayValue.joinToString(",")}")
                 return arrayValue.joinToString(",")
             }
             else if (clazz == FloatArray::class.java) {
@@ -252,19 +233,9 @@ object CheckpointHook : ClassFileTransformer {
                 log.debug("readFieldExit float array: $clazz = ${arrayValue.joinToString(",")}")
                 return arrayValue.joinToString(",")
             }
-            else if (clazz == Array<Float>::class.java) {
-                val arrayValue = value as Array<Float>
-                log.debug("readFieldExit array of float: $clazz = ${arrayValue.joinToString(",")}")
-                return arrayValue.joinToString(",")
-            }
             else if (clazz == DoubleArray::class.java) {
                 val arrayValue = value as DoubleArray
                 log.debug("readFieldExit double array: $clazz = ${arrayValue.joinToString(",")}")
-                return arrayValue.joinToString(",")
-            }
-            else if (clazz == Array<Double>::class.java) {
-                val arrayValue = value as Array<Double>
-                log.debug("readFieldExit array of double: $clazz = ${arrayValue.joinToString(",")}")
                 return arrayValue.joinToString(",")
             }
             else if (clazz == BooleanArray::class.java) {
@@ -368,11 +339,14 @@ object CheckpointHook : ClassFileTransformer {
         }
     }
 
-    private fun prettyStatsTree(indent: Int, statsInfo: StatsInfo, statsTreeToCount: Pair<StatsTree,Int>, builder: StringBuilder) {
-        val statsTree = statsTreeToCount.first
+    private fun prettyStatsTree(indent: Int, statsInfo: StatsInfo, identityInfo: IdentityInfo, builder: StringBuilder) {
+        val statsTree = identityInfo.tree
         when (statsTree) {
             is StatsTree.Object -> {
-                if (indent/2  < stackDepth) {
+                if (printOnce && identityInfo.refCount > 1) {
+                    log.debug("Skipping $statsInfo, $statsTree (count:${identityInfo.refCount})")
+                }
+                else if (indent/2  < stackDepth) {
                     builder.append(String.format("%03d:", indent / 2))
                     builder.append(CharArray(indent) { ' ' })
                     builder.append(" ${statsInfo.fieldName} ")
@@ -396,7 +370,7 @@ object CheckpointHook : ClassFileTransformer {
                         builder.append("${statsInfo.fieldType} (map size:${statsTree.value.size})")
                     }
                     else {
-                        builder.append("${statsTree.className} (hash:${statsTree.value?.hashCode()}) (count:${statsTreeToCount.second})")
+                        builder.append("${statsTree.className} (hash:${statsTree.value?.hashCode()}) (count:${identityInfo.refCount})")
                     }
                     builder.append(" ")
                     builder.append(String.format("%,d", statsTree.size))
@@ -432,9 +406,13 @@ sealed class StatsTree {
     data class Object(
             val className: String,
             val size: Long,
-            val children: List<Pair<StatsInfo, Pair<StatsTree,Int>>>,
+            val children: List<Pair<StatsInfo, IdentityInfo>>,
             val value: Any?
-    ) : StatsTree()
+    ) : StatsTree() {
+        override fun toString(): String {
+            return "Object [$className, $size, $value]"
+        }
+    }
 
     data class BasicType(
             val value: Any?
@@ -447,7 +425,9 @@ sealed class StatsTree {
     }
 }
 
-fun readTree(events: List<StatsEvent>, index: Int, idMap: IdentityHashMap<Any, Pair<StatsTree,Int>> = IdentityHashMap()): Pair<Int, Pair<StatsTree,Int>> {
+data class IdentityInfo(val tree: StatsTree, val refCount: Int)
+
+fun readTree(events: List<StatsEvent>, index: Int, idMap: IdentityHashMap<Any, IdentityInfo> = IdentityHashMap()): Pair<Int, IdentityInfo> {
     val event = events[index]
     when (event) {
         is StatsEvent.Enter -> {
@@ -456,13 +436,10 @@ fun readTree(events: List<StatsEvent>, index: Int, idMap: IdentityHashMap<Any, P
             require(event.className == exit.className)
             val tree = StatsTree.Object(event.className, exit.offset - event.offset, children, exit.value)
             if (idMap.containsKey(exit.value)) {
-                val treeAndCount = idMap[exit.value]!!
-                if (exit.value != null) {
-                    val newTreeAndCount = treeAndCount.copy(treeAndCount.first, treeAndCount.second+1)
-                    log.debug("Skipping repeated object: ${exit.value} (hashcode:${exit.value.hashCode()}) (count:${newTreeAndCount.second})")
-                    idMap[exit.value] = newTreeAndCount
-                } else idMap[exit.value] = Pair(tree, 1)
-            } else idMap[exit.value] = Pair(tree, 1)
+                val identityInfo = idMap[exit.value]!!
+                idMap[exit.value] = IdentityInfo(identityInfo.tree, identityInfo.refCount + 1)
+                log.debug("Skipping repeated StatsEvent.Enter: ${exit.value} (hashcode:${exit.value!!.hashCode()}) (count:${idMap[exit.value]?.refCount})")
+            } else idMap[exit.value] = IdentityInfo(tree, 1)
             return Pair(nextIndex + 1, idMap[exit.value]!!)
         }
         else -> {
@@ -473,8 +450,8 @@ fun readTree(events: List<StatsEvent>, index: Int, idMap: IdentityHashMap<Any, P
 
 data class StatsInfo(val fieldName: String, val fieldType: Class<*>?)
 
-fun readTrees(events: List<StatsEvent>, index: Int, idMap: IdentityHashMap<Any, Pair<StatsTree, Int>>): Pair<Int, List<Pair<StatsInfo, Pair<StatsTree,Int>>>> {
-    val trees = ArrayList<Pair<StatsInfo, Pair<StatsTree,Int>>>()
+fun readTrees(events: List<StatsEvent>, index: Int, idMap: IdentityHashMap<Any, IdentityInfo>): Pair<Int, List<Pair<StatsInfo, IdentityInfo>>> {
+    val trees = ArrayList<Pair<StatsInfo, IdentityInfo>>()
     var i = index
     var arrayIdx = 0
     var inField = false
@@ -496,23 +473,29 @@ fun readTrees(events: List<StatsEvent>, index: Int, idMap: IdentityHashMap<Any, 
             is StatsEvent.Exit -> {
                 arrayIdx = 0
                 if (idMap.containsKey(event.value)) {
-                    val treeAndCount = idMap[event.value]!!
-                    if (event.value != null) {
-                        log.debug("Skipping repeated object: ${event.value} (hashcode:${event.value.hashCode()}) (count:${treeAndCount.second})")
-                        val newTreeAndCount = treeAndCount.copy(treeAndCount.first, treeAndCount.second+1)
-                        idMap[event.value] = newTreeAndCount
-                    }
+                    val identityInfo = idMap[event.value]!!
+                    idMap[event.value] = IdentityInfo(identityInfo.tree, identityInfo.refCount + 1)
+                    log.debug("Skipping repeated StatsEvent.Exit: ${event.value} (hashcode:${event.value!!.hashCode()}) (count:${idMap[event.value]?.refCount})")
                 }
                 return Pair(i, trees)
             }
             is StatsEvent.BasicTypeField -> {
-                trees += StatsInfo(event.fieldName, event.fieldType) to Pair(StatsTree.BasicType(event.fieldValue), 1)
+                trees += StatsInfo(event.fieldName, event.fieldType) to IdentityInfo(StatsTree.BasicType(event.fieldValue), 1)
                 i++
                 inField = false
             }
             is StatsEvent.ObjectField -> {
-                val treeAndCount = idMap[event.value] ?: Pair(StatsTree.Loop(0), 0)
-                trees += StatsInfo(event.fieldName, event.fieldType) to Pair(treeAndCount.first, 1)
+                val identityInfo =
+                    if (idMap.containsKey(event.value)) {
+                        val identityInfo = idMap[event.value]!!
+                        idMap[event.value] = IdentityInfo(identityInfo.tree, identityInfo.refCount + 1)
+                        log.debug("Skipping repeated StatsEvent.ObjectField: ${event.value} (hashcode:${event.value!!.hashCode()}) (count:${idMap[event.value]?.refCount})")
+                        identityInfo
+                    }
+                    else {
+                        IdentityInfo(StatsTree.Loop(0), 1)
+                    }
+                trees += StatsInfo(event.fieldName, event.fieldType) to identityInfo
                 i++
                 inField = false
             }
