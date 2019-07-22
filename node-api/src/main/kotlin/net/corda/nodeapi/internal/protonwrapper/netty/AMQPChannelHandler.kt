@@ -287,6 +287,9 @@ internal class AMQPChannelHandler(private val serverMode: Boolean,
             cause is ClosedChannelException -> logWarnWithMDC("SSL Handshake closed early.")
         // Sadly the exception thrown by Netty wrapper requires that we check the message.
             cause is SSLException && cause.message == "handshake timed out" -> logWarnWithMDC("SSL Handshake timed out")
+            cause is SSLException && cause.message == "Received close_notify during handshake"
+                                                                           -> logWarnWithMDC("Received close_notify during handshake")
+
             else -> badCert = true
         }
         logErrorWithMDC("Handshake failure: ${evt.cause().message}")
