@@ -106,14 +106,14 @@ class CheckpointDumper(private val checkpointStorage: CheckpointStorage, private
                     checkpointStorage.getAllCheckpoints().use { stream ->
                         ZipOutputStream(file.outputStream()).use { zip ->
                             stream.forEach { (runId, serialisedCheckpoint) ->
+                                if (isCheckpointAgentRunning)
+                                    instrumentCheckpointAgent(runId)
                                 val checkpoint = serialisedCheckpoint.checkpointDeserialize(context = checkpointSerializationContext)
                                 val json = checkpoint.toJson(runId.uuid, now)
                                 val jsonBytes = writer.writeValueAsBytes(json)
                                 zip.putNextEntry(ZipEntry("${json.flowLogicClass.simpleName}-${runId.uuid}.json"))
                                 zip.write(jsonBytes)
                                 zip.closeEntry()
-                                if (isCheckpointAgentRunning)
-                                    instrumentCheckpointAgent(runId)
                             }
                         }
                     }
