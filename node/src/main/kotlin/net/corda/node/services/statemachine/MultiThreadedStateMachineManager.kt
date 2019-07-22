@@ -410,7 +410,7 @@ class MultiThreadedStateMachineManager(
         val sessionMessage = try {
             event.receivedMessage.data.deserialize<SessionMessage>()
         } catch (ex: Exception) {
-            logger.error("Received corrupt SessionMessage data from $peer")
+            logger.error("Unable to deserialize SessionMessage data from $peer", ex)
             event.deduplicationHandler.afterDatabaseTransaction()
             return
         }
