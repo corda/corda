@@ -346,7 +346,7 @@ the owner.
 
 To calculate how much cash is moving, we use the ``sumCashBy`` utility function. Again, this is an extension function,
 so in Kotlin code it appears as if it was a method on the ``List<Cash.State>`` type even though JDK provides no such
-method. In Java we see its true nature: it is actually a static method named ``CashKt.sumCashBy``. This method simply
+method. In Java we see its true nature: it is actually a static method named ``StateSummingUtilities.kt.sumCashBy``. This method simply
 returns an ``Amount`` object containing the sum of all the cash states in the transaction outputs that are owned by
 that given public key, or throws an exception if there were no such states *or* if there were different currencies
 represented in the outputs! So we can see that this contract imposes a limitation on the structure of a redemption
