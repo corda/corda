@@ -12,6 +12,8 @@ import net.corda.nodeapi.internal.config.parseAs
 import net.corda.nodeapi.internal.cryptoservice.CryptoService
 import net.corda.nodeapi.internal.cryptoservice.CryptoServiceException
 import net.corda.nodeapi.internal.cryptoservice.JCACryptoService
+import net.corda.core.utilities.detailedLogger
+import net.corda.core.utilities.trace
 import java.nio.file.Path
 import java.security.*
 import java.time.Duration
@@ -72,10 +74,13 @@ class FutureXCryptoService(
                 } else {
                     "SHA256withECDSA"
                 }
+                detailedLogger.trace { "CryptoService(action=signing_start;alias=$alias;algorithm=$algorithm)" }
                 val signature = Signature.getInstance(algorithm, provider)
                 signature.initSign(it)
                 signature.update(data)
-                signature.sign()
+                val signedData = signature.sign()
+                detailedLogger.trace { "CryptoService(action=signing_end;alias=$alias;algorithm=$algorithm)" }
+                signedData
             }
         }
     }
@@ -109,6 +114,8 @@ class FutureXCryptoService(
 
     companion object {
         val KEYSTORE_TYPE = "PKCS11"
+
+        private val detailedLogger = detailedLogger()
 
         private fun parseConfigFile(cryptoServiceConf: Path): FutureXConfiguration {
             try {

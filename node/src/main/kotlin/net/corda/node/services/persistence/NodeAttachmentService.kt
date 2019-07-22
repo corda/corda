@@ -24,6 +24,8 @@ import net.corda.core.node.services.vault.Builder
 import net.corda.core.node.services.vault.Sort
 import net.corda.core.serialization.*
 import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.detailedLogger
+import net.corda.core.utilities.trace
 import net.corda.node.services.vault.HibernateAttachmentQueryCriteriaParser
 import net.corda.node.utilities.InfrequentlyMutatedCache
 import net.corda.node.utilities.NonInvalidatingCache
@@ -64,6 +66,7 @@ class NodeAttachmentService(
 
     companion object {
         private val log = contextLogger()
+        private val detailedLogger = detailedLogger()
 
         private val PRIVILEGED_UPLOADERS = listOf(DEPLOYED_CORDAPP_UPLOADER, RPC_UPLOADER, P2P_UPLOADER, UNKNOWN_UPLOADER)
 
@@ -262,8 +265,10 @@ class NodeAttachmentService(
 
     private fun loadAttachmentContent(id: SecureHash): Pair<Attachment, ByteArray>? {
         return database.transaction {
+            detailedLogger.trace { "Attachment(action=loading;id=$id)" }
             val attachment = currentDBSession().get(NodeAttachmentService.DBAttachment::class.java, id.toString())
                     ?: return@transaction null
+            detailedLogger.trace { "Attachment(action=loaded;id=$id;uploader=${attachment.uploader})"}
             val attachmentImpl = AttachmentImpl(id, { attachment.content }, checkAttachmentsOnLoad, attachment.uploader).let {
                 val contracts = attachment.contractClassNames
                 if (contracts != null && contracts.isNotEmpty()) {
@@ -360,9 +365,9 @@ class NodeAttachmentService(
                 // To do this we must pipe stream into the database without knowing its hash, which we will learn only once
                 // the insert/upload is complete. We can then query to see if it's a duplicate and if so, erase, and if not
                 // set the hash field of the new attachment record.
-
                 val bytes = inputStream.readFully()
                 val id = bytes.sha256()
+                detailedLogger.trace { "Attachment(action=store_start;id=$id;filename=$filename;uploader=$uploader)"}
                 if (!hasAttachment(id)) {
                     checkIsAValidJAR(bytes.inputStream())
                     val jarSigners = getSigners(bytes)
@@ -380,6 +385,7 @@ class NodeAttachmentService(
                     session.save(attachment)
                     attachmentCount.inc()
                     log.info("Stored new attachment: id=$id uploader=$uploader filename=$filename")
+                    detailedLogger.trace { "Attachment(action=store_created;id=$id;filename=$filename;uploader=$uploader)" }
                     contractClassNames.forEach { contractsCache.invalidate(it) }
                     return@withContractsInJar id
                 }
@@ -390,6 +396,7 @@ class NodeAttachmentService(
                     if (attachment.uploader != uploader) {
                         attachment.uploader = uploader
                         log.info("Updated attachment $id with uploader $uploader")
+                        detailedLogger.trace { "Attachment(action=store_updated;id=$id;filename=$filename;uploader=$uploader)" }
                         contractClassNames.forEach { contractsCache.invalidate(it) }
                         loadAttachmentContent(id)?.let { attachmentAndContent ->
                             // TODO: this is racey. ENT-2870
@@ -429,6 +436,7 @@ class NodeAttachmentService(
     override fun queryAttachments(criteria: AttachmentQueryCriteria, sorting: AttachmentSort?): List<AttachmentId> {
         log.info("Attachment query criteria: $criteria, sorting: $sorting")
         return database.transaction {
+            detailedLogger.trace { "Attachment(action=query_start;criteria=$criteria;sorting=$sorting)" }
             val session = currentDBSession()
             val criteriaBuilder = session.criteriaBuilder
 
@@ -444,7 +452,9 @@ class NodeAttachmentService(
             val query = session.createQuery(criteriaQuery)
 
             // execution
-            query.resultList.map { AttachmentId.parse(it.attId) }
+            val result = query.resultList
+            detailedLogger.trace { "Attachment(action=query_end;criteria=$criteria;sorting=$sorting)" }
+            result.map { AttachmentId.parse(it.attId) }
         }
     }
 
@@ -491,7 +501,10 @@ class NodeAttachmentService(
             val query = session.createQuery(criteriaQuery)
 
             // execution
-            TreeMap(query.resultList.groupBy { it.version }.map { makeAttachmentIds(it, name) }.toMap())
+            detailedLogger.trace { "Attachment(action=query_version_start;type=contract;className=$contractClassName;criteria=$attachmentQueryCriteria)" }
+            val resultList = query.resultList
+            detailedLogger.trace { "Attachment(action=query_version_end;type=contract;className=$contractClassName;criteria=$attachmentQueryCriteria)" }
+            TreeMap(resultList.groupBy { it.version }.map { makeAttachmentIds(it, name) }.toMap())
         }
     }
 

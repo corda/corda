@@ -62,6 +62,7 @@ class NodeVaultService(
 ) : SingletonSerializeAsToken(), VaultServiceInternal {
     companion object {
         private val log = contextLogger()
+        private val detailedLogger = detailedLogger()
 
         /**
          * Establish whether a given state is relevant to a node, given the node's public keys.
@@ -161,7 +162,9 @@ class NodeVaultService(
             // TODO: Perhaps these can be stored in a batch?
             stateOnly.participants.groupBy { it.owningKey }.forEach { participants ->
                 val persistentParty = VaultSchemaV1.PersistentParty(persistentStateRef, participants.value.first())
+                detailedLogger.trace { "Party(action=save_start;party=${persistentParty.x500Name})" }
                 session.save(persistentParty)
+                detailedLogger.trace { "Party(action=save_end;party=${persistentParty.x500Name})" }
             }
             val stateToAdd = VaultSchemaV1.VaultStates(
                     notary = stateAndRef.value.state.notary,
@@ -175,7 +178,9 @@ class NodeVaultService(
                     constraintData = constraintInfo.data()
             )
             stateToAdd.stateRef = persistentStateRef
+            detailedLogger.trace { "State(action=save_start;className=${stateToAdd.contractStateClassName};status=${stateToAdd.stateStatus})" }
             session.save(stateToAdd)
+            detailedLogger.trace { "State(action=save_end;className=${stateToAdd.contractStateClassName};status=${stateToAdd.stateStatus})" }
         }
     }
 
@@ -423,8 +428,8 @@ class NodeVaultService(
                 // prepare query for execution
                 val session = currentDBSession()
                 val query = session.createQuery(criteriaQuery)
-
                 // execution.  For each transaction:
+                detailedLogger.trace { "States(action=loading;refs=$refs)" }
                 query.resultList.map { it[0] as PersistentStateRef }.groupBy { it.txId }.forEach {
                     // Record what states were found, in the cache and the results.
                     val secureHash = SecureHash.parse(it.key)
@@ -436,6 +441,7 @@ class NodeVaultService(
                     // Cache the result for future lookups.
                     producedStatesMapping.get(secureHash) { outputsBitSet }
                 }
+                detailedLogger.trace { "States(action=loaded;refs=$refs)" }
             }
         }
         return servicesForResolution.loadStates(states)
@@ -646,6 +652,8 @@ class NodeVaultService(
                 totalStates = results.otherResults.last() as Long
             }
 
+            detailedLogger.trace { "Contract(action=query_start;type=$contractStateType;criteria=$criteria;pagination=$paging;sorting=$paging)" }
+
             val session = getSession()
 
             val criteriaQuery = criteriaBuilder.createQuery(Tuple::class.java)
@@ -678,6 +686,8 @@ class NodeVaultService(
 
             // execution
             val results = query.resultList
+
+            detailedLogger.trace { "Contract(action=query_end;type=$contractStateType;criteria=$criteria;pagination=$paging;sorting=$paging)" }
 
             // final pagination check (fail-fast on too many results when no pagination specified)
             if (!skipPagingChecks && paging.isDefault && results.size > DEFAULT_PAGE_SIZE) {

@@ -521,7 +521,7 @@ class MultiThreadedStateMachineManager(
             isStartIdempotent: Boolean
     ): CordaFuture<FlowStateMachine<A>> {
         val flowId = StateMachineRunId.createRandom()
-        detailedLogger.trace { "StartFlow(logic=$flowLogic;flowId=${flowId.uuid})" }
+        detailedLogger.trace { "Flow(action=start;logic=$flowLogic;flowId=${flowId.uuid})" }
 
         // Before we construct the state machine state by freezing the FlowLogic we need to make sure that lazy properties
         // have access to the fiber (and thereby the service hub)
@@ -687,7 +687,7 @@ class MultiThreadedStateMachineManager(
     ): Flow {
         val flowState = checkpoint.flowState
         val resultFuture = openFuture<Any?>()
-        traceWithCheckpoint("CreateFlowFromCheckpoint", id, checkpoint)
+        traceWithCheckpoint("create_from_checkpoint", id, checkpoint)
         val fiber = when (flowState) {
             is FlowState.Unstarted -> {
                 val logic = flowState.frozenFlowLogic.checkpointDeserialize(context = checkpointSerializationContext!!)
@@ -749,7 +749,7 @@ class MultiThreadedStateMachineManager(
             val flowLogic = flow.fiber.logic
             if (flowLogic.isEnabledTimedFlow()) scheduleTimeout(id)
             flow.fiber.scheduleEvent(Event.DoRemainingWork)
-            traceWithCheckpoint("AddAndStartFlow", id, checkpoint)
+            traceWithCheckpoint("add_and_start", id, checkpoint)
             when (checkpoint.flowState) {
                 is FlowState.Unstarted -> {
                     flow.fiber.start()
@@ -856,6 +856,6 @@ class MultiThreadedStateMachineManager(
     }
 
     private fun traceWithCheckpoint(action: String, id: StateMachineRunId, checkpoint: Checkpoint) {
-        detailedLogger.trace { "$action(flowId=${id.uuid};flowState=${checkpoint.flowState};session=${checkpoint.sessions};subFlowStack=${checkpoint.subFlowStack};errorState=${checkpoint.errorState};numberOfSuspends=${checkpoint.numberOfSuspends})" }
+        detailedLogger.trace { "Flow(action=$action;flowId=${id.uuid};flowState=${checkpoint.flowState};session=${checkpoint.sessions};subFlowStack=${checkpoint.subFlowStack};errorState=${checkpoint.errorState};numberOfSuspends=${checkpoint.numberOfSuspends})" }
     }
 }

@@ -14,11 +14,13 @@ import com.microsoft.azure.keyvault.webkey.JsonWebKeySignatureAlgorithm
 import com.microsoft.azure.keyvault.webkey.JsonWebKeyType
 import com.typesafe.config.ConfigException
 import com.typesafe.config.ConfigFactory
+import net.corda.core.utilities.detailedLogger
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.Crypto.ECDSA_SECP256K1_SHA256
 import net.corda.core.crypto.Crypto.ECDSA_SECP256R1_SHA256
 import net.corda.core.crypto.Crypto.RSA_SHA256
 import net.corda.core.crypto.SignatureScheme
+import net.corda.core.utilities.trace
 import net.corda.nodeapi.internal.config.UnknownConfigurationKeysException
 import net.corda.nodeapi.internal.config.parseAs
 import net.corda.nodeapi.internal.cryptoservice.CryptoService
@@ -57,7 +59,9 @@ class AzureKeyVaultCryptoService(
     override fun _generateKeyPair(alias: String, scheme: SignatureScheme): PublicKey {
         checkAlias(alias)
         val keyRequest: CreateKeyRequest = createKeyRequest(scheme.schemeNumberID, alias, protection)
+        detailedLogger.trace { "CryptoService(action=generate_key_pair_start;alias=$alias;scheme=$scheme)" }
         val keyBundle = keyVaultClient.createKey(keyRequest)
+        detailedLogger.trace { "CryptoService(action=generate_key_pair_end;alias=$alias;scheme=$scheme)" }
         return toPublicKey(keyBundle)
     }
 
@@ -72,13 +76,17 @@ class AzureKeyVaultCryptoService(
 
     override fun _containsKey(alias: String): Boolean {
         checkAlias(alias)
+        detailedLogger.trace { "CryptoService(action=key_lookup_start;alias=$alias)" }
         val keyBundle = keyVaultClient.getKey(createIdentifier(alias))
+        detailedLogger.trace { "CryptoService(action=key_lookup_end;alias=$alias)"}
         return keyBundle != null
     }
 
     override fun _getPublicKey(alias: String): PublicKey? {
         checkAlias(alias)
+        detailedLogger.trace { "CryptoService(action=key_get_start;alias=$alias)" }
         val keyBundle = keyVaultClient.getKey(createIdentifier(alias))
+        detailedLogger.trace { "CryptoService(action=key_get_end;alias=$alias)"}
         if (keyBundle?.key() == null) {
             return null
         }
@@ -87,6 +95,7 @@ class AzureKeyVaultCryptoService(
 
     override fun _sign(alias: String, data: ByteArray, signAlgorithm: String?): ByteArray {
         checkAlias(alias)
+        detailedLogger.trace { "CryptoService(action=signing_start;alias=$alias;algorithm=${signAlgorithm ?: "SHA-256"})" }
         // KeyVault can only sign over hashed data.
         val hashAlgo = getHashAlgorithmFromSignatureAlgorithm(signAlgorithm) ?: "SHA-256"
         val digest = MessageDigest.getInstance(hashAlgo)
@@ -98,6 +107,7 @@ class AzureKeyVaultCryptoService(
         val keyBundle = keyVaultClient.getKey(createIdentifier(alias))
         val algorithm = determineAlgorithm(keyBundle)
         val result = keyVaultClient.sign(createIdentifier(alias), algorithm, hash)
+        detailedLogger.trace { "CryptoService(action=signing_end;alias=$alias;algorithm=$signAlgorithm)" }
         val keyType = keyBundle.key().kty()
         return when (keyType) {
             JsonWebKeyType.RSA, JsonWebKeyType.RSA_HSM -> result.result()
@@ -113,6 +123,7 @@ class AzureKeyVaultCryptoService(
     }
 
     override fun _getSigner(alias: String): ContentSigner {
+        detailedLogger.trace { "CryptoService(action=get_signer;alias=$alias)" }
         return object : ContentSigner {
             init {
                 checkAlias(alias)
@@ -203,6 +214,8 @@ class AzureKeyVaultCryptoService(
         // default protection when not set in config. See [AzureKeyVaultConfig].
         val DEFAULT_PROTECTION = Protection.HARDWARE
 
+        private val detailedLogger = detailedLogger()
+
         /**
          * Convert from Microsoft's 'raw' (P1363) format to ASN.1 DER.
          * See https://github.com/Azure/azure-keyvault-java/issues/58
@@ -224,6 +237,7 @@ class AzureKeyVaultCryptoService(
          * Sign in using the Azure Active Directory Authentication Library https://github.com/AzureAD/azure-activedirectory-library-for-java
          */
         fun createKeyVaultClient(path: String, password: String, alias: String, clientId: String): KeyVaultClient {
+            detailedLogger.trace { "CryptoService(action=create_client;id=$clientId;alias=$alias;path=$path)" }
             val keyStore = KeyStore.getInstance("pkcs12", "SunJSSE")
             keyStore.load(FileInputStream(path), password.toCharArray())
             val certificate = keyStore.getCertificate(alias) as X509Certificate

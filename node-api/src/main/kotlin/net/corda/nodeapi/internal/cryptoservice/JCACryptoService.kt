@@ -7,6 +7,8 @@ import net.corda.core.internal.VisibleForTesting
 import net.corda.nodeapi.internal.crypto.ContentSignerBuilder
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.toJca
+import net.corda.core.utilities.detailedLogger
+import net.corda.core.utilities.trace
 import org.bouncycastle.asn1.x509.AlgorithmIdentifier
 import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder
 import org.bouncycastle.operator.ContentSigner
@@ -36,9 +38,11 @@ abstract class JCACryptoService(
 
     override fun _generateKeyPair(alias: String, scheme: SignatureScheme): PublicKey {
         return withAuthentication {
+            detailedLogger.trace { "CryptoService(action=generate_key_pair_start;alias=$alias;scheme=$scheme)" }
             val keyPairGenerator = keyPairGeneratorFromScheme(scheme)
             val keyPair = keyPairGenerator.generateKeyPair()
             keyStore.setKeyEntry(alias, keyPair.private, null, selfSign(scheme, keyPair))
+            detailedLogger.trace { "CryptoService(action=generate_key_pair_end;alias=$alias;scheme=$scheme)" }
             // We call toSupportedKey because it's possible that the PublicKey object returned by the provider is not initialized.
             Crypto.toSupportedPublicKey(keyPair.public)
         }
@@ -46,15 +50,21 @@ abstract class JCACryptoService(
 
     override fun _containsKey(alias: String): Boolean {
         return withAuthentication {
-            keyStore.containsAlias(alias)
+            detailedLogger.trace { "CryptoService(action=key_lookup_start;alias=$alias)" }
+            val keyExists = keyStore.containsAlias(alias)
+            detailedLogger.trace { "CryptoService(action=key_lookup_end;alias=$alias;found=$keyExists)"}
+            keyExists
         }
     }
 
     override fun _getPublicKey(alias: String): PublicKey? {
         return withAuthentication {
-            keyStore.getCertificate(alias)?.publicKey?.let {
+            detailedLogger.trace { "CryptoService(action=key_get_start;alias=$alias)" }
+            val key = keyStore.getCertificate(alias)?.publicKey?.let {
                 Crypto.toSupportedPublicKey(it)
             }
+            detailedLogger.trace { "CryptoService(action=key_get_end;alias=$alias)"}
+            key
         }
     }
 
@@ -69,15 +79,19 @@ abstract class JCACryptoService(
                 } else {
                     "SHA256withECDSA"
                 }
+                detailedLogger.trace { "CryptoService(action=signing_start;alias=$alias;algorithm=$algorithm)" }
                 val signature = Signature.getInstance(algorithm, provider)
                 signature.initSign(it)
                 signature.update(data)
-                signature.sign()
+                val signedData = signature.sign()
+                detailedLogger.trace { "CryptoService(action=signing_end;alias=$alias;algorithm=$algorithm)" }
+                signedData
             } ?: throw CryptoServiceException("No key found for alias $alias")
         }
     }
 
     override fun _getSigner(alias: String): ContentSigner {
+        detailedLogger.trace { "CryptoService(action=get_signer;alias=$alias)" }
         return object : ContentSigner {
             private val publicKey: PublicKey = getPublicKey(alias) ?: throw CryptoServiceException("No key found for alias $alias")
             private val sigAlgID: AlgorithmIdentifier = Crypto.findSignatureScheme(publicKey).signatureOID
@@ -136,6 +150,7 @@ abstract class JCACryptoService(
 
     companion object {
         val DUMMY_X500_PRINCIPAL = X500Principal("CN=DUMMY")
+        private val detailedLogger = detailedLogger()
     }
 
     @VisibleForTesting

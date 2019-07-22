@@ -10,6 +10,8 @@ import net.corda.nodeapi.internal.config.UnknownConfigurationKeysException
 import net.corda.nodeapi.internal.config.parseAs
 import net.corda.nodeapi.internal.cryptoservice.CryptoService
 import net.corda.nodeapi.internal.cryptoservice.JCACryptoService
+import net.corda.core.utilities.detailedLogger
+import net.corda.core.utilities.trace
 import java.nio.file.Path
 import java.security.KeyStore
 import java.security.Provider
@@ -44,10 +46,12 @@ class GemaltoLunaCryptoService(
 
     override fun _generateKeyPair(alias: String, scheme: SignatureScheme): PublicKey {
         return withAuthentication {
+            detailedLogger.trace { "CryptoService(action=generate_key_pair_start;alias=$alias;scheme=$scheme)" }
             val keyPairGenerator = keyPairGeneratorFromScheme(scheme)
             val keyPair = keyPairGenerator.generateKeyPair()
             keyStore.setKeyEntry(alias, keyPair.private, null, selfSign(scheme, keyPair))
             keyStore.store(null, null) // Gemalto-specific
+            detailedLogger.trace { "CryptoService(action=generate_key_pair_end;alias=$alias;scheme=$scheme)" }
             // We call toSupportedKey because it's possible that the PublicKey object returned by the provider is not initialized.
             Crypto.toSupportedPublicKey(keyPair.public)
         }
@@ -68,6 +72,8 @@ class GemaltoLunaCryptoService(
     }
 
     companion object {
+        private val detailedLogger = detailedLogger()
+
         val KEYSTORE_TYPE = "Luna"
         fun fromConfigurationFile(legalName: X500Principal, cryptoServiceConf: Path?, timeout: Duration? = null): CryptoService {
             val config = parseConfigFile(cryptoServiceConf!!)
