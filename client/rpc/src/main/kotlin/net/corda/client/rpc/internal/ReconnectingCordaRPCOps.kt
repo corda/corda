@@ -157,8 +157,6 @@ class ReconnectingCordaRPCOps private constructor(
          */
         @Synchronized
         fun reconnectOnError(e: Throwable) {
-            // Ensure any resources on this side are cleaned up before building a new connection
-            currentRPCConnection?.close()
             currentState = CurrentState.DIED
             //TODO - handle error cases
             log.error("Reconnecting to ${this.nodeHostAndPorts} due to error: ${e.message}")
