@@ -219,3 +219,4 @@ see changes to this list.
 * Wawrzek Niewodniczanski (R3)
 * Wei Wu Zhang (Commonwealth Bank of Australia)
 * Zabrina Smith (Northern Trust)
+* Manish Kumar  (ChainThat)
