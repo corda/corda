@@ -46,7 +46,7 @@ The checkpoint agent can be started with the following optional parameters:
 
     checkpoint-agent.jar=[instrumentType=<read|write>],[instrumentClassname=<CLASSNAME>],[minimumSize=<MIN_SIZE>],[maximumSize=<MAX_SIZE>, [stackDepth=<DEPTH>], [printOnce=<true|false>]
 
-* ``instrumentType``: whether to output checkpoints on read, write or both. Possible values: [read, write]. Default: read.
+* ``instrumentType``: whether to output checkpoints on read or write. Possible values: [read, write]. Default: read.
 * ``instrumentClassname``: specify the base type of objects to log. The default setting is to process all *Flow* object types. Default: net.corda.node.services.statemachine.FlowStateMachineImpl.
 * ``minimumSize``: specifies the minimum size (in bytes) of objects to log. Default: 8192 bytes
 * ``maximumSize``: specifies the maximum size (in bytes) of objects to log. Default: 1024000 bytes
@@ -59,7 +59,7 @@ These arguments are passed to the JVM along with the agent specification. For ex
 
     -javaagent:<PATH>/checkpoint-agent.jar=instrumentClassname=net.corda.vega.flows.SimmFlow,instrumentType=read,minimumSize=10240,maximumSize=512000,stackDepth=6,printOnce=false
 
-.. note:: Arguments may be passed into the agent in any order and should **not** contain spaces between arguments.
+.. note:: Arguments may be passed into the agent in any order and should **not** contain spaces between them.
 
 Checkpoint Dump support
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -176,7 +176,7 @@ Note,
 Flow diagnostic process
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-Lets assume a scenario where have triggered a flow from a node (eg. node acting as a flow initiator) but the flow does not appear to complete.
+Lets assume a scenario where we have triggered a flow in a node (eg. node acting as a flow initiator) but the flow does not appear to complete.
 
 For example, you may see the following using the CRaSH shell ``flow watch`` command:
 
@@ -227,6 +227,7 @@ And two additional files will appear in the nodes logs directory:
    It contents will contain the following diagnostics information:
 
 .. sourcecode:: none
+
     {
       "id" : "90613d6f-be78-41bd-98e1-33a756c28808",
       "flowLogicClass" : "net.corda.finance.flows.CashIssueAndPaymentFlow",
@@ -357,7 +358,7 @@ Upon re-start ensure you disable flow draining mode to allow the node to continu
 See also :ref:`Flow draining mode <draining-mode>`.
 
 * contacting other participants in the network where their nodes are not responding to an initiated flow.
-  The checkpoint dump gives good diagnostics on the reason a flow may be suspended (including the destination peer participant who is not responding):
+  The checkpoint dump gives good diagnostics on the reason a flow may be suspended (including the destination peer participant node that is not responding):
 
 .. sourcecode:: none
 
