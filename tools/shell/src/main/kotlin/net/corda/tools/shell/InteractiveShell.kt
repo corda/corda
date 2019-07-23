@@ -13,8 +13,6 @@ import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.client.rpc.PermissionException
 import net.corda.client.rpc.internal.ReconnectingCordaRPCOps
-import net.corda.client.rpc.internal.ReconnectingObservable
-import net.corda.client.rpc.internal.asReconnectingWithInitialValues
 import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.UniqueIdentifier
@@ -464,11 +462,7 @@ object InteractiveShell {
         val (stateMachines, stateMachineUpdates) = proxy.stateMachinesFeed()
         val currentStateMachines = stateMachines.map { StateMachineUpdate.Added(it) }
         val subscriber = FlowWatchPrintingSubscriber(out)
-        if (stateMachineUpdates is ReconnectingObservable<*>) {
-            stateMachineUpdates.asReconnectingWithInitialValues(currentStateMachines).subscribe(subscriber::onNext)
-        } else {
-            stateMachineUpdates.startWith(currentStateMachines).subscribe(subscriber)
-        }
+        stateMachineUpdates.startWith(currentStateMachines).subscribe(subscriber)
         var result: Any? = subscriber.future
         if (result is Future<*>) {
             if (!result.isDone) {

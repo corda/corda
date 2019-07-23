@@ -418,7 +418,7 @@ class SingleThreadedStateMachineManager(
         val sessionMessage = try {
             event.receivedMessage.data.deserialize<SessionMessage>()
         } catch (ex: Exception) {
-            logger.error("Received corrupt SessionMessage data from $peer")
+            logger.error("Unable to deserialize SessionMessage data from $peer", ex)
             event.deduplicationHandler.afterDatabaseTransaction()
             return
         }
@@ -448,12 +448,12 @@ class SingleThreadedStateMachineManager(
                     }
                 } else {
                     // It happens when flows restart and the old sessions messages still arrive from a peer.
-                    logger.info("Cannot find flow corresponding to session ID $recipientId.")
+                    logger.info("Cannot find flow corresponding to session ID - $recipientId.")
                 }
             } else {
-                val flow = mutex.locked { flows[flowId] }
-                        ?: throw IllegalStateException("Cannot find fiber corresponding to ID $flowId")
-                flow.fiber.scheduleEvent(Event.DeliverSessionMessage(sessionMessage, deduplicationHandler, sender))
+                mutex.locked { flows[flowId] }?.run {
+                    fiber.scheduleEvent(Event.DeliverSessionMessage(sessionMessage, deduplicationHandler, sender))
+                } ?: logger.info("Cannot find fiber corresponding to flow ID $flowId")
             }
         } catch (exception: Exception) {
             logger.error("Exception while routing $sessionMessage", exception)
