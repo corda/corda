@@ -135,7 +135,7 @@ class ActionExecutorImpl(
     private fun executePropagateErrors(action: Action.PropagateErrors) {
         action.errorMessages.forEach { (exception) ->
             log.warn("Propagating error", exception)
-            detailedLogger.trace { "PropagateError(flowId=$currentFlowId,exception=${exception?.message})" }
+            detailedLogger.trace { "Flow(action=propagate_error;flowId=$currentFlowId,exception=${exception?.message})" }
         }
         for (sessionState in action.sessions) {
             // We cannot propagate if the session isn't live.
@@ -172,13 +172,13 @@ class ActionExecutorImpl(
 
     @Suspendable
     private fun executeSendInitial(action: Action.SendInitial) {
-        detailedLogger.trace { "SendInitial(flowId=$currentFlowId;initiatorFlow=${action.initialise.initiatorFlowClassName};id=${action.deduplicationId.deduplicationId.toString};appName=${action.initialise.appName};flowVersion=${action.initialise.flowVersion};recipient=${action.party})" }
+        detailedLogger.trace { "Session(action=send_initial_message;flowId=$currentFlowId;initiatorFlow=${action.initialise.initiatorFlowClassName};id=${action.deduplicationId.deduplicationId.toString};appName=${action.initialise.appName};flowVersion=${action.initialise.flowVersion};recipient=${action.party})" }
         flowMessaging.sendSessionMessage(action.party, action.initialise, action.deduplicationId)
     }
 
     @Suspendable
     private fun executeSendExisting(action: Action.SendExisting) {
-        detailedLogger.trace { "SendExisting(flowId=$currentFlowId;message=${action.message::class.simpleName};id=${action.deduplicationId.deduplicationId.toString};recipient=${action.peerParty})" }
+        detailedLogger.trace { "Session(action=send_existing_message;flowId=$currentFlowId;message=${action.message::class.simpleName};id=${action.deduplicationId.deduplicationId.toString};recipient=${action.peerParty})" }
         flowMessaging.sendSessionMessage(action.peerParty, action.message, action.deduplicationId)
     }
 
@@ -199,7 +199,7 @@ class ActionExecutorImpl(
 
     @Suspendable
     private fun executeRemoveFlow(action: Action.RemoveFlow) {
-        detailedLogger.trace { "RemoveFlow(flowId=$currentFlowId;reason=${action.removalReason})" }
+        detailedLogger.trace { "Flow(action=remove;flowId=$currentFlowId;reason=${action.removalReason})" }
         stateMachineManager.removeFlow(action.flowId, action.removalReason, action.lastState)
     }
 
@@ -213,7 +213,7 @@ class ActionExecutorImpl(
 
     @Suspendable
     private fun executeRollbackTransaction() {
-        detailedLogger.trace { "RollbackTransaction(flowId=$currentFlowId)" }
+        detailedLogger.trace { "Transaction(action=rollback;flowId=$currentFlowId)" }
         contextTransactionOrNull?.close()
     }
 
@@ -242,7 +242,7 @@ class ActionExecutorImpl(
 
     private fun executeRetryFlowFromSafePoint(action: Action.RetryFlowFromSafePoint) {
         val checkpoint = action.currentState.checkpoint
-        detailedLogger.trace { "RetryFromSafePoint(flowId=$currentFlowId;flow=${action.currentState.flowLogic};subFlows=[${checkpoint.subFlowStack.joinToString { it.flowClass.simpleName }}];state=${checkpoint.flowState::class.simpleName};error=${checkpoint.errorState::class.simpleName};suspends=${checkpoint.numberOfSuspends})" }
+        detailedLogger.trace { "Flow(action=retry_safe_point;flowId=$currentFlowId;flow=${action.currentState.flowLogic};subFlows=[${checkpoint.subFlowStack.joinToString { it.flowClass.simpleName }}];state=${checkpoint.flowState::class.simpleName};error=${checkpoint.errorState::class.simpleName};suspends=${checkpoint.numberOfSuspends})" }
         stateMachineManager.retryFlowFromSafePoint(action.currentState)
     }
 
