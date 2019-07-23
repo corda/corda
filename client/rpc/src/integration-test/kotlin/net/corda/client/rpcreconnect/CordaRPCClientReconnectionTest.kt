@@ -13,24 +13,32 @@ import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.node.services.Permissions
 import net.corda.testing.core.CHARLIE_NAME
+import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.driver
 import net.corda.testing.driver.internal.incrementalPortAllocation
+import net.corda.testing.internal.IntegrationTest
+import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.FINANCE_CORDAPPS
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.ClassRule
 import org.junit.Test
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
-class CordaRPCClientReconnectionTest {
+class CordaRPCClientReconnectionTest: IntegrationTest() {
 
     private val portAllocator = incrementalPortAllocation()
 
     companion object {
+
+        @ClassRule
+        @JvmField
+        val databaseSchemas = IntegrationTestSchemas(CHARLIE_NAME, DUMMY_NOTARY_NAME)
         val rpcUser = User("user1", "test", permissions = setOf(Permissions.all()))
     }
 
