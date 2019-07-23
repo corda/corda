@@ -2,6 +2,7 @@ package net.corda.core.flows
 
 import net.corda.core.CordaException
 import net.corda.core.CordaRuntimeException
+import net.corda.core.identity.Party
 
 // DOCSTART 1
 /**
@@ -28,6 +29,9 @@ open class FlowException(message: String?, cause: Throwable?, var originalErrorI
     constructor(cause: Throwable?) : this(cause?.toString(), cause)
     constructor() : this(null, null)
 
+    // private field with obscure name to ensure it is not overridden
+    private var peer: Party? = null
+
     override fun getErrorId(): Long? = originalErrorId
 }
 // DOCEND 1
@@ -41,6 +45,9 @@ class UnexpectedFlowEndException(message: String, cause: Throwable?, val origina
         CordaRuntimeException(message, cause), IdentifiableException {
     constructor(message: String, cause: Throwable?) : this(message, cause, null)
     constructor(message: String) : this(message, null)
+
+    // private field with obscure name to ensure it is not overridden
+    private var peer: Party? = null
 
     override fun getErrorId(): Long? = originalErrorId
 }

@@ -163,10 +163,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                     is FlowContinuation.Resume -> {
                         return continuation.result
                     }
-                    is FlowContinuation.Throw -> {
-                        continuation.throwable.fillInStackTrace()
-                        throw continuation.throwable
-                    }
+                    is FlowContinuation.Throw -> throw continuation.throwable.fillInLocalStackTrace()
                     FlowContinuation.ProcessEvents -> continue@eventLoop
                     FlowContinuation.Abort -> abortFiber()
                 }
@@ -175,6 +172,39 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             checkDbTransaction(isDbTransactionOpenOnExit)
             openThreadLocalWormhole()
         }
+    }
+
+    private fun Throwable.fillInLocalStackTrace(): Throwable {
+        fillInStackTrace()
+        // provide useful information that can be displayed to the user
+        // reflection use to access private field
+        when (this) {
+            is UnexpectedFlowEndException -> {
+                DeclaredField<Party?>(UnexpectedFlowEndException::class.java, "peer", this).value?.let {
+                    stackTrace = arrayOf(
+                        StackTraceElement(
+                            "Received unexpected counter-flow exception from peer ${it.name}",
+                            "",
+                            "",
+                            -1
+                        )
+                    ) + stackTrace
+                }
+            }
+            is FlowException -> {
+                DeclaredField<Party?>(FlowException::class.java, "peer", this).value?.let {
+                    stackTrace = arrayOf(
+                        StackTraceElement(
+                            "Received counter-flow exception from peer ${it.name}",
+                            "",
+                            "",
+                            -1
+                        )
+                    ) + stackTrace
+                }
+            }
+        }
+        return this
     }
 
     /**
