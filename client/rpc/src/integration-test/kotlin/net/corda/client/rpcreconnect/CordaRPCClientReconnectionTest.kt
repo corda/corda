@@ -1,5 +1,8 @@
-package net.corda.client.rpc
+package net.corda.client.rpcreconnect
 
+import net.corda.client.rpc.CordaRPCClient
+import net.corda.client.rpc.CordaRPCClientConfiguration
+import net.corda.client.rpc.CordaRPCClientTest
 import net.corda.client.rpc.internal.ReconnectingCordaRPCOps
 import net.corda.core.messaging.startTrackedFlow
 import net.corda.core.utilities.NetworkHostAndPort
