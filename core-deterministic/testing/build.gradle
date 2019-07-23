@@ -21,10 +21,5 @@ dependencies {
     testRuntimeOnly "org.junit.platform:junit-platform-launcher:${junit_platform_version}"
 }
 
-tasks.withType(JavaCompile) {
-    // Relaxes JPMS visibility constraints across module boundaries
-//    options.compilerArgs << '--add-exports' << 'java.base/sun.security.provider=ALL-UNNAMED'
-}
-
 // This module has no artifact and only contains tests.
 jar.enabled = false

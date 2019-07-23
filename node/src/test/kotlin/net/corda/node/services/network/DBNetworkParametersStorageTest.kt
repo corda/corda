@@ -100,7 +100,6 @@ class DBNetworkParametersStorageTest {
         database.transaction {
             val consoleOutput = interceptConsoleOutput {
                 networkParametersService.lookup(hash3)
-                System.out.println()
             }
             assertThat(consoleOutput).anySatisfy {
                 it.contains("Caused by: java.security.cert.CertPathValidatorException: subject/issuer name chaining check failed")

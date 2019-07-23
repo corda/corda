@@ -6,6 +6,8 @@ import net.corda.core.utilities.contextLogger
 import net.corda.testing.node.TestCordapp
 import org.gradle.tooling.GradleConnector
 import org.gradle.tooling.ProgressEvent
+import java.io.File
+import java.io.RandomAccessFile
 import java.nio.file.Path
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
@@ -77,18 +79,24 @@ data class TestCordappImpl(val scanPackage: String, override val config: Map<Str
         }
 
         private fun buildCordappJar(projectRoot: Path): Path {
-            return projectRootToBuiltJar.computeIfAbsent(projectRoot) {
-                log.info("Generating CorDapp jar from local project in $projectRoot ...")
-                runGradleBuild(projectRoot)
+            val gradleLockFile = RandomAccessFile(File(System.getProperty("user.home"), "corda-gradle.lock"), "rw")
+            return gradleLockFile.use {
+                val lock = gradleLockFile.channel.lock()
+                lock.use {
+                    projectRootToBuiltJar.computeIfAbsent(projectRoot) {
+                        log.info("Generating CorDapp jar from local project in $projectRoot ...")
+                        runGradleBuild(projectRoot)
 
-                val libs = projectRoot / "build" / "libs"
-                val jars = libs.list {
-                    it.filter { it.toString().endsWith(".jar") }
-                            .filter { !it.toString().endsWith("sources.jar") }
-                            .filter { !it.toString().endsWith("javadoc.jar") }
-                            .toList()
-                }.sortedBy { it.attributes().creationTime() }
-                checkNotNull(jars.lastOrNull()) { "No jars were built in $libs" }
+                        val libs = projectRoot / "build" / "libs"
+                        val jars = libs.list {
+                            it.filter { it.toString().endsWith(".jar") }
+                                    .filter { !it.toString().endsWith("sources.jar") }
+                                    .filter { !it.toString().endsWith("javadoc.jar") }
+                                    .toList()
+                        }.sortedBy { it.attributes().creationTime() }
+                        checkNotNull(jars.lastOrNull()) { "No jars were built in $libs" }
+                    }
+                }
             }
         }
 

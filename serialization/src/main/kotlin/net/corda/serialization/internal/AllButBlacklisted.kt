@@ -2,8 +2,6 @@ package net.corda.serialization.internal
 
 import net.corda.core.DeleteForDJVM
 import net.corda.core.serialization.ClassWhitelist
-//import sun.misc.Unsafe
-//import sun.security.util.Password
 import java.io.*
 import java.lang.invoke.*
 import java.lang.reflect.AccessibleObject
@@ -50,7 +48,6 @@ object AllButBlacklisted : ClassWhitelist {
             ClassLoader::class.java.name,
             Handler::class.java.name, // MemoryHandler, StreamHandler
             Runtime::class.java.name,
-//            Unsafe::class.java.name,
             ZipFile::class.java.name,
             Provider::class.java.name,
             SecurityManager::class.java.name,
@@ -62,7 +59,6 @@ object AllButBlacklisted : ClassWhitelist {
 
             // java.security.
             KeyStore::class.java.name,
-//            Password::class.java.name,
             AccessController::class.java.name,
             Permission::class.java.name,
 

@@ -28,7 +28,7 @@ import kotlin.test.assertTrue
 
 class CordaRPCClientReconnectionTest {
 
-    private val portAllocator = incrementalPortAllocation()
+    private val portAllocator = incrementalPortAllocation(10000)
 
     companion object {
         val rpcUser = User("user1", "test", permissions = setOf(Permissions.all()))

@@ -66,7 +66,6 @@ interface NodeHandle : AutoCloseable {
     fun stop()
 }
 
-
 /** Interface which represents an out of process node and exposes its process handle. **/
 @DoNotImplement
 interface OutOfProcess : NodeHandle {
@@ -372,6 +371,7 @@ data class DriverParameters(
     @Deprecated("extraCordappPackagesToScan does not preserve the original CorDapp's versioning and metadata, which may lead to " +
             "misleading results in tests. Use withCordappsForAllNodes instead.")
     fun withExtraCordappPackagesToScan(extraCordappPackagesToScan: List<String>): DriverParameters = copy(extraCordappPackagesToScan = extraCordappPackagesToScan)
+
     fun withJmxPolicy(jmxPolicy: JmxPolicy): DriverParameters = copy(jmxPolicy = jmxPolicy)
     fun withNetworkParameters(networkParameters: NetworkParameters): DriverParameters = copy(networkParameters = networkParameters)
     fun withNotaryCustomOverrides(notaryCustomOverrides: Map<String, Any?>): DriverParameters = copy(notaryCustomOverrides = notaryCustomOverrides)
