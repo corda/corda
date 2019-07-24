@@ -97,6 +97,7 @@ class FloatControlListenerService(val conf: FirewallConfiguration,
                 override val trace: Boolean = conf.enableAMQPPacketTrace
                 override val healthCheckPhrase = conf.healthCheckPhrase
                 override val silencedIPs: Set<String> = conf.silencedIPs
+                override val sslHandshakeTimeout: Long = conf.sslHandshakeTimeout
                 override val revocationConfig: RevocationConfig = conf.revocationConfig
             }
             val controlServer = AMQPServer(floatControlAddress.host,

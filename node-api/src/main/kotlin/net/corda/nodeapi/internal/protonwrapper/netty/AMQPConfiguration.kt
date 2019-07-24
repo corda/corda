@@ -2,6 +2,7 @@ package net.corda.nodeapi.internal.protonwrapper.netty
 
 import net.corda.nodeapi.internal.ArtemisMessagingComponent
 import net.corda.nodeapi.internal.config.CertificateStore
+import net.corda.nodeapi.internal.config.DEFAULT_SSL_HANDSHAKE_TIMEOUT_MILLIS
 
 interface AMQPConfiguration {
     /**
@@ -67,7 +68,7 @@ interface AMQPConfiguration {
 
     @JvmDefault
     val sslHandshakeTimeout: Long
-        get() = 20000 // Aligned with sun.security.provider.certpath.URICertStore.DEFAULT_CRL_CONNECT_TIMEOUT
+        get() = DEFAULT_SSL_HANDSHAKE_TIMEOUT_MILLIS // Aligned with sun.security.provider.certpath.URICertStore.DEFAULT_CRL_CONNECT_TIMEOUT
 
     /**
      * An optional Health Check Phrase which if passed through the channel will cause AMQP Server to echo it back instead of doing normal pipeline processing

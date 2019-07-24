@@ -39,7 +39,8 @@ class DirectBridgeSenderService(val conf: FirewallConfiguration,
                 conf.bridgeInnerConfig?.enableSNI ?: true,
                 { ForwardingArtemisMessageClient(artemisConnectionService) },
                 BridgeAuditServiceAdaptor(auditService),
-                conf.enableAMQPPacketTrace)
+                conf.enableAMQPPacketTrace,
+                conf.sslHandshakeTimeout)
     }
 
     private class BridgeAuditServiceAdaptor(private val auditService: FirewallAuditService) : BridgeMetricsService {

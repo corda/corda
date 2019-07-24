@@ -84,7 +84,7 @@ data class FirewallConfigurationImpl(
         override val tunnelingCryptoServiceConfig: CryptoServiceConfigImpl?,
         override val artemisCryptoServiceConfig: CryptoServiceConfigImpl?,
         override val revocationConfig: RevocationConfig,
-        override val sslHandshakeTimeout: Long = 10000) : FirewallConfiguration {
+        override val sslHandshakeTimeout: Long = DEFAULT_SSL_HANDSHAKE_TIMEOUT_MILLIS) : FirewallConfiguration {
     init {
         when (firewallMode) {
             FirewallMode.SenderReceiver -> require(inboundConfig != null && outboundConfig != null) { "Missing required configuration" }

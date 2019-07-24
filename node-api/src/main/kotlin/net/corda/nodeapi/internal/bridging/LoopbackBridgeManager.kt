@@ -38,7 +38,8 @@ class LoopbackBridgeManager(keyStore: CertificateStore,
                             private val artemisMessageClientFactory: () -> ArtemisSessionProvider,
                             private val bridgeMetricsService: BridgeMetricsService? = null,
                             private val isLocalInbox: (String) -> Boolean,
-                            trace: Boolean) : AMQPBridgeManager(keyStore, trustStore, useOpenSSL, proxyConfig, maxMessageSize, revocationConfig, enableSNI, artemisMessageClientFactory, bridgeMetricsService, trace) {
+                            trace: Boolean,
+                            sslHandshakeTimeout: Long? = null) : AMQPBridgeManager(keyStore, trustStore, useOpenSSL, proxyConfig, maxMessageSize, revocationConfig, enableSNI, artemisMessageClientFactory, bridgeMetricsService, trace, sslHandshakeTimeout) {
 
     companion object {
         private val log = contextLogger()
