@@ -53,12 +53,25 @@ class FlowHospitalTest: IntegrationTest() {
 
             val stateAndRef = charlieClient.startFlow(::IssueFlow, defaultNotaryIdentity).returnValue.get()
 
+            // case 1: the notary exception is not caught
             charlieClient.startFlow(::SpendFlow, stateAndRef, aliceParty).returnValue.get()
 
             assertThatThrownBy {
                 charlieClient.startFlow(::SpendFlow, stateAndRef, aliceParty).returnValue.get()
             }.isInstanceOf(ExecutionException::class.java)
                 .hasCauseExactlyInstanceOf(NotaryException::class.java)
+
+            assertThat(aliceClient.stateMachinesSnapshot()).isEmpty()
+
+            // case 2: the notary exception is caught and wrapped in a custom exception
+            val secondStateAndRef = charlieClient.startFlow(::IssueFlow, defaultNotaryIdentity).returnValue.get()
+
+            charlieClient.startFlow(::SpendFlowWithCustomException, secondStateAndRef, aliceParty).returnValue.get()
+
+            assertThatThrownBy {
+                charlieClient.startFlow(::SpendFlowWithCustomException, secondStateAndRef, aliceParty).returnValue.get()
+            }.isInstanceOf(ExecutionException::class.java)
+                    .hasMessageContaining("double spend!")
 
             assertThat(aliceClient.stateMachinesSnapshot()).isEmpty()
         }
@@ -81,16 +94,15 @@ class FlowHospitalTest: IntegrationTest() {
 
     @StartableByRPC
     @InitiatingFlow
-    class SpendFlow(val stateAndRef: StateAndRef<SingleOwnerState>, val newOwner: Party): FlowLogic<Boolean>() {
+    class SpendFlow(val stateAndRef: StateAndRef<SingleOwnerState>, val newOwner: Party): FlowLogic<Unit>() {
 
         @Suspendable
-        override fun call(): Boolean {
+        override fun call() {
             val txBuilder = DummyContract.move(stateAndRef, newOwner)
             val signedTransaction = serviceHub.signInitialTransaction(txBuilder, ourIdentity.owningKey)
             val sessionWithCounterParty = initiateFlow(newOwner)
             sessionWithCounterParty.sendAndReceive<String>("initial-message")
             subFlow(FinalityFlow(signedTransaction, setOf(sessionWithCounterParty)))
-            return true
         }
 
     }
@@ -107,5 +119,39 @@ class FlowHospitalTest: IntegrationTest() {
         }
 
     }
+
+    @StartableByRPC
+    @InitiatingFlow
+    class SpendFlowWithCustomException(val stateAndRef: StateAndRef<SingleOwnerState>, val newOwner: Party): FlowLogic<Unit>() {
+
+        @Suspendable
+        override fun call() {
+            val txBuilder = DummyContract.move(stateAndRef, newOwner)
+            val signedTransaction = serviceHub.signInitialTransaction(txBuilder, ourIdentity.owningKey)
+            val sessionWithCounterParty = initiateFlow(newOwner)
+            sessionWithCounterParty.sendAndReceive<String>("initial-message")
+            try {
+                subFlow(FinalityFlow(signedTransaction, setOf(sessionWithCounterParty)))
+            } catch (e: NotaryException) {
+                throw DoubleSpendException("double spend!", e)
+            }
+        }
+
+    }
+
+    @InitiatedBy(SpendFlowWithCustomException::class)
+    class AcceptSpendFlowWithCustomException(val otherSide: FlowSession): FlowLogic<Unit>() {
+
+        @Suspendable
+        override fun call() {
+            otherSide.receive<String>()
+            otherSide.send("initial-response")
+
+            subFlow(ReceiveFinalityFlow(otherSide))
+        }
+
+    }
+
+    class DoubleSpendException(message: String, cause: Throwable): FlowException(message, cause)
 
 }

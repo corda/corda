@@ -306,7 +306,7 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val 
     object FinalityDoctor : Staff {
         override fun consult(flowFiber: FlowFiber, currentState: StateMachineState, newError: Throwable, history: FlowMedicalHistory): Diagnosis {
             return if (currentState.flowLogic is FinalityHandler || isFromReceiveFinalityFlow(newError)) {
-                if (isErrorPropagatedFromCounterparty(newError)) {
+                if (isErrorPropagatedFromCounterparty(newError) && isErrorThrownDuringReceiveFinality(newError)) {
                     // no need to keep around the flow, since notarisation has already failed at the counterparty.
                     Diagnosis.NOT_MY_SPECIALTY
                 } else {
@@ -323,18 +323,26 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val 
             return throwable.stackTrace.any { it.className == ReceiveFinalityFlow::class.java.name }
         }
 
-        private fun isErrorPropagatedFromCounterparty(throwable: Throwable): Boolean {
-            return when(throwable) {
+        private fun isErrorPropagatedFromCounterparty(error: Throwable): Boolean {
+            return when(error) {
                 is UnexpectedFlowEndException -> {
-                    val peer = DeclaredField<Party?>(UnexpectedFlowEndException::class.java, "peer", throwable).value
+                    val peer = DeclaredField<Party?>(UnexpectedFlowEndException::class.java, "peer", error).value
                     peer != null
                 }
                 is FlowException -> {
-                    val peer = DeclaredField<Party?>(FlowException::class.java, "peer", throwable).value
+                    val peer = DeclaredField<Party?>(FlowException::class.java, "peer", error).value
                     peer != null
                 }
                 else -> false
             }
         }
+
+        private fun isErrorThrownDuringReceiveFinality(error: Throwable): Boolean {
+            val strippedStacktrace = error.stackTrace
+                    .filterNot { it?.className?.contains("counter-flow exception from peer") ?: false }
+                    .filterNot { it?.className?.startsWith("net.corda.node.services.statemachine.") ?: false }
+            return strippedStacktrace.isNotEmpty() && strippedStacktrace.first().className.startsWith(ReceiveTransactionFlow::class.qualifiedName!! )
+        }
+
     }
 }
