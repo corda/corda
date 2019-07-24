@@ -1533,7 +1533,8 @@ performance in transactions/second per network rather than per node, but Corda n
 
 Because of this, a group of businesses doing high-throughput traffic between each other won't affect the load on
 other nodes belonging to unrelated businesses. Nodes can handle large numbers of transactions per second.
-As of the time of writing, a node has been demonstrated doing a sustained 800 transactions per second. Very few
+As of the time of writing, a node has been demonstrated doing a sustained 800 transactions per second and an
+independent test has demonstrated a multi-notary network processing over 20,000 transactions per second\cite{DTCCStudy}. Very few
 businesses directly generate such large quantities of traffic - all of PayPal does only about 320 transactions per
 second on average\cite{PayPalTrafficVolume}, so we believe this is sufficient to enable virtually all business use
 cases, especially as one transaction can update many parts of the ledger simultaneously.
@@ -1998,7 +1999,7 @@ In a system without global broadcast things are very different: the notary clust
 directly and there is no mechanism to ensure that everyone sees that the transaction is occurring. Sometimes this
 doesn't matter: most transactions are irrelevant for you and having to download them just wastes resources. But
 occasionally you do wish to become aware that the ledger state has been changed by someone else. A simple example
-is an option contract in which you wish to expire the option unless the counterparty has already exercised it. Them
+is an option contract in which you wish to expire the option unless the counterparty has already exercised it. Their
 exercising the option must not require the seller to sign off on it, as it may be advantageous for the seller to
 refuse if it would cause them to lose money. Whilst the seller would discover if the buyer had exercised the option
 when they attempted to expire it, due to the notary informing them that their expiry transaction was a double
