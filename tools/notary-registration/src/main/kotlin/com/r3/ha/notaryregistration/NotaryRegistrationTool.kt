@@ -118,9 +118,10 @@ class NotaryRegistrationTool : CordaCliWrapper("register", "Corda registration t
     }
 
     private fun parseNodeConfiguration(): NodeConfiguration {
+        val parentDir = configFile.parent ?: Paths.get(".")
         return resolveCryptoServiceConfPathToAbsolutePath(
-                configFile.parent,
-                ConfigHelper.loadConfig(configFile.parent, configFile)
+                parentDir,
+                ConfigHelper.loadConfig(parentDir, configFile)
         )
                 .withValue("baseDirectory", ConfigValueFactory.fromAnyRef(baseDirectory.toString()))
                 .parseAsNodeConfiguration()
@@ -154,11 +155,12 @@ class NotaryRegistrationTool : CordaCliWrapper("register", "Corda registration t
     private fun validateNodeHsmConfigs(configFiles: List<Path>) {
         val cryptoServicesTypes = mutableMapOf<SupportedCryptoServices, MutableList<Any>>()
         configFiles.forEach { configPath ->
-            val nodeConfig = ConfigHelper.loadConfig(configPath.parent, configPath).parseAsNodeConfiguration().value()
+            val parentDir = configPath.parent ?: Paths.get(".")
+            val nodeConfig = ConfigHelper.loadConfig(parentDir, configPath).parseAsNodeConfiguration().value()
             val errorMessage = "Node ${nodeConfig.myLegalName} has conflicting crypto service configuration."
             nodeConfig.cryptoServiceName?.let { nodeCryptoServiceName ->
                 val configs = cryptoServicesTypes.getOrDefault(nodeCryptoServiceName, mutableListOf())
-                val cryptoServiceConfigPath = resolveCryptoConfPath(configPath.parent, nodeConfig.cryptoServiceConf!!)
+                val cryptoServiceConfigPath = resolveCryptoConfPath(parentDir, nodeConfig.cryptoServiceConf!!)
                 val toProcess = readCryptoConfigFile(nodeCryptoServiceName, cryptoServiceConfigPath)
                 configs.forEach {
                     when (nodeCryptoServiceName) {
