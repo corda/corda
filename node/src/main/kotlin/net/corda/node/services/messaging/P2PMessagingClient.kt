@@ -366,10 +366,15 @@ class P2PMessagingClient(val config: NodeConfiguration,
         knownQueues.clear()
         for (queue in queues) {
             val queueQuery = session.queueQuery(queue)
-            if (!config.lazyBridgeStart || queueQuery.messageCount > 0) {
-                createBridgeEntry(queue)
-            } else {
-                delayStartQueues += queue.toString()
+            if (queueQuery.isExists) {
+                if (!config.lazyBridgeStart || queueQuery.messageCount > 0) {
+                    createBridgeEntry(queue)
+                } else {
+                    delayStartQueues += queue.toString()
+                }
+            }
+            else {
+                log.warn("queueQuery invoke attempt on non existent queue")
             }
         }
         val startupMessage = BridgeControl.NodeToBridgeSnapshot(config.myLegalName.toString(), inboxes, requiredBridges)

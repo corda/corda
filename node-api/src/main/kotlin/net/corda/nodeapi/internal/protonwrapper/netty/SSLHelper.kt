@@ -22,6 +22,7 @@ import java.net.Socket
 import java.security.KeyStore
 import java.security.cert.*
 import java.util.*
+import java.util.concurrent.Executor
 import javax.net.ssl.*
 
 private const val HOSTNAME_FORMAT = "%s.corda.net"
@@ -112,6 +113,32 @@ internal class LoggingTrustManagerWrapper(val wrapped: X509ExtendedTrustManager)
 
 }
 
+private class LoggingImmediateExecutor private constructor()// use static instance
+    : Executor {
+
+    override fun execute(command: Runnable?) {
+        var startTime = System.nanoTime()
+        log.info("LoggingImmediateExecutor : enter - ${Thread.currentThread().name}")
+        if (command == null) {
+            log.error("LoggingImmediateExecutor : command == null")
+            throw NullPointerException("command")
+        }
+        try {
+            command.run()
+        }
+        catch (ex: Exception) {
+            log.error("LoggingImmediateExecutor : caught exception [${(System.nanoTime()-startTime).toDouble() / 1_000_000_000}]", ex)
+            throw ex
+        }
+        log.info("LoggingImmediateExecutor : exit [${(System.nanoTime()-startTime).toDouble() / 1_000_000_000}]")
+    }
+
+    companion object {
+        val INSTANCE = LoggingImmediateExecutor()
+        val log = contextLogger()
+    }
+}
+
 internal fun createClientSslHelper(target: NetworkHostAndPort,
                                    expectedRemoteLegalNames: Set<CordaX500Name>,
                                    keyManagerFactory: KeyManagerFactory,
@@ -130,7 +157,7 @@ internal fun createClientSslHelper(target: NetworkHostAndPort,
         sslParameters.serverNames = listOf(SNIHostName(x500toHostName(expectedRemoteLegalNames.single())))
         sslEngine.sslParameters = sslParameters
     }
-    return SslHandler(sslEngine)
+    return SslHandler(sslEngine, false, LoggingImmediateExecutor.INSTANCE)
 }
 
 internal fun createClientOpenSslHandler(target: NetworkHostAndPort,
@@ -147,7 +174,7 @@ internal fun createClientOpenSslHandler(target: NetworkHostAndPort,
         sslParameters.serverNames = listOf(SNIHostName(x500toHostName(expectedRemoteLegalNames.single())))
         sslEngine.sslParameters = sslParameters
     }
-    return SslHandler(sslEngine)
+    return SslHandler(sslEngine, false, LoggingImmediateExecutor.INSTANCE)
 }
 
 internal fun createServerSslHandler(keyStore: CertificateStore,
@@ -166,7 +193,7 @@ internal fun createServerSslHandler(keyStore: CertificateStore,
     val sslParameters = sslEngine.sslParameters
     sslParameters.sniMatchers = listOf(ServerSNIMatcher(keyStore))
     sslEngine.sslParameters = sslParameters
-    return SslHandler(sslEngine)
+    return SslHandler(sslEngine, false, LoggingImmediateExecutor.INSTANCE)
 }
 
 internal fun initialiseTrustStoreAndEnableCrlChecking(trustStore: CertificateStore, revocationConfig: RevocationConfig): ManagerFactoryParameters {
@@ -204,7 +231,7 @@ internal fun createServerOpenSslHandler(keyManagerFactory: KeyManagerFactory,
     val sslContext = getServerSslContextBuilder(keyManagerFactory, trustManagerFactory).build()
     val sslEngine = sslContext.newEngine(alloc)
     sslEngine.useClientMode = false
-    return SslHandler(sslEngine)
+    return SslHandler(sslEngine, false, LoggingImmediateExecutor.INSTANCE)
 }
 
 /**
