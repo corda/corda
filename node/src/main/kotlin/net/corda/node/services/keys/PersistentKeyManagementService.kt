@@ -62,8 +62,6 @@ class PersistentKeyManagementService(cacheFactory: NamedCacheFactory, val identi
             )
         }
     }
-    // Maintain a map from PublicKey to alias for the initial keys.
-    private val originalKeysMap = mutableMapOf<PublicKey, String>()
 
     private val keysMap = createKeyMap(cacheFactory)
 
@@ -74,7 +72,7 @@ class PersistentKeyManagementService(cacheFactory: NamedCacheFactory, val identi
     override val keys: Set<PublicKey> get() = database.transaction { keysMap.allPersisted().map { it.first }.toSet() }
 
     override fun filterMyKeys(candidateKeys: Iterable<PublicKey>): Iterable<PublicKey> = database.transaction {
-        candidateKeys.filter { it in originalKeysMap || it in keysMap }
+        identityService.stripNotOurKeys(candidateKeys)
     }
 
     override fun freshKey(): PublicKey {

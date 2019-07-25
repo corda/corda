@@ -285,19 +285,17 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
         return keys.filter { certificateFromKey(it)?.name in ourNames }
     }
 
-    override fun registerKeyToParty(key: PublicKey, party: Party): Boolean {
+    override fun registerKeyToParty(key: PublicKey, party: Party) {
         return database.transaction {
             val existingEntryForKey = keyToName[key.hash]
             if (existingEntryForKey == null) {
                 log.info("Linking: ${key.hash} to ${party.name}")
                 keyToName[key.hash] = party.name
-               true
             } else {
                 log.info("An existing entry for ${key.hash} already exists.")
                 if (party.name != keyToName[key.hash]) {
-                    log.error("The public key ${key.hash} is already assigned to a party.")
+                    throw IllegalArgumentException("The public key ${key.hash} is already assigned to a different party than the supplied .")
                 }
-                false
             }
         }
     }

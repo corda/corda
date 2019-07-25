@@ -102,17 +102,16 @@ class InMemoryIdentityService(identities: List<PartyAndCertificate> = emptyList(
         val results = LinkedHashSet<Party>()
         nameToKey.forEach { (x500name, key) ->
             if (x500Matches(query, exactMatch, x500name)) {
-                results += keyToPartyAndCerts[key]!!.party
+                results += keyToPartyAndCerts[key]?.party ?: throw IllegalArgumentException("Could not find an entry in the database for the public key $key.")
             }
         }
         return results
     }
 
-    override fun registerKeyToParty(key: PublicKey, party: Party): Boolean {
+    override fun registerKeyToParty(key: PublicKey, party: Party) {
         if (keyToName[key] == null) {
             keyToName.putIfAbsent(key, party.name)
-            return true
         }
-        return false
+        throw IllegalArgumentException("An entry for the public key: $key already exists.")
     }
 }

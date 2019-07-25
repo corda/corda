@@ -48,10 +48,10 @@ class PersistentIdentitiesMigration : CordaMigration() {
 
         val connection = database.connection as JdbcConnection
 
-        testMigration(connection)
+        doAndTestMigration(connection)
     }
 
-    private fun testMigration(connection: JdbcConnection) {
+    private fun doAndTestMigration(connection: JdbcConnection) {
         val alice = TestIdentity(CordaX500Name("Alice Corp", "Madrid", "ES"), 70)
         val pkHash = addTestMapping(connection, alice)
 
@@ -126,13 +126,17 @@ class PersistentIdentitiesMigration : CordaMigration() {
 
     private fun verifyTestMigration(connection: JdbcConnection, pk: String, name: String) {
         connection.createStatement().use {
-            val rs = it.executeQuery("SELECT (pk_hash, name) FROM node_identities_no_cert")
-            while (rs.next()) {
-                val result = rs.getString(1)
-                require(result.contains(pk))
-                require(result.contains(name))
+            try {
+                val rs = it.executeQuery("SELECT (pk_hash, name) FROM node_identities_no_cert")
+                while (rs.next()) {
+                    val result = rs.getString(1)
+                    require(result.contains(pk))
+                    require(result.contains(name))
+                }
+                rs.close()
+            } catch (e: Exception) {
+                logger.error(e.localizedMessage)
             }
-            rs.close()
         }
     }
 }

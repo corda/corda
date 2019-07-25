@@ -10,6 +10,7 @@ import net.corda.core.utilities.contextLogger
 import java.security.InvalidAlgorithmParameterException
 import java.security.PublicKey
 import java.security.cert.*
+
 /**
  * An identity service maintains a directory of parties by their associated distinguished name/public keys and thus
  * supports lookup of a party given its key, or name. The service also manages the certificates linking confidential
@@ -154,9 +155,10 @@ interface IdentityService {
      *
      * @param key The public key that will be registered to the supplied [Party]
      * @param party The party that the supplied public key will be registered to
+     * @throws IllegalArgumentException if the public key is already registered to a party that does not match the supplied party
      */
-    // TODO this needs changing name
-    fun registerKeyToParty(key: PublicKey, party: Party) : Boolean
+    @Throws(IllegalArgumentException::class)
+    fun registerKeyToParty(key: PublicKey, party: Party)
 }
 
 class UnknownAnonymousPartyException(message: String) : CordaException(message)
