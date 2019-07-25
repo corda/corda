@@ -111,7 +111,7 @@ For non-validating notaries the notary stores roughly one kilobyte per transacti
 Prerequisites
 =============
 
-* Java runtime
+* A supported Java distribution. The supported versions are listed in :doc:`../getting-set-up`
 * Corda Enterprise JAR
 * Notary Health-Check JAR
 * Bootstrapper JAR (only required when setting up network without doorman and network map)
