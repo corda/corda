@@ -337,6 +337,13 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val 
             }
         }
 
+        /**
+         * This method will return true if [ReceiveTransactionFlow] is at the top of the stack during the error.
+         * As a result, if the failure happened during a sub-flow invoked from [ReceiveTransactionFlow], the method will return false.
+         *
+         * This is because in the latter case, the transaction might have already been finalised and deleting the flow
+         * would introduce risk for inconsistency between nodes.
+         */
         private fun isErrorThrownDuringReceiveFinality(error: Throwable): Boolean {
             val strippedStacktrace = error.stackTrace
                     .filterNot { it?.className?.contains("counter-flow exception from peer") ?: false }

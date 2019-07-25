@@ -73,6 +73,8 @@ class FlowHospitalTest: IntegrationTest() {
             }.isInstanceOf(ExecutionException::class.java)
                     .hasMessageContaining("double spend!")
 
+            Thread.sleep(1_000)
+
             assertThat(aliceClient.stateMachinesSnapshot()).isEmpty()
         }
     }
