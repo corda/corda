@@ -17,12 +17,16 @@ import net.corda.nodeapi.internal.protonwrapper.netty.revocation.ExternalSourceR
 import org.bouncycastle.asn1.x509.AuthorityKeyIdentifier
 import org.bouncycastle.asn1.x509.Extension
 import org.bouncycastle.asn1.x509.SubjectKeyIdentifier
+import org.slf4j.LoggerFactory
+import sun.security.x509.X500Name
 import sun.security.x509.*
 import java.net.Socket
 import java.security.KeyStore
 import java.security.cert.*
 import java.util.*
+import java.util.concurrent.Executor
 import javax.net.ssl.*
+import kotlin.system.measureTimeMillis
 
 private const val HOSTNAME_FORMAT = "%s.corda.net"
 internal const val DEFAULT = "default"
@@ -121,6 +125,29 @@ internal class LoggingTrustManagerWrapper(val wrapped: X509ExtendedTrustManager)
 
 }
 
+private object LoggingImmediateExecutor : Executor {
+
+    override fun execute(command: Runnable?) {
+        val log = LoggerFactory.getLogger(javaClass)
+
+        if (command == null) {
+            log.error("SSL handler executor called with a null command")
+            throw NullPointerException("command")
+        }
+
+        try {
+            val commandName = command::class.qualifiedName?.let { "[$it]" } ?: ""
+            log.info("Entering SSL command $commandName")
+            val elapsedTime = measureTimeMillis { command.run() }
+            log.info("Exiting SSL command $elapsedTime millis")
+        }
+        catch (ex: Exception) {
+            log.error("Caught exception in SSL handler executor", ex)
+            throw ex
+        }
+    }
+}
+
 internal fun createClientSslHelper(target: NetworkHostAndPort,
                                    expectedRemoteLegalNames: Set<CordaX500Name>,
                                    keyManagerFactory: KeyManagerFactory,
@@ -139,7 +166,8 @@ internal fun createClientSslHelper(target: NetworkHostAndPort,
         sslParameters.serverNames = listOf(SNIHostName(x500toHostName(expectedRemoteLegalNames.single())))
         sslEngine.sslParameters = sslParameters
     }
-    return SslHandler(sslEngine)
+    @Suppress("DEPRECATION")
+    return SslHandler(sslEngine, false, LoggingImmediateExecutor)
 }
 
 internal fun createClientOpenSslHandler(target: NetworkHostAndPort,
@@ -156,7 +184,8 @@ internal fun createClientOpenSslHandler(target: NetworkHostAndPort,
         sslParameters.serverNames = listOf(SNIHostName(x500toHostName(expectedRemoteLegalNames.single())))
         sslEngine.sslParameters = sslParameters
     }
-    return SslHandler(sslEngine)
+    @Suppress("DEPRECATION")
+    return SslHandler(sslEngine, false, LoggingImmediateExecutor)
 }
 
 internal fun createServerSslHandler(keyStore: CertificateStore,
@@ -175,7 +204,8 @@ internal fun createServerSslHandler(keyStore: CertificateStore,
     val sslParameters = sslEngine.sslParameters
     sslParameters.sniMatchers = listOf(ServerSNIMatcher(keyStore))
     sslEngine.sslParameters = sslParameters
-    return SslHandler(sslEngine)
+    @Suppress("DEPRECATION")
+    return SslHandler(sslEngine, false, LoggingImmediateExecutor)
 }
 
 internal fun initialiseTrustStoreAndEnableCrlChecking(trustStore: CertificateStore, revocationConfig: RevocationConfig): ManagerFactoryParameters {
@@ -213,7 +243,8 @@ internal fun createServerOpenSslHandler(keyManagerFactory: KeyManagerFactory,
     val sslContext = getServerSslContextBuilder(keyManagerFactory, trustManagerFactory).build()
     val sslEngine = sslContext.newEngine(alloc)
     sslEngine.useClientMode = false
-    return SslHandler(sslEngine)
+    @Suppress("DEPRECATION")
+    return SslHandler(sslEngine, false, LoggingImmediateExecutor)
 }
 
 /**
