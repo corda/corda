@@ -146,7 +146,7 @@ class TransactionBuilderTest {
     }, DummyContract.PROGRAM_ID)
 
     private fun signedAttachment(vararg parties: Party) = ContractAttachment.create(object : AbstractAttachment({ byteArrayOf() }, "test") {
-        override val id: SecureHash get() = throw UnsupportedOperationException()
+        override val id: SecureHash get() = contractAttachmentId
 
         override val signerKeys: List<PublicKey> get() = parties.map { it.owningKey }
     }, DummyContract.PROGRAM_ID, signerKeys = parties.map { it.owningKey })
