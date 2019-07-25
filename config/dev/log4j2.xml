@@ -127,7 +127,7 @@
                                  filePattern="${archive}/details-${log-name}.%date{yyyy-MM-dd}-%i.log.gz"
                                  immediateFlush="false">
 
-            <PatternLayout pattern="[%-5level] %date{ISO8601}{UTC}Z %msg%n" />
+            <PatternLayout pattern="[%-5level] %date{ISO8601}{UTC}Z %msg %X%n" />
 
             <Policies>
                 <TimeBasedTriggeringPolicy/>

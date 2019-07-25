@@ -6,9 +6,10 @@ import com.typesafe.config.ConfigException
 import com.typesafe.config.ConfigFactory
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SignatureScheme
+import net.corda.core.utilities.detailedLogger
+import net.corda.core.utilities.trace
 import net.corda.nodeapi.internal.config.UnknownConfigurationKeysException
 import net.corda.nodeapi.internal.config.parseAs
-import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.cryptoservice.CryptoService
 import net.corda.nodeapi.internal.cryptoservice.CryptoServiceException
 import org.bouncycastle.asn1.x509.AlgorithmIdentifier
@@ -32,13 +33,17 @@ class UtimacoCryptoService(private val cryptoServerProvider: CryptoServerProvide
     init {
         try {
             keyTemplate = toKeyTemplate(config)
+            detailedLogger.trace { "CryptoService(action=authenticate_start)" }
             authenticate(auth())
             val authState = cryptoServerProvider.cryptoServer.authState
+            detailedLogger.trace { "CryptoService(action=authenticate_end;authState=$authState)" }
             require((authState and 0x0000000F) >= config.authThreshold) {
                 "Insufficient authentication: auth state is $authState, at least ${config.authThreshold} is required."
             }
             keyStore = KeyStore.getInstance("CryptoServer", cryptoServerProvider)
+            detailedLogger.trace { "CryptoService(action=keystore_load_start)" }
             keyStore.load(null, null)
+            detailedLogger.trace { "CryptoService(action=keystore_load_end)" }
         } catch (e: CryptoServerAPI.CryptoServerException) {
             throw UtimacoHSMException(HsmErrors.errors[e.ErrorCode], e)
         }
@@ -70,7 +75,10 @@ class UtimacoCryptoService(private val cryptoServerProvider: CryptoServerProvide
     override fun containsKey(alias: String): Boolean {
         try {
             return withAuthentication {
-                keyStore.containsAlias(alias)
+                detailedLogger.trace { "CryptoService(action=key_lookup_start;alias=$alias)" }
+                val exists = keyStore.containsAlias(alias)
+                detailedLogger.trace { "CryptoService(action=key_lookup_end;alias=$alias;found=$exists)"}
+                exists
             }
         } catch (e: CryptoServerAPI.CryptoServerException) {
             HsmErrors.errors[e.ErrorCode]
@@ -81,9 +89,12 @@ class UtimacoCryptoService(private val cryptoServerProvider: CryptoServerProvide
     override fun getPublicKey(alias: String): PublicKey? {
         try {
             return withAuthentication {
-                keyStore.getCertificate(alias)?.publicKey?.let {
+                detailedLogger.trace { "CryptoService(action=key_get_start;alias=$alias)" }
+                val key = keyStore.getCertificate(alias)?.publicKey?.let {
                     KeyFactory.getInstance(it.algorithm).generatePublic(X509EncodedKeySpec(it.encoded))
                 }
+                detailedLogger.trace { "CryptoService(action=key_get_end;alias=$alias)"}
+                key
             }
         } catch (e: CryptoServerAPI.CryptoServerException) {
             HsmErrors.errors[e.ErrorCode]
@@ -100,10 +111,13 @@ class UtimacoCryptoService(private val cryptoServerProvider: CryptoServerProvide
                     } else {
                         "SHA256withECDSA"
                     }
+                    detailedLogger.trace { "CryptoService(action=signing_start;alias=$alias;algorithm=$algorithm)" }
                     val signature = Signature.getInstance(algorithm, cryptoServerProvider)
                     signature.initSign(it)
                     signature.update(data)
-                    signature.sign()
+                    val signedData = signature.sign()
+                    detailedLogger.trace { "CryptoService(action=signing_end;alias=$alias;algorithm=$algorithm)" }
+                    signedData
                 } ?: throw CryptoServiceException("No key found for alias $alias")
             }
         } catch (e: CryptoServerAPI.CryptoServerException) {
@@ -113,6 +127,7 @@ class UtimacoCryptoService(private val cryptoServerProvider: CryptoServerProvide
     }
 
     override fun getSigner(alias: String): ContentSigner {
+        detailedLogger.trace { "CryptoService(action=get_signer;alias=$alias)" }
         return object : ContentSigner {
             private val publicKey: PublicKey = getPublicKey(alias) ?: throw CryptoServiceException("No key found for alias $alias")
             private val sigAlgID: AlgorithmIdentifier = Crypto.findSignatureScheme(publicKey).signatureOID
@@ -137,7 +152,9 @@ class UtimacoCryptoService(private val cryptoServerProvider: CryptoServerProvide
             val keyAttributes = attributesForScheme(keyTemplate, scheme.schemeNumberID)
             keyAttributes.name = alias
             val overwrite = if (config.keyOverride) CryptoServerCXI.FLAG_OVERWRITE else 0
+            detailedLogger.trace { "CryptoService(action=generate_key_pair_start;alias=$alias;scheme=$scheme)" }
             cryptoServerProvider.cryptoServer.generateKey(overwrite, keyAttributes, config.keyGenMechanism)
+            detailedLogger.trace { "CryptoService(action=generate_key_pair_end;alias=$alias;scheme=$scheme)" }
             getPublicKey(alias) ?: throw CryptoServiceException("Key generation for alias $alias succeeded, but key could not be accessed afterwards.")
         }
     }
@@ -224,6 +241,8 @@ class UtimacoCryptoService(private val cryptoServerProvider: CryptoServerProvide
     companion object {
         val DEFAULT_IDENTITY_SIGNATURE_SCHEME = Crypto.ECDSA_SECP256R1_SHA256
         val DEFAULT_TLS_SIGNATURE_SCHEME = Crypto.ECDSA_SECP256R1_SHA256
+
+        private val detailedLogger = detailedLogger()
 
         private val keyAttributeForScheme: Map<Int, CryptoServerCXI.KeyAttributes> = mapOf(
                 Crypto.ECDSA_SECP256R1_SHA256.schemeNumberID to CryptoServerCXI.KeyAttributes().apply {
