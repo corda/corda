@@ -23,8 +23,7 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
-import org.junit.jupiter.api.Assertions.assertFalse
-import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.assertThrows
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
@@ -243,16 +242,11 @@ class PersistentIdentityServiceTests {
     fun `register a public key to party mapping`(){
         val (alice, anonymousAlice) = createConfidentialIdentity(ALICE.name)
 
-        val isRegistered = identityService.registerKeyToParty(anonymousAlice.owningKey, alice.party)
-        assertTrue(isRegistered)
+        identityService.registerKeyToParty(anonymousAlice.owningKey, alice.party)
 
-        // Ensure we don't register the mapping twice
-        val isDuplicateRegistered = identityService.registerKeyToParty(anonymousAlice.owningKey, alice.party)
-        assertFalse(isDuplicateRegistered)
-
-        // Ensure we can't map a known key to a different party
-        val isNotRegistered = identityService.registerKeyToParty(anonymousAlice.owningKey, bob.party)
-        assertFalse(isNotRegistered)
+        assertThrows<IllegalArgumentException> {
+            identityService.registerKeyToParty(anonymousAlice.owningKey, bob.party)
+        }
     }
 
     private fun createConfidentialIdentity(x500Name: CordaX500Name): Pair<PartyAndCertificate, PartyAndCertificate> {

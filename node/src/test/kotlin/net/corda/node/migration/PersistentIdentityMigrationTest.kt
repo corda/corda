@@ -91,8 +91,7 @@ class PersistentIdentityMigrationTest {
          *
          * Since [PersistentIdentitiesMigration] implements [CordaMigration] the migration will run when the DB is setup.
          */
-         val migration = PersistentIdentitiesMigration()
-         migration.execute(liquidBaseDB)
+         PersistentIdentitiesMigration()
     }
 
     private fun saveAllIdentities(identities: List<PartyAndCertificate>) {
