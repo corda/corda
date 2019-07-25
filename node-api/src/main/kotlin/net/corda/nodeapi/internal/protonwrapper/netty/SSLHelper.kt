@@ -19,6 +19,7 @@ import org.bouncycastle.asn1.x509.Extension
 import org.bouncycastle.asn1.x509.SubjectKeyIdentifier
 import org.slf4j.LoggerFactory
 import sun.security.x509.X500Name
+import sun.security.x509.*
 import java.net.Socket
 import java.security.KeyStore
 import java.security.cert.*
@@ -29,6 +30,16 @@ import kotlin.system.measureTimeMillis
 
 private const val HOSTNAME_FORMAT = "%s.corda.net"
 internal const val DEFAULT = "default"
+
+fun X509Certificate.distributionPointsToString() : String {
+    val certImpl = X509CertImpl.toImpl(this)
+    return certImpl.crlDistributionPointsExtension?.let {
+        val points = it.get(CRLDistributionPointsExtension.POINTS)
+        val uriNames = points.flatMap { point -> point.fullName.names()
+                .filter { name -> name.type == GeneralNameInterface.NAME_URI }}.map { uri -> uri.name as URIName }
+        uriNames.map { uriname -> uriname.uri.toURL() }.mapNotNull { it }.joinToString()
+    } ?: "NO CRLDP ext"
+}
 
 internal class LoggingTrustManagerWrapper(val wrapped: X509ExtendedTrustManager) : X509ExtendedTrustManager() {
     companion object {
@@ -53,11 +64,10 @@ internal class LoggingTrustManagerWrapper(val wrapped: X509ExtendedTrustManager)
             } catch (ex: Exception) {
                 "null"
             }
-            "  $subject[$keyIdentifier] issued by $issuer[$authorityKeyIdentifier]"
+            "  $subject[$keyIdentifier] issued by $issuer[$authorityKeyIdentifier] [${it.distributionPointsToString()}]"
         }
         return certs.joinToString("\r\n")
     }
-
 
     private fun certPathToStringFull(chain: Array<out X509Certificate>?): String {
         if (chain == null) {
