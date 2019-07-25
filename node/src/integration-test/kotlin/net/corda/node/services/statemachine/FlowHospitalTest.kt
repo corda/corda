@@ -61,6 +61,8 @@ class FlowHospitalTest: IntegrationTest() {
             }.isInstanceOf(ExecutionException::class.java)
                 .hasCauseExactlyInstanceOf(NotaryException::class.java)
 
+            Thread.sleep(2_000)
+
             assertThat(aliceClient.stateMachinesSnapshot()).isEmpty()
 
             // case 2: the notary exception is caught and wrapped in a custom exception
@@ -73,7 +75,7 @@ class FlowHospitalTest: IntegrationTest() {
             }.isInstanceOf(ExecutionException::class.java)
                     .hasMessageContaining("double spend!")
 
-            Thread.sleep(1_000)
+            Thread.sleep(2_000)
 
             assertThat(aliceClient.stateMachinesSnapshot()).isEmpty()
         }
