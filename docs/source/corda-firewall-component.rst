@@ -122,7 +122,7 @@ Embedded Developer Node (node + artemis + internal bridge, no float, no DMZ)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Prerequisites
 """""""""""""
-* Java runtime
+* A supported Java distribution. The supported versions are listed in :doc:`getting-set-up`
 * Corda Enterprise JAR
 
 The simplest development deployment of the node is without firewall and thus just use the embedded bridge and Peer-to-Peer
@@ -138,7 +138,7 @@ Node + Combined Bridge/Float (no DMZ)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Prerequisites
 """""""""""""
-* Java runtime
+* A supported Java distribution. The supported versions are listed in :doc:`getting-set-up`
 * Corda Enterprise JAR
 * Corda Firewall JAR
 
@@ -172,7 +172,7 @@ DMZ ready (node + bridge + float)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Prerequisites
 """""""""""""
-* Java runtime
+* A supported Java distribution. The supported versions are listed in :doc:`getting-set-up`
 * Corda Enterprise JAR
 * Corda Firewall JAR
 
@@ -212,7 +212,7 @@ DMZ ready with outbound SOCKS
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Prerequisites
 """""""""""""
-* Java runtime
+* A supported Java distribution. The supported versions are listed in :doc:`getting-set-up`
 * Corda Enterprise JAR
 * Corda Firewall JAR
 * SOCKS Proxy
@@ -247,7 +247,7 @@ Full production HA DMZ ready mode (hot/cold node, hot/warm bridge)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Prerequisites
 """""""""""""
-* Java runtime
+* A supported Java distribution. The supported versions are listed in :doc:`getting-set-up`
 * Corda Enterprise JAR
 * Corda Firewall JAR
 * Zookeeper v3.5.4-beta
@@ -290,7 +290,7 @@ Multiple nodes + Bridge (no float, no DMZ)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Prerequisites
 """""""""""""
-* Java runtime
+* A supported Java distribution. The supported versions are listed in :doc:`getting-set-up`
 * Corda Enterprise JAR
 * Corda Firewall JAR
 * Apache Artemis v2.6.2 or RedHat amq broker v7.2.2
