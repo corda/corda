@@ -88,4 +88,11 @@ The following table contains the current support and the associated configuratio
 .. csv-table::
    :header: "Master key storage", "cryptoServiceName", "cryptoServiceConf", "mode"
 
-   "file-based keystore", "BC_SIMPLE", not used, "DEGRADED_WRAPPED"
+   "file-based keystore", ``BC_SIMPLE``, not used, ``DEGRADED_WRAPPED``
+   "Securosys PrimusX HSM", ``PRIMUS_X``, path to the PrimusX configuration file, ``WRAPPED``
+
+
+Additional notes
+----------------
+
+* For Securosys' PrimusX HSM, this feature has been tested with an HSM running firmware version 2.7.4 and the version 1.8.2 of the PrimusX JCA provider.

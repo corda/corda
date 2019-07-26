@@ -5,6 +5,7 @@ import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SignatureScheme
 import net.corda.nodeapi.internal.cryptoservice.CryptoService
 import net.corda.nodeapi.internal.cryptoservice.CryptoServiceSpec
+import net.corda.nodeapi.internal.cryptoservice.WrappingMode
 import org.junit.Ignore
 import java.security.KeyStore
 
@@ -35,4 +36,8 @@ class PrimusXCryptoServiceTest: CryptoServiceSpec() {
     }
 
     override fun getSupportedSchemes(): List<SignatureScheme> = listOf(Crypto.RSA_SHA256, Crypto.ECDSA_SECP256R1_SHA256, Crypto.ECDSA_SECP256K1_SHA256)
+
+    override fun getSupportedSchemesForWrappingOperations(): List<SignatureScheme> = listOf(Crypto.RSA_SHA256, Crypto.ECDSA_SECP256R1_SHA256, Crypto.ECDSA_SECP256K1_SHA256)
+
+    override fun getSupportedWrappingMode(): WrappingMode? = WrappingMode.WRAPPED
 }

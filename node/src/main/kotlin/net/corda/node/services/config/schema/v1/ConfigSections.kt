@@ -406,10 +406,10 @@ internal object FreshIdentitiesConfigurationSpec: Configuration.Specification<Fr
 
 internal object CryptoServiceConfigurationSpec: Configuration.Specification<CryptoServiceConfiguration>("CryptoServiceConfiguration") {
     private val cryptoServiceName by enum(SupportedCryptoServices::class)
-    private val cryptoserviceConf by string().mapValid(::toPath).optional()
+    private val cryptoServiceConf by string().mapValid(::toPath).optional()
 
     override fun parseValid(configuration: Config, options: Configuration.Options): Valid<CryptoServiceConfiguration> {
         val config = configuration.withOptions(options)
-        return valid(CryptoServiceConfiguration(config[cryptoServiceName], config[cryptoserviceConf]))
+        return valid(CryptoServiceConfiguration(config[cryptoServiceName], config[cryptoServiceConf]))
     }
 }
