@@ -12,6 +12,9 @@ import net.corda.nodeapi.internal.cryptoservice.CryptoService
 import net.corda.nodeapi.internal.cryptoservice.JCACryptoService
 import net.corda.core.utilities.detailedLogger
 import net.corda.core.utilities.trace
+import net.corda.nodeapi.internal.cryptoservice.WrappedPrivateKey
+import net.corda.nodeapi.internal.cryptoservice.WrappingMode
+import java.lang.UnsupportedOperationException
 import java.nio.file.Path
 import java.security.KeyStore
 import java.security.Provider
@@ -63,6 +66,20 @@ class GemaltoLunaCryptoService(keyStore: KeyStore, provider: Provider, x500Princ
             block()
         }
     }
+
+    override fun createWrappingKey(alias: String, failIfExists: Boolean) {
+        throw UnsupportedOperationException()
+    }
+
+    override fun generateWrappedKeyPair(masterKeyAlias: String, childKeyScheme: SignatureScheme): Pair<PublicKey, WrappedPrivateKey> {
+        throw UnsupportedOperationException()
+    }
+
+    override fun sign(masterKeyAlias: String, wrappedPrivateKey: WrappedPrivateKey, payloadToSign: ByteArray): ByteArray {
+        throw UnsupportedOperationException()
+    }
+
+    override fun getWrappingMode(): WrappingMode? = null
 
     companion object {
         private val detailedLogger = detailedLogger()

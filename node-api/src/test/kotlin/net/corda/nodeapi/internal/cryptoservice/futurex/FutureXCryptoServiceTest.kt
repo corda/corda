@@ -5,6 +5,7 @@ import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SignatureScheme
 import net.corda.nodeapi.internal.cryptoservice.CryptoService
 import net.corda.nodeapi.internal.cryptoservice.CryptoServiceSpec
+import net.corda.nodeapi.internal.cryptoservice.WrappingMode
 import net.corda.nodeapi.internal.cryptoservice.futurex.FutureXCryptoService.Companion.KEYSTORE_TYPE
 import org.junit.Ignore
 import java.security.KeyStore
@@ -24,5 +25,9 @@ class FutureXCryptoServiceTest: CryptoServiceSpec() {
     }
 
     override fun getSupportedSchemes(): List<SignatureScheme> = listOf(Crypto.RSA_SHA256, Crypto.ECDSA_SECP256R1_SHA256)
+
+    override fun getSupportedSchemesForWrappingOperations(): List<SignatureScheme> = emptyList()
+
+    override fun getSupportedWrappingMode(): WrappingMode? = null
 
 }

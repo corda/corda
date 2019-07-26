@@ -25,6 +25,8 @@ import net.corda.nodeapi.internal.config.UnknownConfigurationKeysException
 import net.corda.nodeapi.internal.config.parseAs
 import net.corda.nodeapi.internal.cryptoservice.CryptoService
 import net.corda.nodeapi.internal.cryptoservice.CryptoServiceException
+import net.corda.nodeapi.internal.cryptoservice.WrappedPrivateKey
+import net.corda.nodeapi.internal.cryptoservice.WrappingMode
 import org.bouncycastle.asn1.x509.AlgorithmIdentifier
 import org.bouncycastle.operator.ContentSigner
 import java.io.ByteArrayOutputStream
@@ -32,6 +34,7 @@ import java.io.FileInputStream
 import java.io.FileNotFoundException
 import java.io.OutputStream
 import java.lang.IllegalArgumentException
+import java.lang.UnsupportedOperationException
 import java.math.BigInteger
 import java.nio.file.Path
 import java.security.KeyStore
@@ -167,6 +170,20 @@ class AzureKeyVaultCryptoService(private val keyVaultClient: KeyVaultClient, pri
     override fun defaultTLSSignatureScheme(): SignatureScheme {
         return DEFAULT_TLS_SIGNATURE_SCHEME
     }
+
+    override fun createWrappingKey(alias: String, failIfExists: Boolean) {
+        throw UnsupportedOperationException()
+    }
+
+    override fun generateWrappedKeyPair(masterKeyAlias: String, childKeyScheme: SignatureScheme): Pair<PublicKey, WrappedPrivateKey> {
+        throw UnsupportedOperationException()
+    }
+
+    override fun sign(masterKeyAlias: String, wrappedPrivateKey: WrappedPrivateKey, payloadToSign: ByteArray): ByteArray {
+        throw UnsupportedOperationException()
+    }
+
+    override fun getWrappingMode(): WrappingMode? = null
 
     private fun createIdentifier(alias: String) = keyVaultUrl.removeSuffix("/") + "/keys/" + alias
 

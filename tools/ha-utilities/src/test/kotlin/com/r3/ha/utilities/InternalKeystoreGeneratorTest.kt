@@ -16,6 +16,8 @@ import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_CLIENT_TLS
 import net.corda.nodeapi.internal.crypto.getCertificateAndKeyPair
 import net.corda.nodeapi.internal.cryptoservice.CryptoService
 import net.corda.nodeapi.internal.cryptoservice.CryptoServiceFactory
+import net.corda.nodeapi.internal.cryptoservice.WrappedPrivateKey
+import net.corda.nodeapi.internal.cryptoservice.WrappingMode
 import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
 import org.bouncycastle.operator.ContentSigner
 import org.junit.After
@@ -251,5 +253,22 @@ private class MockedCryptoService(val keystorePath: Path) : CryptoService {
     override fun generateKeyPair(alias: String, scheme: SignatureScheme): PublicKey {
         return bouncyCryptoService.generateKeyPair(alias, scheme)
     }
+
+    override fun generateWrappedKeyPair(masterKeyAlias: String, childKeyScheme: SignatureScheme): Pair<PublicKey, WrappedPrivateKey> {
+        throw UnsupportedOperationException()
+    }
+
+    override fun sign(masterKeyAlias: String, wrappedPrivateKey: WrappedPrivateKey, payloadToSign: ByteArray): ByteArray {
+        throw UnsupportedOperationException()
+    }
+
+    override fun getWrappingMode(): WrappingMode? {
+        throw UnsupportedOperationException()
+    }
+
+    override fun createWrappingKey(alias: String, failIfExists: Boolean) {
+        throw UnsupportedOperationException()
+    }
+
 }
 

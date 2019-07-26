@@ -85,7 +85,9 @@ data class NodeConfigurationImpl(
         override val cordappSignerKeyFingerprintBlacklist: List<String> = Defaults.cordappSignerKeyFingerprintBlacklist,
         override val cryptoServiceName: SupportedCryptoServices? = Defaults.cryptoServiceName,
         override val cryptoServiceConf: Path? = Defaults.cryptoServiceConf,
-        override val networkParameterAcceptanceSettings: NetworkParameterAcceptanceSettings = Defaults.networkParameterAcceptanceSettings
+        override val networkParameterAcceptanceSettings: NetworkParameterAcceptanceSettings = Defaults.networkParameterAcceptanceSettings,
+        override val freshIdentitiesConfiguration: FreshIdentitiesConfiguration? = null,
+        override val disableFreshIdentitiesWarning: Boolean = false
 ) : NodeConfiguration {
     internal object Defaults {
         val jmxMonitoringHttpPort: Int? = null
@@ -123,6 +125,8 @@ data class NodeConfigurationImpl(
         val cryptoServiceName: SupportedCryptoServices? = null
         val cryptoServiceConf: Path? = null
         val networkParameterAcceptanceSettings: NetworkParameterAcceptanceSettings = NetworkParameterAcceptanceSettings()
+        val masterKeyAlias = "wrapping-key-alias"
+        val createDuringStartup = CreateWrappingKeyDuringStartup.YES
 
         fun cordappsDirectories(baseDirectory: Path) = listOf(baseDirectory / CORDAPPS_DIR_NAME_DEFAULT)
 
@@ -211,6 +215,7 @@ data class NodeConfigurationImpl(
 
     private val signingCertificateStorePath = certificatesDirectory / "nodekeystore.jks"
     private val p2pKeystorePath: Path get() = certificatesDirectory / "sslkeystore.jks"
+    override val wrappingKeyStorePath = certificatesDirectory / "wrappingkeystore.pkcs12"
 
     // TODO: There are two implications here:
     // 1. "signingCertificateStore" and "p2pKeyStore" have the same passwords. In the future we should re-visit this "rule" and see of they can be made different;
