@@ -305,7 +305,11 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val 
 
     object FinalityDoctor : Staff {
         override fun consult(flowFiber: FlowFiber, currentState: StateMachineState, newError: Throwable, history: FlowMedicalHistory): Diagnosis {
-            return if (currentState.flowLogic is FinalityHandler || isFromReceiveFinalityFlow(newError)) {
+            return if (currentState.flowLogic is FinalityHandler) {
+                log.warn("Flow ${flowFiber.id} failed to be finalised. Manual intervention may be required before retrying " +
+                        "the flow by re-starting the node. State machine state: $currentState", newError)
+                Diagnosis.OVERNIGHT_OBSERVATION
+            } else if (isFromReceiveFinalityFlow(newError)) {
                 if (isErrorPropagatedFromCounterparty(newError) && isErrorThrownDuringReceiveFinality(newError)) {
                     // no need to keep around the flow, since notarisation has already failed at the counterparty.
                     Diagnosis.NOT_MY_SPECIALTY
