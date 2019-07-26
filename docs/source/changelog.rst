@@ -11,6 +11,7 @@ Version 5.0
 
 * Removed ``finance-workflows`` dependency on jackson library.  The functions that used jackson (e.g. ``FinanceJSONSupport``) have been moved
   into IRS Demo.
+* The introductory and technical white papers have been refreshed. They have new content and a clearer organisation.
 
 .. _changelog_v4.2:
 
