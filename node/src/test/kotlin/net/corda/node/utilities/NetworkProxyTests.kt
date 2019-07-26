@@ -4,6 +4,7 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.services.config.NetworkServicesConfig
 import org.junit.After
 import org.junit.Assert
+import org.junit.Ignore
 import org.junit.Test
 import java.net.*
 
@@ -17,6 +18,7 @@ class NetworkProxyTests {
      * Check we can get http proxy auth credentials if and only if server address, port and requestor type
      * match (i.e. the requestor type is PROXY for http proxies)
      */
+    @Ignore("Cannot be parallelised - run manually when required")
     @Test
     fun testHttpSettingFromConfig() {
         val config = NetworkServicesConfig(URL("https://doorman"), URL("http://networkmap"), proxyType = Proxy.Type.HTTP, proxyAddress = NetworkHostAndPort("localhost", 1234), proxyPassword = "pw", proxyUser = "user")
@@ -40,6 +42,7 @@ class NetworkProxyTests {
      * Check we can get socks proxy auth credentials if and only if server address, port and requestor type
      * match (i.e. the requestor type is SERVER for socks proxies)
      */
+    @Ignore("Cannot be parallelised - run manually when required")
     @Test
     fun testSocksSettingFromConfig() {
         val config = NetworkServicesConfig(URL("https://doorman"), URL("http://networkmap"), proxyType = Proxy.Type.SOCKS, proxyAddress = NetworkHostAndPort("localhost", 1234), proxyPassword = "pw", proxyUser = "user")
@@ -61,6 +64,7 @@ class NetworkProxyTests {
 
 
     @Test
+    @Ignore("Cannot be parallelised - run manually when required")
     fun testCanSetProxyConfigOnlyOnce() {
         val config = NetworkServicesConfig(URL("https://doorman"), URL("http://networkmap"), proxyType = Proxy.Type.HTTP, proxyAddress = NetworkHostAndPort("localhost", 1234), proxyPassword = "pw", proxyUser = "user")
         var proxy = ProxyAuthSetter.getInstance(config)
