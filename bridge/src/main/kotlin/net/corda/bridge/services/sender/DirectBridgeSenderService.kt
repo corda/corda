@@ -16,6 +16,7 @@ import java.net.InetSocketAddress
 
 class DirectBridgeSenderService(val conf: FirewallConfiguration,
                                 val maxMessageSize: Int,
+                                signingService: TLSSigningService,
                                 val auditService: FirewallAuditService,
                                 haService: BridgeMasterService,
                                 private val artemisConnectionService: BridgeArtemisConnectionService,
@@ -24,18 +25,23 @@ class DirectBridgeSenderService(val conf: FirewallConfiguration,
         private val log = contextLogger()
     }
 
-    private val statusFollower: ServiceStateCombiner = ServiceStateCombiner(listOf(auditService, artemisConnectionService, haService))
+    private val statusFollower: ServiceStateCombiner = ServiceStateCombiner(listOf(auditService, artemisConnectionService, haService, signingService))
     private var statusSubscriber: Subscription? = null
     private var listenerActiveSubscriber: Subscription? = null
     private var listenerFailureSubscriber: Subscription? = null
-    private var bridgeControlListener = BridgeControlListener(conf.publicSSLConfiguration,
-            conf.outboundConfig!!.proxyConfig,
-            maxMessageSize,
-            conf.crlCheckSoftFail,
-            conf.bridgeInnerConfig?.enableSNI ?: true,
-            { ForwardingArtemisMessageClient(artemisConnectionService) },
-            BridgeAuditServiceAdaptor(auditService),
-            conf.enableAMQPPacketTrace)
+    private var bridgeControlListener: BridgeControlListener
+
+    init {
+        bridgeControlListener = BridgeControlListener(signingService.keyStore(), conf.publicSSLConfiguration.trustStore.get(), conf.publicSSLConfiguration.useOpenSsl,
+                conf.outboundConfig!!.proxyConfig,
+                maxMessageSize,
+                conf.revocationConfig,
+                conf.bridgeInnerConfig?.enableSNI ?: true,
+                { ForwardingArtemisMessageClient(artemisConnectionService) },
+                BridgeAuditServiceAdaptor(auditService),
+                conf.enableAMQPPacketTrace,
+                conf.sslHandshakeTimeout)
+    }
 
     private class BridgeAuditServiceAdaptor(private val auditService: FirewallAuditService) : BridgeMetricsService {
         override fun bridgeCreated(targets: List<NetworkHostAndPort>, legalNames: Set<CordaX500Name>) {

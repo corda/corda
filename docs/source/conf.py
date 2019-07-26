@@ -45,7 +45,7 @@ sys.path.append(os.path.abspath('../ext/'))
 # needs_sphinx = '1.0'
 
 # m2r is a Markdown to RST converter, as our design docs use Markdown.
-extensions = ['rst2pdf.pdfbuilder', 'm2r', 'conditional_toctree']
+extensions = ['rst2pdf.pdfbuilder', 'm2r', 'conditional_toctree', 'sphinx.ext.autosectionlabel']
 
 # PDF configuration
 pdf_documents = [('index', u'corda-developer-site', u'Corda Enterprise Documentation', u'R3')]
@@ -296,3 +296,7 @@ latex_elements = {
     'extraclassoptions' : 'openany',
 }
 
+# True to prefix each section label with the name of the document it is in, followed by a colon.
+# For example, index:Introduction for a section called Introduction that appears in document index.rst.
+# Useful for avoiding ambiguity when the same section heading appears in different documents.
+autosectionlabel_prefix_document = True

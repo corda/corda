@@ -1,0 +1,12 @@
+host = "127.0.0.1"
+port = 3001
+connectionTimeout = 60000
+keepSessionAlive = true
+keyGroup = "*"
+keySpecifier = 2
+keyOverride = true
+keyExport = false
+keyGenMechanism = 4
+authThreshold = 1
+username = INTEGRATION_TEST
+password = INTEGRATION_TEST

@@ -110,8 +110,9 @@ class FutureXCryptoService(keyStore: KeyStore, provider: SunPKCS11, x500Principa
 
         private val detailedLogger = detailedLogger()
 
-        private fun parseConfigFile(cryptoServiceConf: Path): FutureXConfiguration {
+        fun parseConfigFile(cryptoServiceConf: Path): FutureXConfiguration {
             try {
+                checkConfigurationFileExists(cryptoServiceConf)
                 val config = ConfigFactory.parseFile(cryptoServiceConf.toFile()).resolve()
                 return config.parseAs(FutureXConfiguration::class)
             } catch (e: Exception) {

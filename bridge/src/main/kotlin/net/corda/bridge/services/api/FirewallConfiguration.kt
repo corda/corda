@@ -3,7 +3,9 @@ package net.corda.bridge.services.api
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
+import net.corda.nodeapi.internal.cryptoservice.SupportedCryptoServices
 import net.corda.nodeapi.internal.protonwrapper.netty.ProxyConfig
+import net.corda.nodeapi.internal.protonwrapper.netty.RevocationConfig
 import java.nio.file.Path
 
 enum class FirewallMode {
@@ -29,7 +31,6 @@ enum class FirewallMode {
 
 interface BridgeSSLConfiguration : MutualSslConfiguration
 
-
 /**
  * Details of the local Artemis broker.
  * Required in SenderReceiver and BridgeInner modes.
@@ -50,8 +51,6 @@ interface BridgeOutboundConfiguration {
  */
 interface BridgeInboundConfiguration {
     val listeningAddress: NetworkHostAndPort
-    // Allows override of [KeyStore] details for the AMQP listener port, otherwise the general top level details are used.
-    val customSSLConfiguration: BridgeSSLConfiguration?
 }
 
 /**
@@ -99,7 +98,7 @@ interface FirewallConfiguration {
     val bridgeInnerConfig: BridgeInnerConfiguration?
     val floatOuterConfig: FloatOuterConfiguration?
     val haConfig: BridgeHAConfig?
-    val networkParametersPath: Path
+    val networkParametersPath: Path?
     val enableAMQPPacketTrace: Boolean
     // Initial reconnect interval for link to artemis after [artemisReconnectionIntervalMin] ms the default value is 5000 ms.
     val artemisReconnectionIntervalMin: Int
@@ -116,10 +115,21 @@ interface FirewallConfiguration {
     // This is relevant to bridges, because we push messages into the inbox and use the async acknowledgement responses to reply to sender.
     val p2pConfirmationWindowSize: Int
     val whitelistedHeaders: List<String>
-    val crlCheckSoftFail: Boolean
     val publicSSLConfiguration: MutualSslConfiguration
+    val p2pTlsSigningCryptoServiceConfig: CryptoServiceConfig?
+    val tunnelingCryptoServiceConfig: CryptoServiceConfig? // Location for the cryptoService conf file.
+    val artemisCryptoServiceConfig: CryptoServiceConfig?
+
     val auditServiceConfiguration: AuditServiceConfiguration
     // An optional Health Check Phrase which if passed through the channel will cause AMQP Server to echo it back instead of doing normal pipeline processing
     val healthCheckPhrase: String?
     val silencedIPs: Set<String>
+
+    val sslHandshakeTimeout:Long
+    val revocationConfig: RevocationConfig
+}
+
+interface CryptoServiceConfig {
+    val name: SupportedCryptoServices
+    val conf: Path?
 }

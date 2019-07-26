@@ -40,6 +40,8 @@ import net.corda.nodeapi.internal.config.toConfig
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
+import net.corda.nodeapi.internal.protonwrapper.netty.RevocationConfig
+import net.corda.nodeapi.internal.protonwrapper.netty.RevocationConfigImpl
 import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.getTestPartyAndCertificate
 import net.corda.testing.driver.DriverParameters
@@ -210,11 +212,11 @@ data class RpcFlowWorkerDriverDSL(private val driverDSL: DriverDSLImpl, private 
 
         val baseDirectory = driverDSL.driverDirectory / "bridge_${nodeConfig.myLegalName.organisation}"
 
-        val bridgeConfig = FirewallConfigurationImpl(baseDirectory = baseDirectory, crlCheckSoftFail = true,
+        val bridgeConfig = FirewallConfigurationImpl(baseDirectory = baseDirectory,
                 bridgeInnerConfig = null, keyStorePassword = "pass", trustStorePassword = "pass", firewallMode = FirewallMode.SenderReceiver,
-                networkParametersPath = baseDirectory, outboundConfig = BridgeOutboundConfigurationImpl(nodeConfig.messagingServerAddress!!, listOf(), null, null),
-                inboundConfig = BridgeInboundConfigurationImpl(bridgeListeningAddress, null), enableAMQPPacketTrace = false, floatOuterConfig = null, haConfig = null,
-                auditServiceConfiguration = AuditServiceConfigurationImpl(120))
+                outboundConfig = BridgeOutboundConfigurationImpl(nodeConfig.messagingServerAddress!!, listOf(), null, null),
+                inboundConfig = BridgeInboundConfigurationImpl(bridgeListeningAddress), enableAMQPPacketTrace = false, floatOuterConfig = null, haConfig = null,
+                auditServiceConfiguration = AuditServiceConfigurationImpl(120), p2pTlsSigningCryptoServiceConfig = null, tunnelingCryptoServiceConfig = null, artemisCryptoServiceConfig = null, revocationConfig = RevocationConfigImpl(RevocationConfig.Mode.SOFT_FAIL))
 
         baseDirectory.createDirectories()
         // Write config (for reference)

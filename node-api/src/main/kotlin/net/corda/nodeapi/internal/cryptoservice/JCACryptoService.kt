@@ -13,9 +13,11 @@ import org.bouncycastle.asn1.x509.AlgorithmIdentifier
 import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder
 import org.bouncycastle.operator.ContentSigner
 import java.io.ByteArrayOutputStream
+import java.io.FileNotFoundException
 import java.io.OutputStream
 import java.lang.IllegalArgumentException
 import java.math.BigInteger
+import java.nio.file.Path
 import java.security.*
 import java.security.cert.Certificate
 import java.security.spec.ECGenParameterSpec
@@ -144,7 +146,15 @@ abstract class JCACryptoService(internal val keyStore: KeyStore, internal val pr
 
     companion object {
         val DUMMY_X500_PRINCIPAL = X500Principal("CN=DUMMY")
+
         private val detailedLogger = detailedLogger()
+
+        internal fun checkConfigurationFileExists(cryptoServiceConf: Path) {
+            if (!cryptoServiceConf.toFile().exists()) {
+                throw FileNotFoundException("Configured crypto configuration file [${cryptoServiceConf.toFile().absolutePath}] does not exist")
+            }
+        }
+
     }
 
     @VisibleForTesting

@@ -12,9 +12,11 @@ import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.BRIDGE_NOT
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_PREFIX
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEERS_PREFIX
 import net.corda.nodeapi.internal.ArtemisSessionProvider
+import net.corda.nodeapi.internal.config.CertificateStore
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.crypto.x509
 import net.corda.nodeapi.internal.protonwrapper.netty.ProxyConfig
+import net.corda.nodeapi.internal.protonwrapper.netty.RevocationConfig
 import org.apache.activemq.artemis.api.core.ActiveMQNonExistentQueueException
 import org.apache.activemq.artemis.api.core.ActiveMQQueueExistsException
 import org.apache.activemq.artemis.api.core.RoutingType
@@ -27,22 +29,25 @@ import rx.subjects.PublishSubject
 import sun.security.x509.X500Name
 import java.util.*
 
-class BridgeControlListener(val config: MutualSslConfiguration,
+class BridgeControlListener(private val keyStore: CertificateStore,
+                            trustStore: CertificateStore,
+                            useOpenSSL: Boolean,
                             proxyConfig: ProxyConfig? = null,
                             maxMessageSize: Int,
-                            crlCheckSoftFail: Boolean,
+                            revocationConfig: RevocationConfig,
                             enableSNI: Boolean,
                             private val artemisMessageClientFactory: () -> ArtemisSessionProvider,
                             bridgeMetricsService: BridgeMetricsService? = null,
-                            trace: Boolean = false) : AutoCloseable {
+                            trace: Boolean = false,
+                            sslHandshakeTimeout: Long? = null) : AutoCloseable {
     private val bridgeId: String = UUID.randomUUID().toString()
     private var bridgeControlQueue = "$BRIDGE_CONTROL.$bridgeId"
     private var bridgeNotifyQueue = "$BRIDGE_NOTIFY.$bridgeId"
     private val validInboundQueues = mutableSetOf<String>()
     private val bridgeManager = if (enableSNI) {
-        LoopbackBridgeManager(config, proxyConfig, maxMessageSize, crlCheckSoftFail, enableSNI, artemisMessageClientFactory, bridgeMetricsService, this::validateReceiveTopic, trace)
+        LoopbackBridgeManager(keyStore, trustStore, useOpenSSL, proxyConfig, maxMessageSize, revocationConfig, enableSNI, artemisMessageClientFactory, bridgeMetricsService, this::validateReceiveTopic, trace, sslHandshakeTimeout)
     } else {
-        AMQPBridgeManager(config, proxyConfig, maxMessageSize, crlCheckSoftFail, enableSNI, artemisMessageClientFactory, bridgeMetricsService, trace)
+        AMQPBridgeManager(keyStore, trustStore, useOpenSSL, proxyConfig, maxMessageSize, revocationConfig, enableSNI, artemisMessageClientFactory, bridgeMetricsService, trace, sslHandshakeTimeout)
     }
     private var artemis: ArtemisSessionProvider? = null
     private var controlConsumer: ClientConsumer? = null
@@ -51,9 +56,9 @@ class BridgeControlListener(val config: MutualSslConfiguration,
     constructor(config: MutualSslConfiguration,
                 p2pAddress: NetworkHostAndPort,
                 maxMessageSize: Int,
-                crlCheckSoftFail: Boolean,
+                revocationConfig: RevocationConfig,
                 enableSNI: Boolean,
-                proxy: ProxyConfig? = null) : this(config, proxy, maxMessageSize, crlCheckSoftFail, enableSNI, { ArtemisMessagingClient(config, p2pAddress, maxMessageSize) })
+                proxy: ProxyConfig? = null) : this(config.keyStore.get(), config.trustStore.get(), config.useOpenSsl, proxy, maxMessageSize, revocationConfig, enableSNI, { ArtemisMessagingClient(config, p2pAddress, maxMessageSize) })
 
     companion object {
         private val log = contextLogger()
@@ -245,11 +250,11 @@ class BridgeControlListener(val config: MutualSslConfiguration,
     }
 
     private fun isConfigured(sourceX500Name: String): Boolean {
-        val keyStore = config.keyStore.get().value.internal
-        return keyStore.aliases().toList().filter { alias ->
+        val keyStore = keyStore.value.internal
+        return keyStore.aliases().toList().any { alias ->
             val x500Name = keyStore.getCertificate(alias).x509.subjectDN as X500Name
             val cordaX500Name = CordaX500Name.build(x500Name.asX500Principal())
             cordaX500Name.toString() == sourceX500Name
-        }.isNotEmpty()
+        }
     }
 }

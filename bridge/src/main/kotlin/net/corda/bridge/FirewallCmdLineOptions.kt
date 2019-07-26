@@ -2,7 +2,6 @@ package net.corda.bridge
 
 import net.corda.bridge.services.api.FirewallConfiguration
 import net.corda.bridge.services.config.BridgeConfigHelper
-import net.corda.bridge.services.config.parseAsFirewallConfiguration
 import net.corda.cliutils.CommonCliConstants.BASE_DIR
 import net.corda.core.internal.div
 import net.corda.core.internal.exists
@@ -46,6 +45,6 @@ class FirewallCmdLineOptions {
 
     fun loadConfig(): FirewallConfiguration {
         val configFile = _configFile ?: baseDirectory.defaultConfigFile()
-        return BridgeConfigHelper.loadConfig(baseDirectory, configFile).parseAsFirewallConfiguration()
+        return BridgeConfigHelper.loadConfig(baseDirectory, configFile)
     }
 }

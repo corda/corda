@@ -4,6 +4,8 @@ import io.netty.buffer.ByteBuf
 import io.netty.buffer.Unpooled
 import io.netty.channel.ChannelHandlerContext
 import io.netty.handler.codec.ByteToMessageDecoder
+import io.netty.handler.ssl.SslHandler
+import net.corda.core.utilities.contextLogger
 
 /**
  * Responsible for deciding whether we are likely to be processing health probe request
@@ -13,6 +15,7 @@ internal class ModeSelectingChannel(healthCheckPhrase: String) : ByteToMessageDe
 
     companion object {
         const val NAME = "modeSelector"
+        private val log = contextLogger()
     }
 
     private enum class TriState {
@@ -56,6 +59,10 @@ internal class ModeSelectingChannel(healthCheckPhrase: String) : ByteToMessageDe
         if (zipped.all { it.first == it.second }) {
             // Matched the healthCheckPhrase
             currentMode = TriState.ECHO_MODE
+            log.info("Echo mode activated for connection ${ctx.channel().id()}")
+            // Cancel scheduled action to avoid SSL handshake timeout, which starts "ticking" upon connection is established,
+            // namely upon call to `io.netty.handler.ssl.SslHandler#handlerAdded` is made
+            ctx.pipeline().get(SslHandler::class.java)?.handshakeFuture()?.cancel(false)
             ctx.echoBack(inByteBuf)
         } else {
             currentMode = TriState.NORMAL_MODE

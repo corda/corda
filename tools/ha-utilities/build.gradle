@@ -15,10 +15,10 @@ dependencies {
 
     testCompile(project(':test-cli'))
     testCompile(project(':node-driver'))
-}
 
-processResources {
-    from file("$rootDir/config/dev/log4j2.xml")
+    testCompile project(path: ':node-api', configuration: 'testArtifacts')
+
+    testImplementation "io.mockk:mockk:1.9.kotlin12"
 }
 
 jar {
@@ -26,6 +26,7 @@ jar {
         exclude "META-INF/*.SF"
         exclude "META-INF/*.DSA"
         exclude "META-INF/*.RSA"
+        exclude "log4j2.xml"
     }
     baseName = "ha-utilities"
     manifest {

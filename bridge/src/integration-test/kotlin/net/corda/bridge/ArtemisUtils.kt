@@ -13,6 +13,7 @@ import net.corda.nodeapi.internal.DEV_CA_KEY_STORE_PASS
 import net.corda.nodeapi.internal.DEV_CA_TRUST_STORE_PASS
 import net.corda.nodeapi.internal.config.FileBasedCertificateStoreSupplier
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
+import net.corda.nodeapi.internal.cryptoservice.CryptoService
 import net.corda.testing.core.MAX_MESSAGE_SIZE
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.core.config.Configuration
@@ -94,7 +95,7 @@ private fun restrictedRole(name: String, send: Boolean = false, consume: Boolean
             deleteNonDurableQueue, manage, browse, createDurableQueue || createNonDurableQueue, deleteDurableQueue || deleteNonDurableQueue)
 }
 
-fun createNodeDevCertificates(x500Name: CordaX500Name, nodePath: Path, keyStorePassword: String = DEV_CA_KEY_STORE_PASS, truststorePass: String = DEV_CA_TRUST_STORE_PASS) {
+fun createNodeDevCertificates(x500Name: CordaX500Name, nodePath: Path, keyStorePassword: String = DEV_CA_KEY_STORE_PASS, truststorePass: String = DEV_CA_TRUST_STORE_PASS, cryptoService: CryptoService? = null) {
     val certificateDir = nodePath / "certificates"
     val nodeKeystore = FileBasedCertificateStoreSupplier(certificateDir / "nodekeystore.jks", keyStorePassword, keyStorePassword)
     val config = object : MutualSslConfiguration {
@@ -102,5 +103,5 @@ fun createNodeDevCertificates(x500Name: CordaX500Name, nodePath: Path, keyStoreP
         override val keyStore = FileBasedCertificateStoreSupplier(certificateDir / "sslkeystore.jks", keyStorePassword, keyStorePassword)
         override val trustStore = FileBasedCertificateStoreSupplier(certificateDir / "truststore.jks", truststorePass, truststorePass)
     }
-    config.configureDevKeyAndTrustStores(x500Name, nodeKeystore, certificateDir)
+    config.configureDevKeyAndTrustStores(x500Name, nodeKeystore, certificateDir, cryptoService)
 }

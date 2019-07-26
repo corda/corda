@@ -23,10 +23,6 @@ sourceSets {
     }
 }
 
-processResources {
-    from file("$rootDir/config/dev/log4j2.xml")
-}
-
 dependencies {
 
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
@@ -53,6 +49,13 @@ dependencies {
         transitive = false// we control dependencies directly as the bridge is likely to be audited
     }
 
+    // For HSM simulator
+    testCompile project(':node-api').sourceSets.test.output
+    testCompile project(':test-cli')
+    testCompile fileTree(dir: 'lib', include: 'CryptoServer*.jar')
+    // Spotify Docker client for using docker containers in integration tests
+    testCompile "com.spotify:docker-client:8.14.5"
+
     // Here we pull in dependencies that would normally be pulled in transitively from :core and :node-api, but we need more fine grained control
     // For AMQP serialisation.
     compile "org.apache.qpid:proton-j:${protonj_version}"
@@ -71,7 +74,7 @@ dependencies {
     // Bouncy castle support needed for X509 certificate manipulation
     compile "org.bouncycastle:bcprov-jdk15on:${bouncycastle_version}"
     compile "org.bouncycastle:bcpkix-jdk15on:${bouncycastle_version}"
-    // Seems to be needed?
+    // Needed for CRLs caching
     compile "com.github.ben-manes.caffeine:caffeine:$caffeine_version"
 
     // Log4J: logging framework (with SLF4J bindings)
@@ -91,7 +94,7 @@ dependencies {
     compile "org.fusesource.jansi:jansi:$jansi_version"
 
     compile "commons-lang:commons-lang:$commons_lang_version"
-    
+
     integrationTestCompile project(':node-driver')
     integrationTestCompile "org.apache.curator:curator-test:${curator_version}"
     testCompile "junit:junit:$junit_version"
@@ -99,6 +102,10 @@ dependencies {
     testCompile project(':test-utils')
     testCompile project(':tools:ha-utilities')
     integrationTestCompile project(':tools:ha-utilities')
+
+    // Capsule is a library for building independently executable fat JARs.
+    // We only need this dependency to compile our Caplet against.
+    compileOnly "co.paralleluniverse:capsule:$capsule_version"
 }
 
 task integrationTest(type: Test) {

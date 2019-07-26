@@ -106,6 +106,7 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
             amqpActive = false
             if (!future.isSuccess) {
                 log.info("Failed to connect to $currentTarget")
+
                 if (started) {
                     workerGroup?.schedule({
                         nextTarget()
@@ -141,7 +142,7 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
 
         init {
             keyManagerFactory.init(conf.keyStore)
-            trustManagerFactory.init(initialiseTrustStoreAndEnableCrlChecking(conf.trustStore, conf.crlCheckSoftFail))
+            trustManagerFactory.init(initialiseTrustStoreAndEnableCrlChecking(conf.trustStore, conf.revocationConfig))
         }
 
         override fun initChannel(ch: SocketChannel) {
@@ -186,7 +187,7 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
             } else {
                 createClientSslHelper(target, parent.allowedRemoteLegalNames, wrappedKeyManagerFactory, trustManagerFactory)
             }
-            handler.handshakeTimeoutMillis = java.lang.Long.getLong(SSL_HANDSHAKE_TIMEOUT_PROP_NAME, SSL_HANDSHAKE_TIMEOUT_DEFAULT_VALUE)
+            handler.handshakeTimeoutMillis = conf.sslHandshakeTimeout
             pipeline.addLast("sslHandler", handler)
             if (conf.trace) pipeline.addLast("logger", LoggingHandler(LogLevel.INFO))
             pipeline.addLast(AMQPChannelHandler(false,

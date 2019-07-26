@@ -83,6 +83,7 @@ class FilterServiceTest {
         assertEquals(true, filterService.active)
         // ready so packet forwarded
         val goodMessage = rigorousMock<ReceivedMessage>().also {
+            doNothing().whenever(it).release()
             doNothing().whenever(it).complete(true) // ACK was called
             doReturn(DUMMY_BANK_B_NAME.toString()).whenever(it).sourceLegalName
             doReturn(inboxTopic).whenever(it).topic
@@ -201,6 +202,7 @@ class FilterServiceTest {
 
         // Valid message sent and completed
         val goodMessage = rigorousMock<ReceivedMessage>().also {
+            doNothing().whenever(it).release()
             doNothing().whenever(it).complete(true) // ACK was called
             doReturn(DUMMY_BANK_B_NAME.toString()).whenever(it).sourceLegalName
             doReturn(inboxTopic).whenever(it).topic

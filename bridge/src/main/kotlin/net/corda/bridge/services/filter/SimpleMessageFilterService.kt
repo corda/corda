@@ -107,6 +107,7 @@ class SimpleMessageFilterService(val conf: FirewallConfiguration,
             }
             log.debug { "Sent message [${msgId}] in ${timeToSendMillis}ms." }
             auditService.packetAcceptedEvent(inboundMessage, RoutingDirection.INBOUND)
+            inboundMessage.release()
         } catch (ex: Exception) {
             log.error("Error trying to forward message", ex)
             inboundMessage.complete(false) // delivery failure. NAK back to source and await re-delivery attempts

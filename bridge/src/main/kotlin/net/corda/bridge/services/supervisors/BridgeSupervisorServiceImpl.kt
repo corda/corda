@@ -2,9 +2,11 @@ package net.corda.bridge.services.supervisors
 
 import net.corda.bridge.services.api.*
 import net.corda.bridge.services.artemis.BridgeArtemisConnectionServiceImpl
+import net.corda.bridge.services.config.BridgeConfigHelper.BRIDGE_NAME
 import net.corda.bridge.services.filter.SimpleMessageFilterService
 import net.corda.bridge.services.ha.ExternalMasterElectionService
 import net.corda.bridge.services.ha.SingleInstanceMasterService
+import net.corda.bridge.services.receiver.CryptoServiceSigningService
 import net.corda.bridge.services.receiver.InProcessBridgeReceiverService
 import net.corda.bridge.services.receiver.TunnelingBridgeReceiverService
 import net.corda.bridge.services.sender.DirectBridgeSenderService
@@ -22,7 +24,7 @@ class BridgeSupervisorServiceImpl(conf: FirewallConfiguration,
                                   private val stateHelper: ServiceStateHelper = ServiceStateHelper(log)) : BridgeSupervisorService, ServiceStateSupport by stateHelper {
     companion object {
         private val log = contextLogger()
-        private val consoleLogger : Logger = LoggerFactory.getLogger("BasicInfo")
+        private val consoleLogger: Logger = LoggerFactory.getLogger("BasicInfo")
     }
 
     private val haService: BridgeMasterService
@@ -32,21 +34,35 @@ class BridgeSupervisorServiceImpl(conf: FirewallConfiguration,
     private val filterService: IncomingMessageFilterService
     private val statusFollower: ServiceStateCombiner
     private var statusSubscriber: Subscription? = null
+    private val signingService: TLSSigningService
+    private val tunnelingSigningService: TLSSigningService
+    private val artemisSigningService: TLSSigningService
 
     init {
-        artemisService = BridgeArtemisConnectionServiceImpl(conf, maxMessageSize, auditService)
+        val artemisSSlConfiguration = conf.outboundConfig?.artemisSSLConfiguration ?: conf.publicSSLConfiguration
+        // The fact that we pass BRIDGE_NAME has no effect as Crypto service obtained will only be used to sign data and never to create new key pairs
+        val legalName = BRIDGE_NAME
+        artemisSigningService = CryptoServiceSigningService(conf.artemisCryptoServiceConfig, legalName, artemisSSlConfiguration, conf.sslHandshakeTimeout, auditService, name = "Artemis")
+
+        artemisService = BridgeArtemisConnectionServiceImpl(artemisSigningService, conf, maxMessageSize, auditService)
         haService = if (conf.haConfig == null) {
             SingleInstanceMasterService(conf, auditService)
         } else {
             ExternalMasterElectionService(conf, auditService, artemisService)
         }
-        senderService = DirectBridgeSenderService(conf, maxMessageSize, auditService, haService, artemisService)
+
+        // TODO: get keystore public data from crypto service? or from config?
+        signingService = CryptoServiceSigningService(conf.p2pTlsSigningCryptoServiceConfig, legalName, conf.publicSSLConfiguration, conf.sslHandshakeTimeout, auditService, name = "P2P")
+
+        val controlLinkSSLConfiguration = conf.bridgeInnerConfig?.tunnelSSLConfiguration ?: conf.publicSSLConfiguration
+        tunnelingSigningService = CryptoServiceSigningService(conf.tunnelingCryptoServiceConfig, legalName, controlLinkSSLConfiguration, auditService = auditService, name = "Tunnel")
+        senderService = DirectBridgeSenderService(conf, maxMessageSize, signingService, auditService, haService, artemisService)
         filterService = SimpleMessageFilterService(conf, auditService, artemisService, senderService)
         receiverService = if (conf.firewallMode == FirewallMode.SenderReceiver) {
-            InProcessBridgeReceiverService(conf, auditService, haService, inProcessAMQPListenerService!!, filterService)
+            InProcessBridgeReceiverService(maxMessageSize, auditService, haService, signingService, inProcessAMQPListenerService!!, filterService)
         } else {
             require(inProcessAMQPListenerService == null) { "Should not have an in process instance of the AMQPListenerService" }
-            TunnelingBridgeReceiverService(conf, auditService, haService, filterService)
+            TunnelingBridgeReceiverService(conf, maxMessageSize, auditService, haService, tunnelingSigningService, signingService, filterService)
         }
         statusFollower = ServiceStateCombiner(listOf(haService, senderService, receiverService, filterService))
         activeChange.subscribe({
@@ -63,6 +79,9 @@ class BridgeSupervisorServiceImpl(conf: FirewallConfiguration,
         receiverService.start()
         filterService.start()
         haService.start()
+        signingService.start()
+        tunnelingSigningService.start()
+        artemisSigningService.start()
     }
 
     override fun stop() {
@@ -74,5 +93,8 @@ class BridgeSupervisorServiceImpl(conf: FirewallConfiguration,
         artemisService.stop()
         statusSubscriber?.unsubscribe()
         statusSubscriber = null
+        signingService.stop()
+        tunnelingSigningService.stop()
+        artemisSigningService.stop()
     }
 }

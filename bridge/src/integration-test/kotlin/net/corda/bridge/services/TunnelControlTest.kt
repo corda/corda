@@ -5,12 +5,14 @@ import net.corda.bridge.*
 import net.corda.bridge.services.api.BridgeAMQPListenerService
 import net.corda.bridge.services.api.IncomingMessageFilterService
 import net.corda.bridge.services.ha.SingleInstanceMasterService
+import net.corda.bridge.services.receiver.CryptoServiceSigningService
 import net.corda.bridge.services.receiver.FloatControlListenerService
 import net.corda.bridge.services.receiver.TunnelingBridgeReceiverService
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_PREFIX
+import net.corda.nodeapi.internal.config.CertificateStore
 import net.corda.nodeapi.internal.protonwrapper.messages.ReceivedMessage
 import net.corda.nodeapi.internal.protonwrapper.netty.ConnectionChange
 import net.corda.testing.core.DUMMY_BANK_A_NAME
@@ -45,7 +47,7 @@ class TunnelControlTest {
         override val running: Boolean
             get() = _running
 
-        override fun provisionKeysAndActivate(keyStoreBytes: ByteArray, keyStorePassword: CharArray, keyStorePrivateKeyPassword: CharArray, trustStoreBytes: ByteArray, trustStorePassword: CharArray) {
+        override fun provisionKeysAndActivate(keyStore: CertificateStore, trustStore: CertificateStore, maxMessageSize: Int) {
             _running = true
         }
 
@@ -66,8 +68,14 @@ class TunnelControlTest {
         bridgeConfig.createBridgeKeyStores(DUMMY_BANK_A_NAME)
         val bridgeAuditService = TestAuditService()
         val haService = SingleInstanceMasterService(bridgeConfig, bridgeAuditService)
+
+        val controlLinkSSLConfiguration = bridgeConfig.bridgeInnerConfig?.tunnelSSLConfiguration ?: bridgeConfig.publicSSLConfiguration
+        val signingService = CryptoServiceSigningService(bridgeConfig.p2pTlsSigningCryptoServiceConfig, DUMMY_BANK_A_NAME, bridgeConfig.publicSSLConfiguration, bridgeConfig.sslHandshakeTimeout, bridgeAuditService, name = "P2P")
+        val tunnelingSigningService = CryptoServiceSigningService(bridgeConfig.tunnelingCryptoServiceConfig, DUMMY_BANK_A_NAME, controlLinkSSLConfiguration, auditService = bridgeAuditService, name = "Tunnel")
         val filterService = createPartialMock<TestIncomingMessageFilterService>()
-        val bridgeProxiedReceiverService = TunnelingBridgeReceiverService(bridgeConfig, bridgeAuditService, haService, filterService)
+        signingService.start()
+        tunnelingSigningService.start()
+        val bridgeProxiedReceiverService = TunnelingBridgeReceiverService(bridgeConfig, maxMessageSize, bridgeAuditService, haService, tunnelingSigningService, signingService, filterService)
         val bridgeStateFollower = bridgeProxiedReceiverService.activeChange.toBlocking().iterator
         bridgeProxiedReceiverService.start()
         assertEquals(false, bridgeStateFollower.next())
@@ -82,7 +90,6 @@ class TunnelControlTest {
         val floatConfigResource = "/net/corda/bridge/withfloat/float/firewall.conf"
         val floatPath = tempFolder.root.toPath() / "float"
         floatPath.createDirectories()
-        createNetworkParams(floatPath)
         val floatConfig = createAndLoadConfigFromResource(floatPath, floatConfigResource)
         floatConfig.createBridgeKeyStores(DUMMY_BANK_A_NAME)
 
@@ -91,7 +98,7 @@ class TunnelControlTest {
             doReturn(Observable.never<ConnectionChange>()).whenever(it).onConnection
             doReturn(Observable.never<ReceivedMessage>()).whenever(it).onReceive
         }
-        val floatControlListener = FloatControlListenerService(floatConfig, maxMessageSize, floatAuditService, amqpListenerService)
+        val floatControlListener = FloatControlListenerService(floatConfig, floatAuditService, amqpListenerService)
         val floatStateFollower = floatControlListener.activeChange.toBlocking().iterator
         assertEquals(false, floatStateFollower.next())
         assertEquals(false, floatControlListener.active)
@@ -100,7 +107,7 @@ class TunnelControlTest {
         floatAuditService.start()
         assertEquals(false, floatControlListener.active)
         verify(amqpListenerService, times(0)).wipeKeysAndDeactivate()
-        verify(amqpListenerService, times(0)).provisionKeysAndActivate(any(), any(), any(), any(), any())
+        verify(amqpListenerService, times(0)).provisionKeysAndActivate(any(), any(), any())
         assertEquals(false, serverListening("localhost", 12005))
         amqpListenerService.start()
         assertEquals(true, floatStateFollower.next())
@@ -110,14 +117,14 @@ class TunnelControlTest {
         assertEquals(true, bridgeStateFollower.next())
         assertEquals(true, bridgeProxiedReceiverService.active)
         verify(amqpListenerService, times(0)).wipeKeysAndDeactivate()
-        verify(amqpListenerService, times(1)).provisionKeysAndActivate(any(), any(), any(), any(), any())
+        verify(amqpListenerService, times(1)).provisionKeysAndActivate(any(), any(), any())
 
         haService.stop()
         assertEquals(false, bridgeStateFollower.next())
         assertEquals(false, bridgeProxiedReceiverService.active)
         assertEquals(true, floatControlListener.active)
         verify(amqpListenerService, times(1)).wipeKeysAndDeactivate()
-        verify(amqpListenerService, times(1)).provisionKeysAndActivate(any(), any(), any(), any(), any())
+        verify(amqpListenerService, times(1)).provisionKeysAndActivate(any(), any(), any())
         assertEquals(true, serverListening("localhost", 12005))
 
         haService.start()
@@ -125,7 +132,7 @@ class TunnelControlTest {
         assertEquals(true, bridgeProxiedReceiverService.active)
         assertEquals(true, floatControlListener.active)
         verify(amqpListenerService, times(1)).wipeKeysAndDeactivate()
-        verify(amqpListenerService, times(2)).provisionKeysAndActivate(any(), any(), any(), any(), any())
+        verify(amqpListenerService, times(2)).provisionKeysAndActivate(any(), any(), any())
 
         floatControlListener.stop()
         assertEquals(false, floatControlListener.active)
@@ -152,7 +159,14 @@ class TunnelControlTest {
                 Unit
             }.whenever(it).sendMessageToLocalBroker(any())
         }
-        val bridgeProxiedReceiverService = TunnelingBridgeReceiverService(bridgeConfig, bridgeAuditService, haService, filterService)
+        val signingService = CryptoServiceSigningService(bridgeConfig.p2pTlsSigningCryptoServiceConfig, DUMMY_BANK_A_NAME, bridgeConfig.publicSSLConfiguration, bridgeConfig.sslHandshakeTimeout, bridgeAuditService, name = "P2P")
+
+        val controlLinkSSLConfiguration = bridgeConfig.bridgeInnerConfig?.tunnelSSLConfiguration ?: bridgeConfig.publicSSLConfiguration
+        val tunnelingSigningService = CryptoServiceSigningService(bridgeConfig.tunnelingCryptoServiceConfig, DUMMY_BANK_A_NAME, controlLinkSSLConfiguration, auditService = bridgeAuditService, name = "Tunnel")
+        signingService.start()
+        tunnelingSigningService.start()
+
+        val bridgeProxiedReceiverService = TunnelingBridgeReceiverService(bridgeConfig, maxMessageSize, bridgeAuditService, haService, tunnelingSigningService, signingService, filterService)
         val bridgeStateFollower = bridgeProxiedReceiverService.activeChange.toBlocking().iterator
         bridgeProxiedReceiverService.start()
         bridgeAuditService.start()
@@ -163,7 +177,6 @@ class TunnelControlTest {
         val floatConfigResource = "/net/corda/bridge/withfloat/float/firewall.conf"
         val floatPath = tempFolder.root.toPath() / "float"
         floatPath.createDirectories()
-        createNetworkParams(floatPath)
         val floatConfig = createAndLoadConfigFromResource(floatPath, floatConfigResource)
         floatConfig.createBridgeKeyStores(DUMMY_BANK_A_NAME)
 
@@ -173,7 +186,7 @@ class TunnelControlTest {
             doReturn(Observable.never<ConnectionChange>()).whenever(it).onConnection
             doReturn(receiveObserver).whenever(it).onReceive
         }
-        val floatControlListener = FloatControlListenerService(floatConfig, maxMessageSize, floatAuditService, amqpListenerService)
+        val floatControlListener = FloatControlListenerService(floatConfig, floatAuditService, amqpListenerService)
         floatControlListener.start()
         floatAuditService.start()
         amqpListenerService.start()
@@ -184,6 +197,7 @@ class TunnelControlTest {
         val testPayload = ByteArray(1) { 0x11 }
         val receivedMessage = rigorousMock<ReceivedMessage>().also {
             doNothing().whenever(it).complete(true) // ACK was called
+            doNothing().whenever(it).release()
             doReturn(DUMMY_BANK_B_NAME.toString()).whenever(it).sourceLegalName
             doReturn(NetworkHostAndPort("localhost", 12345)).whenever(it).sourceLink
             doReturn(inboxTopic).whenever(it).topic
@@ -207,6 +221,7 @@ class TunnelControlTest {
                 ackLatch.countDown()
                 Unit
             }.whenever(it).complete(false) // NAK was called
+            doNothing().whenever(it).release()
             doReturn(DUMMY_BANK_B_NAME.toString()).whenever(it).sourceLegalName
             doReturn(NetworkHostAndPort("localhost", 12345)).whenever(it).sourceLink
             doReturn(inboxTopic).whenever(it).topic
@@ -231,6 +246,7 @@ class TunnelControlTest {
                 ackLatch2.countDown()
                 Unit
             }.whenever(it).complete(false) // NAK was called
+            doNothing().whenever(it).release()
             doReturn(DUMMY_BANK_B_NAME.toString()).whenever(it).sourceLegalName
             doReturn(NetworkHostAndPort("localhost", 12345)).whenever(it).sourceLink
             doReturn(inboxTopic).whenever(it).topic
@@ -247,5 +263,4 @@ class TunnelControlTest {
 
         floatControlListener.stop()
     }
-
 }
