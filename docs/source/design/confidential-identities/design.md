@@ -206,7 +206,7 @@ there will be a set of flows for:
 
 1. Deprecate `freshKeyAndCert` methods because they are not required any
    more. Instead, CorDapp developers will use a new method which returns
-   a `SignedData<OwnershipClaim>`.
+   a `SignedKeyForAccount`.
 
 2. Add a new API called `fun freshKey(externalID: UUID): PublicKey`
    which creates a new key pair, adds an entry to the `PublicKeyHashToExternalId`
@@ -246,9 +246,10 @@ behaviour whilst supporting a new API for key to party mappings:
 1. Add a new method to `IdentityService` (and implementation in
    `PersistentIdentityService` and `InMemoryIdentityService`).
 
-        fun registerKeyToParty(key: PublicKey, party: Party) : Boolean
+        fun registerKeyToParty(key: PublicKey, party: Party)
 
-   This method only updates the `keyToName` mapping. If a mapping has    already been stored for the same `Party` then the method call is idempotent.
+   This method only updates the `keyToName` mapping. If a mapping has already 
+   been stored for the same `Party` then the method call is idempotent.
    If it turns out that another x500 name has been stored for the same key
    then the method will throw an exception for now. In the future, it might
    be the case that client-side generated key pairs can moved from one node
@@ -313,13 +314,20 @@ Keys with mappings to an x500name can be rendered used the x500 name.
 
 #### Flows
 
+A new security protocol will be implemented to within the new flows. We introduce
+a ``ChallengeResponse`` type which is an alias for ``SecureHash.SHA256``. This will
+be randomly generated and used to prevent against replay attacks.
+
 Three sets of flows will be added:
 
 1. `RequestKeyFlow` where a `Party` and an optional externalId `UUID` are
-   specified as parameters. An optional `PublicKey` parameter may be provided if we we wish to store a mapping between a known `PublicKey` and the `Party`. The `Party` is then asked to generate a new
-   key pair, then map the public key to it's own `Party` object. This mapping
-   will then be stored locally and shared with the requesting node, which
-   then verifies and stores the mapping.
+   specified as parameters. An optional `PublicKey` parameter may be provided if 
+   we we wish to store a mapping between a known `PublicKey` and the `Party`. The
+   initiating party generates a ``ChallengeResponse`` and sends this to the counter-party
+   who then generates a new key pair. The ``ChallengeResonse`` is signed over using
+   the new ``PublicKey`` and sent back to the initiating party. The ``ChallengeResponse``
+   and signature are verified before registering the mapping between ``PublicKey`` and the
+   counter-party's ``CordaX500NAme`` in the requesting parties``IdentityService``.
 2. `ShareKeyFlow` which implements the above but in reverse. This
    flow requests a new key pair and key to `Party` mapping, stores the mapping
    then shares it with the specified `Party`s.
@@ -347,3 +355,8 @@ Three sets of flows will be added:
 
 The current flows can be left as they are. However my view is that they
 should be deprecated.
+
+#### New flow security protocol
+<p align="center">
+<a href="https://ibb.co/zNbMBTs"><img src="https://i.ibb.co/25P9C1q/ci-flow-security-protocol.png" alt="ci-flow-security-protocol" border="0"></a>
+</p>
