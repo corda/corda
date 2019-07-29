@@ -50,7 +50,7 @@ MySQL JDBC Driver
 +++++++++++++++++
 
 Each worker node requires a MySQL JDBC driver to be placed in the ``drivers`` directory to be able to communicate with the Percona XtraDB Cluster.
-The official driver can be obtained from Maven or the `MySQL Connector/J download page <https://dev.mysql.com/doc/connector-j/8.0/en/connector-j-installing.html>`_.
+Version 6.0.6 of the MySQL JDBC Type 4 driver, also known as mysql-connector-java, is supported by Corda Enterprise. The official driver can be obtained from `Maven <https://search.maven.org/artifact/mysql/mysql-connector-java/6.0.6/jar>`_.
 
 Next Steps
 ++++++++++
