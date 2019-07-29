@@ -325,7 +325,8 @@ Three sets of flows will be added:
    we we wish to store a mapping between a known `PublicKey` and the `Party`. The
    initiating party generates a ``ChallengeResponse`` and sends this to the counter-party
    who then generates a new key pair. The ``ChallengeResonse`` is signed over using
-   the new ``PublicKey`` and sent back to the initiating party. The ``ChallengeResponse``
+   the new ``PublicKey`` and sent back to the initiating party in the form of a 
+   ``SignedKeyForAccount`` object. The ``ChallengeResponse``
    and signature are verified before registering the mapping between ``PublicKey`` and the
    counter-party's ``CordaX500NAme`` in the requesting parties``IdentityService``.
 2. `ShareKeyFlow` which implements the above but in reverse. This
@@ -342,8 +343,8 @@ Three sets of flows will be added:
        keyed with `AnonymousParty`s. The initiator cannot create a signed
        assertion that the mapping is correct. Instead, the responder must
        contact each `Party` individually and ask them for a signed assertion.
-    4. The Responder asks each `Party` for a `SignedData<OwnershipClaim>`. The responders
-       will return a `SignedData<OwnershipClaim>` if they own the key, otherwise, they'll
+    4. The Responder asks each `Party` for a `SignedKeyForAccount`. The responders
+       will return a `SignedDataKeyForAccount` if they own the key, otherwise, they'll
        return a `null`.
     5. The key difference to the old `SyncIdentitiesFlow` is that when we
        used certificates, the initiator of the flow could just send the
