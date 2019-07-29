@@ -19,6 +19,7 @@ import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.internal.div
 import net.corda.core.internal.errors.AddressBindingException
 import net.corda.core.internal.getJavaUpdateVersion
+import net.corda.core.internal.isRegularFile
 import net.corda.core.internal.notary.NotaryService
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.RPCOps
@@ -29,6 +30,9 @@ import net.corda.core.serialization.internal.SerializationEnvironment
 import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
+import net.corda.djvm.source.ApiSource
+import net.corda.djvm.source.BootstrapClassLoader
+import net.corda.djvm.source.EmptyApi
 import net.corda.node.CordaClock
 import net.corda.node.SimpleClock
 import net.corda.node.VersionInfo
@@ -106,7 +110,8 @@ open class Node(configuration: NodeConfiguration,
         versionInfo,
         flowManager,
         // Under normal (non-test execution) it will always be "1"
-        AffinityExecutor.ServiceAffinityExecutor("Node thread-${sameVmNodeCounter.incrementAndGet()}", 1)
+        AffinityExecutor.ServiceAffinityExecutor("Node thread-${sameVmNodeCounter.incrementAndGet()}", 1),
+        bootstrapSource = createBootstrapSource(configuration)
 ) {
 
     override fun createStartedNode(nodeInfo: NodeInfo, rpcOps: CordaRPCOps, notaryService: NotaryService?): NodeInfo =
@@ -169,6 +174,17 @@ open class Node(configuration: NodeConfiguration,
                 }
             } catch (e: NumberFormatException) { // custom JDKs may not have the update version (e.g. 1.8.0-adoptopenjdk)
                 false
+            }
+        }
+
+        fun createBootstrapSource(config: NodeConfiguration): ApiSource {
+            val bootstrapSource = config.baseDirectory.resolve("djvm").resolve("deterministic-rt.jar")
+            return if (bootstrapSource.isRegularFile()) {
+                staticLog.info("Deterministic Runtime: {}", bootstrapSource)
+                BootstrapClassLoader(bootstrapSource)
+            } else {
+                staticLog.warn("NO DETERMINISTIC RUNTIME FOUND - will use host JVM instead.")
+                EmptyApi
             }
         }
     }

@@ -6,12 +6,21 @@ import com.typesafe.config.*;
 import sun.misc.Signal;
 
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.stream.Stream;
 
+import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
+
 public class CordaCaplet extends Capsule {
+    private static final String DETERMINISTIC_RT = "deterministic-rt.jar";
+    private static final String DJVM_DIR ="djvm";
+    private static final String DETERMINISTIC_RT_RESOURCE = "/" + DJVM_DIR + "/" + DETERMINISTIC_RT;
 
     private Config nodeConfig = null;
     private String baseDir = null;
@@ -79,10 +88,57 @@ public class CordaCaplet extends Capsule {
         return null;
     }
 
+    private void installDJVM() {
+        Path djvmDir = Paths.get(baseDir, DJVM_DIR);
+        if (!djvmDir.toFile().mkdir() && !Files.isDirectory(djvmDir)) {
+            log(LOG_VERBOSE, "DJVM directory could not be created");
+        } else {
+            Path deterministicRt = djvmDir.resolve(DETERMINISTIC_RT);
+            Path sourceRt = appDir().resolve(DJVM_DIR).resolve(DETERMINISTIC_RT);
+            if (Files.isRegularFile(sourceRt)) {
+                try {
+                    // Forcibly reinstall the deterministic APIs.
+                    Files.deleteIfExists(deterministicRt);
+                    Files.createSymbolicLink(deterministicRt, sourceRt);
+                } catch (UnsupportedOperationException | IOException e) {
+                    copyFile(sourceRt, deterministicRt);
+                }
+            } else {
+                URL rtURL = getClass().getResource(DETERMINISTIC_RT_RESOURCE);
+                if (rtURL == null) {
+                    log(LOG_VERBOSE, DETERMINISTIC_RT_RESOURCE + " missing from Corda capsule");
+                } else {
+                    copyResource(rtURL, deterministicRt);
+                }
+            }
+        }
+    }
+
+    private void copyFile(Path source, Path target) {
+        try {
+            Files.copy(source, target, REPLACE_EXISTING);
+        } catch (IOException e) {
+            //noinspection ResultOfMethodCallIgnored
+            target.toFile().delete();
+            log(LOG_VERBOSE, e);
+        }
+    }
+
+    private void copyResource(URL source, Path target) {
+        try (InputStream input = source.openStream()) {
+            Files.copy(input, target, REPLACE_EXISTING);
+        } catch (IOException e) {
+            //noinspection ResultOfMethodCallIgnored
+            target.toFile().delete();
+            log(LOG_VERBOSE, e);
+        }
+    }
+
     @Override
     protected ProcessBuilder prelaunch(List<String> jvmArgs, List<String> args) {
         checkJavaVersion();
         nodeConfig = parseConfigFile(args);
+        installDJVM();
         return super.prelaunch(jvmArgs, args);
     }
 

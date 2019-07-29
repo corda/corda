@@ -3,6 +3,7 @@ package net.corda.node.internal
 import net.corda.core.contracts.*
 import net.corda.core.cordapp.CordappProvider
 import net.corda.core.internal.SerializedStateAndRef
+import net.corda.core.internal.Verifier
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.AttachmentStorage
@@ -14,13 +15,19 @@ import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.NotaryChangeWireTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.transactions.WireTransaction.Companion.resolveStateRefBinaryComponent
+import net.corda.djvm.analysis.AnalysisConfiguration
+import net.corda.djvm.analysis.Whitelist
+import net.corda.djvm.source.ApiSource
+import net.corda.djvm.source.UserPathSource
+import java.net.URLClassLoader
 
 data class ServicesForResolutionImpl(
         override val identityService: IdentityService,
         override val attachments: AttachmentStorage,
         override val cordappProvider: CordappProvider,
         override val networkParametersService: NetworkParametersService,
-        private val validatedTransactions: TransactionStorage
+        private val validatedTransactions: TransactionStorage,
+        private val djvmBootstrapSource: ApiSource
 ) : ServicesForResolution {
     override val networkParameters: NetworkParameters get() = networkParametersService.lookup(networkParametersService.currentHash) ?:
             throw IllegalArgumentException("No current parameters in network parameters storage")
@@ -74,6 +81,16 @@ data class ServicesForResolutionImpl(
     override fun specialise(ltx: LedgerTransaction): LedgerTransaction {
         // Specialise the LedgerTransaction here so that
         // contracts are verified inside the DJVM!
-        return ltx
+        return ltx.specialise { tx, cl ->
+            (cl as? URLClassLoader)?.run { DeterministicVerifier(tx, cl, createSandbox(cl)) } ?: Verifier(tx, cl)
+        }
+    }
+
+    private fun createSandbox(classLoader: URLClassLoader): AnalysisConfiguration {
+        return AnalysisConfiguration.createRoot(
+            userSource = UserPathSource(classLoader.urLs),
+            whitelist = Whitelist.MINIMAL,
+            bootstrapSource = djvmBootstrapSource
+        )
     }
 }

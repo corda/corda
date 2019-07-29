@@ -38,6 +38,10 @@ configurations {
     
     slowIntegrationTestCompile.extendsFrom testCompile
     slowIntegrationTestRuntimeOnly.extendsFrom testRuntimeOnly
+
+    jdkRt.resolutionStrategy {
+        cacheChangingModulesFor 0, 'seconds'
+    }
 }
 
 sourceSets {
@@ -155,6 +159,10 @@ dependencies {
 
     // TypeSafe Config: for simple and human friendly config files.
     compile "com.typesafe:config:$typesafe_config_version"
+
+    // Sandbox for deterministic contract verification
+    compile "net.corda:corda-djvm:$djvm_version"
+    jdkRt "net.corda:deterministic-rt:latest.integration"
 
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
     testImplementation "junit:junit:$junit_version"

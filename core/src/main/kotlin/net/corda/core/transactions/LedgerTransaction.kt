@@ -140,7 +140,9 @@ private constructor(
      */
     @Throws(TransactionVerificationException::class)
     fun verify() {
-        internalPrepareVerify(emptyList()).verify()
+        internalPrepareVerify(emptyList()).use { v ->
+            v.verify()
+        }
     }
 
     /**
