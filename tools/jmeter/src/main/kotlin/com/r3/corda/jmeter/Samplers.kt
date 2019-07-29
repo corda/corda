@@ -279,3 +279,78 @@ class CashPaySampler : AbstractSampler() {
     override val additionalArgs: Set<Argument>
         get() = setOf(notary, otherParty, numberOfStatesPerTx, numberOfChangeStatesPerTx, anonymousIdentities)
 }
+
+/**
+ * A sampler that issues cash once per sampler, and then generates a transaction to pay 1 dollar "numberOfStatesPerTx" times
+ * to a specified party per sample, thus invoking the notary and the payee via P2P. After a specified number of
+ * transactions, it will pay another party to force this to resolve all transaction that have happened in the meantime.
+ *
+ * This allows us to test performance of transaction resolution, i.e. requesting a configurable number
+ * of transactions from the backchain.
+ */
+class TxResolutionSampler : AbstractSampler() {
+    companion object JMeterProperties {
+        val counterParty1 = Argument("counterParty1Name", "", "<meta>", "The X500 name of the payee for the bulk of the txs.")
+        val counterParty2 = Argument("counterParty2Name", "", "<meta>", "The X500 name of the payee having to resolve the tx chain.")
+        val numberOfStatesPerTx = Argument("numberOfStatesPerTx", "1", "<meta>", "The number of payment states per transaction.")
+        val numberOfChangeStatesPerTx = Argument("numberOfChangeStatesPerTx", "1", "<meta>", "The number of change states per transaction.")
+        val anonymousIdentities = Argument("anonymousIdentities", "false", "<meta>", "True to use anonymous identities and false (or anything else) to use well known identities.")
+        val txToResolve = Argument("numberOfTxToResolve", "1000", "<meta>", "The number of payments flows to run with counterparty 1 before paying counterparty 2.")
+    }
+
+    lateinit var mainCounterParty: Party
+    lateinit var otherCounterParty: Party
+    var numberOfStatesPerTxCount: Int = 1
+    var numberOfChangeStatesPerTxCount: Int = 1
+    var useAnonymousIdentities: Boolean = true
+    var numberOfTxToResolve = 1000
+    private var inputStartIndex = 0
+    private var inputEndIndex = 0
+
+    private var currentCount = 0
+
+    override fun setupTest(rpcProxy: CordaRPCOps, testContext: JavaSamplerContext) {
+        getNotaryIdentity(rpcProxy, testContext)
+        mainCounterParty = getIdentity(rpcProxy, testContext, counterParty1)
+        otherCounterParty = getIdentity(rpcProxy, testContext, counterParty2)
+        if (otherCounterParty == mainCounterParty) {
+            throw IllegalArgumentException("This sampler requires two distinct counterparties")
+        }
+        numberOfStatesPerTxCount = testContext.getParameter(numberOfStatesPerTx.name, numberOfStatesPerTx.value).toInt()
+        numberOfChangeStatesPerTxCount = testContext.getParameter(numberOfChangeStatesPerTx.name, numberOfChangeStatesPerTx.value).toInt()
+        numberOfTxToResolve = testContext.getParameter(txToResolve.name, txToResolve.value).toInt()
+        useAnonymousIdentities = testContext.getParameter(anonymousIdentities.name, anonymousIdentities.value).toBoolean()
+
+        // Now issue lots of USD
+        val amount = 1_000_000_000.DOLLARS
+        val flowInvoke = FlowInvoke<CashIssueFlow>(CashIssueFlow::class.java, arrayOf(amount, OpaqueBytes.of(1), notaryIdentity))
+        val handle = rpcProxy.startFlowDynamic(flowInvoke.flowLogicClass, *(flowInvoke.args))
+        flowResult = handle.returnValue.getOrThrow()
+    }
+
+    override fun createFlowInvoke(rpcProxy: CordaRPCOps, testContext: JavaSamplerContext): FlowInvoke<*> {
+        // Change is always the latter outputs
+        val txId = (flowResult as AbstractCashFlow.Result).id
+        val inputs = (inputStartIndex..inputEndIndex).map { StateRef(txId, it) }.toSet()
+        val amount = 1.DOLLARS
+        inputStartIndex = numberOfStatesPerTxCount
+        inputEndIndex = inputStartIndex + (numberOfChangeStatesPerTxCount - 1)
+        return if (++currentCount % numberOfTxToResolve == 0) {
+            FlowInvoke<CashPaymentFromKnownStatesFlow>(CashPaymentFromKnownStatesFlow::class.java, arrayOf(inputs, numberOfStatesPerTxCount, numberOfChangeStatesPerTxCount, amount, otherCounterParty, useAnonymousIdentities))
+        } else {
+            FlowInvoke<CashPaymentFromKnownStatesFlow>(CashPaymentFromKnownStatesFlow::class.java, arrayOf(inputs, numberOfStatesPerTxCount, numberOfChangeStatesPerTxCount, amount, mainCounterParty, useAnonymousIdentities))
+        }
+    }
+
+    override fun additionalFlowResponseProcessing(context: JavaSamplerContext, sample: SampleResult, response: Any?) {
+        if (currentCount % numberOfTxToResolve == 0) {
+            sample.sampleLabel += " Tx Resolution"
+        }
+    }
+
+    override fun teardownTest(rpcProxy: CordaRPCOps, testContext: JavaSamplerContext) {
+    }
+
+    override val additionalArgs: Set<Argument>
+        get() = setOf(notary, counterParty1, counterParty2, numberOfStatesPerTx, numberOfChangeStatesPerTx, anonymousIdentities, txToResolve)
+}
