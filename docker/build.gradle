@@ -61,6 +61,7 @@ task buildDockerFolder(dependsOn: [":node:capsule:buildCordaJAR", shadowJar]) {
             from "src/bash/generate-config.sh"
             from "src/docker/DockerfileAL"
             from "src/docker/Dockerfile"
+            from "src/docker/Dockerfile11"
             rename(cordaJar.name, "corda.jar")
             rename(shadowJar.archivePath.name, "config-exporter.jar")
         }
@@ -69,13 +70,19 @@ task buildDockerFolder(dependsOn: [":node:capsule:buildCordaJAR", shadowJar]) {
 
 final String runTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
 final String suffix = project.version.toString().toLowerCase().contains("snapshot") ?  runTime : "RELEASE"
-final zuluBuildTags = ["corda/corda-zulu-${project.version.toString().toLowerCase()}:${suffix}", "corda/corda-zulu-${project.version.toString().toLowerCase()}:latest"]
-final correttoBuildTags = ["corda/corda-corretto-${project.version.toString().toLowerCase()}:${suffix}", "corda/corda-corretto-${project.version.toString().toLowerCase()}:latest"]
+final zuluBuildTags = ["corda/corda-zulu-java${JavaVersion.current()}-${project.version.toString().toLowerCase()}:${suffix}", "corda/corda-zulu-java${JavaVersion.current()}-${project.version.toString().toLowerCase()}:latest"]
+final correttoBuildTags = ["corda/corda-corretto-java${JavaVersion.current()}-${project.version.toString().toLowerCase()}:${suffix}", "corda/corda-corretto-java${JavaVersion.current()}-${project.version.toString().toLowerCase()}:latest"]
 
 task buildOfficialZuluDockerImage(type: DockerBuildImage, dependsOn: [buildDockerFolder]) {
     inputDir = new File(project.buildDir, "docker-temp")
     tags = zuluBuildTags
     dockerFile = new File(new File(project.buildDir, "docker-temp"), "Dockerfile")
+}
+
+task buildOfficialZuluJDK11DockerImage(type: DockerBuildImage, dependsOn: [buildDockerFolder]) {
+    inputDir = new File(project.buildDir, "docker-temp")
+    tags = zuluBuildTags
+    dockerFile = new File(new File(project.buildDir, "docker-temp"), "Dockerfile11")
 }
 
 task buildOfficialCorrettoDockerImage(type: DockerBuildImage, dependsOn: [buildDockerFolder]) {
