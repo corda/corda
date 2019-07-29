@@ -98,7 +98,7 @@ Example configuration file:
       keyStore: "tokenlabel:my-partition"
       password: "my-password"
 
-Note that the Gemalto's JCA provider has to be installed as described in the documentation for the Gemalto Luna.
+Note that the Gemalto's JCA provider (version 7.3) has to be installed as described in the documentation for the Gemalto Luna.
 
 Futurex
 -------
@@ -122,7 +122,7 @@ Example configuration file:
 
 When starting Corda the environment variables ``FXPKCS11_CFG`` and ``FXPKCS11_MODULE`` need to be set as detailed in Futurex's documentation.
 Corda must be running with the system property ``java.library.path`` pointing to the directory that contains the FutureX binaries (e.g. ``libfxjp11.so`` for Linux).
-Additionaly, The JAR containing the Futurex JCA provider must be put on the class path, or copied to the node's ``drivers`` directory.
+Additionaly, The JAR containing the Futurex JCA provider (version 3.1) must be put on the class path, or copied to the node's ``drivers`` directory.
 
 
 Azure KeyVault
