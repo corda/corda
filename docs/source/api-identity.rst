@@ -167,18 +167,17 @@ useful in the event that a node operator hosts a large number of *accounts* and 
 identities would require a large amount of memory.
 
 This version of confidential identities can be used through the three new flows; ``RequestKeyFlow``, ``ShareKeyFlow`` and
-``SyncKeyMappingsFlow`` found in the ``confidential-identities`` repository.
+``SyncKeyMappingsFlow`` found in the ``confidential-identities`` repository. Within the context of these flows, we have a ``SecureHash.SHA256``
+an alias of ``ChallengeResponse``. This is used to prevent replay attacks.
 
-In ``RequestKeyFlow``, the generation of a ``SignedData<OwnershipClaim>`` that contains a newly generated ``PublicKey`` is delegated to the
-counterparty. For example, Alice may issue and pay some cash to a new confidential identity. In order for Bob to resolve the confidential
-identity, he can run ``RequestKeyFlow`` providing the confidential identity's owning key as a parameter, and Alice as the counterparty.
-Alice will generate a ``SignedData<OwnershipClaim>`` containing the ``PublicKey`` for the confidential identity. Alice will send this back
-to Bob, who can extract the data required to register the mapping between the ``PublicKey`` and ``CordaX500Name`` in Bob's
-``IdentityService`` and Bob can then resolve the confidential identity. ``ShareKeyFlow`` works in a similar vein, however, the initiating
-node generates the ``SignedData<OwnershipClaim>`` and shares it with a counterparty.
+In ``RequestKeyFlow``, the generation of a new ``PublicKey`` is requested from the counter-party within the flow. The initiating party creates a
+randomly ``ChallengeResponse`` and provides this to the counter-party. The counter-party generates a new ``PublicKey``, signs the ``ChallengeResponse``
+with the new ``PublicKey`` and sends the signed ``ChallengeResponse`` and ``PublicKey`` back to the requesting party. The signature and ``ChallengeResponse``
+are verified as being correct before storing the mapping of ``PublicKey`` to ``CordaX500Name`` in the ``IdentityService. ``ShareKeyFlow`` works in a
+similar vein, however, the initiating party generates the ``PublicKey`` and ``ChallengeResponse`` and shares it with the counter-party.
 
 The ``SyncKeyMappingsFlow`` works in exactly the same way as the existing ``IdentitySyncFlow`` whereby the unknown confidential identities
-involved in a transaction can be extracted and the identity data for them being registered in the ``IdentityService`` of the node who wishes
-to obtain this information. However, the ``SyncKeyMappingsFlow`` also allows us to sync up the confidential identities between two nodes
-without having to provide a transaction to extract the confidential identities from. The node can directly provide the list of
-``AnonymousParty`` they wish to synchronise with the counterparty.
+involved in a transaction can be extracted and the identity data for them being registered in the ``IdentityService`` of the party who wishes
+to obtain this information. However, the ``SyncKeyMappingsFlow`` also allows us to sync up the confidential identities between two parties
+without having to provide a transaction to extract the confidential identities from. The party can directly provide the list of
+``AnonymousParty`` they wish to synchronise with the counter-party.
