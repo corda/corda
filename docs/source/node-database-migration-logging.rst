@@ -129,7 +129,7 @@ as predefined categories grouping potentially many specific errors.  The followi
 
       databaseInitialisation(id=YrhVTZsn;status="error";error_code="8";message="Could not create the DataSource: Migration failed for change set migration/node-services.changelog-init.xml::1511451595465-14::R3.Corda:      Reason: liquibase.exception.DatabaseException: ERROR: type \"biginteger\" does not exist   Position: 55 [Failed SQL: CREATE TABLE my_schema.node_message_retry (message_id BIGINTEGER NOT NULL, message OID, recipients OID)]")
 
-* 9 - error while performing database migration, such as a conflicting or duplicate change set, for example:
+* 9 - unable to apply a change set due to its incompatibility with the current database state, for example:
 
   .. sourcecode:: none
 
