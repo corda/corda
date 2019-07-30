@@ -2,7 +2,6 @@ package net.corda.nodeapi.internal.crypto
 
 import net.corda.core.CordaOID
 import net.corda.core.crypto.Crypto
-import net.corda.core.crypto.SignatureScheme
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.internal.*
 import net.corda.core.utilities.days
@@ -402,7 +401,6 @@ enum class CertificateType(val keyUsage: KeyUsage, vararg val purposes: KeyPurpo
 
     INTERMEDIATE_CA(
             KeyUsage(KeyUsage.digitalSignature or KeyUsage.keyCertSign or KeyUsage.cRLSign),
-            KeyPurposeId.id_kp_serverAuth,
             KeyPurposeId.id_kp_clientAuth,
             isCA = true,
             role = CertRole.DOORMAN_CA
@@ -410,7 +408,6 @@ enum class CertificateType(val keyUsage: KeyUsage, vararg val purposes: KeyPurpo
 
     NETWORK_MAP(
             KeyUsage(KeyUsage.digitalSignature),
-            KeyPurposeId.id_kp_serverAuth,
             KeyPurposeId.id_kp_clientAuth,
             isCA = false,
             role = CertRole.NETWORK_MAP
@@ -418,7 +415,6 @@ enum class CertificateType(val keyUsage: KeyUsage, vararg val purposes: KeyPurpo
 
     SERVICE_IDENTITY(
             KeyUsage(KeyUsage.digitalSignature),
-            KeyPurposeId.id_kp_serverAuth,
             KeyPurposeId.id_kp_clientAuth,
             isCA = false,
             role = CertRole.SERVICE_IDENTITY
@@ -426,7 +422,6 @@ enum class CertificateType(val keyUsage: KeyUsage, vararg val purposes: KeyPurpo
 
     NODE_CA(
             KeyUsage(KeyUsage.digitalSignature or KeyUsage.keyCertSign or KeyUsage.cRLSign),
-            KeyPurposeId.id_kp_serverAuth,
             KeyPurposeId.id_kp_clientAuth,
             isCA = true,
             role = CertRole.NODE_CA
@@ -443,18 +438,21 @@ enum class CertificateType(val keyUsage: KeyUsage, vararg val purposes: KeyPurpo
     // TODO: Identity certs should have tight name constraints on child certificates
     LEGAL_IDENTITY(
             KeyUsage(KeyUsage.digitalSignature or KeyUsage.keyCertSign),
+            KeyPurposeId.id_kp_clientAuth,
             isCA = true,
             role = CertRole.LEGAL_IDENTITY
     ),
 
     CONFIDENTIAL_LEGAL_IDENTITY(
             KeyUsage(KeyUsage.digitalSignature),
+            KeyPurposeId.id_kp_clientAuth,
             isCA = false,
             role = CertRole.CONFIDENTIAL_LEGAL_IDENTITY
     ),
 
     NETWORK_PARAMETERS(
             KeyUsage(KeyUsage.digitalSignature),
+            KeyPurposeId.id_kp_clientAuth,
             isCA = false,
             role = CertRole.NETWORK_PARAMETERS
     )
