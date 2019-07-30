@@ -839,8 +839,8 @@ Simple notary configuration file
         validating = false
     }
     compatibilityZoneURL : "https://cz.corda.net"
-    enterprise : {
-        tuning : {
+    enterpriseConfiguration = {
+        tuning = {
             rpcThreadPoolSize = 16
             flowThreadPoolSize = 256
         }
