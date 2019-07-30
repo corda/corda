@@ -160,6 +160,18 @@ Example configuration file:
     clientId: "a3d72387-egfa-4bc2-9cba-b0b27c63540e"
     protection: "HARDWARE"
 
+The Azure key vault client side jars need to be placed in the drivers directory. Two jars are required azure-keyvault-1.1.1.jar and adal4j-1.6.3.jar. Both jars must be fat jars, i.e. include all there dependencies.
+The source for the jars are on github at the following locations.
+
+    azure-keyvault-1.1.1.jar can be obtained from https://github.com/Azure/azure-keyvault-java
+
+    adal4j-1.6.3.jar can be obtained from https://github.com/AzureAD/azure-activedirectory-library-for-java
+
+For azure-keyvault-1.1.1.jar you must first switch to the 1.1.1 tag then call mvn package -Prun-shade-plugin. This will generate the fat jar for azure-keyvault.
+For adal4j you need to switch to the 1.6.3 tag. The pom for adal4j does not include the shade plugin (used to build the fat jar). So this needs to be manually copied in, you can use the same plugin definition as in the keyvault pom.
+Then run mvn package to generate the fat jar.
+
+
 Securosys Primus X
 ------------
 
