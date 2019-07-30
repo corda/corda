@@ -1,13 +1,9 @@
 package net.corda.bridge.services.receiver
 
-import net.corda.bridge.services.receiver.FloatControlTopics.FLOAT_CONTROL_TOPIC
-import net.corda.bridge.services.receiver.FloatControlTopics.FLOAT_DATA_TOPIC
-import net.corda.bridge.services.receiver.FloatControlTopics.FLOAT_SIGNING_TOPIC
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.minutes
-import net.corda.nodeapi.internal.protonwrapper.messages.ReceivedMessage
 import java.security.cert.X509CRL
 import java.security.cert.X509Certificate
 import java.time.Duration
@@ -39,7 +35,9 @@ internal class CrlRequest(override val requestId: Long = requestCounter.incremen
 internal class CrlResponse(override val requestId: Long, val crls: Set<X509CRL>) : TunnelControlMessage(), RequestIdContainer
 object DeactivateFloat : TunnelControlMessage()
 
-fun ReceivedMessage.checkTunnelControlTopic() = (topic == FLOAT_CONTROL_TOPIC || topic == FLOAT_SIGNING_TOPIC)
+// Placeholder for messages to facilitate float health check
+internal class HealthCheckFloat(override val requestId: Long, val command: String) : TunnelControlMessage(), RequestIdContainer
+internal class FloatHealthyAck(override val requestId: Long, val healthy: Boolean, val narrative: String) : TunnelControlMessage(), RequestIdContainer
 
 @CordaSerializable
 internal class FloatDataPacket(val topic: String,
@@ -49,5 +47,3 @@ internal class FloatDataPacket(val topic: String,
                                val sourceLink: NetworkHostAndPort,
                                val destinationLegalName: CordaX500Name,
                                val destinationLink: NetworkHostAndPort)
-
-fun ReceivedMessage.checkTunnelDataTopic() = (topic == FLOAT_DATA_TOPIC)
