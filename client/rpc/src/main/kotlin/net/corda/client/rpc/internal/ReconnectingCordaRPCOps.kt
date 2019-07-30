@@ -157,11 +157,13 @@ class ReconnectingCordaRPCOps private constructor(
          */
         @Synchronized
         fun reconnectOnError(e: Throwable) {
+            val previousConnection = currentRPCConnection
             currentState = CurrentState.DIED
             //TODO - handle error cases
             log.error("Reconnecting to ${this.nodeHostAndPorts} due to error: ${e.message}")
             log.debug("", e)
             connect()
+            previousConnection?.close()
         }
 
         @Synchronized
