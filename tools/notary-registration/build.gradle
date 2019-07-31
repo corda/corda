@@ -1,0 +1,46 @@
+apply plugin: 'kotlin'
+apply plugin: 'net.corda.plugins.publish-utils'
+apply plugin: 'com.jfrog.artifactory'
+
+description 'Notary registration tool'
+
+dependencies {
+    compile project(':node')
+    compile project(':tools:cliutils')
+    
+    // Azure KeyVault
+    compile 'com.microsoft.azure:azure-keyvault:1.1.1'
+    compile 'com.microsoft.azure:adal4j:1.6.3'
+
+
+    compile "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
+
+    testCompile(project(':test-utils')) {
+        exclude group: 'org.apache.logging.log4j', module: 'log4j-slf4j-impl'
+    }
+
+    testCompile(project(':test-cli'))
+    testCompile(project(':node-driver'))
+}
+
+processResources {
+    from file("$rootDir/config/dev/log4j2.xml")
+}
+
+jar {
+    from(configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }) {
+        exclude "META-INF/*.SF"
+        exclude "META-INF/*.DSA"
+        exclude "META-INF/*.RSA"
+    }
+    baseName = "notary-registration"
+    manifest {
+        attributes(
+                'Main-Class': 'com.r3.ha.notaryregistration.MainKt'
+        )
+    }
+}
+
+publish {
+    name 'corda-tools-notary-registration'
+}

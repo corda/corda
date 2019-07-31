@@ -230,6 +230,10 @@ class FloatControlListenerService(val conf: FirewallConfiguration,
                             destroyTunnelExternalCrlSourceService()
                             destroyP2pSigningService()
                         }
+                        is HealthCheckFloat -> {
+                            log.info("Received HealthCheckFloat")
+                            confirmFloatHealthy(controlMessage.requestId)
+                        }
                     }
                 }
             }
@@ -238,6 +242,21 @@ class FloatControlListenerService(val conf: FirewallConfiguration,
             }
         }
         receivedMessage.complete(true)
+    }
+
+    private fun confirmFloatHealthy(requestId: Long) {
+        try {
+            val wrappedMessage = FloatHealthyAck(requestId, true, "Float is healthy")
+            val amqpControl = requireNotNull(getAmqpControl())
+            val amqpForwardMessage = amqpControl.createMessage(wrappedMessage.serialize(context = SerializationDefaults.P2P_CONTEXT).bytes,
+                    FLOAT_DATA_TOPIC,
+                    forwardLegalName!!,
+                    forwardAddress!!,
+                    emptyMap())
+            amqpControl.write(amqpForwardMessage)
+        } catch (ex: Exception) {
+            log.error("Failed to perform health check", ex)
+        }
     }
 
     private fun wipeKeys(keyStoreBytes: ByteArray, keyStorePassword: CharArray) {

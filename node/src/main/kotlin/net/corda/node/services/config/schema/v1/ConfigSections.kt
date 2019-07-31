@@ -17,6 +17,8 @@ import net.corda.node.services.config.schema.parsers.*
 import net.corda.nodeapi.BrokerRpcSslOptions
 import net.corda.nodeapi.internal.config.MessagingServerConnectionConfiguration
 import net.corda.nodeapi.internal.config.User
+import net.corda.nodeapi.internal.cryptoservice.SupportedCryptoServices
+import net.corda.nodeapi.internal.cryptoservice.WrappingMode
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.SchemaInitializationType
 import net.corda.nodeapi.internal.persistence.TransactionIsolationLevel
@@ -387,5 +389,27 @@ internal object ProcessedMessageCleanupSpec : Configuration.Specification<Proces
     override fun parseValid(configuration: Config, options: Configuration.Options): Valid<ProcessedMessageCleanup> {
         val config = configuration.withOptions(options)
         return valid(ProcessedMessageCleanup(config[retainPerSender], config[retainForDays]))
+    }
+}
+
+internal object FreshIdentitiesConfigurationSpec: Configuration.Specification<FreshIdentitiesConfiguration>("FreshIdentitiesConfiguration") {
+    private val mode by enum(WrappingMode::class)
+    private val cryptoServiceConfiguration by nested(CryptoServiceConfigurationSpec)
+    private val masterKeyAlias by string().optional().withDefaultValue(NodeConfigurationImpl.Defaults.masterKeyAlias)
+    private val createDuringStartup by enum(CreateWrappingKeyDuringStartup::class).optional().withDefaultValue(NodeConfigurationImpl.Defaults.createDuringStartup)
+
+    override fun parseValid(configuration: Config, options: Configuration.Options): Valid<FreshIdentitiesConfiguration> {
+        val config = configuration.withOptions(options)
+        return valid(FreshIdentitiesConfiguration(config[mode], config[cryptoServiceConfiguration], config[masterKeyAlias], config[createDuringStartup]))
+    }
+}
+
+internal object CryptoServiceConfigurationSpec: Configuration.Specification<CryptoServiceConfiguration>("CryptoServiceConfiguration") {
+    private val cryptoServiceName by enum(SupportedCryptoServices::class)
+    private val cryptoServiceConf by string().mapValid(::toPath).optional()
+
+    override fun parseValid(configuration: Config, options: Configuration.Options): Valid<CryptoServiceConfiguration> {
+        val config = configuration.withOptions(options)
+        return valid(CryptoServiceConfiguration(config[cryptoServiceName], config[cryptoServiceConf]))
     }
 }

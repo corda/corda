@@ -70,6 +70,8 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
     private val cordappSignerKeyFingerprintBlacklist by string().list().optional().withDefaultValue(Defaults.cordappSignerKeyFingerprintBlacklist)
     private val cryptoServiceName by enum(SupportedCryptoServices::class).optional()
     private val cryptoServiceConf by string().mapValid(::toPath).optional()
+    private val freshIdentitiesConfiguration by nested(FreshIdentitiesConfigurationSpec).optional()
+    private val disableFreshIdentitiesWarning by boolean().optional().withDefaultValue(false)
     @Suppress("unused")
     private val custom by nestedObject().optional()
     private val relay by nested(RelayConfigurationSpec).optional()
@@ -133,6 +135,8 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
                     cordappSignerKeyFingerprintBlacklist = config[cordappSignerKeyFingerprintBlacklist],
                     cryptoServiceName = config[cryptoServiceName],
                     cryptoServiceConf = config[cryptoServiceConf],
+                    freshIdentitiesConfiguration = config[freshIdentitiesConfiguration],
+                    disableFreshIdentitiesWarning = config[disableFreshIdentitiesWarning],
                     relay = config[relay],
                     enableSNI = config[enableSNI],
                     useOpenSsl = config[useOpenSsl],

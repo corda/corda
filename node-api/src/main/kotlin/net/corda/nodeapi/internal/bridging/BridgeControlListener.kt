@@ -246,6 +246,10 @@ class BridgeControlListener(private val keyStore: CertificateStore,
                 }
                 bridgeManager.destroyBridge(controlMessage.bridgeInfo.queueName, controlMessage.bridgeInfo.targets)
             }
+            is BridgeControl.BridgeHealthCheck -> {
+                log.warn("Not currently doing anything on BridgeHealthCheck")
+                return
+            }
         }
     }
 

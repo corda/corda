@@ -22,7 +22,10 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import sun.net.www.protocol.http.AuthCacheImpl
+import sun.net.www.protocol.http.AuthCacheValue
 import java.io.IOException
+import java.net.Authenticator
 import java.net.InetAddress
 import java.net.Proxy
 import java.net.URL
@@ -78,6 +81,10 @@ class NetworkMapSocksProxyTest {
 
     @Before
     fun setup() {
+        // Reset all proxy  related setting before the test
+        ProxyAuthSetter.unsetInstance()
+        Authenticator.setDefault(null)
+        AuthCacheValue.setAuthCache(AuthCacheImpl())
         server = NetworkMapServer(cacheTimeout, hostAndPort = NetworkHostAndPort(myHostname, serverPort))
         serverAddress = server.start()
         socksProxy = SocksServer(socksProxyPort, proxyUser, proxyPw)
@@ -87,7 +94,11 @@ class NetworkMapSocksProxyTest {
     fun tearDown() {
         server.close()
         socksProxy.close()
+
+        // Reset all proxy related settings after the test so we don't leak any global settings into other tests
         ProxyAuthSetter.unsetInstance()
+        Authenticator.setDefault(null)
+        AuthCacheValue.setAuthCache(AuthCacheImpl())
     }
 
     @Test

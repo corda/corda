@@ -87,15 +87,15 @@ to respond, we need to update its responder flow to first receive the partially 
 
     .. literalinclude:: example-code/src/main/kotlin/net/corda/docs/kotlin/tutorial/twoparty/IOUFlowResponder.kt
         :language: kotlin
-        :start-after: DOCSTART 01
-        :end-before: DOCEND 01
-        :dedent: 8
+        :start-after: DOCSTART 1
+        :end-before: DOCEND 1
+        :dedent: 4
 
     .. literalinclude:: example-code/src/main/java/net/corda/docs/java/tutorial/twoparty/IOUFlowResponder.java
         :language: java
-        :start-after: DOCSTART 01
-        :end-before: DOCEND 01
-        :dedent: 8
+        :start-after: DOCSTART 1
+        :end-before: DOCEND 1
+        :dedent: 4
 
 We could write our own flow to handle this process. However, there is also a pre-defined flow called
 ``SignTransactionFlow`` that can handle the process automatically. The only catch is that ``SignTransactionFlow`` is an
