@@ -1,6 +1,7 @@
 package net.corda.node.services.rpc
 
 import net.corda.client.rpc.internal.ReconnectingCordaRPCOps
+import net.corda.client.rpc.notUsed
 import net.corda.core.contracts.Amount
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.concurrent.transpose
@@ -215,6 +216,8 @@ class RpcReconnectTests {
                             log.info("Started flow $amount with flowId: $flowId")
                             flowProgressEvents.addEvent(flowId, null)
 
+                            flowHandle.stepsTreeFeed?.updates?.notUsed()
+                            flowHandle.stepsTreeIndexFeed?.updates?.notUsed()
                             // No reconnecting possible.
                             flowHandle.progress.subscribe(
                                     { prog ->
