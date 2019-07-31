@@ -374,7 +374,14 @@ object InteractiveShell {
                 log.error("Failed to parse flow ID", e)
                 return
             }
-
+            //auxiliary validation - workaround for JDK8 bug https://bugs.java.com/bugdatabase/view_bug.do?bug_id=8159339
+            val uuidStringSize = 36
+            if (id.length < uuidStringSize) {
+                val msg = "Flow ID of '$id' seems to be malformed - a UUID should have $uuidStringSize characters. " +
+                        "Expand the terminal window to see the full UUID value."
+                output.println(msg, Color.yellow)
+                log.warn(msg)
+            }
             if (rpcOps.killFlow(runId)) {
                 output.println("Killed flow $runId", Color.yellow)
             } else {
