@@ -7,13 +7,14 @@ import com.esotericsoftware.kryo.serializers.FieldSerializer
 import javassist.ClassPool
 import javassist.CtClass
 import net.corda.core.internal.ThreadBox
+import net.corda.core.utilities.debug
 import net.corda.tools.CheckpointAgent.Companion.instrumentClassname
 import net.corda.tools.CheckpointAgent.Companion.instrumentType
 import net.corda.tools.CheckpointAgent.Companion.log
 import net.corda.tools.CheckpointAgent.Companion.maximumSize
 import net.corda.tools.CheckpointAgent.Companion.minimumSize
 import net.corda.tools.CheckpointAgent.Companion.printOnce
-import net.corda.tools.CheckpointAgent.Companion.stackDepth
+import net.corda.tools.CheckpointAgent.Companion.graphDepth
 import org.slf4j.LoggerFactory
 import java.io.ByteArrayInputStream
 import java.lang.instrument.ClassFileTransformer
@@ -35,15 +36,15 @@ class CheckpointAgent {
         val DEFAULT_INSTRUMENT_CLASSNAME = "net.corda.node.services.statemachine.FlowStateMachineImpl"
         val DEFAULT_INSTRUMENT_TYPE = InstrumentationType.READ
         val DEFAULT_MINIMUM_SIZE = 8 * 1024
-        val DEFAULT_MAXIMUM_SIZE = 1000 * 1024
-        val DEFAULT_STACK_DEPTH = 12
+        val DEFAULT_MAXIMUM_SIZE = 20_000_000
+        val DEFAULT_GRAPH_DEPTH = Int.MAX_VALUE
 
         // startup arguments
         var instrumentClassname = DEFAULT_INSTRUMENT_CLASSNAME
         var minimumSize = DEFAULT_MINIMUM_SIZE
         var maximumSize = DEFAULT_MAXIMUM_SIZE
         var instrumentType = DEFAULT_INSTRUMENT_TYPE
-        var stackDepth = DEFAULT_STACK_DEPTH
+        var graphDepth = DEFAULT_GRAPH_DEPTH
         var printOnce = true
 
         val log by lazy {
@@ -65,26 +66,30 @@ class CheckpointAgent {
                         when (nvpItem[0].trim()) {
                             "instrumentClassname" -> instrumentClassname = nvpItem[1]
                             "instrumentType" -> try { instrumentType = InstrumentationType.valueOf(nvpItem[1].toUpperCase()) } catch (e: Exception) {
-                                println("Invalid value: ${nvpItem[1]}. Please specify read or write.")
+                                display("Invalid value: ${nvpItem[1]}. Please specify read or write.")
                             }
                             "minimumSize" -> try { minimumSize = nvpItem[1].toInt() } catch (e: NumberFormatException) {
-                                println("Invalid value: ${nvpItem[1]}. Please specify an integer value.") }
+                                display("Invalid value: ${nvpItem[1]}. Please specify an integer value.") }
                             "maximumSize" -> try { maximumSize = nvpItem[1].toInt() } catch (e: NumberFormatException) {
-                                println("Invalid value: ${nvpItem[1]}. Please specify an integer value.")
+                                display("Invalid value: ${nvpItem[1]}. Please specify an integer value.")
                             }
-                            "stackDepth" -> try { stackDepth = nvpItem[1].toInt() } catch (e: NumberFormatException) {
-                                println("Invalid value: ${nvpItem[1]}. Please specify an integer value.")
+                            "graphDepth" -> try { graphDepth = nvpItem[1].toInt() } catch (e: NumberFormatException) {
+                                display("Invalid value: ${nvpItem[1]}. Please specify an integer value.")
                             }
                             "printOnce" -> try { printOnce = nvpItem[1].toBoolean() } catch (e: Exception) {
-                                println("Invalid value: ${nvpItem[1]}. Please specify true or false.")
+                                display("Invalid value: ${nvpItem[1]}. Please specify true or false.")
                             }
-                            else -> println("Invalid argument: $nvpItem")
+                            else -> display("Invalid argument: $nvpItem")
                         }
                     }
-                    else println("Missing value for argument: $nvpItem")
+                    else display("Missing value for argument: $nvpItem")
                 }
             }
-            println("Running Checkpoint agent with following arguments: instrumentClassname=$instrumentClassname, instrumentType=$instrumentType, minimumSize=$minimumSize, maximumSize=$maximumSize, stackDepth=$stackDepth, printOnce=$printOnce\n")
+            println("Running Checkpoint agent with following arguments: instrumentClassname=$instrumentClassname, instrumentType=$instrumentType, minimumSize=$minimumSize, maximumSize=$maximumSize, graphDepth=$graphDepth, printOnce=$printOnce\n")
+        }
+
+        private fun display(output: String) {
+            System.err.println("CheckpointAgent: $output")
         }
     }
 }
@@ -125,7 +130,7 @@ object CheckpointHook : ClassFileTransformer {
                     val parameterTypeNames = method.parameterTypes.map { it.name }
                     if (parameterTypeNames == listOf("com.esotericsoftware.kryo.Kryo", "com.esotericsoftware.kryo.io.Output", "java.lang.Object")) {
                         if (method.isEmpty) continue
-                        log.debug("Instrumenting on write: ${clazz.name}")
+                        log.debug { "Instrumenting on write: ${clazz.name}" }
                         method.insertBefore("$hookClassName.${this::writeEnter.name}($2, $3);")
                         method.insertAfter("$hookClassName.${this::writeExit.name}($2, $3);")
                         return clazz
@@ -137,13 +142,13 @@ object CheckpointHook : ClassFileTransformer {
                     val parameterTypeNames = method.parameterTypes.map { it.name }
                     if (parameterTypeNames == listOf("com.esotericsoftware.kryo.Kryo", "com.esotericsoftware.kryo.io.Input", "java.lang.Class")) {
                         if (method.isEmpty) continue
-                        log.debug("Instrumenting on read: ${clazz.name}")
+                        log.debug { "Instrumenting on read: ${clazz.name}" }
                         method.insertBefore("$hookClassName.${this::readEnter.name}($2, $3);")
                         method.insertAfter("$hookClassName.${this::readExit.name}($2, $3, (java.lang.Object)\$_);")
                         return clazz
                     } else if (parameterTypeNames == listOf("com.esotericsoftware.kryo.io.Input", "java.lang.Object")) {
                         if (method.isEmpty) continue
-                        log.debug("Instrumenting on field read: ${clazz.name}")
+                        log.debug { "Instrumenting on field read: ${clazz.name}" }
                         method.insertBefore("$hookClassName.${this::readFieldEnter.name}((java.lang.Object)this);")
                         method.insertAfter("$hookClassName.${this::readFieldExit.name}($2, (java.lang.Object)this);")
                         return clazz
@@ -162,7 +167,7 @@ object CheckpointHook : ClassFileTransformer {
     var checkpointId: UUID? = null
         set(value) {
             if (value != null)
-                log.debug("Diagnosing checkpoint id: $value")
+                log.debug { "Diagnosing checkpoint id: $value" }
             mutex.locked {
                 field = value
             }
@@ -172,7 +177,7 @@ object CheckpointHook : ClassFileTransformer {
     @JvmStatic
     fun readFieldEnter(that: Any) {
         if (that is FieldSerializer.CachedField<*>) {
-            log.debug("readFieldEnter object: ${that.field.name}:${that.field.type}")
+            log.debug { "readFieldEnter object: ${that.field.name}:${that.field.type}" }
             val (list, _) = events.getOrPut(Strand.currentStrand().id) { Pair(ArrayList(), AtomicInteger(0)) }
             list.add(StatsEvent.EnterField(that.field.name, that.field.type))
         }
@@ -186,10 +191,10 @@ object CheckpointHook : ClassFileTransformer {
             val arrayValue = getArrayValue(that.field.type, value)
             if (!that.javaClass.name.endsWith("ObjectField")
                     || arrayValue != null || that.field.type == java.lang.String::class.java || value == null) {
-                log.debug("readFieldExit basic type value: ${that.field.name}:${that.field.type} = ${arrayValue ?: value}")
+                log.debug { "readFieldExit basic type value: ${that.field.name}:${that.field.type} = ${arrayValue ?: value}" }
                 list.add(StatsEvent.BasicTypeField(that.field.name, that.field.type, arrayValue ?: value))
             } else {
-                log.debug("readFieldExit object value: ${that.field.name}:${that.field.type} = $value")
+                log.debug { "readFieldExit object value: ${that.field.name}:${that.field.type} = $value" }
                 list.add(StatsEvent.ObjectField(that.field.name, that.field.type, value))
             }
         }
@@ -197,72 +202,71 @@ object CheckpointHook : ClassFileTransformer {
 
     private fun <T> getArrayValue(clazz: Class<T>, value: Any?): String? {
         if (clazz.isArray) {
-            log.debug("readFieldExit array type: $clazz, value: $value]")
+            log.debug { "readFieldExit array type: $clazz, value: $value]" }
             if (Array<Number>::class.java.isAssignableFrom(clazz)) {
                 val numberValue = value as Array<Number>
-                log.debug("readFieldExit array of number: $clazz = ${numberValue.joinToString(",")}")
+                log.debug { "readFieldExit array of number: $clazz = ${numberValue.joinToString(",")}" }
                 return numberValue.joinToString(",")
             }
             else if (clazz == Array<Boolean>::class.java) {
                 val arrayValue = value as Array<Boolean>
-                log.debug("readFieldExit array of boolean: $clazz = ${arrayValue.joinToString(",")}")
+                log.debug { "readFieldExit array of boolean: $clazz = ${arrayValue.joinToString(",")}" }
                 return arrayValue.joinToString(",")
             }
             // N dimensional arrays
             else if (arrayOf<Array<*>>()::class.java.isAssignableFrom(clazz)) {
                 val arrayValue = value as Array<Array<*>>
                 return arrayValue.map { arrayEntry ->
-                    log.debug("N Dimensional: $clazz, $arrayEntry, ${arrayEntry::class.java}")
+                    log.debug { "N Dimensional: $clazz, $arrayEntry, ${arrayEntry::class.java}" }
                     "[" + getArrayValue(arrayEntry::class.java, arrayEntry) + "]"
                 }.toString()
             }
             // Kotlin array types
             else if (clazz == CharArray::class.java) {
                 val arrayValue = value as CharArray
-                log.debug("readFieldExit char array: $clazz = ${arrayValue.joinToString("")}")
+                log.debug { "readFieldExit char array: $clazz = ${arrayValue.joinToString("")}" }
                 return arrayValue.joinToString("")
             }
             else if (clazz == ByteArray::class.java) {
                 val arrayValue = value as ByteArray
-                log.debug("readFieldExit byte array: $clazz = ${byteArrayToHex(arrayValue)}")
+                log.debug { "readFieldExit byte array: $clazz = ${byteArrayToHex(arrayValue)}" }
                 return byteArrayToHex(arrayValue)
             }
             else if (clazz == ShortArray::class.java) {
                 val arrayValue = value as ShortArray
-                log.debug("readFieldExit short array: $clazz = ${arrayValue.joinToString(",")}")
+                log.debug { "readFieldExit short array: $clazz = ${arrayValue.joinToString(",")}" }
                 return arrayValue.joinToString(",")
             }
             else if (clazz == IntArray::class.java) {
                 val arrayValue = value as IntArray
-                log.debug("readFieldExit int array: $clazz = ${arrayValue.joinToString(",")}")
+                log.debug { "readFieldExit int array: $clazz = ${arrayValue.joinToString(",")}" }
                 return arrayValue.joinToString(",")
             }
             else if (clazz == LongArray::class.java) {
                 val arrayValue = value as LongArray
-                log.debug("readFieldExit long array: $clazz = ${arrayValue.joinToString(",")}")
+                log.debug { "readFieldExit long array: $clazz = ${arrayValue.joinToString(",")}" }
                 return arrayValue.joinToString(",")
             }
             else if (clazz == FloatArray::class.java) {
                 val arrayValue = value as FloatArray
-                log.debug("readFieldExit float array: $clazz = ${arrayValue.joinToString(",")}")
+                log.debug { "readFieldExit float array: $clazz = ${arrayValue.joinToString(",")}" }
                 return arrayValue.joinToString(",")
             }
             else if (clazz == DoubleArray::class.java) {
                 val arrayValue = value as DoubleArray
-                log.debug("readFieldExit double array: $clazz = ${arrayValue.joinToString(",")}")
+                log.debug { "readFieldExit double array: $clazz = ${arrayValue.joinToString(",")}" }
                 return arrayValue.joinToString(",")
             }
             else if (clazz == BooleanArray::class.java) {
                 val arrayValue = value as BooleanArray
-                log.debug("readFieldExit boolean array: $clazz = ${arrayValue.joinToString(",")}")
+                log.debug { "readFieldExit boolean array: $clazz = ${arrayValue.joinToString(",")}" }
                 return arrayValue.joinToString(",")
             }
-            log.debug("ARRAY OF TYPE: $clazz (size: ${(value as Array<Any?>).size})")
+            log.debug { "ARRAY OF TYPE: $clazz (size: ${(value as Array<Any?>).size})" }
         }
         return null
     }
 
-    // https://stackoverflow.com/questions/9655181/how-to-convert-a-byte-array-to-a-hex-string-in-java
     private fun byteArrayToHex(a: ByteArray): String {
         val sb = StringBuilder(a.size * 2)
         for (b in a)
@@ -273,7 +277,7 @@ object CheckpointHook : ClassFileTransformer {
     @JvmStatic
     fun readEnter(input: Input, clazz: Class<*>) {
         val (list, count) = events.getOrPut(Strand.currentStrand().id) { Pair(ArrayList(), AtomicInteger(0)) }
-        log.debug("readEnter: adding event for clazz: ${clazz.name} (strandId: ${Strand.currentStrand().id})")
+        log.debug { "readEnter: adding event for clazz: ${clazz.name} (strandId: ${Strand.currentStrand().id})" }
         list.add(StatsEvent.Enter(clazz.name, input.total()))
         count.incrementAndGet()
     }
@@ -282,7 +286,7 @@ object CheckpointHook : ClassFileTransformer {
     fun readExit(input: Input, clazz: Class<*>, value: Any?) {
         val (list, count) = events[Strand.currentStrand().id]!!
         list.add(StatsEvent.Exit(clazz.name, input.total(), value))
-        log.debug("readExit: clazz[$clazz], strandId[${Strand.currentStrand().id}], eventCount[$count]")
+        log.debug { "readExit: clazz[$clazz], strandId[${Strand.currentStrand().id}], eventCount[$count]" }
         if (count.decrementAndGet() == 0) {
             if ((checkpointId != null) ||
                     ((clazz.name == instrumentClassname) &&
@@ -296,7 +300,7 @@ object CheckpointHook : ClassFileTransformer {
                 log.info("[READ] $clazz\n$sb")
                 checkpointId = null
             }
-            log.debug("readExit: clearing event for clazz: $clazz (strandId: ${Strand.currentStrand().id})")
+            log.debug { "readExit: clearing event for clazz: $clazz (strandId: ${Strand.currentStrand().id})" }
             events.remove(Strand.currentStrand().id)
         }
     }
@@ -304,7 +308,7 @@ object CheckpointHook : ClassFileTransformer {
     @JvmStatic
     fun writeEnter(output: Output, obj: Any) {
         val (list, count) = events.getOrPut(-Strand.currentStrand().id) { Pair(ArrayList(), AtomicInteger(0)) }
-        log.debug("writeEnter: adding event for clazz: ${obj.javaClass.name} (strandId: ${Strand.currentStrand().id})")
+        log.debug { "writeEnter: adding event for clazz: ${obj.javaClass.name} (strandId: ${Strand.currentStrand().id})" }
         list.add(StatsEvent.Enter(obj.javaClass.name, output.total()))
         count.incrementAndGet()
     }
@@ -313,7 +317,7 @@ object CheckpointHook : ClassFileTransformer {
     fun writeExit(output: Output, obj: Any) {
         val (list, count) = events[-Strand.currentStrand().id]!!
         list.add(StatsEvent.Exit(obj.javaClass.name, output.total(), null))
-        log.debug("writeExit: clazz[${obj.javaClass.name}], strandId[${Strand.currentStrand().id}], eventCount[$count]")
+        log.debug { "writeExit: clazz[${obj.javaClass.name}], strandId[${Strand.currentStrand().id}], eventCount[$count]" }
         if (count.decrementAndGet() == 0) {
             // always log diagnostics for explicit checkpoint ids (eg. set dumpCheckpoints)
             if ((checkpointId != null) ||
@@ -325,7 +329,7 @@ object CheckpointHook : ClassFileTransformer {
                 log.info("[WRITE] $obj\n$sb")
                 checkpointId = null
             }
-            log.debug("writeExit: clearing event for clazz: ${obj.javaClass.name} (strandId: ${Strand.currentStrand().id})")
+            log.debug { "writeExit: clearing event for clazz: ${obj.javaClass.name} (strandId: ${Strand.currentStrand().id})" }
             events.remove(-Strand.currentStrand().id)
         }
     }
@@ -335,9 +339,9 @@ object CheckpointHook : ClassFileTransformer {
         when (statsTree) {
             is StatsTree.Object -> {
                 if (printOnce && identityInfo.refCount > 1) {
-                    log.debug("Skipping $statsInfo, $statsTree (count:${identityInfo.refCount})")
+                    log.debug { "Skipping $statsInfo, $statsTree (count:${identityInfo.refCount})" }
                 }
-                else if (indent/2  < stackDepth) {
+                else if (indent/2  < graphDepth) {
                     builder.append(String.format("%03d:", indent / 2))
                     builder.append(CharArray(indent) { ' ' })
                     builder.append(" ${statsInfo.fieldName} ")
@@ -363,7 +367,7 @@ object CheckpointHook : ClassFileTransformer {
                 }
             }
             is StatsTree.BasicType -> {
-                if (indent/2 < stackDepth) {
+                if (indent/2 < graphDepth) {
                     builder.append(String.format("%03d:", indent / 2))
                     builder.append(CharArray(indent) { ' ' })
                     builder.append(" ${statsInfo.fieldName} ")
@@ -419,7 +423,7 @@ fun readTree(events: List<StatsEvent>, index: Int, idMap: IdentityHashMap<Any, I
             if (idMap.containsKey(exit.value)) {
                 val identityInfo = idMap[exit.value]!!
                 idMap[exit.value] = IdentityInfo(identityInfo.tree, identityInfo.refCount + 1)
-                log.debug("Skipping repeated StatsEvent.Enter: ${exit.value} (hashcode:${exit.value!!.hashCode()}) (count:${idMap[exit.value]?.refCount})")
+                log.debug { "Skipping repeated StatsEvent.Enter: ${exit.value} (hashcode:${exit.value!!.hashCode()}) (count:${idMap[exit.value]?.refCount})" }
             } else idMap[exit.value] = IdentityInfo(tree, 1)
             return Pair(nextIndex + 1, idMap[exit.value]!!)
         }
@@ -456,7 +460,7 @@ fun readTrees(events: List<StatsEvent>, index: Int, idMap: IdentityHashMap<Any, 
                 if (idMap.containsKey(event.value)) {
                     val identityInfo = idMap[event.value]!!
                     idMap[event.value] = IdentityInfo(identityInfo.tree, identityInfo.refCount + 1)
-                    log.debug("Skipping repeated StatsEvent.Exit: ${event.value} (hashcode:${event.value!!.hashCode()}) (count:${idMap[event.value]?.refCount})")
+                    log.debug { "Skipping repeated StatsEvent.Exit: ${event.value} (hashcode:${event.value!!.hashCode()}) (count:${idMap[event.value]?.refCount})" }
                 }
                 return Pair(i, trees)
             }
@@ -470,7 +474,7 @@ fun readTrees(events: List<StatsEvent>, index: Int, idMap: IdentityHashMap<Any, 
                     if (idMap.containsKey(event.value)) {
                         val identityInfo = idMap[event.value]!!
                         idMap[event.value] = IdentityInfo(identityInfo.tree, identityInfo.refCount + 1)
-                        log.debug("Skipping repeated StatsEvent.ObjectField: ${event.value} (hashcode:${event.value!!.hashCode()}) (count:${idMap[event.value]?.refCount})")
+                        log.debug { "Skipping repeated StatsEvent.ObjectField: ${event.value} (hashcode:${event.value!!.hashCode()}) (count:${idMap[event.value]?.refCount})" }
                         identityInfo
                     }
                     else {

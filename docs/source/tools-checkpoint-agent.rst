@@ -13,24 +13,25 @@ from the last checkpoint if the node restarts. Automatic checkpointing is an unu
 reliable code that can survive node restarts and crashes. It also assists with scaling up, as flows that are waiting for a response can be flushed
 from memory."
 
-The Checkpoint Agent is a diagnostics tool that can be used to output the type, size and content of flow *checkpoints* at node runtime.
+The Checkpoint Agent is a very low level diagnostics tool that can be used to output the type, size and content of flow *checkpoints* at node runtime.
+It is primarily targeted at users developing and testing code that may exhibit flow mis-behaviour (preferably before going into production).
 
 For a given flow *checkpoint*, the agent outputs:
 
     1. Information about the checkpoint such as its ``id`` (also called a ``flow id``) that can be used to correlate with that flows lifecycle details in the main Corda logs.
-    2. A nested hierarchical view of its reachable objects (indented and tagged with depth size) and their associated sizes, including the state
+    2. A nested hierarchical view of its reachable objects (indented and tagged with depth and size) and their associated sizes, including the state
        of any flows held within the checkpoint.
 
 Diagnostics information is written to standard log files (eg. log4j2 configured logger).
 
 This tool is particularly useful when used in conjunction with the ``dumpCheckpoints`` CRaSH shell command to troubleshoot and identify potential
-problems associated with checkpoints that are preventing flows from completing.
+problems associated with checkpoints for flows that appear to not be completing.
 
 The checkpoint agent can be downloaded from `here <https://software.r3.com/artifactory/corda-releases/net/corda/corda-tools-checkpoint-agent/>`_.
 
 To run simply pass in the following jar to the JVM used to start a Corda node: ``-javaagent:<PATH>/checkpoint-agent.jar[=arg=value,...]``
 
-.. warning:: You will also need to increase the default JVM heap size to at least 1Gb by passing `-Xmx1024m` to the JVM on startup.
+.. warning:: This tool requires additional memory footprint and we recommended a minimal heap size of at least 1Gb.
 
 The agent can be customised with a number of optional parameters described below.
 
@@ -44,20 +45,20 @@ The checkpoint agent can be started with the following optional parameters:
 
 .. code-block:: shell
 
-    checkpoint-agent.jar=[instrumentType=<read|write>],[instrumentClassname=<CLASSNAME>],[minimumSize=<MIN_SIZE>],[maximumSize=<MAX_SIZE>, [stackDepth=<DEPTH>], [printOnce=<true|false>]
+    checkpoint-agent.jar=[instrumentType=<read|write>],[instrumentClassname=<CLASSNAME>],[minimumSize=<MIN_SIZE>],[maximumSize=<MAX_SIZE>, [graphDepth=<DEPTH>], [printOnce=<true|false>]
 
 * ``instrumentType``: whether to output checkpoints on read or write. Possible values: [read, write]. Default: read.
 * ``instrumentClassname``: specify the base type of objects to log. The default setting is to process all *Flow* object types. Default: net.corda.node.services.statemachine.FlowStateMachineImpl.
-* ``minimumSize``: specifies the minimum size (in bytes) of objects to log. Default: 8192 bytes
-* ``maximumSize``: specifies the maximum size (in bytes) of objects to log. Default: 1024000 bytes
-* ``stackDepth``: specifies how many levels deep to display the stack output. Default: 12
-* ``printOnce``: specifies whether to display a full object reference (and its stack) only once or as many times as it is referenced. Default: true
+* ``minimumSize``: specifies the minimum size (in bytes) of objects to log. Default: 8192 bytes (8K)
+* ``maximumSize``: specifies the maximum size (in bytes) of objects to log. Default: 20000000 bytes (20Mb)
+* ``graphDepth``: specifies how many levels deep to display the graph output. Default: unlimited
+* ``printOnce``: if true, will display a full object reference (and its sub-graph) only once. Otherwise an object will be displayed repeatedly as referenced. Default: true
 
 These arguments are passed to the JVM along with the agent specification. For example:
 
 .. code-block:: shell
 
-    -javaagent:<PATH>/checkpoint-agent.jar=instrumentClassname=net.corda.vega.flows.SimmFlow,instrumentType=read,minimumSize=10240,maximumSize=512000,stackDepth=6,printOnce=false
+    -javaagent:<PATH>/checkpoint-agent.jar=instrumentClassname=net.corda.vega.flows.SimmFlow,instrumentType=read,minimumSize=10240,maximumSize=512000,graphDepth=6,printOnce=false
 
 .. note:: Arguments may be passed into the agent in any order and should **not** contain spaces between them.
 
@@ -82,6 +83,9 @@ If you **only** wish to log checkpoint data for failing flows, start the checkpo
     checkpoint-agent.jar=instrumentType=read,instrumentClassname=NONE
 
 and use the ``dumpCheckpoints`` shell command to trigger diagnostics collection.
+
+.. warning:: The checkpoint agent JAR file must be called "checkpoint-agent.jar" as the checkpoint dump support code uses Java reflection to
+   determine whether the VM has been instrumented or not at runtime.
 
 Logging configuration
 ~~~~~~~~~~~~~~~~~~~~~
