@@ -51,6 +51,11 @@ inline fun Logger.debug(msg: () -> String) {
     if (isDebugEnabled) debug(msg())
 }
 
+/** Log a INFO level message produced by evaluating the given lamdba, but only if INFO logging is enabled. */
+inline fun Logger.info(msg: () -> String) {
+    if (isInfoEnabled) info(msg())
+}
+
 /**
  * Extension method for easier construction of [Duration]s in terms of integer days: `val twoDays = 2.days`.
  * @see Duration.ofDays
