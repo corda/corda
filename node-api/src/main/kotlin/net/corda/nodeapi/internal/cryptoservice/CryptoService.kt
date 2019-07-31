@@ -66,14 +66,13 @@ abstract class CryptoService(protected val timeout: Duration? = null) : AutoClos
      * @return the return value of the function call
      * @throws TimedCryptoServiceException if we reach the timeout
      */
-    protected fun <A> withTimeout(timeout: Duration?, func: () -> A) : A {
-        return func()
-        // TODO: Bring back timeouts.  (See ENT-3827 & ENT-3658)
-//        try {
-//            return executor.submit(func).getOrThrow(timeout)
-//        } catch (e: TimeoutException) {
-//            throw TimedCryptoServiceException("Timed-out while waiting for ${timeout?.toMillis()} milliseconds")
-//        }
+    private fun <A> withTimeout(timeout: Duration?, func: () -> A) : A {
+        try {
+            return executor.submit(func).getOrThrow(timeout)
+        } catch (e: TimeoutException) {
+            throw TimedCryptoServiceException("Timed-out while waiting for ${timeout?.toMillis()} milliseconds")
+        }
+
     }
 
     /**
