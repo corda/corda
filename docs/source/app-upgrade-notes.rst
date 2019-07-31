@@ -4,6 +4,69 @@
    <script type="text/javascript" src="_static/jquery.js"></script>
    <script type="text/javascript" src="_static/codesets.js"></script>
 
+Upgrading apps to Platform Version 5
+====================================
+
+These notes provide instructions for upgrading your CorDapps from previous versions to take advantage of features and enhancements introduced
+in platform version 5. Backwards compatibility for public, non-experimental APIs continues to be provided in this release. See the
+:doc: `corda-api` page for details of which APIs are committed to.
+
+.. note:: If you are upgrading from a platform version older than 4, then the upgrade notes for upgrading to Corda 4 (below) also apply.
+
+Step 1. Handle any source compatibility breaks
+----------------------------------------------
+
+The following code, which compiled in Platform Version 4, will not compile in Platform Version 5:
+
+.. code-block:: kotlin
+
+    data class Obligation(val amount: Amount<Currency>, val lender: AbstractParty, val borrower: AbstractParty)
+
+    val (lenderId, borrowerId) = if (anonymous) {
+        val anonymousIdentitiesResult = subFlow(SwapIdentitiesFlow(lenderSession))
+        Pair(anonymousIdentitiesResult[lenderSession.counterparty]!!, anonymousIdentitiesResult[ourIdentity]!!)
+    } else {
+        Pair(lender, ourIdentity)
+    }
+
+    val obligation = Obligation(100.dollars, lenderId, borrowerId)
+
+Compiling this code against Platform Version 5 will result in the following error:
+
+`Type mismatch: inferred type is Any but AbstractParty was expected`
+
+The issue here is that a new interface introduced in Platform Version 5 can cause type inference failures when a variable is used as an
+`AbstractParty` but has an actual value that is one of a number of possible subclasses of `AbstractParty`. As these subclasses implement an
+interface that the superclass does not, the Kotlin compiler is unable to infer that both branches result in a subclass of `AbstractParty`,
+and instead infers that the type is `Any`.
+
+To fix this, an explicit type hint must be provided to the compiler:
+
+.. code-block:: kotlin
+
+    data class Obligation(val amount: Amount<Currency>, val lender: AbstractParty, val borrower: AbstractParty)
+
+    val (lenderId, borrowerId) = if (anonymous) {
+        val anonymousIdentitiesResult = subFlow(SwapIdentitiesFlow(lenderSession))
+        Pair(anonymousIdentitiesResult[lenderSession.counterparty]!!, anonymousIdentitiesResult[ourIdentity]!!)
+    } else {
+        Pair<AbstractParty, AbstractParty>(lender, ourIdentity)
+    }
+
+    val obligation = Obligation(100.dollars, lenderId, borrowerId)
+
+A more detailed explanation is provided below:
+
+Platform Version 5 introduces a new `Destination` interface to mark parties which a flow can be initiated with. `AbstractParty` does not
+implement this as in the future new subclasses of `AbstractParty` may be introduced that a flow cannot be initiated with. However, the current
+`Party` and `AnonymousParty` do implement this interface.
+
+This introduces a type inference failure when a variable could be either of these subclasses of `AbstractParty`. Due to a limitation in the
+Kotlin compiler, it cannot determine that the type of these variables is both a subclass of `AbstractParty` and an implementor of `Destination`,
+and instead picks the most specific common ancestor of both of these. Unfortunately, this is the `Any` type, and so all type information
+is lost. By indicating to the compiler that both branches result in an `AbstractParty`, it can then accept future uses of the variable as
+an `AbstractParty`.
+
 Upgrading apps to Corda 4
 =========================
 
