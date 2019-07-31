@@ -163,7 +163,7 @@ class ReconnectingCordaRPCOps private constructor(
             log.error("Reconnecting to ${this.nodeHostAndPorts} due to error: ${e.message}")
             log.debug("", e)
             connect()
-            previousConnection?.close()
+            previousConnection?.notifyServerAndClose()
         }
 
         @Synchronized
