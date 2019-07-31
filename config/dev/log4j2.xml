@@ -223,5 +223,11 @@
         <Logger name="databaseInitialisation" additivity="false" level="${defaultLogLevel}">
             <AppenderRef ref="RollingFile-Appender"/>
         </Logger>
+        <Logger name="liquibase" additivity="false" level="warn">
+            <AppenderRef ref="RollingFile-Appender"/>
+        </Logger>
+        <Logger name="databaseInitialisation" additivity="false" level="${defaultLogLevel}">
+            <AppenderRef ref="RollingFile-Appender"/>
+        </Logger>
     </Loggers>
 </Configuration>
