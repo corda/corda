@@ -279,10 +279,8 @@ open class NodeStartup : NodeStartupLogging {
 
     protected open fun logLoadedCorDapps(corDapps: List<CordappImpl>) {
         Node.printBasicNodeInfo("Loaded ${corDapps.size} CorDapp(s)", corDapps.map { it.info }.joinToString(", "))
-        corDapps.map { it.info }.filter { it.hasUnknownFields() }.let { malformed ->
-            if (malformed.isNotEmpty()) {
-                logger.warn("Found ${malformed.size} CorDapp(s) with unknown information. They will be unable to run on Corda in the future.")
-            }
+        corDapps.filter { it.info.hasUnknownFields() }.forEach {
+            logger.warn("${it.info} will be unable to run on Corda in the future due to missing entries in JAR's manifest file.")
         }
     }
 
