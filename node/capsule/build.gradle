@@ -36,7 +36,11 @@ capsule {
     version capsule_version
 }
 
-task buildCordaJAR(type: FatCapsule, dependsOn: project(':node').tasks.jar) {
+task buildCordaJAR(type: FatCapsule, dependsOn: [
+        project(':node').tasks.jar,
+        project(':core-deterministic').tasks.assemble,
+        project(':serialization-deterministic').tasks.assemble
+    ]) {
     applicationClass 'net.corda.node.Corda'
     archiveBaseName = 'corda'
     archiveVersion = corda_release_version
@@ -52,9 +56,18 @@ task buildCordaJAR(type: FatCapsule, dependsOn: project(':node').tasks.jar) {
     from configurations.capsuleRuntime.files.collect { zipTree(it) }
     with jar
 
+    def deterministicResolved = project(':node').configurations['deterministic'].resolvedConfiguration
+    def deterministicLibs = deterministicResolved.firstLevelModuleDependencies.moduleArtifacts.flatten { it.file }.toSet()
+    def deterministicCordaDependencies = deterministicResolved.files - deterministicLibs
+
+    manifest {
+        // These are the dependencies that the deterministic Corda libraries share with Corda.
+        attributes('Corda-DJVM-Dependencies': deterministicCordaDependencies.collect { it.name }.join(' '))
+    }
+
     into('djvm') {
         from project(':node').configurations['jdkRt'].singleFile
-        rename 'deterministic-rt(.*)', 'deterministic-rt.jar'
+        from deterministicLibs
         fileMode = 0444
     }
 

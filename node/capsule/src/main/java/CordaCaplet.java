@@ -7,20 +7,20 @@ import sun.misc.Signal;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.URL;
+import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.jar.JarInputStream;
+import java.util.jar.Manifest;
 import java.util.stream.Stream;
 
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 
 public class CordaCaplet extends Capsule {
-    private static final String DETERMINISTIC_RT = "deterministic-rt.jar";
     private static final String DJVM_DIR ="djvm";
-    private static final String DETERMINISTIC_RT_RESOURCE = "/" + DJVM_DIR + "/" + DETERMINISTIC_RT;
 
     private Config nodeConfig = null;
     private String baseDir = null;
@@ -93,40 +93,59 @@ public class CordaCaplet extends Capsule {
         if (!djvmDir.toFile().mkdir() && !Files.isDirectory(djvmDir)) {
             log(LOG_VERBOSE, "DJVM directory could not be created");
         } else {
-            Path deterministicRt = djvmDir.resolve(DETERMINISTIC_RT);
-            Path sourceRt = appDir().resolve(DJVM_DIR).resolve(DETERMINISTIC_RT);
-            if (Files.isRegularFile(sourceRt)) {
-                try {
-                    // Forcibly reinstall the deterministic APIs.
-                    Files.deleteIfExists(deterministicRt);
-                    Files.createSymbolicLink(deterministicRt, sourceRt);
-                } catch (UnsupportedOperationException | IOException e) {
-                    copyFile(sourceRt, deterministicRt);
+            try {
+                Path sourceDir = appDir().resolve(DJVM_DIR);
+                if (Files.isDirectory(sourceDir)) {
+                    installCordaDependenciesForDJVM(sourceDir, djvmDir);
+                    installTransitiveDependenciesForDJVM(appDir(), djvmDir);
                 }
-            } else {
-                URL rtURL = getClass().getResource(DETERMINISTIC_RT_RESOURCE);
-                if (rtURL == null) {
-                    log(LOG_VERBOSE, DETERMINISTIC_RT_RESOURCE + " missing from Corda capsule");
-                } else {
-                    copyResource(rtURL, deterministicRt);
-                }
+            } catch (IOException e) {
+                log(LOG_VERBOSE, "Failed to populate directory " + djvmDir.toAbsolutePath());
+                log(LOG_VERBOSE, e);
             }
+        }
+    }
+
+    private void installCordaDependenciesForDJVM(Path sourceDir, Path targetDir) throws IOException {
+        try (DirectoryStream<Path> directory = Files.newDirectoryStream(sourceDir, file -> Files.isRegularFile(file))) {
+            for (Path sourceFile : directory) {
+                Path targetFile = targetDir.resolve(sourceFile.getFileName());
+                installFile(sourceFile, targetFile);
+            }
+        }
+    }
+
+    private void installTransitiveDependenciesForDJVM(Path sourceDir, Path targetDir) throws IOException {
+        Manifest manifest = getManifest();
+        String[] transitives = manifest.getMainAttributes().getValue("Corda-DJVM-Dependencies").split("\\s++", 0);
+        for (String transitive : transitives) {
+            Path source = sourceDir.resolve(transitive);
+            if (Files.isRegularFile(source)) {
+                installFile(source, targetDir.resolve(transitive));
+            }
+        }
+    }
+
+    private Manifest getManifest() throws IOException {
+        URL capsule = getClass().getProtectionDomain().getCodeSource().getLocation();
+        try (JarInputStream jar = new JarInputStream(capsule.openStream())) {
+            return jar.getManifest();
+        }
+    }
+
+    private void installFile(Path source, Path target) {
+        try {
+            // Forcibly reinstall this dependency.
+            Files.deleteIfExists(target);
+            Files.createSymbolicLink(target, source);
+        } catch (UnsupportedOperationException | IOException e) {
+            copyFile(source, target);
         }
     }
 
     private void copyFile(Path source, Path target) {
         try {
             Files.copy(source, target, REPLACE_EXISTING);
-        } catch (IOException e) {
-            //noinspection ResultOfMethodCallIgnored
-            target.toFile().delete();
-            log(LOG_VERBOSE, e);
-        }
-    }
-
-    private void copyResource(URL source, Path target) {
-        try (InputStream input = source.openStream()) {
-            Files.copy(input, target, REPLACE_EXISTING);
         } catch (IOException e) {
             //noinspection ResultOfMethodCallIgnored
             target.toFile().delete();

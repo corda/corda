@@ -4,6 +4,7 @@ import com.codahale.metrics.MetricFilter
 import com.codahale.metrics.MetricRegistry
 import com.codahale.metrics.jmx.JmxReporter
 import com.github.benmanes.caffeine.cache.Caffeine
+import com.jcabi.manifests.Manifests
 import com.palominolabs.metrics.newrelic.AllEnabledMetricAttributeFilter
 import com.palominolabs.metrics.newrelic.NewRelicReporter
 import io.netty.util.NettyRuntime
@@ -30,9 +31,7 @@ import net.corda.core.serialization.internal.SerializationEnvironment
 import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
-import net.corda.djvm.source.ApiSource
-import net.corda.djvm.source.BootstrapClassLoader
-import net.corda.djvm.source.EmptyApi
+import net.corda.djvm.source.*
 import net.corda.node.CordaClock
 import net.corda.node.SimpleClock
 import net.corda.node.VersionInfo
@@ -78,6 +77,7 @@ import java.lang.Long.max
 import java.lang.Long.min
 import java.net.BindException
 import java.net.InetAddress
+import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.time.Clock
@@ -111,13 +111,17 @@ open class Node(configuration: NodeConfiguration,
         flowManager,
         // Under normal (non-test execution) it will always be "1"
         AffinityExecutor.ServiceAffinityExecutor("Node thread-${sameVmNodeCounter.incrementAndGet()}", 1),
-        bootstrapSource = createBootstrapSource(configuration)
+        bootstrapSource = createBootstrapSource(configuration),
+        djvmCordaSource = createDeterministicClasspath(configuration)
 ) {
 
     override fun createStartedNode(nodeInfo: NodeInfo, rpcOps: CordaRPCOps, notaryService: NotaryService?): NodeInfo =
             nodeInfo
 
     companion object {
+        private const val CORDA_DETERMINISTIC_RUNTIME_ATTR = "Corda-Deterministic-Runtime"
+        private const val CORDA_DETERMINISTIC_CLASSPATH_ATTR = "Corda-Deterministic-Classpath"
+
         private val staticLog = contextLogger()
         var renderBasicInfoToConsole = true
 
@@ -177,10 +181,41 @@ open class Node(configuration: NodeConfiguration,
             }
         }
 
+        private fun manifestValue(attrName: String): String? = if (Manifests.exists(attrName)) Manifests.read(attrName) else null
+
+        fun createDeterministicClasspath(config: NodeConfiguration): UserSource? {
+            val classpathSource = config.baseDirectory.resolve("djvm")
+            val djvmClasspath = manifestValue(CORDA_DETERMINISTIC_CLASSPATH_ATTR)
+
+            return if (djvmClasspath == null) {
+                staticLog.warn("{} missing from MANIFEST.MF - deterministic contract verification now impossible!",
+                                   CORDA_DETERMINISTIC_CLASSPATH_ATTR)
+                null
+            } else if (!Files.isDirectory(classpathSource)) {
+                staticLog.warn("{} directory does not exist - deterministic contract verification now impossible!",
+                                   classpathSource.toAbsolutePath())
+                null
+            } else {
+                val files = djvmClasspath.split("\\s++".toRegex(), 0).map { classpathSource.resolve(it) }
+                    .filter { Files.isRegularFile(it) || Files.isSymbolicLink(it) }
+                staticLog.info("Corda Deterministic Libraries: {}", files.map(Path::getFileName).joinToString())
+
+                val jars = files.map { it.toUri().toURL() }.toTypedArray()
+                UserPathSource(jars)
+            }
+        }
+
         fun createBootstrapSource(config: NodeConfiguration): ApiSource {
-            val bootstrapSource = config.baseDirectory.resolve("djvm").resolve("deterministic-rt.jar")
+            val deterministicRt = manifestValue(CORDA_DETERMINISTIC_RUNTIME_ATTR)
+            if (deterministicRt == null) {
+                staticLog.warn("{} missing from MANIFEST.MF - will use host JVM for deterministic runtime.",
+                                   CORDA_DETERMINISTIC_RUNTIME_ATTR)
+                return EmptyApi
+            }
+
+            val bootstrapSource = config.baseDirectory.resolve("djvm").resolve(deterministicRt)
             return if (bootstrapSource.isRegularFile()) {
-                staticLog.info("Deterministic Runtime: {}", bootstrapSource)
+                staticLog.info("Deterministic Runtime: {}", bootstrapSource.fileName)
                 BootstrapClassLoader(bootstrapSource)
             } else {
                 staticLog.warn("NO DETERMINISTIC RUNTIME FOUND - will use host JVM instead.")

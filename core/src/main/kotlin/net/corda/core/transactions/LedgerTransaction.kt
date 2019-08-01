@@ -12,6 +12,7 @@ import net.corda.core.node.NetworkParameters
 import net.corda.core.serialization.internal.AttachmentsClassLoaderBuilder
 import net.corda.core.utilities.contextLogger
 import java.util.*
+import java.util.Collections.unmodifiableList
 import java.util.function.Predicate
 
 /**
@@ -80,6 +81,16 @@ private constructor(
     companion object {
         private val logger = contextLogger()
 
+        private fun <T> protect(list: List<T>?): List<T>? {
+            return list?.run {
+                if (isEmpty()) {
+                    emptyList()
+                } else {
+                    unmodifiableList(this)
+                }
+            }
+        }
+
         @CordaInternal
         internal fun create(
                 inputs: List<StateAndRef<ContractState>>,
@@ -108,9 +119,9 @@ private constructor(
                 privacySalt = privacySalt,
                 networkParameters = networkParameters,
                 references = references,
-                componentGroups = componentGroups,
-                serializedInputs = serializedInputs,
-                serializedReferences = serializedReferences,
+                componentGroups = protect(componentGroups),
+                serializedInputs = protect(serializedInputs),
+                serializedReferences = protect(serializedReferences),
                 isAttachmentTrusted = isAttachmentTrusted,
                 verifierFactory = ::Verifier
             )
@@ -162,6 +173,14 @@ private constructor(
             // This artifice is required to preserve backwards compatibility.
             verifierFactory(createLtxForVerification(), transactionClassLoader)
         }
+    }
+
+    /**
+     * Pass all of this [LedgerTransaction] object's serialized state to a [transformer] function.
+     */
+    @CordaInternal
+    fun <T> transform(transformer: (List<ComponentGroup>?, List<SerializedStateAndRef>?, List<SerializedStateAndRef>?) -> T): T {
+        return transformer(componentGroups, serializedInputs, serializedReferences)
     }
 
     /**

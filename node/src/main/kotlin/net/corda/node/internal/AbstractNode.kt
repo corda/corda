@@ -34,9 +34,7 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.days
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.minutes
-import net.corda.djvm.source.ApiSource
-import net.corda.djvm.source.BootstrapClassLoader
-import net.corda.djvm.source.EmptyApi
+import net.corda.djvm.source.*
 import net.corda.node.CordaClock
 import net.corda.node.VersionInfo
 import net.corda.node.internal.classloading.requireAnnotation
@@ -129,7 +127,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                                protected val flowManager: FlowManager,
                                val serverThread: AffinityExecutor.ServiceAffinityExecutor,
                                val busyNodeLatch: ReusableLatch = ReusableLatch(),
-                               bootstrapSource: ApiSource = EmptyApi) : SingletonSerializeAsToken() {
+                               bootstrapSource: ApiSource = EmptyApi,
+                               djvmCordaSource: UserSource? = null) : SingletonSerializeAsToken() {
 
     protected abstract val log: Logger
     @Suppress("LeakingThis")
@@ -195,7 +194,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     val pkToIdCache = PublicKeyToOwningIdentityCacheImpl(database, cacheFactory)
     @Suppress("LeakingThis")
     val keyManagementService = makeKeyManagementService(identityService).tokenize()
-    val servicesForResolution = ServicesForResolutionImpl(identityService, attachments, cordappProvider, networkParametersStorage, transactionStorage, bootstrapSource).also {
+    val servicesForResolution = ServicesForResolutionImpl(identityService, attachments, cordappProvider, networkParametersStorage, transactionStorage, bootstrapSource, djvmCordaSource).also {
         attachments.servicesForResolution = it
     }
     @Suppress("LeakingThis")

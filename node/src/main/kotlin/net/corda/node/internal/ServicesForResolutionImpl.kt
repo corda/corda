@@ -19,6 +19,8 @@ import net.corda.djvm.analysis.AnalysisConfiguration
 import net.corda.djvm.analysis.Whitelist
 import net.corda.djvm.source.ApiSource
 import net.corda.djvm.source.UserPathSource
+import net.corda.djvm.source.UserSource
+import net.corda.node.internal.djvm.DeterministicVerifier
 import java.net.URLClassLoader
 
 data class ServicesForResolutionImpl(
@@ -27,7 +29,8 @@ data class ServicesForResolutionImpl(
         override val cordappProvider: CordappProvider,
         override val networkParametersService: NetworkParametersService,
         private val validatedTransactions: TransactionStorage,
-        private val djvmBootstrapSource: ApiSource
+        private val djvmBootstrapSource: ApiSource,
+        private val djvmCordaSource: UserSource?
 ) : ServicesForResolution {
     override val networkParameters: NetworkParameters get() = networkParametersService.lookup(networkParametersService.currentHash) ?:
             throw IllegalArgumentException("No current parameters in network parameters storage")
@@ -79,18 +82,21 @@ data class ServicesForResolutionImpl(
     }
 
     override fun specialise(ltx: LedgerTransaction): LedgerTransaction {
+        // Do nothing unless we have Corda's deterministic libraries.
+        val cordaSource = djvmCordaSource ?: return ltx
+
         // Specialise the LedgerTransaction here so that
         // contracts are verified inside the DJVM!
         return ltx.specialise { tx, cl ->
-            (cl as? URLClassLoader)?.run { DeterministicVerifier(tx, cl, createSandbox(cl)) } ?: Verifier(tx, cl)
+            (cl as? URLClassLoader)?.run { DeterministicVerifier(tx, cl, createSandbox(cordaSource, cl)) } ?: Verifier(tx, cl)
         }
     }
 
-    private fun createSandbox(classLoader: URLClassLoader): AnalysisConfiguration {
+    private fun createSandbox(cordaSource: UserSource, classLoader: URLClassLoader): AnalysisConfiguration {
         return AnalysisConfiguration.createRoot(
-            userSource = UserPathSource(classLoader.urLs),
+            userSource = cordaSource,
             whitelist = Whitelist.MINIMAL,
             bootstrapSource = djvmBootstrapSource
-        )
+        ).createChild(UserPathSource(classLoader.urLs), null)
     }
 }

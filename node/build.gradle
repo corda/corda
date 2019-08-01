@@ -42,6 +42,7 @@ configurations {
     jdkRt.resolutionStrategy {
         cacheChangingModulesFor 0, 'seconds'
     }
+    deterministic
 }
 
 sourceSets {
@@ -163,6 +164,9 @@ dependencies {
     // Sandbox for deterministic contract verification
     compile "net.corda:corda-djvm:$djvm_version"
     jdkRt "net.corda:deterministic-rt:latest.integration"
+    deterministic project(path: ':core-deterministic', configuration: 'deterministicArtifacts')
+    deterministic project(path: ':serialization-deterministic', configuration: 'deterministicArtifacts')
+    deterministic "org.slf4j:slf4j-nop:$slf4j_version"
 
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
     testImplementation "junit:junit:$junit_version"
@@ -299,6 +303,10 @@ quasar {
 
 jar {
     baseName 'corda-node'
+    manifest {
+        attributes('Corda-Deterministic-Runtime': configurations.jdkRt.singleFile.name)
+        attributes('Corda-Deterministic-Classpath': configurations.deterministic.collect { it.name }.join(' '))
+    }
 }
 
 publish {
