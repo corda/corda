@@ -110,10 +110,12 @@ class CordaPersistence(
             try {
                 HibernateConfiguration(schemas, databaseConfig, attributeConverters, jdbcUrl, cacheFactory, customClassLoader)
             } catch (e: Exception) {
-                when (e) {
-                    is SchemaManagementException -> throw HibernateSchemaChangeException("Incompatible schema change detected. Please run the node with database.initialiseSchema=true. Reason: ${e.message}", e)
-                    else -> throw HibernateConfigException("Could not create Hibernate configuration: ${e.message}", e)
+                val re = when (e) {
+                    is SchemaManagementException -> HibernateSchemaChangeException("Incompatible schema change detected. Please run the node with database.initialiseSchema=true. Reason: ${e.message}", e)
+                    else -> HibernateConfigException("Could not create Hibernate configuration: ${e.message}", e)
                 }
+                logDatabaseErrorWithCode(re)
+                throw re
             }
         }
     }

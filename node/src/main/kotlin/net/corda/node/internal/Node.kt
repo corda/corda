@@ -60,7 +60,7 @@ import net.corda.nodeapi.internal.bridging.BridgeControlListener
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.persistence.CouldNotCreateDataSourceException
-import net.corda.nodeapi.internal.persistence.SchemaMigration
+import net.corda.nodeapi.internal.persistence.logDatabaseErrorWithCode
 import net.corda.serialization.internal.*
 import net.corda.serialization.internal.amqp.SerializationFactoryCacheKey
 import net.corda.serialization.internal.amqp.SerializerFactory
@@ -419,7 +419,7 @@ open class Node(configuration: NodeConfiguration,
         try {
             super.startDatabase()
         } catch(t: Throwable) {
-            SchemaMigration.logger.error(SchemaMigration.formatter.format( "status", "error", "message", t?.message ?: ""))
+            logDatabaseErrorWithCode(t)
             throw t
         }
         database.closeOnStop()
