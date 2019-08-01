@@ -43,6 +43,7 @@ class DeterministicVerifier(
                 ExecutionSummary(result.costs),
                 this
             )
+            logger.error("Error validating transaction ${ltx.id}.", sandboxEx)
             throw DeterministicVerificationException(ltx.id, sandboxEx.message ?: "", sandboxEx)
         }
     }

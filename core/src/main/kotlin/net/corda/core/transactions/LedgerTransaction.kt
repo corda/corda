@@ -123,7 +123,7 @@ private constructor(
                 serializedInputs = protect(serializedInputs),
                 serializedReferences = protect(serializedReferences),
                 isAttachmentTrusted = isAttachmentTrusted,
-                verifierFactory = ::Verifier
+                verifierFactory = ::BasicVerifier
             )
         }
     }
@@ -653,7 +653,7 @@ private constructor(
             serializedInputs = null,
             serializedReferences = null,
             isAttachmentTrusted = { it.isUploaderTrusted() },
-            verifierFactory = ::Verifier
+            verifierFactory = ::BasicVerifier
     )
 
     @Deprecated("LedgerTransaction should not be created directly, use WireTransaction.toLedgerTransaction instead.")
@@ -682,7 +682,7 @@ private constructor(
             serializedInputs = null,
             serializedReferences = null,
             isAttachmentTrusted = { it.isUploaderTrusted() },
-            verifierFactory = ::Verifier
+            verifierFactory = ::BasicVerifier
     )
 
     @Deprecated("LedgerTransactions should not be created directly, use WireTransaction.toLedgerTransaction instead.")

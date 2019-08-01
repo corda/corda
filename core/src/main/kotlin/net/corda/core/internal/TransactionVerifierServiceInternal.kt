@@ -29,12 +29,12 @@ fun LedgerTransaction.prepareVerify(extraAttachments: List<Attachment>) = this.i
  * Because we create a separate [LedgerTransaction] onto which we need to perform verification, it becomes important we don't verify the
  * wrong object instance. This class helps avoid that.
  */
-open class Verifier(val ltx: LedgerTransaction, protected val transactionClassLoader: ClassLoader) : AutoCloseable {
+abstract class Verifier(val ltx: LedgerTransaction, protected val transactionClassLoader: ClassLoader) : AutoCloseable {
     private val inputStates: List<TransactionState<*>> = ltx.inputs.map { it.state }
     private val allStates: List<TransactionState<*>> = inputStates + ltx.references.map { it.state } + ltx.outputs
 
     companion object {
-        private val logger = contextLogger()
+        val logger = contextLogger()
     }
 
     /**
@@ -345,12 +345,24 @@ open class Verifier(val ltx: LedgerTransaction, protected val transactionClassLo
     }
 
     /**
+     * Placeholder function for the contract verification logic.
+     */
+    abstract fun verifyContracts()
+
+    /**
+     * Placeholder function so that the [Verifier] can release any resources.
+     */
+    abstract override fun close()
+}
+
+class BasicVerifier(ltx: LedgerTransaction, transactionClassLoader: ClassLoader) : Verifier(ltx, transactionClassLoader) {
+    /**
      * Check the transaction is contract-valid by running the verify() for each input and output state contract.
      * If any contract fails to verify, the whole transaction is considered to be invalid.
      *
      * Note: Reference states are not verified.
      */
-    open fun verifyContracts() {
+    override fun verifyContracts() {
         try {
             ContractVerifier(transactionClassLoader).apply(ltx)
         } catch (e: TransactionVerificationException.ContractRejection) {
@@ -359,9 +371,6 @@ open class Verifier(val ltx: LedgerTransaction, protected val transactionClassLo
         }
     }
 
-    /**
-     * Placeholder function so that the [Verifier] can release any resources.
-     */
     override fun close() {}
 }
 

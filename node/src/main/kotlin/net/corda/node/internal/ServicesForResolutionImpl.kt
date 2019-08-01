@@ -2,8 +2,8 @@ package net.corda.node.internal
 
 import net.corda.core.contracts.*
 import net.corda.core.cordapp.CordappProvider
+import net.corda.core.internal.BasicVerifier
 import net.corda.core.internal.SerializedStateAndRef
-import net.corda.core.internal.Verifier
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.AttachmentStorage
@@ -88,7 +88,7 @@ data class ServicesForResolutionImpl(
         // Specialise the LedgerTransaction here so that
         // contracts are verified inside the DJVM!
         return ltx.specialise { tx, cl ->
-            (cl as? URLClassLoader)?.run { DeterministicVerifier(tx, cl, createSandbox(cordaSource, cl)) } ?: Verifier(tx, cl)
+            (cl as? URLClassLoader)?.run { DeterministicVerifier(tx, cl, createSandbox(cordaSource, cl)) } ?: BasicVerifier(tx, cl)
         }
     }
 
