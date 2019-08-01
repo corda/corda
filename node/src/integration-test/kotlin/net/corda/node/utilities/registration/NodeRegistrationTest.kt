@@ -53,7 +53,7 @@ class NodeRegistrationTest {
     @JvmField
     val testSerialization = SerializationEnvironmentRule(true)
 
-    private val portAllocation = incrementalPortAllocation(13000)
+    private val portAllocation = incrementalPortAllocation()
     private val registrationHandler = RegistrationHandler(DEV_ROOT_CA)
     private lateinit var server: NetworkMapServer
     private lateinit var serverHostAndPort: NetworkHostAndPort

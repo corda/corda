@@ -259,15 +259,6 @@ allprojects {
 
         maxHeapSize = "1g"
 
-        if (project.hasProperty('test.parallel') && project.property('test.parallel').toBoolean()) {
-            maxParallelForks = Runtime.runtime.availableProcessors().intdiv(2) as int ?: 1
-        }
-
-        if (System.getProperty("test.maxParallelForks") != null) {
-            maxParallelForks = Integer.getInteger('test.maxParallelForks')
-            logger.debug("System property test.maxParallelForks found - setting max parallel forks to $maxParallelForks for $project")
-        }
-
         if (project.path.startsWith(':experimental') && System.getProperty("experimental.test.enable") == null) {
             enabled = false
         }
@@ -276,6 +267,16 @@ allprojects {
         // See https://github.com/gradle/gradle/issues/5269 and https://github.com/gradle/gradle/pull/6419
         extensions.configure(TypeOf.typeOf(JacocoTaskExtension)) { ex ->
             ex.append = false
+        }
+
+        maxParallelForks = (System.env.CORDA_TESTING_FORKS == null) ? 1 :  "$System.env.CORDA_TESTING_FORKS".toInteger()
+
+        systemProperty 'java.security.egd', 'file:/dev/./urandom'
+    }
+
+    tasks.withType(Test){
+        if (name.contains("integrationTest")){
+            maxParallelForks = (System.env.CORDA_INT_TESTING_FORKS == null) ? 1 :  "$System.env.CORDA_INT_TESTING_FORKS".toInteger()
         }
     }
 
