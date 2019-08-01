@@ -4,12 +4,30 @@
    <script type="text/javascript" src="_static/jquery.js"></script>
    <script type="text/javascript" src="_static/codesets.js"></script>
 
+Upgrading CorDapps to newer Platform Versions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+These notes provide instructions for upgrading your CorDapps from previous versions. Corda provides backwards compatibility for public,
+non-experimental APIs that have been committed to. A list can be found in the :doc:`corda-api` page.
+
+This means that you can upgrade your node across versions *without recompiling or adjusting your CorDapps*. You just have to upgrade
+your node and restart.
+
+However, there are usually new features and other opt-in changes that may improve the security, performance or usability of your
+application that are worth considering for any actively maintained software. This guide shows you how to upgrade your app to benefit
+from the new features in the latest release.
+
+.. warning:: The sample apps found in the Corda repository and the Corda samples repository are not intended to be used in production.
+   If you are using them you should re-namespace them to a package namespace you control, and sign/version them yourself.
+
+.. contents::
+   :depth: 3
+
 Upgrading apps to Platform Version 5
 ====================================
 
-These notes provide instructions for upgrading your CorDapps from previous versions to take advantage of features and enhancements introduced
-in platform version 5. Backwards compatibility for public, non-experimental APIs continues to be provided in this release. See the
-:doc: `corda-api` page for details of which APIs are committed to.
+This section provides instructions for upgrading your CorDapps from previous versions to take advantage of features and enhancements introduced
+in platform version 5.
 
 .. note:: If you are upgrading from a platform version older than 4, then the upgrade notes for upgrading to Corda 4 (below) also apply.
 
@@ -67,24 +85,10 @@ and instead picks the most specific common ancestor of both of these. Unfortunat
 is lost. By indicating to the compiler that both branches result in an `AbstractParty`, it can then accept future uses of the variable as
 an `AbstractParty`.
 
-Upgrading apps to Corda 4
-=========================
+Upgrading apps to Platform Version 4
+====================================
 
-These notes provide instructions for upgrading your CorDapps from previous versions. Corda provides backwards compatibility for public,
-non-experimental APIs that have been committed to. A list can be found in the :doc:`corda-api` page.
-
-This means that you can upgrade your node across versions *without recompiling or adjusting your CorDapps*. You just have to upgrade
-your node and restart.
-
-However, there are usually new features and other opt-in changes that may improve the security, performance or usability of your
-application that are worth considering for any actively maintained software. This guide shows you how to upgrade your app to benefit
-from the new features in the latest release.
-
-.. warning:: The sample apps found in the Corda repository and the Corda samples repository are not intended to be used in production.
-   If you are using them you should re-namespace them to a package namespace you control, and sign/version them yourself.
-
-.. contents::
-   :depth: 3
+This section provides instructions for upgrading your CorDapps from previous versions to platform version 4.
 
 Step 1. Switch any RPC clients to use the new RPC library
 ---------------------------------------------------------
