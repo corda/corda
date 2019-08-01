@@ -49,6 +49,7 @@ class ReconnectingObservable<T> private constructor(subscriber: ReconnectingSubs
             if (unsubscribed) return
             val subscriber = checkNotNull(this.subscriber.get())
             try {
+                backingSubscription?.unsubscribe()
                 backingSubscription = dataFeed.updates.subscribe(subscriber::onNext, ::scheduleResubscribe, subscriber::onCompleted)
             } catch (e: Exception) {
                 scheduleResubscribe(e)
