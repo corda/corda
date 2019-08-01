@@ -9,6 +9,7 @@ import net.corda.core.internal.copyTo
 import net.corda.core.internal.div
 import net.corda.core.internal.exists
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.DEV_ROOT_CA
 import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.crypto.X509Utilities
@@ -21,6 +22,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import picocli.CommandLine
+import java.io.*
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -32,11 +34,33 @@ class RegistrationToolTest {
     val tempFolder: TemporaryFolder = TemporaryFolder()
 
     private val registrationTool = RegistrationTool()
-    private val portAllocation = incrementalPortAllocation(25666)
+    private val portAllocation = incrementalPortAllocation(20101) // TODO: During `master` merge remove 20101
+
+    private val nmPort = portAllocation.nextPort()
 
     @Rule
     @JvmField
     val bridgeHSM = HsmSimulator(portAllocation)
+
+    private val utimacoPort = bridgeHSM.address.port
+
+    private val portReplacementMap = mapOf("\$NM_PORT" to nmPort.toString(), "\$UTIMACO_PORT" to utimacoPort.toString())
+
+    companion object {
+
+        private val log = contextLogger()
+
+        private fun InputStream.replaceMapping(replacement: Map<String, String>): InputStream {
+            val text = InputStreamReader(this).readText()
+            val textWithReplacementApplied = replacement.entries.fold(text) { currText, entry -> currText.replace(entry.key, entry.value) }
+            return ByteArrayInputStream(textWithReplacementApplied.toByteArray())
+        }
+    }
+
+    init {
+        log.info("NM port: $nmPort")
+        log.info("Utimaco port: $utimacoPort")
+    }
 
     @Test
     fun `the tool can register multiple nodes at the same time`() {
@@ -48,10 +72,10 @@ class RegistrationToolTest {
         }
 
         listOf("nodeA.conf", "nodeB.conf", "nodeC.conf", "nodeD.conf").forEach {
-            javaClass.classLoader.getResourceAsStream(it).copyTo(workingDirectory / it)
+            javaClass.classLoader.getResourceAsStream(it).replaceMapping(portReplacementMap).copyTo(workingDirectory / it)
         }
 
-        val runResult = RegistrationServer(NetworkHostAndPort("localhost", 10000)).use {
+        val runResult = RegistrationServer(NetworkHostAndPort("localhost", nmPort)).use {
             it.start()
             CommandLine.populateCommand(registrationTool, BASE_DIR, workingDirectory.toString(),
                     "--network-root-truststore", trustStorePath.toString(),
@@ -85,17 +109,17 @@ class RegistrationToolTest {
         }
 
         listOf("nodeA.conf", "nodeB.conf", "nodeC.conf").forEach {
-            javaClass.classLoader.getResourceAsStream(it).copyTo(workingDirectory / it)
+            javaClass.classLoader.getResourceAsStream(it).replaceMapping(portReplacementMap).copyTo(workingDirectory / it)
         }
 
         // Store firewall files in a separate directory
         val firewallDir = workingDirectory / "firewall"
         firewallDir.toFile().mkdir()
         listOf("firewall.conf", "utimaco_config.yml").forEach {
-            javaClass.classLoader.getResourceAsStream(it).copyTo(firewallDir / it)
+            javaClass.classLoader.getResourceAsStream(it).replaceMapping(portReplacementMap).copyTo(firewallDir / it)
         }
 
-        val runResult = RegistrationServer(NetworkHostAndPort("localhost", 10000)).use {
+        val runResult = RegistrationServer(NetworkHostAndPort("localhost", nmPort)).use {
             it.start()
             CommandLine.populateCommand(registrationTool, BASE_DIR, workingDirectory.toString(),
                     "--network-root-truststore", trustStorePath.toString(),
@@ -144,10 +168,10 @@ class RegistrationToolTest {
         }
 
         listOf("nodeA_HSM.conf", "nodeB_HSM.conf", "nodeC_HSM.conf", "firewall.conf", "utimaco_config.yml", "utimaco_config2.yml").forEach {
-            javaClass.classLoader.getResourceAsStream(it).copyTo(workingDirectory / it)
+            javaClass.classLoader.getResourceAsStream(it).replaceMapping(portReplacementMap).copyTo(workingDirectory / it)
         }
 
-        val runResult = RegistrationServer(NetworkHostAndPort("localhost", 10000)).use {
+        val runResult = RegistrationServer(NetworkHostAndPort("localhost", nmPort)).use {
             it.start()
             CommandLine.populateCommand(registrationTool, BASE_DIR, workingDirectory.toString(),
                     "--network-root-truststore", trustStorePath.toString(),
