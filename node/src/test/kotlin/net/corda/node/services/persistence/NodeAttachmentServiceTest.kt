@@ -801,7 +801,7 @@ class NodeAttachmentServiceTest {
     }
 
     @Test
-    fun `jar not trusted if same key but different contract`() {
+    fun `jar trusted if same key but different contract`() {
         SelfCleaningDir().use { file ->
             val alias = "testAlias"
             val password = "testPassword"
@@ -817,7 +817,7 @@ class NodeAttachmentServiceTest {
             // Sanity check.
             assertEquals(key1, key2, "Different public keys used to sign jars")
             assertTrue(isAttachmentTrusted(storage.openAttachment(v1Id)!!, storage), "Initial contract $v1Id should be trusted")
-            assertFalse(isAttachmentTrusted(storage.openAttachment(v2Id)!!, storage), "Upgraded contract $v2Id should not be trusted")
+            assertTrue(isAttachmentTrusted(storage.openAttachment(v2Id)!!, storage), "Upgraded contract $v2Id should not be trusted")
         }
     }
 

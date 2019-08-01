@@ -3,6 +3,7 @@ package net.corda.coretests.transactions
 import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.Contract
 import net.corda.core.contracts.TransactionVerificationException
+import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.declaredField
 import net.corda.core.internal.inputStream
@@ -198,5 +199,95 @@ class AttachmentsClassLoaderTests {
 
     private fun importAttachment(jar: InputStream, uploader: String, filename: String?): AttachmentId {
         return jar.use { storage.importAttachment(jar, uploader, filename) }
+    }
+
+    @Test
+    fun `Allow loading an untrusted contract jar if another attachment exists that was signed with the same keys and uploaded by a trusted uploader`() {
+        val keyPairA = Crypto.generateKeyPair()
+        val keyPairB = Crypto.generateKeyPair()
+        val classJar = fakeAttachment(
+            "/com/example/something/UntrustedClass.class",
+            "Signed by someone trusted"
+        ).inputStream()
+        val attachment = classJar.use {
+            storage.importContractAttachment(
+                listOf("UntrustedClass.class"),
+                "rpc",
+                it,
+                signers = listOf(keyPairA.public, keyPairB.public)
+            )
+        }
+
+        val untrustedClassJar = fakeAttachment(
+            "/com/example/something/UntrustedClass.class",
+            "Signed by someone untrusted"
+        ).inputStream()
+        val untrustedAttachment = untrustedClassJar.use {
+            storage.importContractAttachment(
+                listOf("UntrustedClass.class"),
+                "untrusted",
+                it,
+                signers = listOf(keyPairA.public, keyPairB.public)
+            )
+        }
+
+        make(arrayOf(untrustedAttachment).map { storage.openAttachment(it)!! })
+    }
+
+    @Test
+    fun `Cannot load an untrusted contract jar if no other attachment exists that was signed with the same keys`() {
+        val keyPairA = Crypto.generateKeyPair()
+        val keyPairB = Crypto.generateKeyPair()
+        val untrustedClassJar = fakeAttachment(
+            "/com/example/something/UntrustedClass.class",
+            "Signed by someone untrusted"
+        ).inputStream()
+        val untrustedAttachment = untrustedClassJar.use {
+            storage.importContractAttachment(
+                listOf("UntrustedClass.class"),
+                "untrusted",
+                it,
+                signers = listOf(keyPairA.public, keyPairB.public)
+            )
+        }
+
+        assertFailsWith(TransactionVerificationException.UntrustedAttachmentsException::class) {
+            make(arrayOf(untrustedAttachment).map { storage.openAttachment(it)!! })
+        }
+    }
+
+    @Test
+    fun `Cannot load an untrusted contract jar if no other attachment exists that was signed with the same keys and uploaded by a trusted uploader`() {
+        val keyPairA = Crypto.generateKeyPair()
+        val keyPairB = Crypto.generateKeyPair()
+        val classJar = fakeAttachment(
+            "/com/example/something/UntrustedClass.class",
+            "Signed by someone untrusted with the same keys"
+        ).inputStream()
+        val existingUntrustedAttachment = classJar.use {
+            storage.importContractAttachment(
+                listOf("UntrustedClass.class"),
+                "untrusted",
+                it,
+                signers = listOf(keyPairA.public, keyPairB.public)
+            )
+        }
+
+        val untrustedClassJar = fakeAttachment(
+            "/com/example/something/UntrustedClass.class",
+            "Signed by someone untrusted"
+        ).inputStream()
+        val untrustedAttachment = untrustedClassJar.use {
+            storage.importContractAttachment(
+                listOf("UntrustedClass.class"),
+                "untrusted",
+                it,
+                signers = listOf(keyPairA.public, keyPairB.public)
+            )
+        }
+
+        assertFailsWith(TransactionVerificationException.UntrustedAttachmentsException::class) {
+            make(arrayOf(untrustedAttachment).map { storage.openAttachment(it)!! })
+        }
     }
 }
