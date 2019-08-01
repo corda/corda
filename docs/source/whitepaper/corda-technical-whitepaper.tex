@@ -203,12 +203,12 @@ unique pseudonym that is ultimately rooted by the top of the DNS hierarchy, so t
 arbitrary self-selected usernames. The permissioning service can implement any policy it likes as long as the
 identities it signs are globally unique. Thus it's possible to build an entirely pseudonymous Corda network.
 
-However, when a network has a way to map identities to some sort of real world thing that's difficult to bulk create
+However, when a network has a way to map identities to some sort of real world thing that's difficult to bulk create,
 many efficient and useful algorithms become available. Most importantly, all efficient byzantine fault tolerant
 consensus algorithms require nodes to be usefully distinct such that users can reason about the likelihood of cluster
 members going bad simultaneously. In the worst case where a BFT cluster consists of a single player pretending to be
 several, the security of the system is completely voided in an undetectable manner. Useful privacy techniques like
-mix networks and Tor\cite{Dingledine:2004:TSO:1251375.1251396} also make the assumption of unique, sybil-free
+mix networks (see~\cref{subsec:privacy-upgrades}) and Tor\cite{Dingledine:2004:TSO:1251375.1251396} also make the assumption of unique, sybil-free
 identities. For these reasons and more the mainline Corda network performs identity verification to require that
 top-level members be companies, and it's recommended that all networks do so.
 
@@ -343,9 +343,12 @@ the administrator is expected to manually review the change and accept it. Failu
 date (the ``flag day'') results in the node shutting down, as it would no longer be able to fulfil its purpose.
 Network operators are expected to communicate and coordinate this process out of band; the protocol allows nodes to
 publish what parameters they have accepted so acceptance can be monitored and the flag day can be changed if
-so desired. Unlike in proof-of-work based block chain systems, there is no way to continue past an unacceptable
-change in the network parameters and remain on the `losing side'. Thus the notion of flag days is subtly different
-to the notion of a hard fork.
+so desired. In proof-of-work based block chain systems a hard fork creates two split views of the ledger that
+then proceed to evolve independently, with each side remaining in some strictly technical sense `usable' by parties
+on each side of the fork. Consensus will only be lost over transactions where both sides do really disagree and for
+any transaction that traces its origin back to a post-fork coinbase transaction. But in Corda, there is no way
+to continue past an unacceptable change in the network parameters and remain on the `losing side'.
+Thus the notion of flag days is subtly different to the notion of a hard fork.
 
 \subsection{Protocol versioning}\label{subsec:protocol-versioning}
 
@@ -371,7 +374,7 @@ case the API will throw an exception if an attempt is made to use a new feature 
 version number is lower than the version in which the new feature was introduced. The network can then use a flag
 day to increase the minimum platform version and thus activate the new features. Nodes that aren't new
 enough to handle the network's minimum version shut down automatically unless overridden. Because mandatory
-upgrades may be difficult to coordinate and enforce future versions of the platform may support outsourcing of
+upgrades may be difficult to coordinate and enforce, future versions of the platform may support outsourcing of
 transaction verification to third party nodes or remote SGX enclaves.
 
 Flag days mark the end of a process: it is the point by which the overwhelming majority of network participants are
@@ -597,7 +600,7 @@ Instead, the network operator is the root and may delegate authority as they see
 delegate authority over the sub-namespace of a single legal entity, as described above, it is theoretically also
 possible to delegate in other ways, for example, along national boundaries, or simply to grant unconstrained
 certificate-issuing power to other firms, as is done in the web PKI. In such a configuration care would have to be
-taken to ensure only a single certificate laying claim to a name/key pair was issued, as the platform as this time
+taken to ensure only a single certificate laying claim to a name/key pair was issued, as the platform at this time
 cannot handle the ambiguity of multiple live certificates for the same identity in different parts of the
 hierarchy. The issues involved in having multiple certificate issuers for a single network may be addressed in
 future work, but would not remove the requirement to have a single coherent set of network parameters.
@@ -695,7 +698,7 @@ a variety of cipher suites - Corda implements cryptographic agility.
 \item [Type.] Transactions can either be normal, notary-changing or explicit upgrades. The validation rules for each are
 different.
 \item [Timestamp.] When present, a timestamp defines a time range in which the transaction is considered to
-have occurred. This is discussed in more detail below.
+have occurred. This is discussed in section \cref{sec:timestamps}.
 \item [Network parameters.] Specifies the hash and epoch of the network parameters that were in force at the time the
 transaction was notarised. See \cref{subsec:network-parameters} for more details.
 % \item [Summaries] Textual summaries of what the transaction does, checked by the involved smart contracts. This field
@@ -811,7 +814,7 @@ is assumed to have occurred within that time.
 \paragraph{Reference clocks.}In order to allow for relatively tight time windows to be used when transactions are
 fully under the control of a single party, notaries are expected to be synchronised to international atomic time
 (TIA). Accurate feeds of this clock can be obtained from GPS satellites and long-wave radio. Note that Corda uses
-the Google/Amazon timeline, which is UTC with a leap smear from noon to noon across the leap event, thus each day
+the Google/Amazon timeline\cite{GoogleTime}, which is UTC with a leap smear from noon to noon across leap second events. Each day thus
 always has exactly 86400 seconds.
 
 \paragraph{Timezones.}Business agreements typically specify times in local time zones rather than offsets from
@@ -843,10 +846,8 @@ is the ability to embed the ISDA Common Domain Model\cite{ISDACDM} directly into
 a large collection of types mapped to Java classes that model derivatives trading in a standardised way. It is
 common for industry groups to define such domain models and for them to have a Java mapping.
 
-Current versions of the platform only execute attachments that have been previously installed (and thus
-whitelisted), or attachments that are signed by the same signer as a previously installed attachment. Thus nodes
-may fail to reach consensus on long transaction chains that involve apps your counterparty has not seen. Future
-versions of the platform will run contract bytecode inside a deterministic JVM. See~\cref{sec:djvm}.
+Attachments containing bytecode are executed using a deterministic Java bytecode rewriting system, sometimes called
+the DJVM. See~\cref{sec:djvm} for more information.
 
 The Java standards also specify a comprehensive type system for expressing common business data. Time and calendar
 handling is provided by an implementation of the JSR 310 specification, decimal calculations can be performed
@@ -858,7 +859,7 @@ Contract bytecode also defines the states themselves, which may be directed acyc
 their properties with a small set of standardised annotations. These can be useful for controlling how states are
 serialized to JSON and XML (using JSR 367 and JSR 222 respectively), for expressing static validation constraints
 (JSR 349) and for controlling how states are inserted into relational databases (JSR 338). This feature is
-discussed later. Future versions of the platform may additionally support cyclic object graphs.
+discussed further in section~\cref{subsec:direct-sql-access}. Future versions of the platform may additionally support cyclic object graphs.
 
 \paragraph{Data files.}Attachments may also contain data files that support the contract code. These may be in the
 same zip as the bytecode files, or in a different zip that must be provided for the transaction to be valid.
@@ -911,7 +912,7 @@ for code signing we place initial focus on being able to re-use the infrastructu
 In any system that combines typed data with potentially malicious adversaries, it's important to always ensure
 names are not allowed to become ambiguous or mixed up. Corda achieves this via a combination of different features.
 
-\paragraph{No overlap rule.}Within a transaction attachments form a Java classpath. Class names are resolved by
+\paragraph{No overlap rule.}Within a transaction, attachments form a Java classpath. Class names are resolved by
 locating the defining class file within the set of attachments and loading them via the deterministic JVM.
 Unfortunately, out of the box Java allows different JAR files to define the same class name. Whichever JAR happens
 to come first on the classpath is the one that gets used, but conventionally a classpath is not meant to have an
@@ -959,7 +960,7 @@ uses.
 % TODO: Discuss confidential identities.
 % TODO: Discuss the crypto suites used in Corda.
 
-\subsection{Bug fixes and dispute resolution}\label{subsec:bug-fixes-and-dispute-resolution}
+\subsection{Dispute resolution}\label{subsec:bug-fixes-and-dispute-resolution}
 
 Decentralised ledger systems often differ in their underlying political ideology as well as their technical
 choices. The Ethereum project originally promised ``unstoppable apps'' which would implement ``code as law''. After
@@ -1150,9 +1151,8 @@ algorithms for the task under this name.
 
 Together, this functionality provides Corda's equivalent of the Ethereum ERC-20 standard\cite{ERC20}.
 
-Having defined various kinds of abstract token, the SDK goes on to define (finally!) \texttt{Money} and
-\texttt{FiatCurrency} types. Interop with the JSR 354 standard for representing financial amounts is left to future
-work.
+Having defined various kinds of abstract token, the SDK defines \texttt{Money} and \texttt{FiatCurrency} types.
+Interop with the JSR 354 standard for representing financial amounts is left to future work.
 
 %\subsection{Market infrastructure}
 %
@@ -1363,7 +1363,7 @@ states back to the issuer for re-issuance, thus pruning long transaction chains 
 The vault is also responsible for managing scheduled events requested by node-relevant states when the implementing
 app has been installed (see~\cref{sec:event-scheduling}).
 
-\subsection{Direct SQL access}
+\subsection{Direct SQL access}\label{subsec:direct-sql-access}
 
 A distributed ledger is ultimately just a shared database, albeit one with some unique features. The following
 features are therefore highly desirable for improving the productivity of app developers:
@@ -1617,7 +1617,7 @@ It is common for blockchain systems to execute smart contract logic very slowly 
 optimising compilers for their custom programming languages. Because Corda runs smart contract logic on a JVM it
 benefits automatically from just-in-time compilation to machine code of contract logic. After a contract has been
 encountered a few times it will be scheduled for conversion to machine code, yielding speedups of many orders of
-magnitude. Contract logic only executed only a few times will be run interpreted, avoiding the overhead of
+magnitude. Contract logic only executed a few times will be run interpreted, avoiding the overhead of
 compilation for rarely used business logic. The process is entirely transparent to developer, thus as JVMs improve
 over time the throughput of nodes automatically gets better too. JVMs have over thousands of accumulated man-years
 of work put into their optimising compilers already, and are still improving. The upgrade from Java 8 to Java 11
@@ -1671,7 +1671,7 @@ See~\cref{subsec:data-visibility-and-dependency-resolution}~and~\cref{subsec:par
 subcomponents be revealed to parties who already know the Merkle root hash. Additionally, they may sign the
 transaction without being able to see all of it. See~\cref{sec:tear-offs}
 
-\paragraph{Key randomisation.}The vault generates and uses random keys that are unlinkable to an identity.
+\paragraph{Key randomisation.}The node's key management service generates and uses random keys that are unlinkable to an identity.
 See~\cref{sec:vault}.
 
 \paragraph{Graph pruning.}Large transaction graphs that involve liquid assets can be `pruned' by requesting the asset
@@ -2123,9 +2123,8 @@ the feature ideal for various kinds of file that would be inappropriate to place
 
 \subsection{Human interaction}
 
-The primary purpose of flows is to orchestrate changes to the ledger amongst nodes. However, a common need is
-to model with flows not just multi-party protocols but higher level business processes which may include human
-interaction. This would be helpful for:
+As well as multi-party protocols, a common need is to model flows with higher level business processes which may
+include human interaction. This would be helpful for:
 
 \begin{itemize}
     \item Gaining approval to proceed with a ledger change if it meets certain criteria, like being too large
@@ -2134,7 +2133,7 @@ interaction. This would be helpful for:
     \item Notifying people of work they need to do.
 \end{itemize}
 
-Today such tasks can be achieved by splitting a flow up and having UI logic update shared database tables. But
+Today such tasks can be achieved by splitting a flow up and having UI logic update shared database tables. However,
 this would be much more convenient if flows could send and receive messages with people and not just other nodes.
 Whilst no replacement for a full GUI, many common tasks could be handled in this way.
 
@@ -2144,7 +2143,7 @@ queues and take requests from them, with the responses (if required) being place
 These adapters could, for example, create tickets in an internal ticketing system, push notifications to a smartphone
 app, update in-house applications, post to shared chatrooms and so on.
 
-Individuals and groups of individuals within an organisation would be modelled as parties that can be looked up via a
+Individuals and groups of individuals within an organisation could be modelled as parties that can be looked up via a
 directory service, similar to how parties can be resolved from the network map. Note that there'd be no requirement
 for users to have keys in this scheme: whether a user has a key and signs transactions or whether they just instruct
 the app about what to do is up to the application developer.
@@ -2198,7 +2197,9 @@ they may communicate only by sending messages to the untrusted host software whi
 need to encrypt and sign any data entering/leaving the enclave.
 
 SGX is designed with a sophisticated versioning scheme that allows it to be re-secured in case flaws in the
-technology are found; as of writing this ``TCB recovery'' process has been used several times.
+technology are found; as of writing this ``TCB recovery'' process has been used several times\footnote{See slide 18
+in \href{https://www.slideshare.net/DesmondYuen/intel-software-guard-extension}{this presentation} for more
+information on TCB recovery.}.
 
 A remote attestation report can be attached to a piece of data to create a \emph{signature of attestation} (SoA).
 Such a signature is conceptually like a normal digital signature and in fact may contain a regular digital signature
@@ -2336,14 +2337,14 @@ directly.
 
 \section{Conclusion}\label{sec:conclusion}
 
-We have presented Corda, a decentralised database designed for the financial sector. It allows for a unified data
-set to be distributed amongst many mutually distrusting nodes, with smart contracts running on the JVM providing
+We have presented Corda, a decentralised database designed for industrial use cases. It allows for a consistent
+data set to be decentralised amongst many mutually distrusting nodes, with smart contracts running on the JVM providing
 access control and schema definitions. A novel continuation-based persistence framework assists developers with
 coordinating the flow of data across the network. An identity management system ensures that parties always know
-who they are trading with. Notaries ensure algorithmic agility with respect to distributed consensus systems, and
-the system operates without mining or a block chain.
+who they are interacting with. Notaries ensure algorithmic agility with respect to distributed consensus systems, and
+the system operates without mining or chains of blocks.
 
-A standard type system is provided for the modelling of financial logic. The design considers security throughout:
+A standard type system is provided for the modelling of business logic. The design considers security throughout:
 it supports the integration of secure signing devices for transaction authorisation, secure enclaves for
 transaction processing, composite keys for expressing complex authorisation policies, and is based on binary
 protocols with length-prefixed buffers throughout for the systematic avoidance of common buffer management
@@ -2351,8 +2352,8 @@ exploits. Users may analyse ledger data relevant to them by issuing ordinary SQL
 engines, and may craft complex multi-party transactions with ease in programming languages that are already
 familiar to them.
 
-Finally, the platform defines standard ways to integrate the global ledger with financial infrastructure like high
-performance markets and netting services.
+Finally, we have laid out a roadmap of future work intended to enhance the platform's privacy, security, robustness
+and flexibility.
 
 \section{Acknowledgements}
 
