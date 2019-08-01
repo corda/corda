@@ -88,6 +88,30 @@
 
         </RollingRandomAccessFile>
 
+        <RollingFile name="Checkpoint-Agent-RollingFile-Appender"
+                     fileName="${log-path}/checkpoints_agent-${date:yyyyMMdd-HHmmss}.log"
+                     filePattern="${archive}/checkpoints_agent.%date{yyyy-MM-dd}-%i.log.gz">
+
+            <PatternLayout pattern="[%-5level] %date{ISO8601}{UTC}Z [%t] %c{2}.%method - %msg%n"/>
+
+            <Policies>
+                <TimeBasedTriggeringPolicy/>
+                <SizeBasedTriggeringPolicy size="100MB"/>
+            </Policies>
+
+            <DefaultRolloverStrategy min="1" max="100">
+                <Delete basePath="${archive}" maxDepth="1">
+                    <IfFileName glob="${log-name}*.log.gz"/>
+                    <IfLastModified age="60d">
+                        <IfAny>
+                            <IfAccumulatedFileSize exceeds="10 GB"/>
+                        </IfAny>
+                    </IfLastModified>
+                </Delete>
+            </DefaultRolloverStrategy>
+
+        </RollingFile>
+
         <Rewrite name="Console-ErrorCode-Selector">
             <AppenderRef ref="Console-Selector"/>
             <ErrorCodeRewritePolicy/>
@@ -131,6 +155,9 @@
         <Logger name="org.jolokia" additivity="true" level="warn">
             <AppenderRef ref="Console-ErrorCode-Appender-Println"/>
             <AppenderRef ref="RollingFile-ErrorCode-Appender"/>
+        </Logger>
+        <Logger name="CheckpointAgent" level="debug" additivity="false">
+            <AppenderRef ref="Checkpoint-Agent-RollingFile-Appender"/>
         </Logger>
     </Loggers>
 </Configuration>

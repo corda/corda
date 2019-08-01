@@ -1537,8 +1537,6 @@ public final class net.corda.core.crypto.CordaSecurityProvider extends java.secu
 public static final class net.corda.core.crypto.CordaSecurityProvider$Companion extends java.lang.Object
   public <init>(kotlin.jvm.internal.DefaultConstructorMarker)
 ##
-public final class net.corda.core.crypto.CordaSecurityProviderKt extends java.lang.Object
-##
 public final class net.corda.core.crypto.Crypto extends java.lang.Object
   @NotNull
   public static final java.security.PrivateKey decodePrivateKey(String, byte[])

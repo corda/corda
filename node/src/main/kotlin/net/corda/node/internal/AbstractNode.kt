@@ -342,7 +342,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         installCoreFlows()
         registerCordappFlows()
         services.rpcFlows += cordappLoader.cordapps.flatMap { it.rpcFlows }
-        val checkpointDumper = CheckpointDumper(checkpointStorage, database, services)
+        val checkpointDumper = CheckpointDumper(checkpointStorage, database, services, services.configuration.baseDirectory)
         val rpcOps = makeRPCOps(cordappLoader, checkpointDumper)
         startShell()
         networkMapClient?.start(trustRoot)
