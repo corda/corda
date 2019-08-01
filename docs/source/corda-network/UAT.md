@@ -27,11 +27,11 @@ Joining the UAT environment
 * Access to the appropriate environment has been agreed with your project representative with sufficient advance notice (4 weeks standard but may be longer if you have special service requirements) to ensure appropriate SLAs can be in place. Your project representative will be able to supply the booking template.
 
 **Note**: 
-*Corda Network UAT is an R3 owned and operated environment and service designed to support parties intending to join Corda Network proper with realistic network test facilities. In contrast, Corda Network is a production network governed by an [independent Foundation](https://corda.network/governance/index.html) and has no responsibility for Corda Network UAT. Corda Network UAT seeks to provide a test environment which is as close as possible to Corda Network in its make-up and operation.*
+Corda Network UAT is an R3 owned and operated environment and service designed to support parties intending to join Corda Network proper with realistic network test facilities. In contrast, Corda Network is a production network governed by an [Independent Foundation](https://corda.network/governance/index.html) and has no responsibility for Corda Network UAT. Corda Network UAT seeks to provide a test environment which is as close as possible to Corda Network in its make-up and operation.
 
 Steps to join UAT environment
 -----------------------------
 
-Steps to join are outlined on the [Corda Network UAT microsite](http://uat.network.r3.com/pages/joining/joining.html)
+Steps to join are outlined on the [Corda Network UAT microsite](http://uat.network.r3.com/pages/joining/joining.html).
 
 For further questions on this process, please contact us - preferably on the mailing list: https://groups.io/g/corda-network
