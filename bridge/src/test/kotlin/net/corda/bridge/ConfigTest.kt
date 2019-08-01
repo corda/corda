@@ -21,6 +21,7 @@ import org.junit.rules.TemporaryFolder
 import java.nio.file.Paths
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class ConfigTest {
     @Rule
@@ -112,6 +113,7 @@ class ConfigTest {
         assertEquals("tunnelkeypassword", tunnelSSLConfiguration.keyStore.storePassword)
         assertEquals("tunneltrustpassword", tunnelSSLConfiguration.trustStore.storePassword)
         assertNull(config.floatOuterConfig)
+        assertFalse(config.useProxyForCrls)
     }
 
     @Test
@@ -166,6 +168,7 @@ class ConfigTest {
         assertEquals("proxyUser", config.outboundConfig!!.proxyConfig!!.userName)
         assertEquals("pwd", config.outboundConfig!!.proxyConfig!!.password)
         assertEquals(null, config.outboundConfig!!.proxyConfig!!.proxyTimeoutMS)
+        assertTrue(config.useProxyForCrls)
         val badConfigResource4 = "/net/corda/bridge/withsocks/badconfig/badsocksversion4.conf"
         assertFailsWith<IllegalArgumentException> {
             createAndLoadConfigFromResource(tempFolder.root.toPath() / "4", badConfigResource4)
@@ -337,5 +340,13 @@ class ConfigTest {
         val configResource = "/net/corda/bridge/zeroAddress/bridge/firewall.conf"
         Assertions.assertThatThrownBy { createAndLoadConfigFromResource(tempFolder.root.toPath(), configResource) }
                 .hasMessage("0.0.0.0 is not allowed in floatAddresses")
+    }
+
+    @Test
+    fun `Check useProxyForCrls can be changed`() {
+        val configResource = "/net/corda/bridge/useProxyForCrls/firewall.conf"
+        val baseDirectory = tempFolder.root.toPath()
+        val config = createAndLoadConfigFromResource(baseDirectory, configResource)
+        assertTrue(config.useProxyForCrls)
     }
 }

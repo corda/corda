@@ -17,10 +17,7 @@ import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.nodeapi.internal.protonwrapper.messages.MessageStatus
 import net.corda.nodeapi.internal.protonwrapper.messages.ReceivedMessage
-import net.corda.nodeapi.internal.protonwrapper.netty.AMQPClient
-import net.corda.nodeapi.internal.protonwrapper.netty.AMQPConfiguration
-import net.corda.nodeapi.internal.protonwrapper.netty.ConnectionChange
-import net.corda.nodeapi.internal.protonwrapper.netty.RevocationConfig
+import net.corda.nodeapi.internal.protonwrapper.netty.*
 import rx.Subscription
 import java.io.ByteArrayOutputStream
 import java.util.concurrent.ExecutorService
@@ -50,8 +47,19 @@ class TunnelingBridgeReceiverService(val conf: FirewallConfiguration,
     private var receiveSubscriber: Subscription? = null
     private var amqpControlClient: AMQPClient? = null
     private val expectedCertificateSubject: CordaX500Name = conf.bridgeInnerConfig!!.expectedCertificateSubject
-    private val crlFetcher = CrlFetcher(conf.outboundConfig?.proxyConfig)
+    private val crlFetcher = CrlFetcher(establishProxyConfig())
+
     private val executor: ExecutorService = Executors.newSingleThreadExecutor()
+
+    private fun establishProxyConfig() : ProxyConfig? {
+        return if (conf.useProxyForCrls) {
+            log.info("For CRL retrieval via tunnel will be using the following ProxyConfig: ${conf.outboundConfig?.proxyConfig}. If this is unwanted, please use 'useProxyForCrls = false' to override.")
+            conf.outboundConfig?.proxyConfig
+        } else {
+            log.info("Not using ProxyConfig for CRL retrieval via tunnel. If this is unwanted, please use 'useProxyForCrls = true' to override.")
+            null
+        }
+    }
 
     override fun start() {
         statusSubscriber = statusFollower.activeChange.subscribe({
