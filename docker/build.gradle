@@ -99,6 +99,14 @@ task pushZuluLatestTag('type': DockerPushImage, dependsOn: [buildOfficialZuluDoc
     imageName = zuluBuildTags[1]
 }
 
+task pushZulu11TimeStampedTag('type': DockerPushImage, dependsOn: [buildOfficialZuluJDK11DockerImage]){
+    imageName = zuluBuildTags[0]
+}
+
+task pushZulu11LatestTag('type': DockerPushImage, dependsOn: [buildOfficialZuluJDK11DockerImage]){
+    imageName = zuluBuildTags[1]
+}
+
 task pushCorrettoTimeStampedTag('type': DockerPushImage, dependsOn: [buildOfficialCorrettoDockerImage]){
     imageName = correttoBuildTags[0]
 }
