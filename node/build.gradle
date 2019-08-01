@@ -31,6 +31,13 @@ apply plugin: 'com.jfrog.artifactory'
 
 description 'Corda node modules'
 
+repositories {
+    // Extra repository for the deterministic-rt JAR.
+    maven {
+        url "$artifactory_contextUrl/corda-dev"
+    }
+}
+
 //noinspection GroovyAssignabilityCheck
 configurations {
     integrationTestCompile.extendsFrom testCompile
