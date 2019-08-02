@@ -23,6 +23,7 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.api.assertThrows
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -242,7 +243,15 @@ class PersistentIdentityServiceTests {
     fun `register a public key to party mapping`(){
         val (alice, anonymousAlice) = createConfidentialIdentity(ALICE.name)
 
+        // Ensure no exceptions are thrown if we attempt to look up an unregistered CI
+        assertNull(identityService.wellKnownPartyFromAnonymous(AnonymousParty(anonymousAlice.owningKey)))
+
         identityService.registerKeyToParty(anonymousAlice.owningKey, alice.party)
+
+        // If an existing entry is found matching the party then the method call is idempotent
+        assertDoesNotThrow {
+            identityService.registerKeyToParty(anonymousAlice.owningKey, alice.party)
+        }
 
         assertThrows<IllegalArgumentException> {
             identityService.registerKeyToParty(anonymousAlice.owningKey, bob.party)
