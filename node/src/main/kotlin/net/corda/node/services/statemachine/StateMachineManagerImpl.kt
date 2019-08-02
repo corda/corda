@@ -445,9 +445,10 @@ class StateMachineManagerImpl(
             decrementLiveFibers()
         }
         fiber.actionOnEnd = { result, propagated ->
+            var checkpointToRemove: Checkpoint? = null
             try {
                 mutex.locked {
-                    stateMachines.remove(fiber)?.let { checkpointStorage.removeCheckpoint(it) }
+                    checkpointToRemove = stateMachines.remove(fiber)
                     notifyChangeObservers(StateMachineManager.Change.Removed(fiber.logic, result))
                 }
                 endAllFiberSessions(fiber, result, propagated)
@@ -460,6 +461,17 @@ class StateMachineManagerImpl(
                     fiber.rollbackTransaction()
                 }
                 decrementLiveFibers()
+            }
+
+            checkpointToRemove?.let { checkpoint: Checkpoint ->
+                try {
+                    database.transaction {
+                        checkpointStorage.removeCheckpoint(checkpoint)
+                        this.commit()
+                    }
+                } catch (t: Throwable) {
+                    logger.error("Could not remove the checkpoint ${checkpoint.id} for failed fiber ${fiber.id}!", t)
+                }
             }
         }
         mutex.locked {
