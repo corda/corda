@@ -14,12 +14,12 @@ import com.microsoft.azure.keyvault.webkey.JsonWebKeySignatureAlgorithm
 import com.microsoft.azure.keyvault.webkey.JsonWebKeyType
 import com.typesafe.config.ConfigException
 import com.typesafe.config.ConfigFactory
-import net.corda.core.utilities.detailedLogger
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.Crypto.ECDSA_SECP256K1_SHA256
 import net.corda.core.crypto.Crypto.ECDSA_SECP256R1_SHA256
 import net.corda.core.crypto.Crypto.RSA_SHA256
 import net.corda.core.crypto.SignatureScheme
+import net.corda.core.utilities.detailedLogger
 import net.corda.core.utilities.trace
 import net.corda.nodeapi.internal.config.UnknownConfigurationKeysException
 import net.corda.nodeapi.internal.config.parseAs
@@ -30,7 +30,6 @@ import org.bouncycastle.operator.ContentSigner
 import java.io.ByteArrayOutputStream
 import java.io.FileInputStream
 import java.io.OutputStream
-import java.lang.IllegalArgumentException
 import java.math.BigInteger
 import java.nio.file.Path
 import java.security.KeyStore
@@ -38,7 +37,6 @@ import java.security.MessageDigest
 import java.security.PrivateKey
 import java.security.PublicKey
 import java.security.cert.X509Certificate
-import java.time.Duration
 import java.util.concurrent.Executors
 
 /*
@@ -49,14 +47,13 @@ import java.util.concurrent.Executors
 class AzureKeyVaultCryptoService(
         private val keyVaultClient: KeyVaultClient,
         private val keyVaultUrl: String,
-        private val protection: Protection = DEFAULT_PROTECTION,
-        timeout: Duration? = null
-) : CryptoService(timeout) {
+        private val protection: Protection = DEFAULT_PROTECTION
+) : CryptoService {
 
     /**
      * The protection parameter indicates if  KeyVault should store keys protected by an HSM or as "software-protected" keys.
      */
-    override fun _generateKeyPair(alias: String, scheme: SignatureScheme): PublicKey {
+    override fun generateKeyPair(alias: String, scheme: SignatureScheme): PublicKey {
         checkAlias(alias)
         val keyRequest: CreateKeyRequest = createKeyRequest(scheme.schemeNumberID, alias, protection)
         detailedLogger.trace { "CryptoService(action=generate_key_pair_start;alias=$alias;scheme=$scheme)" }
@@ -74,7 +71,7 @@ class AzureKeyVaultCryptoService(
         }
     }
 
-    override fun _containsKey(alias: String): Boolean {
+    override fun containsKey(alias: String): Boolean {
         checkAlias(alias)
         detailedLogger.trace { "CryptoService(action=key_lookup_start;alias=$alias)" }
         val keyBundle = keyVaultClient.getKey(createIdentifier(alias))
@@ -82,7 +79,7 @@ class AzureKeyVaultCryptoService(
         return keyBundle != null
     }
 
-    override fun _getPublicKey(alias: String): PublicKey? {
+    override fun getPublicKey(alias: String): PublicKey? {
         checkAlias(alias)
         detailedLogger.trace { "CryptoService(action=key_get_start;alias=$alias)" }
         val keyBundle = keyVaultClient.getKey(createIdentifier(alias))
@@ -93,7 +90,7 @@ class AzureKeyVaultCryptoService(
         return toPublicKey(keyBundle)
     }
 
-    override fun _sign(alias: String, data: ByteArray, signAlgorithm: String?): ByteArray {
+    override fun sign(alias: String, data: ByteArray, signAlgorithm: String?): ByteArray {
         checkAlias(alias)
         detailedLogger.trace { "CryptoService(action=signing_start;alias=$alias;algorithm=${signAlgorithm ?: "SHA-256"})" }
         // KeyVault can only sign over hashed data.
@@ -122,7 +119,7 @@ class AzureKeyVaultCryptoService(
         }
     }
 
-    override fun _getSigner(alias: String): ContentSigner {
+    override fun getSigner(alias: String): ContentSigner {
         detailedLogger.trace { "CryptoService(action=get_signer;alias=$alias)" }
         return object : ContentSigner {
             init {
@@ -256,11 +253,11 @@ class AzureKeyVaultCryptoService(
         /**
          * Parse the configuration file at the specified path configFile.
          */
-        fun fromConfigurationFile(configFile: Path, timeout: Duration? = null): AzureKeyVaultCryptoService {
+        fun fromConfigurationFile(configFile: Path): AzureKeyVaultCryptoService {
             val config = parseConfigFile(configFile)
             val keyVaultClient: KeyVaultClient = createKeyVaultClient(config.path, config.password, config.alias, config.clientId)
             return AzureKeyVaultCryptoService(keyVaultClient, config.keyVaultURL, config.protection
-                    ?: DEFAULT_PROTECTION, timeout)
+                    ?: DEFAULT_PROTECTION)
         }
 
         internal fun parseConfigFile(configFile: Path): AzureKeyVaultConfig {

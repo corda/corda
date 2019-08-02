@@ -19,7 +19,6 @@ import java.io.OutputStream
 import java.nio.file.Path
 import java.security.*
 import java.security.spec.X509EncodedKeySpec
-import java.time.Duration
 import java.util.*
 import kotlin.reflect.full.memberProperties
 
@@ -29,9 +28,8 @@ import kotlin.reflect.full.memberProperties
 class UtimacoCryptoService(
         private val cryptoServerProvider: CryptoServerProvider,
         private val config: UtimacoConfig,
-        timeout: Duration? = null,
         private val auth: () -> UtimacoCredentials
-) : CryptoService(timeout) {
+) : CryptoService {
 
     private val keyStore: KeyStore
     private val keyTemplate: CryptoServerCXI.KeyAttributes
@@ -74,11 +72,11 @@ class UtimacoCryptoService(
         }
     }
 
-    override fun _generateKeyPair(alias: String, scheme: SignatureScheme): PublicKey {
+    override fun generateKeyPair(alias: String, scheme: SignatureScheme): PublicKey {
         return generateKeyPair(alias, scheme, keyTemplate)
     }
 
-    override fun _containsKey(alias: String): Boolean {
+    override fun containsKey(alias: String): Boolean {
         try {
             return withAuthentication {
                 detailedLogger.trace { "CryptoService(action=key_lookup_start;alias=$alias)" }
@@ -92,7 +90,7 @@ class UtimacoCryptoService(
         }
     }
 
-    override fun _getPublicKey(alias: String): PublicKey? {
+    override fun getPublicKey(alias: String): PublicKey? {
         try {
             return withAuthentication {
                 detailedLogger.trace { "CryptoService(action=key_get_start;alias=$alias)" }
@@ -108,7 +106,7 @@ class UtimacoCryptoService(
         }
     }
 
-    override fun _sign(alias: String, data: ByteArray, signAlgorithm: String?): ByteArray {
+    override fun sign(alias: String, data: ByteArray, signAlgorithm: String?): ByteArray {
         try {
             return withAuthentication {
                 (keyStore.getKey(alias, null) as PrivateKey?)?.let {
@@ -132,7 +130,7 @@ class UtimacoCryptoService(
         }
     }
 
-    override fun _getSigner(alias: String): ContentSigner {
+    override fun getSigner(alias: String): ContentSigner {
         detailedLogger.trace { "CryptoService(action=get_signer;alias=$alias)" }
         return object : ContentSigner {
             private val publicKey: PublicKey = getPublicKey(alias) ?: throw CryptoServiceException("No key found for alias $alias")
@@ -290,15 +288,15 @@ class UtimacoCryptoService(
             UtimacoCredentials(username, pw)
         }
 
-        fun fromConfigurationFile(configFile: Path?, timeout: Duration? = null): UtimacoCryptoService {
+        fun fromConfigurationFile(configFile: Path?): UtimacoCryptoService {
             val config = parseConfigFile(configFile!!)
-            return fromConfig(config, timeout) { UtimacoCredentials(config.username, config.password.toByteArray(), config.keyFile) }
+            return fromConfig(config) { UtimacoCredentials(config.username, config.password.toByteArray(), config.keyFile) }
         }
 
-        fun fromConfig(configuration: UtimacoConfig, timeout: Duration? = null, auth: () -> UtimacoCredentials): UtimacoCryptoService {
+        fun fromConfig(configuration: UtimacoConfig, auth: () -> UtimacoCredentials): UtimacoCryptoService {
             val providerConfig = toCryptoServerProviderConfig(configuration)
             val cryptoServerProvider = createProvider(providerConfig)
-            return UtimacoCryptoService(cryptoServerProvider, configuration, timeout, auth)
+            return UtimacoCryptoService(cryptoServerProvider, configuration, auth)
         }
 
         /**

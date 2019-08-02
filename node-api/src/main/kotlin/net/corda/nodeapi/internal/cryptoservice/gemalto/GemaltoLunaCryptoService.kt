@@ -6,26 +6,24 @@ import com.typesafe.config.ConfigException
 import com.typesafe.config.ConfigFactory
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SignatureScheme
+import net.corda.core.utilities.detailedLogger
+import net.corda.core.utilities.trace
 import net.corda.nodeapi.internal.config.UnknownConfigurationKeysException
 import net.corda.nodeapi.internal.config.parseAs
 import net.corda.nodeapi.internal.cryptoservice.CryptoService
 import net.corda.nodeapi.internal.cryptoservice.JCACryptoService
-import net.corda.core.utilities.detailedLogger
-import net.corda.core.utilities.trace
 import java.nio.file.Path
 import java.security.KeyStore
 import java.security.Provider
 import java.security.PublicKey
-import java.time.Duration
 import javax.security.auth.x500.X500Principal
 
 class GemaltoLunaCryptoService(
         keyStore: KeyStore,
         provider: Provider,
         x500Principal: X500Principal = DUMMY_X500_PRINCIPAL,
-        timeout: Duration? = null,
         private val auth: () -> GemaltoLunaConfiguration
-) : JCACryptoService(keyStore, provider, x500Principal, timeout) {
+) : JCACryptoService(keyStore, provider, x500Principal) {
 
     override fun isLoggedIn(): Boolean {
         return LunaSlotManager.getInstance().isLoggedIn
@@ -44,7 +42,7 @@ class GemaltoLunaCryptoService(
         return DEFAULT_TLS_SIGNATURE_SCHEME
     }
 
-    override fun _generateKeyPair(alias: String, scheme: SignatureScheme): PublicKey {
+    override fun generateKeyPair(alias: String, scheme: SignatureScheme): PublicKey {
         return withAuthentication {
             detailedLogger.trace { "CryptoService(action=generate_key_pair_start;alias=$alias;scheme=$scheme)" }
             val keyPairGenerator = keyPairGeneratorFromScheme(scheme)
@@ -75,11 +73,11 @@ class GemaltoLunaCryptoService(
         private val detailedLogger = detailedLogger()
 
         val KEYSTORE_TYPE = "Luna"
-        fun fromConfigurationFile(legalName: X500Principal, cryptoServiceConf: Path?, timeout: Duration? = null): CryptoService {
+        fun fromConfigurationFile(legalName: X500Principal, cryptoServiceConf: Path?): CryptoService {
             val config = parseConfigFile(cryptoServiceConf!!)
             val provider = LunaProvider.getInstance()
             val keyStore = KeyStore.getInstance(KEYSTORE_TYPE, provider)
-            return GemaltoLunaCryptoService(keyStore, provider, legalName, timeout) { config }
+            return GemaltoLunaCryptoService(keyStore, provider, legalName) { config }
         }
 
         private fun parseConfigFile(cryptoServiceConf: Path): GemaltoLunaConfiguration {

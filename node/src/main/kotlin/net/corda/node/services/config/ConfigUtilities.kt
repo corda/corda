@@ -10,22 +10,18 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.internal.exists
-import net.corda.nodeapi.internal.DEV_CA_KEY_STORE_PASS
-import net.corda.nodeapi.internal.cryptoservice.azure.AzureKeyVaultCryptoService
-import net.corda.nodeapi.internal.cryptoservice.utimaco.UtimacoCryptoService
 import net.corda.nodeapi.internal.*
-import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
 import net.corda.nodeapi.internal.config.FileBasedCertificateStoreSupplier
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.config.toProperties
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509KeyStore
-import net.corda.nodeapi.internal.cryptoservice.CryptoService
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_CLIENT_CA
-import net.corda.nodeapi.internal.installDevNodeCaCertPath
-import net.corda.nodeapi.internal.loadDevCaTrustStore
-import net.corda.nodeapi.internal.registerDevP2pCertificates
+import net.corda.nodeapi.internal.cryptoservice.TimedCryptoService
+import net.corda.nodeapi.internal.cryptoservice.azure.AzureKeyVaultCryptoService
+import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
+import net.corda.nodeapi.internal.cryptoservice.utimaco.UtimacoCryptoService
 import org.slf4j.LoggerFactory
 import java.nio.file.Path
 import java.security.PublicKey
@@ -95,10 +91,10 @@ object ConfigHelper {
  * the CA certs in Node resources. Then provision KeyStores into certificates folder under node path.
  */
 // TODO Move this to KeyStoreConfigHelpers.
-fun NodeConfiguration.configureWithDevSSLCertificate(cryptoService: CryptoService? = null) = p2pSslOptions.configureDevKeyAndTrustStores(myLegalName, signingCertificateStore, certificatesDirectory, cryptoService)
+fun NodeConfiguration.configureWithDevSSLCertificate(cryptoService: TimedCryptoService? = null) = p2pSslOptions.configureDevKeyAndTrustStores(myLegalName, signingCertificateStore, certificatesDirectory, cryptoService)
 
 // TODO Move this to KeyStoreConfigHelpers.
-fun MutualSslConfiguration.configureDevKeyAndTrustStores(myLegalName: CordaX500Name, signingCertificateStore: FileBasedCertificateStoreSupplier, certificatesDirectory: Path, cryptoService: CryptoService? = null) {
+fun MutualSslConfiguration.configureDevKeyAndTrustStores(myLegalName: CordaX500Name, signingCertificateStore: FileBasedCertificateStoreSupplier, certificatesDirectory: Path, cryptoService: TimedCryptoService? = null) {
     val specifiedTrustStore = trustStore.getOptional()
 
     val specifiedKeyStore = keyStore.getOptional()
@@ -114,7 +110,7 @@ fun MutualSslConfiguration.configureDevKeyAndTrustStores(myLegalName: CordaX500N
     if (specifiedKeyStore == null || specifiedSigningStore == null) {
         FileBasedCertificateStoreSupplier(keyStore.path, keyStore.storePassword, keyStore.entryPassword).get(true)
                 .also { it.registerDevP2pCertificates(myLegalName) }
-        when (cryptoService) {
+        when (cryptoService?.underlyingService) {
             is BCCryptoService, null -> {
                 val signingKeyStore = FileBasedCertificateStoreSupplier(signingCertificateStore.path, signingCertificateStore.storePassword, signingCertificateStore.entryPassword).get(true)
                         .also { it.installDevNodeCaCertPath(myLegalName) }

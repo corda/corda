@@ -14,7 +14,6 @@ import net.corda.nodeapi.internal.cryptoservice.JCACryptoService
 import java.nio.file.Path
 import java.security.KeyStore
 import java.security.Provider
-import java.time.Duration
 import javax.security.auth.x500.X500Principal
 
 
@@ -22,9 +21,8 @@ class PrimusXCryptoService(
         keyStore: KeyStore,
         provider: Provider,
         x500Principal: X500Principal = DUMMY_X500_PRINCIPAL,
-        timeout: Duration? = null,
         private val auth: () -> PrimusXConfiguration
-): JCACryptoService(keyStore, provider, x500Principal, timeout) {
+): JCACryptoService(keyStore, provider, x500Principal) {
 
     override fun isLoggedIn(): Boolean {
         return PrimusLogin.isLoggedIn(auth().host, auth().port)
@@ -49,11 +47,11 @@ class PrimusXCryptoService(
         val DEFAULT_IDENTITY_SIGNATURE_SCHEME = Crypto.ECDSA_SECP256R1_SHA256
         val DEFAULT_TLS_SIGNATURE_SCHEME = Crypto.ECDSA_SECP256R1_SHA256
 
-        fun fromConfigurationFile(legalName: X500Principal, cryptoServiceConf: Path?, timeout: Duration? = null): CryptoService {
+        fun fromConfigurationFile(legalName: X500Principal, cryptoServiceConf: Path?): CryptoService {
             val config = parseConfigFile(cryptoServiceConf!!)
             val provider = PrimusProvider()
             val keyStore = KeyStore.getInstance(PrimusProvider.getKeyStoreTypeName(), provider)
-            return PrimusXCryptoService(keyStore, provider, legalName, timeout) { config }
+            return PrimusXCryptoService(keyStore, provider, legalName) { config }
         }
 
         private fun parseConfigFile(cryptoServiceConf: Path): PrimusXConfiguration {

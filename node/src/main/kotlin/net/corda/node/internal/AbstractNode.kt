@@ -54,11 +54,6 @@ import net.corda.node.services.events.ScheduledActivityObserver
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.BasicHSMKeyManagementService
 import net.corda.node.services.keys.KeyManagementServiceInternal
-import net.corda.nodeapi.internal.cryptoservice.azure.AzureKeyVaultCryptoService
-import net.corda.nodeapi.internal.cryptoservice.gemalto.GemaltoLunaCryptoService
-import net.corda.nodeapi.internal.cryptoservice.utimaco.UtimacoCryptoService
-import net.corda.nodeapi.internal.cryptoservice.futurex.FutureXCryptoService
-import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
 import net.corda.node.services.messaging.DeduplicationHandler
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.network.NetworkMapClient
@@ -88,7 +83,13 @@ import net.corda.nodeapi.internal.crypto.X509Utilities.DISTRIBUTED_NOTARY_ALIAS_
 import net.corda.nodeapi.internal.crypto.X509Utilities.NODE_IDENTITY_ALIAS_PREFIX
 import net.corda.nodeapi.internal.cryptoservice.CryptoServiceFactory
 import net.corda.nodeapi.internal.cryptoservice.SupportedCryptoServices
+import net.corda.nodeapi.internal.cryptoservice.TimedCryptoService
+import net.corda.nodeapi.internal.cryptoservice.azure.AzureKeyVaultCryptoService
+import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
+import net.corda.nodeapi.internal.cryptoservice.futurex.FutureXCryptoService
+import net.corda.nodeapi.internal.cryptoservice.gemalto.GemaltoLunaCryptoService
 import net.corda.nodeapi.internal.cryptoservice.securosys.PrimusXCryptoService
+import net.corda.nodeapi.internal.cryptoservice.utimaco.UtimacoCryptoService
 import net.corda.nodeapi.internal.persistence.*
 import net.corda.tools.shell.InteractiveShell
 import org.apache.activemq.artemis.utils.ReusableLatch
@@ -118,7 +119,6 @@ import java.util.function.Consumer
 import javax.persistence.EntityManager
 import kotlin.math.max
 import kotlin.math.min
-import net.corda.core.crypto.generateKeyPair as cryptoGenerateKeyPair
 
 /**
  * A base node implementation that can be customised either for production (with real implementations that do real
@@ -182,13 +182,14 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     val transactionStorage = makeTransactionStorage(configuration.transactionCacheSizeBytes).tokenize()
     val networkMapClient: NetworkMapClient? = configuration.networkServices?.let { NetworkMapClient(it, versionInfo) }
     val attachments = NodeAttachmentService(metricRegistry, cacheFactory, database, configuration.devMode).tokenize()
-    val cryptoService = CryptoServiceFactory.makeCryptoService(
+    val cryptoService : TimedCryptoService = CryptoServiceFactory.makeTimedCryptoService(
             configuration.cryptoServiceName ?: SupportedCryptoServices.BC_SIMPLE,
             configuration.myLegalName,
             configuration.signingCertificateStore,
             configuration.cryptoServiceConf,
             configuration.cryptoServiceTimeout
     ).closeOnStop()
+
     @Suppress("LeakingThis")
     val networkParametersStorage = makeNetworkParametersStorage()
     val cordappProvider = CordappProviderImpl(cordappLoader, CordappConfigFileProvider(configuration.cordappDirectories), attachments).tokenize()
@@ -298,8 +299,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             configuration.configureWithDevSSLCertificate(cryptoService)
             // configureWithDevSSLCertificate is a devMode process that writes directly to keystore files, so
             // we should re-synchronise BCCryptoService with the updated keystore file.
-            if (cryptoService is BCCryptoService) {
-                cryptoService.resyncKeystore()
+            if (cryptoService.underlyingService is BCCryptoService) {
+                (cryptoService.underlyingService as BCCryptoService).resyncKeystore()
             }
         }
         return validateKeyStores()
@@ -1035,7 +1036,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
         val identityCertPath = listOf(identityCert) + nodeCaCertPath
         signingCertificateStore.setCertPathOnly(alias, identityCertPath)
-        when(cryptoService) {
+        when(cryptoService.underlyingService) {
             is GemaltoLunaCryptoService -> log.info("Private key '$alias' stored in Gemalto HSM. Certificate-chain stored in node keystore.")
             is AzureKeyVaultCryptoService -> log.info("Private key '$alias' stored in Azure KeyVault. Certificate-chain stored in node keystore.")
             is UtimacoCryptoService -> log.info("Private key '$alias' stored in Utimaco HSM.  Certificate-chain stored in node keystore.")

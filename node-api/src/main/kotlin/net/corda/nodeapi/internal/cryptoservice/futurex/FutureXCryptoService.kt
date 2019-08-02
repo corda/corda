@@ -7,16 +7,15 @@ import fx.security.pkcs11.SunPKCS11
 import fx.security.pkcs11.wrapper.PKCS11Constants.CKA_SIGN
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SignatureScheme
+import net.corda.core.utilities.detailedLogger
+import net.corda.core.utilities.trace
 import net.corda.nodeapi.internal.config.UnknownConfigurationKeysException
 import net.corda.nodeapi.internal.config.parseAs
 import net.corda.nodeapi.internal.cryptoservice.CryptoService
 import net.corda.nodeapi.internal.cryptoservice.CryptoServiceException
 import net.corda.nodeapi.internal.cryptoservice.JCACryptoService
-import net.corda.core.utilities.detailedLogger
-import net.corda.core.utilities.trace
 import java.nio.file.Path
 import java.security.*
-import java.time.Duration
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
 import javax.security.auth.callback.PasswordCallback
@@ -26,9 +25,8 @@ class FutureXCryptoService(
         keyStore: KeyStore,
         provider: SunPKCS11,
         x500Principal: X500Principal = DUMMY_X500_PRINCIPAL,
-        timeout:Duration? = null,
         private val auth: () -> FutureXConfiguration
-) : JCACryptoService(keyStore, provider, x500Principal, timeout) {
+) : JCACryptoService(keyStore, provider, x500Principal) {
 
     private val cachedKeyHandles: ConcurrentMap<String, PrivateKey> = ConcurrentHashMap()
 
@@ -52,14 +50,14 @@ class FutureXCryptoService(
         keyStore.load(null, null)
     }
 
-    override fun _generateKeyPair(alias: String, scheme: SignatureScheme): PublicKey {
+    override fun generateKeyPair(alias: String, scheme: SignatureScheme): PublicKey {
         if (cachedKeyHandles.containsKey(alias)) {
             cachedKeyHandles.remove(alias)
         }
         return super.generateKeyPair(alias, scheme)
     }
 
-    override fun _sign(alias: String, data: ByteArray, signAlgorithm: String?): ByteArray {
+    override fun sign(alias: String, data: ByteArray, signAlgorithm: String?): ByteArray {
         return withAuthentication {
             val privateKeyHandle = if (cachedKeyHandles.containsKey(alias)) {
                 cachedKeyHandles[alias]!!
@@ -129,11 +127,11 @@ class FutureXCryptoService(
             }
         }
 
-        fun fromConfigurationFile(legalName: X500Principal, cryptoServiceConf: Path?, timeout: Duration? = null): CryptoService {
+        fun fromConfigurationFile(legalName: X500Principal, cryptoServiceConf: Path?): CryptoService {
             val config = parseConfigFile(cryptoServiceConf!!)
             val provider = SunPKCS11()
             val keyStore = KeyStore.getInstance(KEYSTORE_TYPE, provider)
-            return FutureXCryptoService(keyStore, provider, legalName, timeout) { config }
+            return FutureXCryptoService(keyStore, provider, legalName) { config }
         }
 
         val DEFAULT_IDENTITY_SIGNATURE_SCHEME = Crypto.ECDSA_SECP256R1_SHA256

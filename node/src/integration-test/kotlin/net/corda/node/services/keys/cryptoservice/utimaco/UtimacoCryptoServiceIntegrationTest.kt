@@ -13,7 +13,6 @@ import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.getTestPartyAndCertificate
 import net.corda.testing.driver.internal.incrementalPortAllocation
 import org.junit.ClassRule
-import org.junit.Ignore
 import org.junit.Test
 import java.io.IOException
 import java.time.Duration
