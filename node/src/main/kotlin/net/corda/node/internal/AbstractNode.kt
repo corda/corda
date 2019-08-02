@@ -30,15 +30,19 @@ import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SingletonSerializeAsToken
+import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.days
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.minutes
+import net.corda.djvm.analysis.AnalysisConfiguration
+import net.corda.djvm.analysis.Whitelist
 import net.corda.djvm.source.*
 import net.corda.node.CordaClock
 import net.corda.node.VersionInfo
 import net.corda.node.internal.classloading.requireAnnotation
 import net.corda.node.internal.cordapp.*
+import net.corda.node.internal.djvm.DeterministicVerifier
 import net.corda.node.internal.rpc.proxies.AuthenticatedRpcOpsProxy
 import net.corda.node.internal.rpc.proxies.ThreadContextAdjustingRpcOpsProxy
 import net.corda.node.services.ContractUpgradeHandler
@@ -96,6 +100,8 @@ import rx.Observable
 import rx.Scheduler
 import java.io.IOException
 import java.lang.reflect.InvocationTargetException
+import java.net.URL
+import java.net.URLClassLoader
 import java.nio.file.Path
 import java.security.KeyPair
 import java.security.KeyStoreException
@@ -127,8 +133,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                                protected val flowManager: FlowManager,
                                val serverThread: AffinityExecutor.ServiceAffinityExecutor,
                                val busyNodeLatch: ReusableLatch = ReusableLatch(),
-                               bootstrapSource: ApiSource = EmptyApi,
-                               djvmCordaSource: UserSource? = null) : SingletonSerializeAsToken() {
+                               private val djvmBootstrapSource: ApiSource = EmptyApi,
+                               private val djvmCordaSource: UserSource? = null) : SingletonSerializeAsToken() {
 
     protected abstract val log: Logger
     @Suppress("LeakingThis")
@@ -194,7 +200,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     val pkToIdCache = PublicKeyToOwningIdentityCacheImpl(database, cacheFactory)
     @Suppress("LeakingThis")
     val keyManagementService = makeKeyManagementService(identityService).tokenize()
-    val servicesForResolution = ServicesForResolutionImpl(identityService, attachments, cordappProvider, networkParametersStorage, transactionStorage, bootstrapSource, djvmCordaSource).also {
+    val servicesForResolution = ServicesForResolutionImpl(identityService, attachments, cordappProvider, networkParametersStorage, transactionStorage).also {
         attachments.servicesForResolution = it
     }
     @Suppress("LeakingThis")
@@ -1071,6 +1077,27 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         // allows services to register handlers to be informed when the node stop method is called
         override fun registerUnloadHandler(runOnStop: () -> Unit) {
             this@AbstractNode.runOnStop += runOnStop
+        }
+
+        override fun specialise(ltx: LedgerTransaction): LedgerTransaction {
+            val ledgerTransaction = servicesForResolution.specialise(ltx)
+
+            // Do nothing unless we have Corda's deterministic libraries.
+            val cordaSource = djvmCordaSource ?: return ledgerTransaction
+
+            // Specialise the LedgerTransaction here so that
+            // contracts are verified inside the DJVM!
+            return ledgerTransaction.specialise { tx, cl ->
+                (cl as? URLClassLoader)?.run { DeterministicVerifier(tx, cl, createSandbox(cordaSource, cl.urLs)) } ?: BasicVerifier(tx, cl)
+            }
+        }
+
+        private fun createSandbox(cordaSource: UserSource, userSource: Array<URL>): AnalysisConfiguration {
+            return AnalysisConfiguration.createRoot(
+                userSource = cordaSource,
+                whitelist = Whitelist.MINIMAL,
+                bootstrapSource = djvmBootstrapSource
+            ).createChild(UserPathSource(userSource), null)
         }
     }
 }

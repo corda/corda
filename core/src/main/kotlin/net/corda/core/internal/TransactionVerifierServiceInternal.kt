@@ -352,6 +352,7 @@ abstract class Verifier(val ltx: LedgerTransaction, protected val transactionCla
     /**
      * Placeholder function so that the [Verifier] can release any resources.
      */
+    @Throws(Exception::class)
     abstract override fun close()
 }
 

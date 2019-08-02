@@ -18,9 +18,10 @@ class DeterministicVerifier(
 ) : Verifier(ltx, transactionClassLoader) {
 
     override fun verifyContracts() {
-        val configuration = SandboxConfiguration.of(
-            enableTracing = false,
-            analysisConfiguration = analysisConfiguration
+        val configuration = SandboxConfiguration.createFor(
+            analysisConfiguration = analysisConfiguration,
+            profile = ExecutionProfile.DEFAULT,
+            enableTracing = false
         )
         val verifierClass = ClassSource.fromClassName(ContractVerifier::class.java.name)
         val result = IsolatedTask(verifierClass.qualifiedClassName, configuration).run {
@@ -48,8 +49,9 @@ class DeterministicVerifier(
         }
     }
 
+    @Throws(Exception::class)
     override fun close() {
-        analysisConfiguration.close()
+        analysisConfiguration.closeAll()
     }
 }
 

@@ -2,7 +2,6 @@ package net.corda.node.internal
 
 import net.corda.core.contracts.*
 import net.corda.core.cordapp.CordappProvider
-import net.corda.core.internal.BasicVerifier
 import net.corda.core.internal.SerializedStateAndRef
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.ServicesForResolution
@@ -11,26 +10,16 @@ import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.NetworkParametersService
 import net.corda.core.node.services.TransactionStorage
 import net.corda.core.transactions.ContractUpgradeWireTransaction
-import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.NotaryChangeWireTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.transactions.WireTransaction.Companion.resolveStateRefBinaryComponent
-import net.corda.djvm.analysis.AnalysisConfiguration
-import net.corda.djvm.analysis.Whitelist
-import net.corda.djvm.source.ApiSource
-import net.corda.djvm.source.UserPathSource
-import net.corda.djvm.source.UserSource
-import net.corda.node.internal.djvm.DeterministicVerifier
-import java.net.URLClassLoader
 
 data class ServicesForResolutionImpl(
         override val identityService: IdentityService,
         override val attachments: AttachmentStorage,
         override val cordappProvider: CordappProvider,
         override val networkParametersService: NetworkParametersService,
-        private val validatedTransactions: TransactionStorage,
-        private val djvmBootstrapSource: ApiSource,
-        private val djvmCordaSource: UserSource?
+        private val validatedTransactions: TransactionStorage
 ) : ServicesForResolution {
     override val networkParameters: NetworkParameters get() = networkParametersService.lookup(networkParametersService.currentHash) ?:
             throw IllegalArgumentException("No current parameters in network parameters storage")
@@ -79,24 +68,5 @@ data class ServicesForResolutionImpl(
             }
         }
         return inner(stateRef, null)
-    }
-
-    override fun specialise(ltx: LedgerTransaction): LedgerTransaction {
-        // Do nothing unless we have Corda's deterministic libraries.
-        val cordaSource = djvmCordaSource ?: return ltx
-
-        // Specialise the LedgerTransaction here so that
-        // contracts are verified inside the DJVM!
-        return ltx.specialise { tx, cl ->
-            (cl as? URLClassLoader)?.run { DeterministicVerifier(tx, cl, createSandbox(cordaSource, cl)) } ?: BasicVerifier(tx, cl)
-        }
-    }
-
-    private fun createSandbox(cordaSource: UserSource, classLoader: URLClassLoader): AnalysisConfiguration {
-        return AnalysisConfiguration.createRoot(
-            userSource = cordaSource,
-            whitelist = Whitelist.MINIMAL,
-            bootstrapSource = djvmBootstrapSource
-        ).createChild(UserPathSource(classLoader.urLs), null)
     }
 }

@@ -111,7 +111,7 @@ open class Node(configuration: NodeConfiguration,
         flowManager,
         // Under normal (non-test execution) it will always be "1"
         AffinityExecutor.ServiceAffinityExecutor("Node thread-${sameVmNodeCounter.incrementAndGet()}", 1),
-        bootstrapSource = createBootstrapSource(configuration),
+        djvmBootstrapSource = createBootstrapSource(configuration),
         djvmCordaSource = createDeterministicClasspath(configuration)
 ) {
 
