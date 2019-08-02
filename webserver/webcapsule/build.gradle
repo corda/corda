@@ -18,14 +18,6 @@ dependencies {
     capsuleRuntime "com.typesafe:config:$typesafe_config_version"
 }
 
-// Force the Caplet to target Java 6. This ensures that running 'java -jar corda.jar' on any Java 6 VM upwards
-// will get as far as the Capsule version checks, meaning that if your JVM is too old, you will at least get
-// a sensible error message telling you what to do rather than a bytecode version exception that doesn't.
-// If we introduce .java files into this module that need Java 8+ then we will have to push the caplet into
-// its own module so its target can be controlled individually, but for now this suffices.
-sourceCompatibility = 1.6
-targetCompatibility = 1.6
-
 jar.enabled = false
 
 capsule {

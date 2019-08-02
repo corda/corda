@@ -178,7 +178,7 @@ apply plugin: 'com.jfrog.artifactory'
 apply plugin: 'java'
 
 sourceCompatibility = VERSION_1_8
-targetCompatibility = VERSION_1_8
+targetCompatibility = VERSION_11
 println "Java version: " + JavaVersion.current()
 println "Java source compatibility: " + sourceCompatibility
 println "Java target compatibility: " + targetCompatibility
@@ -214,7 +214,7 @@ allprojects {
         }
     }
     sourceCompatibility = VERSION_1_8
-    targetCompatibility = VERSION_1_8
+    targetCompatibility = VERSION_11
 
     jacoco {
         // JDK11 official support (https://github.com/jacoco/jacoco/releases/tag/v0.8.3)

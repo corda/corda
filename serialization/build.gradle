@@ -1,8 +1,13 @@
+import static org.gradle.api.JavaVersion.VERSION_1_8
+
 apply plugin: 'kotlin'
 apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'com.jfrog.artifactory'
 
 description 'Corda serialization'
+
+// required by DJVM and Avian JVM (for running inside the SGX enclave) which only supports Java 8.
+targetCompatibility = VERSION_1_8
 
 dependencies {
     compile project(":core")

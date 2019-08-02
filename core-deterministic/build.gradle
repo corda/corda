@@ -8,6 +8,9 @@ apply plugin: 'idea'
 
 evaluationDependsOn(":core")
 
+// required by DJVM and Avian JVM (for running inside the SGX enclave) which only supports Java 8.
+targetCompatibility = VERSION_1_8
+
 def javaHome = System.getProperty('java.home')
 def jarBaseName = "corda-${project.name}".toString()
 
@@ -155,6 +158,8 @@ task determinise(type: ProGuardTask) {
 }
 
 import net.corda.gradle.jarfilter.MetaFixerTask
+import static org.gradle.api.JavaVersion.VERSION_1_8
+
 task metafix(type: MetaFixerTask) {
     outputDir file("$buildDir/libs")
     jars determinise
