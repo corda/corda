@@ -26,6 +26,7 @@ import net.corda.core.utilities.ProgressTracker.Change
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
 import net.corda.node.services.persistence.checkpoints
+import net.corda.nodeapi.internal.cryptoservice.CryptoServiceException
 import net.corda.nodeapi.internal.cryptoservice.TimedCryptoServiceException
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
@@ -428,8 +429,27 @@ class FlowFrameworkTests {
 
     @Test
     fun `timed out CryptoService is sent to the flow hospital`() {
+        bobNode.registerCordappFlowFactory(TimedCryptoExceptionFlow::class) { NoOpFlow() }
+
+        aliceNode.services.startFlow(TimedCryptoExceptionFlow(bob)).resultFuture
+
+        val medicalRecords = mutableListOf<StaffedFlowHospital.MedicalRecord>()
+        aliceNode.smm.flowHospital.track().updates.subscribe { medicalRecords.add(it) }
+
+        mockNet.runNetwork()
+
+        assertThat(TimedCryptoExceptionFlow.retryCount).isEqualTo(3)
+
+        // We expect three discharges and then overnight observation (in that order)
+        assertThat(medicalRecords).hasSize(4)
+        assertThat(medicalRecords.filter { it.outcome == StaffedFlowHospital.Outcome.DISCHARGE }).hasSize(3)
+        assertThat(medicalRecords.last().outcome == StaffedFlowHospital.Outcome.OVERNIGHT_OBSERVATION)
+    }
+
+    @Test
+    fun `non recoverable CryptoServiceException skips flow hospital`() {
         bobNode.registerCordappFlowFactory(ReceiveFlow::class) {
-            ExceptionFlow { TimedCryptoServiceException("We timed out!") }
+            ExceptionFlow { CryptoServiceException("Something bad happened!") }
         }
 
         aliceNode.services.startFlow(ReceiveFlow(bob)).resultFuture
@@ -439,10 +459,7 @@ class FlowFrameworkTests {
         assertThat(receivedSessionMessages.filter { it.message is ExistingSessionMessage && it.message.payload is ErrorSessionMessage }).hasSize(1)
         val medicalRecords = bobNode.smm.flowHospital.track().apply { updates.notUsed() }.snapshot
 
-        // We expect three discharges and then overnight observation (in that order)
-        assertThat(medicalRecords).hasSize(4)
-        assertThat(medicalRecords.filter { it.outcome == StaffedFlowHospital.Outcome.DISCHARGE }).hasSize(3)
-        assertThat(medicalRecords.last().outcome == StaffedFlowHospital.Outcome.OVERNIGHT_OBSERVATION)
+        assertThat(medicalRecords).isEmpty()
     }
 
     @Test
@@ -764,6 +781,22 @@ internal class InitiatedReceiveFlow(private val otherPartySession: FlowSession) 
 internal open class InitiatedSendFlow(private val payload: Any, private val otherPartySession: FlowSession) : FlowLogic<Unit>() {
     @Suspendable
     override fun call() = otherPartySession.send(payload)
+}
+
+@InitiatingFlow
+internal class TimedCryptoExceptionFlow(private val party: Party) : FlowLogic<Unit>() {
+    companion object {
+        // start negative due to where it is incremented
+        var retryCount = -1
+    }
+
+    @Suspendable
+    override fun call() {
+        initiateFlow(party).send("hello there")
+        // checkpoint will restart the flow after the send
+        retryCount += 1
+        throw TimedCryptoServiceException("We timed out!")
+    }
 }
 
 @InitiatingFlow

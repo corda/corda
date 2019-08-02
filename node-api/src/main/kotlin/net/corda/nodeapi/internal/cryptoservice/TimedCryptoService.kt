@@ -8,7 +8,7 @@ import java.time.Duration
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeoutException
 
-class TimedCryptoServiceException(message: String?, cause: Throwable? = null) : CryptoServiceException(message, cause)
+class TimedCryptoServiceException(message: String?, cause: Throwable? = null) : CryptoServiceException(message, cause, true)
 
 /**
  * Timeout decorator implementation of a [CryptoService] that uses the [underlyingService] real service

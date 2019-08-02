@@ -104,6 +104,11 @@ cryptoServiceConf
   Optional path to the configuration file for the CryptoService provider. This may have to be present if you use a different CryptoService provider
   than the default one (see :doc:`cryptoservice-configuration`).
 
+cryptoServiceTimeout
+  Optional timeout value of actions sent to the the CryptoService (HSM). If the HSM takes longer than this duration to respond then a ``TimedCryptoService`` exception will be thrown and handled by the Flow Hospital.
+
+  *Default:* 1s
+
 custom
   Set custom command line attributes (e.g. Java system properties) on the node process via the capsule launcher
 

@@ -5,13 +5,10 @@ import com.typesafe.config.ConfigException
 import net.corda.common.configuration.parsing.internal.*
 import net.corda.common.validation.internal.Validated.Companion.invalid
 import net.corda.common.validation.internal.Validated.Companion.valid
-import net.corda.node.services.config.JmxReporterType
-import net.corda.node.services.config.NodeConfiguration
-import net.corda.node.services.config.NodeConfigurationImpl
+import net.corda.node.services.config.*
 import net.corda.node.services.config.NodeConfigurationImpl.Defaults
-import net.corda.node.services.config.Valid
-import net.corda.node.services.config.VerifierType
 import net.corda.node.services.config.schema.parsers.*
+import net.corda.node.services.config.Valid
 import net.corda.nodeapi.internal.cryptoservice.SupportedCryptoServices
 
 internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfiguration>("NodeConfiguration") {
@@ -63,6 +60,7 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
     private val cordappSignerKeyFingerprintBlacklist by string().list().optional().withDefaultValue(Defaults.cordappSignerKeyFingerprintBlacklist)
     private val cryptoServiceName by enum(SupportedCryptoServices::class).optional()
     private val cryptoServiceConf by string().mapValid(::toPath).optional()
+    private val cryptoServiceTimeout by duration().optional().withDefaultValue(Defaults.cryptoServiceTimeout)
     @Suppress("unused")
     private val custom by nestedObject().optional()
     private val relay by nested(RelayConfigurationSpec).optional()
@@ -129,6 +127,7 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
                     cordappSignerKeyFingerprintBlacklist = config[cordappSignerKeyFingerprintBlacklist],
                     cryptoServiceName = config[cryptoServiceName],
                     cryptoServiceConf = config[cryptoServiceConf],
+                    cryptoServiceTimeout = config[cryptoServiceTimeout],
                     relay = config[relay],
                     enableSNI = config[enableSNI],
                     useOpenSsl = config[useOpenSsl],

@@ -85,7 +85,8 @@ data class NodeConfigurationImpl(
         override val cordappSignerKeyFingerprintBlacklist: List<String> = Defaults.cordappSignerKeyFingerprintBlacklist,
         override val networkParameterAcceptanceSettings: NetworkParameterAcceptanceSettings = Defaults.networkParameterAcceptanceSettings,
         override val cryptoServiceName: SupportedCryptoServices? = Defaults.cryptoServiceName,
-        override val cryptoServiceConf: Path? = Defaults.cryptoServiceConf
+        override val cryptoServiceConf: Path? = Defaults.cryptoServiceConf,
+        override val cryptoServiceTimeout: Duration = Defaults.cryptoServiceTimeout
 ) : NodeConfiguration {
     internal object Defaults {
         val jmxMonitoringHttpPort: Int? = null
@@ -122,6 +123,7 @@ data class NodeConfigurationImpl(
         val useOpenSsl: Boolean = false
         val cryptoServiceName: SupportedCryptoServices? = null
         val cryptoServiceConf: Path? = null
+        val cryptoServiceTimeout: Duration = Duration.ofSeconds(1)
         val networkParameterAcceptanceSettings: NetworkParameterAcceptanceSettings = NetworkParameterAcceptanceSettings()
 
         fun cordappsDirectories(baseDirectory: Path) = listOf(baseDirectory / CORDAPPS_DIR_NAME_DEFAULT)

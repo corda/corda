@@ -61,4 +61,4 @@ interface CryptoService : SignOnlyCryptoService {
     fun generateKeyPair(alias: String, scheme: SignatureScheme): PublicKey
 }
 
-open class CryptoServiceException(message: String?, cause: Throwable? = null) : Exception(message, cause)
+open class CryptoServiceException(message: String?, cause: Throwable? = null, val isRecoverable: Boolean = false) : Exception(message, cause)
