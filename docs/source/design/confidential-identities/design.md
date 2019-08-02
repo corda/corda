@@ -324,11 +324,11 @@ Two new flows will be added:
    specified as parameters. An optional `PublicKey` parameter may be provided if 
    we we wish to store a mapping between a known `PublicKey` and the `Party`. The
    initiating party generates a ``ChallengeResponse`` and sends this to the counter-party
-   who then generates a new key pair. The ``ChallengeResonse`` is signed over using
-   the new ``PublicKey`` and sent back to the initiating party in the form of a 
-   ``SignedKeyForAccount`` object. The ``ChallengeResponse``
+   who then creates a new key pair and an additional randomly generated ``ChallengeResponse``. The two ``ChallengeResonse``s are concatenated and 
+   signed over using the new ``PublicKey`` and sent back to the initiating party in the form of a 
+   ``SignedKeyForAccount`` object. The concatenated ``ChallengeResponse``
    and signature are verified before registering the mapping between ``PublicKey`` and the
-   counter-party's ``CordaX500NAme`` in the requesting parties``IdentityService``.
+   counter-party's ``CordaX500NAme`` in the requesting parties ``IdentityService``.
    
 2. `SyncKeyMappings` which takes the following format:
 
@@ -355,6 +355,7 @@ Two new flows will be added:
 The current flows can be left as they are. However my view is that they
 should be deprecated.
 
-#### New flow security protocol
+#### Security protocol
+
 <p align="center">
 <<a href="https://ibb.co/bN1ndpj"><img src="https://i.ibb.co/nQrSkhq/ci-flow-security-protocol.png" alt="ci-flow-security-protocol" border="0"></a>
