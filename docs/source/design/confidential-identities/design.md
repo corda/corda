@@ -359,5 +359,4 @@ should be deprecated.
 
 #### New flow security protocol
 <p align="center">
-<a href="https://ibb.co/zNbMBTs"><img src="https://i.ibb.co/25P9C1q/ci-flow-security-protocol.png" alt="ci-flow-security-protocol" border="0"></a>
-</p>
+<<a href="https://ibb.co/bN1ndpj"><img src="https://i.ibb.co/nQrSkhq/ci-flow-security-protocol.png" alt="ci-flow-security-protocol" border="0"></a>
