@@ -69,6 +69,7 @@ class RPCStabilityTests {
     }
 
     @Test
+    @Ignore
     fun `client and server dont leak threads`() {
         fun startAndStop() {
             rpcDriver {
@@ -101,6 +102,7 @@ class RPCStabilityTests {
     }
 
     @Test
+    @Ignore
     fun `client doesnt leak threads when it fails to start`() {
         fun startAndStop() {
             rpcDriver {
