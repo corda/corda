@@ -289,6 +289,7 @@ quasar {
             "com.google.**",
             "com.lmax.**",
             "com.zaxxer.**",
+            "djvm.**",
             "net.bytebuddy**",
             "io.github.classgraph**",
             "io.netty*",
@@ -305,7 +306,8 @@ quasar {
             "org.w3c.**",
             "org.xml**",
             "org.yaml**",
-            "rx**")
+            "rx**",
+            "sandbox.**")
 }
 
 jar {
