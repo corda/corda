@@ -161,20 +161,22 @@ also any other identities in the transaction to the Bob and Charlie.
 Confidential identities without certificates
 --------------------------------------------
 
-The latest version of confidential identities reduces the overhead by removing the storage of the X.509 certificates when using confidential
-identities. Instead, they will be stored via a mapping between a newly generated ``PublicKey`` to ``CordaX500Name``. This is particularly
+The latest version of confidential identities removes the need to record X.509 certificates, therefore removing storage overhead. Instead,
+they will be stored via a mapping between a newly generated ``PublicKey`` to ``CordaX500Name``. This is particularly
 useful in the event that a node operator hosts a large number of *accounts* and such that storing the X.509 certificate for confidential
-identities would require a large amount of memory.
+identities would require a large amount of disk storage.
 
-This version of confidential identities can be used through the three new flows; ``RequestKeyFlow``, ``ShareKeyFlow`` and
-``SyncKeyMappingsFlow`` found in the ``confidential-identities`` repository. Within the context of these flows, we have a ``SecureHash.SHA256``
-an alias of ``ChallengeResponse``. This is used to prevent replay attacks.
+This version of confidential identities can be used through the two new flows; ``RequestKeyFlow`` and
+``SyncKeyMappingFlow`` found in the ``confidential-identities`` repository. Within the context of these flows, we have a ``SecureHash.SHA256``
+an alias of ``ChallengeResponse``. This is used to prevent replay attacks whereby a malicious node may claim ownership of a public key that
+is not theirs.
 
 In ``RequestKeyFlow``, the generation of a new ``PublicKey`` is requested from the counter-party within the flow. The initiating party creates a
-randomly ``ChallengeResponse`` and provides this to the counter-party. The counter-party generates a new ``PublicKey``, signs the ``ChallengeResponse``
-with the new ``PublicKey`` and sends the signed ``ChallengeResponse`` and ``PublicKey`` back to the requesting party. The signature and ``ChallengeResponse``
-are verified as being correct before storing the mapping of ``PublicKey`` to ``CordaX500Name`` in the ``IdentityService. ``ShareKeyFlow`` works in a
-similar vein, however, the initiating party generates the ``PublicKey`` and ``ChallengeResponse`` and shares it with the counter-party.
+randomly generated ``ChallengeResponse`` and provides this to the counter-party. The counter-party generates a new ``PublicKey`` and randomly generates another
+``ChallengeResponse`` which is concatenated and hashed into a new 512 bit ``SecureHash``. This is signed over using the new ``PublicKey`` and sends
+this back to the requesting party in the form of a ``SignedKeyForAccount`` that also contains the  ``PublicKey``  used to sign the data, and the
+additional ``ChallengeResponse``. The signature and concatenated ``ChallengeResponse``
+are verified as being correct before storing the mapping of ``PublicKey`` to ``CordaX500Name`` in the ``IdentityService. .
 
 The ``SyncKeyMappingsFlow`` works in exactly the same way as the existing ``IdentitySyncFlow`` whereby the unknown confidential identities
 involved in a transaction can be extracted and the identity data for them being registered in the ``IdentityService`` of the party who wishes

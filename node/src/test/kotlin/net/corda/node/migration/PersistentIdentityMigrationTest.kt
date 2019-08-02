@@ -97,7 +97,7 @@ class PersistentIdentityMigrationTest {
     private fun saveAllIdentities(identities: List<PartyAndCertificate>) {
         cordaDB.transaction {
             identities.forEach {
-                session.save(PersistentIdentityService.PersistentIdentityCert(it.owningKey.hash.toString(), it.certPath.encoded))
+                session.save(PersistentIdentityService.PersistentPublicKeyHashToCertificate(it.owningKey.hash.toString(), it.certPath.encoded))
             }
         }
     }

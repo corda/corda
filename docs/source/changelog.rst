@@ -18,7 +18,8 @@ Version 5.0
 
 * Added a new API ``IdentityService.registerKeyToParty(PublicKey, Party)`` that will store a mapping between a ``PublicKey`` and ``CordaX500Name``
   for **all** legal identities as well as created anonymous keys. If the mapping already exists then the method call is idempotent. This is
-  only called from the new version of confidential identity flows found in the ``confidential-identities`` repository.
+  only called from the new version of confidential identity flows found in the ``confidential-identities`` repository. Deprecated
+  ``IdentityService.certificateFromKey(PublicKey)`` and ``KeyManagementService.freshKeyAndCert(PartyAndCertificate, Boolean)``.
 
 .. _changelog_v4.2:
 

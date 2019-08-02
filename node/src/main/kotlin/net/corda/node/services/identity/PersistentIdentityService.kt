@@ -37,7 +37,7 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
     companion object {
         private val log = contextLogger()
 
-        fun createKeyToPartyAndCertMap(cacheFactory: NamedCacheFactory): AppendOnlyPersistentMap<SecureHash, PartyAndCertificate, PersistentIdentityCert, String> {
+        fun createKeyToPartyAndCertMap(cacheFactory: NamedCacheFactory): AppendOnlyPersistentMap<SecureHash, PartyAndCertificate, PersistentPublicKeyHashToCertificate, String> {
             return AppendOnlyPersistentMap(
                     cacheFactory = cacheFactory,
                     name = "PersistentIdentityService_keyToPartyAndCert",
@@ -49,26 +49,26 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
                         )
                     },
                     toPersistentEntity = { key: SecureHash, value: PartyAndCertificate ->
-                        PersistentIdentityCert(key.toString(), value.certPath.encoded)
+                        PersistentPublicKeyHashToCertificate(key.toString(), value.certPath.encoded)
                     },
-                    persistentEntityClass = PersistentIdentityCert::class.java
+                    persistentEntityClass = PersistentPublicKeyHashToCertificate::class.java
             )
         }
 
-        fun createX500ToKeyMap(cacheFactory: NamedCacheFactory): AppendOnlyPersistentMap<CordaX500Name, SecureHash, PersistentIdentityNames, String> {
+        fun createX500ToKeyMap(cacheFactory: NamedCacheFactory): AppendOnlyPersistentMap<CordaX500Name, SecureHash, PersistentPartyToPublicKeyHash, String> {
             return AppendOnlyPersistentMap(
                     cacheFactory = cacheFactory,
                     name = "PersistentIdentityService_nameToKey",
                     toPersistentEntityKey = { it.toString() },
                     fromPersistentEntity = { Pair(CordaX500Name.parse(it.name), SecureHash.parse(it.publicKeyHash)) },
                     toPersistentEntity = { key: CordaX500Name, value: SecureHash ->
-                        PersistentIdentityNames(key.toString(), value.toString())
+                        PersistentPartyToPublicKeyHash(key.toString(), value.toString())
                     },
-                    persistentEntityClass = PersistentIdentityNames::class.java
+                    persistentEntityClass = PersistentPartyToPublicKeyHash::class.java
             )
         }
 
-        fun createKeyToX500Map(cacheFactory: NamedCacheFactory): AppendOnlyPersistentMap<SecureHash, CordaX500Name, PersistentIdentity, String> {
+        fun createKeyToX500Map(cacheFactory: NamedCacheFactory): AppendOnlyPersistentMap<SecureHash, CordaX500Name, PersistentPublicKeyHashToParty, String> {
             return AppendOnlyPersistentMap(
                     cacheFactory = cacheFactory,
                     name = "PersistentIdentityService_keyToName",
@@ -80,9 +80,9 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
                         )
                     },
                     toPersistentEntity = { key: SecureHash, value: CordaX500Name ->
-                        PersistentIdentity(key.toString(), value.toString())
+                        PersistentPublicKeyHashToParty(key.toString(), value.toString())
                     },
-                    persistentEntityClass = PersistentIdentity::class.java)
+                    persistentEntityClass = PersistentPublicKeyHashToParty::class.java)
         }
 
         private fun mapToKey(owningKey: PublicKey) = owningKey.hash
@@ -91,7 +91,7 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
 
     @Entity
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}identities")
-    class PersistentIdentityCert(
+    class PersistentPublicKeyHashToCertificate(
             @Id
             @Column(name = "pk_hash", length = MAX_HASH_HEX_SIZE, nullable = false)
             var publicKeyHash: String = "",
@@ -103,7 +103,7 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
 
     @Entity
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}named_identities")
-    class PersistentIdentityNames(
+    class PersistentPartyToPublicKeyHash(
             @Id
             @Column(name = "name", length = 128, nullable = false)
             var name: String = "",
@@ -114,7 +114,7 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
 
     @Entity
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}identities_no_cert")
-    class PersistentIdentity(
+    class PersistentPublicKeyHashToParty(
             @Id
             @Column(name = "pk_hash", length = MAX_HASH_HEX_SIZE, nullable = false)
             var publicKeyHash: String = "",

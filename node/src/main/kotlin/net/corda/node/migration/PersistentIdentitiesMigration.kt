@@ -153,9 +153,9 @@ object PersistentIdentitiesMigrationSchema
 object PersistentIdentitiesMigrationSchemaV1 : MappedSchema(schemaFamily = PersistentIdentitiesMigrationSchema.javaClass, version = 1,
         mappedTypes = listOf(
                 DBTransactionStorage.DBTransaction::class.java,
-                PersistentIdentityService.PersistentIdentityCert::class.java,
-                PersistentIdentityService.PersistentIdentityNames::class.java,
-                PersistentIdentityService.PersistentIdentity::class.java,
+                PersistentIdentityService.PersistentPublicKeyHashToCertificate::class.java,
+                PersistentIdentityService.PersistentPartyToPublicKeyHash::class.java,
+                PersistentIdentityService.PersistentPublicKeyHashToParty::class.java,
                 BasicHSMKeyManagementService.PersistentKey::class.java,
                 NodeAttachmentService.DBAttachment::class.java,
                 DBNetworkParametersStorage.PersistentNetworkParameters::class.java

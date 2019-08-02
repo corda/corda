@@ -10,7 +10,10 @@ import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.internal.*
+import net.corda.core.internal.NotaryChangeTransactionBuilder
+import net.corda.core.internal.hash
+import net.corda.core.internal.packageName
+import net.corda.core.internal.signWithCert
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NotaryInfo
 import net.corda.core.node.services.Vault
@@ -195,9 +198,9 @@ class VaultStateMigrationTest {
     private fun saveAllIdentities(identities: List<PartyAndCertificate>) {
         cordaDB.transaction {
             identities.groupBy { it.name }.forEach { name, certs ->
-                val persistentIdsCerts = certs.map { PersistentIdentityService.PersistentIdentityCert(it.owningKey.hash.toString(), it.certPath.encoded) }
-                val persistentName = PersistentIdentityService.PersistentIdentityNames(name.toString(), certs.first().owningKey.hash.toString())
-                val persistentIdsNoCert  = certs.map { PersistentIdentityService.PersistentIdentity(it.owningKey.hash.toString(), name.toString()) }
+                val persistentIdsCerts = certs.map { PersistentIdentityService.PersistentPublicKeyHashToCertificate(it.owningKey.hash.toString(), it.certPath.encoded) }
+                val persistentName = PersistentIdentityService.PersistentPartyToPublicKeyHash(name.toString(), certs.first().owningKey.hash.toString())
+                val persistentIdsNoCert  = certs.map { PersistentIdentityService.PersistentPublicKeyHashToParty(it.owningKey.hash.toString(), name.toString()) }
                 persistentIdsCerts.forEach { session.save(it) }
                 persistentIdsNoCert.forEach { session.save(it) }
                 session.save(persistentName)

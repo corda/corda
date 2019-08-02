@@ -149,9 +149,9 @@ interface IdentityService {
     fun partiesFromName(query: String, exactMatch: Boolean): Set<Party>
 
     /**
-     * Returns true if an existing mapping for the specified [PublicKey] and [Party] does not already exist and will add a new entry
-     * to the database for this mapping. First we check if an existing entry exists for the supplied [PublicKey] exists in the
-     * database. If there is no mapping, then a new entry in the database is registered linking the [PublicKey] to the supplied [Party].
+     * Registers a mapping in the database between the provided [PublicKey] and [Party] if one does not already exist. If an entry
+     * exists for the supplied [PublicKey] but the associated [Party] does not match the one supplied to the method then an exception will
+     * be thrown.
      *
      * @param key The public key that will be registered to the supplied [Party]
      * @param party The party that the supplied public key will be registered to

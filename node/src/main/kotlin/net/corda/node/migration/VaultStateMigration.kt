@@ -1,13 +1,18 @@
 package net.corda.node.migration
 
 import liquibase.database.Database
-import net.corda.core.contracts.*
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.StateAndRef
+import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.SecureHash
 import net.corda.core.node.services.Vault
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.serialization.SerializationContext
-import net.corda.core.serialization.internal.*
+import net.corda.core.serialization.internal.SerializationEnvironment
+import net.corda.core.serialization.internal._allEnabledSerializationEnvs
+import net.corda.core.serialization.internal._inheritableContextSerializationEnv
+import net.corda.core.serialization.internal.effectiveSerializationEnv
 import net.corda.core.utilities.contextLogger
 import net.corda.node.internal.DBNetworkParametersStorage
 import net.corda.node.services.identity.PersistentIdentityService
@@ -126,9 +131,9 @@ object VaultMigrationSchema
 object VaultMigrationSchemaV1 : MappedSchema(schemaFamily = VaultMigrationSchema.javaClass, version = 1,
         mappedTypes = listOf(
                 DBTransactionStorage.DBTransaction::class.java,
-                PersistentIdentityService.PersistentIdentityCert::class.java,
-                PersistentIdentityService.PersistentIdentityNames::class.java,
-                PersistentIdentityService.PersistentIdentity::class.java,
+                PersistentIdentityService.PersistentPublicKeyHashToCertificate::class.java,
+                PersistentIdentityService.PersistentPartyToPublicKeyHash::class.java,
+                PersistentIdentityService.PersistentPublicKeyHashToParty::class.java,
                 BasicHSMKeyManagementService.PersistentKey::class.java,
                 NodeAttachmentService.DBAttachment::class.java,
                 DBNetworkParametersStorage.PersistentNetworkParameters::class.java
