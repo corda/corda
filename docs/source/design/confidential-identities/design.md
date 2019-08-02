@@ -318,7 +318,7 @@ A new security protocol will be implemented to within the new flows. We introduc
 a ``ChallengeResponse`` type which is an alias for ``SecureHash.SHA256``. This will
 be randomly generated and used to prevent against replay attacks.
 
-Three sets of flows will be added:
+Two new flows will be added:
 
 1. `RequestKeyFlow` where a `Party` and an optional externalId `UUID` are
    specified as parameters. An optional `PublicKey` parameter may be provided if 
@@ -329,10 +329,8 @@ Three sets of flows will be added:
    ``SignedKeyForAccount`` object. The ``ChallengeResponse``
    and signature are verified before registering the mapping between ``PublicKey`` and the
    counter-party's ``CordaX500NAme`` in the requesting parties``IdentityService``.
-2. `ShareKeyFlow` which implements the above but in reverse. This
-   flow requests a new key pair and key to `Party` mapping, stores the mapping
-   then shares it with the specified `Party`s.
-3. `SyncKeyMappings` which takes the following format:
+   
+2. `SyncKeyMappings` which takes the following format:
 
     1. The initiator shares `AnonymousParty` objects for all parties involved
        in a confidential transaction.
