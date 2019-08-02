@@ -335,7 +335,7 @@ class TxResolutionSampler : AbstractSampler() {
         val amount = 1.DOLLARS
         inputStartIndex = numberOfStatesPerTxCount
         inputEndIndex = inputStartIndex + (numberOfChangeStatesPerTxCount - 1)
-        return if (++currentCount % numberOfTxToResolve == 0) {
+        return if (++currentCount % (numberOfTxToResolve + 1) == 0) {
             FlowInvoke<CashPaymentFromKnownStatesFlow>(CashPaymentFromKnownStatesFlow::class.java, arrayOf(inputs, numberOfStatesPerTxCount, numberOfChangeStatesPerTxCount, amount, otherCounterParty, useAnonymousIdentities))
         } else {
             FlowInvoke<CashPaymentFromKnownStatesFlow>(CashPaymentFromKnownStatesFlow::class.java, arrayOf(inputs, numberOfStatesPerTxCount, numberOfChangeStatesPerTxCount, amount, mainCounterParty, useAnonymousIdentities))
@@ -343,7 +343,7 @@ class TxResolutionSampler : AbstractSampler() {
     }
 
     override fun additionalFlowResponseProcessing(context: JavaSamplerContext, sample: SampleResult, response: Any?) {
-        if (currentCount % numberOfTxToResolve == 0) {
+        if (currentCount % (numberOfTxToResolve + 1) == 0) {
             sample.sampleLabel += " Tx Resolution"
         }
     }
