@@ -23,6 +23,8 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import org.junit.jupiter.api.assertDoesNotThrow
+import org.junit.jupiter.api.assertThrows
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
@@ -114,6 +116,7 @@ class PersistentIdentityServiceTests {
         assertEquals(stripped.single(), ALICE_PUBKEY)
     }
 
+
     @Test
     fun `get identity by substring match`() {
         identityService.verifyAndRegisterIdentity(ALICE_IDENTITY)
@@ -168,6 +171,7 @@ class PersistentIdentityServiceTests {
         identityService.verifyAndRegisterIdentity(aliceTxIdentity)
 
         var actual = identityService.certificateFromKey(aliceTxIdentity.party.owningKey)
+
         assertEquals(aliceTxIdentity, actual!!)
 
         assertNull(identityService.certificateFromKey(bobTxIdentity.party.owningKey))
@@ -233,6 +237,25 @@ class PersistentIdentityServiceTests {
 
         val bobReload = newPersistentIdentityService.certificateFromKey(anonymousBob.party.owningKey)
         assertEquals(anonymousBob, bobReload!!)
+    }
+
+    @Test
+    fun `register a public key to party mapping`(){
+        val (alice, anonymousAlice) = createConfidentialIdentity(ALICE.name)
+
+        // Ensure no exceptions are thrown if we attempt to look up an unregistered CI
+        assertNull(identityService.wellKnownPartyFromAnonymous(AnonymousParty(anonymousAlice.owningKey)))
+
+        identityService.registerKeyToParty(anonymousAlice.owningKey, alice.party)
+
+        // If an existing entry is found matching the party then the method call is idempotent
+        assertDoesNotThrow {
+            identityService.registerKeyToParty(anonymousAlice.owningKey, alice.party)
+        }
+
+        assertThrows<IllegalArgumentException> {
+            identityService.registerKeyToParty(anonymousAlice.owningKey, bob.party)
+        }
     }
 
     private fun createConfidentialIdentity(x500Name: CordaX500Name): Pair<PartyAndCertificate, PartyAndCertificate> {

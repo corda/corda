@@ -42,8 +42,9 @@ class NodeSchemaService(private val extraSchemas: Set<MappedSchema> = emptySet()
                     NodeSchedulerService.PersistentScheduledState::class.java,
                     NodeAttachmentService.DBAttachment::class.java,
                     P2PMessageDeduplicator.ProcessedMessage::class.java,
-                    PersistentIdentityService.PersistentIdentity::class.java,
-                    PersistentIdentityService.PersistentIdentityNames::class.java,
+                    PersistentIdentityService.PersistentPublicKeyHashToCertificate::class.java,
+                    PersistentIdentityService.PersistentPartyToPublicKeyHash::class.java,
+                    PersistentIdentityService.PersistentPublicKeyHashToParty::class.java,
                     ContractUpgradeServiceImpl.DBContractUpgrade::class.java,
                     DBNetworkParametersStorage.PersistentNetworkParameters::class.java,
                     PublicKeyHashToExternalId::class.java
@@ -54,9 +55,9 @@ class NodeSchemaService(private val extraSchemas: Set<MappedSchema> = emptySet()
     // Required schemas are those used by internal Corda services
     private val requiredSchemas: Map<MappedSchema, SchemaService.SchemaOptions> =
             mapOf(Pair(CommonSchemaV1, SchemaOptions()),
-                  Pair(VaultSchemaV1, SchemaOptions()),
-                  Pair(NodeInfoSchemaV1, SchemaOptions()),
-                  Pair(NodeCoreV1, SchemaOptions()))
+                    Pair(VaultSchemaV1, SchemaOptions()),
+                    Pair(NodeInfoSchemaV1, SchemaOptions()),
+                    Pair(NodeCoreV1, SchemaOptions()))
 
     fun internalSchemas() = requiredSchemas.keys + extraSchemas.filter { schema -> // when mapped schemas from the finance module are present, they are considered as internal ones
         schema::class.qualifiedName == "net.corda.finance.schemas.CashSchemaV1" ||
@@ -98,5 +99,3 @@ class NodeSchemaService(private val extraSchemas: Set<MappedSchema> = emptySet()
             schemaOptions.keys.map { schema -> crossReferencesToOtherMappedSchema(schema) }.flatMap { it.toList() }
 
 }
-
-

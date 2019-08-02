@@ -7,7 +7,6 @@ import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SignableData
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.node.ServiceHub
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
@@ -48,6 +47,8 @@ interface KeyManagementService {
      * @return X.509 certificate and path to the trust root.
      */
     @Suspendable
+    @Deprecated("his is being deprecated in favour of a new method to map keys to parties without the use of X.509 certificates. " +
+            "Use freshKey instead. See the 'API: Identity' page in docs for more information.")
     fun freshKeyAndCert(identity: PartyAndCertificate, revocationEnabled: Boolean): PartyAndCertificate
 
     /**
@@ -60,6 +61,9 @@ interface KeyManagementService {
      * @return X.509 certificate and path to the trust root.
      */
     @Suspendable
+    @Deprecated("This is being deprecated in favour of a new utility to generate key-party mappings in the new " +
+            "confidential identities repo. [SignedKeyUtilities.createSignedOwnershipClaim]." +
+            "This requires the keys to be generated from within a flow. See [RequestKeyFlow] and [ShareKeyFlow].")
     fun freshKeyAndCert(identity: PartyAndCertificate, revocationEnabled: Boolean, externalId: UUID): PartyAndCertificate
 
     /**

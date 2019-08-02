@@ -4,7 +4,9 @@ package net.corda.core.identity
 
 import net.corda.core.internal.toMultiMap
 import net.corda.core.node.ServiceHub
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.utilities.OpaqueBytes
 import java.security.PublicKey
 
 /**
@@ -77,3 +79,12 @@ fun <T> excludeHostNode(serviceHub: ServiceHub, map: Map<Party, T>): Map<Party, 
  * @return a new copy of the map, with the well known [Party] for the notary removed.
  */
 fun <T> excludeNotary(map: Map<Party, T>, stx: SignedTransaction): Map<Party, T> = map.filterKeys { it != stx.notary }
+
+/**
+ * Check if [x500name] matches the [query].
+ */
+fun x500Matches(query: String, exactMatch: Boolean, x500name: CordaX500Name): Boolean {
+    val components = listOfNotNull(x500name.commonName, x500name.organisationUnit, x500name.organisation, x500name.locality, x500name.state, x500name.country)
+    return components.any { (exactMatch && it == query)
+            || (!exactMatch && it.contains(query, ignoreCase = true)) }
+}

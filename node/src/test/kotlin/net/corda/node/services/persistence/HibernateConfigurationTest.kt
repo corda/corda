@@ -23,19 +23,18 @@ import net.corda.finance.DOLLARS
 import net.corda.finance.POUNDS
 import net.corda.finance.SWISS_FRANCS
 import net.corda.finance.contracts.asset.Cash
-import net.corda.node.testing.DummyFungibleContract
+import net.corda.finance.contracts.utils.sumCash
 import net.corda.finance.schemas.CashSchemaV1
 import net.corda.finance.test.SampleCashSchemaV1
 import net.corda.finance.test.SampleCashSchemaV2
 import net.corda.finance.test.SampleCashSchemaV3
-import net.corda.finance.contracts.utils.sumCash
-import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.node.services.schema.ContractStateAndRef
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.schema.PersistentStateService
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.services.vault.VaultSchemaV1
+import net.corda.node.testing.DummyFungibleContract
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.HibernateConfiguration
@@ -119,8 +118,8 @@ class HibernateConfigurationTest {
             hibernateConfig = database.hibernateConfig
 
             // `consumeCash` expects we can self-notarise transactions
-            services = object : MockServices(cordappPackages, BOB_NAME, mock<IdentityServiceInternal>().also {
-                doNothing().whenever(it).justVerifyAndRegisterIdentity(argThat { name == BOB_NAME }, any())
+            services = object : MockServices(cordappPackages, BOB_NAME, mock<IdentityService>().also {
+                doReturn(null).whenever(it).verifyAndRegisterIdentity(argThat { name == BOB_NAME })
             }, generateKeyPair(), dummyNotary.keyPair) {
                 override val vaultService = NodeVaultService(Clock.systemUTC(), keyManagementService, servicesForResolution, database, schemaService, cordappClassloader).apply { start() }
                 override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {

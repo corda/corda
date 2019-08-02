@@ -21,7 +21,6 @@ import net.corda.finance.contracts.Commodity
 import net.corda.finance.contracts.NetType
 import net.corda.finance.contracts.asset.Obligation.Lifecycle
 import net.corda.finance.workflows.asset.ObligationUtils
-import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.*
 import net.corda.testing.dsl.*
@@ -87,7 +86,7 @@ class ObligationTests {
     }
 
     private val notaryServices = MockServices(emptyList(), MEGA_CORP.name, mock(), dummyNotary.keyPair)
-    private val identityService = mock<IdentityServiceInternal>().also {
+    private val identityService = mock<IdentityService>().also {
         doReturn(null).whenever(it).partyFromKey(ALICE_PUBKEY)
         doReturn(null).whenever(it).partyFromKey(BOB_PUBKEY)
         doReturn(null).whenever(it).partyFromKey(CHARLIE.owningKey)

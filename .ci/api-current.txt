@@ -3599,6 +3599,7 @@ public interface net.corda.core.node.services.IdentityService
   public abstract java.util.Set<net.corda.core.identity.Party> partiesFromName(String, boolean)
   @Nullable
   public abstract net.corda.core.identity.Party partyFromKey(java.security.PublicKey)
+  public abstract void registerKeyToParty(java.security.PublicKey, net.corda.core.identity.Party)
   @NotNull
   public abstract net.corda.core.identity.Party requireWellKnownPartyFromAnonymous(net.corda.core.identity.AbstractParty)
   @Nullable

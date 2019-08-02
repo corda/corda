@@ -842,7 +842,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         if (!cryptoService.containsKey(legalIdentityPrivateKeyAlias) && !signingCertificateStore.contains(legalIdentityPrivateKeyAlias)) {
             // Directly use the X500 name to public key map, as the identity service requires the node identity to start correctly.
             database.transaction {
-                val x500Map = PersistentIdentityService.createX500Map(cacheFactory)
+                val x500Map = PersistentIdentityService.createX500ToKeyMap(cacheFactory)
                 require(configuration.myLegalName !in x500Map) {
                     // There is already a party in the identity store for this node, but the key has been lost. If this node starts up, it will
                     // publish it's new key to the network map, which Corda cannot currently handle. To prevent this, stop the node from starting.

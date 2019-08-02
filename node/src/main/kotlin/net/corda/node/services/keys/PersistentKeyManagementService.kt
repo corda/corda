@@ -42,7 +42,7 @@ class PersistentKeyManagementService(cacheFactory: NamedCacheFactory, val identi
             var privateKey: ByteArray = EMPTY_BYTE_ARRAY
     ) {
         constructor(publicKey: PublicKey, privateKey: PrivateKey)
-            : this(publicKey.toStringShort(), publicKey.encoded, privateKey.encoded)
+                : this(publicKey.toStringShort(), publicKey.encoded, privateKey.encoded)
     }
 
     private companion object {

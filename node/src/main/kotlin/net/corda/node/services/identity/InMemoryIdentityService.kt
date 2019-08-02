@@ -3,10 +3,13 @@ package net.corda.node.services.identity
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.identity.x500Matches
+import net.corda.core.internal.CertRole
+import net.corda.core.node.services.IdentityService
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.trace
-import net.corda.node.services.api.IdentityServiceInternal
+import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.x509Certificates
 import java.security.InvalidAlgorithmParameterException
 import java.security.PublicKey
@@ -21,7 +24,7 @@ import javax.annotation.concurrent.ThreadSafe
  */
 @ThreadSafe
 class InMemoryIdentityService(identities: List<PartyAndCertificate> = emptyList(),
-                              override val trustRoot: X509Certificate) : SingletonSerializeAsToken(), IdentityServiceInternal {
+                              override val trustRoot: X509Certificate) : SingletonSerializeAsToken(), IdentityService {
     companion object {
         private val log = contextLogger()
     }
@@ -31,43 +34,84 @@ class InMemoryIdentityService(identities: List<PartyAndCertificate> = emptyList(
      */
     override val caCertStore: CertStore = CertStore.getInstance("Collection", CollectionCertStoreParameters(setOf(trustRoot)))
     override val trustAnchor: TrustAnchor = TrustAnchor(trustRoot, null)
-    private val keyToParties = ConcurrentHashMap<PublicKey, PartyAndCertificate>()
-    private val principalToParties = ConcurrentHashMap<CordaX500Name, PartyAndCertificate>()
+    private val keyToPartyAndCerts = ConcurrentHashMap<PublicKey, PartyAndCertificate>()
+    private val nameToKey = ConcurrentHashMap<CordaX500Name, PublicKey>()
+    private val keyToName = ConcurrentHashMap<PublicKey, CordaX500Name>()
 
     init {
-        keyToParties.putAll(identities.associateBy { it.owningKey })
-        principalToParties.putAll(identities.associateBy { it.name })
+        keyToPartyAndCerts.putAll(identities.associateBy { it.owningKey })
+        nameToKey.putAll(identities.associateBy { it.name }.mapValues { it.value.owningKey })
+        keyToName.putAll(identities.associateBy{ it.owningKey }.mapValues { it.value.party.name })
+    }
+
+
+    @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
+    override fun verifyAndRegisterIdentity(identity: PartyAndCertificate): PartyAndCertificate? {
+        return verifyAndRegisterIdentity(trustAnchor, identity)
     }
 
     @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
-    override fun verifyAndRegisterIdentity(identity: PartyAndCertificate): PartyAndCertificate? = verifyAndRegisterIdentity(trustAnchor, identity)
+    private fun verifyAndRegisterIdentity(trustAnchor: TrustAnchor, identity: PartyAndCertificate): PartyAndCertificate? {
+        // Validate the chain first, before we do anything clever with it
+        val identityCertChain = identity.certPath.x509Certificates
+        try {
+            identity.verify(trustAnchor)
+        } catch (e: CertPathValidatorException) {
+            log.warn("Certificate validation failed for ${identity.name} against trusted root ${trustAnchor.trustedCert.subjectX500Principal}.")
+            log.warn("Certificate path :")
+            identityCertChain.reversed().forEachIndexed { index, certificate ->
+                val space = (0 until index).joinToString("") { "   " }
+                log.warn("$space${certificate.subjectX500Principal}")
+            }
+            throw e
+        }
+        // Ensure we record the first identity of the same name, first
+        val wellKnownCert = identityCertChain.single { CertRole.extract(it)?.isWellKnown ?: false }
+        if (wellKnownCert != identity.certificate) {
+            val idx = identityCertChain.lastIndexOf(wellKnownCert)
+            val firstPath = X509Utilities.buildCertPath(identityCertChain.slice(idx until identityCertChain.size))
+            verifyAndRegisterIdentity(trustAnchor, PartyAndCertificate(firstPath))
+        }
+        return registerIdentity(identity)
+    }
 
-    @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
-    override fun verifyAndRegisterIdentity(identity: PartyAndCertificate, isNewRandomIdentity: Boolean): PartyAndCertificate? = verifyAndRegisterIdentity(trustAnchor, identity)
-
-    override fun registerIdentity(identity: PartyAndCertificate, isNewRandomIdentity: Boolean): PartyAndCertificate? {
+    private fun registerIdentity(identity: PartyAndCertificate): PartyAndCertificate? {
         val identityCertChain = identity.certPath.x509Certificates
         log.trace { "Registering identity $identity" }
-        keyToParties[identity.owningKey] = identity
+        keyToPartyAndCerts[identity.owningKey] = identity
         // Always keep the first party we registered, as that's the well known identity
-        principalToParties.computeIfAbsent(identity.name) { identity }
-        return keyToParties[identityCertChain[1].publicKey]
+        nameToKey.computeIfAbsent(identity.name) {identity.owningKey}
+        keyToName.putIfAbsent(identity.owningKey, identity.name)
+        return keyToPartyAndCerts[identityCertChain[1].publicKey]
     }
 
-    override fun certificateFromKey(owningKey: PublicKey): PartyAndCertificate? = keyToParties[owningKey]
+    override fun certificateFromKey(owningKey: PublicKey): PartyAndCertificate? = keyToPartyAndCerts[owningKey]
 
     // We give the caller a copy of the data set to avoid any locking problems
-    override fun getAllIdentities(): Iterable<PartyAndCertificate> = ArrayList(keyToParties.values)
+    override fun getAllIdentities(): Iterable<PartyAndCertificate> = ArrayList(keyToPartyAndCerts.values)
 
-    override fun wellKnownPartyFromX500Name(name: CordaX500Name): Party? = principalToParties[name]?.party
+    override fun wellKnownPartyFromX500Name(name: CordaX500Name): Party? {
+        val key = nameToKey[name]
+        return if (key != null) {
+            keyToPartyAndCerts[key]?.party
+        } else
+            null
+    }
 
     override fun partiesFromName(query: String, exactMatch: Boolean): Set<Party> {
         val results = LinkedHashSet<Party>()
-        principalToParties.forEach { (x500name, partyAndCertificate) ->
+        nameToKey.forEach { (x500name, key) ->
             if (x500Matches(query, exactMatch, x500name)) {
-                results +=  partyAndCertificate.party
+                results += keyToPartyAndCerts[key]?.party ?: throw IllegalArgumentException("Could not find an entry in the database for the public key $key.")
             }
         }
         return results
+    }
+
+    override fun registerKeyToParty(key: PublicKey, party: Party) {
+        if (keyToName[key] == null) {
+            keyToName.putIfAbsent(key, party.name)
+        }
+        throw IllegalArgumentException("An entry for the public key: $key already exists.")
     }
 }

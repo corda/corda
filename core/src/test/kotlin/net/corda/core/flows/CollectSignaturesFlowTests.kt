@@ -10,7 +10,6 @@ import net.corda.core.identity.*
 import net.corda.core.node.services.IdentityService
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.*
 import net.corda.testing.internal.matchers.flow.willReturn
@@ -201,7 +200,7 @@ class AnonymousSessionTestFlow(private val cis: List<PartyAndCertificate>) : Flo
 
         for (ci in cis) {
             if (ci.name != ourIdentity.name) {
-                (serviceHub.identityService as IdentityServiceInternal).verifyAndRegisterIdentity(ci)
+                serviceHub.identityService.verifyAndRegisterIdentity(ci)
             }
         }
         val state = DummyContract.MultiOwnerState(owners = cis.map { AnonymousParty(it.owningKey) })
@@ -240,7 +239,7 @@ class MixAndMatchAnonymousSessionTestFlow(private val cis: List<PartyAndCertific
 
         for (ci  in cis) {
             if (ci.name != ourIdentity.name) {
-                (serviceHub.identityService as IdentityServiceInternal).verifyAndRegisterIdentity(ci)
+                serviceHub.identityService.verifyAndRegisterIdentity(ci)
             }
         }
         val state = DummyContract.MultiOwnerState(owners = cis.map { AnonymousParty(it.owningKey) })

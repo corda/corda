@@ -8,6 +8,7 @@ import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
+import net.corda.core.node.services.IdentityService
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.seconds
@@ -15,7 +16,6 @@ import net.corda.finance.DOLLARS
 import net.corda.finance.EUR
 import net.corda.finance.contracts.*
 import net.corda.finance.workflows.utils.loadTestCalendar
-import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.testing.common.internal.addNotary
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.DUMMY_NOTARY_NAME
@@ -235,7 +235,7 @@ class IRSTests {
     private val ledgerServices = MockServices(
             emptyList(),
             megaCorp,
-            mock<IdentityServiceInternal>().also {
+            mock<IdentityService>().also {
                 doReturn(megaCorp.party).whenever(it).partyFromKey(megaCorp.publicKey)
                 doReturn(null).whenever(it).partyFromKey(ORACLE_PUBKEY)
             },
@@ -337,7 +337,7 @@ class IRSTests {
     @Test
     fun generateIRSandFixSome() {
         val services = MockServices(listOf("net.corda.irs.contract"), MEGA_CORP.name,
-                mock<IdentityServiceInternal>().also {
+                mock<IdentityService>().also {
                     listOf(MEGA_CORP, MINI_CORP).forEach { party ->
                         doReturn(party).whenever(it).partyFromKey(party.owningKey)
                     }
