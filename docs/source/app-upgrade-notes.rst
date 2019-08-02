@@ -53,10 +53,10 @@ Compiling this code against Platform Version 5 will result in the following erro
 
 `Type mismatch: inferred type is Any but AbstractParty was expected`
 
-The issue here is that a new interface introduced in Platform Version 5 can cause type inference failures when a variable is used as an
-`AbstractParty` but has an actual value that is one of a number of possible subclasses of `AbstractParty`. As these subclasses implement an
-interface that the superclass does not, the Kotlin compiler is unable to infer that both branches result in a subclass of `AbstractParty`,
-and instead infers that the type is `Any`.
+The issue here is that a new `Destination` interface introduced in Platform Version 5 (see the :doc:`changelog` for Platform Version 5) can
+cause type inference failures when a variable is used as an `AbstractParty` but has an actual value that is one of a number of possible
+subclasses of `AbstractParty`. As these subclasses implement an interface that the superclass does not, the Kotlin compiler is unable to
+infer that both branches result in a subclass of `AbstractParty`, and instead infers that the type is `Any`.
 
 To fix this, an explicit type hint must be provided to the compiler:
 
