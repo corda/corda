@@ -24,7 +24,19 @@ import kotlin.math.pow
 /**
  * This hospital consults "staff" to see if they can automatically diagnose and treat flows.
  */
-class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val ourSenderUUID: String) {
+class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
+                          private val ourSenderUUID: String,
+                          /**
+                           * If enabled, initiation requests for unknown flows will be kept in the hospital until the relevant
+                           * CorDapps are installed.
+                           *
+                           * In such case the initiation message will remain un-acked in the Artemis inbox, and will be replayed
+                           * on node restart.
+                           *
+                           * For service nodes like notaries this feature should be disabled, as client nodes might unintentionally
+                           * overload the node by accidentally sending transaction instead of notarisation requests.
+                           */
+                          private val enableSessionInitTreatment: Boolean = true) {
     private companion object {
         private val log = contextLogger()
         private val staff = listOf(
@@ -35,6 +47,10 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val 
                 FinalityDoctor,
                 TransientConnectionCardiologist
         )
+    }
+
+    init {
+        log.info("Initializing Flow Hospital. Session initialization error treatment ${if (enableSessionInitTreatment) "enabled" else "disabled"}." )
     }
 
     private val mutex = ThreadBox(object {
@@ -51,7 +67,7 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val 
     fun sessionInitErrored(sessionMessage: InitialSessionMessage, sender: Party, event: ExternalEvent.ExternalMessageEvent, error: Throwable) {
         val time = Instant.now()
         val id = UUID.randomUUID()
-        val outcome = if (error is SessionRejectException.UnknownClass) {
+        val outcome = if (error is SessionRejectException.UnknownClass && enableSessionInitTreatment) {
             // We probably don't have the CorDapp installed so let's pause the message in the hopes that the CorDapp is
             // installed on restart, at which point the message will be able proceed as normal. If not then it will need
             // to be dropped manually.
