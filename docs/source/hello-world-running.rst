@@ -107,11 +107,9 @@ commands.
 
 We want to create an IOU of 99 with PartyB. We start the ``IOUFlow`` by typing:
 
-.. container:: codeset
+.. code-block:: bash
 
-    .. code-block:: kotlin
-
-        start IOUFlow iouValue: 99, otherParty: "O=PartyB,L=New York,C=US"
+    start IOUFlow iouValue: 99, otherParty: "O=PartyB,L=New York,C=US"
 
 This single command will cause PartyA and PartyB to automatically agree an IOU. This is one of the great advantages of
 the flow framework - it allows you to reduce complex negotiation and update processes into a single function call.
@@ -120,9 +118,9 @@ If the flow worked, it should have recorded a new IOU in the vaults of both Part
 
 We can check the contents of each node's vault by running:
 
-.. code-block:: base
+.. code-block:: bash
 
-        run vaultQuery contractStateType: com.template.IOUState
+    run vaultQuery contractStateType: com.template.IOUState
 
 The vaults of PartyA and PartyB should both display the following output:
 
@@ -162,12 +160,27 @@ The vaults of PartyA and PartyB should both display the following output:
 
 This is the transaction issuing our ``IOUState`` onto a ledger.
 
+However, if we run the same command on the other node (the notary), we will see the following:
+
+.. code:: bash
+
+    {
+      "states" : [ ],
+      "statesMetadata" : [ ],
+      "totalStatesAvailable" : -1,
+      "stateTypes" : "UNCONSUMED",
+      "otherResults" : [ ]
+    }
+
+This is the result of Corda's privacy model. Because the notary was not involved in the transaction and had no need to see the data, the
+transaction was not distributed to them.
+
 Conclusion
 ----------
 We have written a simple CorDapp that allows IOUs to be issued onto the ledger. Our CorDapp is made up of two key
 parts:
 
-* The ``IOUState``, representing IOUs on the ledger
+* The ``IOUState``, representing IOUs on the blockchain
 * The ``IOUFlow``, orchestrating the process of agreeing the creation of an IOU on-ledger
 
 After completing this tutorial, your CorDapp should look like this:
@@ -179,8 +192,8 @@ Next steps
 ----------
 There are a number of improvements we could make to this CorDapp:
 
-* We chould add unit tests, using the contract-test and flow-test frameworks
-* We chould change ``IOUState.value`` from an integer to a proper amount of a given currency
+* We could add unit tests, using the contract-test and flow-test frameworks
+* We could change ``IOUState.value`` from an integer to a proper amount of a given currency
 * We could add an API, to make it easier to interact with the CorDapp
 
 But for now, the biggest priority is to add an ``IOUContract`` imposing constraints on the evolution of each

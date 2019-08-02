@@ -28,7 +28,18 @@ versions you are currently using are still in force.
 
 We also strongly recommend cross referencing with the :doc:`changelog` to confirm changes.
 
-V3.2 to v3.3
+v3.3 to v3.4
+------------
+
+* Update the Corda Release version
+
+  The ``corda_release_version`` identifier in your project's gradle file will need changing as follows:
+
+  .. sourcecode:: shell
+
+    ext.corda_release_version = '3.4-corda'
+
+v3.2 to v3.3
 ------------
 
 * Update the Corda Release version

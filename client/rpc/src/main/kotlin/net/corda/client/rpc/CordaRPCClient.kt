@@ -6,6 +6,7 @@ import net.corda.client.rpc.internal.RPCClientConfiguration
 import net.corda.core.context.Actor
 import net.corda.core.context.Trace
 import net.corda.core.messaging.CordaRPCOps
+import net.corda.core.internal.messaging.InternalCordaRPCOps
 import net.corda.core.serialization.internal.effectiveSerializationEnv
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.ArtemisTcpTransport.Companion.tcpTransport
@@ -104,7 +105,7 @@ class CordaRPCClient private constructor(
         }
     }
 
-    private val rpcClient = RPCClient<CordaRPCOps>(
+    private val rpcClient = RPCClient<InternalCordaRPCOps>(
             tcpTransport(ConnectionDirection.Outbound(), hostAndPort, config = sslConfiguration),
             configuration.toRpcClientConfiguration(),
             KRYO_RPC_CLIENT_CONTEXT
@@ -136,7 +137,7 @@ class CordaRPCClient private constructor(
      * @throws RPCException if the server version is too low or if the server isn't reachable within a reasonable timeout.
      */
     fun start(username: String, password: String, externalTrace: Trace?, impersonatedActor: Actor?): CordaRPCConnection {
-        return CordaRPCConnection(rpcClient.start(CordaRPCOps::class.java, username, password, externalTrace, impersonatedActor))
+        return CordaRPCConnection(rpcClient.start(InternalCordaRPCOps::class.java, username, password, externalTrace, impersonatedActor))
     }
 
     /**

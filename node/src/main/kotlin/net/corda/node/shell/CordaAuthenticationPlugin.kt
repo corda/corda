@@ -3,7 +3,7 @@ package net.corda.node.shell
 import net.corda.core.context.Actor
 import net.corda.core.context.InvocationContext
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.messaging.CordaRPCOps
+import net.corda.core.internal.messaging.InternalCordaRPCOps
 import net.corda.node.internal.security.Password
 import net.corda.node.internal.security.RPCSecurityManager
 import net.corda.node.internal.security.tryAuthenticate
@@ -11,7 +11,7 @@ import org.crsh.auth.AuthInfo
 import org.crsh.auth.AuthenticationPlugin
 import org.crsh.plugin.CRaSHPlugin
 
-class CordaAuthenticationPlugin(private val rpcOps: CordaRPCOps, private val securityManager: RPCSecurityManager, private val nodeLegalName: CordaX500Name) : CRaSHPlugin<AuthenticationPlugin<String>>(), AuthenticationPlugin<String> {
+class CordaAuthenticationPlugin(private val rpcOps: InternalCordaRPCOps, private val securityManager: RPCSecurityManager, private val nodeLegalName: CordaX500Name) : CRaSHPlugin<AuthenticationPlugin<String>>(), AuthenticationPlugin<String> {
 
     override fun getImplementation(): AuthenticationPlugin<String> = this
 

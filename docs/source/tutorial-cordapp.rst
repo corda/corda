@@ -16,7 +16,7 @@ The example CorDapp allows nodes to agree IOUs with each other, as long as they 
 
 We will deploy and run the CorDapp on four test nodes:
 
-* **Notary**, which hosts a validating notary service
+* **Notary**, which runs a notary service
 * **PartyA**
 * **PartyB**
 * **PartyC**
@@ -30,10 +30,9 @@ Start by downloading the example CorDapp from GitHub:
 
 * Set up your machine by following the :doc:`quickstart guide <getting-set-up>`
 
-* Clone the example CorDapp from the `cordapp-example repository <https://github.com/corda/cordapp-example>`_ using
-  the following command: ``git clone https://github.com/corda/cordapp-example``
+* Clone the samples repository from using the following command: ``git clone https://github.com/corda/samples``
 
-* Change directories to the freshly cloned repo: ``cd cordapp-example``
+* Change directories to the ``cordapp-example`` folder: ``cd samples/cordapp-example``
 
 Opening the example CorDapp in IntelliJ
 ---------------------------------------
@@ -41,8 +40,7 @@ Let's open the example CorDapp in IntelliJ IDEA:
 
 * Open IntelliJ
 
-* A splash screen will appear. Click ``open``, navigate to the folder where you cloned the ``cordapp-example``, and
-  click ``OK``
+* A splash screen will appear. Click ``open``, navigate to and select the ``cordapp-example`` folder, and click ``OK``
 
 * Once the project is open, click ``File``, then ``Project Structure``. Under ``Project SDK:``, set the project SDK by
   clicking ``New...``, clicking ``JDK``, and navigating to ``C:\Program Files\Java\jdk1.8.0_XXX`` (where ``XXX`` is the

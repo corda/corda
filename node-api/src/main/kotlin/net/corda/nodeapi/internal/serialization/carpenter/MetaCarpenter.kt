@@ -34,8 +34,8 @@ data class CarpenterMetaSchema(
     }
 
     fun addDepPair(type: TypeNotation, dependant: String, dependee: String) {
-        dependsOn.computeIfAbsent(dependee, { mutableListOf() }).add(dependant)
-        dependencies.computeIfAbsent(dependant, { Pair(type, mutableListOf()) }).second.add(dependee)
+        dependsOn.computeIfAbsent(dependee) { mutableListOf() }.add(dependant)
+        dependencies.computeIfAbsent(dependant) { Pair(type, mutableListOf()) }.second.add(dependee)
     }
 
     val size
@@ -55,18 +55,34 @@ data class CarpenterMetaSchema(
 
 /**
  * Take a dependency tree of [CarpenterMetaSchema] and reduce it to zero by carpenting those classes that
- * require it. As classes are carpented check for depdency resolution, if now free generate a [Schema] for
+ * require it. As classes are carpented check for dependency resolution, if now free generate a [Schema] for
  * that class and add it to the list of classes ([CarpenterMetaSchema.carpenterSchemas]) that require
- * carpenting
+ * carpenting.
  *
  * @property cc a reference to the actual class carpenter we're using to constuct classes
  * @property objects a list of carpented classes loaded into the carpenters class loader
+ * @property tolerateFailure If set to true don't propagate [InterfaceMismatchException] and [UncarpentableException] types
+ * to the calling method.
+ *
  */
-abstract class MetaCarpenterBase(val schemas: CarpenterMetaSchema, val cc: ClassCarpenter) {
-    val objects = mutableMapOf<String, Class<*>>()
+abstract class MetaCarpenterBase(
+        val schemas: CarpenterMetaSchema,
+        val cc: ClassCarpenter,
+        private val tolerateFailure : Boolean
+) {
+    val objects = mutableMapOf<String, Class<*>?>()
 
     fun step(newObject: Schema) {
-        objects[newObject.name] = cc.build(newObject)
+        objects[newObject.name] = try {
+            cc.build(newObject)
+        } catch (e : Exception) {
+            if (!tolerateFailure) throw e
+
+            when (e) {
+                is InterfaceMismatchException, is UncarpentableException -> null
+                else -> throw e
+            }
+        }
 
         // go over the list of everything that had a dependency on the newly
         // carpented class existing and remove it from their dependency list, If that
@@ -91,7 +107,11 @@ abstract class MetaCarpenterBase(val schemas: CarpenterMetaSchema, val cc: Class
         get() = cc.classloader
 }
 
-class MetaCarpenter(schemas: CarpenterMetaSchema, cc: ClassCarpenter) : MetaCarpenterBase(schemas, cc) {
+class MetaCarpenter(
+        schemas: CarpenterMetaSchema,
+        cc: ClassCarpenter,
+        tolerateFailure: Boolean
+) : MetaCarpenterBase(schemas, cc, tolerateFailure) {
     override fun build() {
         while (schemas.carpenterSchemas.isNotEmpty()) {
             val newObject = schemas.carpenterSchemas.removeAt(0)
@@ -100,7 +120,11 @@ class MetaCarpenter(schemas: CarpenterMetaSchema, cc: ClassCarpenter) : MetaCarp
     }
 }
 
-class TestMetaCarpenter(schemas: CarpenterMetaSchema, cc: ClassCarpenter) : MetaCarpenterBase(schemas, cc) {
+class TestMetaCarpenter(
+        schemas: CarpenterMetaSchema,
+        cc: ClassCarpenter,
+        tolerateFailure: Boolean
+) : MetaCarpenterBase(schemas, cc, tolerateFailure) {
     override fun build() {
         if (schemas.carpenterSchemas.isEmpty()) return
         step(schemas.carpenterSchemas.removeAt(0))

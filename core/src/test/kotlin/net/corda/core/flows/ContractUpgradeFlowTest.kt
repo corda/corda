@@ -20,8 +20,10 @@ import net.corda.finance.flows.CashIssueFlow
 import net.corda.node.internal.SecureCordaRPCOps
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.Permissions.Companion.startFlow
+import net.corda.node.services.rpc.CheckpointDumper
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyContractV2
+import net.corda.testing.contracts.DummyContractV3
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.singleIdentity
@@ -99,24 +101,35 @@ class ContractUpgradeFlowTest {
         mockNet.runNetwork()
 
         val result = resultFuture.resultFuture.getOrThrow()
+        check<DummyContract.State, DummyContractV2.State>(aliceNode, result)
+        check<DummyContract.State, DummyContractV2.State>(bobNode, result)
 
-        fun check(node: StartedNode<MockNode>) {
-            val upgradeTx = node.database.transaction {
-                val wtx = node.services.validatedTransactions.getTransaction(result.ref.txhash)
-                wtx!!.resolveContractUpgradeTransaction(node.services)
-            }
-            assertTrue(upgradeTx.inputs.single().state.data is DummyContract.State)
-            assertTrue(upgradeTx.outputs.single().data is DummyContractV2.State)
+        // Check that the updated state can be further upgraded to V3
+        // Party B authorise the contract state upgrade
+        bobNode.services.startFlow(ContractUpgradeFlow.Authorise(result, DummyContractV3::class.java)).resultFuture.getOrThrow()
+
+        val resultFuture2 = aliceNode.services.startFlow(ContractUpgradeFlow.Initiate(result, DummyContractV3::class.java))
+        mockNet.runNetwork()
+        val result2 = resultFuture2.resultFuture.getOrThrow()
+
+        check<DummyContractV2.State, DummyContractV3.State>(aliceNode, result2)
+        check<DummyContractV2.State, DummyContractV3.State>(bobNode, result2)
+    }
+
+    private inline fun <reified OLD: ContractState, reified NEW: ContractState> check(node: StartedNode<MockNode>, state: StateAndRef<NEW>) {
+        val upgradeTx = node.database.transaction {
+            val wtx = node.services.validatedTransactions.getTransaction(state.ref.txhash)
+            wtx!!.resolveContractUpgradeTransaction(node.services)
         }
-        check(aliceNode)
-        check(bobNode)
+        assertTrue(upgradeTx.inputs.single().state.data is OLD)
+        assertTrue(upgradeTx.outputs.single().data is NEW)
     }
 
     private fun RPCDriverDSL.startProxy(node: StartedNode<MockNode>, user: User): CordaRPCOps {
         return startRpcClient<CordaRPCOps>(
                 rpcAddress = startRpcServer(
                         rpcUser = user,
-                        ops = SecureCordaRPCOps(node.services, node.smm, node.database, node.services)
+                        ops = SecureCordaRPCOps(node.services, node.smm, node.database, node.services, CheckpointDumper(node.checkpointStorage, node.database, node.services))
                 ).get().broker.hostAndPort!!,
                 username = user.username,
                 password = user.password

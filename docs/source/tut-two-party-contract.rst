@@ -81,7 +81,7 @@ Let's write a contract that enforces these constraints. We'll do this by modifyi
 
 .. container:: codeset
 
-    .. literalinclude:: example-code/src/main/kotlin/net/corda/docs/tutorial/twoparty/contract.kt
+    .. literalinclude:: example-code/src/main/kotlin/net/corda/docs/tutorial/twoparty/IOUContract.kt
         :language: kotlin
         :start-after: DOCSTART 01
         :end-before: DOCEND 01
@@ -154,13 +154,15 @@ Transaction constraints
 ~~~~~~~~~~~~~~~~~~~~~~~
 We also want our transaction to have no inputs and only a single output - an issuance transaction.
 
-To impose this and the subsequent constraints, we are using Corda's built-in ``requireThat`` block. ``requireThat``
+In Kotlin, we impose these and the subsequent constraints using Corda's built-in ``requireThat`` block. ``requireThat``
 provides a terse way to write the following:
 
 * If the condition on the right-hand side doesn't evaluate to true...
 * ...throw an ``IllegalArgumentException`` with the message on the left-hand side
 
 As before, the act of throwing this exception causes the transaction to be considered invalid.
+
+In Java, we simply throw an ``IllegalArgumentException`` manually instead.
 
 IOU constraints
 ~~~~~~~~~~~~~~~
@@ -169,9 +171,7 @@ We want to impose two constraints on the ``IOUState`` itself:
 * Its value must be non-negative
 * The lender and the borrower cannot be the same entity
 
-We impose these constraints in the same ``requireThat`` block as before.
-
-You can see that we're not restricted to only writing constraints in the ``requireThat`` block. We can also write
+You can see that we're not restricted to only writing constraints inside ``verify``. We can also write
 other statements - in this case, extracting the transaction's single ``IOUState`` and assigning it to a variable.
 
 Signer constraints
@@ -180,7 +180,7 @@ Finally, we require both the lender and the borrower to be required signers on t
 required signers is equal to the union of all the signers listed on the commands. We therefore extract the signers from
 the ``Create`` command we retrieved earlier.
 
-This is an absolutely essential constraint - it ensures that no ``IOUState`` can ever be created on the ledger without
+This is an absolutely essential constraint - it ensures that no ``IOUState`` can ever be created on the blockchain without
 the express agreement of both the lender and borrower nodes.
 
 Progress so far

@@ -624,6 +624,25 @@ class EvolvabilityTests {
         File(URI("$localPath/$resource")).writeBytes( signedAndSerialized.bytes)
     }
 
+    @Test
+    fun removesList() {
+        val file = File(URI("$localPath/${javaClass.simpleName}.${testName()}"))
+        val factory = testDefaultFactory()
+
+        // Classes as it was serialized
+        //
+        // class ToBeEvolved(val a: String, val b: List<String>)
+        // file.writeBytes(SerializationOutput(factory).serialize(ToBeEvolved("hello", listOf("a", "b"))).bytes)
+
+        // Class as it exited then (from the perspective that this is replicating an older node receiving
+        // a newer version of the class
+        class ToBeEvolved(val a: String)
+
+        val tbe = DeserializationInput(factory).deserialize(SerializedBytes<ToBeEvolved>(file.readBytes()))
+
+        assertEquals("hello", tbe.a)
+    }
+
     @Suppress("UNCHECKED_CAST")
     @Test
     fun getterSetterEvolver1() {
@@ -664,5 +683,27 @@ class EvolvabilityTests {
         assertEquals(2, deserializedC.b)
         assertEquals(4, deserializedC.d)
         assertEquals(5, deserializedC.e)
+    }
+
+    // Class as it was serialized, with additional enum field.
+    // enum class NewEnum { ONE, TWO, BUCKLE_MY_SHOE }
+    // data class Evolved(val fnord: String, val newEnum: NewEnum)
+
+    // Class before evolution
+    data class Evolved(val fnord: String)
+
+    @Test
+    fun evolutionWithCarpentry() {
+        val resource = "EvolvabilityTests.evolutionWithCarpentry"
+        val sf = testDefaultFactory()
+        // Uncomment to recreate
+        // File(URI("$localPath/$resource")).writeBytes(SerializationOutput(sf).serialize(Evolved("dronf", NewEnum.BUCKLE_MY_SHOE)).bytes)
+
+        val url = EvolvabilityTests::class.java.getResource(resource)
+
+        val sc2 = url.readBytes()
+        val deserialized = DeserializationInput(sf).deserialize(SerializedBytes<Evolved>(sc2))
+
+        assertEquals("dronf", deserialized.fnord)
     }
 }

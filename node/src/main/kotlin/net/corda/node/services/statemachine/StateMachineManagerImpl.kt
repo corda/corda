@@ -274,7 +274,7 @@ class StateMachineManagerImpl(
         val sessionMessage = try {
             message.data.deserialize<SessionMessage>()
         } catch (ex: Exception) {
-            logger.error("Received corrupt SessionMessage data from $peer")
+            logger.error("Unable to deserialize SessionMessage data from $peer", ex)
             return
         }
         val sender = serviceHub.networkMapCache.getPeerByLegalName(peer)

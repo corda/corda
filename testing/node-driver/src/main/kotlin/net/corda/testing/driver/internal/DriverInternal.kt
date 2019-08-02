@@ -81,6 +81,7 @@ val InProcess.internalServices: StartedNodeServices get() = services as StartedN
 object RandomFree : PortAllocation() {
     override fun nextPort(): Int {
         return ServerSocket().use {
+            it.reuseAddress = true
             it.bind(InetSocketAddress(0))
             it.localPort
         }

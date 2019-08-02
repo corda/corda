@@ -17,6 +17,7 @@ import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.concurrent.openFuture
+import net.corda.core.internal.messaging.InternalCordaRPCOps
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.*
 import net.corda.core.node.*
@@ -49,6 +50,7 @@ import net.corda.node.services.keys.PersistentKeyManagementService
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.network.*
 import net.corda.node.services.persistence.*
+import net.corda.node.services.rpc.CheckpointDumper
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.statemachine.*
 import net.corda.node.services.transactions.*
@@ -159,8 +161,8 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     private var _started: StartedNode<AbstractNode>? = null
 
     /** The implementation of the [CordaRPCOps] interface used by this node. */
-    open fun makeRPCOps(flowStarter: FlowStarter, database: CordaPersistence, smm: StateMachineManager): CordaRPCOps {
-        return SecureCordaRPCOps(services, smm, database, flowStarter)
+    open fun makeRPCOps(flowStarter: FlowStarter, database: CordaPersistence, smm: StateMachineManager, checkpointDumper: CheckpointDumper): InternalCordaRPCOps {
+        return SecureCordaRPCOps(services, smm, database, flowStarter, checkpointDumper)
     }
 
     private fun initCertificate() {
@@ -242,6 +244,8 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
                     drainingModePollPeriod = configuration.drainingModePollPeriod,
                     nodeProperties = nodeProperties)
 
+            val checkpointDumper = CheckpointDumper(checkpointStorage, database, services)
+
             (serverThread as? ExecutorService)?.let {
                 runOnStop += {
                     // We wait here, even though any in-flight messages should have been drained away because the
@@ -252,7 +256,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             }
 
             makeVaultObservers(schedulerService, database.hibernateConfig, smm, schemaService, flowLogicRefFactory)
-            val rpcOps = makeRPCOps(flowStarter, database, smm)
+            val rpcOps = makeRPCOps(flowStarter, database, smm, checkpointDumper)
             startMessagingService(rpcOps)
             installCoreFlows()
             val cordaServices = installCordaServices(flowStarter)
@@ -260,6 +264,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             registerCordappFlows(smm)
             _services.rpcFlows += cordappLoader.cordapps.flatMap { it.rpcFlows }
             startShell(rpcOps)
+            checkpointDumper.start(tokenizableServices)
             Pair(StartedNodeImpl(this, _services, nodeInfo, checkpointStorage, smm, attachments, network, database, rpcOps, flowStarter, notaryService), schedulerService)
         }
 
@@ -293,7 +298,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
      */
     protected abstract fun getRxIoScheduler(): Scheduler
 
-    open fun startShell(rpcOps: CordaRPCOps) {
+    open fun startShell(rpcOps: InternalCordaRPCOps) {
         InteractiveShell.startShell(configuration, rpcOps, securityManager, _services.identityService, _services.database)
     }
 

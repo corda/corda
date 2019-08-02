@@ -17,11 +17,11 @@ We'll do this by modifying the flow we wrote in the previous tutorial.
 
 Verifying the transaction
 -------------------------
-In ``IOUFlow.java``/``App.kt``, change the imports block to the following:
+In ``IOUFlow.java``/``Flows.kt``, change the imports block to the following:
 
 .. container:: codeset
 
-    .. literalinclude:: example-code/src/main/kotlin/net/corda/docs/tutorial/twoparty/flow.kt
+    .. literalinclude:: example-code/src/main/kotlin/net/corda/docs/tutorial/twoparty/IOUFlow.kt
         :language: kotlin
         :start-after: DOCSTART 01
         :end-before: DOCEND 01
@@ -31,12 +31,11 @@ In ``IOUFlow.java``/``App.kt``, change the imports block to the following:
         :start-after: DOCSTART 01
         :end-before: DOCEND 01
 
-And update ``IOUFlow.call`` by changing the code following the retrieval of the notary's identity from the network as
-follows:
+And update ``IOUFlow.call`` to the following:
 
 .. container:: codeset
 
-    .. literalinclude:: example-code/src/main/kotlin/net/corda/docs/tutorial/twoparty/flow.kt
+    .. literalinclude:: example-code/src/main/kotlin/net/corda/docs/tutorial/twoparty/IOUFlow.kt
         :language: kotlin
         :start-after: DOCSTART 02
         :end-before: DOCEND 02
@@ -89,7 +88,7 @@ to respond, we need to write a response flow as well. In a new ``IOUFlowResponde
 
 .. container:: codeset
 
-    .. literalinclude:: example-code/src/main/kotlin/net/corda/docs/tutorial/twoparty/flowResponder.kt
+    .. literalinclude:: example-code/src/main/kotlin/net/corda/docs/tutorial/twoparty/IOUFlowResponder.kt
         :language: kotlin
         :start-after: DOCSTART 01
         :end-before: DOCEND 01
@@ -136,7 +135,7 @@ defined in ``IOUContract``. We can now re-run our updated CorDapp, using the
 :doc:`same instructions as before <hello-world-running>`.
 
 Our CorDapp now imposes restrictions on the issuance of IOUs. Most importantly, IOU issuance now requires agreement
-from both the lender and the borrower before an IOU can be created on the ledger. This prevents either the lender or
+from both the lender and the borrower before an IOU can be created on the blockchain. This prevents either the lender or
 the borrower from unilaterally updating the ledger in a way that only benefits themselves.
 
 After completing this tutorial, your CorDapp should look like this:

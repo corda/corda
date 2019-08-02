@@ -102,6 +102,16 @@ class EvolutionPropertyReader : PropertyReader() {
 }
 
 /**
+ * Special instance of a [PropertyReader] in the same manner as the [EvolutionPropertyReader] that
+ * indicates when a type is uncarpentable. Used by the evolution code to null out properties
+ * that are discarded by the evolver.
+ */
+class UncarpentablePropertyReader : PropertyReader() {
+    override fun read(obj: Any?) : Any? = null
+    override fun isNullable() = true
+}
+
+/**
  * Represents a generic interface to a serializable property of an object.
  *
  * @property initialPosition where in the constructor used for serialization the property occurs.

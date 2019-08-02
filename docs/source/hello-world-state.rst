@@ -7,7 +7,7 @@
 Writing the state
 =================
 
-In Corda, shared facts on the ledger are represented as states. Our first task will be to define a new state type to
+In Corda, shared facts on the blockchain are represented as states. Our first task will be to define a new state type to
 represent an IOU.
 
 The ContractState interface
@@ -28,7 +28,7 @@ We can see that the ``ContractState`` interface has a single field, ``participan
 entities for which this state is relevant.
 
 Beyond this, our state is free to define any fields, methods, helpers or inner classes it requires to accurately
-represent a given type of shared fact on the ledger.
+represent a given type of shared fact on the blockchain.
 
 .. note::
 
@@ -46,7 +46,7 @@ represent a given type of shared fact on the ledger.
 
 Modelling IOUs
 --------------
-How should we define the ``IOUState`` representing IOUs on the ledger? Beyond implementing the ``ContractState``
+How should we define the ``IOUState`` representing IOUs on the blockchain? Beyond implementing the ``ContractState``
 interface, our ``IOUState`` will also need properties to track the relevant features of the IOU:
 
 * The value of the IOU
@@ -63,7 +63,7 @@ Let's get started by opening ``TemplateState.java`` (for Java) or ``StatesAndCon
 
 .. container:: codeset
 
-    .. literalinclude:: example-code/src/main/kotlin/net/corda/docs/tutorial/helloworld/state.kt
+    .. literalinclude:: example-code/src/main/kotlin/net/corda/docs/tutorial/helloworld/IOUState.kt
         :language: kotlin
         :start-after: DOCSTART 01
         :end-before: DOCEND 01
@@ -99,7 +99,7 @@ Corda are simply classes that implement the ``ContractState`` interface. They ca
 methods you like.
 
 All that's left to do is write the ``IOUFlow`` that will allow a node to orchestrate the creation of a new ``IOUState``
-on the ledger, while only sharing information on a need-to-know basis.
+on the blockchain, while only sharing information on a need-to-know basis.
 
 What about the contract?
 ------------------------

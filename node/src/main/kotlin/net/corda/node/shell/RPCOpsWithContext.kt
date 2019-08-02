@@ -1,7 +1,7 @@
 package net.corda.node.shell
 
 import net.corda.core.context.InvocationContext
-import net.corda.core.messaging.CordaRPCOps
+import net.corda.core.internal.messaging.InternalCordaRPCOps
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.security.AuthorizingSubject
 import net.corda.node.services.messaging.CURRENT_RPC_CONTEXT
@@ -11,9 +11,9 @@ import java.lang.reflect.Proxy
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Future
 
-fun makeRPCOpsWithContext(cordaRPCOps: CordaRPCOps, invocationContext:InvocationContext, authorizingSubject: AuthorizingSubject) : CordaRPCOps {
+fun makeRPCOpsWithContext(cordaRPCOps: InternalCordaRPCOps, invocationContext:InvocationContext, authorizingSubject: AuthorizingSubject) : InternalCordaRPCOps {
 
-    return Proxy.newProxyInstance(CordaRPCOps::class.java.classLoader, arrayOf(CordaRPCOps::class.java), { _, method, args ->
+    return Proxy.newProxyInstance(InternalCordaRPCOps::class.java.classLoader, arrayOf(InternalCordaRPCOps::class.java), { _, method, args ->
         RPCContextRunner(invocationContext, authorizingSubject) {
             try {
                 method.invoke(cordaRPCOps, *(args ?: arrayOf()))
@@ -22,7 +22,7 @@ fun makeRPCOpsWithContext(cordaRPCOps: CordaRPCOps, invocationContext:Invocation
                 throw e.targetException
             }
         }.get().getOrThrow()
-    }) as CordaRPCOps
+    }) as InternalCordaRPCOps
 }
 
 private class RPCContextRunner<T>(val invocationContext: InvocationContext, val authorizingSubject: AuthorizingSubject, val block:() -> T): Thread() {

@@ -1,21 +1,18 @@
+@file:Suppress("MemberVisibilityCanBePrivate")
+
 package net.corda.docs.tutorial.twoparty
 
 // DOCSTART 01
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.Command
-import net.corda.core.contracts.StateAndContract
-import net.corda.core.flows.*
+import net.corda.core.flows.CollectSignaturesFlow
+import net.corda.core.flows.FinalityFlow
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.InitiatingFlow
+import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
-import net.corda.core.messaging.CordaRPCOps
-import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
-import java.util.function.Function
-import javax.ws.rs.GET
-import javax.ws.rs.Path
-import javax.ws.rs.Produces
-import javax.ws.rs.core.MediaType
-import javax.ws.rs.core.Response
 // DOCEND 01
 
 @InitiatingFlow
@@ -29,20 +26,18 @@ class IOUFlow(val iouValue: Int,
     /** The flow logic is encapsulated within the call() method. */
     @Suspendable
     override fun call() {
+        // DOCSTART 02
         // We retrieve the notary identity from the network map.
         val notary = serviceHub.networkMapCache.notaryIdentities[0]
 
-        // DOCSTART 02
-        // We create a transaction builder.
-        val txBuilder = TransactionBuilder(notary = notary)
-
         // We create the transaction components.
         val outputState = IOUState(iouValue, ourIdentity, otherParty)
-        val outputContractAndState = StateAndContract(outputState, IOU_CONTRACT_ID)
-        val cmd = Command(IOUContract.Create(), listOf(ourIdentity.owningKey, otherParty.owningKey))
+        val command = Command(IOUContract.Create(), listOf(ourIdentity.owningKey, otherParty.owningKey))
 
-        // We add the items to the builder.
-        txBuilder.withItems(outputContractAndState, cmd)
+        // We create a transaction builder and add the components.
+        val txBuilder = TransactionBuilder(notary = notary)
+                .addOutputState(outputState, IOUContract.ID)
+                .addCommand(command)
 
         // Verifying the transaction.
         txBuilder.verify(serviceHub)
@@ -51,10 +46,10 @@ class IOUFlow(val iouValue: Int,
         val signedTx = serviceHub.signInitialTransaction(txBuilder)
 
         // Creating a session with the other party.
-        val otherpartySession = initiateFlow(otherParty)
+        val otherPartySession = initiateFlow(otherParty)
 
         // Obtaining the counterparty's signature.
-        val fullySignedTx = subFlow(CollectSignaturesFlow(signedTx, listOf(otherpartySession), CollectSignaturesFlow.tracker()))
+        val fullySignedTx = subFlow(CollectSignaturesFlow(signedTx, listOf(otherPartySession), CollectSignaturesFlow.tracker()))
 
         // Finalising the transaction.
         subFlow(FinalityFlow(fullySignedTx))

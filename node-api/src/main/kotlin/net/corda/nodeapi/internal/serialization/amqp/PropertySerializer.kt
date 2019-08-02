@@ -1,7 +1,9 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
+import net.corda.core.CordaRuntimeException
 import org.apache.qpid.proton.amqp.Binary
 import org.apache.qpid.proton.codec.Data
+import java.io.NotSerializableException
 import java.lang.reflect.Type
 
 /**
@@ -126,6 +128,33 @@ sealed class PropertySerializer(val name: String, val propertyReader: PropertyRe
         override fun writeProperty(obj: Any?, data: Data, output: SerializationOutput, debugIndent: Int) {
             val input = propertyReader.read(obj)
             if (input != null) data.putShort((input as Char).toShort()) else data.putNull()
+        }
+    }
+
+    /**
+     * Represents a property of an evolved type that cannot be synthesised by this version of the node. If we're evolving
+     * out recieved blob to be readable by the local version of the class and the synthesised elements are discarded
+     * everything is fine. If not, this type will ensure the error propogates out of the serializer.
+     */
+    class UncarpentablePropertySerializer(
+            name: String
+    ) : PropertySerializer(
+            name,
+            propertyReader = UncarpentablePropertyReader(),
+            resolvedType = Any::class.java
+    ) {
+        private val error = "Type $name cannot be serialized"
+
+        override fun readProperty(obj: Any?, schemas: SerializationSchemas, input: DeserializationInput) {
+            throw CordaRuntimeException(error)
+        }
+
+        override fun writeClassInfo(output: SerializationOutput) {
+            throw CordaRuntimeException(error)
+        }
+
+        override fun writeProperty(obj: Any?, data: Data, output: SerializationOutput, debugIndent: Int) {
+            throw CordaRuntimeException(error)
         }
     }
 }
