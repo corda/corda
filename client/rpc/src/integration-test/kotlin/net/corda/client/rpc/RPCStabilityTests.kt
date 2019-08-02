@@ -101,6 +101,7 @@ class RPCStabilityTests {
     }
 
     @Test
+    @Ignore("This test is flaky. It is being addressed as part of CORDA-3098")
     fun `client doesnt leak threads when it fails to start`() {
         fun startAndStop() {
             rpcDriver {
