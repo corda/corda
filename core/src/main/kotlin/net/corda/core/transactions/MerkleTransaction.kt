@@ -12,6 +12,7 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.utilities.OpaqueBytes
+import java.lang.IllegalArgumentException
 import java.security.PublicKey
 import java.util.function.Predicate
 
@@ -84,6 +85,12 @@ abstract class TraversableTransaction(open val componentGroups: List<ComponentGr
  */
 @KeepForDJVM
 @CordaSerializable
+/**
+ * SGX: need the ability to filter based on individual compoent offsets. The current API takes in input
+ * a generic Predicate<Any>, which is particulalry difficult to extend without breaking existing usages. It also causes
+ * other complications (like the necessity of wrapper types to differentiate various components groups). Perhaps a more
+ * flexible approach would be to provide an entirely separate builder class.
+ */
 class FilteredTransaction internal constructor(
         override val id: SecureHash,
         val filteredComponentGroups: List<FilteredComponentGroup>,
@@ -98,7 +105,21 @@ class FilteredTransaction internal constructor(
          */
         @JvmStatic
         fun buildFilteredTransaction(wtx: WireTransaction, filtering: Predicate<Any>): FilteredTransaction {
+            val filter = object: Predicate<Any> {
+                override fun test(t: Any): Boolean {
+                    val (component, _) = (t as? Pair<Any, Int>)
+                            ?: throw IllegalArgumentException("Unexpected argument type")
+                    return filtering.test(component)
+                }
+            }
             val filteredComponentGroups = filterWithFun(wtx, filtering)
+            return FilteredTransaction(wtx.id, filteredComponentGroups, wtx.groupHashes)
+        }
+
+        @JvmStatic
+        // SGX: refactor this
+        fun buildFilteredTransactionWithIndexedGroup(wtx: WireTransaction, filterWithIndices: Predicate<Any>): FilteredTransaction {
+            val filteredComponentGroups = filterWithFun(wtx, filterWithIndices)
             return FilteredTransaction(wtx.id, filteredComponentGroups, wtx.groupHashes)
         }
 
@@ -108,14 +129,15 @@ class FilteredTransaction internal constructor(
          * @param filtering filtering over the whole WireTransaction.
          * @return a list of [FilteredComponentGroup] used in PartialMerkleTree calculation and verification.
          */
-        private fun filterWithFun(wtx: WireTransaction, filtering: Predicate<Any>): List<FilteredComponentGroup> {
+        private fun filterWithFun(wtx: WireTransaction, filtering: Predicate<Any>)
+                : List<FilteredComponentGroup> {
             val filteredSerialisedComponents: MutableMap<Int, MutableList<OpaqueBytes>> = hashMapOf()
             val filteredComponentNonces: MutableMap<Int, MutableList<SecureHash>> = hashMapOf()
             val filteredComponentHashes: MutableMap<Int, MutableList<SecureHash>> = hashMapOf() // Required for partial Merkle tree generation.
             var signersIncluded = false
 
             fun <T : Any> filter(t: T, componentGroupIndex: Int, internalIndex: Int) {
-                if (!filtering.test(t)) return
+                if (!filtering.test(Pair(t, internalIndex))) return
 
                 val group = filteredSerialisedComponents[componentGroupIndex]
                 // Because the filter passed, we know there is a match. We also use first Vs single as the init function
@@ -158,7 +180,6 @@ class FilteredTransaction internal constructor(
                 // Note that because [inputs] and [references] share the same type [StateRef], we use a wrapper for references [ReferenceStateRef],
                 // when filtering. Thus, to filter-in all [references] based on type, one should use the wrapper type [ReferenceStateRef] and not [StateRef].
                 // Similar situation is for network parameters hash and attachments, one should use wrapper [NetworkParametersHash] and not [SecureHash].
-                wtx.references.forEachIndexed { internalIndex, it -> filter(ReferenceStateRef(it), REFERENCES_GROUP.ordinal, internalIndex) }
                 wtx.networkParametersHash?.let { filter(NetworkParametersHash(it), PARAMETERS_GROUP.ordinal, 0) }
                 // It is highlighted that because there is no a signers property in TraversableTransaction,
                 // one cannot specifically filter them in or out.
@@ -233,7 +254,7 @@ class FilteredTransaction internal constructor(
      * over a transaction with the attachment that wasn't verified. Of course it depends on how you implement it, but else -> false
      * should solve a problem with possible later extensions to WireTransaction.
      * @param checkingFun function that performs type checking on the structure fields and provides verification logic accordingly.
-     * @return false if no elements were matched on a structure or checkingFun returned false.
+     * @return false if no elements were matched on a structure or checkingFun returned false
      */
     fun checkWithFun(checkingFun: (Any) -> Boolean): Boolean {
         val checkList = availableComponentGroups.flatten().map { checkingFun(it) }

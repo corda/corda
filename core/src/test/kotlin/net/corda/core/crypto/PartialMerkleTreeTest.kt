@@ -10,6 +10,7 @@ import net.corda.core.identity.Party
 import net.corda.core.node.NotaryInfo
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
+import net.corda.core.transactions.FilteredTransactionBuilder
 import net.corda.core.transactions.ReferenceStateRef
 import net.corda.core.transactions.WireTransaction
 import net.corda.finance.DOLLARS
@@ -169,6 +170,11 @@ class PartialMerkleTreeTest {
         assertNotNull(ftx.timeWindow)
         assertNull(ftx.networkParametersHash)
         ftx.verify()
+    }
+
+    @Test
+    fun `test output states subsetting`() {
+        val tx = testLedger.interpreter.transactionsUnverified[0]
     }
 
     @Test

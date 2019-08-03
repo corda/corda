@@ -17,7 +17,6 @@ import net.corda.testing.internal.fakeAttachment
 import net.corda.testing.internal.rigorousMock
 import org.junit.Rule
 import org.junit.Test
-import java.io.InputStream
 import java.math.BigInteger
 import java.security.KeyPair
 import java.security.PublicKey
@@ -35,6 +34,7 @@ class TransactionTests {
         val dummyNotary = TestIdentity(DUMMY_NOTARY_NAME, 20)
         val DUMMY_NOTARY get() = dummyNotary.party
         val DUMMY_NOTARY_KEY get() = dummyNotary.keyPair
+        val DUMMY_NETPARAMS = testNetworkParameters(minimumPlatformVersion = 4, notaries = listOf(NotaryInfo(DUMMY_NOTARY, true)))
     }
 
     @Rule
@@ -216,5 +216,29 @@ class TransactionTests {
         val issueTx2 = buildTransaction()
 
         assertNotEquals(issueTx1.id, issueTx2.id)
+    }
+
+    @Test
+    fun `test transaction filtered by output state id`() {
+        val outputState1 = TransactionState(DummyContract.SingleOwnerState(0, ALICE), DummyContract.PROGRAM_ID, DUMMY_NOTARY)
+        val outputState2 = TransactionState(DummyContract.SingleOwnerState(1, ALICE), DummyContract.PROGRAM_ID, DUMMY_NOTARY)
+        val tx = createWireTransaction(
+                inputs = emptyList(),
+                attachments = emptyList(),
+                outputs = listOf(outputState1, outputState2),
+                commands = listOf(dummyCommand(DUMMY_KEY_1.public, DUMMY_KEY_2.public)),
+                notary = DUMMY_NOTARY,
+                timeWindow = null,
+                networkParamHash = NetworkParametersHash(SecureHash.allOnesHash)
+        )
+        val filteredTx = FilteredTransactionBuilder(tx)
+                .withOutputStates { _: TransactionState<ContractState>, id: Int -> id == 1 }
+                .includeNetworkParameters(true)
+                .build()
+        val outputState2Serialized = tx.componentGroups.first { it.groupIndex == ComponentGroupEnum.OUTPUTS_GROUP.ordinal }.components[1]
+        val filteredOutputStateGroup = filteredTx.filteredComponentGroups.first { it.groupIndex == ComponentGroupEnum.OUTPUTS_GROUP.ordinal }
+        val filteredId = filteredOutputStateGroup.components.indexOf(outputState2Serialized)
+        val outputState2Hash = componentHash(filteredOutputStateGroup.nonces[filteredId], outputState2Serialized)
+        assertEquals(filteredOutputStateGroup.partialMerkleTree.leafIndex(outputState2Hash), 1)
     }
 }

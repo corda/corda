@@ -112,6 +112,18 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
         )
     }
 
+    /*
+    fun toLedgerTransaction(services: TransactionResolutionServices): LedgerTransaction {
+        return toLedgerTransactionInternal(
+                resolveIdentity = services.resolveIdentity,
+                resolveAttachment = services.resolveAttachment,
+                resolveStateRefAsSerialized = services.resolveStateRefAsSerialized,
+                resolveParameters = services.resolveNetworkParameters,
+                resolveContractAttachment = { throw java.lang.UnsupportedOperationException("Unsupported") },
+                isAttachmentTrusted = { true } //< TODO: define a trust-model not dependent on DB or rely on sandboxing
+        )
+    }*/
+
     // Helper for deprecated toLedgerTransaction
     // TODO: revisit once Deterministic JVM code updated
     private val missingAttachment: Attachment by lazy {
