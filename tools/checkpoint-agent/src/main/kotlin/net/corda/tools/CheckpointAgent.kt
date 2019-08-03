@@ -203,6 +203,7 @@ object CheckpointHook : ClassFileTransformer {
     private fun <T> getArrayValue(clazz: Class<T>, value: Any?): String? {
         if (clazz.isArray) {
             log.debug { "readFieldExit array type: $clazz, value: $value]" }
+            @Suppress("UNCHECKED_CAST")
             if (Array<Number>::class.java.isAssignableFrom(clazz)) {
                 val numberValue = value as Array<Number>
                 log.debug { "readFieldExit array of number: $clazz = ${numberValue.joinToString(",")}" }
@@ -262,6 +263,7 @@ object CheckpointHook : ClassFileTransformer {
                 log.debug { "readFieldExit boolean array: $clazz = ${arrayValue.joinToString(",")}" }
                 return arrayValue.joinToString(",")
             }
+            @Suppress("UNCHECKED_CAST")
             log.debug { "ARRAY OF TYPE: $clazz (size: ${(value as Array<Any?>).size})" }
         }
         return null
@@ -346,6 +348,7 @@ object CheckpointHook : ClassFileTransformer {
                     builder.append(CharArray(indent) { ' ' })
                     builder.append(" ${statsInfo.fieldName} ")
                     if (statsInfo.fieldType != null && statsInfo.fieldType.isArray) {
+                        @Suppress("UNCHECKED_CAST")
                         val arrayValue = (statsTree.value as Array<Any?>)
                         builder.append("${statsInfo.fieldType} (array length:${arrayValue.size})")
                     }
@@ -474,7 +477,7 @@ fun readTrees(events: List<StatsEvent>, index: Int, idMap: IdentityHashMap<Any, 
                     if (idMap.containsKey(event.value)) {
                         val identityInfo = idMap[event.value]!!
                         idMap[event.value] = IdentityInfo(identityInfo.tree, identityInfo.refCount + 1)
-                        log.debug { "Skipping repeated StatsEvent.ObjectField: ${event.value} (hashcode:${event.value!!.hashCode()}) (count:${idMap[event.value]?.refCount})" }
+                        log.debug { "Skipping repeated StatsEvent.ObjectField: ${event.value} (hashcode:${event.value.hashCode()}) (count:${idMap[event.value]?.refCount})" }
                         identityInfo
                     }
                     else {

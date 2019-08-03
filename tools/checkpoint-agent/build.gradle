@@ -29,7 +29,12 @@ apply plugin: 'idea'
 description 'A javaagent to allow hooking into Kryo checkpoints'
 
 dependencies {
+    api "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+    api "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
+
     compile "javassist:javassist:$javaassist_version"
+    compile "com.esotericsoftware:kryo:4.0.0"
+    compile "co.paralleluniverse:quasar-core:$quasar_version"
 
     compile (project(':core')) {
         transitive = false
