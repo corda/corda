@@ -15,6 +15,7 @@ import net.corda.core.internal.createComponentGroups
 import net.corda.core.node.NodeInfo
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.internal.effectiveSerializationEnv
+import net.corda.core.transactions.NetworkParametersHash
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.loggerFor
 import net.corda.node.internal.createCordaPersistence
@@ -158,8 +159,11 @@ fun createWireTransaction(inputs: List<StateRef>,
                           commands: List<Command<*>>,
                           notary: Party?,
                           timeWindow: TimeWindow?,
-                          privacySalt: PrivacySalt = PrivacySalt()): WireTransaction {
-    val componentGroups = createComponentGroups(inputs, outputs, commands, attachments, notary, timeWindow, emptyList(), null)
+                          privacySalt: PrivacySalt = PrivacySalt(),
+                          networkParamHash: NetworkParametersHash? = null): WireTransaction {
+    val componentGroups = createComponentGroups(
+            inputs, outputs, commands, attachments, notary,
+            timeWindow, emptyList(), networkParamHash?.hash)
     return WireTransaction(componentGroups, privacySalt)
 }
 
