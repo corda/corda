@@ -5,13 +5,11 @@ import net.corda.core.context.InvocationContext
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
-import net.corda.core.internal.FlowStateMachine
-import net.corda.core.internal.NamedCacheFactory
+import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.StateMachineTransactionMapping
 import net.corda.core.node.NodeInfo
-import net.corda.core.node.ServiceHub
 import net.corda.core.node.StatesToRecord
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.NetworkMapCacheBase
@@ -49,11 +47,13 @@ interface NetworkMapCacheInternal : NetworkMapCache, NetworkMapCacheBase {
     fun removeNode(node: NodeInfo)
 }
 
-interface ServiceHubInternal : ServiceHub {
+interface ServiceHubInternal : ServiceHubCoreInternal {
     companion object {
         private val log = contextLogger()
 
-        fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>,
+        // TODO Why is txs an Iterable and not a Collection??
+        fun recordTransactions(statesToRecord: StatesToRecord,
+                               txs: Iterable<SignedTransaction>,
                                validatedTransactions: WritableTransactionStorage,
                                stateMachineRecordedTransactionMapping: StateMachineRecordedTransactionMappingStorage,
                                vaultService: VaultServiceInternal,
@@ -139,12 +139,17 @@ interface ServiceHubInternal : ServiceHub {
     val nodeProperties: NodePropertiesStore
     val networkMapUpdater: NetworkMapUpdater
     override val cordappProvider: CordappProviderInternal
+
+    fun getFlowFactory(initiatingFlowClass: Class<out FlowLogic<*>>): InitiatedFlowFactory<*>?
+    val cacheFactory: NamedCacheFactory
+
     override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
         recordTransactions(statesToRecord, txs, validatedTransactions, stateMachineRecordedTransactionMapping, vaultService, database)
     }
 
-    fun getFlowFactory(initiatingFlowClass: Class<out FlowLogic<*>>): InitiatedFlowFactory<*>?
-    val cacheFactory: NamedCacheFactory
+    override fun createTransactionsResolver(flow: ResolveTransactionsFlow): TransactionsResolver {
+        return InMemoryTransactionsResolver(flow)
+    }
 }
 
 interface FlowStarter {
@@ -177,18 +182,29 @@ interface FlowStarter {
 }
 
 interface StartedNodeServices : ServiceHubInternal, FlowStarter
+
 /**
  * Thread-safe storage of transactions.
  */
 interface WritableTransactionStorage : TransactionStorage {
     /**
-     * Add a new transaction to the store. If the store already has a transaction with the same id it will be
-     * overwritten.
+     * Add a new *verified* transaction to the store, or convert the existing unverified transaction into a verified one.
      * @param transaction The transaction to be recorded.
-     * @return true if the transaction was recorded successfully, false if it was already recorded.
+     * @return true if the transaction was recorded as a *new verified* transcation, false if the transaction already exists.
      */
     // TODO: Throw an exception if trying to add a transaction with fewer signatures than an existing entry.
     fun addTransaction(transaction: SignedTransaction): Boolean
+
+    /**
+     * Add a new *unverified* transaction to the store.
+     */
+    fun addUnverifiedTransaction(transaction: SignedTransaction)
+
+    /**
+     * Return the transaction with the given ID from the store, and a flag of whether it's verified. Returns null if no transaction with the
+     * ID exists.
+     */
+    fun getTransactionInternal(id: SecureHash): Pair<SignedTransaction, Boolean>?
 }
 
 /**
