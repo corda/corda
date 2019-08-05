@@ -44,6 +44,8 @@
       <module name="business-network-demo_test" target="1.8" />
       <module name="canonicalizer_main" target="1.8" />
       <module name="canonicalizer_test" target="1.8" />
+      <module name="checkpoint-agent_main" target="1.8" />
+      <module name="checkpoint-agent_test" target="1.8" />
       <module name="cli_main" target="1.8" />
       <module name="cli_test" target="1.8" />
       <module name="client_main" target="1.8" />

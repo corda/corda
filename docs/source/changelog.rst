@@ -9,6 +9,9 @@ release, see :doc:`app-upgrade-notes`.
 Version 5.0
 -----------
 
+* Introduced a new low level flow diagnostics tool: checkpoint agent (that can be used standalone or in conjunction with the ``dumpCheckpoints`` shell command).
+  See :doc:`tools-checkpoint-agent` for more information.
+
 * The MockNet now supports setting a custom Notary class name, as was already supported by normal node config. See :doc:`tutorial-custom-notary`.
 
 * Introduced a new ``Destination`` abstraction for communicating with non-Party destinations using the new ``FlowLogic.initateFlow(Destination)``
