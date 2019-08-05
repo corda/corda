@@ -180,3 +180,6 @@ fun FlowLogic<*>.checkParameterHash(networkParametersHash: SecureHash?) {
     //       lets us predict what is the reasonable time window for changing parameters on most of the nodes.
     //       For now we don't check whether the attached network parameters match the current ones.
 }
+
+val SignedTransaction.dependencies: Set<SecureHash>
+    get() = (inputs.asSequence() + references.asSequence()).map { it.txhash }.toSet()

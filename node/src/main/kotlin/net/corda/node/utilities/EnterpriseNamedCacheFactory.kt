@@ -33,7 +33,6 @@ class EnterpriseNamedCacheFactory private constructor(private val tracingConfig:
     override fun <K, V> configuredForNamed(caffeine: Caffeine<K, V>, name: String): Caffeine<K, V> {
         return with(nodeConfiguration!!) {
             when {
-                name == "DBTransactionStorage_locks" -> caffeine.maximumSize(defaultCacheSize)
                 name == "NodeVaultService_producedStates" -> caffeine.maximumSize(defaultCacheSize)
                 name == "NodeAttachmentService_attachmentContent" -> caffeine.maximumWeight(defaultAttachmentCacheBound(this))
                 name == "NodeAttachmentService_attachmentPresence" -> caffeine.maximumSize(defaultAttachmentPresenceCacheBound(this))
