@@ -1,5 +1,5 @@
 host = "127.0.0.1"
-port = 25666
+port = $UTIMACO_PORT
 connectionTimeout = 60000
 keepSessionAlive = true
 keyGroup = "*"
