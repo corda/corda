@@ -15,8 +15,6 @@ import com.fasterxml.jackson.databind.*
 import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.databind.ser.BeanPropertyWriter
 import com.fasterxml.jackson.databind.ser.BeanSerializerModifier
-//import jdk.internal.vm.VMSupport
-//import sun.misc.VMSupport
 import net.corda.client.jackson.JacksonSupport
 import net.corda.client.jackson.internal.jsonObject
 import net.corda.core.context.InvocationOrigin
@@ -44,6 +42,7 @@ import net.corda.core.utilities.contextLogger
 import net.corda.node.internal.NodeStartup
 import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.statemachine.*
+import net.corda.node.utilities.JVMAgentUtil.getJvmAgentProperties
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.serialization.internal.CheckpointSerializeAsTokenContextImpl
 import net.corda.serialization.internal.withTokenContext
@@ -143,12 +142,10 @@ class CheckpointDumper(private val checkpointStorage: CheckpointStorage, private
     }
 
     private fun checkpointAgentRunning(): Boolean {
-//        val agentProperties = VMSupport.getAgentProperties()
-//        return agentProperties.values.any { value ->
-//            (value is String && value.contains("checkpoint-agent.jar"))
-//        }
-        // JDK 11 revisit replacement of VMSupport
-        return false
+        val agentProperties = getJvmAgentProperties(log)
+        return agentProperties.values.any { value ->
+            value is String && value.contains("checkpoint-agent.jar")
+        }
     }
 
     private fun Checkpoint.toJson(id: UUID, now: Instant): CheckpointJson {

@@ -25,6 +25,7 @@ import net.corda.node.internal.subcommands.ValidateConfigurationCli.Companion.lo
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.shouldStartLocalShell
 import net.corda.node.services.config.shouldStartSSHDaemon
+import net.corda.node.utilities.JVMAgentUtil.getJvmAgentProperties
 import net.corda.node.utilities.registration.NodeRegistrationException
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.nodeapi.internal.persistence.CouldNotCreateDataSourceException
@@ -252,6 +253,10 @@ open class NodeStartup : NodeStartupLogging {
         logger.info("VM ${info.vmName} ${info.vmVendor} ${info.vmVersion}")
         logger.info("Machine: ${lookupMachineNameAndMaybeWarn()}")
         logger.info("Working Directory: ${cmdLineOptions.baseDirectory}")
+        val agentProperties = getJvmAgentProperties(logger)
+        if (agentProperties.containsKey("sun.jdwp.listenerAddress")) {
+            logger.info("Debug port: ${agentProperties.getProperty("sun.jdwp.listenerAddress")}")
+        }
         var nodeStartedMessage = "Starting as node on ${conf.p2pAddress}"
         if (conf.extraNetworkMapKeys.isNotEmpty()) {
             nodeStartedMessage = "$nodeStartedMessage with additional Network Map keys ${conf.extraNetworkMapKeys.joinToString(prefix = "[", postfix = "]", separator = ", ")}"
