@@ -18,6 +18,7 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.contextLogger
 import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.internal.cordapp.CordappProviderInternal
+import net.corda.node.services.InMemoryTransactionsResolver
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.network.NetworkMapUpdater
