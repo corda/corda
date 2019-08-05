@@ -100,6 +100,7 @@ class RPCStabilityTests {
         }
     }
 
+    @Ignore("Flaky test on Bare Metal TC hardware")
     @Test
     fun `client doesnt leak threads when it fails to start`() {
         fun startAndStop() {
