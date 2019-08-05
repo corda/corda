@@ -150,3 +150,5 @@ shut itself down reporting the cause as an error message to the Node's log file.
 .. note:: On some operating systems when PC is going to sleep whilst Corda Node is running, imbedded into Node Artemis message broker reports
     the loss of heartbeat event which in turn causes loss of connectivity to Artemis. In such circumstances Corda Node will exit reporting broker
     connectivity problem in the log.
+
+Once critical resources node relies upon are available again, it is safe for Node operator to re-start the node for normal operation.
