@@ -5,14 +5,11 @@ import net.corda.core.context.InvocationContext
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
-import net.corda.core.internal.FlowStateMachine
-import net.corda.core.internal.NamedCacheFactory
-import net.corda.core.internal.ResolveTransactionsFlow
+import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.StateMachineTransactionMapping
 import net.corda.core.node.NodeInfo
-import net.corda.core.node.ServiceHub
 import net.corda.core.node.StatesToRecord
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.NetworkMapCacheBase
@@ -21,6 +18,8 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.contextLogger
 import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.internal.cordapp.CordappProviderInternal
+import net.corda.node.services.DbTransactionsResolver
+import net.corda.node.services.InMemoryTransactionsResolver
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.network.NetworkMapUpdater
@@ -49,11 +48,22 @@ interface NetworkMapCacheInternal : NetworkMapCache, NetworkMapCacheBase {
     fun removeNode(node: NodeInfo)
 }
 
-interface ServiceHubInternal : ServiceHub {
+interface ServiceHubInternal : ServiceHubCoreInternal {
     companion object {
         private val log = contextLogger()
 
-        fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>,
+        private fun topologicalSort(transactions: Iterable<SignedTransaction>): List<SignedTransaction> {
+            if ((transactions as? List)?.size == 1) return transactions
+            val sort = InMemoryTransactionsResolver.TopologicalSort()
+            for (tx in transactions) {
+                sort.add(tx, tx.dependencies)
+            }
+            return sort.complete()
+        }
+
+        // TODO Why is txs an Iterable and not a Collection??
+        fun recordTransactions(statesToRecord: StatesToRecord,
+                               txs: Iterable<SignedTransaction>,
                                validatedTransactions: WritableTransactionStorage,
                                stateMachineRecordedTransactionMapping: StateMachineRecordedTransactionMappingStorage,
                                vaultService: VaultServiceInternal,
@@ -62,63 +72,64 @@ interface ServiceHubInternal : ServiceHub {
             database.transaction {
                 require(txs.any()) { "No transactions passed in for recording" }
                 // Ensure we record dependencies first
-                val orderedTxs = ResolveTransactionsFlow.topologicalSort(txs.toList())
+                val orderedTxs = topologicalSort(txs)
                 // Mark all txs as being written
-                validatedTransactions.lockObjectsForWrite(orderedTxs.map { it.coreTransaction.id }, this)
+                validatedTransactions.lockObjectsForWrite(orderedTxs.map { it.coreTransaction.id }, this, false) {
 
-                // Divide transactions into those seen before and those that are new to this node if ALL_VISIBLE states are being recorded.
-                // This allows the node to re-record transactions that have previously only been seen at the ONLY_RELEVANT level. Note that
-                // for transactions being recorded at ONLY_RELEVANT, if this transaction has been seen before its outputs should already
-                // have been recorded at ONLY_RELEVANT, so there shouldn't be anything to re-record here.
-                val (recordedTransactions, previouslySeenTxs) = if (statesToRecord != StatesToRecord.ALL_VISIBLE) {
-                    Pair(orderedTxs.filter { validatedTransactions.addTransaction(it) }, emptyList())
-                } else {
-                    orderedTxs.partition { validatedTransactions.addTransaction(it) }
-                }
-                val stateMachineRunId = FlowStateMachineImpl.currentStateMachine()?.id
-                if (stateMachineRunId != null) {
-                    recordedTransactions.forEach {
-                        stateMachineRecordedTransactionMapping.addMapping(stateMachineRunId, it.id)
+                    // Divide transactions into those seen before and those that are new to this node if ALL_VISIBLE states are being recorded.
+                    // This allows the node to re-record transactions that have previously only been seen at the ONLY_RELEVANT level. Note that
+                    // for transactions being recorded at ONLY_RELEVANT, if this transaction has been seen before its outputs should already
+                    // have been recorded at ONLY_RELEVANT, so there shouldn't be anything to re-record here.
+                    val (recordedTransactions, previouslySeenTxs) = if (statesToRecord != StatesToRecord.ALL_VISIBLE) {
+                        Pair(orderedTxs.filter { validatedTransactions.addTransaction(it) }, emptyList())
+                    } else {
+                        orderedTxs.partition { validatedTransactions.addTransaction(it) }
                     }
-                } else {
-                    log.warn("Transactions recorded from outside of a state machine")
-                }
+                    val stateMachineRunId = FlowStateMachineImpl.currentStateMachine()?.id
+                    if (stateMachineRunId != null) {
+                        recordedTransactions.forEach {
+                            stateMachineRecordedTransactionMapping.addMapping(stateMachineRunId, it.id)
+                        }
+                    } else {
+                        log.warn("Transactions recorded from outside of a state machine")
+                    }
 
-                // When the user has requested StatesToRecord.ALL we may end up recording and relationally mapping states
-                // that do not involve us and that we cannot sign for. This will break coin selection and thus a warning
-                // is present in the documentation for this feature (see the "Observer nodes" tutorial on docs.corda.net).
-                //
-                // The reason for this is three-fold:
-                //
-                // 1) We are putting in place the observer mode feature relatively quickly to meet specific customer
-                //    launch target dates.
-                //
-                // 2) The right design for vaults which mix observations and relevant states isn't entirely clear yet.
-                //
-                // 3) If we get the design wrong it could create security problems and business confusions.
-                //
-                // Back in the bitcoinj days I did add support for "watching addresses" to the wallet code, which is the
-                // Bitcoin equivalent of observer nodes:
-                //
-                //   https://bitcoinj.github.io/working-with-the-wallet#watching-wallets
-                //
-                // The ability to have a wallet containing both irrelevant and relevant states complicated everything quite
-                // dramatically, even methods as basic as the getBalance() API which required additional modes to let you
-                // query "balance I can spend" vs "balance I am observing". In the end it might have been better to just
-                // require the user to create an entirely separate wallet for observing with.
-                //
-                // In Corda we don't support a single node having multiple vaults (at the time of writing), and it's not
-                // clear that's the right way to go: perhaps adding an "origin" column to the VAULT_STATES table is a better
-                // solution. Then you could select subsets of states depending on where the report came from.
-                //
-                // The risk of doing this is that apps/developers may use 'canned SQL queries' not written by us that forget
-                // to add a WHERE clause for the origin column. Those queries will seem to work most of the time until
-                // they're run on an observer node and mix in irrelevant data. In the worst case this may result in
-                // erroneous data being reported to the user, which could cause security problems.
-                //
-                // Because the primary use case for recording irrelevant states is observer/regulator nodes, who are unlikely
-                // to make writes to the ledger very often or at all, we choose to punt this issue for the time being.
-                vaultService.notifyAll(statesToRecord, recordedTransactions.map { it.coreTransaction }, previouslySeenTxs.map { it.coreTransaction })
+                    // When the user has requested StatesToRecord.ALL we may end up recording and relationally mapping states
+                    // that do not involve us and that we cannot sign for. This will break coin selection and thus a warning
+                    // is present in the documentation for this feature (see the "Observer nodes" tutorial on docs.corda.net).
+                    //
+                    // The reason for this is three-fold:
+                    //
+                    // 1) We are putting in place the observer mode feature relatively quickly to meet specific customer
+                    //    launch target dates.
+                    //
+                    // 2) The right design for vaults which mix observations and relevant states isn't entirely clear yet.
+                    //
+                    // 3) If we get the design wrong it could create security problems and business confusions.
+                    //
+                    // Back in the bitcoinj days I did add support for "watching addresses" to the wallet code, which is the
+                    // Bitcoin equivalent of observer nodes:
+                    //
+                    //   https://bitcoinj.github.io/working-with-the-wallet#watching-wallets
+                    //
+                    // The ability to have a wallet containing both irrelevant and relevant states complicated everything quite
+                    // dramatically, even methods as basic as the getBalance() API which required additional modes to let you
+                    // query "balance I can spend" vs "balance I am observing". In the end it might have been better to just
+                    // require the user to create an entirely separate wallet for observing with.
+                    //
+                    // In Corda we don't support a single node having multiple vaults (at the time of writing), and it's not
+                    // clear that's the right way to go: perhaps adding an "origin" column to the VAULT_STATES table is a better
+                    // solution. Then you could select subsets of states depending on where the report came from.
+                    //
+                    // The risk of doing this is that apps/developers may use 'canned SQL queries' not written by us that forget
+                    // to add a WHERE clause for the origin column. Those queries will seem to work most of the time until
+                    // they're run on an observer node and mix in irrelevant data. In the worst case this may result in
+                    // erroneous data being reported to the user, which could cause security problems.
+                    //
+                    // Because the primary use case for recording irrelevant states is observer/regulator nodes, who are unlikely
+                    // to make writes to the ledger very often or at all, we choose to punt this issue for the time being.
+                    vaultService.notifyAll(statesToRecord, recordedTransactions.map { it.coreTransaction }, previouslySeenTxs.map { it.coreTransaction })
+                }
             }
         }
     }
@@ -143,12 +154,17 @@ interface ServiceHubInternal : ServiceHub {
     val nodeProperties: NodePropertiesStore
     val networkMapUpdater: NetworkMapUpdater
     override val cordappProvider: CordappProviderInternal
+
+    fun getFlowFactory(initiatingFlowClass: Class<out FlowLogic<*>>): InitiatedFlowFactory<*>?
+    val cacheFactory: NamedCacheFactory
+
     override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
         recordTransactions(statesToRecord, txs, validatedTransactions, stateMachineRecordedTransactionMapping, vaultService, database)
     }
 
-    fun getFlowFactory(initiatingFlowClass: Class<out FlowLogic<*>>): InitiatedFlowFactory<*>?
-    val cacheFactory: NamedCacheFactory
+    override fun createTransactionsResolver(flow: ResolveTransactionsFlow): TransactionsResolver {
+        return DbTransactionsResolver(flow)
+    }
 }
 
 interface FlowStarter {
@@ -181,33 +197,41 @@ interface FlowStarter {
 }
 
 interface StartedNodeServices : ServiceHubInternal, FlowStarter
+
 /**
  * Thread-safe storage of transactions.
  */
 interface WritableTransactionStorage : TransactionStorage {
     /**
-     * Add a new transaction to the store. If the store already has a transaction with the same id it will be
-     * overwritten.
+     * Add a new *verified* transaction to the store, or convert the existing unverified transaction into a verified one.
      * @param transaction The transaction to be recorded.
-     * @return true if the transaction was recorded successfully, false if it was already recorded.
+     * @return true if the transaction was recorded as a *new verified* transcation, false if the transaction already exists.
      */
     // TODO: Throw an exception if trying to add a transaction with fewer signatures than an existing entry.
     fun addTransaction(transaction: SignedTransaction): Boolean
 
     /**
-     * This will create a read/write lock for each of the listed ids if it doesn't exist yet and
-     * lock a write lock for any of them until the dbTx is either committed or rolled back.
-     * @param ids list of (Corda transaction) ids we potentially want to write.
-     * @param dbTx database transaction the write will happen under
+     * Add a new *unverified* transaction to the store.
      */
-    fun lockObjectsForWrite(ids: Collection<SecureHash>, dbTx: DatabaseTransaction)
+    fun addUnverifiedTransaction(transaction: SignedTransaction)
 
     /**
-     * This will create or get a read/write lock for the id and run the block under the read lock
-     * @param id Corda transaction id we will try to read
-     * @param block Block to execute to read the transaction
+     * Return the transaction with the given ID from the store, and a flag of whether it's verified. Returns null if no transaction with the
+     * ID exists.
      */
-    fun <T> intentToRead(id: SecureHash, block: () -> T): T
+    fun getTransactionInternal(id: SecureHash): Pair<SignedTransaction, Boolean>?
+
+    /**
+     * Lock each of the provided transactions IDs in the iteration order of the provided collection. The locks for each identifier are held
+     * until the provided database transaction is closed (for any reason).
+     *
+     * @param ids list of (Corda transaction) ids we potentially want to write.
+     * @param dbTx database transaction the write will happen under
+     * @param writePessimistically whether to write this transaction pessimistically to the database
+     * @param block A block of code to execute, that registers some callbacks to be invoked on transaction commit/close. This function
+     *              ensures that locks are held while these callbacks are invoked.
+     */
+    fun <T> lockObjectsForWrite(ids: Collection<SecureHash>, dbTx: DatabaseTransaction, writePessimistically: Boolean, block: () -> T): T
 }
 
 /**

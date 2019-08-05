@@ -737,12 +737,10 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
             private val database: CordaPersistence,
             private val delegate: WritableTransactionStorage
     ) : WritableTransactionStorage, SingletonSerializeAsToken() {
-        override fun lockObjectsForWrite(ids: Collection<SecureHash>, dbTx: DatabaseTransaction) {
-        }
-
-        override fun <T> intentToRead(id: SecureHash, block: () -> T): T {
-            return block()
-        }
+        override fun <T> lockObjectsForWrite(ids: Collection<SecureHash>,
+                                             dbTx: DatabaseTransaction,
+                                             writePessimistically: Boolean,
+                                             block: () -> T): T = block()
 
         override fun trackTransaction(id: SecureHash): CordaFuture<SignedTransaction> {
             return database.transaction {
@@ -772,6 +770,18 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
             return database.transaction {
                 records.add(TxRecord.Get(id))
                 delegate.getTransaction(id)
+            }
+        }
+
+        override fun addUnverifiedTransaction(transaction: SignedTransaction) {
+            database.transaction {
+                delegate.addUnverifiedTransaction(transaction)
+            }
+        }
+
+        override fun getTransactionInternal(id: SecureHash): Pair<SignedTransaction, Boolean>? {
+            return database.transaction {
+                delegate.getTransactionInternal(id)
             }
         }
     }

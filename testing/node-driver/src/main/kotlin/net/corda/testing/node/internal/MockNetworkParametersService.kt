@@ -4,12 +4,15 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
 import net.corda.core.internal.NetworkParametersStorage
 import net.corda.core.internal.SignedDataWithCert
+import net.corda.core.internal.signWithCert
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NotaryInfo
 import net.corda.core.serialization.serialize
 import net.corda.nodeapi.internal.network.SignedNetworkParameters
 import net.corda.nodeapi.internal.network.verifiedNetworkMapCert
 import net.corda.testing.common.internal.testNetworkParameters
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.TestIdentity
 import net.corda.testing.internal.withTestSerializationEnvIfNotSet
 import java.security.cert.X509Certificate
 import java.time.Instant
@@ -66,5 +69,10 @@ class MockNetworkParametersStorage(private var currentParameters: NetworkParamet
 
     private fun storeCurrentParameters() {
         hashToParametersMap[currentHash] = currentParameters
+        val testIdentity = TestIdentity(ALICE_NAME, 20)
+        val signedData = withTestSerializationEnvIfNotSet {
+            currentParameters.signWithCert(testIdentity.keyPair.private, testIdentity.identity.certificate)
+        }
+        hashToSignedParametersMap[currentHash] = signedData
     }
 }

@@ -1,5 +1,6 @@
 package net.corda.node.services.persistence
 
+import junit.framework.TestCase.assertTrue
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
@@ -151,6 +152,50 @@ class DBTransactionStorageTests {
             require(!secondInserted) { "Second time should be redundant" }
             println("$firstInserted $secondInserted")
         }
+    }
+
+    @Test
+    fun `unverified transaction is correctly added in add transaction`() {
+        val transaction = newTransaction()
+        val added = database.transaction {
+            transactionStorage.addUnverifiedTransaction(transaction)
+            transactionStorage.addTransaction(transaction)
+        }
+        assertTransactionIsRetrievable(transaction)
+        assertTrue(added)
+
+        val secondTransaction = newTransaction()
+        database.transaction {
+            transactionStorage.addUnverifiedTransaction(secondTransaction)
+        }
+
+        val secondAdded = database.transaction {
+            transactionStorage.addTransaction(secondTransaction)
+        }
+
+        assertTransactionIsRetrievable(secondTransaction)
+        assertTrue(secondAdded)
+    }
+
+    @Test
+    fun `cannot move transaction from verified to unverified`() {
+        val transaction = newTransaction()
+        database.transaction {
+            transactionStorage.addTransaction(transaction)
+            transactionStorage.addUnverifiedTransaction(transaction)
+        }
+
+        assertTransactionIsRetrievable(transaction)
+
+        val secondTransaction = newTransaction()
+        database.transaction {
+            transactionStorage.addTransaction(secondTransaction)
+        }
+
+        database.transaction {
+            transactionStorage.addUnverifiedTransaction(secondTransaction)
+        }
+        assertTransactionIsRetrievable(secondTransaction)
     }
 
     private fun newTransactionStorage(cacheSizeBytesOverride: Long? = null) {

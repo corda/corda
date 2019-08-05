@@ -17,7 +17,6 @@ import net.corda.nodeapi.internal.persistence.contextDatabase
 import net.corda.nodeapi.internal.persistence.contextTransaction
 import net.corda.nodeapi.internal.persistence.contextTransactionOrNull
 import java.time.Duration
-import java.time.Instant
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
 
@@ -161,7 +160,7 @@ class ActionExecutorImpl(
     private fun executeSleepUntil(action: Action.SleepUntil) {
         // TODO introduce explicit sleep state + wakeup event instead of relying on Fiber.sleep. This is so shutdown
         // conditions may "interrupt" the sleep instead of waiting until wakeup.
-        val duration = Duration.between(Instant.now(), action.time)
+        val duration = Duration.between(services.clock.instant(), action.time)
         Fiber.sleep(duration.toNanos(), TimeUnit.NANOSECONDS)
     }
 

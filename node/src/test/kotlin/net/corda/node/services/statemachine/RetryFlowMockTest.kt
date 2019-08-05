@@ -20,6 +20,7 @@ import net.corda.testing.core.TestIdentity
 import net.corda.testing.node.internal.*
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.h2.util.Utils
 import org.hibernate.exception.ConstraintViolationException
 import org.junit.After
 import org.junit.Assert.assertTrue
@@ -283,7 +284,7 @@ class RetryFlowMockTest {
         }
 
         private fun doInsert() {
-            val tx = DBTransactionStorage.DBTransaction("Foo")
+            val tx = DBTransactionStorage.DBTransaction("Foo", null, Utils.EMPTY_BYTES, 'V')
             contextTransaction.session.save(tx)
         }
     }
