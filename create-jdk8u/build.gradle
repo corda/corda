@@ -54,6 +54,7 @@ task runtimeJar(type: Jar, dependsOn: makeJdk) {
     from(zipTree('libs/jce.jar'))
     from(zipTree('libs/jsse.jar'))
     from 'libs/currency.data'
+    from 'libs/tzdb.dat'
 
     reproducibleFileOrder = true
     includeEmptyDirs = false
