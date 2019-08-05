@@ -135,13 +135,14 @@ as predefined categories grouping potentially many specific errors.  The followi
 
       DatabaseInitialisation(id=liyxdqHP;status="error";error_code="9";message="Could not create the DataSource: Migration failed for change set migration/vault-schema.changelog-init.xml::1511451595465-22::R3.Corda:      Reason: liquibase.exception.DatabaseException: ERROR: relation \"vault_fungible_states\" already exists [Failed SQL: CREATE TABLE my_schema.vault_fungible_states (output_index INTEGER NOT NULL, transaction_id VARCHAR(64) NOT NULL, issuer_name VARCHAR(255), issuer_ref BYTEA, owner_name VARCHAR(255), quantity BIGINT)]")
 
-* 10 - outstanding database migration change sets, for example:
+* 10 - uncategorised exception when applying a change set;
+* 11 - outstanding database migration change sets, for example:
 
   .. sourcecode:: none
 
       DatabaseInitialisation(id=x0gKBFBQ;status="error";error_code="10";message="Incompatible database schema version detected, please run the node with configuration option database.initialiseSchema=true. Reason: There are 95 outstanding database changes that need to be run.")
 
-* 11 - mapped schema incompatible with database management script, for example:
+* 12 - mapped schema incompatible with database management script, for example:
 
   .. sourcecode:: none
 

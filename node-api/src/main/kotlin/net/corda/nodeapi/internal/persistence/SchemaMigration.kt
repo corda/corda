@@ -259,8 +259,9 @@ enum class SchemaMigrationError(val code: Int) {
     INVALID_SQL_STATEMENT(7),
     INVALID_SQL_TYPE(8),
     INCOMPATIBLE_CHANGE_SET(9),
-    OUTSTANDING_CHANGE_SETS(10),
-    MAPPED_SCHEMA_INCOMPATIBLE_WITH_DATABASE_MANAGEMENT_SCRIPT(11);
+    UNCATEGORISED_DATABASE_MIGRATION_ERROR(10),
+    OUTSTANDING_CHANGE_SETS(11),
+    MAPPED_SCHEMA_INCOMPATIBLE_WITH_DATABASE_MANAGEMENT_SCRIPT(12);
 
     companion object {
         fun fromThrowable(t: Throwable): SchemaMigrationError {
@@ -277,7 +278,7 @@ enum class SchemaMigrationError(val code: Int) {
                     t.message?.contains("syntax error") ?: false -> SchemaMigrationError.INVALID_SQL_STATEMENT
                     t.message?.contains("DatabaseException: ERROR: type") ?: false -> SchemaMigrationError.INVALID_SQL_TYPE
                     t.message?.contains("Failed SQL:") ?: false -> SchemaMigrationError.INCOMPATIBLE_CHANGE_SET
-                    else -> SchemaMigrationError.UNKNOWN_ERROR
+                    else -> SchemaMigrationError.UNCATEGORISED_DATABASE_MIGRATION_ERROR
                 }
                 t is DatabaseIncompatibleException -> SchemaMigrationError.OUTSTANDING_CHANGE_SETS
                 t is HibernateSchemaChangeException && t.cause is SchemaManagementException -> SchemaMigrationError.MAPPED_SCHEMA_INCOMPATIBLE_WITH_DATABASE_MANAGEMENT_SCRIPT
