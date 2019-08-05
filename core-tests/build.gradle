@@ -14,6 +14,8 @@ configurations {
     smokeTestRuntimeOnly.extendsFrom runtimeOnly
 }
 
+evaluationDependsOn(':node:capsule')
+
 sourceSets {
     integrationTest {
         kotlin {

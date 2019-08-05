@@ -7,8 +7,6 @@ apply plugin: 'com.jfrog.artifactory'
 
 description 'Corda core'
 
-evaluationDependsOn(':node:capsule')
-
 configurations {
     integrationTestCompile.extendsFrom testCompile
     integrationTestRuntimeOnly.extendsFrom testRuntimeOnly
