@@ -141,7 +141,7 @@ as predefined categories grouping potentially many specific errors.  The followi
 
       DatabaseInitialisation(id=x0gKBFBQ;status="error";error_code="10";message="Incompatible database schema version detected, please run the node with configuration option database.initialiseSchema=true. Reason: There are 95 outstanding database changes that need to be run.")
 
-* 11 - missing table during database startup, for example:
+* 11 - mapped schema incompatible with database management script, for example:
 
   .. sourcecode:: none
 

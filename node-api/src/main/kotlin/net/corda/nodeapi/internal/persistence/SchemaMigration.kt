@@ -260,29 +260,35 @@ enum class SchemaMigrationError(val code: Int) {
     INVALID_SQL_TYPE(8),
     INCOMPATIBLE_CHANGE_SET(9),
     OUTSTANDING_CHANGE_SETS(10),
-    MISSING_TABLE(11)
+    MAPPED_SCHEMA_INCOMPATIBLE_WITH_DATABASE_MANAGEMENT_SCRIPT(11);
+
+    companion object {
+        fun fromThrowable(t: Throwable): SchemaMigrationError {
+            return when {
+                t.cause is ClassNotFoundException -> SchemaMigrationError.MISSING_DRIVER
+                t.cause is HikariPool.PoolInitializationException -> SchemaMigrationError.INITIALISATION_ERROR
+                t is CouldNotCreateDataSourceException && t.cause !is MigrationFailedException -> when {
+                    t.cause is RuntimeException && ".+ Property \\S+ does not exist .+".toRegex().matches(t.message ?: "") -> SchemaMigrationError.INVALID_DATA_SOURCE_PROPERTY
+                    (t.cause is DatabaseMigrationException && (t.message?.contains("Could not find Liquibase database migration script") ?: false)) || t.cause is MissingMigrationException -> SchemaMigrationError.MISSING_SCRIPT
+                    t.cause is ChangeLogParseException -> SchemaMigrationError.SCRIPT_PARSING_ERROR
+                    else -> SchemaMigrationError.UNKNOWN_ERROR
+                }
+                t is MigrationFailedException || t.cause is MigrationFailedException -> when {
+                    t.message?.contains("syntax error") ?: false -> SchemaMigrationError.INVALID_SQL_STATEMENT
+                    t.message?.contains("DatabaseException: ERROR: type") ?: false -> SchemaMigrationError.INVALID_SQL_TYPE
+                    t.message?.contains("Failed SQL:") ?: false -> SchemaMigrationError.INCOMPATIBLE_CHANGE_SET
+                    else -> SchemaMigrationError.UNKNOWN_ERROR
+                }
+                t is DatabaseIncompatibleException -> SchemaMigrationError.OUTSTANDING_CHANGE_SETS
+                t is HibernateSchemaChangeException && t.cause is SchemaManagementException -> SchemaMigrationError.MAPPED_SCHEMA_INCOMPATIBLE_WITH_DATABASE_MANAGEMENT_SCRIPT
+                else -> SchemaMigrationError.UNKNOWN_ERROR
+            }
+        }
+    }
 }
 
 fun logDatabaseErrorWithCode(t: Throwable, vararg prefixElements: String) {
-    val errorCode = when {
-        t.cause is ClassNotFoundException -> SchemaMigrationError.MISSING_DRIVER
-        t.cause is HikariPool.PoolInitializationException -> SchemaMigrationError.INITIALISATION_ERROR
-        t is CouldNotCreateDataSourceException && t.cause !is MigrationFailedException -> when {
-            t.cause is RuntimeException && ".+ Property \\S+ does not exist .+".toRegex().matches(t.message ?: "") -> SchemaMigrationError.INVALID_DATA_SOURCE_PROPERTY
-            t.cause is DatabaseMigrationException && (t.message?.contains("Could not find Liquibase database migration script") ?: false) -> SchemaMigrationError.MISSING_SCRIPT
-            t.cause is ChangeLogParseException -> SchemaMigrationError.SCRIPT_PARSING_ERROR
-            else -> SchemaMigrationError.UNKNOWN_ERROR
-        }
-        t is MigrationFailedException || t.cause is MigrationFailedException -> when {
-            t.message?.contains("syntax error") ?: false -> SchemaMigrationError.INVALID_SQL_STATEMENT
-            t.message?.contains("DatabaseException: ERROR: type") ?: false -> SchemaMigrationError.INVALID_SQL_TYPE
-            t.message?.contains("Failed SQL:") ?: false -> SchemaMigrationError.INCOMPATIBLE_CHANGE_SET
-            else -> SchemaMigrationError.UNKNOWN_ERROR
-        }
-        t is DatabaseIncompatibleException && t.message.contains("outstanding database changes") -> SchemaMigrationError.OUTSTANDING_CHANGE_SETS
-        t is HibernateSchemaChangeException && t.cause is SchemaManagementException -> SchemaMigrationError.MISSING_TABLE
-        else -> SchemaMigrationError.UNKNOWN_ERROR
-    }
+    val errorCode = SchemaMigrationError.fromThrowable(t)
     SchemaMigration.logger.error(SchemaMigration.formatter.format(*prefixElements, "status", "error", "error_code", errorCode.code.toString(), "message", t?.message ?: ""))
 }
 

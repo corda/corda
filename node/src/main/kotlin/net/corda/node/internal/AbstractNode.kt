@@ -360,9 +360,15 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         val nodeCa = configuration.signingCertificateStore.get()[CORDA_CLIENT_CA]
         identityService.start(trustRoot, listOf(identity.certificate, nodeCa), netParams.notaries.map { it.identity })
 
-        val (keyPairs, nodeInfoAndSigned, myNotaryIdentity) = database.transaction {
-            updateNodeInfo(identity, identityKeyPair, publish = true)
-        }
+        val (keyPairs, nodeInfoAndSigned, myNotaryIdentity) =
+                try {
+                    database.transaction {
+                        updateNodeInfo(identity, identityKeyPair, publish = true)
+                    }
+                } catch (e: Exception) {
+                    logDatabaseErrorWithCode(e)
+                    throw e
+                }
 
         val (nodeInfo, signedNodeInfo) = nodeInfoAndSigned
         identityService.ourNames = nodeInfo.legalIdentities.map { it.name }.toSet()
