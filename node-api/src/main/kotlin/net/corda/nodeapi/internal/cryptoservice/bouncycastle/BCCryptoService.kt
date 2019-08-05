@@ -68,7 +68,12 @@ class BCCryptoService(private val legalName: X500Principal, private val certific
     }
 
     override fun containsKey(alias: String): Boolean {
-        return certificateStore.contains(alias)
+        return if (wrappingKeyStorePath == null) {
+            certificateStore.contains(alias)
+        } else {
+            certificateStore.contains(alias) || wrappingKeyStore.containsAlias(alias)
+        }
+
     }
 
     override fun getPublicKey(alias: String): PublicKey {

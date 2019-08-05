@@ -206,6 +206,7 @@ class BCCryptoServiceTests {
 
         val keyAlias = UUID.randomUUID().toString()
         cryptoService.createWrappingKey(keyAlias)
+        assertThat(cryptoService.containsKey(keyAlias)).isTrue()
         assertThatThrownBy { cryptoService.createWrappingKey(keyAlias) }
                 .isInstanceOf(IllegalArgumentException::class.java)
                 .hasMessage("There is an existing key with the alias: $keyAlias")
