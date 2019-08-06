@@ -55,11 +55,11 @@ Compiling this code against Platform Version 5 will result in the following erro
 
 ``Type mismatch: inferred type is Any but AbstractParty was expected``
 
-The issue here is that a new `Destination` interface introduced in Platform Version 5 (see the :doc:`changelog` for Platform Version 5, or
+The issue here is that a new ``Destination`` interface introduced in Platform Version 5 (see the :doc:`changelog` for Platform Version 5, or
 the KDocs for the interface `here <https://docs.corda.net/head/api/kotlin/corda/net.corda.core.flows/-destination.html>`__) can cause type
-inference failures when a variable is used as an `AbstractParty` but has an actual value that is one of a number of possible subclasses of
-`AbstractParty`. As these subclasses implement an interface that the superclass does not, the Kotlin compiler is unable to infer that both
-branches result in a subclass of `AbstractParty`, and instead infers that the type is `Any`.
+inference failures when a variable is used as an ``AbstractParty`` but has an actual value that is one of a number of possible subclasses of
+``AbstractParty``. As these subclasses implement an interface that the superclass does not, the Kotlin compiler is unable to infer that both
+branches result in a subclass of ``AbstractParty``, and instead infers that the type is ``Any``.
 
 Note that this is a Kotlin-specific issue. The Java compiler should be able to handle this case.
 
@@ -83,15 +83,15 @@ To fix this, an explicit type hint must be provided to the compiler:
 
 A more detailed explanation is provided below:
 
-Platform Version 5 introduces a new `Destination` interface to mark parties which a flow can be initiated with. `AbstractParty` does not
-implement this as in the future new subclasses of `AbstractParty` may be introduced that a flow cannot be initiated with. However, the current
-`Party` and `AnonymousParty` do implement this interface.
+Platform Version 5 introduces a new ``Destination`` interface to mark parties which a flow can be initiated with. ``AbstractParty`` does not
+implement this as in the future new subclasses of ``AbstractParty`` may be introduced that a flow cannot be initiated with. However, the current
+``Party`` and ``AnonymousParty`` do implement this interface.
 
-This introduces a type inference failure when a variable could be either of these subclasses of `AbstractParty`. Due to a limitation in the
-Kotlin compiler, it cannot determine that the type of these variables is both a subclass of `AbstractParty` and an implementor of `Destination`,
-and instead picks the most specific common ancestor of both of these. Unfortunately, this is the `Any` type, and so all type information
-is lost. By indicating to the compiler that both branches result in an `AbstractParty`, it can then accept future uses of the variable as
-an `AbstractParty`.
+This introduces a type inference failure when a variable could be either of these subclasses of ``AbstractParty``. Due to a limitation in the
+Kotlin compiler, it cannot determine that the type of these variables is both a subclass of ``AbstractParty`` and an implementor of ``Destination``,
+and instead picks the most specific common ancestor of both of these. Unfortunately, this is the ``Any`` type, and so all type information
+is lost. By indicating to the compiler that both branches result in an ``AbstractParty``, it can then accept future uses of the variable as
+an ``AbstractParty``.
 
 Upgrading apps to Platform Version 4
 ====================================
