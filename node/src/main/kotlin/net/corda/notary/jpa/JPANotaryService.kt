@@ -10,7 +10,7 @@ import net.corda.node.services.transactions.ValidatingNotaryFlow
 import net.corda.nodeapi.internal.config.parseAs
 import java.security.PublicKey
 
-/** Notary service backed by a replicated MySQL database. */
+/** Notary service backed by a relational database. */
 class JPANotaryService(
         override val services: ServiceHubInternal,
         override val notaryIdentityKey: PublicKey) : SinglePartyNotaryService() {
@@ -20,9 +20,9 @@ class JPANotaryService(
 
     override val uniquenessProvider = with(services) {
         val jpaNotaryConfig = try {
-            notaryConfig.extraConfig!!.parseAs<JPANotaryConfiguration>()
+            notaryConfig.extraConfig?.parseAs() ?: JPANotaryConfiguration()
         } catch (e: Exception) {
-            throw IllegalArgumentException("Failed to register ${JPANotaryService::class.java}: JPA notary configuration not present")
+            throw IllegalArgumentException("Failed to register ${JPANotaryService::class.java}: extra notary configuration parameters invalid")
         }
         JPAUniquenessProvider(services.monitoringService.metrics, services.clock, services.database, jpaNotaryConfig)
     }

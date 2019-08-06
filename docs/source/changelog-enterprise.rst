@@ -30,6 +30,8 @@ Changelog entries below refer to Enterprise-only changes.
 
 * The experimental Raft notary implementation has been deprecated in favour of the MySQL-based HA notary implementation (see :doc:`running-a-notary-cluster/toctree`).
 
+* There have been schema changes for the single-node notary: the ``id`` column of the ``notary_request_log`` table has been changed from ``INT`` to ``VARCHAR(76)``. The new ``id`` format is ``<UUID>:<Hex counter>``. No upgrade steps are required.
+
 * Introduced a hierarchy of ``DatabaseMigrationException``'s, allowing ``NodeStartup`` to gracefully inform users of problems
   related to database migrations before exiting with a non-zero code.
 

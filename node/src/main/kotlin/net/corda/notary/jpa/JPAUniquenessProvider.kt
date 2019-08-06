@@ -17,6 +17,7 @@ import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.elapsedTime
 import net.corda.core.internal.notary.*
+import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -45,14 +46,14 @@ class JPAUniquenessProvider(
         metrics: MetricRegistry,
         val clock: Clock,
         val database: CordaPersistence,
-        val config: JPANotaryConfiguration
+        val config: JPANotaryConfiguration = JPANotaryConfiguration()
 ) : UniquenessProvider, SingletonSerializeAsToken() {
 
     // TODO: test vs. MySQLUniquenessProvider
 
     // This is the prefix of the ID in the request log table, to allow running multiple instances that access the
     // same table.
-    val instanceId = UUID.randomUUID().toString()
+    private val instanceId = UUID.randomUUID()
 
     /**
      * Measured in states per minute, with a minimum of 1. We take an average of the last 100 commits.
@@ -63,7 +64,7 @@ class JPAUniquenessProvider(
     private var throughput: Double = 0.0
 
     @Entity
-    @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}jpa_notary_request_log")
+    @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}notary_request_log")
     @CordaSerializable
     class Request(
             @Id
@@ -96,17 +97,16 @@ class JPAUniquenessProvider(
             val committedStatesEntities: List<CommittedState>)
 
     @Entity
-    @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}jpa_notary_committed_states")
+    @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}notary_committed_states")
     @NamedQuery(name = "CommittedState.select", query = "SELECT c from JPAUniquenessProvider\$CommittedState c WHERE c.id in :ids")
     class CommittedState(
-            @Id
-            @Column(name = "state_ref", length = 73)
-            val id: String,
+            @EmbeddedId
+            val id: PersistentStateRef,
             @Column(name = "consuming_transaction_id", nullable = false, length = 64)
             val consumingTxHash: String)
 
     @Entity
-    @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}jpa_notary_committed_transactions")
+    @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}notary_committed_txs")
     class CommittedTransaction(
             @Id
             @Column(name = "transaction_id", nullable = false, length = 64)
@@ -186,12 +186,12 @@ class JPAUniquenessProvider(
         private const val jdbcBatchSize = 100_000
         private val log = contextLogger()
 
-        fun encodeStateRef(s: StateRef): String {
-            return s.txhash.toString() + ":" + s.index.toString(16)
+        fun encodeStateRef(s: StateRef): PersistentStateRef {
+            return PersistentStateRef(s.txhash.toString(), s.index)
         }
 
-        fun decodeStateRef(s: String): StateRef {
-            return StateRef(txhash = SecureHash.parse(s.take(64)), index = s.substring(65).toInt(16))
+        fun decodeStateRef(s: PersistentStateRef): StateRef {
+            return StateRef(txhash = SecureHash.parse(s.txId), index = s.index)
         }
     }
 
@@ -217,7 +217,12 @@ class JPAUniquenessProvider(
                 partyName = callerIdentity.name.toString(),
                 requestSignature = requestSignature.serialize(context = SerializationDefaults.STORAGE_CONTEXT.withEncoding(CordaSerializationEncoding.SNAPPY)).bytes,
                 requestDate = clock.instant())
-        val stateEntities = states.map { CommittedState(encodeStateRef(it), txId.toString()) }
+        val stateEntities = states.map {
+            CommittedState(
+                    encodeStateRef(it),
+                    txId.toString()
+            )
+        }
         val request = CommitRequest(states, txId, callerIdentity, requestSignature, timeWindow, references, future, requestEntities, stateEntities)
         future.then {
             recordDuration(timer)
@@ -239,7 +244,7 @@ class JPAUniquenessProvider(
     private fun logRequests(requests: List<CommitRequest>) {
         database.transaction {
             for (request in requests) {
-                request.requestEntity.id = instanceId + (nextRequestId++).toString(16)
+                request.requestEntity.id = "$instanceId:${(nextRequestId++).toString(16)}"
                 session.persist(request.requestEntity)
             }
         }
@@ -265,7 +270,7 @@ class JPAUniquenessProvider(
         }
 
         return committedStates.map {
-            val stateRef = decodeStateRef(it.id)
+            val stateRef = StateRef(txhash = SecureHash.parse(it.id.txId), index = it.id.index)
             val consumingTxId = SecureHash.parse(it.consumingTxHash)
             if (stateRef in references) {
                 stateRef to StateConsumptionDetails(consumingTxId.sha256(), type = StateConsumptionDetails.ConsumedStateType.REFERENCE_INPUT_STATE)

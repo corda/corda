@@ -14,7 +14,6 @@ dependencies {
     cordaCompile project(':core')
     cordaCompile project(':client:rpc')
     cordaCompile project(':node-driver')
-    compile project(':notary:mysql')
     compile project(':client:mock')
     compile group: 'mysql', name: 'mysql-connector-java', version: '6.0.6'
     compile group: 'io.dropwizard.metrics', name: 'metrics-graphite', version: '3.2.5'

@@ -94,8 +94,6 @@ include 'hsm-tool'
 include 'tools:notary-healthcheck:contract'
 include 'tools:notary-healthcheck:cordapp'
 include 'tools:notary-healthcheck:client'
-include 'notary:jpa'
-include 'notary:mysql'
 
 // Common libraries - start
 include 'common-validation'

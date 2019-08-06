@@ -53,7 +53,7 @@ class JPAUniquenessProviderTests {
     }
 
     @Test
-    fun `serializes and deserializes state ref`() {
+    fun `correctly encodes and decodes state ref`() {
         val stateRef = generateStateRef()
         assertEquals(stateRef, decodeStateRef(encodeStateRef(stateRef)))
     }

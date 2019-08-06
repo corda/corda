@@ -53,7 +53,6 @@ class UniquenessProviderTests(
         @JvmStatic
         @Parameterized.Parameters(name = "{0}")
         fun data(): Collection<UniquenessProviderFactory> = listOf(
-                PersistentUniquenessProviderFactory(),
                 RaftUniquenessProviderFactory(),
                 MySQLUniquenessProviderFactory(),
                 JPAUniquenessProviderFactory()
@@ -396,20 +395,6 @@ class UniquenessProviderTests(
 interface UniquenessProviderFactory {
     fun create(clock: Clock): UniquenessProvider
     fun cleanUp() {}
-}
-
-class PersistentUniquenessProviderFactory : UniquenessProviderFactory {
-    private var database: CordaPersistence? = null
-
-    override fun create(clock: Clock): UniquenessProvider {
-        database?.close()
-        database = configureDatabase(MockServices.makeTestDataSourceProperties(), DatabaseConfig(runMigration = true), { null }, { null }, NodeSchemaService(extraSchemas = setOf(NodeNotarySchemaV1)))
-        return PersistentUniquenessProvider(MetricRegistry(), clock, database!!, TestingNamedCacheFactory())
-    }
-
-    override fun cleanUp() {
-        database?.close()
-    }
 }
 
 class RaftUniquenessProviderFactory : UniquenessProviderFactory {

@@ -6,12 +6,12 @@ import net.corda.core.flows.ContractUpgradeFlow
 import net.corda.core.internal.cordapp.CordappImpl
 import net.corda.core.internal.location
 import net.corda.node.VersionInfo
-import net.corda.node.services.transactions.NodeNotarySchemaV1
-import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.notary.experimental.bftsmart.BFTSmartNotarySchemaV1
 import net.corda.notary.experimental.bftsmart.BFTSmartNotaryService
 import net.corda.notary.experimental.raft.RaftNotarySchemaV1
 import net.corda.notary.experimental.raft.RaftNotaryService
+import net.corda.notary.jpa.JPANotarySchemaV1
+import net.corda.notary.jpa.JPANotaryService
 import net.corda.notary.mysql.MySQLNotaryService
 
 internal object VirtualCordapp {
@@ -46,7 +46,7 @@ internal object VirtualCordapp {
     }
 
     /** A Cordapp for the built-in notary service implementation. */
-    fun generateSimpleNotary(versionInfo: VersionInfo): CordappImpl {
+    fun generateJPANotary(versionInfo: VersionInfo): CordappImpl {
         return CordappImpl(
                 contractClassNames = listOf(),
                 initiatedFlows = listOf(),
@@ -56,14 +56,14 @@ internal object VirtualCordapp {
                 services = listOf(),
                 serializationWhitelists = listOf(),
                 serializationCustomSerializers = listOf(),
-                customSchemas = setOf(NodeNotarySchemaV1),
+                customSchemas = setOf(JPANotarySchemaV1),
                 info = Cordapp.Info.Default("corda-notary", versionInfo.vendor, versionInfo.releaseVersion, "Copyright 2019 R3. Licensed use only"),
                 allFlows = listOf(),
-                jarPath = SimpleNotaryService::class.java.location,
+                jarPath = JPANotaryService::class.java.location,
                 jarHash = SecureHash.allOnesHash,
                 minimumPlatformVersion = versionInfo.platformVersion,
                 targetPlatformVersion = versionInfo.platformVersion,
-                notaryService = SimpleNotaryService::class.java,
+                notaryService = JPANotaryService::class.java,
                 isLoaded = false
         )
     }

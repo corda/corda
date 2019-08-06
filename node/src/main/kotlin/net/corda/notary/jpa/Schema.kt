@@ -14,5 +14,5 @@ object JPANotarySchemaV1 : MappedSchema(
         )
 ) {
     override val migrationResource: String?
-        get() = "notary-jpa.changelog-master"
+        get() = "node-notary.changelog-master"
 }

@@ -244,9 +244,7 @@ dependencies {
     testCompile(project(':test-cli'))
     testCompile(project(':test-utils'))
     testCompile(project(':node-driver'))
-
-    testCompile(project(':notary:mysql'))
-    testCompile(project(':notary:jpa'))
+    
     testCompile ("net.corda:corda-finance-contracts:$os_corda_release_version"){
             transitive = false
     }
