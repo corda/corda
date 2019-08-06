@@ -53,6 +53,7 @@ import net.corda.node.services.rpc.InternalRPCMessagingClient
 import net.corda.node.services.rpc.RPCServerConfiguration
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.utilities.*
+import net.corda.nodeapi.internal.ArtemisMessagingClient
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.INTERNAL_SHELL_USER
 import net.corda.nodeapi.internal.ShutdownHook
 import net.corda.nodeapi.internal.addShutdownHook
@@ -265,11 +266,7 @@ open class Node(configuration: NodeConfiguration,
             startLocalRpcBroker(securityManager)
         }
 
-        val bridgeControlListener = BridgeControlListener(
-                configuration.p2pSslOptions,
-                network.serverAddress,
-                networkParameters.maxMessageSize,
-                configuration.crlCheckSoftFail)
+        val bridgeControlListener = makeBridgeControlListener(network.serverAddress, networkParameters)
 
         printBasicNodeInfo("Advertised P2P messaging addresses", nodeInfo.addresses.joinToString())
         val rpcServerConfiguration = RPCServerConfiguration.DEFAULT
@@ -305,6 +302,18 @@ open class Node(configuration: NodeConfiguration,
                 advertisedAddress = nodeInfo.addresses[0],
                 maxMessageSize = networkParameters.maxMessageSize
         )
+    }
+
+    private fun makeBridgeControlListener(serverAddress: NetworkHostAndPort, networkParameters: NetworkParameters) : BridgeControlListener {
+        val artemisMessagingClientFactory = {
+            ArtemisMessagingClient(
+                    configuration.p2pSslOptions,
+                    serverAddress,
+                    networkParameters.maxMessageSize,
+                    failoverCallback =  { errorAndTerminate("ArtemisMessagingClient failed. Shutting down.", null) }
+            )
+        }
+        return BridgeControlListener(configuration.p2pSslOptions, networkParameters.maxMessageSize, configuration.crlCheckSoftFail, artemisMessagingClientFactory)
     }
 
     private fun startLocalRpcBroker(securityManager: RPCSecurityManager): BrokerAddresses? {
