@@ -192,7 +192,7 @@ Oracles and notaries are covered in later sections.
 
 Taking part in a Corda network as a node requires an identity certificate. These certificates bind a human readable
 name to a public key and are signed by the network operator. Having a signed identity grants the ability to take
-part in the top layer of the network, but it's important to understand that users can participate in the ledger
+part in the top layer of the network, but it's important to understand that users and programs can participate in the ledger
 \emph{without} having an issued identity. Only a raw key pair is necessary if a node that \emph{does} have an
 identity is willing to route traffic on your behalf. This structure is similar to the email network, in which users
 without servers can take part by convincing a server operator to grant them an account. How network identities and
@@ -634,7 +634,7 @@ However, implementations are recommended to use hierarchical deterministic key d
 
 % CODEME: The platform doesn't do suffix stripping at the moment.
 
-\subsection{Accounts}\label{subsec:accounts}
+\subsection{Non-verified keys}\label{subsec:non-verified-keys}
 
 The ability for nodes to use confidential identities isn't only useful for anonymising the node owner. It's
 possible to locally mark anonymous keys with private, randomly generated \emph{universally unique identifiers}
@@ -642,14 +642,25 @@ possible to locally mark anonymous keys with private, randomly generated \emph{u
 that isn't otherwise exposed to the ledger. The flow framework understands how to start a flow with a
 confidential identity if the subflows discussed above have been used to establish ownership beforehand.
 
-This feature must be used with care. There's no way for the private key to be held outside the node at the time
-of writing and enabling non-node software to safely sign transactions requires some subtle enhancements
-(see~\cref{sec:secure-signing-devices}). Moreover it's only reasonable to do this in specific situations, such
-as when the signer of a transaction is an employee of the organisation hosting the node. This is because whilst
-signing external to the node may reduce the impact of a compromised server the node itself still has full access
-to all the data (account holder has no privacy from the node operator), and the node may mis-report
-the contents of the ledger at any time. Thus the node still has considerable power, even in a situation where
-the signing keys are no longer directly accessible.
+There are a variety of uses for non-verified keys:
+
+\begin{itemize}
+    \item Oracles may use them to separate their oracular identity from their mainline business identity.
+          See~\cref{sec:tear-offs}.
+    \item Enclaves (see~\cref{subsec:sgx}) and other services exposed by the nodes may require separated
+          signing authority.
+    \item States may be directly assigned to groups of employees and the keys stored in off-node hardware.
+          See~\cref{sec:secure-signing-devices}.
+    \item The node may act as a host for users with \emph{micronodes}: nodes that can't directly take part
+          in the peer-to-peer network but still wish to have ultimate control over states. See~\cref{subsec:micronodes}.
+\end{itemize}
+
+Moving signing authority out of the node must be done with care to ensure that a new balance of power is
+actually achieved. It's easy to provision people or devices with keys, yet miss the fact that the overall system
+architecture still grants everyone the same set of powers as before. As keys must be carefully generated, backed up
+and managed (representing cost), you should ensure keys are deployed only where they can justify that cost.
+
+% TODO: Add a section discussing balance-of-powers analysis.
 
 \section{Data model}
 
@@ -1686,8 +1697,113 @@ failure. See~\cref{subsec:sgx}.
 
 \section{Future work}
 
-Corda has a long term roadmap with many planned extensions. In this section we explore a variety of planned upgrades
-that solve common technical or business problems.
+Corda has a long term roadmap with many planned extensions. In this section we propose a variety of possible upgrades
+that solve common technical or business problems. These designs are not fixed in stone and will evolve over time as
+the community learns more about the best way to utilise the technology.
+
+\subsection{Micronodes}\label{subsec:micronodes}
+
+A micronode is a program that performs some but not all of the functions of a regular node. Micronodes may be suitable
+for deployment on smartphones to enable consumer e-cash applications, or embedded in devices which wish to trade with
+other machines autonomously.
+
+A typical micronode avoids the resource and connectivity requirements of a full node by making the following compromises:
+
+\begin{enumerate}
+
+    \item \textbf{Connectivity}. A micronode relies on another node's message queue broker to provide internet
+    connectivity, network map presence and querying, and message buffering.
+
+    \item \textbf{Verification}. A micronode doesn't fully resolve transactions. Instead it relies on signatures by
+    other entities that have verified the transactions, such as a fully verifying notary or SGX enclave
+    (see~\cref{subsec:sgx}).
+
+    \item \textbf{Dynamic loading}. A micronode has CorDapps baked into it when it's distributed. States and
+    contracts from other apps are ignored.
+
+    \item \textbf{Limited flow support}. A micronode may not support features like flow checkpointing, full
+    relational database access from inside flows or scheduled states.
+
+\end{enumerate}
+
+Because of these limits, apps must be specifically written to support running in a micronode environment. In cases where
+that isn't possible micronode-targeted variants of an app must be written, much as mobile apps may share some code with
+desktop apps but otherwise are separate codebases.
+
+In return for accepting these limitations, a micronode would provide several benefits:
+
+\begin{itemize}
+
+    \item \textbf{AOT compilation.} A micronode could be compiled ahead of time to native code, yielding very small
+    and efficient binaries. The \texttt{native-image} tool\footnote{A component of the GraalVM, see
+    \href{https://www.graalvm.org}{https://www.graalvm.org} for more information} can produce native code
+    binaries with no JVM dependencies and no JIT compilation.
+
+    \item \textbf{Much reduced resources.} The SubstrateVM JVM that \texttt{native-image} uses generally needs
+    around 10x less memory, starts around 10x faster than a normal Java program and can produce binaries as small
+    as a few megabytes in size even for quite complex programs. A micronode's vault is called a wallet and would
+    store only keys, states, directly relevant transactions (without dependencies) and potentially app specific
+    private data. This is plenty sufficient for many embedded use cases, although some demanding applications may
+    desire even smaller footprints.
+
+    \item \textbf{Transiency.} Micronodes can be mostly offline rather than mostly online and can automatically
+    encrypt and back up their wallets to hosting nodes.
+
+\end{itemize}
+
+For example, a micronode could be embedded in a desktop or mobile app. This would achieve a new balance of power,
+different to that offered by a full node. In the new balance the user relies more heavily on the trustworthyness of
+the nodes or enclaves that actually verify the transactions, as any breach of that trust would allow someone to
+present an arbitrary view of the ledger e.g. forging payments of tokens that aren't backed by any actual deposits,
+or changing the name on a record to their own. The micronode could choose to rely on multiple sources of
+verification and compare them to reduce this risk. Even with compromised verification, the ability to change the
+database from the perspective of full nodes is not obtained because the micronode will not sign transactions or
+reveal data without user approval.
+
+Making micronodes usable and safe would require significant work in at least three areas: key recovery
+(\cref{subsec:social-key-recovery-and-key-rotation}), secure software update and the ability to move between
+hosting nodes. It would also require designs for how users on a global Corda network can find each other
+without directly exchanging public keys or key hashes, as is done in cryptocurrencies.
+
+\subsubsection{Secure software update}
+
+A micronode embedded into a mobile e-payments app doesn't automatically make the system decentralised. Rather, it
+shifts all power to whoever controls the code signing key for the application itself. If that key is compromised
+the adversary can push an update to the app that implants a back door in it. That back door could steal people's
+private keys, or sign transactions with the keys that e.g. sends the users tokens to the attacker whilst presenting
+a fake view of the ledger indicating that no such transfer has occurred. Alternatively the legitimate developer of
+the app may be pressured, legally or extra-legally, to seize funds or block users/geographies.
+
+To resolve this multi-party threshold software updates are required. Corda already implements this for on-ledger
+code via signature constraints (see~\cref{sec:contract-constraints}), and Android supports multi-signed updates
+(but not threshold updates) from Android 9 onwards. iOS does not, however it may be possible to retrofit this
+capability using Shoup's threshold RSA algorithm\cite{shoup2000practical}.
+
+As an illustrative example, one of the required signers may be an auditor who reads the source code and verifies
+the natural language description of the application matches what it really does. The auditor may be under agreement
+to refuse to sign an update that would cause the app to violate its `constitution'.
+
+\subsection{Social key recovery and key rotation}\label{subsec:social-key-recovery-and-key-rotation}
+
+In all blockchain systems loss of a private key is fatal. There is no global administrator who can restore access
+to the system, and the difficulty of coordinating with all possible counterparties means there is no practical
+way to replace a private key that has been destroyed.
+
+Whilst this constraint may be viable for professionally run IT organisations it is infeasible for consumers, who
+can be expected to lose keys regularly. Backing up their key to the hosting node simply means the hosting node
+controls the identity and thus those parts of the ledger completely, making the micronode useless. Instead the key
+may be split using Shamir's secret sharing scheme\cite{Shamir:1979:SS:359168.359176} and then distributed to a
+group of parties the user trusts. This may be the user's friends or family, or alternatively a coalition of nodes
+which are assumed to not collaborate against the user (e.g. notary nodes that agreed to take on this additional
+function). In case of key loss the user must approach enough of the holders of the shards and ask them to send back
+the fragments; the holders must verify the user's identity sufficiently well to prevent an imposter fooling them.
+
+\paragraph{Key rotation.} If it's suspected that a key may be lost or compromised ahead of time, a backup key
+may be generated and a key rotation message may be signed using the primary key. In case of loss of the primary
+key, the backup key and rotation message may be retrieved from storage. The rotation message must be countersigned
+by the network operator after (re)performing ID verification, to ensure that compromised storage can't be used to
+rotate the live key to the adversary. It can then be announced to the network, so nodes can treat the new key as
+being equivalent to the old key.
 
 \subsection{Domain specific languages}
 
