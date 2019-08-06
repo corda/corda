@@ -68,7 +68,6 @@ class RPCStabilityTests {
         }.get()
     }
 
-    @Ignore("Flaky test on Bare Metal TC hardware")
     @Test
     @Ignore("Ignored as it became increasingly flaky. CORDA-3098")
     fun `client and server dont leak threads`() {
@@ -102,7 +101,6 @@ class RPCStabilityTests {
         }
     }
 
-    @Ignore("Flaky test on Bare Metal TC hardware")
     @Test
     @Ignore("Ignored as it became increasingly flaky. CORDA-3098")
     fun `client doesnt leak threads when it fails to start`() {
