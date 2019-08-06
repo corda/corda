@@ -31,27 +31,29 @@ in platform version 5.
 
 .. note:: If you are upgrading from a platform version older than 4, then the upgrade notes for upgrading to Corda 4 (below) also apply.
 
-Step 1. Handle any source compatibility breaks
-----------------------------------------------
+Step 1. Handle any source compatibility breaks (if using Kotlin)
+----------------------------------------------------------------
 
 The following code, which compiled in Platform Version 4, will not compile in Platform Version 5:
 
-.. code-block:: kotlin
+.. container:: codeset
 
-    data class Obligation(val amount: Amount<Currency>, val lender: AbstractParty, val borrower: AbstractParty)
+    .. sourcecode:: kotlin
 
-    val (lenderId, borrowerId) = if (anonymous) {
-        val anonymousIdentitiesResult = subFlow(SwapIdentitiesFlow(lenderSession))
-        Pair(anonymousIdentitiesResult[lenderSession.counterparty]!!, anonymousIdentitiesResult[ourIdentity]!!)
-    } else {
-        Pair(lender, ourIdentity)
-    }
+        data class Obligation(val amount: Amount<Currency>, val lender: AbstractParty, val borrower: AbstractParty)
 
-    val obligation = Obligation(100.dollars, lenderId, borrowerId)
+        val (lenderId, borrowerId) = if (anonymous) {
+            val anonymousIdentitiesResult = subFlow(SwapIdentitiesFlow(lenderSession))
+            Pair(anonymousIdentitiesResult[lenderSession.counterparty]!!, anonymousIdentitiesResult[ourIdentity]!!)
+        } else {
+            Pair(lender, ourIdentity)
+        }
+
+        val obligation = Obligation(100.dollars, lenderId, borrowerId)
 
 Compiling this code against Platform Version 5 will result in the following error:
 
-`Type mismatch: inferred type is Any but AbstractParty was expected`
+``Type mismatch: inferred type is Any but AbstractParty was expected``
 
 The issue here is that a new `Destination` interface introduced in Platform Version 5 (see the :doc:`changelog` for Platform Version 5, or
 the KDocs for the interface `here <https://docs.corda.net/head/api/kotlin/corda/net.corda.core.flows/-destination.html>`__) can cause type
@@ -59,20 +61,25 @@ inference failures when a variable is used as an `AbstractParty` but has an actu
 `AbstractParty`. As these subclasses implement an interface that the superclass does not, the Kotlin compiler is unable to infer that both
 branches result in a subclass of `AbstractParty`, and instead infers that the type is `Any`.
 
+Note that this is a Kotlin-specific issue. The Java compiler should be able to handle this case.
+
 To fix this, an explicit type hint must be provided to the compiler:
 
-.. code-block:: kotlin
+.. container:: codeset
 
-    data class Obligation(val amount: Amount<Currency>, val lender: AbstractParty, val borrower: AbstractParty)
+    .. sourcecode:: kotlin
 
-    val (lenderId, borrowerId) = if (anonymous) {
-        val anonymousIdentitiesResult = subFlow(SwapIdentitiesFlow(lenderSession))
-        Pair(anonymousIdentitiesResult[lenderSession.counterparty]!!, anonymousIdentitiesResult[ourIdentity]!!)
-    } else {
-        Pair<AbstractParty, AbstractParty>(lender, ourIdentity)
-    }
+        data class Obligation(val amount: Amount<Currency>, val lender: AbstractParty, val borrower: AbstractParty)
 
-    val obligation = Obligation(100.dollars, lenderId, borrowerId)
+        val (lenderId, borrowerId) = if (anonymous) {
+            val anonymousIdentitiesResult = subFlow(SwapIdentitiesFlow(lenderSession))
+            Pair(anonymousIdentitiesResult[lenderSession.counterparty]!!, anonymousIdentitiesResult[ourIdentity]!!)
+        } else {
+            // This Pair now provides a type hint to the compiler
+            Pair<AbstractParty, AbstractParty>(lender, ourIdentity)
+        }
+
+        val obligation = Obligation(100.dollars, lenderId, borrowerId)
 
 A more detailed explanation is provided below:
 
