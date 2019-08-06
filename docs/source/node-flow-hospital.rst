@@ -67,17 +67,3 @@ Specifically, there are two main ways a flow is hospitalized:
      Database connection pooling errors are dealt with. If this exception occurs, the flow will retry. After retrying a number of times, the errored flow is kept in for observation.
 
 .. note:: Flows that are kept in for observation are retried upon node restart.
-
-Futures
--------
-
-The flow hospital will be extended in the following areas:
-
-- Human Computer Interaction (HCI) with MQ integration <ref design/CID>
-- Addition of Public APIs (and CRaSH utility functions) to trigger retries
-- Improved back-off and retry policies
-- Improved Explorer visualization operational controls (eg. ability to select and retry or terminate a failed flow).
-- Tighter integration with Corda Enterprise monitoring and management tooling
-
-
-
