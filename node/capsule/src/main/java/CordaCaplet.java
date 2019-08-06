@@ -3,6 +3,7 @@
 // trying to construct this from Capsule, so it is written in Java.
 
 import com.typesafe.config.*;
+import sun.misc.Signal;
 
 import java.io.File;
 import java.nio.file.Path;
@@ -215,6 +216,9 @@ public class CordaCaplet extends Capsule {
     @Override
     protected void liftoff() {
         super.liftoff();
+        Signal.handle(new Signal("INT"), signal -> {
+            // Disable Ctrl-C for this process, so the child process can handle it in the shell instead.
+        });
     }
 
     private Boolean isJAR(File file) {
