@@ -467,7 +467,6 @@ class StateMachineManagerImpl(
                 try {
                     database.transaction {
                         checkpointStorage.removeCheckpoint(checkpoint)
-                        this.commit()
                     }
                 } catch (t: Throwable) {
                     logger.error("Could not remove the checkpoint ${checkpoint.id} for failed fiber ${fiber.id}!", t)
