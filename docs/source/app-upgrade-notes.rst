@@ -62,7 +62,8 @@ ancestor of both ``AbstractParty`` and ``Destination``. This is ``Any``, which i
 (For more information on ``Destination``, see the :doc:`changelog` for Platform Version 5, or the KDocs for the interface
 `here <https://docs.corda.net/head/api/kotlin/corda/net.corda.core.flows/-destination.html>`__)
 
-Note that this is a Kotlin-specific issue. Java has an appropriate type to choose here in ``? extends AbstractParty & Destination``.
+Note that this is a Kotlin-specific issue. Java can instead choose ``? extends AbstractParty & Destination`` here, which can later be used
+as ``AbstractParty``.
 
 To fix this, an explicit type hint must be provided to the compiler:
 
