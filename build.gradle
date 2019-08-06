@@ -177,9 +177,12 @@ apply plugin: 'com.jfrog.artifactory'
 // the resulting import. This fixes it.
 apply plugin: 'java'
 
-sourceCompatibility = VERSION_1_8
-targetCompatibility = VERSION_11
 println "Java version: " + JavaVersion.current()
+sourceCompatibility = VERSION_1_8
+if (JavaVersion.current() == JavaVersion.VERSION_1_8)
+    targetCompatibility = VERSION_1_8
+else
+    targetCompatibility = VERSION_11
 println "Java source compatibility: " + sourceCompatibility
 println "Java target compatibility: " + targetCompatibility
 println "Quasar version: " + quasar_version
@@ -214,7 +217,10 @@ allprojects {
         }
     }
     sourceCompatibility = VERSION_1_8
-    targetCompatibility = VERSION_11
+    if (JavaVersion.current() == JavaVersion.VERSION_1_8)
+        targetCompatibility = VERSION_1_8
+    else
+        targetCompatibility = VERSION_11
 
     jacoco {
         // JDK11 official support (https://github.com/jacoco/jacoco/releases/tag/v0.8.3)
