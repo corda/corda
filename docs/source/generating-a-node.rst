@@ -388,7 +388,7 @@ following line to each node's ``node.conf`` file:
 
 Where ``2222`` is the port you want to open to SSH into the shell.
 
-Below you can find the example task from the `IRS Demo <https://github.com/corda/corda/blob/release/|platform_version|/samples/irs-demo/cordapp/build.gradle#L111>`_ included in the samples directory of main Corda GitHub repository:
+Below you can find the example task from the `IRS Demo <|os_branch|/samples/irs-demo/cordapp/build.gradle#L111>`_ included in the samples directory of main Corda GitHub repository:
 
 .. sourcecode:: groovy
 

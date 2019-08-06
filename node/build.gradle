@@ -209,7 +209,7 @@ tasks.withType(JavaCompile) {
 }
 
 test {
-    maxHeapSize = "2g"
+    maxHeapSize = "3g"
     maxParallelForks = (System.env.CORDA_NODE_TESTING_FORKS == null) ? 1 : "$System.env.CORDA_NODE_TESTING_FORKS".toInteger()
     jvmArgs '-Djdk.attach.allowAttachSelf=true'
 }
