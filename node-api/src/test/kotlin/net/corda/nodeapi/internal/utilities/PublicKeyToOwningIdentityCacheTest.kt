@@ -7,6 +7,7 @@ import net.corda.nodeapi.internal.persistence.withoutDatabaseAccess
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.TestIdentity
+import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.node.MockServices
 import org.junit.After
 import org.junit.Before
@@ -34,7 +35,7 @@ class PublicKeyToOwningIdentityCacheTest {
         )
         database = databaseAndServices.first
         services = databaseAndServices.second
-        testCache = PublicKeyToOwningIdentityCache(database, 1000)
+        testCache = PublicKeyToOwningIdentityCache(database, TestingNamedCacheFactory())
         createTestKeys()
     }
 
@@ -78,7 +79,7 @@ class PublicKeyToOwningIdentityCacheTest {
 
     @Test
     fun `entries can be fetched if cache invalidated`() {
-        testCache = PublicKeyToOwningIdentityCache(database, 5)
+        testCache = PublicKeyToOwningIdentityCache(database, TestingNamedCacheFactory(sizeOverride = 5))
         // Fill the cache
         performTestRun()
 

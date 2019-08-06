@@ -1,8 +1,8 @@
 package net.corda.nodeapi.internal.utilities
 
+import com.github.benmanes.caffeine.cache.Caffeine
 import net.corda.core.crypto.toStringShort
-import net.corda.core.internal.createSimpleCache
-import net.corda.core.internal.toSynchronised
+import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.nodeapi.internal.persistence.CordaPersistence
@@ -19,14 +19,14 @@ import javax.persistence.criteria.CriteriaBuilder
  * attempts to access the database.
  */
 class PublicKeyToOwningIdentityCache(private val database: CordaPersistence,
-                                     cacheSize: Int = 1000) {
+                                     cacheFactory: NamedCacheFactory) {
     companion object {
         val log = contextLogger()
     }
 
     private val criteriaBuilder: CriteriaBuilder by lazy { database.hibernateConfig.sessionFactoryForRegisteredSchemas.criteriaBuilder }
 
-    private val cache = createSimpleCache<PublicKey, KeyOwningIdentity>(cacheSize).toSynchronised()
+    private val cache = cacheFactory.buildNamed<PublicKey, KeyOwningIdentity>(Caffeine.newBuilder(), "PublicKeyToOwningIdentityCache_cache")
 
     /**
      * Return the owning identity associated with a given key.
@@ -35,7 +35,7 @@ class PublicKeyToOwningIdentityCache(private val database: CordaPersistence,
      * key is generated, the UUID assigned to it is never changed.
      */
     operator fun get(key: PublicKey): KeyOwningIdentity {
-        return cache.computeIfAbsent(key) {
+        return cache.asMap().computeIfAbsent(key) {
             database.transaction {
                 val criteriaQuery = criteriaBuilder.createQuery(UUID::class.java)
                 val queryRoot = criteriaQuery.from(PublicKeyHashToExternalId::class.java)
