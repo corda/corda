@@ -126,7 +126,6 @@ tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile) {
 tasks.withType(Test) {
     ignoreFailures = true
     failFast = false
-    jvmArgs '--add-exports=java.base/sun.security.util=ALL-UNNAMED'
 }
 
 task testJar(type: Jar) {
