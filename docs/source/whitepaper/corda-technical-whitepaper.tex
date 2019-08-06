@@ -1753,48 +1753,35 @@ client-side hardware to hold private keys and perform signing operations with th
 approach to transaction rollbacks, this is one of the ways they reduce overheads: by attempting to ensure that
 transaction authorisation is robust and secure, and thus that signatures are reliable.
 
-Many banks have rolled out CAP (chip authentication program) readers to consumers which allow logins to online
-banking using a challenge/response protocol to a smartcard. The user is expected to type in the right codes and
-copy the responses back to the computer by hand. These devices are cheap, but tend to have small, unreliable, low
-resolution screens and can be subject to confusion attacks if there is malware on the PC, e.g. if the malware
+It can be useful to move signing keys into hardware controlled directly by authorising users. This ensures that
+if a node is compromised, only private data leaks and the integrity of the ledger is maintained.
+
+Many networks have rolled out two factor authenticators to their employees which allow logins to online services
+using a challenge/response protocol, usually to a smartcard. These devices are cheap but tend to have small or
+non-existent screens and so can be subject to confusion attacks if there is malware on the PC, e.g. if the malware
 convinces the user they are performing a login challenge whereas in fact they are authorising a payment to a new
-account. The primary advantage is that the signing key is held in a robust and cheap smart card, so the device can
-be replaced without replacing the key.
+account. The primary advantage is that the signing key is held in a robust and cheap object that refuses to reveal
+the contained keys, so a stolen authenticator can't be cloned.
 
 The state-of-the-art in this space are devices like the TREZOR\cite{TREZOR} by Satoshi Labs or the Ledger Blue.
-These were developed by and for the Bitcoin community. They are more expensive than CAP readers and feature better
-screens and USB connections to eliminate typing. Advanced devices like the Ledger Blue support NFC and Bluetooth as
-well. These devices differ from CAP readers in another key respect: instead of signing arbitrary, small challenge
-numbers, they actually understand the native transaction format of the network to which they're specialised and
-parse the transaction to figure out the message to present to the user, who then confirms that they wish to perform
-the action printed on the screen by simply pressing a button. The transaction is then signed internally before
-being passed back to the PC via the USB/NFC/Bluetooth connection.
+These were developed by and for the Bitcoin community. They are more expensive than ordinary two-factor devices and feature better
+screens with USB or Bluetooth connections to eliminate typing. These devices differ from other forms of hardware
+authenticator device in another respect: instead of signing challenge numbers, they actually understand the native
+transaction format of the network to which they're specialised and parse the transaction to figure out the message
+to present to the user, who then confirms that they wish to perform the action printed on the screen by simply
+pressing a button. The transaction is then signed internally before being passed back to the PC.
 
-This setup means that rather than having a small device that authorises to a powerful server (which controls all
-your assets), the device itself controls the assets. As there is no smartcard equivalent the private key can be
-exported off the device by writing it down in the form of ``wallet words'': 12 random words derived from the
-contents of the key. Because elliptic curve private keys are small (256 bits), this is not as tedious as it would
-be with the much larger RSA keys that were standard until recently.
-
-There are clear benefits to having signing keys be kept on personal, employee-controlled devices only, with the
-organisation's node not having any ability to sign for transactions itself:
-
-\begin{itemize}
-    \item If the node is hacked by a malicious intruder or bad insider they cannot steal assets, modify agreements,
-    or do anything else that requires human approval, because they don't have access to the signing keys. There is no single
-    point of failure from a key management perspective.
-    \item It's clearer who signed off on a particular action -- the signatures prove which devices were used to sign off
-    on an action. There can't be any back doors or administrator tools which can create transactions on behalf of someone else.
-    \item Devices that integrate fingerprint readers and other biometric authentication could further increase trust by
-    making it harder for employees to share/swap devices. A smartphone or tablet could be also used as a transaction authenticator.
-\end{itemize}
+As there is no smartcard equivalent the private key can be exported off the device by writing it down in the form
+of ``wallet words'': 12 random words derived from the contents of the key. Because elliptic curve private keys
+are small (256 bits), this is not as tedious as it would be with the much larger RSA keys that were standard until
+recently.
 
 \subsubsection{Confusion attacks}
 
 The biggest problem facing anyone wanting to integrate smart signing devices into a distributed ledger system is
 how the device processes transactions. For Bitcoin it's straightforward for devices to process transactions
 directly because their format is very small and simple (in theory -- in practice a fixable quirk of the Bitcoin
-protocol actually significantly complicates how these devices must work). Thus turning a Bitcoin transaction into a
+protocol significantly complicates how these devices must work). Thus turning a Bitcoin transaction into a
 human meaningful confirmation screen is quite easy:
 
 \indent\texttt{Confirm payment of 1.23 BTC to 1AbCd0123456.......}
