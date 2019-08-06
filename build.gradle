@@ -127,7 +127,8 @@ buildscript {
         maven {
             url "$artifactory_contextUrl/corda-releases"
         }
-        // TEMP: remove once Corda Gradle plugins 5.0.0 published.
+        // TEMP: remove once Corda Gradle plugins 5.x with Quasar Java 11 support published.
+        // https://ci-artifactory.corda.r3cev.com/artifactory/corda-dev/net/corda/plugins/quasar-utils/5.0.1-SNAPSHOT-quasar-jdk11/
         maven {
             url "$artifactory_contextUrl/corda-dev"
         }
@@ -228,9 +229,8 @@ allprojects {
     }
     
     tasks.withType(JavaCompile) {
-        options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation" << "-Xlint:-options" << "-parameters" 
+        options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation" << "-Xlint:-options" << "-parameters"
         options.encoding = 'UTF-8'
-        options.verbose = true
     }
 
     tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile) {
