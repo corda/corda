@@ -1,12 +1,15 @@
 package net.corda.nodeapi.internal.persistence
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.zaxxer.hikari.pool.HikariPool
 import liquibase.Contexts
 import liquibase.LabelExpression
 import liquibase.Liquibase
 import liquibase.database.Database
 import liquibase.database.DatabaseFactory
 import liquibase.database.jvm.JdbcConnection
+import liquibase.exception.ChangeLogParseException
+import liquibase.exception.MigrationFailedException
 import liquibase.resource.ClassLoaderResourceAccessor
 import net.corda.core.identity.CordaX500Name
 import net.corda.nodeapi.internal.MigrationHelpers.getMigrationResource
@@ -14,6 +17,7 @@ import net.corda.core.schemas.MappedSchema
 import net.corda.core.utilities.info
 import net.corda.nodeapi.internal.cordapp.CordappLoader
 import net.corda.nodeapi.internal.logging.KeyValueFormatter
+import org.hibernate.tool.schema.spi.SchemaManagementException
 import org.slf4j.LoggerFactory
 import java.io.ByteArrayInputStream
 import java.io.InputStream
@@ -138,7 +142,7 @@ class SchemaMigration(
                             liquibase.update(1, Contexts().toString())
                             logger.info { formatter.format( "changeset", elem.toString(), "status", "successful") }
                         } catch (t: Throwable) {
-                            logger.error(formatter.format( "changeset", elem.toString(), "status", "error", "message", t.cause?.message ?: ""))
+                            logDatabaseErrorWithCode(t, "changeset", elem.toString())
                             throw t
                         }
                     }
@@ -243,6 +247,50 @@ class SchemaMigration(
             }
         }
     }
+}
+
+enum class SchemaMigrationError(val code: Int) {
+    UNKNOWN_ERROR(1),
+    MISSING_DRIVER(2),
+    INVALID_DATA_SOURCE_PROPERTY(3),
+    INITIALISATION_ERROR(4),
+    MISSING_SCRIPT(5),
+    SCRIPT_PARSING_ERROR(6),
+    INVALID_SQL_STATEMENT(7),
+    INVALID_SQL_TYPE(8),
+    INCOMPATIBLE_CHANGE_SET(9),
+    UNCATEGORISED_DATABASE_MIGRATION_ERROR(10),
+    OUTSTANDING_CHANGE_SETS(11),
+    MAPPED_SCHEMA_INCOMPATIBLE_WITH_DATABASE_MANAGEMENT_SCRIPT(12);
+
+    companion object {
+        fun fromThrowable(t: Throwable): SchemaMigrationError {
+            return when {
+                t.cause is ClassNotFoundException -> SchemaMigrationError.MISSING_DRIVER
+                t.cause is HikariPool.PoolInitializationException -> SchemaMigrationError.INITIALISATION_ERROR
+                t is CouldNotCreateDataSourceException && t.cause !is MigrationFailedException -> when {
+                    t.cause is RuntimeException && ".+ Property \\S+ does not exist .+".toRegex().matches(t.message ?: "") -> SchemaMigrationError.INVALID_DATA_SOURCE_PROPERTY
+                    (t.cause is DatabaseMigrationException && (t.message?.contains("Could not find Liquibase database migration script") ?: false)) || t.cause is MissingMigrationException -> SchemaMigrationError.MISSING_SCRIPT
+                    t.cause is ChangeLogParseException -> SchemaMigrationError.SCRIPT_PARSING_ERROR
+                    else -> SchemaMigrationError.UNKNOWN_ERROR
+                }
+                t is MigrationFailedException || t.cause is MigrationFailedException -> when {
+                    t.message?.contains("syntax error") ?: false -> SchemaMigrationError.INVALID_SQL_STATEMENT
+                    t.message?.contains("DatabaseException: ERROR: type") ?: false -> SchemaMigrationError.INVALID_SQL_TYPE
+                    t.message?.contains("Failed SQL:") ?: false -> SchemaMigrationError.INCOMPATIBLE_CHANGE_SET
+                    else -> SchemaMigrationError.UNCATEGORISED_DATABASE_MIGRATION_ERROR
+                }
+                t is DatabaseIncompatibleException -> SchemaMigrationError.OUTSTANDING_CHANGE_SETS
+                t is HibernateSchemaChangeException && t.cause is SchemaManagementException -> SchemaMigrationError.MAPPED_SCHEMA_INCOMPATIBLE_WITH_DATABASE_MANAGEMENT_SCRIPT
+                else -> SchemaMigrationError.UNKNOWN_ERROR
+            }
+        }
+    }
+}
+
+fun logDatabaseErrorWithCode(t: Throwable, vararg prefixElements: String) {
+    val errorCode = SchemaMigrationError.fromThrowable(t)
+    SchemaMigration.logger.error(SchemaMigration.formatter.format(*prefixElements, "status", "error", "error_code", errorCode.code.toString(), "message", t?.message ?: ""))
 }
 
 open class DatabaseMigrationException(message: String) : IllegalArgumentException(message) {

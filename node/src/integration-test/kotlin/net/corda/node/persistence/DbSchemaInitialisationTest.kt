@@ -5,6 +5,7 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.node.flows.isQuasarAgentSpecified
 import net.corda.node.logging.logFile
 import net.corda.nodeapi.internal.persistence.DatabaseIncompatibleException
+import net.corda.nodeapi.internal.persistence.SchemaMigrationError
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
@@ -96,7 +97,7 @@ class DbSchemaInitialisationTest {
 
             Assertions.assertThat(logFile.length()).isGreaterThan(0)
 
-            val sampleChangeSetError = "${loggerPrefix}changeset=\"$sampleChangeset\";status=\"error\";message=\"".toRegex()
+            val sampleChangeSetError = "${loggerPrefix}changeset=\"$sampleChangeset\";status=\"error\";error_code=\"${SchemaMigrationError.INCOMPATIBLE_CHANGE_SET.code}\";message=\"".toRegex()
 
             var errorLines = logFile.useLines {
                 lines -> lines.filter { it.contains(sampleChangeSetError) }.count()

@@ -362,9 +362,15 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         val nodeCa = configuration.signingCertificateStore.get()[CORDA_CLIENT_CA]
         identityService.start(trustRoot, listOf(identity.certificate, nodeCa), netParams.notaries.map { it.identity }, pkToIdCache)
 
-        val (keyPairs, nodeInfoAndSigned, myNotaryIdentity) = database.transaction {
-            updateNodeInfo(identity, identityKeyPair, publish = true)
-        }
+        val (keyPairs, nodeInfoAndSigned, myNotaryIdentity) =
+                try {
+                    database.transaction {
+                        updateNodeInfo(identity, identityKeyPair, publish = true)
+                    }
+                } catch (e: Exception) {
+                    logDatabaseErrorWithCode(e)
+                    throw e
+                }
 
         val (nodeInfo, signedNodeInfo) = nodeInfoAndSigned
         identityService.ourNames = nodeInfo.legalIdentities.map { it.name }.toSet()
@@ -1152,7 +1158,7 @@ fun CordaPersistence.startHikariPool(hikariProperties: Properties, databaseConfi
     } catch (ex: Exception) {
         when {
             ex is HikariPool.PoolInitializationException -> throw CouldNotCreateDataSourceException("Could not connect to the database. Please check your JDBC connection URL, or the connectivity to the database.", ex)
-            ex.cause is ClassNotFoundException -> throw CouldNotCreateDataSourceException("Could not find the database driver class. Please add it to the 'drivers' folder. See: https://docs.corda.net/corda-configuration-file.html")
+            ex.cause is ClassNotFoundException -> throw CouldNotCreateDataSourceException("Could not find the database driver class. Please add it to the 'drivers' folder. See: https://docs.corda.net/corda-configuration-file.html", ex.cause)
             ex is OutstandingDatabaseChangesException -> throw (DatabaseIncompatibleException(ex.message))
             else -> throw CouldNotCreateDataSourceException("Could not create the DataSource: ${ex.message}", ex)
         }
