@@ -19,7 +19,7 @@ object JVMAgentUtil {
         } catch (e: Exception) {
             log.warn("Unable to determine whether checkpoint agent is running: ${e.message}.\n" +
                      "You may need to pass in -Djdk.attach.allowAttachSelf=true if running on a Java 9 or later VM")
-            Properties(0)
+            Properties()
         }
     }
 }
