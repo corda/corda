@@ -279,11 +279,9 @@ class CryptoServiceSigningServiceUnitTest {
 
         // create signing service
         val signingService = CryptoServiceSigningService(csConfig, dummyLegalName, sslConfiguration, 10000,
-                TestAuditService(), name = "Tunnel", sleep = { x ->
-            run {
-                println("Sleeping 1 sec ...")
-                Thread.sleep(1000)
-            }
+                TestAuditService(), name = "Tunnel", sleep = {
+            println("Sleeping 1 sec ...")
+            Thread.sleep(1000)
         }, makeCryptoService = makeCryptoService)
 
         // start signing service
