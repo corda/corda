@@ -114,6 +114,7 @@ class LoopbackBridgeManager(keyStore: CertificateStore,
         fun stop() {
             logInfoWithMDC("Stopping AMQP bridge")
             artemis.exclusive {
+                bridgeMetricsService?.bridgeDisconnected(targets, legalNames)
                 consumer?.apply { if (!isClosed) close() }
                 consumer = null
                 producer?.apply { if (!isClosed) close() }
