@@ -24,11 +24,18 @@ import javax.security.auth.x500.X500Principal
 class GemaltoLunaCryptoService(keyStore: KeyStore, provider: Provider, x500Principal: X500Principal = DUMMY_X500_PRINCIPAL, private val auth: () -> GemaltoLunaConfiguration) : JCACryptoService(keyStore, provider, x500Principal) {
 
     override fun isLoggedIn(): Boolean {
-        return LunaSlotManager.getInstance().isLoggedIn
+        return try {
+            // Will throw LunaCryptokiException on network failure
+            LunaSlotManager.getInstance().isLoggedIn
+        } catch (e: Exception) {
+            false
+        }
     }
 
     override fun logIn() {
         val config = auth()
+        // Force reinitialization to allow reconnect after network failure
+        LunaSlotManager.getInstance().reinitialize(true)
         keyStore.load(config.keyStore.byteInputStream(), config.password.toCharArray())
     }
 
