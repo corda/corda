@@ -1,39 +1,43 @@
 package net.corda.nodeapi.internal.persistence
 
 import junit.framework.TestCase.assertEquals
+import net.corda.core.node.services.KeyManagementService
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.node.MockServices
+import net.corda.testing.node.internal.MockKeyManagementService
+import net.corda.testing.node.makeTestIdentityService
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import java.security.PublicKey
 import java.util.*
 import java.util.concurrent.Executors
+import kotlin.test.assertFails
 
 class PublicKeyToOwningIdentityCacheImplTest {
 
     private lateinit var database: CordaPersistence
     private lateinit var testCache: PublicKeyToOwningIdentityCacheImpl
-    private lateinit var services: MockServices
+    private lateinit var keyManagementService: KeyManagementService
     private val testKeys = mutableListOf<Pair<KeyOwningIdentity, PublicKey>>()
     private val alice = TestIdentity(ALICE_NAME, 20)
 
     @Before
     fun setUp() {
-        val databaseAndServices = MockServices.makeTestDatabaseAndPersistentServices(
+        val identityService = makeTestIdentityService()
+        val databaseAndServices = MockServices.makeTestDatabaseAndMockServices(
                 listOf(),
+                identityService,
                 alice,
-                testNetworkParameters(),
-                setOf(),
-                setOf()
+                testNetworkParameters()
         )
         database = databaseAndServices.first
-        services = databaseAndServices.second
         testCache = PublicKeyToOwningIdentityCacheImpl(database, TestingNamedCacheFactory())
+        keyManagementService = MockKeyManagementService(identityService, pkToIdCache = testCache)
         createTestKeys()
     }
 
@@ -47,9 +51,9 @@ class PublicKeyToOwningIdentityCacheImplTest {
         val uuids = listOf(UUID.randomUUID(), UUID.randomUUID(), null, null, duplicatedUUID, duplicatedUUID)
         uuids.forEach {
             val key = if (it != null) {
-                services.keyManagementService.freshKey(it)
+                keyManagementService.freshKey(it)
             } else {
-                services.keyManagementService.freshKey()
+                keyManagementService.freshKey()
             }
             testKeys.add(Pair(KeyOwningIdentity.fromUUID(it), key))
         }
@@ -92,5 +96,25 @@ class PublicKeyToOwningIdentityCacheImplTest {
         val f2 = executor.submit { performTestRun() }
         f2.getOrThrow()
         f1.getOrThrow()
+    }
+
+    private fun createAndAddKeys() {
+        keyManagementService.freshKey(UUID.randomUUID())
+    }
+
+    @Test
+    fun `can set multiple keys across threads`() {
+        val executor = Executors.newFixedThreadPool(2)
+        val f1 = executor.submit { repeat(5) { createAndAddKeys() } }
+        val f2 = executor.submit { repeat(5) { createAndAddKeys() } }
+        f2.getOrThrow()
+        f1.getOrThrow()
+    }
+
+    @Test
+    fun `attempting to set existing key results in failure`() {
+        val uuid = UUID.randomUUID()
+        val key = keyManagementService.freshKey()
+        assertFails { testCache[key] = KeyOwningIdentity.fromUUID(uuid) }
     }
 }
