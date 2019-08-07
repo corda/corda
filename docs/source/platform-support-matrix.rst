@@ -80,7 +80,7 @@ Hardware Security Modules (HSM)
 | Utimaco SecurityServer Se Gen2| * Firmware version 4.21.1  | * Firmware version 4.21.1  | Not supported                         |
 |                               | * Driver version 4.21.1    | * Driver version 4.21.1    |                                       |
 +-------------------------------+----------------------------+----------------------------+---------------------------------------+
-| Gemalto Luna                  | * Firmware version 7.3     | * Firmware version 7.3     | Not supported                         |
+| Gemalto Luna                  | * Firmware version 7.0.3   | * Firmware version 7.0.3   | Not supported                         |
 |                               | * Driver version 7.3       | * Driver version 7.3       |                                       |
 +-------------------------------+----------------------------+----------------------------+---------------------------------------+
 | FutureX Excrypt SSP9000       | * Firmware version 3.1     | * Firmware version 3.1     | Not supported                         |
@@ -89,6 +89,6 @@ Hardware Security Modules (HSM)
 | Azure Key Vault               | * Driver version 1.1.1     | * Driver version 1.1.1     | Not supported                         |
 |                               |                            |                            |                                       |
 +-------------------------------+----------------------------+----------------------------+---------------------------------------+
-| Securosys PrimusX             | * Firmware version 2.7.3   | * Firmware version 2.7.3   | * Firmware version 2.7.4              |
-|                               | * Driver version 1.8.0     | * Driver version 1.8.0     | * Driver version 1.8.2                |
+| Securosys PrimusX             | * Firmware version 2.7.4   | * Firmware version 2.7.4   | * Firmware version 2.7.4              |
+|                               | * Driver version 1.8.2     | * Driver version 1.8.2     | * Driver version 1.8.2                |
 +-------------------------------+----------------------------+----------------------------+---------------------------------------+
