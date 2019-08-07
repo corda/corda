@@ -1,7 +1,12 @@
 package net.corda.bridge.services.receiver
 
+import com.nhaarman.mockito_kotlin.any
+import com.nhaarman.mockito_kotlin.doReturn
+import com.nhaarman.mockito_kotlin.whenever
 import com.r3.ha.utilities.InternalTunnelKeystoreGenerator
 import net.corda.bridge.services.TestAuditService
+import net.corda.bridge.services.api.CryptoServiceConfig
+import net.corda.bridge.services.config.BridgeConfigHelper
 import net.corda.cliutils.CommonCliConstants
 import net.corda.core.crypto.Crypto
 import net.corda.core.identity.CordaX500Name
@@ -15,17 +20,25 @@ import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_ROOT_CA
 import net.corda.nodeapi.internal.crypto.getCertificateAndKeyPair
+import net.corda.nodeapi.internal.cryptoservice.CryptoService
 import net.corda.nodeapi.internal.cryptoservice.CryptoServiceException
+import net.corda.nodeapi.internal.cryptoservice.SupportedCryptoServices
 import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
 import net.corda.testing.common.internal.isInstanceOf
+import net.corda.testing.internal.participant
 import org.assertj.core.api.Assertions
 import org.junit.Before
-import org.junit.Test
-
+import org.junit.Ignore
 import org.junit.Rule
+import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import picocli.CommandLine
+import rx.subjects.BehaviorSubject
 import java.nio.file.Path
+import java.security.cert.X509Certificate
+import java.util.*
+import java.util.concurrent.SynchronousQueue
+import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
@@ -121,5 +134,174 @@ class CryptoServiceSigningServiceUnitTest {
         val instance = CryptoServiceSigningService(null, dummyLegalName, sslConfiguration, null, TestAuditService(),
                 "testUnmappedAliasedStart", {}, { bouncyCryptoService })
         Assertions.assertThatThrownBy { instance.start() }.isInstanceOf<CryptoServiceException>()
+    }
+
+    private enum class Operation { CONNECT, HEARTBEAT }
+    /**
+     * Allows to mock sleep() calls in CryptoServiceSigningService execution threads, check next performed operations and, also,
+     * simulate failures on operations.
+     */
+    private class CryptoServiceMock(private val makeCryptoService: () -> CryptoService) {
+        private val sleepQueue = SynchronousQueue<Long>()
+        private val operationChange = BehaviorSubject.create<Operation>()
+        private val operationFollower = operationChange.serialize().toBlocking().iterator
+        var failHeartbeat = false
+        var failConnect = false
+
+        /**
+         * Calls makeCryptoService() inside it.
+         */
+        fun connect(): CryptoService {
+            operationChange.onNext(Operation.CONNECT)
+            if (failConnect) throw IllegalArgumentException("Connect failed")
+            val cryptoService = makeCryptoService()
+            return object : CryptoService by cryptoService {
+                override fun containsKey(alias: String): Boolean {
+                    operationChange.onNext(Operation.HEARTBEAT)
+                    if (failHeartbeat) throw IllegalArgumentException("Heartbeat failed")
+                    return cryptoService.containsKey(alias)
+                }
+            }
+        }
+
+        /**
+         * Blocks execution thread until nextOperation(true) is called
+         */
+        fun sleep(millis: Long) = sleepQueue.put(millis)
+
+        /**
+         * Returns the next operation
+         * @param wakeUpFromSleep Set true to "wake up" from sleep and release blocked execution thread
+         */
+        fun nextOperation(wakeUpFromSleep: Boolean = false): Operation {
+            if (wakeUpFromSleep) sleepQueue.take()
+            return operationFollower.next()
+        }
+    }
+
+    @Test
+    fun testLifecycleWithBCCryptoService() {
+        // create signing service
+        val mock = CryptoServiceMock { BridgeConfigHelper.makeCryptoService(null, dummyLegalName, sslConfiguration.keyStore) }
+        val signingService = CryptoServiceSigningService(null, dummyLegalName, sslConfiguration, 10000,
+                TestAuditService(), name = "Test", sleep = mock::sleep, makeCryptoService = mock::connect)
+        val stateFollower = signingService.activeChange.toBlocking().iterator
+        assertEquals(false, stateFollower.next())
+        assertEquals(false, signingService.active)
+
+        // start signing service and receive 1st heartbeat
+        signingService.start()
+        assertEquals(true, stateFollower.next())
+        assertEquals(true, signingService.active)
+        assertEquals(Operation.CONNECT, mock.nextOperation())
+        assertEquals(Operation.HEARTBEAT, mock.nextOperation())
+
+        // 2nd heartbeat OK
+        assertEquals(Operation.HEARTBEAT, mock.nextOperation(true))
+
+        // 3rd heartbeat failed: signing service disconnected
+        mock.failConnect = true
+        mock.failHeartbeat = true
+        assertEquals(Operation.HEARTBEAT, mock.nextOperation(true))
+        assertEquals(false, stateFollower.next())
+        assertEquals(false, signingService.active)
+
+        // unable to connect to crypto service
+        assertEquals(Operation.CONNECT, mock.nextOperation(true))
+        assertEquals(false, signingService.active)
+
+        // crypto service is connected but 1st heartbeat still fails
+        mock.failConnect = false
+        assertEquals(Operation.CONNECT, mock.nextOperation(true))
+        assertEquals(Operation.HEARTBEAT, mock.nextOperation())
+        assertEquals(false, signingService.active)
+
+        // signing service is online
+        mock.failHeartbeat = false
+        assertEquals(Operation.CONNECT, mock.nextOperation(true))
+        assertEquals(Operation.HEARTBEAT, mock.nextOperation())
+        assertEquals(true, stateFollower.next())
+        assertEquals(true, signingService.active)
+
+        // restart service and receive 2 heartbeats
+        signingService.stop()
+        signingService.start()
+        assertEquals(Operation.CONNECT, mock.nextOperation())
+        assertEquals(Operation.HEARTBEAT, mock.nextOperation())
+        assertEquals(Operation.HEARTBEAT, mock.nextOperation(true))
+    }
+
+    /**
+     * Only for manual testing of HSM connection. Not intended for automatic run. Must be terminated manually.
+     * Two test scenarios are suggested:
+     * 1) Start test when HSM connection is active, then terminate HSM connection (e.g. by blocking the port) and restore it again after some time.
+     * 2) Start test when HSM connection is blocked, then unblock it.
+     *
+     * In both cases crypto signing service must be correctly activated after HSM connection is unblocked.
+     */
+    private fun testLifecycleWithLiveHSM(csName: SupportedCryptoServices, csConfigText: String) {
+        // mock certificate store to be able to generate keys and certificates after first connect to HSM
+        val alias = UUID.randomUUID().toString()
+        val aliases: Enumeration<String> = Collections.enumeration(listOf(alias))
+        val certList = mutableListOf<X509Certificate>()
+        val x509KeyStore = participant<X509KeyStore>().also {
+            doReturn(certList).whenever(it).getCertificateChain(any())
+            doReturn(aliases.iterator()).whenever(it).aliases()
+        }
+        val certificateStore = CertificateStore.of(x509KeyStore, "", "")
+        floatKeystore = participant<FileBasedCertificateStoreSupplier>().also {
+            doReturn(certificateStore).whenever(it).get(any())
+        }
+
+        // generate config file for provided configuration
+        val csConfigPath = tempFolder.root.toPath() / "hsm.conf"
+        csConfigPath.toFile().writeText(csConfigText)
+        val csConfig = object : CryptoServiceConfig {
+            override val name = csName
+            override val conf = csConfigPath
+        }
+
+        // generate keys in HSM and add corresponding certificate to the signing service after first connect to HSM
+        val makeCryptoService = {
+            val cryptoService = BridgeConfigHelper.makeCryptoService(csConfig, dummyLegalName, sslConfiguration.keyStore)
+            println("CryptoService created")
+            if (certList.isEmpty()) {
+                println("Creating certificate ...")
+                val pubKey = cryptoService.generateKeyPair(alias, cryptoService.defaultIdentitySignatureScheme())
+                val cert = participant<X509Certificate>().also {
+                    doReturn(pubKey).whenever(it).publicKey
+                }
+                certList.add(cert)
+                println("Certificate created OK")
+            }
+            cryptoService
+        }
+
+        // create signing service
+        val signingService = CryptoServiceSigningService(csConfig, dummyLegalName, sslConfiguration, 10000,
+                TestAuditService(), name = "Tunnel", sleep = {
+            println("Sleeping 1 sec ...")
+            Thread.sleep(1000)
+        }, makeCryptoService = makeCryptoService)
+
+        // start signing service
+        signingService.start()
+
+        // sleep forever: test must be explicitly terminated
+        while (true) Thread.sleep(1000)
+    }
+
+    /**
+     * Only for manual run. See [testLifecycleWithLiveHSM] for description.
+     * Requires live connect to Gemalto HSM server, see [net.corda.nodeapi.internal.cryptoservice.gemalto.GemaltoLunaCryptoServiceTest].
+     * Edit below configuration to use proper credentials.
+     */
+    @Ignore
+    @Test
+    fun testLifecycleWithGemalto() {
+        testLifecycleWithLiveHSM(SupportedCryptoServices.GEMALTO_LUNA, """
+            keyStore: "tokenlabel:somepartition"
+            password: "somepassword"
+        """.trimIndent())
     }
 }
