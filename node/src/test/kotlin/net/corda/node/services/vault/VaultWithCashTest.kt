@@ -35,9 +35,6 @@ import net.corda.testing.node.MockServices.Companion.makeTestDatabaseAndMockServ
 import net.corda.testing.node.makeTestIdentityService
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
-import org.hamcrest.MatcherAssert.assertThat
-import org.hamcrest.Matchers.containsInAnyOrder
-import org.hamcrest.Matchers.equalTo
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
@@ -110,14 +107,20 @@ class VaultWithCashTest {
             vaultFiller.fillWithSomeTestCash(100.DOLLARS, issuerServices, 3, DUMMY_CASH_ISSUER)
         }
         database.transaction {
-            val w = vaultService.queryBy<Cash.State>().states.map { it.state.data }
+            val w = vaultService.queryBy<Cash.State>().states
             assertEquals(3, w.size)
-            assertThat(w.map { it.amount }, containsInAnyOrder(
-                    equalTo(30.45.DOLLARS `issued by` DUMMY_CASH_ISSUER),
-                    equalTo(34.70.DOLLARS `issued by` DUMMY_CASH_ISSUER),
-                    equalTo(34.85.DOLLARS `issued by` DUMMY_CASH_ISSUER))
-            )
-            assertEquals(servicesKey.public, w[0].owner.owningKey)
+
+            // topological sort of transactions when writing them means the order in the
+            // vault may be different from the generated order in the vault filler (also
+            // bad practice to rely on the order of db records). We're only interested
+            // that the correct states exist, so sort them by amount for consistency.
+            val states = w.map { it.state.data }.sortedBy { it.amount }
+
+            val state = states[0]
+            assertEquals(30.45.DOLLARS `issued by` DUMMY_CASH_ISSUER, state.amount)
+            assertEquals(servicesKey.public, state.owner.owningKey)
+            assertEquals(34.70.DOLLARS `issued by` DUMMY_CASH_ISSUER, states[1].amount)
+            assertEquals(34.85.DOLLARS `issued by` DUMMY_CASH_ISSUER, states[2].amount)
         }
     }
 
