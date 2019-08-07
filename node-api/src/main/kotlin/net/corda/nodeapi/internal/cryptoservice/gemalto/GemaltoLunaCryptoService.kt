@@ -25,10 +25,10 @@ class GemaltoLunaCryptoService(keyStore: KeyStore, provider: Provider, x500Princ
 
     override fun isLoggedIn(): Boolean {
         return try {
-            // Throwing the following exception on network failure
-            // com.safenetinc.luna.exception.LunaCryptokiException: function 'C_GetSessionInfo' returns 0x30 (CKR_DEVICE_ERROR)
+            // Will throw LunaCryptokiException on network failure
             LunaSlotManager.getInstance().isLoggedIn
         } catch (e: Exception) {
+            detailedLogger.error("Exception when checking logged in status", e)
             false
         }
     }
