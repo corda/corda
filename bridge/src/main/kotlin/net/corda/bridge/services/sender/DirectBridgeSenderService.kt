@@ -55,7 +55,9 @@ class DirectBridgeSenderService(val conf: FirewallConfiguration,
         }
 
         override fun bridgeDisconnected(targets: List<NetworkHostAndPort>, legalNames: Set<CordaX500Name>) {
-            // No corresponding method on FirewallAuditService yet
+            val firstHostPort = targets.first()
+            auditService.terminatedConnectionEvent(InetSocketAddress(firstHostPort.host, firstHostPort.port),
+                    legalNames.first().toString(), "BridgeDisconnected", RoutingDirection.OUTBOUND)
         }
 
         override fun bridgeDestroyed(targets: List<NetworkHostAndPort>, legalNames: Set<CordaX500Name>) {

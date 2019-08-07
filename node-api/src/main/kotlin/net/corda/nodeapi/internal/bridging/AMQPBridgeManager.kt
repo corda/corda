@@ -13,7 +13,6 @@ import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2PMessagi
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.RemoteInboxAddress.Companion.translateLocalQueueToInboxAddress
 import net.corda.nodeapi.internal.ArtemisSessionProvider
 import net.corda.nodeapi.internal.config.CertificateStore
-import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.protonwrapper.messages.MessageStatus
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPClient
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPConfiguration
@@ -199,6 +198,7 @@ open class AMQPBridgeManager(keyStore: CertificateStore,
                 session = null
                 ArtemisState.STOPPED
             }
+            bridgeMetricsService?.bridgeDisconnected(targets, legalNames)
             connectedSubscription?.unsubscribe()
             connectedSubscription = null
             // Do this last because we already scheduled the Artemis stop, so it's okay to unsubscribe onConnected first.
@@ -208,6 +208,7 @@ open class AMQPBridgeManager(keyStore: CertificateStore,
         private fun onSocketConnected(connected: Boolean) {
             if (connected) {
                 logInfoWithMDC("Bridge Connected")
+                bridgeMetricsService?.bridgeConnected(targets, legalNames)
                 artemis(ArtemisState.STARTING) {
                     val startedArtemis = artemis.started
                     if (startedArtemis == null) {
