@@ -21,7 +21,12 @@ import java.security.Provider
 import java.security.PublicKey
 import javax.security.auth.x500.X500Principal
 
-class GemaltoLunaCryptoService(keyStore: KeyStore, provider: Provider, x500Principal: X500Principal = DUMMY_X500_PRINCIPAL, private val auth: () -> GemaltoLunaConfiguration) : JCACryptoService(keyStore, provider, x500Principal) {
+class GemaltoLunaCryptoService(
+        keyStore: KeyStore,
+        provider: Provider,
+        x500Principal: X500Principal = DUMMY_X500_PRINCIPAL,
+        private val auth: () -> GemaltoLunaConfiguration
+) : JCACryptoService(keyStore, provider, x500Principal) {
 
     override fun isLoggedIn(): Boolean {
         return LunaSlotManager.getInstance().isLoggedIn

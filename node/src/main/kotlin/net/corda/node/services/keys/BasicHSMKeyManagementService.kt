@@ -15,13 +15,14 @@ import net.corda.nodeapi.internal.cryptoservice.CryptoService
 import net.corda.nodeapi.internal.cryptoservice.WrappedPrivateKey
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
-import org.apache.commons.lang.ArrayUtils.EMPTY_BYTE_ARRAY
+import org.apache.commons.lang3.ArrayUtils.EMPTY_BYTE_ARRAY
 import org.bouncycastle.operator.ContentSigner
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
 import java.util.*
 import javax.persistence.*
+import kotlin.collections.LinkedHashSet
 
 /**
  * A persistent re-implementation of [E2ETestKeyManagementService] to support CryptoService for initial keys and
@@ -152,9 +153,13 @@ class BasicHSMKeyManagementService(cacheFactory: NamedCacheFactory, val identity
         }
     }
 
-    override val keys: Set<PublicKey> get() = database.transaction {
-        originalKeysMap.keys
-                .plus(keysMap.allPersisted().map { it.first }.toSet())
+    override val keys: Set<PublicKey> get() {
+        return database.transaction {
+        val set = LinkedHashSet<PublicKey>(originalKeysMap.keys
+                )
+            keysMap.allPersisted.use { it.forEach { set += it.first } }
+            set
+        }
     }
 
     private fun containsPublicKey(publicKey: PublicKey): Boolean {

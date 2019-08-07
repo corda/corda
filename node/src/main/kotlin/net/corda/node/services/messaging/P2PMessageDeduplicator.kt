@@ -22,6 +22,15 @@ typealias SenderHashToSeqNo = Pair<String, Long?>
 
 /**
  * Encapsulate the de-duplication logic.
+ *
+ * The optimized codepath (in CE) is a bit more complicated. In the simpler codepath we always went through the database when we check whether
+ * the message is a duplicate, which is a very expensive operation. The enterprise implementation of the this class uses high
+ * watermarking to optimize this away in the happy path.
+ *
+ * The idea is this: messages contain an incrementing sequence number that's monotonically increasing per *sender identity*. We keep around the
+ * highest such number for each sender, and if we see a message coming from the same identity but with a higher sequence number then we can
+ * skip the database roundtrip, we know it's a fresh message. In any other case we fallback to the old slower codepath. In practice this is
+ * completely sufficient to eliminate almost all read roundtrips to the database on the receive, aside from an initial one.
  */
 class P2PMessageDeduplicator(
         cacheFactory: NamedCacheFactory,

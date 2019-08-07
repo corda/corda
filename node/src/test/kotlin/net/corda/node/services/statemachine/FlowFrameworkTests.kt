@@ -26,18 +26,20 @@ import net.corda.core.utilities.ProgressTracker.Change
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
 import net.corda.node.services.persistence.checkpoints
+import net.corda.nodeapi.internal.cryptoservice.CryptoServiceException
+import net.corda.nodeapi.internal.cryptoservice.TimedCryptoServiceException
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.dummyCommand
 import net.corda.testing.core.singleIdentity
+import net.corda.testing.flows.registerCordappFlowFactory
 import net.corda.testing.internal.LogHelper
 import net.corda.testing.node.InMemoryMessagingNetwork.MessageTransfer
 import net.corda.testing.node.InMemoryMessagingNetwork.ServicePeerAllocationStrategy.RoundRobin
 import net.corda.testing.node.internal.*
-import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.assertj.core.api.Assertions.*
 import org.assertj.core.api.AssertionsForClassTypes.assertThatExceptionOfType
 import org.assertj.core.api.Condition
 import org.junit.After
@@ -426,6 +428,41 @@ class FlowFrameworkTests {
     }
 
     @Test
+    fun `timed out CryptoService is sent to the flow hospital`() {
+        bobNode.registerCordappFlowFactory(TimedCryptoExceptionFlow::class) { NoOpFlow() }
+
+        aliceNode.services.startFlow(TimedCryptoExceptionFlow(bob)).resultFuture
+
+        val medicalRecords = mutableListOf<StaffedFlowHospital.MedicalRecord>()
+        aliceNode.smm.flowHospital.track().updates.subscribe { medicalRecords.add(it) }
+
+        mockNet.runNetwork()
+
+        assertThat(TimedCryptoExceptionFlow.retryCount).isEqualTo(3)
+
+        // We expect three discharges and then overnight observation (in that order)
+        assertThat(medicalRecords).hasSize(4)
+        assertThat(medicalRecords.filter { it.outcome == StaffedFlowHospital.Outcome.DISCHARGE }).hasSize(3)
+        assertThat(medicalRecords.last().outcome == StaffedFlowHospital.Outcome.OVERNIGHT_OBSERVATION)
+    }
+
+    @Test
+    fun `non recoverable CryptoServiceException skips flow hospital`() {
+        bobNode.registerCordappFlowFactory(ReceiveFlow::class) {
+            ExceptionFlow { CryptoServiceException("Something bad happened!") }
+        }
+
+        aliceNode.services.startFlow(ReceiveFlow(bob)).resultFuture
+
+        mockNet.runNetwork()
+
+        assertThat(receivedSessionMessages.filter { it.message is ExistingSessionMessage && it.message.payload is ErrorSessionMessage }).hasSize(1)
+        val medicalRecords = bobNode.smm.flowHospital.track().apply { updates.notUsed() }.snapshot
+
+        assertThat(medicalRecords).isEmpty()
+    }
+
+    @Test
     fun `non-FlowException thrown on other side`() {
         val erroringFlowFuture = bobNode.registerCordappFlowFactory(ReceiveFlow::class) {
             ExceptionFlow { Exception("evil bug!") }
@@ -461,6 +498,28 @@ class FlowFrameworkTests {
                 bobNode sent sessionConfirm() to aliceNode,
                 bobNode sent errorMessage() to aliceNode
         )
+    }
+
+    @Test
+    fun `initiating flow using unknown AnonymousParty`() {
+        val anonymousBob = bobNode.services.keyManagementService.freshKeyAndCert(bobNode.info.legalIdentitiesAndCerts.single(), false).party.anonymise()
+        bobNode.registerCordappFlowFactory(SendAndReceiveFlow::class) { SingleInlinedSubFlow(it) }
+        val result = aliceNode.services.startFlow(SendAndReceiveFlow(anonymousBob, "Hello")).resultFuture
+        mockNet.runNetwork()
+        assertThatIllegalArgumentException()
+                .isThrownBy { result.getOrThrow() }
+                .withMessage("We do not know who $anonymousBob belongs to")
+    }
+
+    @Test
+    fun `initiating flow using known AnonymousParty`() {
+        val anonymousBob = bobNode.services.keyManagementService.freshKeyAndCert(bobNode.info.legalIdentitiesAndCerts.single(), false)
+        aliceNode.services.identityService.verifyAndRegisterIdentity(anonymousBob)
+        val bobResponderFlow = bobNode.registerCordappFlowFactory(SendAndReceiveFlow::class) { SingleInlinedSubFlow(it) }
+        val result = aliceNode.services.startFlow(SendAndReceiveFlow(anonymousBob.party.anonymise(), "Hello")).resultFuture
+        mockNet.runNetwork()
+        bobResponderFlow.getOrThrow()
+        assertThat(result.getOrThrow()).isEqualTo("HelloHello")
     }
 
     //region Helpers
@@ -725,6 +784,22 @@ internal open class InitiatedSendFlow(private val payload: Any, private val othe
 }
 
 @InitiatingFlow
+internal class TimedCryptoExceptionFlow(private val party: Party) : FlowLogic<Unit>() {
+    companion object {
+        // start negative due to where it is incremented
+        var retryCount = -1
+    }
+
+    @Suspendable
+    override fun call() {
+        initiateFlow(party).send("hello there")
+        // checkpoint will restart the flow after the send
+        retryCount += 1
+        throw TimedCryptoServiceException("We timed out!")
+    }
+}
+
+@InitiatingFlow
 internal class ReceiveFlow(private vararg val otherParties: Party) : FlowLogic<Unit>() {
     object START_STEP : ProgressTracker.Step("Starting")
     object RECEIVED_STEP : ProgressTracker.Step("Received")
@@ -762,12 +837,12 @@ internal class MyFlowException(override val message: String) : FlowException() {
 internal class MyPeerFlowException(override val message: String, val peer: Party) : FlowException()
 
 @InitiatingFlow
-internal class SendAndReceiveFlow(private val otherParty: Party, private val payload: Any, private val otherPartySession: FlowSession? = null) : FlowLogic<Any>() {
+internal class SendAndReceiveFlow(private val destination: Destination, private val payload: Any, private val otherPartySession: FlowSession? = null) : FlowLogic<Any>() {
     constructor(otherPartySession: FlowSession, payload: Any) : this(otherPartySession.counterparty, payload, otherPartySession)
 
     @Suspendable
     override fun call(): Any {
-        return (otherPartySession ?: initiateFlow(otherParty)).sendAndReceive<Any>(payload).unwrap { it }
+        return (otherPartySession ?: initiateFlow(destination)).sendAndReceive<Any>(payload).unwrap { it }
     }
 }
 

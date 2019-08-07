@@ -127,7 +127,7 @@ open class StringToMethodCallParser<in T : Any> @JvmOverloads constructor(
         return method.parameters.mapIndexed { index, param ->
             when {
                 param.isNamePresent -> param.name
-            // index + 1 because the first Kotlin reflection param is 'this', but that doesn't match Java reflection.
+                // index + 1 because the first Kotlin reflection param is 'this', but that doesn't match Java reflection.
                 kf != null -> kf.parameters[index + 1].name ?: throw UnparseableCallException.ReflectionDataMissing(method.name, index)
                 else -> throw UnparseableCallException.ReflectionDataMissing(method.name, index)
             }
@@ -153,6 +153,7 @@ open class StringToMethodCallParser<in T : Any> @JvmOverloads constructor(
         class MissingParameter(methodName: String, val paramName: String, command: String) : UnparseableCallException("Parameter $paramName missing from attempt to invoke $methodName in command: $command")
         class TooManyParameters(methodName: String, command: String) : UnparseableCallException("Too many parameters provided for $methodName: $command")
         class ReflectionDataMissing(methodName: String, argIndex: Int) : UnparseableCallException("Method $methodName missing parameter name at index $argIndex")
+        class NoSuchFile(filename: String) : UnparseableCallException("File $filename not found")
         class FailedParse(e: Exception) : UnparseableCallException(e.message ?: e.toString(), e)
     }
 
@@ -185,21 +186,35 @@ open class StringToMethodCallParser<in T : Any> @JvmOverloads constructor(
     }
 
     /**
+     * Validates that the argument string matches the constructor parameters, i.e. this is a matching constructor
+     * for the argument string. Exception is thrown if not a match
+     *
+     * @param methodNameHint A name that will be used in exceptions if thrown; not used for any other purpose.
+     * @throws UnparseableCallException If no match is found between constructor parameters and passed string.
+     */
+    @Throws(UnparseableCallException::class)
+    fun validateIsMatchingCtor(methodNameHint: String, parameters: List<Pair<String, Type>>, args: String) {
+        val tree = createJsonTreeAndValidate(methodNameHint, parameters, args)
+        val inOrderParams: List<Any?> = parameters.mapIndexed { _, (argName, argType) ->
+            tree[argName] ?: throw UnparseableCallException.MissingParameter(methodNameHint, argName, args)
+        }
+    }
+
+    /**
      * Parses only the arguments string given the info about parameter names and types.
      *
      * @param methodNameHint A name that will be used in exceptions if thrown; not used for any other purpose.
      */
     @Throws(UnparseableCallException::class)
     fun parseArguments(methodNameHint: String, parameters: List<Pair<String, Type>>, args: String): Array<Any?> {
-        // If we have parameters, wrap them in {} to allow the Yaml parser to eat them on a single line.
-        val parameterString = "{ $args }"
-        val tree: JsonNode = om.readTree(parameterString) ?: throw UnparseableCallException(args)
-        if (tree.size() > parameters.size) throw UnparseableCallException.TooManyParameters(methodNameHint, args)
+        val tree = createJsonTreeAndValidate(methodNameHint, parameters, args)
         val inOrderParams: List<Any?> = parameters.mapIndexed { _, (argName, argType) ->
             val entry = tree[argName] ?: throw UnparseableCallException.MissingParameter(methodNameHint, argName, args)
             val entryType = om.typeFactory.constructType(argType)
             try {
                 om.readValue<Any>(entry.traverse(om), entryType)
+            } catch (e: java.nio.file.NoSuchFileException) {
+                throw UnparseableCallException.NoSuchFile(e.file ?: entry.toString())
             } catch (e: Exception) {
                 throw UnparseableCallException.FailedParse(e)
             }
@@ -213,18 +228,28 @@ open class StringToMethodCallParser<in T : Any> @JvmOverloads constructor(
         return inOrderParams.toTypedArray()
     }
 
+    private fun createJsonTreeAndValidate(methodNameHint: String, parameters: List<Pair<String, Type>>, args: String) : JsonNode {
+        // If we have parameters, wrap them in {} to allow the Yaml parser to eat them on a single line.
+        val parameterString = "{ $args }"
+        val tree: JsonNode = om.readTree(parameterString) ?: throw UnparseableCallException(args)
+        if (tree.size() > parameters.size) throw UnparseableCallException.TooManyParameters(methodNameHint, args)
+        return tree
+    }
+
     /** Returns a string-to-string map of commands to a string describing available parameter types. */
     val availableCommands: Map<String, String>
         get() {
-            return methodMap.entries().map { entry ->
-                val (name, args) = entry   // TODO: Kotlin 1.1
-                val argStr = if (args.parameterCount == 0) "" else {
-                    val paramNames = methodParamNames[name]!!
-                    val typeNames = args.parameters.map { it.type.simpleName }
-                    val paramTypes = paramNames.zip(typeNames)
-                    paramTypes.joinToString(", ") { "${it.first}: ${it.second}" }
+            return methodMap.entries().mapNotNull { (name, args) ->
+                if (args.parameterCount == 0) {
+                    Pair(name, "")
+                } else {
+                    methodParamNames[name]?. let { params ->
+                        val typeNames = args.parameters.map { it.type.simpleName }
+                        val paramTypes = params.zip(typeNames)
+                        val paramNames = paramTypes.joinToString(", ") { "${it.first}: ${it.second}" }
+                        Pair(name, paramNames)
+                    }
                 }
-                Pair(name, argStr)
             }.toMap()
         }
 }

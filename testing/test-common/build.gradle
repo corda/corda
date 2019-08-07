@@ -6,10 +6,17 @@ dependencies {
     compile project(':core')
     compile project(':node-api')
     compile project(':tools:cliutils')
+    compile project(":common-logging")
 
     // Unit testing helpers.
+    compile "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
     compile "junit:junit:$junit_version"
-    compile 'org.hamcrest:hamcrest-library:1.3'
+
+    runtimeOnly "org.junit.vintage:junit-vintage-engine:${junit_vintage_version}"
+    runtimeOnly "org.junit.jupiter:junit-jupiter-engine:${junit_jupiter_version}"
+    runtimeOnly "org.junit.platform:junit-platform-launcher:${junit_platform_version}"
+
+    compile 'org.hamcrest:hamcrest-library:2.1'
     compile "com.nhaarman:mockito-kotlin:$mockito_kotlin_version"
     compile "org.mockito:mockito-core:$mockito_version"
     compile "org.assertj:assertj-core:$assertj_version"

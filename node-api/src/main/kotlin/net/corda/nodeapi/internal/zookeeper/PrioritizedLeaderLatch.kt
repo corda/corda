@@ -6,7 +6,7 @@ import net.corda.core.utilities.debug
 import org.apache.curator.framework.CuratorFramework
 import org.apache.curator.framework.api.BackgroundCallback
 import org.apache.curator.framework.api.CuratorEvent
-import org.apache.curator.framework.listen.ListenerContainer
+import org.apache.curator.framework.listen.StandardListenerManager
 import org.apache.curator.framework.recipes.AfterConnectionEstablished
 import org.apache.curator.framework.recipes.leader.LeaderLatchListener
 import org.apache.curator.framework.recipes.locks.InterProcessSemaphoreMutex
@@ -28,7 +28,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 
 /**
- * A modified version of the Apache Curator [LeaderLatch] recipe. It allows prioritized leader election.
+ * A modified version of the Apache Curator [org.apache.curator.framework.recipes.leader.LeaderLatch] recipe. It allows prioritized leader election.
  * Upon start, a zNode is created using the [nodeId] and [priority] arguments of the constructor.
  * If the creation is successful, a [Watcher] is created for the [path]. I will be triggered by
  * [Watcher.Event.EventType.NodeChildrenChanged] events which indicate that a candidate has left or joined the
@@ -37,7 +37,7 @@ import java.util.concurrent.atomic.AtomicReference
  *
  * Clients with the same priority are treated on a first-come first-served basis.
  *
- * Because [Zookeeper] cannot guarantee that path changes are reliably seen, a new watcher is immediately set when the
+ * Because [org.apache.zookeeper.ZooKeeper] cannot guarantee that path changes are reliably seen, a new watcher is immediately set when the
  * existing one is triggered.
  *
  * @param client the [CuratorFramework] instance used to manage the Zookeeper connection
@@ -53,12 +53,12 @@ internal class PrioritizedLeaderLatch(private val client: CuratorFramework,
     val state = AtomicReference<State>(State.CLOSED)
 
     private val watchedClient = client.newWatcherRemoveCuratorFramework()
-    private val leaderLock = LeaderLock(client, "$path$LOCK_PATH_NAME")
+    private val leaderLock = LeaderLock(client, "$path$LOCK_PATH_NAME", nodeId)
     private val hasLeadership = AtomicBoolean(false)
     private val ourPath = AtomicReference<String>()
     private val startTask = AtomicReference<Future<*>>()
 
-    private val listeners = ListenerContainer<LeaderLatchListener>()
+    private val listeners =  StandardListenerManager.standard<LeaderLatchListener>()
     private val connectionStateListener = ConnectionStateListener { _, newState -> handleStateChange(newState) }
 
     private companion object {
@@ -123,7 +123,7 @@ internal class PrioritizedLeaderLatch(private val client: CuratorFramework,
     }
 
     /**
-     * @return [true] if leader, [false] otherwise
+     * @return `true` if leader, `false` otherwise
      */
     fun hasLeadership(): Boolean {
         return State.STARTED == state.get() && hasLeadership.get()
@@ -218,7 +218,7 @@ internal class PrioritizedLeaderLatch(private val client: CuratorFramework,
         val oldValue = hasLeadership.getAndSet(newValue)
         log.info("Client $nodeId: setting leadership to $newValue; old value was $oldValue.")
         if (oldValue && !newValue) {
-            listeners.forEach { listener -> listener?.notLeader(); null }
+            listeners.forEach { listener -> listener?.notLeader() }
             // Release lock after listeners have been notified
             try {
                 if (leaderLock.isAcquiredInThisProcess) {
@@ -234,7 +234,6 @@ internal class PrioritizedLeaderLatch(private val client: CuratorFramework,
             leaderLock.asyncAcquire {
                 listeners.forEach { listener ->
                     listener?.isLeader()
-                    null
                 }
             }
         }
@@ -317,33 +316,33 @@ internal class PrioritizedLeaderLatch(private val client: CuratorFramework,
     /**
      * A wrapper class to make sure we handle the leader lock with the same thread
      */
-    private class LeaderLock(client: CuratorFramework, path: String) {
+    private class LeaderLock(client: CuratorFramework, path: String, private val nodeId: String) {
         private val leaderLock = InterProcessSemaphoreMutex(client, path)
         private val lockHandlingExecutor = Executors.newSingleThreadExecutor()
         val isAcquiredInThisProcess get() = leaderLock.isAcquiredInThisProcess
 
         fun release() {
             lockHandlingExecutor.submit {
-                log.info("Releasing leader lock...")
+                log.info("Client $nodeId: Releasing leader lock...")
                 leaderLock.release()
-                log.info("Leader lock released.")
+                log.info("Client $nodeId: Leader lock released.")
             }.get()
         }
 
         fun asyncAcquire(onComplete: () -> Unit) {
             lockHandlingExecutor.submit {
                 try {
-                    log.info("Acquiring leader lock.")
+                    log.info("Client $nodeId: Acquiring leader lock.")
                     if (!isAcquiredInThisProcess) {
                        leaderLock.acquire()
                     } else {
-                        log.info("Lock already acquired.")
+                        log.info("Client $nodeId: Lock already acquired.")
                     }
-                    log.info("Leader lock acquired.")
+                    log.info("Client $nodeId: Leader lock acquired.")
                 } catch (e: IOException) {
-                    log.warn("Client closed while trying to acquire leader lock.")
+                    log.warn("Client $nodeId: Client closed while trying to acquire leader lock.")
                 } catch (e: IllegalStateException) {
-                    log.warn("Client tried to acquire leader lock while closing.")
+                    log.warn("Client $nodeId: Client tried to acquire leader lock while closing.")
                 }
                 onComplete()
             }

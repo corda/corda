@@ -242,7 +242,7 @@ Running the example CorDapp
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Start the nodes by running the following command from the root of the ``cordapp-example`` folder:
 
-* Unix/Mac OSX: ``workflows-kotlin/build/nodes/runnodes``
+* Unix/Mac OSX: ``workflows-kotlin/build/nodes/runnodes`` 
 * Windows: ``call workflows-kotlin\build\nodes\runnodes.bat``
 
 Each Spring Boot server needs to be started in its own terminal/command prompt, replace X with A, B and C:
@@ -253,7 +253,7 @@ Each Spring Boot server needs to be started in its own terminal/command prompt, 
 Look for the Started ServerKt in X seconds message, don't rely on the % indicator.
 
 .. warning:: On Unix/Mac OSX, do not click/change focus until all seven additional terminal windows have opened, or some
-   nodes may fail to start.
+   nodes may fail to start. You can run ``workflows-kotlin/build/nodes/runnodes --headless`` to prevent each server from opening in a new terminal window. To interact with the nodes will need to use ssh, see :doc:`shell`.
 
 For each node, the ``runnodes`` script creates a node tab/window:
 
@@ -281,12 +281,14 @@ For each node, the ``runnodes`` script creates a node tab/window:
 
    Fri Mar 02 17:34:02 GMT 2018>>>
 
-It usually takes around 60 seconds for the nodes to finish starting up. To ensure that all the nodes are running, you
-can query the 'status' end-point located at ``http://localhost:[port]/api/status`` (e.g.
-``http://localhost:50005/api/status`` for ``PartyA``).
+It usually takes around 60 seconds for the nodes to finish starting up. Each node will display "Welcome to the Corda interactive shell." along with a prompt when ready.
 
 Running the example CorDapp from IntelliJ
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+* Load the project by opening the project folder (Do not use "Import Project" functionality by IntelliJ because it will overwrite the pre-existing configuration) 
+
+* Follow the prompt to ``import Gradle project``
+
 * Select the ``Run Example CorDapp - Kotlin`` run configuration from the drop-down menu at the top right-hand side of
   the IDE
 
@@ -294,6 +296,8 @@ Running the example CorDapp from IntelliJ
 
   .. image:: resources/run-config-drop-down.png
     :width: 400
+
+* Select ``cordapp-example.workflows-kotlin.test`` for the Use classpath of module field, and then click Run
 
 * To stop the nodes, press the red square button at the top right-hand side of the IDE, next to the run configurations
 
@@ -331,7 +335,7 @@ To create an IOU between PartyA and PartyB, run the following command from the c
 
 .. sourcecode:: bash
 
-   curl -X PUT 'http://localhost:50005/api/example/create-iou?iouValue=1&partyName=O=PartyB,L=New%20York,C=US'
+   curl -X POST -H 'Content-Type: application/x-www-form-urlencoded' 'http://localhost:50005/api/example/create-iou?iouValue=1&partyName=O=PartyB,L=New%20York,C=US'
 
 Note that both PartyA's port number (``50005``) and PartyB are referenced in the PUT request path. This command
 instructs PartyA to agree an IOU with PartyB. Once the process is complete, both nodes will have a signed, notarised
@@ -386,11 +390,7 @@ following list:
     net.corda.core.flows.ContractUpgradeFlow$Authorise
     net.corda.core.flows.ContractUpgradeFlow$Deauthorise
     net.corda.core.flows.ContractUpgradeFlow$Initiate
-    net.corda.finance.flows.CashExitFlow
-    net.corda.finance.flows.CashIssueAndPaymentFlow
-    net.corda.finance.flows.CashIssueFlow
-    net.corda.finance.flows.CashPaymentFlow
-    net.corda.finance.internal.CashConfigDataFlow
+
 
 Creating an IOU via the interactive shell
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -486,41 +486,7 @@ You can run the CorDapp's integration tests by running the ``Run Integration Tes
 Running tests in IntelliJ
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-We recommend editing your IntelliJ preferences so that you use the Gradle runner - this means that the quasar utils
-plugin will make sure that some flags (like ``-javaagent`` - see :ref:`below <tutorial_cordapp_alternative_test_runners>`) are
-set for you.
-
-To switch to using the Gradle runner:
-
-* Navigate to ``Build, Execution, Deployment -> Build Tools -> Gradle -> Runner`` (or search for `runner`)
-
-  * Windows: this is in "Settings"
-  * MacOS: this is in "Preferences"
-
-* Set "Delegate IDE build/run actions to gradle" to true
-* Set "Run test using:" to "Gradle Test Runner"
-
-.. _tutorial_cordapp_alternative_test_runners:
-
-If you would prefer to use the built in IntelliJ JUnit test runner, you can add some code to your ``build.gradle`` file and
-it will copy your quasar JAR file to the lib directory. You will also need to specify ``-javaagent:lib/quasar.jar``
-and set the run directory to the project root directory for each test.
-
-Add the following to your ``build.gradle`` file - ideally to a ``build.gradle`` that already contains the quasar-utils plugin line:
-
-.. sourcecode:: groovy
-
-    apply plugin: 'net.corda.plugins.quasar-utils'
-
-    task installQuasar(type: Copy) {
-        destinationDir rootProject.file("lib")
-        from(configurations.quasar) {
-            rename 'quasar-core(.*).jar', 'quasar.jar'
-        }
-    }
-
-
-and then you can run ``gradlew installQuasar``.
+See :ref:`Running tests in IntelliJ<tutorial_cordapp_alternative_test_runners>`
 
 Debugging your CorDapp
 ----------------------

@@ -1,0 +1,27 @@
+notary {
+  mysql {
+      connectionRetries=[NUMBER_OF_PERCONA_NODES]
+      dataSource {
+          autoCommit="false"
+          jdbcUrl="<encrypt{jdbc:mysql://[CLUSTER_IPS]/[DB_NAME - e.g. corda]?rewriteBatchedStatements=true&useSSL=false&failOverReadOnly=false}>"
+          username=[USER_NAME]
+          password="<encrypt{your-data-source-password}>"
+      }
+  }
+  validating=false
+  serviceLegalName="O=HA Notary, C=GB, L=London"
+}
+
+...
+
+keyStorePassword = "<encrypt{your-key-store-password}>"
+trustStorePassword = "<encrypt{your-trust-store-password}>"
+
+...
+
+dataSourceProperties = {
+    dataSourceClassName = "org.postgresql.ds.PGSimpleDataSource"
+    dataSource.url = "jdbc:postgresql://[HOST]:[PORT]/postgres"
+    dataSource.user = [USER_NAME]
+    dataSource.password = "<encrypt{your-data-source-password}>"
+}

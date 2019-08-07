@@ -10,6 +10,8 @@ Unreleased
 * Changes in HA notary setup: the MySQL JDBC driver now needs to be installed manually for every worker node, otherwise nodes will fail to start.
   See :ref:`notary installation page <mysql_driver>` for more information.
 
+* For Azure SQL and SQL Server databases the node now requires a minimum version of 6.4.0.jre8 for the JDBC drivers.
+
 Version 4.0
 -----------
 
@@ -27,6 +29,8 @@ Changelog entries below refer to Enterprise-only changes.
 * The experimental BFT-Smart notary implementation has been deprecated – a fully supported BFT implementation is under development.
 
 * The experimental Raft notary implementation has been deprecated in favour of the MySQL-based HA notary implementation (see :doc:`running-a-notary-cluster/toctree`).
+
+* There have been schema changes for the single-node notary: the ``id`` column of the ``notary_request_log`` table has been changed from ``INT`` to ``VARCHAR(76)``. The new ``id`` format is ``<UUID>:<Hex counter>``. No upgrade steps are required.
 
 * Introduced a hierarchy of ``DatabaseMigrationException``'s, allowing ``NodeStartup`` to gracefully inform users of problems
   related to database migrations before exiting with a non-zero code.

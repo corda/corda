@@ -4,11 +4,11 @@ import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SignatureScheme
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.internal.VisibleForTesting
+import net.corda.core.utilities.detailedLogger
+import net.corda.core.utilities.trace
 import net.corda.nodeapi.internal.crypto.ContentSignerBuilder
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.toJca
-import net.corda.core.utilities.detailedLogger
-import net.corda.core.utilities.trace
 import org.bouncycastle.asn1.x509.AlgorithmIdentifier
 import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder
 import org.bouncycastle.operator.ContentSigner
@@ -30,7 +30,11 @@ import javax.security.auth.x500.X500Principal
  * will have to be overridden with vendor-specific implementations.
  * It is required that @keyStore is initialized.
  */
-abstract class JCACryptoService(internal val keyStore: KeyStore, internal val provider: Provider, internal val x500PrincipalForCerts: X500Principal = DUMMY_X500_PRINCIPAL) : CryptoService {
+abstract class JCACryptoService(
+        internal val keyStore: KeyStore,
+        internal val provider: Provider,
+        internal val x500PrincipalForCerts: X500Principal = DUMMY_X500_PRINCIPAL
+) : CryptoService {
 
     override fun generateKeyPair(alias: String, scheme: SignatureScheme): PublicKey {
         return withAuthentication {

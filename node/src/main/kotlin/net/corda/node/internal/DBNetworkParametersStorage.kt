@@ -20,7 +20,7 @@ import net.corda.nodeapi.internal.network.verifiedNetworkMapCert
 import net.corda.nodeapi.internal.network.verifiedNetworkParametersCert
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
-import org.apache.commons.lang.ArrayUtils
+import org.apache.commons.lang3.ArrayUtils
 import java.security.cert.X509Certificate
 import javax.persistence.*
 
@@ -115,13 +115,13 @@ class DBNetworkParametersStorage(
         val currentParameters = lookup(currentHash)
                 ?: throw IllegalStateException("Unable to obtain NotaryInfo – current network parameters not set.")
         val inCurrentParams = currentParameters.notaries.singleOrNull { it.identity == party }
-        if (inCurrentParams == null) {
-            val inOldParams = hashToParameters.allPersisted().flatMap { (_, signedParams) ->
-                val parameters = signedParams.raw.deserialize()
-                parameters.notaries.asSequence()
-            }.firstOrNull { it.identity == party }
-            return inOldParams
-        } else return inCurrentParams
+        if (inCurrentParams != null) return inCurrentParams
+        return hashToParameters.allPersisted.use {
+            it.flatMap { (_, signedNetParams) -> signedNetParams.raw.deserialize().notaries.stream() }
+                    .filter { it.identity == party }
+                    .findFirst()
+                    .orElse(null)
+        }
     }
 
     @Entity

@@ -1,6 +1,8 @@
 package net.corda.node.services.transactions
 
+import com.codahale.metrics.MetricRegistry
 import com.codahale.metrics.SlidingWindowReservoir
+import com.google.common.base.Stopwatch
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
@@ -38,7 +40,12 @@ import kotlin.concurrent.thread
 
 /** A RDBMS backed Uniqueness provider */
 @ThreadSafe
-class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersistence, cacheFactory: NamedCacheFactory) : UniquenessProvider, SingletonSerializeAsToken() {
+class PersistentUniquenessProvider(
+        metrics: MetricRegistry,
+        val clock: Clock,
+        val database: CordaPersistence,
+        cacheFactory: NamedCacheFactory
+) : UniquenessProvider, SingletonSerializeAsToken() {
 
     @MappedSuperclass
     class BaseComittedState(
@@ -93,6 +100,23 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}notary_committed_states")
     class CommittedState(id: PersistentStateRef, consumingTxHash: String) : BaseComittedState(id, consumingTxHash)
 
+    private val metricPrefix = PersistentUniquenessProvider::class.simpleName
+    /** Transaction commit duration timer and TPS meter. */
+    private val commitTimer = metrics.timer("$metricPrefix.Commit")
+    /** IPS (input states per second) meter. */
+    private val inputStatesMeter = metrics.meter("$metricPrefix.IPS")
+    /** Track double spend attempts. Note that this will also include notarisation retries. */
+    private val conflictCounter = metrics.counter("$metricPrefix.Conflicts")
+    /** Track the distribution of the number of input states. **/
+    private val inputStateHistogram = metrics.histogram("$metricPrefix.NumberOfInputStates")
+    /** Track the measured ETA. **/
+    private val requestProcessingETA = metrics.histogram("$metricPrefix.requestProcessingETASeconds")
+    /** Track the number of requests in the queue at insert. **/
+    private val requestQueueCount = metrics.histogram("$metricPrefix.requestQueue.size")
+    /** Track the number of states in the queue at insert. **/
+    private val requestQueueStateCount = metrics.histogram("$metricPrefix.requestQueue.queuedStates")
+    /** Tracks the distribution of the number of unique transactions that contributed states to the current transaction **/
+    private val uniqueTxHashCount = metrics.histogram("$metricPrefix.NumberOfUniqueTxHashes")
     private val commitLog = createMap(cacheFactory)
 
     private val requestQueue = LinkedBlockingQueue<CommitRequest>(requestQueueSize)
@@ -118,9 +142,12 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
     override fun getEta(numStates: Int): Duration {
         val rate = throughput
         val nrStates = nrQueuedStates.getAndAdd(numStates)
+        requestQueueStateCount.update(nrStates)
         log.debug { "rate: $rate, queueSize: $nrStates" }
         if (rate > 0.0 && nrStates > 0) {
-            return Duration.ofSeconds((2 * TimeUnit.MINUTES.toSeconds(1) * nrStates / rate).toLong())
+            val eta = Duration.ofSeconds((2 * TimeUnit.MINUTES.toSeconds(1) * nrStates / rate).toLong())
+            requestProcessingETA.update(eta.seconds)
+            return eta
         }
         return NotaryServiceFlow.defaultEstimatedWaitTime
     }
@@ -178,10 +205,22 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
             timeWindow: TimeWindow?,
             references: List<StateRef>
     ): CordaFuture<UniquenessProvider.Result> {
+        inputStateHistogram.update(states.size)
+        val timer = Stopwatch.createStarted()
         val future = openFuture<UniquenessProvider.Result>()
         val request = CommitRequest(states, txId, callerIdentity, requestSignature, timeWindow, references, future)
+        future.then {
+            recordDuration(timer)
+        }
         requestQueue.put(request)
+        requestQueueCount.update(requestQueue.size)
         return future
+    }
+
+    private fun recordDuration(totalTime: Stopwatch) {
+        totalTime.stop()
+        val elapsed = totalTime.elapsed(TimeUnit.MILLISECONDS)
+        commitTimer.update(elapsed, TimeUnit.MILLISECONDS)
     }
 
     private fun logRequest(txId: SecureHash, callerIdentity: Party, requestSignature: NotarisationRequestSignature) {
@@ -245,6 +284,7 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
 
     private fun handleReferenceConflicts(txId: SecureHash, conflictingStates: LinkedHashMap<StateRef, StateConsumptionDetails>) {
         if (!previouslyCommitted(txId)) {
+            conflictCounter.inc()
             val conflictError = NotaryError.Conflict(txId, conflictingStates)
             log.debug { "Failure, input states already committed: ${conflictingStates.keys}" }
             throw NotaryInternalException(conflictError)
@@ -258,6 +298,7 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
             return
         } else {
             log.debug { "Failure, input states already committed: ${conflictingStates.keys}" }
+            conflictCounter.inc()
             val conflictError = NotaryError.Conflict(txId, conflictingStates)
             throw NotaryInternalException(conflictError)
         }
@@ -291,9 +332,11 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
     private fun processRequest(request: CommitRequest) {
         val numStates = decrementQueueSize(request)
         try {
+            uniqueTxHashCount.update(request.states.distinctBy { it.txhash }.count())
             val duration = elapsedTime {
                 commitOne(request.states, request.txId, request.callerIdentity, request.requestSignature, request.timeWindow, request.references)
             }
+            inputStatesMeter.mark(request.states.size.toLong())
             val statesPerMinute = numStates.toLong() * TimeUnit.MINUTES.toNanos(1) / duration.toNanos()
             throughputHistory.update(maxOf(statesPerMinute, 1))
             throughput = throughputHistory.snapshot.median // Median deemed more stable / representative than mean.

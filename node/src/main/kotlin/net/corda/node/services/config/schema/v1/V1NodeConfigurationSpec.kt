@@ -5,9 +5,7 @@ import com.typesafe.config.ConfigException
 import net.corda.common.configuration.parsing.internal.*
 import net.corda.common.validation.internal.Validated.Companion.invalid
 import net.corda.common.validation.internal.Validated.Companion.valid
-import net.corda.node.services.config.JmxReporterType
-import net.corda.node.services.config.NodeConfiguration
-import net.corda.node.services.config.NodeConfigurationImpl
+import net.corda.node.services.config.*
 import net.corda.node.services.config.NodeConfigurationImpl.Defaults
 import net.corda.node.services.config.Valid
 import net.corda.node.services.config.VerifierType
@@ -72,6 +70,7 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
     private val cryptoServiceConf by string().mapValid(::toPath).optional()
     private val freshIdentitiesConfiguration by nested(FreshIdentitiesConfigurationSpec).optional()
     private val disableFreshIdentitiesWarning by boolean().optional().withDefaultValue(false)
+    private val cryptoServiceTimeout by duration().optional().withDefaultValue(Defaults.cryptoServiceTimeout)
     @Suppress("unused")
     private val custom by nestedObject().optional()
     private val relay by nested(RelayConfigurationSpec).optional()
@@ -79,15 +78,18 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
     private val useOpenSsl by boolean().optional().withDefaultValue(Defaults.useOpenSsl)
     private val graphiteOptions by nested(GraphiteOptionsSpec).optional()
     private val enterpriseConfiguration by nested(EnterpriseConfigurationSpec)
+    @Suppress("unused")
+    private val systemProperties by nestedObject().optional()
 
     override fun parseValid(configuration: Config, options: Configuration.Options): Valid<NodeConfiguration> {
         val config = configuration.withOptions(options)
         val messagingServerExternal = config[messagingServerExternal] ?: Defaults.messagingServerExternal(config[messagingServerAddress])
         val database = config[database] ?: Defaults.database(config[devMode])
-        val cordappDirectories = config[cordappDirectories] ?: Defaults.cordappsDirectories(config[baseDirectory])
+        val baseDirectoryPath = config[baseDirectory]
+        val cordappDirectories = config[cordappDirectories] ?: Defaults.cordappsDirectories(baseDirectoryPath)
         val result = try {
             valid<NodeConfigurationImpl, Configuration.Validation.Error>(NodeConfigurationImpl(
-                    baseDirectory = config[baseDirectory],
+                    baseDirectory = baseDirectoryPath,
                     myLegalName = config[myLegalName],
                     emailAddress = config[emailAddress],
                     p2pAddress = config[p2pAddress],
@@ -131,12 +133,13 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
                     attachmentContentCacheSizeMegaBytes = config[attachmentContentCacheSizeMegaBytes],
                     h2port = config[h2port],
                     jarDirs = config[jarDirs],
-                    cordappDirectories = cordappDirectories,
+                    cordappDirectories = cordappDirectories.map { baseDirectoryPath.resolve(it) },
                     cordappSignerKeyFingerprintBlacklist = config[cordappSignerKeyFingerprintBlacklist],
                     cryptoServiceName = config[cryptoServiceName],
                     cryptoServiceConf = config[cryptoServiceConf],
                     freshIdentitiesConfiguration = config[freshIdentitiesConfiguration],
                     disableFreshIdentitiesWarning = config[disableFreshIdentitiesWarning],
+                    cryptoServiceTimeout = config[cryptoServiceTimeout],
                     relay = config[relay],
                     enableSNI = config[enableSNI],
                     useOpenSsl = config[useOpenSsl],

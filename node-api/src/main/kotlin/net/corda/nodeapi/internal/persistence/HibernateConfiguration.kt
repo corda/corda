@@ -243,6 +243,9 @@ class HibernateConfiguration(
 
     //Enterprise only check
     private fun isNonStopSqlMxDatabase(jdbcUrl: String) = jdbcUrl.contains(":t4sqlmx:") || jdbcUrl.contains(":sqlmx:")
+
+    // Enterprise only: allow batching the vault update query for consumed states to avoid overloading SQLServer
+    val vaultUpdateBatchSize: Int? = databaseConfig.vaultUpdateBatchSize ?: if (jdbcUrl.contains(":sqlserver:")) 40 else null
 }
 
 /** Allow Oracle database drivers ojdbc7.jar and ojdbc8.jar to deserialize classes from oracle.sql.converter package. */

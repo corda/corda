@@ -58,7 +58,7 @@ later is often as simple as adding an additional property to your class definiti
 
 Defining IOUState
 -----------------
-Let's get started by opening ``TemplateState.java`` (for Java) or ``StatesAndContracts.kt`` (for Kotlin) and updating
+Let's get started by opening ``TemplateState.java`` (for Java) or ``TemplateState.kt`` (for Kotlin) and updating
 ``TemplateState`` to define an ``IOUState``:
 
 .. container:: codeset

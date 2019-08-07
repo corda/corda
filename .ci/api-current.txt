@@ -1537,8 +1537,6 @@ public final class net.corda.core.crypto.CordaSecurityProvider extends java.secu
 public static final class net.corda.core.crypto.CordaSecurityProvider$Companion extends java.lang.Object
   public <init>(kotlin.jvm.internal.DefaultConstructorMarker)
 ##
-public final class net.corda.core.crypto.CordaSecurityProviderKt extends java.lang.Object
-##
 public final class net.corda.core.crypto.Crypto extends java.lang.Object
   @NotNull
   public static final java.security.PrivateKey decodePrivateKey(String, byte[])
@@ -2897,7 +2895,7 @@ public abstract class net.corda.core.identity.AbstractParty extends java.lang.Ob
 ##
 @DoNotImplement
 @CordaSerializable
-public final class net.corda.core.identity.AnonymousParty extends net.corda.core.identity.AbstractParty
+public final class net.corda.core.identity.AnonymousParty extends net.corda.core.identity.AbstractParty implements net.corda.core.flows.Destination
   public <init>(java.security.PublicKey)
   @Nullable
   public net.corda.core.identity.CordaX500Name nameOrNull()
@@ -2978,7 +2976,7 @@ public final class net.corda.core.identity.IdentityUtils extends java.lang.Objec
 ##
 @DoNotImplement
 @CordaSerializable
-public final class net.corda.core.identity.Party extends net.corda.core.identity.AbstractParty
+public final class net.corda.core.identity.Party extends net.corda.core.identity.AbstractParty implements net.corda.core.flows.Destination
   public <init>(java.security.cert.X509Certificate)
   public <init>(net.corda.core.identity.CordaX500Name, java.security.PublicKey)
   @NotNull

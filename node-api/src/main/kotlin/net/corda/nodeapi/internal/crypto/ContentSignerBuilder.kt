@@ -36,9 +36,18 @@ object ContentSignerBuilder {
     }
 
     private class SignatureOutputStream(private val sig: Signature) : OutputStream() {
-        internal val signature: ByteArray get() = sig.sign()
-        override fun write(bytes: ByteArray, off: Int, len: Int) = sig.update(bytes, off, len)
-        override fun write(bytes: ByteArray) = sig.update(bytes)
-        override fun write(b: Int) = sig.update(b.toByte())
+        private var alreadySigned = false
+        internal val signature: ByteArray by lazy {
+            try {
+                alreadySigned = true
+                sig.sign();
+            } finally {
+                Instances.releaseSignatureInstance(sig);
+            }
+        }
+        private fun checkNotSigned(func: () -> Unit) { if (alreadySigned) throw IllegalStateException("Cannot write to already signed object"); func()}
+        override fun write(bytes: ByteArray, off: Int, len: Int) = checkNotSigned { sig.update(bytes, off, len) }
+        override fun write(bytes: ByteArray) = checkNotSigned { sig.update(bytes) }
+        override fun write(b: Int) = checkNotSigned { sig.update(b.toByte()) }
     }
 }

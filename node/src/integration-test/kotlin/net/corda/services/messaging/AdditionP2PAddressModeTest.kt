@@ -31,7 +31,7 @@ class AdditionP2PAddressModeTest : IntegrationTest() {
         val databaseSchemas = IntegrationTestSchemas(DUMMY_BANK_A_NAME, DUMMY_BANK_B_NAME, DUMMY_NOTARY_NAME)
     }
 
-    private val portAllocation = incrementalPortAllocation(27182)
+    private val portAllocation = incrementalPortAllocation()
     @Test
     fun `runs nodes with one configured to use additionalP2PAddresses`() {
         val testUser = User("test", "test", setOf(all()))

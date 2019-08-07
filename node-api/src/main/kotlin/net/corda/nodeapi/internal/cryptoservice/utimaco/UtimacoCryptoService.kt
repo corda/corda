@@ -28,7 +28,11 @@ import kotlin.reflect.full.memberProperties
 /**
  * Implementation of CryptoService for the Utimaco HSM.
  */
-class UtimacoCryptoService(private val cryptoServerProvider: CryptoServerProvider, private val config: UtimacoConfig, private val auth: () -> UtimacoCredentials) : CryptoService {
+class UtimacoCryptoService(
+        private val cryptoServerProvider: CryptoServerProvider,
+        private val config: UtimacoConfig,
+        private val auth: () -> UtimacoCredentials
+) : CryptoService {
 
     private val keyStore: KeyStore
     private val keyTemplate: CryptoServerCXI.KeyAttributes

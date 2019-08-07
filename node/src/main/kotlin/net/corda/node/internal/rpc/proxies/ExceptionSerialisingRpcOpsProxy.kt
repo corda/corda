@@ -1,18 +1,13 @@
 package net.corda.node.internal.rpc.proxies
 
 import net.corda.core.CordaRuntimeException
-import net.corda.core.CordaThrowable
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.doOnError
 import net.corda.core.internal.concurrent.doOnError
 import net.corda.core.internal.concurrent.mapError
+import net.corda.core.internal.messaging.InternalCordaRPCOps
 import net.corda.core.mapErrors
-import net.corda.core.messaging.CordaRPCOps
-import net.corda.core.messaging.DataFeed
-import net.corda.core.messaging.FlowHandle
-import net.corda.core.messaging.FlowHandleImpl
-import net.corda.core.messaging.FlowProgressHandle
-import net.corda.core.messaging.FlowProgressHandleImpl
+import net.corda.core.messaging.*
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.loggerFor
 import net.corda.node.internal.InvocationHandlerTemplate
@@ -20,17 +15,17 @@ import rx.Observable
 import java.lang.reflect.Method
 import java.lang.reflect.Proxy.newProxyInstance
 
-internal class ExceptionSerialisingRpcOpsProxy(private val delegate: CordaRPCOps, doLog: Boolean) : CordaRPCOps by proxy(delegate, doLog) {
+internal class ExceptionSerialisingRpcOpsProxy(private val delegate: InternalCordaRPCOps, doLog: Boolean) : InternalCordaRPCOps by proxy(delegate, doLog) {
     private companion object {
         private val logger = loggerFor<ExceptionSerialisingRpcOpsProxy>()
 
-        private fun proxy(delegate: CordaRPCOps, doLog: Boolean): CordaRPCOps {
+        private fun proxy(delegate: InternalCordaRPCOps, doLog: Boolean): InternalCordaRPCOps {
             val handler = ErrorSerialisingInvocationHandler(delegate, doLog)
-            return newProxyInstance(delegate::class.java.classLoader, arrayOf(CordaRPCOps::class.java), handler) as CordaRPCOps
+            return newProxyInstance(delegate::class.java.classLoader, arrayOf(InternalCordaRPCOps::class.java), handler) as InternalCordaRPCOps
         }
     }
 
-    private class ErrorSerialisingInvocationHandler(override val delegate: CordaRPCOps, private val doLog: Boolean) : InvocationHandlerTemplate {
+    private class ErrorSerialisingInvocationHandler(override val delegate: InternalCordaRPCOps, private val doLog: Boolean) : InvocationHandlerTemplate {
         override fun invoke(proxy: Any, method: Method, arguments: Array<out Any?>?): Any? {
             try {
                 val result = super.invoke(proxy, method, arguments)
@@ -83,11 +78,6 @@ internal class ExceptionSerialisingRpcOpsProxy(private val delegate: CordaRPCOps
             } else {
                 log(error)
                 CordaRuntimeException(error.message, error)
-            }
-
-            if (result is CordaThrowable) {
-                result.stackTrace = arrayOf<StackTraceElement>()
-                result.setCause(null)
             }
             return result
         }

@@ -20,7 +20,10 @@ requires its own database for the node state, since the notary workers are
 Corda nodes with extra notary capabilities that use the flow framework for
 communication.
 
-This guide assumes you're running a Debian-based Linux OS.
+This guide assumes you're running a Debian-based Linux OS. See the 
+`Percona documentation <https://www.percona.com/doc/percona-xtradb-cluster/LATEST/index.html>`__ for a full list of 
+supported operating systems.
+
 
 Double curly braces ``{{ }}`` are used to represent placeholder values
 throughout this guide.

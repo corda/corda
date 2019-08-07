@@ -49,7 +49,7 @@ class UtimacoNodeRegistrationTest : IntegrationTest() {
     @JvmField
     val testSerialization = SerializationEnvironmentRule(true)
 
-    private val portAllocation = incrementalPortAllocation(13400)
+    private val portAllocation = incrementalPortAllocation()
 
     @Rule
     @JvmField

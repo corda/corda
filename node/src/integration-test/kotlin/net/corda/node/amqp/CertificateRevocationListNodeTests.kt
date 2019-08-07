@@ -56,7 +56,7 @@ class CertificateRevocationListNodeTests {
     private val ROOT_CA = DEV_ROOT_CA
     private lateinit var INTERMEDIATE_CA: CertificateAndKeyPair
 
-    private val portAllocation = incrementalPortAllocation(10000)
+    private val portAllocation = incrementalPortAllocation()
     private val serverPort = portAllocation.nextPort()
 
     private lateinit var server: CrlServer

@@ -118,7 +118,7 @@ class NetworkMapHttpProxyTest {
     private lateinit var server: NetworkMapServer
     private lateinit var serverAddress: NetworkHostAndPort
 
-    private val portAllocator = incrementalPortAllocation(12023)
+    private val portAllocator = incrementalPortAllocation()
     private val httpProxyPort = portAllocator.nextPort()
     private val serverPort = portAllocator.nextPort()
     private val httpProxy: Server = reverseJettyProxy()

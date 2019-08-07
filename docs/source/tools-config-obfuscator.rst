@@ -64,6 +64,15 @@ of the command:
 
 Note also that ``HARDWARE_ADDRESS`` and ``SEED`` are optional.
 
+.. note::
+
+	The tool works on both HOCON and JSON files. Include directives (i.e. ``include "other.conf"``) are not followed by the tool. If you wish to obfuscate fields in multiple files, you will need to run the tool against each file individually. The node will de-obfuscate the included files automatically.
+
+
+.. warning::
+
+	The Corda Enterprise Network Manager (https://docs.cenm.r3.com/) does not currently support obfuscated configurations.
+
 
 Configuration directives
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -121,8 +130,13 @@ For instance:
       // (...)
     }
 
-.. note::
+Limitations
+~~~~~~~~~~~
 
-    The ``<encrypt{}>`` blocks can only appear inside string properties. Otherwise, the node will not be able
-    to decipher the obfuscated content. More explicitly, this means that the blocks can only appear on the right
-    hand-side of the colon, and for string properties only.
+
+* The ``<encrypt{}>`` blocks can only appear inside string properties. They cannot be used to obfuscate entire 
+  configuration blocks. Otherwise, the node will not be able to decipher the obfuscated content. More explicitly, 
+  this means that the blocks can only appear on the right hand-side of the colon, and for string properties only
+* The Configuration Obfuscator tool is only suitable for bare-metal deployments. It is not suitable for environments 
+  where MAC addresses change regularly, such as inside Docker. In containerised environments, the 'secrets' service 
+  of the container platform should be used instead, with the secrets passed in via environment variables

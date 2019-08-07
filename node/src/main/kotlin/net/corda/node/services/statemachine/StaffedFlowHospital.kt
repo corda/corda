@@ -11,9 +11,11 @@ import net.corda.core.messaging.DataFeed
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.seconds
 import net.corda.node.services.FinalityHandler
+import net.corda.nodeapi.internal.cryptoservice.CryptoServiceException
 import org.hibernate.exception.ConstraintViolationException
 import rx.subjects.PublishSubject
 import java.sql.SQLException
+import java.sql.SQLTransientConnectionException
 import java.time.Duration
 import java.time.Instant
 import java.util.*
@@ -37,7 +39,18 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
                           private val enableSessionInitTreatment: Boolean = true) {
     private companion object {
         private val log = contextLogger()
-        private val staff = listOf(DeadlockNurse, DuplicateInsertSpecialist, DoctorTimeout, FinalityDoctor)
+        private val staff = listOf(
+                DeadlockNurse,
+                DuplicateInsertSpecialist,
+                DoctorTimeout,
+                CryptoServiceDoctor,
+                FinalityDoctor,
+                TransientConnectionCardiologist
+        )
+    }
+
+    init {
+        log.info("Initializing Flow Hospital. Session initialization error treatment ${if (enableSessionInitTreatment) "enabled" else "disabled"}." )
     }
 
     init {
@@ -284,8 +297,7 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
         }
 
         private fun mentionsDeadlock(exception: Throwable?): Boolean {
-            return exception != null && (exception is SQLException && ((exception.message?.toLowerCase()?.contains("deadlock")
-                    ?: false)) || mentionsDeadlock(exception.cause))
+            return exception.mentionsThrowable(SQLException::class.java, "deadlock")
         }
     }
 
@@ -294,15 +306,11 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
      */
     object DuplicateInsertSpecialist : Staff {
         override fun consult(flowFiber: FlowFiber, currentState: StateMachineState, newError: Throwable, history: FlowMedicalHistory): Diagnosis {
-            return if (mentionsConstraintViolation(newError) && history.notDischargedForTheSameThingMoreThan(3, this, currentState)) {
+            return if (newError.mentionsThrowable(ConstraintViolationException::class.java) && history.notDischargedForTheSameThingMoreThan(3, this, currentState)) {
                 Diagnosis.DISCHARGE
             } else {
                 Diagnosis.NOT_MY_SPECIALTY
             }
-        }
-
-        private fun mentionsConstraintViolation(exception: Throwable?): Boolean {
-            return exception != null && (exception is ConstraintViolationException || mentionsConstraintViolation(exception.cause))
         }
     }
 
@@ -316,6 +324,24 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
                 return Diagnosis.DISCHARGE
             }
             return Diagnosis.NOT_MY_SPECIALTY
+        }
+    }
+
+    /**
+     * Restarts [TimedFlow], keeping track of the number of retries and making sure it does not
+     * exceed the limit specified by the [FlowTimeoutException].
+     */
+    object CryptoServiceDoctor : Staff {
+        override fun consult(flowFiber: FlowFiber, currentState: StateMachineState, newError: Throwable, history: FlowMedicalHistory): Diagnosis {
+            return if (newError is CryptoServiceException && newError.isRecoverable) {
+                if (history.notDischargedForTheSameThingMoreThan(2, this, currentState)) {
+                    Diagnosis.DISCHARGE
+                } else {
+                    Diagnosis.NOT_MY_SPECIALTY
+                }
+            } else {
+                Diagnosis.NOT_MY_SPECIALTY
+            }
         }
     }
 
@@ -372,4 +398,37 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
         }
 
     }
+
+    /**
+     * [SQLTransientConnectionException] detection that arise from failing to connect the underlying database/datasource
+     */
+    object TransientConnectionCardiologist : Staff {
+        override fun consult(flowFiber: FlowFiber, currentState: StateMachineState, newError: Throwable, history: FlowMedicalHistory): Diagnosis {
+            return if (mentionsTransientConnection(newError)) {
+                if (history.notDischargedForTheSameThingMoreThan(2, this, currentState)) {
+                    Diagnosis.DISCHARGE
+                } else {
+                    Diagnosis.OVERNIGHT_OBSERVATION
+                }
+            } else {
+                Diagnosis.NOT_MY_SPECIALTY
+            }
+        }
+
+        private fun mentionsTransientConnection(exception: Throwable?): Boolean {
+            return exception.mentionsThrowable(SQLTransientConnectionException::class.java, "connection is not available")
+        }
+    }
+}
+
+private fun <T : Throwable> Throwable?.mentionsThrowable(exceptionType: Class<T>, errorMessage: String? = null): Boolean {
+    if (this == null) {
+        return false
+    }
+    val containsMessage = if (errorMessage != null) {
+        message?.toLowerCase()?.contains(errorMessage) ?: false
+    } else {
+        true
+    }
+    return (exceptionType.isAssignableFrom(this::class.java) && containsMessage) || cause.mentionsThrowable(exceptionType, errorMessage)
 }

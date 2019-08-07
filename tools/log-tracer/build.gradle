@@ -1,0 +1,29 @@
+apply plugin: 'kotlin'
+apply plugin: 'net.corda.plugins.publish-utils'
+apply plugin: 'com.jfrog.artifactory'
+
+defaultTasks 'run'
+
+dependencies {
+  compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+
+  compile "io.jaegertracing:jaeger-core:$jaeger_version"
+  compile "io.jaegertracing:jaeger-thrift:$jaeger_version"
+  compile "io.opentracing:opentracing-api:$opentracing_version"
+  compile "io.opentracing:opentracing-util:$opentracing_version"
+
+  compile "org.slf4j:slf4j-api:$slf4j_version"
+  runtime "org.slf4j:slf4j-nop:$slf4j_version"
+
+  testCompile 'junit:junit:4.12'
+  testCompile "org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version"
+}
+
+jar {
+  manifest { attributes 'Main-Class': 'net.corda.tracelog.ProgramKt' }
+  from { configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
+}
+
+publish {
+  name 'corda-tools-log-tracer'
+}

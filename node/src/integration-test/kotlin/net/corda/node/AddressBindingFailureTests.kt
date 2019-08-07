@@ -28,7 +28,7 @@ class AddressBindingFailureTests: IntegrationTest() {
         @JvmField
         val databaseSchemas = IntegrationTestSchemas(ALICE_NAME, BOB_NAME, DUMMY_BANK_A_NAME)
 
-        private val portAllocation = incrementalPortAllocation(20_000)
+        private val portAllocation = incrementalPortAllocation()
     }
 
     @Test

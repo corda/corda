@@ -23,7 +23,12 @@ import java.util.concurrent.ConcurrentMap
 import javax.security.auth.callback.PasswordCallback
 import javax.security.auth.x500.X500Principal
 
-class FutureXCryptoService(keyStore: KeyStore, provider: SunPKCS11, x500Principal: X500Principal = DUMMY_X500_PRINCIPAL, private val auth: () -> FutureXConfiguration) : JCACryptoService(keyStore, provider, x500Principal) {
+class FutureXCryptoService(
+        keyStore: KeyStore,
+        provider: SunPKCS11,
+        x500Principal: X500Principal = DUMMY_X500_PRINCIPAL,
+        private val auth: () -> FutureXConfiguration
+) : JCACryptoService(keyStore, provider, x500Principal) {
 
     private val cachedKeyHandles: ConcurrentMap<String, PrivateKey> = ConcurrentHashMap()
 

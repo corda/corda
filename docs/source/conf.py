@@ -23,7 +23,9 @@ corda_substitutions = {
     "|kotlin_version|" : constants_properties_dict["kotlinVersion"],
     "|gradle_plugins_version|" : constants_properties_dict["gradlePluginsVersion"],
     "|quasar_version|" : constants_properties_dict["quasarVersion"],
-    "|platform_version|" : constants_properties_dict["platformVersion"]
+    "|platform_version|" : constants_properties_dict["platformVersion"],
+    "|os_branch|" : constants_properties_dict["openSourceBranch"],
+    "|os_samples_branch|" : constants_properties_dict["openSourceSamplesBranch"]
 }
 
 def setup(app):
@@ -98,9 +100,9 @@ language = None
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns = ['./design/README.md']
+exclude_patterns = ['design/README.md']
 if tags.has('pdfmode'):
-    exclude_patterns = ['./design', './design/README.md']
+    exclude_patterns = ['design', 'design/README.md']
 
 # The reST default role (used for this markup: `text`) to use for all
 # documents.
@@ -141,13 +143,18 @@ html_theme = "sphinx_rtd_theme"
 
 html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
 
-html_add_permalinks = True
+# html_add_permalinks = True
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
-# html_theme_options = {}
 
+html_theme_options = {
+    'includehidden':True,
+    'collapse_navigation':False,
+    'sticky_navigation':True,
+    'titles_only':True
+}
 # Add any paths that contain custom themes here, relative to this directory.
 # html_theme_path = []
 

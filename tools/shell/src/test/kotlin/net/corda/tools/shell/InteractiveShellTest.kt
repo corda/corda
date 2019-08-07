@@ -18,7 +18,7 @@ import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.openFuture
-import net.corda.core.messaging.CordaRPCOps
+import net.corda.core.internal.messaging.InternalCordaRPCOps
 import net.corda.core.messaging.FlowProgressHandleImpl
 import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.NetworkHostAndPort
@@ -41,7 +41,7 @@ import kotlin.test.assertFailsWith
 
 class InteractiveShellTest {
     lateinit var inputObjectMapper: ObjectMapper
-    lateinit var cordaRpcOps: CordaRPCOps
+    lateinit var cordaRpcOps: InternalCordaRPCOps
     lateinit var invocationContext: InvocationContext<Map<Any, Any>>
     lateinit var printWriter: RenderPrintWriter
 
@@ -154,7 +154,7 @@ class InteractiveShellTest {
 
     @Test
     fun flowStartWithArrayType() = check(
-            input = "b: [ One, Two, Three, Four ]",
+            input = "c: [ One, Two, Three, Four ]",
             expected = "One+Two+Three+Four"
     )
 
@@ -174,7 +174,7 @@ class InteractiveShellTest {
     fun flowStartNoArgs() = check("", "")
 
     @Test(expected = InteractiveShell.NoApplicableConstructor::class)
-    fun flowMissingParam() = check("c: Yo", "")
+    fun flowMissingParam() = check("d: Yo", "")
 
     @Test(expected = InteractiveShell.NoApplicableConstructor::class)
     fun flowTooManyParams() = check("b: 12, c: Yo, d: Bar", "")
@@ -190,7 +190,7 @@ class InteractiveShellTest {
                 "[pair: Pair<Amount<Currency>, SecureHash.SHA256>]: missing parameter pair",
                 "[party: Party]: missing parameter party",
                 "[b: Integer, amount: Amount<UserValue>]: missing parameter b",
-                "[b: String[]]: missing parameter b",
+                "[c: String[]]: missing parameter c",
                 "[b: Integer, c: String]: missing parameter b",
                 "[a: String]: missing parameter a",
                 "[b: Integer]: missing parameter b"
@@ -275,7 +275,7 @@ class FlowA(val a: String) : FlowLogic<String>() {
     constructor(pair: Pair<Amount<Currency>, SecureHash.SHA256>) : this(pair.toString())
     constructor(party: Party) : this(party.name.toString())
     constructor(b: Int?, amount: Amount<UserValue>) : this("${(b ?: 0) + amount.quantity} ${amount.token}")
-    constructor(b: Array<String>) : this(b.joinToString("+"))
+    constructor(c: Array<String>) : this(c.joinToString("+"))
     constructor(amounts: Array<Amount<UserValue>>) : this(amounts.joinToString("++", transform = Amount<UserValue>::toString))
 
     override val progressTracker = ProgressTracker()

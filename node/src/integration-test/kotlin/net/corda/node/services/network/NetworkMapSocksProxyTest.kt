@@ -71,7 +71,7 @@ class NetworkMapSocksProxyTest {
     private val cacheTimeout = 100000.seconds
     private val myHostname = InetAddress.getLocalHost().hostName
 
-    private val portAllocator = incrementalPortAllocation(12034)
+    private val portAllocator = incrementalPortAllocation()
     private val socksProxyPort = portAllocator.nextPort()
     private val serverPort = portAllocator.nextPort()
 

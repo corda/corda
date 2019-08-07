@@ -63,7 +63,6 @@ class NodeSchemaService(private val extraSchemas: Set<MappedSchema> = emptySet()
     fun internalSchemas() = requiredSchemas.keys + extraSchemas.filter { schema -> // when mapped schemas from the finance module are present, they are considered as internal ones
         schema::class.qualifiedName == "net.corda.finance.schemas.CashSchemaV1" ||
                 schema::class.qualifiedName == "net.corda.finance.schemas.CommercialPaperSchemaV1" ||
-                schema::class.qualifiedName == "net.corda.node.services.transactions.NodeNotarySchemaV1" ||
                 schema::class.qualifiedName?.startsWith("net.corda.notary.") ?: false
     }
 

@@ -9,7 +9,6 @@ import net.corda.common.validation.internal.Validated.Companion.invalid
 import net.corda.common.validation.internal.Validated.Companion.valid
 import net.corda.core.context.AuthServiceId
 import net.corda.core.internal.notary.NotaryServiceFlow
-import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.services.config.*
 import net.corda.node.services.config.SecurityConfiguration.AuthService.Companion.defaultAuthServiceId
 import net.corda.node.services.config.Valid
@@ -129,7 +128,6 @@ internal object NetworkServicesConfigSpec : Configuration.Specification<NetworkS
     private val proxyAddress by string().mapValid(::toNetworkHostAndPort).optional()
     private val proxyUser by string().optional()
     private val proxyPassword by string(sensitive = true).optional()
-
 
     override fun parseValid(configuration: Config, options: Configuration.Options): Valid<NetworkServicesConfig> {
         val config = configuration.withOptions(options)

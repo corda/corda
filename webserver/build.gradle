@@ -29,11 +29,12 @@ dependencies {
     compile project(':client:rpc')
     compile project(':client:jackson')
     compile project(':tools:cliutils')
+    compile project(":common-logging")
 
     // Web stuff: for HTTP[S] servlets
     compile "org.eclipse.jetty:jetty-servlet:$jetty_version"
     compile "org.eclipse.jetty:jetty-webapp:$jetty_version"
-    compile "javax.servlet:javax.servlet-api:3.1.0"
+    compile "javax.servlet:javax.servlet-api:${servlet_version}"
     compile "commons-fileupload:commons-fileupload:$fileupload_version"
 
     // Log4J: logging framework (with SLF4J bindings)
@@ -53,14 +54,20 @@ dependencies {
     compile "org.glassfish.jersey.media:jersey-media-json-jackson:$jersey_version"
 
     // For rendering the index page.
-    compile "org.jetbrains.kotlinx:kotlinx-html-jvm:0.6.3"
+    compile "org.jetbrains.kotlinx:kotlinx-html-jvm:0.6.12"
 
     // Capsule is a library for building independently executable fat JARs.
     // We only need this dependency to compile our Caplet against.
     compileOnly "co.paralleluniverse:capsule:$capsule_version"
 
     integrationTestCompile project(':node-driver')
-    testCompile "junit:junit:$junit_version"
+
+    testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
+    testImplementation "junit:junit:$junit_version"
+
+    testRuntimeOnly "org.junit.vintage:junit-vintage-engine:${junit_vintage_version}"
+    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${junit_jupiter_version}"
+    testRuntimeOnly "org.junit.platform:junit-platform-launcher:${junit_platform_version}"
 }
 
 task integrationTest(type: Test) {

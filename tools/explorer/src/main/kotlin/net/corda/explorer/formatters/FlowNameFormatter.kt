@@ -1,6 +1,6 @@
 package net.corda.explorer.formatters
 
-import org.apache.commons.lang.StringUtils.splitByCharacterTypeCamelCase
+import org.apache.commons.lang3.StringUtils.splitByCharacterTypeCamelCase
 
 object FlowNameFormatter {
     val camelCase = object : Formatter<String> {

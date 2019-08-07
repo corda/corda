@@ -21,10 +21,11 @@ dependencies {
     // Compile against the deterministic artifacts to ensure that we use only the deterministic API subset.
     compileOnly configurations.deterministicArtifacts
     api "junit:junit:$junit_version"
+    runtimeOnly "org.junit.vintage:junit-vintage-engine:$junit_vintage_version"
 }
 
 jar {
-    baseName 'corda-deterministic-verifier'
+    archiveBaseName = 'corda-deterministic-verifier'
 }
 
 artifacts {
@@ -35,8 +36,10 @@ artifacts {
 
 publish {
     // Our published POM will contain dependencies on the non-deterministic Corda artifacts.
-    dependenciesFrom configurations.runtimeArtifacts
-    name jar.baseName
+    dependenciesFrom(configurations.runtimeArtifacts) {
+        defaultScope = 'compile'
+    }
+    name jar.archiveBaseName.get()
 }
 
 idea {

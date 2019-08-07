@@ -87,7 +87,8 @@ data class NodeConfigurationImpl(
         override val cryptoServiceConf: Path? = Defaults.cryptoServiceConf,
         override val networkParameterAcceptanceSettings: NetworkParameterAcceptanceSettings = Defaults.networkParameterAcceptanceSettings,
         override val freshIdentitiesConfiguration: FreshIdentitiesConfiguration? = null,
-        override val disableFreshIdentitiesWarning: Boolean = false
+        override val disableFreshIdentitiesWarning: Boolean = false,
+        override val cryptoServiceTimeout: Duration = Defaults.cryptoServiceTimeout
 ) : NodeConfiguration {
     internal object Defaults {
         val jmxMonitoringHttpPort: Int? = null
@@ -124,6 +125,7 @@ data class NodeConfigurationImpl(
         val useOpenSsl: Boolean = false
         val cryptoServiceName: SupportedCryptoServices? = null
         val cryptoServiceConf: Path? = null
+        val cryptoServiceTimeout: Duration = Duration.ofSeconds(1)
         val networkParameterAcceptanceSettings: NetworkParameterAcceptanceSettings = NetworkParameterAcceptanceSettings()
         val masterKeyAlias = "wrapping-key-alias"
         val createDuringStartup = CreateWrappingKeyDuringStartup.YES
@@ -326,7 +328,7 @@ data class NodeConfigurationImpl(
         }
 
         if (networkServices != null && networkServices!!.proxyType != Proxy.Type.DIRECT && networkServices!!.proxyAddress == null) {
-            errors += "cannot enable network proxy by specifying 'networkServices.proxyType without providing 'networkServices.'proxyAddress'"
+            errors += "cannot enable network proxy by specifying 'networkServices.proxyType' without providing 'networkServices.proxyAddress'"
         }
 
         return errors

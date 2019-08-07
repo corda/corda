@@ -73,6 +73,8 @@ application development please continue to refer to `the main project documentat
 
 .. toctree::
     :maxdepth: 1
+    :hidden:
+    :titlesonly:
     :if_tag: htmlmode
 
    release-notes-enterprise.rst
@@ -107,12 +109,15 @@ application development please continue to refer to `the main project documentat
    troubleshooting.rst
 
 .. conditional-toctree::
+   :hidden:
+   :titlesonly:
    :caption: Corda Enterprise
    :maxdepth: 1
    :if_tag: htmlmode
 
    hot-cold-deployment
    node-database-intro
+   cryptoservice-configuration
    corda-firewall
    sizing-and-performance
    running-a-notary-cluster/toctree
@@ -120,6 +125,8 @@ application development please continue to refer to `the main project documentat
    tools-index-enterprise.rst
 
 .. conditional-toctree::
+   :hidden:
+   :titlesonly:
    :caption: Development
    :maxdepth: 1
    :if_tag: htmlmode
@@ -136,6 +143,8 @@ application development please continue to refer to `the main project documentat
    troubleshooting.rst
 
 .. conditional-toctree::
+   :hidden:
+   :titlesonly:
    :caption: Operations
    :maxdepth: 2
    :if_tag: htmlmode
@@ -154,6 +163,8 @@ application development please continue to refer to `the main project documentat
    :caption: Corda Network
    :maxdepth: 2
    :if_tag: htmlmode
+   :hidden:
+   :titlesonly:
 
    corda-network/index.md
    corda-network/UAT.md

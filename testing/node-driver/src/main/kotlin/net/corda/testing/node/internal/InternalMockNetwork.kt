@@ -249,10 +249,10 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
 
     @VisibleForTesting
     internal open fun createNotaries(): List<TestStartedNode> {
-        return notarySpecs.map { (name, validating) ->
+        return notarySpecs.map { spec ->
             createNode(InternalMockNodeParameters(
-                    legalName = name,
-                    configOverrides = { doReturn(NotaryConfig(validating)).whenever(it).notary }
+                    legalName = spec.name,
+                    configOverrides = { doReturn(NotaryConfig(spec.validating, className = spec.className)).whenever(it).notary }
             ))
         }
     }
@@ -382,11 +382,11 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
 
         // This is not thread safe, but node construction is done on a single thread, so that should always be fine
         override fun generateKeyPair(alias: String): PublicKey {
-            require(cryptoService is BCCryptoService) { "MockNode supports BCCryptoService only, but it is ${cryptoService.javaClass.name}" }
+            require(cryptoService.underlyingService is BCCryptoService) { "MockNode supports BCCryptoService only, but it is ${cryptoService.underlyingService.javaClass.name}" }
             counter = counter.add(BigInteger.ONE)
             // The StartedMockNode specifically uses EdDSA keys as they are fixed and stored in json files for some tests (e.g IRSSimulation).
             val keyPair = Crypto.deriveKeyPairFromEntropy(Crypto.EDDSA_ED25519_SHA512, counter)
-            (cryptoService as BCCryptoService).importKey(alias, keyPair)
+            (cryptoService.underlyingService as BCCryptoService).importKey(alias, keyPair)
             return keyPair.public
         }
 

@@ -129,7 +129,7 @@ class CreateMigrationSqlForCordappsCli : CliWrapperBase(CREATE_MIGRATION_CORDAPP
                 liquiBaseOutput = MigrationExporter(db.baseDirectory, db.config.dataSourceProperties, db.classLoader, it).generateMigrationForCorDapp(schemaClass)
             }
         } catch (e: Exception) {
-            wrappedError("Could not generate migration for $schemaClass: ${e.message}", e)
+            throw wrappedError("Could not generate migration for $schemaClass: ${e.message}", e)
         }
         return liquiBaseOutput
     }

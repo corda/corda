@@ -296,9 +296,18 @@ Further work is planned:
 Command-line Tool
 ~~~~~~~~~~~~~~~~~
 
-Open your terminal and navigate to the ``djvm`` directory in the Corda source tree. Then issue the following command:
+You can download and unpack ``corda-djvm-cli.zip`` from the R3 Artifactory.
+Alternatively, you can build it yourself from the source as follows.
 
-::
+Open your terminial and clone the DJVM repository from GitHub:
+
+:: shell
+
+  $ git clone https://github.com/corda/djvm
+
+Navigate to this newly created ``djvm`` directory, and then issue the following command:
+
+:: shell
 
   $ djvm/shell/install
 
@@ -306,7 +315,7 @@ Open your terminal and navigate to the ``djvm`` directory in the Corda source tr
 This will build the DJVM tool and install a shortcut on Bash-enabled systems. It will also generate a Bash completion
 file and store it in the ``shell`` folder. This file can be sourced from your Bash initialisation script.
 
-::
+:: shell
 
   $ cd ~
   $ djvm
@@ -314,7 +323,7 @@ file and store it in the ``shell`` folder. This file can be sourced from your Ba
 Now, you can create a new Java file from a skeleton that ``djvm`` provides, compile the file, and consequently run it
 by issuing the following commands:
 
-::
+:: shell
 
   $ djvm new Hello
   $ vim tmp/net/corda/sandbox/Hello.java

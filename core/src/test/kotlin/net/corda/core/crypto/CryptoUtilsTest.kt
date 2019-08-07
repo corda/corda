@@ -7,12 +7,7 @@ import net.corda.core.crypto.Crypto.EDDSA_ED25519_SHA512
 import net.corda.core.crypto.Crypto.RSA_SHA256
 import net.corda.core.crypto.Crypto.SPHINCS256_SHA256
 import net.corda.core.crypto.internal.PlatformSecureRandomService
-import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.OpaqueBytes
-import net.corda.nodeapi.internal.DEV_INTERMEDIATE_CA
-import net.corda.nodeapi.internal.DEV_ROOT_CA
-import net.corda.nodeapi.internal.crypto.CertificateType
-import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.i2p.crypto.eddsa.EdDSAKey
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import net.i2p.crypto.eddsa.EdDSAPublicKey
@@ -20,7 +15,7 @@ import net.i2p.crypto.eddsa.math.GroupElement
 import net.i2p.crypto.eddsa.spec.EdDSANamedCurveSpec
 import net.i2p.crypto.eddsa.spec.EdDSANamedCurveTable
 import net.i2p.crypto.eddsa.spec.EdDSAPublicKeySpec
-import org.apache.commons.lang.ArrayUtils.EMPTY_BYTE_ARRAY
+import org.apache.commons.lang3.ArrayUtils.EMPTY_BYTE_ARRAY
 import org.bouncycastle.asn1.pkcs.PrivateKeyInfo
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo
 import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPrivateKey
@@ -909,15 +904,6 @@ class CryptoUtilsTest {
         assertEquals("DL3Wr5EQGrMTaKBy5XMvG8rvSfKX1AYZLCRU8kixGbxt1E", keyPairBiggerThan512bits.public.toStringShort())
         val keyPairBiggerThan258bits = Crypto.deriveKeyPairFromEntropy(ECDSA_SECP256K1_SHA256, BigInteger("2").pow(259).plus(BigInteger.ONE))
         assertEquals("DL7NbssqvuuJ4cqFkkaVYu9j1MsVswESGgCfbqBS9ULwuM", keyPairBiggerThan258bits.public.toStringShort())
-    }
-
-    @Test
-    fun `crl distribution point is blacklisted`() {
-        val intermediateCert = X509Utilities.createCertificate(CertificateType.INTERMEDIATE_CA, DEV_ROOT_CA.certificate, DEV_ROOT_CA.keyPair, DEV_INTERMEDIATE_CA.certificate.subjectX500Principal, DEV_INTERMEDIATE_CA.keyPair.public, crlDistPoint = "http://r3-test.com/certificate-revocation-list/root")
-        val nodeCA = X509Utilities.createCertificate(CertificateType.NODE_CA, intermediateCert, DEV_INTERMEDIATE_CA.keyPair, CordaX500Name("Test", "London", "GB").x500Principal, generateKeyPair().public)
-        assertTrue {
-            isCRLDistributionPointBlacklisted(listOf(nodeCA, intermediateCert, DEV_ROOT_CA.certificate))
-        }
     }
 
     @Test

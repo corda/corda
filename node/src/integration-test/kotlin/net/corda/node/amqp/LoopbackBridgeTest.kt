@@ -49,7 +49,7 @@ class LoopbackBridgeTest(private val useOpenSsl: Boolean) {
     val temporaryFolder = TemporaryFolder()
     private val log = loggerFor<LoopbackBridgeTest>()
     private val BOB = TestIdentity(BOB_NAME)
-    private val portAllocation = incrementalPortAllocation(10000)
+    private val portAllocation = incrementalPortAllocation()
     private val artemisAddress = portAllocation.nextHostAndPort()
     private val amqpAddress = portAllocation.nextHostAndPort()
 

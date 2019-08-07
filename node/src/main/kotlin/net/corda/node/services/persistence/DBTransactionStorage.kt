@@ -30,6 +30,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.locks.ReentrantLock
 import javax.persistence.*
+import kotlin.streams.toList
 
 class DBTransactionStorage(private val database: CordaPersistence, cacheFactory: NamedCacheFactory) : WritableTransactionStorage, SingletonSerializeAsToken() {
 
@@ -272,7 +273,9 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
     val transactions: List<SignedTransaction> get() = database.transaction { snapshot() }
 
     private fun snapshot(): List<SignedTransaction> {
-        return txStorage.content.allPersisted().filter { it.second.status.isVerified() }.map { it.second.toSignedTx() }.toList()
+        return txStorage.content.allPersisted.use {
+            it.filter { it.second.status.isVerified() }.map { it.second.toSignedTx() }.toList()
+        }
     }
 
     // Cache value type to just store the immutable bits of a signed transaction plus conversion helpers

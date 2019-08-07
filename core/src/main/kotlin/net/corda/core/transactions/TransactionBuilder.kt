@@ -276,18 +276,19 @@ open class TransactionBuilder(
         // Filter out all contracts that might have been already used by 'normal' input or output states.
         val referenceStateGroups: Map<ContractClassName, List<TransactionState<ContractState>>> = referencesWithTransactionState.groupBy { it.contract }
         val refStateContractAttachments: List<AttachmentId> = referenceStateGroups
-                .filterNot { it.key in allContracts }
-                .map { refStateEntry ->
-                    selectAttachmentThatSatisfiesConstraints(true, refStateEntry.key, refStateEntry.value, emptySet(), services)
-                }
-
-        val contractClassNameToInputStateRef: Map<ContractClassName, Set<StateRef>> = inputsWithTransactionState.map { Pair(it.state.contract, it.ref) }
-                .groupBy { it.first }.mapValues { it.value.map { e -> e.second }.toSet() }
+            .filterNot { it.key in allContracts }
+            .map { refStateEntry ->
+                getInstalledContractAttachmentId(
+                    refStateEntry.key,
+                    refStateEntry.value,
+                    services
+                )
+            }
 
         // For each contract, resolve the AutomaticPlaceholderConstraint, and select the attachment.
         val contractAttachmentsAndResolvedOutputStates: List<Pair<AttachmentId, List<TransactionState<ContractState>>?>> = allContracts.toSet()
                 .map { ctr ->
-                    handleContract(ctr, inputContractGroups[ctr], contractClassNameToInputStateRef[ctr], outputContractGroups[ctr], explicitAttachmentContractsMap[ctr], services)
+                    handleContract(ctr, inputContractGroups[ctr], outputContractGroups[ctr], explicitAttachmentContractsMap[ctr], services)
                 }
 
         val resolvedStates: List<TransactionState<ContractState>> = contractAttachmentsAndResolvedOutputStates.mapNotNull { it.second }
@@ -321,12 +322,44 @@ open class TransactionBuilder(
     private fun handleContract(
             contractClassName: ContractClassName,
             inputStates: List<TransactionState<ContractState>>?,
-            inputStateRefs: Set<StateRef>?,
             outputStates: List<TransactionState<ContractState>>?,
             explicitContractAttachment: AttachmentId?,
             services: ServicesForResolution
     ): Pair<AttachmentId, List<TransactionState<ContractState>>?> {
         val inputsAndOutputs = (inputStates ?: emptyList()) + (outputStates ?: emptyList())
+
+        fun selectAttachment() = getInstalledContractAttachmentId(
+            contractClassName,
+            inputsAndOutputs.filterNot { it.constraint in automaticConstraints },
+            services
+        )
+
+        /*
+        This block handles the very specific code path where a [HashAttachmentConstraint] can
+        migrate to a [SignatureAttachmentConstraint]. If all the criteria is met, this function
+        will return early as the rest of the logic is no longer required.
+
+        This can only happen in a private network where all nodes have started with
+        a system parameter that disables the hash constraint check.
+        */
+        if (canMigrateFromHashToSignatureConstraint(inputStates, outputStates, services)) {
+            val attachmentId = selectAttachment()
+            val attachment = services.attachments.openAttachment(attachmentId)
+            require(attachment != null) { "Contract attachment $attachmentId for $contractClassName is missing." }
+            if ((attachment as ContractAttachment).isSigned && (explicitContractAttachment == null || explicitContractAttachment == attachment.id)) {
+                val signatureConstraint =
+                    makeSignatureAttachmentConstraint(attachment.signerKeys)
+                require(signatureConstraint.isSatisfiedBy(attachment)) { "Selected output constraint: $signatureConstraint not satisfying ${attachment.id}" }
+                val resolvedOutputStates = outputStates?.map {
+                    if (it.constraint in automaticConstraints) {
+                        it.copy(constraint = signatureConstraint)
+                    } else {
+                        it
+                    }
+                }
+                return attachment.id to resolvedOutputStates
+            }
+        }
 
         // Determine if there are any HashConstraints that pin the version of a contract. If there are, check if we trust them.
         val hashAttachments = inputsAndOutputs
@@ -353,13 +386,6 @@ open class TransactionBuilder(
 
         // This will contain the hash of the JAR that *has* to be used by this Transaction, because it is explicit. Or null if none.
         val forcedAttachmentId = explicitContractAttachment ?: hashAttachments.singleOrNull()?.id
-
-        fun selectAttachment() = selectAttachmentThatSatisfiesConstraints(
-                false,
-                contractClassName,
-                inputsAndOutputs.filterNot { it.constraint in automaticConstraints },
-                inputStateRefs,
-                services)
 
         // This will contain the hash of the JAR that will be used by this Transaction.
         val selectedAttachmentId = forcedAttachmentId ?: selectAttachment()
@@ -408,6 +434,25 @@ open class TransactionBuilder(
     }
 
     /**
+     * Checks whether the current transaction can migrate from a [HashAttachmentConstraint] to a
+     * [SignatureAttachmentConstraint]. This is only possible in very specific scenarios. Most
+     * importantly, [HashAttachmentConstraint.disableHashConstraints] must be set to `true` for
+     * any possibility of transition off of existing [HashAttachmentConstraint]s.
+     */
+    private fun canMigrateFromHashToSignatureConstraint(
+        inputStates: List<TransactionState<ContractState>>?,
+        outputStates: List<TransactionState<ContractState>>?,
+        services: ServicesForResolution
+    ): Boolean {
+        return HashAttachmentConstraint.disableHashConstraints
+                && services.networkParameters.minimumPlatformVersion >= 4
+                // `disableHashConstraints == true` therefore it does not matter if there are
+                // multiple input states with different hash constraints
+                && inputStates?.any { it.constraint is HashAttachmentConstraint } == true
+                && outputStates?.none { it.constraint is HashAttachmentConstraint } == true
+    }
+
+    /**
      * If there are multiple input states with different constraints then run the constraint intersection logic to determine the resulting output constraint.
      * For issuing transactions where the attachmentToUse is JarSigned, then default to the SignatureConstraint with all the signatures.
      * TODO - in the future this step can actually create a new ContractAttachment by merging 2 signed jars of the same version.
@@ -417,7 +462,7 @@ open class TransactionBuilder(
             inputStates: List<TransactionState<ContractState>>?,
             attachmentToUse: ContractAttachment,
             services: ServicesForResolution): AttachmentConstraint = when {
-        inputStates != null -> attachmentConstraintsTransition(inputStates.groupBy { it.constraint }.keys, attachmentToUse)
+        inputStates != null -> attachmentConstraintsTransition(inputStates.groupBy { it.constraint }.keys, attachmentToUse, services)
         attachmentToUse.signerKeys.isNotEmpty() && services.networkParameters.minimumPlatformVersion < 4 -> {
             log.warnOnce("Signature constraints not available on network requiring a minimum platform version of 4. Current is: ${services.networkParameters.minimumPlatformVersion}.")
             if (useWhitelistedByZoneAttachmentConstraint(contractClassName, services.networkParameters)) {
@@ -440,57 +485,64 @@ open class TransactionBuilder(
      *
      * TODO - once support for third party signing is added, it should be implemented here. ( a constraint with 2 signatures is less restrictive than a constraint with 1 more signature)
      */
-    private fun attachmentConstraintsTransition(constraints: Set<AttachmentConstraint>, attachmentToUse: ContractAttachment): AttachmentConstraint = when {
+    private fun attachmentConstraintsTransition(
+        constraints: Set<AttachmentConstraint>,
+        attachmentToUse: ContractAttachment,
+        services: ServicesForResolution
+    ): AttachmentConstraint = when {
 
         // Sanity check.
         constraints.isEmpty() -> throw IllegalArgumentException("Cannot transition from no constraints.")
 
-        // When all input states have the same constraint.
-        constraints.size == 1 -> constraints.single()
-
-        // Fail when combining the insecure AlwaysAcceptAttachmentConstraint with something else. The size must be at least 2 at this point.
-        constraints.any { it is AlwaysAcceptAttachmentConstraint } ->
+        // Fail when combining the insecure AlwaysAcceptAttachmentConstraint with something else.
+        constraints.size > 1 && constraints.any { it is AlwaysAcceptAttachmentConstraint } ->
             throw IllegalArgumentException("Can't mix the AlwaysAcceptAttachmentConstraint with a secure constraint in the same transaction. This can be used to hide insecure transitions.")
 
         // Multiple states with Hash constraints with different hashes. This should not happen as we checked already.
-        constraints.all { it is HashAttachmentConstraint } ->
+        constraints.size > 1 && constraints.all { it is HashAttachmentConstraint } ->
             throw IllegalArgumentException("Cannot mix HashConstraints with different hashes in the same transaction.")
 
         // The HashAttachmentConstraint is the strongest constraint, so it wins when mixed with anything. As long as the actual constraints pass.
-        // TODO - this could change if we decide to introduce a way to gracefully migrate from the Hash Constraint to the Signature Constraint.
+        // Migration from HashAttachmentConstraint to SignatureAttachmentConstraint is handled in [TransactionBuilder.handleContract]
+        // If we have reached this point, then no migration is possible and the existing HashAttachmentConstraint must be used
         constraints.any { it is HashAttachmentConstraint } -> constraints.find { it is HashAttachmentConstraint }!!
 
         // TODO, we don't currently support mixing signature constraints with different signers. This will change once we introduce third party signers.
-        constraints.all { it is SignatureAttachmentConstraint } ->
+        constraints.count { it is SignatureAttachmentConstraint } > 1 ->
             throw IllegalArgumentException("Cannot mix SignatureAttachmentConstraints signed by different parties in the same transaction.")
 
-        // This ensures a smooth migration from the Whitelist Constraint, given that for the transaction to be valid it still has to pass both constraints.
-        // The transition is possible only when the SignatureConstraint contains ALL signers from the attachment.
-        constraints.any { it is SignatureAttachmentConstraint } && constraints.any { it is WhitelistedByZoneAttachmentConstraint } -> {
-            val signatureConstraint = constraints.mapNotNull { it as? SignatureAttachmentConstraint }.single()
-            when {
-                attachmentToUse.signerKeys.isEmpty() -> throw IllegalArgumentException("Cannot mix a state with the WhitelistedByZoneAttachmentConstraint and a state with the SignatureAttachmentConstraint, when the latest attachment is not signed. Please contact your Zone operator.")
-                signatureConstraint.key.keys.containsAll(attachmentToUse.signerKeys) -> signatureConstraint
-                else -> throw IllegalArgumentException("Attempting to transition a WhitelistedByZoneAttachmentConstraint state backed by an attachment signed by multiple parties to a weaker SignatureConstraint that does not require all those signatures. Please contact your Zone operator.")
-            }
-        }
+        // This ensures a smooth migration from a Whitelist Constraint to a Signature Constraint
+        constraints.any { it is WhitelistedByZoneAttachmentConstraint } && attachmentToUse.isSigned && services.networkParameters.minimumPlatformVersion >= 4 -> transitionToSignatureConstraint(constraints, attachmentToUse)
+
+        // This condition is hit when the current node has not installed the latest signed version but has already received states that have been migrated
+        constraints.any { it is SignatureAttachmentConstraint } && !attachmentToUse.isSigned ->
+            throw IllegalArgumentException("Attempting to create an illegal transaction. Please install the latest signed version for the $attachmentToUse Cordapp.")
+
+        // When all input states have the same constraint.
+        constraints.size == 1 -> constraints.single()
 
         else -> throw IllegalArgumentException("Unexpected constraints $constraints.")
     }
 
+    private fun transitionToSignatureConstraint(constraints: Set<AttachmentConstraint>, attachmentToUse: ContractAttachment): SignatureAttachmentConstraint {
+        val signatureConstraint = constraints.singleOrNull { it is SignatureAttachmentConstraint } as? SignatureAttachmentConstraint
+        // If there were states transitioned already used in the current transaction use that signature constraint, otherwise create a new one.
+        return when {
+            signatureConstraint != null -> signatureConstraint
+            else -> makeSignatureAttachmentConstraint(attachmentToUse.signerKeys)
+        }
+    }
+
     private fun makeSignatureAttachmentConstraint(attachmentSigners: List<PublicKey>) =
-            SignatureAttachmentConstraint(CompositeKey.Builder().addKeys(attachmentSigners.map { it }).build())
+            SignatureAttachmentConstraint(CompositeKey.Builder().addKeys(attachmentSigners).build())
 
-    /**
-     * This method should only be called for upgradeable contracts.
-     */
-    private fun selectAttachmentThatSatisfiesConstraints(isReference: Boolean, contractClassName: String, states: List<TransactionState<ContractState>>, stateRefs: Set<StateRef>?, services: ServicesForResolution): AttachmentId {
-        val constraints = states.map { it.constraint }
-        require(constraints.none { it in automaticConstraints })
-        require(isReference || constraints.none { it is HashAttachmentConstraint })
-
+    private fun getInstalledContractAttachmentId(
+        contractClassName: String,
+        states: List<TransactionState<ContractState>>,
+        services: ServicesForResolution
+    ): AttachmentId {
         return services.cordappProvider.getContractAttachmentID(contractClassName)
-                ?: throw MissingContractAttachments(states, contractClassName)
+            ?: throw MissingContractAttachments(states, contractClassName)
     }
 
     private fun useWhitelistedByZoneAttachmentConstraint(contractClassName: ContractClassName, networkParameters: NetworkParameters) = contractClassName in networkParameters.whitelistedContractImplementations.keys
@@ -620,37 +672,38 @@ open class TransactionBuilder(
     /** Adds an output state, with associated contract code (and constraints), and notary, to the transaction. */
     @JvmOverloads
     fun addOutputState(
-            state: ContractState,
-            contract: ContractClassName = requireNotNull(state.requiredContractClassName) {
-                //TODO: add link to docsite page, when there is one.
-                """
-Unable to infer Contract class name because state class ${state::class.java.name} is not annotated with
-@BelongsToContract, and does not have an enclosing class which implements Contract. Either annotate ${state::class.java.name}
-with @BelongsToContract, or supply an explicit contract parameter to addOutputState().
-""".trimIndent().replace('\n', ' ')
-            },
-            notary: Party, encumbrance: Int? = null,
-            constraint: AttachmentConstraint = AutomaticPlaceholderConstraint
-    ) = addOutputState(TransactionState(state, contract, notary, encumbrance, constraint))
+        state: ContractState,
+        contract: ContractClassName = requireNotNullContractClassName(state),
+        notary: Party, encumbrance: Int? = null,
+        constraint: AttachmentConstraint = AutomaticPlaceholderConstraint
+    ): TransactionBuilder {
+        return addOutputState(TransactionState(state, contract, notary, encumbrance, constraint))
+    }
 
-    /** A default notary must be specified during builder construction to use this method */
+    /** Adds an output state. A default notary must be specified during builder construction to use this method */
     @JvmOverloads
     fun addOutputState(
-            state: ContractState,
-            contract: ContractClassName = requireNotNull(state.requiredContractClassName) {
-                //TODO: add link to docsite page, when there is one.
-                """
-Unable to infer Contract class name because state class ${state::class.java.name} is not annotated with
-@BelongsToContract, and does not have an enclosing class which implements Contract. Either annotate ${state::class.java.name}
-with @BelongsToContract, or supply an explicit contract parameter to addOutputState().
-""".trimIndent().replace('\n', ' ')
-            },
-            constraint: AttachmentConstraint = AutomaticPlaceholderConstraint
-    ) = apply {
-        checkNotNull(notary) {
-            "Need to specify a notary for the state, or set a default one on TransactionBuilder initialisation"
-        }
+        state: ContractState,
+        contract: ContractClassName = requireNotNullContractClassName(state),
+        constraint: AttachmentConstraint = AutomaticPlaceholderConstraint
+    ): TransactionBuilder {
+        checkNotNull(notary) { "Need to specify a notary for the state, or set a default one on TransactionBuilder initialisation" }
         addOutputState(state, contract, notary!!, constraint = constraint)
+        return this
+    }
+
+    /** Adds an output state with the specified constraint. */
+    fun addOutputState(state: ContractState, constraint: AttachmentConstraint): TransactionBuilder {
+        return addOutputState(state, requireNotNullContractClassName(state), constraint)
+    }
+
+    private fun requireNotNullContractClassName(state: ContractState) = requireNotNull(state.requiredContractClassName) {
+        //TODO: add link to docsite page, when there is one.
+        """
+        Unable to infer Contract class name because state class ${state::class.java.name} is not annotated with
+        @BelongsToContract, and does not have an enclosing class which implements Contract. Either annotate ${state::class.java.name}
+        with @BelongsToContract, or supply an explicit contract parameter to addOutputState().
+        """.trimIndent().replace('\n', ' ')
     }
 
     /** Adds a [Command] to the transaction. */

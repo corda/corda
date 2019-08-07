@@ -4,14 +4,15 @@ import io.netty.channel.unix.Errors
 import net.corda.cliutils.printError
 import net.corda.cliutils.CliWrapperBase
 import net.corda.cliutils.CordaCliWrapper
-import net.corda.cliutils.CordaVersionProvider
 import net.corda.cliutils.ExitCodes
+import net.corda.common.logging.CordaVersion
 import net.corda.core.contracts.HashAttachmentConstraint
 import net.corda.core.crypto.Crypto
 import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.internal.cordapp.CordappImpl
 import net.corda.core.internal.errors.AddressBindingException
+import net.corda.core.internal.safeSymbolicRead
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.loggerFor
@@ -39,6 +40,7 @@ import java.io.RandomAccessFile
 import java.lang.management.ManagementFactory
 import java.net.InetAddress
 import java.nio.channels.UnresolvedAddressException
+import java.nio.file.Files
 import java.nio.file.Path
 import java.time.DayOfWeek
 import java.time.ZonedDateTime
@@ -76,6 +78,24 @@ open class NodeStartupCli : CordaCliWrapper("corda", "Runs a Corda Node") {
     override fun initLogging(): Boolean = this.initLogging(cmdLineOptions.baseDirectory)
 
     override fun additionalSubCommands() = setOf(networkCacheCli, justGenerateNodeInfoCli, justGenerateRpcSslCertsCli, initialRegistrationCli, validateConfigurationCli)
+
+    override fun call(): Int {
+        if (!validateBaseDirectory()) {
+            return ExitCodes.FAILURE
+        }
+        return super.call()
+    }
+
+    private fun validateBaseDirectory(): Boolean {
+        //Ensure that the base directory actually exists before initialising and the rest of the node.
+        val baseDirectory = cmdLineOptions.baseDirectory
+
+        if (!baseDirectory.exists()) {
+            printError("Base directory $baseDirectory does not exist. Node will now shutdown")
+            return false
+        }
+        return true
+    }
 
     override fun runProgram(): Int {
         return when {
@@ -147,8 +167,10 @@ open class NodeStartup : NodeStartupLogging {
         Node.printBasicNodeInfo(LOGS_CAN_BE_FOUND_IN_STRING, System.getProperty("log-path"))
 
         // Step 5. Load and validate node configuration.
-        val rawConfig = cmdLineOptions.rawConfiguration().doOnErrors(cmdLineOptions::logRawConfigurationErrors).optional ?: return ExitCodes.FAILURE
-        val configuration = cmdLineOptions.parseConfiguration(rawConfig).doIfValid { logRawConfig(rawConfig) }.doOnErrors(::logConfigurationErrors).optional ?: return ExitCodes.FAILURE
+        val rawConfig = cmdLineOptions.rawConfiguration().doOnErrors(cmdLineOptions::logRawConfigurationErrors).optional
+                ?: return ExitCodes.FAILURE
+        val configuration = cmdLineOptions.parseConfiguration(rawConfig).doIfValid { logRawConfig(rawConfig) }.doOnErrors(::logConfigurationErrors).optional
+                ?: return ExitCodes.FAILURE
 
         // Step 6. Check if we can access the certificates directory
         if (requireCertificates && !canReadCertificatesDirectory(configuration.certificatesDirectory, configuration.devMode)) return ExitCodes.FAILURE
@@ -258,18 +280,16 @@ open class NodeStartup : NodeStartupLogging {
     open fun getVersionInfo(): VersionInfo {
         return VersionInfo(
                 PLATFORM_VERSION,
-                CordaVersionProvider.releaseVersion,
-                CordaVersionProvider.revision,
-                CordaVersionProvider.vendor
+                CordaVersion.releaseVersion,
+                CordaVersion.revision,
+                CordaVersion.vendor
         )
     }
 
     protected open fun logLoadedCorDapps(corDapps: List<CordappImpl>) {
         Node.printBasicNodeInfo("Loaded ${corDapps.size} CorDapp(s)", corDapps.map { it.info }.joinToString(", "))
-        corDapps.map { it.info }.filter { it.hasUnknownFields() }.let { malformed ->
-            if (malformed.isNotEmpty()) {
-                logger.warn("Found ${malformed.size} CorDapp(s) with unknown information. They will be unable to run on Corda in the future.")
-            }
+        corDapps.filter { it.info.hasUnknownFields() }.forEach {
+            logger.warn("${it.info} will be unable to run on Corda in the future due to missing entries in JAR's manifest file.")
         }
     }
 
@@ -399,7 +419,8 @@ open class NodeStartup : NodeStartupLogging {
                     "When I discovered my toaster wasn't\nwaterproof, I was shocked.",
                     "Where do cryptographers go for\nentertainment? The security theatre.",
                     "How did the Java programmer get rich?\nThey inherited a factory.",
-                    "Why did the developer quit his job?\nHe didn't get ar-rays."
+                    "Why did the developer quit his job?\nHe didn't get ar-rays.",
+                    "Quantum computer jokes are both\n funny and not funny at the same time."
             )
 
             if (Emoji.hasEmojiTerminal)
@@ -475,7 +496,7 @@ fun CliWrapperBase.initLogging(baseDirectory: Path): Boolean {
     //Test for access to the logging path and shutdown if we are unable to reach it.
     val logPath = baseDirectory / NodeCliCommand.LOGS_DIRECTORY_NAME
     try {
-        logPath.createDirectories()
+        logPath.safeSymbolicRead()?.createDirectories()
     } catch (e: IOException) {
         printError("Unable to create logging directory ${logPath.toString()}. Node will now shutdown.")
         return false

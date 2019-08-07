@@ -6,6 +6,7 @@ import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.deserialiseComponentGroup
 import net.corda.core.internal.div
+import net.corda.core.internal.isAttachmentTrusted
 import net.corda.core.internal.readObject
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.ServicesForResolution
@@ -25,6 +26,7 @@ import sun.reflect.generics.reflectiveObjects.NotImplementedException
 import java.nio.file.Paths
 import java.time.Clock
 import java.time.Duration
+import java.util.Comparator.comparingInt
 
 class MigrationServicesForResolution(
         override val identityService: IdentityService,
@@ -86,8 +88,10 @@ class MigrationServicesForResolution(
         private val filedParams = getNetworkParametersFromFile()
 
         override val defaultHash: SecureHash = filedParams?.raw?.hash ?: SecureHash.getZeroHash()
-        override val currentHash: SecureHash =  cordaDB.transaction {
-            storage.allPersisted().maxBy { it.second.verified().epoch }?.first ?: defaultHash
+        override val currentHash: SecureHash = cordaDB.transaction {
+            storage.allPersisted.use {
+                it.max(comparingInt { it.second.verified().epoch }).map { it.first }.orElse(defaultHash)
+            }
         }
 
         override fun lookup(hash: SecureHash): NetworkParameters? {
@@ -106,8 +110,13 @@ class MigrationServicesForResolution(
 
     private fun extractStateFromTx(tx: WireTransaction, stateIndices: Collection<Int>): List<TransactionState<ContractState>> {
         return try {
-            val attachments = tx.attachments.mapNotNull { attachments.openAttachment(it)}
-            val states = AttachmentsClassLoaderBuilder.withAttachmentsClassloaderContext(attachments, networkParameters, tx.id, cordappLoader.appClassLoader) {
+            val txAttachments = tx.attachments.mapNotNull { attachments.openAttachment(it)}
+            val states = AttachmentsClassLoaderBuilder.withAttachmentsClassloaderContext(
+                    txAttachments,
+                    networkParameters,
+                    tx.id,
+                    { isAttachmentTrusted(it, attachments) },
+                    cordappLoader.appClassLoader) {
                 deserialiseComponentGroup(tx.componentGroups, TransactionState::class, ComponentGroupEnum.OUTPUTS_GROUP, forceDeserialize = true)
             }
             states.filterIndexed {index, _ -> stateIndices.contains(index)}.toList()

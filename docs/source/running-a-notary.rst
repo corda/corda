@@ -39,3 +39,59 @@ setup steps.
 
 .. warning::
     Upgrading an existing single-node notary to be highly available is currently unsupported.
+
+Metrics
+-------
+
+Corda Enterprise captures different metrics for each of its notary implementations. These metrics can be
+used to analyse the performance and stability of the notary service, and are exposed to third party interfaces.
+
+Common Metrics
+==============
+
+All notary implementations record the following metrics:
+
+.. _common_notary_metrics
+
+commitTimer
+  Measures the time taken for a single transaction commit and provides a transactions per second (TPS) measurement.
+
+inputStatesMeter
+  Measures input states per second (IPS).
+
+conflictCounter
+  Tracks double spend attempts. Note that this will also include notarisation retries.
+
+inputStateHistogram
+  Tracks distribution of the number of input states.
+
+requestProcessingETA
+  Tracks the measured estimated time of request processing. A notary service that is aware of its own throughput can
+  return an estimate of how long requests will be queued for before they can be processed.  Note that a default ETA
+  is returned if there are no transactions currently in the queue.
+
+requestQueueCount
+  Tracks the number of requests in the queue at time of insert.
+
+requestQueueStateCount
+  Tracks the number of states in the queue at time of insert.
+
+uniqueTxHashCount
+  Tracks the distribution of the number of unique transactions that contributed states to the current transaction.
+
+Specific Metrics
+================
+
+Some notary implementations record metrics that are unique to them:
+
+.. _mysql_notary_metrics
+
+MySQL Notary Metrics
+~~~~~~~~~~~~~~~~~~~
+
+  rollbackCounter
+    Tracks the number of rollbacks that occur. When writing to multiple masters with Galera, transaction rollbacks may happen
+    due to high contention.
+
+  connectionExceptionCounter
+    Tracks the number of times that the notary service is unable to obtain a database connection.

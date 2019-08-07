@@ -359,39 +359,49 @@ When not in ``devMode``, the server will mask exceptions not meant for clients a
 This does not expose internal information to clients, strengthening privacy and security. CorDapps can have exceptions implement
 ``ClientRelevantError`` to allow them to reach RPC clients.
 
-Connection management
----------------------
-It is possible to not be able to connect to the server on the first attempt. In that case, the ``CordaRPCClient.start()``
-method will throw an exception. The following code snippet is an example of how to write a simple retry mechanism for
-such situations:
+Reconnecting RPC clients
+------------------------
 
-.. literalinclude:: ../../samples/bank-of-corda-demo/src/main/kotlin/net/corda/bank/api/BankOfCordaClientApi.kt
-   :language: kotlin
-   :start-after: DOCSTART rpcClientConnectionWithRetry
-   :end-before: DOCEND rpcClientConnectionWithRetry
+In the current version of Corda, an RPC client connected to a node stops functioning when the node becomes unavailable or the associated TCP connection is interrupted.
+Running RPC commands against a stopped node will just throw exceptions. Any subscriptions to ``Observable``\s that have been created before the disconnection will stop receiving events after the node restarts.
+RPCs which have a side effect, such as starting flows, may or may not have executed on the node depending on when the client was disconnected.
 
-.. warning:: The list of ``NetworkHostAndPort`` passed to this function should represent one or more addresses reflecting the number of
-   instances of a node configured to service the client RPC request. See ``haAddressPool`` in `CordaRPCClient`_ for further information on
-   using an RPC Client for load balancing and failover.
+It is the client's responsibility to handle these errors and reconnect once the node is running again. The client will have to re-subscribe to any ``Observable``\s in order to keep receiving updates.
+With regards to RPCs with side effects, the client will have to inspect the state of the node to infer whether the flow was executed or not before retrying it.
 
-After a successful connection, it is possible for the server to become unavailable. In this case, all RPC calls will throw
-an exception and created observables will no longer receive observations. Below is an example of how to reconnect and
-back-fill any data that might have been missed while the connection was down. This is done by using the ``onError`` handler
-on the ``Observable`` returned by ``CordaRPCOps``.
+Clients can make use of the options described below in order to take advantage of some automatic reconnection functionality that mitigates some of these issues.
 
-.. literalinclude:: ../../samples/bank-of-corda-demo/src/main/kotlin/net/corda/bank/api/BankOfCordaClientApi.kt
-   :language: kotlin
-   :start-after: DOCSTART rpcClientConnectionRecovery
-   :end-before: DOCEND rpcClientConnectionRecovery
+Enabling automatic reconnection
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-In this code snippet it is possible to see that the function ``performRpcReconnect`` creates an RPC connection and implements
-the error handler upon subscription to an ``Observable``. The call to this ``onError`` handler will be triggered upon failover, at which
-point the client will terminate its existing subscription, close its RPC connection and recursively call ``performRpcReconnect``,
-which will re-subscribe once the RPC connection is re-established.
+If you provide a list of addresses via the ``haAddressPool`` argument when instantiating a ``CordaRPCClient``, then automatic reconnection will be performed when the existing connection is dropped.
+However, any in-flight calls during reconnection will fail and previously returned observables will call ``onError``. The client code is responsible for waiting for the connection to be established
+in order to retry any calls, retrieve new observables and re-subscribe to them.
 
-Within the body of the ``subscribe`` function itself, the client code receives instances of ``StateMachineInfo``. Upon re-connecting, this code receives
-*all* the instances of ``StateMachineInfo``, some of which may already been delivered to the client code prior to previous disconnect.
-It is the responsibility of the client code to handle potential duplicated instances of ``StateMachineInfo`` as appropriate.
+Enabling graceful reconnection
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A more graceful form of reconnection is also available, which will block all in-flight calls until the connection is re-established and
+will also reconnect the existing ``Observable``\s, so that they keep emitting events to the existing subscribers.
+
+.. warning:: In this approach, some events might be lost during a re-connection and not sent from the subscribed ``Observable``\s.
+
+You can enable this graceful form of reconnection by using the ``gracefulReconnect`` parameter in the following way:
+
+.. sourcecode:: kotlin
+
+   val cordaClient = CordaRPCClient(nodeRpcAddress)
+   val cordaRpcOps = cordaClient.start(rpcUserName, rpcUserPassword, gracefulReconnect = true).proxy
+
+Logical  retries for flow invocation
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+As described above, if you want to retry a flow that failed during a disconnection, you will first need to verify it has not been previously executed.
+The only way currently to confirm this is by performing a business-level query.
+
+.. note:: Future releases of Corda are expected to contain new APIs for coping with reconnection in a more resilient way providing stricter
+   safety guarantees.
+
 
 Wire security
 -------------

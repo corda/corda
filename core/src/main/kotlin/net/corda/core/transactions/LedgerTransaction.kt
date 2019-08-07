@@ -14,7 +14,6 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.DeprecatedConstructorForDeserialization
 import net.corda.core.serialization.internal.AttachmentsClassLoaderBuilder
 import net.corda.core.utilities.contextLogger
-import java.lang.UnsupportedOperationException
 import java.util.*
 import java.util.function.Predicate
 
@@ -75,6 +74,7 @@ private constructor(
     private var componentGroups: List<ComponentGroup>? = null
     private var serializedInputs: List<SerializedStateAndRef>? = null
     private var serializedReferences: List<SerializedStateAndRef>? = null
+    private var isAttachmentTrusted: (Attachment) -> Boolean = { isAttachmentTrusted(it, null) }
 
     init {
         if (timeWindow != null) check(notary != null) { "Transactions with time-windows must be notarised" }
@@ -98,12 +98,14 @@ private constructor(
                 references: List<StateAndRef<ContractState>>,
                 componentGroups: List<ComponentGroup>? = null,
                 serializedInputs: List<SerializedStateAndRef>? = null,
-                serializedReferences: List<SerializedStateAndRef>? = null
+                serializedReferences: List<SerializedStateAndRef>? = null,
+                isAttachmentTrusted: (Attachment) -> Boolean
         ): LedgerTransaction {
             return LedgerTransaction(inputs, outputs, commands, attachments, id, notary, timeWindow, privacySalt, networkParameters, references).apply {
                 this.componentGroups = componentGroups
                 this.serializedInputs = serializedInputs
                 this.serializedReferences = serializedReferences
+                this.isAttachmentTrusted = isAttachmentTrusted
             }
         }
     }
@@ -141,7 +143,11 @@ private constructor(
     internal fun internalPrepareVerify(extraAttachments: List<Attachment>): Verifier {
         // Switch thread local deserialization context to using a cached attachments classloader. This classloader enforces various rules
         // like no-overlap, package namespace ownership and (in future) deterministic Java.
-        return AttachmentsClassLoaderBuilder.withAttachmentsClassloaderContext(this.attachments + extraAttachments, getParamsWithGoo(), id) { transactionClassLoader ->
+        return AttachmentsClassLoaderBuilder.withAttachmentsClassloaderContext(
+                this.attachments + extraAttachments,
+                getParamsWithGoo(),
+                id,
+                isAttachmentTrusted = isAttachmentTrusted) { transactionClassLoader ->
             // Create a copy of the outer LedgerTransaction which deserializes all fields inside the [transactionClassLoader].
             // Only the copy will be used for verification, and the outer shell will be discarded.
             // This artifice is required to preserve backwards compatibility.

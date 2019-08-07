@@ -63,6 +63,16 @@ The set-up instructions are available for the following platforms:
 
 .. _windows-label:
 
+.. note:: These setup instructions will guide you on how to install the Oracle JDK. Each JDK can be found on their respective sites:
+
+          * `Oracle <http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html>`_
+
+          * `Amazon Corretto <https://docs.aws.amazon.com/corretto/latest/corretto-8-ug/downloads-list.html>`_
+
+          * `Red Hat OpenJDK <https://developers.redhat.com/products/openjdk/download/>`_
+
+          * `Zulu OpenJDK <https://www.azul.com/downloads/zulu/>`_
+
 Windows
 -------
 
@@ -89,6 +99,64 @@ IntelliJ
 2. Download and run the executable to install IntelliJ Community Edition (use the default settings)
 3. Ensure the Kotlin plugin in Intellij is updated to version |kotlin_version| (new installs will contains this version)
 
+Download a sample project
+^^^^^^^^^^^^^^^^^^^^^^^^^
+1. Open a command prompt
+2. Clone the CorDapp example repo by running ``git clone https://github.com/corda/cordapp-example``
+3. Move into the ``cordapp-example`` folder by running ``cd cordapp-example``
+4. Checkout the corresponding branch for Corda Enterprise 3.1 by running ``git checkout release-enterprise-V3`` in the current directory
+
+Resolve Corda Enterprise binaries
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+The Corda Enterprise binaries are not available in a publicly accessible Maven repository. Instead, the Corda Enterprise
+binaries will be made available to your organisation as a compressed tarball (``corda-3.1-developer-pack.tar.gz``).
+This tarball contains all of the Corda dependencies as they would appear in your local Maven repository located at
+``C:\Documents and Settings\{your-username}\.m2``.
+
+To build CorDapps on development machines the Corda Enterprise binaries will need to be discoverable by Gradle. The
+`build.gradle <https://github.com/corda/cordapp-example/blob/release-enterprise-V3/build.gradle>`_ file on the
+``cordapp-example`` ``release-enterprise-V3`` branch includes instructions on how to allow Gradle to discover
+dependencies.
+
+1. Open ``cordapp-example\build.gradle``
+2. Do any of the following to allow Gradle to resolve Corda Enterprise binaries, for more information read the commented code in ``build.gradle``:
+
+   a. Add Corda Enterprise binaries and dependencies to your local maven repository path (e.g., ``C:\Documents and Settings\{your-username}\.m2``).
+   b. Upload Corda Enterprise binaries and dependencies to your company's private Maven repository and register the repository with Gradle.
+   c. Add Corda Enterprise binaries to a local directory and register a local Maven repository pointing to this directory with Gradle.
+
+.. note:: Upon receiving the binaries, the quickest way to get started developing your CorDapps is **option a**. This can
+          be done by firstly unpacking the ``corda-3.1-developer-pack.tar.gz`` compressed tarball. Then, copy the unpacked
+          ``respository`` folder to your local Maven repository located at ``C:\Documents and Settings\{your-username}\.m2``.
+
+Run from the command prompt
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+1. Move into the ``cordapp-example`` folder by running ``cd cordapp-example``
+2. From the ``cordapp-example`` folder, deploy the nodes by running ``gradlew deployNodes``
+3. Start the nodes by running ``call kotlin-source/build/nodes/runnodes.bat``
+4. Wait until all the terminal windows display either ``Webserver started up in XX.X sec`` or ``Node for "NodeC" started up and registered in XX.XX sec``
+5. Confirm that the CorDapp is running correctly by visiting the front end at http://localhost:10009/web/example/
+
+Run from IntelliJ
+^^^^^^^^^^^^^^^^^
+1. Open IntelliJ Community Edition
+2. On the splash screen, click ``Open`` (do **not** click ``Import Project``) and select the ``cordapp-example`` folder
+
+.. warning:: If you click ``Import Project`` instead of ``Open``, the project's run configurations will be erased!
+
+3. Once the project is open, click ``File``, then ``Project Structure``. Under ``Project SDK:``, set the project SDK by
+   clicking ``New...``, clicking ``JDK``, and navigating to ``C:\\Program Files\\Java\\jdk1.8.0_XXX`` (where ``XXX`` is
+   the latest minor version number). Click ``OK``
+4. Again under ``File`` then ``Project Structure``, select ``Modules``. Click ``+``, then ``Import Module``, then select
+   the ``cordapp-example`` folder and click ``Open``. Choose to ``Import module from external model``, select
+   ``Gradle``, click ``Next`` then ``Finish`` (leaving the defaults) and ``OK``
+5. Wait for the indexing to finish (a progress bar will display at the bottom-right of the IntelliJ window until indexing
+   is complete)
+6. At the top-right of the screen, to the left of the green ``play`` arrow, you should see a dropdown. In that
+   dropdown, select ``Run Example Cordapp - Kotlin`` and click the green ``play`` arrow.
+7. Wait until the run windows displays the message ``Webserver started up in XX.X sec``
+8. Confirm that the CorDapp is running correctly by visiting the front end at `http://localhost:10009/web/example/
+
 .. _mac-label:
 
 Mac
@@ -101,13 +169,99 @@ Java
 1. Visit http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html
 2. Click the download link for jdk-8uXXX-macosx-x64.dmg (where "XXX" is the latest minor version number)
 3. Download and run the executable to install Java (use the default settings)
-4. Open a new terminal window and run ``java -version`` to test that Java is installed correctly
+4. Open a new terminal window and run ``java -version`` to test that Java is installed correctly. The version should be
 
 IntelliJ
 ^^^^^^^^
 1. Visit https://www.jetbrains.com/idea/download/download-thanks.html?platform=mac&code=IIC
 2. Download and run the executable to install IntelliJ Community Edition (use the default settings)
 3. Ensure the Kotlin plugin in IntelliJ is updated to version |kotlin_version| (new installs will contains this version)
+
+Download a sample project
+^^^^^^^^^^^^^^^^^^^^^^^^^
+1. Open a terminal
+2. Clone the CorDapp example repo by running ``git clone https://github.com/corda/cordapp-example``
+3. Move into the ``cordapp-example`` folder by running ``cd cordapp-example``
+4. Checkout the corresponding branch for Corda Enterprise 3.1 by running ``git checkout release-enterprise-V3`` in the current directory
+
+.. _resolve-corda-enterprise-binaries:
+
+Resolve Corda Enterprise binaries
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+The Corda Enterprise binaries are not available in a publicly accessible Maven repository. Instead, the Corda Enterprise
+binaries will be made available to your organisation as a compressed tarball (``corda-3.1-developer-pack.tar.gz``).
+This tarball contains all of the Corda dependencies as they would appear in your local Maven repository located at
+``~/.m2/repository``.
+
+To build CorDapps on development machines the Corda Enterprise binaries will need to be discoverable by Gradle. The
+`build.gradle <https://github.com/corda/cordapp-example/blob/release-enterprise-V3/build.gradle>`_ file on the
+``cordapp-example`` ``release-enterprise-V3`` branch includes instructions on how to allow Gradle to discover
+dependencies.
+
+1. Open ``cordapp-example/build.gradle``
+2. Do any of the following to allow Gradle to resolve Corda Enterprise binaries, for more information read the commented code in ``build.gradle``:
+
+   a. Add Corda Enterprise binaries and dependencies to your local maven repository path e.g., ``~/.m2/repository``
+   b. Upload Corda Enterprise binaries and dependencies to your company's private Maven repository and register the repository with Gradle.
+   c. Add Corda Enterprise binaries to a local directory and register a local Maven repository pointing to this directory with Gradle.
+
+.. note:: Upon receiving the binaries, the quickest way to get started developing your CorDapps is **option a**. This can
+be done by firstly unpacking the ``corda-3.1-developer-pack.tar.gz`` compressed tarball:
+
+            ``tar -xvzf corda-3.1-developer-pack.tar.gz``
+
+          Then, copy the unpacked ``respository`` folder to your local Maven repository:
+
+            ``rsync -av repository ~/.m2/``
+
+          The extracted folder can now be deleted:
+
+            ``rm -rf repository``
+
+Run from the terminal
+^^^^^^^^^^^^^^^^^^^^^
+1. Move into the ``cordapp-example`` folder by running ``cd cordapp-example``
+2. From the ``cordapp-example`` folder, deploy the nodes by running ``./gradlew deployNodes``
+3. Start the nodes by running ``kotlin-source/build/nodes/runnodes``. Do not click while 7 additional terminal windows start up.
+4. Wait until all the terminal windows display either ``Webserver started up in XX.X sec`` or ``Node for "NodeC" started up and registered in XX.XX sec``
+5. Confirm that the CorDapp is running correctly by visiting the front end at http://localhost:10009/web/example/
+
+Run from IntelliJ
+^^^^^^^^^^^^^^^^^
+1. Open IntelliJ Community Edition
+2. On the splash screen, click ``Open`` (do **not** click ``Import Project``) and select the ``cordapp-example`` folder
+
+.. warning:: If you click ``Import Project`` instead of ``Open``, the project's run configurations will be erased!
+
+3. Once the project is open, click ``File``, then ``Project Structure``. Under ``Project SDK:``, set the project SDK by
+   clicking ``New...``, clicking ``JDK``, and navigating to your JDK installation (e.g., ``/Library/Java/JavaVirtualMachines/jdk1.8.0_XXX.jdk``, where ``XXX`` is
+   the latest minor version number). Click ``OK``
+4. Again under ``File`` then ``Project Structure``, select ``Modules``. Click ``+``, then ``Import Module``, then select
+   the ``cordapp-example`` folder and click ``Open``. Choose to ``Import module from external model``, select
+   ``Gradle``, click ``Next`` then ``Finish`` (leaving the defaults) and ``OK``
+5. Wait for the indexing to finish (a progress bar will display at the bottom-right of the IntelliJ window until indexing
+   is complete)
+6. At the top-right of the screen, to the left of the green ``play`` arrow, you should see a dropdown. In that
+   dropdown, select ``Run Example Cordapp - Kotlin`` and click the green ``play`` arrow.
+7. Wait until the run windows displays the message ``Webserver started up in XX.X sec``
+8. Confirm that the CorDapp is running correctly by visiting the front end at http://localhost:10009/web/example/
+
+CorDapp Templates and samples
+-----------------------------
+
+A CorDapp template that you can use as the basis for your own CorDapps is available in both Java and Kotlin versions:
+
+    https://github.com/corda/cordapp-template-java.git
+
+    https://github.com/corda/cordapp-template-kotlin.git
+
+And a list of simple sample CorDapps for you to explore basic concepts is available here:
+
+	https://www.corda.net/samples/
+
+You can clone these repos to your local machine by running the command ``git clone [repo URL]``.
+
+.. _deb-ubuntu-label:
 
 Debian/Ubuntu
 -------------
@@ -118,10 +272,36 @@ These instructions were tested on Ubuntu Desktop 18.04 LTS.
 
 Java
 ^^^^
-1. Open a new terminal and add the Oracle PPA to your repositories by typing ``sudo add-apt-repository ppa:webupd8team/java``. Press ENTER when prompted.
-2. Update your packages list with the command ``sudo apt update``
-3. Install the Oracle JDK 8 by typing ``sudo apt install oracle-java8-installer``. Press Y when prompted and agree to the licence terms.
-4. Verify that the JDK was installed correctly by running ``java -version``
+1. Go to https://www.oracle.com/technetwork/java/javase/downloads/java-archive-javase8-2177648.html and download ``jdk-8u202-linux-x64.tar.gz``.
+   You will be redirected to an Oracle login page. Login or create an account to download the JDK.
+2. Extract the archive with ``tar -xvf jdk-8u202-linux-x64.tar.gz jdk1.8.0_202/``
+3. Create a directory to place the JDK e.g. ``sudo mkdir -p /usr/lib/jvm``
+4. Move the extracted archive in that folder with ``sudo mv ./jdk1.8.0_202 /usr/lib/jvm/``
+5. Add the most common java binaries to the list of alternatives to allow easy swap between Java versions in the future
+
+       .. code-block:: shell
+
+         sudo update-alternatives --install "/usr/bin/java" "java" "/usr/lib/jvm/jdk1.8.0_202/bin/java" 1
+         sudo update-alternatives --install "/usr/bin/javac" "javac" "/usr/lib/jvm/jdk1.8.0_202/bin/javac" 1
+         sudo update-alternatives --install "/usr/bin/javaws" "javaws" "/usr/lib/jvm/jdk1.8.0_202/bin/javaws" 1
+
+6. Update permissions
+
+       .. code-block:: shell
+
+         sudo chmod a+x /usr/bin/java
+         sudo chmod a+x /usr/bin/javac
+         sudo chmod a+x /usr/bin/javaws
+         sudo chown -R root:root /usr/lib/jvm/jdk1.8.0_202
+
+7. Set JAVA_HOME and JRE_HOME to your ``~/.bash_profile`` and/or ``~/.bashrc``
+
+       .. code-block:: shell
+
+         export JAVA_HOME=/usr/lib/jvm/jdk1.8.0_202
+         export JRE_HOME=/usr/lib/jvm/jdk1.8.0_202/jre
+
+8. Verify that the JDK was installed correctly by running ``java -version``
 
 Git
 ^^^^
@@ -163,50 +343,6 @@ IntelliJ
 2. Unpack the ``tar.gz`` file using the following command ``tar xfz ideaIC-<version>.tar.gz -C /opt``
 3. Run IntelliJ with ``/opt/ideaIC-<version>/bin/idea.sh``
 4. Ensure the Kotlin plugin in IntelliJ is updated to version |kotlin_version| (new installs will contains this version)
-
-Resolve Corda Enterprise binaries
----------------------------------
-.. |developer_pack_name| replace:: corda-|version|-developer-pack.tar.gz
-
-The Corda Enterprise binaries are not available in a publicly accessible Maven repository. Instead, the Corda Enterprise
-binaries will be made available to your organisation as a compressed tarball (|developer_pack_name|).
-This tarball contains all of the Corda dependencies as they would appear in your local Maven repository located at
-``C:\Documents and Settings\{your-username}\.m2``.
-
-To build CorDapps on development machines the Corda Enterprise binaries will need to be discoverable by Gradle. The
-`build.gradle <https://github.com/corda/samples/tree/release-V4-enterprise/cordapp-example/build.gradle>`_ file in the Corda
-samples repository (``release-V4-enterprise`` branch) includes instructions on how to allow Gradle to discover dependencies.
-
-1. Open ``samples\cordapp-example\build.gradle``
-2. Do any of the following to allow Gradle to resolve Corda Enterprise binaries, for more information read the commented code in ``build.gradle``:
-
-   a. Add Corda Enterprise binaries and dependencies to your local maven repository path (e.g., ``C:\Documents and Settings\{your-username}\.m2``).
-   b. Upload Corda Enterprise binaries and dependencies to your company's private Maven repository and register the repository with Gradle.
-   c. Add Corda Enterprise binaries to a local directory and register a local Maven repository pointing to this directory with Gradle.
-
-.. note:: Upon receiving the binaries, the quickest way to get started developing your CorDapps is **option a**. This can
-be done by firstly unpacking the |developer_pack_name| compressed tarball. Then, copy the unpacked
-          ``respository`` folder to your local Maven repository located at ``C:\Documents and Settings\{your-username}\.m2``.
-
-Download and run a sample project
----------------------------------
-
-Follow the instructions in https://docs.corda.net/tutorial-cordapp.html.
-
-.. warning:: Ensure you checkout the corresponding branch for for Corda Enterprise |corda_version| by running ``git checkout release-V4-enterprise`` in the samples directory
-
-CorDapp Templates and samples
------------------------------
-
-A CorDapp template that you can use as the basis for your own CorDapps is available in both Java and Kotlin versions:
-
-    https://github.com/corda/cordapp-template-java.git
-
-    https://github.com/corda/cordapp-template-kotlin.git
-
-A comprehensive list of samples, including CorDapps written by R3 and community CorDapps and projects, are available here:
-
-	https://www.corda.net/samples/
 
 You can clone these repos to your local machine by running the command ``git clone [repo URL]``.
 

@@ -9,6 +9,7 @@ import net.corda.nodeapi.internal.cryptoservice.gemalto.GemaltoLunaCryptoService
 import net.corda.nodeapi.internal.cryptoservice.securosys.PrimusXCryptoService
 import net.corda.nodeapi.internal.cryptoservice.utimaco.UtimacoCryptoService
 import java.nio.file.Path
+import java.time.Duration
 
 class CryptoServiceFactory {
     companion object {
@@ -29,6 +30,15 @@ class CryptoServiceFactory {
                 SupportedCryptoServices.FUTUREX -> FutureXCryptoService.fromConfigurationFile(legalName.x500Principal, cryptoServiceConf)
                 SupportedCryptoServices.PRIMUS_X -> PrimusXCryptoService.fromConfigurationFile(legalName.x500Principal, cryptoServiceConf)
             }
+        }
+        fun makeTimedCryptoService(
+                cryptoServiceName: SupportedCryptoServices,
+                legalName: CordaX500Name,
+                signingCertificateStore: FileBasedCertificateStoreSupplier? = null,
+                cryptoServiceConf: Path? = null,
+                timeout: Duration? = null
+        ): TimedCryptoService {
+            return TimedCryptoService(makeCryptoService(cryptoServiceName, legalName, signingCertificateStore, cryptoServiceConf), timeout)
         }
     }
 }

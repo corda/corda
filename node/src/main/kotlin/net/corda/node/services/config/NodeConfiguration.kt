@@ -14,7 +14,6 @@ import net.corda.nodeapi.internal.config.FileBasedCertificateStoreSupplier
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.cryptoservice.SupportedCryptoServices
-import net.corda.nodeapi.internal.cryptoservice.securosys.PrimusXCryptoService
 import net.corda.nodeapi.internal.cryptoservice.WrappingMode
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.notary.experimental.bftsmart.BFTSmartConfig
@@ -95,6 +94,7 @@ interface NodeConfiguration {
 
     val cryptoServiceName: SupportedCryptoServices?
     val cryptoServiceConf: Path? // Location for the cryptoService conf file.
+    val cryptoServiceTimeout: Duration get() = DEFAULT_CRYPTO_SERVICE_TIMEOUT
 
     val freshIdentitiesConfiguration: FreshIdentitiesConfiguration?
     val disableFreshIdentitiesWarning: Boolean get() = false
@@ -115,6 +115,8 @@ interface NodeConfiguration {
 
         internal val defaultAttachmentContentCacheSize: Long = 10.MB
         internal const val defaultAttachmentCacheBound = 1024L
+
+        internal val DEFAULT_CRYPTO_SERVICE_TIMEOUT = Duration.ofSeconds(1)
 
         const val cordappDirectoriesKey = "cordappDirectories"
 

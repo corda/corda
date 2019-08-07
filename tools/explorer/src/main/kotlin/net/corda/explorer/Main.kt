@@ -15,7 +15,7 @@ import net.corda.explorer.model.CordaViewModel
 import net.corda.explorer.model.SettingsModel
 import net.corda.explorer.views.*
 import net.corda.explorer.views.cordapps.cash.CashViewer
-import org.apache.commons.lang.SystemUtils
+import org.apache.commons.lang3.SystemUtils
 import org.controlsfx.dialog.ExceptionDialog
 import tornadofx.App
 import tornadofx.addStageIcon

@@ -26,7 +26,7 @@ class PrimusXCryptoServiceTest: CryptoServiceSpec() {
     override fun getCryptoService(): CryptoService {
         val provider = PrimusProvider()
         val keyStore = KeyStore.getInstance(PrimusProvider.getKeyStoreTypeName(), provider)
-        val auth = { PrimusXCryptoService.PrimusXConfiguration(TEST_HSM_HOST, TEST_HSM_PORT, TEST_HSM_USERNAME, TEST_HSM_PASSWORD) }
+        val auth = { PrimusXCryptoService.Companion.PrimusXConfiguration(TEST_HSM_HOST, TEST_HSM_PORT, TEST_HSM_USERNAME, TEST_HSM_PASSWORD) }
 
         return PrimusXCryptoService(keyStore, provider, auth = auth)
     }

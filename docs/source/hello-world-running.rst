@@ -16,7 +16,7 @@ Let's take a look at the nodes we're going to deploy. Open the project's ``build
 ``PartyB``), plus a special network map/notary node that is running the network map service and advertises a validating notary
 service.
 
-.. code:: bash
+.. code-block:: none
 
     task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         directory "./build/nodes"
@@ -120,7 +120,7 @@ We can check the contents of each node's vault by running:
 
 .. code-block:: bash
 
-    run vaultQuery contractStateType: com.template.IOUState
+    run vaultQuery contractStateType: com.template.states.IOUState
 
 The vaults of PartyA and PartyB should both display the following output:
 

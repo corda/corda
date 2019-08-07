@@ -31,7 +31,7 @@ couple of resources.
 
 #. Stop the Corda node(s) running on your cloud instance.
 
-   .. code:: bash
+   .. code-block:: bash
 
        sudo systemctl stop corda
 
@@ -42,6 +42,8 @@ couple of resources.
 
    Download the finance CorDapp and database manager to your VM instance:
 
+   .. code-block:: bash
+
    * corda-finance-contracts-|corda_version|.jar
    * corda-finance-workflows-|corda_version|.jar
    * corda-tools-database-manager-|corda_version|.jar
@@ -49,7 +51,7 @@ couple of resources.
    This is required to run some flows to check your connections, and to issue/transfer cash to counterparties. Copy it to
    the Corda installation location:
 
-   .. code:: bash
+   .. code-block:: bash
 
        sudo cp /home/<USER>/corda-finance-*-|corda_version|.jar /opt/corda/cordapps/
 
@@ -68,7 +70,7 @@ couple of resources.
 
 #. Run the following to create a config file for the finance CorDapp:
 
-   .. code:: bash
+   .. code-block:: bash
 
        echo "issuableCurrencies = [ USD ]" > /opt/corda/cordapps/config/corda-finance-|corda_version|.conf
 

@@ -55,7 +55,7 @@ class FlowWorkerTest {
     @JvmField
     val serializationEnvironment = SerializationEnvironmentRule(true)
 
-    private val portAllocation = incrementalPortAllocation(10000)
+    private val portAllocation = incrementalPortAllocation()
 
     private val bankAKeyPair = generateKeyPair()
     private val bankBKeyPair = generateKeyPair()

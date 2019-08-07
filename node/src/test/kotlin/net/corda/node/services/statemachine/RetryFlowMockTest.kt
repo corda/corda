@@ -102,7 +102,7 @@ class RetryFlowMockTest {
         })
         val count = 10000 // Lots of iterations so the flow keeps going long enough
         nodeA.startFlow(KeepSendingFlow(count, partyB))
-        eventually(waitBetween = Duration.ofMillis(10)) {
+        eventually(duration = Duration.ofSeconds(30), waitBetween = Duration.ofMillis(100)) {
             assertTrue(messagesSent.isNotEmpty())
             assertNotNull(messagesSent.first().senderUUID)
         }
@@ -116,7 +116,7 @@ class RetryFlowMockTest {
         })
         // Now short circuit the iterations so the flow finishes soon.
         KeepSendingFlow.count.set(count - 2)
-        eventually(waitBetween = Duration.ofMillis(10)) {
+        eventually(duration = Duration.ofSeconds(30), waitBetween = Duration.ofMillis(100)) {
             assertTrue(nodeA.smm.allStateMachines.isEmpty())
         }
         assertNull(messagesSent.last().senderUUID)
@@ -143,7 +143,8 @@ class RetryFlowMockTest {
         val alice = TestIdentity(CordaX500Name.parse("L=London,O=Alice Ltd,OU=Trade,C=GB")).party
         val records = nodeA.smm.flowHospital.track().updates.toBlocking().toIterable().iterator()
         val flow: FlowStateMachine<Unit> = nodeA.services.startFlow(FinalityHandler(object : FlowSession() {
-            override val counterparty = alice
+            override val destination: Destination get() = alice
+            override val counterparty: Party get() = alice
 
             override fun getCounterpartyFlowInfo(maySkipCheckpoint: Boolean): FlowInfo {
                 TODO("not implemented")

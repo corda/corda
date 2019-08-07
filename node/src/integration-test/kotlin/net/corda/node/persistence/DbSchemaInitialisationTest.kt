@@ -37,18 +37,6 @@ class DbSchemaInitialisationTest : IntegrationTest() {
         }
     }
 
-    // Enterprise only test  - when running against database other than H2, runMigration flag is be used
-    @Test
-    fun `remote database is not initialised as runMigration flag takes precedence`() {
-        Assume.assumeTrue(isRemoteDatabaseMode())
-        driver(DriverParameters(startNodesInProcess = isQuasarAgentSpecified())){
-            assertFailsWith(DatabaseIncompatibleException::class) {
-                startNode(NodeParameters(customOverrides = mapOf("database.initialiseSchema" to "true",
-                        "database.runMigration" to "false")), ALICE_NAME).getOrThrow()
-            }
-        }
-    }
-
     @Ignore // Ignoring, an in-memory H2 database is not properly closed in this test (when the node throws exception), and a db instance is reused by subsequent tests
     // FlowsDrainingModeContentionTest sets db to flow-draining mode, AdditionP2PAddressModeTest fails on this mode
     @Test
@@ -56,6 +44,18 @@ class DbSchemaInitialisationTest : IntegrationTest() {
         driver(DriverParameters(startNodesInProcess = isQuasarAgentSpecified())){
             assertFailsWith(DatabaseIncompatibleException::class) {
                 startNode(NodeParameters(customOverrides = mapOf("database.initialiseSchema" to "false",
+                        "database.runMigration" to "false")), ALICE_NAME).getOrThrow()
+            }
+        }
+    }
+
+    // Enterprise only test  - when running against database other than H2, runMigration flag is be used
+    @Test
+    fun `remote database is not initialised as runMigration flag takes precedence`() {
+        Assume.assumeTrue(isRemoteDatabaseMode())
+        driver(DriverParameters(startNodesInProcess = isQuasarAgentSpecified())){
+            assertFailsWith(DatabaseIncompatibleException::class) {
+                startNode(NodeParameters(customOverrides = mapOf("database.initialiseSchema" to "true",
                         "database.runMigration" to "false")), ALICE_NAME).getOrThrow()
             }
         }

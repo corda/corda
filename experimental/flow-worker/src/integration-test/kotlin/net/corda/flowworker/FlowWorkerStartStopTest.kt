@@ -57,7 +57,7 @@ class FlowWorkerStartStopTest {
     @JvmField
     val serializationEnvironment = SerializationEnvironmentRule(true)
 
-    private val portAllocation = incrementalPortAllocation(10000)
+    private val portAllocation = incrementalPortAllocation()
 
     companion object {
 

@@ -52,7 +52,7 @@ class NettyEngineBasedTlsAuthenticationTests(val sslSetup: SslSetup) {
     private fun tempFile(name: String): Path = tempFolder.root.toPath() / name
 
     companion object {
-        private val portAllocation = incrementalPortAllocation(10000)
+        private val portAllocation = incrementalPortAllocation()
 
         data class SslSetup(val clientNative: Boolean, val serverNative: Boolean) {
             override fun toString(): String = "Client: ${if (clientNative) "openSsl" else "javaSsl"} Server: ${if (serverNative) "openSsl" else "javaSsl"} "

@@ -58,7 +58,7 @@ class ArtemisMessagingTest {
     @JvmField
     val temporaryFolder = TemporaryFolder()
 
-    private val portAllocation = incrementalPortAllocation(10000)
+    private val portAllocation = incrementalPortAllocation()
     private val serverPort = portAllocation.nextPort()
     private val identity = generateKeyPair()
 

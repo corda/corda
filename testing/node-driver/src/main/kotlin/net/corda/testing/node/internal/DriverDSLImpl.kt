@@ -25,6 +25,7 @@ import net.corda.node.internal.clientSslOptionsCompatibleWith
 import net.corda.node.services.Permissions
 import net.corda.node.services.config.*
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
+import net.corda.node.utilities.registration.NodeRegistrationConfiguration
 import net.corda.node.utilities.registration.NodeRegistrationHelper
 import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.SignedNodeInfo
@@ -108,9 +109,6 @@ class DriverDSLImpl(
     lateinit var networkMapAvailability: CordaFuture<LocalNetworkMap?>
     private lateinit var _notaries: CordaFuture<List<NotaryHandle>>
     override val notaryHandles: List<NotaryHandle> get() = _notaries.getOrThrow()
-
-    // While starting with inProcess mode, we need to have different names to avoid clashes
-    private val inMemoryCounter = AtomicInteger()
 
     interface Waitable {
         @Throws(InterruptedException::class)
@@ -253,7 +251,8 @@ class DriverDSLImpl(
                 NodeConfiguration::verifierType.name to parameters.verifierType.name,
                 "enterpriseConfiguration.tuning.flowThreadPoolSize" to "1",
                 NodeConfiguration::flowOverrides.name to flowOverrideConfig.toConfig().root().unwrapped(),
-                NodeConfiguration::enableSNI.name to enableSNI
+                NodeConfiguration::enableSNI.name to enableSNI,
+                        NodeConfiguration::additionalNodeInfoPollingFrequencyMsec.name to 1000
         ) + czUrlConfig + jmxConfig + parameters.customOverrides
         val config = NodeConfig(ConfigHelper.loadConfig(
                 baseDirectory = baseDirectory(name),
@@ -278,6 +277,7 @@ class DriverDSLImpl(
                         "address" to portAllocation.nextHostAndPort().toString(),
                         "adminAddress" to portAllocation.nextHostAndPort().toString()
                 ),
+                "additionalNodeInfoPollingFrequencyMsec" to 1000,
                 "devMode" to false) + customOverrides
         val config = NodeConfig(ConfigHelper.loadConfig(
                 baseDirectory = baseDirectory,
@@ -298,7 +298,7 @@ class DriverDSLImpl(
         return if (startNodesInProcess) {
             executorService.fork {
                 NodeRegistrationHelper(
-                        config.corda,
+                        NodeRegistrationConfiguration(config.corda),
                         HTTPNetworkRegistrationService(networkServicesConfig, versionInfo),
                         NodeRegistrationOption(rootTruststorePath, rootTruststorePassword)
                 ).generateKeysAndRegister()
@@ -565,6 +565,7 @@ class DriverDSLImpl(
                 null,
                 systemProperties,
                 "512m",
+                null,
                 *extraCmdLineFlag
         )
 
@@ -623,7 +624,7 @@ class DriverDSLImpl(
             nodeFuture
         } else {
             val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
-            val process = startOutOfProcessNode(config, quasarJarPath, debugPort, bytemanJarPath, bytemanPort, systemProperties, parameters.maximumHeapSize)
+            val process = startOutOfProcessNode(config, quasarJarPath, debugPort, bytemanJarPath, bytemanPort, systemProperties, parameters.maximumHeapSize, parameters.logLevelOverride)
 
             // Destroy the child process when the parent exits.This is needed even when `waitForAllNodesToFinish` is
             // true because we don't want orphaned processes in the case that the parent process is terminated by the
@@ -693,6 +694,9 @@ class DriverDSLImpl(
     companion object {
         internal val log = contextLogger()
 
+        // While starting with inProcess mode, we need to have different names to avoid clashes
+        private val inMemoryCounter = AtomicInteger()
+
         private val notaryHandleTimeout = Duration.ofMinutes(2)
         private val defaultRpcUserList = listOf(InternalUser("default", "default", setOf("ALL")).toConfig().root().unwrapped())
         private val names = arrayOf(ALICE_NAME, BOB_NAME, DUMMY_BANK_A_NAME)
@@ -752,6 +756,7 @@ class DriverDSLImpl(
                 bytemanPort: Int?,
                 overriddenSystemProperties: Map<String, String>,
                 maximumHeapSize: String,
+                logLevelOverride: String?,
                 vararg extraCmdLineFlag: String
         ): Process {
             log.info("Starting out-of-process Node ${config.corda.myLegalName.organisation}, " +
@@ -784,7 +789,13 @@ class DriverDSLImpl(
                     "com.lmax**;picocli**;liquibase**;com.github.benmanes**;org.json**;org.postgresql**;nonapi.io.github.classgraph**;)"
             val extraJvmArguments = systemProperties.removeResolvedClasspath().map { "-D${it.key}=${it.value}" } +
                     "-javaagent:$quasarJarPath=$excludePattern"
-            val loggingLevel = if (debugPort == null) "INFO" else "DEBUG"
+
+            val loggingLevel = when {
+                logLevelOverride != null -> logLevelOverride
+                debugPort == null -> "INFO"
+                else -> "DEBUG"
+            }
+
 
             val arguments = mutableListOf(
                     "--base-directory=${config.corda.baseDirectory}",
@@ -836,7 +847,7 @@ class DriverDSLImpl(
             )
         }
 
-        private val propertiesInScope = setOf("java.io.tmpdir", AbstractAMQPSerializationScheme.SCAN_SPEC_PROP_NAME)
+        private val propertiesInScope = setOf("java.io.tmpdir")
 
         private fun inheritFromParentProcess(): Iterable<Pair<String, String>> {
             return propertiesInScope.flatMap { propName ->

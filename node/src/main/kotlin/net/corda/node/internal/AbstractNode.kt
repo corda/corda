@@ -22,6 +22,7 @@ import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.concurrent.openFuture
+import net.corda.core.internal.messaging.InternalCordaRPCOps
 import net.corda.core.internal.notary.NotaryService
 import net.corda.core.messaging.*
 import net.corda.core.node.*
@@ -65,10 +66,10 @@ import net.corda.node.services.network.NetworkMapUpdater
 import net.corda.node.services.network.NodeInfoWatcher
 import net.corda.node.services.network.PersistentNetworkMapCache
 import net.corda.node.services.persistence.*
+import net.corda.node.services.rpc.CheckpointDumper
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.statemachine.*
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
-import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.node.services.upgrade.ContractUpgradeServiceImpl
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.utilities.*
@@ -86,7 +87,13 @@ import net.corda.nodeapi.internal.crypto.X509Utilities.DISTRIBUTED_NOTARY_ALIAS_
 import net.corda.nodeapi.internal.crypto.X509Utilities.NODE_IDENTITY_ALIAS_PREFIX
 import net.corda.nodeapi.internal.cryptoservice.CryptoServiceFactory
 import net.corda.nodeapi.internal.cryptoservice.SupportedCryptoServices
+import net.corda.nodeapi.internal.cryptoservice.TimedCryptoService
+import net.corda.nodeapi.internal.cryptoservice.azure.AzureKeyVaultCryptoService
+import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
+import net.corda.nodeapi.internal.cryptoservice.futurex.FutureXCryptoService
+import net.corda.nodeapi.internal.cryptoservice.gemalto.GemaltoLunaCryptoService
 import net.corda.nodeapi.internal.cryptoservice.securosys.PrimusXCryptoService
+import net.corda.nodeapi.internal.cryptoservice.utimaco.UtimacoCryptoService
 import net.corda.nodeapi.internal.persistence.*
 import net.corda.tools.shell.InteractiveShell
 import org.apache.activemq.artemis.utils.ReusableLatch
@@ -180,7 +187,14 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     val transactionStorage = makeTransactionStorage(configuration.transactionCacheSizeBytes).tokenize()
     val networkMapClient: NetworkMapClient? = configuration.networkServices?.let { NetworkMapClient(it, versionInfo) }
     val attachments = NodeAttachmentService(metricRegistry, cacheFactory, database, configuration.devMode).tokenize()
-    val cryptoService = CryptoServiceFactory.makeCryptoService(configuration.cryptoServiceName ?: SupportedCryptoServices.BC_SIMPLE , configuration.myLegalName, configuration.signingCertificateStore, configuration.cryptoServiceConf, configuration.wrappingKeyStorePath)
+    val cryptoService : TimedCryptoService = CryptoServiceFactory.makeTimedCryptoService(
+            configuration.cryptoServiceName ?: SupportedCryptoServices.BC_SIMPLE,
+            configuration.myLegalName,
+            configuration.signingCertificateStore,
+            configuration.cryptoServiceConf,
+            configuration.cryptoServiceTimeout
+    ).closeOnStop()
+
     @Suppress("LeakingThis")
     val networkParametersStorage = makeNetworkParametersStorage()
     val cordappProvider = CordappProviderImpl(cordappLoader, CordappConfigFileProvider(configuration.cordappDirectories), attachments).tokenize()
@@ -265,16 +279,23 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     }
 
     /** The implementation of the [CordaRPCOps] interface used by this node. */
-    open fun makeRPCOps(cordappLoader: CordappLoader): CordaRPCOps {
-        val ops: CordaRPCOps = CordaRPCOpsImpl(services, smm, flowStarter) { shutdownExecutor.submit { stop() } }.also { it.closeOnStop() }
-        val proxies = mutableListOf<(CordaRPCOps) -> CordaRPCOps>()
+    open fun makeRPCOps(cordappLoader: CordappLoader, checkpointDumper: CheckpointDumper): CordaRPCOps {
+        val ops: InternalCordaRPCOps = CordaRPCOpsImpl(
+                services,
+                smm,
+                flowStarter,
+                checkpointDumper
+        ) {
+            shutdownExecutor.submit(::stop)
+        }.also { it.closeOnStop() }
+        val proxies = mutableListOf<(InternalCordaRPCOps) -> InternalCordaRPCOps>()
         // Mind that order is relevant here.
         proxies += ::AuthenticatedRpcOpsProxy
         if (!configuration.devMode) {
-            proxies += { it -> ExceptionMaskingRpcOpsProxy(it, true) }
+            proxies += { ExceptionMaskingRpcOpsProxy(it, true) }
         }
-        proxies += { it -> ExceptionSerialisingRpcOpsProxy(it, configuration.devMode) }
-        proxies += { it -> ThreadContextAdjustingRpcOpsProxy(it, cordappLoader.appClassLoader) }
+        proxies += { ExceptionSerialisingRpcOpsProxy(it, configuration.devMode) }
+        proxies += { ThreadContextAdjustingRpcOpsProxy(it, cordappLoader.appClassLoader) }
         return proxies.fold(ops) { delegate, decorate -> decorate(delegate) }
     }
 
@@ -283,8 +304,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             configuration.configureWithDevSSLCertificate(cryptoService)
             // configureWithDevSSLCertificate is a devMode process that writes directly to keystore files, so
             // we should re-synchronise BCCryptoService with the updated keystore file.
-            if (cryptoService is BCCryptoService) {
-                cryptoService.resyncKeystore()
+            if (cryptoService.underlyingService is BCCryptoService) {
+                (cryptoService.underlyingService as BCCryptoService).resyncKeystore()
             }
         }
         return validateKeyStores()
@@ -294,8 +315,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         check(started == null) { "Node has already been started" }
         log.info("Generating nodeInfo ...")
         val trustRoot = initKeyStores()
-        val (identity, identityKeyPair) = obtainIdentity()
         startDatabase()
+        val (identity, identityKeyPair) = obtainIdentity()
         val nodeCa = configuration.signingCertificateStore.get()[CORDA_CLIENT_CA]
         identityService.start(trustRoot, listOf(identity.certificate, nodeCa))
         return database.use {
@@ -335,7 +356,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         installCoreFlows()
         registerCordappFlows()
         services.rpcFlows += cordappLoader.cordapps.flatMap { it.rpcFlows }
-        val rpcOps = makeRPCOps(cordappLoader)
+        val checkpointDumper = CheckpointDumper(checkpointStorage, database, services, services.configuration.baseDirectory)
+        val rpcOps = makeRPCOps(cordappLoader, checkpointDumper)
         startShell()
         networkMapClient?.start(trustRoot)
 
@@ -412,7 +434,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             tokenizableServices = null
 
             verifyCheckpointsCompatible(frozenTokenizableServices)
-
+            checkpointDumper.start(frozenTokenizableServices)
             smm.start(frozenTokenizableServices)
             // Shut down the SMM so no Fibers are scheduled.
             runOnStop += { smm.stop(acceptableLiveFiberCountOnStop()) }
@@ -609,10 +631,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                 extraCordapps = generatedCordapps,
                 signerKeyFingerprintBlacklist = blacklistedKeys
         )
-    }
-
-    private fun isRunningSimpleNotaryService(configuration: NodeConfiguration): Boolean {
-        return configuration.notary != null && configuration.notary?.className == SimpleNotaryService::class.java.name
     }
 
     private class ServiceInstantiationException(cause: Throwable?) : CordaException("Service Instantiation Error", cause)
@@ -916,6 +934,16 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
         var signingCertificateStore = configuration.signingCertificateStore.get()
         if (!cryptoService.containsKey(legalIdentityPrivateKeyAlias) && !signingCertificateStore.contains(legalIdentityPrivateKeyAlias)) {
+            // Directly use the X500 name to public key map, as the identity service requires the node identity to start correctly.
+            database.transaction {
+                val x500Map = PersistentIdentityService.createX500Map(cacheFactory)
+                require(configuration.myLegalName !in x500Map) {
+                    // There is already a party in the identity store for this node, but the key has been lost. If this node starts up, it will
+                    // publish it's new key to the network map, which Corda cannot currently handle. To prevent this, stop the node from starting.
+                    "Private key for the node legal identity not found (alias $legalIdentityPrivateKeyAlias) but the corresponding public key" +
+                            " for it exists in the database. This suggests the identity for this node has been lost. Shutting down to prevent network map issues."
+                }
+            }
             log.info("$legalIdentityPrivateKeyAlias not found in key store, generating fresh key!")
             createAndStoreLegalIdentity(legalIdentityPrivateKeyAlias)
             signingCertificateStore = configuration.signingCertificateStore.get() // We need to resync after [createAndStoreLegalIdentity].
@@ -1009,14 +1037,13 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
         val identityCertPath = listOf(identityCert) + nodeCaCertPath
         signingCertificateStore.setCertPathOnly(alias, identityCertPath)
-        when(cryptoService) {
+        when(cryptoService.underlyingService) {
             is GemaltoLunaCryptoService -> log.info("Private key '$alias' stored in Gemalto HSM. Certificate-chain stored in node keystore.")
             is AzureKeyVaultCryptoService -> log.info("Private key '$alias' stored in Azure KeyVault. Certificate-chain stored in node keystore.")
             is UtimacoCryptoService -> log.info("Private key '$alias' stored in Utimaco HSM.  Certificate-chain stored in node keystore.")
             is FutureXCryptoService -> log.info("Private key '$alias' stored in FutureX HSM.  Certificate-chain stored in node keystore.")
-            is BCCryptoService -> log.info("Private key '$alias' and its certificate-chain stored successfully.")
             is PrimusXCryptoService -> log.info("Private key '$alias' stored in PrimusX HSM.  Certificate-chain stored in node keystore.")
-            else -> throw java.lang.IllegalStateException("Unknown cryptoservice type found: ${cryptoService.javaClass.kotlin.qualifiedName}")
+            is BCCryptoService -> log.info("Private key '$alias' and its certificate-chain stored successfully.")
         }
         return PartyAndCertificate(X509Utilities.buildCertPath(identityCertPath))
     }

@@ -87,8 +87,8 @@ Database Management Tool settings in configuration file ``node.conf`` for Azure 
 Replace placeholders *<database_server>* and *<my_database>* with appropriate values (*<my_database>* is a user database).
 The ``database.schema`` is the database schema name assigned to both administrative and restrictive users.
 
-Microsoft SQL JDBC driver can be downloaded from `Microsoft Download Center <https://www.microsoft.com/en-us/download/details.aspx?id=55539>`_.
-Extract the archive, and copy the single file *mssql-jdbc-6.2.2.jre8.jar* into the ``drivers`` directory.
+Microsoft SQL JDBC driver can be downloaded from `Microsoft Download Center <https://www.microsoft.com/en-us/download/details.aspx?id=56615>`_.
+Extract the archive, and copy the single file *mssql-jdbc-6.4.0.jre8.jar* into the ``drivers`` directory.
 
 .. _db_setup_configure_db_tool_sqlserver_ref:
 
@@ -111,8 +111,8 @@ Database Management Tool settings in configuration file ``node.conf`` for SQL Se
 
 Replace placeholders *<host>* and *<port>* with appropriate values. The default SQL Server port is 1433.
 
-Microsoft JDBC 6.2 driver can be downloaded from `Microsoft Download Center <https://www.microsoft.com/en-us/download/details.aspx?id=55539>`_.
-Extract the archive, and copy the single file *mssql-jdbc-6.2.2.jre8.jar* into the ``drivers`` directory.
+Microsoft JDBC 6.4 driver can be downloaded from `Microsoft Download Center <https://www.microsoft.com/en-us/download/details.aspx?id=56615>`_.
+Extract the archive, and copy the single file *mssql-jdbc-6.4.0.jre8.jar* into the ``drivers`` directory.
 
 .. _db_setup_configure_db_tool_oracle_ref:
 

@@ -29,7 +29,7 @@ class RpcFlowsDrainingModeTest : IntegrationTest() {
         val databaseSchemas = IntegrationTestSchemas(ALICE_NAME, BOB_NAME, DUMMY_BANK_A_NAME, DUMMY_NOTARY_NAME)
     }
 
-    private val portAllocation = incrementalPortAllocation(10000)
+    private val portAllocation = incrementalPortAllocation()
     private val user = User("mark", "dadada", setOf(Permissions.all()))
     private val users = listOf(user)
 

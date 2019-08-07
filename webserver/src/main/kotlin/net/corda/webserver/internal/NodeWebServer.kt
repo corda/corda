@@ -5,6 +5,7 @@ import io.netty.channel.unix.Errors
 import net.corda.client.jackson.JacksonSupport
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.RPCException
+import net.corda.client.rpc.internal.ReconnectingCordaRPCOps
 import net.corda.core.internal.errors.AddressBindingException
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.utilities.contextLogger
@@ -43,7 +44,7 @@ class NodeWebServer(val config: WebServerConfig) {
 
     fun start() {
         logAndMaybePrint("Starting as webserver: ${config.webAddress}")
-        server = initWebServer(retryConnectLocalRpc())
+        server = initWebServer(reconnectingCordaRPCOps())
     }
 
     fun run() {
@@ -175,34 +176,7 @@ class NodeWebServer(val config: WebServerConfig) {
         }
     }
 
-    private fun retryConnectLocalRpc(): CordaRPCOps {
-        while (true) {
-            try {
-                return connectLocalRpcAsNodeUser()
-            } catch (e: RPCException) {
-                log.debug("Could not connect to ${config.rpcAddress} due to exception: ", e)
-                Thread.sleep(retryDelay)
-                // This error will happen if the server has yet to create the keystore
-                // Keep the fully qualified package name due to collisions with the Kotlin stdlib
-                // exception of the same name
-            } catch (e: NoSuchFileException) {
-                log.debug("Tried to open a file that doesn't yet exist, retrying", e)
-                Thread.sleep(retryDelay)
-            } catch (e: Throwable) {
-                // E.g. a plugin cannot be instantiated?
-                // Note that we do want the exception stacktrace.
-                log.error("Cannot start WebServer", e)
-                throw e
-            }
-        }
-    }
-
-    private fun connectLocalRpcAsNodeUser(): CordaRPCOps {
-        log.info("Connecting to node at ${config.rpcAddress} as ${config.runAs}")
-        val client = CordaRPCClient(hostAndPort = config.rpcAddress, classLoader = javaClass.classLoader)
-        val connection = client.start(config.runAs.username, config.runAs.password)
-        return connection.proxy
-    }
+    private fun reconnectingCordaRPCOps() = ReconnectingCordaRPCOps(config.rpcAddress, config.runAs.username , config.runAs.password, null, javaClass.classLoader)
 
     /** Fetch WebServerPluginRegistry classes registered in META-INF/services/net.corda.webserver.services.WebServerPluginRegistry files that exist in the classpath */
     val pluginRegistries: List<WebServerPluginRegistry> by lazy {

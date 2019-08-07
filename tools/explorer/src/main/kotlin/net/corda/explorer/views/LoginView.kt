@@ -4,9 +4,11 @@ import javafx.beans.property.SimpleIntegerProperty
 import javafx.scene.control.*
 import net.corda.client.jfx.model.NodeMonitorModel
 import net.corda.client.jfx.model.objectProperty
+import net.corda.client.rpc.RPCException
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.explorer.model.SettingsModel
-import org.controlsfx.dialog.ExceptionDialog
+import net.corda.explorer.ui.AdvancedExceptionDialog
+import net.corda.explorer.ui.withStacktrace
 import tornadofx.*
 import kotlin.system.exitProcess
 
@@ -50,10 +52,14 @@ class LoginView : View(WINDOW_TITLE) {
                         }
                         getModel<SettingsModel>().commit()
                         LoginStatus.loggedIn
+                    } catch (e: RPCException) {
+                        e.printStackTrace()
+                        AdvancedExceptionDialog(e).apply { initOwner(root.scene.window) }.showAndWait()
+                        LoginStatus.exception
                     } catch (e: Exception) {
                         // TODO : Handle this in a more user friendly way.
                         e.printStackTrace()
-                        ExceptionDialog(e).apply { initOwner(root.scene.window) }.showAndWait()
+                        AdvancedExceptionDialog(e).withStacktrace().apply { initOwner(root.scene.window) }.showAndWait()
                         LoginStatus.exception
                     } finally {
                         root.isDisable = false

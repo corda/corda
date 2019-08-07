@@ -337,3 +337,39 @@ You would need to create such entries and provide them to a node operator, in or
 
 See the Corda node upgrade procedure :ref:`details steps <upgrading_os_to_ent_1>` how to obtain SQL statements.
 Also see `Liquibase Sql Format <http://www.liquibase.org/documentation/sql_format.html>`_.
+
+Notes on Liquibase specifics
+----------------------------
+
+When writing data migrations, certain databases may have particular limitations which mean that database specific migration code is required. For example, in Oracle:
+
+* 30 byte names - Prior to version 12c the maximum length of table/column names was around 30 bytes and post 12c the limit is 128 bytes. There is no way to reconfigure the limit or make a Liquibase workaround without also specialising the CorDapp code.
+
+* VARCHAR longer than 2000 bytes - Liquibase does not automatically resolve the issue and will create a broken SQL statement. The solution is to migrate to LOB types (CLOB, BLOB, NCLOB) or extend the length limit. Versions after 12c can use `extended data types <https://oracle-base.com/articles/12c/extended-data-types-12cR1>`_ to do the latter.
+
+Example Liquibase with specialised logic
+----------------------------------------
+
+When using Liquibase to work around the issue of VARCHAR length, you could create a changeset
+specific to Oracle using the <changeset ... dbms="oracle"> with the supported Oracle value type, as Liquibase
+itself does not do the conversion automatically.
+
+.. code-block:: xml
+
+    <!--This is only executed for Oracle-->
+    <changeSet author="author" dbms = "oracle">
+        <createTable tableName="table">
+            <column name="field" type="CLOB"/>
+        </createTable>
+    </changeSet>
+
+    <!--This is only executed for H2, Postgres and SQL Server-->
+    <changeSet author="author" dbms="h2,postgresql,sqlserver">
+        <createTable tableName="table">
+            <column name="field" type="VARCHAR(4000)"/>
+        </createTable>
+    </changeSet>
+
+As we can see, we have one changeset for Oracle and one for the other database types. The dbms check will ensure the proper changeset is executed.
+Each database has it's own specifics, so when creating scripts for a CorDapp, it is recommended that you test your scripts against each supported
+database.

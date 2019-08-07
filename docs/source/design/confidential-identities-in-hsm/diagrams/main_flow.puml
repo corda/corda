@@ -1,0 +1,34 @@
+@startuml main_flow
+
+PartyA->PartyB : SwapIdentitiesFlow
+
+PartyB->KeyManagementService: freshKeyAndCert(..)
+
+KeyManagementService->CryptoService: generateWrappedKeyPair(masterKeyAlias, childKeyScheme)
+CryptoService->KeyManagementService: (publicKey: PublicKey, privateWrappedKey: PrivateWrappedKey)
+
+KeyManagementService->"CI DB table": put(publicKeyHash, publicKey, privateWrappedKey.bytes, privateWrappedKey.keyAlgorithm, privateWrappedKey.keySize)
+
+KeyManagementService->PartyB: PartyAndCertificate
+
+PartyB->PartyA: Map<Party,AnonymousParty>
+
+PartyA->PartyB: CollectSignaturesFlow
+
+KeyManagementService->KeyManagementService: check which map/table contains the public key (old or new one)
+
+alt public key in regular table/map
+    KeyManagementService->KeyManagementService: existing behaviour
+else public key in wrapped keys table/map
+    KeyManagementService->"CI DB table": get(publicKeyHash)
+    "CI DB table"->KeyManagementService: (publicKey, wrappedPrivateKeyBytes, childKeyAlgorithm, childKeySize)
+
+    KeyManagementService->CryptoService: sign(masterKeyAlias, privateWrappedKey, payloadToSign)
+    CryptoService->KeyManagementService: signature: Signature
+end
+
+KeyManagementService->PartyB: TransactionSignature
+
+PartyB->PartyA: SignedTransaction
+
+@enduml

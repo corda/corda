@@ -2,7 +2,6 @@ apply plugin: 'kotlin'
 // Java Persistence API support: create no-arg constructor
 // see: http://stackoverflow.com/questions/32038177/kotlin-with-jpa-default-constructor-hell
 apply plugin: 'kotlin-jpa'
-apply plugin: CanonicalizerPlugin
 apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'net.corda.plugins.cordapp'
@@ -23,6 +22,12 @@ sourceSets {
     }
 }
 
+configurations {
+    testArtifacts.extendsFrom testRuntimeClasspath
+    integrationTestCompile.extendsFrom testCompile
+    integrationTestRuntimeOnly.extendsFrom testRuntimeOnly
+}
+
 dependencies {
     // Note: 3rd party CorDapps should remember to include the relevant Finance CorDapp dependencies using `cordapp`
     // cordapp project(':finance:workflows')
@@ -34,21 +39,19 @@ dependencies {
         transitive = false
     }
 
-    // For JSON
-    compile "com.fasterxml.jackson.core:jackson-databind:${jackson_version}"
-
     testCompile project(':test-utils')
     testCompile project(path: ':core', configuration: 'testArtifacts')
-    testCompile "junit:junit:$junit_version"
+    testCompile project(':node-driver')
+
+    testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
+    testImplementation "junit:junit:$junit_version"
+
+    testRuntimeOnly "org.junit.vintage:junit-vintage-engine:${junit_vintage_version}"
+    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${junit_jupiter_version}"
+    testRuntimeOnly "org.junit.platform:junit-platform-launcher:${junit_platform_version}"
 
     // AssertJ: for fluent assertions for testing
     testCompile "org.assertj:assertj-core:$assertj_version"
-}
-
-configurations {
-    testArtifacts.extendsFrom testRuntime
-    integrationTestCompile.extendsFrom testCompile
-    integrationTestRuntime.extendsFrom testRuntime
 }
 
 task testJar(type: Jar) {
@@ -67,12 +70,6 @@ artifacts {
 
 jar {
     baseName 'corda-finance-workflows'
-}
-
-configurations {
-    testArtifacts.extendsFrom testRuntime
-    integrationTestCompile.extendsFrom testCompile
-    integrationTestRuntime.extendsFrom testRuntime
 }
 
 cordapp {

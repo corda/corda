@@ -42,7 +42,8 @@ data class DatabaseConfig(
         val schema: String? = null,
         val exportHibernateJMXStatistics: Boolean = Defaults.exportHibernateJMXStatistics,
         val hibernateDialect: String? = null,
-        val mappedSchemaCacheSize: Long = Defaults.mappedSchemaCacheSize
+        val mappedSchemaCacheSize: Long = Defaults.mappedSchemaCacheSize,
+        val vaultUpdateBatchSize: Int? = Defaults.vaultUpdateBatchSize
 ) {
     object Defaults {
         val runMigration = false
@@ -51,6 +52,7 @@ data class DatabaseConfig(
         val transactionIsolationLevel = TransactionIsolationLevel.REPEATABLE_READ
         val exportHibernateJMXStatistics = false
         val mappedSchemaCacheSize = 100L
+        val vaultUpdateBatchSize = null
     }
 }
 

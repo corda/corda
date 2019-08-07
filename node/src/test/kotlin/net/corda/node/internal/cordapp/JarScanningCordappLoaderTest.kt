@@ -66,6 +66,18 @@ class JarScanningCordappLoaderTest {
     }
 
     @Test
+    fun `constructed CordappImpl contains the right cordapp classes`() {
+        val isolatedJAR = JarScanningCordappLoaderTest::class.java.getResource("/isolated.jar")
+        val loader = JarScanningCordappLoader.fromJarUrls(listOf(isolatedJAR))
+
+        val actualCordapp = loader.cordapps.single()
+        val cordappClasses = actualCordapp.cordappClasses
+        assertThat(cordappClasses).contains(isolatedFlowName)
+        val serializationWhitelistedClasses = actualCordapp.serializationWhitelists.flatMap { it.whitelist }.map { it.name }
+        assertThat(cordappClasses).containsAll(serializationWhitelistedClasses)
+    }
+
+    @Test
     fun `flows are loaded by loader`() {
         val jarFile = cordappWithPackages(javaClass.packageName).jarFile
         val loader = JarScanningCordappLoader.fromJarUrls(listOf(jarFile.toUri().toURL()))
@@ -117,7 +129,7 @@ class JarScanningCordappLoaderTest {
         val jar = JarScanningCordappLoaderTest::class.java.getResource("versions/min-2-no-target.jar")!!
         val loader = JarScanningCordappLoader.fromJarUrls(listOf(jar), VersionInfo.UNKNOWN)
         // exclude the core cordapp
-        val cordapp = loader.cordapps.single { it.cordappClasses.contains("net.corda.core.internal.cordapp.CordappImpl") }
+        val cordapp = loader.cordapps.first()
         assertThat(cordapp.targetPlatformVersion).isEqualTo(2)
         assertThat(cordapp.minimumPlatformVersion).isEqualTo(2)
     }

@@ -7,7 +7,7 @@ import net.corda.core.DeleteForDJVM
 import net.corda.core.crypto.DummySecureRandom
 import net.corda.core.utilities.SgxSupport
 import net.corda.core.utilities.loggerFor
-import org.apache.commons.lang.SystemUtils
+import org.apache.commons.lang3.SystemUtils
 import java.io.*
 import java.security.Provider
 import java.security.SecureRandom

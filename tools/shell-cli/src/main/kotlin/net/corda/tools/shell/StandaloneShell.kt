@@ -81,7 +81,7 @@ class StandaloneShell : CordaCliWrapper("corda-shell", "The Corda standalone she
                 password = String(readPassword("Password:"))
             }
         }
-        InteractiveShell.startShell(configuration, classLoader)
+        InteractiveShell.startShell(configuration, classLoader, true)
         try {
              //connecting to node by requesting node info to fail fast
               InteractiveShell.nodeInfo()

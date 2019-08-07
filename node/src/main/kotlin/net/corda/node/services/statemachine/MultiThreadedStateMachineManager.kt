@@ -315,18 +315,20 @@ class MultiThreadedStateMachineManager(
     }
 
     private fun restoreFlowsFromCheckpoints(): List<Flow> {
-        return checkpointStorage.getAllCheckpoints().map { (id, serializedCheckpoint) ->
-            // If a flow is added before start() then don't attempt to restore it
-            if (concurrentBox.content.flows.containsKey(id)) return@map null
-            val checkpoint = deserializeCheckpoint(serializedCheckpoint) ?: return@map null
-            createFlowFromCheckpoint(
-                    id = id,
-                    checkpoint = checkpoint,
-                    initialDeduplicationHandler = null,
-                    isAnyCheckpointPersisted = true,
-                    isStartIdempotent = false
-            )
-        }.toList().filterNotNull()
+        return checkpointStorage.getAllCheckpoints().use {
+            it.mapNotNull { (id, serializedCheckpoint) ->
+                // If a flow is added before start() then don't attempt to restore it
+                if (concurrentBox.content.flows.containsKey(id)) return@mapNotNull null
+                val checkpoint = deserializeCheckpoint(serializedCheckpoint) ?: return@mapNotNull null
+                createFlowFromCheckpoint(
+                        id = id,
+                        checkpoint = checkpoint,
+                        initialDeduplicationHandler = null,
+                        isAnyCheckpointPersisted = true,
+                        isStartIdempotent = false
+                )
+            }.toList()
+        }
     }
 
     private fun resumeRestoredFlows(flows: List<Flow>) {

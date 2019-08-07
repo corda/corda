@@ -3,6 +3,7 @@ description 'Corda core (deterministic)'
 apply from: '../deterministic.gradle'
 apply plugin: 'com.jfrog.artifactory'
 apply plugin: 'net.corda.plugins.publish-utils'
+apply plugin: 'java-library'
 apply plugin: 'idea'
 
 evaluationDependsOn(":core")
@@ -11,7 +12,7 @@ def javaHome = System.getProperty('java.home')
 def jarBaseName = "corda-${project.name}".toString()
 
 configurations {
-    deterministicLibraries
+    deterministicLibraries.extendsFrom api
     deterministicArtifacts.extendsFrom deterministicLibraries
 }
 
@@ -20,18 +21,23 @@ dependencies {
 
     // Configure these by hand. It should be a minimal subset of core's dependencies,
     // and without any obviously non-deterministic ones such as Hibernate.
-    deterministicLibraries "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
-    deterministicLibraries "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
-    deterministicLibraries "javax.persistence:javax.persistence-api:2.2"
+
+    // These "api" dependencies will become "compile" scoped in our published POM.
+    api "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+    api "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
+    api "javax.persistence:javax.persistence-api:2.2"
+    api "com.google.code.findbugs:jsr305:$jsr305_version"
+
+    // These dependencies will become "runtime" scoped in our published POM.
+    // See publish.dependenciesFrom.defaultScope.
     deterministicLibraries "org.bouncycastle:bcprov-jdk15on:$bouncycastle_version"
     deterministicLibraries "org.bouncycastle:bcpkix-jdk15on:$bouncycastle_version"
-    deterministicLibraries "com.google.code.findbugs:jsr305:$jsr305_version"
     deterministicLibraries "net.i2p.crypto:eddsa:$eddsa_version"
     deterministicLibraries "org.slf4j:slf4j-api:$slf4j_version"
 }
 
 jar {
-    baseName 'DOES-NOT-EXIST'
+    archiveBaseName = 'DOES-NOT-EXIST'
     // Don't build a jar here because it would be the wrong one.
     // The jar we really want will be built by the metafix task.
     enabled = false
@@ -41,10 +47,10 @@ def coreJarTask = tasks.getByPath(':core:jar')
 def originalJar = coreJarTask.outputs.files.singleFile
 
 task patchCore(type: Zip, dependsOn: coreJarTask) {
-    destinationDir file("$buildDir/source-libs")
+    destinationDirectory = file("$buildDir/source-libs")
     metadataCharset 'UTF-8'
-    classifier 'transient'
-    extension 'jar'
+    archiveClassifier = 'transient'
+    archiveExtension = 'jar'
 
     from(compileKotlin)
     from(zipTree(originalJar)) {
@@ -68,7 +74,7 @@ task predeterminise(type: ProGuardTask) {
 
     libraryjars file("$javaHome/lib/rt.jar")
     libraryjars file("$javaHome/lib/jce.jar")
-    configurations.compileOnly.forEach {
+    configurations.compileClasspath.forEach {
         if (originalJar != it) {
             libraryjars it, filter: '!META-INF/versions/**'
         }

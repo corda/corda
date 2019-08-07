@@ -2,7 +2,9 @@
 Percona XtraDB Cluster, the underlying replicated Database
 ==========================================================
 
-Percona's `documentation page <https://www.percona.com/doc/percona-xtradb-cluster/LATEST/index.html>`__ explains the installation in detail.
+The HA notary service is tested against Percona XtraDB Cluster 5.7. Percona's 
+`documentation page <https://www.percona.com/doc/percona-xtradb-cluster/LATEST/index.html>`__ explains the installation 
+in detail.
 
 .. note::
 
@@ -117,6 +119,8 @@ Start the Database
 Watch the logs using ``tail -f /var/log/mysqld.log``. Look for a log entry like
 ``WSREP: Setting wsrep_ready to true``.
 
+You can now connect to the database using a standard tool (e.g. the ``mysql`` command line tool).
+
 Create the Corda User
 ~~~~~~~~~~~~~~~~~~~~~
 
@@ -126,6 +130,14 @@ Create the Corda User
 
 Create the Database and Tables
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+We need to create three tables in our database:
+
+* ``notary_committed_states``
+* ``notary_request_log``
+* ``notary_committed_transactions``
+
+We can do this using the following commands:
 
 .. code:: sql
 

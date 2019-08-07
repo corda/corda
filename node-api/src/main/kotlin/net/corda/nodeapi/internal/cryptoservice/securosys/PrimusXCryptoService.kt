@@ -163,7 +163,7 @@ class PrimusXCryptoService(keyStore: KeyStore, provider: Provider, x500Principal
                 }
             }
         }
-    }
 
-    data class PrimusXConfiguration(val host: String, val port: Int, val username: String, val password: String)
+        data class PrimusXConfiguration(val host: String, val port: Int, val username: String, val password: String)
+    }
 }

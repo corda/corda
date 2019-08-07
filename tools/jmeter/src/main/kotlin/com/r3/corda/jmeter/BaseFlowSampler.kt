@@ -62,8 +62,8 @@ abstract class BaseFlowSampler : AbstractJavaSamplerClient() {
             labelValue = null
         }
         rpcPool = rpcClientPools.computeIfAbsent(rpcParams) {
+            val rpcClient = CordaRPCClient(it.address)
             LazyPool {
-                val rpcClient = CordaRPCClient(it.address)
                 val rpcConnection = rpcClient.start(it.user, it.password)
                 val rpcProxy = rpcConnection.proxy
                 RPCClient(rpcClient, rpcConnection, rpcProxy)

@@ -3,6 +3,7 @@ package net.corda.nodeapi.internal.network
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigException
 import com.typesafe.config.ConfigFactory
+import net.corda.common.configuration.parsing.internal.Configuration
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
@@ -196,6 +197,23 @@ internal constructor(private val initSerEnv: Boolean,
     /** Entry point for Cordform */
     fun bootstrapCordform(directory: Path, cordappJars: List<Path>) {
         bootstrap(directory, cordappJars, CopyCordapps.No, fromCordform = true)
+    }
+
+    /**
+     * Entry point for Cordform with extra configurations
+     * @param directory - directory on which the network will be deployed
+     * @param cordappJars - List of CordApps to deploy
+     * @param extraConfigurations - HOCON representation of extra configuration parameters
+     */
+    fun bootstrapCordform(directory: Path, cordappJars: List<Path>, extraConfigurations: String) {
+        val configuration = ConfigFactory.parseString(extraConfigurations).resolve().getObject("networkParameterOverrides").toConfig().parseAsNetworkParametersConfiguration()
+        val networkParametersOverrides = configuration.doOnErrors(::reportErrors).optional ?: throw IllegalStateException("Invalid configuration passed.")
+        bootstrap(directory, cordappJars, CopyCordapps.No, fromCordform = true, networkParametersOverrides = networkParametersOverrides)
+    }
+
+    private fun reportErrors(errors: Set<Configuration.Validation.Error>) {
+        System.err.println("Error(s) found parsing the networkParameterOverrides:")
+        errors.forEach { System.err.println("Error parsing ${it.pathAsString}: ${it.message}") }
     }
 
     /** Entry point for the tool */

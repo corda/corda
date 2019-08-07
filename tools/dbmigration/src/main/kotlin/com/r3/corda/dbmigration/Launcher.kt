@@ -3,18 +3,21 @@
 package com.r3.corda.dbmigration
 
 import com.typesafe.config.Config
-import liquibase.exception.MigrationFailedException
 import net.corda.cliutils.*
+import net.corda.common.logging.CordaVersion
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.Emoji
+import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.internal.div
 import net.corda.core.internal.exists
 import net.corda.core.schemas.MappedSchema
+import net.corda.node.VersionInfo
 import net.corda.node.internal.DataSourceFactory.createDatasourceFromDriverJarFolders
+import net.corda.node.services.config.NotaryConfig
+import net.corda.node.utilities.NotaryLoader
 import net.corda.nodeapi.internal.config.UnknownConfigKeysPolicy
 import net.corda.nodeapi.internal.config.parseAs
 import net.corda.nodeapi.internal.cordapp.CordappLoader
-import net.corda.nodeapi.internal.persistence.CheckpointsException
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.SchemaMigration
 import org.slf4j.Logger
@@ -98,7 +101,7 @@ private class DbManagementTool : CordaCliWrapper("database-manager", "The Corda 
     }
 }
 
-data class Configuration(val dataSourceProperties: Properties, val database: DatabaseConfig, val jarDirs: List<String> = emptyList(), val myLegalName: CordaX500Name)
+data class Configuration(val dataSourceProperties: Properties, val database: DatabaseConfig, val jarDirs: List<String> = emptyList(), val myLegalName: CordaX500Name, val notary: NotaryConfig?)
 
 abstract class DbManagerConfiguration(private val cmdLineOptions: SharedDbManagerOptions) {
     protected abstract val defaultConfigFileName: String
@@ -107,6 +110,11 @@ abstract class DbManagerConfiguration(private val cmdLineOptions: SharedDbManage
     abstract val cordappLoader: CordappLoader?
     abstract val parsedConfig: Config
     val config by lazy { parsedConfig.parseAs(Configuration::class, UnknownConfigKeysPolicy.IGNORE::handle) }
+    val notaryLoader by lazy {
+        config.notary?.let {
+            NotaryLoader(it, VersionInfo(PLATFORM_VERSION, CordaVersion.releaseVersion, CordaVersion.revision, CordaVersion.vendor))
+        }
+    }
     val baseDirectory: Path by lazy {
         val dir = cmdLineOptions.baseDirectory?.toAbsolutePath()?.normalize()
                 ?: throw error("You must specify a base-directory")
@@ -119,20 +127,25 @@ abstract class DbManagerConfiguration(private val cmdLineOptions: SharedDbManage
         val jarDirs = config.jarDirs.map { Paths.get(it) }
         for (jarDir in jarDirs) {
             if (!jarDir.exists()) {
-                error("Could not find the configured JDBC driver directory: '$jarDir'.")
+                throw error("Could not find the configured JDBC driver directory: '$jarDir'.")
             }
         }
-
-        return try {
-            withDatasource(createDatasourceFromDriverJarFolders(config.dataSourceProperties, classLoader, driversFolder + jarDirs))
+        val dataSource = createDataSource(driversFolder, jarDirs)
+        try {
+            withDatasource(dataSource)
         } catch (e: Exception) {
-            when (e) {
-                is CheckpointsException, is MigrationFailedException -> error(e)
-                else -> wrappedError("""Failed to create datasource.
-                |Please check that the correct JDBC driver is installed in one of the following folders:
-                |${(driversFolder + jarDirs).joinToString("\n\t - ", "\t - ")}
-                |Caused By $e""".trimMargin(), e)
-            }
+            throw wrappedError("Migration failed:\nCaused By $e", e)
+        }
+    }
+
+    private fun createDataSource(driversFolder: List<Path>, jarDirs: List<Path>): DataSource {
+        return try {
+            createDatasourceFromDriverJarFolders(config.dataSourceProperties, classLoader, driversFolder + jarDirs)
+        } catch (e: Exception) {
+            throw wrappedError("""Failed to create datasource.
+                    |Please check that the correct JDBC driver is installed in one of the following folders:
+                    |${(driversFolder + jarDirs).joinToString("\n\t - ", "\t - ")}
+                    |Caused By $e""".trimMargin(), e)
         }
     }
 
@@ -144,14 +157,14 @@ abstract class DbManagerConfiguration(private val cmdLineOptions: SharedDbManage
 class ConfigurationException(message: String) : Exception(message)
 class WrappedConfigurationException(message: String, val innerException: Exception) : Exception(message)
 
-fun wrappedError(message: String, innerException: Exception) {
+fun wrappedError(message: String, innerException: Exception): WrappedConfigurationException {
     errorLogger.error(message, innerException)
-    throw WrappedConfigurationException(message, innerException)
+    return WrappedConfigurationException(message, innerException)
 }
 
-fun error(exception: Exception) {
+fun error(exception: Exception): Exception {
     errorLogger.error(exception.message, exception)
-    throw exception
+    return exception
 }
 
 private fun error(message: String): Throwable {

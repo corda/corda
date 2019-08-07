@@ -4,31 +4,61 @@ Changelog
 Here's a summary of what's changed in each Corda release. For guidance on how to upgrade code from the previous
 release, see :doc:`app-upgrade-notes`.
 
-Unreleased
-----------
+.. _changelog_v5.0:
 
-* Updating postgres dependency to 42.2.5
+Version 5.0
+-----------
 
-* Test ``CordaService`` s can be installed on mock nodes using ``UnstartedMockNode.installCordaService``.
+* Introduced a new low level flow diagnostics tool: checkpoint agent (that can be used standalone or in conjunction with the ``dumpCheckpoints`` shell command).
+  See :doc:`tools-checkpoint-agent` for more information.
 
-* The finance-contracts demo CorDapp has been slimmed down to contain only that which is relevant for contract verification. Everything else
-  has been moved to the finance-workflows CorDapp:
+* The MockNet now supports setting a custom Notary class name, as was already supported by normal node config. See :doc:`tutorial-custom-notary`.
 
-  * The cash selection logic. ``AbstractCashSelection`` is now in net.corda.finance.contracts.asset so any custom implementations must now be
-    defined in ``META-INF/services/net.corda.finance.workflows.asset.selection.AbstractCashSelection``.
+* Introduced a new ``Destination`` abstraction for communicating with non-Party destinations using the new ``FlowLogic.initateFlow(Destination)``
+  method. ``Party`` and ``AnonymousParty`` have been retrofitted to implement ``Destination``. Initiating a flow to an ``AnonymousParty``
+  means resolving to the well-known identity ``Party`` and then communicating with that.
 
-  * The jackson annotations on ``Expression`` have been removed. You will need to use ``FinanceJSONSupport.registerFinanceJSONMappers`` if
-    you wish to preserve the JSON format for this class.
+* Removed ``finance-workflows`` dependency on jackson library.  The functions that used jackson (e.g. ``FinanceJSONSupport``) have been moved
+  into IRS Demo.
 
-  * The various utility methods defined in ``Cash`` for creating cash transactions have been moved to ``net.corda.finance.workflows.asset.CashUtils``.
-    Similarly with ``CommercialPaperUtils`` and ``ObligationUtils``.
+* Information about checkpointed flows can be retrieved from the shell. Calling ``dumpCheckpoints`` will create a zip file inside the node's
+  ``log`` directory. This zip will contain a JSON representation of each checkpointed flow. This information can then be used to determine the
+  state of stuck flows or flows that experienced internal errors and were kept in the node for manual intervention.
 
-  * Various other utilities such as ``GetBalances`` and the test calendar data.
+* It is now possible to re-record transactions if a node wishes to record as an observer a transaction it has participated in. If this is
+  done, then the node may record new output states that are not relevant to the node.
 
-  The only exception to this is ``Interpolator`` and related classes. These are now in the `IRS demo workflows CorDapp <https://github.com/corda/corda/tree/master/samples/irs-demo/cordapp/workflows-irs>`_.
+  .. warning:: Nodes may re-record transactions if they have previously recorded them as a participant and wish to record them as an observer.
+     However, the node cannot resolve the forward chain of transactions if this is done. This means that if you wish to re-record a chain of
+     transactions and get the new output states to be correctly marked as consumed, the full chain must be sent to the node *in order*.
 
-* Vault states are now correctly migrated when moving from V3 to V4. In particular, this means the relevancy column is correctly filled, and the state party table is populated.
-  Note: This means Corda can be slow to start up for the first time after upgrading from V3 to V4.
+* Added ``nodeDiagnosticInfo`` to the RPC API. The new RPC is also available as the ``run nodeDiagnosticInfo`` command executable from
+  the Corda shell. It retrieves version information about the Corda platform and the CorDapps installed on the node.
+
+* ``CordaRPCClient.start`` has a new ``gracefulReconnect`` parameter. When ``true`` (the default is ``false``) it will cause the RPC client
+  to try to automatically reconnect to the node on disconnect. Further any ``Observable`` s previously created will continue to vend new
+  events on reconnect.
+
+  .. note:: This is only best-effort and there are no guarantees of reliability.
+
+.. _changelog_v4.2:
+
+Version 4.2
+-----------
+
+* Contract attachments are now automatically whitelisted by the node if another contract attachment is present with the same contract classes,
+  signed by the same public keys, and uploaded by a trusted uploader. This allows the node to resolve transactions that use earlier versions
+  of a contract without having to manually install that version, provided a newer version is installed. Similarly, non-contract attachments
+  are whitelisted if another attachment is present on the node that is signed by the same public key.
+
+* :doc:`design/data-model-upgrades/package-namespace-ownership` configurations can be now be set as described in
+  :ref:`node_package_namespace_ownership`, when using the Cordformation plugin version 4.0.43.
+
+* Disabled the default loading of ``hibernate-validator`` as a plugin by hibernate when a CorDapp depends on it. This change will in turn fix the
+  (https://github.com/corda/corda/issues/4444) issue, because nodes will no longer need to add ``hibernate-validator`` to the ``\libs`` folder.
+  For nodes that already did that, it can be safely removed when the latest Corda is installed.
+  One thing to keep in mind is that if any CorDapp relied on hibernate-validator to validate Querayable JPA Entities via annotations, that will no longer happen.
+  That was a bad practice anyway, because the ``ContractState`` should be validated in the Contract verify method.
 
 * Disabled the default loading of ``hibernate-validator`` as a plugin by hibernate when a CorDapp depends on it. This change will in turn fix the
   (https://github.com/corda/corda/issues/4444) issue, because nodes will no longer need to add ``hibernate-validator`` to the ``\libs`` folder.

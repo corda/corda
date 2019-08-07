@@ -101,6 +101,14 @@ across the nodes that intend to use it.
 Each transaction received by a node will then verify that the apps attached to it have the correct signers as specified by its
 Signature Constraints. This ensures that the version of each app is acceptable to the transaction's input states.
 
+If a node receives a transaction that uses a contract attachment that it doesn't trust, but there is an attachment present on the node with
+the same contract classes and same signatures, then the node will execute that contract's code as if it were trusted. This means that nodes
+are no longer required to have every version of a CorDapp uploaded to them in order to verify transactions running older version of a CorDapp.
+Instead, it is sufficient to have any version of the CorDapp contract installed.
+
+For third party dependencies attached to the transaction, the rule is slightly different. In this case, the attachment will be trusted by the
+node provided there is another trusted attachment in the node's attachment store that has been signed with the same keys.
+
 More information on how to sign an app directly from Gradle can be found in the
 :ref:`CorDapp Jar signing <cordapp_build_system_signing_cordapp_jar_ref>` section of the documentation.
 
@@ -113,14 +121,10 @@ This is expanded upon in :ref:`contract_constraints_in_transactions`.
 .. note:: Signature Constraints are used by default except when a new transaction contains an input state with a Hash Constraint. In this
           situation the Hash Constraint is used.
 
-.. _app_versioning_with_signature_constraints:
-
 App versioning with Signature Constraints
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Signed apps require a version number to be provided, see :doc:`versioning`. You can't import two different
-JARs that claim to be the same version, provide the same contract classes and which are both signed. At runtime
-the node will throw a ``DuplicateContractClassException`` exception if this condition is violated.
+Signed apps require a version number to be provided, see :doc:`versioning`.
 
 Hash Constraints
 ----------------
@@ -131,8 +135,8 @@ Issues when using the HashAttachmentConstraint
 When setting up a new network, it is possible to encounter errors when states are issued with the ``HashAttachmentConstraint``,
 but not all nodes have that same version of the CorDapp installed locally.
 
-In this case, flows will fail with a ``ContractConstraintRejection``, and the failed flow will be sent to the :doc:`node-flow-hospital`.
-From there it's suspended waiting to be retried on node restart.
+In this case, flows will fail with a ``ContractConstraintRejection``, and are sent to the flow hospital.
+From there, they are suspended, waiting to be retried on node restart.
 This gives the node operator the opportunity to recover from those errors, which in the case of constraint violations means
 adding the right cordapp jar to the ``cordapps`` folder.
 
@@ -166,7 +170,7 @@ indicating the ``Contract`` class to which it is tied:
 
     .. sourcecode:: java
 
-        @BelongToContract(MyContract.class)
+        @BelongsToContract(MyContract.class)
         public class MyState implements ContractState {
             // implementation goes here
         }
@@ -230,10 +234,7 @@ signed.
 
 To manually define the Contract Constraint of an output state, see the example below:
 
-In this case, flows will fail with a ``ContractConstraintRejection``, and the failed flow will be sent to the flow hospital.
-From there it's suspended waiting to be retried on node restart.
-This gives the node operator the opportunity to recover from those errors, which in the case of constraint violations means
-adding the right cordapp jar to the ``cordapps`` folder.
+.. container:: codeset
 
     .. sourcecode:: java
 
@@ -289,6 +290,8 @@ node or will be automatically fetched over the network when receiving a transact
    as a "new app", which may end up requiring essentially unnecessary upgrade procedures. It's better to split your
    app into multiple modules: one which contains just states, contracts and core data types. And another which contains
    the rest of the app. See :ref:`cordapp-structure`.
+
+.. _constraints_propagation:
 
 Constraints propagation
 -----------------------

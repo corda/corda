@@ -28,6 +28,7 @@ sourceSets {
 }
 
 dependencies {
+    rpcProxyCompile project(':test-utils')
     compile project(':test-utils')
 
     // Integration test helpers

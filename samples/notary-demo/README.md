@@ -3,8 +3,11 @@ Notary demo
 
 This demo shows a party getting transactions notarised by either a single-node or a distributed notary service.
 
-The Raft (https://raft.github.io/) version of the demo will start three distributed notary nodes.
-The BFT SMaRt (https://bft-smart.github.io/library/) version of the demo will start four distributed notary nodes.
+* The Raft (https://raft.github.io/) version of the demo will start three distributed notary nodes.
+* The BFT SMaRt (https://bft-smart.github.io/library/) version of the demo will start four distributed notary nodes.
+* The MySQL version of this demo will start a three distributed notary nodes, running on top of a Percona DB. The MySQL CFT notary
+  is an enterprise feature, that requires an additional Percona database cluster. This implementation provides good throughput since
+  input states are committed in batches to the database during notarisation.
 
 The output will display a list of notarised transaction IDs and corresponding signer public keys. In the Raft distributed notary,
 every node in the cluster can service client requests, and one signature is sufficient to satisfy the notary composite key requirement.
@@ -55,3 +58,15 @@ by using the H2 web console:
 
 - The committed states are stored in the ``NOTARY_COMMITTED_STATES`` table (for Raft) or ``NODE_BFT_SMART_NOTARY_COMMITTED_STATES`` (for BFT).
   Note that in the Raft case the raw data is not human-readable, but we're only interested in the row count for this demo
+
+ To run the CFT Notary demo from the command line in Unix:
+
+1. Start the percona container using `./gradlew samples:notary-demo:startPercona`.
+2. Once you have verified the database is running and listening on port 3306
+   (with `docker ps` and `nc -vz 127.0.0.1 3306`, use ``deployNodesMySQL``.
+3. Run `./gradlew samples:notary-demo:notarise` to make the "Alice Corp" node
+   initiate notarisation requests. In a few seconds you'll see a message
+   "Notarised 10 transactions" with list of transaction ids and the signer public
+   keys.
+4. Bring down the notary nodes and remove the Percona container with `./gradlew
+   samples:notary-demo:removePercona`.

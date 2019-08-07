@@ -152,9 +152,16 @@ Run this script as database administrator:
   GRANT CREATE TABLE TO my_admin_user;
   GRANT CREATE VIEW TO my_admin_user;
   GRANT CREATE SEQUENCE TO my_admin_user;
+  GRANT SELECT ON v_$parameter TO my_admin_user;
 
 The permissions for the Corda node user to access database objects will be assigned in :ref:`the following step <db_setup_step_2_oracle_extra_step_ref>`
 after the database objects are created.
+
+The last permission for the *v_$parameter* view is needed when a database is running in
+`Database Compatibility mode <https://docs.oracle.com/en/database/oracle/oracle-database/12.2/upgrd/what-is-oracle-database-compatibility.html>`_.
+If the permission is not granted then :ref:`Corda Database Management Tool <database-management-tool-ref>` will output the message
+*'Could not set check compatibility mode on OracleDatabase, assuming not running in any sort of compatibility mode ...'* in a log file,
+the message can be ignored.
 
 .. _db_setup_create_user_postgresql_ref:
 
@@ -349,8 +356,8 @@ The required ``node.conf`` settings for the Database Management Tool using Azure
 Replace the placeholders *<database_server>* and *<my_database>* with appropriate values (*<my_database>* is a user database).
 The ``database.schema`` is the database schema name assigned to both administrative and restrictive users.
 
-The Microsoft SQL JDBC driver can be downloaded from `Microsoft Download Center <https://www.microsoft.com/en-us/download/details.aspx?id=55539>`_,
-extract the archive and copy the single file *mssql-jdbc-6.2.2.jre8.jar* into the ``drivers`` directory.
+The Microsoft SQL JDBC driver can be downloaded from `Microsoft Download Center <https://www.microsoft.com/en-us/download/details.aspx?id=56615>`_,
+extract the archive and copy the single file *mssql-jdbc-6.4.0.jre8.jar* into the ``drivers`` directory.
 
 .. _db_setup_configure_db_tool_sqlserver_ref:
 
@@ -374,8 +381,8 @@ The required ``node.conf`` settings for the Database Management Tool using Azure
 
 Replace placeholders *<host>*, *<port>* with appropriate values, the default SQL Server port is 1433.
 
-The Microsoft JDBC 6.2 driver can be downloaded from `Microsoft Download Center <https://www.microsoft.com/en-us/download/details.aspx?id=55539>`_,
-extract the archive and copy the single file *mssql-jdbc-6.2.2.jre8.jar* into the ``drivers`` directory.
+The Microsoft JDBC 6.4 driver can be downloaded from `Microsoft Download Center <https://www.microsoft.com/en-us/download/details.aspx?id=56615>`_,
+extract the archive and copy the single file *mssql-jdbc-6.4.0.jre8.jar* into the ``drivers`` directory.
 
 .. _db_setup_configure_db_tool_oracle_ref:
 
@@ -481,6 +488,7 @@ Connect to the database as administrator and run the following DDL script:
 
      CREATE USER my_user identified by my_password;
      GRANT CREATE SESSION TO my_user;
+     GRANT SELECT ON v_$parameter TO my_user;
      GRANT SELECT ON my_admin_user.DATABASECHANGELOG TO my_user;
      GRANT SELECT ON my_admin_user.DATABASECHANGELOGLOCK TO my_user;
      GRANT SELECT SEQUENCE ON my_admin_user.HIBERNATE_SEQUENCE TO my_user;
@@ -610,8 +618,8 @@ Do not change the default isolation for this database (*READ_COMMITTED*) as the 
 and performance using this level.
 The ``database.schema`` is the database schema name assigned to the user.
 
-The Microsoft SQL JDBC driver can be downloaded from `Microsoft Download Center <https://www.microsoft.com/en-us/download/details.aspx?id=55539>`_,
-extract the archive and copy the single file *mssql-jdbc-6.2.2.jre8.jar* (the archive comes with two JARs).
+The Microsoft SQL JDBC driver can be downloaded from `Microsoft Download Center <https://www.microsoft.com/en-us/download/details.aspx?id=56615>`_,
+extract the archive and copy the single file *mssql-jdbc-6.4.0.jre8.jar* (the archive comes with two JARs).
 :ref:`Common Configuration Steps paragraph <db_setup_step_3_ref>` explains the correct location for the driver JAR in the node installation structure.
 
 .. _db_setup_configure_node_sqlserver_ref:
@@ -642,8 +650,8 @@ By default the connection to the database is not SSL. To secure the JDBC connect
 Do not change the default isolation for this database (*READ_COMMITTED*) as the Corda platform has been validated for functional correctness and performance using this level.
 The ``database.schema`` is the database schema name assigned to the user.
 
-The Microsoft JDBC 6.2 driver can be downloaded from `Microsoft Download Center <https://www.microsoft.com/en-us/download/details.aspx?id=55539>`_,
-extract the archive and copy the single file ``mssql-jdbc-6.2.2.jre8.jar`` (the archive comes with two JARs).
+The Microsoft JDBC 6.4 driver can be downloaded from `Microsoft Download Center <https://www.microsoft.com/en-us/download/details.aspx?id=56615>`_,
+extract the archive and copy the single file ``mssql-jdbc-6.4.0.jre8.jar`` (the archive comes with two JARs).
 :ref:`Common Configuration Steps <db_setup_step_3_ref>` explains the correct location for the driver JAR in the node installation structure.
 
 Ensure JDBC connection properties match the SQL Server setup. Especially when trying to reuse Azure SQL JDBC URLs

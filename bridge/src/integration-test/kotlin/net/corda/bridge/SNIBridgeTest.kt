@@ -36,7 +36,7 @@ class SNIBridgeTest(private val withFloat: Boolean) : IntegrationTest() {
     fun `Nodes behind all in one bridge can communicate with external node`() {
         val demoUser = User("demo", "demo", setOf(Permissions.startFlow<Ping>(), Permissions.all()))
         var artemis: ActiveMQServer? = null
-        internalDriver(startNodesInProcess = true, cordappsForAllNodes = cordappsForPackages("net.corda.bridge"), notarySpecs = emptyList(), portAllocation = incrementalPortAllocation(20000)) {
+        internalDriver(startNodesInProcess = true, cordappsForAllNodes = cordappsForPackages("net.corda.bridge"), notarySpecs = emptyList(), portAllocation = incrementalPortAllocation()) {
             val artemisPort = portAllocation.nextPort()
             val advertisedP2PPort = portAllocation.nextPort()
             val floatPort = if (withFloat) portAllocation.nextPort() else null

@@ -41,7 +41,7 @@ data class CordappImpl(
 
     // TODO: Also add [SchedulableFlow] as a Cordapp class
     override val cordappClasses: List<String> = run {
-        val classList = rpcFlows + initiatedFlows + services + serializationWhitelists.map { javaClass } + notaryService
+        val classList = rpcFlows + initiatedFlows + services + serializationWhitelists.flatMap { it.whitelist } + notaryService
         classList.mapNotNull { it?.name } + contractClassNames + explicitCordappClasses
     }
 

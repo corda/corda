@@ -1,9 +1,9 @@
 package net.corda.core.crypto.internal
 
-import io.netty.util.concurrent.FastThreadLocal
 import net.corda.core.DeleteForDJVM
 import net.corda.core.StubOutForDJVM
-import java.lang.UnsupportedOperationException
+import net.corda.core.crypto.SignatureScheme
+import net.corda.core.internal.LazyPool
 import java.security.Provider
 import java.security.Signature
 import java.util.concurrent.ConcurrentHashMap
@@ -13,8 +13,18 @@ import java.util.concurrent.ConcurrentHashMap
  * optimise them en masse.
  */
 object Instances {
+    fun <A> withSignature(signatureScheme: SignatureScheme, func: (signature: Signature) -> A): A {
+        val signature = getSignatureInstance(signatureScheme.signatureName, providerMap[signatureScheme.providerName])
+        try {
+            return func(signature)
+        } finally {
+            releaseSignatureInstance(signature)
+        }
+    }
+
     // Modified for performance in Enterprise.
-    fun getSignatureInstance(algorithm: String, provider: Provider?) = signatureFactory(algorithm, provider)
+    fun getSignatureInstance(algorithm: String, provider: Provider?) = signatureFactory.borrow(algorithm, provider)
+    fun releaseSignatureInstance(sig:Signature) = signatureFactory.release(sig)
 
     // ********************************************
     // ENTERPRISE ONLY PERFORMANCE CODE BEGINS HERE
@@ -40,27 +50,31 @@ object Instances {
 
     @DeleteForDJVM
     private class CachingSignatureFactory : SignatureFactory {
-        private val signatureInstances = ConcurrentHashMap<SignatureKey, FastThreadLocal<Signature>>()
+        private val signatureInstances = ConcurrentHashMap<SignatureKey, LazyPool<Signature>>()
 
-        override fun invoke(algorithm: String, provider: Provider?): Signature {
+        override fun borrow(algorithm: String, provider: Provider?): Signature {
             return signatureInstances.getOrPut(SignatureKey(algorithm, provider)) {
-                object : FastThreadLocal<Signature>() {
-                    override fun initialValue(): Signature = Signature.getInstance(algorithm, provider)
-                }
-            }.get()
+                LazyPool(newInstance = { Signature.getInstance(algorithm, provider) })
+            }.borrow()
         }
+
+        override fun release(sig: Signature): Unit =
+                signatureInstances[SignatureKey(sig.algorithm, sig.provider)]?.release(sig)!!
     }
 
     private fun makeFactory(): SignatureFactory {
         return object : SignatureFactory {
-            override fun invoke(algorithm: String, provider: Provider?): Signature {
+            override fun borrow(algorithm: String, provider: Provider?): Signature {
                 return Signature.getInstance(algorithm, provider)
             }
         }
     }
 }
 
-typealias SignatureFactory = Function2<String, Provider?, Signature>
+interface SignatureFactory {
+    fun borrow(algorithm: String, provider: Provider?): Signature
+    fun release(sig: Signature) {}
+}
 // ********************************************
 // ENTERPRISE ONLY PERFORMANCE CODE ENDS HERE
 // ********************************************

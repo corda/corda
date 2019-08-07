@@ -14,7 +14,6 @@ dependencies {
     cordaCompile project(':core')
     cordaCompile project(':client:rpc')
     cordaCompile project(':node-driver')
-    compile project(':notary:mysql')
     compile project(':client:mock')
     compile group: 'mysql', name: 'mysql-connector-java', version: '6.0.6'
     compile group: 'io.dropwizard.metrics', name: 'metrics-graphite', version: '3.2.5'
@@ -28,9 +27,6 @@ idea {
 }
 
 def nodeTask = tasks.getByPath(':node:capsule:assemble')
-task deployJDBC(type: Cordform, dependsOn: ['jar', nodeTask]) {
-    // Nodes require porting from net.corda.notarytest.JDBCNotaryCordform
-}
 
 task runTest(type: JavaExec) {
     classpath = sourceSets.main.runtimeClasspath
@@ -52,5 +48,39 @@ cordapp {
         vendor "R3"
         targetPlatformVersion corda_platform_version.toInteger()
         minimumPlatformVersion 1
+    }
+}
+
+task deployNodesMySQL(type: Cordform, dependsOn: ['jar', nodeTask]) {
+    directory file("$buildDir/nodes/nodesMySQL")
+    nodeDefaults {
+        projectCordapp {
+            deploy = true
+            config '''
+                notary {
+                    validating = false
+                    serviceLegalName = "O=HA Notary,L=Zurich,C=CH",
+                    mysql {
+                            connectionRetries = 1
+                            dataSource {
+                                    autoCommit = false,
+                                    jdbcUrl = "jdbc:mysql://127.0.0.1:3306/corda?rewriteBatchedStatements=true&useSSL=false&failOverReadOnly=false",
+                                    username = "root",
+                                    password ="root"
+                            }
+                    }
+                }
+            '''
+        }
+        extraConfig = [h2Settings: [address: "localhost:0"]]
+    }
+    node {
+        name "O=Notary Service 0,L=Zurich,C=CH"
+        p2pPort 10009
+        rpcSettings {
+            address "localhost:10010"
+            adminAddress "localhost:10110"
+        }
+        rpcUsers = [[user: "demou", password: "demop", permissions: ["ALL"]]]
     }
 }

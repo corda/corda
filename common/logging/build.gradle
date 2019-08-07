@@ -1,0 +1,35 @@
+import org.apache.tools.ant.filters.ReplaceTokens
+
+apply plugin: 'kotlin'
+apply plugin: 'net.corda.plugins.publish-utils'
+apply plugin: 'com.jfrog.artifactory'
+
+dependencies {
+    compile group: "org.jetbrains.kotlin", name: "kotlin-stdlib-jdk8", version: kotlin_version
+    compile group: "org.jetbrains.kotlin", name: "kotlin-reflect", version: kotlin_version
+
+    compile group: "com.typesafe", name: "config", version: typesafe_config_version
+
+    // Log4J: logging framework
+    compile "org.apache.logging.log4j:log4j-core:$log4j_version"
+
+    compile "com.jcabi:jcabi-manifests:$jcabi_manifests_version"
+
+    testCompile project(":test-utils")
+}
+
+
+task generateSource(type: Copy) {
+    from 'src/main/template'
+    filter(ReplaceTokens, tokens: [corda_release_version: corda_release_version])
+    into 'src/main'
+}
+compileKotlin.dependsOn generateSource
+
+jar {
+    baseName 'corda-common-logging'
+}
+
+publish {
+    name jar.baseName
+}

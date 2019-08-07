@@ -104,6 +104,11 @@ cryptoServiceConf
   Optional path to the configuration file for the CryptoService provider. This may have to be present if you use a different CryptoService provider
   than the default one (see :doc:`cryptoservice-configuration`).
 
+cryptoServiceTimeout
+  Optional timeout value of actions sent to the the CryptoService (HSM). If the HSM takes longer than this duration to respond then a ``TimedCryptoService`` exception will be thrown and handled by the Flow Hospital.
+
+  *Default:* 1s
+
 custom
   Set custom command line attributes (e.g. Java system properties) on the node process via the capsule launcher
 
@@ -163,7 +168,7 @@ database
 dataSourceProperties
   This section is used to configure the JDBC connection and database driver used for the node's persistence.
   :ref:`Node database <standalone_database_config_examples_ref>` contains example configurations for other database providers.
-  To add additional data source properties (for a specific JDBC driver) use the ``dataSource.`` prefix with the property name (e.g. `dataSource.customProperty = value`).
+  To add additional data source properties (for a specific JDBC driver) use the ``dataSource.`` prefix with the property name (e.g. ``dataSource.customProperty = value``).
 
   dataSourceClassName
     JDBC Data Source class name.
@@ -179,7 +184,7 @@ dataSourceProperties
 
   *Default:*
 
-  .. parsed-literal::
+  .. code-block:: none
 
     dataSourceClassName = org.h2.jdbcx.JdbcDataSource
     dataSource.url = "jdbc:h2:file:"${baseDirectory}"/persistence;DB_CLOSE_ON_EXIT=FALSE;WRITE_DELAY=0;LOCK_TIMEOUT=10000"
@@ -192,6 +197,8 @@ detectPublicIp
   Set to ``true`` to enable.
 
   *Default:* false
+
+.. _corda_configuration_file_dev_mode:
 
 devMode
   This flag sets the node to run in development mode.
@@ -381,6 +388,8 @@ h2Port (deprecated)
 
   **Important: Deprecated please use h2Setting instead**
 
+.. _corda_configuration_file_h2_settings:
+
 h2Settings
   Sets the H2 JDBC server host and port.
   See :doc:`node-database-access-h2`.
@@ -449,6 +458,8 @@ messagingServerExternal
 
   *Default:* not defined
 
+.. _corda_configuration_file_myLegalName:
+
 myLegalName
   The legal identity of the node.
   This acts as a human-readable alias to the node's public key and can be used with the network map to look up the node's info.
@@ -457,6 +468,8 @@ myLegalName
   For more details please read :ref:`node-naming` chapter.
 
   *Default:* not defined
+
+.. _corda_configuration_file_notary:
 
 notary
   Optional configuration object which if present configures the node to run as a notary. If running as part of a HA notary cluster, please
@@ -597,13 +610,13 @@ networkServices
 
   proxyType
     Optional - this can be used to turn on using a proxy for the http connections to doorman and network map. Allowed
-    values are ``DIRECT`` and ``HTTP``. If set to anything else than ``DIRECT``, the proxyAddress must also
+    values are ``DIRECT``, ``HTTP`` and ``SOCKS``. If set to anything else than ``DIRECT``, the proxyAddress must also
     be set.
 
     *Default:* ``DIRECT`` (i.e. no proxy)
 
   proxyAddress
-    Optional hostname and port of a HTTP proxy to be used for connections to the network map or doorman.
+    Optional hostname and port of a HTTP or SOCKS proxy to be used for connections to the network map or doorman.
 
     *Default:* not defined
 
@@ -656,6 +669,8 @@ rpcAddress (deprecated)
 
   *Default:* not defined
 
+.. _corda_configuration_file_rpc_settings:
+
 rpcSettings
   Options for the RPC server exposed by the Node.
 
@@ -694,6 +709,8 @@ rpcSettings
 
         *Default:* not defined
 
+.. _corda_configuration_file_rpc_users:
+
 rpcUsers
   A list of users who are authorised to access the RPC system.
   Each user in the list is a configuration object with the following fields:
@@ -719,6 +736,8 @@ rpcUsers
 security
   Contains various nested fields controlling user authentication/authorization, in particular for RPC accesses.
   See :doc:`clientrpc` for details.
+
+.. _corda_configuration_file_sshd:
 
 sshd
   If provided, node will start internal SSH server which will provide a management shell.
@@ -793,6 +812,7 @@ Any options you do not specify in your own ``node.conf`` file will use these def
 Here are the contents of the ``reference.conf`` file:
 
 .. literalinclude:: ../../node/src/main/resources/reference.conf
+    :language: none
 
 
 Configuration examples
@@ -803,11 +823,12 @@ Node configuration hosting the IRSDemo services
 General node configuration file for hosting the IRSDemo services
 
 .. literalinclude:: example-code/src/main/resources/example-node.conf
+    :language: none
 
 Simple notary configuration file
 `````````````````````````````````
 
-.. parsed-literal::
+.. code-block:: none
 
     myLegalName = "O=Notary Service,OU=corda,L=London,C=GB"
     keyStorePassword = "cordacadevpass"
@@ -823,8 +844,8 @@ Simple notary configuration file
         validating = false
     }
     compatibilityZoneURL : "https://cz.corda.net"
-    enterprise : {
-        tuning : {
+    enterpriseConfiguration = {
+        tuning = {
             rpcThreadPoolSize = 16
             flowThreadPoolSize = 256
         }
@@ -841,5 +862,6 @@ Node configuration with diffrent URL for NetworkMap and Doorman
 Configuring a node where the Corda Compatibility Zone's registration and Network Map services exist on different URLs
 
 .. literalinclude:: example-code/src/main/resources/example-node-with-networkservices.conf
+    :language: none
 
 

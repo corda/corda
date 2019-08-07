@@ -14,12 +14,12 @@ import com.microsoft.azure.keyvault.webkey.JsonWebKeySignatureAlgorithm
 import com.microsoft.azure.keyvault.webkey.JsonWebKeyType
 import com.typesafe.config.ConfigException
 import com.typesafe.config.ConfigFactory
-import net.corda.core.utilities.detailedLogger
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.Crypto.ECDSA_SECP256K1_SHA256
 import net.corda.core.crypto.Crypto.ECDSA_SECP256R1_SHA256
 import net.corda.core.crypto.Crypto.RSA_SHA256
 import net.corda.core.crypto.SignatureScheme
+import net.corda.core.utilities.detailedLogger
 import net.corda.core.utilities.trace
 import net.corda.nodeapi.internal.config.UnknownConfigurationKeysException
 import net.corda.nodeapi.internal.config.parseAs
@@ -49,7 +49,11 @@ import java.util.concurrent.Executors
  * Uses the Azure KeyVault Java API https://docs.microsoft.com/en-us/java/api/overview/azure/keyvault .
  * Supported algorithms are ECDSA_SECP256R1_SHA256, ECDSA_SECP256K1_SHA256 and RSA_SHA256.
  */
-class AzureKeyVaultCryptoService(private val keyVaultClient: KeyVaultClient, private val keyVaultUrl: String, private val protection: Protection = DEFAULT_PROTECTION) : CryptoService {
+class AzureKeyVaultCryptoService(
+        private val keyVaultClient: KeyVaultClient,
+        private val keyVaultUrl: String,
+        private val protection: Protection = DEFAULT_PROTECTION
+) : CryptoService {
 
     enum class DigestAlgo(val nameString: String) {
         SHA1("SHA-1"),

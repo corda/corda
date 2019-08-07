@@ -5,9 +5,9 @@ import com.typesafe.config.ConfigValueFactory
 import net.corda.client.rpc.internal.serialization.amqp.AMQPClientSerializationScheme
 import net.corda.cliutils.CommonCliConstants.BASE_DIR
 import net.corda.cliutils.CordaCliWrapper
-import net.corda.cliutils.CordaVersionProvider
 import net.corda.cliutils.ExitCodes
 import net.corda.core.crypto.SecureHash
+import net.corda.common.logging.CordaVersion
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.internal.div
@@ -23,6 +23,7 @@ import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.parseAsNodeConfiguration
 import net.corda.node.services.network.NetworkMapClient
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
+import net.corda.node.utilities.registration.NodeRegistrationConfiguration
 import net.corda.node.utilities.registration.NodeRegistrationHelper
 import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.crypto.X509Utilities
@@ -57,9 +58,9 @@ class RegistrationTool : CordaCliWrapper("node-registration", "Corda registratio
             // Use lazy init to ensure that CliWrapperBase.initLogging() is called before accessing CordaVersionProvider
             VersionInfo(
                     PLATFORM_VERSION,
-                    CordaVersionProvider.releaseVersion,
-                    CordaVersionProvider.revision,
-                    CordaVersionProvider.vendor)
+                    CordaVersion.releaseVersion,
+                    CordaVersion.revision,
+                    CordaVersion.vendor)
         }
 
         private val logger by lazy { contextLogger() }
@@ -137,7 +138,7 @@ class RegistrationTool : CordaCliWrapper("node-registration", "Corda registratio
                                 null
                             }
                             with(parsedConfig) {
-                                val helper = NodeRegistrationHelper(this, HTTPNetworkRegistrationService(networkServices!!, VERSION_INFO),
+                                val helper = NodeRegistrationHelper(NodeRegistrationConfiguration(this), HTTPNetworkRegistrationService(networkServices!!, VERSION_INFO),
                                         NodeRegistrationOption(networkRootTrustStorePath, networkRootTrustStorePassword),
                                         logProgress = logger::info, logError = logger::error)
                                 helper.generateKeysAndRegister(sslPublicKey)
@@ -157,9 +158,9 @@ class RegistrationTool : CordaCliWrapper("node-registration", "Corda registratio
 
             val (success, fail) = nodeConfigurations.partition { it.second.isSuccess }
 
-            if(success.isNotEmpty()) {
+            if (success.isNotEmpty()) {
                 // Fetch the network params and store them in the `baseDirectory`
-                val versionInfo = VersionInfo(PLATFORM_VERSION, CordaVersionProvider.releaseVersion, CordaVersionProvider.revision, CordaVersionProvider.vendor)
+                val versionInfo = VersionInfo(PLATFORM_VERSION, CordaVersion.releaseVersion, CordaVersion.revision, CordaVersion.vendor)
                 val networkMapClient = NetworkMapClient(success.first().second.getOrThrow().networkServices!!, versionInfo)
                 val trustRootCertificate = X509KeyStore.fromFile(networkRootTrustStorePath, networkRootTrustStorePassword)
                         .getCertificate(CORDA_ROOT_CA)
@@ -262,8 +263,8 @@ class RegistrationTool : CordaCliWrapper("node-registration", "Corda registratio
                             require(toProcess.credentials != it.credentials) { errorMessage }
                         }
                         SupportedCryptoServices.PRIMUS_X -> {
-                            toProcess as PrimusXCryptoService.PrimusXConfiguration
-                            it as PrimusXCryptoService.PrimusXConfiguration
+                            toProcess as PrimusXCryptoService.Companion.PrimusXConfiguration
+                            it as PrimusXCryptoService.Companion.PrimusXConfiguration
                             if (toProcess.host == it.host && toProcess.port == it.port) {
                                 require (toProcess.username != it.username) { errorMessage }
                             }

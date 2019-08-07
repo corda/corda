@@ -7,7 +7,7 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath "org.yaml:snakeyaml:1.19"
+        classpath "org.yaml:snakeyaml:1.24"
     }
 }
 
@@ -52,6 +52,7 @@ clientDependencies {
 ext['artemis.version'] = artemis_version
 ext['hibernate.version'] = hibernate_version
 ext['jackson.version'] = jackson_version
+ext['mssql-jdbc.version'] = mssql_version
 
 apply plugin: 'kotlin'
 apply plugin: 'kotlin-spring'

@@ -142,6 +142,7 @@ Revise these settings depending on your nodes sizing requirements.
  GRANT CREATE TABLE TO my_user;
  GRANT CREATE VIEW TO my_user;
  GRANT CREATE SEQUENCE TO my_user;
+ GRANT SELECT ON v_$parameter TO my_user;
 
 .. _db_dev_setup_create_user_postgresql_ref:
 
@@ -259,8 +260,8 @@ for functional correctness and performance using this level.
 The ``database.schema`` is the database schema name assigned to the user.
 ``runMigration`` value should be set to *true* when using *administrative* permissions only, otherwise set the value to *false*.
 
-The Microsoft SQL JDBC driver can be downloaded from `Microsoft Download Center <https://www.microsoft.com/en-us/download/details.aspx?id=55539>`_,
-extract the archive and copy the single file *mssql-jdbc-6.2.2.jre8.jar* as the archive comes with two JARs.
+The Microsoft SQL JDBC driver can be downloaded from `Microsoft Download Center <https://www.microsoft.com/en-us/download/details.aspx?id=56615>`_,
+extract the archive and copy the single file *mssql-jdbc-6.4.0.jre8.jar* as the archive comes with two JARs.
 :ref:`Common Configuration Steps paragraph <db_setup_developer_step_3_ref>` explains the correct location for the driver JAR in the node installation structure.
 
 .. _db_dev_setup_configure_node_sqlserver_ref:
@@ -293,8 +294,8 @@ for functional correctness and performance using this level.
 The ``runMigration`` value should be set to *true* when using *administrative* permissions only, otherwise set the value to *false*.
 The ``database.schema`` is the database schema name assigned to the user.
 
-Microsoft JDBC 6.2 driver can be downloaded from `Microsoft Download Center <https://www.microsoft.com/en-us/download/details.aspx?id=55539>`_,
-extract the archive and copy the single file ``mssql-jdbc-6.2.2.jre8.jar`` to the ``drivers`` folder, as the archive comes with two JARs.
+Microsoft JDBC 6.2 driver can be downloaded from `Microsoft Download Center <https://www.microsoft.com/en-us/download/details.aspx?id=56615>`_,
+extract the archive and copy the single file ``mssql-jdbc-6.4.0.jre8.jar`` to the ``drivers`` folder, as the archive comes with two JARs.
 
 Ensure JDBC connection properties match the SQL Server setup, especially when trying to reuse the Azure provided SQL JDBC URL
 which is invalid for SQL Server.  This may lead to the node failing to start with the message:
