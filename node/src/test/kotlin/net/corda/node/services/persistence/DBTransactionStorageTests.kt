@@ -1,5 +1,6 @@
 package net.corda.node.services.persistence
 
+import junit.framework.TestCase.assertTrue
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
@@ -8,11 +9,11 @@ import net.corda.core.crypto.TransactionSignature
 import net.corda.core.toFuture
 import net.corda.core.transactions.SignedTransaction
 import net.corda.node.services.transactions.PersistentUniquenessProvider
-import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.core.*
 import net.corda.testing.internal.LogHelper
+import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.internal.configureDatabase
 import net.corda.testing.internal.createWireTransaction
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
@@ -151,6 +152,50 @@ class DBTransactionStorageTests {
             require(!secondInserted) { "Second time should be redundant" }
             println("$firstInserted $secondInserted")
         }
+    }
+
+    @Test
+    fun `unverified transaction is correctly added in add transaction`() {
+        val transaction = newTransaction()
+        val added = database.transaction {
+            transactionStorage.addUnverifiedTransaction(transaction)
+            transactionStorage.addTransaction(transaction)
+        }
+        assertTransactionIsRetrievable(transaction)
+        assertTrue(added)
+
+        val secondTransaction = newTransaction()
+        database.transaction {
+            transactionStorage.addUnverifiedTransaction(secondTransaction)
+        }
+
+        val secondAdded = database.transaction {
+            transactionStorage.addTransaction(secondTransaction)
+        }
+
+        assertTransactionIsRetrievable(secondTransaction)
+        assertTrue(secondAdded)
+    }
+
+    @Test
+    fun `cannot move transaction from verified to unverified`() {
+        val transaction = newTransaction()
+        database.transaction {
+            transactionStorage.addTransaction(transaction)
+            transactionStorage.addUnverifiedTransaction(transaction)
+        }
+
+        assertTransactionIsRetrievable(transaction)
+
+        val secondTransaction = newTransaction()
+        database.transaction {
+            transactionStorage.addTransaction(secondTransaction)
+        }
+
+        database.transaction {
+            transactionStorage.addUnverifiedTransaction(secondTransaction)
+        }
+        assertTransactionIsRetrievable(secondTransaction)
     }
 
     private fun newTransactionStorage(cacheSizeBytesOverride: Long? = null) {

@@ -229,3 +229,6 @@ fun isAttachmentTrusted(attachment: Attachment, service: AttachmentStorage?): Bo
         false
     }
 }
+
+val SignedTransaction.dependencies: Set<SecureHash>
+    get() = (inputs.asSequence() + references.asSequence()).map { it.txhash }.toSet()

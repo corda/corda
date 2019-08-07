@@ -77,7 +77,8 @@ sealed class FetchDataFlow<T : NamedByHash, in W : Any>(
         val (fromDisk, toFetch) = loadWhatWeHave()
 
         return if (toFetch.isEmpty()) {
-            Result(fromDisk, emptyList())
+            val loadedFromDisk = loadExpected(fromDisk)
+            Result(loadedFromDisk, emptyList())
         } else {
             logger.debug { "Requesting ${toFetch.size} dependency(s) for verification from ${otherSideSession.counterparty.name}" }
 
@@ -99,7 +100,9 @@ sealed class FetchDataFlow<T : NamedByHash, in W : Any>(
             val downloaded = validateFetchResponse(UntrustworthyData(maybeItems), toFetch)
             logger.debug { "Fetched ${downloaded.size} elements from ${otherSideSession.counterparty.name}" }
             maybeWriteToDisk(downloaded)
-            Result(fromDisk, downloaded)
+            // Re-load items already present before the download procedure. This ensures these objects are not unnecessarily checkpointed.
+            val loadedFromDisk = loadExpected(fromDisk)
+            Result(loadedFromDisk, downloaded)
         }
     }
 
@@ -107,17 +110,27 @@ sealed class FetchDataFlow<T : NamedByHash, in W : Any>(
         // Do nothing by default.
     }
 
-    private fun loadWhatWeHave(): Pair<List<T>, List<SecureHash>> {
-        val fromDisk = ArrayList<T>()
+    private fun loadWhatWeHave(): Pair<List<SecureHash>, List<SecureHash>> {
+        val fromDisk = ArrayList<SecureHash>()
         val toFetch = ArrayList<SecureHash>()
         for (txid in requests) {
             val stx = load(txid)
             if (stx == null)
                 toFetch += txid
             else
-                fromDisk += stx
+                // Although the full object is loaded here, only return the id. This prevents the full set of objects already present from
+                // being checkpointed every time a request is made to download an object the node does not yet have.
+                fromDisk += txid
         }
         return Pair(fromDisk, toFetch)
+    }
+
+    private fun loadExpected(ids: List<SecureHash>): List<T> {
+        val loaded = ids.mapNotNull { load(it) }
+        require(ids.size == loaded.size) {
+            "Expected to find ${ids.size} items in database but only found ${loaded.size} items"
+        }
+        return loaded
     }
 
     protected abstract fun load(txid: SecureHash): T?

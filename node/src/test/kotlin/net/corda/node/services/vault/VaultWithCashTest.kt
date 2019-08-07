@@ -110,11 +110,17 @@ class VaultWithCashTest {
             val w = vaultService.queryBy<Cash.State>().states
             assertEquals(3, w.size)
 
-            val state = w[0].state.data
+            // topological sort of transactions when writing them means the order in the
+            // vault may be different from the generated order in the vault filler (also
+            // bad practice to rely on the order of db records). We're only interested
+            // that the correct states exist, so sort them by amount for consistency.
+            val states = w.map { it.state.data }.sortedBy { it.amount }
+
+            val state = states[0]
             assertEquals(30.45.DOLLARS `issued by` DUMMY_CASH_ISSUER, state.amount)
             assertEquals(servicesKey.public, state.owner.owningKey)
-            assertEquals(34.70.DOLLARS `issued by` DUMMY_CASH_ISSUER, (w[2].state.data).amount)
-            assertEquals(34.85.DOLLARS `issued by` DUMMY_CASH_ISSUER, (w[1].state.data).amount)
+            assertEquals(34.70.DOLLARS `issued by` DUMMY_CASH_ISSUER, states[1].amount)
+            assertEquals(34.85.DOLLARS `issued by` DUMMY_CASH_ISSUER, states[2].amount)
         }
     }
 
