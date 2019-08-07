@@ -3,42 +3,29 @@ package net.corda.bridge.services.receiver
 import net.corda.bridge.services.api.*
 import net.corda.bridge.services.util.ServiceStateCombiner
 import net.corda.bridge.services.util.ServiceStateHelper
-import net.corda.core.internal.readAll
 import net.corda.core.utilities.contextLogger
-import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.protonwrapper.messages.ReceivedMessage
 import rx.Subscription
 
-class InProcessBridgeReceiverService(val conf: FirewallConfiguration,
-                                     val auditService: FirewallAuditService,
+class InProcessBridgeReceiverService(private val maxMessageSize: Int,
+                                     auditService: FirewallAuditService,
                                      haService: BridgeMasterService,
-                                     val amqpListenerService: BridgeAMQPListenerService,
-                                     val filterService: IncomingMessageFilterService,
+                                     private val signingService: TLSSigningService,
+                                     private val amqpListenerService: BridgeAMQPListenerService,
+                                     private val filterService: IncomingMessageFilterService,
                                      private val stateHelper: ServiceStateHelper = ServiceStateHelper(log)) : BridgeReceiverService, ServiceStateSupport by stateHelper {
     companion object {
         val log = contextLogger()
     }
 
-    private val statusFollower: ServiceStateCombiner
+    private val statusFollower = ServiceStateCombiner(listOf(auditService, haService, amqpListenerService, filterService, signingService))
     private var statusSubscriber: Subscription? = null
     private var receiveSubscriber: Subscription? = null
-    private val sslConfiguration: MutualSslConfiguration
-
-    init {
-        statusFollower = ServiceStateCombiner(listOf(auditService, haService, amqpListenerService, filterService))
-        sslConfiguration = conf.inboundConfig?.customSSLConfiguration ?: conf.publicSSLConfiguration
-    }
 
     override fun start() {
         statusSubscriber = statusFollower.activeChange.subscribe({
             if (it) {
-                val keyStoreBytes = sslConfiguration.keyStore.path.readAll()
-                val trustStoreBytes = sslConfiguration.trustStore.path.readAll()
-                amqpListenerService.provisionKeysAndActivate(keyStoreBytes,
-                        sslConfiguration.keyStore.storePassword.toCharArray(),
-                        sslConfiguration.keyStore.entryPassword.toCharArray(),
-                        trustStoreBytes,
-                        sslConfiguration.trustStore.storePassword.toCharArray())
+                amqpListenerService.provisionKeysAndActivate(signingService.keyStore(), signingService.truststore(), maxMessageSize)
             } else {
                 if (amqpListenerService.running) {
                     amqpListenerService.wipeKeysAndDeactivate()

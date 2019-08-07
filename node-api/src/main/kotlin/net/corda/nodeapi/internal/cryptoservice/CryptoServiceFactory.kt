@@ -13,19 +13,13 @@ import java.time.Duration
 
 class CryptoServiceFactory {
     companion object {
-        fun makeCryptoService(
-                cryptoServiceName: SupportedCryptoServices,
-                legalName: CordaX500Name,
-                signingCertificateStore: FileBasedCertificateStoreSupplier? = null,
-                cryptoServiceConf: Path? = null
-        ): CryptoService {
-            // The signing certificate store can be null for other services as only BCC requires is at the moment.
+        fun makeCryptoService(cryptoServiceName: SupportedCryptoServices, legalName: CordaX500Name, signingCertificateStore: FileBasedCertificateStoreSupplier? = null, cryptoServiceConf: Path? = null, wrappingKeyStorePath: Path? = null): CryptoService {
             return when (cryptoServiceName) {
                 SupportedCryptoServices.BC_SIMPLE -> {
                     if (signingCertificateStore == null) {
                         throw IllegalArgumentException("A valid signing certificate store is required to create a BouncyCastle crypto service.")
                     }
-                    BCCryptoService(legalName.x500Principal, signingCertificateStore)
+                    BCCryptoService(legalName.x500Principal, signingCertificateStore, wrappingKeyStorePath)
                 }
                 SupportedCryptoServices.UTIMACO -> UtimacoCryptoService.fromConfigurationFile(cryptoServiceConf)
                 SupportedCryptoServices.GEMALTO_LUNA -> GemaltoLunaCryptoService.fromConfigurationFile(legalName.x500Principal, cryptoServiceConf)

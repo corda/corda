@@ -43,7 +43,7 @@ Defaults
 A set of default configuration options are loaded from the built-in resource file. Any options you do not specify in
 your own ``firewall.conf`` file will use these defaults:
 
-.. literalinclude:: ../../bridge/src/main/resources/firewalldefault.conf
+.. literalinclude:: ../../bridge/src/main/resources/firewalldefault_latest.conf
     :language: javascript
    
 Firewall operating modes
@@ -95,10 +95,11 @@ absolute path to the firewall's base directory.
     .. note:: Longer term these keys will be managed in secure hardware devices.
 
 
-:networkParametersPath: This is the file path to a copy of the ``network-parameters`` as copied from a node after it has fetched the latest version from the network-map via http.
+:networkParametersPath: This a mandatory parameter that only makes sense in case of ``SenderReceiver`` and ``BridgeInner`` modes.
+   This is the absolute file path to a copy of the ``network-parameters`` as copied from a node after it has fetched the latest version from the network-map via http.
    It is used to correctly configure the maximum allowed message size. The maximum message size limit is already enforced by the P2P Artemis inside the ``node``,
-   but the ``bridge`` also enforces this before forwarding messages to remote peers and also the ``float`` enforces this on received packets.
-   If the size limit is breached these messages will be consumed and discarded, so that they are not replayed forever.
+   but the ``bridge`` also enforces this before forwarding messages to remote peers.
+   ``Float`` learns about maximum message size from ``bridge`` and enforces this on received packets. If the size limit is breached these messages will be consumed and discarded, so that they are not replayed forever.
 
 :outboundConfig:  This section is used to configure the processing of outbound messages. It is required for ``SenderReceiver`` and ``BridgeInner`` modes and must be absent for ``FloatOuter`` mode:
 
@@ -121,8 +122,6 @@ absolute path to the firewall's base directory.
 
         :trustStoreFile: The path to the TrustStore file to use in outgoing ``TLS 1.2/AMQP 1.0`` connections.
 
-        :crlCheckSoftFail: If true (recommended setting) allows certificate checks to pass if the CRL(certificate revocation list) provider is unavailable.
-
 .. _proxyConfig :
 
    :proxyConfig:  This section is optionally present if outgoing peer connections should go via a SOCKS4, SOCKS5, or HTTP CONNECT tunnelling proxy:
@@ -141,22 +140,6 @@ absolute path to the firewall's base directory.
 
         :listeningAddress: The host and port to bind to as ``TLS 1.2/AMQP 1.0`` listener. This may be a specific network interface on multi-homed machines.
             It may also differ from the externally exposed public ``p2pAddress`` of the port if the firewalls, or load balancers transparently reroute the traffic.
-
-   :customSSLConfiguration:  The default behaviour is that the inbound ``TLS 1.2/AMQP 1.0`` connections present certificate details from (``<workspace>/<certificatesDirectory>/sslkeystore.jks``)
-        and validate against (``<workspace>/<certificatesDirectory>/truststore.jks``), using the passwords defined in the root config. However, distinct KeyStores may be configured in this section:
-
-        :keyStorePassword: The password for the TLS KeyStore.
-
-        :keyStorePrivateKeyPassword: Optional parameter to lock the private keys within the KeyStore. If it is missing, it will be assumed that the private keys password is the same as
-            ``keyStorePassword`` above.
-
-        :trustStorePassword: The password for TLS TrustStore.
-
-        :sslKeystore: The path to the KeyStore file to use in inbound ``TLS 1.2/AMQP 1.0`` connections.
-
-        :trustStoreFile: The path to the TrustStore file to use in inbound ``TLS 1.2/AMQP 1.0`` connections.
-
-        :crlCheckSoftFail: If true (recommended setting) allows certificate checks to pass if the CRL(certificate revocation list) provider is unavailable.
 
 :bridgeInnerConfig:  This section is required for ``BridgeInner`` mode and configures the tunnel connection to the ``FloatOuter`` (s) in the DMZ. The section should be absent in ``SenderReceiver`` and ``FloatOuter`` modes:
 
@@ -180,8 +163,6 @@ absolute path to the firewall's base directory.
 
             :trustStoreFile: The path to the TrustStore file to use in control tunnel connections.
 
-            :crlCheckSoftFail: If true (recommended setting) allows certificate checks to pass if the CRL(certificate revocation list) provider is unavailable.
-
 :floatOuterConfig:   This section is required for ``FloatOuter`` mode and configures the control tunnel listening socket. It should be absent for ``SenderReceiver`` and ``BridgeInner`` modes:
 
         :floatAddress: The host and port to bind the control tunnel listener socket to. This can be for a specific interface if used on a multi-homed machine.
@@ -202,8 +183,6 @@ absolute path to the firewall's base directory.
             :sslKeystore: The path to the KeyStore file to use in control tunnel connections.
 
             :trustStoreFile: The path to the TrustStore file to use in control tunnel connections.
-
-            :crlCheckSoftFail: If true (recommended setting) allows certificate checks to pass if the CRL(certificate revocation list) provider is unavailable.
             
 :haConfig: Optionally the ``SenderReceiver`` and ``BridgeInner`` modes can be run in a hot-warm configuration, which determines the active instance using an external master election service.
     Currently, the leader election process can be delegated to Zookeeper, or the firewall can use the ``Bully Algorithm`` (see `here <https://en.wikipedia.org/wiki/Bully_algorithm>`_) via Publish/Subscribe messages on the artemis broker.
@@ -244,6 +223,49 @@ absolute path to the firewall's base directory.
 
 :silencedIPs: An optional list of strings of that will be compared to the remote IPv4/IPv6 source address of inbound socket connections.
     If there is a match all logging for this connection will be reduced to TRACE level. The intention is to allow simple filtering of health check connections from load balancers and other monitoring components.
+
+:custom.jvmArgs: Allows a list of jvm argument overrides to be sent to the Corda firewall process spawned by the capsule wrapper.
+    For instance ```custom.jvmArgs = ["-Xmx2G"]`` in the configuration file will set 2GByte of memory for the firewall.
+    This is equivalent to specifying ``-Dcapsule.jvm.args="-Xmx2G"`` on the command line, but is easier to track with other configuration and does not risk
+    accidentally setting the properties onto the capsule parent process (e.g. wasting 2Gbyte of memory).
+
+.. _revocationConfig :
+
+:revocationConfig: Controls the way Certificate Revocation Lists (CRL) are handled for TLS connections.
+
+        :revocationConfig:
+
+            :mode: Either ``SOFT_FAIL`` or ``HARD_FAIL`` or ``OFF`` or ``EXTERNAL_SOURCE``
+
+                ``SOFT_FAIL`` : Causes CRL checking to use soft fail mode. Soft fail mode allows the revocation check to succeed if the revocation status cannot be determined because of a network error.
+
+                ``HARD_FAIL`` :  Rigorous CRL checking takes place. This involves each certificate in the certificate path being checked for a CRL distribution point extension, and that this extension points to a URL serving a valid CRL.
+                    This means that if any CRL URL in the certificate path is inaccessible, the connection with the other party will fail and be marked as bad.
+                    Additionally, if any certificate in the hierarchy, including the self-generated node SSL certificate, is missing a valid CRL URL, then the certificate path will be marked as invalid.
+
+                ``OFF`` : do not perform CRL check.
+
+                ``EXTERNAL_SOURCE`` : only makes sense for Float component i.e. with ``firewallMode = FloatOuter``. When ``mode = EXTERNAL_SOURCE`` is specified, Float component will fetch CRLs using tunnel connection it maintains with Bridge. This allows Float to correctly obtain CRLs without
+                    initiating direct outgoing connections to the Delivery Points specified in TLS certificates.
+
+.. _p2pTlsSigningCryptoServiceConfig :
+
+:p2pTlsSigningCryptoServiceConfig: This is an optional crypto service configuration which will be used for HSM TLS signing when incoming P2P connection by external party attempted into
+    Float. Please see: :ref:`corda-firewall-component:Use of HSM in Corda Firewall` for the overview.
+    Since Float is by design a lightweight component which does not store any sensitive information locally, when it comes to TLS signing, Float will talk to the Bridge for TLS signing to take place.
+    Therefore, this option only makes sense for ``BridgeInner`` and ``SenderReceiver`` modes.
+
+    :name: The name of HSM provider to be used. E.g.: ``UTIMACO``, ``GEMALTO_LUNA``, etc. Please see: :doc:`Crypto service configuration <cryptoservice-configuration>`.
+
+    :conf: Absolute path to HSM provider specific configuration which will contain everything necessary to establish connection with HSM.
+
+:artemisCryptoServiceConfig: This is an optional crypto service configuration which will be used for HSM TLS signing when interacting with Artemis message bus.
+    This option only makes sense for ``SenderReceiver`` and ``BridgeInner`` modes. In terms of structure it is very similar to `p2pTlsSigningCryptoServiceConfig`_ above.
+    If this option is missing, local file system will be used to store private keys inside ``JKS`` key stores.
+
+:tunnelingCryptoServiceConfig: This is an optional crypto service configuration which will be used for HSM TLS signing during communication between Bridge and Float.
+    This option only makes sense for ``BridgeInner`` and ``FloatOuter``. In terms of structure it is very similar to `p2pTlsSigningCryptoServiceConfig`_ above.
+    If this option is missing, local file system will be used to store private keys inside ``JKS`` key stores.
 
 Complete example
 ================
@@ -655,15 +677,13 @@ Configuration file: ``firewall.conf`` for ``vmFloat1`` should look as follows:
         floatAddress = "vmFloat1-int:12005" // NB: Replace with "vmFloat2-int:12005" on vmFloat2 host
         expectedCertificateSubject = "CN=bridge, O=Corda, L=London, C=GB" // This X.500 name must align with name that Bridge received at the time of internal certificates generation.
         tunnelSSLConfiguration {
-               keyStorePassword = "tunnelStorePass"
-               keyStorePrivateKeyPassword = "tunnelPrivateKeyPassword"
-               trustStorePassword = "tunnelTrustpass"
-               sslKeystore = "./tunnel/float.jks"
-               trustStoreFile = "./tunnel/tunnel-truststore.jks"
-               crlCheckSoftFail = true
+            keyStorePassword = "tunnelStorePass"
+            keyStorePrivateKeyPassword = "tunnelPrivateKeyPassword"
+            trustStorePassword = "tunnelTrustpass"
+            sslKeystore = "./tunnel/float.jks"
+            trustStoreFile = "./tunnel/tunnel-truststore.jks"
         }
     }
-    networkParametersPath = network-parameters // The network-parameters file is expected to be copied from the node registration phase and here is expected in the workspace folder.
     healthCheckPhrase = "HelloCorda"
 
 Files ``tunnel/float.jks`` and ``tunnel/tunnel-truststore.jks`` should be copied from `Tunnel keystore generation`_ stage.
@@ -773,10 +793,10 @@ Configuration file: ``firewall.conf`` for ``vmInfra1`` should look as follows:
     outboundConfig {
         artemisBrokerAddress = "vmInfra1:11005" // NB: for vmInfra2 swap artemisBrokerAddress and alternateArtemisBrokerAddresses. Note: SWAP2
         alternateArtemisBrokerAddresses = ["vmInfra2:11005"] // Note: SWAP2
-        socksProxyConfig {
+        proxyConfig {
            version = SOCKS5
            proxyAddress = "vmSocks:1080"
-           username = "proxyuser"
+           userName = "proxyuser"
            password = "password"
         }
 
@@ -785,7 +805,6 @@ Configuration file: ``firewall.conf`` for ``vmInfra1`` should look as follows:
             trustStorePassword = "artemisTrustpass"
             sslKeystore = "artemis/artemis.jks"
             trustStoreFile = "artemis/artemis-truststore.jks"
-            crlCheckSoftFail = true
         }
     }
     bridgeInnerConfig {
@@ -797,7 +816,6 @@ Configuration file: ``firewall.conf`` for ``vmInfra1`` should look as follows:
             trustStorePassword = "tunnelTrustpass"
             sslKeystore = "./tunnel/bridge.jks"
             trustStoreFile = "./tunnel/tunnel-truststore.jks"
-            crlCheckSoftFail = true
         }
     }
     haConfig {

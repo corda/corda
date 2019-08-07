@@ -8,30 +8,35 @@ import net.corda.bridge.services.util.ServiceStateHelper
 import net.corda.core.utilities.contextLogger
 import org.slf4j.LoggerFactory
 import rx.Subscription
+import java.lang.IllegalStateException
 
+/**
+ * @see FloatSupervisorService
+ */
 class FloatSupervisorServiceImpl(val conf: FirewallConfiguration,
-                                 val maxMessageSize: Int,
                                  val auditService: FirewallAuditService,
                                  private val stateHelper: ServiceStateHelper = ServiceStateHelper(log)) : FloatSupervisorService, ServiceStateSupport by stateHelper {
     companion object {
-        val log = contextLogger()
-        val consoleLogger = LoggerFactory.getLogger("BasicInfo")
+        private val log = contextLogger()
+        private val consoleLogger = LoggerFactory.getLogger("BasicInfo")
     }
 
     override val amqpListenerService: BridgeAMQPListenerService
-    private val floatControlService: FloatControlService?
+    private var floatControlService: FloatControlListenerService? = null
     private val statusFollower: ServiceStateCombiner
     private var statusSubscriber: Subscription? = null
 
     init {
-        amqpListenerService = BridgeAMQPListenerServiceImpl(conf, maxMessageSize, auditService)
+        amqpListenerService = BridgeAMQPListenerServiceImpl(conf, auditService, extSourceSupplier = {
+            floatControlService?.extCrlSource ?: throw IllegalStateException("floatControlService is null")
+        })
         floatControlService = if (conf.firewallMode == FirewallMode.FloatOuter) {
             require(conf.haConfig == null) { "Float process should not have HA config, that is controlled via the bridge." }
-            FloatControlListenerService(conf, maxMessageSize, auditService, amqpListenerService)
+            FloatControlListenerService(conf, auditService, amqpListenerService)
         } else {
             null
         }
-        statusFollower = ServiceStateCombiner(listOf(amqpListenerService, floatControlService).filterNotNull())
+        statusFollower = ServiceStateCombiner(listOfNotNull(amqpListenerService, floatControlService))
         activeChange.subscribe({
             consoleLogger.info("FloatSupervisorService: active = $it")
         }, { log.error("Error in state change", it) })
@@ -48,6 +53,7 @@ class FloatSupervisorServiceImpl(val conf: FirewallConfiguration,
     override fun stop() {
         stateHelper.active = false
         floatControlService?.stop()
+        floatControlService = null
         amqpListenerService.stop()
         statusSubscriber?.unsubscribe()
         statusSubscriber = null

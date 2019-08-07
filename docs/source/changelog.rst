@@ -60,6 +60,12 @@ Version 4.2
   One thing to keep in mind is that if any CorDapp relied on hibernate-validator to validate Querayable JPA Entities via annotations, that will no longer happen.
   That was a bad practice anyway, because the ``ContractState`` should be validated in the Contract verify method.
 
+* Disabled the default loading of ``hibernate-validator`` as a plugin by hibernate when a CorDapp depends on it. This change will in turn fix the
+  (https://github.com/corda/corda/issues/4444) issue, because nodes will no longer need to add ``hibernate-validator`` to the ``\libs`` folder.
+  For nodes that already did that, it can be safely removed when the latest Corda is installed.
+  One thing to keep in mind is that if any CorDapp relied on hibernate-validator to validate Querayable JPA Entities via annotations, that will no longer happen.
+  That was a bad practice anyway, because the ``ContractState`` should be validated in the Contract verify method.
+
 .. _changelog_v4.0:
 
 Version 4.0

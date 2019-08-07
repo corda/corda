@@ -33,7 +33,11 @@ Node Registration Tool
 ----------------------
 
 The registration tool can be used to register multiple Corda nodes with the network operator, it is useful when managing multiple identities and setting up multiple Corda nodes sharing Corda firewall infrastructures.
-For convenience the tool is also downloading network parameters.
+For convenience the tool is also downloading network parameters. Additionally, the tool can use the crypto services configured in the bridge(if any) to generate SSL keys and import them into the bridge.
+
+The tool does not include any third party supplied client side jar files needed when connecting to an HSM. These jar files are supplied by the HSM vendor. The tool does however assume that it can load
+these jar files from the drivers sub directory of the configured base-directory option. Before running the tool you need to make sure the required HSM client side jar files are in the drivers directory.
+This is only necessary when connecting to an HSM.
 
 Command-line options
 ~~~~~~~~~~~~~~~~~~~~
@@ -47,6 +51,8 @@ Command-line options
 * ``-f``, ``--config-files=FILE...``: The path to the config file
 * ``-t``, ``--network-root-truststore=FILE``: Network root trust store obtained from network operator.
 * ``-p``, ``--network-root-truststore-password=PASSWORD``: Network root trust store password obtained from network operator.
+* ``-g``, ``--bridge-config-file``: The path to the bridge configuration file.
+* ``-r``, ``--bridge-keystore-password=PASSWORD``: The password of the bridge SSLK keystore.
 * ``-h``, ``--help``: Show this help message and exit.
 * ``-V``, ``--version``: Print version information and exit.
 
@@ -78,6 +84,13 @@ Self signed internal Artemis SSL keystore
 
 TLS is used to ensure communications between HA components and standalone Artemis are secured. This tool can be used to generate the required keystores if TLS cert signing infrastructure is not available within your organisation.
 Please note that for Artemis to work correctly, the password for the store and the password for the private key will need to be set to the same value.
+This tool can also create the private key used by the Bridge for the SSL communication in an HSM.
+This will happen if the HSM name and HSM config file option is specified, otherwise the file based keystore is used.
+Regardless where the private keys are stored the public certificates are stored in the file based keystores.
+
+The tool does not include any third party supplied client side jar files needed when connecting to an HSM. These jar files are supplied by the HSM vendor. The tool does however assume that it can load
+these jar files from the drivers sub directory of the configured base-directory option. Before running the tool you need to make sure the required HSM client side jar files are in the drivers directory.
+This is only necessary when connecting to an HSM.
 
 Command-line options
 ~~~~~~~~~~~~~~~~~~~~
@@ -92,14 +105,24 @@ Command-line options
 * ``-o``, ``--organization=<organization>``: X500Name's organization attribute. Default: Corda
 * ``-l``, ``--locality=<locality>``: X500Name's locality attribute. Default: London
 * ``-c``, ``--country=<country>``: X500Name's country attribute. Default: GB
-* ``-b``, ``--base-directory=<baseDirectory>``: The node working directory where all the files are kept.
+* ``-b``, ``--base-directory=<baseDirectory>``: The working directory where all the files are kept.
+* ``-m``, ``--hsm-name``: The HSM name. One of Azure, Utimaco, Gemalto, FutureX. The first x characters to uniquely identify the name is adequate.
+* ``-f``, ``--hsm-config-file``: The path to the HSM config file. Only required if the HSM name has been specified.
 * ``-h``, ``--help``: Show this help message and exit.
 * ``-V``, ``--version``: Print version information and exit.
+
 
 Self signed internal Tunnel SSL keystore
 -----------------------------------------
 
 TLS is used for communications between Bridge and Float components. This tool can be used to generate the required keystores if TLS cert signing infrastructure is not available within your organisation.
+This tool can also create the private keys used by the Bridge and Float for the SSL communication in an HSM.
+This will happen if the HSM name and HSM config file option for the Bridge or Float is specified, otherwise the file based keystore is used.
+Regardless where the private keys are stored the public certificates are stored in the file based keystores.
+
+The tool does not include any third party supplied client side jar files needed when connecting to an HSM. These jar files are supplied by the HSM vendor. The tool does however assume that it can load
+these jar files from the drivers sub directory of the configured base-directory option. Before running the tool you need to make sure the required HSM client side jar files are in the drivers directory.
+This is only necessary when connecting to an HSM.
 
 Command-line options
 ~~~~~~~~~~~~~~~~~~~~
@@ -115,7 +138,11 @@ Command-line options
 * ``-o``, ``--organization=<organization>``: X500Name's organization attribute. Default: Corda
 * ``-l``, ``--locality=<locality>``: X500Name's locality attribute. Default: London
 * ``-c``, ``--country=<country>``: X500Name's country attribute. Default: GB
-* ``-b``, ``--base-directory=<baseDirectory>``: The node working directory where all the files are kept.
+* ``-b``, ``--base-directory=<baseDirectory>``: The working directory where all the files are kept.
+* ``-m``, ``--float-hsm-name``: The HSM name for the Float. One of Azure, Utimaco, Gemalto, FutureX. The first x characters to uniquely identify the name is adequate.
+* ``-f``, ``--float-hsm-config-file``: The path to the Float HSM config file. Only required if the HSM name has been specified.
+* ``-s``, ``--bridge-hsm-name``: The HSM name for the Bridge. One of Azure, Utimaco, Gemalto, FutureX. The first x characters to uniquely identify the name is adequate.
+* ``-i``, ``--bridge-hsm-config-file``: The path to the Bridge HSM config file. Only required if the HSM name has been specified.
 * ``-h``, ``--help``: Show this help message and exit.
 * ``-V``, ``--version``: Print version information and exit.
 

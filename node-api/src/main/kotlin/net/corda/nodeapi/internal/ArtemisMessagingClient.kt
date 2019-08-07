@@ -28,6 +28,8 @@ class ArtemisMessagingClient(private val config: MutualSslConfiguration,
 )  : ArtemisSessionProvider {
     companion object {
         private val log = loggerFor<ArtemisMessagingClient>()
+        const val CORDA_ARTEMIS_CALL_TIMEOUT_PROP_NAME = "net.corda.nodeapi.artemismessagingclient.CallTimeout"
+        const val CORDA_ARTEMIS_CALL_TIMEOUT_DEFAULT = 5000L
     }
 
     class Started(val serverLocator: ServerLocator, val sessionFactory: ClientSessionFactory, val session: ClientSession, val producer: ClientProducer)
@@ -50,11 +52,12 @@ class ArtemisMessagingClient(private val config: MutualSslConfiguration,
             // would be the default and the two lines below can be deleted.
             connectionTTL = 60000
             clientFailureCheckPeriod = 30000
-            callFailoverTimeout = 1000
-            callTimeout = 1000
+            callFailoverTimeout = java.lang.Long.getLong(CORDA_ARTEMIS_CALL_TIMEOUT_PROP_NAME, CORDA_ARTEMIS_CALL_TIMEOUT_DEFAULT)
+            callTimeout = java.lang.Long.getLong(CORDA_ARTEMIS_CALL_TIMEOUT_PROP_NAME, CORDA_ARTEMIS_CALL_TIMEOUT_DEFAULT)
             minLargeMessageSize = maxMessageSize
             isUseGlobalPools = nodeSerializationEnv != null
             confirmationWindowSize = this@ArtemisMessagingClient.confirmationWindowSize
+            producerWindowSize = -1
             messagingServerConnectionConfig?.let {
                 connectionLoadBalancingPolicyClassName = RoundRobinConnectionPolicy::class.java.canonicalName
                 reconnectAttempts = messagingServerConnectionConfig.reconnectAttempts(isHA)

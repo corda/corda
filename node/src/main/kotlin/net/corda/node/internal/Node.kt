@@ -62,6 +62,7 @@ import net.corda.nodeapi.internal.config.MessagingServerConnectionConfiguration
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.persistence.CouldNotCreateDataSourceException
+import net.corda.nodeapi.internal.protonwrapper.netty.toRevocationConfig
 import net.corda.serialization.internal.*
 import net.corda.serialization.internal.amqp.SerializationFactoryCacheKey
 import net.corda.serialization.internal.amqp.SerializerFactory
@@ -239,6 +240,13 @@ open class Node(configuration: NodeConfiguration,
 
         network as P2PMessagingClient
 
+        if (System.getProperty("io.netty.allocator.numHeapArenas").isNullOrBlank()) {
+            // Netty arenas are approx 16MB each when max'd out.  Set arenas based on memory, not core count, unless memory is abundant.
+            val memBasedArenas = max(Runtime.getRuntime().maxMemory() / 256.MB, 1L)
+            // We set the min of the above and the default.
+            System.setProperty("io.netty.allocator.numHeapArenas", min(memBasedArenas, NettyRuntime.availableProcessors() * 2L).toString())
+        }
+
         // When using external Artemis for P2P messaging, the node's p2pSslOptions are no longer used.
         val sslOptions = configuration.enterpriseConfiguration.messagingServerSslConfiguration ?: configuration.p2pSslOptions
 
@@ -274,7 +282,7 @@ open class Node(configuration: NodeConfiguration,
 
         val externalBridge = configuration.enterpriseConfiguration.externalBridge
         val bridgeControlListener = if (externalBridge == null || !externalBridge) {
-            val artemisClient =  {
+            val artemisClient = {
                 ArtemisMessagingClient(configuration.p2pSslOptions,
                         network.serverAddress,
                         networkParameters.maxMessageSize,
@@ -284,7 +292,18 @@ open class Node(configuration: NodeConfiguration,
                         configuration.enterpriseConfiguration.messagingServerConnectionConfiguration,
                         configuration.enterpriseConfiguration.messagingServerBackupAddresses)
             }
-            BridgeControlListener(configuration.p2pSslOptions, null, networkParameters.maxMessageSize, configuration.crlCheckSoftFail, configuration.enableSNI, artemisClient)
+            BridgeControlListener(configuration.p2pSslOptions.keyStore.get(),
+                    configuration.p2pSslOptions.trustStore.get(),
+                    configuration.p2pSslOptions.useOpenSsl,
+                    null,
+                    networkParameters.maxMessageSize,
+                    configuration.crlCheckSoftFail.toRevocationConfig(),
+                    configuration.enableSNI,
+                    artemisClient).apply {
+                this.failure.subscribe {
+                    errorAndTerminate("BridgeControlListener has failed. Node must restart.")
+                }
+            }
         } else {
             null
         }
@@ -348,9 +367,13 @@ open class Node(configuration: NodeConfiguration,
                             Thread.sleep(delay)
                             delay = Math.min(2L * delay, 60000L)
                             retry = true
-                        } else { throw e } // Preserve old behaviour
+                        } else {
+                            throw e
+                        } // Preserve old behaviour
                     }
-                    else -> { throw e } // All other exceptions are thrown to cause the node to exit
+                    else -> {
+                        throw e
+                    } // All other exceptions are thrown to cause the node to exit
                 }
             }
         } while (retry)
@@ -570,7 +593,7 @@ open class Node(configuration: NodeConfiguration,
 
                 checkpointSerializer = KryoCheckpointSerializer,
                 checkpointContext = KRYO_CHECKPOINT_CONTEXT.withClassLoader(classloader)
-            )
+        )
     }
 
     /** Starts a blocking event loop for message dispatch. */

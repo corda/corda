@@ -1,5 +1,6 @@
 package net.corda.bridge.services.api
 
+import net.corda.nodeapi.internal.config.CertificateStore
 import net.corda.nodeapi.internal.protonwrapper.messages.ReceivedMessage
 import net.corda.nodeapi.internal.protonwrapper.netty.ConnectionChange
 import rx.Observable
@@ -17,11 +18,7 @@ interface BridgeAMQPListenerService : ServiceLifecycleSupport {
      * Passes in the [KeyStore]s containing the TLS keys and certificates. This data is only to be held in memory
      * and will be wiped on close.
      */
-    fun provisionKeysAndActivate(keyStoreBytes: ByteArray,
-                                 keyStorePassword: CharArray,
-                                 keyStorePrivateKeyPassword: CharArray,
-                                 trustStoreBytes: ByteArray,
-                                 trustStorePassword: CharArray)
+    fun provisionKeysAndActivate(keyStore: CertificateStore, trustStore: CertificateStore, maxMessageSize: Int)
 
     /**
      * Stop listening on the socket and cleanup any private data/keys.
@@ -43,3 +40,5 @@ interface BridgeAMQPListenerService : ServiceLifecycleSupport {
      */
     val onConnection: Observable<ConnectionChange>
 }
+
+typealias SignerCallback = (alias: String, signatureAlgorithm: String, data: ByteArray) -> ByteArray?

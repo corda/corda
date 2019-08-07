@@ -13,20 +13,35 @@ import net.corda.nodeapi.internal.ArtemisTcpTransport
 import net.corda.nodeapi.internal.config.CertificateStore
 import net.corda.nodeapi.internal.crypto.toBc
 import net.corda.nodeapi.internal.crypto.x509
+import net.corda.nodeapi.internal.protonwrapper.netty.revocation.ExternalSourceRevocationChecker
 import org.bouncycastle.asn1.x509.AuthorityKeyIdentifier
 import org.bouncycastle.asn1.x509.Extension
 import org.bouncycastle.asn1.x509.SubjectKeyIdentifier
+import org.slf4j.LoggerFactory
 import sun.security.x509.X500Name
+import sun.security.x509.*
 import java.net.Socket
 import java.security.KeyStore
 import java.security.cert.*
 import java.util.*
+import java.util.concurrent.Executor
 import javax.net.ssl.*
+import kotlin.system.measureTimeMillis
 
 private const val HOSTNAME_FORMAT = "%s.corda.net"
 internal const val SSL_HANDSHAKE_TIMEOUT_PROP_NAME = "corda.netty.sslHelper.handshakeTimeout"
 internal const val DEFAULT_SSL_TIMEOUT = 20000 // Aligned with sun.security.provider.certpath.URICertStore.DEFAULT_CRL_CONNECT_TIMEOUT
 internal const val DEFAULT = "default"
+
+fun X509Certificate.distributionPointsToString() : String {
+    val certImpl = X509CertImpl.toImpl(this)
+    return certImpl.crlDistributionPointsExtension?.let {
+        val points = it.get(CRLDistributionPointsExtension.POINTS)
+        val uriNames = points.flatMap { point -> point.fullName.names()
+                .filter { name -> name.type == GeneralNameInterface.NAME_URI }}.map { uri -> uri.name as URIName }
+        uriNames.map { uriname -> uriname.uri.toURL() }.mapNotNull { it }.joinToString()
+    } ?: "NO CRLDP ext"
+}
 
 internal class LoggingTrustManagerWrapper(val wrapped: X509ExtendedTrustManager) : X509ExtendedTrustManager() {
     companion object {
@@ -51,11 +66,10 @@ internal class LoggingTrustManagerWrapper(val wrapped: X509ExtendedTrustManager)
             } catch (ex: Exception) {
                 "null"
             }
-            "  $subject[$keyIdentifier] issued by $issuer[$authorityKeyIdentifier]"
+            "  $subject[$keyIdentifier] issued by $issuer[$authorityKeyIdentifier] [${it.distributionPointsToString()}]"
         }
         return certs.joinToString("\r\n")
     }
-
 
     private fun certPathToStringFull(chain: Array<out X509Certificate>?): String {
         if (chain == null) {
@@ -113,6 +127,29 @@ internal class LoggingTrustManagerWrapper(val wrapped: X509ExtendedTrustManager)
 
 }
 
+private object LoggingImmediateExecutor : Executor {
+
+    override fun execute(command: Runnable?) {
+        val log = LoggerFactory.getLogger(javaClass)
+
+        if (command == null) {
+            log.error("SSL handler executor called with a null command")
+            throw NullPointerException("command")
+        }
+
+        try {
+            val commandName = command::class.qualifiedName?.let { "[$it]" } ?: ""
+            log.info("Entering SSL command $commandName")
+            val elapsedTime = measureTimeMillis { command.run() }
+            log.info("Exiting SSL command $elapsedTime millis")
+        }
+        catch (ex: Exception) {
+            log.error("Caught exception in SSL handler executor", ex)
+            throw ex
+        }
+    }
+}
+
 internal fun createClientSslHelper(target: NetworkHostAndPort,
                                    expectedRemoteLegalNames: Set<CordaX500Name>,
                                    keyManagerFactory: KeyManagerFactory,
@@ -131,7 +168,8 @@ internal fun createClientSslHelper(target: NetworkHostAndPort,
         sslParameters.serverNames = listOf(SNIHostName(x500toHostName(expectedRemoteLegalNames.single())))
         sslEngine.sslParameters = sslParameters
     }
-    return SslHandler(sslEngine)
+    @Suppress("DEPRECATION")
+    return SslHandler(sslEngine, false, LoggingImmediateExecutor)
 }
 
 internal fun createClientOpenSslHandler(target: NetworkHostAndPort,
@@ -148,7 +186,8 @@ internal fun createClientOpenSslHandler(target: NetworkHostAndPort,
         sslParameters.serverNames = listOf(SNIHostName(x500toHostName(expectedRemoteLegalNames.single())))
         sslEngine.sslParameters = sslParameters
     }
-    return SslHandler(sslEngine)
+    @Suppress("DEPRECATION")
+    return SslHandler(sslEngine, false, LoggingImmediateExecutor)
 }
 
 internal fun createServerSslHandler(keyStore: CertificateStore,
@@ -167,23 +206,34 @@ internal fun createServerSslHandler(keyStore: CertificateStore,
     val sslParameters = sslEngine.sslParameters
     sslParameters.sniMatchers = listOf(ServerSNIMatcher(keyStore))
     sslEngine.sslParameters = sslParameters
-    return SslHandler(sslEngine)
+    @Suppress("DEPRECATION")
+    return SslHandler(sslEngine, false, LoggingImmediateExecutor)
 }
 
-internal fun initialiseTrustStoreAndEnableCrlChecking(trustStore: CertificateStore, crlCheckSoftFail: Boolean): ManagerFactoryParameters {
-    val certPathBuilder = CertPathBuilder.getInstance("PKIX")
-    val revocationChecker = certPathBuilder.revocationChecker as PKIXRevocationChecker
-    revocationChecker.options = EnumSet.of(
-            // Prefer CRL over OCSP
-            PKIXRevocationChecker.Option.PREFER_CRLS,
-            // Don't fall back to OCSP checking
-            PKIXRevocationChecker.Option.NO_FALLBACK)
-    if (crlCheckSoftFail) {
-        // Allow revocation check to succeed if the revocation status cannot be determined for one of
-        // the following reasons: The CRL or OCSP response cannot be obtained because of a network error.
-        revocationChecker.options = revocationChecker.options + PKIXRevocationChecker.Option.SOFT_FAIL
-    }
+internal fun initialiseTrustStoreAndEnableCrlChecking(trustStore: CertificateStore, revocationConfig: RevocationConfig): ManagerFactoryParameters {
     val pkixParams = PKIXBuilderParameters(trustStore.value.internal, X509CertSelector())
+    val revocationChecker = when (revocationConfig.mode) {
+        RevocationConfig.Mode.OFF -> AllowAllRevocationChecker  // Custom PKIXRevocationChecker skipping CRL check
+        RevocationConfig.Mode.EXTERNAL_SOURCE -> {
+            assert(revocationConfig.externalCrlSource != null) { "externalCrlSource must not be null" }
+            ExternalSourceRevocationChecker(revocationConfig.externalCrlSource!!) { pkixParams.date } // Custom PKIXRevocationChecker which uses `externalCrlSource`
+        }
+        else -> {
+            val certPathBuilder = CertPathBuilder.getInstance("PKIX")
+            val pkixRevocationChecker = certPathBuilder.revocationChecker as PKIXRevocationChecker
+            pkixRevocationChecker.options = EnumSet.of(
+                    // Prefer CRL over OCSP
+                    PKIXRevocationChecker.Option.PREFER_CRLS,
+                    // Don't fall back to OCSP checking
+                    PKIXRevocationChecker.Option.NO_FALLBACK)
+            if (revocationConfig.mode == RevocationConfig.Mode.SOFT_FAIL) {
+                // Allow revocation check to succeed if the revocation status cannot be determined for one of
+                // the following reasons: The CRL or OCSP response cannot be obtained because of a network error.
+                pkixRevocationChecker.options = pkixRevocationChecker.options + PKIXRevocationChecker.Option.SOFT_FAIL
+            }
+            pkixRevocationChecker
+        }
+    }
     pkixParams.addCertPathChecker(revocationChecker)
     return CertPathTrustManagerParameters(pkixParams)
 }
@@ -195,7 +245,8 @@ internal fun createServerOpenSslHandler(keyManagerFactory: KeyManagerFactory,
     val sslContext = getServerSslContextBuilder(keyManagerFactory, trustManagerFactory).build()
     val sslEngine = sslContext.newEngine(alloc)
     sslEngine.useClientMode = false
-    return SslHandler(sslEngine)
+    @Suppress("DEPRECATION")
+    return SslHandler(sslEngine, false, LoggingImmediateExecutor)
 }
 
 /**

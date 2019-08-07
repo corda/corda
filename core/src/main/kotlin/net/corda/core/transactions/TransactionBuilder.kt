@@ -20,10 +20,13 @@ import net.corda.core.node.services.KeyManagementService
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationFactory
 import net.corda.core.utilities.contextLogger
+import java.io.NotSerializableException
+import java.lang.Exception
 import java.security.PublicKey
 import java.time.Duration
 import java.time.Instant
-import java.util.*
+import java.util.ArrayDeque
+import java.util.UUID
 import java.util.regex.Pattern
 import kotlin.collections.ArrayList
 import kotlin.collections.component1
@@ -70,6 +73,7 @@ open class TransactionBuilder(
     private companion object {
         private fun defaultLockId() = (Strand.currentStrand() as? FlowStateMachine<*>)?.id?.uuid ?: UUID.randomUUID()
         private val log = contextLogger()
+        private const val CORDA_VERSION_THAT_INTRODUCED_FLATTENED_COMMANDS = 4
 
         private val ID_PATTERN = "\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*"
         private val FQCP = Pattern.compile("$ID_PATTERN(/$ID_PATTERN)+")

@@ -18,6 +18,8 @@ import net.corda.nodeapi.internal.bridging.AMQPBridgeManager
 import net.corda.nodeapi.internal.bridging.BridgeManager
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPConfiguration
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPServer
+import net.corda.nodeapi.internal.protonwrapper.netty.RevocationConfig
+import net.corda.nodeapi.internal.protonwrapper.netty.toRevocationConfig
 import net.corda.testing.core.*
 import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.internal.rigorousMock
@@ -372,7 +374,13 @@ class AMQPBridgeTest(private val useOpenSsl: Boolean, private val enableSNI: Boo
 
         artemisServer.start()
         artemisClient.start()
-        val bridgeManager = AMQPBridgeManager(artemisConfig.p2pSslOptions, artemisAddress, MAX_MESSAGE_SIZE, artemisConfig.crlCheckSoftFail, enableSNI)
+        val bridgeManager = AMQPBridgeManager(artemisConfig.p2pSslOptions.keyStore.get(),
+                artemisConfig.p2pSslOptions.trustStore.get(),
+                artemisConfig.p2pSslOptions.useOpenSsl,
+                null,
+                MAX_MESSAGE_SIZE,
+                artemisConfig.crlCheckSoftFail.toRevocationConfig(),
+                enableSNI, { ArtemisMessagingClient(artemisConfig.p2pSslOptions, artemisAddress, MAX_MESSAGE_SIZE) }, trace = false)
         bridgeManager.start()
         val artemis = artemisClient.started!!
         if (sourceQueueName != null) {
@@ -431,7 +439,7 @@ class AMQPBridgeTest(private val useOpenSsl: Boolean, private val enableSNI: Boo
             override val trustStore = serverConfig.p2pSslOptions.trustStore.get()
             //override val trace: Boolean = true
             override val maxMessageSize: Int = maxMessageSize
-            override val crlCheckSoftFail: Boolean = serverConfig.crlCheckSoftFail
+            override val revocationConfig: RevocationConfig = serverConfig.crlCheckSoftFail.toRevocationConfig()
             override val useOpenSsl = serverConfig.p2pSslOptions.useOpenSsl
             override val enableSNI: Boolean = this@AMQPBridgeTest.enableSNI
             override val healthCheckPhrase = echoPhrase

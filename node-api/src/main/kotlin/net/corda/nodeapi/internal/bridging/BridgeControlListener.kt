@@ -12,9 +12,11 @@ import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.BRIDGE_NOT
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_PREFIX
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEERS_PREFIX
 import net.corda.nodeapi.internal.ArtemisSessionProvider
+import net.corda.nodeapi.internal.config.CertificateStore
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.crypto.x509
 import net.corda.nodeapi.internal.protonwrapper.netty.ProxyConfig
+import net.corda.nodeapi.internal.protonwrapper.netty.RevocationConfig
 import org.apache.activemq.artemis.api.core.ActiveMQNonExistentQueueException
 import org.apache.activemq.artemis.api.core.ActiveMQQueueExistsException
 import org.apache.activemq.artemis.api.core.RoutingType
@@ -27,22 +29,25 @@ import rx.subjects.PublishSubject
 import sun.security.x509.X500Name
 import java.util.*
 
-class BridgeControlListener(val config: MutualSslConfiguration,
+class BridgeControlListener(private val keyStore: CertificateStore,
+                            trustStore: CertificateStore,
+                            useOpenSSL: Boolean,
                             proxyConfig: ProxyConfig? = null,
                             maxMessageSize: Int,
-                            crlCheckSoftFail: Boolean,
+                            revocationConfig: RevocationConfig,
                             enableSNI: Boolean,
                             private val artemisMessageClientFactory: () -> ArtemisSessionProvider,
                             bridgeMetricsService: BridgeMetricsService? = null,
-                            trace: Boolean = false) : AutoCloseable {
+                            trace: Boolean = false,
+                            sslHandshakeTimeout: Long? = null) : AutoCloseable {
     private val bridgeId: String = UUID.randomUUID().toString()
     private var bridgeControlQueue = "$BRIDGE_CONTROL.$bridgeId"
     private var bridgeNotifyQueue = "$BRIDGE_NOTIFY.$bridgeId"
     private val validInboundQueues = mutableSetOf<String>()
     private val bridgeManager = if (enableSNI) {
-        LoopbackBridgeManager(config, proxyConfig, maxMessageSize, crlCheckSoftFail, enableSNI, artemisMessageClientFactory, bridgeMetricsService, this::validateReceiveTopic, trace)
+        LoopbackBridgeManager(keyStore, trustStore, useOpenSSL, proxyConfig, maxMessageSize, revocationConfig, enableSNI, artemisMessageClientFactory, bridgeMetricsService, this::validateReceiveTopic, trace, sslHandshakeTimeout)
     } else {
-        AMQPBridgeManager(config, proxyConfig, maxMessageSize, crlCheckSoftFail, enableSNI, artemisMessageClientFactory, bridgeMetricsService, trace)
+        AMQPBridgeManager(keyStore, trustStore, useOpenSSL, proxyConfig, maxMessageSize, revocationConfig, enableSNI, artemisMessageClientFactory, bridgeMetricsService, trace, sslHandshakeTimeout)
     }
     private var artemis: ArtemisSessionProvider? = null
     private var controlConsumer: ClientConsumer? = null
@@ -51,9 +56,9 @@ class BridgeControlListener(val config: MutualSslConfiguration,
     constructor(config: MutualSslConfiguration,
                 p2pAddress: NetworkHostAndPort,
                 maxMessageSize: Int,
-                crlCheckSoftFail: Boolean,
+                revocationConfig: RevocationConfig,
                 enableSNI: Boolean,
-                proxy: ProxyConfig? = null) : this(config, proxy, maxMessageSize, crlCheckSoftFail, enableSNI, { ArtemisMessagingClient(config, p2pAddress, maxMessageSize) })
+                proxy: ProxyConfig? = null) : this(config.keyStore.get(), config.trustStore.get(), config.useOpenSsl, proxy, maxMessageSize, revocationConfig, enableSNI, { ArtemisMessagingClient(config, p2pAddress, maxMessageSize) })
 
     companion object {
         private val log = contextLogger()
@@ -66,31 +71,41 @@ class BridgeControlListener(val config: MutualSslConfiguration,
     val activeChange: Observable<Boolean>
         get() = _activeChange
 
+    private val _failure = PublishSubject.create<BridgeControlListener>().toSerialized()
+    val failure: Observable<BridgeControlListener>
+        get() = _failure
+
     fun start() {
-        stop()
+        try {
+            stop()
 
-        val queueDisambiguityId = UUID.randomUUID().toString()
-        bridgeControlQueue = "$BRIDGE_CONTROL.$queueDisambiguityId"
-        bridgeNotifyQueue = "$BRIDGE_NOTIFY.$queueDisambiguityId"
+            val queueDisambiguityId = UUID.randomUUID().toString()
+            bridgeControlQueue = "$BRIDGE_CONTROL.$queueDisambiguityId"
+            bridgeNotifyQueue = "$BRIDGE_NOTIFY.$queueDisambiguityId"
 
-        bridgeManager.start()
-        val artemis = artemisMessageClientFactory()
-        this.artemis = artemis
-        artemis.start()
-        val artemisClient = artemis.started!!
-        val artemisSession = artemisClient.session
-        registerBridgeControlListener(artemisSession)
-        registerBridgeDuplicateChecker(artemisSession)
-        // Attempt to read available inboxes directly from Artemis before requesting updates from connected nodes
-        validInboundQueues.addAll(artemisSession.addressQuery(SimpleString("$P2P_PREFIX#")).queueNames.map { it.toString() })
-        log.info("Found inboxes: $validInboundQueues")
-        if (active) {
-            _activeChange.onNext(true)
+            bridgeManager.start()
+            val artemis = artemisMessageClientFactory()
+            this.artemis = artemis
+            artemis.start()
+            val artemisClient = artemis.started!!
+            val artemisSession = artemisClient.session
+            registerBridgeControlListener(artemisSession)
+            registerBridgeDuplicateChecker(artemisSession)
+            // Attempt to read available inboxes directly from Artemis before requesting updates from connected nodes
+            validInboundQueues.addAll(artemisSession.addressQuery(SimpleString("$P2P_PREFIX#")).queueNames.map { it.toString() })
+            log.info("Found inboxes: $validInboundQueues")
+            if (active) {
+                _activeChange.onNext(true)
+            }
+            val startupMessage = BridgeControl.BridgeToNodeSnapshotRequest(bridgeId).serialize(context = SerializationDefaults.P2P_CONTEXT)
+                    .bytes
+            val bridgeRequest = artemisSession.createMessage(false)
+            bridgeRequest.writeBodyBufferBytes(startupMessage)
+            artemisClient.producer.send(BRIDGE_NOTIFY, bridgeRequest)
+        } catch (e: Exception) {
+            log.error("Failure to start BridgeControlListener", e)
+            _failure.onNext(this)
         }
-        val startupMessage = BridgeControl.BridgeToNodeSnapshotRequest(bridgeId).serialize(context = SerializationDefaults.P2P_CONTEXT).bytes
-        val bridgeRequest = artemisSession.createMessage(false)
-        bridgeRequest.writeBodyBufferBytes(startupMessage)
-        artemisClient.producer.send(BRIDGE_NOTIFY, bridgeRequest)
     }
 
     private fun registerBridgeControlListener(artemisSession: ClientSession) {
@@ -107,6 +122,7 @@ class BridgeControlListener(val config: MutualSslConfiguration,
                 processControlMessage(msg)
             } catch (ex: Exception) {
                 log.error("Unable to process bridge control message", ex)
+                _failure.onNext(this)
             }
             msg.acknowledge()
         }
@@ -130,36 +146,40 @@ class BridgeControlListener(val config: MutualSslConfiguration,
                 }
             } catch (ex: Exception) {
                 log.error("Unable to process bridge notification message", ex)
+                _failure.onNext(this)
             }
             msg.acknowledge()
         }
     }
 
     fun stop() {
-        if (active) {
-            _activeChange.onNext(false)
-        }
-        validInboundQueues.clear()
-        controlConsumer?.close()
-        controlConsumer = null
-        notifyConsumer?.close()
-        notifyConsumer = null
-        artemis?.apply {
-            try {
-                started?.session?.deleteQueue(bridgeControlQueue)
-            } catch(e: ActiveMQNonExistentQueueException) {
-                log.warn("Queue $bridgeControlQueue does not exist and it can't be deleted")
+        try {
+            if (active) {
+                _activeChange.onNext(false)
             }
-            try {
-                started?.session?.deleteQueue(bridgeNotifyQueue)
-            } catch(e: ActiveMQNonExistentQueueException) {
-                log.warn("Queue $bridgeNotifyQueue does not exist and it can't be deleted")
+            validInboundQueues.clear()
+            controlConsumer?.close()
+            controlConsumer = null
+            notifyConsumer?.close()
+            notifyConsumer = null
+            artemis?.apply {
+                try {
+                    started?.session?.deleteQueue(bridgeControlQueue)
+                } catch (e: ActiveMQNonExistentQueueException) {
+                    log.warn("Queue $bridgeControlQueue does not exist and it can't be deleted")
+                }
+                try {
+                    started?.session?.deleteQueue(bridgeNotifyQueue)
+                } catch (e: ActiveMQNonExistentQueueException) {
+                    log.warn("Queue $bridgeNotifyQueue does not exist and it can't be deleted")
+                }
+                stop()
             }
-
-            stop()
+            artemis = null
+            bridgeManager.stop()
+        } catch (e: Exception) {
+            log.error("Failure to stop BridgeControlListener", e)
         }
-        artemis = null
-        bridgeManager.stop()
     }
 
     override fun close() = stop()
@@ -226,15 +246,19 @@ class BridgeControlListener(val config: MutualSslConfiguration,
                 }
                 bridgeManager.destroyBridge(controlMessage.bridgeInfo.queueName, controlMessage.bridgeInfo.targets)
             }
+            is BridgeControl.BridgeHealthCheck -> {
+                log.warn("Not currently doing anything on BridgeHealthCheck")
+                return
+            }
         }
     }
 
     private fun isConfigured(sourceX500Name: String): Boolean {
-        val keyStore = config.keyStore.get().value.internal
-        return keyStore.aliases().toList().filter { alias ->
+        val keyStore = keyStore.value.internal
+        return keyStore.aliases().toList().any { alias ->
             val x500Name = keyStore.getCertificate(alias).x509.subjectDN as X500Name
             val cordaX500Name = CordaX500Name.build(x500Name.asX500Principal())
             cordaX500Name.toString() == sourceX500Name
-        }.isNotEmpty()
+        }
     }
 }

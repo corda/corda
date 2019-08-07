@@ -9,10 +9,10 @@ import kotlin.concurrent.thread
  * the system in a messy state.
  */
 @Synchronized
-fun errorAndTerminate(message: String, e: Throwable?) {
+fun errorAndTerminate(message: String, e: Throwable? = null) {
     thread {
         val log = LoggerFactory.getLogger("errorAndTerminate")
-        log.error(message, e)
+        if (e != null) log.error(message, e) else log.error(message)
     }
 
     // give the logger a chance to flush the error message before killing the node

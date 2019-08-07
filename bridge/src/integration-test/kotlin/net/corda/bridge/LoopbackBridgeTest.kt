@@ -38,6 +38,7 @@ class LoopbackBridgeTest : IntegrationTest() {
         internalDriver(startNodesInProcess = true, cordappsForAllNodes = cordappsForPackages("net.corda.bridge"), notarySpecs = emptyList(), portAllocation = incrementalPortAllocation()) {
             val artemisPort = portAllocation.nextPort()
             val advertisedP2PPort = portAllocation.nextPort()
+            val floatPort = portAllocation.nextPort()
 
             val bankAPath = driverDirectory / DUMMY_BANK_A_NAME.organisation / "node"
             val bankBPath = driverDirectory / DUMMY_BANK_B_NAME.organisation / "node"
@@ -100,7 +101,7 @@ class LoopbackBridgeTest : IntegrationTest() {
             }
 
             // Starting the bridge at the end, to test the NodeToBridgeSnapshot message's AMQP bridge convert to Loopback bridge code path.
-            startBridge(driverDirectory, artemisPort, advertisedP2PPort, bankAPath / "certificates" / "sslkeystore.jks", bankBPath / "certificates" / "sslkeystore.jks").getOrThrow()
+            startBridge(driverDirectory, artemisPort, advertisedP2PPort, bankAPath / "certificates" / "sslkeystore.jks", bankBPath / "certificates" / "sslkeystore.jks", floatPort = floatPort).getOrThrow()
 
             testThread.join()
         }

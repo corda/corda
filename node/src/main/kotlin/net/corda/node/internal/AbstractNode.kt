@@ -118,6 +118,7 @@ import java.util.function.Consumer
 import javax.persistence.EntityManager
 import kotlin.math.max
 import kotlin.math.min
+import net.corda.core.crypto.generateKeyPair as cryptoGenerateKeyPair
 
 /**
  * A base node implementation that can be customised either for production (with real implementations that do real

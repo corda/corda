@@ -9,7 +9,6 @@ import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.Crypto.ECDSA_SECP256R1_SHA256
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.div
-import net.corda.core.internal.readAll
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEERS_PREFIX
 import net.corda.nodeapi.internal.config.CertificateStore
@@ -44,7 +43,7 @@ class AMQPListenerTest {
         val bridgeConfig = createAndLoadConfigFromResource(tempFolder.root.toPath() / "listener", configResource)
         bridgeConfig.createBridgeKeyStores(DUMMY_BANK_A_NAME)
         val auditService = TestAuditService()
-        val amqpListenerService = BridgeAMQPListenerServiceImpl(bridgeConfig, maxMessageSize, auditService)
+        val amqpListenerService = BridgeAMQPListenerServiceImpl(bridgeConfig, auditService)
         val stateFollower = amqpListenerService.activeChange.toBlocking().iterator
         val connectionFollower = amqpListenerService.onConnection.toBlocking().iterator
         val auditFollower = auditService.onAuditEvent.toBlocking().iterator
@@ -58,14 +57,8 @@ class AMQPListenerTest {
         assertEquals(true, stateFollower.next())
         assertEquals(true, amqpListenerService.active)
         assertEquals(false, serverListening("localhost", 10005))
-        val keyStoreBytes = bridgeConfig.publicSSLConfiguration.keyStore.path.readAll()
-        val trustStoreBytes = bridgeConfig.publicSSLConfiguration.trustStore.path.readAll()
         // start listening
-        amqpListenerService.provisionKeysAndActivate(keyStoreBytes,
-                bridgeConfig.publicSSLConfiguration.keyStore.storePassword.toCharArray(),
-                bridgeConfig.publicSSLConfiguration.keyStore.entryPassword.toCharArray(),
-                trustStoreBytes,
-                bridgeConfig.publicSSLConfiguration.trustStore.storePassword.toCharArray())
+        amqpListenerService.provisionKeysAndActivate(bridgeConfig.publicSSLConfiguration.keyStore.get(), bridgeConfig.publicSSLConfiguration.trustStore.get(), maxMessageSize)
         // Fire lots of activity to prove we are good
         assertEquals(TestAuditService.AuditEvent.STATUS_CHANGE, auditFollower.next())
         assertEquals(true, amqpListenerService.active)
@@ -123,7 +116,6 @@ class AMQPListenerTest {
         assertEquals(false, amqpListenerService.active)
     }
 
-
     @Test
     fun `Bad certificate audit check`() {
         val configResource = "/net/corda/bridge/singleprocess/firewall.conf"
@@ -131,17 +123,11 @@ class AMQPListenerTest {
         val bridgeConfig = createAndLoadConfigFromResource(tempFolder.root.toPath() / "listener", configResource)
         bridgeConfig.createBridgeKeyStores(DUMMY_BANK_A_NAME)
         val auditService = TestAuditService()
-        val amqpListenerService = BridgeAMQPListenerServiceImpl(bridgeConfig, maxMessageSize, auditService)
+        val amqpListenerService = BridgeAMQPListenerServiceImpl(bridgeConfig, auditService)
         amqpListenerService.start()
         auditService.start()
-        val keyStoreBytes = bridgeConfig.publicSSLConfiguration.keyStore.path.readAll()
-        val trustStoreBytes = bridgeConfig.publicSSLConfiguration.trustStore.path.readAll()
         // start listening
-        amqpListenerService.provisionKeysAndActivate(keyStoreBytes,
-                bridgeConfig.publicSSLConfiguration.keyStore.storePassword.toCharArray(),
-                bridgeConfig.publicSSLConfiguration.keyStore.entryPassword.toCharArray(),
-                trustStoreBytes,
-                bridgeConfig.publicSSLConfiguration.trustStore.storePassword.toCharArray())
+        amqpListenerService.provisionKeysAndActivate(bridgeConfig.publicSSLConfiguration.keyStore.get(), bridgeConfig.publicSSLConfiguration.trustStore.get(), maxMessageSize)
         val connectionFollower = amqpListenerService.onConnection.toBlocking().iterator
         val auditFollower = auditService.onAuditEvent.toBlocking().iterator
         val clientKeys = Crypto.generateKeyPair(ECDSA_SECP256R1_SHA256)
@@ -173,5 +159,4 @@ class AMQPListenerTest {
         amqpListenerService.wipeKeysAndDeactivate()
         amqpListenerService.stop()
     }
-
 }

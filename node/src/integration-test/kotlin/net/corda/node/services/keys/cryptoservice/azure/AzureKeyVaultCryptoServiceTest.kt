@@ -1,6 +1,8 @@
 package net.corda.node.services.keys.cryptoservice.azure
 
 import net.corda.core.crypto.Crypto
+import net.corda.core.crypto.internal.Instances
+import net.corda.core.crypto.internal.cordaBouncyCastleProvider
 import net.corda.core.identity.Party
 import net.corda.core.utilities.days
 import net.corda.nodeapi.internal.crypto.CertificateType
@@ -8,14 +10,18 @@ import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.cryptoservice.azure.AzureKeyVaultCryptoService
 import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.getTestPartyAndCertificate
-import org.junit.Ignore
 import org.junit.Test
+import org.junit.Ignore
+import java.security.PublicKey
+import java.security.SignatureException
 import java.time.Duration
 import java.util.*
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+
+
 
 /*
  * These tests need to be run manually. They require an Amazon KeyVault (and the associated service principal) to be set up and will perform operations that are not free of charge.
@@ -68,6 +74,42 @@ class AzureKeyVaultCryptoServiceTest {
     }
 
     @Test
+    fun `Generate P-256 ECDSA key with hardware protection, sign with SHA384WITHECDSA and verify data`() {
+        val keyVaultClient = AzureKeyVaultCryptoService.createKeyVaultClient(path, "", "1", clientId)
+        val cryptoService = AzureKeyVaultCryptoService(keyVaultClient, premiumVault, AzureKeyVaultCryptoService.Protection.HARDWARE)
+        val alias = UUID.randomUUID().toString()
+        val generated = cryptoService.generateKeyPair(alias, Crypto.ECDSA_SECP256R1_SHA256)
+        assertNotNull(generated)
+        val data = UUID.randomUUID().toString().toByteArray()
+        val signed = cryptoService.sign(alias, data, "SHA384WITHECDSA")
+        verifySignature("SHA384WITHECDSA", generated, signed, data)
+    }
+
+    @Test
+    fun `Generate P-256 ECDSA key with hardware protection, sign with SHA256WITHECDSA and verify data`() {
+        val keyVaultClient = AzureKeyVaultCryptoService.createKeyVaultClient(path, "", "1", clientId)
+        val cryptoService = AzureKeyVaultCryptoService(keyVaultClient, premiumVault, AzureKeyVaultCryptoService.Protection.HARDWARE)
+        val alias = UUID.randomUUID().toString()
+        val generated = cryptoService.generateKeyPair(alias, Crypto.ECDSA_SECP256R1_SHA256)
+        assertNotNull(generated)
+        val data = UUID.randomUUID().toString().toByteArray()
+        val signed = cryptoService.sign(alias, data, "SHA256WITHECDSA")
+        verifySignature("SHA256WITHECDSA", generated, signed, data)
+    }
+
+    @Test
+    fun `Generate P-256 ECDSA key with hardware protection, sign with SHA512WITHECDSA and verify data`() {
+        val keyVaultClient = AzureKeyVaultCryptoService.createKeyVaultClient(path, "", "1", clientId)
+        val cryptoService = AzureKeyVaultCryptoService(keyVaultClient, premiumVault, AzureKeyVaultCryptoService.Protection.HARDWARE)
+        val alias = UUID.randomUUID().toString()
+        val generated = cryptoService.generateKeyPair(alias, Crypto.ECDSA_SECP256R1_SHA256)
+        assertNotNull(generated)
+        val data = UUID.randomUUID().toString().toByteArray()
+        val signed = cryptoService.sign(alias, data, "SHA512WITHECDSA")
+        verifySignature("SHA512WITHECDSA", generated, signed, data)
+    }
+
+    @Test
     fun `Generate P-256 ECDSA key with software protection, sign and verify data`() {
         val keyVaultClient = AzureKeyVaultCryptoService.createKeyVaultClient(path, "", "1", clientId)
         val cryptoService = AzureKeyVaultCryptoService(keyVaultClient, vaultURL, AzureKeyVaultCryptoService.Protection.SOFTWARE)
@@ -77,6 +119,18 @@ class AzureKeyVaultCryptoServiceTest {
         val data = UUID.randomUUID().toString().toByteArray()
         val signed = cryptoService.sign(alias, data)
         Crypto.doVerify(generated, signed, data)
+    }
+
+    @Test
+    fun `Generate P-256 ECDSA key with software protection, sign with SHA512WITHECDSA and verify data`() {
+        val keyVaultClient = AzureKeyVaultCryptoService.createKeyVaultClient(path, "", "1", clientId)
+        val cryptoService = AzureKeyVaultCryptoService(keyVaultClient, vaultURL, AzureKeyVaultCryptoService.Protection.SOFTWARE)
+        val alias = UUID.randomUUID().toString()
+        val generated = cryptoService.generateKeyPair(alias, Crypto.ECDSA_SECP256R1_SHA256)
+        assertNotNull(generated)
+        val data = UUID.randomUUID().toString().toByteArray()
+        val signed = cryptoService.sign(alias, data, "SHA512WITHECDSA")
+        verifySignature("SHA512WITHECDSA", generated, signed, data)
     }
 
     @Test
@@ -92,6 +146,18 @@ class AzureKeyVaultCryptoServiceTest {
     }
 
     @Test
+    fun `Generate P-256 ECDSA K1 key with hardware protection, sign with SHA512WITHECDSA and verify data`() {
+        val keyVaultClient = AzureKeyVaultCryptoService.createKeyVaultClient(path, "", "1", clientId)
+        val cryptoService = AzureKeyVaultCryptoService(keyVaultClient, premiumVault, AzureKeyVaultCryptoService.Protection.HARDWARE)
+        val alias = UUID.randomUUID().toString()
+        val generated = cryptoService.generateKeyPair(alias, Crypto.ECDSA_SECP256K1_SHA256)
+        assertNotNull(generated)
+        val data = UUID.randomUUID().toString().toByteArray()
+        val signed = cryptoService.sign(alias, data, "SHA512WITHECDSA")
+        verifySignature("SHA512WITHECDSA", generated, signed, data)
+    }
+
+    @Test
     fun `Generate P-256 ECDSA K1 key with software protection, sign and verify data`() {
         val keyVaultClient = AzureKeyVaultCryptoService.createKeyVaultClient(path, "", "1", clientId)
         val cryptoService = AzureKeyVaultCryptoService(keyVaultClient, vaultURL, AzureKeyVaultCryptoService.Protection.SOFTWARE)
@@ -101,6 +167,19 @@ class AzureKeyVaultCryptoServiceTest {
         val data = UUID.randomUUID().toString().toByteArray()
         val signed = cryptoService.sign(alias, data)
         Crypto.doVerify(generated, signed, data)
+    }
+
+    @Test
+    fun `Generate P-256 ECDSA K1 key with software protection, sign with SHA512WITHECDSA and verify data`() {
+        val keyVaultClient = AzureKeyVaultCryptoService.createKeyVaultClient(path, "", "1", clientId)
+        val cryptoService = AzureKeyVaultCryptoService(keyVaultClient, vaultURL, AzureKeyVaultCryptoService.Protection.SOFTWARE)
+        val alias = UUID.randomUUID().toString()
+        val generated = cryptoService.generateKeyPair(alias, Crypto.ECDSA_SECP256K1_SHA256)
+        assertNotNull(generated)
+        val data = UUID.randomUUID().toString().toByteArray()
+        val signed = cryptoService.sign(alias, data, "SHA512WITHECDSA")
+        verifySignature("SHA512WITHECDSA", generated, signed, data)
+
     }
 
     @Test
@@ -116,6 +195,42 @@ class AzureKeyVaultCryptoServiceTest {
     }
 
     @Test
+    fun `Generate RSA key with hardware protection, sign with SHA512WITHRSA and verify data`() {
+        val keyVaultClient = AzureKeyVaultCryptoService.createKeyVaultClient(path, "", "1", clientId)
+        val cryptoService = AzureKeyVaultCryptoService(keyVaultClient, premiumVault, AzureKeyVaultCryptoService.Protection.HARDWARE)
+        val alias = UUID.randomUUID().toString()
+        val generated = cryptoService.generateKeyPair(alias, Crypto.RSA_SHA256)
+        assertNotNull(generated)
+        val data = UUID.randomUUID().toString().toByteArray()
+        val signed = cryptoService.sign(alias, data, "SHA512WITHERSA")
+        verifySignature("SHA512WITHRSA", generated, signed, data)
+    }
+
+    @Test
+    fun `Generate RSA key with hardware protection, sign with SHA384WITHRSA and verify data`() {
+        val keyVaultClient = AzureKeyVaultCryptoService.createKeyVaultClient(path, "", "1", clientId)
+        val cryptoService = AzureKeyVaultCryptoService(keyVaultClient, premiumVault, AzureKeyVaultCryptoService.Protection.HARDWARE)
+        val alias = UUID.randomUUID().toString()
+        val generated = cryptoService.generateKeyPair(alias, Crypto.RSA_SHA256)
+        assertNotNull(generated)
+        val data = UUID.randomUUID().toString().toByteArray()
+        val signed = cryptoService.sign(alias, data, "SHA384WITHERSA")
+        verifySignature("SHA384WITHRSA", generated, signed, data)
+    }
+
+    @Test
+    fun `Generate RSA key with hardware protection, sign with SHA256WITHRSA and verify data`() {
+        val keyVaultClient = AzureKeyVaultCryptoService.createKeyVaultClient(path, "", "1", clientId)
+        val cryptoService = AzureKeyVaultCryptoService(keyVaultClient, premiumVault, AzureKeyVaultCryptoService.Protection.HARDWARE)
+        val alias = UUID.randomUUID().toString()
+        val generated = cryptoService.generateKeyPair(alias, Crypto.RSA_SHA256)
+        assertNotNull(generated)
+        val data = UUID.randomUUID().toString().toByteArray()
+        val signed = cryptoService.sign(alias, data, "SHA256WITHERSA")
+        verifySignature("SHA256WITHRSA", generated, signed, data)
+    }
+
+    @Test
     fun `Generate RSA key with software protection, sign and verify data`() {
         val keyVaultClient = AzureKeyVaultCryptoService.createKeyVaultClient(path, "", "1", clientId)
         val cryptoService = AzureKeyVaultCryptoService(keyVaultClient, vaultURL, AzureKeyVaultCryptoService.Protection.SOFTWARE)
@@ -125,6 +240,18 @@ class AzureKeyVaultCryptoServiceTest {
         val data = UUID.randomUUID().toString().toByteArray()
         val signed = cryptoService.sign(alias, data)
         Crypto.doVerify(generated, signed, data)
+    }
+
+    @Test
+    fun `Generate RSA key with software protection, sign with SHA512WITHRSA and verify data`() {
+        val keyVaultClient = AzureKeyVaultCryptoService.createKeyVaultClient(path, "", "1", clientId)
+        val cryptoService = AzureKeyVaultCryptoService(keyVaultClient, vaultURL, AzureKeyVaultCryptoService.Protection.SOFTWARE)
+        val alias = UUID.randomUUID().toString()
+        val generated = cryptoService.generateKeyPair(alias, Crypto.RSA_SHA256)
+        assertNotNull(generated)
+        val data = UUID.randomUUID().toString().toByteArray()
+        val signed = cryptoService.sign(alias, data, "SHA512WITHRSA")
+        verifySignature("SHA512WITHRSA", generated, signed, data)
     }
 
     @Test
@@ -177,4 +304,11 @@ class AzureKeyVaultCryptoServiceTest {
         val cryptoService = AzureKeyVaultCryptoService(keyVaultClient, vaultURL, AzureKeyVaultCryptoService.Protection.SOFTWARE)
         assertFailsWith<IllegalArgumentException> { cryptoService.generateKeyPair("no", Crypto.EDDSA_ED25519_SHA512) }
     }
+}
+
+private fun verifySignature(signatureName: String, publicKey: PublicKey, signatureData: ByteArray, clearData: ByteArray): Boolean {
+    val signature = Instances.getSignatureInstance(signatureName, cordaBouncyCastleProvider)
+    signature.initVerify(publicKey)
+    signature.update(clearData)
+    return if (signature.verify(signatureData)) true else throw SignatureException("Signature Verification failed!")
 }

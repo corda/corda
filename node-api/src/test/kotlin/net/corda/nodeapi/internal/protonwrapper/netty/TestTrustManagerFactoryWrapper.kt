@@ -42,10 +42,10 @@ class TestTrustManagerFactoryWrapper {
         val trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
 
         val wrapped = LoggingTrustManagerFactoryWrapper(trustManagerFactory)
-        wrapped.init(initialiseTrustStoreAndEnableCrlChecking(config.p2pSslOptions.trustStore.get(), false))
+        wrapped.init(initialiseTrustStoreAndEnableCrlChecking(config.p2pSslOptions.trustStore.get(), RevocationConfigImpl(RevocationConfig.Mode.HARD_FAIL)))
 
         val trustManagers = wrapped.trustManagers
-        assertTrue(trustManagers.size > 0)
+        assertTrue(trustManagers.isNotEmpty())
         assertTrue(trustManagers[0] is LoggingTrustManagerWrapper)
     }
 }

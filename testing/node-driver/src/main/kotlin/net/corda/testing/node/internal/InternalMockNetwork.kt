@@ -36,6 +36,7 @@ import net.corda.node.services.config.*
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.BasicHSMKeyManagementService
 import net.corda.node.services.keys.KeyManagementServiceInternal
+import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
 import net.corda.node.services.messaging.Message
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.persistence.NodeAttachmentService
@@ -46,7 +47,6 @@ import net.corda.node.utilities.EnterpriseNamedCacheFactory
 import net.corda.node.utilities.profiling.getTracingConfig
 import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.config.User
-import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
@@ -453,8 +453,9 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
         val id = parameters.forcedID ?: nextNodeId++
         val baseDirectory = baseDirectory(id)
         val certificatesDirectory = baseDirectory / "certificates"
+        val wrappingKeyStorePath = certificatesDirectory / "wrappingkeystore.pkcs12"
         certificatesDirectory.createDirectories()
-        val config = mockNodeConfiguration(certificatesDirectory).also {
+        val config = mockNodeConfiguration(certificatesDirectory, wrappingKeyStorePath).also {
             doReturn(baseDirectory).whenever(it).baseDirectory
             doReturn(parameters.legalName ?: CordaX500Name("Mock Company $id", "London", "GB")).whenever(it).myLegalName
             doReturn(makeInternalTestDataSourceProperties("node_$id", "net_$networkId")).whenever(it).dataSourceProperties
@@ -591,7 +592,7 @@ abstract class MessagingServiceSpy {
     abstract fun send(message: Message, target: MessageRecipients, sequenceKey: Any)
 }
 
-private fun mockNodeConfiguration(certificatesDirectory: Path): NodeConfiguration {
+private fun mockNodeConfiguration(certificatesDirectory: Path, wrappingKeyStorePath: Path): NodeConfiguration {
     @DoNotImplement
     abstract class AbstractNodeConfiguration : NodeConfiguration
 
@@ -600,6 +601,7 @@ private fun mockNodeConfiguration(certificatesDirectory: Path): NodeConfiguratio
 
     return rigorousMock<AbstractNodeConfiguration>().also {
         doReturn(certificatesDirectory.createDirectories()).whenever(it).certificatesDirectory
+        doReturn(wrappingKeyStorePath).whenever(it).wrappingKeyStorePath
         doReturn(p2pSslConfiguration).whenever(it).p2pSslOptions
         doReturn(signingCertificateStore).whenever(it).signingCertificateStore
         doReturn(emptyList<User>()).whenever(it).rpcUsers

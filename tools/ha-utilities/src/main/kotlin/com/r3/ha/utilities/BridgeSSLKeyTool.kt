@@ -1,9 +1,9 @@
 package com.r3.ha.utilities
 
+import com.r3.ha.utilities.RegistrationTool.Companion.x500PrincipalToTLSAlias
 import net.corda.cliutils.CliWrapperBase
 import net.corda.cliutils.CommonCliConstants.BASE_DIR
 import net.corda.cliutils.ExitCodes
-import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.div
 import net.corda.core.internal.exists
 import net.corda.nodeapi.internal.crypto.X509KeyStore
@@ -22,10 +22,13 @@ class BridgeSSLKeyTool : CliWrapperBase("import-ssl-key", "Key copying tool for 
     @Option(names = ["-k", "--bridge-keystore"], paramLabel = "FILES", description = ["The path to the bridge SSL keystore."])
     private var _bridgeKeystore: Path? = null
     val bridgeKeystore: Path get() = _bridgeKeystore ?: (baseDirectory / "bridge.jks")
-    @Option(names = ["-p", "--bridge-keystore-password"], paramLabel = "PASSWORDS", description = ["The password of the bridge SSL keystore."], required = true)
+    @Option(names = ["-p", "--bridge-keystore-password"], paramLabel = "PASSWORD", description = ["The password of the bridge SSL keystore."], required = true)
     lateinit var bridgeKeystorePassword: String
 
     override fun runProgram(): Int {
+        if (!HAUtilities.addJarsInDriversDirectoryToSystemClasspath(baseDirectory)) {
+            HAUtilities.addJarsInDriversDirectoryToSystemClasspath(Paths.get("."))
+        }
         if (!bridgeKeystore.exists()) {
             println("Creating new bridge SSL keystore.")
         } else {
@@ -46,9 +49,9 @@ class BridgeSSLKeyTool : CliWrapperBase("import-ssl-key", "Key copying tool for 
                     val tlsKeystore = X509KeyStore.fromFile(keystore, password, createNew = false)
                     val tlsKey = tlsKeystore.getPrivateKey(X509Utilities.CORDA_CLIENT_TLS, password)
                     val certChain = tlsKeystore.getCertificateChain(X509Utilities.CORDA_CLIENT_TLS)
-                    val nameHash = SecureHash.sha256(certChain.first().subjectX500Principal.toString())
+                    // Alias must be lower case to stay consistent with HSM alias after .JKS file forces to lower case on insert.
+                    val alias = x500PrincipalToTLSAlias(certChain.first().subjectX500Principal)
                     // Key password need to be same as the keystore password
-                    val alias = "${X509Utilities.CORDA_CLIENT_TLS}-$nameHash"
                     setPrivateKey(alias, tlsKey, certChain, bridgeKeystorePassword)
                     println("Added new SSL key with alias '$alias', for identity '${certChain.first().subjectX500Principal}'")
                 } catch (e: Exception) {

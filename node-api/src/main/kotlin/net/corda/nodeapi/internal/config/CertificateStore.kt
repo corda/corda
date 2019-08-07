@@ -3,7 +3,6 @@ package net.corda.nodeapi.internal.config
 import net.corda.core.crypto.internal.AliasPrivateKey
 import net.corda.core.internal.outputStream
 import net.corda.nodeapi.internal.crypto.X509KeyStore
-import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.addOrReplaceCertificate
 import java.io.InputStream
 import java.io.OutputStream

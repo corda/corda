@@ -11,6 +11,7 @@ import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
 import org.junit.Assume
 import org.junit.ClassRule
+import org.junit.Ignore
 import org.junit.Test
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
@@ -36,6 +37,8 @@ class DbSchemaInitialisationTest : IntegrationTest() {
         }
     }
 
+    @Ignore // Ignoring, an in-memory H2 database is not properly closed in this test (when the node throws exception), and a db instance is reused by subsequent tests
+    // FlowsDrainingModeContentionTest sets db to flow-draining mode, AdditionP2PAddressModeTest fails on this mode
     @Test
     fun `database is not initialised`() {
         driver(DriverParameters(startNodesInProcess = isQuasarAgentSpecified())){

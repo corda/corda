@@ -9,7 +9,6 @@ import net.corda.bridge.services.util.ServiceStateCombiner
 import net.corda.bridge.services.util.ServiceStateHelper
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.internal.concurrent.openFuture
-import net.corda.core.internal.div
 import net.corda.core.internal.exists
 import net.corda.core.internal.readObject
 import net.corda.core.serialization.deserialize
@@ -19,7 +18,6 @@ import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.ShutdownHook
 import net.corda.nodeapi.internal.addShutdownHook
-import net.corda.nodeapi.internal.network.NETWORK_PARAMS_FILE_NAME
 import net.corda.nodeapi.internal.network.SignedNetworkParameters
 import net.corda.serialization.internal.AMQP_P2P_CONTEXT
 import net.corda.serialization.internal.SerializationFactoryImpl
@@ -36,7 +34,7 @@ class FirewallInstance(val conf: FirewallConfiguration,
     private val shutdown = AtomicBoolean(false)
     private var shutdownHook: ShutdownHook? = null
 
-    private var maxMessageSize: Int = -1
+    private var maxMessageSize: Int? = null
     private var firewallAuditService: FirewallAuditService? = null
     private var bridgeSupervisorService: BridgeSupervisorService? = null
     private var floatSupervisorService: FloatSupervisorService? = null
@@ -71,7 +69,9 @@ class FirewallInstance(val conf: FirewallConfiguration,
         shutdownHook = addShutdownHook {
             stop()
         }
-        retrieveNetworkParameters()
+        if (conf.firewallMode != FirewallMode.FloatOuter) {
+            retrieveNetworkParameters()
+        }
         createServices()
         startServices()
     }
@@ -95,7 +95,8 @@ class FirewallInstance(val conf: FirewallConfiguration,
     val onExit: CordaFuture<FirewallInstance> get() = _exitFuture
 
     private fun retrieveNetworkParameters() {
-        val networkParamsFile = conf.baseDirectory / NETWORK_PARAMS_FILE_NAME
+        val networkParamsFile = requireNotNull(conf.networkParametersPath) { "networkParametersPath must be specified." }
+
         require(networkParamsFile.exists()) { "No network-parameters file found." }
         val networkParameters = networkParamsFile.readObject<SignedNetworkParameters>().raw.deserialize()
         maxMessageSize = networkParameters.maxMessageSize
@@ -103,7 +104,6 @@ class FirewallInstance(val conf: FirewallConfiguration,
     }
 
     private fun createServices() {
-        require(maxMessageSize > 0) { "maxMessageSize not initialised" }
         firewallAuditService = LoggingFirewallAuditService(conf)
         when (conf.firewallMode) {
         // In the SenderReceiver mode the inbound and outbound message paths are run from within a single firewall process.
@@ -112,8 +112,9 @@ class FirewallInstance(val conf: FirewallConfiguration,
         // The process also runs a TLS/AMQP 1.0 server socket, which is can receive connections and messages from peers,
         // validate the messages and then forwards the packets to the Artemis inbox queue of the node.
             FirewallMode.SenderReceiver -> {
-                floatSupervisorService = FloatSupervisorServiceImpl(conf, maxMessageSize, firewallAuditService!!)
-                bridgeSupervisorService = BridgeSupervisorServiceImpl(conf, maxMessageSize, firewallAuditService!!, floatSupervisorService!!.amqpListenerService)
+                require(maxMessageSize != null && maxMessageSize!! > 0) { "maxMessageSize not initialised" }
+                floatSupervisorService = FloatSupervisorServiceImpl(conf, firewallAuditService!!)
+                bridgeSupervisorService = BridgeSupervisorServiceImpl(conf, maxMessageSize!!, firewallAuditService!!, floatSupervisorService!!.amqpListenerService)
             }
         // In the BridgeInner mode the process runs the full outbound message path as in the SenderReceiver mode, but the inbound path is split.
         // This 'Bridge Inner/Bridge Controller' process runs the more trusted portion of the inbound path.
@@ -122,7 +123,8 @@ class FirewallInstance(val conf: FirewallConfiguration,
         // node inboxes, before transferring the message to Artemis. Potentially it might carry out deeper checks of received packets.
         // However, the 'Bridge Inner' is not directly exposed to the internet, or peers and does not host the TLS/AMQP 1.0 server socket.
             FirewallMode.BridgeInner -> {
-                bridgeSupervisorService = BridgeSupervisorServiceImpl(conf, maxMessageSize, firewallAuditService!!, null)
+                require(maxMessageSize != null && maxMessageSize!! > 0) { "maxMessageSize not initialised" }
+                bridgeSupervisorService = BridgeSupervisorServiceImpl(conf, maxMessageSize!!, firewallAuditService!!, null)
             }
         // In the FloatOuter mode this process runs a minimal AMQP proxy that is designed to run in a DMZ zone.
         // The process holds the minimum data necessary to act as the TLS/AMQP 1.0 receiver socket and tries
@@ -137,7 +139,7 @@ class FirewallInstance(val conf: FirewallConfiguration,
         // holding potentially sensitive information and are then forwarded across the control tunnel to the 'Bridge Inner' process for more
         // complete validation checks.
             FirewallMode.FloatOuter -> {
-                floatSupervisorService = FloatSupervisorServiceImpl(conf, maxMessageSize, firewallAuditService!!)
+                floatSupervisorService = FloatSupervisorServiceImpl(conf, firewallAuditService!!)
             }
         }
         statusFollower = ServiceStateCombiner(listOf(firewallAuditService, floatSupervisorService, bridgeSupervisorService).filterNotNull())
