@@ -209,12 +209,46 @@ class AttachmentsClassLoaderTests {
             "/com/example/something/UntrustedClass.class",
             "Signed by someone trusted"
         ).inputStream()
-        val attachment = classJar.use {
+        classJar.use {
             storage.importContractAttachment(
                 listOf("UntrustedClass.class"),
                 "rpc",
                 it,
                 signers = listOf(keyPairA.public, keyPairB.public)
+            )
+        }
+
+        val untrustedClassJar = fakeAttachment(
+            "/com/example/something/UntrustedClass.class",
+            "Signed by someone untrusted"
+        ).inputStream()
+        val untrustedAttachment = untrustedClassJar.use {
+            storage.importContractAttachment(
+                listOf("UntrustedClass.class"),
+                "untrusted",
+                it,
+                signers = listOf(keyPairA.public, keyPairB.public)
+            )
+        }
+
+        make(arrayOf(untrustedAttachment).map { storage.openAttachment(it)!! })
+    }
+
+    @Test
+    fun `Allow loading an untrusted contract jar if another attachment exists that was signed by a trusted uploader - intersection of keys match existing attachment`() {
+        val keyPairA = Crypto.generateKeyPair()
+        val keyPairB = Crypto.generateKeyPair()
+        val keyPairC = Crypto.generateKeyPair()
+        val classJar = fakeAttachment(
+            "/com/example/something/UntrustedClass.class",
+            "Signed by someone trusted"
+        ).inputStream()
+        classJar.use {
+            storage.importContractAttachment(
+                listOf("UntrustedClass.class"),
+                "rpc",
+                it,
+                signers = listOf(keyPairA.public, keyPairC.public)
             )
         }
 
@@ -264,7 +298,7 @@ class AttachmentsClassLoaderTests {
             "/com/example/something/UntrustedClass.class",
             "Signed by someone untrusted with the same keys"
         ).inputStream()
-        val existingUntrustedAttachment = classJar.use {
+        classJar.use {
             storage.importContractAttachment(
                 listOf("UntrustedClass.class"),
                 "untrusted",
