@@ -121,10 +121,8 @@ class LoggingFirewallAuditService(val conf: FirewallConfiguration,
             if(activeConnectionCount.containsKey(address)) {
                 // Connection was active at one point in time
                 activeConnectionCount[address]?.decrementAndGet()
-            } else {
-                // There was never an active connection on this address, it must be initial attempt to connect has failed
-                failedConnectionCount.getOrPut(address, ::AtomicLong).incrementAndGet()
             }
+            failedConnectionCount.getOrPut(address, ::AtomicLong).incrementAndGet()
         }
     }
 
