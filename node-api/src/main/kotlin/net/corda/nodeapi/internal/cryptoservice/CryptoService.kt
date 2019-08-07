@@ -1,6 +1,7 @@
 package net.corda.nodeapi.internal.cryptoservice
 
 import net.corda.core.DoNotImplement
+import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SignatureScheme
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import org.bouncycastle.operator.ContentSigner

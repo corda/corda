@@ -31,7 +31,7 @@ class PrimusXWrappedKeysTest: AbstractWrappedKeysTest() {
     }
 
     private fun getCryptoService(): PrimusXCryptoService {
-        val config = ConfigFactory.parseFile(configPath().toFile()).resolve().parseAs(PrimusXCryptoService.PrimusXConfiguration::class)
+        val config = ConfigFactory.parseFile(configPath().toFile()).resolve().parseAs(PrimusXCryptoService.Companion.PrimusXConfiguration::class)
 
         val provider = PrimusProvider()
         val keyStore = KeyStore.getInstance(PrimusProvider.getKeyStoreTypeName(), provider)

@@ -54,7 +54,7 @@ class BridgeIntegrationTest {
     @JvmField
     val serializationEnvironment = SerializationEnvironmentRule(true)
 
-    private val portAllocation = incrementalPortAllocation(10000)
+    private val portAllocation = incrementalPortAllocation()
 
     private abstract class AbstractNodeConfiguration : NodeConfiguration
 

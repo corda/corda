@@ -38,7 +38,7 @@ abstract class AbstractWrappedKeysTest: IntegrationTest() {
 
     internal abstract fun deleteEntries(aliases: List<String>)
 
-    private val portAllocation = incrementalPortAllocation(13900)
+    private val portAllocation = incrementalPortAllocation()
 
     @Rule
     @JvmField

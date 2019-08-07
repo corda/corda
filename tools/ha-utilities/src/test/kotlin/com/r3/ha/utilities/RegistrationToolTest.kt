@@ -34,7 +34,7 @@ class RegistrationToolTest {
     val tempFolder: TemporaryFolder = TemporaryFolder()
 
     private val registrationTool = RegistrationTool()
-    private val portAllocation = incrementalPortAllocation(20101) // TODO: During `master` merge remove 20101
+    private val portAllocation = incrementalPortAllocation()
 
     private val nmPort = portAllocation.nextPort()
 

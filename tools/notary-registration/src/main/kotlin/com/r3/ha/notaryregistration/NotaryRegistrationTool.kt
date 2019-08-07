@@ -5,8 +5,8 @@ import com.typesafe.config.ConfigValueFactory
 import net.corda.client.rpc.internal.serialization.amqp.AMQPClientSerializationScheme
 import net.corda.cliutils.CommonCliConstants.BASE_DIR
 import net.corda.cliutils.CordaCliWrapper
-import net.corda.cliutils.CordaVersionProvider
 import net.corda.cliutils.ExitCodes
+import net.corda.common.logging.CordaVersion
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.CertRole
 import net.corda.core.internal.PLATFORM_VERSION
@@ -21,22 +21,15 @@ import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.parseAsNodeConfiguration
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
 import net.corda.node.utilities.registration.NetworkRegistrationHelper
+import net.corda.node.utilities.registration.NodeRegistrationConfiguration
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.cryptoservice.SupportedCryptoServices
 import net.corda.nodeapi.internal.cryptoservice.azure.AzureKeyVaultCryptoService
 import net.corda.nodeapi.internal.cryptoservice.azure.AzureKeyVaultCryptoService.Companion.AzureKeyVaultConfig
-import net.corda.nodeapi.internal.cryptoservice.futurex.FutureXCryptoService
-import net.corda.nodeapi.internal.cryptoservice.gemalto.GemaltoLunaCryptoService
-import net.corda.nodeapi.internal.cryptoservice.gemalto.GemaltoLunaCryptoService.GemaltoLunaConfiguration
-import net.corda.nodeapi.internal.cryptoservice.securosys.PrimusXCryptoService
-import net.corda.nodeapi.internal.cryptoservice.utimaco.UtimacoCryptoService
-import net.corda.nodeapi.internal.cryptoservice.utimaco.UtimacoCryptoService.UtimacoConfig
 import net.corda.serialization.internal.AMQP_P2P_CONTEXT
 import net.corda.serialization.internal.AMQP_RPC_CLIENT_CONTEXT
 import net.corda.serialization.internal.SerializationFactoryImpl
 import picocli.CommandLine.Option
-import java.lang.IllegalArgumentException
-import java.lang.UnsupportedOperationException
 import java.net.URL
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -48,9 +41,9 @@ class NotaryRegistrationTool : CordaCliWrapper("register", "Corda registration t
             // Use lazy init to ensure that CliWrapperBase.initLogging() is called before accessing CordaVersionProvider
             VersionInfo(
                     PLATFORM_VERSION,
-                    CordaVersionProvider.releaseVersion,
-                    CordaVersionProvider.revision,
-                    CordaVersionProvider.vendor)
+                    CordaVersion.releaseVersion,
+                    CordaVersion.revision,
+                    CordaVersion.vendor)
         }
 
         private val logger by lazy { contextLogger() }
@@ -101,7 +94,7 @@ class NotaryRegistrationTool : CordaCliWrapper("register", "Corda registration t
                         VERSION_INFO
                 )
                 val registrationHelper = NetworkRegistrationHelper(
-                        this,
+                        NodeRegistrationConfiguration(this),
                         networkRegistrationService,
                         networkRootTrustStorePath,
                         networkRootTrustStorePassword,

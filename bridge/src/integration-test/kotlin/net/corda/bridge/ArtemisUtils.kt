@@ -14,6 +14,7 @@ import net.corda.nodeapi.internal.DEV_CA_TRUST_STORE_PASS
 import net.corda.nodeapi.internal.config.FileBasedCertificateStoreSupplier
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.cryptoservice.CryptoService
+import net.corda.nodeapi.internal.cryptoservice.TimedCryptoService
 import net.corda.testing.core.MAX_MESSAGE_SIZE
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.core.config.Configuration
@@ -103,5 +104,5 @@ fun createNodeDevCertificates(x500Name: CordaX500Name, nodePath: Path, keyStoreP
         override val keyStore = FileBasedCertificateStoreSupplier(certificateDir / "sslkeystore.jks", keyStorePassword, keyStorePassword)
         override val trustStore = FileBasedCertificateStoreSupplier(certificateDir / "truststore.jks", truststorePass, truststorePass)
     }
-    config.configureDevKeyAndTrustStores(x500Name, nodeKeystore, certificateDir, cryptoService)
+    config.configureDevKeyAndTrustStores(x500Name, nodeKeystore, certificateDir, cryptoService?.let { TimedCryptoService(it) })
 }
