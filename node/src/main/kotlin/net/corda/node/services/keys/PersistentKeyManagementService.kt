@@ -9,8 +9,9 @@ import net.corda.core.utilities.MAX_HASH_HEX_SIZE
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.persistence.KeyOwningIdentity
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
-import net.corda.nodeapi.internal.persistence.PublicKeyHashToExternalId
+import net.corda.nodeapi.internal.persistence.PublicKeyToOwningIdentityCache
 import org.apache.commons.lang3.ArrayUtils.EMPTY_BYTE_ARRAY
 import org.bouncycastle.operator.ContentSigner
 import java.security.KeyPair
@@ -27,8 +28,10 @@ import javax.persistence.*
  * This class needs database transactions to be in-flight during method calls and init.
  */
 @Deprecated("Superseded by net.corda.node.services.keys.BasicHSMKeyManagementService")
-class PersistentKeyManagementService(cacheFactory: NamedCacheFactory, val identityService: PersistentIdentityService,
-                                     private val database: CordaPersistence) : SingletonSerializeAsToken(), KeyManagementServiceInternal {
+class PersistentKeyManagementService(cacheFactory: NamedCacheFactory,
+                                     val identityService: PersistentIdentityService,
+                                     private val database: CordaPersistence,
+                                     private val pkToIdCache: PublicKeyToOwningIdentityCache) : SingletonSerializeAsToken(), KeyManagementServiceInternal {
     @Entity
     @Table(name = "${NODE_DATABASE_PREFIX}our_key_pairs")
     class PersistentKey(
@@ -77,7 +80,7 @@ class PersistentKeyManagementService(cacheFactory: NamedCacheFactory, val identi
         identityService.stripNotOurKeys(candidateKeys)
     }
 
-    override fun freshKey(): PublicKey {
+    private fun generateKey(): PublicKey {
         val keyPair = generateKeyPair()
         database.transaction {
             keysMap[keyPair.public] = keyPair.private
@@ -85,19 +88,27 @@ class PersistentKeyManagementService(cacheFactory: NamedCacheFactory, val identi
         return keyPair.public
     }
 
+    override fun freshKey(): PublicKey {
+        val newKey = generateKey()
+        pkToIdCache[newKey] = KeyOwningIdentity.fromUUID(null)
+        return newKey
+    }
+
     override fun freshKey(externalId: UUID): PublicKey {
-        val newKey = freshKey()
-        database.transaction { session.persist(PublicKeyHashToExternalId(externalId, newKey)) }
+        val newKey = generateKey()
+        pkToIdCache[newKey] = KeyOwningIdentity.fromUUID(externalId)
         return newKey
     }
 
     override fun freshKeyAndCert(identity: PartyAndCertificate, revocationEnabled: Boolean): PartyAndCertificate {
-        return freshCertificate(identityService, freshKey(), identity, getSigner(identity.owningKey))
+        val newKeyWithCert = freshCertificate(identityService, generateKey(), identity, getSigner(identity.owningKey))
+        pkToIdCache[newKeyWithCert.owningKey] = KeyOwningIdentity.fromUUID(null)
+        return newKeyWithCert
     }
 
     override fun freshKeyAndCert(identity: PartyAndCertificate, revocationEnabled: Boolean, externalId: UUID): PartyAndCertificate {
-        val newKeyWithCert = freshKeyAndCert(identity, revocationEnabled)
-        database.transaction { session.persist(PublicKeyHashToExternalId(externalId, newKeyWithCert.owningKey)) }
+        val newKeyWithCert = freshCertificate(identityService, generateKey(), identity, getSigner(identity.owningKey))
+        pkToIdCache[newKeyWithCert.owningKey] = KeyOwningIdentity.fromUUID(externalId)
         return newKeyWithCert
     }
 
