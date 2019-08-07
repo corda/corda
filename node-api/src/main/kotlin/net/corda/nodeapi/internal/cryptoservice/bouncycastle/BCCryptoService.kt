@@ -2,6 +2,7 @@ package net.corda.nodeapi.internal.cryptoservice.bouncycastle
 
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SignatureScheme
+import net.corda.core.crypto.internal.Instances.getSignatureInstance
 import net.corda.core.crypto.internal.cordaBouncyCastleProvider
 import net.corda.core.crypto.newSecureRandom
 import net.corda.core.crypto.sha256
@@ -11,22 +12,30 @@ import net.corda.nodeapi.internal.config.CertificateStore
 import net.corda.nodeapi.internal.config.CertificateStoreSupplier
 import net.corda.nodeapi.internal.crypto.ContentSignerBuilder
 import net.corda.nodeapi.internal.crypto.X509Utilities
+import net.corda.nodeapi.internal.crypto.loadOrCreateKeyStore
+import net.corda.nodeapi.internal.crypto.save
 import net.corda.nodeapi.internal.cryptoservice.CryptoService
 import net.corda.nodeapi.internal.cryptoservice.CryptoServiceException
+import net.corda.nodeapi.internal.cryptoservice.WrappedPrivateKey
+import net.corda.nodeapi.internal.cryptoservice.WrappingMode
 import org.bouncycastle.operator.ContentSigner
-import java.security.KeyPair
-import java.security.KeyStore
-import java.security.PublicKey
-import java.security.Signature
+import java.lang.IllegalArgumentException
+import java.lang.IllegalStateException
+import java.nio.file.Path
+import java.security.*
+import java.security.spec.ECGenParameterSpec
+import javax.crypto.Cipher
+import javax.crypto.KeyGenerator
 import javax.security.auth.x500.X500Principal
 
 /**
  * Basic implementation of a [CryptoService] that uses BouncyCastle for cryptographic operations
  * and a Java KeyStore in the form of [CertificateStore] to store private keys.
  * This service reuses the [NodeConfiguration.signingCertificateStore] to store keys.
+ *
+ * The [wrappingKeyStorePath] must be provided in order to execute any wrapping operations (e.g. [createWrappingKey], [generateWrappedKeyPair])
  */
-class BCCryptoService(private val legalName: X500Principal,
-                      private val certificateStoreSupplier: CertificateStoreSupplier) : CryptoService {
+class BCCryptoService(private val legalName: X500Principal, private val certificateStoreSupplier: CertificateStoreSupplier, private val wrappingKeyStorePath: Path? = null) : CryptoService {
 
     private companion object {
         val detailedLogger = detailedLogger()
@@ -34,6 +43,17 @@ class BCCryptoService(private val legalName: X500Principal,
     // TODO check if keyStore exists.
     // TODO make it private when E2ETestKeyManagementService does not require direct access to the private key.
     var certificateStore: CertificateStore = certificateStoreSupplier.get(true)
+
+    /**
+     * JKS keystore does not support storage for secret keys, so the existing keystore cannot be re-used.
+     * JCEKS keystore supports storage of symmetric keys according to the spec, but there are several issues around classloaders and deserialization filtering (see links below).
+     *      - https://stackoverflow.com/questions/49990904/what-is-the-cause-of-java-security-unrecoverablekeyexception-rejected-by-the-j
+     *      - https://stackoverflow.com/questions/50393533/java-io-ioexception-invalid-secret-key-format-when-opening-jceks-key-store-wi
+     * Thus, PKCS12 is used for storing the wrapping key.
+     */
+    private val wrappingKeyStore: KeyStore by lazy {
+        loadOrCreateKeyStore(wrappingKeyStorePath!!, certificateStore.password, "PKCS12")
+    }
 
     override fun generateKeyPair(alias: String, scheme: SignatureScheme): PublicKey {
         try {
@@ -120,4 +140,74 @@ class BCCryptoService(private val legalName: X500Principal,
             throw CryptoServiceException("Cannot import key with alias $alias", e)
         }
     }
+
+    @Synchronized
+    override fun createWrappingKey(alias: String, failIfExists: Boolean) {
+        if (wrappingKeyStore.containsAlias(alias)) {
+            when (failIfExists) {
+                true -> throw IllegalArgumentException("There is an existing key with the alias: $alias")
+                false -> return
+            }
+        }
+
+        val keyGenerator = KeyGenerator.getInstance("AES")
+        keyGenerator.init(wrappingKeySize())
+        val wrappingKey = keyGenerator.generateKey()
+        wrappingKeyStore.setEntry(alias, KeyStore.SecretKeyEntry(wrappingKey), KeyStore.PasswordProtection(certificateStore.entryPassword.toCharArray()))
+        wrappingKeyStore.save(wrappingKeyStorePath!!, certificateStore.password)
+    }
+
+    override fun generateWrappedKeyPair(masterKeyAlias: String, childKeyScheme: SignatureScheme): Pair<PublicKey, WrappedPrivateKey> {
+        if (!wrappingKeyStore.containsAlias(masterKeyAlias)) {
+            throw IllegalStateException("There is no master key under the alias: $masterKeyAlias")
+        }
+
+        val wrappingKey = wrappingKeyStore.getKey(masterKeyAlias, certificateStore.entryPassword.toCharArray())
+        val cipher = Cipher.getInstance("AES", cordaBouncyCastleProvider)
+        cipher.init(Cipher.WRAP_MODE, wrappingKey)
+
+        val keyPairGenerator = keyPairGeneratorFromScheme(childKeyScheme)
+        val keyPair = keyPairGenerator.generateKeyPair()
+        val privateKeyMaterialWrapped = cipher.wrap(keyPair.private)
+
+        return Pair(keyPair.public, WrappedPrivateKey(privateKeyMaterialWrapped, childKeyScheme))
+    }
+
+    override fun sign(masterKeyAlias: String, wrappedPrivateKey: WrappedPrivateKey, payloadToSign: ByteArray): ByteArray {
+        if (!wrappingKeyStore.containsAlias(masterKeyAlias)) {
+            throw IllegalStateException("There is no master key under the alias: $masterKeyAlias")
+        }
+
+        val wrappingKey = wrappingKeyStore.getKey(masterKeyAlias, certificateStore.entryPassword.toCharArray())
+        val cipher = Cipher.getInstance("AES", cordaBouncyCastleProvider)
+        cipher.init(Cipher.UNWRAP_MODE, wrappingKey)
+
+        val privateKey = cipher.unwrap(wrappedPrivateKey.keyMaterial, keyAlgorithmFromScheme(wrappedPrivateKey.signatureScheme), Cipher.PRIVATE_KEY) as PrivateKey
+
+        val signature = getSignatureInstance(wrappedPrivateKey.signatureScheme.signatureName, cordaBouncyCastleProvider)
+        signature.initSign(privateKey, newSecureRandom())
+        signature.update(payloadToSign)
+        return signature.sign()
+    }
+
+    override fun getWrappingMode(): WrappingMode? = WrappingMode.DEGRADED_WRAPPED
+
+    private fun keyPairGeneratorFromScheme(scheme: SignatureScheme): KeyPairGenerator {
+        val algorithm = keyAlgorithmFromScheme(scheme)
+        val keyPairGenerator = KeyPairGenerator.getInstance(algorithm, cordaBouncyCastleProvider)
+        when (scheme) {
+            Crypto.ECDSA_SECP256R1_SHA256 -> keyPairGenerator.initialize(ECGenParameterSpec("secp256r1"))
+            Crypto.ECDSA_SECP256K1_SHA256 -> keyPairGenerator.initialize(ECGenParameterSpec("secp256k1"))
+            Crypto.RSA_SHA256 -> keyPairGenerator.initialize(scheme.keySize!!)
+            else -> throw IllegalArgumentException("No mapping for scheme ID ${scheme.schemeNumberID}")
+        }
+        return keyPairGenerator
+    }
+
+    private fun keyAlgorithmFromScheme(scheme: SignatureScheme): String = when (scheme) {
+        Crypto.ECDSA_SECP256R1_SHA256, Crypto.ECDSA_SECP256K1_SHA256 -> "EC"
+        Crypto.RSA_SHA256 -> "RSA"
+        else -> throw IllegalArgumentException("No algorithm for scheme ID ${scheme.schemeNumberID}")
+    }
+
 }
