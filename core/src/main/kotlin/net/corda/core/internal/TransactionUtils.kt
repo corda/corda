@@ -185,7 +185,7 @@ fun FlowLogic<*>.checkParameterHash(networkParametersHash: SecureHash?) {
 }
 
 // A cache for caching whether a particular set of signers are trusted
-private val trustedSignersCache: MutableMap<PublicKey, Boolean> =
+private val trustedKeysCache: MutableMap<PublicKey, Boolean> =
     createSimpleCache<PublicKey, Boolean>(100).toSynchronised()
 
 /**
@@ -194,8 +194,8 @@ private val trustedSignersCache: MutableMap<PublicKey, Boolean> =
  *
  * Attachments are trusted if one of the following is true:
  *  - They are uploaded by a trusted uploader
- *  - There is another attachment in the attachment store signed by the same keys (and with the same contract classes if the attachment is a
- *    contract attachment) that is trusted
+ *  - There is another attachment in the attachment store, that is trusted and is signed by at least one key that the input
+ *  attachment is also signed with
  */
 fun isAttachmentTrusted(attachment: Attachment, service: AttachmentStorage?): Boolean {
     val trustedByUploader = when (attachment) {
@@ -208,7 +208,7 @@ fun isAttachmentTrusted(attachment: Attachment, service: AttachmentStorage?): Bo
 
     return if (service != null && attachment.signerKeys.isNotEmpty()) {
         attachment.signerKeys.any { signer ->
-            trustedSignersCache.computeIfAbsent(signer) {
+            trustedKeysCache.computeIfAbsent(signer) {
                 val queryCriteria = AttachmentQueryCriteria.AttachmentsQueryCriteria(
                     signersCondition = Builder.equal(listOf(signer)),
                     uploaderCondition = Builder.`in`(TRUSTED_UPLOADERS)
