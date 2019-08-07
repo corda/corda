@@ -10,7 +10,7 @@ import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
-import net.corda.nodeapi.internal.utilities.PublicKeyHashToExternalId
+import net.corda.nodeapi.internal.persistence.PublicKeyHashToExternalId
 import org.apache.commons.lang3.ArrayUtils.EMPTY_BYTE_ARRAY
 import org.bouncycastle.operator.ContentSigner
 import java.security.KeyPair

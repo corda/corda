@@ -21,7 +21,7 @@ import net.corda.node.services.persistence.DBTransactionStorage
 import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.node.services.upgrade.ContractUpgradeServiceImpl
 import net.corda.node.services.vault.VaultSchemaV1
-import net.corda.nodeapi.internal.utilities.PublicKeyHashToExternalId
+import net.corda.nodeapi.internal.persistence.PublicKeyHashToExternalId
 
 /**
  * Most basic implementation of [SchemaService].

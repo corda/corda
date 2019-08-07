@@ -1,9 +1,7 @@
-package net.corda.nodeapi.internal.utilities
+package net.corda.nodeapi.internal.persistence
 
 import junit.framework.TestCase.assertEquals
 import net.corda.core.utilities.getOrThrow
-import net.corda.nodeapi.internal.persistence.CordaPersistence
-import net.corda.nodeapi.internal.persistence.withoutDatabaseAccess
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.TestIdentity
@@ -16,10 +14,10 @@ import java.security.PublicKey
 import java.util.*
 import java.util.concurrent.Executors
 
-class PublicKeyToOwningIdentityCacheTest {
+class PublicKeyToOwningIdentityCacheImplTest {
 
     private lateinit var database: CordaPersistence
-    private lateinit var testCache: PublicKeyToOwningIdentityCache
+    private lateinit var testCache: PublicKeyToOwningIdentityCacheImpl
     private lateinit var services: MockServices
     private val testKeys = mutableListOf<Pair<KeyOwningIdentity, PublicKey>>()
     private val alice = TestIdentity(ALICE_NAME, 20)
@@ -35,7 +33,7 @@ class PublicKeyToOwningIdentityCacheTest {
         )
         database = databaseAndServices.first
         services = databaseAndServices.second
-        testCache = PublicKeyToOwningIdentityCache(database, TestingNamedCacheFactory())
+        testCache = PublicKeyToOwningIdentityCacheImpl(database, TestingNamedCacheFactory())
         createTestKeys()
     }
 
@@ -79,7 +77,7 @@ class PublicKeyToOwningIdentityCacheTest {
 
     @Test
     fun `entries can be fetched if cache invalidated`() {
-        testCache = PublicKeyToOwningIdentityCache(database, TestingNamedCacheFactory(sizeOverride = 5))
+        testCache = PublicKeyToOwningIdentityCacheImpl(database, TestingNamedCacheFactory(sizeOverride = 5))
         // Fill the cache
         performTestRun()
 

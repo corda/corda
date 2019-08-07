@@ -1,25 +1,21 @@
-package net.corda.nodeapi.internal.utilities
+package net.corda.nodeapi.internal.persistence
 
 import com.github.benmanes.caffeine.cache.Caffeine
 import net.corda.core.crypto.toStringShort
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
-import net.corda.nodeapi.internal.persistence.CordaPersistence
 import java.security.PublicKey
 import java.util.*
 import javax.persistence.NoResultException
 import javax.persistence.criteria.CriteriaBuilder
 
 /**
- * A [PublicKeyToOwningIdentityCache] maps public keys to their corresponding owning identity. This may be the node identity, or may be an
- * external UUID (commonly the case when working with accounts).
- *
- * This class caches the result of any database lookup, such that if the same key is accessed multiple times there will not be multiple
- * attempts to access the database.
+ * The [PublicKeyToOwningIdentityCacheImpl] provides a caching layer over the pk_hash_to_external_id table. Gets will attempt to read an
+ * external identity from the database if it is not present in memory, while sets will write external identity UUIDs to this database table.
  */
-class PublicKeyToOwningIdentityCache(private val database: CordaPersistence,
-                                     cacheFactory: NamedCacheFactory) {
+class PublicKeyToOwningIdentityCacheImpl(private val database: CordaPersistence,
+                                         cacheFactory: NamedCacheFactory) : PublicKeyToOwningIdentityCache {
     companion object {
         val log = contextLogger()
     }
@@ -34,7 +30,7 @@ class PublicKeyToOwningIdentityCache(private val database: CordaPersistence,
      * This method caches the result of a database lookup to prevent multiple database accesses for the same key. This assumes that once a
      * key is generated, the UUID assigned to it is never changed.
      */
-    operator fun get(key: PublicKey): KeyOwningIdentity {
+    override operator fun get(key: PublicKey): KeyOwningIdentity {
         return cache.asMap().computeIfAbsent(key) {
             database.transaction {
                 val criteriaQuery = criteriaBuilder.createQuery(UUID::class.java)
@@ -56,5 +52,19 @@ class PublicKeyToOwningIdentityCache(private val database: CordaPersistence,
                 signingEntity
             }
         }
+    }
+
+    /**
+     * Associate a key with a given [KeyOwningIdentity].
+     *
+     * This will write to the pk_hash_to_external_id table and also set the value in the cache. Note that it assumes that no UUID has
+     * previously been associated with a given public key. Attempting to set a key that already exists will result in an error.
+     */
+    override operator fun set(key: PublicKey, value: KeyOwningIdentity) {
+        when (value) {
+            is KeyOwningIdentity.ExternalIdentity -> database.transaction { session.persist(PublicKeyHashToExternalId(value.uuid, key)) }
+            is KeyOwningIdentity.NodeIdentity -> {} // Do nothing
+        }
+        cache.asMap()[key] = value
     }
 }

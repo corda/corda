@@ -1,4 +1,4 @@
-package net.corda.nodeapi.internal.utilities
+package net.corda.nodeapi.internal.persistence
 
 import java.util.*
 
