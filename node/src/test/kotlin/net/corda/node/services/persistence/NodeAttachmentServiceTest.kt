@@ -909,8 +909,8 @@ class NodeAttachmentServiceTest {
             file.path.signJar(jarSignedByA.toAbsolutePath().toString(), aliasA, password)
 
             val jarSignedByAB = makeTestContractJar(file.path, "foo.bar.DifferentContract", version = 2)
-            file.path.signJar(jarSignedByAB.toAbsolutePath().toString(), aliasA, password)
             file.path.signJar(jarSignedByAB.toAbsolutePath().toString(), aliasB, password)
+            file.path.signJar(jarSignedByAB.toAbsolutePath().toString(), aliasA, password)
 
             val jarSignedByBC = makeTestContractJar(file.path, "foo.bar.AnotherContract", version = 2)
             file.path.signJar(jarSignedByBC.toAbsolutePath().toString(), aliasB, password)

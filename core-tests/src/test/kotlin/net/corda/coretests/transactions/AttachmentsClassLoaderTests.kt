@@ -347,12 +347,12 @@ class AttachmentsClassLoaderTests {
             "/com/example/something/UntrustedClass.class",
             "Signed by someone who inherits trust"
         ).inputStream()
-        inheritedTrustClassJar.use {
+        val inheritedTrustAttachment = inheritedTrustClassJar.use {
             storage.importContractAttachment(
                 listOf("UntrustedClass.class"),
                 "untrusted",
                 it,
-                signers = listOf(keyPairA.public, keyPairB.public)
+                signers = listOf(keyPairB.public, keyPairA.public)
             )
         }
 
@@ -369,6 +369,7 @@ class AttachmentsClassLoaderTests {
             )
         }
 
+        make(arrayOf(inheritedTrustAttachment).map { storage.openAttachment(it)!! })
         assertFailsWith(TransactionVerificationException.UntrustedAttachmentsException::class) {
             make(arrayOf(untrustedAttachment).map { storage.openAttachment(it)!! })
         }
