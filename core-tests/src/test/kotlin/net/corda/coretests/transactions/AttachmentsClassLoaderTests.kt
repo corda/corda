@@ -324,4 +324,53 @@ class AttachmentsClassLoaderTests {
             make(arrayOf(untrustedAttachment).map { storage.openAttachment(it)!! })
         }
     }
+
+    @Test
+    fun `Attachments with inherited trust do not grant trust to attachments being loaded (no chain of trust)`() {
+        val keyPairA = Crypto.generateKeyPair()
+        val keyPairB = Crypto.generateKeyPair()
+        val keyPairC = Crypto.generateKeyPair()
+        val classJar = fakeAttachment(
+            "/com/example/something/UntrustedClass.class",
+            "Signed by someone untrusted with the same keys"
+        ).inputStream()
+        classJar.use {
+            storage.importContractAttachment(
+                listOf("UntrustedClass.class"),
+                "app",
+                it,
+                signers = listOf(keyPairA.public)
+            )
+        }
+
+        val inheritedTrustClassJar = fakeAttachment(
+            "/com/example/something/UntrustedClass.class",
+            "Signed by someone who inherits trust"
+        ).inputStream()
+        inheritedTrustClassJar.use {
+            storage.importContractAttachment(
+                listOf("UntrustedClass.class"),
+                "untrusted",
+                it,
+                signers = listOf(keyPairA.public, keyPairB.public)
+            )
+        }
+
+        val untrustedClassJar = fakeAttachment(
+            "/com/example/something/UntrustedClass.class",
+            "Signed by someone untrusted"
+        ).inputStream()
+        val untrustedAttachment = untrustedClassJar.use {
+            storage.importContractAttachment(
+                listOf("UntrustedClass.class"),
+                "untrusted",
+                it,
+                signers = listOf(keyPairB.public, keyPairC.public)
+            )
+        }
+
+        assertFailsWith(TransactionVerificationException.UntrustedAttachmentsException::class) {
+            make(arrayOf(untrustedAttachment).map { storage.openAttachment(it)!! })
+        }
+    }
 }

@@ -895,6 +895,38 @@ class NodeAttachmentServiceTest {
     }
 
     @Test
+    fun `jar with inherited trust does not grant trust to other jars (no chain of trust)`() {
+        SelfCleaningDir().use { file ->
+            val aliasA = "Daredevil"
+            val aliasB = "The Punisher"
+            val aliasC = "Jessica Jones"
+            val password = "i am a netflix series"
+            file.path.generateKey(aliasA, password)
+            file.path.generateKey(aliasB, password)
+            file.path.generateKey(aliasC, password)
+
+            val jarSignedByA = makeTestContractJar(file.path, "foo.bar.DummyContract")
+            file.path.signJar(jarSignedByA.toAbsolutePath().toString(), aliasA, password)
+
+            val jarSignedByAB = makeTestContractJar(file.path, "foo.bar.DifferentContract", version = 2)
+            file.path.signJar(jarSignedByAB.toAbsolutePath().toString(), aliasA, password)
+            file.path.signJar(jarSignedByAB.toAbsolutePath().toString(), aliasB, password)
+
+            val jarSignedByBC = makeTestContractJar(file.path, "foo.bar.AnotherContract", version = 2)
+            file.path.signJar(jarSignedByBC.toAbsolutePath().toString(), aliasB, password)
+            file.path.signJar(jarSignedByBC.toAbsolutePath().toString(), aliasC, password)
+
+            val attachmentA = jarSignedByA.read { storage.privilegedImportAttachment(it, "app", "dummy-contract.jar") }
+            val attachmentB = jarSignedByAB.read { storage.privilegedImportAttachment(it, "untrusted", "dummy-contract.jar") }
+            val attachmentC = jarSignedByBC.read { storage.privilegedImportAttachment(it, "untrusted", "dummy-contract.jar") }
+
+            assertTrue(isAttachmentTrusted(storage.openAttachment(attachmentA)!!, storage), "Contract $attachmentA should be trusted")
+            assertTrue(isAttachmentTrusted(storage.openAttachment(attachmentB)!!, storage), "Contract $attachmentB should inherit trust")
+            assertFalse(isAttachmentTrusted(storage.openAttachment(attachmentC)!!, storage), "Contract $attachmentC should not be trusted (no chain of trust)")
+        }
+    }
+
+    @Test
     fun `jar not trusted if different key but same contract`() {
         SelfCleaningDir().use { file ->
             val alias = "testAlias"
