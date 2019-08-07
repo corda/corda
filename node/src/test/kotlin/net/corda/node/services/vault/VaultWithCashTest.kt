@@ -35,6 +35,9 @@ import net.corda.testing.node.MockServices.Companion.makeTestDatabaseAndMockServ
 import net.corda.testing.node.makeTestIdentityService
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.hamcrest.MatcherAssert.assertThat
+import org.hamcrest.Matchers.containsInAnyOrder
+import org.hamcrest.Matchers.equalTo
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
@@ -107,14 +110,14 @@ class VaultWithCashTest {
             vaultFiller.fillWithSomeTestCash(100.DOLLARS, issuerServices, 3, DUMMY_CASH_ISSUER)
         }
         database.transaction {
-            val w = vaultService.queryBy<Cash.State>().states
+            val w = vaultService.queryBy<Cash.State>().states.map { it.state.data }
             assertEquals(3, w.size)
-
-            val state = w[0].state.data
-            assertEquals(30.45.DOLLARS `issued by` DUMMY_CASH_ISSUER, state.amount)
-            assertEquals(servicesKey.public, state.owner.owningKey)
-            assertEquals(34.70.DOLLARS `issued by` DUMMY_CASH_ISSUER, (w[2].state.data).amount)
-            assertEquals(34.85.DOLLARS `issued by` DUMMY_CASH_ISSUER, (w[1].state.data).amount)
+            assertThat(w.map { it.amount }, containsInAnyOrder(
+                    equalTo(30.45.DOLLARS `issued by` DUMMY_CASH_ISSUER),
+                    equalTo(34.70.DOLLARS `issued by` DUMMY_CASH_ISSUER),
+                    equalTo(34.85.DOLLARS `issued by` DUMMY_CASH_ISSUER))
+            )
+            assertEquals(servicesKey.public, w[0].owner.owningKey)
         }
     }
 
