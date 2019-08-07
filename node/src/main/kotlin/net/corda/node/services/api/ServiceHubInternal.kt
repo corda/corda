@@ -19,6 +19,7 @@ import net.corda.core.utilities.contextLogger
 import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.internal.cordapp.CordappProviderInternal
 import net.corda.node.services.DbTransactionsResolver
+import net.corda.node.services.InMemoryTransactionsResolver
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.network.NetworkMapUpdater
@@ -52,6 +53,15 @@ interface ServiceHubInternal : ServiceHubCoreInternal {
     companion object {
         private val log = contextLogger()
 
+        private fun topologicalSort(transactions: Iterable<SignedTransaction>): List<SignedTransaction> {
+            if ((transactions as? List)?.size == 1) return transactions
+            val sort = InMemoryTransactionsResolver.TopologicalSort()
+            for (tx in transactions) {
+                sort.add(tx, tx.dependencies)
+            }
+            return sort.complete()
+        }
+
         // TODO Why is txs an Iterable and not a Collection??
         fun recordTransactions(statesToRecord: StatesToRecord,
                                txs: Iterable<SignedTransaction>,
@@ -63,14 +73,15 @@ interface ServiceHubInternal : ServiceHubCoreInternal {
             database.transaction {
                 require(txs.any()) { "No transactions passed in for recording" }
 
+                val orderedTxs = topologicalSort(txs)
                 // Divide transactions into those seen before and those that are new to this node if ALL_VISIBLE states are being recorded.
                 // This allows the node to re-record transactions that have previously only been seen at the ONLY_RELEVANT level. Note that
                 // for transactions being recorded at ONLY_RELEVANT, if this transaction has been seen before its outputs should already
                 // have been recorded at ONLY_RELEVANT, so there shouldn't be anything to re-record here.
                 val (recordedTransactions, previouslySeenTxs) = if (statesToRecord != StatesToRecord.ALL_VISIBLE) {
-                    Pair(txs.filter { validatedTransactions.addTransaction(it) }, emptyList())
+                    Pair(orderedTxs.filter { validatedTransactions.addTransaction(it) }, emptyList())
                 } else {
-                    txs.partition { validatedTransactions.addTransaction(it) }
+                    orderedTxs.partition { validatedTransactions.addTransaction(it) }
                 }
                 val stateMachineRunId = FlowStateMachineImpl.currentStateMachine()?.id
                 if (stateMachineRunId != null) {
