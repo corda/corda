@@ -17,7 +17,7 @@ import org.junit.Rule
 import org.junit.Test
 import java.net.URL
 
-class NodeInitForWrappedKeysTest {
+class NodeStartupForWrappedKeysTest {
 
     companion object {
         internal val notaryName = CordaX500Name("NotaryService", "Zurich", "CH")
