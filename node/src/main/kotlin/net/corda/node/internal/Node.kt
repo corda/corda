@@ -352,7 +352,8 @@ open class Node(configuration: NodeConfiguration,
                         true,
                         -1,
                         configuration.enterpriseConfiguration.messagingServerConnectionConfiguration,
-                        configuration.enterpriseConfiguration.messagingServerBackupAddresses)
+                        configuration.enterpriseConfiguration.messagingServerBackupAddresses,
+                        failoverCallback =  { errorAndTerminate("ArtemisMessagingClient failed. Shutting down.", null) })
             }
             BridgeControlListener(configuration.p2pSslOptions, null, networkParameters.maxMessageSize, configuration.crlCheckSoftFail, configuration.enableSNI, artemisClient)
         } else {
