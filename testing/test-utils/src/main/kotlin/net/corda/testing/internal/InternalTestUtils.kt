@@ -14,7 +14,6 @@ import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.internal.cordapp.set
 import net.corda.core.internal.createComponentGroups
 import net.corda.core.node.NodeInfo
-import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.internal.effectiveSerializationEnv
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.loggerFor
@@ -49,6 +48,8 @@ import java.util.jar.JarOutputStream
 import java.util.jar.Manifest
 import java.util.zip.ZipEntry
 import javax.security.auth.x500.X500Principal
+import java.io.IOException
+import java.net.ServerSocket
 
 @Suppress("unused")
 inline fun <reified T : Any> T.kryoSpecific(reason: String, function: () -> Unit) = if (!AMQP_ENABLED) {
@@ -229,5 +230,20 @@ fun <R> withTestSerializationEnvIfNotSet(block: () -> R): R {
         block()
     } else {
         createTestSerializationEnv().asTestContextEnv { block() }
+    }
+}
+
+/**
+ * Used to check if particular port is already bound i.e. not vacant
+ */
+fun isLocalPortBound(port: Int) : Boolean {
+    return try {
+        ServerSocket(port).use {
+            // Successful means that the port was vacant
+            false
+        }
+    } catch (e: IOException) {
+        // Failed to open server socket means that it is already bound by someone
+        true
     }
 }
