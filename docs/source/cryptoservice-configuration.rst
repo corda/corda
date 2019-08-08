@@ -76,7 +76,7 @@ In addition to the configuration, the node needs to access binaries provided by 
 Gemalto Luna
 ------------
 
-Corda Enterprise nodes can be configured to store their legal identity keys in `Gemalto Luna <https://safenet.gemalto.com/data-encryption/hardware-security-modules-hsms/safenet-network-hsm>`_ HSMs running firmware version 7.3.
+Corda Enterprise nodes can be configured to store their legal identity keys in `Gemalto Luna <https://safenet.gemalto.com/data-encryption/hardware-security-modules-hsms/safenet-network-hsm>`_ HSMs running firmware version 7.0.3.
 
 In the ``node.conf``, the ``cryptoServiceName`` needs to be set to "GEMALTO_LUNA", and ``cryptoServiceConf`` should contain the path to a configuration file, the content of which is explained further down.
 
@@ -98,7 +98,7 @@ Example configuration file:
       keyStore: "tokenlabel:my-partition"
       password: "my-password"
 
-Note that the Gemalto's JCA provider has to be installed as described in the documentation for the Gemalto Luna.
+Note that the Gemalto's JCA provider (version 7.3) has to be installed as described in the documentation for the Gemalto Luna.
 
 Futurex
 -------
@@ -122,7 +122,7 @@ Example configuration file:
 
 When starting Corda the environment variables ``FXPKCS11_CFG`` and ``FXPKCS11_MODULE`` need to be set as detailed in Futurex's documentation.
 Corda must be running with the system property ``java.library.path`` pointing to the directory that contains the FutureX binaries (e.g. ``libfxjp11.so`` for Linux).
-Additionaly, The JAR containing the Futurex JCA provider must be put on the class path, or copied to the node's ``drivers`` directory.
+Additionaly, The JAR containing the Futurex JCA provider (version 3.1) must be put on the class path, or copied to the node's ``drivers`` directory.
 
 
 Azure KeyVault
@@ -163,7 +163,7 @@ Example configuration file:
 Securosys Primus X
 ------------
 
-Corda Enterprise nodes can be configured to store their legal identity keys in `Securosys Primus X <https://www.securosys.ch/product/high-availability-high-performance-hardware-security-module>`_ HSMs running firmware version 2.7.3.
+Corda Enterprise nodes can be configured to store their legal identity keys in `Securosys Primus X <https://www.securosys.ch/product/high-availability-high-performance-hardware-security-module>`_ HSMs running firmware version 2.7.4.
 
 In the ``node.conf``, the ``cryptoServiceName`` needs to be set to "PRIMUS_X", and ``cryptoServiceConf`` should contain the path to a configuration file, the content of which is explained further down.
 
@@ -191,4 +191,4 @@ Example configuration file:
       username: "my-username"
       password: "my-password"
 
-In addition to the configuration, the Securosys' Primus X JCA provider (version 1.8.0) needs to be placed in the node's drivers folder.
+In addition to the configuration, the Securosys' Primus X JCA provider (version 1.8.2) needs to be placed in the node's drivers folder.
