@@ -6,6 +6,7 @@ import net.corda.common.configuration.parsing.internal.*
 import net.corda.common.validation.internal.Validated.Companion.invalid
 import net.corda.common.validation.internal.Validated.Companion.valid
 import net.corda.node.services.config.*
+import net.corda.node.services.config.Valid
 import net.corda.node.services.config.NodeConfigurationImpl.Defaults
 import net.corda.node.services.config.schema.parsers.*
 import net.corda.nodeapi.internal.cryptoservice.SupportedCryptoServices

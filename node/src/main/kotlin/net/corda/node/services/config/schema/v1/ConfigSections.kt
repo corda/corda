@@ -10,6 +10,7 @@ import net.corda.common.validation.internal.Validated.Companion.valid
 import net.corda.core.context.AuthServiceId
 import net.corda.core.internal.notary.NotaryServiceFlow
 import net.corda.node.services.config.*
+import net.corda.node.services.config.Valid
 import net.corda.node.services.config.SecurityConfiguration.AuthService.Companion.defaultAuthServiceId
 import net.corda.node.services.config.schema.parsers.*
 import net.corda.nodeapi.BrokerRpcSslOptions
