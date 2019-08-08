@@ -183,6 +183,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     @Suppress("LeakingThis")
     val networkParametersStorage = makeNetworkParametersStorage()
     val cordappProvider = CordappProviderImpl(cordappLoader, CordappConfigFileProvider(configuration.cordappDirectories), attachments).tokenize()
+    val pkToIdCache = PublicKeyToOwningIdentityCacheImpl(database, cacheFactory)
     @Suppress("LeakingThis")
     val keyManagementService = makeKeyManagementService(identityService).tokenize()
     val servicesForResolution = ServicesForResolutionImpl(identityService, attachments, cordappProvider, networkParametersStorage, transactionStorage).also {
@@ -229,7 +230,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
     private val cordappServices = MutableClassToInstanceMap.create<SerializeAsToken>()
     private val shutdownExecutor = Executors.newSingleThreadExecutor()
-    val pkToIdCache = PublicKeyToOwningIdentityCacheImpl(database, cacheFactory)
 
     protected abstract val transactionVerifierWorkerCount: Int
     /**
