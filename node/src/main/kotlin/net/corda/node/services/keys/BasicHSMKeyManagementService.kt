@@ -9,7 +9,8 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.MAX_HASH_HEX_SIZE
 import net.corda.node.services.identity.PersistentIdentityService
-import net.corda.node.services.keys.BasicHSMKeyManagementService.PrivateKeyType.*
+import net.corda.node.services.keys.BasicHSMKeyManagementService.PrivateKeyType.REGULAR
+import net.corda.node.services.keys.BasicHSMKeyManagementService.PrivateKeyType.WRAPPED
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.nodeapi.internal.cryptoservice.CryptoService
 import net.corda.nodeapi.internal.cryptoservice.WrappedPrivateKey

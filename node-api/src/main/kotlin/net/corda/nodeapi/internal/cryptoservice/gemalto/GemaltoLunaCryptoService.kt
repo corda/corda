@@ -6,15 +6,14 @@ import com.typesafe.config.ConfigException
 import com.typesafe.config.ConfigFactory
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SignatureScheme
+import net.corda.core.utilities.detailedLogger
+import net.corda.core.utilities.trace
 import net.corda.nodeapi.internal.config.UnknownConfigurationKeysException
 import net.corda.nodeapi.internal.config.parseAs
 import net.corda.nodeapi.internal.cryptoservice.CryptoService
 import net.corda.nodeapi.internal.cryptoservice.JCACryptoService
-import net.corda.core.utilities.detailedLogger
-import net.corda.core.utilities.trace
 import net.corda.nodeapi.internal.cryptoservice.WrappedPrivateKey
 import net.corda.nodeapi.internal.cryptoservice.WrappingMode
-import java.lang.UnsupportedOperationException
 import java.nio.file.Path
 import java.security.KeyStore
 import java.security.Provider

@@ -2,7 +2,6 @@ package net.corda.nodeapi.internal.proxy
 
 import net.corda.nodeapi.internal.protonwrapper.netty.ProxyConfig
 import net.corda.nodeapi.internal.protonwrapper.netty.ProxyVersion
-import java.lang.IllegalArgumentException
 import java.net.Authenticator
 import java.net.InetSocketAddress
 import java.net.PasswordAuthentication

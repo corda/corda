@@ -8,7 +8,6 @@ import net.corda.bridge.services.util.ServiceStateHelper
 import net.corda.core.utilities.contextLogger
 import org.slf4j.LoggerFactory
 import rx.Subscription
-import java.lang.IllegalStateException
 
 /**
  * @see FloatSupervisorService

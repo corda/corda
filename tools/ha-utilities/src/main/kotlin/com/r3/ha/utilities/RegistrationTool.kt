@@ -6,8 +6,8 @@ import net.corda.client.rpc.internal.serialization.amqp.AMQPClientSerializationS
 import net.corda.cliutils.CommonCliConstants.BASE_DIR
 import net.corda.cliutils.CordaCliWrapper
 import net.corda.cliutils.ExitCodes
-import net.corda.core.crypto.SecureHash
 import net.corda.common.logging.CordaVersion
+import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.internal.div

@@ -7,15 +7,11 @@ import fx.security.pkcs11.SunPKCS11
 import fx.security.pkcs11.wrapper.PKCS11Constants.CKA_SIGN
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SignatureScheme
-import net.corda.nodeapi.internal.config.UnknownConfigurationKeysException
-import net.corda.nodeapi.internal.config.parseAs
-import net.corda.nodeapi.internal.cryptoservice.CryptoService
-import net.corda.nodeapi.internal.cryptoservice.CryptoServiceException
-import net.corda.nodeapi.internal.cryptoservice.JCACryptoService
 import net.corda.core.utilities.detailedLogger
 import net.corda.core.utilities.trace
+import net.corda.nodeapi.internal.config.UnknownConfigurationKeysException
+import net.corda.nodeapi.internal.config.parseAs
 import net.corda.nodeapi.internal.cryptoservice.*
-import java.lang.UnsupportedOperationException
 import java.nio.file.Path
 import java.security.*
 import java.util.concurrent.ConcurrentHashMap

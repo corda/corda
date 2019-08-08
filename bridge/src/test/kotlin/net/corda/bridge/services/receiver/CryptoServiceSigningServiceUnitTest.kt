@@ -20,9 +20,8 @@ import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
 import net.corda.testing.common.internal.isInstanceOf
 import org.assertj.core.api.Assertions
 import org.junit.Before
-import org.junit.Test
-
 import org.junit.Rule
+import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import picocli.CommandLine
 import java.nio.file.Path

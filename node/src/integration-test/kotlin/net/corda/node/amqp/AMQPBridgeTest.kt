@@ -4,10 +4,10 @@ import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.crypto.toStringShort
 import net.corda.core.internal.div
+import net.corda.core.toFuture
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.hours
-import net.corda.core.toFuture
 import net.corda.core.utilities.loggerFor
 import net.corda.node.services.config.*
 import net.corda.node.services.messaging.ArtemisMessagingServer

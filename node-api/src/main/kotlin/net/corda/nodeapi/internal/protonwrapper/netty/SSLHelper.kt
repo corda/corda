@@ -18,7 +18,6 @@ import org.bouncycastle.asn1.x509.AuthorityKeyIdentifier
 import org.bouncycastle.asn1.x509.Extension
 import org.bouncycastle.asn1.x509.SubjectKeyIdentifier
 import org.slf4j.LoggerFactory
-import sun.security.x509.X500Name
 import sun.security.x509.*
 import java.net.Socket
 import java.security.KeyStore

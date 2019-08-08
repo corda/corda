@@ -22,10 +22,9 @@ import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.node.User
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
-import org.junit.*
+import org.junit.Test
 import java.util.*
 import java.util.concurrent.ExecutionException
-
 
 class FlowHospitalTest: IntegrationTest() {
 

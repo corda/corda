@@ -6,7 +6,6 @@ import net.corda.cliutils.start
 import net.corda.core.internal.div
 import net.corda.core.internal.exists
 import java.io.File
-import java.lang.IllegalStateException
 import java.net.URL
 import java.net.URLClassLoader
 import java.nio.file.Path

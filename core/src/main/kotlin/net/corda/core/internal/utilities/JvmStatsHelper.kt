@@ -1,6 +1,5 @@
 package net.corda.core.internal.utilities
 
-import java.lang.StringBuilder
 import java.lang.management.ManagementFactory
 import java.lang.management.MemoryUsage
 

@@ -10,8 +10,8 @@ import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.cryptoservice.azure.AzureKeyVaultCryptoService
 import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.getTestPartyAndCertificate
-import org.junit.Test
 import org.junit.Ignore
+import org.junit.Test
 import java.security.PublicKey
 import java.security.SignatureException
 import java.time.Duration
@@ -20,8 +20,6 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
-
-
 
 /*
  * These tests need to be run manually. They require an Amazon KeyVault (and the associated service principal) to be set up and will perform operations that are not free of charge.

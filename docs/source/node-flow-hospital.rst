@@ -84,16 +84,5 @@ status (for example, to only display errored flows):
 As of |release|, this UI is informational only (read-only). Future versions of Corda will extend the basic functionality to enable
 operational controls such as manual recovery and retry, and cancellation of errored flows.
 
-Futures
--------
-
-The flow hospital will be extended in the following areas:
-
-- Human Computer Interaction (HCI) with MQ integration <ref design/CID>
-- Addition of Public APIs (and CRaSH utility functions) to trigger retries
-- Improved back-off and retry policies
-- Improved Explorer visualization operational controls (eg. ability to select and retry or terminate a failed flow).
-- Tighter integration with Corda Enterprise monitoring and management tooling
-
 
 

@@ -18,7 +18,6 @@ import org.bouncycastle.asn1.x509.AlgorithmIdentifier
 import org.bouncycastle.operator.ContentSigner
 import java.io.ByteArrayOutputStream
 import java.io.OutputStream
-import java.lang.UnsupportedOperationException
 import java.nio.file.Path
 import java.security.*
 import java.security.spec.X509EncodedKeySpec

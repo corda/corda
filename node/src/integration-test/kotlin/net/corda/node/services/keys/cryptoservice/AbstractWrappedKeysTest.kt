@@ -19,7 +19,6 @@ import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.internal.FINANCE_CORDAPPS
 import net.corda.testing.node.internal.SharedCompatibilityZoneParams
 import net.corda.testing.node.internal.internalDriver
-import org.assertj.core.api.Assertions
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.ClassRule

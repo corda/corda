@@ -8,7 +8,6 @@ import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignableData
 import net.corda.core.crypto.SignatureMetadata
-import net.corda.core.crypto.keys
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
 import net.corda.core.node.NetworkParameters
@@ -20,8 +19,6 @@ import net.corda.core.node.services.KeyManagementService
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationFactory
 import net.corda.core.utilities.contextLogger
-import java.io.NotSerializableException
-import java.lang.Exception
 import java.security.PublicKey
 import java.time.Duration
 import java.time.Instant

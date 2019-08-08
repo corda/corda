@@ -1,18 +1,21 @@
 package net.corda.node.migration
 
 import liquibase.database.Database
-import liquibase.database.jvm.JdbcConnection
-import net.corda.core.contracts.*
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.StateAndRef
+import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.SecureHash
 import net.corda.core.node.services.Vault
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.serialization.SerializationContext
-import net.corda.core.serialization.internal.*
+import net.corda.core.serialization.internal.SerializationEnvironment
+import net.corda.core.serialization.internal._allEnabledSerializationEnvs
+import net.corda.core.serialization.internal._inheritableContextSerializationEnv
+import net.corda.core.serialization.internal.effectiveSerializationEnv
 import net.corda.core.utilities.contextLogger
 import net.corda.node.internal.DBNetworkParametersStorage
 import net.corda.node.services.identity.PersistentIdentityService
-import net.corda.node.services.keys.BasicHSMKeyManagementService
 import net.corda.node.services.persistence.DBTransactionStorage
 import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.node.services.vault.NodeVaultService

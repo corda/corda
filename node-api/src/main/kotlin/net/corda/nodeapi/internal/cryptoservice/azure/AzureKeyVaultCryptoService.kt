@@ -33,8 +33,6 @@ import java.io.ByteArrayOutputStream
 import java.io.FileInputStream
 import java.io.FileNotFoundException
 import java.io.OutputStream
-import java.lang.IllegalArgumentException
-import java.lang.UnsupportedOperationException
 import java.math.BigInteger
 import java.nio.file.Path
 import java.security.KeyStore

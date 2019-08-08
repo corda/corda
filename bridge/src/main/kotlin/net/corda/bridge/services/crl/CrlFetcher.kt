@@ -8,10 +8,12 @@ import sun.security.x509.CRLDistributionPointsExtension
 import sun.security.x509.GeneralNameInterface.NAME_URI
 import sun.security.x509.URIName
 import sun.security.x509.X509CertImpl
+import java.net.Authenticator
+import java.net.Proxy
+import java.net.URL
+import java.security.cert.CertificateFactory
 import java.security.cert.X509CRL
 import java.security.cert.X509Certificate
-import java.security.cert.CertificateFactory
-import java.net.*
 
 /**
  * Responsible for fetching CRLs by performing remote communication using optional Proxy configuration provided.

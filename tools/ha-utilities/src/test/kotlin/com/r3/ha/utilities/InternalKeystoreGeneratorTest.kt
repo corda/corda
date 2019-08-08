@@ -11,8 +11,8 @@ import net.corda.core.internal.div
 import net.corda.core.internal.exists
 import net.corda.nodeapi.internal.config.FileBasedCertificateStoreSupplier
 import net.corda.nodeapi.internal.crypto.X509KeyStore
-import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_ROOT_CA
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_CLIENT_TLS
+import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_ROOT_CA
 import net.corda.nodeapi.internal.crypto.getCertificateAndKeyPair
 import net.corda.nodeapi.internal.cryptoservice.CryptoService
 import net.corda.nodeapi.internal.cryptoservice.CryptoServiceFactory

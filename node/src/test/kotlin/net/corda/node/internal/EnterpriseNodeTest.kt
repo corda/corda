@@ -17,7 +17,6 @@ import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
-import java.lang.IllegalStateException
 import java.time.Duration
 
 class EnterpriseNodeTest {

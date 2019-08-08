@@ -5,17 +5,17 @@ import com.typesafe.config.ConfigException
 import com.typesafe.config.ConfigFactory
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SignatureScheme
-import net.corda.core.crypto.internal.Instances
 import net.corda.nodeapi.internal.config.UnknownConfigurationKeysException
 import net.corda.nodeapi.internal.config.parseAs
 import net.corda.nodeapi.internal.cryptoservice.CryptoService
 import net.corda.nodeapi.internal.cryptoservice.JCACryptoService
 import net.corda.nodeapi.internal.cryptoservice.WrappedPrivateKey
 import net.corda.nodeapi.internal.cryptoservice.WrappingMode
-import java.lang.IllegalArgumentException
-import java.lang.IllegalStateException
 import java.nio.file.Path
-import java.security.*
+import java.security.Key
+import java.security.KeyStore
+import java.security.Provider
+import java.security.PublicKey
 import java.security.interfaces.ECPrivateKey
 import java.security.interfaces.RSAPrivateKey
 import java.util.*
@@ -23,7 +23,6 @@ import java.util.concurrent.ConcurrentHashMap
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.security.auth.x500.X500Principal
-
 
 class PrimusXCryptoService(keyStore: KeyStore, provider: Provider, x500Principal: X500Principal = DUMMY_X500_PRINCIPAL, private val auth: () -> PrimusXConfiguration): JCACryptoService(keyStore, provider) {
 

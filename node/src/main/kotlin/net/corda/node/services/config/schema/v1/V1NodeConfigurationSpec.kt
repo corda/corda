@@ -6,17 +6,9 @@ import net.corda.common.configuration.parsing.internal.*
 import net.corda.common.validation.internal.Validated.Companion.invalid
 import net.corda.common.validation.internal.Validated.Companion.valid
 import net.corda.node.services.config.*
-import net.corda.node.services.config.NodeConfigurationImpl.Defaults
 import net.corda.node.services.config.Valid
-import net.corda.node.services.config.VerifierType
-import net.corda.node.services.config.schema.parsers.badValue
-import net.corda.node.services.config.schema.parsers.toCordaX500Name
-import net.corda.node.services.config.schema.parsers.toNetworkHostAndPort
-import net.corda.node.services.config.schema.parsers.toPath
-import net.corda.node.services.config.schema.parsers.toPrincipal
-import net.corda.node.services.config.schema.parsers.toProperties
-import net.corda.node.services.config.schema.parsers.toURL
-import net.corda.node.services.config.schema.parsers.toUUID
+import net.corda.node.services.config.NodeConfigurationImpl.Defaults
+import net.corda.node.services.config.schema.parsers.*
 import net.corda.nodeapi.internal.cryptoservice.SupportedCryptoServices
 
 internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfiguration>("NodeConfiguration") {

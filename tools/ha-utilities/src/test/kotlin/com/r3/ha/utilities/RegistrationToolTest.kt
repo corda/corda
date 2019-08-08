@@ -22,7 +22,9 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import picocli.CommandLine
-import java.io.*
+import java.io.ByteArrayInputStream
+import java.io.InputStream
+import java.io.InputStreamReader
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue

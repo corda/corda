@@ -2,7 +2,6 @@ package net.corda.nodeapi.internal.cryptoservice.bouncycastle
 
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SignatureScheme
-import net.corda.core.crypto.internal.cordaBouncyCastleProvider
 import net.corda.core.internal.div
 import net.corda.core.utilities.days
 import net.corda.nodeapi.internal.config.CertificateStoreSupplier
@@ -14,23 +13,14 @@ import net.corda.nodeapi.internal.cryptoservice.WrappedPrivateKey
 import net.corda.nodeapi.internal.cryptoservice.WrappingMode
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.internal.stubs.CertificateStoreStubs
-import net.i2p.crypto.eddsa.EdDSAEngine
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
-import org.bouncycastle.asn1.pkcs.PKCSObjectIdentifiers
-import org.bouncycastle.asn1.sec.SECObjectIdentifiers
-import org.bouncycastle.asn1.x509.AlgorithmIdentifier
-import org.bouncycastle.asn1.x9.X9ObjectIdentifiers
-import org.bouncycastle.jce.ECNamedCurveTable
 import org.bouncycastle.jce.provider.BouncyCastleProvider
-import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.io.FileOutputStream
-import java.lang.IllegalArgumentException
-import java.lang.IllegalStateException
 import java.nio.file.Path
 import java.security.*
 import java.time.Duration

@@ -280,33 +280,7 @@ open class Node(configuration: NodeConfiguration,
             startLocalRpcBroker(securityManager, sslOptions)
         }
 
-        val externalBridge = configuration.enterpriseConfiguration.externalBridge
-        val bridgeControlListener = if (externalBridge == null || !externalBridge) {
-            val artemisClient = {
-                ArtemisMessagingClient(configuration.p2pSslOptions,
-                        network.serverAddress,
-                        networkParameters.maxMessageSize,
-                        true,
-                        true,
-                        -1,
-                        configuration.enterpriseConfiguration.messagingServerConnectionConfiguration,
-                        configuration.enterpriseConfiguration.messagingServerBackupAddresses)
-            }
-            BridgeControlListener(configuration.p2pSslOptions.keyStore.get(),
-                    configuration.p2pSslOptions.trustStore.get(),
-                    configuration.p2pSslOptions.useOpenSsl,
-                    null,
-                    networkParameters.maxMessageSize,
-                    configuration.crlCheckSoftFail.toRevocationConfig(),
-                    configuration.enableSNI,
-                    artemisClient).apply {
-                this.failure.subscribe {
-                    errorAndTerminate("BridgeControlListener has failed. Node must restart.")
-                }
-            }
-        } else {
-            null
-        }
+        val bridgeControlListener = makeBridgeControlListener(network.serverAddress, networkParameters)
 
         printBasicNodeInfo("Advertised P2P messaging addresses", nodeInfo.addresses.joinToString())
 
@@ -377,6 +351,37 @@ open class Node(configuration: NodeConfiguration,
                 }
             }
         } while (retry)
+    }
+
+    private fun makeBridgeControlListener(serverAddress: NetworkHostAndPort, networkParameters: NetworkParameters) : BridgeControlListener? {
+        val externalBridge = configuration.enterpriseConfiguration.externalBridge
+        return if (externalBridge == null || !externalBridge) {
+            val artemisClient =  {
+                ArtemisMessagingClient(configuration.p2pSslOptions,
+                        serverAddress,
+                        networkParameters.maxMessageSize,
+                        true,
+                        true,
+                        -1,
+                        configuration.enterpriseConfiguration.messagingServerConnectionConfiguration,
+                        configuration.enterpriseConfiguration.messagingServerBackupAddresses,
+                        failoverCallback =  { errorAndTerminate("ArtemisMessagingClient failed. Shutting down.", null) })
+            }
+            BridgeControlListener(configuration.p2pSslOptions.keyStore.get(),
+                    configuration.p2pSslOptions.trustStore.get(),
+                    configuration.p2pSslOptions.useOpenSsl,
+                    null,
+                    networkParameters.maxMessageSize,
+                    configuration.crlCheckSoftFail.toRevocationConfig(),
+                    configuration.enableSNI,
+                    artemisClient).apply {
+                this.failure.subscribe {
+                    errorAndTerminate("BridgeControlListener has failed. Node must restart.")
+                }
+            }
+        } else {
+            null
+        }
     }
 
     private fun startLocalRpcBroker(securityManager: RPCSecurityManager, sslOptions: MutualSslConfiguration): BrokerAddresses? {
