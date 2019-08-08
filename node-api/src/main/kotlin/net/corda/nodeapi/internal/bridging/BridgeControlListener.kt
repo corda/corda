@@ -4,9 +4,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
-import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
-import net.corda.nodeapi.internal.ArtemisMessagingClient
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.BRIDGE_CONTROL
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.BRIDGE_NOTIFY
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_PREFIX
@@ -47,13 +45,6 @@ class BridgeControlListener(val config: MutualSslConfiguration,
     private var artemis: ArtemisSessionProvider? = null
     private var controlConsumer: ClientConsumer? = null
     private var notifyConsumer: ClientConsumer? = null
-
-    constructor(config: MutualSslConfiguration,
-                p2pAddress: NetworkHostAndPort,
-                maxMessageSize: Int,
-                crlCheckSoftFail: Boolean,
-                enableSNI: Boolean,
-                proxy: ProxyConfig? = null) : this(config, proxy, maxMessageSize, crlCheckSoftFail, enableSNI, { ArtemisMessagingClient(config, p2pAddress, maxMessageSize) })
 
     companion object {
         private val log = contextLogger()

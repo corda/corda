@@ -24,7 +24,8 @@ class ArtemisMessagingClient(private val config: MutualSslConfiguration,
                              private val autoCommitAcks: Boolean = true,
                              private val confirmationWindowSize: Int = -1,
                              private val messagingServerConnectionConfig: MessagingServerConnectionConfiguration? = null,
-                             private val backupServerAddressPool: List<NetworkHostAndPort> = emptyList()
+                             private val backupServerAddressPool: List<NetworkHostAndPort> = emptyList(),
+                             private val failoverCallback: ((FailoverEventType) -> Unit)? = null
 )  : ArtemisSessionProvider {
     companion object {
         private val log = loggerFor<ArtemisMessagingClient>()
@@ -67,6 +68,10 @@ class ArtemisMessagingClient(private val config: MutualSslConfiguration,
             addIncomingInterceptor(ArtemisMessageSizeChecksInterceptor(maxMessageSize))
         }
         val sessionFactory = locator.createSessionFactory()
+
+        // Handle failover events if a callback method is provided
+        if (failoverCallback != null) sessionFactory.addFailoverListener(failoverCallback)
+
         // Login using the node username. The broker will authenticate us as its node (as opposed to another peer)
         // using our TLS certificate.
         // Note that the acknowledgement of messages is not flushed to the Artermis journal until the default buffer
