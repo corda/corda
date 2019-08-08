@@ -1,4 +1,4 @@
-package net.corda.nodeapi.internal.persistence
+package net.corda.node.services.persistence
 
 import net.corda.core.crypto.toStringShort
 import org.hibernate.annotations.Type

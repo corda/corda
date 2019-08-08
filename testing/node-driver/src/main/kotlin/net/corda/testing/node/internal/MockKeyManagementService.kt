@@ -6,8 +6,8 @@ import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.KeyManagementService
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.node.services.keys.freshCertificate
+import net.corda.node.services.persistence.WritablePKToOwningIDCache
 import net.corda.nodeapi.internal.persistence.KeyOwningIdentity
-import net.corda.nodeapi.internal.persistence.PublicKeyToOwningIdentityCache
 import org.bouncycastle.operator.ContentSigner
 import java.security.KeyPair
 import java.security.PrivateKey
@@ -21,7 +21,7 @@ import java.util.*
  */
 class MockKeyManagementService(val identityService: IdentityService,
                                vararg initialKeys: KeyPair,
-                               private val pkToIdCache: PublicKeyToOwningIdentityCache) : SingletonSerializeAsToken(), KeyManagementService {
+                               private val pkToIdCache: WritablePKToOwningIDCache) : SingletonSerializeAsToken(), KeyManagementService {
     private val keyStore: MutableMap<PublicKey, PrivateKey> = initialKeys.associateByTo(HashMap(), { it.public }, { it.private })
 
     override val keys: Set<PublicKey> get() = keyStore.keys

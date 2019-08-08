@@ -12,9 +12,4 @@ interface PublicKeyToOwningIdentityCache {
      * Obtain the owning identity for a public key.
      */
     operator fun get(key: PublicKey): KeyOwningIdentity
-
-    /**
-     * Assign a public key to an owning identity. This will error if the public key has a previously assigned owning identity.
-     */
-    operator fun set(key: PublicKey, value: KeyOwningIdentity)
 }

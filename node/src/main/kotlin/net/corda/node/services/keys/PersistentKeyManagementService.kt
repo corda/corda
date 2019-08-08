@@ -7,11 +7,11 @@ import net.corda.core.internal.toSet
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.MAX_HASH_HEX_SIZE
 import net.corda.node.services.identity.PersistentIdentityService
+import net.corda.node.services.persistence.WritablePKToOwningIDCache
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.KeyOwningIdentity
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
-import net.corda.nodeapi.internal.persistence.PublicKeyToOwningIdentityCache
 import org.apache.commons.lang3.ArrayUtils.EMPTY_BYTE_ARRAY
 import org.bouncycastle.operator.ContentSigner
 import java.security.KeyPair
@@ -31,7 +31,7 @@ import javax.persistence.*
 class PersistentKeyManagementService(cacheFactory: NamedCacheFactory,
                                      val identityService: PersistentIdentityService,
                                      private val database: CordaPersistence,
-                                     private val pkToIdCache: PublicKeyToOwningIdentityCache) : SingletonSerializeAsToken(), KeyManagementServiceInternal {
+                                     private val pkToIdCache: WritablePKToOwningIDCache) : SingletonSerializeAsToken(), KeyManagementServiceInternal {
     @Entity
     @Table(name = "${NODE_DATABASE_PREFIX}our_key_pairs")
     class PersistentKey(

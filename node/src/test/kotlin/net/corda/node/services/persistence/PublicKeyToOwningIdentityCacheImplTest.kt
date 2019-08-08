@@ -1,8 +1,11 @@
-package net.corda.nodeapi.internal.persistence
+package net.corda.node.services.persistence
 
 import junit.framework.TestCase.assertEquals
 import net.corda.core.node.services.KeyManagementService
 import net.corda.core.utilities.getOrThrow
+import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.persistence.KeyOwningIdentity
+import net.corda.nodeapi.internal.persistence.withoutDatabaseAccess
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.TestIdentity
@@ -16,7 +19,6 @@ import org.junit.Test
 import java.security.PublicKey
 import java.util.*
 import java.util.concurrent.Executors
-import kotlin.test.assertFails
 
 class PublicKeyToOwningIdentityCacheImplTest {
 
@@ -109,12 +111,5 @@ class PublicKeyToOwningIdentityCacheImplTest {
         val f2 = executor.submit { repeat(5) { createAndAddKeys() } }
         f2.getOrThrow()
         f1.getOrThrow()
-    }
-
-    @Test
-    fun `attempting to set existing key results in failure`() {
-        val uuid = UUID.randomUUID()
-        val key = keyManagementService.freshKey()
-        assertFails { testCache[key] = KeyOwningIdentity.fromUUID(uuid) }
     }
 }

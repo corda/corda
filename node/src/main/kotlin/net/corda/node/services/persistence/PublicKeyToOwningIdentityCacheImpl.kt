@@ -1,10 +1,12 @@
-package net.corda.nodeapi.internal.persistence
+package net.corda.node.services.persistence
 
 import com.github.benmanes.caffeine.cache.Caffeine
 import net.corda.core.crypto.toStringShort
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
+import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.persistence.KeyOwningIdentity
 import java.security.PublicKey
 import java.util.*
 import javax.persistence.NoResultException
@@ -15,7 +17,7 @@ import javax.persistence.criteria.CriteriaBuilder
  * external identity from the database if it is not present in memory, while sets will write external identity UUIDs to this database table.
  */
 class PublicKeyToOwningIdentityCacheImpl(private val database: CordaPersistence,
-                                         cacheFactory: NamedCacheFactory) : PublicKeyToOwningIdentityCache {
+                                         cacheFactory: NamedCacheFactory) : WritablePKToOwningIDCache {
     companion object {
         val log = contextLogger()
     }
@@ -57,16 +59,19 @@ class PublicKeyToOwningIdentityCacheImpl(private val database: CordaPersistence,
     /**
      * Associate a key with a given [KeyOwningIdentity].
      *
-     * This will write to the pk_hash_to_external_id table and also set the value in the cache. Note that it assumes that no UUID has
-     * previously been associated with a given public key. Attempting to set a key that already exists will result in an error.
+     * This will write to the pk_hash_to_external_id table if the key belongs to an external id. If a key is created within a transaction
+     * that is rolled back in the future, the cache may contain stale entries. However, that key should be missing from the
+     * KeyManagementService in that case, and so querying it from this cache should not occur (as the key is inaccessible).
+     *
+     * The same key should not be written twice.
      */
     override operator fun set(key: PublicKey, value: KeyOwningIdentity) {
         when (value) {
             is KeyOwningIdentity.ExternalIdentity -> {
                 database.transaction { session.persist(PublicKeyHashToExternalId(value.uuid, key)) }
-                cache.asMap()[key] = value
             }
-            is KeyOwningIdentity.NodeIdentity -> { cache.asMap().putIfAbsent(key, value) }
+            is KeyOwningIdentity.NodeIdentity -> {}
         }
+        cache.asMap()[key] = value
     }
 }
