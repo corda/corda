@@ -23,11 +23,13 @@ import net.corda.nodeapi.internal.hsm.HsmSimulator
 import net.corda.testing.core.*
 import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.internal.IntegrationTest
+import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.cordappsForPackages
 import net.corda.testing.node.internal.internalDriver
 import org.apache.activemq.artemis.core.server.ActiveMQServer
 import org.apache.commons.io.FileUtils
+import org.junit.ClassRule
 import org.junit.Rule
 import org.junit.Test
 import sun.security.x509.X500Name
@@ -40,6 +42,13 @@ import javax.security.auth.x500.X500Principal
 const val ARTEMIS_HSM_KEYSTORE = "artemishsm.jks"  // Store only the public key for Bridge Artemis link
 
 class BridgeHSMTest : IntegrationTest() {
+
+    companion object {
+        @ClassRule
+        @JvmField
+        val databaseSchemas = IntegrationTestSchemas(DUMMY_BANK_A_NAME, DUMMY_BANK_B_NAME, DUMMY_BANK_C_NAME)
+    }
+
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule(true)
