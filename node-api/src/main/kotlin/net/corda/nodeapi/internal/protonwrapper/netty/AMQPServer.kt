@@ -58,7 +58,7 @@ class AMQPServer(val hostName: String,
 
         init {
             keyManagerFactory.init(conf.keyStore.value.internal, conf.keyStore.entryPassword.toCharArray())
-            trustManagerFactory.init(initialiseTrustStoreAndEnableCrlChecking(conf.trustStore, conf.crlCheckSoftFail))
+            trustManagerFactory.init(initialiseTrustStoreAndEnableCrlChecking(conf.trustStore, conf.revocationConfig))
         }
 
         override fun initChannel(ch: SocketChannel) {
@@ -102,7 +102,7 @@ class AMQPServer(val hostName: String,
                     // For javaSSL, SNI matching is handled at key manager level.
                     createServerSslHandler(amqpConfig.keyStore, keyManagerFactory, trustManagerFactory)
                 }
-                handler.handshakeTimeoutMillis = Integer.getInteger(SSL_HANDSHAKE_TIMEOUT_PROP_NAME, DEFAULT_SSL_TIMEOUT).toLong()
+                handler.handshakeTimeoutMillis = amqpConfig.sslHandshakeTimeout
                 Pair(handler, mapOf(DEFAULT to keyManagerFactory))
             }
         }

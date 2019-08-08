@@ -5,25 +5,20 @@ import net.corda.bridge.services.util.ServiceStateCombiner
 import net.corda.bridge.services.util.ServiceStateHelper
 import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.config.CertificateStore
-import net.corda.nodeapi.internal.crypto.KEYSTORE_TYPE
-import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.protonwrapper.messages.ReceivedMessage
-import net.corda.nodeapi.internal.protonwrapper.netty.AMQPConfiguration
-import net.corda.nodeapi.internal.protonwrapper.netty.AMQPServer
-import net.corda.nodeapi.internal.protonwrapper.netty.ConnectionChange
+import net.corda.nodeapi.internal.protonwrapper.netty.*
 import org.slf4j.LoggerFactory
 import rx.Observable
 import rx.Subscription
 import rx.subjects.PublishSubject
-import java.io.ByteArrayInputStream
-import java.lang.String.valueOf
-import java.security.KeyStore
-import java.util.*
 
+/**
+ * Responsible for performing actions when Float component is being activated and de-activated.
+ */
 class BridgeAMQPListenerServiceImpl(val conf: FirewallConfiguration,
-                                    val maximumMessageSize: Int,
                                     val auditService: FirewallAuditService,
-                                    private val stateHelper: ServiceStateHelper = ServiceStateHelper(log)) : BridgeAMQPListenerService, ServiceStateSupport by stateHelper {
+                                    private val stateHelper: ServiceStateHelper = ServiceStateHelper(log),
+                                    private val extSourceSupplier: (() -> ExternalCrlSource)? = null) : BridgeAMQPListenerService, ServiceStateSupport by stateHelper {
     companion object {
         private val log = contextLogger()
         private val consoleLogger = LoggerFactory.getLogger("BasicInfo")
@@ -32,33 +27,24 @@ class BridgeAMQPListenerServiceImpl(val conf: FirewallConfiguration,
     private val statusFollower: ServiceStateCombiner = ServiceStateCombiner(listOf(auditService))
     private var statusSubscriber: Subscription? = null
     private var amqpServer: AMQPServer? = null
-    private var keyStorePrivateKeyPassword: CharArray? = null
     private var onConnectSubscription: Subscription? = null
     private var onConnectAuditSubscription: Subscription? = null
     private var onReceiveSubscription: Subscription? = null
 
-    override fun provisionKeysAndActivate(keyStoreBytes: ByteArray,
-                                          keyStorePassword: CharArray,
-                                          keyStorePrivateKeyPassword: CharArray,
-                                          trustStoreBytes: ByteArray,
-                                          trustStorePassword: CharArray) {
+    override fun provisionKeysAndActivate(keyStore: CertificateStore, trustStore:CertificateStore, maxMessageSize: Int) {
         require(active) { "AuditService must be active" }
-        require(keyStorePassword !== keyStorePrivateKeyPassword) { "keyStorePassword and keyStorePrivateKeyPassword must reference distinct arrays!" }
-
-        val keyStore = CertificateStore.of(loadKeyStore(keyStoreBytes, keyStorePassword),
-                java.lang.String.valueOf(keyStorePassword), java.lang.String.valueOf(keyStorePrivateKeyPassword)).also { wipeKeys(keyStoreBytes, keyStorePassword) }
-        val trustStore = CertificateStore.of(loadKeyStore(trustStoreBytes, trustStorePassword),
-                java.lang.String.valueOf(trustStorePassword), java.lang.String.valueOf(trustStorePassword)).also { wipeKeys(trustStoreBytes, trustStorePassword) }
         val bindAddress = conf.inboundConfig!!.listeningAddress
         val amqpConfiguration = object : AMQPConfiguration {
+            //TODO: No password for delegated keystore. Refactor this?
             override val keyStore = keyStore
             override val trustStore = trustStore
-            override val crlCheckSoftFail: Boolean = conf.crlCheckSoftFail
-            override val maxMessageSize: Int = maximumMessageSize
+            override val maxMessageSize: Int = maxMessageSize
             override val trace: Boolean = conf.enableAMQPPacketTrace
             override val enableSNI: Boolean = conf.bridgeInnerConfig?.enableSNI ?: true
             override val healthCheckPhrase = conf.healthCheckPhrase
             override val silencedIPs: Set<String> = conf.silencedIPs
+            override val sslHandshakeTimeout: Long = conf.sslHandshakeTimeout
+            override val revocationConfig: RevocationConfig = conf.revocationConfig.enrichExternalCrlSource(extSourceSupplier)
         }
         val server = AMQPServer(bindAddress.host,
                 bindAddress.port,
@@ -69,8 +55,8 @@ class BridgeAMQPListenerServiceImpl(val conf: FirewallConfiguration,
                 auditService.successfulConnectionEvent(it.remoteAddress, it.remoteCert?.subjectDN?.name
                         ?: "", "Successful AMQP inbound connection", RoutingDirection.INBOUND)
             } else {
-                auditService.failedConnectionEvent(it.remoteAddress, it.remoteCert?.subjectDN?.name
-                        ?: "", "Failed AMQP inbound connection", RoutingDirection.INBOUND)
+                auditService.terminatedConnectionEvent(it.remoteAddress, it.remoteCert?.subjectDN?.name
+                        ?: "", "Terminated AMQP inbound connection", RoutingDirection.INBOUND)
             }
         }, { log.error("Connection event error", it) })
         onReceiveSubscription = server.onReceive.subscribe(_onReceive)
@@ -79,20 +65,6 @@ class BridgeAMQPListenerServiceImpl(val conf: FirewallConfiguration,
         val msg = "Now listening for incoming connections on $bindAddress"
         auditService.statusChangeEvent(msg)
         consoleLogger.info(msg)
-    }
-
-    private fun wipeKeys(keyStoreBytes: ByteArray, keyStorePassword: CharArray) {
-        // We overwrite the keys we don't need anymore
-        Arrays.fill(keyStoreBytes, 0xAA.toByte())
-        Arrays.fill(keyStorePassword, 0xAA55.toChar())
-    }
-
-    private fun loadKeyStore(keyStoreBytes: ByteArray, keyStorePassword: CharArray): X509KeyStore {
-        val keyStore = KeyStore.getInstance(KEYSTORE_TYPE)
-        ByteArrayInputStream(keyStoreBytes).use {
-            keyStore.load(it, keyStorePassword)
-        }
-        return X509KeyStore(keyStore, valueOf(keyStorePassword))
     }
 
     override fun wipeKeysAndDeactivate() {
@@ -105,15 +77,11 @@ class BridgeAMQPListenerServiceImpl(val conf: FirewallConfiguration,
         if (running) {
             val msg = "AMQP Listener shutting down"
             auditService.statusChangeEvent(msg)
+            auditService.reset()
             consoleLogger.info(msg)
         }
         amqpServer?.close()
         amqpServer = null
-        if (keyStorePrivateKeyPassword != null) {
-            // Wipe the old password
-            Arrays.fill(keyStorePrivateKeyPassword, 0xAA55.toChar())
-            keyStorePrivateKeyPassword = null
-        }
     }
 
     override fun start() {
@@ -139,5 +107,4 @@ class BridgeAMQPListenerServiceImpl(val conf: FirewallConfiguration,
     private val _onConnection = PublishSubject.create<ConnectionChange>().toSerialized()
     override val onConnection: Observable<ConnectionChange>
         get() = _onConnection
-
 }

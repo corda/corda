@@ -1,10 +1,7 @@
 package net.corda.nodeapi.internal.protonwrapper.netty
 
 import io.netty.bootstrap.Bootstrap
-import io.netty.channel.Channel
-import io.netty.channel.ChannelFutureListener
-import io.netty.channel.ChannelInitializer
-import io.netty.channel.EventLoopGroup
+import io.netty.channel.*
 import io.netty.channel.nio.NioEventLoopGroup
 import io.netty.channel.socket.SocketChannel
 import io.netty.channel.socket.nio.NioSocketChannel
@@ -19,6 +16,7 @@ import io.netty.util.internal.logging.Slf4JLoggerFactory
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.debug
 import net.corda.nodeapi.internal.protonwrapper.messages.ReceivedMessage
 import net.corda.nodeapi.internal.protonwrapper.messages.SendableMessage
 import net.corda.nodeapi.internal.protonwrapper.messages.impl.SendableMessageImpl
@@ -73,7 +71,7 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
 
     private val lock = ReentrantLock()
     @Volatile
-    private var stopping: Boolean = false
+    private var started: Boolean = false
     private var workerGroup: EventLoopGroup? = null
     @Volatile
     private var clientChannel: Channel? = null
@@ -82,6 +80,8 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
     private var currentTarget: NetworkHostAndPort = targets.first()
     private var retryInterval = MIN_RETRY_INTERVAL
     private val badCertTargets = mutableSetOf<NetworkHostAndPort>()
+    @Volatile
+    private var amqpActive = false
 
     private fun nextTarget() {
         val origIndex = targetIndex
@@ -101,21 +101,24 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
         retryInterval = min(MAX_RETRY_INTERVAL, retryInterval * BACKOFF_MULTIPLIER)
     }
 
-    private val connectListener = ChannelFutureListener { future ->
-        if (!future.isSuccess) {
-            log.info("Failed to connect to $currentTarget. Proxy: ${configuration.proxyConfig?.proxyAddress}")
+    private val connectListener = object : ChannelFutureListener {
+        override fun operationComplete(future: ChannelFuture) {
+            amqpActive = false
+            if (!future.isSuccess) {
+                log.info("Failed to connect to $currentTarget")
 
-            if (!stopping) {
-                workerGroup?.schedule({
-                    nextTarget()
-                    restart()
-                }, retryInterval, TimeUnit.MILLISECONDS)
+                if (started) {
+                    workerGroup?.schedule({
+                        nextTarget()
+                        restart()
+                    }, retryInterval, TimeUnit.MILLISECONDS)
+                }
+            } else {
+                log.info("Connected to $currentTarget")
+                // Connection established successfully
+                clientChannel = future.channel()
+                clientChannel?.closeFuture()?.addListener(closeListener)
             }
-        } else {
-            log.info("Connected to $currentTarget")
-            // Connection established successfully
-            clientChannel = future.channel()
-            clientChannel?.closeFuture()?.addListener(closeListener)
         }
     }
 
@@ -123,7 +126,8 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
         log.info("Disconnected from $currentTarget")
         future.channel()?.disconnect()
         clientChannel = null
-        if (!stopping) {
+        if (started && !amqpActive) {
+            log.debug { "Scheduling restart of $currentTarget (AMQP inactive)" }
             workerGroup?.schedule({
                 nextTarget()
                 restart()
@@ -138,7 +142,7 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
 
         init {
             keyManagerFactory.init(conf.keyStore)
-            trustManagerFactory.init(initialiseTrustStoreAndEnableCrlChecking(conf.trustStore, conf.crlCheckSoftFail))
+            trustManagerFactory.init(initialiseTrustStoreAndEnableCrlChecking(conf.trustStore, conf.revocationConfig))
         }
 
         override fun initChannel(ch: SocketChannel) {
@@ -183,7 +187,7 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
             } else {
                 createClientSslHelper(target, parent.allowedRemoteLegalNames, wrappedKeyManagerFactory, trustManagerFactory)
             }
-            handler.handshakeTimeoutMillis = Integer.getInteger(SSL_HANDSHAKE_TIMEOUT_PROP_NAME, DEFAULT_SSL_TIMEOUT).toLong()
+            handler.handshakeTimeoutMillis = conf.sslHandshakeTimeout
             pipeline.addLast("sslHandler", handler)
             if (conf.trace) pipeline.addLast("logger", LoggingHandler(LogLevel.INFO))
             pipeline.addLast(AMQPChannelHandler(false,
@@ -195,6 +199,7 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
                     conf.trace,
                     false,
                     { _, change ->
+                        parent.amqpActive = true
                         parent.retryInterval = MIN_RETRY_INTERVAL // reset to fast reconnect if we connect properly
                         parent._onConnection.onNext(change)
                     },
@@ -203,6 +208,16 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
                         if (change.badCert) {
                             log.error("Blocking future connection attempts to $target due to bad certificate on endpoint")
                             parent.badCertTargets += target
+                        }
+                        parent.run {
+                            if (started && amqpActive) {
+                                log.debug { "Scheduling restart of $currentTarget (AMQP active)" }
+                                workerGroup?.schedule({
+                                    nextTarget()
+                                    restart()
+                                }, retryInterval, TimeUnit.MILLISECONDS)
+                            }
+                            amqpActive = false
                         }
                     },
                     { rcv -> parent._onReceive.onNext(rcv) }))
@@ -213,6 +228,7 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
         lock.withLock {
             log.info("connect to: $currentTarget")
             workerGroup = sharedThreadPool ?: NioEventLoopGroup(NUM_CLIENT_THREADS)
+            started = true
             restart()
         }
     }
@@ -236,19 +252,15 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
     fun stop() {
         lock.withLock {
             log.info("disconnect from: $currentTarget")
-            stopping = true
-            try {
-                if (sharedThreadPool == null) {
-                    workerGroup?.shutdownGracefully()
-                    workerGroup?.terminationFuture()?.sync()
-                } else {
-                    clientChannel?.close()?.sync()
-                }
-                clientChannel = null
-                workerGroup = null
-            } finally {
-                stopping = false
+            started = false
+            if (sharedThreadPool == null) {
+                workerGroup?.shutdownGracefully()
+                workerGroup?.terminationFuture()?.sync()
+            } else {
+                clientChannel?.close()?.sync()
             }
+            clientChannel = null
+            workerGroup = null
             log.info("stopped connection to $currentTarget")
         }
     }

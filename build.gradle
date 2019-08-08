@@ -265,8 +265,11 @@ allprojects {
         final TEST_DB_ADMIN_PASSWORD = "test.db.admin.password"
         final TEST_DB_SCRIPT_DIR = "test.db.script.dir"
 
+        // Controls printout on Java security level
+        final JAVA_SECURITY_DEBUG = "java.security.auth.debug" 
+        
         [DATABASE_PROVIDER,DATASOURCE_URL, DATASOURCE_CLASSNAME, DATASOURCE_USER, DATASOURCE_PASSWORD,
-          TEST_DB_ADMIN_USER, TEST_DB_ADMIN_PASSWORD, TEST_DB_SCRIPT_DIR].forEach {
+          TEST_DB_ADMIN_USER, TEST_DB_ADMIN_PASSWORD, TEST_DB_SCRIPT_DIR, JAVA_SECURITY_DEBUG].forEach {
             def property = System.getProperty(it)
             if (property != null) {
                 systemProperty(it, property)
@@ -456,6 +459,7 @@ bintrayConfig {
             'corda-tools-health-survey',
             'corda-tools-config-obfuscator',
             'corda-tools-ha-utilities',
+            'corda-tools-notary-registration',
             'corda-tools-log-tracer',
             'corda-firewall',
             'corda-ptflows',

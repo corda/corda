@@ -8,7 +8,6 @@ import net.corda.common.validation.internal.Validated.Companion.valid
 import net.corda.node.services.config.*
 import net.corda.node.services.config.NodeConfigurationImpl.Defaults
 import net.corda.node.services.config.schema.parsers.*
-import net.corda.node.services.config.Valid
 import net.corda.nodeapi.internal.cryptoservice.SupportedCryptoServices
 
 internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfiguration>("NodeConfiguration") {
@@ -60,6 +59,8 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
     private val cordappSignerKeyFingerprintBlacklist by string().list().optional().withDefaultValue(Defaults.cordappSignerKeyFingerprintBlacklist)
     private val cryptoServiceName by enum(SupportedCryptoServices::class).optional()
     private val cryptoServiceConf by string().mapValid(::toPath).optional()
+    private val freshIdentitiesConfiguration by nested(FreshIdentitiesConfigurationSpec).optional()
+    private val disableFreshIdentitiesWarning by boolean().optional().withDefaultValue(false)
     private val cryptoServiceTimeout by duration().optional().withDefaultValue(Defaults.cryptoServiceTimeout)
     @Suppress("unused")
     private val custom by nestedObject().optional()
@@ -127,6 +128,8 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
                     cordappSignerKeyFingerprintBlacklist = config[cordappSignerKeyFingerprintBlacklist],
                     cryptoServiceName = config[cryptoServiceName],
                     cryptoServiceConf = config[cryptoServiceConf],
+                    freshIdentitiesConfiguration = config[freshIdentitiesConfiguration],
+                    disableFreshIdentitiesWarning = config[disableFreshIdentitiesWarning],
                     cryptoServiceTimeout = config[cryptoServiceTimeout],
                     relay = config[relay],
                     enableSNI = config[enableSNI],

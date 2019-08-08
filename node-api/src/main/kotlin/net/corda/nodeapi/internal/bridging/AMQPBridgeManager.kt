@@ -1,5 +1,6 @@
 package net.corda.nodeapi.internal.bridging
 
+import io.netty.channel.EventLoop
 import io.netty.channel.EventLoopGroup
 import io.netty.channel.nio.NioEventLoopGroup
 import net.corda.core.identity.CordaX500Name
@@ -12,11 +13,11 @@ import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2PMessagi
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.RemoteInboxAddress.Companion.translateLocalQueueToInboxAddress
 import net.corda.nodeapi.internal.ArtemisSessionProvider
 import net.corda.nodeapi.internal.config.CertificateStore
-import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.protonwrapper.messages.MessageStatus
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPClient
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPConfiguration
 import net.corda.nodeapi.internal.protonwrapper.netty.ProxyConfig
+import net.corda.nodeapi.internal.protonwrapper.netty.RevocationConfig
 import org.apache.activemq.artemis.api.core.ActiveMQObjectClosedException
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient.DEFAULT_ACK_BATCH_SIZE
@@ -25,6 +26,7 @@ import org.apache.activemq.artemis.api.core.client.ClientMessage
 import org.apache.activemq.artemis.api.core.client.ClientSession
 import org.slf4j.MDC
 import rx.Subscription
+import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
@@ -37,14 +39,17 @@ import kotlin.concurrent.withLock
  *  The Netty thread pool used by the AMQPBridges is also shared and managed by the AMQPBridgeManager.
  */
 @VisibleForTesting
-open class AMQPBridgeManager(config: MutualSslConfiguration,
+open class AMQPBridgeManager(keyStore: CertificateStore,
+                             trustStore: CertificateStore,
+                             useOpenSSL: Boolean,
                              proxyConfig: ProxyConfig? = null,
                              maxMessageSize: Int,
-                             crlCheckSoftFail: Boolean,
+                             revocationConfig: RevocationConfig,
                              enableSNI: Boolean,
                              private val artemisMessageClientFactory: () -> ArtemisSessionProvider,
                              private val bridgeMetricsService: BridgeMetricsService? = null,
-                             private val trace: Boolean) : BridgeManager {
+                             trace: Boolean,
+                             sslHandshakeTimeout: Long? = null) : BridgeManager {
 
     private val lock = ReentrantLock()
     private val queueNamesToBridgesMap = mutableMapOf<String, MutableList<AMQPBridge>>()
@@ -53,37 +58,23 @@ open class AMQPBridgeManager(config: MutualSslConfiguration,
                                         override val trustStore: CertificateStore,
                                         override val proxyConfig: ProxyConfig?,
                                         override val maxMessageSize: Int,
-                                        override val crlCheckSoftFail: Boolean,
+                                        override val revocationConfig: RevocationConfig,
                                         override val useOpenSsl: Boolean,
                                         override val enableSNI: Boolean,
                                         override val sourceX500Name: String? = null,
-                                        override val trace: Boolean) : AMQPConfiguration {
-        constructor(config: MutualSslConfiguration, proxyConfig: ProxyConfig?, maxMessageSize: Int, crlCheckSoftFail: Boolean, enableSNI: Boolean, trace: Boolean) : this(config.keyStore.get(),
-                config.trustStore.get(),
-                proxyConfig,
-                maxMessageSize,
-                crlCheckSoftFail,
-                config.useOpenSsl,
-                enableSNI,
-                trace = trace)
+                                        override val trace: Boolean,
+                                        private val _sslHandshakeTimeout: Long?) : AMQPConfiguration {
+        override val sslHandshakeTimeout: Long
+            get() = _sslHandshakeTimeout ?: super.sslHandshakeTimeout
     }
 
-    private val amqpConfig: AMQPConfiguration = AMQPConfigurationImpl(config, proxyConfig, maxMessageSize, crlCheckSoftFail, enableSNI, trace)
+    private val amqpConfig: AMQPConfiguration = AMQPConfigurationImpl(keyStore, trustStore, proxyConfig, maxMessageSize, revocationConfig,useOpenSSL, enableSNI, trace = trace, _sslHandshakeTimeout = sslHandshakeTimeout)
     private var sharedEventLoopGroup: EventLoopGroup? = null
     private var artemis: ArtemisSessionProvider? = null
 
-    constructor(config: MutualSslConfiguration,
-                p2pAddress: NetworkHostAndPort,
-                maxMessageSize: Int,
-                crlCheckSoftFail: Boolean,
-                enableSNI: Boolean,
-                proxyConfig: ProxyConfig? = null,
-                trace: Boolean = false)
-            : this(config, proxyConfig, maxMessageSize, crlCheckSoftFail, enableSNI, { ArtemisMessagingClient(config, p2pAddress, maxMessageSize) }, trace = trace)
-
     companion object {
         private const val NUM_BRIDGE_THREADS = 0 // Default sized pool
-        private const val ARTEMIS_RETRY_TIME = 60000L
+        private const val ARTEMIS_RETRY_BACKOFF = 5000L
     }
 
     /**
@@ -99,7 +90,7 @@ open class AMQPBridgeManager(config: MutualSslConfiguration,
                              val targets: List<NetworkHostAndPort>,
                              val legalNames: Set<CordaX500Name>,
                              private val amqpConfig: AMQPConfiguration,
-                             private val sharedEventGroup: EventLoopGroup,
+                             sharedEventGroup: EventLoopGroup,
                              private val artemis: ArtemisSessionProvider,
                              private val bridgeMetricsService: BridgeMetricsService?) {
         companion object {
@@ -131,11 +122,65 @@ open class AMQPBridgeManager(config: MutualSslConfiguration,
         private fun logWarnWithMDC(msg: String) = withMDC { log.warn(msg) }
 
         val amqpClient = AMQPClient(targets, legalNames, amqpConfig, sharedThreadPool = sharedEventGroup)
-        private val lock = ReentrantLock() // lock to serialise session level access
         private var session: ClientSession? = null
         private var consumer: ClientConsumer? = null
         private var connectedSubscription: Subscription? = null
+        @Volatile
         private var messagesReceived: Boolean = false
+        private val eventLoop: EventLoop = sharedEventGroup.next()
+        private var artemisState: ArtemisState = ArtemisState.STOPPED
+            set(value) {
+                logDebugWithMDC { "State change $field to $value" }
+                field = value
+            }
+        private var artemisHeartbeatPlusBackoff = TimeUnit.SECONDS.toMillis(90)
+
+        private sealed class ArtemisState {
+            object STARTING : ArtemisState()
+            data class STARTED(override val pending: ScheduledFuture<Unit>) : ArtemisState()
+
+            object CHECKING : ArtemisState()
+            object RESTARTED : ArtemisState()
+            object RECEIVING : ArtemisState()
+
+            object AMQP_STOPPED : ArtemisState()
+            object AMQP_STARTING : ArtemisState()
+            object AMQP_STARTED : ArtemisState()
+
+            object STOPPING : ArtemisState()
+            object STOPPED : ArtemisState()
+            data class STOPPED_AMQP_START_SCHEDULED(override val pending: ScheduledFuture<Unit>) : ArtemisState()
+
+            open val pending: ScheduledFuture<Unit>? = null
+
+            override fun toString(): String = javaClass.simpleName
+        }
+
+        private fun artemis(inProgress: ArtemisState, block: (precedingState: ArtemisState) -> ArtemisState) {
+            val runnable = {
+                synchronized(artemis) {
+                    try {
+                        val precedingState = artemisState
+                        artemisState.pending?.cancel(false)
+                        artemisState = inProgress
+                        artemisState = block(precedingState)
+                    } catch (ex: Exception) {
+                        withMDC { log.error("Unexpected error in Artemis processing in state $artemisState.", ex) }
+                    }
+                }
+            }
+            if (eventLoop.inEventLoop()) {
+                runnable()
+            } else {
+                eventLoop.execute(runnable)
+            }
+        }
+
+        private fun scheduledArtemis(delay: Long, unit: TimeUnit, inProgress: ArtemisState, block: (precedingState: ArtemisState) -> ArtemisState): ScheduledFuture<Unit> {
+            return eventLoop.schedule<Unit>({
+                artemis(inProgress, block)
+            }, delay, unit)
+        }
 
         fun start() {
             logInfoWithMDC("Create new AMQP bridge")
@@ -145,80 +190,146 @@ open class AMQPBridgeManager(config: MutualSslConfiguration,
 
         fun stop() {
             logInfoWithMDC("Stopping AMQP bridge")
-            lock.withLock {
-                synchronized(artemis) {
-                    consumer?.apply {
-                        if (!isClosed) {
-                            close()
-                        }
-                    }
-                    consumer = null
-                    session?.apply {
-                        if (!isClosed) {
-                            stop()
-                        }
-                    }
-                    session = null
-                }
+            artemis(ArtemisState.STOPPING) {
+                logInfoWithMDC("Stopping Artemis because stopping AMQP bridge")
+                closeConsumer()
+                consumer = null
+                stopSession()
+                session = null
+                ArtemisState.STOPPED
             }
-            amqpClient.stop()
             connectedSubscription?.unsubscribe()
             connectedSubscription = null
+            // Do this last because we already scheduled the Artemis stop, so it's okay to unsubscribe onConnected first.
+            amqpClient.stop()
         }
 
         private fun onSocketConnected(connected: Boolean) {
-            lock.withLock {
-                messagesReceived = false
-                synchronized(artemis) {
-                    if (connected) {
-                        logInfoWithMDC("Bridge Connected")
-                        sharedEventGroup.schedule({ // during testing we found that kill -9 can fail to replay messages into the consumer until the session is restarted/remade
-                            if(!messagesReceived) { // we only make bridges if there is at least one message to process, so if none arrive hit artemis with a hammer
-                                synchronized(artemis) {
-                                    logInfoWithMDC("No messages received on new bridge. Restarting Artemis session")
-                                    try {
-                                        this.session?.apply {
-                                            stop()
-                                            start()
-                                        }
-                                    } catch(ex: Exception) {
-                                        log.error("Restart artemis session error", ex)
-                                    }
-                                }
-                            }
-                        }, ARTEMIS_RETRY_TIME, TimeUnit.MILLISECONDS)
-                        bridgeMetricsService?.bridgeConnected(targets, legalNames)
-                        val sessionFactory = artemis.started!!.sessionFactory
-                        val session = sessionFactory.createSession(NODE_P2P_USER, NODE_P2P_USER, false, true, true, false, DEFAULT_ACK_BATCH_SIZE)
-                        this.session = session
-                        // Several producers (in the case of shared bridge) can put messages in the same outbound p2p queue. The consumers are created using the source x500 name as a filter
-                        val consumer = if (amqpConfig.enableSNI) {
-                            session.createConsumer(queueName, "hyphenated_props:sender-subject-name = '${amqpConfig.sourceX500Name}'")
-                        } else {
-                            session.createConsumer(queueName)
-                        }
-                        this.consumer = consumer
-                        consumer.setMessageHandler(this@AMQPBridge::clientArtemisMessageHandler)
-                        session.start()
+            if (connected) {
+                logInfoWithMDC("Bridge Connected")
+                artemis(ArtemisState.STARTING) {
+                    val startedArtemis = artemis.started
+                    if (startedArtemis == null) {
+                        logInfoWithMDC("Bridge Connected but Artemis is disconnected")
+                        ArtemisState.STOPPED
                     } else {
-                        logInfoWithMDC("Bridge Disconnected")
-                        bridgeMetricsService?.bridgeDisconnected(targets, legalNames)
-                        consumer?.apply {
-                            if (!isClosed) {
-                                close()
-                            }
+                        logInfoWithMDC("Bridge Connected so starting Artemis")
+                        artemisHeartbeatPlusBackoff = startedArtemis.serverLocator.connectionTTL + ARTEMIS_RETRY_BACKOFF
+                        try {
+                            createSessionAndConsumer(startedArtemis).start()
+                            ArtemisState.STARTED(scheduledArtemis(artemisHeartbeatPlusBackoff, TimeUnit.MILLISECONDS, ArtemisState.CHECKING) {
+                            if (!messagesReceived) {
+                                    logInfoWithMDC("No messages received on new bridge. Restarting Artemis session")
+                                    if (restartSession()) {
+                                        ArtemisState.RESTARTED
+                                    } else {
+                                        logInfoWithMDC("Artemis session restart failed. Aborting by restarting AMQP connection.")
+                                        stopAndStartOutbound()
+                                    }
+                                } else {
+                                    ArtemisState.RECEIVING
+                                }
+                            })
+                                    } catch (ex: Exception) {
+                                       // Now, bounce the AMQP connection to restart the sequence of establishing the connectivity back from the beginning.
+                            withMDC { log.warn("Create artemis session error. Restarting AMQP connection", ex) }
+                            stopAndStartOutbound()
                         }
-                        consumer = null
-                        session?.apply {
-                            if (!isClosed) {
-                                stop()
-                            }
-                        }
-                        session = null
+                    }
+                }
+            } else {
+                logInfoWithMDC("Bridge Disconnected")
+                bridgeMetricsService?.bridgeDisconnected(targets, legalNames)
+                artemis(ArtemisState.STOPPING) { precedingState: ArtemisState ->
+                    logInfoWithMDC("Stopping Artemis because AMQP bridge disconnected")
+                    closeConsumer()
+                    consumer = null
+                    stopSession()
+                    session = null
+                    if (precedingState == ArtemisState.AMQP_STOPPED) {
+                        ArtemisState.STOPPED_AMQP_START_SCHEDULED(scheduledArtemis(artemisHeartbeatPlusBackoff, TimeUnit.MILLISECONDS, ArtemisState.AMQP_STARTING) {
+                            logInfoWithMDC("Starting AMQP client")
+                            amqpClient.start()
+                            ArtemisState.AMQP_STARTED
+                        })
+                    } else {
+                        ArtemisState.STOPPED
                     }
                 }
             }
         }
+
+        private fun stopAndStartOutbound(): ArtemisState {
+            amqpClient.stop()
+            // Bridge disconnect will detect this state and schedule an AMQP start.
+            return ArtemisState.AMQP_STOPPED
+        }
+
+        private fun createSessionAndConsumer(startedArtemis: ArtemisMessagingClient.Started): ClientSession {
+            logInfoWithMDC("Creating session and consumer.")
+            val sessionFactory = startedArtemis.sessionFactory
+            val session = sessionFactory.createSession(NODE_P2P_USER, NODE_P2P_USER, false, true, true, false, DEFAULT_ACK_BATCH_SIZE)
+            this.session = session
+            // Several producers (in the case of shared bridge) can put messages in the same outbound p2p queue. The consumers are created using the source x500 name as a filter
+            val consumer = if (amqpConfig.enableSNI) {
+                session.createConsumer(queueName, "hyphenated_props:sender-subject-name = '${amqpConfig.sourceX500Name}'")
+            } else {
+                session.createConsumer(queueName)
+            }
+            this.consumer = consumer
+            consumer.setMessageHandler(this@AMQPBridge::clientArtemisMessageHandler)
+            return session
+        }
+
+        private fun closeConsumer(): Boolean {
+            var closed = false
+            try {
+                consumer?.apply {
+                    if (!isClosed) {
+                        close()
+                    }
+                }
+                closed = true
+            } catch (ex: Exception) {
+                withMDC { log.warn("Close artemis consumer error", ex) }
+            } finally {
+                return closed
+            }
+        }
+
+        private fun stopSession(): Boolean {
+            var stopped = false
+            try {
+                session?.apply {
+                    if (!isClosed) {
+                        stop()
+                    }
+                }
+                stopped = true
+            } catch (ex: Exception) {
+                withMDC { log.warn("Stop artemis session error", ex) }
+            } finally {
+                return stopped
+            }
+        }
+
+        private fun restartSession(): Boolean {
+            if (!stopSession()) {
+                // Session timed out stopping.  The request/responses can be out of sequence on the session now, so abandon it.
+                session = null
+                // The consumer is also dead now too as attached to the dead session.
+                consumer = null
+                return false
+            }
+            try {
+                // Does not wait for a response.
+                this.session?.start()
+            } catch (ex: Exception) {
+                withMDC { log.error("Start artemis session error", ex) }
+            }
+            return true
+        }
+
 
         private fun clientArtemisMessageHandler(artemisMessage: ClientMessage) {
             messagesReceived = true
@@ -230,7 +341,7 @@ open class AMQPBridgeManager(config: MutualSslConfiguration,
                 // Ack the message to prevent same message being sent to us again.
                 try {
                     artemisMessage.individualAcknowledge()
-                } catch(ex: ActiveMQObjectClosedException) {
+                } catch (ex: ActiveMQObjectClosedException) {
                     log.warn("Artemis message was closed")
                 }
                 return
@@ -252,11 +363,11 @@ open class AMQPBridgeManager(config: MutualSslConfiguration,
                     properties)
             sendableMessage.onComplete.then {
                 logDebugWithMDC { "Bridge ACK ${sendableMessage.onComplete.get()}" }
-                lock.withLock {
+                eventLoop.submit {
                     if (sendableMessage.onComplete.get() == MessageStatus.Acknowledged) {
                         try {
                             artemisMessage.individualAcknowledge()
-                        } catch(ex: ActiveMQObjectClosedException) {
+                        } catch (ex: ActiveMQObjectClosedException) {
                             log.warn("Artemis message was closed")
                         }
                     } else {
@@ -273,7 +384,7 @@ open class AMQPBridgeManager(config: MutualSslConfiguration,
             } catch (ex: IllegalStateException) {
                 // Attempting to send a message while the AMQP client is disconnected may cause message loss.
                 // The failed message is rolled back after committing acknowledged messages.
-                lock.withLock {
+                eventLoop.submit {
                     ex.message?.let { logInfoWithMDC(it) }
                     logInfoWithMDC("Rollback rejected message uuid: ${artemisMessage.getObjectProperty("_AMQ_DUPL_ID")}")
                     session?.commit()
@@ -292,7 +403,7 @@ open class AMQPBridgeManager(config: MutualSslConfiguration,
                     return
                 }
             }
-            val newAMQPConfig = with(amqpConfig) { AMQPConfigurationImpl(keyStore, trustStore, proxyConfig, maxMessageSize, crlCheckSoftFail, useOpenSsl, enableSNI, sourceX500Name, trace) }
+            val newAMQPConfig = with(amqpConfig) { AMQPConfigurationImpl(keyStore, trustStore, proxyConfig, maxMessageSize, revocationConfig, useOpenSsl, enableSNI, sourceX500Name, trace, sslHandshakeTimeout) }
             val newBridge = AMQPBridge(sourceX500Name, queueName, targets, legalNames, newAMQPConfig, sharedEventLoopGroup!!, artemis!!, bridgeMetricsService)
             bridges += newBridge
             bridgeMetricsService?.bridgeCreated(targets, legalNames)

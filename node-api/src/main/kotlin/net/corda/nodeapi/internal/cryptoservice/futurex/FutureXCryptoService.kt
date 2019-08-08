@@ -11,9 +11,7 @@ import net.corda.core.utilities.detailedLogger
 import net.corda.core.utilities.trace
 import net.corda.nodeapi.internal.config.UnknownConfigurationKeysException
 import net.corda.nodeapi.internal.config.parseAs
-import net.corda.nodeapi.internal.cryptoservice.CryptoService
-import net.corda.nodeapi.internal.cryptoservice.CryptoServiceException
-import net.corda.nodeapi.internal.cryptoservice.JCACryptoService
+import net.corda.nodeapi.internal.cryptoservice.*
 import java.nio.file.Path
 import java.security.*
 import java.util.concurrent.ConcurrentHashMap
@@ -110,13 +108,28 @@ class FutureXCryptoService(
         return keyPairGenerator
     }
 
+    override fun createWrappingKey(alias: String, failIfExists: Boolean) {
+        throw UnsupportedOperationException()
+    }
+
+    override fun generateWrappedKeyPair(masterKeyAlias: String, childKeyScheme: SignatureScheme): Pair<PublicKey, WrappedPrivateKey> {
+        throw UnsupportedOperationException()
+    }
+
+    override fun sign(masterKeyAlias: String, wrappedPrivateKey: WrappedPrivateKey, payloadToSign: ByteArray): ByteArray {
+        throw UnsupportedOperationException()
+    }
+
+    override fun getWrappingMode(): WrappingMode? = null
+
     companion object {
         val KEYSTORE_TYPE = "PKCS11"
 
         private val detailedLogger = detailedLogger()
 
-        private fun parseConfigFile(cryptoServiceConf: Path): FutureXConfiguration {
+        fun parseConfigFile(cryptoServiceConf: Path): FutureXConfiguration {
             try {
+                checkConfigurationFileExists(cryptoServiceConf)
                 val config = ConfigFactory.parseFile(cryptoServiceConf.toFile()).resolve()
                 return config.parseAs(FutureXConfiguration::class)
             } catch (e: Exception) {

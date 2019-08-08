@@ -14,6 +14,7 @@ import net.corda.nodeapi.internal.config.FileBasedCertificateStoreSupplier
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.cryptoservice.SupportedCryptoServices
+import net.corda.nodeapi.internal.cryptoservice.WrappingMode
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.notary.experimental.bftsmart.BFTSmartConfig
 import net.corda.notary.experimental.raft.RaftConfig
@@ -83,6 +84,7 @@ interface NodeConfiguration {
     // However, BCCryptoService is reusing this to store keys as well.
     val signingCertificateStore: FileBasedCertificateStoreSupplier
     val p2pSslOptions: MutualSslConfiguration
+    val wrappingKeyStorePath: Path
 
     val cordappDirectories: List<Path>
     val enableSNI: Boolean
@@ -90,11 +92,12 @@ interface NodeConfiguration {
 
     val cordappSignerKeyFingerprintBlacklist: List<String>
 
-    // TODO At the moment this is just an identifier for the desired CryptoService engine. Consider using a classname to
-    //      to allow for pluggable implementations.
     val cryptoServiceName: SupportedCryptoServices?
     val cryptoServiceConf: Path? // Location for the cryptoService conf file.
     val cryptoServiceTimeout: Duration get() = DEFAULT_CRYPTO_SERVICE_TIMEOUT
+
+    val freshIdentitiesConfiguration: FreshIdentitiesConfiguration?
+    val disableFreshIdentitiesWarning: Boolean get() = false
 
     val networkParameterAcceptanceSettings: NetworkParameterAcceptanceSettings
 
@@ -354,4 +357,17 @@ data class RelayConfiguration(val relayHost: String,
     internal object Defaults {
         val sshPort = 22
     }
+}
+
+data class FreshIdentitiesConfiguration(val mode: WrappingMode,
+                                        val cryptoServiceConfiguration: CryptoServiceConfiguration,
+                                        val masterKeyAlias: String,
+                                        val createDuringStartup: CreateWrappingKeyDuringStartup)
+
+data class CryptoServiceConfiguration(val cryptoServiceName: SupportedCryptoServices, val cryptoServiceConf: Path?)
+
+enum class CreateWrappingKeyDuringStartup {
+    YES,
+    NO,
+    ONLY_IF_MISSING
 }

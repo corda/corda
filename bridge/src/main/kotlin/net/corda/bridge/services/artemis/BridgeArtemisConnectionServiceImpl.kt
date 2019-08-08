@@ -7,23 +7,29 @@ import net.corda.core.internal.ThreadBox
 import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.ArtemisMessagingClient
+import net.corda.nodeapi.internal.ArtemisMessagingClient.Companion.CORDA_ARTEMIS_CALL_TIMEOUT_DEFAULT
+import net.corda.nodeapi.internal.ArtemisMessagingClient.Companion.CORDA_ARTEMIS_CALL_TIMEOUT_PROP_NAME
 import net.corda.nodeapi.internal.ArtemisMessagingComponent
 import net.corda.nodeapi.internal.ArtemisTcpTransport
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
+import net.corda.nodeapi.internal.provider.DelegatedKeystoreProvider
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient
 import org.apache.activemq.artemis.api.core.client.FailoverEventType
 import org.apache.activemq.artemis.api.core.client.ServerLocator
 import org.apache.activemq.artemis.core.remoting.impl.netty.TransportConstants
 import rx.Subscription
 import java.lang.Long.min
+import java.security.Security
 import java.util.concurrent.CountDownLatch
 
-class BridgeArtemisConnectionServiceImpl(val conf: FirewallConfiguration,
+class BridgeArtemisConnectionServiceImpl(artemisSigningService: TLSSigningService,
+                                         val conf: FirewallConfiguration,
                                          val maxMessageSize: Int,
                                          val auditService: FirewallAuditService,
                                          private val stateHelper: ServiceStateHelper = ServiceStateHelper(log)) : BridgeArtemisConnectionService, ServiceStateSupport by stateHelper {
     companion object {
         val log = contextLogger()
+        const val signingServiceName = "ArtemisSigningService"
     }
 
     private class InnerState {
@@ -39,8 +45,16 @@ class BridgeArtemisConnectionServiceImpl(val conf: FirewallConfiguration,
     private var statusSubscriber: Subscription? = null
 
     init {
-        statusFollower = ServiceStateCombiner(listOf(auditService))
+        statusFollower = ServiceStateCombiner(listOf(auditService, artemisSigningService))
         sslConfiguration = conf.outboundConfig?.artemisSSLConfiguration ?: conf.publicSSLConfiguration
+
+        val provider = Security.getProvider(DelegatedKeystoreProvider.PROVIDER_NAME)
+        val delegatedKeystoreProvider = if (provider != null) {
+            provider as DelegatedKeystoreProvider
+        } else {
+            DelegatedKeystoreProvider().apply { Security.addProvider(this) }
+        }
+        delegatedKeystoreProvider.putService(signingServiceName, artemisSigningService)
     }
 
     override fun start() {
@@ -60,17 +74,19 @@ class BridgeArtemisConnectionServiceImpl(val conf: FirewallConfiguration,
             val outboundConf = conf.outboundConfig!!
             log.info("Connecting to message broker: ${outboundConf.artemisBrokerAddress}")
             val brokerAddresses = listOf(outboundConf.artemisBrokerAddress) + outboundConf.alternateArtemisBrokerAddresses
-            val tcpTransports = brokerAddresses.map { ArtemisTcpTransport.p2pConnectorTcpTransport(it, sslConfiguration) }
+            val tcpTransports = brokerAddresses.map { ArtemisTcpTransport.p2pConnectorTcpTransport(it, sslConfiguration,
+                    keyStoreProvider = signingServiceName) }
             locator = ActiveMQClient.createServerLocatorWithoutHA(*tcpTransports.toTypedArray()).apply {
                 // Never time out on our loopback Artemis connections. If we switch back to using the InVM transport this
                 // would be the default and the two lines below can be deleted.
                 connectionTTL = 60000
                 clientFailureCheckPeriod = 30000
-                callFailoverTimeout = 1000
-                callTimeout = 1000
+                callFailoverTimeout = java.lang.Long.getLong(CORDA_ARTEMIS_CALL_TIMEOUT_PROP_NAME, CORDA_ARTEMIS_CALL_TIMEOUT_DEFAULT)
+                callTimeout = java.lang.Long.getLong(CORDA_ARTEMIS_CALL_TIMEOUT_PROP_NAME, CORDA_ARTEMIS_CALL_TIMEOUT_DEFAULT)
                 minLargeMessageSize = maxMessageSize
                 isUseGlobalPools = nodeSerializationEnv != null
                 confirmationWindowSize = conf.p2pConfirmationWindowSize
+                producerWindowSize = -1
             }
             connectThread = Thread({ artemisReconnectionLoop() }, "Artemis Connector Thread").apply {
                 isDaemon = true
@@ -83,6 +99,18 @@ class BridgeArtemisConnectionServiceImpl(val conf: FirewallConfiguration,
         stopArtemisConnection()
         statusSubscriber?.unsubscribe()
         statusSubscriber = null
+    }
+
+    override fun bounce() {
+        state.locked {
+            if (running) {
+                log.info("Bouncing artemis")
+                started?.apply {
+                    sessionFactory.close()
+                }
+                started = null
+            }
+        }
     }
 
     private fun stopArtemisConnection() {

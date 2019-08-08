@@ -83,9 +83,11 @@ data class NodeConfigurationImpl(
         private val useOpenSsl: Boolean = Defaults.useOpenSsl,
         override val flowOverrides: FlowOverrideConfig?,
         override val cordappSignerKeyFingerprintBlacklist: List<String> = Defaults.cordappSignerKeyFingerprintBlacklist,
-        override val networkParameterAcceptanceSettings: NetworkParameterAcceptanceSettings = Defaults.networkParameterAcceptanceSettings,
         override val cryptoServiceName: SupportedCryptoServices? = Defaults.cryptoServiceName,
         override val cryptoServiceConf: Path? = Defaults.cryptoServiceConf,
+        override val networkParameterAcceptanceSettings: NetworkParameterAcceptanceSettings = Defaults.networkParameterAcceptanceSettings,
+        override val freshIdentitiesConfiguration: FreshIdentitiesConfiguration? = null,
+        override val disableFreshIdentitiesWarning: Boolean = false,
         override val cryptoServiceTimeout: Duration = Defaults.cryptoServiceTimeout
 ) : NodeConfiguration {
     internal object Defaults {
@@ -125,6 +127,8 @@ data class NodeConfigurationImpl(
         val cryptoServiceConf: Path? = null
         val cryptoServiceTimeout: Duration = Duration.ofSeconds(1)
         val networkParameterAcceptanceSettings: NetworkParameterAcceptanceSettings = NetworkParameterAcceptanceSettings()
+        val masterKeyAlias = "wrapping-key-alias"
+        val createDuringStartup = CreateWrappingKeyDuringStartup.YES
 
         fun cordappsDirectories(baseDirectory: Path) = listOf(baseDirectory / CORDAPPS_DIR_NAME_DEFAULT)
 
@@ -213,6 +217,7 @@ data class NodeConfigurationImpl(
 
     private val signingCertificateStorePath = certificatesDirectory / "nodekeystore.jks"
     private val p2pKeystorePath: Path get() = certificatesDirectory / "sslkeystore.jks"
+    override val wrappingKeyStorePath = certificatesDirectory / "wrappingkeystore.pkcs12"
 
     // TODO: There are two implications here:
     // 1. "signingCertificateStore" and "p2pKeyStore" have the same passwords. In the future we should re-visit this "rule" and see of they can be made different;

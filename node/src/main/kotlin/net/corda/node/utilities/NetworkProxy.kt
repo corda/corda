@@ -8,6 +8,7 @@ import java.net.PasswordAuthentication
 import java.net.Proxy
 
 class ProxyAuthSetter private constructor(config: NetworkServicesConfig) {
+
     companion object {
         private var instance: ProxyAuthSetter? = null
 

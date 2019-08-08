@@ -17,9 +17,16 @@ import net.corda.testing.node.internal.internalDriver
 import org.apache.activemq.artemis.core.server.ActiveMQServer
 import org.junit.ClassRule
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.junit.runners.Parameterized
 
-class SNIBridgeTest : IntegrationTest() {
+@RunWith(Parameterized::class)
+class SNIBridgeTest(private val withFloat: Boolean) : IntegrationTest() {
     companion object {
+        @JvmStatic
+        @Parameterized.Parameters(name = "with float = {0}")
+        fun data() = listOf(false, true)
+
         @ClassRule
         @JvmField
         val databaseSchemas = IntegrationTestSchemas(DUMMY_BANK_A_NAME, DUMMY_BANK_B_NAME, DUMMY_BANK_C_NAME, DUMMY_NOTARY_NAME)
@@ -32,6 +39,7 @@ class SNIBridgeTest : IntegrationTest() {
         internalDriver(startNodesInProcess = true, cordappsForAllNodes = cordappsForPackages("net.corda.bridge"), notarySpecs = emptyList(), portAllocation = incrementalPortAllocation()) {
             val artemisPort = portAllocation.nextPort()
             val advertisedP2PPort = portAllocation.nextPort()
+            val floatPort = if (withFloat) portAllocation.nextPort() else null
 
             val bankAPath = driverDirectory / DUMMY_BANK_A_NAME.organisation / "node"
             val bankBPath = driverDirectory / DUMMY_BANK_B_NAME.organisation / "node"
@@ -87,7 +95,7 @@ class SNIBridgeTest : IntegrationTest() {
 
             val b = bFuture.getOrThrow()
 
-            startBridge(driverDirectory, artemisPort, advertisedP2PPort, bankAPath / "certificates" / "sslkeystore.jks", bankBPath / "certificates" / "sslkeystore.jks").getOrThrow()
+            startBridge(driverDirectory, artemisPort, advertisedP2PPort, bankAPath / "certificates" / "sslkeystore.jks", bankBPath / "certificates" / "sslkeystore.jks", floatPort = floatPort).getOrThrow()
 
             // Start a node on the other side of the bridge
             val c = startNode(providedName = DUMMY_BANK_C_NAME, rpcUsers = listOf(demoUser), customOverrides = mapOf("p2pAddress" to "localhost:${portAllocation.nextPort()}", "baseDirectory" to "$bankCPath")).getOrThrow()

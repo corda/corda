@@ -11,4 +11,9 @@ interface BridgeArtemisConnectionService : ServiceLifecycleSupport {
      * When the service becomes [active] this will be non-null and provides access to Artemis management objects.
      */
     val started: ArtemisMessagingClient.Started?
+
+    /**
+     * If any errors are experienced with the connection, this method can be used to shutdown the connection, triggering an auto-reconnect.
+     */
+    fun bounce()
 }

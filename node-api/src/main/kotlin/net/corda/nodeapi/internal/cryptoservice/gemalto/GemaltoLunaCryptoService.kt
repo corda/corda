@@ -12,6 +12,8 @@ import net.corda.nodeapi.internal.config.UnknownConfigurationKeysException
 import net.corda.nodeapi.internal.config.parseAs
 import net.corda.nodeapi.internal.cryptoservice.CryptoService
 import net.corda.nodeapi.internal.cryptoservice.JCACryptoService
+import net.corda.nodeapi.internal.cryptoservice.WrappedPrivateKey
+import net.corda.nodeapi.internal.cryptoservice.WrappingMode
 import java.nio.file.Path
 import java.security.KeyStore
 import java.security.Provider
@@ -69,6 +71,20 @@ class GemaltoLunaCryptoService(
         }
     }
 
+    override fun createWrappingKey(alias: String, failIfExists: Boolean) {
+        throw UnsupportedOperationException()
+    }
+
+    override fun generateWrappedKeyPair(masterKeyAlias: String, childKeyScheme: SignatureScheme): Pair<PublicKey, WrappedPrivateKey> {
+        throw UnsupportedOperationException()
+    }
+
+    override fun sign(masterKeyAlias: String, wrappedPrivateKey: WrappedPrivateKey, payloadToSign: ByteArray): ByteArray {
+        throw UnsupportedOperationException()
+    }
+
+    override fun getWrappingMode(): WrappingMode? = null
+
     companion object {
         private val detailedLogger = detailedLogger()
 
@@ -80,8 +96,9 @@ class GemaltoLunaCryptoService(
             return GemaltoLunaCryptoService(keyStore, provider, legalName) { config }
         }
 
-        private fun parseConfigFile(cryptoServiceConf: Path): GemaltoLunaConfiguration {
+        fun parseConfigFile(cryptoServiceConf: Path): GemaltoLunaConfiguration {
             try {
+                checkConfigurationFileExists(cryptoServiceConf)
                 val config = ConfigFactory.parseFile(cryptoServiceConf.toFile()).resolve()
                 return config.parseAs(GemaltoLunaConfiguration::class)
             } catch (e: Exception) {

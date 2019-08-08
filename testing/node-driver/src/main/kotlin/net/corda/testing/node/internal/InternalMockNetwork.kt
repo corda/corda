@@ -453,8 +453,9 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
         val id = parameters.forcedID ?: nextNodeId++
         val baseDirectory = baseDirectory(id)
         val certificatesDirectory = baseDirectory / "certificates"
+        val wrappingKeyStorePath = certificatesDirectory / "wrappingkeystore.pkcs12"
         certificatesDirectory.createDirectories()
-        val config = mockNodeConfiguration(certificatesDirectory).also {
+        val config = mockNodeConfiguration(certificatesDirectory, wrappingKeyStorePath).also {
             doReturn(baseDirectory).whenever(it).baseDirectory
             doReturn(parameters.legalName ?: CordaX500Name("Mock Company $id", "London", "GB")).whenever(it).myLegalName
             doReturn(makeInternalTestDataSourceProperties("node_$id", "net_$networkId")).whenever(it).dataSourceProperties
@@ -591,7 +592,7 @@ abstract class MessagingServiceSpy {
     abstract fun send(message: Message, target: MessageRecipients, sequenceKey: Any)
 }
 
-private fun mockNodeConfiguration(certificatesDirectory: Path): NodeConfiguration {
+private fun mockNodeConfiguration(certificatesDirectory: Path, wrappingKeyStorePath: Path): NodeConfiguration {
     @DoNotImplement
     abstract class AbstractNodeConfiguration : NodeConfiguration
 
@@ -600,6 +601,7 @@ private fun mockNodeConfiguration(certificatesDirectory: Path): NodeConfiguratio
 
     return rigorousMock<AbstractNodeConfiguration>().also {
         doReturn(certificatesDirectory.createDirectories()).whenever(it).certificatesDirectory
+        doReturn(wrappingKeyStorePath).whenever(it).wrappingKeyStorePath
         doReturn(p2pSslConfiguration).whenever(it).p2pSslOptions
         doReturn(signingCertificateStore).whenever(it).signingCertificateStore
         doReturn(emptyList<User>()).whenever(it).rpcUsers

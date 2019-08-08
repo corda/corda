@@ -61,5 +61,5 @@ See :doc:`versioning` for further information.
 .. note::
 
    Compatibility guarantees apply to the latest minor release version of either distribution, including any subsequent patches.
-   At the time of writing these are Enterprise release version 3.2.20190215 and Open Source release version 3.3.
+   At the time of writing these are Enterprise release version 3.3 and Open Source release version 3.4.
    See :doc:`versioning` for further information.

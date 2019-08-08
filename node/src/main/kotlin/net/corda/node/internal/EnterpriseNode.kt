@@ -13,11 +13,19 @@ import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.loggerFor
 import net.corda.node.VersionInfo
+import net.corda.node.services.config.CreateWrappingKeyDuringStartup
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.RelayConfiguration
+import net.corda.node.services.identity.PersistentIdentityService
+import net.corda.node.services.keys.BasicHSMKeyManagementService
+import net.corda.node.services.keys.KeyManagementServiceInternal
 import net.corda.node.services.statemachine.*
 import net.corda.node.utilities.EnterpriseNamedCacheFactory
 import net.corda.node.utilities.profiling.getTracingConfig
+import net.corda.nodeapi.internal.cryptoservice.CryptoService
+import net.corda.nodeapi.internal.cryptoservice.CryptoServiceFactory
+import net.corda.nodeapi.internal.cryptoservice.SupportedCryptoServices
+import net.corda.nodeapi.internal.cryptoservice.WrappingMode
 import org.fusesource.jansi.Ansi
 import org.fusesource.jansi.AnsiConsole
 import java.io.IOException
@@ -216,4 +224,50 @@ D""".trimStart()
     }
 
     override fun makeFlowLogicRefFactoryImpl(): FlowLogicRefFactoryImpl = EnterpriseFlowLogicRefFactoryImpl(cordappLoader.appClassLoader, cacheFactory)
+
+    override fun makeKeyManagementService(identityService: PersistentIdentityService): KeyManagementServiceInternal {
+        val freshIdentitiesConfig = configuration.freshIdentitiesConfiguration
+
+        if (freshIdentitiesConfig == null) {
+            if (!configuration.disableFreshIdentitiesWarning && configuration.notary == null) {
+                val warningMsg = "If you make use of confidential identities, there is now a more secure way of storing the associated keys, but you have to explicitly enable it with the appropriate configuration. " +
+                        "Review the documentation to see how this can be enabled via the `freshIdentitiesConfiguration` entry. Alternatively, you can disable this warning by setting `disableFreshIdentitiesWarning` to true in the node's configuration."
+                Node.printWarning(warningMsg)
+            }
+            return BasicHSMKeyManagementService(cacheFactory, identityService, database, cryptoService)
+        } else {
+            val cryptoServiceConfigBlock = freshIdentitiesConfig.cryptoServiceConfiguration
+            val masterKeyAlias = freshIdentitiesConfig.masterKeyAlias
+            val wrappingCryptoService = CryptoServiceFactory.makeCryptoService(cryptoServiceConfigBlock.cryptoServiceName, configuration.myLegalName, configuration.signingCertificateStore, cryptoServiceConfigBlock.cryptoServiceConf, configuration.wrappingKeyStorePath)
+            verifyConfiguredModeIsSupported(freshIdentitiesConfig.mode, wrappingCryptoService, cryptoServiceConfigBlock.cryptoServiceName)
+            createWrappingKeyIfNeeded(freshIdentitiesConfig.createDuringStartup, masterKeyAlias, wrappingCryptoService, cryptoServiceConfigBlock.cryptoServiceName)
+            return BasicHSMKeyManagementService(cacheFactory, identityService, database, cryptoService, wrappingCryptoService, masterKeyAlias)
+        }
+    }
+
+    private fun createWrappingKeyIfNeeded(createDuringStartup: CreateWrappingKeyDuringStartup, masterKeyAlias: String, cryptoService: CryptoService, cryptoServiceLabel: SupportedCryptoServices) {
+        when (createDuringStartup) {
+            CreateWrappingKeyDuringStartup.YES -> {
+                try {
+                    cryptoService.createWrappingKey(masterKeyAlias)
+                } catch(exception: IllegalArgumentException) {
+                    throw ConfigurationException("The crypto service configured for fresh identities ($cryptoServiceLabel) already contains a key under the alias: $masterKeyAlias. However, createDuringStartup is set to $createDuringStartup")
+                }
+            }
+            CreateWrappingKeyDuringStartup.ONLY_IF_MISSING -> {
+                cryptoService.createWrappingKey(masterKeyAlias, false)
+            }
+            CreateWrappingKeyDuringStartup.NO -> {
+                if (!cryptoService.containsKey(masterKeyAlias)) {
+                    throw ConfigurationException("The crypto service configured for fresh identities ($cryptoServiceLabel) does not contain a key under the alias: $masterKeyAlias. However, createDuringStartup is set to $createDuringStartup")
+                }
+            }
+        }
+    }
+
+    private fun verifyConfiguredModeIsSupported(mode: WrappingMode, cryptoService: CryptoService, cryptoServiceLabel: SupportedCryptoServices) {
+        if (cryptoService.getWrappingMode() != mode) {
+            throw ConfigurationException("The crypto service configured for fresh identities ($cryptoServiceLabel) supports the ${cryptoService.getWrappingMode()} mode, but the node is configured to use $mode")
+        }
+    }
 }

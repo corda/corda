@@ -32,6 +32,7 @@ import net.corda.nodeapi.internal.createDevNetworkMapCa
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
+import net.corda.nodeapi.internal.protonwrapper.netty.toRevocationConfig
 import net.corda.testing.core.*
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.internal.incrementalPortAllocation
@@ -217,7 +218,7 @@ class FlowWorkerStartStopTest {
     }
 
     private fun createBridgeControlListener(config: NodeConfiguration, maxMessageSize: Int): BridgeControlListener {
-        val bridgeControlListener = BridgeControlListener(config.p2pSslOptions, config.messagingServerAddress!!, maxMessageSize, config.crlCheckSoftFail, enableSNI = true)
+        val bridgeControlListener = BridgeControlListener(config.p2pSslOptions, config.messagingServerAddress!!, maxMessageSize, config.crlCheckSoftFail.toRevocationConfig(), enableSNI = true)
         bridgeControlListener.start()
         return bridgeControlListener
     }

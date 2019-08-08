@@ -4,7 +4,9 @@ import net.corda.bridge.services.api.*
 import net.corda.bridge.services.util.ServiceStateCombiner
 import net.corda.bridge.services.util.ServiceStateHelper
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.internal.utilities.measureMilliAndNanoTime
 import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.debug
 import net.corda.nodeapi.internal.ArtemisMessagingComponent
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2PMessagingHeaders
 import net.corda.nodeapi.internal.protonwrapper.messages.ReceivedMessage
@@ -32,8 +34,13 @@ class SimpleMessageFilterService(val conf: FirewallConfiguration,
     override fun start() {
         statusSubscriber = statusFollower.activeChange.subscribe({
             if (it) {
-                inboundSession = artemisConnectionService.started!!.sessionFactory.createSession(ArtemisMessagingComponent.NODE_P2P_USER, ArtemisMessagingComponent.NODE_P2P_USER, false, true, true, false, ActiveMQClient.DEFAULT_ACK_BATCH_SIZE)
-                inboundProducer = inboundSession!!.createProducer()
+                try {
+                    inboundSession = artemisConnectionService.started!!.sessionFactory.createSession(ArtemisMessagingComponent.NODE_P2P_USER, ArtemisMessagingComponent.NODE_P2P_USER, false, true, true, false, ActiveMQClient.DEFAULT_ACK_BATCH_SIZE)
+                    inboundProducer = inboundSession!!.createProducer()
+                } catch (e: Exception) {
+                    log.warn("Problems creating producer. Will bounce Artemis connection.", e)
+                    artemisConnectionService.bounce()
+                }
             } else {
                 inboundProducer?.close()
                 inboundProducer = null
@@ -55,9 +62,6 @@ class SimpleMessageFilterService(val conf: FirewallConfiguration,
     }
 
     private fun validateMessage(inboundMessage: ReceivedMessage) {
-        if (!active) {
-            throw IllegalStateException("Unable to forward message as Service Dependencies down")
-        }
         val sourceLegalName = try {
             CordaX500Name.parse(inboundMessage.sourceLegalName)
         } catch (ex: IllegalArgumentException) {
@@ -70,6 +74,11 @@ class SimpleMessageFilterService(val conf: FirewallConfiguration,
     }
 
     override fun sendMessageToLocalBroker(inboundMessage: ReceivedMessage) {
+        if (!active) {
+            auditService.packetDropEvent(inboundMessage, "Packet arrived while dependencies down.", RoutingDirection.INBOUND)
+            inboundMessage.complete(false) // redeliver.
+            return
+        }
         try {
             validateMessage(inboundMessage)
         } catch (ex: Exception) {
@@ -91,8 +100,14 @@ class SimpleMessageFilterService(val conf: FirewallConfiguration,
             }
             artemisMessage.putStringProperty(P2PMessagingHeaders.bridgedCertificateSubject, SimpleString(inboundMessage.sourceLegalName))
             artemisMessage.writeBodyBufferBytes(inboundMessage.payload)
-            producer.send(SimpleString(inboundMessage.topic), artemisMessage) { _ -> inboundMessage.complete(true) }
+            val msgId = inboundMessage.applicationProperties["_AMQ_DUPL_ID"]?.toString()
+            log.debug { "Sending message [${msgId}]" }
+            val timeToSendMillis: Double = measureMilliAndNanoTime {
+                producer.send(SimpleString(inboundMessage.topic), artemisMessage) { _ -> inboundMessage.complete(true) }
+            }
+            log.debug { "Sent message [${msgId}] in ${timeToSendMillis}ms." }
             auditService.packetAcceptedEvent(inboundMessage, RoutingDirection.INBOUND)
+            inboundMessage.release()
         } catch (ex: Exception) {
             log.error("Error trying to forward message", ex)
             inboundMessage.complete(false) // delivery failure. NAK back to source and await re-delivery attempts

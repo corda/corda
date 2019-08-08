@@ -148,6 +148,11 @@ class NetworkMapHttpProxyTest {
 
     @Before
     fun setUp() {
+        // Reset all proxy  related setting before the test
+        ProxyAuthSetter.unsetInstance()
+        Authenticator.setDefault(null)
+        AuthCacheValue.setAuthCache(AuthCacheImpl())
+
         server = NetworkMapServer(cacheTimeout, hostAndPort = NetworkHostAndPort(myHostname, serverPort))
         serverAddress = server.start()
         httpProxy.start()
@@ -158,8 +163,8 @@ class NetworkMapHttpProxyTest {
         server.close()
         httpProxy.stop()
         ProxyAuthSetter.unsetInstance()
-        Authenticator.setDefault(null)
         AuthCacheValue.setAuthCache(AuthCacheImpl())
+        Authenticator.setDefault(null)
     }
 
     @Test

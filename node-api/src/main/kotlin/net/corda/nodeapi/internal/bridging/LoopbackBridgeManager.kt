@@ -10,9 +10,10 @@ import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_P2P_U
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.RemoteInboxAddress.Companion.translateInboxAddressToLocalQueue
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.RemoteInboxAddress.Companion.translateLocalQueueToInboxAddress
 import net.corda.nodeapi.internal.ArtemisSessionProvider
-import net.corda.nodeapi.internal.config.MutualSslConfiguration
+import net.corda.nodeapi.internal.config.CertificateStore
 import net.corda.nodeapi.internal.protonwrapper.messages.impl.SendableMessageImpl
 import net.corda.nodeapi.internal.protonwrapper.netty.ProxyConfig
+import net.corda.nodeapi.internal.protonwrapper.netty.RevocationConfig
 import net.corda.nodeapi.internal.stillOpen
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient.DEFAULT_ACK_BATCH_SIZE
@@ -27,15 +28,18 @@ import org.slf4j.MDC
  *  inboxes.
  */
 @VisibleForTesting
-class LoopbackBridgeManager(config: MutualSslConfiguration,
+class LoopbackBridgeManager(keyStore: CertificateStore,
+                            trustStore: CertificateStore,
+                            useOpenSSL: Boolean,
                             proxyConfig: ProxyConfig? = null,
                             maxMessageSize: Int,
-                            crlCheckSoftFail: Boolean,
+                            revocationConfig: RevocationConfig,
                             enableSNI: Boolean,
                             private val artemisMessageClientFactory: () -> ArtemisSessionProvider,
                             private val bridgeMetricsService: BridgeMetricsService? = null,
                             private val isLocalInbox: (String) -> Boolean,
-                            trace: Boolean) : AMQPBridgeManager(config, proxyConfig, maxMessageSize, crlCheckSoftFail, enableSNI, artemisMessageClientFactory, bridgeMetricsService, trace) {
+                            trace: Boolean,
+                            sslHandshakeTimeout: Long? = null) : AMQPBridgeManager(keyStore, trustStore, useOpenSSL, proxyConfig, maxMessageSize, revocationConfig, enableSNI, artemisMessageClientFactory, bridgeMetricsService, trace, sslHandshakeTimeout) {
 
     companion object {
         private val log = contextLogger()

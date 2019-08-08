@@ -59,6 +59,8 @@ The set-up instructions are available for the following platforms:
 
 * :ref:`fedora-label`
 
+.. note:: These setup instructions will guide you on how to install the Oracle JDK.
+
 .. _windows-label:
 
 .. note:: These setup instructions will guide you on how to install the Oracle JDK. Each JDK can be found on their respective sites:
@@ -342,6 +344,9 @@ IntelliJ
 3. Run IntelliJ with ``/opt/ideaIC-<version>/bin/idea.sh``
 4. Ensure the Kotlin plugin in IntelliJ is updated to version |kotlin_version| (new installs will contains this version)
 
+You can clone these repos to your local machine by running the command ``git clone [repo URL]``.
+
+.. _deb-ubuntu-label:
 
 Next steps
 ----------

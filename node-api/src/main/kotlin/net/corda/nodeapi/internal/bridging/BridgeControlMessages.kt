@@ -47,4 +47,13 @@ sealed class BridgeControl {
      */
     @CordaSerializable
     data class Delete(val nodeIdentity: String, val bridgeInfo: BridgeEntry) : BridgeControl()
+
+    /**
+     * This message is sent to Bridge to check the health of it.
+     * @property requestId The identifier for the health check request as health check is likely to be produced repeatedly.
+     * @property command  Allows to specify the sort fo health check that needs to be performed.
+     * @property bridgeInfo The connection details of the new bridge (optional).
+     */
+    @CordaSerializable
+    data class BridgeHealthCheck(val requestId: Long, val command: String, val bridgeInfo: BridgeEntry?) : BridgeControl()
 }

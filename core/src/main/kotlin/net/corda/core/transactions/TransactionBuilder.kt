@@ -8,7 +8,6 @@ import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignableData
 import net.corda.core.crypto.SignatureMetadata
-import net.corda.core.crypto.keys
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
 import net.corda.core.node.NetworkParameters
@@ -23,7 +22,8 @@ import net.corda.core.utilities.contextLogger
 import java.security.PublicKey
 import java.time.Duration
 import java.time.Instant
-import java.util.*
+import java.util.ArrayDeque
+import java.util.UUID
 import java.util.regex.Pattern
 import kotlin.collections.ArrayList
 import kotlin.collections.component1
@@ -70,6 +70,7 @@ open class TransactionBuilder(
     private companion object {
         private fun defaultLockId() = (Strand.currentStrand() as? FlowStateMachine<*>)?.id?.uuid ?: UUID.randomUUID()
         private val log = contextLogger()
+        private const val CORDA_VERSION_THAT_INTRODUCED_FLATTENED_COMMANDS = 4
 
         private val ID_PATTERN = "\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*"
         private val FQCP = Pattern.compile("$ID_PATTERN(/$ID_PATTERN)+")

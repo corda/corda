@@ -18,7 +18,9 @@ import net.corda.node.services.messaging.ArtemisMessagingServer
 import net.corda.nodeapi.internal.*
 import net.corda.nodeapi.internal.bridging.BridgeControl
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
-import net.corda.nodeapi.internal.crypto.*
+import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
+import net.corda.nodeapi.internal.crypto.CertificateType
+import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.testing.core.*
 import net.corda.testing.internal.rigorousMock
@@ -26,6 +28,7 @@ import net.corda.testing.internal.stubs.CertificateStoreStubs
 import org.apache.activemq.artemis.api.core.RoutingType
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.curator.test.TestingServer
+import org.assertj.core.api.Assertions
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
@@ -66,14 +69,28 @@ class BridgeSmokeTest {
     }
 
     @Test
-    fun `Run full features bridge from jar to ensure everything works`() {
+    fun `Run full features bridge from jar to ensure everything works`() = runBridge("firewall.conf")
 
+    @Test
+    fun `Run full features bridge from jar with config from version 4`() = runBridge("firewall.conf", "version4")
+
+    @Test
+    fun `Run full features bridge from jar with config from version 3`() = runBridge("bridge.conf", "version3")
+
+    @Test
+    fun `Run bridge from jar with invalid config`() {
+        Assertions.assertThatThrownBy { runBridge("firewall.conf", "invalidoption") }
+                .isInstanceOf(IllegalStateException::class.java)
+                .hasMessageContaining("Bridge Failed")
+    }
+
+    private fun runBridge(configName: String, resourceSubDir: String = "") {
         val baseDirectory = tempFolder.root.toPath().createDirectories()
         val artemisConfig = CertificateStoreStubs.P2P.withBaseDirectory(baseDirectory)
 
         artemisConfig.createBridgeKeyStores(DUMMY_BANK_A_NAME)
         copyBridgeResource("corda-firewall.jar", baseDirectory)
-        copyBridgeResource("firewall.conf", baseDirectory)
+        copyBridgeResource(configName, baseDirectory, resourceSubDir)
         createNetworkParams(baseDirectory)
         val (artemisServer, artemisClient) = createArtemis(baseDirectory, baseDirectory / "certificates", artemisConfig)
         val zkServer = TestingServer(11105, false)
@@ -89,9 +106,9 @@ class BridgeSmokeTest {
         }
     }
 
-    private fun copyBridgeResource(resourceName: String, baseDirectory: Path) {
+    private fun copyBridgeResource(resourceName: String, baseDirectory: Path, resourceSubDir: String = "") {
         // Find the firewall jar file for the smoke tests of this module
-        val bridgeJar = Paths.get("build", "resources/smokeTest/net/corda/bridge/smoketest").list {
+        val bridgeJar = Paths.get("build", "resources/smokeTest/net/corda/bridge/smoketest/$resourceSubDir").list {
             it.filter { resourceName in it.toString() }.toList().single()
         }
         bridgeJar.copyToDirectory(baseDirectory)
@@ -158,6 +175,8 @@ class BridgeSmokeTest {
                 try {
                     if (!process.isAlive) {
                         log.error("Bridge has died.")
+                        // Cancel the polling if the process has not been properly started
+                        executor.shutdown()
                         return@scheduleWithFixedDelay
                     }
                     if (!serverListening("localhost", 10005)) {
