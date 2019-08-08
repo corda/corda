@@ -48,6 +48,8 @@ import java.util.jar.JarOutputStream
 import java.util.jar.Manifest
 import java.util.zip.ZipEntry
 import javax.security.auth.x500.X500Principal
+import java.io.IOException
+import java.net.ServerSocket
 
 @Suppress("unused")
 inline fun <reified T : Any> T.kryoSpecific(reason: String, function: () -> Unit) = if (!AMQP_ENABLED) {
@@ -228,5 +230,20 @@ fun <R> withTestSerializationEnvIfNotSet(block: () -> R): R {
         block()
     } else {
         createTestSerializationEnv().asTestContextEnv { block() }
+    }
+}
+
+/**
+ * Used to check if particular port is already bound i.e. not vacant
+ */
+fun isLocalPortBound(port: Int) : Boolean {
+    return try {
+        ServerSocket(port).use {
+            // Successful means that the port was vacant
+            false
+        }
+    } catch (e: IOException) {
+        // Failed to open server socket means that it is already bound by someone
+        true
     }
 }

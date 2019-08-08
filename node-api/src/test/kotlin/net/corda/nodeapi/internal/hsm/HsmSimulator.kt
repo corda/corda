@@ -4,13 +4,16 @@ import CryptoServerAPI.CryptoServerException
 import CryptoServerJCE.CryptoServerProvider
 import com.spotify.docker.client.DefaultDockerClient
 import com.spotify.docker.client.DockerClient
+import com.spotify.docker.client.DockerHost
 import com.spotify.docker.client.messages.ContainerConfig
 import com.spotify.docker.client.messages.HostConfig
 import com.spotify.docker.client.messages.PortBinding
 import com.spotify.docker.client.messages.RegistryAuth
 import net.corda.core.utilities.contextLogger
 import net.corda.testing.driver.PortAllocation
+import net.corda.testing.internal.isLocalPortBound
 import org.junit.Assume.assumeFalse
+import org.junit.Assume.assumeTrue
 import org.junit.rules.ExternalResource
 import java.io.ByteArrayOutputStream
 import kotlin.reflect.full.memberProperties
@@ -82,10 +85,14 @@ class HsmSimulator(portAllocation: PortAllocation,
     private var containerId: String? = null
 
     override fun before() {
+
+        val dockerEnv = DefaultDockerClient.fromEnv()
+        val dockerPort = (dockerEnv.uri().port).let { if (it > 0) it else DockerHost.defaultPort() }
+        assumeTrue("Docker should be running locally on port $dockerPort", isLocalPortBound(dockerPort))
         assumeFalse("Docker registry username is not set!. Skipping the test.", registryUser.isNullOrBlank())
         assumeFalse("Docker registry password is not set!. Skipping the test.", registryPass.isNullOrBlank())
 
-        docker = DefaultDockerClient.fromEnv().build()
+        docker = dockerEnv.build()
         if (pullImage) {
             docker.pullHsmSimulatorImageFromRepository()
         }
