@@ -52,24 +52,24 @@ class SchedulingContract : Contract {
      * State to mark a running notary health check. The ScheduleCheckFlow evolves a ScheduleCheckState into this when it
      * runs the healthcheck flow for its target.
      */
-    class RunningCheckState(override val linearId: UniqueIdentifier, override val participants: List<AbstractParty>, val startTime: Instant) : LinearState
+    data class RunningCheckState(override val linearId: UniqueIdentifier, override val participants: List<AbstractParty>, val startTime: Instant) : LinearState
 
     /**
      * State to mark a successful health check. The ScheduleCheckFlow evolves a RunningCheckState into this if the healthcheck
      * flow returns successfully.
      */
-    class SuccessfulCheckState(override val linearId: UniqueIdentifier, override val participants: List<AbstractParty>, val finishTime: Instant) : LinearState
+    data class SuccessfulCheckState(override val linearId: UniqueIdentifier, override val participants: List<AbstractParty>, val finishTime: Instant) : LinearState
 
     /**
      * State to mark a failed health check. The ScheduleCheckFlow evolves a RunningCheckState into this if the healthcheck
      * flow fails
      */
-    class FailedCheckState(override val linearId: UniqueIdentifier, override val participants: List<AbstractParty>) : LinearState
+    data class FailedCheckState(override val linearId: UniqueIdentifier, override val participants: List<AbstractParty>) : LinearState
 
     /**
      * State to mark an abandoned (not started) healthcheck. The ScheduleCheckFlow evolves a ScheduleCheckState into this
      * if there was still one or more healthcheck flows outstanding and the last one had been started less than waitForOutstandingFlowsSeconds
      * ago.
      */
-    class AbandonedCheckState(override val linearId: UniqueIdentifier, override val participants: List<AbstractParty>) : LinearState
+    data class AbandonedCheckState(override val linearId: UniqueIdentifier, override val participants: List<AbstractParty>) : LinearState
 }
