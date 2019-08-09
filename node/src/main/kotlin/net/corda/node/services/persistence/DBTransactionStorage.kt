@@ -47,7 +47,7 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
                 counter.getAndIncrement()
                 valueToAdd
             }
-            Pair(mapValue!!.first, mapValue!!.third)
+            Pair(mapValue!!.first, mapValue.third)
         }
         locks.forEach {
             it.first.lock()
@@ -207,8 +207,10 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
                         false
                     }
                 } else {
-                    set(transaction.id, cachedValue)
-                    onNewTx(transaction)
+                    logger.debug { "Writing transaction ${transaction.id} optimistically as verified" }
+                    set(transaction.id, cachedValue).apply {
+                        onNewTx(transaction)
+                    }
                 }
             }
         }
