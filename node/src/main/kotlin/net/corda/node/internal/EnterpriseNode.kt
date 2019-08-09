@@ -57,6 +57,8 @@ open class EnterpriseNode(configuration: NodeConfiguration,
         }
     }
 
+    private var wrappingCryptoService: CryptoService? = null
+
     class NodeCli : NodeStartupCli() {
         override val startup = Startup()
     }
@@ -196,6 +198,7 @@ D""".trimStart()
     override fun start(): NodeInfo {
         val info = super.start()
         registerOptionalMetricsReporter(configuration, services.monitoringService.metrics)
+        createWrappingKeyIfNeeded()
         return info
     }
 
@@ -238,28 +241,36 @@ D""".trimStart()
         } else {
             val cryptoServiceConfigBlock = freshIdentitiesConfig.cryptoServiceConfiguration
             val masterKeyAlias = freshIdentitiesConfig.masterKeyAlias
-            val wrappingCryptoService = CryptoServiceFactory.makeCryptoService(cryptoServiceConfigBlock.cryptoServiceName, configuration.myLegalName, configuration.signingCertificateStore, cryptoServiceConfigBlock.cryptoServiceConf, configuration.wrappingKeyStorePath)
-            verifyConfiguredModeIsSupported(freshIdentitiesConfig.mode, wrappingCryptoService, cryptoServiceConfigBlock.cryptoServiceName)
-            createWrappingKeyIfNeeded(freshIdentitiesConfig.createDuringStartup, masterKeyAlias, wrappingCryptoService, cryptoServiceConfigBlock.cryptoServiceName)
-            return BasicHSMKeyManagementService(cacheFactory, identityService, database, cryptoService, wrappingCryptoService, masterKeyAlias)
+            wrappingCryptoService = CryptoServiceFactory.makeCryptoService(cryptoServiceConfigBlock.cryptoServiceName, configuration.myLegalName, configuration.signingCertificateStore, cryptoServiceConfigBlock.cryptoServiceConf, configuration.wrappingKeyStorePath)
+            verifyConfiguredModeIsSupported(freshIdentitiesConfig.mode, wrappingCryptoService!!, cryptoServiceConfigBlock.cryptoServiceName)
+            return BasicHSMKeyManagementService(cacheFactory, identityService, database, cryptoService, wrappingCryptoService!!, masterKeyAlias)
         }
     }
 
-    private fun createWrappingKeyIfNeeded(createDuringStartup: CreateWrappingKeyDuringStartup, masterKeyAlias: String, cryptoService: CryptoService, cryptoServiceLabel: SupportedCryptoServices) {
+    private fun createWrappingKeyIfNeeded() {
+        val freshIdentitiesConfig = configuration.freshIdentitiesConfiguration
+        if (freshIdentitiesConfig == null) {
+            return
+        }
+
+        val wrappingCryptoServiceType = freshIdentitiesConfig.cryptoServiceConfiguration.cryptoServiceName
+        val createDuringStartup = freshIdentitiesConfig.createDuringStartup
+        val masterKeyAlias = freshIdentitiesConfig.masterKeyAlias
+
         when (createDuringStartup) {
             CreateWrappingKeyDuringStartup.YES -> {
                 try {
-                    cryptoService.createWrappingKey(masterKeyAlias)
+                    wrappingCryptoService!!.createWrappingKey(masterKeyAlias)
                 } catch(exception: IllegalArgumentException) {
-                    throw ConfigurationException("The crypto service configured for fresh identities ($cryptoServiceLabel) already contains a key under the alias: $masterKeyAlias. However, createDuringStartup is set to $createDuringStartup")
+                    throw ConfigurationException("The crypto service configured for fresh identities ($wrappingCryptoServiceType) already contains a key under the alias: $masterKeyAlias. However, createDuringStartup is set to $createDuringStartup")
                 }
             }
             CreateWrappingKeyDuringStartup.ONLY_IF_MISSING -> {
-                cryptoService.createWrappingKey(masterKeyAlias, false)
+                wrappingCryptoService!!.createWrappingKey(masterKeyAlias, failIfExists = false)
             }
             CreateWrappingKeyDuringStartup.NO -> {
-                if (!cryptoService.containsKey(masterKeyAlias)) {
-                    throw ConfigurationException("The crypto service configured for fresh identities ($cryptoServiceLabel) does not contain a key under the alias: $masterKeyAlias. However, createDuringStartup is set to $createDuringStartup")
+                if (!wrappingCryptoService!!.containsKey(masterKeyAlias)) {
+                    throw ConfigurationException("The crypto service configured for fresh identities ($wrappingCryptoServiceType) does not contain a key under the alias: $masterKeyAlias. However, createDuringStartup is set to $createDuringStartup")
                 }
             }
         }

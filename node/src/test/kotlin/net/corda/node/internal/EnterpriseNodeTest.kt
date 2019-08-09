@@ -74,38 +74,6 @@ class EnterpriseNodeTest {
                 .hasMessageContaining("The crypto service configured for fresh identities (BC_SIMPLE) supports the DEGRADED_WRAPPED mode, but the node is configured to use WRAPPED")
     }
 
-    @Test
-    fun `when configuration instructs to avoid creating the key on startup, but the key does not exist during startup, the node exits`() {
-        val freshIdentitiesConfiguration = FreshIdentitiesConfiguration(
-                WrappingMode.DEGRADED_WRAPPED,
-                CryptoServiceConfiguration(SupportedCryptoServices.BC_SIMPLE, null),
-                NodeConfigurationImpl.Defaults.masterKeyAlias,
-                CreateWrappingKeyDuringStartup.NO)
-        val nodeConfig = createConfig(freshIdentitiesConfiguration)
-
-        assertThatThrownBy { val node = EnterpriseNode(nodeConfig, versionInfo) }
-                .isInstanceOf(ConfigurationException::class.java)
-                .hasMessageContaining("The crypto service configured for fresh identities (BC_SIMPLE) does not contain a key under the alias: wrapping-key-alias. However, createDuringStartup is set to NO")
-    }
-
-    @Test
-    fun `when configuration instructs to create the key on startup, but the key already exists, the node exits`() {
-        val freshIdentitiesConfiguration = FreshIdentitiesConfiguration(
-                WrappingMode.DEGRADED_WRAPPED,
-                CryptoServiceConfiguration(SupportedCryptoServices.BC_SIMPLE, null),
-                NodeConfigurationImpl.Defaults.masterKeyAlias,
-                CreateWrappingKeyDuringStartup.YES)
-        val nodeConfig = createConfig(freshIdentitiesConfiguration)
-
-        // pre-create the key, before starting up the node
-        val cryptoService = CryptoServiceFactory.makeCryptoService(SupportedCryptoServices.BC_SIMPLE, nodeName, nodeConfig.signingCertificateStore, nodeConfig.cryptoServiceConf, nodeConfig.wrappingKeyStorePath)
-        cryptoService.createWrappingKey(NodeConfigurationImpl.Defaults.masterKeyAlias)
-
-        assertThatThrownBy { val node = EnterpriseNode(nodeConfig, versionInfo) }
-                .isInstanceOf(ConfigurationException::class.java)
-                .hasMessageContaining("The crypto service configured for fresh identities (BC_SIMPLE) already contains a key under the alias: wrapping-key-alias. However, createDuringStartup is set to YES")
-    }
-
     fun checkReplacement(orgname: String, expectedName: String, custom: String? = null) {
         val nodeConfig = mock<NodeConfiguration>() {
             whenever(it.myLegalName).thenReturn(CordaX500Name(orgname, "London", "GB"))

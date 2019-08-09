@@ -75,7 +75,7 @@ abstract class AbstractWrappedKeysTest: IntegrationTest() {
                                             "cryptoServiceName" to cryptoServiceName(),
                                             "cryptoServiceConf" to configPath()?.toFile()?.absolutePath
                                     ),
-                                    "createDuringStartup" to "ONLY_IF_MISSING"
+                                    "createDuringStartup" to "YES"
                             )
                     )),
                     startNode(providedName = genevieveName, customOverrides = mapOf(
