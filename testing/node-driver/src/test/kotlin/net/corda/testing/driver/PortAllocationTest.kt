@@ -1,6 +1,7 @@
 package net.corda.testing.driver
 
 import net.corda.core.utilities.Try
+import net.corda.core.utilities.contextLogger
 import net.corda.testing.node.PortAllocationRunner
 import org.assertj.core.util.Files
 import org.hamcrest.CoreMatchers.`is`
@@ -15,6 +16,10 @@ import java.util.concurrent.TimeUnit
 
 class PortAllocationTest {
 
+    companion object {
+        val logger = contextLogger()
+    }
+    
     @Test
     fun `should allocate a port whilst cycling back round if exceeding start of ephemeral range`() {
         val startingPoint = PortAllocation.DEFAULT_START_PORT
@@ -39,53 +44,57 @@ class PortAllocationTest {
     fun `should support multiprocess port allocation`() {
         assumeFalse(System.getProperty("os.name").toLowerCase().contains("windows"))
 
-        println("Starting multiprocess port allocation test")
+        logger.info("Starting multiprocess port allocation test")
         val spinnerFile = Files.newTemporaryFile().also { it.deleteOnExit() }.absolutePath
-        val process1 = buildJvmProcess(spinnerFile, 1)
-        val process2 = buildJvmProcess(spinnerFile, 2)
+        val iterCount = 10_000
+        val process1 = buildJvmProcess(spinnerFile, 1, iterCount)
+        val process2 = buildJvmProcess(spinnerFile, 2, iterCount)
 
-        println("Started child processes")
+        logger.info("Started child processes")
 
         val processes = listOf(process1, process2)
 
         val spinnerBackingFile = RandomAccessFile(spinnerFile, "rw")
-        println("Mapped spinner file")
+        logger.info("Mapped spinner file at: $spinnerFile")
         val spinnerBuffer = spinnerBackingFile.channel.map(FileChannel.MapMode.READ_WRITE, 0, 512)
-        println("Created spinner buffer")
+        logger.info("Created spinner buffer")
 
         var timeWaited = 0L
 
         while (spinnerBuffer.getShort(1) != 10.toShort() && spinnerBuffer.getShort(2) != 10.toShort() && timeWaited < 60_000) {
-            println("Waiting to childProcesses to report back. waited ${timeWaited}ms")
+            logger.info("Waiting to childProcesses to report back. waited ${timeWaited}ms")
             Thread.sleep(1000)
             timeWaited += 1000
         }
 
         //GO!
-        println("Instructing child processes to start allocating ports")
+        logger.info("Instructing child processes to start allocating ports")
         spinnerBuffer.putShort(0, 8)
-        println("Waiting for child processes to terminate")
-        processes.forEach { it.waitFor(1, TimeUnit.MINUTES) }
-        println("child processes terminated")
+        logger.info("Waiting for child processes to terminate")
+        val terminationStatuses = processes.map { if(it.waitFor(1, TimeUnit.MINUTES)) "OK" else "STILL RUNNING" }
+        logger.info("child processes terminated: $terminationStatuses")
 
-        fun Process.setOfPorts() : Set<Int> {
+        fun List<String>.setOfPorts() : Set<Int> {
             // May include warnings when ports are busy
-            return inputStream.reader().readLines().map { Try.on { Integer.parseInt(it)} }.filter { it.isSuccess }.map { it.getOrThrow() }.toSet()
+            return map { Try.on { Integer.parseInt(it)} }.filter { it.isSuccess }.map { it.getOrThrow() }.toSet()
         }
 
-        val process1Output = process1.setOfPorts()
-        val process2Output = process2.setOfPorts()
+        val lines1 = process1.inputStream.reader().readLines()
+        val portsAllocated1 = lines1.setOfPorts()
+        val lines2 = process2.inputStream.reader().readLines()
+        val portsAllocated2 = lines2.setOfPorts()
 
-        println("child process out captured")
+        logger.info("child process out captured")
 
-        Assert.assertThat(process1Output.size, `is`(10_000))
-        Assert.assertThat(process2Output.size, `is`(10_000))
+        Assert.assertThat(lines1.joinToString(), portsAllocated1.size, `is`(iterCount))
+        Assert.assertThat(lines2.joinToString(), portsAllocated2.size, `is`(iterCount))
 
         //there should be no overlap between the outputs as each process should have been allocated a unique set of ports
-        Assert.assertThat(process1Output.intersect(process2Output), `is`(emptySet()))
+        val intersect = portsAllocated1.intersect(portsAllocated2)
+        Assert.assertThat(intersect.joinToString(), intersect, `is`(emptySet()))
     }
 
-    private fun buildJvmProcess(spinnerFile: String, reportingIndex: Int): Process {
+    private fun buildJvmProcess(spinnerFile: String, reportingIndex: Int, iterCount: Int): Process {
         val separator = System.getProperty("file.separator")
         val classpath = System.getProperty("java.class.path")
         val path = (System.getProperty("java.home")
@@ -94,7 +103,8 @@ class PortAllocationTest {
                 classpath,
                 PortAllocationRunner::class.java.name,
                 spinnerFile,
-                reportingIndex.toString())
+                reportingIndex.toString(),
+                iterCount.toString())
 
         return processBuilder.start()
     }
