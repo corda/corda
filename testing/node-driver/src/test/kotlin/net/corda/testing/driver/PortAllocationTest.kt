@@ -1,5 +1,6 @@
 package net.corda.testing.driver
 
+import net.corda.core.utilities.Try
 import net.corda.testing.node.PortAllocationRunner
 import org.assertj.core.util.Files
 import org.hamcrest.CoreMatchers.`is`
@@ -67,8 +68,13 @@ class PortAllocationTest {
         processes.forEach { it.waitFor(1, TimeUnit.MINUTES) }
         println("child processes terminated")
 
-        val process1Output = process1.inputStream.reader().readLines().toSet()
-        val process2Output = process2.inputStream.reader().readLines().toSet()
+        fun Process.setOfPorts() : Set<Int> {
+            // May include warnings when ports are busy
+            return inputStream.reader().readLines().map { Try.on { Integer.parseInt(it)} }.filter { it.isSuccess }.map { it.getOrThrow() }.toSet()
+        }
+
+        val process1Output = process1.setOfPorts()
+        val process2Output = process2.setOfPorts()
 
         println("child process out captured")
 
