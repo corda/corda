@@ -9,6 +9,7 @@ import net.corda.core.contracts.ComponentGroupEnum.OUTPUTS_GROUP
 import net.corda.core.crypto.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
+import net.corda.core.internal.node.services.AttachmentStorageInternal
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
@@ -108,7 +109,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                     services.networkParametersService.lookup(hashToResolve)
                 },
                 resolveContractAttachment = { services.loadContractAttachment(it) },
-                isAttachmentTrusted = { isAttachmentTrusted(it, services.attachments) }
+                isAttachmentTrusted = { isAttachmentTrusted(it, services.attachments as AttachmentStorageInternal) }
         )
     }
 

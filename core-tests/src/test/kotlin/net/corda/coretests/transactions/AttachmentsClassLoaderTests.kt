@@ -6,6 +6,7 @@ import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.declaredField
+import net.corda.core.internal.hash
 import net.corda.core.internal.inputStream
 import net.corda.core.internal.isAttachmentTrusted
 import net.corda.core.node.NetworkParameters
@@ -19,6 +20,7 @@ import net.corda.testing.services.MockAttachmentStorage
 import org.apache.commons.io.IOUtils
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
+import org.junit.Before
 import org.junit.Test
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
@@ -40,11 +42,17 @@ class AttachmentsClassLoaderTests {
         }
     }
 
-    private val storage = MockAttachmentStorage()
+    private var storage = MockAttachmentStorage()
     private val networkParameters = testNetworkParameters()
+
     private fun make(attachments: List<Attachment>,
                      params: NetworkParameters = networkParameters): AttachmentsClassLoader {
         return AttachmentsClassLoader(attachments, params, SecureHash.zeroHash, { isAttachmentTrusted(it, storage) })
+    }
+
+    @Before
+    fun setup() {
+        storage = MockAttachmentStorage()
     }
 
     @Test
@@ -373,5 +381,65 @@ class AttachmentsClassLoaderTests {
         assertFailsWith(TransactionVerificationException.UntrustedAttachmentsException::class) {
             make(arrayOf(untrustedAttachment).map { storage.openAttachment(it)!! })
         }
+    }
+
+    @Test
+    fun `Cannot load an untrusted contract jar if it is signed by a blacklisted key`() {
+        val keyPairA = Crypto.generateKeyPair()
+        val keyPairB = Crypto.generateKeyPair()
+
+        storage = MockAttachmentStorage(listOf(keyPairB.public.hash))
+
+        val classJar = fakeAttachment(
+            "/com/example/something/UntrustedClass.class",
+            "Signed by someone trusted"
+        ).inputStream()
+        classJar.use {
+            storage.importContractAttachment(
+                listOf("UntrustedClass.class"),
+                "rpc",
+                it,
+                signers = listOf(keyPairA.public, keyPairB.public)
+            )
+        }
+
+        val untrustedClassJar = fakeAttachment(
+            "/com/example/something/UntrustedClass.class",
+            "Signed by someone untrusted"
+        ).inputStream()
+        val untrustedAttachment = untrustedClassJar.use {
+            storage.importContractAttachment(
+                listOf("UntrustedClass.class"),
+                "untrusted",
+                it,
+                signers = listOf(keyPairA.public, keyPairB.public)
+            )
+        }
+
+        assertFailsWith(TransactionVerificationException.UntrustedAttachmentsException::class) {
+            make(arrayOf(untrustedAttachment).map { storage.openAttachment(it)!! })
+        }
+    }
+
+    @Test
+    fun `Allow loading a trusted attachment that is signed by a blacklisted key`() {
+        val keyPairA = Crypto.generateKeyPair()
+
+        storage = MockAttachmentStorage(listOf(keyPairA.public.hash))
+
+        val classJar = fakeAttachment(
+            "/com/example/something/UntrustedClass.class",
+            "Signed by someone trusted"
+        ).inputStream()
+        val trustedAttachment = classJar.use {
+            storage.importContractAttachment(
+                listOf("UntrustedClass.class"),
+                "rpc",
+                it,
+                signers = listOf(keyPairA.public)
+            )
+        }
+
+        make(arrayOf(trustedAttachment).map { storage.openAttachment(it)!! })
     }
 }

@@ -13,7 +13,7 @@ import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.cordapp.CordappLoader
-import net.corda.node.services.persistence.AttachmentStorageInternal
+import net.corda.core.internal.node.services.AttachmentStorageInternal
 import java.net.URL
 import java.util.concurrent.ConcurrentHashMap
 

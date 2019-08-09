@@ -16,6 +16,7 @@ import net.corda.core.internal.*
 import net.corda.core.internal.Version
 import net.corda.core.internal.cordapp.CordappImpl.Companion.CORDAPP_CONTRACT_VERSION
 import net.corda.core.internal.cordapp.CordappImpl.Companion.DEFAULT_CORDAPP_VERSION
+import net.corda.core.internal.node.services.AttachmentStorageInternal
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.vault.AttachmentQueryCriteria
@@ -36,6 +37,7 @@ import net.corda.nodeapi.internal.withContractsInJar
 import java.io.FilterInputStream
 import java.io.IOException
 import java.io.InputStream
+import java.lang.IllegalArgumentException
 import java.nio.file.Paths
 import java.security.PublicKey
 import java.time.Instant
@@ -49,15 +51,22 @@ import javax.persistence.*
  * Stores attachments using Hibernate to database.
  */
 @ThreadSafe
-class NodeAttachmentService(
-        metrics: MetricRegistry,
-        cacheFactory: NamedCacheFactory,
-        private val database: CordaPersistence,
-        val devMode: Boolean
+class NodeAttachmentService @JvmOverloads constructor(
+    metrics: MetricRegistry,
+    cacheFactory: NamedCacheFactory,
+    private val database: CordaPersistence,
+    val devMode: Boolean = false,
+    keysToBlacklist: List<String> = emptyList()
 ) : AttachmentStorageInternal, SingletonSerializeAsToken() {
-    constructor(metrics: MetricRegistry,
-                cacheFactory: NamedCacheFactory,
-                database: CordaPersistence) : this(metrics, cacheFactory, database, false)
+
+    override val blacklistedAttachmentSigningKeys: List<SecureHash> = keysToBlacklist.mapNotNull {
+        try {
+            SecureHash.parse(it)
+        } catch (e: IllegalArgumentException) {
+            log.warn("Failed to parse blacklisted attachment signing key: $it. The key will not be added to the list of blacklisted attachment signing keys")
+            null
+        }
+    }
 
     // This is to break the circular dependency.
     lateinit var servicesForResolution: ServicesForResolution

@@ -7,7 +7,7 @@ import net.corda.core.crypto.componentHash
 import net.corda.core.crypto.sha256
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.Party
-import net.corda.core.node.services.AttachmentStorage
+import net.corda.core.internal.node.services.AttachmentStorageInternal
 import net.corda.core.node.services.vault.AttachmentQueryCriteria
 import net.corda.core.node.services.vault.Builder
 import net.corda.core.serialization.*
@@ -197,7 +197,7 @@ private val trustedKeysCache: MutableMap<PublicKey, Boolean> =
  *  - There is another attachment in the attachment store, that is trusted and is signed by at least one key that the input
  *  attachment is also signed with
  */
-fun isAttachmentTrusted(attachment: Attachment, service: AttachmentStorage?): Boolean {
+fun isAttachmentTrusted(attachment: Attachment, service: AttachmentStorageInternal?): Boolean {
     val trustedByUploader = when (attachment) {
         is ContractAttachment -> isUploaderTrusted(attachment.uploader)
         is AbstractAttachment -> isUploaderTrusted(attachment.uploader)
@@ -206,7 +206,9 @@ fun isAttachmentTrusted(attachment: Attachment, service: AttachmentStorage?): Bo
 
     if (trustedByUploader) return true
 
-    return if (service != null && attachment.signerKeys.isNotEmpty()) {
+    if (service == null || attachment.isSignedByBlacklistedKeys(service)) return false
+
+    return if (attachment.signerKeys.isNotEmpty()) {
         attachment.signerKeys.any { signer ->
             trustedKeysCache.computeIfAbsent(signer) {
                 val queryCriteria = AttachmentQueryCriteria.AttachmentsQueryCriteria(
@@ -220,6 +222,9 @@ fun isAttachmentTrusted(attachment: Attachment, service: AttachmentStorage?): Bo
         false
     }
 }
+
+private fun Attachment.isSignedByBlacklistedKeys(service: AttachmentStorageInternal) =
+    signerKeys.map { it.hash }.any(service.blacklistedAttachmentSigningKeys::contains)
 
 val SignedTransaction.dependencies: Set<SecureHash>
     get() = (inputs.asSequence() + references.asSequence()).map { it.txhash }.toSet()

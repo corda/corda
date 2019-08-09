@@ -11,6 +11,7 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.AttachmentWithContext
 import net.corda.core.internal.combinedHash
 import net.corda.core.internal.isAttachmentTrusted
+import net.corda.core.internal.node.services.AttachmentStorageInternal
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.serialization.CordaSerializable
@@ -153,7 +154,7 @@ data class ContractUpgradeWireTransaction(
                 listOf(legacyAttachment, upgradedAttachment),
                 params,
                 id,
-                { isAttachmentTrusted(it, services.attachments) }) { transactionClassLoader ->
+                { isAttachmentTrusted(it, services.attachments as AttachmentStorageInternal) }) { transactionClassLoader ->
             val resolvedInput = binaryInput.deserialize()
             val upgradedContract = upgradedContract(upgradedContractClassName, transactionClassLoader)
             val outputState = calculateUpgradedState(resolvedInput, upgradedContract, upgradedAttachment)

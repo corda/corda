@@ -7,6 +7,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.deserialiseComponentGroup
 import net.corda.core.internal.div
 import net.corda.core.internal.isAttachmentTrusted
+import net.corda.core.internal.node.services.AttachmentStorageInternal
 import net.corda.core.internal.readObject
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.ServicesForResolution
@@ -115,7 +116,7 @@ class MigrationServicesForResolution(
                     txAttachments,
                     networkParameters,
                     tx.id,
-                    { isAttachmentTrusted(it, attachments) },
+                    { isAttachmentTrusted(it, attachments as AttachmentStorageInternal) },
                     cordappLoader.appClassLoader) {
                 deserialiseComponentGroup(tx.componentGroups, TransactionState::class, ComponentGroupEnum.OUTPUTS_GROUP, forceDeserialize = true)
             }

@@ -1048,6 +1048,71 @@ class NodeAttachmentServiceTest {
     }
 
     @Test
+    fun `jar not trusted if signed by a blacklisted key and not uploaded by trusted uploader`() {
+        SelfCleaningDir().use { file ->
+
+            val aliasA = "Antman"
+            val aliasB = "The Wasp"
+            val password = "antman and the wasp"
+            file.path.generateKey(aliasA, password)
+            val keyB = file.path.generateKey(aliasB, password)
+
+            storage = NodeAttachmentService(
+                MetricRegistry(),
+                TestingNamedCacheFactory(),
+                database,
+                keysToBlacklist = listOf(keyB.hash.toString())
+            ).also {
+                database.transaction {
+                    it.start()
+                }
+            }
+            storage.servicesForResolution = services
+
+            val jarA = makeTestContractJar(file.path, "foo.bar.DummyContract")
+            file.path.signJar(jarA.toAbsolutePath().toString(), aliasA, password)
+            file.path.signJar(jarA.toAbsolutePath().toString(), aliasB, password)
+            val jarB = makeTestContractJar(file.path, "foo.bar.AnotherDummyContract")
+            file.path.signJar(jarB.toAbsolutePath().toString(), aliasA, password)
+            file.path.signJar(jarB.toAbsolutePath().toString(), aliasB, password)
+
+            val attachmentA = jarA.read { storage.privilegedImportAttachment(it, "app", "dummy-contract.jar") }
+            val attachmentB = jarB.read { storage.privilegedImportAttachment(it, "untrusted", "dummy-contract.jar") }
+
+            assertTrue(isAttachmentTrusted(storage.openAttachment(attachmentA)!!, storage), "Contract $attachmentA should be trusted")
+            assertFalse(isAttachmentTrusted(storage.openAttachment(attachmentB)!!, storage), "Contract $attachmentB should not be trusted")
+        }
+    }
+
+    @Test
+    fun `jar uploaded by trusted uploader is still trusted even if it is signed by a blacklisted key`() {
+        SelfCleaningDir().use { file ->
+
+            val aliasA = "Thanos"
+            val password = "what did it cost? everything"
+            val key = file.path.generateKey(aliasA, password)
+
+            storage = NodeAttachmentService(
+                MetricRegistry(),
+                TestingNamedCacheFactory(),
+                database,
+                keysToBlacklist = listOf(key.hash.toString())
+            ).also {
+                database.transaction {
+                    it.start()
+                }
+            }
+            storage.servicesForResolution = services
+
+            val jar = makeTestContractJar(file.path, "foo.bar.DummyContract")
+            file.path.signJar(jar.toAbsolutePath().toString(), aliasA, password)
+            val attachment = jar.read { storage.privilegedImportAttachment(it, "app", "dummy-contract.jar") }
+
+            assertTrue(isAttachmentTrusted(storage.openAttachment(attachment)!!, storage), "Contract $attachment should be trusted")
+        }
+    }
+
+    @Test
     fun `attachments can be queried by providing a intersection of signers using an EQUAL statement - EQUAL containing a single public key`() {
         SelfCleaningDir().use { file ->
             val aliasA = "Luke Skywalker"

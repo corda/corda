@@ -22,6 +22,7 @@ import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.messaging.InternalCordaRPCOps
+import net.corda.core.internal.node.services.AttachmentStorageInternal
 import net.corda.core.internal.notary.NotaryService
 import net.corda.core.messaging.*
 import net.corda.core.node.*
@@ -174,7 +175,13 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     @Suppress("LeakingThis")
     val transactionStorage = makeTransactionStorage(configuration.transactionCacheSizeBytes).tokenize()
     val networkMapClient: NetworkMapClient? = configuration.networkServices?.let { NetworkMapClient(it.networkMapURL, versionInfo) }
-    val attachments = NodeAttachmentService(metricRegistry, cacheFactory, database, configuration.devMode).tokenize()
+    val attachments = NodeAttachmentService(
+        metricRegistry,
+        cacheFactory,
+        database,
+        configuration.devMode,
+        configuration.blacklistedAttachmentSigningKeys
+    ).tokenize()
     val cryptoService = CryptoServiceFactory.makeCryptoService(
             SupportedCryptoServices.BC_SIMPLE,
             configuration.myLegalName,
