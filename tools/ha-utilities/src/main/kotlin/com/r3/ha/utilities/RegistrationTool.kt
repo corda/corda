@@ -117,7 +117,7 @@ class RegistrationTool : CordaCliWrapper("node-registration", "Corda registratio
             // If manual interaction will be needed - it would be possible to sign them all off at once on Doorman side.
             val nodeConfigurations = ConcurrentLinkedQueue<Pair<CordaX500Name, Try<NodeConfiguration>>>()
             val startedThreads = configFiles.map {
-                val legalName = ConfigHelper.loadConfig(it.parent, it).parseAsNodeConfiguration().value().myLegalName
+                val legalName = ConfigHelper.loadConfig(it.parentOrDefault, it).parseAsNodeConfiguration().value().myLegalName
                 thread(name = legalName.toString(), start = true) {
                     nodeConfigurations.add(Pair(legalName, Try.on {
                         try {
@@ -125,8 +125,8 @@ class RegistrationTool : CordaCliWrapper("node-registration", "Corda registratio
                             // Load the config again with modified base directory.
                             val folderName = if (legalName.commonName == null) legalName.organisation else "${legalName.commonName},${legalName.organisation}"
                             val baseDir = baseDirectory / folderName.toFileName()
-                            val parsedConfig = resolveCryptoServiceConfPathToAbsolutePath(it.parent,
-                                                                                          ConfigHelper.loadConfig(it.parent, it))
+                            val parsedConfig = resolveCryptoServiceConfPathToAbsolutePath(it.parentOrDefault,
+                                                                                          ConfigHelper.loadConfig(it.parentOrDefault, it))
                                     .withValue("baseDirectory", ConfigValueFactory.fromAnyRef(baseDir.toString()))
                                     .parseAsNodeConfiguration()
                                     .value()
@@ -223,15 +223,18 @@ class RegistrationTool : CordaCliWrapper("node-registration", "Corda registratio
         return replace("[^a-zA-Z0-9-_.]".toRegex(), "_")
     }
 
+    private val Path.parentOrDefault get() = this.parent ?: Paths.get(".")
+
     // Make sure the nodes don't have conflicting crypto service configurations
     private fun validateNodeHsmConfigs(configFiles: List<Path>) {
         val cryptoServicesTypes = mutableMapOf<SupportedCryptoServices, MutableList<Any>>()
         configFiles.forEach { configPath ->
-            val nodeConfig = ConfigHelper.loadConfig(configPath.parent, configPath).parseAsNodeConfiguration().value()
+            logger.info("Parsing ${configPath.toAbsolutePath().normalize()}")
+            val nodeConfig = ConfigHelper.loadConfig(configPath.parentOrDefault, configPath).parseAsNodeConfiguration().value()
             val errorMessage = "Node ${nodeConfig.myLegalName} has conflicting crypto service configuration."
             nodeConfig.cryptoServiceName?.let { nodeCryptoServiceName ->
                 val configs = cryptoServicesTypes.getOrDefault(nodeCryptoServiceName, mutableListOf())
-                val cryptoServiceConfigPath = resolveCryptoConfPath(configPath.parent, nodeConfig.cryptoServiceConf!!)
+                val cryptoServiceConfigPath = resolveCryptoConfPath(configPath.parentOrDefault, nodeConfig.cryptoServiceConf!!)
                 val toProcess = readCryptoConfigFile(nodeCryptoServiceName, cryptoServiceConfigPath)
                 configs.forEach {
                     when(nodeCryptoServiceName) {
@@ -315,7 +318,8 @@ class RegistrationTool : CordaCliWrapper("node-registration", "Corda registratio
             var bridgeCryptoServiceName: SupportedCryptoServices? = null
             try {
                 // Get CryptoService type from bridge configuration
-                val bridgeConfig = ConfigHelper.loadConfig(configFile.parent, configFile)
+                logger.info("Parsing ${configFile.toAbsolutePath().normalize()}")
+                val bridgeConfig = ConfigHelper.loadConfig(configFile.parentOrDefault, configFile)
                 if (bridgeConfig.isEmpty || !bridgeConfig.hasPath("p2pTlsSigningCryptoServiceConfig")) {
                     throw IllegalArgumentException("Bridge configuration file missing 'p2pTlsSigningCryptoServiceConfig' property.")
                 }
@@ -326,7 +330,7 @@ class RegistrationTool : CordaCliWrapper("node-registration", "Corda registratio
                 }
                 bridgeCryptoServiceName = SupportedCryptoServices.valueOf(bridgeCryptoServiceConfig.getString("name"))
                 val bridgeCryptoServiceConfigFile = Paths.get(bridgeCryptoServiceConfig.getString("conf"))
-                CryptoServiceFactory.makeCryptoService(bridgeCryptoServiceName, DUMMY_X500_NAME, null, (configFile.parent / bridgeCryptoServiceConfigFile.fileName.toString()))
+                CryptoServiceFactory.makeCryptoService(bridgeCryptoServiceName, DUMMY_X500_NAME, null, (configFile.parentOrDefault / bridgeCryptoServiceConfigFile.fileName.toString()))
             }
             catch (ex: NoClassDefFoundError) {
                 logger.error ("Caught a NoClassDefFoundError exception when trying to load the ${bridgeCryptoServiceName?.name} crypto service")
