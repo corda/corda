@@ -25,6 +25,10 @@ import org.junit.Test
 import java.net.URL
 import java.nio.file.Path
 
+internal val notaryName = CordaX500Name("NotaryService", "Zurich", "CH")
+internal val aliceName = CordaX500Name("Alice", "London", "GB")
+internal val genevieveName = CordaX500Name("Genevieve", "London", "GB")
+
 abstract class AbstractWrappedKeysTest: IntegrationTest() {
 
     internal abstract fun configPath(): Path?
@@ -40,15 +44,6 @@ abstract class AbstractWrappedKeysTest: IntegrationTest() {
     @Rule
     @JvmField
     val doorman = TestDoorman(portAllocation)
-
-    companion object {
-        @JvmStatic
-        protected val notaryName = CordaX500Name("NotaryService", "Zurich", "CH")
-        @JvmStatic
-        protected val aliceName = CordaX500Name("Alice", "London", "GB")
-        @JvmStatic
-        protected val genevieveName = CordaX500Name("Genevieve", "London", "GB")
-    }
 
     @After
     fun after() {

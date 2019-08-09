@@ -4,6 +4,9 @@ import com.securosys.primus.jce.PrimusProvider
 import com.typesafe.config.ConfigFactory
 import net.corda.core.internal.toPath
 import net.corda.node.services.keys.cryptoservice.AbstractWrappedKeysTest
+import net.corda.node.services.keys.cryptoservice.aliceName
+import net.corda.node.services.keys.cryptoservice.genevieveName
+import net.corda.node.services.keys.cryptoservice.notaryName
 import net.corda.nodeapi.internal.config.parseAs
 import net.corda.nodeapi.internal.cryptoservice.SupportedCryptoServices
 import net.corda.nodeapi.internal.cryptoservice.securosys.PrimusXCryptoService
