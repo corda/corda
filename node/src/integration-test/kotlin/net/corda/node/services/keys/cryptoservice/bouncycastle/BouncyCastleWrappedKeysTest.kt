@@ -1,10 +1,19 @@
 package net.corda.node.services.keys.cryptoservice.bouncycastle
 
+import net.corda.core.identity.CordaX500Name
 import net.corda.node.services.keys.cryptoservice.AbstractWrappedKeysTest
 import net.corda.nodeapi.internal.cryptoservice.SupportedCryptoServices
+import net.corda.testing.internal.IntegrationTestSchemas
+import org.junit.ClassRule
 import java.nio.file.Path
 
 class BouncyCastleWrappedKeysTest: AbstractWrappedKeysTest() {
+
+    companion object {
+        @ClassRule
+        @JvmField
+        val databaseSchemas = IntegrationTestSchemas(notaryName, aliceName, genevieveName)
+    }
 
     override fun configPath(): Path? = null
 

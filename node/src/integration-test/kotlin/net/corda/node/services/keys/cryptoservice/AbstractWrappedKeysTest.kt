@@ -14,14 +14,12 @@ import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.internal.DEV_ROOT_CA
 import net.corda.testing.internal.IntegrationTest
-import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.internal.FINANCE_CORDAPPS
 import net.corda.testing.node.internal.SharedCompatibilityZoneParams
 import net.corda.testing.node.internal.internalDriver
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
-import org.junit.ClassRule
 import org.junit.Rule
 import org.junit.Test
 import java.net.URL
@@ -44,13 +42,12 @@ abstract class AbstractWrappedKeysTest: IntegrationTest() {
     val doorman = TestDoorman(portAllocation)
 
     companion object {
-        private val notaryName = CordaX500Name("NotaryService", "Zurich", "CH")
-        private val aliceName = CordaX500Name("Alice", "London", "GB")
-        private val genevieveName = CordaX500Name("Genevieve", "London", "GB")
-
-        @ClassRule
-        @JvmField
-        val databaseSchemas = IntegrationTestSchemas(notaryName, aliceName, genevieveName)
+        @JvmStatic
+        protected val notaryName = CordaX500Name("NotaryService", "Zurich", "CH")
+        @JvmStatic
+        protected val aliceName = CordaX500Name("Alice", "London", "GB")
+        @JvmStatic
+        protected val genevieveName = CordaX500Name("Genevieve", "London", "GB")
     }
 
     @After

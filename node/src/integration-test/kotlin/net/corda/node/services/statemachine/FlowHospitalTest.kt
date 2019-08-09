@@ -22,6 +22,7 @@ import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.node.User
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.junit.ClassRule
 import org.junit.Test
 import java.util.*
 import java.util.concurrent.ExecutionException
@@ -29,7 +30,10 @@ import java.util.concurrent.ExecutionException
 class FlowHospitalTest: IntegrationTest() {
 
     companion object {
+        @ClassRule
+        @JvmField
         val databaseSchemas = IntegrationTestSchemas(CHARLIE_NAME, ALICE_NAME, DUMMY_NOTARY_NAME)
+
         val rpcUser = User("user1", "test", permissions = setOf(Permissions.all()))
     }
 
@@ -92,7 +96,6 @@ class FlowHospitalTest: IntegrationTest() {
             val stateAndRef = notarised.coreTransaction.outRef<SingleOwnerState>(0)
             return stateAndRef
         }
-
     }
 
     @StartableByRPC
@@ -107,7 +110,6 @@ class FlowHospitalTest: IntegrationTest() {
             sessionWithCounterParty.sendAndReceive<String>("initial-message")
             subFlow(FinalityFlow(signedTransaction, setOf(sessionWithCounterParty)))
         }
-
     }
 
     @InitiatedBy(SpendFlow::class)
@@ -120,7 +122,6 @@ class FlowHospitalTest: IntegrationTest() {
 
             subFlow(ReceiveFinalityFlow(otherSide))
         }
-
     }
 
     @StartableByRPC
@@ -152,9 +153,7 @@ class FlowHospitalTest: IntegrationTest() {
 
             subFlow(ReceiveFinalityFlow(otherSide))
         }
-
     }
 
     class DoubleSpendException(message: String, cause: Throwable): FlowException(message, cause)
-
 }
