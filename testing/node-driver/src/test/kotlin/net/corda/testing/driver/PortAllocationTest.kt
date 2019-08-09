@@ -13,6 +13,7 @@ import org.junit.Test
 import java.io.RandomAccessFile
 import java.nio.channels.FileChannel
 import java.util.concurrent.TimeUnit
+import kotlin.streams.toList
 
 class PortAllocationTest {
 
@@ -46,7 +47,8 @@ class PortAllocationTest {
 
         logger.info("Starting multiprocess port allocation test")
         val spinnerFile = Files.newTemporaryFile().also { it.deleteOnExit() }.absolutePath
-        val iterCount = 10_000
+        val iterCount = 8_000 // Default port range 10000-30000 since we will have 2 processes we want to make sure there is enough leg room
+                              // If we rollover, we may well receive the ports that were already given to a different process
         val process1 = buildJvmProcess(spinnerFile, 1, iterCount)
         val process2 = buildJvmProcess(spinnerFile, 2, iterCount)
 
@@ -71,7 +73,7 @@ class PortAllocationTest {
         logger.info("Instructing child processes to start allocating ports")
         spinnerBuffer.putShort(0, 8)
         logger.info("Waiting for child processes to terminate")
-        val terminationStatuses = processes.map { if(it.waitFor(1, TimeUnit.MINUTES)) "OK" else "STILL RUNNING" }
+        val terminationStatuses = processes.parallelStream().map { if(it.waitFor(1, TimeUnit.MINUTES)) "OK" else "STILL RUNNING" }.toList()
         logger.info("child processes terminated: $terminationStatuses")
 
         fun List<String>.setOfPorts() : Set<Int> {
