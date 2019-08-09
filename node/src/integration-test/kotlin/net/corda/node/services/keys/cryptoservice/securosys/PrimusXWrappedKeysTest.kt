@@ -4,15 +4,26 @@ import com.securosys.primus.jce.PrimusProvider
 import com.typesafe.config.ConfigFactory
 import net.corda.core.internal.toPath
 import net.corda.node.services.keys.cryptoservice.AbstractWrappedKeysTest
+import net.corda.node.services.keys.cryptoservice.aliceName
+import net.corda.node.services.keys.cryptoservice.genevieveName
+import net.corda.node.services.keys.cryptoservice.notaryName
 import net.corda.nodeapi.internal.config.parseAs
 import net.corda.nodeapi.internal.cryptoservice.SupportedCryptoServices
 import net.corda.nodeapi.internal.cryptoservice.securosys.PrimusXCryptoService
+import net.corda.testing.internal.IntegrationTestSchemas
+import org.junit.ClassRule
 import org.junit.Ignore
 import java.nio.file.Path
 import java.security.KeyStore
 
 @Ignore
 class PrimusXWrappedKeysTest: AbstractWrappedKeysTest() {
+
+    companion object {
+        @ClassRule
+        @JvmField
+        val databaseSchemas = IntegrationTestSchemas(notaryName, aliceName, genevieveName)
+    }
 
     override fun configPath(): Path = javaClass.getResource("primusx.conf").toPath()
 

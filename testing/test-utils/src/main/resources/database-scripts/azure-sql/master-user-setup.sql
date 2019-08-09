@@ -10,6 +10,7 @@ CREATE LOGIN BobPlc WITH PASSWORD = 'yourStrong(!)Password';
 CREATE LOGIN CharlieLtd WITH PASSWORD = 'yourStrong(!)Password';
 CREATE LOGIN DistributedService_0 WITH PASSWORD = 'yourStrong(!)Password';
 CREATE LOGIN DistributedService_1 WITH PASSWORD = 'yourStrong(!)Password';
+CREATE LOGIN Genevieve WITH PASSWORD = 'yourStrong(!)Password';
 CREATE LOGIN NetworkMapService WITH PASSWORD = 'yourStrong(!)Password';
 CREATE LOGIN Notary WITH PASSWORD = 'yourStrong(!)Password';
 CREATE LOGIN NotaryService WITH PASSWORD = 'yourStrong(!)Password';
