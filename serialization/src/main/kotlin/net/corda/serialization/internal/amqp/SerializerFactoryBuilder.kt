@@ -92,7 +92,7 @@ object SerializerFactoryBuilder {
                 customSerializerRegistry,
                 onlyCustomSerializers)
 
-        val typeLoader = ClassCarpentingTypeLoader(
+        val typeLoader: TypeLoader = ClassCarpentingTypeLoader(
                 SchemaBuildingRemoteTypeCarpenter(classCarpenter),
                 classCarpenter.classloader)
 

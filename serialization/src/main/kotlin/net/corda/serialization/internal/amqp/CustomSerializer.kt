@@ -29,6 +29,10 @@ abstract class CustomSerializer<T : Any> : AMQPSerializer<T>, SerializerFor {
      */
     open val additionalSerializers: Iterable<CustomSerializer<out Any>> = emptyList()
 
+    /**
+     * This custom serializer is also allowed to deserialize these classes.
+     */
+    open val deserializationAliases: Set<Class<*>> = emptySet()
 
     protected abstract val descriptor: Descriptor
     /**
@@ -110,7 +114,7 @@ abstract class CustomSerializer<T : Any> : AMQPSerializer<T>, SerializerFor {
      */
     abstract class CustomSerializerImp<T : Any>(protected val clazz: Class<T>, protected val withInheritance: Boolean) : CustomSerializer<T>() {
         override val type: Type get() = clazz
-        override val typeDescriptor: Symbol = Symbol.valueOf("$DESCRIPTOR_DOMAIN:${AMQPTypeIdentifiers.nameForType(clazz)}")
+        override val typeDescriptor: Symbol = typeDescriptorFor(clazz)
         override fun writeClassInfo(output: SerializationOutput) {}
         override val descriptor: Descriptor = Descriptor(typeDescriptor)
         override fun isSerializerFor(clazz: Class<*>): Boolean = if (withInheritance) this.clazz.isAssignableFrom(clazz) else this.clazz == clazz

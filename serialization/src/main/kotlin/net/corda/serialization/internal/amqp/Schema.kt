@@ -9,11 +9,12 @@ import org.apache.qpid.proton.amqp.UnsignedInteger
 import org.apache.qpid.proton.amqp.UnsignedLong
 import org.apache.qpid.proton.codec.DescribedTypeConstructor
 import java.io.NotSerializableException
-import net.corda.serialization.internal.carpenter.Field as CarpenterField
-import net.corda.serialization.internal.carpenter.Schema as CarpenterSchema
+import java.lang.reflect.Type
 
 const val DESCRIPTOR_DOMAIN: String = "net.corda"
 val amqpMagic = CordaSerializationMagic("corda".toByteArray() + byteArrayOf(1, 0))
+
+fun typeDescriptorFor(type: Type): Symbol = Symbol.valueOf("$DESCRIPTOR_DOMAIN:${AMQPTypeIdentifiers.nameForType(type)}")
 
 /**
  * This and the classes below are OO representations of the AMQP XML schema described in the specification. Their

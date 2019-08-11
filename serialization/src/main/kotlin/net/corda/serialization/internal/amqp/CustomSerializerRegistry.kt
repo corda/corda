@@ -84,7 +84,7 @@ class CachingCustomSerializerRegistry(
     }
 
     private val customSerializersCache: MutableMap<CustomSerializerIdentifier, CustomSerializerLookupResult> = DefaultCacheProvider.createCache()
-    private var customSerializers: List<SerializerFor> = emptyList()
+    private val customSerializers: MutableList<SerializerFor> = mutableListOf()
 
     /**
      * Register a custom serializer for any type that cannot be serialized or deserialized by the default serializer
@@ -93,7 +93,7 @@ class CachingCustomSerializerRegistry(
     override fun register(customSerializer: CustomSerializer<out Any>) {
         logger.trace("action=\"Registering custom serializer\", class=\"${customSerializer.type}\"")
 
-        if (!customSerializersCache.isEmpty()) {
+        if (customSerializersCache.isNotEmpty()) {
             logger.warn("Attempting to register custom serializer $customSerializer.type} in an active cache." +
                     "All serializers should be registered before the cache comes into use.")
         }
@@ -103,14 +103,23 @@ class CachingCustomSerializerRegistry(
             for (additional in customSerializer.additionalSerializers) {
                 register(additional)
             }
+
+            for (alias in customSerializer.deserializationAliases) {
+                val aliasDescriptor = typeDescriptorFor(alias)
+                if (aliasDescriptor != customSerializer.typeDescriptor) {
+                    descriptorBasedSerializerRegistry[aliasDescriptor.toString()] = customSerializer
+                }
+            }
+
             customSerializer
         }
+
     }
 
     override fun registerExternal(customSerializer: CorDappCustomSerializer) {
         logger.trace("action=\"Registering external serializer\", class=\"${customSerializer.type}\"")
 
-        if (!customSerializersCache.isEmpty()) {
+        if (customSerializersCache.isNotEmpty()) {
             logger.warn("Attempting to register custom serializer ${customSerializer.type} in an active cache." +
                     "All serializers must be registered before the cache comes into use.")
         }
