@@ -255,3 +255,9 @@ jar {
 publish {
     name jar.baseName
 }
+
+
+task printIt(type: JavaExec) {
+    classpath = sourceSets.test.runtimeClasspath
+    main = 'net.corda.JunitPrinter'
+}
