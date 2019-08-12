@@ -206,7 +206,10 @@ sealed class TypeIdentifier {
 
         override fun toString() = "Parameterised(${prettyPrint()})"
         override fun getLocalType(classLoader: ClassLoader): Type {
-            val rawType = Class.forName(name, false, classLoader)
+            // We need to invoke ClassLoader.loadClass() directly, because
+            // the JVM will complain if Class.forName() returns a class
+            // that has a name other than the requested one.
+            val rawType = classLoader.loadClass(name)
             if (rawType.typeParameters.size != parameters.size) {
                 throw IncompatibleTypeIdentifierException(
                         "Class $rawType expects ${rawType.typeParameters.size} type arguments, " +

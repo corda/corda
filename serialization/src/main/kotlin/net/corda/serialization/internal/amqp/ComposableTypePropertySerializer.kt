@@ -1,6 +1,7 @@
 package net.corda.serialization.internal.amqp
 
 import net.corda.core.serialization.SerializationContext
+import net.corda.serialization.internal.amqp.AMQPTypeIdentifiers.isPrimitive
 import net.corda.serialization.internal.model.*
 import org.apache.qpid.proton.amqp.Binary
 import org.apache.qpid.proton.codec.Data
@@ -18,7 +19,7 @@ interface PropertyReadStrategy {
          * Select the correct strategy for reading properties, based on the property type.
          */
         fun make(name: String, typeIdentifier: TypeIdentifier, type: Type): PropertyReadStrategy =
-                if (AMQPTypeIdentifiers.isPrimitive(typeIdentifier)) {
+                if (isPrimitive(typeIdentifier)) {
                     when (typeIdentifier) {
                         in characterTypes -> AMQPCharPropertyReadStrategy
                         else -> AMQPPropertyReadStrategy
@@ -47,7 +48,7 @@ interface PropertyWriteStrategy {
         fun make(name: String, propertyInformation: LocalPropertyInformation, factory: LocalSerializerFactory): PropertyWriteStrategy {
             val reader = PropertyReader.make(propertyInformation)
             val type = propertyInformation.type
-            return if (AMQPTypeIdentifiers.isPrimitive(type.typeIdentifier)) {
+            return if (isPrimitive(type.typeIdentifier)) {
                 when (type.typeIdentifier) {
                     in characterTypes -> AMQPCharPropertyWriteStategy(reader)
                     else -> AMQPPropertyWriteStrategy(reader)
@@ -191,15 +192,14 @@ object EvolutionPropertyWriteStrategy : PropertyWriteStrategy {
  * Read a type that comes with its own [TypeDescriptor], by calling back into [RemoteSerializerFactory] to obtain a suitable
  * serializer for that descriptor.
  */
-class DescribedTypeReadStrategy(name: String,
-                                typeIdentifier: TypeIdentifier,
+class DescribedTypeReadStrategy(name: String, typeIdentifier: TypeIdentifier,
                                 private val type: Type): PropertyReadStrategy {
 
     private val nameForDebug = "$name(${typeIdentifier.prettyPrint(false)})"
 
     override fun readProperty(obj: Any?, schemas: SerializationSchemas, input: DeserializationInput, context: SerializationContext): Any? =
             ifThrowsAppend({ nameForDebug }) {
-                input.readObjectOrNull(obj, schemas, type, context)
+                input.readObjectOrNull(redescribe(obj, type), schemas, type, context)
             }
 }
 

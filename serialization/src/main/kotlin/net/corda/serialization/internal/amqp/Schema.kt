@@ -3,10 +3,10 @@ package net.corda.serialization.internal.amqp
 import net.corda.core.KeepForDJVM
 import net.corda.core.internal.uncheckedCast
 import net.corda.serialization.internal.CordaSerializationMagic
-import org.apache.qpid.proton.amqp.DescribedType
-import org.apache.qpid.proton.amqp.Symbol
-import org.apache.qpid.proton.amqp.UnsignedInteger
-import org.apache.qpid.proton.amqp.UnsignedLong
+import net.corda.serialization.internal.amqp.AMQPTypeIdentifiers.isPrimitive
+import net.corda.serialization.internal.model.TypeIdentifier.TopType
+import net.corda.serialization.internal.model.TypeIdentifier.Companion.forGenericType
+import org.apache.qpid.proton.amqp.*
 import org.apache.qpid.proton.codec.DescribedTypeConstructor
 import java.io.NotSerializableException
 import java.lang.reflect.Type
@@ -15,6 +15,26 @@ const val DESCRIPTOR_DOMAIN: String = "net.corda"
 val amqpMagic = CordaSerializationMagic("corda".toByteArray() + byteArrayOf(1, 0))
 
 fun typeDescriptorFor(type: Type): Symbol = Symbol.valueOf("$DESCRIPTOR_DOMAIN:${AMQPTypeIdentifiers.nameForType(type)}")
+
+fun redescribe(obj: Any?, type: Type): Any? {
+    return if (obj == null || obj is DescribedType || obj is Binary || forGenericType(type).run { isPrimitive(this) || this == TopType }) {
+        obj
+    } else {
+        /**
+         * This must be a primitive [obj] that has a non-primitive [type].
+         * Rewrap it with the required descriptor for further deserialization.
+         */
+        RedescribedType(typeDescriptorFor(type), obj)
+    }
+}
+
+private class RedescribedType(
+    private val descriptor: Symbol,
+    private val described: Any?
+) : DescribedType {
+    override fun getDescriptor(): Symbol = descriptor
+    override fun getDescribed(): Any? = described
+}
 
 /**
  * This and the classes below are OO representations of the AMQP XML schema described in the specification. Their
