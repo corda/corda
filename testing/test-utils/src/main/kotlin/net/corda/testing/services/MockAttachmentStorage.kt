@@ -47,7 +47,16 @@ class MockAttachmentStorage : AttachmentStorage, SingletonSerializeAsToken() {
     // and not all predicate types are covered here.
     private fun <C> criteriaFilter(metadata: C, predicate: ColumnPredicate<C>?): Boolean {
         return when (predicate) {
-            is ColumnPredicate.EqualityComparison -> predicate.rightLiteral == metadata
+            // real implementation allows an intersection of signers to return results from the query
+            is ColumnPredicate.EqualityComparison -> {
+                val rightLiteral = predicate.rightLiteral
+                when (rightLiteral) {
+                    is Collection<*> -> rightLiteral.any { value ->
+                        (metadata as Collection<*>).contains(value)
+                    }
+                    else -> rightLiteral == metadata
+                }
+            }
             is ColumnPredicate.CollectionExpression -> predicate.rightLiteral.contains(metadata)
             else -> true
         }
