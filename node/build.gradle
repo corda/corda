@@ -25,6 +25,9 @@ description 'Corda node modules'
 configurations {
     integrationTestCompile.extendsFrom testCompile
     integrationTestRuntimeOnly.extendsFrom testRuntimeOnly
+    
+    slowIntegrationTestCompile.extendsFrom testCompile
+    slowIntegrationTestRuntimeOnly.extendsFrom testRuntimeOnly
 }
 
 sourceSets {
@@ -41,6 +44,21 @@ sourceSets {
         }
         resources {
             srcDir file('src/integration-test/resources')
+        }
+    }
+    slowIntegrationTest {
+        kotlin {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test-slow/kotlin')
+        }
+        java {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test-slow/java')
+        }
+        resources {
+            srcDir file('src/integration-test-slow/resources')
         }
     }
 }
@@ -201,6 +219,13 @@ dependencies {
 
     testCompile(project(':test-cli'))
     testCompile(project(':test-utils'))
+
+    slowIntegrationTestCompile sourceSets.main.output
+    slowIntegrationTestCompile sourceSets.test.output
+    slowIntegrationTestCompile configurations.compile
+    slowIntegrationTestCompile configurations.testCompile
+    slowIntegrationTestRuntime configurations.runtime
+    slowIntegrationTestRuntime configurations.testRuntime
 }
 
 tasks.withType(JavaCompile) {
@@ -217,6 +242,12 @@ task integrationTest(type: Test) {
     testClassesDirs = sourceSets.integrationTest.output.classesDirs
     classpath = sourceSets.integrationTest.runtimeClasspath
     maxParallelForks = (System.env.CORDA_NODE_INT_TESTING_FORKS == null) ? 1 :  "$System.env.CORDA_NODE_INT_TESTING_FORKS".toInteger()
+}
+
+task slowIntegrationTest(type: Test) {
+    testClassesDirs = sourceSets.slowIntegrationTest.output.classesDirs
+    classpath = sourceSets.slowIntegrationTest.runtimeClasspath
+    maxParallelForks = 1
 }
 
 // quasar exclusions upon agent code instrumentation at run-time
