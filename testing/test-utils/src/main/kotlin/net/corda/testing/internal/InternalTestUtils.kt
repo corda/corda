@@ -50,8 +50,6 @@ import java.util.jar.JarOutputStream
 import java.util.jar.Manifest
 import java.util.zip.ZipEntry
 import javax.security.auth.x500.X500Principal
-import java.io.IOException
-import java.net.ServerSocket
 
 @Suppress("unused")
 inline fun <reified T : Any> T.kryoSpecific(reason: String, function: () -> Unit) = if (!AMQP_ENABLED) {
