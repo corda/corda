@@ -111,6 +111,7 @@ import java.util.concurrent.TimeUnit.MINUTES
 import java.util.concurrent.TimeUnit.SECONDS
 import java.util.function.Consumer
 import javax.persistence.EntityManager
+import net.corda.core.crypto.generateKeyPair as cryptoGenerateKeyPair
 
 /**
  * A base node implementation that can be customised either for production (with real implementations that do real
@@ -175,11 +176,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     val transactionStorage = makeTransactionStorage(configuration.transactionCacheSizeBytes).tokenize()
     val networkMapClient: NetworkMapClient? = configuration.networkServices?.let { NetworkMapClient(it.networkMapURL, versionInfo) }
     val attachments = NodeAttachmentService(metricRegistry, cacheFactory, database, configuration.devMode).tokenize()
-    val cryptoService = CryptoServiceFactory.makeCryptoService(
-            SupportedCryptoServices.BC_SIMPLE,
-            configuration.myLegalName,
-            configuration.signingCertificateStore
-    ).closeOnStop()
+    val cryptoService = CryptoServiceFactory.makeCryptoService(SupportedCryptoServices.BC_SIMPLE, configuration.myLegalName, configuration.signingCertificateStore)
     @Suppress("LeakingThis")
     val networkParametersStorage = makeNetworkParametersStorage()
     val cordappProvider = CordappProviderImpl(cordappLoader, CordappConfigFileProvider(configuration.cordappDirectories), attachments).tokenize()
