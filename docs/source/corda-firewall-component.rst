@@ -374,15 +374,6 @@ Sharing ZooKeeper
 ^^^^^^^^^^^^^^^^^
 A single ZooKeeper cluster instance can be shared between multiple bridge clusters to reduce infrastructure cost, the ``haConfig.haTopic`` can be configured to allow each bridge cluster accessing different ZooKeeper path.
 
-.. image:: resources/bridge/zookeeper.png
-     :scale: 100%
-     :align: center
-
-The above example shows multiple Corda bridges (NodeA and NodeB) connecting to the same ZooKeeper server.
-Node A and B have their own namespaces in ZooKeeper, which allow them to operate in the same ZooKeeper without interfering each other.
-
-This setup can be configured by setting NodeA and B's ``haConfig.haTopic`` to ``/corda/bridge/NodeA`` and ``/coda/bridge/NodeB`` respectively, the parent nodes (/corda and /corda/bridge) will be created automatically upon connection.
-
 ZooKeeper alternative
 ---------------------
 It is possible to have the hot-warm capability of the bridge and float clusters without the added deployment complexity of a ZooKeeper cluster. The firewall provides a ``Bully Algorithm`` implementation for master election which can be enabled
