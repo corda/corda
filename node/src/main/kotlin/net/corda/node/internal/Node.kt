@@ -250,13 +250,6 @@ open class Node(configuration: NodeConfiguration,
         // When using external Artemis for P2P messaging, the node's p2pSslOptions are no longer used.
         val sslOptions = configuration.enterpriseConfiguration.messagingServerSslConfiguration ?: configuration.p2pSslOptions
 
-        if (System.getProperty("io.netty.allocator.numHeapArenas").isNullOrBlank()) {
-            // Netty arenas are approx 16MB each when max'd out.  Set arenas based on memory, not core count, unless memory is abundant.
-            val memBasedArenas = max(Runtime.getRuntime().maxMemory() / 256.MB, 1L)
-            // We set the min of the above and the default.
-            System.setProperty("io.netty.allocator.numHeapArenas", min(memBasedArenas, NettyRuntime.availableProcessors() * 2L).toString())
-        }
-
         // Construct security manager reading users data either from the 'security' config section
         // if present or from rpcUsers list if the former is missing from config.
         val securityManagerConfig = configuration.security?.authService
