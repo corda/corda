@@ -655,10 +655,22 @@ There are a variety of uses for non-verified keys:
           in the peer-to-peer network but still wish to have ultimate control over states. See~\cref{subsec:micronodes}.
 \end{itemize}
 
-Moving signing authority out of the node must be done with care to ensure that a new balance of power is
-actually achieved. It's easy to provision people or devices with keys, yet miss the fact that the overall system
-architecture still grants everyone the same set of powers as before. As keys must be carefully generated, backed up
-and managed (representing cost), you should ensure keys are deployed only where they can justify that cost.
+In the general case, the desire to move signing authority out of a node is to move from a model whereby an entity
+external to the node authorises the node to sign a transaction to a model where the individual (or external entity)
+signs for themselves. This is often driven by the observation that, in situations where the authoriser and the node
+operator are different entities, there is a power balance in favour of the operator, since the operator could in
+fact sign anything they wanted. So moving signing authority out of the node is often driven by a desire to reset
+this power balance and thus to reduce the ability of the node operator to subvert the interests of the authoriser.
+
+It is important to note that there are subtle tradeoffs involved here. For example, if the node loses its ability
+to sign some sets of transactions then the responsibility for careful generation, protection and management of the
+keys with that power now resides with the external party; if the keys are lost then the node, by definition, cannot
+step in to rescue you. Similarly, if the third party relies on the node to explain to them what a transaction means
+or to attest to its validity (or that of its dependencies) then the node operator still retains all or nearly all
+the same powers they had beforehand.
+
+So Corda's design attempts to optimise for scenarios where moving keys out of nodes creates desirable new power
+balances.
 
 % TODO: Add a section discussing balance-of-powers analysis.
 
