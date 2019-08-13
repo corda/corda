@@ -256,20 +256,25 @@ D""".trimStart()
         val wrappingCryptoServiceType = freshIdentitiesConfig.cryptoServiceConfiguration.cryptoServiceName
         val createDuringStartup = freshIdentitiesConfig.createDuringStartup
         val masterKeyAlias = freshIdentitiesConfig.masterKeyAlias
+        val configuredCryptoService = wrappingCryptoService!!
 
         when (createDuringStartup) {
             CreateWrappingKeyDuringStartup.YES -> {
                 try {
-                    wrappingCryptoService!!.createWrappingKey(masterKeyAlias)
+                    configuredCryptoService.createWrappingKey(masterKeyAlias)
+                    logWrappingKeyCreation(wrappingCryptoServiceType, masterKeyAlias)
                 } catch(exception: IllegalArgumentException) {
                     throw ConfigurationException("The crypto service configured for fresh identities ($wrappingCryptoServiceType) already contains a key under the alias: $masterKeyAlias. However, createDuringStartup is set to $createDuringStartup")
                 }
             }
             CreateWrappingKeyDuringStartup.ONLY_IF_MISSING -> {
-                wrappingCryptoService!!.createWrappingKey(masterKeyAlias, failIfExists = false)
+                if (!configuredCryptoService.containsKey(masterKeyAlias)) {
+                    configuredCryptoService.createWrappingKey(masterKeyAlias)
+                    logWrappingKeyCreation(wrappingCryptoServiceType, masterKeyAlias)
+                }
             }
             CreateWrappingKeyDuringStartup.NO -> {
-                if (!wrappingCryptoService!!.containsKey(masterKeyAlias)) {
+                if (!configuredCryptoService.containsKey(masterKeyAlias)) {
                     throw ConfigurationException("The crypto service configured for fresh identities ($wrappingCryptoServiceType) does not contain a key under the alias: $masterKeyAlias. However, createDuringStartup is set to $createDuringStartup")
                 }
             }
@@ -279,6 +284,14 @@ D""".trimStart()
     private fun verifyConfiguredModeIsSupported(mode: WrappingMode, cryptoService: CryptoService, cryptoServiceLabel: SupportedCryptoServices) {
         if (cryptoService.getWrappingMode() != mode) {
             throw ConfigurationException("The crypto service configured for fresh identities ($cryptoServiceLabel) supports the ${cryptoService.getWrappingMode()} mode, but the node is configured to use $mode")
+        }
+    }
+
+    private fun logWrappingKeyCreation(cryptoServiceType: SupportedCryptoServices, masterKeyAlias: String) {
+        if (cryptoServiceType == SupportedCryptoServices.BC_SIMPLE) {
+            logger.info("Wrapping key stored in file-based keystore under the alias '$masterKeyAlias'.")
+        } else {
+            logger.info("Wrapping key stored in the configured HSM ($cryptoServiceType) under the alias '$masterKeyAlias'.")
         }
     }
 }
