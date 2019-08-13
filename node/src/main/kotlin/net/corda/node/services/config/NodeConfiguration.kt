@@ -181,8 +181,13 @@ data class NotaryConfig(
         val extraConfig: Config? = null,
         val raft: RaftConfig? = null,
         val bftSMaRt: BFTSmartConfig? = null,
-        val mysql: MySQLNotaryConfig? = null
-)
+        val mysql: MySQLNotaryConfig? = null,
+        val useUnspentStatesCache: Boolean = false
+) {
+    internal object Defaults {
+        val useUnspentStatesCache: Boolean = false
+    }
+}
 
 /**
  * Used as an alternative to the older compatibilityZoneURL to allow the doorman and network map

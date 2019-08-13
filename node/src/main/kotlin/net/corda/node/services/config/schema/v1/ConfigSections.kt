@@ -167,10 +167,11 @@ internal object NotaryConfigSpec : Configuration.Specification<NotaryConfig>("No
     private val raft by nested(RaftConfigSpec).optional()
     private val bftSMaRt by nested(BFTSmartConfigSpec).optional()
     private val mysql by nested(MySQLNotaryConfigSpec).optional()
+    private val useUnspentStatesCache by boolean().optional().withDefaultValue(NotaryConfig.Defaults.useUnspentStatesCache)
 
     override fun parseValid(configuration: Config, options: Configuration.Options): Valid<NotaryConfig> {
         val config = configuration.withOptions(options)
-        return valid(NotaryConfig(config[validating], config[serviceLegalName], config[className], config[etaMessageThresholdSeconds], config[extraConfig], config[raft], config[bftSMaRt], config[mysql]))
+        return valid(NotaryConfig(config[validating], config[serviceLegalName], config[className], config[etaMessageThresholdSeconds], config[extraConfig], config[raft], config[bftSMaRt], config[mysql], config[useUnspentStatesCache]))
     }
 }
 
@@ -196,7 +197,7 @@ internal object BFTSmartConfigSpec : Configuration.Specification<BFTSmartConfig>
     }
 }
 
-internal object MySQLNotaryConfigSpec: Configuration.Specification<MySQLNotaryConfig>("MySQLNotaryConfig") {
+internal object MySQLNotaryConfigSpec : Configuration.Specification<MySQLNotaryConfig>("MySQLNotaryConfig") {
     private val dataSource by nestedObject(sensitive = true).map(::toProperties)
     private val connectionRetries by int().optional().withDefaultValue(MySQLNotaryConfig.Defaults.connectionRetries)
     private val backOffIncrement by int().optional().withDefaultValue(MySQLNotaryConfig.Defaults.backOffIncrement)
@@ -240,7 +241,6 @@ internal object SSHDConfigurationSpec : Configuration.Specification<SSHDConfigur
 
     override fun parseValid(configuration: Config, options: Configuration.Options): Valid<SSHDConfiguration> = attempt<SSHDConfiguration, IllegalArgumentException> { SSHDConfiguration(configuration.withOptions(options)[port]) }
 }
-
 
 internal object DatabaseConfigSpec : Configuration.Specification<DatabaseConfig>("DatabaseConfig") {
     private val initialiseSchema by boolean().optional().withDefaultValue(DatabaseConfig.Defaults.initialiseSchema)

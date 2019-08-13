@@ -16,18 +16,25 @@ class DummyIssueAndMove(private val notary: Party, private val counterpartyNode:
     @Suspendable
     override fun call(): SignedTransaction {
         // Self issue an asset
-        val state = DummyState(listOf(ourIdentity), discriminator)
+        val states = (1..1000).map { DummyState(listOf(ourIdentity), it) }
         val issueTx = serviceHub.signInitialTransaction(TransactionBuilder(notary).apply {
-            addOutputState(state, DO_NOTHING_PROGRAM_ID)
+            for (state in states) {
+                addOutputState(state, DO_NOTHING_PROGRAM_ID)
+            }
             addCommand(DummyCommand(), listOf(ourIdentity.owningKey))
         })
         serviceHub.recordTransactions(issueTx)
-        // Move ownership of the asset to the counterparty
-        // We don't check signatures because we know that the notary's signature is missing
-        return serviceHub.signInitialTransaction(TransactionBuilder(notary).apply {
+
+        val stx = serviceHub.signInitialTransaction(TransactionBuilder(notary).apply {
             addInputState(issueTx.tx.outRef<ContractState>(0))
-            addOutputState(state.copy(participants = listOf(counterpartyNode)), DO_NOTHING_PROGRAM_ID)
+            for (state in states) {
+                addOutputState(state.copy(participants = listOf(counterpartyNode)), DO_NOTHING_PROGRAM_ID)
+            }
             addCommand(DummyCommand(), listOf(ourIdentity.owningKey))
         })
+
+        serviceHub.recordTransactions(stx)
+
+        return stx
     }
 }

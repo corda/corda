@@ -6,6 +6,7 @@ import net.corda.core.internal.notary.SinglePartyNotaryService
 import net.corda.core.utilities.seconds
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.transactions.NonValidatingNotaryFlow
+import net.corda.node.services.transactions.UnspentStatesCache
 import net.corda.node.services.transactions.ValidatingNotaryFlow
 import net.corda.nodeapi.internal.config.parseAs
 import java.security.PublicKey
@@ -18,13 +19,15 @@ class JPANotaryService(
     private val notaryConfig = services.configuration.notary
             ?: throw IllegalArgumentException("Failed to register ${this::class.java}: notary configuration not present")
 
+    private val unspentStatesCache: UnspentStatesCache? = if (notaryConfig.useUnspentStatesCache) UnspentStatesCache(services.monitoringService.metrics) else null
+
     override val uniquenessProvider = with(services) {
         val jpaNotaryConfig = try {
             notaryConfig.extraConfig?.parseAs() ?: JPANotaryConfiguration()
         } catch (e: Exception) {
             throw IllegalArgumentException("Failed to register ${JPANotaryService::class.java}: extra notary configuration parameters invalid")
         }
-        JPAUniquenessProvider(services.monitoringService.metrics, services.clock, services.database, jpaNotaryConfig)
+        JPAUniquenessProvider(services.monitoringService.metrics, services.clock, services.database, jpaNotaryConfig, unspentStatesCache)
     }
 
     override fun createServiceFlow(otherPartySession: FlowSession): NotaryServiceFlow {

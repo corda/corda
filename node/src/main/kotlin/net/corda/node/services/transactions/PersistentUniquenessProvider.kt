@@ -23,6 +23,7 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
+import net.corda.node.services.config.NotaryConfig
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
@@ -44,7 +45,8 @@ class PersistentUniquenessProvider(
         metrics: MetricRegistry,
         val clock: Clock,
         val database: CordaPersistence,
-        cacheFactory: NamedCacheFactory
+        cacheFactory: NamedCacheFactory,
+        val unspentStatesCache: UnspentStatesCache? = null
 ) : UniquenessProvider, SingletonSerializeAsToken() {
 
     @MappedSuperclass
@@ -117,6 +119,7 @@ class PersistentUniquenessProvider(
     private val requestQueueStateCount = metrics.histogram("$metricPrefix.requestQueue.queuedStates")
     /** Tracks the distribution of the number of unique transactions that contributed states to the current transaction **/
     private val uniqueTxHashCount = metrics.histogram("$metricPrefix.NumberOfUniqueTxHashes")
+
     private val commitLog = createMap(cacheFactory)
 
     private val requestQueue = LinkedBlockingQueue<CommitRequest>(requestQueueSize)
@@ -234,6 +237,22 @@ class PersistentUniquenessProvider(
         session.persist(request)
     }
 
+    private fun checkConflicts(toCheck: List<StateRef>, type: StateConsumptionDetails.ConsumedStateType, conflictingStates: LinkedHashMap<StateRef, StateConsumptionDetails>): Boolean {
+        // Fast path: check if all state refs of the input are known as unspent.
+        val fastPath = unspentStatesCache?.isAllUnspent(toCheck)
+
+        if (fastPath == true) {
+            return true
+        }
+
+        toCheck.forEach { stateRef ->
+            val consumingTx = commitLog[stateRef]
+            if (consumingTx != null) conflictingStates[stateRef] = StateConsumptionDetails(consumingTx.sha256(), type)
+        }
+
+        return false
+    }
+
     private fun findAlreadyCommitted(
             states: List<StateRef>,
             references: List<StateRef>,
@@ -241,16 +260,12 @@ class PersistentUniquenessProvider(
     ): LinkedHashMap<StateRef, StateConsumptionDetails> {
         val conflictingStates = LinkedHashMap<StateRef, StateConsumptionDetails>()
 
-        fun checkConflicts(toCheck: List<StateRef>, type: StateConsumptionDetails.ConsumedStateType) {
-            return toCheck.forEach { stateRef ->
-                val consumingTx = commitLog[stateRef]
-                if (consumingTx != null) conflictingStates[stateRef] = StateConsumptionDetails(consumingTx.sha256(), type)
-            }
+        val fastPath = checkConflicts(states, StateConsumptionDetails.ConsumedStateType.INPUT_STATE, conflictingStates)
+        checkConflicts(references, StateConsumptionDetails.ConsumedStateType.REFERENCE_INPUT_STATE, conflictingStates)
+
+        if (fastPath && conflictingStates.isEmpty()) {
+            unspentStatesCache?.markAllAsSpent(states)
         }
-
-        checkConflicts(states, StateConsumptionDetails.ConsumedStateType.INPUT_STATE)
-        checkConflicts(references, StateConsumptionDetails.ConsumedStateType.REFERENCE_INPUT_STATE)
-
         return conflictingStates
     }
 
@@ -315,6 +330,7 @@ class PersistentUniquenessProvider(
             states.forEach { stateRef ->
                 commitLog[stateRef] = txId
             }
+            unspentStatesCache?.markUnspent(txId)
             val session = currentDBSession()
             session.persist(CommittedTransaction(txId.toString()))
             log.debug { "Successfully committed all input states: $states" }
@@ -357,5 +373,9 @@ class PersistentUniquenessProvider(
 
     private fun respondWithSuccess(request: CommitRequest) {
         request.future.set(UniquenessProvider.Result.Success)
+    }
+
+    fun stop() {
+        processorThread.interrupt()
     }
 }

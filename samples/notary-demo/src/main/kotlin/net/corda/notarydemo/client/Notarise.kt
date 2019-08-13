@@ -12,6 +12,7 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
 import net.corda.notarydemo.flows.DummyIssueAndMove
+import net.corda.notarydemo.flows.EfficiencyKnownUnspentCachingDriver
 import net.corda.notarydemo.flows.RPCStartableNotaryFlowClient
 import java.util.concurrent.Future
 

@@ -55,7 +55,8 @@ class UniquenessProviderTests(
         fun data(): Collection<UniquenessProviderFactory> = listOf(
                 RaftUniquenessProviderFactory(),
                 MySQLUniquenessProviderFactory(),
-                JPAUniquenessProviderFactory()
+                JPAUniquenessProviderFactory(),
+                JPAUniquenessProviderWithUnspentStateCacheFactory()
         )
     }
 
@@ -446,6 +447,21 @@ class JPAUniquenessProviderFactory : UniquenessProviderFactory {
         database?.close()
         database = configureDatabase(MockServices.makeTestDataSourceProperties(), DatabaseConfig(runMigration = true), { null }, { null }, NodeSchemaService(extraSchemas = setOf(JPANotarySchemaV1)))
         return JPAUniquenessProvider(MetricRegistry(), clock, database!!, notaryConfig)
+    }
+
+    override fun cleanUp() {
+        database?.close()
+    }
+}
+
+class JPAUniquenessProviderWithUnspentStateCacheFactory : UniquenessProviderFactory {
+    private var database: CordaPersistence? = null
+    private val notaryConfig = JPANotaryConfiguration(maxInputStates = 10)
+    override fun create(clock: Clock): UniquenessProvider {
+        database?.close()
+        database = configureDatabase(MockServices.makeTestDataSourceProperties(), DatabaseConfig(runMigration = true), { null }, { null }, NodeSchemaService(extraSchemas = setOf(JPANotarySchemaV1)))
+        val unspentStatesCache = UnspentStatesCache(MetricRegistry())
+        return JPAUniquenessProvider(MetricRegistry(), clock, database!!, notaryConfig, unspentStatesCache)
     }
 
     override fun cleanUp() {

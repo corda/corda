@@ -24,6 +24,7 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
+import net.corda.node.services.transactions.UnspentStatesCache
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.serialization.internal.CordaSerializationEncoding
@@ -46,7 +47,8 @@ class JPAUniquenessProvider(
         metrics: MetricRegistry,
         val clock: Clock,
         val database: CordaPersistence,
-        val config: JPANotaryConfiguration = JPANotaryConfiguration()
+        val config: JPANotaryConfiguration = JPANotaryConfiguration(),
+        val unspentStatesCache: UnspentStatesCache? = null
 ) : UniquenessProvider, SingletonSerializeAsToken() {
 
     // TODO: test vs. MySQLUniquenessProvider
@@ -131,7 +133,7 @@ class JPAUniquenessProvider(
     private val requestQueueCount = metrics.histogram("$metricPrefix.requestQueue.size")
     /** Track the number of states in the queue at insert. */
     private val requestQueueStateCount = metrics.histogram("$metricPrefix.requestQueue.queuedStates")
-    /** Tracks the distribution of the number of unique transactions that contributed states to the current transaction */
+    /** Tracks the distribution of the number of unique transactions that contributed states to the current transaction. */
     private val uniqueTxHashCount = metrics.histogram("$metricPrefix.NumberOfUniqueTxHashes")
 
     /**
@@ -162,7 +164,7 @@ class JPAUniquenessProvider(
         return nrStates
     }
 
-    /** A requestEntitiy processor thread. */
+    /** A requestEntity processor thread. */
     private val processorThread = thread(name = "Notary request queue processor", isDaemon = true) {
         try {
             val buffer = LinkedList<CommitRequest>()
@@ -196,10 +198,10 @@ class JPAUniquenessProvider(
     }
 
     /**
-     * Generates and adds a [CommitRequest] to the requestEntitiy queue. If the requestEntitiy queue is full, this method will block
+     * Generates and adds a [CommitRequest] to the requestEntity queue. If the requestEntity queue is full, this method will block
      * until space is available.
      *
-     * Returns a future that will complete once the requestEntitiy is processed, containing the commit [Result].
+     * Returns a future that will complete once the requestEntity is processed, containing the commit [Result].
      */
     override fun commit(
             states: List<StateRef>,
@@ -260,12 +262,15 @@ class JPAUniquenessProvider(
     }
 
     private fun findAlreadyCommitted(session: Session, states: List<StateRef>, references: List<StateRef>): Map<StateRef, StateConsumptionDetails> {
-        val ids = (states + references).map { encodeStateRef(it) }.toSet()
+        val persistentStateRefs = (states + references).map { encodeStateRef(it) }.toSet()
         val committedStates = mutableListOf<CommittedState>()
 
-        for (idsBatch in ids.chunked(config.maxInputStates)) {
+        for (idsBatch in persistentStateRefs.chunked(config.maxInputStates)) {
             @SuppressWarnings("unchecked")
-            val existing = session.createNamedQuery("CommittedState.select").setParameter("ids", idsBatch).resultList as List<CommittedState>
+            val existing = session
+                    .createNamedQuery("CommittedState.select")
+                    .setParameter("ids", idsBatch)
+                    .resultList as List<CommittedState>
             committedStates.addAll(existing)
         }
 
@@ -296,11 +301,20 @@ class JPAUniquenessProvider(
     }
 
     private fun findAllConflicts(session: Session, requests: List<CommitRequest>): MutableMap<StateRef, StateConsumptionDetails> {
-        val allInputs = requests.flatMap { it.states }
-        val references = requests.flatMap { it.references }
-        log.info("Processing notarization requests with ${allInputs.size} input states and ${references.size} references")
+        log.info("Processing notarization requests with ${requests.sumBy { it.states.size }} input states and ${requests.sumBy { it.references.size }} references")
 
-        return findAlreadyCommitted(session, allInputs, references).toMutableMap()
+        val toLookup = unspentStatesCache?.let { cache ->
+            // Exclude requests with all input and reference states in the unspent state cache
+            val nonCachedRequests = requests.filterNot {
+                cache.isAllUnspent(it.states + it.references)
+            }
+            log.info("[Unspent state cache] Number of requests fast tracked: ${requests.size - nonCachedRequests.size}")
+            nonCachedRequests
+        } ?: requests
+
+        val allStates = toLookup.flatMap { it.states }
+        val allReferences = toLookup.flatMap { it.references }
+        return findAlreadyCommitted(session, allStates, allReferences).toMutableMap()
     }
 
     private fun processRequest(session: Session, request: CommitRequest, allConflicts: MutableMap<StateRef, StateConsumptionDetails>, toCommit: MutableList<CommitRequest>): UniquenessProvider.Result {
@@ -364,6 +378,7 @@ class JPAUniquenessProvider(
 
                         logRequests(requests)
                         commitRequests(session, toCommit)
+                        updateUnspentStateCache(toCommit)
 
                         for ((request, result) in requests.zip(results)) {
                             request.future.set(result)
@@ -384,6 +399,18 @@ class JPAUniquenessProvider(
         val statesPerMinute = numStates.toLong() * TimeUnit.MINUTES.toNanos(1) / duration.toNanos()
         throughputHistory.update(maxOf(statesPerMinute, 1))
         throughput = throughputHistory.snapshot.median // Median deemed more stable / representative than mean.
+    }
+
+    private fun updateUnspentStateCache(toCommit: MutableList<CommitRequest>) {
+        unspentStatesCache?.let { cache ->
+            toCommit.forEach { request ->
+                log.trace("[Unspent state cache] Marking state references as spent: ${request.states.joinToString()}")
+                cache.markAllAsSpent(request.states)
+                val txId = request.txId
+                log.trace("[Unspent state cache] Marking all transaction outputs as unspent: $txId")
+                cache.markUnspent(txId)
+            }
+        }
     }
 
     private fun respondWithError(request: CommitRequest, exception: Exception) {
