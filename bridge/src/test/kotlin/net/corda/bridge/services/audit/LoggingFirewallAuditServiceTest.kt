@@ -54,7 +54,7 @@ class LoggingFirewallAuditServiceTest {
 
         with(instance.prepareStatsAndReset()) {
             assertThat(this, containsSubstring("Successful connection count: 9(inbound), 21(outbound)"))
-            assertThat(this, containsSubstring("Failed connection count: 0(inbound), 0(outbound)"))
+            assertThat(this, containsSubstring("Failed connection count: 4(inbound), 11(outbound)"))
             assertThat(this, containsSubstring("Active connection count: 5(inbound), 10(outbound)"))
             assertThat(this, containsSubstring("Packets accepted count: 0(inbound), 0(outbound)"))
             assertThat(this, containsSubstring("Bytes transmitted: 0(inbound), 0(outbound)"))
@@ -66,7 +66,7 @@ class LoggingFirewallAuditServiceTest {
         // Verify that after another round of connection shuffling, the temporary stats are properly reset while active connections are only updated correctly
         with(instance.prepareStatsAndReset()) {
             assertThat(this, containsSubstring("Successful connection count: 9(inbound), 21(outbound)"))
-            assertThat(this, containsSubstring("Failed connection count: 0(inbound), 0(outbound)"))
+            assertThat(this, containsSubstring("Failed connection count: 4(inbound), 11(outbound)"))
             assertThat(this, containsSubstring("Active connection count: 10(inbound), 20(outbound)"))
             assertThat(this, containsSubstring("Packets accepted count: 0(inbound), 0(outbound)"))
             assertThat(this, containsSubstring("Bytes transmitted: 0(inbound), 0(outbound)"))

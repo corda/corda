@@ -198,6 +198,7 @@ open class AMQPBridgeManager(keyStore: CertificateStore,
                 session = null
                 ArtemisState.STOPPED
             }
+            bridgeMetricsService?.bridgeDisconnected(targets, legalNames)
             connectedSubscription?.unsubscribe()
             connectedSubscription = null
             // Do this last because we already scheduled the Artemis stop, so it's okay to unsubscribe onConnected first.
@@ -207,6 +208,7 @@ open class AMQPBridgeManager(keyStore: CertificateStore,
         private fun onSocketConnected(connected: Boolean) {
             if (connected) {
                 logInfoWithMDC("Bridge Connected")
+                bridgeMetricsService?.bridgeConnected(targets, legalNames)
                 artemis(ArtemisState.STARTING) {
                     val startedArtemis = artemis.started
                     if (startedArtemis == null) {
