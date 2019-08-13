@@ -13,7 +13,13 @@ import java.time.Duration
 
 class CryptoServiceFactory {
     companion object {
-        fun makeCryptoService(cryptoServiceName: SupportedCryptoServices, legalName: CordaX500Name, signingCertificateStore: FileBasedCertificateStoreSupplier? = null, cryptoServiceConf: Path? = null, wrappingKeyStorePath: Path? = null): CryptoService {
+        fun makeCryptoService(
+                cryptoServiceName: SupportedCryptoServices,
+                legalName: CordaX500Name,
+                signingCertificateStore: FileBasedCertificateStoreSupplier? = null,
+                cryptoServiceConf: Path? = null,
+                wrappingKeyStorePath: Path? = null
+        ): CryptoService {
             return when (cryptoServiceName) {
                 SupportedCryptoServices.BC_SIMPLE -> {
                     if (signingCertificateStore == null) {
