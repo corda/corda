@@ -179,7 +179,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             SupportedCryptoServices.BC_SIMPLE,
             configuration.myLegalName,
             configuration.signingCertificateStore
-    ).closeOnStop()
+    )
     @Suppress("LeakingThis")
     val networkParametersStorage = makeNetworkParametersStorage()
     val cordappProvider = CordappProviderImpl(cordappLoader, CordappConfigFileProvider(configuration.cordappDirectories), attachments).tokenize()
