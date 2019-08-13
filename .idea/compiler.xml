@@ -89,6 +89,10 @@
       <module name="corda-enterprise.experimental.netparams.test" target="1.8" />
       <module name="corda-enterprise.experimental.nodeinfo.main" target="1.8" />
       <module name="corda-enterprise.experimental.nodeinfo.test" target="1.8" />
+      <module name="corda-enterprise.tools.pinger.capsule.main" target="1.6" />
+      <module name="corda-enterprise.tools.pinger.capsule.test" target="1.6" />
+      <module name="corda-enterprise.tools.pinger.main" target="1.8" />
+      <module name="corda-enterprise.tools.pinger.test" target="1.8" />
       <module name="corda-enterprise_buildSrc_main" target="1.8" />
       <module name="corda-enterprise_buildSrc_test" target="1.8" />
       <module name="corda-enterprise_canonicalizer_main" target="1.8" />
