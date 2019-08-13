@@ -3,8 +3,8 @@ package net.corda.node.services.persistence
 import junit.framework.TestCase.assertEquals
 import net.corda.core.node.services.KeyManagementService
 import net.corda.core.utilities.getOrThrow
+import net.corda.nodeapi.internal.KeyOwningIdentity
 import net.corda.nodeapi.internal.persistence.CordaPersistence
-import net.corda.nodeapi.internal.persistence.KeyOwningIdentity
 import net.corda.nodeapi.internal.persistence.withoutDatabaseAccess
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.ALICE_NAME
@@ -18,6 +18,7 @@ import org.junit.Before
 import org.junit.Test
 import java.security.PublicKey
 import java.util.*
+import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
 class PublicKeyToOwningIdentityCacheImplTest {
@@ -27,6 +28,7 @@ class PublicKeyToOwningIdentityCacheImplTest {
     private lateinit var keyManagementService: KeyManagementService
     private val testKeys = mutableListOf<Pair<KeyOwningIdentity, PublicKey>>()
     private val alice = TestIdentity(ALICE_NAME, 20)
+    private lateinit var executor: ExecutorService
 
     @Before
     fun setUp() {
@@ -41,11 +43,13 @@ class PublicKeyToOwningIdentityCacheImplTest {
         testCache = PublicKeyToOwningIdentityCacheImpl(database, TestingNamedCacheFactory())
         keyManagementService = MockKeyManagementService(identityService, pkToIdCache = testCache)
         createTestKeys()
+        executor = Executors.newFixedThreadPool(2)
     }
 
     @After
     fun tearDown() {
         database.close()
+        executor.shutdown()
     }
 
     private fun createTestKeys() {

@@ -1,13 +1,12 @@
 package net.corda.testing.node.internal
 
 import net.corda.core.crypto.*
-import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.KeyManagementService
 import net.corda.core.serialization.SingletonSerializeAsToken
-import net.corda.node.services.keys.freshCertificate
-import net.corda.node.services.persistence.WritablePKToOwningIDCache
-import net.corda.nodeapi.internal.persistence.KeyOwningIdentity
+import net.corda.node.services.keys.KeyManagementServiceInternal
+import net.corda.node.services.persistence.WritablePublicKeyToOwningIdentityCache
+import net.corda.nodeapi.internal.KeyOwningIdentity
 import org.bouncycastle.operator.ContentSigner
 import java.security.KeyPair
 import java.security.PrivateKey
@@ -19,48 +18,29 @@ import java.util.*
  *
  * @property identityService The [IdentityService] which contains the given identities.
  */
-class MockKeyManagementService(val identityService: IdentityService,
+class MockKeyManagementService(override val identityService: IdentityService,
                                vararg initialKeys: KeyPair,
-                               private val pkToIdCache: WritablePKToOwningIDCache) : SingletonSerializeAsToken(), KeyManagementService {
+                               private val pkToIdCache: WritablePublicKeyToOwningIdentityCache) : SingletonSerializeAsToken(), KeyManagementServiceInternal {
     private val keyStore: MutableMap<PublicKey, PrivateKey> = initialKeys.associateByTo(HashMap(), { it.public }, { it.private })
 
     override val keys: Set<PublicKey> get() = keyStore.keys
 
     private val nextKeys = LinkedList<KeyPair>()
 
-    private fun generateKey(): PublicKey {
+    override fun freshKeyInternal(externalId: UUID?): PublicKey {
         val k = nextKeys.poll() ?: generateKeyPair()
         keyStore[k.public] = k.private
+        pkToIdCache[k.public] = KeyOwningIdentity.fromUUID(externalId)
         return k.public
-    }
-
-    override fun freshKey(): PublicKey {
-        val k = generateKey()
-        pkToIdCache[k] = KeyOwningIdentity.fromUUID(null)
-        return k
-    }
-
-    override fun freshKey(externalId: UUID): PublicKey {
-        val k = generateKey()
-        pkToIdCache[k] = KeyOwningIdentity.fromUUID(externalId)
-        return k
-    }
-
-    override fun freshKeyAndCert(identity: PartyAndCertificate, revocationEnabled: Boolean, externalId: UUID): PartyAndCertificate {
-        val keyAndCert = freshCertificate(identityService, generateKey(), identity, getSigner(identity.owningKey))
-        pkToIdCache[keyAndCert.owningKey] = KeyOwningIdentity.fromUUID(externalId)
-        return keyAndCert
     }
 
     override fun filterMyKeys(candidateKeys: Iterable<PublicKey>): Iterable<PublicKey> = candidateKeys.filter { it in this.keys }
 
-    override fun freshKeyAndCert(identity: PartyAndCertificate, revocationEnabled: Boolean): PartyAndCertificate {
-        val keyAndCert = freshCertificate(identityService, generateKey(), identity, getSigner(identity.owningKey))
-        pkToIdCache[keyAndCert.owningKey] = KeyOwningIdentity.fromUUID(null)
-        return keyAndCert
-    }
+    override fun getSigner(publicKey: PublicKey): ContentSigner = net.corda.node.services.keys.getSigner(getSigningKeyPair(publicKey))
 
-    private fun getSigner(publicKey: PublicKey): ContentSigner = net.corda.node.services.keys.getSigner(getSigningKeyPair(publicKey))
+    override fun start(initialKeyPairs: Set<KeyPair>) {
+        initialKeyPairs.forEach { keyStore[it.public] = it.private }
+    }
 
     private fun getSigningKeyPair(publicKey: PublicKey): KeyPair {
         val pk = publicKey.keys.firstOrNull { keyStore.containsKey(it) }

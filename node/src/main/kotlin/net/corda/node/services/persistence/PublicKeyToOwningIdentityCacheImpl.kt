@@ -5,24 +5,20 @@ import net.corda.core.crypto.toStringShort
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
+import net.corda.nodeapi.internal.KeyOwningIdentity
 import net.corda.nodeapi.internal.persistence.CordaPersistence
-import net.corda.nodeapi.internal.persistence.KeyOwningIdentity
 import java.security.PublicKey
 import java.util.*
-import javax.persistence.NoResultException
-import javax.persistence.criteria.CriteriaBuilder
 
 /**
  * The [PublicKeyToOwningIdentityCacheImpl] provides a caching layer over the pk_hash_to_external_id table. Gets will attempt to read an
  * external identity from the database if it is not present in memory, while sets will write external identity UUIDs to this database table.
  */
 class PublicKeyToOwningIdentityCacheImpl(private val database: CordaPersistence,
-                                         cacheFactory: NamedCacheFactory) : WritablePKToOwningIDCache {
+                                         cacheFactory: NamedCacheFactory) : WritablePublicKeyToOwningIdentityCache {
     companion object {
         val log = contextLogger()
     }
-
-    private val criteriaBuilder: CriteriaBuilder by lazy { database.hibernateConfig.sessionFactoryForRegisteredSchemas.criteriaBuilder }
 
     private val cache = cacheFactory.buildNamed<PublicKey, KeyOwningIdentity>(Caffeine.newBuilder(), "PublicKeyToOwningIdentityCache_cache")
 
@@ -35,6 +31,7 @@ class PublicKeyToOwningIdentityCacheImpl(private val database: CordaPersistence,
     override operator fun get(key: PublicKey): KeyOwningIdentity {
         return cache.asMap().computeIfAbsent(key) {
             database.transaction {
+                val criteriaBuilder = session.criteriaBuilder
                 val criteriaQuery = criteriaBuilder.createQuery(UUID::class.java)
                 val queryRoot = criteriaQuery.from(PublicKeyHashToExternalId::class.java)
                 criteriaQuery.select(queryRoot.get(PublicKeyHashToExternalId::externalId.name))
@@ -44,11 +41,7 @@ class PublicKeyToOwningIdentityCacheImpl(private val database: CordaPersistence,
                 val query = session.createQuery(criteriaQuery)
 
                 // If no entry exists for the queried key, treat the result as null.
-                val signingEntity = try {
-                    KeyOwningIdentity.fromUUID(query.singleResult)
-                } catch (e: NoResultException) {
-                    KeyOwningIdentity.fromUUID(null)
-                }
+                val signingEntity = KeyOwningIdentity.fromUUID(query.uniqueResult())
 
                 log.debug { "Database lookup for public key ${key.toStringShort()}, found signing entity $signingEntity" }
                 signingEntity
@@ -70,7 +63,8 @@ class PublicKeyToOwningIdentityCacheImpl(private val database: CordaPersistence,
             is KeyOwningIdentity.ExternalIdentity -> {
                 database.transaction { session.persist(PublicKeyHashToExternalId(value.uuid, key)) }
             }
-            is KeyOwningIdentity.NodeIdentity -> {}
+            is KeyOwningIdentity.NodeIdentity -> {
+            }
         }
         cache.asMap()[key] = value
     }

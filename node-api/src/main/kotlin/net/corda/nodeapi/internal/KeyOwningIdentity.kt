@@ -1,4 +1,4 @@
-package net.corda.nodeapi.internal.persistence
+package net.corda.nodeapi.internal
 
 import java.util.*
 
@@ -12,17 +12,18 @@ sealed class KeyOwningIdentity {
     /**
      * [NodeIdentity] is used for keys that belong to the node identity.
      */
-    object NodeIdentity: KeyOwningIdentity() {
+    object NodeIdentity : KeyOwningIdentity() {
         override fun toString(): String {
             return "NODE_IDENTITY"
         }
-        override val uuid: Nothing? = null
+
+        override val uuid: UUID? = null
     }
 
     /**
      * [ExternalIdentity] is used for keys that have an assigned external UUID.
      */
-    data class ExternalIdentity(override val uuid: UUID): KeyOwningIdentity() {
+    data class ExternalIdentity(override val uuid: UUID) : KeyOwningIdentity() {
         override fun toString(): String {
             return uuid.toString()
         }
@@ -35,16 +36,6 @@ sealed class KeyOwningIdentity {
             } else {
                 NodeIdentity
             }
-        }
-
-        fun fromString(id: String): KeyOwningIdentity {
-            val uuid = try {
-                UUID.fromString(id)
-            } catch (e: IllegalArgumentException) {
-                null
-            }
-
-            return fromUUID(uuid)
         }
     }
 }
