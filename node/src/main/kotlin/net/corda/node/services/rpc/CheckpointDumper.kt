@@ -289,7 +289,7 @@ class CheckpointDumper(private val checkpointStorage: CheckpointStorage, private
             val customOperation: FlowIORequest.ExecuteAsyncOperation<*>? = null,
             val forceCheckpoint: FlowIORequest.ForceCheckpoint? = null
     ) {
-        @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss", timezone = "UTC")
+        @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss'Z'", timezone = "UTC")
         lateinit var suspendedTimestamp: Instant
         var secondsSpentWaiting: Long = 0
     }

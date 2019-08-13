@@ -41,7 +41,7 @@ Below are some of the more important fields included in the output:
 
 - ``flowId``: The id of the flow
 - ``topLevelFlowClass``: The name of the original flow that was invoked (by RPC or a service)
-- ``topLevelFlowLogic``: Further information about the top level flow
+- ``topLevelFlowLogic``: Detailed view of the top level flow
 - ``flowCallStackSummary``: A summarised list of the current stack of sub flows along with any progress tracker information
 - ``suspendedOn``: The command that the flow is suspended on (e.g. ``SuspendAndReceive``) which includes the ``suspendedTimestamp``
 - ``flowCallStack`` A detailed view of the of the current stack of sub flows
