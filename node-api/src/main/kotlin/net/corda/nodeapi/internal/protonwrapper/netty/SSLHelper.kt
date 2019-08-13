@@ -214,7 +214,7 @@ internal fun initialiseTrustStoreAndEnableCrlChecking(trustStore: CertificateSto
     val revocationChecker = when (revocationConfig.mode) {
         RevocationConfig.Mode.OFF -> AllowAllRevocationChecker  // Custom PKIXRevocationChecker skipping CRL check
         RevocationConfig.Mode.EXTERNAL_SOURCE -> {
-            assert(revocationConfig.externalCrlSource != null) { "externalCrlSource must not be null" }
+            require(revocationConfig.externalCrlSource != null) { "externalCrlSource must not be null" }
             ExternalSourceRevocationChecker(revocationConfig.externalCrlSource!!) { pkixParams.date } // Custom PKIXRevocationChecker which uses `externalCrlSource`
         }
         else -> {

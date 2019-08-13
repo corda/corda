@@ -28,11 +28,19 @@ class GemaltoLunaCryptoService(
 ) : JCACryptoService(keyStore, provider, x500Principal) {
 
     override fun isLoggedIn(): Boolean {
-        return LunaSlotManager.getInstance().isLoggedIn
+        return try {
+            // Will throw LunaCryptokiException on network failure
+            LunaSlotManager.getInstance().isLoggedIn
+        } catch (e: Exception) {
+            detailedLogger.error("Exception when checking logged in status", e)
+            false
+        }
     }
 
     override fun logIn() {
         val config = auth()
+        // Force reinitialization to allow reconnect after network failure
+        LunaSlotManager.getInstance().reinitialize(true)
         keyStore.load(config.keyStore.byteInputStream(), config.password.toCharArray())
     }
 

@@ -13,6 +13,7 @@ import net.corda.bridge.services.sender.DirectBridgeSenderService
 import net.corda.bridge.services.util.ServiceStateCombiner
 import net.corda.bridge.services.util.ServiceStateHelper
 import net.corda.core.utilities.contextLogger
+import net.corda.nodeapi.internal.protonwrapper.netty.RevocationConfig
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import rx.Subscription
@@ -39,6 +40,7 @@ class BridgeSupervisorServiceImpl(conf: FirewallConfiguration,
     private val artemisSigningService: TLSSigningService
 
     init {
+        require(conf.revocationConfig.mode != RevocationConfig.Mode.EXTERNAL_SOURCE) { "The BridgeInner and SenderReceiver modes do not support Revocation from External sources" }
         val artemisSSlConfiguration = conf.outboundConfig?.artemisSSLConfiguration ?: conf.publicSSLConfiguration
         // The fact that we pass BRIDGE_NAME has no effect as Crypto service obtained will only be used to sign data and never to create new key pairs
         val legalName = BRIDGE_NAME
