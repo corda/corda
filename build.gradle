@@ -518,6 +518,17 @@ docker {
     }
 }
 
+//testing workflow
+// 1. build an image from current checkout
+// 2. generate a list of tests
+// 3. invoke containers with params (TBD) which will tell each container which tests to run (this could leverage gradle TestFilter)
+// 4. wait for containers to finish
+// 5. collect all xml reports
+// 6. merge into single xml report
+// 7. convert to html and report results
+// 8. if failures detected, determine which container ran the test
+// 9. commit container to image and provide access to contents
+
 task buildTestingDockerImage(type: DockerBuildImage) {
     inputDir = new File(".")
     tags = ["$docker_testing_tag"]
