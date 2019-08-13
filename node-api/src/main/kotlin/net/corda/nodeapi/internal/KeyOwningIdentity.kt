@@ -11,12 +11,12 @@ sealed class KeyOwningIdentity {
     abstract val uuid: UUID?
 
     /**
-     * [NodeLegalIdentity] is used for keys that belong to the node identity. This is any key created on this node that did not have a UUID
-     * assigned to it on generation.
+     * [UnmappedIdentity] is used for keys that are not assigned a UUID. This is any key created on this node that did not have a UUID
+     * assigned to it on generation. These keys are the node identity key, or confidential identity keys.
      */
-    object NodeLegalIdentity : KeyOwningIdentity() {
+    object UnmappedIdentity : KeyOwningIdentity() {
         override fun toString(): String {
-            return "NODE_LEGAL_IDENTITY"
+            return "UNMAPPED_IDENTITY"
         }
 
         override val uuid: UUID? = null
@@ -37,7 +37,7 @@ sealed class KeyOwningIdentity {
             return if (uuid != null) {
                 MappedIdentity(uuid)
             } else {
-                NodeLegalIdentity
+                UnmappedIdentity
             }
         }
     }

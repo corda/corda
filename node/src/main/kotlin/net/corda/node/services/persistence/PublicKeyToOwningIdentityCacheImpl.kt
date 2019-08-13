@@ -78,10 +78,10 @@ class PublicKeyToOwningIdentityCacheImpl(private val database: CordaPersistence,
      */
     override operator fun set(key: PublicKey, value: KeyOwningIdentity) {
         when (value) {
-            is KeyOwningIdentity.ExternalIdentity -> {
+            is KeyOwningIdentity.MappedIdentity -> {
                 database.transaction { session.persist(PublicKeyHashToExternalId(value.uuid, key)) }
             }
-            is KeyOwningIdentity.NodeLegalIdentity -> {
+            is KeyOwningIdentity.UnmappedIdentity -> {
             }
         }
         cache.asMap()[key] = value
