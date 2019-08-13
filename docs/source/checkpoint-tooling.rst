@@ -96,7 +96,7 @@ Below is an example of the JSON output:
             }
           }
         ],
-        "suspendedTimestamp" : "2019-08-12T15:38:39",
+        "suspendedTimestamp" : "2019-08-12T15:38:39Z",
         "secondsSpentWaiting" : 7
       },
       "flowCallStack" : [
@@ -407,7 +407,7 @@ And two additional files will appear in the nodes logs directory:
                }
              }
            ],
-           "suspendedTimestamp" : "2019-08-12T15:38:39",
+           "suspendedTimestamp" : "2019-08-12T15:38:39Z",
            "secondsSpentWaiting" : 7
          },
          "flowCallStack" : [
@@ -553,7 +553,7 @@ See also :ref:`Flow draining mode <draining-mode>`.
                }
              }
            ],
-           "suspendedTimestamp" : "2019-08-12T15:38:39",
+           "suspendedTimestamp" : "2019-08-12T15:38:39Z",
            "secondsSpentWaiting" : 7
         }
       }
