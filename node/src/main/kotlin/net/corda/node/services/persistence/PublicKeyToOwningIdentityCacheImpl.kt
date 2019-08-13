@@ -23,7 +23,7 @@ class PublicKeyToOwningIdentityCacheImpl(private val database: CordaPersistence,
 
     private val cache = cacheFactory.buildNamed<PublicKey, KeyOwningIdentity>(Caffeine.newBuilder(), "PublicKeyToOwningIdentityCache_cache")
 
-    private fun isNodeIdentityKey(key: PublicKey): Boolean {
+    private fun isKeyBelongingToNode(key: PublicKey): Boolean {
         return database.transaction {
             val criteriaBuilder = session.criteriaBuilder
             val criteriaQuery = criteriaBuilder.createQuery(Long::class.java)
@@ -55,7 +55,7 @@ class PublicKeyToOwningIdentityCacheImpl(private val database: CordaPersistence,
                 )
                 val query = session.createQuery(criteriaQuery)
                 val uuid = query.uniqueResult()
-                if (uuid != null || isNodeIdentityKey(key)) {
+                if (uuid != null || isKeyBelongingToNode(key)) {
                     val signingEntity = KeyOwningIdentity.fromUUID(uuid)
                     log.debug { "Database lookup for public key ${key.toStringShort()}, found signing entity $signingEntity" }
                     signingEntity
@@ -81,7 +81,7 @@ class PublicKeyToOwningIdentityCacheImpl(private val database: CordaPersistence,
             is KeyOwningIdentity.ExternalIdentity -> {
                 database.transaction { session.persist(PublicKeyHashToExternalId(value.uuid, key)) }
             }
-            is KeyOwningIdentity.NodeIdentity -> {
+            is KeyOwningIdentity.NodeLegalIdentity -> {
             }
         }
         cache.asMap()[key] = value

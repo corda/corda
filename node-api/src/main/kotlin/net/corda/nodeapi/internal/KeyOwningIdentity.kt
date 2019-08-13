@@ -10,11 +10,11 @@ sealed class KeyOwningIdentity {
     abstract val uuid: UUID?
 
     /**
-     * [NodeIdentity] is used for keys that belong to the node identity.
+     * [NodeLegalIdentity] is used for keys that belong to the node identity.
      */
-    object NodeIdentity : KeyOwningIdentity() {
+    object NodeLegalIdentity : KeyOwningIdentity() {
         override fun toString(): String {
-            return "NODE_IDENTITY"
+            return "NODE_LEGAL_IDENTITY"
         }
 
         override val uuid: UUID? = null
@@ -34,7 +34,7 @@ sealed class KeyOwningIdentity {
             return if (uuid != null) {
                 ExternalIdentity(uuid)
             } else {
-                NodeIdentity
+                NodeLegalIdentity
             }
         }
     }
