@@ -33,7 +33,9 @@ import javax.security.auth.x500.X500Principal
  *
  * The [wrappingKeyStorePath] must be provided in order to execute any wrapping operations (e.g. [createWrappingKey], [generateWrappedKeyPair])
  */
-class BCCryptoService(private val legalName: X500Principal, private val certificateStoreSupplier: CertificateStoreSupplier, private val wrappingKeyStorePath: Path? = null) : CryptoService {
+class BCCryptoService(private val legalName: X500Principal,
+                      private val certificateStoreSupplier: CertificateStoreSupplier,
+                      private val wrappingKeyStorePath: Path? = null) : CryptoService {
 
     private companion object {
         val detailedLogger = detailedLogger()
