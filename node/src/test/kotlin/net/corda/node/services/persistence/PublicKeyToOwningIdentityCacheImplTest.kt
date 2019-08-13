@@ -1,6 +1,7 @@
 package net.corda.node.services.persistence
 
 import junit.framework.TestCase.assertEquals
+import net.corda.core.crypto.generateKeyPair
 import net.corda.core.node.services.KeyManagementService
 import net.corda.core.utilities.getOrThrow
 import net.corda.nodeapi.internal.KeyOwningIdentity
@@ -11,8 +12,6 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.node.MockServices
-import net.corda.testing.node.internal.MockKeyManagementService
-import net.corda.testing.node.makeTestIdentityService
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -32,16 +31,16 @@ class PublicKeyToOwningIdentityCacheImplTest {
 
     @Before
     fun setUp() {
-        val identityService = makeTestIdentityService()
-        val databaseAndServices = MockServices.makeTestDatabaseAndMockServices(
+        val databaseAndServices = MockServices.makeTestDatabaseAndPersistentServices(
                 listOf(),
-                identityService,
                 alice,
-                testNetworkParameters()
+                testNetworkParameters(),
+                emptySet(),
+                emptySet()
         )
         database = databaseAndServices.first
         testCache = PublicKeyToOwningIdentityCacheImpl(database, TestingNamedCacheFactory())
-        keyManagementService = MockKeyManagementService(identityService, pkToIdCache = testCache)
+        keyManagementService = databaseAndServices.second.keyManagementService
         createTestKeys()
         executor = Executors.newFixedThreadPool(2)
     }
@@ -115,5 +114,11 @@ class PublicKeyToOwningIdentityCacheImplTest {
         val f2 = executor.submit { repeat(5) { createAndAddKeys() } }
         f2.getOrThrow()
         f1.getOrThrow()
+    }
+
+    @Test
+    fun `requesting a key unknown to the node returns null`() {
+        val keys = generateKeyPair()
+        assertEquals(null, testCache[keys.public])
     }
 }

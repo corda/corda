@@ -11,8 +11,7 @@ interface PublicKeyToOwningIdentityCache {
     /**
      * Obtain the owning identity for a public key.
      *
-     * Typically, implementations of this are backed by the database, and so attempting to get a key that is not present in memory will
-     * result in database accesses to establish the owning identity of the key.
+     * If the key is unknown to the node, then this will return null.
      */
-    operator fun get(key: PublicKey): KeyOwningIdentity
+    operator fun get(key: PublicKey): KeyOwningIdentity?
 }

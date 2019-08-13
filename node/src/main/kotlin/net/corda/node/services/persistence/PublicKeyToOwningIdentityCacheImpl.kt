@@ -5,6 +5,7 @@ import net.corda.core.crypto.toStringShort
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
+import net.corda.node.services.keys.BasicHSMKeyManagementService
 import net.corda.nodeapi.internal.KeyOwningIdentity
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import java.security.PublicKey
@@ -22,13 +23,27 @@ class PublicKeyToOwningIdentityCacheImpl(private val database: CordaPersistence,
 
     private val cache = cacheFactory.buildNamed<PublicKey, KeyOwningIdentity>(Caffeine.newBuilder(), "PublicKeyToOwningIdentityCache_cache")
 
+    private fun isNodeIdentityKey(key: PublicKey): Boolean {
+        return database.transaction {
+            val criteriaBuilder = session.criteriaBuilder
+            val criteriaQuery = criteriaBuilder.createQuery(Long::class.java)
+            val queryRoot = criteriaQuery.from(BasicHSMKeyManagementService.PersistentKey::class.java)
+            criteriaQuery.select(criteriaBuilder.count(queryRoot))
+            criteriaQuery.where(
+                    criteriaBuilder.equal(queryRoot.get<String>(BasicHSMKeyManagementService.PersistentKey::publicKeyHash.name), key.toStringShort())
+            )
+            val query = session.createQuery(criteriaQuery)
+            query.uniqueResult() > 0
+        }
+    }
+
     /**
      * Return the owning identity associated with a given key.
      *
      * This method caches the result of a database lookup to prevent multiple database accesses for the same key. This assumes that once a
      * key is generated, the UUID assigned to it is never changed.
      */
-    override operator fun get(key: PublicKey): KeyOwningIdentity {
+    override operator fun get(key: PublicKey): KeyOwningIdentity? {
         return cache.asMap().computeIfAbsent(key) {
             database.transaction {
                 val criteriaBuilder = session.criteriaBuilder
@@ -39,12 +54,15 @@ class PublicKeyToOwningIdentityCacheImpl(private val database: CordaPersistence,
                         criteriaBuilder.equal(queryRoot.get<String>(PublicKeyHashToExternalId::publicKeyHash.name), key.toStringShort())
                 )
                 val query = session.createQuery(criteriaQuery)
-
-                // If no entry exists for the queried key, treat the result as null.
-                val signingEntity = KeyOwningIdentity.fromUUID(query.uniqueResult())
-
-                log.debug { "Database lookup for public key ${key.toStringShort()}, found signing entity $signingEntity" }
-                signingEntity
+                val uuid = query.uniqueResult()
+                if (uuid != null || isNodeIdentityKey(key)) {
+                    val signingEntity = KeyOwningIdentity.fromUUID(uuid)
+                    log.debug { "Database lookup for public key ${key.toStringShort()}, found signing entity $signingEntity" }
+                    signingEntity
+                } else {
+                    log.debug { "Attempted to find owning identity for public key ${key.toStringShort()}, but key is unknown to node" }
+                    null
+                }
             }
         }
     }
