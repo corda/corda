@@ -51,4 +51,21 @@ class TimedCryptoService(val underlyingService: CryptoService, private val timeo
 
     override fun getSigner(alias: String): ContentSigner =
         withTimeout(timeout) { underlyingService.getSigner(alias) }
+
+    // ******************************************************
+    // ENTERPRISE ONLY CODE FOR WRAPPING KEYS API STARTS HERE
+    // ******************************************************
+
+    override fun createWrappingKey(alias: String, failIfExists: Boolean) =
+        withTimeout(timeout) { underlyingService.createWrappingKey(alias, failIfExists) }
+
+    override fun generateWrappedKeyPair(masterKeyAlias: String, childKeyScheme: SignatureScheme): Pair<PublicKey, WrappedPrivateKey> =
+        withTimeout(timeout) { underlyingService.generateWrappedKeyPair(masterKeyAlias, childKeyScheme) }
+
+    override fun sign(masterKeyAlias: String, wrappedPrivateKey: WrappedPrivateKey, payloadToSign: ByteArray): ByteArray =
+        withTimeout(timeout) { underlyingService.sign(masterKeyAlias, wrappedPrivateKey, payloadToSign) }
+
+    // *****************************************************
+    // ENTERPRISE ONLY CODE FOR WRAPPING KEYS API ENDS HERE
+    // *****************************************************
 }

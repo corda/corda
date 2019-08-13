@@ -21,11 +21,16 @@ class TimedCryptoServiceTest {
     fun `timeout causes exception to be thrown`() {
         val underlying = rigorousMock<BCCryptoService>().also {
             doAnswer { sleep((timeout * 2).toMillis()); return@doAnswer testKeyPair.public }.whenever(it).generateKeyPair(any(), any())
+            doAnswer { sleep((timeout * 2).toMillis()); }.whenever(it).createWrappingKey(any(), any())
         }
         val service = TimedCryptoService(underlying, timeout)
 
         assertThatExceptionOfType(TimedCryptoServiceException::class.java).isThrownBy {
             service.generateKeyPair("", RSA_SHA256)
+        }.withMessage("Timed-out while waiting for $timeout milliseconds")
+
+        assertThatExceptionOfType(TimedCryptoServiceException::class.java).isThrownBy {
+            service.createWrappingKey("", true)
         }.withMessage("Timed-out while waiting for $timeout milliseconds")
     }
 
@@ -33,9 +38,11 @@ class TimedCryptoServiceTest {
     fun `when no timeout no exception is thrown`() {
         val underlying = rigorousMock<BCCryptoService>().also {
             doAnswer { return@doAnswer testKeyPair.public }.whenever(it).generateKeyPair(any(), any())
+            doAnswer { return@doAnswer }.whenever(it).createWrappingKey(any(), any())
         }
         val service = TimedCryptoService(underlying, timeout)
 
         service.generateKeyPair("", RSA_SHA256)
+        service.createWrappingKey("", true)
     }
 }
