@@ -1,3 +1,5 @@
+import com.bmuschko.gradle.docker.tasks.image.DockerBuildImage
+
 buildscript {
     // For sharing constants between builds
     Properties constants = new Properties()
@@ -16,25 +18,25 @@ buildscript {
     ext.quasar_group = 'co.paralleluniverse'
     ext.quasar_version = constants.getProperty("quasarVersion")
     ext.quasar_exclusions = [
-                'co.paralleluniverse**',
-                'groovy**',
-                'com.esotericsoftware.**',
-                'jdk**',
-                'junit**',
-                'kotlin**',
-                'net.rubygrapefruit.**',
-                'org.gradle.**',
-                'org.apache.**',
-                'org.jacoco.**',
-                'org.junit**',
-                'org.slf4j**',
-                'worker.org.gradle.**',
-                'com.nhaarman.mockito_kotlin**',
-                'org.assertj**',
-                'org.hamcrest**',
-                'org.mockito**',
-                'org.opentest4j**'
-        ]
+            'co.paralleluniverse**',
+            'groovy**',
+            'com.esotericsoftware.**',
+            'jdk**',
+            'junit**',
+            'kotlin**',
+            'net.rubygrapefruit.**',
+            'org.gradle.**',
+            'org.apache.**',
+            'org.jacoco.**',
+            'org.junit**',
+            'org.slf4j**',
+            'worker.org.gradle.**',
+            'com.nhaarman.mockito_kotlin**',
+            'org.assertj**',
+            'org.hamcrest**',
+            'org.mockito**',
+            'org.opentest4j**'
+    ]
 
     // gradle-capsule-plugin:1.0.2 contains capsule:1.0.1 by default.
     // We must configure it manually to use the latest capsule version.
@@ -152,10 +154,12 @@ plugins {
     // Add the shadow plugin to the plugins classpath for the entire project.
     id 'com.github.johnrengelman.shadow' version '2.0.4' apply false
     id "com.gradle.build-scan" version "2.2.1"
+    id 'com.bmuschko.docker-remote-api' version '3.4.4'
 }
 
 ext {
     corda_revision = "git rev-parse HEAD".execute().text.trim()
+    docker_testing_tag = "$corda_revision-${System.currentTimeMillis()}"
 }
 
 apply plugin: 'project-report'
@@ -250,14 +254,14 @@ allprojects {
             ex.append = false
         }
 
-        maxParallelForks = (System.env.CORDA_TESTING_FORKS == null) ? 1 :  "$System.env.CORDA_TESTING_FORKS".toInteger()
+        maxParallelForks = (System.env.CORDA_TESTING_FORKS == null) ? 1 : "$System.env.CORDA_TESTING_FORKS".toInteger()
 
         systemProperty 'java.security.egd', 'file:/dev/./urandom'
     }
 
-    tasks.withType(Test){
-        if (name.contains("integrationTest")){
-            maxParallelForks = (System.env.CORDA_INT_TESTING_FORKS == null) ? 1 :  "$System.env.CORDA_INT_TESTING_FORKS".toInteger()
+    tasks.withType(Test) {
+        if (name.contains("integrationTest")) {
+            maxParallelForks = (System.env.CORDA_INT_TESTING_FORKS == null) ? 1 : "$System.env.CORDA_INT_TESTING_FORKS".toInteger()
         }
     }
 
@@ -496,8 +500,6 @@ if (file('corda-docs-only-build').exists() || (System.getenv('CORDA_DOCS_ONLY_BU
     }
 }
 
-
-
 wrapper {
     gradleVersion = "5.4.1"
     distributionType = Wrapper.DistributionType.ALL
@@ -506,4 +508,18 @@ wrapper {
 buildScan {
     termsOfServiceUrl = 'https://gradle.com/terms-of-service'
     termsOfServiceAgree = 'yes'
+}
+
+docker {
+    registryCredentials {
+        url = System.env.DOCKER_URL ?: "hub.docker.com"
+        username = System.env.DOCKER_USERNAME
+        password = System.env.DOCKER_PASSWORD
+    }
+}
+
+task buildTestingDockerImage(type: DockerBuildImage) {
+    inputDir = new File(".")
+    tags = ["$docker_testing_tag"]
+    dockerFile = new File(new File("testing"), "Dockerfile")
 }

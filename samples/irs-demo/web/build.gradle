@@ -13,7 +13,6 @@ buildscript {
 
 plugins {
     id 'io.spring.dependency-management'
-    id 'com.bmuschko.docker-remote-api' version '3.2.1'
     id 'com.craigburke.client-dependencies' version '1.4.0'
 }
 
