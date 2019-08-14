@@ -86,11 +86,8 @@ class PublicKeyToOwningIdentityCacheImplTest {
 
     @Test
     fun `entries can be fetched if cache invalidated`() {
-        testCache = PublicKeyToOwningIdentityCacheImpl(database, TestingNamedCacheFactory(sizeOverride = 5))
-        // Fill the cache
-        performTestRun()
+        testCache = PublicKeyToOwningIdentityCacheImpl(database, TestingNamedCacheFactory(sizeOverride = 0))
 
-        // Run again, as each entry will have been invalidated before being queried
         performTestRun()
     }
 
