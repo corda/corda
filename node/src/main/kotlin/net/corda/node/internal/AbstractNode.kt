@@ -81,8 +81,8 @@ import net.corda.nodeapi.internal.crypto.X509Utilities.DEFAULT_VALIDITY_WINDOW
 import net.corda.nodeapi.internal.crypto.X509Utilities.DISTRIBUTED_NOTARY_ALIAS_PREFIX
 import net.corda.nodeapi.internal.crypto.X509Utilities.NODE_IDENTITY_ALIAS_PREFIX
 import net.corda.nodeapi.internal.cryptoservice.CryptoServiceFactory
+import net.corda.nodeapi.internal.cryptoservice.ManagedCryptoService
 import net.corda.nodeapi.internal.cryptoservice.SupportedCryptoServices
-import net.corda.nodeapi.internal.cryptoservice.TimedCryptoService
 import net.corda.nodeapi.internal.cryptoservice.azure.AzureKeyVaultCryptoService
 import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
 import net.corda.nodeapi.internal.cryptoservice.futurex.FutureXCryptoService
@@ -118,7 +118,6 @@ import java.util.function.Consumer
 import javax.persistence.EntityManager
 import kotlin.math.max
 import kotlin.math.min
-import net.corda.core.crypto.generateKeyPair as cryptoGenerateKeyPair
 
 /**
  * A base node implementation that can be customised either for production (with real implementations that do real
@@ -182,7 +181,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     val transactionStorage = makeTransactionStorage(configuration.transactionCacheSizeBytes).tokenize()
     val networkMapClient: NetworkMapClient? = configuration.networkServices?.let { NetworkMapClient(it, versionInfo) }
     val attachments = NodeAttachmentService(metricRegistry, cacheFactory, database, configuration.devMode).tokenize()
-    val cryptoService : TimedCryptoService = CryptoServiceFactory.makeTimedCryptoService(
+    val cryptoService : ManagedCryptoService = CryptoServiceFactory.makeManagedCryptoService(
             configuration.cryptoServiceName ?: SupportedCryptoServices.BC_SIMPLE,
             configuration.myLegalName,
             configuration.signingCertificateStore,

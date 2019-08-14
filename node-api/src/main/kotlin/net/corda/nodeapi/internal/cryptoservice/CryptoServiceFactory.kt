@@ -37,14 +37,14 @@ class CryptoServiceFactory {
                 SupportedCryptoServices.PRIMUS_X -> PrimusXCryptoService.fromConfigurationFile(legalName.x500Principal, cryptoServiceConf)
             }
         }
-        fun makeTimedCryptoService(
+        fun makeManagedCryptoService(
                 cryptoServiceName: SupportedCryptoServices,
                 legalName: CordaX500Name,
                 signingCertificateStore: FileBasedCertificateStoreSupplier? = null,
                 cryptoServiceConf: Path? = null,
                 timeout: Duration? = null
-        ): TimedCryptoService {
-            return TimedCryptoService(makeCryptoService(cryptoServiceName, legalName, signingCertificateStore, cryptoServiceConf), timeout)
+        ): ManagedCryptoService {
+            return ManagedCryptoService(makeCryptoService(cryptoServiceName, legalName, signingCertificateStore, cryptoServiceConf), timeout)
         }
     }
 }

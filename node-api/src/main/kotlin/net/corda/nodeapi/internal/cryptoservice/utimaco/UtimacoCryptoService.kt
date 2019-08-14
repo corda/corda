@@ -124,7 +124,7 @@ class UtimacoCryptoService(
                     val signedData = signature.sign()
                     detailedLogger.trace { "CryptoService(action=signing_end;alias=$alias;algorithm=$algorithm)" }
                     signedData
-                } ?: throw CryptoServiceException("No key found for alias $alias")
+                } ?: throw CryptoServiceException("No key found for alias $alias", isRecoverable = false)
             }
         } catch (e: CryptoServerAPI.CryptoServerException) {
             HsmErrors.errors[e.ErrorCode]
@@ -135,7 +135,7 @@ class UtimacoCryptoService(
     override fun getSigner(alias: String): ContentSigner {
         detailedLogger.trace { "CryptoService(action=get_signer;alias=$alias)" }
         return object : ContentSigner {
-            private val publicKey: PublicKey = getPublicKey(alias) ?: throw CryptoServiceException("No key found for alias $alias")
+            private val publicKey: PublicKey = getPublicKey(alias) ?: throw CryptoServiceException("No key found for alias $alias", isRecoverable = false)
             private val sigAlgID: AlgorithmIdentifier = Crypto.findSignatureScheme(publicKey).signatureOID
 
             private val baos = ByteArrayOutputStream()
@@ -191,7 +191,7 @@ class UtimacoCryptoService(
         }
     }
 
-    class UtimacoHSMException(message: String?, cause: Throwable? = null) : CryptoServiceException(message, cause)
+    class UtimacoHSMException(message: String?, cause: Throwable? = null, isRecoverable: Boolean = true) : CryptoServiceException(message, cause, isRecoverable)
 
     data class UtimacoCredentials(val username: String, val password: ByteArray, val keyFile: Path? = null)
 

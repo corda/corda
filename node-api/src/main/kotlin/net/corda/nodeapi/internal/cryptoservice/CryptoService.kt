@@ -124,7 +124,13 @@ interface CryptoService : SignOnlyCryptoService {
     // *****************************************************
 }
 
-open class CryptoServiceException(message: String?, cause: Throwable? = null, val isRecoverable: Boolean = false) : Exception(message, cause)
+/**
+ * If an exception is deemed unrecoverable then it must be set with the flag ``isRecoverable=false``
+ *
+ * [ManagedCryptoService] will assume any [Throwable] which isn't a [CryptoServiceException] is recoverable and
+ * will wrap it in a [CryptoServiceException] with ``isRecoverable=true``.
+*/
+open class CryptoServiceException(message: String?, cause: Throwable? = null, val isRecoverable: Boolean = true) : Exception(message, cause)
 
 enum class WrappingMode {
     /**

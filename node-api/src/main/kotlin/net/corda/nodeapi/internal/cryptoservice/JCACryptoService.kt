@@ -85,14 +85,14 @@ abstract class JCACryptoService(
                 val signedData = signature.sign()
                 detailedLogger.trace { "CryptoService(action=signing_end;alias=$alias;algorithm=$algorithm)" }
                 signedData
-            } ?: throw CryptoServiceException("No key found for alias $alias")
+            } ?: throw CryptoServiceException("No key found for alias $alias", isRecoverable = false)
         }
     }
 
     override fun getSigner(alias: String): ContentSigner {
         detailedLogger.trace { "CryptoService(action=get_signer;alias=$alias)" }
         return object : ContentSigner {
-            private val publicKey: PublicKey = getPublicKey(alias) ?: throw CryptoServiceException("No key found for alias $alias")
+            private val publicKey: PublicKey = getPublicKey(alias) ?: throw CryptoServiceException("No key found for alias $alias", isRecoverable = false)
             private val sigAlgID: AlgorithmIdentifier = Crypto.findSignatureScheme(publicKey).signatureOID
             private val baos = ByteArrayOutputStream()
             override fun getAlgorithmIdentifier(): AlgorithmIdentifier = sigAlgID

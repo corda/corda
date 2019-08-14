@@ -449,7 +449,7 @@ class FlowFrameworkTests {
     @Test
     fun `non recoverable CryptoServiceException skips flow hospital`() {
         bobNode.registerCordappFlowFactory(ReceiveFlow::class) {
-            ExceptionFlow { CryptoServiceException("Something bad happened!") }
+            ExceptionFlow { CryptoServiceException("Something bad happened!", isRecoverable = false) }
         }
 
         aliceNode.services.startFlow(ReceiveFlow(bob)).resultFuture

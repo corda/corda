@@ -80,7 +80,7 @@ class BCCryptoService(private val legalName: X500Principal,
         try {
             return certificateStore.query { getPublicKey(alias) }
         } catch (e: Exception) {
-            throw CryptoServiceException("Cannot get public key for alias $alias", e)
+            throw CryptoServiceException("Cannot get public key for alias $alias", e, isRecoverable = false)
         }
     }
 

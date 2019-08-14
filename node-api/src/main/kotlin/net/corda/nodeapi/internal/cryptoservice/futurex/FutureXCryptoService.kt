@@ -60,7 +60,7 @@ class FutureXCryptoService(
             val privateKeyHandle = if (cachedKeyHandles.containsKey(alias)) {
                 cachedKeyHandles[alias]!!
             } else {
-                val key = keyStore.getKey(alias, null) as PrivateKey? ?: throw CryptoServiceException("No key found for alias $alias")
+                val key = keyStore.getKey(alias, null) as PrivateKey? ?: throw CryptoServiceException("No key found for alias $alias", isRecoverable = false)
                 cachedKeyHandles[alias] = key
                 key
             }

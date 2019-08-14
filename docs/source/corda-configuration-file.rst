@@ -105,7 +105,7 @@ cryptoServiceConf
   than the default one (see :doc:`cryptoservice-configuration`).
 
 cryptoServiceTimeout
-  Optional timeout value of actions sent to the the CryptoService (HSM). If the HSM takes longer than this duration to respond then a ``TimedCryptoService`` exception will be thrown and handled by the Flow Hospital.
+  Optional timeout value of actions sent to the the CryptoService (HSM). If the HSM takes longer than this duration to respond then a ``TimedCryptoServiceException`` will be thrown and handled by the Flow Hospital.
 
   *Default:* 1s
 

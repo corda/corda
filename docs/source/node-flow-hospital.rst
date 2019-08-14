@@ -64,8 +64,15 @@ Specifically, there are two main ways a flow is hospitalized:
      The time is hard to document as the notary members, if actually alive, will inform the requester of the ETA of a response.
      This can occur an infinite number of times.  i.e. we never give up notarising.  No intervention required.
 
-   * ``TimedCryptoServiceException``:
-     This exception will be generated when the HSM takes too long to respond to an action.  The timeout value is defined in :doc:`corda-configuration-file`.
+   * **HSM error handling**
+      * HSM errors:
+        Some errors will be generated on failed HSM operations.  After retrying for a number of times the flow will be removed from
+        the flow hospital and the error will be allowed to propagate.
+        - Error type: ``CryptoServiceException``
+
+      * HSM timeouts:
+        These errors will be generated when the HSM takes too long to respond to an action.  The timeout value is defined in :doc:`corda-configuration-file`.
+        - Error type: ``TimedCryptoServiceException``
 
    * ``SQLTransientConnectionException``:
      Database connection pooling errors are dealt with. If this exception occurs, the flow will retry. After retrying a number of times, the errored flow is kept in for observation.

@@ -155,7 +155,7 @@ class AzureKeyVaultCryptoService(
                 checkAlias(alias)
             }
 
-            private val publicKey: PublicKey = getPublicKey(alias) ?: throw CryptoServiceException("No key found for alias $alias")
+            private val publicKey: PublicKey = getPublicKey(alias) ?: throw CryptoServiceException("No key found for alias $alias", isRecoverable = false)
             private val sigAlgID: AlgorithmIdentifier = Crypto.findSignatureScheme(publicKey).signatureOID
 
             private val baos = ByteArrayOutputStream()
