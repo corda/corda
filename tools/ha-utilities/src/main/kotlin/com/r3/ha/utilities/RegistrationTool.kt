@@ -41,6 +41,7 @@ import net.corda.nodeapi.internal.cryptoservice.utimaco.UtimacoCryptoService.Uti
 import net.corda.serialization.internal.AMQP_P2P_CONTEXT
 import net.corda.serialization.internal.AMQP_RPC_CLIENT_CONTEXT
 import net.corda.serialization.internal.SerializationFactoryImpl
+import org.slf4j.Logger
 import picocli.CommandLine
 import picocli.CommandLine.Option
 import java.nio.file.Path
@@ -90,8 +91,6 @@ class RegistrationTool : CordaCliWrapper("node-registration", "Corda registratio
     lateinit var networkRootTrustStorePassword: String
     @Option(names = ["--bridge-config-file", "-g"],  paramLabel = "FILE", description = ["The path to the bridge configuration file."])
     var bridgeConfigFile: Path? = null
-    @Option(names = ["-r", "--bridge-keystore-password"], paramLabel = "PASSWORDS", description = ["The password of the bridge SSL keystore."])
-    var bridgeKeystorePassword: String? = null
 
     private fun initialiseSerialization() {
         if (nodeSerializationEnv == null) {
@@ -112,7 +111,14 @@ class RegistrationTool : CordaCliWrapper("node-registration", "Corda registratio
                 HAUtilities.addJarsInDriversDirectoryToSystemClasspath(Paths.get("."))
             }
             validateNodeHsmConfigs(configFiles)
-            val bridgeCryptoService = makeBridgeCryptoService(bridgeConfigFile)
+            val bridgeConfig = bridgeConfigFile?.let {
+                logger.logConfigPath(it)
+                ConfigHelper.loadConfig(it.parentOrDefault, it)
+            }
+            // Return null for BC_SIMPLE
+            val bridgeCryptoService = bridgeConfig?.let {
+                makeBridgeCryptoService(it, bridgeConfigFile!!.parentOrDefault)
+            }
             // Parallel processing is beneficial as it is possible to submit multiple CSR in close succession
             // If manual interaction will be needed - it would be possible to sign them all off at once on Doorman side.
             val nodeConfigurations = ConcurrentLinkedQueue<Pair<CordaX500Name, Try<NodeConfiguration>>>()
@@ -180,9 +186,9 @@ class RegistrationTool : CordaCliWrapper("node-registration", "Corda registratio
                         " However, for the following X500 names it has failed: [${fail.allX500NamesAsStr()}]. Please see log for more details.")
             }
 
-            bridgeKeystorePassword?.let {
+            bridgeConfig?.let {
                 logger.info("Running BridgeSSLKeyTool to distribute sslkeystores")
-                val toolArgs = generateBridgeSSLKeyToolArguments(baseDirectory, success, bridgeKeystorePassword!!)
+                val toolArgs = generateBridgeSSLKeyToolArguments(baseDirectory, success, it.getString("keyStorePassword"))
                 val sslKeyTool = BridgeSSLKeyTool()
                 logger.info("Params for BridgeSSLKeyTool are: $toolArgs")
                 CommandLine.populateCommand(sslKeyTool, *toolArgs.toTypedArray())
@@ -225,16 +231,22 @@ class RegistrationTool : CordaCliWrapper("node-registration", "Corda registratio
 
     private val Path.parentOrDefault get() = this.parent ?: Paths.get(".")
 
+    private fun Logger.logConfigPath(configPath: Path) = info("Reading ${configPath.toAbsolutePath().normalize()}")
+    private fun Logger.logCryptoServiceName(cryptoServiceName: SupportedCryptoServices?, legalName: CordaX500Name) =
+            info("Using ${cryptoServiceName ?: SupportedCryptoServices.BC_SIMPLE} crypto service for: $legalName")
+
     // Make sure the nodes don't have conflicting crypto service configurations
     private fun validateNodeHsmConfigs(configFiles: List<Path>) {
         val cryptoServicesTypes = mutableMapOf<SupportedCryptoServices, MutableList<Any>>()
         configFiles.forEach { configPath ->
-            logger.info("Parsing ${configPath.toAbsolutePath().normalize()}")
+            logger.logConfigPath(configPath)
             val nodeConfig = ConfigHelper.loadConfig(configPath.parentOrDefault, configPath).parseAsNodeConfiguration().value()
             val errorMessage = "Node ${nodeConfig.myLegalName} has conflicting crypto service configuration."
+            logger.logCryptoServiceName(nodeConfig.cryptoServiceName, nodeConfig.myLegalName)
             nodeConfig.cryptoServiceName?.let { nodeCryptoServiceName ->
                 val configs = cryptoServicesTypes.getOrDefault(nodeCryptoServiceName, mutableListOf())
                 val cryptoServiceConfigPath = resolveCryptoConfPath(configPath.parentOrDefault, nodeConfig.cryptoServiceConf!!)
+                logger.logConfigPath(cryptoServiceConfigPath)
                 val toProcess = readCryptoConfigFile(nodeCryptoServiceName, cryptoServiceConfigPath)
                 configs.forEach {
                     when(nodeCryptoServiceName) {
@@ -313,32 +325,33 @@ class RegistrationTool : CordaCliWrapper("node-registration", "Corda registratio
         return args
     }
 
-    private fun makeBridgeCryptoService(configFile: Path?): CryptoService? {
-        return if (configFile != null) {
-            var bridgeCryptoServiceName: SupportedCryptoServices? = null
-            try {
-                // Get CryptoService type from bridge configuration
-                logger.info("Parsing ${configFile.toAbsolutePath().normalize()}")
-                val bridgeConfig = ConfigHelper.loadConfig(configFile.parentOrDefault, configFile)
-                if (bridgeConfig.isEmpty || !bridgeConfig.hasPath("p2pTlsSigningCryptoServiceConfig")) {
-                    throw IllegalArgumentException("Bridge configuration file missing 'p2pTlsSigningCryptoServiceConfig' property.")
-                }
-
-                val bridgeCryptoServiceConfig = bridgeConfig.getConfig("p2pTlsSigningCryptoServiceConfig")
-                if (bridgeCryptoServiceConfig.isEmpty || !bridgeCryptoServiceConfig.hasPath("name") || !bridgeCryptoServiceConfig.hasPath("conf")) {
-                    throw IllegalArgumentException("Bridge 'p2pTlsSigningCryptoServiceConfig' is incomplete.")
-                }
-                bridgeCryptoServiceName = SupportedCryptoServices.valueOf(bridgeCryptoServiceConfig.getString("name"))
-                val bridgeCryptoServiceConfigFile = Paths.get(bridgeCryptoServiceConfig.getString("conf"))
-                CryptoServiceFactory.makeCryptoService(bridgeCryptoServiceName, DUMMY_X500_NAME, null, (configFile.parentOrDefault / bridgeCryptoServiceConfigFile.fileName.toString()))
-            }
-            catch (ex: NoClassDefFoundError) {
-                logger.error ("Caught a NoClassDefFoundError exception when trying to load the ${bridgeCryptoServiceName?.name} crypto service")
-                logger.error("Please check that the ${baseDirectory / "drivers"} directory contains the client side jar for the HSM")
-                throw ex
-            }
-        } else {
-            null
+    private fun makeBridgeCryptoService(bridgeConfig: Config, configDir: Path): CryptoService? {
+        // Get CryptoService type from bridge configuration
+        if (!bridgeConfig.hasPath("p2pTlsSigningCryptoServiceConfig")) {
+            logger.logCryptoServiceName(SupportedCryptoServices.BC_SIMPLE, DUMMY_X500_NAME)
+            return null // Use BC_SIMPLE by default
+        }
+        val bridgeCryptoServiceConfig = bridgeConfig.getConfig("p2pTlsSigningCryptoServiceConfig")
+        if (!bridgeCryptoServiceConfig.hasPath("name")) {
+            throw IllegalArgumentException("Key 'name' is not specified in Bridge 'p2pTlsSigningCryptoServiceConfig'.")
+        }
+        val bridgeCryptoServiceName = SupportedCryptoServices.valueOf(bridgeCryptoServiceConfig.getString("name"))
+        logger.logCryptoServiceName(bridgeCryptoServiceName, DUMMY_X500_NAME)
+        if (bridgeCryptoServiceName == SupportedCryptoServices.BC_SIMPLE) {
+            return null // Skip crypto service creation for BC_SIMPLE
+        }
+        if (!bridgeCryptoServiceConfig.hasPath("conf")) {
+            throw IllegalArgumentException("Key 'conf' is not specified in Bridge 'p2pTlsSigningCryptoServiceConfig'.")
+        }
+        // Resolve crypto service config path in the same way as for nodes
+        val bridgeCryptoServiceConfigPath = resolveCryptoConfPath(configDir, Paths.get(bridgeCryptoServiceConfig.getString("conf")))
+        logger.logConfigPath(bridgeCryptoServiceConfigPath)
+        return try {
+            CryptoServiceFactory.makeCryptoService(bridgeCryptoServiceName, DUMMY_X500_NAME, null, bridgeCryptoServiceConfigPath)
+        } catch (ex: NoClassDefFoundError) {
+            logger.error("Caught a NoClassDefFoundError exception when trying to load the ${bridgeCryptoServiceName.name} crypto service")
+            logger.error("Please check that the ${baseDirectory / "drivers"} directory contains the client side jar for the HSM")
+            throw ex
         }
     }
 }
