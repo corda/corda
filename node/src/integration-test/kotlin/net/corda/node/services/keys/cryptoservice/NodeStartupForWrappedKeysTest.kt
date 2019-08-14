@@ -9,10 +9,13 @@ import net.corda.testing.driver.DriverDSL
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.internal.DEV_ROOT_CA
+import net.corda.testing.internal.IntegrationTest.Companion.isRemoteDatabaseMode
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.internal.SharedCompatibilityZoneParams
 import net.corda.testing.node.internal.internalDriver
 import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.junit.Assume
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import java.net.URL
@@ -29,6 +32,12 @@ class NodeStartupForWrappedKeysTest {
     @Rule
     @JvmField
     val doorman = TestDoorman(portAllocation)
+
+    @Before
+    fun setup() {
+        // no need to run these tests with remote DBs
+        Assume.assumeFalse(isRemoteDatabaseMode())
+    }
 
     @Test
     fun `when configuration instructs to avoid creating the key on startup, but the key does not exist during startup, the node exits`() {
