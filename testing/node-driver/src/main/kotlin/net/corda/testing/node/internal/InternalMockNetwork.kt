@@ -373,7 +373,7 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
         }
 
         override fun makeKeyManagementService(identityService: PersistentIdentityService): KeyManagementServiceInternal {
-            return BasicHSMKeyManagementService(cacheFactory, identityService, database, cryptoService)
+            return BasicHSMKeyManagementService(cacheFactory, identityService, database, cryptoService, pkToIdCache)
         }
 
         override fun startShell() {

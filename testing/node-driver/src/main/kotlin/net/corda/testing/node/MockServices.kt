@@ -21,16 +21,17 @@ import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.VersionInfo
-import net.corda.nodeapi.internal.cordapp.CordappLoader
 import net.corda.node.internal.ServicesForResolutionImpl
 import net.corda.node.internal.cordapp.JarScanningCordappLoader
 import net.corda.node.services.api.*
 import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.PersistentKeyManagementService
+import net.corda.node.services.persistence.PublicKeyToOwningIdentityCacheImpl
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
 import net.corda.node.services.vault.NodeVaultService
+import net.corda.nodeapi.internal.cordapp.CordappLoader
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.contextTransaction
@@ -75,7 +76,11 @@ open class MockServices private constructor(
         private val initialNetworkParameters: NetworkParameters,
         private val initialIdentity: TestIdentity,
         private val moreKeys: Array<out KeyPair>,
-        override val keyManagementService: KeyManagementService = MockKeyManagementService(identityService, *arrayOf(initialIdentity.keyPair) + moreKeys)
+        override val keyManagementService: KeyManagementService = MockKeyManagementService(
+                identityService,
+                *arrayOf(initialIdentity.keyPair) + moreKeys,
+                pkToIdCache = MockPublicKeyToOwningIdentityCache()
+        )
 ) : ServiceHub {
 
     companion object {
@@ -117,7 +122,11 @@ open class MockServices private constructor(
             val dataSourceProps = makeInternalTestDataSourceProperties(initialIdentity.name.organisation, SecureHash.randomSHA256().toString())
             val schemaService = NodeSchemaService(cordappLoader.cordappSchemas)
             val database = configureDatabase(dataSourceProps, makeTestDatabaseProperties(initialIdentity.name.organisation), identityService::wellKnownPartyFromX500Name, identityService::wellKnownPartyFromAnonymous, schemaService)
-            val keyManagementService = MockKeyManagementService(identityService, *arrayOf(initialIdentity.keyPair) + moreKeys)
+            val keyManagementService = MockKeyManagementService(
+                    identityService,
+                    *arrayOf(initialIdentity.keyPair) + moreKeys,
+                    pkToIdCache = MockPublicKeyToOwningIdentityCache()
+            )
             val mockService = database.transaction {
                 makeMockMockServices(cordappLoader, identityService, networkParameters, initialIdentity, moreKeys.toSet(), keyManagementService, schemaService, database)
             }
@@ -160,7 +169,8 @@ open class MockServices private constructor(
             // Create a persistent key management service and add the key pair which was created for the TestIdentity.
             // We only add the keypair for the initial identity and any other keys which this node may control. Note: We don't add the keys
             // for the other identities.
-            val keyManagementService = PersistentKeyManagementService(TestingNamedCacheFactory(), identityService, persistence)
+            val pkToIdCache = PublicKeyToOwningIdentityCacheImpl(persistence, TestingNamedCacheFactory())
+            val keyManagementService = PersistentKeyManagementService(TestingNamedCacheFactory(), identityService, persistence, pkToIdCache)
             persistence.transaction { keyManagementService.start(moreKeys + initialIdentity.keyPair) }
 
             val mockService = persistence.transaction {
