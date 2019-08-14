@@ -4,14 +4,13 @@ import CryptoServerAPI.CryptoServerException
 import CryptoServerJCE.CryptoServerProvider
 import com.spotify.docker.client.DefaultDockerClient
 import com.spotify.docker.client.DockerClient
-import com.spotify.docker.client.DockerHost
 import com.spotify.docker.client.messages.ContainerConfig
 import com.spotify.docker.client.messages.HostConfig
 import com.spotify.docker.client.messages.PortBinding
 import com.spotify.docker.client.messages.RegistryAuth
+import net.corda.core.utilities.Try
 import net.corda.core.utilities.contextLogger
 import net.corda.testing.driver.PortAllocation
-import net.corda.testing.internal.isLocalPortBound
 import org.junit.Assume.assumeFalse
 import org.junit.Assume.assumeTrue
 import org.junit.rules.ExternalResource
@@ -78,6 +77,15 @@ class HsmSimulator(portAllocation: PortAllocation,
 
         private const val HSM_STARTUP_SLEEP_INTERVAL_MS = 1000L
         private const val HSM_STARTUP_POLL_MAX_COUNT = 30
+
+        private fun isDockerRunning(dockerEnv: DefaultDockerClient.Builder): Boolean {
+            val dockerClient = dockerEnv.build()
+            return Try.on {
+                dockerClient.use {
+                    require(it.ping() == "OK")
+                }
+            }.isSuccess
+        }
     }
 
     val address = portAllocation.nextHostAndPort()
@@ -87,8 +95,7 @@ class HsmSimulator(portAllocation: PortAllocation,
     override fun before() {
 
         val dockerEnv = DefaultDockerClient.fromEnv()
-        val dockerPort = (dockerEnv.uri().port).let { if (it > 0) it else DockerHost.defaultPort() }
-        assumeTrue("Docker should be running locally on port $dockerPort", isLocalPortBound(dockerPort))
+        assumeTrue("Docker client should be running on $dockerEnv", isDockerRunning(dockerEnv))
         assumeFalse("Docker registry username is not set!. Skipping the test.", registryUser.isNullOrBlank())
         assumeFalse("Docker registry password is not set!. Skipping the test.", registryPass.isNullOrBlank())
 
