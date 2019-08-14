@@ -37,10 +37,7 @@ import net.corda.node.services.network.NetworkMapClient
 import net.corda.node.services.network.NetworkMapUpdater
 import net.corda.node.services.network.NodeInfoWatcher
 import net.corda.node.services.network.PersistentNetworkMapCache
-import net.corda.node.services.persistence.DBTransactionMappingStorage
-import net.corda.node.services.persistence.DBTransactionStorage
-import net.corda.node.services.persistence.NodeAttachmentService
-import net.corda.node.services.persistence.NodePropertiesPersistentStore
+import net.corda.node.services.persistence.*
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.utilities.EnterpriseNamedCacheFactory
@@ -105,8 +102,9 @@ class RpcWorkerServiceHub(override val configuration: NodeConfiguration,
 
     override val cordappProvider = CordappProviderImpl(cordappLoader, CordappConfigFileProvider(emptyList()), attachments)
 
+    private val pkToIdCache = PublicKeyToOwningIdentityCacheImpl(database, cacheFactory)
     @Suppress("LeakingThis")
-    override val keyManagementService = PersistentKeyManagementService(cacheFactory, identityService, database)
+    override val keyManagementService = PersistentKeyManagementService(cacheFactory, identityService, database, pkToIdCache)
     override val networkParametersService = DBNetworkParametersStorage(cacheFactory, database, networkMapClient)
     private val servicesForResolution = ServicesForResolutionImpl(identityService, attachments, cordappProvider, networkParametersService, validatedTransactions)
     @Suppress("LeakingThis")

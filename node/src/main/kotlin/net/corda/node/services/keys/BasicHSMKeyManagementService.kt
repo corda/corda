@@ -2,7 +2,6 @@ package net.corda.node.services.keys
 
 import net.corda.core.crypto.*
 import net.corda.core.crypto.internal.AliasPrivateKey
-import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -11,8 +10,11 @@ import net.corda.core.utilities.MAX_HASH_HEX_SIZE
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.BasicHSMKeyManagementService.PrivateKeyType.REGULAR
 import net.corda.node.services.keys.BasicHSMKeyManagementService.PrivateKeyType.WRAPPED
+import net.corda.node.services.persistence.WritablePublicKeyToOwningIdentityCache
 import net.corda.node.utilities.AppendOnlyPersistentMap
+import net.corda.nodeapi.internal.KeyOwningIdentity
 import net.corda.nodeapi.internal.cryptoservice.CryptoService
+import net.corda.nodeapi.internal.cryptoservice.SignOnlyCryptoService
 import net.corda.nodeapi.internal.cryptoservice.WrappedPrivateKey
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
@@ -41,14 +43,21 @@ import kotlin.collections.LinkedHashSet
  * - Signing with fresh keys that have been previously generated will be performed locally or using [wrappingCryptoService], depending
  *  on how the keys were generated and stored.
  */
-class BasicHSMKeyManagementService(cacheFactory: NamedCacheFactory, val identityService: PersistentIdentityService,
-                                   private val database: CordaPersistence, private val cryptoService: CryptoService) : SingletonSerializeAsToken(), KeyManagementServiceInternal {
+class BasicHSMKeyManagementService(cacheFactory: NamedCacheFactory,
+                                   override val identityService: PersistentIdentityService,
+                                   private val database: CordaPersistence,
+                                   private val cryptoService: SignOnlyCryptoService,
+                                   private val pkToIdCache: WritablePublicKeyToOwningIdentityCache) : SingletonSerializeAsToken(), KeyManagementServiceInternal {
     private var wrappingCryptoService: CryptoService? = null
     private var wrappingKeyAlias: String? = null
 
-    constructor(cacheFactory: NamedCacheFactory, identityService: PersistentIdentityService,
-                database: CordaPersistence, cryptoService: CryptoService,
-                wrappingCryptoService: CryptoService, wrappingKeyAlias: String): this(cacheFactory, identityService, database, cryptoService) {
+    constructor(cacheFactory: NamedCacheFactory,
+                identityService: PersistentIdentityService,
+                database: CordaPersistence,
+                cryptoService: CryptoService,
+                wrappingCryptoService: CryptoService,
+                wrappingKeyAlias: String,
+                pkToIdCache: WritablePublicKeyToOwningIdentityCache): this(cacheFactory, identityService, database, cryptoService, pkToIdCache) {
         this.wrappingCryptoService = wrappingCryptoService
         this.wrappingKeyAlias = wrappingKeyAlias
     }
@@ -156,56 +165,39 @@ class BasicHSMKeyManagementService(cacheFactory: NamedCacheFactory, val identity
 
     override val keys: Set<PublicKey> get() {
         return database.transaction {
-        val set = LinkedHashSet<PublicKey>(originalKeysMap.keys
-                )
+            val set = LinkedHashSet<PublicKey>(originalKeysMap.keys)
             keysMap.allPersisted.use { it.forEach { set += it.first } }
             set
         }
     }
 
     private fun containsPublicKey(publicKey: PublicKey): Boolean {
-        return publicKey in originalKeysMap || publicKey in keysMap
+        return (publicKey in originalKeysMap || publicKey in keysMap)
     }
 
     override fun filterMyKeys(candidateKeys: Iterable<PublicKey>): Iterable<PublicKey> = database.transaction {
         identityService.stripNotOurKeys(candidateKeys)
     }
 
-    override fun freshKey(): PublicKey {
-        if (wrappingCryptoService == null) {
+    override fun freshKeyInternal(externalId: UUID?): PublicKey {
+        return if (wrappingCryptoService == null) {
             val keyPair = generateKeyPair()
             database.transaction {
                 keysMap[keyPair.public] = GenericPrivateKey(keyPair.private)
+                pkToIdCache[keyPair.public] = KeyOwningIdentity.fromUUID(externalId)
             }
-            return keyPair.public
+            keyPair.public
         } else {
             val (publicKey, privateWrappedKey) = wrappingCryptoService!!.generateWrappedKeyPair(wrappingKeyAlias!!)
             database.transaction {
                 keysMap[publicKey] = GenericPrivateKey(privateWrappedKey)
+                pkToIdCache[publicKey] = KeyOwningIdentity.fromUUID(externalId)
             }
-            return publicKey
+            publicKey
         }
-
-
     }
 
-    override fun freshKey(externalId: UUID): PublicKey {
-        val newKey = freshKey()
-        database.transaction { session.persist(PublicKeyHashToExternalId(externalId, newKey)) }
-        return newKey
-    }
-
-    override fun freshKeyAndCert(identity: PartyAndCertificate, revocationEnabled: Boolean): PartyAndCertificate {
-        return freshCertificate(identityService, freshKey(), identity, getSigner(identity.owningKey))
-    }
-
-    override fun freshKeyAndCert(identity: PartyAndCertificate, revocationEnabled: Boolean, externalId: UUID): PartyAndCertificate {
-        val newKeyWithCert = freshKeyAndCert(identity, revocationEnabled)
-        database.transaction { session.persist(PublicKeyHashToExternalId(externalId, newKeyWithCert.owningKey)) }
-        return newKeyWithCert
-    }
-
-    private fun getSigner(publicKey: PublicKey): ContentSigner {
+    override fun getSigner(publicKey: PublicKey): ContentSigner {
         val signingPublicKey = getSigningPublicKey(publicKey)
         return cryptoService.getSigner(originalKeysMap[signingPublicKey]!!)
     }

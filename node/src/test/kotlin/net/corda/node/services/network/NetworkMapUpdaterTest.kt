@@ -34,6 +34,7 @@ import net.corda.testing.internal.DEV_ROOT_CA
 import net.corda.testing.internal.TestNodeInfoBuilder
 import net.corda.testing.internal.createNodeInfoAndSigned
 import net.corda.testing.node.internal.MockKeyManagementService
+import net.corda.testing.node.internal.MockPublicKeyToOwningIdentityCache
 import net.corda.testing.node.internal.network.NetworkMapServer
 import net.corda.testing.node.makeTestIdentityService
 import org.assertj.core.api.Assertions.assertThat
@@ -103,7 +104,7 @@ class NetworkMapUpdaterTest {
                 server.networkParameters.serialize().hash,
                 ourNodeInfo,
                 networkParameters,
-                MockKeyManagementService(makeTestIdentityService(), ourKeyPair),
+                MockKeyManagementService(makeTestIdentityService(), ourKeyPair, pkToIdCache = MockPublicKeyToOwningIdentityCache()),
                 NetworkParameterAcceptanceSettings(autoAcceptNetworkParameters, excludedAutoAcceptNetworkParameters))
     }
 
