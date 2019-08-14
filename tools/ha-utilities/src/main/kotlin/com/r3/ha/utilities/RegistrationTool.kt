@@ -331,12 +331,6 @@ class RegistrationTool : HAToolBase("node-registration", "Corda registration too
         // Resolve crypto service config path in the same way as for nodes
         val bridgeCryptoServiceConfigPath = resolveCryptoConfPath(configDir, Paths.get(bridgeCryptoServiceConfig.getString("conf")))
         logger.logConfigPath(bridgeCryptoServiceConfigPath)
-        return try {
-            CryptoServiceFactory.makeCryptoService(bridgeCryptoServiceName, DUMMY_X500_NAME, null, bridgeCryptoServiceConfigPath)
-        } catch (ex: NoClassDefFoundError) {
-            logger.error("Caught a NoClassDefFoundError exception when trying to load the ${bridgeCryptoServiceName.name} crypto service")
-            logger.error("Please check that the ${baseDirectory / "drivers"} directory contains the client side jar for the HSM")
-            throw ex
-        }
+        return CryptoServiceFactory.makeCryptoService(bridgeCryptoServiceName, DUMMY_X500_NAME, null, bridgeCryptoServiceConfigPath)
     }
 }
