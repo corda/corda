@@ -71,16 +71,16 @@ introduction}\cite{CordaIntro} and provide a detailed technical discussion.
 \newpage
 \section{Introduction}
 
-In many industries significant effort is needed to keep organisation specific databases in sync with each other. In
-the financial sector the effort of keeping different databases synchronised, reconciling them to ensure they
-actually are synchronised and resolving the `breaks' that occur when they are not represents a significant fraction
-of the total work a bank actually does.
+In many industries significant effort is needed to keep organisation specific databases in sync with each other.
+The effort of keeping different databases synchronised, reconciling them to ensure they actually are synchronised,
+managing inter-firm workflows to change those databases and resolving the `breaks' that occur when they get out
+of sync represents a significant fraction of the total work some organisations actually do.
 
 Why not just use a shared relational database? This would certainly solve a lot of problems using only existing
 technology, but it would also raise more questions than answers:
 
 \begin{itemize}
-\item Who would run this database? Where would we find a sufficient supply of angels to own it?
+\item Who would run this database? Where would we find a sufficient supply of incorruptible angels to own it?
 \item In which countries would it be hosted? What would stop that country abusing the mountain of sensitive information it would have?
 \item What if it were hacked?
 \item Can you actually scale a relational database to fit the entire financial system?
@@ -102,9 +102,10 @@ and global acceptance.
 \emph{Corda} is a decentralised database platform with the following novel features:
 
 \begin{itemize}
-\item Nodes are arranged in an authenticated peer to peer network. All communication is direct. Gossip is not used.
+\item Nodes are arranged in an authenticated peer to peer network. All communication is direct. A gossip protocol is not used.
 \item New transaction types can be defined using JVM\cite{JVM} bytecode. The bytecode is statically analyzed and rewritten
-on the fly to be fully deterministic, and to implement deterministic execution time quotas.
+on the fly to be fully deterministic, and to implement deterministic execution time quotas. This bytecode is mutually
+verified by all counterparties relevant to the transaction, ensuring the validity of ledger updates contained therein.
 \item Transactions may execute in parallel, on different nodes, without either node being aware of the other's transactions.
 \item There is no block chain\cite{Bitcoin}. Transaction races are deconflicted using pluggable \emph{notaries}. A single
 Corda network may contain multiple notaries that provide their guarantees using a variety of different algorithms. Thus
@@ -155,9 +156,11 @@ inputs, outputs and signatures. Unlike Bitcoin, Corda database rows can contain 
 field. Because the data consumed and added by transactions is not necessarily a set of key/value pairs, we don't
 talk about rows but rather \emph{states}. Like Bitcoin, Corda states are associated with bytecode programs that
 must accept a transaction for it to be valid, but unlike Bitcoin, a transaction must satisfy the programs for both
-the input and output states at once. \emph{Issuance transactions} may append new states to the database without
-consuming any existing states but unlike in Bitcoin these transactions are not special and may be created at any
-time, by anyone.
+the input and output states at once. Issuance transactions may append new states to the database without consuming
+any existing states but unlike in Bitcoin these transactions are not special. In Bitcoin, issuance transactions
+represent value creation and provide a crypto-economic incentive. This, in turn, motivates validators or miners.
+In Corda, there is no need for a crypto-economic incentive and so issuance transactions may be created at any
+time, by anyone to issue arbitrary data onto the ledger.
 
 In contrast to both Bitcoin and Ethereum, Corda does not order transactions using a block chain and by implication
 does not use miners or proof-of-work. Instead each state points to a \emph{notary}, which is a service that
@@ -225,8 +228,9 @@ host. The network map service is therefore not trusted to specify node data corr
 The network map abstracts the underlying network locations of the nodes to more useful business concepts like
 identities and services. Domain names for the underlying IP addresses may be helpful for debugging but are not
 required. User interfaces and APIs always work in terms of identities -- there is thus no equivalent to Bitcoin's
-notion of an address (hashed public key), and user-facing applications rely on auto-completion and search rather
-than QRcodes to identify a counterparty.
+notion of an address (hashed public key), and user-facing applications rely on auto-completion and search to
+specify human-readable legal identities rather than specific public keys -- which in the bitcoin ecosystem are
+often distributed as QR codes.
 
 It is possible to subscribe to network map changes and registering with the map is the first thing a node does at
 startup.
@@ -335,7 +339,7 @@ for the event horizon are long, for example, 30 days. This gives nodes that are 
 plenty of time to come online and resynchronise. Shorter values may lead to business processes being interrupted
 due to transient infrastructure outages for which repairs are already in progress.
 
-\paragraph{Flag days and hard forks.}There must be a mechanism for the parameters to be updated. Each signed
+\paragraph{Flag days vs hard forks.}There must be a mechanism for the parameters to be updated. Each signed
 parameter structure contains an incrementing integer epoch. When a new set of parameters is being introduced, it
 starts to be referenced by hash from the current network map and an activation date is supplied. Nodes download the
 new parameters, validate them and then alert the administrator that the network is changing. For some parameters
@@ -702,7 +706,7 @@ transaction is consuming.
 transition functions and finally the data itself.
 \item [Non-consuming input references.] These are also \texttt{(hash, output index)} pairs, however these `reference
 states' are not consumed by the act of referencing them. Reference states are useful for importing data that gives
-context to other states but which is only changed from time to time. Note that the pointed to state must be unconsumed
+context to a verifying smart contract, but which is only changed from time to time. Note that the pointed to state must be unconsumed
 at the time the transaction is notarised: if it's been consumed itself as part of a different transaction, the referencing
 transaction will not be notarised. In this way, non-consuming input references can help prevent the execution of
 transactions that rely on out-of-date reference data.
@@ -796,7 +800,7 @@ Composite keys are useful in multiple scenarios. For example, assets can be plac
 composite key where one leaf key is owned by a user, and the other by an independent risk analysis system. The risk
 analysis system refuses to sign if the transaction seems suspicious, like if too much value has been transferred in
 too short a time window. Another example involves encoding corporate structures into the key, allowing a CFO to
-sign a large transaction alone but his subordinates are required to work together.
+sign a large transaction alone but their subordinates are required to work together.
 
 Composite keys are also useful for byzantine fault tolerant notaries. Each participant in a distributed notary is
 represented by a leaf, and the threshold is set such that some participants can be offline or refusing to sign yet
