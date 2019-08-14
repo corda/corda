@@ -24,6 +24,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowInfo
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
+import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
@@ -98,11 +99,20 @@ class CheckpointDumper(private val checkpointStorage: CheckpointStorage, private
                     checkpointStorage.getAllCheckpoints().use { stream ->
                         ZipOutputStream(file.outputStream()).use { zip ->
                             stream.forEach { (runId, serialisedCheckpoint) ->
-                                val checkpoint = serialisedCheckpoint.checkpointDeserialize(context = checkpointSerializationContext)
-                                val json = checkpoint.toJson(runId.uuid, now)
-                                val jsonBytes = writer.writeValueAsBytes(json)
-                                zip.putNextEntry(ZipEntry("${json.flowLogicClass.simpleName}-${runId.uuid}.json"))
-                                zip.write(jsonBytes)
+
+                                val (bytes, fileName) = try {
+                                    val checkpoint =
+                                        serialisedCheckpoint.checkpointDeserialize(context = checkpointSerializationContext)
+                                    val json = checkpoint.toJson(runId.uuid, now)
+                                    val jsonBytes = writer.writeValueAsBytes(json)
+                                    jsonBytes to "${json.topLevelFlowClass.simpleName}-${runId.uuid}.json"
+                                } catch (e: Exception) {
+                                    log.info("Failed to deserialise checkpoint with flowId: ${runId.uuid}", e)
+                                    val errorBytes = checkpointDeserializationErrorMessage(runId, e).toByteArray()
+                                    errorBytes to "Undeserialisable-checkpoint-${runId.uuid}.json"
+                                }
+                                zip.putNextEntry(ZipEntry(fileName))
+                                zip.write(bytes)
                                 zip.closeEntry()
                             }
                         }
@@ -130,32 +140,74 @@ class CheckpointDumper(private val checkpointStorage: CheckpointStorage, private
         val flowCallStack = if (fiber != null) {
             // Poke into Quasar's stack and find the object references to the sub-flows so that we can correctly get the current progress
             // step for each sub-call.
-            val stackObjects = fiber.declaredField<Stack>("stack").value.declaredField<Array<*>>("dataObject").value
-            subFlowStack.map { subFlow ->
-                val subFlowLogic = stackObjects.find(subFlow.flowClass::isInstance) as? FlowLogic<*>
-                val currentStep = subFlowLogic?.progressTracker?.currentStep
-                FlowCall(subFlow.flowClass, if (currentStep == ProgressTracker.UNSTARTED) null else currentStep?.label)
-            }.reversed()
+            val stackObjects = fiber.getQuasarStack()
+            subFlowStack.map { it.toJson(stackObjects) }
         } else {
             emptyList()
         }
+
         return CheckpointJson(
-                id,
-                flowLogic.javaClass,
-                flowLogic,
-                flowCallStack,
-                (flowState as? FlowState.Started)?.flowIORequest?.toSuspendedOn(suspendedTimestamp(), now),
-                invocationContext.origin.toOrigin(),
-                ourIdentity,
-                sessions.mapNotNull { it.value.toActiveSession(it.key) },
-                errorState as? ErrorState.Errored
+            flowId = id,
+            topLevelFlowClass = flowLogic.javaClass,
+            topLevelFlowLogic = flowLogic,
+            flowCallStackSummary = flowCallStack.toSummary(),
+            flowCallStack = flowCallStack,
+            suspendedOn = (flowState as? FlowState.Started)?.flowIORequest?.toSuspendedOn(
+                suspendedTimestamp(),
+                now
+            ),
+            origin = invocationContext.origin.toOrigin(),
+            ourIdentity = ourIdentity,
+            activeSessions = sessions.mapNotNull { it.value.toActiveSession(it.key) },
+            errored = errorState as? ErrorState.Errored
         )
     }
 
     private fun Checkpoint.suspendedTimestamp(): Instant = invocationContext.trace.invocationId.timestamp
 
+    private fun checkpointDeserializationErrorMessage(
+            checkpointId: StateMachineRunId,
+            exception: Exception
+    ): String {
+        return """
+                *** Unable to deserialise checkpoint: ${exception.message} ***
+                *** Check logs for further information, checkpoint flowId: ${checkpointId.uuid} ***
+                """
+            .trimIndent()
+    }
+
+    private fun FlowStateMachineImpl<*>.getQuasarStack() =
+        declaredField<Stack>("stack").value.declaredField<Array<*>>("dataObject").value
+
+    private fun SubFlow.toJson(stackObjects: Array<*>): FlowCall {
+        val subFlowLogic = stackObjects.find(flowClass::isInstance) as? FlowLogic<*>
+        val currentStep = subFlowLogic?.progressTracker?.currentStep
+        return FlowCall(
+            flowClass = flowClass,
+            progressStep = if (currentStep == ProgressTracker.UNSTARTED) null else currentStep?.label,
+            flowLogic = subFlowLogic
+        )
+    }
+
+    private fun List<FlowCall>.toSummary() = map {
+        FlowCallSummary(
+            it.flowClass,
+            it.progressStep
+        )
+    }
+
     @Suppress("unused")
-    private class FlowCall(val flowClass: Class<*>, val progressStep: String?)
+    private class FlowCallSummary(
+        val flowClass: Class<*>,
+        val progressStep: String?
+    )
+
+    @Suppress("unused")
+    private class FlowCall(
+        val flowClass: Class<*>,
+        val progressStep: String?,
+        val flowLogic: FlowLogic<*>?
+    )
 
     @Suppress("unused")
     @JsonInclude(Include.NON_NULL)
@@ -179,15 +231,16 @@ class CheckpointDumper(private val checkpointStorage: CheckpointStorage, private
 
     @Suppress("unused")
     private class CheckpointJson(
-            val id: UUID,
-            val flowLogicClass: Class<FlowLogic<*>>,
-            val flowLogic: FlowLogic<*>,
-            val flowCallStack: List<FlowCall>,
-            val suspendedOn: SuspendedOn?,
-            val origin: Origin,
-            val ourIdentity: Party,
-            val activeSessions: List<ActiveSession>,
-            val errored: ErrorState.Errored?
+        val flowId: UUID,
+        val topLevelFlowClass: Class<FlowLogic<*>>,
+        val topLevelFlowLogic: FlowLogic<*>,
+        val flowCallStackSummary: List<FlowCallSummary>,
+        val suspendedOn: SuspendedOn?,
+        val flowCallStack: List<FlowCall>,
+        val origin: Origin,
+        val ourIdentity: Party,
+        val activeSessions: List<ActiveSession>,
+        val errored: ErrorState.Errored?
     )
 
     @Suppress("unused")
@@ -204,7 +257,7 @@ class CheckpointDumper(private val checkpointStorage: CheckpointStorage, private
             val customOperation: FlowIORequest.ExecuteAsyncOperation<*>? = null,
             val forceCheckpoint: FlowIORequest.ForceCheckpoint? = null
     ) {
-        @JsonFormat(pattern ="yyyy-MM-dd'T'HH:mm:ss", timezone = "UTC")
+        @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss'Z'", timezone = "UTC")
         lateinit var suspendedTimestamp: Instant
         var secondsSpentWaiting: Long = 0
     }
@@ -215,7 +268,7 @@ class CheckpointDumper(private val checkpointStorage: CheckpointStorage, private
     private fun FlowIORequest<*>.toSuspendedOn(suspendedTimestamp: Instant, now: Instant): SuspendedOn {
         fun Map<FlowSession, SerializedBytes<Any>>.toJson(): List<SendJson> {
             return map {
-                val payload = it.value.deserialize()
+                val payload = it.value.deserializeOrOutputPlaceholder()
                 SendJson(it.key, payload.javaClass, payload)
             }
         }
@@ -238,6 +291,12 @@ class CheckpointDumper(private val checkpointStorage: CheckpointStorage, private
             it.suspendedTimestamp = suspendedTimestamp
             it.secondsSpentWaiting = TimeUnit.MILLISECONDS.toSeconds(Duration.between(suspendedTimestamp, now).toMillis())
         }
+    }
+
+    private fun SerializedBytes<Any>.deserializeOrOutputPlaceholder() = try {
+        deserialize()
+    } catch (e: Exception) {
+        "*** Unable to deserialise message payload: ${e.message} ***"
     }
 
     @Suppress("unused")
