@@ -3,6 +3,7 @@ package com.r3.ha.utilities
 import net.corda.cliutils.*
 import net.corda.core.internal.*
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.contextLogger
 import org.w3c.dom.Document
 import picocli.CommandLine
 import picocli.CommandLine.Option
@@ -15,7 +16,7 @@ import javax.xml.transform.TransformerFactory
 import javax.xml.transform.dom.DOMSource
 import javax.xml.transform.stream.StreamResult
 
-class ArtemisConfigurationTool : CliWrapperBase("configure-artemis", "Generate and install required Artemis broker configuration files.") {
+class ArtemisConfigurationTool : HAToolBase("configure-artemis", "Generate and install required Artemis broker configuration files.") {
     companion object {
         // Required when creating broker instance. Are removed from generated configuration files.
         private const val ARTEMIS_DEFAULT_USER = "corda"
@@ -26,6 +27,8 @@ class ArtemisConfigurationTool : CliWrapperBase("configure-artemis", "Generate a
         private const val ACCEPTOR_STRING = "tcp://%s?tcpSendBufferSize=1048576;tcpReceiveBufferSize=1048576;protocols=CORE,AMQP;useEpoll=true;amqpCredits=1000;amqpLowCredits=300;sslEnabled=true;keyStorePath=%s;keyStorePassword=%s;trustStorePath=%s;trustStorePassword=%s;needClientAuth=true;enabledCipherSuites=TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256;enabledProtocols=TLSv1.2"
         private const val DEFAULT_JOURNAL_BUFFER_TIMEOUT = "2876000"
         private const val DEFAULT_CLUSTER_PASSWORD = "changeit"
+
+        private val logger by lazy { contextLogger() }
     }
 
     @Option(names = ["--install"], description = ["Install an Artemis instance."])
@@ -67,7 +70,9 @@ class ArtemisConfigurationTool : CliWrapperBase("configure-artemis", "Generate a
     @Option(names = ["--cluster-password"], description = ["Artemis cluster password."], defaultValue = DEFAULT_CLUSTER_PASSWORD)
     private lateinit var clusterPassword: String
 
-    override fun runProgram(): Int {
+    override val driversParentDir: Path? = null
+
+    override fun runTool() {
         validateConditionalOptions()
 
         // Create the configuration directory if it doesn't exist.
@@ -75,7 +80,7 @@ class ArtemisConfigurationTool : CliWrapperBase("configure-artemis", "Generate a
 
         // Create Artemis instance
         if (createInstance) {
-            println("Installing new Artemis instance using distribution : $dist ...")
+            logger.info("Installing new Artemis instance using distribution : $dist ...")
             val args = "create corda_p2p_broker --allow-anonymous --user $ARTEMIS_DEFAULT_USER --password $ARTEMIS_DEFAULT_USER_PASS -- $workingDir"
             val process = if (CordaSystemUtils.isOsWindows()) {
                 ProcessBuilder("cmd.exe", "/c", "${dist!! / "bin/artemis.cmd"} $args").start()
@@ -94,21 +99,20 @@ class ArtemisConfigurationTool : CliWrapperBase("configure-artemis", "Generate a
 
         // Generate artemis-users.properties
         "artemis-users.properties".let {
-            println("Generating 'artemis-users.properties'...")
+            logger.info("Generating 'artemis-users.properties'...")
             val templateResolved = javaClass.classLoader.getResourceAsStream(it).reader().readText().replace(USER_ID, userX500Name)
             templateResolved.toByteArray().inputStream().copyTo(workingDir / it, StandardCopyOption.REPLACE_EXISTING)
         }
 
         // Generate artemis-roles.properties
         "artemis-roles.properties".let {
-            println("Generating 'artemis-roles.properties'...")
+            logger.info("Generating 'artemis-roles.properties'...")
             javaClass.classLoader.getResourceAsStream(it).copyTo(workingDir / it, StandardCopyOption.REPLACE_EXISTING)
         }
 
         generateBrokerXml()
 
-        println("Artemis configuration completed.")
-        return ExitCodes.SUCCESS
+        logger.info("Artemis configuration completed.")
     }
 
     private fun validateConditionalOptions() {
@@ -123,7 +127,7 @@ class ArtemisConfigurationTool : CliWrapperBase("configure-artemis", "Generate a
     }
 
     private fun generateBrokerXml() {
-        println("Generating 'broker.xml'...")
+        logger.info("Generating 'broker.xml'...")
         val file = (workingDir / "broker.xml").toFile()
 
         val journalBufferTimeoutValue = if (file.exists()) {

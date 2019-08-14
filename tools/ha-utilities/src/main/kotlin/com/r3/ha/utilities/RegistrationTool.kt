@@ -4,9 +4,7 @@ import com.typesafe.config.Config
 import com.typesafe.config.ConfigValueFactory
 import net.corda.client.rpc.internal.serialization.amqp.AMQPClientSerializationScheme
 import net.corda.cliutils.CommonCliConstants.BASE_DIR
-import net.corda.cliutils.CordaCliWrapper
 import net.corda.cliutils.CordaVersionProvider
-import net.corda.cliutils.ExitCodes
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.PLATFORM_VERSION
@@ -41,7 +39,6 @@ import net.corda.nodeapi.internal.cryptoservice.utimaco.UtimacoCryptoService.Uti
 import net.corda.serialization.internal.AMQP_P2P_CONTEXT
 import net.corda.serialization.internal.AMQP_RPC_CLIENT_CONTEXT
 import net.corda.serialization.internal.SerializationFactoryImpl
-import org.slf4j.Logger
 import picocli.CommandLine
 import picocli.CommandLine.Option
 import java.nio.file.Path
@@ -50,7 +47,7 @@ import java.util.concurrent.ConcurrentLinkedQueue
 import javax.security.auth.x500.X500Principal
 import kotlin.concurrent.thread
 
-class RegistrationTool : CordaCliWrapper("node-registration", "Corda registration tool for registering 1 or more node with the Corda Network, using provided node configuration(s)." +
+class RegistrationTool : HAToolBase("node-registration", "Corda registration tool for registering 1 or more node with the Corda Network, using provided node configuration(s)." +
         " For convenience the tool is also downloading network parameters. Additionally, it can import the TLS keys into the bridge.") {
     companion object {
         private val DUMMY_X500_NAME = CordaX500Name("Bridge", "London", "GB")
@@ -104,12 +101,10 @@ class RegistrationTool : CordaCliWrapper("node-registration", "Corda registratio
         }
     }
 
-    override fun runProgram(): Int {
+    override val driversParentDir: Path? get() = baseDirectory
+
+    override fun runTool() {
         initialiseSerialization() // Should be called after CliWrapperBase.initLogging()
-        return try {
-            if (!HAUtilities.addJarsInDriversDirectoryToSystemClasspath(baseDirectory)) {
-                HAUtilities.addJarsInDriversDirectoryToSystemClasspath(Paths.get("."))
-            }
             validateNodeHsmConfigs(configFiles)
             val bridgeConfig = bridgeConfigFile?.let {
                 logger.logConfigPath(it)
@@ -192,14 +187,8 @@ class RegistrationTool : CordaCliWrapper("node-registration", "Corda registratio
                 val sslKeyTool = BridgeSSLKeyTool()
                 logger.info("Params for BridgeSSLKeyTool are: $toolArgs")
                 CommandLine.populateCommand(sslKeyTool, *toolArgs.toTypedArray())
-                sslKeyTool.runProgram()
+                sslKeyTool.runTool()
             }
-
-            ExitCodes.SUCCESS
-        } catch (e: Exception) {
-            logger.error("RegistrationTool failed with exception", e)
-            ExitCodes.FAILURE
-        }
     }
 
     private fun resolveCryptoServiceConfPathToAbsolutePath(configFileParentPath: Path, config: Config): Config {
@@ -230,10 +219,6 @@ class RegistrationTool : CordaCliWrapper("node-registration", "Corda registratio
     }
 
     private val Path.parentOrDefault get() = this.parent ?: Paths.get(".")
-
-    private fun Logger.logConfigPath(configPath: Path) = info("Reading ${configPath.toAbsolutePath().normalize()}")
-    private fun Logger.logCryptoServiceName(cryptoServiceName: SupportedCryptoServices?, legalName: CordaX500Name) =
-            info("Using ${cryptoServiceName ?: SupportedCryptoServices.BC_SIMPLE} crypto service for: $legalName")
 
     // Make sure the nodes don't have conflicting crypto service configurations
     private fun validateNodeHsmConfigs(configFiles: List<Path>) {
