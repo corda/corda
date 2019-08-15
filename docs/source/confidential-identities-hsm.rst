@@ -73,7 +73,7 @@ A completed configuration file might appear as follows:
 
   freshIdentitiesConfiguration: {
       mode: "DEGRADED_WRAPPED",
-      freshIdentitiesConfiguration: {
+      cryptoServiceConfiguration: {
           cryptoServiceName: "BC_SIMPLE"
       },
       masterKeyAlias: "master-key",
