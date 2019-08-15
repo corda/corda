@@ -1,6 +1,5 @@
 package net.corda.core.crypto
 
-import net.corda.core.DeleteForDJVM
 import net.corda.core.KeepForDJVM
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.exactAdd
@@ -244,7 +243,7 @@ class CompositeKey private constructor(val threshold: Int, children: List<NodeAn
     override fun toString() = "(${children.joinToString()})"
 
     /** A helper class for building a [CompositeKey]. */
-    @DeleteForDJVM
+    @KeepForDJVM
     class Builder {
         private val children: MutableList<NodeAndWeight> = mutableListOf()
 

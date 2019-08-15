@@ -19,7 +19,7 @@ Joining the UAT environment
 
 *Technical*
 * One or more physical or virtual machines upon which to deploy Corda, with compatible operating system and a compatible Java version (e.g. Oracle JDK 8u131+)
-* Corda software - either Open Source or Corda Enterprise (license from R3) 
+* Corda software - either Open Source or Corda Enterprise (CE requires a license from R3) 
 * A static external IP addresses must be available for each machine on which Corda will be run.
 
 *Business*
@@ -28,10 +28,12 @@ Joining the UAT environment
 
 **Note**: 
 *Corda Network UAT is governed by an [independent Foundation](https://corda.network/governance/index.html). Corda Network UAT seeks to provide a test environment which is as close as possible to Corda Network in its make-up and operation.*
+=======
 
 Steps to join UAT environment
 -----------------------------
 
 Steps to join are outlined on this website: https://corda.network/participation/index.html
+=======
 
 For further questions on this process, please contact us - preferably on the mailing list: https://groups.io/g/corda-network
