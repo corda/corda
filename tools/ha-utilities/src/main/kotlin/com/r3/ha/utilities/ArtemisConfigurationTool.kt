@@ -1,6 +1,7 @@
 package com.r3.ha.utilities
 
 import net.corda.cliutils.*
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.*
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
@@ -61,8 +62,8 @@ class ArtemisConfigurationTool : HAToolBase("configure-artemis", "Generate and i
     @Option(names = ["--connectors"], converter = [NetworkHostAndPortConverter::class], split = ",", description = ["A list of network hosts and ports separated by commas representing the artemis connectors used for the Artemis HA cluster. The first entry in the list will be used by the instance configured by this tool."])
     private var connectors: List<NetworkHostAndPort> = mutableListOf()
 
-    @Option(names = ["--user"], description = ["The X500 name of connecting users (clients). Example value: \"CN=artemis, O=Corda, L=London, C=GB\""], required = true)
-    private lateinit var userX500Name: String
+    @Option(names = ["--user"], converter = [CordaX500NameConverter::class], description = ["The X500 name of connecting users (clients). Example value: \"CN=artemis, O=Corda, L=London, C=GB\""], required = true)
+    private lateinit var userX500Name: CordaX500Name
 
     @Option(names = ["--cluster-user"], description = ["The username of the Artemis cluster."], defaultValue = "corda-cluster-user")
     private lateinit var clusterUsername: String
@@ -100,7 +101,7 @@ class ArtemisConfigurationTool : HAToolBase("configure-artemis", "Generate and i
         // Generate artemis-users.properties
         "artemis-users.properties".let {
             logger.info("Generating 'artemis-users.properties'...")
-            val templateResolved = javaClass.classLoader.getResourceAsStream(it).reader().readText().replace(USER_ID, userX500Name)
+            val templateResolved = javaClass.classLoader.getResourceAsStream(it).reader().readText().replace(USER_ID, userX500Name.toString())
             templateResolved.toByteArray().inputStream().copyTo(workingDir / it, StandardCopyOption.REPLACE_EXISTING)
         }
 
@@ -254,6 +255,10 @@ class ArtemisConfigurationTool : HAToolBase("configure-artemis", "Generate and i
                 NetworkHostAndPort.parse(value)
             } ?: throw CommandLine.TypeConversionException("Cannot parse network address: $value")
         }
+    }
+
+    class CordaX500NameConverter: CommandLine.ITypeConverter<CordaX500Name> {
+        override fun convert(value: String) = CordaX500Name.parse(value)
     }
 }
 
