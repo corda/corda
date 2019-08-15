@@ -32,4 +32,5 @@ dependencies {
     }
     compile 'com.google.guava:guava:19.0'
     compile gradleApi()
+    compile group: 'com.github.docker-java', name: 'docker-java', version: '3.1.5'
 }
