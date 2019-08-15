@@ -257,7 +257,7 @@ class ArtemisConfigurationTool : HAToolBase("configure-artemis", "Generate and i
         }
     }
 
-    class CordaX500NameConverter: CommandLine.ITypeConverter<CordaX500Name> {
+    class CordaX500NameConverter : CommandLine.ITypeConverter<CordaX500Name> {
         override fun convert(value: String) = CordaX500Name.parse(value)
     }
 }

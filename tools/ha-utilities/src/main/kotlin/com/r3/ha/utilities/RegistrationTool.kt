@@ -105,90 +105,90 @@ class RegistrationTool : HAToolBase("node-registration", "Corda registration too
 
     override fun runTool() {
         initialiseSerialization() // Should be called after CliWrapperBase.initLogging()
-            validateNodeHsmConfigs(configFiles)
-            val bridgeConfig = bridgeConfigFile?.let {
-                logger.logConfigPath(it)
-                ConfigHelper.loadConfig(it.parentOrDefault, it)
-            }
-            // Return null for BC_SIMPLE
-            val bridgeCryptoService = bridgeConfig?.let {
-                makeBridgeCryptoService(it, bridgeConfigFile!!.parentOrDefault)
-            }
-            // Parallel processing is beneficial as it is possible to submit multiple CSR in close succession
-            // If manual interaction will be needed - it would be possible to sign them all off at once on Doorman side.
-            val nodeConfigurations = ConcurrentLinkedQueue<Pair<CordaX500Name, Try<NodeConfiguration>>>()
-            val startedThreads = configFiles.map {
-                val legalName = ConfigHelper.loadConfig(it.parentOrDefault, it).parseAsNodeConfiguration().value().myLegalName
-                thread(name = legalName.toString(), start = true) {
-                    nodeConfigurations.add(Pair(legalName, Try.on {
-                        try {
-                            logger.info("Processing registration for: $legalName")
-                            // Load the config again with modified base directory.
-                            val folderName = if (legalName.commonName == null) legalName.organisation else "${legalName.commonName},${legalName.organisation}"
-                            val baseDir = baseDirectory / folderName.toFileName()
-                            val parsedConfig = resolveCryptoServiceConfPathToAbsolutePath(it.parentOrDefault,
-                                                                                          ConfigHelper.loadConfig(it.parentOrDefault, it))
-                                    .withValue("baseDirectory", ConfigValueFactory.fromAnyRef(baseDir.toString()))
-                                    .parseAsNodeConfiguration()
-                                    .value()
-                            val sslPublicKey = if (bridgeCryptoService != null) {
-                                val alias = x500PrincipalToTLSAlias(legalName.x500Principal) // must be lower case to stay consistent with public .JKS file
-                                bridgeCryptoService.generateKeyPair(alias, X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-                            } else {
-                                null
-                            }
-                            with(parsedConfig) {
-                                val helper = NodeRegistrationHelper(this, HTTPNetworkRegistrationService(networkServices!!, VERSION_INFO),
-                                        NodeRegistrationOption(networkRootTrustStorePath, networkRootTrustStorePassword),
-                                        logProgress = logger::info, logError = logger::error)
-                                helper.generateKeysAndRegister(sslPublicKey)
-                                helper.generateNodeIdentity()
-                            }
-                            parsedConfig
-                        } catch (ex: Throwable) {
-                            logger.error("Failed to process the following X500 name [$legalName]", ex)
-                            throw ex
+        validateNodeHsmConfigs(configFiles)
+        val bridgeConfig = bridgeConfigFile?.let {
+            logger.logConfigPath(it)
+            ConfigHelper.loadConfig(it.parentOrDefault, it)
+        }
+        // Return null for BC_SIMPLE
+        val bridgeCryptoService = bridgeConfig?.let {
+            makeBridgeCryptoService(it, bridgeConfigFile!!.parentOrDefault)
+        }
+        // Parallel processing is beneficial as it is possible to submit multiple CSR in close succession
+        // If manual interaction will be needed - it would be possible to sign them all off at once on Doorman side.
+        val nodeConfigurations = ConcurrentLinkedQueue<Pair<CordaX500Name, Try<NodeConfiguration>>>()
+        val startedThreads = configFiles.map {
+            val legalName = ConfigHelper.loadConfig(it.parentOrDefault, it).parseAsNodeConfiguration().value().myLegalName
+            thread(name = legalName.toString(), start = true) {
+                nodeConfigurations.add(Pair(legalName, Try.on {
+                    try {
+                        logger.info("Processing registration for: $legalName")
+                        // Load the config again with modified base directory.
+                        val folderName = if (legalName.commonName == null) legalName.organisation else "${legalName.commonName},${legalName.organisation}"
+                        val baseDir = baseDirectory / folderName.toFileName()
+                        val parsedConfig = resolveCryptoServiceConfPathToAbsolutePath(it.parentOrDefault,
+                                ConfigHelper.loadConfig(it.parentOrDefault, it))
+                                .withValue("baseDirectory", ConfigValueFactory.fromAnyRef(baseDir.toString()))
+                                .parseAsNodeConfiguration()
+                                .value()
+                        val sslPublicKey = if (bridgeCryptoService != null) {
+                            val alias = x500PrincipalToTLSAlias(legalName.x500Principal) // must be lower case to stay consistent with public .JKS file
+                            bridgeCryptoService.generateKeyPair(alias, X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
+                        } else {
+                            null
                         }
-                    }))
-                }
+                        with(parsedConfig) {
+                            val helper = NodeRegistrationHelper(this, HTTPNetworkRegistrationService(networkServices!!, VERSION_INFO),
+                                    NodeRegistrationOption(networkRootTrustStorePath, networkRootTrustStorePassword),
+                                    logProgress = logger::info, logError = logger::error)
+                            helper.generateKeysAndRegister(sslPublicKey)
+                            helper.generateNodeIdentity()
+                        }
+                        parsedConfig
+                    } catch (ex: Throwable) {
+                        logger.error("Failed to process the following X500 name [$legalName]", ex)
+                        throw ex
+                    }
+                }))
+            }
+        }
+
+        // Wait for all to complete successfully or not.
+        startedThreads.forEach { it.join() }
+
+        val (success, fail) = nodeConfigurations.partition { it.second.isSuccess }
+
+        if (success.isNotEmpty()) {
+            // Fetch the network params and store them in the `baseDirectory`
+            val versionInfo = VersionInfo(PLATFORM_VERSION, CordaVersionProvider.releaseVersion, CordaVersionProvider.revision, CordaVersionProvider.vendor)
+            val networkMapClient = NetworkMapClient(success.first().second.getOrThrow().networkServices!!, versionInfo)
+            val trustRootCertificate = X509KeyStore.fromFile(networkRootTrustStorePath, networkRootTrustStorePassword)
+                    .getCertificate(CORDA_ROOT_CA)
+            networkMapClient.start(trustRootCertificate)
+            val networkParamsReader = NetworkParametersReader(
+                    trustRootCertificate,
+                    networkMapClient,
+                    baseDirectory)
+            networkParamsReader.read()
+        }
+
+        if (fail.isNotEmpty()) {
+            fun List<Pair<CordaX500Name, Try<NodeConfiguration>>>.allX500NamesAsStr(): String {
+                return map { it.first }.joinToString(";")
             }
 
-            // Wait for all to complete successfully or not.
-            startedThreads.forEach { it.join() }
+            throw IllegalStateException("Registration of [${success.allX500NamesAsStr()}] been successful." +
+                    " However, for the following X500 names it has failed: [${fail.allX500NamesAsStr()}]. Please see log for more details.")
+        }
 
-            val (success, fail) = nodeConfigurations.partition { it.second.isSuccess }
-
-            if(success.isNotEmpty()) {
-                // Fetch the network params and store them in the `baseDirectory`
-                val versionInfo = VersionInfo(PLATFORM_VERSION, CordaVersionProvider.releaseVersion, CordaVersionProvider.revision, CordaVersionProvider.vendor)
-                val networkMapClient = NetworkMapClient(success.first().second.getOrThrow().networkServices!!, versionInfo)
-                val trustRootCertificate = X509KeyStore.fromFile(networkRootTrustStorePath, networkRootTrustStorePassword)
-                        .getCertificate(CORDA_ROOT_CA)
-                networkMapClient.start(trustRootCertificate)
-                val networkParamsReader = NetworkParametersReader(
-                        trustRootCertificate,
-                        networkMapClient,
-                        baseDirectory)
-                networkParamsReader.read()
-            }
-
-            if (fail.isNotEmpty()) {
-                fun List<Pair<CordaX500Name, Try<NodeConfiguration>>>.allX500NamesAsStr(): String {
-                    return map { it.first }.joinToString(";")
-                }
-
-                throw IllegalStateException("Registration of [${success.allX500NamesAsStr()}] been successful." +
-                        " However, for the following X500 names it has failed: [${fail.allX500NamesAsStr()}]. Please see log for more details.")
-            }
-
-            bridgeConfig?.let {
-                logger.info("Running BridgeSSLKeyTool to distribute sslkeystores")
-                val toolArgs = generateBridgeSSLKeyToolArguments(baseDirectory, success, it.getString("keyStorePassword"))
-                val sslKeyTool = BridgeSSLKeyTool()
-                logger.info("Params for BridgeSSLKeyTool are: $toolArgs")
-                CommandLine.populateCommand(sslKeyTool, *toolArgs.toTypedArray())
-                sslKeyTool.runTool()
-            }
+        bridgeConfig?.let {
+            logger.info("Running BridgeSSLKeyTool to distribute sslkeystores")
+            val toolArgs = generateBridgeSSLKeyToolArguments(baseDirectory, success, it.getString("keyStorePassword"))
+            val sslKeyTool = BridgeSSLKeyTool()
+            logger.info("Params for BridgeSSLKeyTool are: $toolArgs")
+            CommandLine.populateCommand(sslKeyTool, *toolArgs.toTypedArray())
+            sslKeyTool.runTool()
+        }
     }
 
     private fun resolveCryptoServiceConfPathToAbsolutePath(configFileParentPath: Path, config: Config): Config {
