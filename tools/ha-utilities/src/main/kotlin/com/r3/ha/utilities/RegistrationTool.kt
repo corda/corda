@@ -142,6 +142,7 @@ class RegistrationTool : CordaCliWrapper("node-registration", "Corda registratio
                                         logProgress = logger::info, logError = logger::error)
                                 helper.generateKeysAndRegister(sslPublicKey)
                                 helper.generateNodeIdentity()
+                                helper.generateWrappingKey()
                             }
                             parsedConfig
                         } catch (ex: Throwable) {
