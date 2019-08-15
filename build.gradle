@@ -115,6 +115,8 @@ buildscript {
     // Updates [131, 161] also have zip compression bugs on MacOS (High Sierra).
     // when the java version in NodeStartup.hasMinimumJavaVersion() changes, so must this check
     ext.java8_minUpdateVersion = constants.getProperty('java8MinUpdateVersion')
+    ext.corda_revision = "git rev-parse HEAD".execute().text.trim()
+    ext.docker_testing_tag = "$corda_revision-${System.currentTimeMillis()}"
 
     repositories {
         mavenLocal()
@@ -158,8 +160,6 @@ plugins {
 }
 
 ext {
-    corda_revision = "git rev-parse HEAD".execute().text.trim()
-    docker_testing_tag = "$corda_revision-${System.currentTimeMillis()}"
 }
 
 apply plugin: 'project-report'
@@ -310,6 +310,10 @@ allprojects {
         runtime {
             // We never want isolated.jar on classPath, since we want to test jar being dynamically loaded as an attachment
             exclude module: 'isolated'
+        }
+
+        ext {
+            docker_testing_tag = "$docker_testing_tag"
         }
     }
 }
@@ -529,7 +533,7 @@ docker {
 // 8. if failures detected, determine which container ran the test
 // 9. commit container to image and provide access to contents
 
-task buildTestingDockerImage(type: DockerBuildImage) {
+task buildTestingDockerImage(type: DockerBuildImage, dependsOn: ["clean"]) {
     inputDir = new File(".")
     tags = ["$docker_testing_tag"]
     dockerFile = new File(new File("testing"), "Dockerfile")

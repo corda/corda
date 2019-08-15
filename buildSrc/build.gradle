@@ -30,4 +30,6 @@ dependencies {
     runtime project.childProjects.collect { n, p ->
         project(p.path)
     }
+    compile 'com.google.guava:guava:19.0'
+    compile gradleApi()
 }

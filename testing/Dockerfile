@@ -6,5 +6,5 @@ RUN apt-get install -y java-common && dpkg -i java-1.8.0-amazon-corretto-jdk_8.2
 
 RUN mkdir -p /tmp/source
 COPY . /tmp/source
-RUN cd /tmp/source && ./gradlew clean testClasses integrationTestClasses
+RUN cd /tmp/source && ./gradlew clean testClasses integrationTestClasses printIt
 
