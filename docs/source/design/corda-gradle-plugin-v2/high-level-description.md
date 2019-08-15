@@ -29,8 +29,6 @@ a prefix extends the functionality.
 
 The configurations: ``cordapp`` and ``cordaRuntime`` are in effect only useful for the `cordformation` plugin. This is a bit surprising and non-intuitive.
 
-Even without the new requirements, in my subjective opinion for a normal cordapp developer, this is not the most straight-forward way to define   
-
 
 #### Cordapp Metadata / Versioning and the Contracts/Workflows split
   
@@ -121,7 +119,8 @@ Currently `findPackages` triggers a gradle build from inside the test to get the
 Another factor is that the driver test / CorDapp plugin framework was designed with both the platform and Cordapp developers in mind. But the requirements
 differ in the 2 use cases.
 
-For example: ``scanPackages`` does not make much sense to be used for a CorDapp developer.  
+For example: ``scanPackages`` does not make much sense to be used for a CorDapp developer, as they are generally testing the Cordapp they're writing
+as part of the current project.
 
 
 #### Cordformation
@@ -209,18 +208,19 @@ There's 2 types of CorDapp code with different security characteristics:
 
 
 ##### 1. On ledger code (states and contracts) 
-This code must prove that it is valid by a cryptographic chain from the root of trust - which is the contract constraint of the states. 
+"On ledger" means that this code will be attached to transactions, which live on ledger. And this code is used to verify the transactions.
+Due to the nature of the ledger, this type of code must be accompanied by a cryptographic chain from the root of trust - which is the contract constraint of the states. 
 
-A transaction can mix multiple contracts that must be able to inter-operate.
+A transaction can mix multiple CorDapps that must be able to inter-operate.
 Currently a classloader per transaction is created, which contains all contracts and all their dependencies. 
 See https://docs.corda.net/head/cordapp-advanced-concepts.html and  https://groups.io/g/corda-dev/topic/31936558?p=Created,,,20,1,0,0::recentpostdate/sticky,,,20,2,0,31936558
 
-When contract jars contain cryptographic links to dependencies, a CorDapp classloader can be created which isolates Cordapps from each other, and avoids all the pitfalls of the current approach.
+(When contract jars will contain cryptographic links to dependencies - as is proposed by this design, a CorDapp classloader can be created which isolates Cordapps from each other, and avoids all the pitfalls of the current approach.)
 
 
 ##### 2. Workflow code.  
 This code is installed on the node by an administrator, so it doesn't need any cryptographic proof. 
-This is code similar to applications deployed on an application server.
+It also doesn't travel over the network. It is more similar to applications deployed on an application server.
 
 Note: ``On ledger code`` will also run in this context. 
 
@@ -232,6 +232,7 @@ Issues:
  - It does not support installing multiple versions at the same time, to avoid the draining mode.
  - Running all CorDapps in a single classloader prevents isolating the actual data from other CorDapps. 
 
+The current design proposes a prerequisite solution that can be used for full CorDapp isolation at the application level.
 
 
 #### Integrate nicely with the ``cordformation`` plugin and the ``driver``.

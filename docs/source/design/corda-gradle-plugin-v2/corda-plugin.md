@@ -1,13 +1,13 @@
 # Corda plugin
 
-Very simple plugin that removes the need to explicitly add specific corda dependencies. 
+The proposal is to build a very simple plugin that removes the need to explicitly add specific corda dependencies. 
 This should normally be added in the root module for all projects that depend on Corda.
 
 It will add 2 properties: 
  - ``cordaCompilePlatformVersion`` for the version and distribution. This should be set once
  - ``cordaComponents`` will contain the components which the module needs. This should be set per module. E.g: ``["corda-core", "corda-node-api", "corda-rpc"]``
 
-It also allows more flexibility, as the code could be compiled and tested against all corda versions between the ``minimumPlatformVersion`` and the ``cordaCompilePlatformVersion``.
+Because of the declarative approach, it also allows more flexibility, as the code could be compiled and tested against all corda versions between the ``minimumPlatformVersion`` and the ``cordaCompilePlatformVersion``.
 
 
 ### Sample config 
@@ -31,7 +31,7 @@ This will replace the current:
 ```
 
 
-If possible (based on the ``cordaCompilePlatformVersion``), this will also set the version of the ``cordapp`` and ``corda-testing`` plugins. 
+If possible (based on the ``cordaCompilePlatformVersion``), this will also set the version of the other plugins like the ``cordapp`` and ``corda-testing`` plugins. 
 
-The other plugins: ``cordapp`` and ``corda-testing`` will depend on this plugin and will configure which components they need.
+Note: The other plugins: ``cordapp`` and ``corda-testing`` will depend on this plugin and will configure which components they need.
 For example, ``onLedgerCode`` only needs a dependency to ``corda-core``.

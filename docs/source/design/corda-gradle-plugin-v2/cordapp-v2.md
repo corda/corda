@@ -10,9 +10,9 @@ The proposed solution is best explained by a sample.
     apply plugin: 'net.corda.plugins.cordapp'
 
     cordapp {        
-        // If this code is designed to be saved as code-on-ledger. E.g.: states and contracts.
+        // Set to true if this module contains states and contracts.
         // If this is set to true:
-        //  - It will autoinclude the `dependency-constraints` plugin.
+        //  - It will autoinclude the `secure-dependency-constraints` plugin.
         //  - It will also include the `jar-signer` plugin and sign the JAR.
         //  - It will set:   `` cordaComponents = ["corda-core"]`` 
         // Could this be used for other purposes - like DJVM stuff? 
@@ -29,7 +29,7 @@ The proposed solution is best explained by a sample.
         targetPlatformVersion 4
     }
     
-    // If `onLedgerCode=true` or the `dependency-constraints` plugin was included, all these dependencies
+    // If `onLedgerCode=true` or the `secure-dependency-constraints` plugin was included, all these dependencies
     // will by default be pinned down in the output JAR of this CorDapp.
     dependencies {
         implementation "com.foo:foo:1.2"
@@ -59,6 +59,10 @@ Its responsibilities are:
         - to include the `jar-signer` plugin and sign the JAR.
         - to configure the components or Corda that are required.
               
+### Requirements
+ - All corda and corda transitive dependencies must be explicitly excluded from the ``secure-dependencies`` file.
+ - The plugin must set the corda components to what is required based on the type of CorDapp
+ - The plugin must set the default corda dev signing key.   
 
 
 ## Changes from the current version.
@@ -73,8 +77,7 @@ This is the area where the changes are the most important.
 Also, know as "contract JARs", these will no longer be distributed by default as semi fat-jars, but as normal jars with cryptographic links to their dependencies.
 
 The plugin developer is still free to create a fat-jar, but must use a custom mechanism for that - like the shadow plugin. 
- 
-Complexity introduced by shading:
+Note, that if the developer chooses to do that, there is some complexity introduced by shading:
     - if the contract only shades code that is used by its internal verification logic, then shading should have no implications. 
     Basically shading an implementation library is ok. 
     - if the shaded dependency is used as part of a data that gets serialized with the state, then the shaded dependency must ripple through to the 
@@ -99,7 +102,7 @@ This would create a sub-folder ``cordapps/com.foo:foo-cordapp:1.0`` where it wil
 Note that this type of structure could support multiple simultaneous versions, because a self-contained classloader can be created from each of these folders.
 Checkpoints will point to the version of the folder. 
 
-Contract jars will be installed in one of these CorDapp folders, as they have no 
+The various versions of contract jars will be installed in these CorDapp folders. 
 
 This difference in packaging will have implications in how CorDapps will be installed and loaded.
 TODO - elaborate on this.  - separate design?
@@ -124,16 +127,14 @@ Note: this will have implications on the coe that is loading this metadata.
 
 ### Typical migration
 
-1. Apply the new plugin id instead of the old one.
-2. Replace the explicit Corda dependencies with ```compilePlatformVersion```. 
+1. Replace the old plugin with the new one.
+2. Remove the explicit Corda dependencies and add ```compilePlatformVersion```. 
 3. Set ```onLedgerCode``` if this is contract code.          
 4. Move all the metadata to the root ``cordapp``.
-3. Remove all the driver testing and code formation into a separate module.  
+5. Remove all the driver testing and code formation into a separate module.
+6. Remove the ``cordaCompile``, ``cordaRuntime`` and ``cordapp`` dependency types, and replace them with normal java or java-library configurations.  
+
 
 #### Backwards compatibility
 
-- read metadata from both old and new versions
-- If ``targetPlatformVersion < 5``, the plugin will add the jar as a dependency and provide a snippet of code to be added. 
-
-
-TODO - dependency - exclude all stuff that is a transitive dep of corda
+CorDapps that want to use this plugin, but run on Corda 4 must add the secure dependencies library explicitly and a snippet of code to the verify function. 

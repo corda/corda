@@ -10,7 +10,7 @@ The tool generally used for this is the Ant ``signJar`` task: https://ant.apache
 
 Our current approach is to embed this logic as part of the Cordapp plugin.
 
-The main issue with this plugin is that the ``signing`` block is named identical to the standard gradle signing plugin: https://docs.gradle.org/current/userguide/signing_plugin.html.    
+The main issue with our current approach is that the ``signing`` block is named identical to the standard gradle signing plugin: https://docs.gradle.org/current/userguide/signing_plugin.html.    
 
 ```groovy
     cordapp {

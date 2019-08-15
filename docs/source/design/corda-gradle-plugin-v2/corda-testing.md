@@ -24,8 +24,8 @@ Question: Currently we decide if nodes should be started in-process or out-of-pr
 Doesn't this setting belong to ``startNode`` with a default in the driver setup?
 
 
-This new plugin is intended for CorDapps. 
-Driver tests we write to test the platform will have to use a different approach to discover which apps to deploy.   
+Note: This proposal is intended just for CorDapps developers. 
+Driver tests that we (R3 devs) write to test the platform will have to use a different approach to discover which apps to deploy.   
 
 
 ## Requirements
@@ -158,6 +158,8 @@ Proposed format:
             "O=Bank B,L=London,C=UK" 
             // more nodes..
         }       
+        
+        // more networks..
     }
 ```
 
@@ -166,7 +168,7 @@ The plugin will create a ``deploy`` task for each network. e.g.: ``deployBankNet
 Note: The network descriptions can also be used by the driver tests, to optimize tests.
 Multiple tests can use the same network without tearing it down.
 The limitation is that tests must assume they don't run on an empty database.
-Nothing should stop a test creating a new fresh node and adding it to the network and then tearing that down.
+But nothing should stop a test from creating a new fresh node and adding it to the network and then only tearing that down.
  
 
 ## Changes to the Driver framework
@@ -211,11 +213,10 @@ The driver must continue to work with the old plugin in case it is not started w
 
 ## Migration (for CorDapp developers)
 
-1. If driver tests were defined in one of the ``cordapp`` module, create a new module for driver tests and move there. Or move to the root module.
+1. If driver tests were defined in one of the ``cordapp`` modules, create a new module for driver tests and move them there. Or move them to the root module.
 2. Add normal dependencies like: ``testImplementation`` to the modules containing the cordapps.
 3. Modify the ``cordformation`` tasks. This should be straight forward.
-4. Remove the ``findCordapps``/``scanPackages`` from the driver tests. 
-  At this point, it should work as before with the default ``currentProjectCordapps``. 
+4. Remove the ``findCordapps``/``scanPackages`` from the driver tests. At this point, it should work as before with the default ``currentProjectCordapps``. 
 5. Add advanced features, like cordapp profiles.
 
 Note: Due to gradle peculiarities, this design is very likely not 100% accurate.
