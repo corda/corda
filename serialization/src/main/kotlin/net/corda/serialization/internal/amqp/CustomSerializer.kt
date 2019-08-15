@@ -57,6 +57,8 @@ abstract class CustomSerializer<T : Any> : AMQPSerializer<T>, SerializerFor {
     abstract fun writeDescribedObject(obj: T, data: Data, type: Type, output: SerializationOutput,
                                       context: SerializationContext)
 
+    open fun specialiseFor(declaredType: Type): AMQPSerializer<T>? = this
+
     /**
      * This custom serializer represents a sort of symbolic link from a subclass to a super class, where the super
      * class custom serializer is responsible for the "on the wire" format but we want to create a reference to the

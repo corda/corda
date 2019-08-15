@@ -129,7 +129,7 @@ class CachingCustomSerializerRegistry(
             customSerializer
         }
     }
-    
+
     override fun findCustomSerializer(clazz: Class<*>, declaredType: Type): AMQPSerializer<Any>? {
         val typeIdentifier = CustomSerializerIdentifier(
                 TypeIdentifier.forClass(clazz),
@@ -173,7 +173,13 @@ class CachingCustomSerializerRegistry(
             throw IllegalCustomSerializerException(declaredSerializers.first(), clazz)
         }
 
-        return declaredSerializers.first()
+        return declaredSerializers.first().let {
+            if (it is CustomSerializer<Any>) {
+                it.specialiseFor(declaredType)
+            } else {
+                it
+            }
+        }
     }
 
     private val Class<*>.isCustomSerializationForbidden: Boolean get() = when {
@@ -183,3 +189,4 @@ class CachingCustomSerializerRegistry(
         else -> false
     }
 }
+
