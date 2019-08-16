@@ -193,11 +193,14 @@ open class MockServices private constructor(
                 override var networkParametersService: NetworkParametersService = MockNetworkParametersStorage(networkParameters)
                 override val vaultService: VaultService = makeVaultService(schemaService, persistence, cordappLoader)
                 override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
-                    ServiceHubInternal.recordTransactions(statesToRecord, txs,
+                    ServiceHubInternal.recordTransactions(
+                            statesToRecord,
+                            txs as? Collection ?: txs.toList(),
                             validatedTransactions as WritableTransactionStorage,
                             mockStateMachineRecordedTransactionMappingStorage,
                             vaultService as VaultServiceInternal,
-                            persistence)
+                            persistence
+                    )
                 }
 
                 override fun jdbcSession(): Connection = persistence.createSession()

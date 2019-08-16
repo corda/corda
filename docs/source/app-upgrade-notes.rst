@@ -4,8 +4,8 @@
    <script type="text/javascript" src="_static/jquery.js"></script>
    <script type="text/javascript" src="_static/codesets.js"></script>
 
-Upgrading apps to Corda 4
-=========================
+Upgrading CorDapps to newer Platform Versions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 These notes provide instructions for upgrading your CorDapps from previous versions. Corda provides backwards compatibility for public,
 non-experimental APIs that have been committed to. A list can be found in the :doc:`corda-api` page.
@@ -22,6 +22,73 @@ from the new features in the latest release.
 
 .. contents::
    :depth: 3
+
+Upgrading apps to Platform Version 5
+====================================
+
+This section provides instructions for upgrading your CorDapps from previous versions to take advantage of features and enhancements introduced
+in platform version 5.
+
+.. note:: If you are upgrading from a platform version older than 4, then the upgrade notes for upgrading to Corda 4 (below) also apply.
+
+Step 1. Handle any source compatibility breaks (if using Kotlin)
+----------------------------------------------------------------
+
+The following code, which compiled in Platform Version 4, will not compile in Platform Version 5:
+
+.. container:: codeset
+
+    .. sourcecode:: kotlin
+
+        data class Obligation(val amount: Amount<Currency>, val lender: AbstractParty, val borrower: AbstractParty)
+
+        val (lenderId, borrowerId) = if (anonymous) {
+            val anonymousIdentitiesResult = subFlow(SwapIdentitiesFlow(lenderSession))
+            Pair(anonymousIdentitiesResult[lenderSession.counterparty]!!, anonymousIdentitiesResult[ourIdentity]!!)
+        } else {
+            Pair(lender, ourIdentity)
+        }
+
+        val obligation = Obligation(100.dollars, lenderId, borrowerId)
+
+Compiling this code against Platform Version 5 will result in the following error:
+
+``Type mismatch: inferred type is Any but AbstractParty was expected``
+
+The issue here is that a new ``Destination`` interface introduced in Platform Version 5 can cause type inference failures when a variable is
+used as an ``AbstractParty`` but has an actual value that is one of ``Party`` or ``AnonymousParty``. These subclasses
+implement ``Destination``, while the superclass does not. Kotlin must pick a type for the variable, and so chooses the most specific
+ancestor of both ``AbstractParty`` and ``Destination``. This is ``Any``, which is not a valid type for use as an ``AbstractParty`` later.
+(For more information on ``Destination``, see the :doc:`changelog` for Platform Version 5, or the KDocs for the interface
+`here <https://docs.corda.net/head/api/kotlin/corda/net.corda.core.flows/-destination.html>`__)
+
+Note that this is a Kotlin-specific issue. Java can instead choose ``? extends AbstractParty & Destination`` here, which can later be used
+as ``AbstractParty``.
+
+To fix this, an explicit type hint must be provided to the compiler:
+
+.. container:: codeset
+
+    .. sourcecode:: kotlin
+
+        data class Obligation(val amount: Amount<Currency>, val lender: AbstractParty, val borrower: AbstractParty)
+
+        val (lenderId, borrowerId) = if (anonymous) {
+            val anonymousIdentitiesResult = subFlow(SwapIdentitiesFlow(lenderSession))
+            Pair(anonymousIdentitiesResult[lenderSession.counterparty]!!, anonymousIdentitiesResult[ourIdentity]!!)
+        } else {
+            // This Pair now provides a type hint to the compiler
+            Pair<AbstractParty, AbstractParty>(lender, ourIdentity)
+        }
+
+        val obligation = Obligation(100.dollars, lenderId, borrowerId)
+
+This stops type inference from occurring and forces the variable to be of type ``AbstractParty``.
+
+Upgrading apps to Platform Version 4
+====================================
+
+This section provides instructions for upgrading your CorDapps from previous versions to platform version 4.
 
 Step 1. Switch any RPC clients to use the new RPC library
 ---------------------------------------------------------
