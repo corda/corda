@@ -1,6 +1,7 @@
 package net.corda.node.internal.rpc.proxies
 
 import net.corda.core.CordaRuntimeException
+import net.corda.core.CordaThrowable
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.doOnError
 import net.corda.core.internal.concurrent.doOnError
