@@ -1,0 +1,21 @@
+#!/bin/bash
+
+function cmake_rem_func {
+
+    rm -f $1/CMakeCache.txt
+    rm $1/Makefile
+    rm $1/cmake_install.cmake
+    rm -rf $1/CMakeFiles
+}
+
+rm -f BLOB-INSPECTOR.cbp
+
+cmake_rem_func .
+cmake_rem_func ./bin
+cmake_rem_func ./src
+cmake_rem_func ./src/amqp
+cmake_rem_func ./src/amqp/test
+cmake_rem_func ./src/proton
+cmake_rem_func ./src/serialiser
+
+
