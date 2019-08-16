@@ -5,6 +5,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.*
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
+import org.apache.activemq.artemis.utils.uri.URIFactory
 import org.w3c.dom.Document
 import picocli.CommandLine
 import picocli.CommandLine.Option
@@ -47,16 +48,16 @@ class ArtemisConfigurationTool : HAToolBase("configure-artemis", "Generate and i
     @Option(names = ["--acceptor-address"], converter = [NetworkHostAndPortConverter::class], description = ["The broker instance acceptor network address for incoming connections."], required = true)
     private lateinit var acceptorHostAndPort: NetworkHostAndPort
 
-    @Option(names = ["--keystore"], description = ["The SSL keystore path."], required = true)
-    private lateinit var keyStore: Path
+    @Option(names = ["--keystore"], converter = [URIValueValidator::class], description = ["The SSL keystore path."], required = true)
+    private lateinit var keyStore: String
 
-    @Option(names = ["--keystore-password"], description = ["The SSL keystore password."], required = true)
+    @Option(names = ["--keystore-password"], converter = [URIValueValidator::class], description = ["The SSL keystore password."], required = true)
     private lateinit var keyStorePass: String
 
-    @Option(names = ["--truststore"], description = ["The SSL truststore path."], required = true)
-    private lateinit var trustStore: Path
+    @Option(names = ["--truststore"], converter = [URIValueValidator::class], description = ["The SSL truststore path."], required = true)
+    private lateinit var trustStore: String
 
-    @Option(names = ["--truststore-password"], description = ["The SSL truststore password."], required = true)
+    @Option(names = ["--truststore-password"], converter = [URIValueValidator::class], description = ["The SSL truststore password."], required = true)
     private lateinit var trustStorePass: String
 
     @Option(names = ["--connectors"], converter = [NetworkHostAndPortConverter::class], split = ",", description = ["A list of network hosts and ports separated by commas representing the artemis connectors used for the Artemis HA cluster. The first entry in the list will be used by the instance configured by this tool."])
@@ -259,6 +260,16 @@ class ArtemisConfigurationTool : HAToolBase("configure-artemis", "Generate and i
 
     class CordaX500NameConverter : CommandLine.ITypeConverter<CordaX500Name> {
         override fun convert(value: String) = CordaX500Name.parse(value)
+    }
+
+    /**
+     * No conversion. Just validation for URI query value String.
+     */
+    class URIValueValidator : CommandLine.ITypeConverter<String> {
+        override fun convert(value: String): String {
+            URIFactory<Any, Any>().expandURI("validator:?value=$value")
+            return value
+        }
     }
 }
 
