@@ -143,6 +143,7 @@ class RegistrationTool : HAToolBase("node-registration", "Corda registration too
                                     logProgress = logger::info, logError = logger::error)
                             helper.generateKeysAndRegister(sslPublicKey)
                             helper.generateNodeIdentity()
+                            helper.generateWrappingKey()
                         }
                         parsedConfig
                     } catch (ex: Throwable) {

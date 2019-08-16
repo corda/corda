@@ -71,8 +71,11 @@ class RegistrationToolTest {
             setCertificate(X509Utilities.CORDA_ROOT_CA, DEV_ROOT_CA.certificate)
         }
 
-        listOf("nodeA.conf", "nodeB.conf", "nodeC.conf", "nodeD.conf").forEach {
-            javaClass.classLoader.getResourceAsStream(it).replaceMapping(portReplacementMap).copyTo(workingDirectory / it)
+        val workingDirReplacementMap = mapOf("\$WORKING_DIR" to workingDirectory.toString())
+
+        listOf("nodeA.conf", "nodeB.conf", "nodeC.conf", "nodeD.conf", "utimaco_config.yml").forEach {
+            javaClass.classLoader.getResourceAsStream(it).replaceMapping(portReplacementMap)
+                    .replaceMapping(workingDirReplacementMap).copyTo(workingDirectory / it)
         }
 
         val runResult = RegistrationServer(NetworkHostAndPort("localhost", nmPort)).use {
@@ -93,6 +96,7 @@ class RegistrationToolTest {
             assertTrue(it) {(workingDirectory / it / "certificates" / "sslkeystore.jks").exists()}
             assertTrue(it) {(workingDirectory / it / "certificates" / "truststore.jks").exists()}
             assertTrue(it) {(workingDirectory / it / "certificates" / "nodekeystore.jks").exists()}
+            assertTrue(it) {(workingDirectory / it / "certificates" / "wrappingkeystore.pkcs12").exists()}
         }
 
         assertTrue((workingDirectory / NETWORK_PARAMS_FILE_NAME).exists())
