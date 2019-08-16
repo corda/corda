@@ -118,4 +118,10 @@ class PublicKeyToOwningIdentityCacheImplTest {
         val keys = generateKeyPair()
         assertEquals(null, testCache[keys.public])
     }
+
+    @Test
+    fun `can request initial identity key`() {
+        val key = alice.publicKey
+        assertEquals(KeyOwningIdentity.UnmappedIdentity, testCache[key])
+    }
 }

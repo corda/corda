@@ -70,7 +70,7 @@ class PersistentKeyManagementService(cacheFactory: NamedCacheFactory,
     private val keysMap = createKeyMap(cacheFactory)
 
     override fun start(initialKeyPairs: Set<KeyPair>) {
-        initialKeyPairs.forEach { keysMap.addWithDuplicatesAllowed(it.public, it.private) }
+//        initialKeyPairs.forEach { keysMap.addWithDuplicatesAllowed(it.public, it.private) }
     }
 
     override val keys: Set<PublicKey> get() = database.transaction { keysMap.allPersisted.use { it.map { it.first }.toSet() } }

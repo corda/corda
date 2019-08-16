@@ -3,8 +3,10 @@ package net.corda.node.services.persistence
 import com.github.benmanes.caffeine.cache.Caffeine
 import net.corda.core.crypto.toStringShort
 import net.corda.core.internal.NamedCacheFactory
+import net.corda.core.internal.hash
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
+import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.BasicHSMKeyManagementService
 import net.corda.nodeapi.internal.KeyOwningIdentity
 import net.corda.nodeapi.internal.persistence.CordaPersistence
@@ -22,6 +24,20 @@ class PublicKeyToOwningIdentityCacheImpl(private val database: CordaPersistence,
     }
 
     private val cache = cacheFactory.buildNamed<PublicKey, KeyOwningIdentity>(Caffeine.newBuilder(), "PublicKeyToOwningIdentityCache_cache")
+
+    private fun isKeyIdentityKey(key: PublicKey): Boolean {
+        return database.transaction {
+            val criteriaBuilder = session.criteriaBuilder
+            val criteriaQuery = criteriaBuilder.createQuery(Long::class.java)
+            val queryRoot = criteriaQuery.from(PersistentIdentityService.PersistentIdentity::class.java)
+            criteriaQuery.select(criteriaBuilder.count(queryRoot))
+            criteriaQuery.where(
+                    criteriaBuilder.equal(queryRoot.get<String>(PersistentIdentityService.PersistentIdentity::publicKeyHash.name), key.hash.toString())
+            )
+            val query = session.createQuery(criteriaQuery)
+            query.uniqueResult() > 0
+        }
+    }
 
     private fun isKeyBelongingToNode(key: PublicKey): Boolean {
         return database.transaction {
@@ -55,7 +71,7 @@ class PublicKeyToOwningIdentityCacheImpl(private val database: CordaPersistence,
                 )
                 val query = session.createQuery(criteriaQuery)
                 val uuid = query.uniqueResult()
-                if (uuid != null || isKeyBelongingToNode(key)) {
+                if (uuid != null || isKeyBelongingToNode(key) || isKeyIdentityKey(key)) {
                     val signingEntity = KeyOwningIdentity.fromUUID(uuid)
                     log.debug { "Database lookup for public key ${key.toStringShort()}, found signing entity $signingEntity" }
                     signingEntity
