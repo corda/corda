@@ -58,4 +58,37 @@ class ArtemisConfigurationToolTest {
             }
         }
     }
+
+    @Test
+    fun `test X500 name conversion`() {
+        val workingDirectory = tempFolder.root.toPath() / "etc"
+        CommandLine.populateCommand(tool, "--path", workingDirectory.toString(),
+                "--user", "CN=artemis,O=Corda Enterprise , L=Hong Kong ,C=HK",
+                "--acceptor-address", "localhost:11005",
+                "--keystore", "artemis.jks",
+                "--keystore-password", "artemisStorePass",
+                "--truststore", "artemis-truststore.jks",
+                "--truststore-password", "artemisTrustpass")
+        tool.runProgram()
+
+        with(workingDirectory / "artemis-users.properties") {
+            assertTrue(exists())
+            val allLines = readText()
+            assertTrue(allLines) {
+                allLines.contains("ArtemisUser=CN=artemis, O=Corda Enterprise, L=Hong Kong, C=HK")
+            }
+        }
+    }
+
+    @Test(expected = CommandLine.ParameterException::class)
+    fun `test wrong X500 name`() {
+        val workingDirectory = tempFolder.root.toPath() / "etc"
+        CommandLine.populateCommand(tool, "--path", workingDirectory.toString(),
+                "--user", "Bad username",
+                "--acceptor-address", "localhost:11005",
+                "--keystore", "artemis.jks",
+                "--keystore-password", "artemisStorePass",
+                "--truststore", "artemis-truststore.jks",
+                "--truststore-password", "artemisTrustpass")
+    }
 }

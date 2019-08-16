@@ -128,7 +128,6 @@ class RegistrationToolTest {
             CommandLine.populateCommand(registrationTool, BASE_DIR, workingDirectory.toString(),
                     "--network-root-truststore", trustStorePath.toString(),
                     "--network-root-truststore-password", "password",
-                    "--bridge-keystore-password", "password",
                     "--bridge-config-file", (firewallDir / "firewall.conf").toString(),
                     "--config-files", (workingDirectory / "nodeA.conf").toString(), (workingDirectory / "nodeB.conf").toString(),
                     (workingDirectory / "nodeC.conf").toString())
@@ -150,7 +149,7 @@ class RegistrationToolTest {
 
         // Compare the contents of each keystore against the bridge and bridge HSM
         val cryptoService = UtimacoCryptoService.fromConfigurationFile((firewallDir / "utimaco_config.yml"))
-        val bridgeKeyStore = X509KeyStore.fromFile((workingDirectory / "bridge.jks"), "password", createNew = false)
+        val bridgeKeyStore = X509KeyStore.fromFile((workingDirectory / "bridge.jks"), "cordacadevpass", createNew = false)
         legalNames.forEach {
             val alias = x500PrincipalToTLSAlias(it.x500Principal)
             val sslKeyStore = X509KeyStore.fromFile((workingDirectory / it.toFolderName() / "certificates" / "sslkeystore.jks"), "cordacadevpass", createNew = false)
@@ -158,6 +157,55 @@ class RegistrationToolTest {
             assertEquals(sslKeyStore.getPublicKey(CORDA_CLIENT_TLS), bridgeKeyStore.getPublicKey(alias))
             assertTrue(cryptoService.containsKey(alias))
             assertEquals(bridgeKeyStore.getPublicKey(alias), cryptoService.getPublicKey(alias))
+        }
+    }
+
+    @Test
+    fun `register nodes and bridge without HSM`() {
+        val workingDirectory = tempFolder.root.toPath()
+
+        // create network trust root trust store
+        val trustStorePath = workingDirectory / "networkTrustRootStore.jks"
+        X509KeyStore.fromFile(trustStorePath, "password", true).update {
+            setCertificate(X509Utilities.CORDA_ROOT_CA, DEV_ROOT_CA.certificate)
+        }
+
+        listOf("nodeA.conf", "nodeB.conf", "nodeC.conf", "firewall_without_HSM.conf").forEach {
+            javaClass.classLoader.getResourceAsStream(it).replaceMapping(portReplacementMap).copyTo(workingDirectory / it)
+        }
+
+        val runResult = RegistrationServer(NetworkHostAndPort("localhost", nmPort)).use {
+            it.start()
+            CommandLine.populateCommand(registrationTool, BASE_DIR, workingDirectory.toString(),
+                    "--network-root-truststore", trustStorePath.toString(),
+                    "--network-root-truststore-password", "password",
+                    "--bridge-config-file", (workingDirectory / "firewall_without_HSM.conf").toString(),
+                    "--config-files", (workingDirectory / "nodeA.conf").toString(), (workingDirectory / "nodeB.conf").toString(),
+                    (workingDirectory / "nodeC.conf").toString())
+            registrationTool.runProgram()
+        }
+
+        assertEquals(ExitCodes.SUCCESS, runResult)
+
+        val legalNames = listOf("PartyA", "Party B", "PartyC").map { CordaX500Name(it, "London", "GB") }
+
+        legalNames.forEach {
+            val certsPath = workingDirectory / it.toFolderName() / "certificates"
+            assertTrue(it.toString()) {(certsPath / "sslkeystore.jks").exists()}
+            assertTrue(it.toString()) {(certsPath / "truststore.jks").exists()}
+            assertTrue(it.toString()) {(certsPath / "nodekeystore.jks").exists()}
+        }
+
+        assertTrue((workingDirectory / "bridge.jks").exists())
+
+        // Compare the contents of each keystore against the bridge and bridge HSM
+        // keyStorePassword is taken from bridge configuration
+        val bridgeKeyStore = X509KeyStore.fromFile((workingDirectory / "bridge.jks"), "bridgepass", createNew = false)
+        legalNames.forEach {
+            val alias = x500PrincipalToTLSAlias(it.x500Principal)
+            val sslKeyStore = X509KeyStore.fromFile((workingDirectory / it.toFolderName() / "certificates" / "sslkeystore.jks"), "cordacadevpass", createNew = false)
+            assertTrue(bridgeKeyStore.contains(alias))
+            assertEquals(sslKeyStore.getPublicKey(CORDA_CLIENT_TLS), bridgeKeyStore.getPublicKey(alias))
         }
     }
 
@@ -180,7 +228,6 @@ class RegistrationToolTest {
             CommandLine.populateCommand(registrationTool, BASE_DIR, workingDirectory.toString(),
                     "--network-root-truststore", trustStorePath.toString(),
                     "--network-root-truststore-password", "password",
-                    "--bridge-keystore-password", "password",
                     "--bridge-config-file", (workingDirectory / "firewall.conf").toString(),
                     "--config-files", (workingDirectory / "nodeA_HSM.conf").toString(), (workingDirectory / "nodeB_HSM.conf").toString(),
                     (workingDirectory / "nodeC_HSM.conf").toString())

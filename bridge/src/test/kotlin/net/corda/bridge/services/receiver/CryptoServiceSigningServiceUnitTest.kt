@@ -152,15 +152,21 @@ class CryptoServiceSigningServiceUnitTest {
          * Calls makeCryptoService() inside it.
          */
         fun connect(): CryptoService {
-            operationChange.onNext(Operation.CONNECT)
-            if (failConnect) throw IllegalArgumentException("Connect failed")
-            val cryptoService = makeCryptoService()
-            return object : CryptoService by cryptoService {
-                override fun containsKey(alias: String): Boolean {
-                    operationChange.onNext(Operation.HEARTBEAT)
-                    if (failHeartbeat) throw IllegalArgumentException("Heartbeat failed")
-                    return cryptoService.containsKey(alias)
+            try {
+                if (failConnect) throw IllegalArgumentException("Connect failed")
+                val cryptoService = makeCryptoService()
+                return object : CryptoService by cryptoService {
+                    override fun containsKey(alias: String): Boolean {
+                        try {
+                            if (failHeartbeat) throw IllegalArgumentException("Heartbeat failed")
+                            return cryptoService.containsKey(alias)
+                        } finally {
+                            operationChange.onNext(Operation.HEARTBEAT)
+                        }
+                    }
                 }
+            } finally {
+                operationChange.onNext(Operation.CONNECT)
             }
         }
 
