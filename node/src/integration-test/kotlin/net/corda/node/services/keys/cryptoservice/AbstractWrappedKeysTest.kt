@@ -83,8 +83,7 @@ abstract class AbstractWrappedKeysTest: IntegrationTest() {
                                     "cryptoServiceConfiguration" to mapOf(
                                             "cryptoServiceName" to cryptoServiceName(),
                                             "cryptoServiceConf" to configPath()?.toFile()?.absolutePath
-                                    ),
-                                    "createDuringStartup" to "YES"
+                                    )
                             )
                     )),
                     startNode(providedName = genevieveName, customOverrides = mapOf(

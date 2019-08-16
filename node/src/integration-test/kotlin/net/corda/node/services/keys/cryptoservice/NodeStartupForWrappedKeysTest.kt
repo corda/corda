@@ -2,7 +2,6 @@ package net.corda.node.services.keys.cryptoservice
 
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.getOrThrow
-import net.corda.node.internal.ConfigurationException
 import net.corda.node.utilities.registration.TestDoorman
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.driver.DriverDSL
@@ -15,6 +14,7 @@ import net.corda.testing.node.internal.internalDriver
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Rule
 import org.junit.Test
+import java.lang.IllegalStateException
 import java.net.URL
 
 class NodeStartupForWrappedKeysTest {
@@ -31,28 +31,7 @@ class NodeStartupForWrappedKeysTest {
     val doorman = TestDoorman(portAllocation)
 
     @Test
-    fun `when configuration instructs to avoid creating the key on startup, but the key does not exist during startup, the node exits`() {
-        val compatibilityZone = SharedCompatibilityZoneParams(
-                URL("http://${doorman.serverHostAndPort}"),
-                null,
-                publishNotaries = { doorman.server.networkParameters = testNetworkParameters(it) },
-                rootCert = DEV_ROOT_CA.certificate)
-
-        internalDriver(startNodesInProcess = true,
-                portAllocation = portAllocation,
-                notarySpecs = listOf(NotarySpec(notaryName)),
-                compatibilityZone = compatibilityZone,
-                notaryCustomOverrides = mapOf("devMode" to false)) {
-            assertThatThrownBy {
-                startNode(this, "NO")
-            }
-            .isInstanceOf(ConfigurationException::class.java)
-            .hasMessageContaining("The crypto service configured for fresh identities (BC_SIMPLE) does not contain a key under the alias: wrapping-key-alias. However, createDuringStartup is set to NO")
-        }
-    }
-
-    @Test
-    fun `when configuration instructs to create the key on startup, but the key already exists, the node exits`() {
+    fun `when initial registration is done without secure confidential identities enabled, then subsequent startup with this enabled will fail`() {
         val compatibilityZone = SharedCompatibilityZoneParams(
                 URL("http://${doorman.serverHostAndPort}"),
                 null,
@@ -65,69 +44,68 @@ class NodeStartupForWrappedKeysTest {
                 compatibilityZone = compatibilityZone,
                 notaryCustomOverrides = mapOf("devMode" to false)) {
 
-            val node = startNode(this, "YES")
+            val node = startNode(this, secureConfidentialIdentitiesEnabled = false, devMode = false)
             node.stop()
 
             assertThatThrownBy {
-                startNode(this, "YES")
+                startNode(this, secureConfidentialIdentitiesEnabled = true, devMode = false)
             }
-            .isInstanceOf(ConfigurationException::class.java)
-            .hasMessageContaining("The crypto service configured for fresh identities (BC_SIMPLE) already contains a key under the alias: wrapping-key-alias. However, createDuringStartup is set to YES")
+            .isInstanceOf(IllegalStateException::class.java)
+            .hasMessageContaining("The crypto service configured for fresh identities (BC_SIMPLE) does not contain a key under the alias: wrapping-key-alias.")
+
         }
     }
 
     @Test
-    fun `node can be re-started multiple times, when createDuringStartup is set to ONLY_IF_MISSING`() {
+    fun `when initial registration is done without secure confidential identities enabled but with devMode=true, then subsequent startup will create the key if missing`() {
+        internalDriver(startNodesInProcess = false,
+                portAllocation = portAllocation) {
+
+            val node = startNode(this, secureConfidentialIdentitiesEnabled = false, devMode = true)
+            node.stop()
+
+            startNode(this, secureConfidentialIdentitiesEnabled = true, devMode = true)
+        }
+    }
+
+    @Test
+    fun `initial registration creates the wrapping key successfully and node can start up multiple times afterwards`() {
         val compatibilityZone = SharedCompatibilityZoneParams(
                 URL("http://${doorman.serverHostAndPort}"),
                 null,
                 publishNotaries = { doorman.server.networkParameters = testNetworkParameters(it) },
                 rootCert = DEV_ROOT_CA.certificate)
 
-        internalDriver(startNodesInProcess = true,
+        internalDriver(startNodesInProcess = false,
                 portAllocation = portAllocation,
                 notarySpecs = listOf(NotarySpec(notaryName)),
                 compatibilityZone = compatibilityZone,
                 notaryCustomOverrides = mapOf("devMode" to false)) {
 
-            val node = startNode(this, "ONLY_IF_MISSING")
+            val node = startNode(this, secureConfidentialIdentitiesEnabled = true, devMode = false)
             node.stop()
-            startNode(this, "ONLY_IF_MISSING")
+            startNode(this, secureConfidentialIdentitiesEnabled = true, devMode = false)
         }
     }
 
-    @Test
-    fun `node can be re-started multiple times, when createDuringStartup is switched to NO after the first startup`() {
-        val compatibilityZone = SharedCompatibilityZoneParams(
-                URL("http://${doorman.serverHostAndPort}"),
-                null,
-                publishNotaries = { doorman.server.networkParameters = testNetworkParameters(it) },
-                rootCert = DEV_ROOT_CA.certificate)
-
-        internalDriver(startNodesInProcess = true,
-                portAllocation = portAllocation,
-                notarySpecs = listOf(NotarySpec(notaryName)),
-                compatibilityZone = compatibilityZone,
-                notaryCustomOverrides = mapOf("devMode" to false)) {
-
-            val node = startNode(this, "YES")
-            node.stop()
-            startNode(this, "NO")
-        }
-    }
-
-    private fun startNode(driver: DriverDSL, createDuringStartup: String): NodeHandle {
-        return driver.startNode(providedName = aliceName, customOverrides = mapOf(
-                "devMode" to false,
-                "cordappSignerKeyFingerprintBlacklist" to listOf<String>(),
-                "freshIdentitiesConfiguration" to mapOf(
+    private fun startNode(driver: DriverDSL, secureConfidentialIdentitiesEnabled: Boolean, devMode: Boolean): NodeHandle {
+        val config = if (secureConfidentialIdentitiesEnabled)
+            mapOf("devMode" to devMode,
+                  "cordappSignerKeyFingerprintBlacklist" to listOf<String>(),
+                  "freshIdentitiesConfiguration" to mapOf(
                         "mode" to "DEGRADED_WRAPPED",
                         "cryptoServiceConfiguration" to mapOf(
                                 "cryptoServiceName" to "BC_SIMPLE"
-                        ),
-                        "createDuringStartup" to createDuringStartup
-                )
-        )).getOrThrow()
+                        )
+                  )
+            )
+        else
+            mapOf("devMode" to devMode,
+                  "cordappSignerKeyFingerprintBlacklist" to listOf<String>()
+            )
+
+
+        return driver.startNode(providedName = aliceName, customOverrides = config).getOrThrow()
     }
 
 }

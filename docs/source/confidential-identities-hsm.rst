@@ -61,7 +61,6 @@ The ``freshIdentitiesConfiguration`` field contains the following attributes:
 	:header: "Attribute", "Type", "Required", "Description"
 
 	"mode", "String", "Yes", "Defines the mode of operation, valid values are: ``WRAPPED`` or ``DEGRADED_WRAPPED``."
-	"createDuringStartup", "String", "No", "Indicates whether the wrapping key must be created during the node startup, whether it will be created externally, or whether it should be created at startup only if it is missing. The valid values are: ``YES``, ``NO``, ``ONLY_IF_MISSING``. The default value is ``YES``."
 	"masterKeyAlias", "String", "No", "Defines an alias for the wrapping key. The default value is ``wrapping-key-alias``."
 	"cryptoServiceConfiguration", "N/A", "Yes", "Contains the ``cryptoServiceName`` and ``cryptoServiceConf`` attributes."
 	"cryptoServiceName", "String", "Yes", "Defines the type of HSM. Valid values can be found in the `HSM documentation <./cryptoservice-configuration.html>`_."
@@ -77,7 +76,6 @@ A completed configuration file might appear as follows:
           cryptoServiceName: "BC_SIMPLE"
       },
       masterKeyAlias: "master-key",
-      createDuringStartup: "YES"
   }
 
 Support matrix
@@ -96,3 +94,5 @@ Additional notes
 ----------------
 
 * For Securosys' PrimusX HSM, this feature has been tested with an HSM running firmware version 2.7.4 and the version 1.8.2 of the PrimusX JCA provider.
+* The wrapping key is generated during node registration. So, if you want to upgrade to this secure mode of using confidential identities after having used the previous one,
+  you will have to re-run the node registration process, which will skip the steps that have been executed already and will just generate the wrapping key.
