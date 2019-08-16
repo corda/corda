@@ -8,12 +8,12 @@ import com.jcraft.jsch.JSch
 import com.jcraft.jsch.JSchException
 import net.corda.core.crypto.newSecureRandom
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.Emoji
 import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.loggerFor
 import net.corda.node.VersionInfo
-import net.corda.node.services.config.CreateWrappingKeyDuringStartup
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.RelayConfiguration
 import net.corda.node.services.identity.PersistentIdentityService
@@ -29,7 +29,9 @@ import net.corda.nodeapi.internal.cryptoservice.WrappingMode
 import org.fusesource.jansi.Ansi
 import org.fusesource.jansi.AnsiConsole
 import java.io.IOException
+import java.lang.IllegalStateException
 import java.net.Inet6Address
+import java.security.KeyPair
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.TimeUnit
 
@@ -195,10 +197,21 @@ D""".trimStart()
         }
     }
 
+    override fun generateAndSaveNodeInfo(): NodeInfo {
+        val nodeInfo = super.generateAndSaveNodeInfo()
+        createWrappingKeyIfNeeded()
+        return nodeInfo
+    }
+
     override fun start(): NodeInfo {
         val info = super.start()
         registerOptionalMetricsReporter(configuration, services.monitoringService.metrics)
-        createWrappingKeyIfNeeded()
+
+        if (configuration.devMode) {
+            createWrappingKeyIfNeeded()
+        }
+        verifyWrappingKeyExistsWhenNeeded()
+
         return info
     }
 
@@ -254,29 +267,27 @@ D""".trimStart()
         }
 
         val wrappingCryptoServiceType = freshIdentitiesConfig.cryptoServiceConfiguration.cryptoServiceName
-        val createDuringStartup = freshIdentitiesConfig.createDuringStartup
         val masterKeyAlias = freshIdentitiesConfig.masterKeyAlias
         val configuredCryptoService = wrappingCryptoService!!
 
-        when (createDuringStartup) {
-            CreateWrappingKeyDuringStartup.YES -> {
-                try {
-                    configuredCryptoService.createWrappingKey(masterKeyAlias)
-                    logWrappingKeyCreation(wrappingCryptoServiceType, masterKeyAlias)
-                } catch(exception: IllegalArgumentException) {
-                    throw ConfigurationException("The crypto service configured for fresh identities ($wrappingCryptoServiceType) already contains a key under the alias: $masterKeyAlias. However, createDuringStartup is set to $createDuringStartup")
-                }
-            }
-            CreateWrappingKeyDuringStartup.ONLY_IF_MISSING -> {
-                if (!configuredCryptoService.containsKey(masterKeyAlias)) {
-                    configuredCryptoService.createWrappingKey(masterKeyAlias)
-                    logWrappingKeyCreation(wrappingCryptoServiceType, masterKeyAlias)
-                }
-            }
-            CreateWrappingKeyDuringStartup.NO -> {
-                if (!configuredCryptoService.containsKey(masterKeyAlias)) {
-                    throw ConfigurationException("The crypto service configured for fresh identities ($wrappingCryptoServiceType) does not contain a key under the alias: $masterKeyAlias. However, createDuringStartup is set to $createDuringStartup")
-                }
+        if (configuredCryptoService.containsKey(masterKeyAlias)) {
+            logger.info("A wrapping key for confidential identities already exists in the configured crypto service ($wrappingCryptoServiceType) under the alias: '$masterKeyAlias'.")
+        } else {
+            configuredCryptoService.createWrappingKey(masterKeyAlias)
+            logWrappingKeyCreation(wrappingCryptoServiceType, masterKeyAlias)
+        }
+    }
+
+    private fun verifyWrappingKeyExistsWhenNeeded() {
+        val freshIdentitiesConfig = configuration.freshIdentitiesConfiguration
+
+        if (freshIdentitiesConfig != null) {
+            val wrappingCryptoServiceType = freshIdentitiesConfig.cryptoServiceConfiguration.cryptoServiceName
+            val masterKeyAlias = freshIdentitiesConfig.masterKeyAlias
+            val configuredCryptoService = wrappingCryptoService!!
+
+            if (!configuredCryptoService.containsKey(masterKeyAlias)) {
+                throw IllegalStateException("The crypto service configured for fresh identities ($wrappingCryptoServiceType) does not contain a key under the alias: $masterKeyAlias.")
             }
         }
     }
@@ -289,9 +300,9 @@ D""".trimStart()
 
     private fun logWrappingKeyCreation(cryptoServiceType: SupportedCryptoServices, masterKeyAlias: String) {
         if (cryptoServiceType == SupportedCryptoServices.BC_SIMPLE) {
-            logger.info("Wrapping key stored in file-based keystore under the alias '$masterKeyAlias'.")
+            logger.info("Wrapping key for confidential identities stored in file-based keystore under the alias '$masterKeyAlias'.")
         } else {
-            logger.info("Wrapping key stored in the configured HSM ($cryptoServiceType) under the alias '$masterKeyAlias'.")
+            logger.info("Wrapping key for confidential identities stored in the configured HSM ($cryptoServiceType) under the alias '$masterKeyAlias'.")
         }
     }
 }

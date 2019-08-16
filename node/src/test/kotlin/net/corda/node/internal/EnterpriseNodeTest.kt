@@ -51,8 +51,7 @@ class EnterpriseNodeTest {
         val freshIdentitiesConfiguration = FreshIdentitiesConfiguration(
                 WrappingMode.DEGRADED_WRAPPED,
                 CryptoServiceConfiguration(SupportedCryptoServices.BC_SIMPLE, null),
-                NodeConfigurationImpl.Defaults.masterKeyAlias,
-                NodeConfigurationImpl.Defaults.createDuringStartup)
+                NodeConfigurationImpl.Defaults.masterKeyAlias)
         val nodeConfig = createConfig(freshIdentitiesConfiguration)
         val node = EnterpriseNode(nodeConfig, versionInfo)
 
@@ -65,8 +64,7 @@ class EnterpriseNodeTest {
         val freshIdentitiesConfiguration = FreshIdentitiesConfiguration(
                 WrappingMode.WRAPPED,
                 CryptoServiceConfiguration(SupportedCryptoServices.BC_SIMPLE, null),
-                NodeConfigurationImpl.Defaults.masterKeyAlias,
-                NodeConfigurationImpl.Defaults.createDuringStartup)
+                NodeConfigurationImpl.Defaults.masterKeyAlias)
         val nodeConfig = createConfig(freshIdentitiesConfiguration)
 
         assertThatThrownBy { val node = EnterpriseNode(nodeConfig, versionInfo) }
