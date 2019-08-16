@@ -79,16 +79,16 @@ class DbTransactionsResolver(private val flow: ResolveTransactionsFlow) : Transa
             for (downloaded in downloadedTxs) {
                 suspended = false
                 val dependencies = downloaded.dependencies
-                val downloadedTxs = this.txsInCheckpoint
-                if (downloadedTxs != null) {
-                    if (downloadedTxs.size < MAX_CHECKPOINT_RESOLUTION) {
-                        downloadedTxs[downloaded.id] = downloaded
+                val txsInCheckpoint = this.txsInCheckpoint
+                if (txsInCheckpoint != null) {
+                    if (txsInCheckpoint.size < MAX_CHECKPOINT_RESOLUTION) {
+                        txsInCheckpoint[downloaded.id] = downloaded
                     } else {
                         logger.debug { "Resolving transaction dependencies has reached a checkpoint limit of $MAX_CHECKPOINT_RESOLUTION " +
                                 "transactions. Switching to the node database for storing the unverified transactions." }
                         // For locking in this case, the full topological sort contains all the locks to be taken out.
                         transactionStorage.lockObjectsForWrite(topologicalSort.complete(), contextTransaction, false) {
-                            downloadedTxs.values.forEach(transactionStorage::addUnverifiedTransaction)
+                            txsInCheckpoint.values.forEach(transactionStorage::addUnverifiedTransaction)
                             // This acts as both a flag that we've switched over to storing the backchain into the db, and to remove what's been
                             // built up in the checkpoint
                             this.txsInCheckpoint = null
