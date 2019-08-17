@@ -18,7 +18,7 @@
 #include "amqp/descriptors/AMQPDescriptorRegistory.h"
 
 #include "amqp/schema/Envelope.h"
-#include "CompositeFactory.h"
+#include "amqp/CompositeFactory.h"
 
 /******************************************************************************/
 
@@ -51,7 +51,7 @@ data_and_stop(std::ifstream & f_, ssize_t sz) {
             << *envelope << std::endl); // NOLINT
     }
 
-    CompositeFactory cf;
+    amqp::internal::CompositeFactory cf;
 
     cf.process (envelope->schema());
 
@@ -112,4 +112,3 @@ main (int argc, char **argv) {
 }
 
 /******************************************************************************/
-

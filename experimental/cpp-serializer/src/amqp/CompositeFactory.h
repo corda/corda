@@ -6,6 +6,8 @@
 #include <set>
 
 #include "types.h"
+
+#include "ICompositeFactory.h"
 #include "amqp/schema/Schema.h"
 #include "amqp/schema/Envelope.h"
 #include "amqp/schema/Composite.h"
@@ -14,9 +16,10 @@
 
 /******************************************************************************/
 
-class CompositeFactory {
+namespace amqp::internal {
+
+    class CompositeFactory : public ICompositeFactory {
     private :
-        using SchemaPtr    = uPtr<amqp::internal::schema::Schema>;
         using CompositePtr = uPtr<amqp::internal::schema::Composite>;
         using EnvelopePtr  = uPtr<amqp::internal::schema::Envelope>;
 
@@ -29,20 +32,23 @@ class CompositeFactory {
     public :
         CompositeFactory() = default;
 
-        void process (const SchemaPtr &);
+        void process(const SchemaPtr &) override ;
 
-        const std::shared_ptr<amqp::Reader> byType (const std::string &);
-        const std::shared_ptr<amqp::Reader> byDescriptor (const std::string &);
+        virtual const std::shared_ptr<amqp::Reader> byType(const std::string &) override;
+
+        virtual const std::shared_ptr<amqp::Reader> byDescriptor(const std::string &) override;
 
     private :
         std::shared_ptr<amqp::Reader> process(const amqp::internal::schema::AMQPTypeNotation &);
 
         std::shared_ptr<amqp::Reader>
-        processComposite (const amqp::internal::schema::AMQPTypeNotation &);
+        processComposite(const amqp::internal::schema::AMQPTypeNotation &);
 
         std::shared_ptr<amqp::Reader>
-        processRestricted (const amqp::internal::schema::AMQPTypeNotation &);
-};
+        processRestricted(const amqp::internal::schema::AMQPTypeNotation &);
+    };
+
+}
 
 /******************************************************************************/
 

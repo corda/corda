@@ -19,36 +19,40 @@
 
 /******************************************************************************/
 
+namespace {
+
 /**
  *
  */
-template <typename T>
-std::shared_ptr<T> &
-computeIfAbsent (
-    spStrMap_t<T> & map_,
-    const std::string & k_,
-    std::function<std::shared_ptr<T>(void)> f_
-) {
-    auto it = map_.find (k_);
+    template<typename T>
+    std::shared_ptr<T> &
+    computeIfAbsent(
+            spStrMap_t<T> &map_,
+            const std::string &k_,
+            std::function<std::shared_ptr<T>(void)> f_
+    ) {
+        auto it = map_.find(k_);
 
-    if (it == map_.end()) {
-        DBG ("ComputeIfAbsent \"" << k_ << "\" - missing" << std::endl); // NOLINT
-        map_[k_] = std::move (f_());
-        DBG ("                \"" << k_ << "\" - RTN: " << map_[k_]->name() << " : " << map_[k_]->type() << std::endl); // NOLINT
-        assert (map_[k_]);
-        assert (map_[k_] != nullptr);
-        assert (k_ == map_[k_]->type());
+        if (it == map_.end()) {
+            DBG ("ComputeIfAbsent \"" << k_ << "\" - missing" << std::endl); // NOLINT
+            map_[k_] = std::move(f_());
+            DBG ("                \"" << k_ << "\" - RTN: " << map_[k_]->name() << " : " << map_[k_]->type()
+                                      << std::endl); // NOLINT
+            assert (map_[k_]);
+            assert (map_[k_] != nullptr);
+            assert (k_ == map_[k_]->type());
 
-        return map_[k_];
+            return map_[k_];
+        } else {
+            DBG ("ComputeIfAbsent \"" << k_ << "\" - found it" << std::endl); // NOLINT
+            DBG ("                \"" << k_ << "\" - RTN: " << map_[k_]->name() << std::endl); // NOLINT
+
+            assert (it->second != nullptr);
+
+            return it->second;
+        }
     }
-    else {
-        DBG ("ComputeIfAbsent \"" << k_ << "\" - found it" << std::endl); // NOLINT
-        DBG ("                \"" << k_ << "\" - RTN: " << map_[k_]->name() << std::endl); // NOLINT
 
-        assert (it->second != nullptr);
-
-        return it->second;
-    }
 }
 
 /******************************************************************************
@@ -68,9 +72,10 @@ computeIfAbsent (
  *
  */
 void
+amqp::internal::
 CompositeFactory::process (const SchemaPtr & schema_) {
-    for (auto i = schema_->begin() ; i != schema_->end() ; ++i) {
-        for (const auto & j : *i) {
+    for (const auto & i : *schema_) {
+        for (const auto & j : i) {
             process(*j);
             m_readersByDescriptor[j->descriptor()] = m_readersByType[j->name()];
         }
@@ -80,6 +85,7 @@ CompositeFactory::process (const SchemaPtr & schema_) {
 /******************************************************************************/
 
 std::shared_ptr<amqp::Reader>
+amqp::internal::
 CompositeFactory::process(
         const amqp::internal::schema::AMQPTypeNotation & schema_)
 {
@@ -101,6 +107,7 @@ CompositeFactory::process(
 /******************************************************************************/
 
 std::shared_ptr<amqp::Reader>
+amqp::internal::
 CompositeFactory::processComposite (
         const amqp::internal::schema::AMQPTypeNotation & type_)
 {
@@ -155,6 +162,7 @@ CompositeFactory::processComposite (
 /******************************************************************************/
 
 std::shared_ptr<amqp::Reader>
+amqp::internal::
 CompositeFactory::processRestricted (
         const amqp::internal::schema::AMQPTypeNotation & type_)
 {
@@ -194,6 +202,7 @@ CompositeFactory::processRestricted (
 /******************************************************************************/
 
 const std::shared_ptr<amqp::Reader>
+amqp::internal::
 CompositeFactory::byType (const std::string & type_) {
     auto it = m_readersByType.find (type_);
 
@@ -203,6 +212,7 @@ CompositeFactory::byType (const std::string & type_) {
 /******************************************************************************/
 
 const std::shared_ptr<amqp::Reader>
+amqp::internal::
 CompositeFactory::byDescriptor (const std::string & descriptor_) {
     auto it = m_readersByDescriptor.find (descriptor_);
 
