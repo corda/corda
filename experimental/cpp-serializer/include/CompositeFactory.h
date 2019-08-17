@@ -42,23 +42,6 @@ class CompositeFactory {
 
         std::shared_ptr<amqp::Reader>
         processRestricted (const amqp::internal::schema::AMQPTypeNotation &);
-
-    /*
-        std::shared_ptr<amqp::Reader>
-        process (
-            amqp::internal::schema::OrderedTypeNotations::const_iterator,
-            std::set<std::string> &);
-
-        std::shared_ptr<amqp::Reader>
-        processComposite (
-            amqp::internal::schema::Schema::SchemaSet::const_iterator,
-            std::set<std::string> &);
-
-        std::shared_ptr<amqp::Reader>
-        processRestricted (
-            amqp::internal::schema::Schema::SchemaSet::const_iterator,
-            std::set<std::string> &);
-            */
 };
 
 /******************************************************************************/
