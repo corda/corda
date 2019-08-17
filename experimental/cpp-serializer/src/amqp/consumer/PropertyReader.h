@@ -22,6 +22,7 @@ namespace amqp {
             static std::shared_ptr<PropertyReader> make (const FieldPtr &);
             static std::shared_ptr<PropertyReader> make (const std::string &);
 
+            PropertyReader() = default;
             ~PropertyReader() override = default;
 
             std::string readString(pn_data_t *) const override = 0;

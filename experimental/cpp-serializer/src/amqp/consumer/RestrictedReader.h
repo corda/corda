@@ -23,11 +23,8 @@ namespace amqp {
             const std::string m_type;
 
         public :
-            RestrictedReader (const std::string & type_)
-                : m_type (type_)
-            { }
-
-            ~RestrictedReader() = default;
+            RestrictedReader (std::string);
+            ~RestrictedReader() override = default;
 
             std::any read(pn_data_t *) const override ;
 

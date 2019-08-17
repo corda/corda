@@ -30,7 +30,7 @@ namespace amqp {
                 std::vector<std::weak_ptr<amqp::Reader>> & readers_
             );
 
-            ~CompositeReader() = default;
+            ~CompositeReader() override = default;
 
             std::any read (pn_data_t *) const override;
 

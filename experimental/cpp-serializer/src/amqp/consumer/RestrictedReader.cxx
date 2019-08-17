@@ -6,6 +6,13 @@
 
 /******************************************************************************/
 
+amqp::
+RestrictedReader::RestrictedReader (std::string type_)
+    : m_type (std::move (type_))
+{ }
+
+/******************************************************************************/
+
 const std::string amqp::RestrictedReader::m_name { // NOLINT
     "Restricted Reader"
 };
