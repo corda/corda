@@ -44,7 +44,7 @@ interface CustomSerializerRegistry {
      *
      * @param clazz The actual class to look for a custom serializer for.
      * @param declaredType The declared type to look for a custom serializer for.
-     * @return The custom serializer handing the class, if found, or `null`.
+     * @return The custom serializer handling the class, if found, or `null`.
      *
      * @throws IllegalCustomSerializerException If a custom serializer identifies itself as the serializer for
      * a class annotated with [CordaSerializable], since all such classes should be serializable via standard object

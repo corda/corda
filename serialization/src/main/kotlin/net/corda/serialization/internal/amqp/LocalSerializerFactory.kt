@@ -6,6 +6,8 @@ import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.trace
 import net.corda.serialization.internal.model.*
+import net.corda.serialization.internal.model.TypeIdentifier.*
+import net.corda.serialization.internal.model.TypeIdentifier.Companion.classLoaderFor
 import org.apache.qpid.proton.amqp.Symbol
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
@@ -137,9 +139,18 @@ class DefaultLocalSerializerFactory(
         serializersByTypeId.getOrPut(localTypeInformation.typeIdentifier) {
             val declaredClass = declaredType.asClass()
 
+            // Any Custom Serializer cached for a ParameterizedType can only be
+            // found by searching for that exact same type. Searching for its raw
+            // class will not work!
+            val declaredGenericType = if (declaredType !is ParameterizedType && localTypeInformation.typeIdentifier is Parameterised) {
+                localTypeInformation.typeIdentifier.getLocalType(classLoaderFor(declaredClass))
+            } else {
+                declaredType
+            }
+
             // can be useful to enable but will be *extremely* chatty if you do
-            logger.trace { "Get Serializer for $declaredClass ${declaredType.typeName}" }
-            customSerializerRegistry.findCustomSerializer(declaredClass, declaredType)?.apply { return@get this }
+            logger.trace { "Get Serializer for $declaredClass ${declaredGenericType.typeName}" }
+            customSerializerRegistry.findCustomSerializer(declaredClass, declaredGenericType)?.apply { return@get this }
 
             return when (localTypeInformation) {
                 is LocalTypeInformation.ACollection -> makeDeclaredCollection(localTypeInformation)

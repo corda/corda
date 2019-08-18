@@ -63,6 +63,8 @@ sealed class TypeIdentifier {
         // This method has locking.  So we memo the value here.
         private val systemClassLoader: ClassLoader = ClassLoader.getSystemClassLoader()
 
+        fun classLoaderFor(clazz: Class<*>): ClassLoader = clazz.classLoader ?: systemClassLoader
+
         /**
          * Obtain the [TypeIdentifier] for an erased Java class.
          *
