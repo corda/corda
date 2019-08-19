@@ -1,7 +1,6 @@
 ext {
     tornadofx_version = '1.7.15'
     jna_version = '4.5.2'
-    purejavacomm_version = '0.0.18'
 
     java_home = System.properties.'java.home'
     pkg_source = "$buildDir/packagesrc"
@@ -29,9 +28,6 @@ repositories {
         dirs 'libs'
     }
     jcenter()
-    maven {
-        url 'http://www.sparetimelabs.com/maven2'
-    }
 }
 
 configurations {
@@ -56,7 +52,7 @@ dependencies {
     compile "com.h2database:h2:$h2_version"
     compile "net.java.dev.jna:jna-platform:$jna_version"
     compile "com.google.guava:guava:$guava_version"
-    compile "com.sparetimelabs:purejavacomm:$purejavacomm_version"
+
     compile "org.slf4j:log4j-over-slf4j:$slf4j_version"
     compile "org.slf4j:jul-to-slf4j:$slf4j_version"
     compile "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
@@ -70,6 +66,7 @@ dependencies {
     // JediTerm: the terminal emulator used in IntelliJ. We have forked it and tweaked it, see https://github.com/corda/jediterm
     compile ':terminal-331a005d6793e52cefc9e2cec6774e62d5a546b1'
     compile ':pty4j-0.7.2'
+    compile ':purejavacomm-0.0.18'
 
     testCompile project(':test-utils')
     testCompile project(':webserver')

@@ -19,7 +19,6 @@ import net.corda.core.utilities.contextLogger
 import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.internal.cordapp.CordappProviderInternal
 import net.corda.node.services.DbTransactionsResolver
-import net.corda.node.services.InMemoryTransactionsResolver
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.network.NetworkMapUpdater
@@ -28,6 +27,7 @@ import net.corda.node.services.statemachine.ExternalEvent
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import java.security.PublicKey
+import java.util.*
 
 interface NetworkMapCacheInternal : NetworkMapCache, NetworkMapCacheBase {
     override val nodeReady: OpenFuture<Void?>
@@ -53,25 +53,24 @@ interface ServiceHubInternal : ServiceHubCoreInternal {
     companion object {
         private val log = contextLogger()
 
-        private fun topologicalSort(transactions: Iterable<SignedTransaction>): List<SignedTransaction> {
-            if ((transactions as? List)?.size == 1) return transactions
-            val sort = InMemoryTransactionsResolver.TopologicalSort()
+        private fun topologicalSort(transactions: Collection<SignedTransaction>): Collection<SignedTransaction> {
+            if (transactions.size == 1) return transactions
+            val sort = TopologicalSort()
             for (tx in transactions) {
                 sort.add(tx, tx.dependencies)
             }
             return sort.complete()
         }
 
-        // TODO Why is txs an Iterable and not a Collection??
         fun recordTransactions(statesToRecord: StatesToRecord,
-                               txs: Iterable<SignedTransaction>,
+                               txs: Collection<SignedTransaction>,
                                validatedTransactions: WritableTransactionStorage,
                                stateMachineRecordedTransactionMapping: StateMachineRecordedTransactionMappingStorage,
                                vaultService: VaultServiceInternal,
                                database: CordaPersistence) {
 
             database.transaction {
-                require(txs.any()) { "No transactions passed in for recording" }
+                require(txs.isNotEmpty()) { "No transactions passed in for recording" }
 
                 val orderedTxs = topologicalSort(txs)
                 // Divide transactions into those seen before and those that are new to this node if ALL_VISIBLE states are being recorded.
@@ -79,9 +78,9 @@ interface ServiceHubInternal : ServiceHubCoreInternal {
                 // for transactions being recorded at ONLY_RELEVANT, if this transaction has been seen before its outputs should already
                 // have been recorded at ONLY_RELEVANT, so there shouldn't be anything to re-record here.
                 val (recordedTransactions, previouslySeenTxs) = if (statesToRecord != StatesToRecord.ALL_VISIBLE) {
-                    Pair(orderedTxs.filter { validatedTransactions.addTransaction(it) }, emptyList())
+                    orderedTxs.filter(validatedTransactions::addTransaction) to emptyList()
                 } else {
-                    orderedTxs.partition { validatedTransactions.addTransaction(it) }
+                    orderedTxs.partition(validatedTransactions::addTransaction)
                 }
                 val stateMachineRunId = FlowStateMachineImpl.currentStateMachine()?.id
                 if (stateMachineRunId != null) {
@@ -156,11 +155,55 @@ interface ServiceHubInternal : ServiceHubCoreInternal {
     val cacheFactory: NamedCacheFactory
 
     override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
-        recordTransactions(statesToRecord, txs, validatedTransactions, stateMachineRecordedTransactionMapping, vaultService, database)
+        recordTransactions(
+                statesToRecord,
+                txs as? Collection ?: txs.toList(), // We can't change txs to a Collection as it's now part of the public API
+                validatedTransactions,
+                stateMachineRecordedTransactionMapping,
+                vaultService,
+                database
+        )
     }
 
-    override fun createTransactionsResolver(flow: ResolveTransactionsFlow): TransactionsResolver {
-        return DbTransactionsResolver(flow)
+    override fun createTransactionsResolver(flow: ResolveTransactionsFlow): TransactionsResolver = DbTransactionsResolver(flow)
+
+    /**
+     * Provides a way to topologically sort SignedTransactions. This means that given any two transactions T1 and T2 in the
+     * list returned by [complete] if T1 is a dependency of T2 then T1 will occur earlier than T2.
+     */
+    private class TopologicalSort {
+        private val forwardGraph = HashMap<SecureHash, MutableSet<SignedTransaction>>()
+        private val transactions = ArrayList<SignedTransaction>()
+
+        /**
+         * Add a transaction to the to-be-sorted set of transactions.
+         */
+        fun add(stx: SignedTransaction, dependencies: Set<SecureHash>) {
+            dependencies.forEach {
+                // Note that we use a LinkedHashSet here to make the traversal deterministic (as long as the input list is).
+                forwardGraph.computeIfAbsent(it) { LinkedHashSet() }.add(stx)
+            }
+            transactions += stx
+        }
+
+        /**
+         * Return the sorted list of signed transactions.
+         */
+        fun complete(): List<SignedTransaction> {
+            val visited = HashSet<SecureHash>(transactions.size)
+            val result = ArrayList<SignedTransaction>(transactions.size)
+
+            fun visit(transaction: SignedTransaction) {
+                if (visited.add(transaction.id)) {
+                    forwardGraph[transaction.id]?.forEach(::visit)
+                    result += transaction
+                }
+            }
+
+            transactions.forEach(::visit)
+
+            return result.apply(Collections::reverse)
+        }
     }
 }
 

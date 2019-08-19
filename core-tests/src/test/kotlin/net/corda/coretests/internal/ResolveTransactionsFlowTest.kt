@@ -20,7 +20,7 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.sequence
 import net.corda.core.utilities.unwrap
 import net.corda.coretests.flows.TestNoSecurityDataVendingFlow
-import net.corda.node.services.DbTransactionsResolver
+import net.corda.node.services.DbTransactionsResolver.Companion.IN_MEMORY_RESOLUTION_LIMIT_PROP_NAME
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyContractV2
 import net.corda.testing.core.DUMMY_BANK_A_NAME
@@ -207,7 +207,7 @@ class ResolveTransactionsFlowTest {
 
     @Test
     fun `Switches between checkpoint and DB based resolution correctly`() {
-        System.setProperty("${DbTransactionsResolver::class.java.name}.max-checkpoint-resolution", "20")
+        System.setProperty(IN_MEMORY_RESOLUTION_LIMIT_PROP_NAME, "20")
         var numTransactions = 0
         megaCorpNode.services.validatedTransactions.updates.subscribe {
             numTransactions++
