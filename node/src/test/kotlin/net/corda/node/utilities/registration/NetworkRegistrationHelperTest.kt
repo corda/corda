@@ -73,6 +73,7 @@ class NetworkRegistrationHelperTest {
             doReturn(true).whenever(it).crlCheckSoftFail
             doReturn(null).whenever(it).cryptoServiceName
             doReturn(null).whenever(it).cryptoServiceConf
+            doReturn(null).whenever(it).freshIdentitiesConfiguration
         }
     }
 
