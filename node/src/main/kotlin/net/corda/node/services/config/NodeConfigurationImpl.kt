@@ -126,7 +126,6 @@ data class NodeConfigurationImpl(
         val cryptoServiceConf: Path? = null
         val networkParameterAcceptanceSettings: NetworkParameterAcceptanceSettings = NetworkParameterAcceptanceSettings()
         val masterKeyAlias = "wrapping-key-alias"
-        val createDuringStartup = CreateWrappingKeyDuringStartup.YES
 
         fun cordappsDirectories(baseDirectory: Path) = listOf(baseDirectory / CORDAPPS_DIR_NAME_DEFAULT)
 

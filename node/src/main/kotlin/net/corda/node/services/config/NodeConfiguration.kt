@@ -359,13 +359,6 @@ data class RelayConfiguration(val relayHost: String,
 
 data class FreshIdentitiesConfiguration(val mode: WrappingMode,
                                         val cryptoServiceConfiguration: CryptoServiceConfiguration,
-                                        val masterKeyAlias: String,
-                                        val createDuringStartup: CreateWrappingKeyDuringStartup)
+                                        val masterKeyAlias: String)
 
 data class CryptoServiceConfiguration(val cryptoServiceName: SupportedCryptoServices, val cryptoServiceConf: Path?)
-
-enum class CreateWrappingKeyDuringStartup {
-    YES,
-    NO,
-    ONLY_IF_MISSING
-}

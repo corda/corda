@@ -396,11 +396,10 @@ internal object FreshIdentitiesConfigurationSpec: Configuration.Specification<Fr
     private val mode by enum(WrappingMode::class)
     private val cryptoServiceConfiguration by nested(CryptoServiceConfigurationSpec)
     private val masterKeyAlias by string().optional().withDefaultValue(NodeConfigurationImpl.Defaults.masterKeyAlias)
-    private val createDuringStartup by enum(CreateWrappingKeyDuringStartup::class).optional().withDefaultValue(NodeConfigurationImpl.Defaults.createDuringStartup)
 
     override fun parseValid(configuration: Config, options: Configuration.Options): Valid<FreshIdentitiesConfiguration> {
         val config = configuration.withOptions(options)
-        return valid(FreshIdentitiesConfiguration(config[mode], config[cryptoServiceConfiguration], config[masterKeyAlias], config[createDuringStartup]))
+        return valid(FreshIdentitiesConfiguration(config[mode], config[cryptoServiceConfiguration], config[masterKeyAlias]))
     }
 }
 
