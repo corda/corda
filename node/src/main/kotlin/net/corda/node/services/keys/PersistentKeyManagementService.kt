@@ -1,13 +1,14 @@
 package net.corda.node.services.keys
 
 import net.corda.core.crypto.*
-import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.internal.toSet
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.MAX_HASH_HEX_SIZE
 import net.corda.node.services.identity.PersistentIdentityService
+import net.corda.node.services.persistence.WritablePublicKeyToOwningIdentityCache
 import net.corda.node.utilities.AppendOnlyPersistentMap
+import net.corda.nodeapi.internal.KeyOwningIdentity
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import org.apache.commons.lang3.ArrayUtils.EMPTY_BYTE_ARRAY
@@ -26,8 +27,10 @@ import javax.persistence.*
  * This class needs database transactions to be in-flight during method calls and init.
  */
 @Deprecated("Superseded by net.corda.node.services.keys.BasicHSMKeyManagementService")
-class PersistentKeyManagementService(cacheFactory: NamedCacheFactory, val identityService: PersistentIdentityService,
-                                     private val database: CordaPersistence) : SingletonSerializeAsToken(), KeyManagementServiceInternal {
+class PersistentKeyManagementService(cacheFactory: NamedCacheFactory,
+                                     override val identityService: PersistentIdentityService,
+                                     private val database: CordaPersistence,
+                                     private val pkToIdCache: WritablePublicKeyToOwningIdentityCache) : SingletonSerializeAsToken(), KeyManagementServiceInternal {
     @Entity
     @Table(name = "${NODE_DATABASE_PREFIX}our_key_pairs")
     class PersistentKey(
@@ -76,31 +79,16 @@ class PersistentKeyManagementService(cacheFactory: NamedCacheFactory, val identi
         identityService.stripNotOurKeys(candidateKeys)
     }
 
-    override fun freshKey(): PublicKey {
+    override fun freshKeyInternal(externalId: UUID?): PublicKey {
         val keyPair = generateKeyPair()
         database.transaction {
             keysMap[keyPair.public] = keyPair.private
+            pkToIdCache[keyPair.public] = KeyOwningIdentity.fromUUID(externalId)
         }
         return keyPair.public
     }
 
-    override fun freshKey(externalId: UUID): PublicKey {
-        val newKey = freshKey()
-        database.transaction { session.persist(PublicKeyHashToExternalId(externalId, newKey)) }
-        return newKey
-    }
-
-    override fun freshKeyAndCert(identity: PartyAndCertificate, revocationEnabled: Boolean): PartyAndCertificate {
-        return freshCertificate(identityService, freshKey(), identity, getSigner(identity.owningKey))
-    }
-
-    override fun freshKeyAndCert(identity: PartyAndCertificate, revocationEnabled: Boolean, externalId: UUID): PartyAndCertificate {
-        val newKeyWithCert = freshKeyAndCert(identity, revocationEnabled)
-        database.transaction { session.persist(PublicKeyHashToExternalId(externalId, newKeyWithCert.owningKey)) }
-        return newKeyWithCert
-    }
-
-    private fun getSigner(publicKey: PublicKey): ContentSigner = getSigner(getSigningKeyPair(publicKey))
+    override fun getSigner(publicKey: PublicKey): ContentSigner = getSigner(getSigningKeyPair(publicKey))
 
     //It looks for the PublicKey in the (potentially) CompositeKey that is ours, and then returns the associated PrivateKey to use in signing
     private fun getSigningKeyPair(publicKey: PublicKey): KeyPair {
