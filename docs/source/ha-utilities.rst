@@ -52,7 +52,6 @@ Command-line options
 * ``-t``, ``--network-root-truststore=FILE``: Network root trust store obtained from network operator.
 * ``-p``, ``--network-root-truststore-password=PASSWORD``: Network root trust store password obtained from network operator.
 * ``-g``, ``--bridge-config-file``: The path to the bridge configuration file.
-* ``-r``, ``--bridge-keystore-password=PASSWORD``: The password of the bridge SSLK keystore.
 * ``-h``, ``--help``: Show this help message and exit.
 * ``-V``, ``--version``: Print version information and exit.
 
@@ -173,6 +172,8 @@ Command-line options
 * ``--truststore-password``: The SSL truststore password.
 * ``--ha``: The broker's working mode. If specified, the broker will be configured to work in HA mode. Valid values: NON_HA, MASTER, SLAVE
 * ``--connectors``: A list of network hosts and ports representing the Artemis connectors used for the Artemis HA cluster. The first entry in the list will be used by the instance configured with this tool. The connector entries are separated by commas (e.g. localhost:10000,localhost:10001,localhost:10002)
+* ``--cluster-user``: The username of the Artemis cluster. Default: corda-cluster-user
+* ``--cluster-password``: Artemis cluster password. Default: changeit
 * ``-h``, ``--help``: Show this help message and exit.
 * ``-V``, ``--version``: Print version information and exit.
 
