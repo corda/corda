@@ -15,7 +15,9 @@ import net.corda.core.contracts.*
 import net.corda.core.flows.*
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
+import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
+import net.corda.core.internal.inputStream
 import net.corda.core.internal.list
 import net.corda.core.internal.messaging.InternalCordaRPCOps
 import net.corda.core.messaging.ClientRpcSslOptions
@@ -26,7 +28,6 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.getOrThrow
-import net.corda.core.utilities.unwrap
 import net.corda.node.internal.NodeStartup
 import net.corda.node.services.Permissions
 import net.corda.node.services.Permissions.Companion.all
@@ -51,8 +52,6 @@ import org.bouncycastle.util.io.Streams
 import org.crsh.text.RenderPrintWriter
 import org.junit.*
 import org.junit.rules.TemporaryFolder
-import java.io.ByteArrayOutputStream
-import java.io.FileInputStream
 import java.util.*
 import java.util.zip.ZipInputStream
 import javax.security.auth.x500.X500Principal
@@ -410,19 +409,19 @@ class InteractiveShellIntegrationTest : IntegrationTest() {
     @Test
     fun `dumpCheckpoints creates zip with json file for suspended flow`() {
         val user = User("u", "p", setOf(all()))
-        driver(DriverParameters()) {
+        driver {
             val aliceNode = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user), startInSameProcess = true).getOrThrow()
             val bobNode = startNode(providedName = BOB_NAME, rpcUsers = listOf(user), startInSameProcess = true).getOrThrow()
             bobNode.stop()
 
-            // create logs directory since the driver is not creating it
-            (aliceNode.baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME).toFile().mkdir()
+            // Create logs directory since the driver is not creating it
+            (aliceNode.baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME).createDirectories()
 
             val conf = ShellConfiguration(commandsDirectory = Files.createTempDir().toPath(),
                     user = user.username, password = user.password,
                     hostAndPort = aliceNode.rpcAddress)
             InteractiveShell.startShell(conf)
-            // setup and configure some mocks required by InteractiveShell.runFlowByNameFragment()
+            // Setup and configure some mocks required by InteractiveShell.runFlowByNameFragment()
             val output = mock<RenderPrintWriter> {
                 on { println(any<String>()) } doAnswer {
                     val line = it.arguments[0]
@@ -444,24 +443,12 @@ class InteractiveShellIntegrationTest : IntegrationTest() {
             InteractiveShell.runRPCFromString(
                     listOf("dumpCheckpoints"), output, mock(), aliceNode.rpc as InternalCordaRPCOps, inputObjectMapper)
 
-            // assert that the checkpoint dump zip has been created
-            val zip = (aliceNode.baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME).list()
-                    .find { it.toString().contains("checkpoints_dump-") }
-            assertNotNull(zip)
+            val checkpointDumperOutputZip = (aliceNode.baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME).list()
+                    .first { it.toString().contains("checkpoints_dump-") }
 
-            val bytes = FileInputStream((zip!!).toFile()).use { file ->
-                ZipInputStream(file).use { zip ->
-                    zip.nextEntry
-                    ByteArrayOutputStream().use { baos ->
-                        val buffer = ByteArray(1024)
-                        var read = zip.read(buffer)
-                        while (read != -1) {
-                            baos.write(buffer, 0, read)
-                            read = zip.read(buffer)
-                        }
-                        baos.toByteArray()
-                    }
-                }
+            val bytes = ZipInputStream((checkpointDumperOutputZip.inputStream())).use { zip ->
+                zip.nextEntry
+                zip.readBytes()
             }
             val objectMapper = ObjectMapper()
             val json = objectMapper.readTree(bytes)
