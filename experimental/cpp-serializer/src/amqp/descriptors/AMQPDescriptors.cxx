@@ -103,7 +103,7 @@ EnvelopeDescriptor::build(pn_data_t * data_) const {
     pn_data_next (data_);
 
     /*
-     * The scehama
+     * The schema
      */
     auto schema = dispatchDescribed<schema::Schema> (data_);
 
