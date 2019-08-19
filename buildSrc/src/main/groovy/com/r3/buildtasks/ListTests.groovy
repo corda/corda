@@ -13,7 +13,14 @@ class ListTests extends DefaultTask {
     String outputFilePrefix = "tests"
 
     ListTests() {
-        dependsOn("testClasses")
+        project.afterEvaluate {
+            // afterEvaluate in order to allow all plugins to generate dynamic tasks
+            // if we don't do this, integrationTest classes don't get generated and the tests are not listed
+            dependsOn(project.tasks.findAll {
+                it.name.toLowerCase().contains("test") &&
+                        it.name.toLowerCase().contains("classes")
+            })
+        }
     }
 
     @TaskAction
