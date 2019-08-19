@@ -8,7 +8,8 @@ It will add 2 properties:
  - ``cordaComponents`` will contain the components which the module needs. This should be set per module. E.g: ``["corda-core", "corda-node-api", "corda-rpc"]``
 
 Because of the declarative approach, it also allows more flexibility, as the code could be compiled and tested against all corda versions between the ``minimumPlatformVersion`` and the ``cordaCompilePlatformVersion``.
-
+To achieve this, the plugin should know about all existing versions of Corda and how components map to artifacts.
+This history is also useful for testing with multiple Corda versions.
 
 ### Sample config 
  

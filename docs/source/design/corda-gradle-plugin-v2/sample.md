@@ -75,14 +75,7 @@ It is also the project where cordFormation configurations live.
     }
 
     cordformation {
-        rpcPortAllocation = INCREMENTAL(9000) 
-        p2pPortAllocation = INCREMENTAL(10000) 
-            
-        nodeDefaults {
-            rpc.user = ['username': "demo", 'password': "demo", 'permissions': ["ALL"]]
-        }
-
-        smallBankNetwork {
+        defaultNetwork {
             "O=Notary Service,L=Zurich,C=CH" {
                 notary = [validating : true]
             }
@@ -92,16 +85,6 @@ It is also the project where cordFormation configurations live.
             "O=Bank B,L=London,C=UK" 
 
             "O=Bank C,L=New York,C=US" 
-        }       
-
-        largeBankNetwork {
-            "O=Notary Service,L=Zurich,C=CH" {
-                notary = [validating : true]
-            }
-   
-            (1..10).forEach{
-                "O=Bank ${it},L=Zurich,C=CH" 
-            }
         }       
     }
 ```
