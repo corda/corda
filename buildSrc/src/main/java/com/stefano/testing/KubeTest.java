@@ -1,10 +1,14 @@
-package net.corda;
+package com.stefano.testing;
 
 import io.fabric8.kubernetes.api.model.*;
 import io.fabric8.kubernetes.client.Config;
 import io.fabric8.kubernetes.client.ConfigBuilder;
 import io.fabric8.kubernetes.client.*;
 import io.fabric8.kubernetes.client.dsl.LogWatch;
+import org.gradle.api.DefaultTask;
+import org.gradle.api.Project;
+import org.gradle.api.tasks.Input;
+import org.gradle.api.tasks.TaskAction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -16,9 +20,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-public class KubeTest {
-
-    String dockerTag;
+public class KubeTest extends DefaultTask {
 
     static class KubePodResult {
 
@@ -33,10 +35,14 @@ public class KubeTest {
 
     private static Logger logger = LoggerFactory.getLogger(KubeTest.class);
 
-    public static void main(String[] args) {
+    @Input
+    String dockerTag;
 
+
+    @TaskAction
+    public void runUnitTestsForModule() {
+        Project project = getProject();
         String runId = new BigInteger(64, new Random()).toString(36).toLowerCase();
-
         Config config = new ConfigBuilder().build();
         try (final KubernetesClient client = new DefaultKubernetesClient(config)) {
 
@@ -46,7 +52,7 @@ public class KubeTest {
             });
 
             client.pods().inNamespace(namespace).list().getItems().forEach(podToDelete -> {
-                System.out.println("deleting: " + podToDelete.getMetadata().getName());
+                logger.info("deleting: " + podToDelete.getMetadata().getName());
                 client.resource(podToDelete).delete();
             });
 
@@ -59,32 +65,21 @@ public class KubeTest {
                 String podName = "test" + runId + i;
                 Pod podRequest = new PodBuilder().withNewMetadata().withName(podName).endMetadata()
                         .withNewSpec()
-                        .addNewVolume()
-                        .withName("azurefiles")
-                        .withNewAzureFile()
-                        .withSecretName("azure-secret")
-                        .withShareName("gradle")
-                        .endAzureFile()
-                        .endVolume()
                         .addNewContainer()
-                        .withImage("stefanotestingcr.azurecr.io/bd7e38437234")
+                        .withImage(dockerTag)
                         .withCommand("bash")
-                        .withArgs("-c", "cd /tmp/source && ./gradlew -PdockerFork=" + i + " -PdockerForks=" + numberOfNodes + " node:test --info")
+                        .withArgs("-c", "cd /tmp/source && ./gradlew -PdockerFork=" + i + " -PdockerForks=" + numberOfNodes + " " + project.getName() + ":test --info")
                         .withName("testing-hello-world" + i)
                         .withNewResources()
                         .addToRequests("cpu", new Quantity("2"))
                         .endResources()
-                        .addNewVolumeMount()
-                        .withName("azurefiles")
-                        .withMountPath("/tmp/gradle")
-                        .endVolumeMount()
                         .endContainer()
                         .withImagePullSecrets(new LocalObjectReference("regcred"))
                         .withRestartPolicy("Never")
                         .endSpec()
                         .build();
 
-                System.out.println("created pod: " + podName);
+                logger.info("created pod: " + podName);
                 Pod createdPod = client.pods().inNamespace(namespace).create(podRequest);
 
                 Thread outputThread = new Thread(() -> {
@@ -98,9 +93,9 @@ public class KubeTest {
                             @Override
                             public void eventReceived(Action action, Pod resource) {
                                 ContainerState state = resource.getStatus().getContainerStatuses().get(0).getState();
-                                System.out.println("[StatusChange]  pod " + resource.getMetadata().getName() + " " + action.name());
+                                logger.info("[StatusChange]  pod " + resource.getMetadata().getName() + " " + action.name());
                                 if (state.getTerminated() != null) {
-                                    System.out.println("[StatusChange] pod: " + resource.getMetadata().getName() + " has exited with code: " + state.getTerminated().getExitCode());
+                                    logger.info("[StatusChange] pod: " + resource.getMetadata().getName() + " has exited with code: " + state.getTerminated().getExitCode());
                                     logWatch.close();
                                 }
                             }
@@ -109,11 +104,11 @@ public class KubeTest {
                             public void onClose(KubernetesClientException cause) {
                             }
                         });
-                        System.out.println("Pod: " + podName + " has started ");
+                        logger.info("Pod: " + podName + " has started ");
                         try (BufferedReader br = new BufferedReader(new InputStreamReader(logWatch.getOutput()))) {
                             String line;
                             while ((line = br.readLine()) != null) {
-                                System.out.println("Container" + i + ":   " + line);
+                                logger.info("Container" + i + ":   " + line);
                             }
                         } catch (IOException e) {
                             e.printStackTrace();
@@ -130,26 +125,27 @@ public class KubeTest {
                 return new KubePodResult(createdPod, outputThread);
             }).collect(Collectors.toList());
 
-            System.out.println("Pods created, waiting for exit");
+            logger.info("Pods created, waiting for exit");
 
             createdPods.forEach(pod -> {
                 try {
                     pod.outputThread.join();
-                    System.out.println("Successfully terminated log streaming for " + pod.createdPod.getMetadata().getName() + " still waiting for " + createdPods.stream().filter(cp -> cp.outputThread.isAlive()).map(cp -> cp.createdPod.getMetadata().getName()).collect(Collectors.toSet()));
+                    logger.info("Successfully terminated log streaming for " + pod.createdPod.getMetadata().getName() + " still waiting for " + createdPods.stream().filter(cp -> cp.outputThread.isAlive()).map(cp -> cp.createdPod.getMetadata().getName()).collect(Collectors.toSet()));
                 } catch (InterruptedException e) {
                 }
             });
 
-            System.out.println("All pods have completed! preparing to gather test results");
+            logger.info("All pods have completed! preparing to gather test results");
 
             createdPods.forEach(cp -> {
-                System.out.println("creating gzip of test xml results on pod " + cp.createdPod.getMetadata().getName());
-                client.pods().inNamespace(namespace).withName(cp.createdPod.getMetadata().getName()).writingOutput(System.out).exec("sh", "-c", "cd " + "/tmp/source/node/build" + " && " +
+                System.out.println("creating gzip of test xml results");
+                client.pods().inNamespace(namespace).withName(cp.createdPod.getMetadata().getName()).writingOutput(System.out).exec("sh", "-c", "cd " + project.getBuildDir() + " && " +
                         "tar -zcvf testResults.tar.gz $(find . | grep xml$)");
             });
 
+
             client.pods().inNamespace(namespace).list().getItems().forEach(podToDelete -> {
-                System.out.println("deleting: " + podToDelete.getMetadata().getName());
+                logger.info("deleting: " + podToDelete.getMetadata().getName());
                 client.resource(podToDelete).delete();
             });
 
@@ -163,6 +159,11 @@ public class KubeTest {
                 }
             }
         }
+
+    }
+
+    public static void main(String[] args) {
+
     }
 
 }

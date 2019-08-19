@@ -296,10 +296,8 @@ test {
 task printIt(type: JavaExec) {
     classpath = sourceSets.test.runtimeClasspath
     main = 'net.corda.JunitPrinter'
-    args buildDir.absolutePath
+    args buildDir.absolutePath, "$corda_revision"
 }
-
-test.dependsOn(printIt)
 
 task dockerTest(type: DockerTest, dependsOn: []) {
     dockerTag = "6f59dd3432ca"

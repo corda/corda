@@ -38,3 +38,8 @@ jar {
 publish {
     name jar.baseName
 }
+
+task runIt(type: JavaExec) {
+    classpath = sourceSets.main.runtimeClasspath
+    main = "net.corda.KubeTest"
+}
