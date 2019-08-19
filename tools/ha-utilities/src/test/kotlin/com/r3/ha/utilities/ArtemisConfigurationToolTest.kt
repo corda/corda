@@ -91,4 +91,50 @@ class ArtemisConfigurationToolTest {
                 "--truststore", "artemis-truststore.jks",
                 "--truststore-password", "artemisTrustpass")
     }
+
+    @Test
+    fun `test relative keystore path`() {
+        val workingDirectory = tempFolder.root.toPath() / "etc"
+        CommandLine.populateCommand(tool, "--path", workingDirectory.toString(),
+                "--user", "CN=artemis, O=Corda, L=London, C=GB",
+                "--acceptor-address", "localhost:11005",
+                "--keystore", "../bridge/artemiscerts/artemis.jks",
+                "--keystore-password", "artemisStorePass123",
+                "--truststore", "../bridge/artemiscerts/artemis-truststore.jks",
+                "--truststore-password", "artemisTrustpass123")
+
+        tool.runProgram()
+
+        with(workingDirectory / "broker.xml") {
+            assertTrue(exists())
+            val allLines = readText()
+            assertTrue(allLines) {
+                allLines.contains("keyStorePath=../bridge/artemiscerts/artemis.jks;keyStorePassword=artemisStorePass123;trustStorePath=../bridge/artemiscerts/artemis-truststore.jks;trustStorePassword=artemisTrustpass123")
+            }
+        }
+    }
+
+    @Test(expected = CommandLine.ParameterException::class)
+    fun `test illegal character in keystore path`() {
+        val workingDirectory = tempFolder.root.toPath() / "etc"
+        CommandLine.populateCommand(tool, "--path", workingDirectory.toString(),
+                "--user", "CN=artemis, O=Corda, L=London, C=GB",
+                "--acceptor-address", "localhost:11005",
+                "--keystore", """..\bridge\artemiscerts\artemis.jks""",
+                "--keystore-password", "artemisStorePass",
+                "--truststore", "artemis-truststore.jks",
+                "--truststore-password", "artemisTrustpass")
+    }
+
+    @Test(expected = CommandLine.ParameterException::class)
+    fun `test illegal character in password`() {
+        val workingDirectory = tempFolder.root.toPath() / "etc"
+        CommandLine.populateCommand(tool, "--path", workingDirectory.toString(),
+                "--user", "CN=artemis, O=Corda, L=London, C=GB",
+                "--acceptor-address", "localhost:11005",
+                "--keystore", "artemis.jks",
+                "--keystore-password", "artemisStorePass<123>",
+                "--truststore", "artemis-truststore.jks",
+                "--truststore-password", "artemisTrustpass")
+    }
 }
