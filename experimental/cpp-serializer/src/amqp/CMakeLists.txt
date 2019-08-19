@@ -1,6 +1,6 @@
 include_directories (descriptors)
 include_directories (schema)
-include_directories (consumer)
+include_directories (reader)
 include_directories (.)
 
 set (amqp_sources
@@ -14,10 +14,10 @@ set (amqp_sources
     schema/restricted-types/Restricted.cxx
     schema/restricted-types/List.cxx
     schema/AMQPTypeNotation.cxx
-    consumer/Reader.cxx
-    consumer/PropertyReader.cxx
-    consumer/RestrictedReader.cxx
-    consumer/CompositeReader.cxx
+        reader/Reader.cxx
+        reader/PropertyReader.cxx
+        reader/RestrictedReader.cxx
+        reader/CompositeReader.cxx
     CompositeFactory.cxx
 )
 

@@ -273,7 +273,9 @@ readAndNext<std::string> (
     } else  if (tolerateDeviance_ && pn_data_type(data_) == PN_NULL) {
         return "";
     }
-    throw std::runtime_error ("Expected a String");
+    std::stringstream ss;
+    ss << "Expected a String but found [" << data_ << "]";
+    throw std::runtime_error (ss.str());
 }
 
 /******************************************************************************/

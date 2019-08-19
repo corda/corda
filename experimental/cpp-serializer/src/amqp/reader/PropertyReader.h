@@ -9,7 +9,7 @@
 
 /******************************************************************************/
 
-namespace amqp {
+namespace amqp::internal::reader {
 
     class PropertyReader : public Reader {
         private :
@@ -29,15 +29,15 @@ namespace amqp {
 
             std::any read (pn_data_t *) const override = 0;
 
-            std::unique_ptr<Value> dump(
+            std::unique_ptr<amqp::reader::IValue> dump(
                 const std::string &,
                 pn_data_t *,
-                const std::unique_ptr<internal::schema::Schema> &
+                const SchemaType &
             ) const override = 0;
 
-            std::unique_ptr<Value> dump(
+            std::unique_ptr<amqp::reader::IValue> dump(
                 pn_data_t *,
-                const std::unique_ptr<internal::schema::Schema> &
+                const SchemaType &
             ) const override = 0;
 
             const std::string & name() const override = 0;
@@ -56,15 +56,15 @@ namespace amqp {
 
             std::any read (pn_data_t *) const override;
 
-            std::unique_ptr<Value> dump(
+            std::unique_ptr<amqp::reader::IValue> dump(
                 const std::string &,
                 pn_data_t *,
-                const std::unique_ptr<internal::schema::Schema> &
+                const SchemaType &
             ) const override;
 
-            std::unique_ptr<Value> dump(
+            std::unique_ptr<amqp::reader::IValue> dump(
                 pn_data_t *,
-                const std::unique_ptr<internal::schema::Schema> &
+                const SchemaType &
             ) const override;
 
             const std::string & name() const override {
@@ -88,15 +88,15 @@ namespace amqp {
 
             std::any read (pn_data_t *) const override;
 
-            std::unique_ptr<Value> dump(
+            std::unique_ptr<amqp::reader::IValue> dump(
                 const std::string &,
                 pn_data_t *,
-                const std::unique_ptr<internal::schema::Schema> &
+                const SchemaType &
             ) const override;
 
-            std::unique_ptr<Value> dump(
+            std::unique_ptr<amqp::reader::IValue> dump(
                 pn_data_t *,
-                const std::unique_ptr<internal::schema::Schema> &
+                const SchemaType &
             ) const override;
 
             const std::string & name() const override {
@@ -118,15 +118,15 @@ namespace amqp {
 
             std::any read (pn_data_t *) const override;
 
-            std::unique_ptr<Value> dump(
+            std::unique_ptr<amqp::reader::IValue> dump(
                 const std::string &,
                 pn_data_t *,
-                const std::unique_ptr<internal::schema::Schema> &
+                const SchemaType &
             ) const override;
 
-            std::unique_ptr<Value> dump(
+            std::unique_ptr<amqp::reader::IValue> dump(
                 pn_data_t *,
-                const std::unique_ptr<internal::schema::Schema> &
+                const SchemaType &
             ) const override;
 
             const std::string & name() const override {
@@ -148,15 +148,15 @@ namespace amqp {
 
             std::any read (pn_data_t *) const override;
 
-            std::unique_ptr<Value> dump(
+            std::unique_ptr<amqp::reader::IValue> dump(
                 const std::string &,
                 pn_data_t *,
-                const std::unique_ptr<internal::schema::Schema> &
+                const SchemaType &
             ) const override;
 
-            std::unique_ptr<Value> dump(
+            std::unique_ptr<amqp::reader::IValue> dump(
                 pn_data_t *,
-                const std::unique_ptr<internal::schema::Schema> &
+                const SchemaType &
             ) const override;
 
             const std::string & name() const override {
@@ -178,15 +178,15 @@ namespace amqp {
 
             std::any read (pn_data_t *) const override;
 
-            std::unique_ptr<Value> dump(
+            std::unique_ptr<amqp::reader::IValue> dump(
                 const std::string &,
                 pn_data_t *,
-                const std::unique_ptr<internal::schema::Schema> &
+                const SchemaType &
             ) const override;
 
-            std::unique_ptr<Value> dump(
+            std::unique_ptr<amqp::reader::IValue> dump(
                 pn_data_t *,
-                const std::unique_ptr<internal::schema::Schema> &
+                const SchemaType &
             ) const override;
 
             const std::string & name() const override {

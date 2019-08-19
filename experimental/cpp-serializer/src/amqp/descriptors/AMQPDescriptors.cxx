@@ -14,7 +14,7 @@
 #include "Composite.h"
 #include "amqp/schema/restricted-types/Restricted.h"
 #include "amqp/schema/OrderedTypeNotations.h"
-#include "AMQPDescribed.h"
+#include "amqp/AMQPDescribed.h"
 
 #include "proton/proton_wrapper.h"
 #include "AMQPDescriptorRegistory.h"
@@ -83,7 +83,7 @@ namespace {
  *
  ******************************************************************************/
 
-std::unique_ptr<amqp::internal::AMQPDescribed>
+std::unique_ptr<amqp::AMQPDescribed>
 amqp::internal::
 EnvelopeDescriptor::build(pn_data_t * data_) const {
     DBG ("ENVELOPE" << std::endl); // NOLINT
@@ -120,7 +120,7 @@ EnvelopeDescriptor::build(pn_data_t * data_) const {
 
 /******************************************************************************/
 
-std::unique_ptr<amqp::internal::AMQPDescribed>
+std::unique_ptr<amqp::AMQPDescribed>
 amqp::internal::
 SchemaDescriptor::build(pn_data_t * data_) const {
     DBG ("SCHEMA" << std::endl); // NOLINT
@@ -156,7 +156,7 @@ SchemaDescriptor::build(pn_data_t * data_) const {
 /**
  * 
  */
-std::unique_ptr<amqp::internal::AMQPDescribed>
+std::unique_ptr<amqp::AMQPDescribed>
 amqp::internal::
 ObjectDescriptor::build(pn_data_t * data_) const {
     DBG ("DESCRIPTOR" << std::endl); // NOLINT
@@ -176,7 +176,7 @@ ObjectDescriptor::build(pn_data_t * data_) const {
  *
  ******************************************************************************/
 
-std::unique_ptr<amqp::internal::AMQPDescribed>
+std::unique_ptr<amqp::AMQPDescribed>
 amqp::internal::
 FieldDescriptor::build(pn_data_t * data_) const {
     DBG ("FIELD" << std::endl); // NOLINT
@@ -235,7 +235,7 @@ FieldDescriptor::build(pn_data_t * data_) const {
  *
  ******************************************************************************/
 
-std::unique_ptr<amqp::internal::AMQPDescribed>
+std::unique_ptr<amqp::AMQPDescribed>
 amqp::internal::
 CompositeDescriptor::build(pn_data_t * data_) const {
     DBG ("COMPOSITE" << std::endl); // NOLINT
@@ -301,7 +301,7 @@ CompositeDescriptor::build(pn_data_t * data_) const {
  *
  ******************************************************************************/
 
-std::unique_ptr<amqp::internal::AMQPDescribed>
+std::unique_ptr<amqp::AMQPDescribed>
 amqp::internal::
 RestrictedDescriptor::build(pn_data_t * data_) const {
     DBG ("RESTRICTED" << std::endl); // NOLINT
@@ -337,62 +337,62 @@ RestrictedDescriptor::build(pn_data_t * data_) const {
  *
  ******************************************************************************/
 
-std::unique_ptr<amqp::internal::AMQPDescribed>
+std::unique_ptr<amqp::AMQPDescribed>
 amqp::internal::
 ChoiceDescriptor::build(pn_data_t * data_) const {
     validateAndNext(data_);
 
     DBG ("CHOICE " << data_ << std::endl); // NOLINT
 
-    return std::unique_ptr<amqp::internal::AMQPDescribed> (nullptr);
+    return std::unique_ptr<amqp::AMQPDescribed> (nullptr);
 }
 
 /******************************************************************************/
 
-std::unique_ptr<amqp::internal::AMQPDescribed>
+std::unique_ptr<amqp::AMQPDescribed>
 amqp::internal::
 ReferencedObjectDescriptor::build(pn_data_t * data_) const {
     validateAndNext(data_);
 
     DBG ("REFERENCED OBJECT " << data_ << std::endl); // NOLINT
 
-    return std::unique_ptr<amqp::internal::AMQPDescribed> (nullptr);
+    return std::unique_ptr<amqp::AMQPDescribed> (nullptr);
 }
 
 /******************************************************************************/
 
-std::unique_ptr<amqp::internal::AMQPDescribed>
+std::unique_ptr<amqp::AMQPDescribed>
 amqp::internal::
 TransformSchemaDescriptor::build(pn_data_t * data_) const {
     validateAndNext(data_);
 
     DBG ("TRANSFORM SCHEMA " << data_ << std::endl); // NOLINT
 
-    return std::unique_ptr<amqp::internal::AMQPDescribed> (nullptr);
+    return std::unique_ptr<amqp::AMQPDescribed> (nullptr);
 }
 
 /******************************************************************************/
 
-std::unique_ptr<amqp::internal::AMQPDescribed>
+std::unique_ptr<amqp::AMQPDescribed>
 amqp::internal::
 TransformElementDescriptor::build(pn_data_t * data_) const {
     validateAndNext(data_);
 
     DBG ("TRANSFORM ELEMENT " << data_ << std::endl); // NOLINT
 
-    return std::unique_ptr<amqp::internal::AMQPDescribed> (nullptr);
+    return std::unique_ptr<amqp::AMQPDescribed> (nullptr);
 }
 
 /******************************************************************************/
 
-std::unique_ptr<amqp::internal::AMQPDescribed>
+std::unique_ptr<amqp::AMQPDescribed>
 amqp::internal::
 TransformElementKeyDescriptor::build(pn_data_t * data_) const {
     validateAndNext(data_);
 
     DBG ("TRANSFORM ELEMENT KEY" << data_ << std::endl); // NOLINT
 
-    return std::unique_ptr<amqp::internal::AMQPDescribed> (nullptr);
+    return std::unique_ptr<amqp::AMQPDescribed> (nullptr);
 }
 
 /******************************************************************************/

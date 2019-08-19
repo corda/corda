@@ -18,7 +18,7 @@ struct pn_data_t;
 
 /******************************************************************************/
 
-namespace amqp:: internal {
+namespace amqp::internal {
 
     class EnvelopeDescriptor : public AMQPDescriptor {
         public :

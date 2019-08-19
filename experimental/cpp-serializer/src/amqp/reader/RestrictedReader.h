@@ -15,7 +15,7 @@ struct pn_data_t;
 
 /******************************************************************************/
 
-namespace amqp {
+namespace amqp::internal::reader {
 
     class RestrictedReader : public Reader {
         private :
@@ -23,17 +23,17 @@ namespace amqp {
             const std::string m_type;
 
         public :
-            RestrictedReader (std::string);
+            explicit RestrictedReader (std::string);
             ~RestrictedReader() override = default;
 
             std::any read(pn_data_t *) const override ;
 
             std::string readString(pn_data_t *) const override;
 
-            std::unique_ptr<Value> dump(
+            std::unique_ptr<amqp::reader::IValue> dump(
                 const std::string &,
                 pn_data_t *,
-                const std::unique_ptr<internal::schema::Schema> &) const override = 0;
+                const SchemaType &) const override = 0;
 
             const std::string & name() const override;
             const std::string & type() const override;
@@ -43,37 +43,37 @@ namespace amqp {
 
 /******************************************************************************/
 
-namespace amqp {
+namespace amqp::internal::reader {
 
     class ListReader : public RestrictedReader {
         private :
             // How to read the underlying types
-            std::weak_ptr<amqp::Reader> m_reader;
+            std::weak_ptr<Reader> m_reader;
 
-            std::list<std::unique_ptr<amqp::Value>> dump_(
+            std::list<std::unique_ptr<amqp::reader::IValue>> dump_(
                 pn_data_t *,
-                const std::unique_ptr<internal::schema::Schema> &) const;
+                const SchemaType &) const;
 
         public :
             ListReader (
                 const std::string & type_,
-                std::weak_ptr<amqp::Reader> reader_
+                std::weak_ptr<Reader> reader_
             ) : RestrictedReader (type_)
-              , m_reader (reader_)
+              , m_reader (std::move (reader_))
             { }
 
             ~ListReader() final = default;
 
             internal::schema::Restricted::RestrictedTypes restrictedType() const;
 
-            std::unique_ptr<Value> dump(
+            std::unique_ptr<amqp::reader::IValue> dump(
                 const std::string &,
                 pn_data_t *,
-                const std::unique_ptr<internal::schema::Schema> &) const override;
+                const SchemaType &) const override;
 
-            std::unique_ptr<Value> dump(
+            std::unique_ptr<amqp::reader::IValue> dump(
                 pn_data_t *,
-                const std::unique_ptr<internal::schema::Schema> &) const override;
+                const SchemaType &) const override;
     };
 
 }

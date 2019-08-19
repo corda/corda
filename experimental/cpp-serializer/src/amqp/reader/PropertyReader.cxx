@@ -13,34 +13,37 @@
 
 namespace {
 
-    std::map<std::string, std::shared_ptr<amqp::PropertyReader>(*)() > propertyMap = {
+    std::map<
+            std::string,
+            std::shared_ptr<amqp::internal::reader::PropertyReader>(*)()
+    > propertyMap = { // NOLINT
         {
-            "int", []() -> std::shared_ptr<amqp::PropertyReader> {
-                return std::make_shared<amqp::IntPropertyReader> ();
+            "int", []() -> std::shared_ptr<amqp::internal::reader::PropertyReader> {
+                return std::make_shared<amqp::internal::reader::IntPropertyReader> ();
             }
         },
         {
-            "string", []() -> std::shared_ptr<amqp::PropertyReader> {
-                return std::make_shared<amqp::StringPropertyReader> (
-                        amqp::StringPropertyReader());
+            "string", []() -> std::shared_ptr<amqp::internal::reader::PropertyReader> {
+                return std::make_shared<amqp::internal::reader::StringPropertyReader> (
+                        amqp::internal::reader::StringPropertyReader());
             }
         },
         {
-            "boolean", []() -> std::shared_ptr<amqp::PropertyReader> {
-                return std::make_shared<amqp::BoolPropertyReader> (
-                        amqp::BoolPropertyReader());
+            "boolean", []() -> std::shared_ptr<amqp::internal::reader::PropertyReader> {
+                return std::make_shared<amqp::internal::reader::BoolPropertyReader> (
+                        amqp::internal::reader::BoolPropertyReader());
             }
         },
         {
-            "long", []() -> std::shared_ptr<amqp::PropertyReader> {
-                return std::make_shared<amqp::LongPropertyReader> (
-                        amqp::LongPropertyReader());
+            "long", []() -> std::shared_ptr<amqp::internal::reader::PropertyReader> {
+                return std::make_shared<amqp::internal::reader::LongPropertyReader> (
+                        amqp::internal::reader::LongPropertyReader());
             }
         },
         {
-            "double", []() -> std::shared_ptr<amqp::PropertyReader> {
-                return std::make_shared<amqp::DoublePropertyReader> (
-                        amqp::DoublePropertyReader());
+            "double", []() -> std::shared_ptr<amqp::internal::reader::PropertyReader> {
+                return std::make_shared<amqp::internal::reader::DoublePropertyReader> (
+                        amqp::internal::reader::DoublePropertyReader());
             }
         }
     };
@@ -49,43 +52,63 @@ namespace {
 
 /******************************************************************************/
 
-const std::string amqp::StringPropertyReader::m_name { // NOLINT
+const std::string
+amqp::internal::reader::
+StringPropertyReader::m_name { // NOLINT
     "String Reader"
 };
 
-const std::string amqp::StringPropertyReader::m_type { // NOLINT
+const std::string
+amqp::internal::reader::
+StringPropertyReader::m_type { // NOLINT
         "string"
 };
 
-const std::string amqp::IntPropertyReader::m_name { // NOLINT
+const std::string
+amqp::internal::reader::
+IntPropertyReader::m_name { // NOLINT
     "Int Reader"
 };
 
-const std::string amqp::IntPropertyReader::m_type { // NOLINT
+const std::string
+amqp::internal::reader::
+IntPropertyReader::m_type { // NOLINT
         "int"
 };
 
-const std::string amqp::BoolPropertyReader::m_name { // NOLINT
+const std::string
+amqp::internal::reader::
+BoolPropertyReader::m_name { // NOLINT
     "Bool Reader"
 };
 
-const std::string amqp::BoolPropertyReader::m_type { // NOLINT
+const std::string
+amqp::internal::reader::
+BoolPropertyReader::m_type { // NOLINT
         "bool"
 };
 
-const std::string amqp::LongPropertyReader::m_name { // NOLINT
+const std::string
+amqp::internal::reader::
+LongPropertyReader::m_name { // NOLINT
     "Long Reader"
 };
 
-const std::string amqp::LongPropertyReader::m_type { // NOLINT
-        "long"
+const std::string
+amqp::internal::reader::
+LongPropertyReader::m_type { // NOLINT
+    "long"
 };
 
-const std::string amqp::DoublePropertyReader::m_name { // NOLINT
+const std::string
+amqp::internal::reader::
+DoublePropertyReader::m_name { // NOLINT
     "Double Reader"
 };
 
-const std::string amqp::DoublePropertyReader::m_type { // NOLINT
+const std::string
+amqp::internal::reader::
+DoublePropertyReader::m_type { // NOLINT
         "double"
 };
 
@@ -94,20 +117,19 @@ const std::string amqp::DoublePropertyReader::m_type { // NOLINT
 /**
  * Static factory method
  */
-std::shared_ptr<amqp::PropertyReader>
-amqp::
+std::shared_ptr<amqp::internal::reader::PropertyReader>
+amqp::internal::reader::
 PropertyReader::make (const FieldPtr & field_) {
     return propertyMap[field_->type()]();
 }
 
 /******************************************************************************/
 
-std::shared_ptr<amqp::PropertyReader>
-amqp::
+std::shared_ptr<amqp::internal::reader::PropertyReader>
+amqp::internal::reader::
 PropertyReader::make (const std::string & type_) {
     return propertyMap[type_]();
 }
-
 
 /******************************************************************************
  *
@@ -116,7 +138,7 @@ PropertyReader::make (const std::string & type_) {
  ******************************************************************************/
 
 std::any
-amqp::
+amqp::internal::reader::
 StringPropertyReader::read (pn_data_t * data_) const {
     return std::any ("hello");
 }
@@ -124,19 +146,19 @@ StringPropertyReader::read (pn_data_t * data_) const {
 /******************************************************************************/
 
 std::string
-amqp::
+amqp::internal::reader::
 StringPropertyReader::readString (pn_data_t * data_) const {
     return proton::readAndNext<std::string> (data_);
 }
 
 /******************************************************************************/
 
-std::unique_ptr<amqp::Value>
-amqp::
+std::unique_ptr<amqp::reader::IValue>
+amqp::internal::reader::
 StringPropertyReader::dump (
         const std::string & name_,
         pn_data_t * data_,
-        const std::unique_ptr<internal::schema::Schema> & schema_) const
+        const SchemaType & schema_) const
 {
     return std::make_unique<TypedPair<std::string>> (
             name_,
@@ -145,11 +167,11 @@ StringPropertyReader::dump (
 
 /******************************************************************************/
 
-std::unique_ptr<amqp::Value>
-amqp::
+std::unique_ptr<amqp::reader::IValue>
+amqp::internal::reader::
 StringPropertyReader::dump (
     pn_data_t * data_,
-    const std::unique_ptr<internal::schema::Schema> & schema_) const
+    const SchemaType & schema_) const
 {
     return std::make_unique<TypedSingle<std::string>> (
             "\"" + proton::readAndNext<std::string> (data_) + "\"");
@@ -162,7 +184,7 @@ StringPropertyReader::dump (
  ******************************************************************************/
 
 std::any
-amqp::
+amqp::internal::reader::
 IntPropertyReader::read (pn_data_t * data_) const {
     return std::any (1);
 }
@@ -170,19 +192,19 @@ IntPropertyReader::read (pn_data_t * data_) const {
 /******************************************************************************/
 
 std::string
-amqp::
+amqp::internal::reader::
 IntPropertyReader::readString (pn_data_t * data_) const {
     return std::to_string (proton::readAndNext<int> (data_));
 }
 
 /******************************************************************************/
 
-std::unique_ptr<amqp::Value>
-amqp::
+std::unique_ptr<amqp::reader::IValue>
+amqp::internal::reader::
 IntPropertyReader::dump (
         const std::string & name_,
         pn_data_t * data_,
-        const std::unique_ptr<internal::schema::Schema> & schema_) const
+        const SchemaType & schema_) const
 {
     return std::make_unique<TypedPair<std::string>> (
             name_,
@@ -191,11 +213,11 @@ IntPropertyReader::dump (
 
 /******************************************************************************/
 
-std::unique_ptr<amqp::Value>
-amqp::
+std::unique_ptr<amqp::reader::IValue>
+amqp::internal::reader::
 IntPropertyReader::dump (
     pn_data_t * data_,
-    const std::unique_ptr<internal::schema::Schema> & schema_) const
+    const SchemaType & schema_) const
 {
     return std::make_unique<TypedSingle<std::string>> (
             std::to_string (proton::readAndNext<int> (data_)));
@@ -208,7 +230,7 @@ IntPropertyReader::dump (
  ******************************************************************************/
 
 std::any
-amqp::
+amqp::internal::reader::
 BoolPropertyReader::read (pn_data_t * data_) const {
     return std::any (true);
 }
@@ -216,19 +238,19 @@ BoolPropertyReader::read (pn_data_t * data_) const {
 /******************************************************************************/
 
 std::string
-amqp::
+amqp::internal::reader::
 BoolPropertyReader::readString (pn_data_t * data_) const {
     return std::to_string (proton::readAndNext<bool> (data_));
 }
 
 /******************************************************************************/
 
-std::unique_ptr<amqp::Value>
-amqp::
+std::unique_ptr<amqp::reader::IValue>
+amqp::internal::reader::
 BoolPropertyReader::dump (
         const std::string & name_,
         pn_data_t * data_,
-        const std::unique_ptr<internal::schema::Schema> & schema_) const
+        const SchemaType & schema_) const
 {
     return std::make_unique<TypedPair<std::string>> (
             name_,
@@ -237,11 +259,11 @@ BoolPropertyReader::dump (
 
 /******************************************************************************/
 
-std::unique_ptr<amqp::Value>
-amqp::
+std::unique_ptr<amqp::reader::IValue>
+amqp::internal::reader::
 BoolPropertyReader::dump (
     pn_data_t * data_,
-    const std::unique_ptr<internal::schema::Schema> & schema_) const
+    const SchemaType & schema_) const
 {
     return std::make_unique<TypedSingle<std::string>> (
             std::to_string (proton::readAndNext<bool> (data_)));
@@ -254,7 +276,7 @@ BoolPropertyReader::dump (
  ******************************************************************************/
 
 std::any
-amqp::
+amqp::internal::reader::
 LongPropertyReader::read (pn_data_t * data_) const {
     return std::any (10L);
 }
@@ -262,19 +284,19 @@ LongPropertyReader::read (pn_data_t * data_) const {
 /******************************************************************************/
 
 std::string
-amqp::
+amqp::internal::reader::
 LongPropertyReader::readString (pn_data_t * data_) const {
     return std::to_string (proton::readAndNext<long> (data_));
 }
 
 /******************************************************************************/
 
-std::unique_ptr<amqp::Value>
-amqp::
+std::unique_ptr<amqp::reader::IValue>
+amqp::internal::reader::
 LongPropertyReader::dump (
         const std::string & name_,
         pn_data_t * data_,
-        const std::unique_ptr<internal::schema::Schema> & schema_) const
+        const SchemaType & schema_) const
 {
     return std::make_unique<TypedPair<std::string>> (
             name_,
@@ -283,11 +305,11 @@ LongPropertyReader::dump (
 
 /******************************************************************************/
 
-std::unique_ptr<amqp::Value>
-amqp::
+std::unique_ptr<amqp::reader::IValue>
+amqp::internal::reader::
 LongPropertyReader::dump (
     pn_data_t * data_,
-    const std::unique_ptr<internal::schema::Schema> & schema_) const
+    const SchemaType & schema_) const
 {
     return std::make_unique<TypedSingle<std::string>> (
             std::to_string (proton::readAndNext<long> (data_)));
@@ -300,7 +322,7 @@ LongPropertyReader::dump (
  ******************************************************************************/
 
 std::any
-amqp::
+amqp::internal::reader::
 DoublePropertyReader::read (pn_data_t * data_) const {
     return std::any (10.0);
 }
@@ -308,19 +330,19 @@ DoublePropertyReader::read (pn_data_t * data_) const {
 /******************************************************************************/
 
 std::string
-amqp::
+amqp::internal::reader::
 DoublePropertyReader::readString (pn_data_t * data_) const {
     return std::to_string (proton::readAndNext<double> (data_));
 }
 
 /******************************************************************************/
 
-std::unique_ptr<amqp::Value>
-amqp::
+std::unique_ptr<amqp::reader::IValue>
+amqp::internal::reader::
 DoublePropertyReader::dump (
-        const std::string & name_,
-        pn_data_t * data_,
-        const std::unique_ptr<internal::schema::Schema> & schema_) const
+    const std::string & name_,
+    pn_data_t * data_,
+    const SchemaType & schema_) const
 {
     return std::make_unique<TypedPair<std::string>> (
             name_,
@@ -329,11 +351,11 @@ DoublePropertyReader::dump (
 
 /******************************************************************************/
 
-std::unique_ptr<amqp::Value>
-amqp::
+std::unique_ptr<amqp::reader::IValue>
+amqp::internal::reader::
 DoublePropertyReader::dump (
     pn_data_t * data_,
-    const std::unique_ptr<internal::schema::Schema> & schema_) const
+    const SchemaType & schema_) const
 {
     return std::make_unique<TypedSingle<std::string>> (
             std::to_string (proton::readAndNext<double> (data_)));

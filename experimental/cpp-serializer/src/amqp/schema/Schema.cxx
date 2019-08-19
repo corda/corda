@@ -1,5 +1,9 @@
 
+#include "amqp/AMQPDescribed.h"
+#include "amqp/schema/ISchema.h"
+#include "amqp/schema/AMQPTypeNotation.h"
 #include "Schema.h"
+#include "types.h"
 
 #include "debug.h"
 
@@ -36,13 +40,13 @@ operator << (std::ostream & stream_, const Schema & schema_) {
 
 amqp::internal::schema::
 Schema::Schema (
-        OrderedTypeNotations<AMQPTypeNotation> types_
+    OrderedTypeNotations<AMQPTypeNotation> types_
 ) : m_types (std::move (types_)) {
     for (auto i { m_types.begin() } ; i != m_types.end() ; ++i) {
         for (auto & j : *i) {
             DBG ("Schema: " << j->descriptor() << " " << j->name() << std::endl); // NOLINT
-            m_descriptorToType.emplace(j->descriptor(), std::ref (j));
-            m_typeToDescriptor.emplace(j->name(), std::ref (j));
+            m_descriptorToType.emplace (j->descriptor(), std::ref (j));
+            m_typeToDescriptor.emplace (j->name(), std::ref (j));
         }
     }
 }
@@ -57,7 +61,7 @@ Schema::types() const {
 
 /******************************************************************************/
 
-amqp::internal::schema::Schema::SchemaMap::const_iterator
+amqp::internal::schema::SchemaMap::const_iterator
 amqp::internal::schema::
 Schema::fromType (const std::string & type_) const {
     return m_typeToDescriptor.find(type_);
@@ -65,7 +69,7 @@ Schema::fromType (const std::string & type_) const {
 
 /******************************************************************************/
 
-amqp::internal::schema::Schema::SchemaMap::const_iterator
+amqp::internal::schema::SchemaMap::const_iterator
 amqp::internal::schema::
 Schema::fromDescriptor (const std::string & descriptor_) const {
     return m_descriptorToType.find (descriptor_);
