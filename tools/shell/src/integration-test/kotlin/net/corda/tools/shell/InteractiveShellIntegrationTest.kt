@@ -11,7 +11,9 @@ import com.nhaarman.mockito_kotlin.doAnswer
 import com.nhaarman.mockito_kotlin.mock
 import net.corda.client.jackson.JacksonSupport
 import net.corda.client.rpc.RPCException
+import net.corda.core.contracts.*
 import net.corda.core.flows.*
+import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.internal.div
 import net.corda.core.internal.list
@@ -19,6 +21,9 @@ import net.corda.core.internal.messaging.InternalCordaRPCOps
 import net.corda.core.messaging.ClientRpcSslOptions
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
+import net.corda.core.transactions.LedgerTransaction
+import net.corda.core.transactions.SignedTransaction
+import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
@@ -30,12 +35,7 @@ import net.corda.node.utilities.createKeyPairAndSelfSignedTLSCertificate
 import net.corda.node.utilities.saveToKeyStore
 import net.corda.node.utilities.saveToTrustStore
 import net.corda.nodeapi.BrokerRpcSslOptions
-import net.corda.testing.core.ALICE_NAME
-import net.corda.testing.core.BOB_NAME
-import net.corda.testing.core.DUMMY_BANK_A_NAME
-import net.corda.testing.core.DUMMY_NOTARY_NAME
-import net.corda.testing.core.BOB_NAME
-import net.corda.testing.core.singleIdentity
+import net.corda.testing.core.*
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.driver.internal.NodeHandleInternal
@@ -49,14 +49,14 @@ import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.bouncycastle.util.io.Streams
 import org.crsh.text.RenderPrintWriter
-import org.junit.ClassRule
-import org.junit.Before
-import org.junit.Ignore
-import org.junit.Rule
-import org.junit.Test
+import org.junit.*
 import org.junit.rules.TemporaryFolder
-import java.util.zip.ZipFile
+import java.io.ByteArrayOutputStream
+import java.io.FileInputStream
+import java.util.*
+import java.util.zip.ZipInputStream
 import javax.security.auth.x500.X500Principal
+import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -410,7 +410,7 @@ class InteractiveShellIntegrationTest : IntegrationTest() {
     @Test
     fun `dumpCheckpoints creates zip with json file for suspended flow`() {
         val user = User("u", "p", setOf(all()))
-        driver(DriverParameters(notarySpecs = emptyList())) {
+        driver(DriverParameters()) {
             val aliceNode = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user), startInSameProcess = true).getOrThrow()
             val bobNode = startNode(providedName = BOB_NAME, rpcUsers = listOf(user), startInSameProcess = true).getOrThrow()
             bobNode.stop()
@@ -430,7 +430,16 @@ class InteractiveShellIntegrationTest : IntegrationTest() {
                 }
             }
 
-            aliceNode.rpc.startFlow(::SendFlow, bobNode.nodeInfo.singleIdentity())
+            val linearId = UniqueIdentifier(id = UUID.fromString("7c0719f0-e489-46e8-bf3b-ee203156fc7c"))
+            aliceNode.rpc.startFlow(
+                ::MyFlow, MyState(
+                    "some random string",
+                    linearId,
+                    listOf(aliceNode.nodeInfo.singleIdentity(), bobNode.nodeInfo.singleIdentity())
+                ), bobNode.nodeInfo.singleIdentity()
+            )
+
+            Thread.sleep(5000)
 
             InteractiveShell.runRPCFromString(
                     listOf("dumpCheckpoints"), output, mock(), aliceNode.rpc as InternalCordaRPCOps, inputObjectMapper)
@@ -439,10 +448,30 @@ class InteractiveShellIntegrationTest : IntegrationTest() {
             val zip = (aliceNode.baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME).list()
                     .find { it.toString().contains("checkpoints_dump-") }
             assertNotNull(zip)
-            // assert that a json file has been created for the suspended flow
-            val json = ZipFile((zip!!).toFile()).entries().asSequence()
-                    .find { it.name.contains(SendFlow::class.simpleName!!) }
-            assertNotNull(json)
+
+            val bytes = FileInputStream((zip!!).toFile()).use { file ->
+                ZipInputStream(file).use { zip ->
+                    zip.nextEntry
+                    ByteArrayOutputStream().use { baos ->
+                        val buffer = ByteArray(1024)
+                        var read = zip.read(buffer)
+                        while (read != -1) {
+                            baos.write(buffer, 0, read)
+                            read = zip.read(buffer)
+                        }
+                        baos.toByteArray()
+                    }
+                }
+            }
+            val objectMapper = ObjectMapper()
+            val json = objectMapper.readTree(bytes)
+            assertNotNull(json["flowId"].asText())
+            assertEquals("net.corda.tools.shell.MyFlow", json["topLevelFlowClass"].asText())
+            assertEquals(linearId.id.toString(), json["topLevelFlowLogic"]["myState"]["linearId"]["id"].asText())
+            assertEquals(4, json["flowCallStackSummary"].size())
+            assertEquals(4, json["flowCallStack"].size())
+            assertEquals(bobNode.nodeInfo.singleIdentity().toString(), json["suspendedOn"]["sendAndReceive"].first()["session"]["peer"].asText())
+            assertEquals(SignedTransaction::class.qualifiedName, json["suspendedOn"]["sendAndReceive"].first()["sentPayloadType"].asText())
         }
     }
 
@@ -482,23 +511,44 @@ class BurbleFlow : FlowLogic<Unit>() {
     }
 }
 
-@StartableByRPC
 @InitiatingFlow
-class SendFlow(private val party: Party) : FlowLogic<Unit>() {
-    override val progressTracker = ProgressTracker()
+@StartableByRPC
+class MyFlow(private val myState: MyState, private val party: Party): FlowLogic<Unit>() {
     @Suspendable
     override fun call() {
-        initiateFlow(party).sendAndReceive<String>("hi").unwrap { it }
+        val tx = TransactionBuilder(serviceHub.networkMapCache.notaryIdentities.first()).apply {
+            addOutputState(myState)
+            addCommand(MyContract.Create(), listOf(ourIdentity, party).map(Party::owningKey))
+        }
+        val sessions = listOf(initiateFlow(party))
+        val stx = serviceHub.signInitialTransaction(tx)
+        subFlow(CollectSignaturesFlow(stx, sessions))
+        throw IllegalStateException("The test should not get here")
     }
 }
 
-@InitiatedBy(SendFlow::class)
-class ReceiveFlow(private val session: FlowSession) : FlowLogic<Unit>() {
-    override val progressTracker = ProgressTracker()
-    @Suspendable
+@InitiatedBy(MyFlow::class)
+class MyResponder(private val session: FlowSession): FlowLogic<Unit>() {
     override fun call() {
-        session.receive<String>().unwrap { it }
-        session.send("hi")
+        val signTxFlow = object : SignTransactionFlow(session) {
+            override fun checkTransaction(stx: SignedTransaction) {
+
+            }
+        }
+        subFlow(signTxFlow)
+        throw IllegalStateException("The test should not get here")
     }
 }
+
+class MyContract: Contract {
+    class Create : CommandData
+    override fun verify(tx: LedgerTransaction) {}
+}
+
+@BelongsToContract(MyContract::class)
+data class MyState(
+    val data: String,
+    override val linearId: UniqueIdentifier,
+    override val participants: List<AbstractParty>
+) : LinearState
 
