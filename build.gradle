@@ -1,4 +1,5 @@
 import com.bmuschko.gradle.docker.tasks.image.DockerBuildImage
+import com.r3.buildtasks.ListTests
 
 buildscript {
     // For sharing constants between builds
@@ -100,7 +101,7 @@ buildscript {
     ext.jsch_version = '0.1.55'
     ext.protonj_version = '0.33.0' // Overide Artemis version
     ext.snappy_version = '0.4'
-    ext.class_graph_version = '4.8.41'
+    ext.class_graph_version = constants.getProperty('classgraphVersion')
     ext.jcabi_manifests_version = '1.1'
     ext.picocli_version = '3.9.6'
     ext.commons_io_version = '2.6'
@@ -316,6 +317,8 @@ allprojects {
             docker_testing_tag = "$docker_testing_tag"
         }
     }
+
+    task listTests(type: ListTests)
 }
 
 // Check that we are running on a Java 8 JDK. The source/targetCompatibility values above aren't sufficient to

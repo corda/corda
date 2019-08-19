@@ -293,14 +293,6 @@ test {
     maxParallelForks = (System.env.CORDA_NODE_TESTING_FORKS == null) ? 1 : "$System.env.CORDA_NODE_TESTING_FORKS".toInteger()
 }
 
-task printIt(type: JavaExec) {
-    classpath = sourceSets.test.runtimeClasspath
-    main = 'net.corda.JunitPrinter'
-    args buildDir.absolutePath
-}
-
-test.dependsOn(printIt)
-
 task dockerTest(type: DockerTest, dependsOn: []) {
     dockerTag = "6f59dd3432ca"
     forkCount = project.hasProperty("dockerForks") ? Integer.parseInt(project.property("dockerForks").toString()) : 1

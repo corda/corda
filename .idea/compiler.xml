@@ -127,6 +127,7 @@
       <module name="corda-project.isolated.test" target="1.8" />
       <module name="corda-project.jdk8u-deterministic.main" target="1.8" />
       <module name="corda-project.jdk8u-deterministic.test" target="1.8" />
+      <module name="corda-project.main" target="1.8" />
       <module name="corda-project.node-api.main" target="1.8" />
       <module name="corda-project.node-api.test" target="1.8" />
       <module name="corda-project.node-driver.integrationTest" target="1.8" />
@@ -195,6 +196,7 @@
       <module name="corda-project.serialization.test" target="1.8" />
       <module name="corda-project.smoke-test-utils.main" target="1.8" />
       <module name="corda-project.smoke-test-utils.test" target="1.8" />
+      <module name="corda-project.test" target="1.8" />
       <module name="corda-project.test-cli.main" target="1.8" />
       <module name="corda-project.test-cli.test" target="1.8" />
       <module name="corda-project.test-common.main" target="1.8" />
@@ -207,6 +209,8 @@
       <module name="corda-project.tools.blobinspector.test" target="1.8" />
       <module name="corda-project.tools.bootstrapper.main" target="1.8" />
       <module name="corda-project.tools.bootstrapper.test" target="1.8" />
+      <module name="corda-project.tools.checkpoint-agent.main" target="1.8" />
+      <module name="corda-project.tools.checkpoint-agent.test" target="1.8" />
       <module name="corda-project.tools.cliutils.main" target="1.8" />
       <module name="corda-project.tools.cliutils.test" target="1.8" />
       <module name="corda-project.tools.demobench.main" target="1.8" />
@@ -222,6 +226,8 @@
       <module name="corda-project.tools.main" target="1.8" />
       <module name="corda-project.tools.network-bootstrapper.main" target="1.8" />
       <module name="corda-project.tools.network-bootstrapper.test" target="1.8" />
+      <module name="corda-project.tools.network-builder.main" target="1.8" />
+      <module name="corda-project.tools.network-builder.test" target="1.8" />
       <module name="corda-project.tools.shell-cli.main" target="1.8" />
       <module name="corda-project.tools.shell-cli.test" target="1.8" />
       <module name="corda-project.tools.shell.integrationTest" target="1.8" />
