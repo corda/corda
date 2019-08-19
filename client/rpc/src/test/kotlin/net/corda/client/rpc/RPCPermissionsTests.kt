@@ -129,21 +129,6 @@ class RPCPermissionsTests : AbstractRPCTest() {
     }
 
     @Test
-    fun `Maintenance user can call system methods but not user flows` () {
-        rpcDriver {
-            val joeUser = userOf("notJoe", setOf("maintainer"))
-            val proxy = testProxyFor(joeUser)
-            proxy.validatePermission("nodeInfo")
-            assertNotAllowed {
-                proxy.validatePermission("startFlowDynamic", "net.corda.flows.OtherFlow")
-            }
-            assertNotAllowed {
-                proxy.validatePermission("startTrackedFlowDynamic", "net.corda.flows.DummyFlow")
-            }
-        }
-    }
-
-    @Test
     fun `checking invokeRpc permissions entitlements`() {
         rpcDriver {
             val joeUser = userOf("joe", setOf("InvokeRpc.networkMapFeed"))
@@ -159,7 +144,6 @@ class RPCPermissionsTests : AbstractRPCTest() {
     }
 
     private fun assertNotAllowed(action: () -> Unit) {
-
         assertFailsWith(PermissionException::class, "User should not be allowed to perform this action.", action)
     }
 }

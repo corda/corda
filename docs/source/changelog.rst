@@ -41,6 +41,9 @@ Version 5.0
 
   .. note:: This is only best-effort and there are no guarantees of reliability.
 
+* Wildcards can now be used when specifying RPC permissions, for example ``StartFlow.foo.bar.*`` will allow users to start any flow in the
+  ``foo.bar`` package. See :ref:`rpcUsers <corda_configuration_file_rpc_users>` for more information.
+
 .. _changelog_v4.2:
 
 Version 4.2

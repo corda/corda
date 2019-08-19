@@ -142,35 +142,11 @@ private object RPCPermissionResolver : PermissionResolver {
     private const val ACTION_START_FLOW = "startflow"
     private const val ACTION_INVOKE_RPC = "invokerpc"
     private const val ACTION_ALL = "all"
-    private const val ACTION_MAINTAINER = "maintainer"
-    private const val ACTION_NODE_USER = "nodeuser"
     private val FLOW_RPC_CALLS = setOf(
             "startFlowDynamic",
             "startTrackedFlowDynamic",
             "startFlow",
             "startTrackedFlow")
-
-    private val NON_FLOW_RPC_CALLS = setOf(
-            "setFlowsDrainingModeEnabled",
-            "isFlowsDrainingModeEnabled",
-            "nodeInfo",
-            "currentNodeTime",
-            "killFlow",
-            "isWaitingForShutdown",
-            "shutdown",
-            "terminate",
-            "gracefulShutdown",
-            "clearNetworkMapCache"
-    )
-
-    private val FULL_START_FLOW_RPC = setOf(
-            "startFlowDynamic",
-            "startTrackedFlowDynamic",
-            "startFlow",
-            "startTrackedFlow",
-            "partiesFromName",
-            "registeredFlows"
-    )
 
     override fun resolvePermission(representation: String): Permission {
     	val action = representation.substringBefore(SEPARATOR).toLowerCase()
@@ -197,12 +173,6 @@ private object RPCPermissionResolver : PermissionResolver {
             ACTION_ALL -> {
                 // Leaving empty set of targets and actions to match everything
                 return RPCPermission()
-            }
-            ACTION_MAINTAINER-> {
-                return RPCPermission(NON_FLOW_RPC_CALLS)
-            }
-            ACTION_NODE_USER-> {
-                return RPCPermission(FULL_START_FLOW_RPC)
             }
             else -> throw IllegalArgumentException("Unknown permission action specifier: $action")
         }
