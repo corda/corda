@@ -25,6 +25,9 @@ class PublicKeyToOwningIdentityCacheImpl(private val database: CordaPersistence,
 
     private val cache = cacheFactory.buildNamed<PublicKey, KeyOwningIdentity>(Caffeine.newBuilder(), "PublicKeyToOwningIdentityCache_cache")
 
+    /**
+     * Establish whether a public key is one of the node's identity keys, by looking in the node's identity database table.
+     */
     private fun isKeyIdentityKey(key: PublicKey): Boolean {
         return database.transaction {
             val criteriaBuilder = session.criteriaBuilder
@@ -39,7 +42,11 @@ class PublicKeyToOwningIdentityCacheImpl(private val database: CordaPersistence,
         }
     }
 
-    private fun isKeyBelongingToNode(key: PublicKey): Boolean {
+    /**
+     * Check to see if the key belongs to one of the key pairs in the node_our_key_pairs table. These keys may relate to confidential
+     * identities.
+     */
+    private fun isKeyPartOfNodeKeyPairs(key: PublicKey): Boolean {
         return database.transaction {
             val criteriaBuilder = session.criteriaBuilder
             val criteriaQuery = criteriaBuilder.createQuery(Long::class.java)
@@ -71,7 +78,7 @@ class PublicKeyToOwningIdentityCacheImpl(private val database: CordaPersistence,
                 )
                 val query = session.createQuery(criteriaQuery)
                 val uuid = query.uniqueResult()
-                if (uuid != null || isKeyBelongingToNode(key) || isKeyIdentityKey(key)) {
+                if (uuid != null || isKeyPartOfNodeKeyPairs(key) || isKeyIdentityKey(key)) {
                     val signingEntity = KeyOwningIdentity.fromUUID(uuid)
                     log.debug { "Database lookup for public key ${key.toStringShort()}, found signing entity $signingEntity" }
                     signingEntity
