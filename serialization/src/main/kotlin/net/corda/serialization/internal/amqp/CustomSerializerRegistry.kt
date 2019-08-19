@@ -57,8 +57,10 @@ interface CustomSerializerRegistry {
 }
 
 class CachingCustomSerializerRegistry(
-        private val descriptorBasedSerializerRegistry: DescriptorBasedSerializerRegistry)
-    : CustomSerializerRegistry {
+        private val descriptorBasedSerializerRegistry: DescriptorBasedSerializerRegistry,
+        private val allowedFor: Set<Class<*>>
+) : CustomSerializerRegistry {
+    constructor(descriptorBasedSerializerRegistry: DescriptorBasedSerializerRegistry) : this(descriptorBasedSerializerRegistry, emptySet())
 
     companion object {
         val logger = contextLogger()
@@ -185,6 +187,7 @@ class CachingCustomSerializerRegistry(
     private val Class<*>.isCustomSerializationForbidden: Boolean get() = when {
         AMQPTypeIdentifiers.isPrimitive(this) -> true
         isSubClassOf(CordaThrowable::class.java) -> false
+        allowedFor.any { it.isAssignableFrom(this) } -> false
         isAnnotationPresent(CordaSerializable::class.java) -> true
         else -> false
     }
