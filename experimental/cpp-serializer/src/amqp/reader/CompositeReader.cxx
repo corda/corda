@@ -27,7 +27,7 @@ CompositeReader::m_name { // NOLINT
 amqp::internal::reader::
 CompositeReader::CompositeReader (
         std::string type_,
-        std::vector<std::weak_ptr<Reader>> & readers_
+        sVec<std::weak_ptr<Reader>> & readers_
 ) : m_readers (readers_)
   , m_type (std::move (type_))
 {
@@ -78,7 +78,7 @@ CompositeReader::readString (pn_data_t * data_) const {
 /******************************************************************************/
 
 
-std::vector<std::unique_ptr<amqp::reader::IValue>>
+sVec<uPtr<amqp::reader::IValue>>
 amqp::internal::reader::
 CompositeReader::_dump (
         pn_data_t * data_,
@@ -88,14 +88,14 @@ CompositeReader::_dump (
     proton::is_described (data_);
     proton::auto_enter ae (data_);
 
-    const auto & it = schema_.fromDescriptor(proton::get_symbol<std::string>(data_));
-    auto & fields = dynamic_cast<amqp::internal::schema::Composite &>(*(it->second.get())).fields();
+    const auto & it = schema_.fromDescriptor (proton::get_symbol<std::string>(data_));
+    auto & fields = dynamic_cast<schema::Composite &>(*(it->second.get())).fields();
 
     assert (fields.size() == m_readers.size());
 
     pn_data_next (data_);
 
-    std::vector<std::unique_ptr<amqp::reader::IValue>> read;
+    sVec<uPtr<amqp::reader::IValue>> read;
     read.reserve (fields.size());
 
     proton::is_list (data_);
@@ -120,14 +120,14 @@ CompositeReader::_dump (
 
 /******************************************************************************/
 
-std::unique_ptr<amqp::reader::IValue>
+uPtr<amqp::reader::IValue>
 amqp::internal::reader::
 CompositeReader::dump (
     const std::string & name_,
     pn_data_t * data_,
     const SchemaType & schema_) const
 {
-    return std::make_unique<TypedPair<std::vector<std::unique_ptr<amqp::reader::IValue>>>> (
+    return std::make_unique<TypedPair<sVec<uPtr<amqp::reader::IValue>>>> (
         name_,
         _dump(data_, schema_));
 }
@@ -137,13 +137,13 @@ CompositeReader::dump (
 /**
  *
  */
-std::unique_ptr<amqp::reader::IValue>
+uPtr<amqp::reader::IValue>
 amqp::internal::reader::
 CompositeReader::dump (
     pn_data_t * data_,
     const SchemaType & schema_) const
 {
-    return std::make_unique<TypedSingle<std::vector<std::unique_ptr<amqp::reader::IValue>>>> (
+    return std::make_unique<TypedSingle<sVec<uPtr<amqp::reader::IValue>>>> (
         _dump (data_, schema_));
 }
 

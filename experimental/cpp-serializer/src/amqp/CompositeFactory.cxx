@@ -12,9 +12,10 @@
 
 #include "amqp/reader/IReader.h"
 #include "reader/Reader.h"
-#include "reader/PropertyReader.h"
+#include "amqp/reader/PropertyReader.h"
 #include "reader/CompositeReader.h"
 #include "reader/RestrictedReader.h"
+#include "reader/restricted-readers/ListReader.h"
 
 #include "schema/restricted-types/List.h"
 

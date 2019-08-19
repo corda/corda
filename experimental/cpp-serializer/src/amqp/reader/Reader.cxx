@@ -51,7 +51,7 @@ namespace {
 
     template<class Auto, class T>
     std::string
-    dumpPair(const std::string & name_, const T & begin_, const T & end_) {
+    dumpPair (const std::string & name_, const T & begin_, const T & end_) {
         std::stringstream rtn;
         {
             Auto am (name_, rtn);
@@ -67,7 +67,7 @@ namespace {
 
     template<class Auto, class T>
     std::string
-    dumpSingle(const T & begin_, const T & end_) {
+    dumpSingle (const T & begin_, const T & end_) {
         std::stringstream rtn;
         {
             Auto am (rtn);
@@ -92,28 +92,28 @@ namespace {
 template<>
 std::string
 amqp::internal::reader::
-TypedPair<std::vector<std::unique_ptr<amqp::internal::reader::Pair>>>::dump() const {
+TypedPair<sVec<uPtr<amqp::internal::reader::Pair>>>::dump() const {
     return ::dumpPair<AutoMap> (m_property, m_value.begin(), m_value.end());
 }
 
 template<>
 std::string
 amqp::internal::reader::
-TypedPair<std::list<std::unique_ptr<amqp::internal::reader::Pair>>>::dump() const {
+TypedPair<sList<uPtr<amqp::internal::reader::Pair>>>::dump() const {
     return ::dumpPair<AutoMap> (m_property, m_value.begin(), m_value.end());
 }
 
 template<>
 std::string
 amqp::internal::reader::
-TypedPair<std::vector<std::unique_ptr<amqp::reader::IValue>>>::dump() const {
+TypedPair<sVec<uPtr<amqp::reader::IValue>>>::dump() const {
     return ::dumpPair<AutoMap> (m_property, m_value.begin(), m_value.end());
 }
 
 template<>
 std::string
 amqp::internal::reader::
-TypedPair<std::list<std::unique_ptr<amqp::reader::IValue>>>::dump() const {
+TypedPair<sList<uPtr<amqp::reader::IValue>>>::dump() const {
     return ::dumpPair<AutoList> (m_property, m_value.begin(), m_value.end());
 }
 
@@ -126,28 +126,28 @@ TypedPair<std::list<std::unique_ptr<amqp::reader::IValue>>>::dump() const {
 template<>
 std::string
 amqp::internal::reader::
-TypedSingle<std::list<std::unique_ptr<amqp::reader::IValue>>>::dump() const {
+TypedSingle<sList<uPtr<amqp::reader::IValue>>>::dump() const {
     return ::dumpSingle<AutoList> (m_value.begin(), m_value.end());
 }
 
 template<>
 std::string
 amqp::internal::reader::
-TypedSingle<std::vector<std::unique_ptr<amqp::reader::IValue>>>::dump() const {
+TypedSingle<sVec<uPtr<amqp::reader::IValue>>>::dump() const {
     return ::dumpSingle<AutoMap> (m_value.begin(), m_value.end());
 }
 
 template<>
 std::string
 amqp::internal::reader::
-TypedSingle<std::list<std::unique_ptr<amqp::internal::reader::Single>>>::dump() const {
+TypedSingle<sList<uPtr<amqp::internal::reader::Single>>>::dump() const {
     return ::dumpSingle<AutoList> (m_value.begin(), m_value.end());
 }
 
 template<>
 std::string
 amqp::internal::reader::
-TypedSingle<std::vector<std::unique_ptr<amqp::internal::reader::Single>>>::dump() const {
+TypedSingle<sVec<uPtr<amqp::internal::reader::Single>>>::dump() const {
     return ::dumpSingle<AutoMap> (m_value.begin(), m_value.end());
 }
 

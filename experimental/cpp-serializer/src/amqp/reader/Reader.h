@@ -41,11 +41,11 @@ namespace amqp::internal::reader {
             { }
 
             explicit TypedSingle (T && value_)
-                    : Single()
-                    , m_value { std::move (value_) }
+                : Single()
+                , m_value { std::move (value_) }
             { }
 
-            explicit TypedSingle (const TypedSingle && value_) noexcept
+            TypedSingle (const TypedSingle && value_) noexcept
                 : Single()
                 , m_value { std::move (value_.m_value) }
             { }
@@ -73,7 +73,6 @@ namespace amqp::internal::reader {
             { }
 
             std::string dump() const override = 0;
-
     };
 
 
@@ -93,7 +92,7 @@ namespace amqp::internal::reader {
                 , m_value (std::move (value_))
             { }
 
-            explicit TypedPair (TypedPair && pair_) noexcept
+            TypedPair (TypedPair && pair_) noexcept
                 : Pair (std::move (pair_.m_property))
                 , m_value (std::move (pair_.m_value))
             { }
@@ -130,26 +129,26 @@ TypedSingle<std::string>::dump() const {
 template<>
 std::string
 amqp::internal::reader::
-TypedSingle<std::vector<std::unique_ptr<amqp::reader::IValue>>>::dump() const;
+TypedSingle<sVec<uPtr<amqp::reader::IValue>>>::dump() const;
 
 template<>
 std::string
 amqp::internal::reader::
-TypedSingle<std::list<std::unique_ptr<amqp::reader::IValue>>>::dump() const;
+TypedSingle<sList<uPtr<amqp::reader::IValue>>>::dump() const;
 
 template<>
 std::string
 amqp::internal::reader::
-TypedSingle<std::vector<std::unique_ptr<amqp::internal::reader::Single>>>::dump() const;
+TypedSingle<sVec<uPtr<amqp::internal::reader::Single>>>::dump() const;
 
 template<>
 std::string
 amqp::internal::reader::
-TypedSingle<std::list<std::unique_ptr<amqp::internal::reader::Single>>>::dump() const;
+TypedSingle<sList<uPtr<amqp::internal::reader::Single>>>::dump() const;
 
 /******************************************************************************
  *
- * amqp::interanel::reader::TypedPair
+ * amqp::internal::reader::TypedPair
  *
  ******************************************************************************/
 
@@ -170,23 +169,23 @@ TypedPair<std::string>::dump() const {
 template<>
 std::string
 amqp::internal::reader::
-TypedPair<std::vector<std::unique_ptr<amqp::reader::IValue>>>::dump() const;
+TypedPair<sVec<uPtr<amqp::reader::IValue>>>::dump() const;
 
 template<>
 std::string
 amqp::internal::reader::
-TypedPair<std::list<std::unique_ptr<amqp::reader::IValue>>>::dump() const;
+TypedPair<sList<uPtr<amqp::reader::IValue>>>::dump() const;
 
 
 template<>
 std::string
 amqp::internal::reader::
-TypedPair<std::vector<std::unique_ptr<amqp::internal::reader::Pair>>>::dump() const;
+TypedPair<sVec<uPtr<amqp::internal::reader::Pair>>>::dump() const;
 
 template<>
 std::string
 amqp::internal::reader::
-TypedPair<std::list<std::unique_ptr<amqp::internal::reader::Pair>>>::dump() const;
+TypedPair<sList<uPtr<amqp::internal::reader::Pair>>>::dump() const;
 
 /******************************************************************************
  *
@@ -197,7 +196,7 @@ TypedPair<std::list<std::unique_ptr<amqp::internal::reader::Pair>>>::dump() cons
 
 namespace amqp::internal::reader  {
 
-    using IReader = amqp::reader::IReader<amqp::internal::schema::SchemaMap::const_iterator>;
+    using IReader = amqp::reader::IReader<schema::SchemaMap::const_iterator>;
 
     class Reader : public IReader {
         public :
@@ -209,12 +208,12 @@ namespace amqp::internal::reader  {
             std::any read (struct pn_data_t *) const override = 0;
             std::string readString (struct pn_data_t *) const override = 0;
 
-            std::unique_ptr<amqp::reader::IValue> dump(
+            uPtr<amqp::reader::IValue> dump(
                 const std::string &,
                 pn_data_t *,
                 const SchemaType &) const override = 0;
 
-            std::unique_ptr<amqp::reader::IValue> dump(
+            uPtr<amqp::reader::IValue> dump(
                 pn_data_t *,
                 const SchemaType &) const override = 0;
     };

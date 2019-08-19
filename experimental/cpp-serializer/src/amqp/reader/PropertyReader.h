@@ -2,7 +2,6 @@
 
 /******************************************************************************/
 
-#include <iostream>
 #include "Reader.h"
 
 #include "amqp/schema/Field.h"
@@ -13,7 +12,7 @@ namespace amqp::internal::reader {
 
     class PropertyReader : public Reader {
         private :
-            using FieldPtr = std::unique_ptr<internal::schema::Field>;
+            using FieldPtr = uPtr<internal::schema::Field>;
 
         public :
             /**
@@ -41,161 +40,7 @@ namespace amqp::internal::reader {
             ) const override = 0;
 
             const std::string & name() const override = 0;
-
             const std::string & type() const override = 0;
-    };
-
-
-    class StringPropertyReader : public PropertyReader {
-        private :
-            static const std::string m_name;
-            static const std::string m_type;
-
-        public :
-            std::string readString (pn_data_t *) const override;
-
-            std::any read (pn_data_t *) const override;
-
-            std::unique_ptr<amqp::reader::IValue> dump(
-                const std::string &,
-                pn_data_t *,
-                const SchemaType &
-            ) const override;
-
-            std::unique_ptr<amqp::reader::IValue> dump(
-                pn_data_t *,
-                const SchemaType &
-            ) const override;
-
-            const std::string & name() const override {
-                return m_name;
-            }
-
-            const std::string & type() const override {
-                return m_type;
-            }
-    };
-
-    class IntPropertyReader : public PropertyReader {
-        private :
-            static const std::string m_name;
-            static const std::string m_type;
-
-        public :
-            ~IntPropertyReader() override = default;
-
-            std::string readString (pn_data_t *) const override;
-
-            std::any read (pn_data_t *) const override;
-
-            std::unique_ptr<amqp::reader::IValue> dump(
-                const std::string &,
-                pn_data_t *,
-                const SchemaType &
-            ) const override;
-
-            std::unique_ptr<amqp::reader::IValue> dump(
-                pn_data_t *,
-                const SchemaType &
-            ) const override;
-
-            const std::string & name() const override {
-                return m_name;
-            }
-
-            const std::string & type() const override {
-                return m_type;
-            }
-    };
-
-    class BoolPropertyReader : public PropertyReader {
-        private :
-            static const std::string m_name;
-            static const std::string m_type;
-
-        public :
-            std::string readString (pn_data_t *) const override;
-
-            std::any read (pn_data_t *) const override;
-
-            std::unique_ptr<amqp::reader::IValue> dump(
-                const std::string &,
-                pn_data_t *,
-                const SchemaType &
-            ) const override;
-
-            std::unique_ptr<amqp::reader::IValue> dump(
-                pn_data_t *,
-                const SchemaType &
-            ) const override;
-
-            const std::string & name() const override {
-                return m_name;
-            }
-
-            const std::string & type() const override {
-                return m_type;
-            }
-    };
-
-    class LongPropertyReader : public PropertyReader {
-        private :
-            static const std::string m_name;
-            static const std::string m_type;
-
-        public :
-            std::string readString (pn_data_t *) const override;
-
-            std::any read (pn_data_t *) const override;
-
-            std::unique_ptr<amqp::reader::IValue> dump(
-                const std::string &,
-                pn_data_t *,
-                const SchemaType &
-            ) const override;
-
-            std::unique_ptr<amqp::reader::IValue> dump(
-                pn_data_t *,
-                const SchemaType &
-            ) const override;
-
-            const std::string & name() const override {
-                return m_name;
-            }
-
-            const std::string & type() const override {
-                return m_type;
-            }
-    };
-
-    class DoublePropertyReader : public PropertyReader {
-        private :
-            static const std::string m_name;
-            static const std::string m_type;
-
-        public :
-            std::string readString (pn_data_t *) const override;
-
-            std::any read (pn_data_t *) const override;
-
-            std::unique_ptr<amqp::reader::IValue> dump(
-                const std::string &,
-                pn_data_t *,
-                const SchemaType &
-            ) const override;
-
-            std::unique_ptr<amqp::reader::IValue> dump(
-                pn_data_t *,
-                const SchemaType &
-            ) const override;
-
-            const std::string & name() const override {
-                return m_name;
-            }
-
-            const std::string & type() const override {
-                return m_type;
-            }
     };
 
 }

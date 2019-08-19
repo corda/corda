@@ -28,7 +28,7 @@ operator << (
 
 amqp::internal::schema::
 Envelope::Envelope (
-    std::unique_ptr<Schema> & schema_,
+    uPtr<Schema> & schema_,
     std::string descriptor_
 ) : m_schema (std::move (schema_))
   , m_descriptor (std::move (descriptor_))
