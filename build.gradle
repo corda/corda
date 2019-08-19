@@ -1,4 +1,3 @@
-import com.bmuschko.gradle.docker.tasks.AbstractDockerRemoteApiTask
 import com.bmuschko.gradle.docker.tasks.container.DockerCreateContainer
 import com.bmuschko.gradle.docker.tasks.container.DockerLogsContainer
 import com.bmuschko.gradle.docker.tasks.container.DockerStartContainer
@@ -6,6 +5,7 @@ import com.bmuschko.gradle.docker.tasks.container.DockerWaitContainer
 import com.bmuschko.gradle.docker.tasks.image.DockerBuildImage
 import com.bmuschko.gradle.docker.tasks.image.DockerCommitImage
 import com.bmuschko.gradle.docker.tasks.image.DockerTagImage
+import com.bmuschko.gradle.docker.tasks.image.DockerPushImage
 
 buildscript {
     // For sharing constants between builds
@@ -527,13 +527,11 @@ buildScan {
     termsOfServiceAgree = 'yes'
 }
 
-//docker {
-//    registryCredentials {
-//        url = System.env.DOCKER_URL ?: "hub.docker.com"
-//        username = System.env.DOCKER_USERNAME
-//        password = System.env.DOCKER_PASSWORD
-//    }
-//}
+docker {
+    registryCredentials {
+        url = "stefanotestingcr.azurecr.io"
+    }
+}
 
 //testing workflow
 // 1. build an image from current checkout
@@ -596,11 +594,8 @@ task tagBuildImageResult(type: DockerTagImage) {
     tag = "latest"
     repository = "stefanotestingcr.azurecr.io/testing"
 }
+//dependsOn(tagBuildImageResult)
+task pushBuildImage(type: DockerPushImage) {
+    imageName = "stefanotestingcr.azurecr.io/testing:latest"
+}
 
-def dockerPushTask = new AbstractDockerRemoteApiTask() {
-    void runRemoteCommand() {
-        PushImageCmd pushImageCmd = dockerClient.pushImageCmd(imageName.get())
-    }
-}
-task pushBuildImage(type: dockerPushTask, dependsOn(tagBuildImageResult)) {
-}
