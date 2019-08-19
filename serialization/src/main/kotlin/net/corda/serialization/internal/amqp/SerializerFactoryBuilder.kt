@@ -7,9 +7,24 @@ import net.corda.serialization.internal.carpenter.ClassCarpenter
 import net.corda.serialization.internal.carpenter.ClassCarpenterImpl
 import net.corda.serialization.internal.model.*
 import java.io.NotSerializableException
+import java.util.Collections.unmodifiableMap
 
 @KeepForDJVM
 object SerializerFactoryBuilder {
+    /**
+     * The standard mapping of Java object types to Java primitive types.
+     * The DJVM will need to override these, but probably not anyone else.
+     */
+    private val javaPrimitiveTypes: Map<Class<*>, Class<*>> = unmodifiableMap(mapOf<Class<out Any>?, Class<out Any>?>(
+        Boolean::class.javaObjectType to Boolean::class.javaPrimitiveType,
+        Byte::class.javaObjectType to Byte::class.javaPrimitiveType,
+        Char::class.javaObjectType to Char::class.javaPrimitiveType,
+        Double::class.javaObjectType to Double::class.javaPrimitiveType,
+        Float::class.javaObjectType to Float::class.javaPrimitiveType,
+        Int::class.javaObjectType to Int::class.javaPrimitiveType,
+        Long::class.javaObjectType to Long::class.javaPrimitiveType,
+        Short::class.javaObjectType to Short::class.javaPrimitiveType
+    )) as Map<Class<*>, Class<*>>
 
     @JvmStatic
     fun build(whitelist: ClassWhitelist, classCarpenter: ClassCarpenter): SerializerFactory {
@@ -99,7 +114,8 @@ object SerializerFactoryBuilder {
         val evolutionSerializerFactory = if (allowEvolution) DefaultEvolutionSerializerFactory(
                 localSerializerFactory,
                 classCarpenter.classloader,
-                mustPreserveDataWhenEvolving
+                mustPreserveDataWhenEvolving,
+                javaPrimitiveTypes
         ) else NoEvolutionSerializerFactory
 
         val remoteSerializerFactory = DefaultRemoteSerializerFactory(
@@ -127,4 +143,6 @@ Local:
 ${localTypeInformation.prettyPrint(false)}
         """)
     }
+
+    override val primitiveTypes: Map<Class<*>, Class<*>> = emptyMap()
 }
