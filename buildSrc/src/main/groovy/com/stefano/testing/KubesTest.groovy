@@ -13,39 +13,60 @@ import java.nio.file.Path
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
+import java.util.function.Consumer
 import java.util.stream.Collectors
 import java.util.stream.IntStream
 
 class KubesTest extends DefaultTask {
-    private static class KubePodResult {
+
+    String dockerTag
+    String taskToExecute
+    Boolean printOutput = false
+    public List<File> results = Collections.emptyList()
+
+    private class KubePodResult {
 
         private final Pod createdPod
         private final AtomicReference<Throwable> errorHolder
         private final CountDownLatch waiter
+        private volatile Integer resultCode = 255
+        private final File output;
 
 
-        KubePodResult(Pod createdPod, AtomicReference<Throwable> errorHolder, CountDownLatch waiter) {
+        KubePodResult(Pod createdPod, AtomicReference<Throwable> errorHolder, CountDownLatch waiter, File output) {
             this.createdPod = createdPod
             this.errorHolder = errorHolder
             this.waiter = waiter
+            this.output = output
         }
+
+        public void setResultCode(Integer code) {
+            synchronized (errorHolder) {
+                this.resultCode = code
+            }
+        }
+
+        public Integer getResultCode() {
+            synchronized (errorHolder) {
+                return this.resultCode
+            }
+        }
+
+
     }
 
-
-    String dockerTag
-    public List<File> results = Collections.emptyList()
 
     @TaskAction
     void runTestsOnKubes() {
         String runId = new BigInteger(64, new Random()).toString(36).toLowerCase()
 
         int k8sTimeout = 50 * 1_000
-        Config config = new ConfigBuilder()
+        io.fabric8.kubernetes.client.Config config = new io.fabric8.kubernetes.client.ConfigBuilder()
                 .withConnectionTimeout(k8sTimeout)
                 .withRequestTimeout(k8sTimeout)
                 .withRollingTimeout(k8sTimeout)
-                .withWebsocketTimeout(k8sTimeout)
-                .withWebsocketPingInterval(k8sTimeout)
+                .withWebsocketTimeout(k8sTimeout * 6)
+                .withWebsocketPingInterval(k8sTimeout * 6)
                 .build()
 
         final KubernetesClient client = new DefaultKubernetesClient(config)
@@ -64,20 +85,25 @@ class KubesTest extends DefaultTask {
         client.namespaces().createOrReplace(ns)
 
         int numberOfNodes = client.nodes().list().getItems().size()
-
         List<KubePodResult> createdPods = IntStream.range(0, numberOfNodes).parallel().mapToObj({ i ->
+            File outputFile = Files.createTempFile("container", ".log").toFile()
+
             String podName = "test" + runId + i
-            Pod podRequest = buildPod(numberOfNodes, i, podName)
+            Pod podRequest = buildPod(podName)
             System.out.println("created pod: " + podName)
             Pod createdPod = client.pods().inNamespace(namespace).create(podRequest)
 
 
             AtomicReference<Throwable> errorHolder = new AtomicReference<>()
             CountDownLatch waiter = new CountDownLatch(1)
-            startBuildAndLogging(client, namespace, numberOfNodes, i, podName, errorHolder, waiter)
+            KubePodResult result = new KubePodResult(createdPod, errorHolder, waiter, outputFile)
+            startBuildAndLogging(client, namespace, numberOfNodes, i, podName, printOutput, errorHolder, waiter, { int resultCode ->
+                result.setResultCode(resultCode)
+            })
 
-            return new KubePodResult(createdPod, errorHolder, waiter)
+            return result
         }).collect(Collectors.toList())
+
         System.out.println("Pods created, waiting for exit")
 
         createdPods.forEach({ pod ->
@@ -95,21 +121,29 @@ class KubesTest extends DefaultTask {
         List<Pod> items = new ArrayList<>(client.pods().inNamespace(namespace).list().getItems())
         Collections.shuffle(items)
 
-        List<File> downloadedTestDirs = items.stream().map { pod ->
+        List<File> downloadedTestDirs = items.stream().parallel().map { pod ->
             return downloadTestXmlFromPod(client, namespace, pod)
         }.collect(Collectors.toList())
 
         this.results = downloadedTestDirs
 
-        client.pods().inNamespace(namespace).list().getItems().forEach({ podToDelete ->
-            System.out.println("deleting: " + podToDelete.getMetadata().getName())
-            client.resource(podToDelete).delete()
+        createdPods.forEach({ podToDelete ->
+            System.out.println("deleting: " + podToDelete.createdPod.getMetadata().getName())
+            client.resource(podToDelete.createdPod).delete()
         })
 
 
     }
 
-    private static void startBuildAndLogging(KubernetesClient client, String namespace, int numberOfPods, int podIdx, String podName, AtomicReference<Throwable> errorHolder, CountDownLatch waiter) {
+    void startBuildAndLogging(KubernetesClient client,
+                              String namespace,
+                              int numberOfPods,
+                              int podIdx,
+                              String podName,
+                              boolean printOutput,
+                              AtomicReference<Throwable> errorHolder,
+                              CountDownLatch waiter,
+                              Consumer<Integer> resultSetter) {
         try {
             System.out.println("Waiting for pod " + podName + " to start before executing build")
             client.pods().inNamespace(namespace).withName(podName).waitUntilReady(10, TimeUnit.MINUTES)
@@ -124,51 +158,78 @@ class KubesTest extends DefaultTask {
                 void onClose(KubernetesClientException cause) {
                 }
             })
+            ExecWatch execWatch;
+            if (printOutput) {
+                execWatch = client.pods().inNamespace(namespace).withName(podName)
+                        .redirectingInput()
+                        .redirectingOutput()
+                        .redirectingError()
+                        .redirectingErrorChannel()
+                        .usingListener(new ExecListener() {
+                            @Override
+                            void onOpen(Response response) {
+                                System.out.println("Build started on pod " + podName)
+                            }
 
-            ExecWatch execWatch = client.pods().inNamespace(namespace).withName(podName)
-                    .redirectingInput()
-                    .redirectingOutput()
-                    .redirectingError()
-                    .redirectingErrorChannel()
-                    .usingListener(new ExecListener() {
-                        @Override
-                        void onOpen(Response response) {
-                            System.out.println("Build started on pod " + podName)
-                        }
+                            @Override
+                            void onFailure(Throwable t, Response response) {
+                                System.out.println("Received error from rom pod + podName")
+                                errorHolder.set(t)
+                                waiter.countDown()
+                            }
 
-                        @Override
-                        void onFailure(Throwable t, Response response) {
-                            System.out.println("Received error from container, exiting")
-                            errorHolder.set(t)
-                            waiter.countDown()
-                        }
+                            @Override
+                            void onClose(int code, String reason) {
+                                resultSetter.accept(code)
+                                System.out.println("Received onClose() from pod " + podName)
+                                waiter.countDown()
+                            }
+                        }).exec(getBuildCommand(numberOfPods, podIdx))
 
-                        @Override
-                        void onClose(int code, String reason) {
-                            System.out.println("Received onClose() from container")
-                            waiter.countDown()
-                        }
-                    }).exec(getBuildCommand(numberOfPods, podIdx))
+            } else {
+                execWatch = client.pods().inNamespace(namespace).withName(podName)
+                        .redirectingInput()
+                        .usingListener(new ExecListener() {
+                            @Override
+                            void onOpen(Response response) {
+                                System.out.println("Build started on pod " + podName)
+                            }
+
+                            @Override
+                            void onFailure(Throwable t, Response response) {
+                                System.out.println("Received error from container, exiting")
+                                errorHolder.set(t)
+                                waiter.countDown()
+                            }
+
+                            @Override
+                            void onClose(int code, String reason) {
+                                System.out.println("Received onClose() from container")
+                                waiter.countDown()
+                            }
+                        }).exec(getBuildCommand(numberOfPods, podIdx))
+
+            }
 
             System.out.println("Pod: " + podName + " has started ")
+            if (printOutput) {
+                Thread loggingThread = new Thread({ ->
+                    BufferedReader br = new BufferedReader(new InputStreamReader(execWatch.getOutput()))
+                    String line
+                    while ((line = br.readLine()) != null) {
+                        System.out.println(("Container" + podIdx + ":   " + line).trim())
+                    }
+                })
 
-            Thread loggingThread = new Thread({ ->
-                BufferedReader br = new BufferedReader(new InputStreamReader(execWatch.getOutput()))
-                String line
-                while ((line = br.readLine()) != null) {
-                    System.out.println(("Container" + podIdx + ":   " + line).trim())
-                }
-            })
-
-            loggingThread.setDaemon(true)
-            loggingThread.start()
-
+                loggingThread.setDaemon(true)
+                loggingThread.start()
+            }
         } catch (InterruptedException ignored) {
             //we were interrupted whilst waiting for container
         }
     }
 
-    private static Pod buildPod(int numberOfPods, int podIdx, String podName) {
+    Pod buildPod(String podName) {
         return new PodBuilder().withNewMetadata().withName(podName).endMetadata()
                 .withNewSpec()
                 .addNewVolume()
@@ -179,9 +240,10 @@ class KubesTest extends DefaultTask {
                 .endHostPath()
                 .endVolume()
                 .addNewContainer()
-                .withImage("stefanotestingcr.azurecr.io/testing:latest")
+                .withImage(dockerTag)
                 .withCommand("bash")
-                .withArgs("-c", "sleep 10000000")
+        //max container life time is 30min
+                .withArgs("-c", "sleep 1800")
                 .withName(podName)
                 .withNewResources()
                 .addToRequests("cpu", new Quantity("2"))
@@ -197,11 +259,11 @@ class KubesTest extends DefaultTask {
                 .build()
     }
 
-    private static String[] getBuildCommand(int numberOfPods, int podIdx) {
-        return ["bash", "-c", "cd /tmp/source && ./gradlew -PdockerFork=" + podIdx + " -PdockerForks=" + numberOfPods + " node:test --info"]
+    String[] getBuildCommand(int numberOfPods, int podIdx) {
+        return ["bash", "-c", "cd /tmp/source && ./gradlew -PdockerFork=" + podIdx + " -PdockerForks=" + numberOfPods + " $taskToExecute --info"]
     }
 
-    private static File downloadTestXmlFromPod(KubernetesClient client, String namespace, Pod cp) {
+    File downloadTestXmlFromPod(KubernetesClient client, String namespace, Pod cp) {
         String resultsInContainerPath = "/tmp/source/node/build/test-results"
         String binaryResultsInContainerPath = "/tmp/source/node/build/test-results/test/binary"
         String podName = cp.getMetadata().getName()
@@ -225,7 +287,7 @@ class KubesTest extends DefaultTask {
         }
     }
 
-    private static File findChildPathInDir(File start, String pathToFind) {
+    File findChildPathInDir(File start, String pathToFind) {
         Queue<File> filesToInspect = new LinkedList<>(Collections.singletonList(start))
         while (!filesToInspect.isEmpty()) {
             File fileToInspect = filesToInspect.poll()

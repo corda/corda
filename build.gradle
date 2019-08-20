@@ -4,8 +4,8 @@ import com.bmuschko.gradle.docker.tasks.container.DockerStartContainer
 import com.bmuschko.gradle.docker.tasks.container.DockerWaitContainer
 import com.bmuschko.gradle.docker.tasks.image.DockerBuildImage
 import com.bmuschko.gradle.docker.tasks.image.DockerCommitImage
-import com.bmuschko.gradle.docker.tasks.image.DockerTagImage
 import com.bmuschko.gradle.docker.tasks.image.DockerPushImage
+import com.bmuschko.gradle.docker.tasks.image.DockerTagImage
 
 buildscript {
     // For sharing constants between builds
@@ -107,7 +107,7 @@ buildscript {
     ext.jsch_version = '0.1.55'
     ext.protonj_version = '0.33.0' // Overide Artemis version
     ext.snappy_version = '0.4'
-    ext.class_graph_version = '4.8.41'
+    ext.class_graph_version = constants.getProperty('classgraphVersion')
     ext.jcabi_manifests_version = '1.1'
     ext.picocli_version = '3.9.6'
     ext.commons_io_version = '2.6'
@@ -188,7 +188,6 @@ apply plugin: 'com.jfrog.artifactory'
 apply plugin: 'java'
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
-
 
 allprojects {
     apply plugin: 'kotlin'
@@ -527,10 +526,8 @@ buildScan {
     termsOfServiceAgree = 'yes'
 }
 
-docker {
-    registryCredentials {
-        url = "stefanotestingcr.azurecr.io"
-    }
+static def getPropertyAsInt(Project proj, String property, Integer defaultValue) {
+    return proj.hasProperty(property) ? Integer.parseInt(proj.property(property).toString()) : defaultValue
 }
 
 //testing workflow
@@ -591,11 +588,76 @@ task commitBuildImageResult(type: DockerCommitImage) {
 task tagBuildImageResult(type: DockerTagImage) {
     dependsOn commitBuildImageResult
     imageId = commitBuildImageResult.getImageId()
-    tag = "latest"
+    tag = "${UUID.randomUUID().toString().toLowerCase().subSequence(0, 6)}"
     repository = "stefanotestingcr.azurecr.io/testing"
 }
-//dependsOn(tagBuildImageResult)
-task pushBuildImage(type: DockerPushImage) {
-    imageName = "stefanotestingcr.azurecr.io/testing:latest"
+docker {
+    registryCredentials {
+        url = "stefanotestingcr.azurecr.io"
+        username = "stefanotestingcr"
+        password = System.getenv("DOCKER_PUSH_PWD")
+    }
 }
 
+task pushBuildImage(type: DockerPushImage) {
+    imageName = "stefanotestingcr.azurecr.io/testing"
+    tag = "fb4ce0"
+}
+
+allprojects {
+    tasks.withType(Test) { Test task ->
+        def projectContainingTask = getProject()
+        try {
+            if (!projectContainingTask.getName().contains("deterministic") &&
+                    !projectContainingTask.getName().contains("capsule") &&
+                    !projectContainingTask.getName().contains("rpc")) {
+
+                def taskName = task.getName()
+                def capitalizedTaskName = task.getName().capitalize()
+                def createdListTask = projectContainingTask.tasks.create("listTestsFor" + capitalizedTaskName, com.stefano.testing.ListTests) {
+                    dependsOn projectContainingTask.getTasks().getByName("${taskName}Classes")
+                    scanClassPath = task.getTestClassesDirs() ? task.getTestClassesDirs() : Collections.emptyList()
+                }
+
+                def createdPrintTask = projectContainingTask.tasks.create("printTestsFor" + capitalizedTaskName) {
+                    dependsOn createdListTask
+                    doLast {
+                        createdListTask.getTestsForFork(0, 1, 42).forEach { testName ->
+                            println testName
+                        }
+                    }
+                }
+
+                logger.info("created task: " + createdListTask.getPath() + " in project: " + projectContainingTask + " it dependsOn: " + createdListTask.dependsOn)
+                logger.info("created task: " + createdPrintTask.getPath() + " in project: " + projectContainingTask + " it dependsOn: " + createdPrintTask.dependsOn)
+                println("detected that we are in a docker environment, modifying task: ${task.getPath()} to depend on task ${createdListTask.getPath()}")
+                task.configure {
+                    dependsOn createdListTask
+                    doFirst {
+                        filter {
+                            def includes = createdListTask.getTestsForFork(getPropertyAsInt(projectContainingTask, "dockerFork", 0), getPropertyAsInt(projectContainingTask, "dockerForks", 1), 42)
+                            includes.forEach { include ->
+                                println "including: $include"
+                                includeTestsMatching include
+                            }
+                        }
+                    }
+                }
+
+                def imageBuildingTask = rootProject.tasks.getByName("pushBuildImage")
+                def createdParallelTestTask = projectContainingTask.tasks.create("parallel" + capitalizedTaskName, com.stefano.testing.KubesTest) {
+                    dependsOn imageBuildingTask
+                    printOutput = true
+                    taskToExecute = task.getPath()
+                    doFirst {
+                        dockerTag = imageBuildingTask.imageName.get() + ":" + imageBuildingTask.tag.get()
+                    }
+                }
+                println "Created task: ${createdParallelTestTask.getPath()} to enable testing on kubenetes for task: ${task.getPath()}"
+            }
+        } catch (Exception e) {
+            System.err.println(e.message)
+        }
+
+    }
+}

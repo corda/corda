@@ -208,8 +208,6 @@ dependencies {
 
     testCompile(project(':test-cli'))
     testCompile(project(':test-utils'))
-
-    testCompile group: 'com.github.docker-java', name: 'docker-java', version: '3.1.5'
 }
 
 tasks.withType(JavaCompile) {
@@ -260,54 +258,7 @@ publish {
     name jar.baseName
 }
 
-def getIncludesFromFile(Integer fork, Integer forks) {
-    def file = new File(buildDir, "tests-print.out")
-    def includes = file.exists() ? file.readLines() : Collections.singletonList("*")
-    def numberOfTestsPerFork = includes.size() / forks
-    def ourRangeStart = fork * numberOfTestsPerFork
-    def ourRangeEnd = (ourRangeStart + 2 * numberOfTestsPerFork > includes.size()) ?
-            includes.size() :
-            ourRangeStart + numberOfTestsPerFork
-
-    println "Discovered: $includes"
-    println "I will do ${ourRangeStart.intValue()} -> ${ourRangeEnd.intValue()}"
-    return includes.subList(ourRangeStart.intValue(), ourRangeEnd.intValue())
-}
-
-def getIntProperty(Project proj, String property) {
-    return proj.hasProperty(property) ? Integer.parseInt(proj.property(property).toString()) : 1
-}
-
 test {
-    doFirst {
-        filter {
-            def includes = getIncludesFromFile(getIntProperty(project, "dockerFork"), getIntProperty(project, "dockerForks"))
-            includes.forEach { include ->
-                println "including: $include"
-                includeTestsMatching include
-            }
-        }
-    }
-
     maxHeapSize = "3g"
     maxParallelForks = (System.env.CORDA_NODE_TESTING_FORKS == null) ? 1 : "$System.env.CORDA_NODE_TESTING_FORKS".toInteger()
-}
-
-task printIt(type: JavaExec) {
-    classpath = sourceSets.test.runtimeClasspath
-    main = 'net.corda.JunitPrinter'
-    args buildDir.absolutePath, "$corda_revision"
-}
-
-task dockerTest(type: KubesTest, dependsOn: []) {
-    dockerTag = "6f59dd3432ca"
-}
-
-task runReport(type: com.stefano.testing.KubesReporting) {
-    mustRunAfter dockerTest
-    dependsOn dockerTest
-    reportOn dockerTest.results
-    doFirst {
-        setTestResultDirs(dockerTest.results)
-    }
 }
