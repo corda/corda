@@ -69,7 +69,6 @@ class RPCStabilityTests {
     }
 
     @Test
-    @Ignore("Ignored as it became increasingly flaky. CORDA-3098")
     fun `client and server dont leak threads`() {
         fun startAndStop() {
             rpcDriver {
@@ -102,7 +101,6 @@ class RPCStabilityTests {
     }
 
     @Test
-    @Ignore("Ignored as it became increasingly flaky. CORDA-3098")
     fun `client doesnt leak threads when it fails to start`() {
         fun startAndStop() {
             rpcDriver {
