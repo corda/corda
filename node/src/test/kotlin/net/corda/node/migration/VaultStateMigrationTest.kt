@@ -212,7 +212,7 @@ class VaultStateMigrationTest {
                     txId = tx.id.toString(),
                     stateMachineRunId = null,
                     transaction = tx.serialize(context = SerializationDefaults.STORAGE_CONTEXT).bytes,
-                    status = 'V'
+                    status = "V"
             )
             session.save(persistentTx)
         }
