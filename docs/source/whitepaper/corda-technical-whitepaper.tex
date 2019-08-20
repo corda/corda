@@ -634,9 +634,8 @@ able to sign with those keys, enabling better security along with operational ef
 There are constraints on the mathematical properties of the digital signature algorithms parties use, and the
 protocol signature algorithms for which deterministic derivation isn't possible. Additionally it's common for nodes
 to keep their private keys in hardware security modules that may also not support deterministic derivation.
-However, implementations are recommended to use hierarchical deterministic key derivation when possible.
-
-% CODEME: The platform doesn't do suffix stripping at the moment.
+The reference implementation does not support BIP32 at the time of writing, however, other implementations are
+recommended to use hierarchical deterministic key derivation when possible.
 
 \subsection{Non-verified keys}\label{subsec:non-verified-keys}
 
@@ -951,7 +950,7 @@ transaction in which two file paths overlap between attachments is invalid. A sm
 expected to overlap normally, such as files in the \texttt{META-INF} directory, are excluded.
 
 \paragraph{Package namespace ownership.}Corda allows parts of the Java package namespace to be reserved for
-particular developers with a network, identified by a public key (which may or may not be linked to an identity). Any JAR
+particular developers within a network, identified by a public key (which may or may not be linked to an identity). Any JAR
 that exports a class in an owned package namespace but which is not signed by the owning key is considered to be
 invalid. Reserving a package namespace is optional but can simplify the data model and make applications more
 secure.
@@ -1260,13 +1259,13 @@ that proofs are produced at a rate that is slow enough that very few are circula
 transactions are likely to be produced at a higher rate than this, it implies a need for the proofs to consolidate
 multiple transactions. Hence the need for blocks.
 
-A Corda network is email-like in the sense that nodes have long term stable identities, of which they can prove
+A Corda network is email-like in the sense that nodes have long term stable identities, which they can prove
 ownership of to others. Sybil attacks are blocked by the network entry process. This allows us to discard
 proof-of-work along with its multiple unfortunate downsides:
 
 \begin{itemize}
 \item Energy consumption is excessively high for such a simple task, being comparable at the time of writing to the
-electricity consumption of an entire city\cite{BitcoinEnergy}. At a time when humanity needs to use less energy
+electricity consumption of an entire country\cite{BitcoinEnergy}. At a time when humanity needs to use less energy
 rather than more this is ecologically undesirable.
 \item High energy consumption forces concentration of mining power in regions with cheap or free electricity.
 This results in unpredictable geopolitical complexities that many users would rather do without.
@@ -2476,7 +2475,7 @@ and flexibility.
 
 \section{Acknowledgements}
 
-The author would like to thank Richard Gendal Brown, James Carlyle, Shams Asari, Rick Parker, Andras Slemmer, Ross
+The authors would like to thank James Carlyle, Shams Asari, Rick Parker, Andras Slemmer, Ross
 Nicoll, Andrius Dagys, Matthew Nesbit, Jose Coll, Katarzyna Streich, Clinton Alexander, Patrick Kuo, Richard Green,
 Ian Grigg, Mark Oldfield and Roger Willis for their insights and contributions to this design. We would also like
 to thank Sofus Mortesen for his work on the universal contract DSL, and the numerous architects and subject matter
