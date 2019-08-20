@@ -31,7 +31,7 @@ import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.node.services.config.NetworkParameterAcceptanceSettings
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.identity.PersistentIdentityService
-import net.corda.node.services.keys.PersistentKeyManagementService
+import net.corda.node.services.keys.BasicHSMKeyManagementService
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.network.NetworkMapClient
 import net.corda.node.services.network.NetworkMapUpdater
@@ -43,6 +43,9 @@ import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.utilities.EnterpriseNamedCacheFactory
 import net.corda.node.utilities.profiling.getTracingConfig
 import net.corda.nodeapi.internal.NodeInfoAndSigned
+import net.corda.nodeapi.internal.cryptoservice.CryptoServiceFactory
+import net.corda.nodeapi.internal.cryptoservice.ManagedCryptoService
+import net.corda.nodeapi.internal.cryptoservice.SupportedCryptoServices
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.serialization.internal.*
 import org.slf4j.Logger
@@ -103,8 +106,15 @@ class RpcWorkerServiceHub(override val configuration: NodeConfiguration,
     override val cordappProvider = CordappProviderImpl(cordappLoader, CordappConfigFileProvider(emptyList()), attachments)
 
     private val pkToIdCache = PublicKeyToOwningIdentityCacheImpl(database, cacheFactory)
+    private val cryptoService : ManagedCryptoService = CryptoServiceFactory.makeManagedCryptoService(
+            configuration.cryptoServiceName ?: SupportedCryptoServices.BC_SIMPLE,
+            configuration.myLegalName,
+            configuration.signingCertificateStore,
+            configuration.cryptoServiceConf,
+            configuration.cryptoServiceTimeout
+    ).closeOnStop()
     @Suppress("LeakingThis")
-    override val keyManagementService = PersistentKeyManagementService(cacheFactory, identityService, database, pkToIdCache)
+    override val keyManagementService = BasicHSMKeyManagementService(cacheFactory, identityService, database, cryptoService, pkToIdCache)
     override val networkParametersService = DBNetworkParametersStorage(cacheFactory, database, networkMapClient)
     private val servicesForResolution = ServicesForResolutionImpl(identityService, attachments, cordappProvider, networkParametersService, validatedTransactions)
     @Suppress("LeakingThis")
