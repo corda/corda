@@ -1,4 +1,4 @@
-package com.r3.buildtasks
+package net.corda.buildtasks
 
 import io.github.classgraph.ClassGraph
 import io.github.classgraph.ClassInfo
