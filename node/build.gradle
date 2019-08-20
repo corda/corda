@@ -1,4 +1,4 @@
-import com.stefano.testing.DockerTest
+import com.stefano.testing.KubesTest
 
 // Import private compile time constants
 buildscript {
@@ -293,7 +293,15 @@ test {
     maxParallelForks = (System.env.CORDA_NODE_TESTING_FORKS == null) ? 1 : "$System.env.CORDA_NODE_TESTING_FORKS".toInteger()
 }
 
-task dockerTest(type: DockerTest, dependsOn: []) {
+task dockerTest(type: KubesTest, dependsOn: []) {
     dockerTag = "6f59dd3432ca"
-    forkCount = project.hasProperty("dockerForks") ? Integer.parseInt(project.property("dockerForks").toString()) : 1
+}
+
+task runReport(type: com.stefano.testing.KubesReporting) {
+    mustRunAfter dockerTest
+    dependsOn dockerTest
+    reportOn dockerTest.results
+    doFirst {
+        setTestResultDirs(dockerTest.results)
+    }
 }

@@ -1,4 +1,11 @@
+import com.bmuschko.gradle.docker.tasks.container.DockerCreateContainer
+import com.bmuschko.gradle.docker.tasks.container.DockerLogsContainer
+import com.bmuschko.gradle.docker.tasks.container.DockerStartContainer
+import com.bmuschko.gradle.docker.tasks.container.DockerWaitContainer
 import com.bmuschko.gradle.docker.tasks.image.DockerBuildImage
+import com.bmuschko.gradle.docker.tasks.image.DockerCommitImage
+import com.bmuschko.gradle.docker.tasks.image.DockerTagImage
+import com.bmuschko.gradle.docker.tasks.image.DockerPushImage
 import com.r3.buildtasks.ListTests
 
 buildscript {
@@ -116,7 +123,13 @@ buildscript {
     // Updates [131, 161] also have zip compression bugs on MacOS (High Sierra).
     // when the java version in NodeStartup.hasMinimumJavaVersion() changes, so must this check
     ext.java8_minUpdateVersion = constants.getProperty('java8MinUpdateVersion')
-    ext.corda_revision = "git rev-parse HEAD".execute().text.trim()
+    ext.corda_revision = {
+        try {
+            "git rev-parse HEAD".execute().text.trim()
+        } catch (Exception e) {
+            "gitNotAvailable"
+        }
+    }()
     ext.docker_testing_tag = "$corda_revision-${System.currentTimeMillis()}"
 
     repositories {
@@ -157,7 +170,7 @@ plugins {
     // Add the shadow plugin to the plugins classpath for the entire project.
     id 'com.github.johnrengelman.shadow' version '2.0.4' apply false
     id "com.gradle.build-scan" version "2.2.1"
-    id 'com.bmuschko.docker-remote-api' version '3.4.4'
+    id 'com.bmuschko.docker-remote-api' version '5.0.0'
 }
 
 ext {
@@ -519,9 +532,7 @@ buildScan {
 
 docker {
     registryCredentials {
-        url = System.env.DOCKER_URL ?: "hub.docker.com"
-        username = System.env.DOCKER_USERNAME
-        password = System.env.DOCKER_PASSWORD
+        url = "stefanotestingcr.azurecr.io"
     }
 }
 
@@ -536,8 +547,58 @@ docker {
 // 8. if failures detected, determine which container ran the test
 // 9. commit container to image and provide access to contents
 
-task buildTestingDockerImage(type: DockerBuildImage, dependsOn: ["clean"]) {
+task buildDockerImageForSource(type: DockerBuildImage, dependsOn: project.getTasksByName("clean", true)) {
     inputDir = new File(".")
-    tags = ["$docker_testing_tag"]
     dockerFile = new File(new File("testing"), "Dockerfile")
 }
+
+task createBuildContainer(type: DockerCreateContainer) {
+    File gradleDir = new File((System.getProperty("java.io.tmpdir") + File.separator + "gradle"))
+    File mavenDir = new File((System.getProperty("java.io.tmpdir") + File.separator + "maven"))
+    doFirst {
+
+        if (!gradleDir.exists()) {
+            gradleDir.mkdirs()
+        }
+        if (!mavenDir.exists()) {
+            mavenDir.mkdirs()
+        }
+    }
+
+    dependsOn buildDockerImageForSource
+    targetImageId buildDockerImageForSource.getImageId()
+    binds = [(gradleDir.absolutePath): "/tmp/gradle", (mavenDir.absolutePath): "/home/root/.m2"]
+}
+
+task startBuildContainer(type: DockerStartContainer) {
+    dependsOn createBuildContainer
+    targetContainerId createBuildContainer.getContainerId()
+}
+
+task logBuildContainer(type: DockerLogsContainer) {
+    dependsOn startBuildContainer
+    targetContainerId createBuildContainer.getContainerId()
+    follow = true
+}
+
+task waitForBuildContainer(type: DockerWaitContainer) {
+    dependsOn logBuildContainer
+    targetContainerId createBuildContainer.getContainerId()
+}
+
+task commitBuildImageResult(type: DockerCommitImage) {
+    dependsOn waitForBuildContainer
+    targetContainerId createBuildContainer.getContainerId()
+}
+
+task tagBuildImageResult(type: DockerTagImage) {
+    dependsOn commitBuildImageResult
+    imageId = commitBuildImageResult.getImageId()
+    tag = "latest"
+    repository = "stefanotestingcr.azurecr.io/testing"
+}
+//dependsOn(tagBuildImageResult)
+task pushBuildImage(type: DockerPushImage) {
+    imageName = "stefanotestingcr.azurecr.io/testing:latest"
+}
+
