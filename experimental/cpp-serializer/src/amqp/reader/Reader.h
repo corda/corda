@@ -8,26 +8,25 @@
 #include <vector>
 #include <memory>
 
-#include "schema/Schema.h"
+#include "amqp/schema/Schema.h"
+#include "amqp/reader/IReader.h"
 
 /******************************************************************************/
 
-struct pn_data_t;
+namespace amqp::internal::reader {
 
-/******************************************************************************/
-
-namespace amqp {
-
-    class Value {
+    class Value : public amqp::reader::IValue {
         public :
-            virtual std::string dump() const = 0;
+            std::string dump() const override = 0;
 
-            virtual ~Value() = default;
+            ~Value() override = default;
     };
 
     class Single : public Value {
         public :
             std::string dump() const override = 0;
+
+            ~Single() override = default;
     };
 
     template<typename T>
@@ -42,8 +41,8 @@ namespace amqp {
             { }
 
             explicit TypedSingle (T && value_)
-                    : Single()
-                    , m_value { std::move (value_) }
+                : Single()
+                , m_value { std::move (value_) }
             { }
 
             TypedSingle (const TypedSingle && value_) noexcept
@@ -63,18 +62,17 @@ namespace amqp {
             std::string m_property;
 
         public:
-            explicit Pair(const std::string & property_)
-                : m_property (property_)
+            explicit Pair (std::string property_)
+                : m_property (std::move (property_))
             { }
 
-            virtual ~Pair() = default;
+            ~Pair() override = default;
 
-            Pair (amqp::Pair && pair_) noexcept
+            Pair (Pair && pair_) noexcept
                 : m_property (std::move (pair_.m_property))
             { }
 
             std::string dump() const override = 0;
-
     };
 
 
@@ -94,7 +92,7 @@ namespace amqp {
                 , m_value (std::move (value_))
             { }
 
-            TypedPair (TypedPair && pair_)
+            TypedPair (TypedPair && pair_) noexcept
                 : Pair (std::move (pair_.m_property))
                 , m_value (std::move (pair_.m_value))
             { }
@@ -110,72 +108,84 @@ namespace amqp {
 
 /******************************************************************************
  *
- * amqp::TypeSingle
+ * amqp::internal::reader::TypedSingle
  *
  ******************************************************************************/
 
 template<typename T>
 inline std::string
-amqp::TypedSingle<T>::dump() const {
+amqp::internal::reader::
+TypedSingle<T>::dump() const {
     return std::to_string(m_value);
 }
 
 template<>
 inline std::string
-amqp::TypedSingle<std::string>::dump() const {
+amqp::internal::reader::
+TypedSingle<std::string>::dump() const {
     return m_value;
 }
 
 template<>
 std::string
-amqp::TypedSingle<std::vector<std::unique_ptr<amqp::Value>>>::dump() const;
+amqp::internal::reader::
+TypedSingle<sVec<uPtr<amqp::reader::IValue>>>::dump() const;
 
 template<>
 std::string
-amqp::TypedSingle<std::list<std::unique_ptr<amqp::Value>>>::dump() const;
+amqp::internal::reader::
+TypedSingle<sList<uPtr<amqp::reader::IValue>>>::dump() const;
 
 template<>
 std::string
-amqp::TypedSingle<std::vector<std::unique_ptr<amqp::Single>>>::dump() const;
+amqp::internal::reader::
+TypedSingle<sVec<uPtr<amqp::internal::reader::Single>>>::dump() const;
 
 template<>
 std::string
-amqp::TypedSingle<std::list<std::unique_ptr<amqp::Single>>>::dump() const;
+amqp::internal::reader::
+TypedSingle<sList<uPtr<amqp::internal::reader::Single>>>::dump() const;
 
 /******************************************************************************
  *
- * amqp::TypedPair
+ * amqp::internal::reader::TypedPair
  *
  ******************************************************************************/
 
 template<typename T>
 inline std::string
-amqp::TypedPair<T>::dump() const {
+amqp::internal::reader::
+TypedPair<T>::dump() const {
     return m_property + " : " + std::to_string (m_value);
 }
 
 template<>
 inline std::string
-amqp::TypedPair<std::string>::dump() const {
+amqp::internal::reader::
+TypedPair<std::string>::dump() const {
     return m_property + " : " + m_value;
 }
 
 template<>
 std::string
-amqp::TypedPair<std::vector<std::unique_ptr<amqp::Value>>>::dump() const;
+amqp::internal::reader::
+TypedPair<sVec<uPtr<amqp::reader::IValue>>>::dump() const;
 
 template<>
 std::string
-amqp::TypedPair<std::list<std::unique_ptr<amqp::Value>>>::dump() const;
+amqp::internal::reader::
+TypedPair<sList<uPtr<amqp::reader::IValue>>>::dump() const;
 
 
 template<>
 std::string
-amqp::TypedPair<std::vector<std::unique_ptr<amqp::Pair>>>::dump() const;
+amqp::internal::reader::
+TypedPair<sVec<uPtr<amqp::internal::reader::Pair>>>::dump() const;
 
 template<>
 std::string
-amqp::TypedPair<std::list<std::unique_ptr<amqp::Pair>>>::dump() const;
+amqp::internal::reader::
+TypedPair<sList<uPtr<amqp::internal::reader::Pair>>>::dump() const;
 
 /******************************************************************************
  *
@@ -184,25 +194,28 @@ amqp::TypedPair<std::list<std::unique_ptr<amqp::Pair>>>::dump() const;
  *
  ******************************************************************************/
 
-namespace amqp {
+namespace amqp::internal::reader  {
 
-    class Reader {
+    using IReader = amqp::reader::IReader<schema::SchemaMap::const_iterator>;
+
+    class Reader : public IReader {
         public :
-            virtual ~Reader() = default;
-            virtual const std::string & name() const = 0;
-            virtual const std::string & type() const = 0;
+            ~Reader() override = default;
 
-            virtual std::any read(pn_data_t *) const = 0;
-            virtual std::string readString(pn_data_t *) const = 0;
+            const std::string & name() const override = 0;
+            const std::string & type() const override = 0;
 
-            virtual std::unique_ptr<Value> dump(
+            std::any read (struct pn_data_t *) const override = 0;
+            std::string readString (struct pn_data_t *) const override = 0;
+
+            uPtr<amqp::reader::IValue> dump(
                 const std::string &,
                 pn_data_t *,
-                const std::unique_ptr<internal::schema::Schema> &) const = 0;
+                const SchemaType &) const override = 0;
 
-            virtual std::unique_ptr<Value> dump(
+            uPtr<amqp::reader::IValue> dump(
                 pn_data_t *,
-                const std::unique_ptr<internal::schema::Schema> &) const = 0;
+                const SchemaType &) const override = 0;
     };
 
 }

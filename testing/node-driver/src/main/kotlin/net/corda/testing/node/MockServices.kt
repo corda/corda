@@ -6,6 +6,7 @@ import net.corda.core.contracts.ContractClassName
 import net.corda.core.contracts.StateRef
 import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.internal.AliasPrivateKey
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.CordaX500Name
@@ -26,7 +27,7 @@ import net.corda.node.internal.cordapp.JarScanningCordappLoader
 import net.corda.node.services.api.*
 import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.services.identity.PersistentIdentityService
-import net.corda.node.services.keys.PersistentKeyManagementService
+import net.corda.node.services.keys.BasicHSMKeyManagementService
 import net.corda.node.services.persistence.PublicKeyToOwningIdentityCacheImpl
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
@@ -170,8 +171,23 @@ open class MockServices private constructor(
             // We only add the keypair for the initial identity and any other keys which this node may control. Note: We don't add the keys
             // for the other identities.
             val pkToIdCache = PublicKeyToOwningIdentityCacheImpl(persistence, TestingNamedCacheFactory())
-            val keyManagementService = PersistentKeyManagementService(TestingNamedCacheFactory(), identityService, persistence, pkToIdCache)
-            persistence.transaction { keyManagementService.start(moreKeys + initialIdentity.keyPair) }
+            val aliasKeyMap = mutableMapOf<String, KeyPair>()
+            val aliasedMoreKeys = moreKeys.mapIndexed { index, keyPair ->
+                val alias = "Extra key $index"
+                aliasKeyMap[alias] = keyPair
+                KeyPair(keyPair.public, AliasPrivateKey(alias))
+            }.toSet()
+            val identityAlias = "${initialIdentity.name} private key"
+            aliasKeyMap[identityAlias] = initialIdentity.keyPair
+            val aliasedIdentityKey = KeyPair(initialIdentity.publicKey, AliasPrivateKey(identityAlias))
+            val keyManagementService = BasicHSMKeyManagementService(
+                    TestingNamedCacheFactory(),
+                    identityService,
+                    persistence,
+                    MockCryptoService(aliasKeyMap),
+                    pkToIdCache
+            )
+            persistence.transaction { keyManagementService.start(aliasedMoreKeys + aliasedIdentityKey) }
 
             val mockService = persistence.transaction {
                 makeMockMockServices(cordappLoader, identityService, networkParameters, initialIdentity, moreKeys, keyManagementService, schemaService, persistence)

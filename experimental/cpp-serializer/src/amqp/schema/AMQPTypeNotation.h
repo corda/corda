@@ -5,8 +5,6 @@
 #include <memory>
 #include <types.h>
 
-/******************************************************************************/
-
 #include "Descriptor.h"
 #include "OrderedTypeNotations.h"
 
@@ -31,7 +29,9 @@ namespace amqp::internal::schema {
 
 namespace amqp::internal::schema {
 
-    class AMQPTypeNotation : public AMQPDescribed, public OrderedTypeNotation {
+    class AMQPTypeNotation
+            : public AMQPDescribed, public OrderedTypeNotation
+    {
         public :
             friend std::ostream & operator << (std::ostream &, const AMQPTypeNotation &);
 

@@ -32,7 +32,6 @@ namespace {
 
                 // do we depend on the left hand side
 
-
                 if (std::find (
                         otn.begin(),
                         otn.end(),
