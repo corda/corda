@@ -33,6 +33,7 @@ import kotlin.test.assertNull
  * To execute the test:
  * - Navigate to `resources/net/corda/node/services/key/cryptoservice/azure` and execute `setup_resources.sh`, which creates all the necessary resources.
  * - Replace the variable `clientId` with the value provided in the output of the previous script.
+ * - Replace the <user> part with value of the $USER environment variable in the variables `premiumVault`, `vaultURL` below.
  * - Run the tests
  * - In the end, navigate to `resources/net/corda/node/services/key/cryptoservice/azure` and execute `tear_down_resources.sh`, which removes all the created resources.
  *
@@ -43,9 +44,9 @@ class AzureKeyVaultCryptoServiceTest {
     // you need to change these values to point to your KeyVault
     private val clientId = "<the-client-id>"
     // creating hardware-secured keys requires a KeyVault with a Premium subscription
-    private val premiumVault = "https://premium-corda-keyvault.vault.azure.net/"
+    private val premiumVault = "https://premium-kv-<user>.vault.azure.net/"
     private val path = javaClass.getResource("out.pkcs12").toURI().path
-    private val vaultURL = "https://standard-corda-keyvault.vault.azure.net/"
+    private val vaultURL = "https://kv-<user>.vault.azure.net/"
 
     @Test
     fun `Generate key with the default legal identity scheme, then sign and verify data`() {
