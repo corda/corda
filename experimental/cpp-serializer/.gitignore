@@ -1,0 +1,13 @@
+# Vi files
+.*.swp
+.*.swo
+
+# CMake
+*.cmake
+CMakeCache.txt
+CMakeFiles
+Makefile
+
+# CLion / JetBrains
+.idea
+BLOB-INSPECTOR.cbp

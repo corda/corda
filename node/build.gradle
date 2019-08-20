@@ -1,10 +1,17 @@
+import com.stefano.testing.KubesTest
+
 // Import private compile time constants
 buildscript {
     def properties = new Properties()
     file("$projectDir/src/main/resources/build.properties").withInputStream { properties.load(it) }
 
     ext.jolokia_version = properties.getProperty('jolokiaAgentVersion')
+
+    dependencies {
+        classpath group: 'com.github.docker-java', name: 'docker-java', version: '3.1.5'
+    }
 }
+
 
 plugins {
     id 'com.google.cloud.tools.jib' version '0.9.4'
@@ -46,10 +53,10 @@ sourceSets {
 }
 
 jib.container {
-  mainClass = "net.corda.node.Corda"
-  args = ['--log-to-console', '--no-local-shell', '--config-file=/config/node.conf']
-  // The Groovy string needs to be converted to a `java.lang.String` below.
-  jvmFlags = ['-Xmx1g', "-javaagent:/app/libs/quasar-core-${quasar_version}-jdk8.jar".toString()]
+    mainClass = "net.corda.node.Corda"
+    args = ['--log-to-console', '--no-local-shell', '--config-file=/config/node.conf']
+    // The Groovy string needs to be converted to a `java.lang.String` below.
+    jvmFlags = ['-Xmx1g', "-javaagent:/app/libs/quasar-core-${quasar_version}-jdk8.jar".toString()]
 }
 
 // Use manual resource copying of log4j2.xml rather than source sets.
@@ -74,7 +81,7 @@ dependencies {
     compile project(':common-validation')
     compile project(':common-configuration-parsing')
     compile project(':common-logging')
-    
+
     // Backwards compatibility goo: Apps expect confidential-identities to be loaded by default.
     // We could eventually gate this on a target-version check.
     compile project(':confidential-identities')
@@ -107,7 +114,7 @@ dependencies {
     compile "commons-beanutils:commons-beanutils:${beanutils_version}"
     compile "org.apache.activemq:artemis-server:${artemis_version}"
     compile "org.apache.activemq:artemis-core-client:${artemis_version}"
-    runtime ("org.apache.activemq:artemis-amqp-protocol:${artemis_version}") {
+    runtime("org.apache.activemq:artemis-amqp-protocol:${artemis_version}") {
         // Gains our proton-j version from core module.
         exclude group: 'org.apache.qpid', module: 'proton-j'
     }
@@ -201,6 +208,8 @@ dependencies {
 
     testCompile(project(':test-cli'))
     testCompile(project(':test-utils'))
+
+    testCompile group: 'com.github.docker-java', name: 'docker-java', version: '3.1.5'
 }
 
 tasks.withType(JavaCompile) {
@@ -208,15 +217,10 @@ tasks.withType(JavaCompile) {
     options.compilerArgs << '-proc:none'
 }
 
-test {
-    maxHeapSize = "3g"
-    maxParallelForks = (System.env.CORDA_NODE_TESTING_FORKS == null) ? 1 : "$System.env.CORDA_NODE_TESTING_FORKS".toInteger()
-}
-
 task integrationTest(type: Test) {
     testClassesDirs = sourceSets.integrationTest.output.classesDirs
     classpath = sourceSets.integrationTest.runtimeClasspath
-    maxParallelForks = (System.env.CORDA_NODE_INT_TESTING_FORKS == null) ? 1 :  "$System.env.CORDA_NODE_INT_TESTING_FORKS".toInteger()
+    maxParallelForks = (System.env.CORDA_NODE_INT_TESTING_FORKS == null) ? 1 : "$System.env.CORDA_NODE_INT_TESTING_FORKS".toInteger()
 }
 
 // quasar exclusions upon agent code instrumentation at run-time
@@ -256,8 +260,54 @@ publish {
     name jar.baseName
 }
 
+def getIncludesFromFile(Integer fork, Integer forks) {
+    def file = new File(buildDir, "tests-print.out")
+    def includes = file.exists() ? file.readLines() : Collections.singletonList("*")
+    def numberOfTestsPerFork = includes.size() / forks
+    def ourRangeStart = fork * numberOfTestsPerFork
+    def ourRangeEnd = (ourRangeStart + 2 * numberOfTestsPerFork > includes.size()) ?
+            includes.size() :
+            ourRangeStart + numberOfTestsPerFork
+
+    println "Discovered: $includes"
+    println "I will do ${ourRangeStart.intValue()} -> ${ourRangeEnd.intValue()}"
+    return includes.subList(ourRangeStart.intValue(), ourRangeEnd.intValue())
+}
+
+def getIntProperty(Project proj, String property) {
+    return proj.hasProperty(property) ? Integer.parseInt(proj.property(property).toString()) : 1
+}
+
+test {
+    doFirst {
+        filter {
+            def includes = getIncludesFromFile(getIntProperty(project, "dockerFork"), getIntProperty(project, "dockerForks"))
+            includes.forEach { include ->
+                println "including: $include"
+                includeTestsMatching include
+            }
+        }
+    }
+
+    maxHeapSize = "3g"
+    maxParallelForks = (System.env.CORDA_NODE_TESTING_FORKS == null) ? 1 : "$System.env.CORDA_NODE_TESTING_FORKS".toInteger()
+}
 
 task printIt(type: JavaExec) {
     classpath = sourceSets.test.runtimeClasspath
     main = 'net.corda.JunitPrinter'
+    args buildDir.absolutePath, "$corda_revision"
+}
+
+task dockerTest(type: KubesTest, dependsOn: []) {
+    dockerTag = "6f59dd3432ca"
+}
+
+task runReport(type: com.stefano.testing.KubesReporting) {
+    mustRunAfter dockerTest
+    dependsOn dockerTest
+    reportOn dockerTest.results
+    doFirst {
+        setTestResultDirs(dockerTest.results)
+    }
 }
