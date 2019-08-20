@@ -376,6 +376,7 @@ tasks.withType(Test) {
 task testReport(type: TestReport) {
     destinationDir = file("$buildDir/reports/allTests")
     // Include the results from the `test` task in all subprojects
+
     reportOn subprojects*.test
 }
 
@@ -533,4 +534,38 @@ task buildTestingDockerImage(type: DockerBuildImage) {
     inputDir = new File(".")
     tags = ["$docker_testing_tag"]
     dockerFile = new File(new File("testing"), "Dockerfile")
+}
+
+configurations {
+    antJUnit
+}
+
+dependencies {
+    antJUnit 'org.apache.ant:ant-junit:1.9.7'
+}
+
+task mergeJUnitReports {
+    ext {
+        resultsDir = file("$buildDir/xml-report")
+        targetDir = file("$buildDir/merged-report")
+    }
+
+    doLast {
+        ant.taskdef(name: 'junitreport',
+                classname: 'org.apache.tools.ant.taskdefs.optional.junit.XMLResultAggregator',
+                classpath: configurations.antJUnit.asPath)
+
+        ant.junitreport(todir: resultsDir) {
+            fileset(dir: resultsDir, includes: 'TEST-*.xml')
+            report(todir: targetDir, format: 'frames')
+        }
+    }
+}
+
+subprojects {
+    task copyReport(type: Copy) {
+        from "build/test-results/test"
+        into "$rootDir/build/xml-report"
+    }
+    test.finalizedBy(copyReport)
 }
