@@ -299,7 +299,11 @@ The Float instances run on ``vmFloat1`` and ``vmFloat2`` which are located in th
 
 The SOCKS5 proxy is running on ``vmSocks`` which also resides in the DMZ.
 
-Each of the ``vmInfra1`` and ``vmInfra2`` computers host: ZooKeeper cluster participant, Bridge instance and Artemis cluster participant.
+Each of the ``vmInfra1`` and ``vmInfra2`` computers host: ZooKeeper cluster participant, Bridge instance and Artemis cluster participant:
+
+.. image:: resources/ha/Infra.png
+   :scale: 100%
+   :align: center
 
 To facilitate High Availability requirement deployment is split onto two data centers.
 

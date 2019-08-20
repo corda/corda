@@ -6,8 +6,11 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.*
 import net.corda.core.utilities.contextLogger
 import net.corda.node.NodeRegistrationOption
+import net.corda.node.internal.ConfigurationException
+import net.corda.node.services.config.FreshIdentitiesConfiguration
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.nodeapi.internal.config.CertificateStore
+import net.corda.nodeapi.internal.config.FileBasedCertificateStoreSupplier
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.crypto.*
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_CLIENT_CA
@@ -18,6 +21,7 @@ import net.corda.nodeapi.internal.crypto.X509Utilities.NODE_IDENTITY_ALIAS_PREFI
 import net.corda.nodeapi.internal.cryptoservice.CryptoService
 import net.corda.nodeapi.internal.cryptoservice.CryptoServiceFactory
 import net.corda.nodeapi.internal.cryptoservice.SupportedCryptoServices
+import net.corda.nodeapi.internal.cryptoservice.WrappingMode
 import net.corda.nodeapi.internal.cryptoservice.azure.AzureKeyVaultCryptoService
 import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
 import net.corda.nodeapi.internal.cryptoservice.futurex.FutureXCryptoService
@@ -340,7 +344,10 @@ class NodeRegistrationConfiguration (
         val certificatesDirectory: Path,
         val emailAddress: String,
         val cryptoService: CryptoService,
-        val certificateStore: CertificateStore) {
+        val certificateStore: CertificateStore,
+        val freshIdentitiesConfiguration: FreshIdentitiesConfiguration?,
+        val wrappingKeyStorePath: Path,
+        val signingCertificateStore: FileBasedCertificateStoreSupplier) {
 
     constructor(config: NodeConfiguration) : this(
             p2pSslOptions = config.p2pSslOptions,
@@ -350,7 +357,10 @@ class NodeRegistrationConfiguration (
             certificatesDirectory = config.certificatesDirectory,
             emailAddress = config.emailAddress,
             cryptoService = CryptoServiceFactory.makeCryptoService(config.cryptoServiceName ?: SupportedCryptoServices.BC_SIMPLE, config.myLegalName, config.signingCertificateStore, config.cryptoServiceConf),
-            certificateStore = config.signingCertificateStore.get(true)
+            certificateStore = config.signingCertificateStore.get(true),
+            freshIdentitiesConfiguration = config.freshIdentitiesConfiguration,
+            wrappingKeyStorePath = config.wrappingKeyStorePath,
+            signingCertificateStore = config.signingCertificateStore
     )
 }
 
@@ -469,6 +479,35 @@ class NodeRegistrationHelper(
 
     private fun principalMatchesCertificatePrincipal(principal: X500Principal, certificate: X509Certificate): Boolean {
         return certificate.subjectX500Principal.isEquivalentTo(principal)
+    }
+
+    fun generateWrappingKey() {
+        createWrappingCryptoService()?.let {
+            val masterKeyAlias = config.freshIdentitiesConfiguration?.masterKeyAlias
+                    ?: throw ConfigurationException("Fresh Identities is configured but masterKeyAlias missing")
+            if (it.containsKey(masterKeyAlias)) {
+                logProgress("Confidential identity wrapping key already exists, will use existing key")
+                return
+            }
+            it.createWrappingKey(masterKeyAlias, true)
+            logProgress("Confidential identity wrapping key created")
+        }
+    }
+
+    private fun createWrappingCryptoService(): CryptoService? {
+        return config.freshIdentitiesConfiguration?.let {
+            val cryptoServiceConfigBlock = it.cryptoServiceConfiguration
+            val wrappingCryptoService = CryptoServiceFactory.makeCryptoService(cryptoServiceConfigBlock.cryptoServiceName, config.myLegalName,
+                    config.signingCertificateStore, cryptoServiceConfigBlock.cryptoServiceConf, config.wrappingKeyStorePath)
+            verifyConfiguredModeIsSupported(it.mode, wrappingCryptoService, cryptoServiceConfigBlock.cryptoServiceName)
+            wrappingCryptoService
+        }
+    }
+
+    private fun verifyConfiguredModeIsSupported(mode: WrappingMode, cryptoService: CryptoService, cryptoServiceLabel: SupportedCryptoServices) {
+        if (cryptoService.getWrappingMode() != mode) {
+            throw ConfigurationException("The crypto service configured for fresh identities ($cryptoServiceLabel) supports the ${cryptoService.getWrappingMode()} mode, but the node is configured to use $mode")
+        }
     }
 }
 

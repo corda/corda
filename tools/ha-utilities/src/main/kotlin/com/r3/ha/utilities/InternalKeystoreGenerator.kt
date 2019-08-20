@@ -1,8 +1,6 @@
 package com.r3.ha.utilities
 
-import net.corda.cliutils.CliWrapperBase
 import net.corda.cliutils.CommonCliConstants.BASE_DIR
-import net.corda.cliutils.ExitCodes
 import net.corda.core.crypto.Crypto
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.div
@@ -33,7 +31,9 @@ private val hsmOptionMap = mapOf(
         's' to SupportedCryptoServices.PRIMUS_X)
 
 class InternalArtemisKeystoreGenerator : AbstractInternalKeystoreGenerator("generate-internal-artemis-ssl-keystores", "Generate self-signed root and SSL certificates for internal communication between the services and external Artemis broker.") {
-
+    companion object {
+        private val logger by lazy { contextLogger() }
+    }
 
     @Option(names = ["--hsm-name", "-m"],
             description = ["The HSM name. One of ${HSM_LIST}. The first x characters to uniquely identify the name is adequate (case insensitive)"])
@@ -43,7 +43,7 @@ class InternalArtemisKeystoreGenerator : AbstractInternalKeystoreGenerator("gene
 
 
     override fun createKeyStores() {
-        println("Generating Artemis keystores")
+        logger.info("Generating Artemis keystores")
         if (errorInHSMOptions(cryptoServiceName, cryptoServiceConfigFile, "Error in HSM options for Artemis key")) {
             throw IllegalArgumentException("Error in HSM options for Artemis key")
         }
@@ -79,6 +79,9 @@ class InternalArtemisKeystoreGenerator : AbstractInternalKeystoreGenerator("gene
 }
 
 class InternalTunnelKeystoreGenerator : AbstractInternalKeystoreGenerator("generate-internal-tunnel-ssl-keystores", "Generate self-signed root and SSL certificates for internal communication between Bridge and Float.") {
+    companion object {
+        private val logger by lazy { contextLogger() }
+    }
 
         @Option(names = ["--float-hsm-name", "-m"],
                 description = ["The HSM name for the Float. One of ${HSM_LIST}. The first x characters to uniquely identify the name is adequate (case insensitive)"])
@@ -99,7 +102,7 @@ class InternalTunnelKeystoreGenerator : AbstractInternalKeystoreGenerator("gener
     lateinit var entryPassword: String
 
     override fun createKeyStores() {
-        println("Generating Tunnel keystores")
+        logger.info("Generating Tunnel keystores")
 
         if (errorInHSMOptions(cryptoServiceNameFloat, cryptoServiceConfigFileFloat, "Error in HSM options for Float")) {
             throw IllegalArgumentException("Error in HSM options for Float")
@@ -128,7 +131,7 @@ class InternalTunnelKeystoreGenerator : AbstractInternalKeystoreGenerator("gener
     }
 }
 
-abstract class AbstractInternalKeystoreGenerator(alias: String, description: String) : CliWrapperBase(alias, description) {
+abstract class AbstractInternalKeystoreGenerator(alias: String, description: String) : HAToolBase(alias, description) {
 
     @Option(names = ["-b", BASE_DIR], description = ["The node working directory where all the files are kept."])
     var baseDirectory: Path = Paths.get(".").toAbsolutePath().normalize()
@@ -151,24 +154,19 @@ abstract class AbstractInternalKeystoreGenerator(alias: String, description: Str
         private val logger by lazy { contextLogger() }
     }
 
-    override fun runProgram(): Int {
+    override val driversParentDir: Path? get() = baseDirectory
 
-        if (!HAUtilities.addJarsInDriversDirectoryToSystemClasspath(baseDirectory)) {
-            HAUtilities.addJarsInDriversDirectoryToSystemClasspath(Paths.get("."))
-        }
-
+    override fun runTool() {
         createKeyStores()
 
         listOf(keyStorePassword to "keyStorePassword", trustStorePassword to "trustStorePassword").forEach {
             warnOnDefaultPassword(it.first, it.second)
         }
-
-        return ExitCodes.SUCCESS
     }
 
     protected fun warnOnDefaultPassword(password: String, paramName: String) {
         if (password == DEFAULT_PASSWORD) {
-            println("WARN: Password for '$paramName' is defaulted to '$DEFAULT_PASSWORD'. Please consider changing the password using java keytool.")
+            logger.warn("Password for '$paramName' is defaulted to '$DEFAULT_PASSWORD'. Please consider changing the password using java keytool.")
         }
     }
 
@@ -179,10 +177,10 @@ abstract class AbstractInternalKeystoreGenerator(alias: String, description: Str
         keystore.update {
             setPrivateKey(X509Utilities.CORDA_ROOT_CA, key.private, listOf(rootCert), entryPassword)
         }
-        println("$commonName keystore created in $keystorePath.")
+        logger.info("$commonName keystore created in $keystorePath.")
 
         X509KeyStore.fromFile(trustStorePath, trustStorePassword, createNew = true).setCertificate(X509Utilities.CORDA_ROOT_CA, rootCert)
-        println("$commonName truststore created in $trustStorePath.")
+        logger.info("$commonName truststore created in $trustStorePath.")
 
         return keystore
     }
@@ -206,7 +204,7 @@ abstract class AbstractInternalKeystoreGenerator(alias: String, description: Str
         val keyStore = CertificateStore.fromFile(keystorePath, storePassword, entryPassword, createNew = true)
         keyStore.setCertPathOnly(alias, listOf(cert, root.certificate))
         keyStore.value.save()
-        println("Internal TLS keystore for '$serviceName' created in $keystorePath.")
+        logger.info("Internal TLS keystore for '$serviceName' created in $keystorePath.")
     }
 
     private fun getX500Principal(commonName: String): X500Principal {
@@ -221,18 +219,13 @@ abstract class AbstractInternalKeystoreGenerator(alias: String, description: Str
                             keystorePath: Path, storePassword: String, entryPassword: String, x500Name: CordaX500Name): CryptoService {
 
         val supportedCryptoServiceName = resolveCryptoServiceName(cryptoServiceName)
-        try {
-            val certificateStoreSupplier = when (supportedCryptoServiceName) {
-                SupportedCryptoServices.BC_SIMPLE -> FileBasedCertificateStoreSupplier(keystorePath, storePassword, entryPassword)
-                else -> null
-            }
-            return CryptoServiceFactory.makeCryptoService(supportedCryptoServiceName, x500Name, certificateStoreSupplier, cryptoServiceConfigPath)
+        logger.logCryptoServiceName(supportedCryptoServiceName, x500Name)
+        val certificateStoreSupplier = when (supportedCryptoServiceName) {
+            SupportedCryptoServices.BC_SIMPLE -> FileBasedCertificateStoreSupplier(keystorePath, storePassword, entryPassword)
+            else -> null
         }
-        catch (ex: NoClassDefFoundError) {
-            logger.error ("Caught a NoClassDefFoundError exception when trying to load the ${supportedCryptoServiceName.name} crypto service")
-            logger.error("Please check that the ${baseDirectory / "drivers"} directory contains the client side jar for the HSM")
-            throw ex
-        }
+        logger.logConfigPath(cryptoServiceConfigPath)
+        return CryptoServiceFactory.makeCryptoService(supportedCryptoServiceName, x500Name, certificateStoreSupplier, cryptoServiceConfigPath)
     }
 
     fun resolveCryptoServiceName(cryptoServiceName: String?): SupportedCryptoServices {
@@ -245,13 +238,13 @@ abstract class AbstractInternalKeystoreGenerator(alias: String, description: Str
     // When we move to Picocli 4.0 delete this and use @ArgGroup instead.
     fun errorInHSMOptions(hsmName: String?, hsmConfigFile: Path?, prefix: String): Boolean {
         if (hsmName.isNullOrBlank() && hsmConfigFile != null) {
-            System.out.println(prefix)
-            System.out.println("If the HSM config file option is specified the HSM name option must also be specified")
+            logger.error(prefix)
+            logger.error("If the HSM config file option is specified the HSM name option must also be specified")
             return true
         }
         if (!hsmName.isNullOrBlank() && hsmConfigFile == null) {
-            System.out.println(prefix)
-            System.out.println("If the HSM name option is specified the HSM config file option must also be specified")
+            logger.error(prefix)
+            logger.error("If the HSM name option is specified the HSM config file option must also be specified")
             return true
         }
         return false
