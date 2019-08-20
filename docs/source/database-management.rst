@@ -9,10 +9,12 @@ Database management scripts
 
 Corda - the platform, and the installed CorDapps store their data in a relational database (see :doc:`api-persistence`).
 When a new CorDapp is installed, associated tables, indexes, foreign-keys, etc. must be created.
-Similarly, when a new version of a CorDapp is installed, its database schemas may have changed,
+Similarly, when a new version of a CorDapp is installed, its database schema may have changed,
 but the existing data needs to be preserved or changed accordingly.
 
-In Corda Enteprise, CorDapps' custom tables are created or upgraded automatically using :ref:`Liquibase <liquibase_ref>`.
+In Corda Enteprise, CorDapps' custom tables are created or upgraded automatically based on
+Database Management Scripts written in :ref:`Liquibase <liquibase_ref>` format and embedded in CorDapp JARs.
+For Corda Enterpise, any CorDapp having custom tables (``MappedSchema``)  needs to contain a matching Database Management Script, the script should be created during CorDapp development.
 
 Scripts structure
 -----------------
@@ -20,7 +22,7 @@ Scripts structure
 The ``MappedSchema`` class should have a matching Liquibase script defining a table creation.
 Liquibase scripts use declarative set of XML tags and attributes to express DDL in a cross database vendor way.
 The script can also be written in SQL, however this doesn't guarantee compatibility across different database vendors.
-Liquibase script code is grouped in a units called ``changeSet``s,
+Liquibase script code is grouped in a units called ``changeSet``\ s,
 a single ``changeSet`` should contain instructions to create/update/delete a single table.
 
 Database table creation
