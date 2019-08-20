@@ -14,7 +14,7 @@
 #include "Composite.h"
 #include "amqp/schema/restricted-types/Restricted.h"
 #include "amqp/schema/OrderedTypeNotations.h"
-#include "AMQPDescribed.h"
+#include "amqp/AMQPDescribed.h"
 
 #include "proton/proton_wrapper.h"
 #include "AMQPDescriptorRegistory.h"
@@ -28,13 +28,13 @@
 namespace {
 
     /**
-     * Look up a described type by its ID in the AMQPDescriptorRegistory and
-     * return the coresponding schema type. Specialised below to avoid
+     * Look up a described type by its ID in the AMQPDescriptorRegistry and
+     * return the corresponding schema type. Specialised below to avoid
      * the cast and re-owning of the unigue pointer when we're happy
-     * with a simple std::unique_ptr<AMQPDescribed>
+     * with a simple uPtr<AMQPDescribed>
      */
     template<class T>
-    std::unique_ptr<T>
+    uPtr<T>
     dispatchDescribed (pn_data_t * data_) {
         proton::is_described(data_);
         proton::auto_enter p (data_);
@@ -42,7 +42,7 @@ namespace {
 
         auto id = pn_data_get_ulong(data_);
 
-        return std::unique_ptr<T> (
+        return uPtr<T> (
               static_cast<T *>(amqp::AMQPDescriptorRegistory[id]->build(data_).release()));
     }
 
@@ -83,7 +83,7 @@ namespace {
  *
  ******************************************************************************/
 
-std::unique_ptr<amqp::internal::AMQPDescribed>
+uPtr<amqp::AMQPDescribed>
 amqp::internal::
 EnvelopeDescriptor::build(pn_data_t * data_) const {
     DBG ("ENVELOPE" << std::endl); // NOLINT
@@ -103,7 +103,7 @@ EnvelopeDescriptor::build(pn_data_t * data_) const {
     pn_data_next (data_);
 
     /*
-     * The scehama
+     * The schema
      */
     auto schema = dispatchDescribed<schema::Schema> (data_);
 
@@ -120,7 +120,7 @@ EnvelopeDescriptor::build(pn_data_t * data_) const {
 
 /******************************************************************************/
 
-std::unique_ptr<amqp::internal::AMQPDescribed>
+uPtr<amqp::AMQPDescribed>
 amqp::internal::
 SchemaDescriptor::build(pn_data_t * data_) const {
     DBG ("SCHEMA" << std::endl); // NOLINT
@@ -156,7 +156,7 @@ SchemaDescriptor::build(pn_data_t * data_) const {
 /**
  * 
  */
-std::unique_ptr<amqp::internal::AMQPDescribed>
+uPtr<amqp::AMQPDescribed>
 amqp::internal::
 ObjectDescriptor::build(pn_data_t * data_) const {
     DBG ("DESCRIPTOR" << std::endl); // NOLINT
@@ -176,7 +176,7 @@ ObjectDescriptor::build(pn_data_t * data_) const {
  *
  ******************************************************************************/
 
-std::unique_ptr<amqp::internal::AMQPDescribed>
+uPtr<amqp::AMQPDescribed>
 amqp::internal::
 FieldDescriptor::build(pn_data_t * data_) const {
     DBG ("FIELD" << std::endl); // NOLINT
@@ -186,12 +186,12 @@ FieldDescriptor::build(pn_data_t * data_) const {
     proton::auto_enter ae (data_);
 
     /* name: String */
-    auto name = proton::get_string(data_);
+    auto name = proton::get_string (data_);
 
     pn_data_next(data_);
 
     /* type: String */
-    auto type = proton::get_string(data_);
+    auto type = proton::get_string (data_);
 
     pn_data_next(data_);
 
@@ -207,18 +207,18 @@ FieldDescriptor::build(pn_data_t * data_) const {
     pn_data_next(data_);
 
     /* default: String? */
-    auto def = proton::get_string(data_, true);
+    auto def = proton::get_string (data_, true);
 
     pn_data_next(data_);
 
     /* label: String? */
-    auto label = proton::get_string(data_, true);
+    auto label = proton::get_string (data_, true);
 
     pn_data_next(data_);
 
     /* mandatory: Boolean - copes with the Kotlin concept of nullability.
        If something is mandatory then it cannot be null */
-    auto mandatory = proton::get_boolean(data_);
+    auto mandatory = proton::get_boolean (data_);
 
     pn_data_next(data_);
 
@@ -235,9 +235,9 @@ FieldDescriptor::build(pn_data_t * data_) const {
  *
  ******************************************************************************/
 
-std::unique_ptr<amqp::internal::AMQPDescribed>
+uPtr<amqp::AMQPDescribed>
 amqp::internal::
-CompositeDescriptor::build(pn_data_t * data_) const {
+CompositeDescriptor::build (pn_data_t * data_) const {
     DBG ("COMPOSITE" << std::endl); // NOLINT
 
     validateAndNext(data_);
@@ -250,7 +250,7 @@ CompositeDescriptor::build(pn_data_t * data_) const {
     pn_data_next(data_);
 
     /* Label Name - Nullable String */
-    auto label = proton::get_string(data_, true);
+    auto label = proton::get_string (data_, true);
 
     pn_data_next(data_);
 
@@ -271,11 +271,11 @@ CompositeDescriptor::build(pn_data_t * data_) const {
     pn_data_next(data_);
 
     /* fields: List<Described>*/
-    std::vector<std::unique_ptr<schema::Field>> fields;
+    std::vector<uPtr<schema::Field>> fields;
     fields.reserve (pn_data_get_list (data_));
     {
         proton::auto_list_enter p2 (data_);
-        while (pn_data_next(data_)) {
+        while (pn_data_next (data_)) {
             fields.emplace_back (dispatchDescribed<schema::Field>(data_));
         }
     }
@@ -301,9 +301,9 @@ CompositeDescriptor::build(pn_data_t * data_) const {
  *
  ******************************************************************************/
 
-std::unique_ptr<amqp::internal::AMQPDescribed>
+uPtr<amqp::AMQPDescribed>
 amqp::internal::
-RestrictedDescriptor::build(pn_data_t * data_) const {
+RestrictedDescriptor::build (pn_data_t * data_) const {
     DBG ("RESTRICTED" << std::endl); // NOLINT
     validateAndNext(data_);
 
@@ -322,8 +322,8 @@ RestrictedDescriptor::build(pn_data_t * data_) const {
 
     pn_data_next (data_);
 
-    auto source = proton::readAndNext<std::string>(data_);
-    auto descriptor = dispatchDescribed<schema::Descriptor>(data_);
+    auto source = proton::readAndNext<std::string> (data_);
+    auto descriptor = dispatchDescribed<schema::Descriptor> (data_);
 
     // SKIP the choices section **FOR NOW**
 
@@ -337,62 +337,62 @@ RestrictedDescriptor::build(pn_data_t * data_) const {
  *
  ******************************************************************************/
 
-std::unique_ptr<amqp::internal::AMQPDescribed>
+uPtr<amqp::AMQPDescribed>
 amqp::internal::
-ChoiceDescriptor::build(pn_data_t * data_) const {
+ChoiceDescriptor::build (pn_data_t * data_) const {
     validateAndNext(data_);
 
     DBG ("CHOICE " << data_ << std::endl); // NOLINT
 
-    return std::unique_ptr<amqp::internal::AMQPDescribed> (nullptr);
+    return uPtr<amqp::AMQPDescribed> (nullptr);
 }
 
 /******************************************************************************/
 
-std::unique_ptr<amqp::internal::AMQPDescribed>
+uPtr<amqp::AMQPDescribed>
 amqp::internal::
-ReferencedObjectDescriptor::build(pn_data_t * data_) const {
-    validateAndNext(data_);
+ReferencedObjectDescriptor::build (pn_data_t * data_) const {
+    validateAndNext (data_);
 
     DBG ("REFERENCED OBJECT " << data_ << std::endl); // NOLINT
 
-    return std::unique_ptr<amqp::internal::AMQPDescribed> (nullptr);
+    return uPtr<amqp::AMQPDescribed> (nullptr);
 }
 
 /******************************************************************************/
 
-std::unique_ptr<amqp::internal::AMQPDescribed>
+uPtr<amqp::AMQPDescribed>
 amqp::internal::
-TransformSchemaDescriptor::build(pn_data_t * data_) const {
-    validateAndNext(data_);
+TransformSchemaDescriptor::build (pn_data_t * data_) const {
+    validateAndNext (data_);
 
     DBG ("TRANSFORM SCHEMA " << data_ << std::endl); // NOLINT
 
-    return std::unique_ptr<amqp::internal::AMQPDescribed> (nullptr);
+    return uPtr<amqp::AMQPDescribed> (nullptr);
 }
 
 /******************************************************************************/
 
-std::unique_ptr<amqp::internal::AMQPDescribed>
+uPtr<amqp::AMQPDescribed>
 amqp::internal::
-TransformElementDescriptor::build(pn_data_t * data_) const {
-    validateAndNext(data_);
+TransformElementDescriptor::build (pn_data_t * data_) const {
+    validateAndNext (data_);
 
     DBG ("TRANSFORM ELEMENT " << data_ << std::endl); // NOLINT
 
-    return std::unique_ptr<amqp::internal::AMQPDescribed> (nullptr);
+    return uPtr<amqp::AMQPDescribed> (nullptr);
 }
 
 /******************************************************************************/
 
-std::unique_ptr<amqp::internal::AMQPDescribed>
+uPtr<amqp::AMQPDescribed>
 amqp::internal::
-TransformElementKeyDescriptor::build(pn_data_t * data_) const {
-    validateAndNext(data_);
+TransformElementKeyDescriptor::build (pn_data_t * data_) const {
+    validateAndNext (data_);
 
     DBG ("TRANSFORM ELEMENT KEY" << data_ << std::endl); // NOLINT
 
-    return std::unique_ptr<amqp::internal::AMQPDescribed> (nullptr);
+    return uPtr<amqp::AMQPDescribed> (nullptr);
 }
 
 /******************************************************************************/
