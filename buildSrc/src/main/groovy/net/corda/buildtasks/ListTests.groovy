@@ -9,8 +9,9 @@ import org.gradle.api.tasks.TaskAction
 
 class ListTests extends DefaultTask {
 
-    boolean file = true
-    String outputFilePrefix = "tests"
+    long randomSeed = 0
+    int workers = 1
+    int workerId = 0
 
     ListTests() {
         project.afterEvaluate {
@@ -25,39 +26,35 @@ class ListTests extends DefaultTask {
 
     @TaskAction
     def listTests() {
+        if (workerId >= workers) throw new IllegalStateException("workerId cannot be >= workers")
+
+        Random rnd = new Random(randomSeed)
         project.getConvention()
                 .getPlugin(JavaPluginConvention)
                 .sourceSets
                 .findAll { it.name.toLowerCase().contains("test") }
                 .forEach { ss ->
                     logger.info("Processing source set: {}", ss.name)
-                    if (file) {
-                        File reportsDir = new File(project.buildDir, "reports/tests")
-                        reportsDir.mkdirs()
-                        new File(reportsDir, outputFilePrefix + "-" + ss.name)
-                                .withWriter("utf-8") {
-                                    writeTests(ss, it)
-                                }
-                    } else {
-                        writeTests(ss, new PrintWriter(System.out, true))
-                    }
+                    List<String> tests = scanTests(ss)
+                    Collections.shuffle(tests, rnd)
+                    String extKey = project.path + "-" + ss.name
+                    tests = tests.withIndex()
+                            .findAll { Tuple2<String, Integer> ii -> ii.getSecond() % workers == workerId }
+                            .collect { it.first }
+                    extensions.add(extKey, tests)
+                    if (logger.isDebugEnabled())
+                        logger.debug("Exposing tests with extension key {}: {}", extKey, tests.join("\n"))
                 }
     }
 
-    def writeTests(SourceSet ss, Writer writer) {
-        new ClassGraph()
+    List<String> scanTests(SourceSet ss) {
+        return new ClassGraph()
                 .enableClassInfo()
                 .enableMethodInfo()
                 .enableAnnotationInfo()
                 .overrideClasspath(ss.output.classesDirs)
                 .scan()
                 .getClassesWithMethodAnnotation("org.junit.Test")
-                .collect { ClassInfo c ->
-                    c.getDeclaredMethodInfo()
-                            .findAll { mi -> mi.hasAnnotation("org.junit.Test") }
-                            .collect { mi -> c.getName() + "." + mi.getName() }
-                }
-                .flatten()
-                .forEach { writer.println it }
+                .collect { ClassInfo c -> c.getName() + ".*" }
     }
 }

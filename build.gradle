@@ -173,9 +173,6 @@ plugins {
     id 'com.bmuschko.docker-remote-api' version '5.0.0'
 }
 
-ext {
-}
-
 apply plugin: 'project-report'
 apply plugin: 'com.github.ben-manes.versions'
 apply plugin: 'net.corda.plugins.publish-utils'
@@ -331,7 +328,12 @@ allprojects {
         }
     }
 
-    task listTests(type: ListTests)
+    task listTests(type: ListTests) {
+        // TODO set parameters
+        randomSeed = 0
+        workers = 1
+        workerId = 0
+    }
 }
 
 // Check that we are running on a Java 8 JDK. The source/targetCompatibility values above aren't sufficient to
