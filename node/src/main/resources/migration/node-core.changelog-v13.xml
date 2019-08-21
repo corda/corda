@@ -6,7 +6,7 @@
 
     <changeSet author="R3.Corda" id="add_status_column">
         <addColumn tableName="node_transactions">
-            <column name="status" type="NVARCHAR(255)" defaultValue="V">
+            <column name="status" type="NVARCHAR(1)" defaultValue="V">
                 <constraints nullable="false"/>
             </column>
         </addColumn>

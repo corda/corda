@@ -44,7 +44,7 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
             @Column(name = "transaction_value", nullable = false)
             val transaction: ByteArray,
 
-            @Column(name = "status", nullable = false)
+            @Column(name = "status", nullable = false, length = 1)
             @Convert(converter = TransactionStatusConverter::class)
             val status: TransactionStatus
     )
