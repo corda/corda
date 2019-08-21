@@ -1,5 +1,7 @@
 package net.corda.node.services.rpc
 
+import net.corda.client.rpc.CordaRPCClient
+import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.client.rpc.internal.ReconnectingCordaRPCOps
 import net.corda.client.rpc.notUsed
 import net.corda.core.contracts.Amount
@@ -10,10 +12,7 @@ import net.corda.core.node.services.Vault
 import net.corda.core.node.services.vault.PageSpecification
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.node.services.vault.builder
-import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.OpaqueBytes
-import net.corda.core.utilities.contextLogger
-import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.*
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashIssueAndPaymentFlow
 import net.corda.finance.schemas.CashSchemaV1
@@ -28,6 +27,7 @@ import net.corda.testing.driver.internal.OutOfProcessImpl
 import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.FINANCE_CORDAPPS
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 import java.util.*
 import java.util.concurrent.CountDownLatch
@@ -99,7 +99,7 @@ class RpcReconnectTests {
             fun startBankA(address: NetworkHostAndPort) = startNode(providedName = DUMMY_BANK_A_NAME, rpcUsers = listOf(demoUser), customOverrides = mapOf("rpcSettings.address" to address.toString()))
             fun startProxy(addressPair: AddressPair) = RandomFailingProxy(serverPort = addressPair.proxyAddress.port, remotePort = addressPair.nodeAddress.port).start()
 
-            val addresses = (1..3).map { getRandomAddressPair() }
+            val addresses = (1..2).map { getRandomAddressPair() }
             currentAddressPair = addresses[0]
 
             proxy = startProxy(currentAddressPair)
@@ -115,7 +115,11 @@ class RpcReconnectTests {
 
             val addressesForRpc = addresses.map { it.proxyAddress }
             // DOCSTART rpcReconnectingRPC
-            val bankAReconnectingRpc = ReconnectingCordaRPCOps(addressesForRpc, demoUser.username, demoUser.password)
+            val client = CordaRPCClient(addressesForRpc, CordaRPCClientConfiguration.DEFAULT.copy(
+                    maxReconnectAttempts = 3,
+                    connectionRetryInterval = 2.seconds
+            ))
+            val bankAReconnectingRpc = client.start(demoUser.username, demoUser.password, gracefulReconnect = true).proxy as ReconnectingCordaRPCOps
             // DOCEND rpcReconnectingRPC
 
             // Observe the vault and collect the observations.
@@ -188,7 +192,7 @@ class RpcReconnectTests {
                             log.info("Performing failover to a different node")
                             node.stop()
                             proxy.stop()
-                            currentAddressPair = addresses[Random().nextInt(addresses.size)]
+                            currentAddressPair = (addresses - currentAddressPair).first()
                             node = startBankA(currentAddressPair.nodeAddress).get()
                             proxy = startProxy(currentAddressPair)
                         }
@@ -288,7 +292,7 @@ class RpcReconnectTests {
             // Check that enough vault events were received.
             // This check is fuzzy because events can go missing during node restarts.
             // Ideally there should be nrOfFlowsToRun events receive but some might get lost for each restart.
-            assertTrue(vaultEvents!!.size + nrFailures * 3 >= NUMBER_OF_FLOWS_TO_RUN, "Not all vault events were received")
+            assertThat(vaultEvents!!.size + nrFailures * 3).isGreaterThanOrEqualTo(NUMBER_OF_FLOWS_TO_RUN)
             // DOCEND missingVaultEvents
 
             // Check that no flow was triggered twice.
