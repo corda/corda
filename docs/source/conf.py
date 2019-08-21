@@ -23,7 +23,9 @@ corda_substitutions = {
     "|kotlin_version|" : constants_properties_dict["kotlinVersion"],
     "|gradle_plugins_version|" : constants_properties_dict["gradlePluginsVersion"],
     "|quasar_version|" : constants_properties_dict["quasarVersion"],
-    "|platform_version|" : constants_properties_dict["platformVersion"]
+    "|platform_version|" : constants_properties_dict["platformVersion"],
+    "|os_branch|" : constants_properties_dict["openSourceBranch"],
+    "|os_samples_branch|" : constants_properties_dict["openSourceSamplesBranch"]
 }
 
 def setup(app):
@@ -146,8 +148,13 @@ html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
-# html_theme_options = {}
 
+html_theme_options = {
+    'includehidden':True,
+    'collapse_navigation':False,
+    'sticky_navigation':True,
+    'titles_only':True
+}
 # Add any paths that contain custom themes here, relative to this directory.
 # html_theme_path = []
 
@@ -285,4 +292,3 @@ latex_elements = {
 
     'extraclassoptions' : 'openany',
 }
-

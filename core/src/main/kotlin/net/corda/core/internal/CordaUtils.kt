@@ -100,7 +100,7 @@ object RetrieveAnyTransactionPayload : ArrayList<Any>()
 private fun owns(packageName: String, fullClassName: String): Boolean = fullClassName.startsWith("$packageName.", ignoreCase = true)
 
 /** Returns the public key of the package owner of the [contractClassName], or null if not owned. */
-internal fun NetworkParameters.getPackageOwnerOf(contractClassName: ContractClassName): PublicKey? {
+fun NetworkParameters.getPackageOwnerOf(contractClassName: ContractClassName): PublicKey? {
     return packageOwnership.entries.singleOrNull { owns(it.key, contractClassName) }?.value
 }
 

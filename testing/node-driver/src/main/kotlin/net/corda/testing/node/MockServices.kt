@@ -6,6 +6,7 @@ import net.corda.core.contracts.ContractClassName
 import net.corda.core.contracts.StateRef
 import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.internal.AliasPrivateKey
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.CordaX500Name
@@ -21,16 +22,17 @@ import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.VersionInfo
-import net.corda.nodeapi.internal.cordapp.CordappLoader
 import net.corda.node.internal.ServicesForResolutionImpl
 import net.corda.node.internal.cordapp.JarScanningCordappLoader
 import net.corda.node.services.api.*
 import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.services.identity.PersistentIdentityService
-import net.corda.node.services.keys.PersistentKeyManagementService
+import net.corda.node.services.keys.BasicHSMKeyManagementService
+import net.corda.node.services.persistence.PublicKeyToOwningIdentityCacheImpl
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
 import net.corda.node.services.vault.NodeVaultService
+import net.corda.nodeapi.internal.cordapp.CordappLoader
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.contextTransaction
@@ -75,7 +77,11 @@ open class MockServices private constructor(
         private val initialNetworkParameters: NetworkParameters,
         private val initialIdentity: TestIdentity,
         private val moreKeys: Array<out KeyPair>,
-        override val keyManagementService: KeyManagementService = MockKeyManagementService(identityService, *arrayOf(initialIdentity.keyPair) + moreKeys)
+        override val keyManagementService: KeyManagementService = MockKeyManagementService(
+                identityService,
+                *arrayOf(initialIdentity.keyPair) + moreKeys,
+                pkToIdCache = MockPublicKeyToOwningIdentityCache()
+        )
 ) : ServiceHub {
 
     companion object {
@@ -120,7 +126,11 @@ open class MockServices private constructor(
             val dataSourceProps = makeTestDataSourceProperties()
             val schemaService = NodeSchemaService(cordappLoader.cordappSchemas)
             val database = configureDatabase(dataSourceProps, DatabaseConfig(), identityService::wellKnownPartyFromX500Name, identityService::wellKnownPartyFromAnonymous, schemaService, schemaService.internalSchemas())
-            val keyManagementService = MockKeyManagementService(identityService, *arrayOf(initialIdentity.keyPair) + moreKeys)
+            val keyManagementService = MockKeyManagementService(
+                    identityService,
+                    *arrayOf(initialIdentity.keyPair) + moreKeys,
+                    pkToIdCache = MockPublicKeyToOwningIdentityCache()
+            )
             val mockService = database.transaction {
                 makeMockMockServices(cordappLoader, identityService, networkParameters, initialIdentity, moreKeys.toSet(), keyManagementService, schemaService, database)
             }
@@ -163,8 +173,24 @@ open class MockServices private constructor(
             // Create a persistent key management service and add the key pair which was created for the TestIdentity.
             // We only add the keypair for the initial identity and any other keys which this node may control. Note: We don't add the keys
             // for the other identities.
-            val keyManagementService = PersistentKeyManagementService(TestingNamedCacheFactory(), identityService, persistence)
-            persistence.transaction { keyManagementService.start(moreKeys + initialIdentity.keyPair) }
+            val pkToIdCache = PublicKeyToOwningIdentityCacheImpl(persistence, TestingNamedCacheFactory())
+            val aliasKeyMap = mutableMapOf<String, KeyPair>()
+            val aliasedMoreKeys = moreKeys.mapIndexed { index, keyPair ->
+                val alias = "Extra key $index"
+                aliasKeyMap[alias] = keyPair
+                KeyPair(keyPair.public, AliasPrivateKey(alias))
+            }.toSet()
+            val identityAlias = "${initialIdentity.name} private key"
+            aliasKeyMap[identityAlias] = initialIdentity.keyPair
+            val aliasedIdentityKey = KeyPair(initialIdentity.publicKey, AliasPrivateKey(identityAlias))
+            val keyManagementService = BasicHSMKeyManagementService(
+                    TestingNamedCacheFactory(),
+                    identityService,
+                    persistence,
+                    MockCryptoService(aliasKeyMap),
+                    pkToIdCache
+            )
+            persistence.transaction { keyManagementService.start(aliasedMoreKeys + aliasedIdentityKey) }
 
             val mockService = persistence.transaction {
                 makeMockMockServices(cordappLoader, identityService, networkParameters, initialIdentity, moreKeys, keyManagementService, schemaService, persistence)
@@ -186,11 +212,14 @@ open class MockServices private constructor(
                 override var networkParametersService: NetworkParametersService = MockNetworkParametersStorage(networkParameters)
                 override val vaultService: VaultService = makeVaultService(schemaService, persistence, cordappLoader)
                 override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
-                    ServiceHubInternal.recordTransactions(statesToRecord, txs,
+                    ServiceHubInternal.recordTransactions(
+                            statesToRecord,
+                            txs as? Collection ?: txs.toList(),
                             validatedTransactions as WritableTransactionStorage,
                             mockStateMachineRecordedTransactionMappingStorage,
                             vaultService as VaultServiceInternal,
-                            persistence)
+                            persistence
+                    )
                 }
 
                 override fun jdbcSession(): Connection = persistence.createSession()

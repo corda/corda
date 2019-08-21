@@ -12,6 +12,7 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.node.NetworkParameters
+import net.corda.core.node.NodeDiagnosticInfo
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.NetworkMapCache
@@ -279,6 +280,11 @@ interface CordaRPCOps : RPCOps {
 
     /** Returns Node's NodeInfo, assuming this will not change while the node is running. */
     fun nodeInfo(): NodeInfo
+
+    /**
+     * Returns Node's NodeDiagnosticInfo, including the version details as well as the information about installed CorDapps.
+     */
+    fun nodeDiagnosticInfo(): NodeDiagnosticInfo
 
     /**
      * Returns network's notary identities, assuming this will not change while the node is running.

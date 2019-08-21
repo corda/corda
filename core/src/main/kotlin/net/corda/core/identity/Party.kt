@@ -4,6 +4,8 @@ import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Crypto
+import net.corda.core.flows.Destination
+import net.corda.core.flows.FlowLogic
 import net.corda.core.utilities.OpaqueBytes
 import java.security.PublicKey
 import java.security.cert.X509Certificate
@@ -25,10 +27,15 @@ import java.security.cert.X509Certificate
  *
  * Note that equality is based solely on the owning key.
  *
+ * ### Flow sessions
+ *
+ * Communication with other parties is done using the flow framework with the [FlowLogic.initiateFlow] method. Message routing is done by
+ * using the network map to look up the connectivity details pertaining to the [Party].
+ *
  * @see CompositeKey
  */
 @KeepForDJVM
-class Party(val name: CordaX500Name, owningKey: PublicKey) : AbstractParty(owningKey) {
+class Party(val name: CordaX500Name, owningKey: PublicKey) : Destination, AbstractParty(owningKey) {
     constructor(certificate: X509Certificate)
             : this(CordaX500Name.build(certificate.subjectX500Principal), Crypto.toSupportedPublicKey(certificate.publicKey))
 

@@ -2,13 +2,7 @@ package net.corda.node.services.config.schema.v1
 
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigException
-import net.corda.common.configuration.parsing.internal.Configuration
-import net.corda.common.configuration.parsing.internal.get
-import net.corda.common.configuration.parsing.internal.listOrEmpty
-import net.corda.common.configuration.parsing.internal.map
-import net.corda.common.configuration.parsing.internal.mapValid
-import net.corda.common.configuration.parsing.internal.nested
-import net.corda.common.configuration.parsing.internal.toValidationError
+import net.corda.common.configuration.parsing.internal.*
 import net.corda.common.validation.internal.Validated.Companion.invalid
 import net.corda.common.validation.internal.Validated.Companion.valid
 import net.corda.node.services.config.JmxReporterType
@@ -17,14 +11,7 @@ import net.corda.node.services.config.NodeConfigurationImpl
 import net.corda.node.services.config.NodeConfigurationImpl.Defaults
 import net.corda.node.services.config.Valid
 import net.corda.node.services.config.VerifierType
-import net.corda.node.services.config.schema.parsers.badValue
-import net.corda.node.services.config.schema.parsers.toCordaX500Name
-import net.corda.node.services.config.schema.parsers.toNetworkHostAndPort
-import net.corda.node.services.config.schema.parsers.toPath
-import net.corda.node.services.config.schema.parsers.toPrincipal
-import net.corda.node.services.config.schema.parsers.toProperties
-import net.corda.node.services.config.schema.parsers.toURL
-import net.corda.node.services.config.schema.parsers.toUUID
+import net.corda.node.services.config.schema.parsers.*
 
 internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfiguration>("NodeConfiguration") {
     private val myLegalName by string().mapValid(::toCordaX500Name)
@@ -75,15 +62,18 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
     private val cordappSignerKeyFingerprintBlacklist by string().list().optional().withDefaultValue(Defaults.cordappSignerKeyFingerprintBlacklist)
     @Suppress("unused")
     private val custom by nestedObject().optional()
+    @Suppress("unused")
+    private val systemProperties by nestedObject().optional()
 
     override fun parseValid(configuration: Config): Valid<NodeConfiguration> {
 
         val messagingServerExternal = configuration[messagingServerExternal] ?: Defaults.messagingServerExternal(configuration[messagingServerAddress])
         val database = configuration[database] ?: Defaults.database(configuration[devMode])
-        val cordappDirectories = configuration[cordappDirectories] ?: Defaults.cordappsDirectories(configuration[baseDirectory])
+        val baseDirectoryPath = configuration[baseDirectory]
+        val cordappDirectories = configuration[cordappDirectories] ?: Defaults.cordappsDirectories(baseDirectoryPath)
         val result = try {
             valid<NodeConfigurationImpl, Configuration.Validation.Error>(NodeConfigurationImpl(
-                    baseDirectory = configuration[baseDirectory],
+                    baseDirectory = baseDirectoryPath,
                     myLegalName = configuration[myLegalName],
                     emailAddress = configuration[emailAddress],
                     p2pAddress = configuration[p2pAddress],
@@ -127,7 +117,7 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
                     attachmentContentCacheSizeMegaBytes = configuration[attachmentContentCacheSizeMegaBytes],
                     h2port = configuration[h2port],
                     jarDirs = configuration[jarDirs],
-                    cordappDirectories = cordappDirectories,
+                    cordappDirectories = cordappDirectories.map { baseDirectoryPath.resolve(it) },
                     cordappSignerKeyFingerprintBlacklist = configuration[cordappSignerKeyFingerprintBlacklist]
             ))
         } catch (e: Exception) {

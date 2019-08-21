@@ -13,8 +13,6 @@ import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.client.rpc.PermissionException
 import net.corda.client.rpc.internal.ReconnectingCordaRPCOps
-import net.corda.client.rpc.internal.ReconnectingObservable
-import net.corda.client.rpc.internal.asReconnectingWithInitialValues
 import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.UniqueIdentifier
@@ -23,6 +21,7 @@ import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.concurrent.openFuture
+import net.corda.core.internal.messaging.InternalCordaRPCOps
 import net.corda.core.messaging.*
 import net.corda.tools.shell.utlities.ANSIProgressRenderer
 import net.corda.tools.shell.utlities.StdoutANSIProgressRenderer
@@ -73,8 +72,8 @@ import kotlin.concurrent.thread
 
 object InteractiveShell {
     private val log = LoggerFactory.getLogger(javaClass)
-    private lateinit var rpcOps: (username: String, password: String) -> CordaRPCOps
-    private lateinit var ops: CordaRPCOps
+    private lateinit var rpcOps: (username: String, password: String) -> InternalCordaRPCOps
+    private lateinit var ops: InternalCordaRPCOps
     private lateinit var rpcConn: AutoCloseable
     private var shell: Shell? = null
     private var classLoader: ClassLoader? = null
@@ -104,7 +103,7 @@ object InteractiveShell {
                         classLoader = classLoader)
                 val connection = client.start(username, password)
                 rpcConn = connection
-                connection.proxy
+                connection.proxy as InternalCordaRPCOps
             }
         }
         _startShell(configuration, classLoader)
@@ -462,11 +461,7 @@ object InteractiveShell {
         val (stateMachines, stateMachineUpdates) = proxy.stateMachinesFeed()
         val currentStateMachines = stateMachines.map { StateMachineUpdate.Added(it) }
         val subscriber = FlowWatchPrintingSubscriber(out)
-        if (stateMachineUpdates is ReconnectingObservable<*>) {
-            stateMachineUpdates.asReconnectingWithInitialValues(currentStateMachines).subscribe(subscriber::onNext)
-        } else {
-            stateMachineUpdates.startWith(currentStateMachines).subscribe(subscriber)
-        }
+        stateMachineUpdates.startWith(currentStateMachines).subscribe(subscriber)
         var result: Any? = subscriber.future
         if (result is Future<*>) {
             if (!result.isDone) {
@@ -488,7 +483,7 @@ object InteractiveShell {
     }
 
     @JvmStatic
-    fun runRPCFromString(input: List<String>, out: RenderPrintWriter, context: InvocationContext<out Any>, cordaRPCOps: CordaRPCOps,
+    fun runRPCFromString(input: List<String>, out: RenderPrintWriter, context: InvocationContext<out Any>, cordaRPCOps: InternalCordaRPCOps,
                          inputObjectMapper: ObjectMapper): Any? {
         val cmd = input.joinToString(" ").trim { it <= ' ' }
         if (cmd.startsWith("startflow", ignoreCase = true)) {
@@ -504,7 +499,7 @@ object InteractiveShell {
         var result: Any? = null
         try {
             InputStreamSerializer.invokeContext = context
-            val parser = StringToMethodCallParser(CordaRPCOps::class.java, inputObjectMapper)
+            val parser = StringToMethodCallParser(InternalCordaRPCOps::class.java, inputObjectMapper)
             val call = parser.parse(cordaRPCOps, cmd)
             result = call.call()
             if (result != null && result !== kotlin.Unit && result !is Void) {

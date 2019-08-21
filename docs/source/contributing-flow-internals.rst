@@ -127,6 +127,8 @@ The main try-catch that handles the yielding may be found `here <https://github.
    primitive values). The arrays always have the same length, and they both contain values for each stack frame. The primitive stack
    additionally has a "metadata" slot for each stack frame, this is where the "method entry" value is put, as well as frame size data.
 
+.. _flow_internals_checkpoints_ref:
+
 Checkpoints
 -----------
 

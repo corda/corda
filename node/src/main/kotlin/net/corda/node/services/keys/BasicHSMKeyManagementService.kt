@@ -2,24 +2,25 @@ package net.corda.node.services.keys
 
 import net.corda.core.crypto.*
 import net.corda.core.crypto.internal.AliasPrivateKey
-import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.MAX_HASH_HEX_SIZE
 import net.corda.node.services.identity.PersistentIdentityService
+import net.corda.node.services.persistence.WritablePublicKeyToOwningIdentityCache
 import net.corda.node.utilities.AppendOnlyPersistentMap
-import net.corda.nodeapi.internal.cryptoservice.CryptoService
+import net.corda.nodeapi.internal.KeyOwningIdentity
+import net.corda.nodeapi.internal.cryptoservice.SignOnlyCryptoService
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import org.apache.commons.lang3.ArrayUtils.EMPTY_BYTE_ARRAY
 import org.bouncycastle.operator.ContentSigner
-import org.hibernate.annotations.Type
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
 import java.util.*
 import javax.persistence.*
+import kotlin.collections.LinkedHashSet
 
 /**
  * A persistent re-implementation of [E2ETestKeyManagementService] to support CryptoService for initial keys and
@@ -29,8 +30,11 @@ import javax.persistence.*
  *
  * This class needs database transactions to be in-flight during method calls and init.
  */
-class BasicHSMKeyManagementService(cacheFactory: NamedCacheFactory, val identityService: PersistentIdentityService,
-                                   private val database: CordaPersistence, private val cryptoService: CryptoService) : SingletonSerializeAsToken(), KeyManagementServiceInternal {
+class BasicHSMKeyManagementService(cacheFactory: NamedCacheFactory,
+                                   override val identityService: PersistentIdentityService,
+                                   private val database: CordaPersistence,
+                                   private val cryptoService: SignOnlyCryptoService,
+                                   private val pkToIdCache: WritablePublicKeyToOwningIdentityCache) : SingletonSerializeAsToken(), KeyManagementServiceInternal {
     @Entity
     @Table(name = "${NODE_DATABASE_PREFIX}our_key_pairs")
     class PersistentKey(
@@ -77,7 +81,13 @@ class BasicHSMKeyManagementService(cacheFactory: NamedCacheFactory, val identity
         }
     }
 
-    override val keys: Set<PublicKey> get() = database.transaction { originalKeysMap.keys.plus(keysMap.allPersisted().map { it.first }.toSet()) }
+    override val keys: Set<PublicKey> get() {
+        return database.transaction {
+            val set = LinkedHashSet<PublicKey>(originalKeysMap.keys)
+            keysMap.allPersisted.use { it.forEach { set += it.first } }
+            set
+        }
+    }
 
     private fun containsPublicKey(publicKey: PublicKey): Boolean {
         return (publicKey in originalKeysMap || publicKey in keysMap)
@@ -87,33 +97,16 @@ class BasicHSMKeyManagementService(cacheFactory: NamedCacheFactory, val identity
         identityService.stripNotOurKeys(candidateKeys)
     }
 
-    // Unlike initial keys, freshkey() is related confidential keys and it utilises platform's software key generation
-    // thus, without using [cryptoService]).
-    override fun freshKey(): PublicKey {
+    override fun freshKeyInternal(externalId: UUID?): PublicKey {
         val keyPair = generateKeyPair()
         database.transaction {
             keysMap[keyPair.public] = keyPair.private
+            pkToIdCache[keyPair.public] = KeyOwningIdentity.fromUUID(externalId)
         }
         return keyPair.public
     }
 
-    override fun freshKey(externalId: UUID): PublicKey {
-        val newKey = freshKey()
-        database.transaction { session.persist(PublicKeyHashToExternalId(externalId, newKey)) }
-        return newKey
-    }
-
-    override fun freshKeyAndCert(identity: PartyAndCertificate, revocationEnabled: Boolean): PartyAndCertificate {
-        return freshCertificate(identityService, freshKey(), identity, getSigner(identity.owningKey))
-    }
-
-    override fun freshKeyAndCert(identity: PartyAndCertificate, revocationEnabled: Boolean, externalId: UUID): PartyAndCertificate {
-        val newKeyWithCert = freshKeyAndCert(identity, revocationEnabled)
-        database.transaction { session.persist(PublicKeyHashToExternalId(externalId, newKeyWithCert.owningKey)) }
-        return newKeyWithCert
-    }
-
-    private fun getSigner(publicKey: PublicKey): ContentSigner {
+    override fun getSigner(publicKey: PublicKey): ContentSigner {
         val signingPublicKey = getSigningPublicKey(publicKey)
         return if (signingPublicKey in originalKeysMap) {
             cryptoService.getSigner(originalKeysMap[signingPublicKey]!!)

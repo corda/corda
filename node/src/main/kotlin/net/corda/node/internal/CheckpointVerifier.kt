@@ -36,22 +36,24 @@ object CheckpointVerifier {
 
         val cordappsByHash = currentCordapps.associateBy { it.jarHash }
 
-        checkpointStorage.getAllCheckpoints().forEach { (_, serializedCheckpoint) ->
-            val checkpoint = try {
-                serializedCheckpoint.checkpointDeserialize(context = checkpointSerializationContext)
-            } catch (e: ClassNotFoundException) {
-                val message = e.message
-                if (message != null) {
-                    throw CheckpointIncompatibleException.CordappNotInstalledException(message)
-                } else {
+        checkpointStorage.getAllCheckpoints().use {
+            it.forEach { (_, serializedCheckpoint) ->
+                val checkpoint = try {
+                    serializedCheckpoint.checkpointDeserialize(context = checkpointSerializationContext)
+                } catch (e: ClassNotFoundException) {
+                    val message = e.message
+                    if (message != null) {
+                        throw CheckpointIncompatibleException.CordappNotInstalledException(message)
+                    } else {
+                        throw CheckpointIncompatibleException.CannotBeDeserialisedException(e)
+                    }
+                } catch (e: Exception) {
                     throw CheckpointIncompatibleException.CannotBeDeserialisedException(e)
                 }
-            } catch (e: Exception) {
-                throw CheckpointIncompatibleException.CannotBeDeserialisedException(e)
-            }
 
-            // For each Subflow, compare the checkpointed version to the current version.
-            checkpoint.subFlowStack.forEach { checkFlowCompatible(it, cordappsByHash, platformVersion) }
+                // For each Subflow, compare the checkpointed version to the current version.
+                checkpoint.subFlowStack.forEach { checkFlowCompatible(it, cordappsByHash, platformVersion) }
+            }
         }
     }
 

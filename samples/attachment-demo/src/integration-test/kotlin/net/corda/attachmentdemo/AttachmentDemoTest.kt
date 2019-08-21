@@ -19,7 +19,7 @@ class AttachmentDemoTest {
     fun `attachment demo using a 10MB zip file`() {
         val numOfExpectedBytes = 10_000_000
         driver(DriverParameters(
-                portAllocation = incrementalPortAllocation(20000),
+                portAllocation = incrementalPortAllocation(),
                 startNodesInProcess = true,
                 cordappsForAllNodes = listOf(findCordapp("net.corda.attachmentdemo.contracts"), findCordapp("net.corda.attachmentdemo.workflows")))
         ) {

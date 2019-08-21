@@ -34,7 +34,7 @@ class P2PFlowsDrainingModeTest {
         private val logger = contextLogger()
     }
 
-    private val portAllocation = incrementalPortAllocation(10000)
+    private val portAllocation = incrementalPortAllocation()
     private val user = User("mark", "dadada", setOf(Permissions.all()))
     private val users = listOf(user)
 

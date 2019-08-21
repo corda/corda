@@ -3,7 +3,7 @@ package net.corda.confidential
 import co.paralleluniverse.fibers.Suspendable
 import com.natpryce.hamkrest.MatchResult
 import com.natpryce.hamkrest.Matcher
-import com.natpryce.hamkrest.assertion.assert
+import com.natpryce.hamkrest.assertion.assertThat
 import com.natpryce.hamkrest.equalTo
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.flows.FlowLogic
@@ -18,7 +18,10 @@ import net.corda.testing.core.*
 import net.corda.testing.internal.matchers.allOf
 import net.corda.testing.internal.matchers.flow.willReturn
 import net.corda.testing.internal.matchers.hasOnlyEntries
-import net.corda.testing.node.internal.*
+import net.corda.testing.node.internal.InternalMockNetwork
+import net.corda.testing.node.internal.TestStartedNode
+import net.corda.testing.node.internal.enclosedCordapp
+import net.corda.testing.node.internal.startFlow
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.AfterClass
 import org.junit.Test
@@ -45,7 +48,7 @@ class SwapIdentitiesFlowTests {
 
     @Test
     fun `issue key`() {
-        assert.that(
+        assertThat(
             aliceNode.services.startFlow(SwapIdentitiesInitiator(bob)),
             willReturn(
                 hasOnlyEntries(

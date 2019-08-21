@@ -15,6 +15,7 @@ include 'finance:contracts'
 include 'finance:workflows'
 include 'isolated'
 include 'core'
+include 'core-tests'
 include 'docs'
 include 'node-api'
 include 'node'
@@ -28,7 +29,6 @@ include 'webserver'
 include 'webserver:webcapsule'
 include 'experimental'
 include 'experimental:avalanche'
-include 'experimental:behave'
 include 'experimental:quasar-hook'
 include 'experimental:corda-utils'
 include 'experimental:nodeinfo'
@@ -37,10 +37,11 @@ include 'jdk8u-deterministic'
 include 'test-common'
 include 'test-cli'
 include 'test-utils'
+include 'test-db'
 include 'smoke-test-utils'
 include 'node-driver'
 // Avoid making 'testing' a project, and allow build.gradle files to refer to these by their simple names:
-['test-common', 'test-utils', 'test-cli', 'smoke-test-utils', 'node-driver'].each {
+['test-common', 'test-utils', 'test-cli', 'test-db', 'smoke-test-utils', 'node-driver'].each {
     project(":$it").projectDir = new File("$settingsDir/testing/$it")
 }
 include 'tools:explorer'
@@ -52,9 +53,10 @@ include 'tools:bootstrapper'
 include 'tools:blobinspector'
 include 'tools:shell'
 include 'tools:shell-cli'
-include 'tools:network-bootstrapper'
+include 'tools:network-builder'
 include 'tools:cliutils'
 include 'tools:worldmap'
+include 'tools:checkpoint-agent'
 include 'example-code'
 project(':example-code').projectDir = file("$settingsDir/docs/source/example-code")
 include 'samples:attachment-demo:contracts'
@@ -96,4 +98,6 @@ if (JavaVersion.current() == JavaVersion.VERSION_1_8) {
     include 'core-deterministic:testing:verifier'
     include 'serialization-deterministic'
 }
+include 'tools:checkpoint-agent'
+findProject(':tools:checkpoint-agent')?.name = 'checkpoint-agent'
 

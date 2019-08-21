@@ -1,29 +1,31 @@
 package net.corda.client.rpc.internal
 
 import net.corda.client.rpc.*
+import net.corda.client.rpc.reconnect.CouldNotStartFlowException
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.div
+import net.corda.core.internal.messaging.InternalCordaRPCOps
 import net.corda.core.internal.times
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.ClientRpcSslOptions
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.FlowHandle
-import net.corda.core.utilities.*
+import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.debug
+import net.corda.core.utilities.seconds
 import net.corda.nodeapi.exceptions.RejectedCommandException
 import org.apache.activemq.artemis.api.core.ActiveMQConnectionTimedOutException
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import org.apache.activemq.artemis.api.core.ActiveMQUnBlockedException
-import rx.Observable
 import java.lang.reflect.InvocationHandler
 import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Method
 import java.lang.reflect.Proxy
 import java.time.Duration
-import java.util.*
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
-import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 
 /**
@@ -40,11 +42,13 @@ import java.util.concurrent.TimeUnit
  *
  * *This class is not a stable API. Any project that wants to use it, must copy and paste it.*
  */
+// TODO The executor service is not needed. All we need is a single thread that deals with reconnecting and onto which ReconnectingObservables
+//  and other things can attach themselves as listeners for reconnect events.
 class ReconnectingCordaRPCOps private constructor(
-        private val reconnectingRPCConnection: ReconnectingRPCConnection,
+        val reconnectingRPCConnection: ReconnectingRPCConnection,
         private val observersPool: ExecutorService,
         private val userPool: Boolean
-) : AutoCloseable, CordaRPCOps by proxy(reconnectingRPCConnection, observersPool) {
+) : AutoCloseable, InternalCordaRPCOps by proxy(reconnectingRPCConnection, observersPool) {
 
     // Constructors that mirror CordaRPCClient.
     constructor(
@@ -77,11 +81,11 @@ class ReconnectingCordaRPCOps private constructor(
         const val MAX_RETRY_ATTEMPTS_ON_AUTH_ERROR = 3
 
         private val log = contextLogger()
-        private fun proxy(reconnectingRPCConnection: ReconnectingRPCConnection, observersPool: ExecutorService): CordaRPCOps {
+        private fun proxy(reconnectingRPCConnection: ReconnectingRPCConnection, observersPool: ExecutorService): InternalCordaRPCOps {
             return Proxy.newProxyInstance(
                     this::class.java.classLoader,
-                    arrayOf(CordaRPCOps::class.java),
-                    ErrorInterceptingHandler(reconnectingRPCConnection, observersPool)) as CordaRPCOps
+                    arrayOf(InternalCordaRPCOps::class.java),
+                    ErrorInterceptingHandler(reconnectingRPCConnection, observersPool)) as InternalCordaRPCOps
         }
     }
 
@@ -118,25 +122,9 @@ class ReconnectingCordaRPCOps private constructor(
     }
 
     /**
-     * This function is similar to [runFlowWithLogicalRetry] but is blocking and it returns the result of the flow.
-     *
-     * [runFlow] - starts a flow and returns the [FlowHandle].
-     * [hasFlowCompleted] - Runs a vault query and is able to recreate the result of the flow.
-     */
-    fun <T> runFlowAndReturnResultWithLogicalRetry(runFlow: (CordaRPCOps) -> FlowHandle<T>, hasFlowCompleted: (CordaRPCOps) -> T?, timeout: Duration = 4.seconds): T {
-        return try {
-            runFlow(this).returnValue.get()
-        } catch (e: CouldNotStartFlowException) {
-            log.error("Couldn't start flow: ${e.message}")
-            Thread.sleep(timeout.toMillis())
-            hasFlowCompleted(this) ?: runFlowAndReturnResultWithLogicalRetry(runFlow, hasFlowCompleted, timeout)
-        }
-    }
-
-    /**
      * Helper class useful for reconnecting to a Node.
      */
-    internal data class ReconnectingRPCConnection(
+    data class ReconnectingRPCConnection(
             val nodeHostAndPorts: List<NetworkHostAndPort>,
             val username: String,
             val password: String,
@@ -168,10 +156,11 @@ class ReconnectingCordaRPCOps private constructor(
          * Will block until the connection is established again.
          */
         @Synchronized
-        fun error(e: Throwable) {
+        fun reconnectOnError(e: Throwable) {
             currentState = CurrentState.DIED
             //TODO - handle error cases
             log.error("Reconnecting to ${this.nodeHostAndPorts} due to error: ${e.message}")
+            log.debug("", e)
             connect()
         }
 
@@ -192,9 +181,9 @@ class ReconnectingCordaRPCOps private constructor(
                 ).start(username, password).also {
                     // Check connection is truly operational before returning it.
                     require(it.proxy.nodeInfo().legalIdentitiesAndCerts.isNotEmpty()) {
-                        "Could not establish connection to ${nodeHostAndPorts}."
+                        "Could not establish connection to $nodeHostAndPorts."
                     }
-                    log.debug { "Connection successfully established with: ${nodeHostAndPorts}" }
+                    log.debug { "Connection successfully established with: $nodeHostAndPorts" }
                 }
             } catch (ex: Exception) {
                 when (ex) {
@@ -255,57 +244,6 @@ class ReconnectingCordaRPCOps private constructor(
         }
     }
 
-    internal class ReconnectingObservableImpl<T> internal constructor(
-            val reconnectingRPCConnection: ReconnectingRPCConnection,
-            val observersPool: ExecutorService,
-            val initial: DataFeed<*, T>,
-            val createDataFeed: () -> DataFeed<*, T>
-    ) : Observable<T>(null), ReconnectingObservable<T> {
-
-        private var initialStartWith: Iterable<T>? = null
-        private fun _subscribeWithReconnect(observerHandle: ObserverHandle, onNext: (T) -> Unit, onStop: () -> Unit, onDisconnect: () -> Unit, onReconnect: () -> Unit, startWithValues: Iterable<T>? = null) {
-            var subscriptionError: Throwable?
-            try {
-                val subscription = initial.updates.let { if (startWithValues != null) it.startWith(startWithValues) else it }
-                        .subscribe(onNext, observerHandle::fail, observerHandle::stop)
-                subscriptionError = observerHandle.await()
-                subscription.unsubscribe()
-            } catch (e: Exception) {
-                log.error("Failed to register subscriber .", e)
-                subscriptionError = e
-            }
-
-            // In case there was no exception the observer has finished gracefully.
-            if (subscriptionError == null) {
-                onStop()
-                return
-            }
-
-            onDisconnect()
-            // Only continue if the subscription failed.
-            reconnectingRPCConnection.error(subscriptionError)
-            log.debug { "Recreating data feed." }
-
-            val newObservable = createDataFeed().updates as ReconnectingObservableImpl<T>
-            onReconnect()
-            return newObservable._subscribeWithReconnect(observerHandle, onNext, onStop, onDisconnect, onReconnect)
-        }
-
-        override fun subscribe(onNext: (T) -> Unit, onStop: () -> Unit, onDisconnect: () -> Unit, onReconnect: () -> Unit): ObserverHandle {
-            val observerNotifier = ObserverHandle()
-            // TODO - change the establish connection method to be non-blocking
-            observersPool.execute {
-                _subscribeWithReconnect(observerNotifier, onNext, onStop, onDisconnect, onReconnect, initialStartWith)
-            }
-            return observerNotifier
-        }
-
-        override fun startWithValues(values: Iterable<T>): ReconnectingObservable<T> {
-            initialStartWith = values
-            return this
-        }
-    }
-
     private class ErrorInterceptingHandler(val reconnectingRPCConnection: ReconnectingRPCConnection, val observersPool: ExecutorService) : InvocationHandler {
         private fun Method.isStartFlow() = name.startsWith("startFlow") || name.startsWith("startTrackedFlow")
 
@@ -326,23 +264,23 @@ class ReconnectingCordaRPCOps private constructor(
                 when (e.targetException) {
                     is RejectedCommandException -> {
                         log.error("Node is being shutdown. Operation ${method.name} rejected. Retrying when node is up...", e)
-                        reconnectingRPCConnection.error(e)
+                        reconnectingRPCConnection.reconnectOnError(e)
                         this.invoke(proxy, method, args)
                     }
                     is ConnectionFailureException -> {
                         log.error("Failed to perform operation ${method.name}. Connection dropped. Retrying....", e)
-                        reconnectingRPCConnection.error(e)
+                        reconnectingRPCConnection.reconnectOnError(e)
                         retry()
                     }
                     is RPCException -> {
                         log.error("Failed to perform operation ${method.name}. RPCException. Retrying....", e)
-                        reconnectingRPCConnection.error(e)
+                        reconnectingRPCConnection.reconnectOnError(e)
                         Thread.sleep(1000) // TODO - explain why this sleep is necessary
                         retry()
                     }
                     else -> {
                         log.error("Failed to perform operation ${method.name}. Unknown error. Retrying....", e)
-                        reconnectingRPCConnection.error(e)
+                        reconnectingRPCConnection.reconnectOnError(e)
                         retry()
                     }
                 }
@@ -352,7 +290,7 @@ class ReconnectingCordaRPCOps private constructor(
                 DataFeed::class.java -> {
                     // Intercept the data feed methods and returned a ReconnectingObservable instance
                     val initialFeed: DataFeed<Any, Any?> = uncheckedCast(result)
-                    val observable = ReconnectingObservableImpl(reconnectingRPCConnection, observersPool, initialFeed) {
+                    val observable = ReconnectingObservable(reconnectingRPCConnection, observersPool, initialFeed) {
                         // This handles reconnecting and creates new feeds.
                         uncheckedCast(this.invoke(reconnectingRPCConnection.proxy, method, args))
                     }
@@ -370,42 +308,3 @@ class ReconnectingCordaRPCOps private constructor(
         reconnectingRPCConnection.forceClose()
     }
 }
-
-/**
- * Returned as the `updates` field when calling methods that return a [DataFeed] on the [ReconnectingCordaRPCOps].
- *
- * TODO - provide a logical function to know how to retrieve missing events that happened during disconnects.
- */
-interface ReconnectingObservable<T> {
-    fun subscribe(onNext: (T) -> Unit): ObserverHandle = subscribe(onNext, {}, {}, {})
-    fun subscribe(onNext: (T) -> Unit, onStop: () -> Unit, onDisconnect: () -> Unit, onReconnect: () -> Unit): ObserverHandle
-    fun startWithValues(values: Iterable<T>): ReconnectingObservable<T>
-}
-
-/**
- * Utility to externally control a subscribed observer.
- */
-class ObserverHandle {
-    private val terminated = LinkedBlockingQueue<Optional<Throwable>>(1)
-
-    fun stop() = terminated.put(Optional.empty())
-    internal fun fail(e: Throwable) = terminated.put(Optional.of(e))
-
-    /**
-     * Returns null if the observation ended successfully.
-     */
-    internal fun await(duration: Duration = 60.minutes): Throwable? = terminated.poll(duration.seconds, TimeUnit.SECONDS).orElse(null)
-}
-
-/**
- * Thrown when a flow start command died before receiving a [net.corda.core.messaging.FlowHandle].
- * On catching this exception, the typical behaviour is to run a "logical retry", meaning only retry the flow if the expected outcome did not occur.
- */
-class CouldNotStartFlowException(cause: Throwable? = null) : RPCException("Could not start flow as connection failed", cause)
-
-/**
- * Mainly for Kotlin users.
- */
-fun <T> Observable<T>.asReconnecting(): ReconnectingObservable<T> = uncheckedCast(this)
-
-fun <T> Observable<T>.asReconnectingWithInitialValues(values: Iterable<T>): ReconnectingObservable<T> = asReconnecting().startWithValues(values)

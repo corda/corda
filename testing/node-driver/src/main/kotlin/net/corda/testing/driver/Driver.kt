@@ -16,6 +16,7 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.DUMMY_NOTARY_NAME
+import net.corda.testing.driver.internal.SharedMemoryIncremental
 import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.driver.internal.internalServices
 import net.corda.testing.node.NotarySpec
@@ -66,7 +67,6 @@ interface NodeHandle : AutoCloseable {
     fun stop()
 }
 
-
 /** Interface which represents an out of process node and exposes its process handle. **/
 @DoNotImplement
 interface OutOfProcess : NodeHandle {
@@ -104,37 +104,33 @@ data class WebserverHandle(
         val process: Process
 )
 
-/**
- * An abstract helper class which is used within the driver to allocate unused ports for testing.
- */
 @DoNotImplement
+// Unfortunately cannot be an interface due to `defaultAllocator`
 abstract class PortAllocation {
-    /** Get the next available port **/
-    abstract fun nextPort(): Int
+
+    companion object {
+        @JvmStatic
+        val defaultAllocator: PortAllocation = SharedMemoryIncremental.INSTANCE
+        const val DEFAULT_START_PORT = 10_000
+        const val FIRST_EPHEMERAL_PORT = 30_000
+    }
 
     /** Get the next available port via [nextPort] and then return a [NetworkHostAndPort] **/
-    fun nextHostAndPort() = NetworkHostAndPort("localhost", nextPort())
+    fun nextHostAndPort(): NetworkHostAndPort = NetworkHostAndPort("localhost", nextPort())
 
-    /**
-     * An implementation of [PortAllocation] which allocates ports sequentially
-     */
+    abstract fun nextPort(): Int
+
+    @DoNotImplement
+    @Deprecated("This has been superseded by net.corda.testing.driver.SharedMemoryIncremental.INSTANCE", ReplaceWith("SharedMemoryIncremental.INSTANCE"))
     open class Incremental(private val startingPort: Int) : PortAllocation() {
-        private companion object {
-            private const val FIRST_EPHEMERAL_PORT = 49152
-        }
 
         /** The backing [AtomicInteger] used to keep track of the currently allocated port */
-        val portCounter = AtomicInteger(startingPort)
+        @Deprecated("This has been superseded by net.corda.testing.driver.SharedMemoryIncremental.INSTANCE", ReplaceWith("net.corda.testing.driver.DriverDSL.nextPort()"))
+        val portCounter: AtomicInteger = AtomicInteger()
 
+        @Deprecated("This has been superseded by net.corda.testing.driver.SharedMemoryIncremental.INSTANCE", ReplaceWith("net.corda.testing.driver.DriverDSL.nextPort()"))
         override fun nextPort(): Int {
-            return portCounter.getAndUpdate { i ->
-                val next = i + 1
-                if (next >= FIRST_EPHEMERAL_PORT) {
-                    startingPort
-                } else {
-                    next
-                }
-            }
+            return SharedMemoryIncremental.INSTANCE.nextPort()
         }
     }
 }
@@ -152,7 +148,7 @@ data class JmxPolicy
 @Deprecated("Use the constructor that just takes in the jmxHttpServerPortAllocation or use JmxPolicy.defaultEnabled()")
 constructor(
         val startJmxHttpServer: Boolean = false,
-        val jmxHttpServerPortAllocation: PortAllocation = incrementalPortAllocation(7005)
+        val jmxHttpServerPortAllocation: PortAllocation = incrementalPortAllocation()
 ) {
     @Deprecated("The default constructor does not turn on monitoring. Simply leave the jmxPolicy parameter unspecified if you wish to not " +
             "have monitoring turned on.")
@@ -245,9 +241,9 @@ fun <A> driver(defaultParameters: DriverParameters = DriverParameters(), dsl: Dr
 @Suppress("unused")
 data class DriverParameters(
         val isDebug: Boolean = false,
-        val driverDirectory: Path = Paths.get("build") / "node-driver" /  getTimestampAsDirectoryName(),
-        val portAllocation: PortAllocation = incrementalPortAllocation(10000),
-        val debugPortAllocation: PortAllocation = incrementalPortAllocation(5005),
+        val driverDirectory: Path = Paths.get("build") / "node-driver" / getTimestampAsDirectoryName(),
+        val portAllocation: PortAllocation = incrementalPortAllocation(),
+        val debugPortAllocation: PortAllocation = incrementalPortAllocation(),
         val systemProperties: Map<String, String> = emptyMap(),
         val useTestClock: Boolean = false,
         val startNodesInProcess: Boolean = false,
@@ -266,9 +262,9 @@ data class DriverParameters(
 
     constructor(
             isDebug: Boolean = false,
-            driverDirectory: Path = Paths.get("build") / "node-driver" /  getTimestampAsDirectoryName(),
-            portAllocation: PortAllocation = incrementalPortAllocation(10000),
-            debugPortAllocation: PortAllocation = incrementalPortAllocation(5005),
+            driverDirectory: Path = Paths.get("build") / "node-driver" / getTimestampAsDirectoryName(),
+            portAllocation: PortAllocation = incrementalPortAllocation(),
+            debugPortAllocation: PortAllocation = incrementalPortAllocation(),
             systemProperties: Map<String, String> = emptyMap(),
             useTestClock: Boolean = false,
             startNodesInProcess: Boolean = false,
@@ -372,6 +368,7 @@ data class DriverParameters(
     @Deprecated("extraCordappPackagesToScan does not preserve the original CorDapp's versioning and metadata, which may lead to " +
             "misleading results in tests. Use withCordappsForAllNodes instead.")
     fun withExtraCordappPackagesToScan(extraCordappPackagesToScan: List<String>): DriverParameters = copy(extraCordappPackagesToScan = extraCordappPackagesToScan)
+
     fun withJmxPolicy(jmxPolicy: JmxPolicy): DriverParameters = copy(jmxPolicy = jmxPolicy)
     fun withNetworkParameters(networkParameters: NetworkParameters): DriverParameters = copy(networkParameters = networkParameters)
     fun withNotaryCustomOverrides(notaryCustomOverrides: Map<String, Any?>): DriverParameters = copy(notaryCustomOverrides = notaryCustomOverrides)

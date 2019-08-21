@@ -170,7 +170,7 @@ fun runLoadTests(configuration: LoadTestConfiguration, tests: List<Pair<LoadTest
         }
     }
 
-    connectToNodes(remoteNodes, incrementalPortAllocation(configuration.localTunnelStartingPort)) { connections ->
+    connectToNodes(remoteNodes, incrementalPortAllocation()) { connections ->
         log.info("Connected to all nodes!")
         val hostNodeMap = ConcurrentHashMap<String, NodeConnection>()
         connections.parallelStream().forEach { connection ->

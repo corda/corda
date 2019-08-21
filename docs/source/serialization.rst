@@ -73,7 +73,8 @@ It's reproduced here as an example of both ways you can do this for a couple of 
 AMQP
 ----
 
-Corda uses an extended form of AMQP 1.0 as its binary wire protocol.
+Corda uses an extended form of AMQP 1.0 as its binary wire protocol. You can learn more about the :doc:`wire-format` Corda
+uses if you intend to parse Corda messages from non-JVM platforms.
 
 Corda serialisation is currently used for:
 

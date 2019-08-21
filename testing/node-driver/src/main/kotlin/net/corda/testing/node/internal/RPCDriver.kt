@@ -50,7 +50,6 @@ import org.apache.activemq.artemis.core.server.embedded.EmbeddedActiveMQ
 import org.apache.activemq.artemis.core.server.impl.ActiveMQServerImpl
 import org.apache.activemq.artemis.core.settings.impl.AddressFullMessagePolicy
 import org.apache.activemq.artemis.core.settings.impl.AddressSettings
-import org.apache.activemq.artemis.core.settings.impl.SlowConsumerPolicy
 import org.apache.activemq.artemis.spi.core.protocol.RemotingConnection
 import org.apache.activemq.artemis.spi.core.security.ActiveMQSecurityManager3
 import java.lang.reflect.Method
@@ -102,8 +101,8 @@ val rpcTestUser = User("user1", "test", permissions = emptySet())
 val fakeNodeLegalName = CordaX500Name(organisation = "Not:a:real:name", locality = "Nowhere", country = "GB")
 
 // Use a global pool so that we can run RPC tests in parallel
-private val globalPortAllocation = incrementalPortAllocation(10000)
-private val globalDebugPortAllocation = incrementalPortAllocation(5005)
+private val globalPortAllocation = incrementalPortAllocation()
+private val globalDebugPortAllocation = incrementalPortAllocation()
 
 fun <A> rpcDriver(
         isDebug: Boolean = false,
@@ -207,9 +206,6 @@ data class RPCDriverDSL(
                         maxSizeBytes = maxBufferedBytesPerClient
                         addressFullMessagePolicy = AddressFullMessagePolicy.PAGE
                         pageSizeBytes = maxSizeBytes / 10
-                        slowConsumerPolicy = SlowConsumerPolicy.KILL
-                        slowConsumerThreshold = 1
-                        slowConsumerCheckPeriod = 30
                     }
             )
         }

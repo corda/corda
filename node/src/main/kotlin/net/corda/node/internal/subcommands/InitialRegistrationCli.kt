@@ -11,6 +11,7 @@ import net.corda.node.internal.*
 import net.corda.node.internal.NodeStartupLogging.Companion.logger
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
+import net.corda.node.utilities.registration.NodeRegistrationConfiguration
 import net.corda.node.utilities.registration.NodeRegistrationHelper
 import picocli.CommandLine.Mixin
 import picocli.CommandLine.Option
@@ -68,7 +69,7 @@ class InitialRegistration(val baseDirectory: Path, private val networkRootTrustS
                 "*                                                                *\n" +
                 "******************************************************************\n")
 
-        NodeRegistrationHelper(conf,
+        NodeRegistrationHelper(NodeRegistrationConfiguration(conf),
                 HTTPNetworkRegistrationService(
                         requireNotNull(conf.networkServices),
                         versionInfo),

@@ -1,8 +1,8 @@
 package net.corda.node.internal
 
-import com.codahale.metrics.JmxReporter
 import com.codahale.metrics.MetricFilter
 import com.codahale.metrics.MetricRegistry
+import com.codahale.metrics.jmx.JmxReporter
 import com.github.benmanes.caffeine.cache.Caffeine
 import com.palominolabs.metrics.newrelic.AllEnabledMetricAttributeFilter
 import com.palominolabs.metrics.newrelic.NewRelicReporter
@@ -53,6 +53,7 @@ import net.corda.node.services.rpc.InternalRPCMessagingClient
 import net.corda.node.services.rpc.RPCServerConfiguration
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.utilities.*
+import net.corda.nodeapi.internal.ArtemisMessagingClient
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.INTERNAL_SHELL_USER
 import net.corda.nodeapi.internal.ShutdownHook
 import net.corda.nodeapi.internal.addShutdownHook
@@ -64,7 +65,7 @@ import net.corda.serialization.internal.*
 import net.corda.serialization.internal.amqp.SerializationFactoryCacheKey
 import net.corda.serialization.internal.amqp.SerializerFactory
 import org.apache.commons.lang3.SystemUtils
-import org.h2.jdbc.JdbcSQLException
+import org.h2.jdbc.JdbcSQLNonTransientConnectionException
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import rx.Scheduler
@@ -265,11 +266,7 @@ open class Node(configuration: NodeConfiguration,
             startLocalRpcBroker(securityManager)
         }
 
-        val bridgeControlListener = BridgeControlListener(
-                configuration.p2pSslOptions,
-                network.serverAddress,
-                networkParameters.maxMessageSize,
-                configuration.crlCheckSoftFail)
+        val bridgeControlListener = makeBridgeControlListener(network.serverAddress, networkParameters)
 
         printBasicNodeInfo("Advertised P2P messaging addresses", nodeInfo.addresses.joinToString())
         val rpcServerConfiguration = RPCServerConfiguration.DEFAULT
@@ -305,6 +302,18 @@ open class Node(configuration: NodeConfiguration,
                 advertisedAddress = nodeInfo.addresses[0],
                 maxMessageSize = networkParameters.maxMessageSize
         )
+    }
+
+    private fun makeBridgeControlListener(serverAddress: NetworkHostAndPort, networkParameters: NetworkParameters) : BridgeControlListener {
+        val artemisMessagingClientFactory = {
+            ArtemisMessagingClient(
+                    configuration.p2pSslOptions,
+                    serverAddress,
+                    networkParameters.maxMessageSize,
+                    failoverCallback =  { errorAndTerminate("ArtemisMessagingClient failed. Shutting down.", null) }
+            )
+        }
+        return BridgeControlListener(configuration.p2pSslOptions, networkParameters.maxMessageSize, configuration.crlCheckSoftFail, artemisMessagingClientFactory)
     }
 
     private fun startLocalRpcBroker(securityManager: RPCSecurityManager): BrokerAddresses? {
@@ -405,7 +414,7 @@ open class Node(configuration: NodeConfiguration,
                 runOnStop += server::stop
                 val url = try {
                     server.start().url
-                } catch (e: JdbcSQLException) {
+                } catch (e: JdbcSQLNonTransientConnectionException) {
                     if (e.cause is BindException) {
                         throw AddressBindingException(effectiveH2Settings.address)
                     } else {

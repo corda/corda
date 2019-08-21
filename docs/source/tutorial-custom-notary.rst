@@ -33,3 +33,16 @@ To enable the service, add the following to the node configuration:
         validating : true # Set to false if your service is non-validating
         className : "net.corda.notarydemo.MyCustomValidatingNotaryService" # The fully qualified name of your service class
     }
+
+Testing your custom notary service
+---------------------------------
+
+To create a flow test that uses your custom notary service, you can set the class name of the custom notary service as follows in your flow test:
+
+.. literalinclude:: ../../testing/node-driver/src/test/kotlin/net/corda/testing/node/CustomNotaryTest.kt
+   :language: kotlin
+   :start-after: START 1
+   :end-before: END 1
+
+After this, your custom notary will be the default notary on the mock network, and can be used in the same way as described in :doc:`flow-testing`.
+

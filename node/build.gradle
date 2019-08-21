@@ -90,8 +90,8 @@ dependencies {
     testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
 
     // Kryo: object graph serialization.
-    compile "com.esotericsoftware:kryo:4.0.0"
-    compile "de.javakaffee:kryo-serializers:0.42"
+    compile "com.esotericsoftware:kryo:4.0.2"
+    compile "de.javakaffee:kryo-serializers:0.43"
 
     compile "com.google.guava:guava:$guava_version"
 
@@ -120,7 +120,7 @@ dependencies {
     }
 
     // Coda Hale's Metrics: for monitoring of key statistics
-    compile "io.dropwizard.metrics:metrics-core:$metrics_version"
+    compile "io.dropwizard.metrics:metrics-jmx:$metrics_version"
 
     // JimFS: in memory java.nio filesystem. Used for test and simulation utilities.
     compile "com.google.jimfs:jimfs:1.1"
@@ -137,6 +137,7 @@ dependencies {
 
     // Unit testing helpers.
     testCompile "org.assertj:assertj-core:${assertj_version}"
+    testCompile project(':node-driver')
     testCompile project(':test-utils')
     testCompile project(':client:jfx')
     testCompile project(':finance:contracts')
@@ -157,11 +158,6 @@ dependencies {
     // Hibernate: an object relational mapper for writing state objects to the database automatically.
     compile "org.hibernate:hibernate-core:$hibernate_version"
     compile "org.hibernate:hibernate-java8:$hibernate_version"
-
-    // Capsule is a library for building independently executable fat JARs.
-    // We only need this dependency to compile our Caplet against.
-    compileOnly "co.paralleluniverse:capsule:$capsule_version"
-    testCompile "co.paralleluniverse:capsule:$capsule_version"
 
     // OkHTTP: Simple HTTP library.
     compile "com.squareup.okhttp3:okhttp:$okhttp_version"
@@ -191,7 +187,7 @@ dependencies {
     // Web stuff: for HTTP[S] servlets
     testCompile "org.eclipse.jetty:jetty-servlet:${jetty_version}"
     testCompile "org.eclipse.jetty:jetty-webapp:${jetty_version}"
-    testCompile "javax.servlet:javax.servlet-api:3.1.0"
+    testCompile "javax.servlet:javax.servlet-api:${servlet_version}"
 
     // Jersey for JAX-RS implementation for use in Jetty
     testCompile "org.glassfish.jersey.core:jersey-server:${jersey_version}"
@@ -212,18 +208,44 @@ tasks.withType(JavaCompile) {
     options.compilerArgs << '-proc:none'
 }
 
-tasks.withType(Test) {
-    maxHeapSize = "2g"
-    // fork a new test process for every test class
-    forkEvery = 10
+test {
+    maxHeapSize = "3g"
+    maxParallelForks = (System.env.CORDA_NODE_TESTING_FORKS == null) ? 1 : "$System.env.CORDA_NODE_TESTING_FORKS".toInteger()
 }
 
 task integrationTest(type: Test) {
     testClassesDirs = sourceSets.integrationTest.output.classesDirs
     classpath = sourceSets.integrationTest.runtimeClasspath
+    maxParallelForks = (System.env.CORDA_NODE_INT_TESTING_FORKS == null) ? 1 :  "$System.env.CORDA_NODE_INT_TESTING_FORKS".toInteger()
+}
 
-    systemProperty 'testing.global.port.allocation.enabled', true
-    systemProperty 'testing.global.port.allocation.starting.port', 10000
+// quasar exclusions upon agent code instrumentation at run-time
+quasar {
+    excludePackages.addAll(
+            "antlr**",
+            "com.codahale**",
+            "com.fasterxml.**",
+            "com.github.benmanes.caffeine.**",
+            "com.google.**",
+            "com.lmax.**",
+            "com.zaxxer.**",
+            "net.bytebuddy**",
+            "io.github.classgraph**",
+            "io.netty*",
+            "liquibase**",
+            "net.i2p.crypto.**",
+            "nonapi.io.github.classgraph.**",
+            "org.apiguardian.**",
+            "org.bouncycastle**",
+            "org.codehaus.**",
+            "org.h2**",
+            "org.hibernate**",
+            "org.jboss.**",
+            "org.objenesis**",
+            "org.w3c.**",
+            "org.xml**",
+            "org.yaml**",
+            "rx**")
 }
 
 jar {

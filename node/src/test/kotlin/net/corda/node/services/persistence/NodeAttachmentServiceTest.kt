@@ -14,14 +14,11 @@ import net.corda.core.internal.*
 import net.corda.core.internal.cordapp.CordappImpl.Companion.DEFAULT_CORDAPP_VERSION
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.AttachmentId
+import net.corda.core.node.services.vault.*
 import net.corda.core.node.services.vault.AttachmentQueryCriteria.AttachmentsQueryCriteria
-import net.corda.core.node.services.vault.AttachmentSort
-import net.corda.core.node.services.vault.Builder
-import net.corda.core.node.services.vault.Sort
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.nodeapi.exceptions.DuplicateAttachmentException
-import net.corda.nodeapi.exceptions.DuplicateContractClassException
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.common.internal.testNetworkParameters
@@ -342,15 +339,12 @@ class NodeAttachmentServiceTest {
     }
 
     @Test
-    fun `cannot import jar with duplicated contract class, version and signers for trusted uploader`() {
+    fun `can import jar with duplicated contract class, version and signers for trusted uploader`() {
         SelfCleaningDir().use { file ->
             val (contractJar, _) = makeTestSignedContractJar(file.path, "com.example.MyContract")
             val anotherContractJar = makeTestContractJar(file.path, listOf( "com.example.MyContract", "com.example.AnotherContract"), true, generateManifest = false, jarFileName = "another-sample.jar")
             contractJar.read { storage.privilegedImportAttachment(it, "app", "sample.jar") }
-
-            assertThatExceptionOfType(DuplicateContractClassException::class.java).isThrownBy {
-                anotherContractJar.read { storage.privilegedImportAttachment(it, "app", "another-sample.jar") }
-            }
+            anotherContractJar.read { storage.privilegedImportAttachment(it, "app", "another-sample.jar") }
         }
     }
 
@@ -376,30 +370,23 @@ class NodeAttachmentServiceTest {
     }
 
     @Test
-    fun `cannot promote to trusted uploader if other trusted attachment already has duplicated contract class, version and signers`() {
+    fun `can promote to trusted uploader if other trusted attachment already has duplicated contract class, version and signers`() {
         SelfCleaningDir().use { file ->
             val (contractJar, _) = makeTestSignedContractJar(file.path, "com.example.MyContract")
             contractJar.read { storage.importAttachment(it, "uploaderA", "sample.jar") }
             val anotherContractJar = makeTestContractJar(file.path, listOf( "com.example.MyContract", "com.example.AnotherContract"), true, generateManifest = false, jarFileName = "another-sample.jar")
             anotherContractJar.read { storage.privilegedImportAttachment(it, "app", "another-sample.jar") }
-
-            assertThatExceptionOfType(DuplicateContractClassException::class.java).isThrownBy {
-                contractJar.read { storage.privilegedImportAttachment(it, "app", "sample.jar") }
-            }
-
+            contractJar.read { storage.privilegedImportAttachment(it, "app", "sample.jar") }
         }
     }
 
     @Test
-    fun `cannot promote to trusted uploder the same jar if other trusted uplodaer `() {
+    fun `can promote to trusted uploader the same jar if other trusted uploader `() {
         SelfCleaningDir().use { file ->
             val (contractJar, _) = makeTestSignedContractJar(file.path, "com.example.MyContract")
             val anotherContractJar = makeTestContractJar(file.path, listOf( "com.example.MyContract", "com.example.AnotherContract"), true, generateManifest = false, jarFileName = "another-sample.jar")
             contractJar.read { storage.privilegedImportAttachment(it, "app", "sample.jar") }
-
-            assertThatExceptionOfType(DuplicateContractClassException::class.java).isThrownBy {
-                anotherContractJar.read { storage.privilegedImportAttachment(it, "app", "another-sample.jar") }
-            }
+            anotherContractJar.read { storage.privilegedImportAttachment(it, "app", "another-sample.jar") }
         }
     }
 
@@ -420,7 +407,7 @@ class NodeAttachmentServiceTest {
     }
 
     @Test
-    fun `can import duplicated contract class and version from unsiged attachment if a signed attachment already exists`() {
+    fun `can import duplicated contract class and version from unsigned attachment if a signed attachment already exists`() {
         SelfCleaningDir().use { file ->
             val (contractJar, _) = makeTestSignedContractJar(file.path, "com.example.MyContract")
             val anotherContractJar = makeTestContractJar(file.path, listOf( "com.example.MyContract", "com.example.AnotherContract"), generateManifest = false, jarFileName = "another-sample.jar")
@@ -438,7 +425,7 @@ class NodeAttachmentServiceTest {
     }
 
     @Test
-    fun `can import duplicated contract class and version from siged attachment if an unsigned attachment already exists`() {
+    fun `can import duplicated contract class and version from signed attachment if an unsigned attachment already exists`() {
         SelfCleaningDir().use { file ->
             val contractJar = makeTestContractJar(file.path, "com.example.MyContract")
             val anotherContractJar = makeTestContractJar(file.path, listOf( "com.example.MyContract", "com.example.AnotherContract"), true, generateManifest = false, jarFileName = "another-sample.jar")
@@ -812,7 +799,7 @@ class NodeAttachmentServiceTest {
     }
 
     @Test
-    fun `jar not trusted if same key but different contract`() {
+    fun `jar trusted if same key but different contract`() {
         SelfCleaningDir().use { file ->
             val alias = "testAlias"
             val password = "testPassword"
@@ -828,7 +815,114 @@ class NodeAttachmentServiceTest {
             // Sanity check.
             assertEquals(key1, key2, "Different public keys used to sign jars")
             assertTrue(isAttachmentTrusted(storage.openAttachment(v1Id)!!, storage), "Initial contract $v1Id should be trusted")
-            assertFalse(isAttachmentTrusted(storage.openAttachment(v2Id)!!, storage), "Upgraded contract $v2Id should not be trusted")
+            assertTrue(isAttachmentTrusted(storage.openAttachment(v2Id)!!, storage), "Upgraded contract $v2Id should be trusted")
+        }
+    }
+
+    @Test
+    fun `jar trusted if the signing keys are a subset of an existing trusted jar's signers`() {
+        SelfCleaningDir().use { file ->
+            val alias = "testAlias"
+            val password = "testPassword"
+            val alias2 = "anotherTestAlias"
+            file.path.generateKey(alias, password)
+            file.path.generateKey(alias2, password)
+
+            val jarV1 = makeTestContractJar(file.path, "foo.bar.DummyContract")
+            file.path.signJar(jarV1.toAbsolutePath().toString(), alias, password)
+            file.path.signJar(jarV1.toAbsolutePath().toString(), alias2, password)
+
+            val jarV2 = makeTestContractJar(file.path, "foo.bar.DifferentContract", version = 2)
+            file.path.signJar(jarV2.toAbsolutePath().toString(), alias, password)
+
+            val v1Id = jarV1.read { storage.privilegedImportAttachment(it, "app", "dummy-contract.jar") }
+            val v2Id = jarV2.read { storage.privilegedImportAttachment(it, "untrusted", "dummy-contract.jar") }
+
+            assertTrue(isAttachmentTrusted(storage.openAttachment(v1Id)!!, storage), "Initial contract $v1Id should be trusted")
+            assertTrue(isAttachmentTrusted(storage.openAttachment(v2Id)!!, storage), "Upgraded contract $v2Id should be trusted")
+        }
+    }
+
+    @Test
+    fun `jar trusted if the signing keys are an intersection of an existing trusted jar's signers`() {
+        SelfCleaningDir().use { file ->
+            val alias = "testAlias"
+            val password = "testPassword"
+            val alias2 = "anotherTestAlias"
+            val alias3 = "yetAnotherTestAlias"
+            file.path.generateKey(alias, password)
+            file.path.generateKey(alias2, password)
+            file.path.generateKey(alias3, password)
+
+            val jarV1 = makeTestContractJar(file.path, "foo.bar.DummyContract")
+            file.path.signJar(jarV1.toAbsolutePath().toString(), alias, password)
+            file.path.signJar(jarV1.toAbsolutePath().toString(), alias2, password)
+
+            val jarV2 = makeTestContractJar(file.path, "foo.bar.DifferentContract", version = 2)
+            file.path.signJar(jarV2.toAbsolutePath().toString(), alias, password)
+            file.path.signJar(jarV2.toAbsolutePath().toString(), alias3, password)
+
+            val v1Id = jarV1.read { storage.privilegedImportAttachment(it, "app", "dummy-contract.jar") }
+            val v2Id = jarV2.read { storage.privilegedImportAttachment(it, "untrusted", "dummy-contract.jar") }
+
+            assertTrue(isAttachmentTrusted(storage.openAttachment(v1Id)!!, storage), "Initial contract $v1Id should be trusted")
+            assertTrue(isAttachmentTrusted(storage.openAttachment(v2Id)!!, storage), "Upgraded contract $v2Id should be trusted")
+        }
+    }
+
+    @Test
+    fun `jar trusted if the signing keys are a superset of an existing trusted jar's signers`() {
+        SelfCleaningDir().use { file ->
+            val alias = "testAlias"
+            val password = "testPassword"
+            val alias2 = "anotherTestAlias"
+            file.path.generateKey(alias, password)
+            file.path.generateKey(alias2, password)
+
+            val jarV1 = makeTestContractJar(file.path, "foo.bar.DummyContract")
+            file.path.signJar(jarV1.toAbsolutePath().toString(), alias, password)
+
+            val jarV2 = makeTestContractJar(file.path, "foo.bar.DifferentContract", version = 2)
+            file.path.signJar(jarV2.toAbsolutePath().toString(), alias, password)
+            file.path.signJar(jarV2.toAbsolutePath().toString(), alias2, password)
+
+            val v1Id = jarV1.read { storage.privilegedImportAttachment(it, "app", "dummy-contract.jar") }
+            val v2Id = jarV2.read { storage.privilegedImportAttachment(it, "untrusted", "dummy-contract.jar") }
+
+            assertTrue(isAttachmentTrusted(storage.openAttachment(v1Id)!!, storage), "Initial contract $v1Id should be trusted")
+            assertTrue(isAttachmentTrusted(storage.openAttachment(v2Id)!!, storage), "Upgraded contract $v2Id should be trusted")
+        }
+    }
+
+    @Test
+    fun `jar with inherited trust does not grant trust to other jars (no chain of trust)`() {
+        SelfCleaningDir().use { file ->
+            val aliasA = "Daredevil"
+            val aliasB = "The Punisher"
+            val aliasC = "Jessica Jones"
+            val password = "i am a netflix series"
+            file.path.generateKey(aliasA, password)
+            file.path.generateKey(aliasB, password)
+            file.path.generateKey(aliasC, password)
+
+            val jarSignedByA = makeTestContractJar(file.path, "foo.bar.DummyContract")
+            file.path.signJar(jarSignedByA.toAbsolutePath().toString(), aliasA, password)
+
+            val jarSignedByAB = makeTestContractJar(file.path, "foo.bar.DifferentContract", version = 2)
+            file.path.signJar(jarSignedByAB.toAbsolutePath().toString(), aliasB, password)
+            file.path.signJar(jarSignedByAB.toAbsolutePath().toString(), aliasA, password)
+
+            val jarSignedByBC = makeTestContractJar(file.path, "foo.bar.AnotherContract", version = 2)
+            file.path.signJar(jarSignedByBC.toAbsolutePath().toString(), aliasB, password)
+            file.path.signJar(jarSignedByBC.toAbsolutePath().toString(), aliasC, password)
+
+            val attachmentA = jarSignedByA.read { storage.privilegedImportAttachment(it, "app", "dummy-contract.jar") }
+            val attachmentB = jarSignedByAB.read { storage.privilegedImportAttachment(it, "untrusted", "dummy-contract.jar") }
+            val attachmentC = jarSignedByBC.read { storage.privilegedImportAttachment(it, "untrusted", "dummy-contract.jar") }
+
+            assertTrue(isAttachmentTrusted(storage.openAttachment(attachmentA)!!, storage), "Contract $attachmentA should be trusted")
+            assertTrue(isAttachmentTrusted(storage.openAttachment(attachmentB)!!, storage), "Contract $attachmentB should inherit trust")
+            assertFalse(isAttachmentTrusted(storage.openAttachment(attachmentC)!!, storage), "Contract $attachmentC should not be trusted (no chain of trust)")
         }
     }
 
@@ -948,6 +1042,147 @@ class NodeAttachmentServiceTest {
 
             assertTrue(isAttachmentTrusted(storage.openAttachment(v1Id)!!, storage), "Initial attachment $v1Id should not be trusted")
             assertFalse(isAttachmentTrusted(storage.openAttachment(v2Id)!!, storage), "Other attachment $v2Id should not be trusted")
+        }
+    }
+
+    @Test
+    fun `attachments can be queried by providing a intersection of signers using an EQUAL statement - EQUAL containing a single public key`() {
+        SelfCleaningDir().use { file ->
+            val aliasA = "Luke Skywalker"
+            val aliasB = "Han Solo"
+            val aliasC = "Chewbacca"
+            val aliasD = "Princess Leia"
+            val password = "may the force be with you"
+            file.path.generateKey(aliasA, password)
+            file.path.generateKey(aliasB, password)
+            file.path.generateKey(aliasC, password)
+            file.path.generateKey(aliasD, password)
+
+            val jarSignedByA = makeTestContractJar(file.path, "foo.bar.DummyContract")
+            val keyA = file.path.signJar(jarSignedByA.toAbsolutePath().toString(), aliasA, password)
+
+            val jarSignedByAB = makeTestContractJar(file.path, "foo.bar.DifferentContract")
+            file.path.signJar(jarSignedByAB.toAbsolutePath().toString(), aliasA, password)
+            val keyB = file.path.signJar(jarSignedByAB.toAbsolutePath().toString(), aliasB, password)
+
+            val jarSignedByABC = makeTestContractJar(file.path, "foo.bar.ExpensiveContract")
+            file.path.signJar(jarSignedByABC.toAbsolutePath().toString(), aliasA, password)
+            file.path.signJar(jarSignedByABC.toAbsolutePath().toString(), aliasB, password)
+            val keyC = file.path.signJar(jarSignedByABC.toAbsolutePath().toString(), aliasC, password)
+
+            val jarSignedByABCD = makeTestContractJar(file.path, "foo.bar.DidNotReadThisContract")
+            file.path.signJar(jarSignedByABCD.toAbsolutePath().toString(), aliasA, password)
+            file.path.signJar(jarSignedByABCD.toAbsolutePath().toString(), aliasB, password)
+            file.path.signJar(jarSignedByABCD.toAbsolutePath().toString(), aliasC, password)
+            val keyD = file.path.signJar(jarSignedByABCD.toAbsolutePath().toString(), aliasD, password)
+
+            val attachmentA = jarSignedByA.read { storage.privilegedImportAttachment(it, "app", "A.jar") }
+            val attachmentB = jarSignedByAB.read { storage.privilegedImportAttachment(it, "app", "B.jar") }
+            val attachmentC = jarSignedByABC.read { storage.privilegedImportAttachment(it, "app", "C.jar") }
+            val attachmentD = jarSignedByABCD.read { storage.privilegedImportAttachment(it, "app", "D.jar") }
+
+            assertEquals(
+                listOf(attachmentA, attachmentB, attachmentC, attachmentD),
+                storage.queryAttachments(
+                    AttachmentsQueryCriteria(
+                        signersCondition = Builder.equal(listOf(keyA))
+                    )
+                )
+            )
+
+            assertEquals(
+                listOf(attachmentB, attachmentC, attachmentD),
+                storage.queryAttachments(
+                    AttachmentsQueryCriteria(
+                        signersCondition = Builder.equal(listOf(keyB))
+                    )
+                )
+            )
+
+            assertEquals(
+                listOf(attachmentC, attachmentD),
+                storage.queryAttachments(
+                    AttachmentsQueryCriteria(
+                        signersCondition = Builder.equal(listOf(keyC))
+                    )
+                )
+            )
+
+            assertEquals(
+                listOf(attachmentD),
+                storage.queryAttachments(
+                    AttachmentsQueryCriteria(
+                        signersCondition = Builder.equal(listOf(keyD))
+                    )
+                )
+            )
+        }
+    }
+
+    @Test
+    fun `attachments can be queried by providing a intersection of signers using an EQUAL statement - EQUAL containing multiple public keys`() {
+        SelfCleaningDir().use { file ->
+            val aliasA = "Ironman"
+            val aliasB = "Captain America"
+            val aliasC = "Blackwidow"
+            val aliasD = "Thor"
+            val password = "avengers, assemble!"
+            file.path.generateKey(aliasA, password)
+            file.path.generateKey(aliasB, password)
+            file.path.generateKey(aliasC, password)
+            file.path.generateKey(aliasD, password)
+
+            val jarSignedByA = makeTestContractJar(file.path, "foo.bar.DummyContract")
+            val keyA = file.path.signJar(jarSignedByA.toAbsolutePath().toString(), aliasA, password)
+
+            val jarSignedByAB = makeTestContractJar(file.path, "foo.bar.DifferentContract")
+            file.path.signJar(jarSignedByAB.toAbsolutePath().toString(), aliasA, password)
+            val keyB = file.path.signJar(jarSignedByAB.toAbsolutePath().toString(), aliasB, password)
+
+            val jarSignedByBC = makeTestContractJar(file.path, "foo.bar.ExpensiveContract")
+            file.path.signJar(jarSignedByBC.toAbsolutePath().toString(), aliasB, password)
+            val keyC = file.path.signJar(jarSignedByBC.toAbsolutePath().toString(), aliasC, password)
+
+            val jarSignedByCD = makeTestContractJar(file.path, "foo.bar.DidNotReadThisContract")
+            file.path.signJar(jarSignedByCD.toAbsolutePath().toString(), aliasC, password)
+            val keyD = file.path.signJar(jarSignedByCD.toAbsolutePath().toString(), aliasD, password)
+
+            val attachmentA = jarSignedByA.read { storage.privilegedImportAttachment(it, "app", "A.jar") }
+            val attachmentB = jarSignedByAB.read { storage.privilegedImportAttachment(it, "app", "B.jar") }
+            val attachmentC = jarSignedByBC.read { storage.privilegedImportAttachment(it, "app", "C.jar") }
+            val attachmentD = jarSignedByCD.read { storage.privilegedImportAttachment(it, "app", "D.jar") }
+
+            storage.queryAttachments(
+                AttachmentsQueryCriteria(
+                    signersCondition = Builder.equal(listOf(keyA, keyC))
+                )
+            ).let { result ->
+                assertEquals(4, result.size)
+                assertEquals(
+                    listOf(attachmentA, attachmentB, attachmentC, attachmentD),
+                    result
+                )
+            }
+
+            storage.queryAttachments(
+                AttachmentsQueryCriteria(
+                    signersCondition = Builder.equal(listOf(keyA, keyB))
+                )
+            ).let { result ->
+                // made a [Set] due to [NodeAttachmentService.queryAttachments] not returning distinct results
+                assertEquals(3, result.toSet().size)
+                assertEquals(setOf(attachmentA, attachmentB, attachmentC), result.toSet())
+            }
+
+            storage.queryAttachments(
+                AttachmentsQueryCriteria(
+                    signersCondition = Builder.equal(listOf(keyB, keyC, keyD))
+                )
+            ).let { result ->
+                // made a [Set] due to [NodeAttachmentService.queryAttachments] not returning distinct results
+                assertEquals(3, result.toSet().size)
+                assertEquals(setOf(attachmentB, attachmentC, attachmentD), result.toSet())
+            }
         }
     }
 

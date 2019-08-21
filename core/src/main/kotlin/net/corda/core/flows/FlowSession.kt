@@ -2,11 +2,12 @@ package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.DoNotImplement
+import net.corda.core.KeepForDJVM
+import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.utilities.UntrustworthyData
 
 /**
- *
  * A [FlowSession] is a handle on a communication sequence between two paired flows, possibly running on separate nodes.
  *   It is used to send and receive messages between the flows as well as to query information about the counter-flow.
  *
@@ -45,8 +46,18 @@ import net.corda.core.utilities.UntrustworthyData
 @DoNotImplement
 abstract class FlowSession {
     /**
-     * The [Party] on the other side of this session. In the case of a session created by [FlowLogic.initiateFlow]
-     *   [counterparty] is the same Party as the one passed to that function.
+     * The [Destination] on the other side of this session. In the case of a session created by [FlowLogic.initiateFlow] this is the same
+     * destination as the one passed to that function.
+     */
+    abstract val destination: Destination
+
+    /**
+     * If the destination on the other side of this session is a [Party] then returns that, otherwise throws [IllegalStateException].
+     *
+     * Only use this method if it's known the other side is a [Party], otherwise use [destination].
+     *
+     * @throws IllegalStateException if the other side is not a [Party].
+     * @see destination
      */
     abstract val counterparty: Party
 
@@ -181,3 +192,14 @@ abstract class FlowSession {
     @Suspendable
     abstract fun send(payload: Any)
 }
+
+/**
+ * An abstraction for flow session destinations. A flow can send to and receive from objects which implement this interface. The specifics
+ * of how the messages are routed depend on the implementation.
+ *
+ * Corda currently only supports a fixed set of destination types, namely [Party] and [AnonymousParty]. New destination types will be added
+ * in future releases.
+ */
+@DoNotImplement
+@KeepForDJVM
+interface Destination
