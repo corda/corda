@@ -284,7 +284,7 @@ class RetryFlowMockTest {
         }
 
         private fun doInsert() {
-            val tx = DBTransactionStorage.DBTransaction("Foo", null, Utils.EMPTY_BYTES, 'V')
+            val tx = DBTransactionStorage.DBTransaction("Foo", null, Utils.EMPTY_BYTES, DBTransactionStorage.TransactionStatus.VERIFIED)
             contextTransaction.session.save(tx)
         }
     }
