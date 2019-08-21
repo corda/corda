@@ -36,11 +36,15 @@ class TypeModellingFingerPrinter(
     private val cache: MutableMap<TypeIdentifier, String> = DefaultCacheProvider.createCache()
 
     override fun fingerprint(typeInformation: LocalTypeInformation): String =
-            cache.computeIfAbsent(typeInformation.typeIdentifier) {
-                FingerPrintingState(
-                        customTypeDescriptorLookup,
-                        FingerprintWriter(debugEnabled)).fingerprint(typeInformation)
-            }
+        /*
+         * We cannot use ConcurrentMap.computeIfAbsent() here because it requires
+         * that the map not be re-entered during the computation function. And
+         * the Fingerprinter cannot guarantee that.
+         */
+        cache.getOrPut(typeInformation.typeIdentifier) {
+            FingerPrintingState(customTypeDescriptorLookup, FingerprintWriter(debugEnabled))
+                    .fingerprint(typeInformation)
+        }
 }
 
 /**
