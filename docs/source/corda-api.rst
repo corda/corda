@@ -1,27 +1,3 @@
-Corda API
-=========
-
-The following are the core APIs that are used in the development of CorDapps:
-
-.. toctree::
-   :maxdepth: 1
-
-   api-states
-   api-persistence
-   api-contracts
-   api-contract-constraints
-   api-vault-query
-   api-transactions
-   api-flows
-   api-identity
-   api-service-hub
-   api-service-classes
-   api-rpc
-   api-core-types
-   api-testing
-
-Before reading this page, you should be familiar with the :doc:`key concepts of Corda <key-concepts>`.
-
 .. _internal-apis-and-stability-guarantees:
 
 API stability guarantees
