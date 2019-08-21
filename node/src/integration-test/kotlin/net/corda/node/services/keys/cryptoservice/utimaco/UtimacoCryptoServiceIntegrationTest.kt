@@ -181,8 +181,11 @@ class UtimacoCryptoServiceIntegrationTest {
         val username = "ADMIN"
         val pw = "utimaco".toByteArray()
         val conf = config.copy(authThreshold = 0) // because auth state for the admin user is 570425344
-        val cryptoService = UtimacoCryptoService.fromConfig(conf) { UtimacoCryptoService.UtimacoCredentials(username, pw, keyFile) }
         // the admin user does not have permission to access or create keys, so this operation will fail
-        assertFailsWith<UtimacoCryptoService.UtimacoHSMException> { cryptoService.generateKeyPair("no", cryptoService.defaultIdentitySignatureScheme()) }
+        assertFailsWith<UtimacoCryptoService.UtimacoHSMException> {
+            // Exception can be thrown from either of the following methods depending on if HSM cluster is used or not
+            val cryptoService = UtimacoCryptoService.fromConfig(conf) { UtimacoCryptoService.UtimacoCredentials(username, pw, keyFile) }
+            cryptoService.generateKeyPair("no", cryptoService.defaultIdentitySignatureScheme())
+        }
     }
 }

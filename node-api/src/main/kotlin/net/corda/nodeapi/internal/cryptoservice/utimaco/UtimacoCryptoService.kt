@@ -19,6 +19,7 @@ import org.bouncycastle.operator.ContentSigner
 import java.io.ByteArrayOutputStream
 import java.io.OutputStream
 import java.lang.UnsupportedOperationException
+import java.net.ConnectException
 import java.nio.file.Path
 import java.security.*
 import java.security.spec.X509EncodedKeySpec
@@ -60,14 +61,6 @@ class UtimacoCryptoService(private val cryptoServerProvider: CryptoServerProvide
                 authenticate(auth())
                 block()
             }
-        }
-    }
-
-    private inline fun <T> withErrorMapping(block: () -> T): T {
-        try {
-            return block()
-        } catch (e: CryptoServerAPI.CryptoServerException) {
-            throw UtimacoHSMException(HsmErrors.errors[e.ErrorCode], e)
         }
     }
 
@@ -276,6 +269,18 @@ class UtimacoCryptoService(private val cryptoServerProvider: CryptoServerProvide
                 }
         )
 
+        private inline fun <T> withErrorMapping(block: () -> T): T {
+            try {
+                return block()
+            } catch (e: CryptoServerAPI.CryptoServerException) {
+                if (e.ErrorCode == 0xB9800021.toInt()) {
+                    // Allows CryptoServiceSigningService to start when connection to cluster cannot be temporarily established
+                    throw ConnectException(HsmErrors.errors[e.ErrorCode])
+                }
+                throw UtimacoHSMException(HsmErrors.errors[e.ErrorCode], e)
+            }
+        }
+
         fun parseConfigFile(configFile: Path): UtimacoConfig {
             try {
                 val config = ConfigFactory.parseFile(configFile.toFile()).resolve()
@@ -325,7 +330,9 @@ class UtimacoCryptoService(private val cryptoServerProvider: CryptoServerProvide
 
         private fun toCryptoServerProviderConfig(config: UtimacoConfig): CryptoServerProviderConfig {
             return CryptoServerProviderConfig(
-                    "${config.port}@${config.host}",
+                    // KeepSessionAlive=1 doesn't prevent from session expiry after 5 min of inactivity when using remote connection to HSM.
+                    // As a workaround, we use HSM cluster with two identical nodes to handle network re-connections automatically.
+                    "${config.port}@${config.host} ${config.port}@${config.host}",
                     config.connectionTimeout,
                     config.timeout,
                     if (config.keepSessionAlive) 1 else 0,
@@ -350,7 +357,7 @@ class UtimacoCryptoService(private val cryptoServerProvider: CryptoServerProvide
             }
             writer.close()
             val cfg = cfgBuffer.toByteArray().inputStream()
-            return CryptoServerProvider(cfg)
+            return withErrorMapping { CryptoServerProvider(cfg) }
         }
     }
 }
