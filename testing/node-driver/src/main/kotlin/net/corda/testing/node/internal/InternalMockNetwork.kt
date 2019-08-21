@@ -34,7 +34,7 @@ import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.api.StartedNodeServices
 import net.corda.node.services.config.*
 import net.corda.node.services.identity.PersistentIdentityService
-import net.corda.node.services.keys.BasicHSMKeyManagementService
+import net.corda.node.services.keys.PersistentKeyManagementService
 import net.corda.node.services.keys.KeyManagementServiceInternal
 import net.corda.node.services.messaging.Message
 import net.corda.node.services.messaging.MessagingService
@@ -373,7 +373,7 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
         }
 
         override fun makeKeyManagementService(identityService: PersistentIdentityService): KeyManagementServiceInternal {
-            return BasicHSMKeyManagementService(cacheFactory, identityService, database, cryptoService, pkToIdCache)
+            return PersistentKeyManagementService(cacheFactory, identityService, database, cryptoService, pkToIdCache)
         }
 
         override fun startShell() {

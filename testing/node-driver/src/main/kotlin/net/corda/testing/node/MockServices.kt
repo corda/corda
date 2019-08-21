@@ -27,7 +27,7 @@ import net.corda.node.internal.cordapp.JarScanningCordappLoader
 import net.corda.node.services.api.*
 import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.services.identity.PersistentIdentityService
-import net.corda.node.services.keys.BasicHSMKeyManagementService
+import net.corda.node.services.keys.PersistentKeyManagementService
 import net.corda.node.services.persistence.PublicKeyToOwningIdentityCacheImpl
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
@@ -183,7 +183,7 @@ open class MockServices private constructor(
             val identityAlias = "${initialIdentity.name} private key"
             aliasKeyMap[identityAlias] = initialIdentity.keyPair
             val aliasedIdentityKey = KeyPair(initialIdentity.publicKey, AliasPrivateKey(identityAlias))
-            val keyManagementService = BasicHSMKeyManagementService(
+            val keyManagementService = PersistentKeyManagementService(
                     TestingNamedCacheFactory(),
                     identityService,
                     persistence,

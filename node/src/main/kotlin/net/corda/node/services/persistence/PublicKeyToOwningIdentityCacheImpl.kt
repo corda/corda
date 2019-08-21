@@ -7,7 +7,7 @@ import net.corda.core.internal.hash
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.node.services.identity.PersistentIdentityService
-import net.corda.node.services.keys.BasicHSMKeyManagementService
+import net.corda.node.services.keys.PersistentKeyManagementService
 import net.corda.nodeapi.internal.KeyOwningIdentity
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import java.security.PublicKey
@@ -50,10 +50,10 @@ class PublicKeyToOwningIdentityCacheImpl(private val database: CordaPersistence,
         return database.transaction {
             val criteriaBuilder = session.criteriaBuilder
             val criteriaQuery = criteriaBuilder.createQuery(Long::class.java)
-            val queryRoot = criteriaQuery.from(BasicHSMKeyManagementService.PersistentKey::class.java)
+            val queryRoot = criteriaQuery.from(PersistentKeyManagementService.PersistentKey::class.java)
             criteriaQuery.select(criteriaBuilder.count(queryRoot))
             criteriaQuery.where(
-                    criteriaBuilder.equal(queryRoot.get<String>(BasicHSMKeyManagementService.PersistentKey::publicKeyHash.name), key.toStringShort())
+                    criteriaBuilder.equal(queryRoot.get<String>(PersistentKeyManagementService.PersistentKey::publicKeyHash.name), key.toStringShort())
             )
             val query = session.createQuery(criteriaQuery)
             query.uniqueResult() > 0

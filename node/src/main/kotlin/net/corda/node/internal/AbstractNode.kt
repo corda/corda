@@ -54,7 +54,7 @@ import net.corda.node.services.config.shouldInitCrashShell
 import net.corda.node.services.events.NodeSchedulerService
 import net.corda.node.services.events.ScheduledActivityObserver
 import net.corda.node.services.identity.PersistentIdentityService
-import net.corda.node.services.keys.BasicHSMKeyManagementService
+import net.corda.node.services.keys.PersistentKeyManagementService
 import net.corda.node.services.keys.KeyManagementServiceInternal
 import net.corda.node.services.messaging.DeduplicationHandler
 import net.corda.node.services.messaging.MessagingService
@@ -819,7 +819,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         // Place the long term identity key in the KMS. Eventually, this is likely going to be separated again because
         // the KMS is meant for derived temporary keys used in transactions, and we're not supposed to sign things with
         // the identity key. But the infrastructure to make that easy isn't here yet.
-        return BasicHSMKeyManagementService(cacheFactory, identityService, database, cryptoService, pkToIdCache)
+        return PersistentKeyManagementService(cacheFactory, identityService, database, cryptoService, pkToIdCache)
     }
 
     open fun stop() {

@@ -31,7 +31,7 @@ import net.corda.finance.contracts.asset.OnLedgerAsset
 import net.corda.finance.schemas.CashSchemaV1
 import net.corda.node.internal.DBNetworkParametersStorage
 import net.corda.node.services.identity.PersistentIdentityService
-import net.corda.node.services.keys.BasicHSMKeyManagementService
+import net.corda.node.services.keys.PersistentKeyManagementService
 import net.corda.node.services.persistence.DBTransactionStorage
 import net.corda.node.services.vault.VaultSchemaV1
 import net.corda.nodeapi.internal.crypto.X509Utilities
@@ -189,7 +189,7 @@ class VaultStateMigrationTest {
     private fun saveOurKeys(keys: List<KeyPair>) {
         cordaDB.transaction {
             keys.forEach {
-                val persistentKey = BasicHSMKeyManagementService.PersistentKey(it.public, it.private)
+                val persistentKey = PersistentKeyManagementService.PersistentKey(it.public, it.private)
                 session.save(persistentKey)
             }
         }
