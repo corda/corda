@@ -751,10 +751,22 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
             return true
         }
 
+        override fun addUnverifiedTransaction(transaction: SignedTransaction) {
+            database.transaction {
+                delegate.addUnverifiedTransaction(transaction)
+            }
+        }
+
         override fun getTransaction(id: SecureHash): SignedTransaction? {
             return database.transaction {
                 records.add(TxRecord.Get(id))
                 delegate.getTransaction(id)
+            }
+        }
+
+        override fun getTransactionInternal(id: SecureHash): Pair<SignedTransaction, Boolean>? {
+            return database.transaction {
+                delegate.getTransactionInternal(id)
             }
         }
     }

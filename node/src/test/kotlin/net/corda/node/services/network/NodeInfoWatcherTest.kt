@@ -2,17 +2,18 @@ package net.corda.node.services.network
 
 import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
+import net.corda.core.internal.NODE_INFO_DIRECTORY
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.internal.size
 import net.corda.core.node.services.KeyManagementService
-import net.corda.core.internal.NODE_INFO_DIRECTORY
 import net.corda.nodeapi.internal.NodeInfoAndSigned
 import net.corda.nodeapi.internal.network.NodeInfoFilesCopier
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.internal.createNodeInfoAndSigned
 import net.corda.testing.node.internal.MockKeyManagementService
+import net.corda.testing.node.internal.MockPublicKeyToOwningIdentityCache
 import net.corda.testing.node.makeTestIdentityService
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Before
@@ -49,7 +50,7 @@ class NodeInfoWatcherTest {
     fun start() {
         nodeInfoAndSigned = createNodeInfoAndSigned(ALICE_NAME)
         val identityService = makeTestIdentityService()
-        keyManagementService = MockKeyManagementService(identityService)
+        keyManagementService = MockKeyManagementService(identityService, pkToIdCache = MockPublicKeyToOwningIdentityCache())
         nodeInfoWatcher = NodeInfoWatcher(tempFolder.root.toPath(), scheduler)
         nodeInfoPath = tempFolder.root.toPath() / NODE_INFO_DIRECTORY
     }

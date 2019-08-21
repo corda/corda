@@ -6,13 +6,14 @@ Overview
 
 The **flow hospital** refers to a built-in node service that manages flows that have encountered an error.
 
-This service is responsible for recording, tracking, diagnosing, recovering and retrying. It determines whether errored flows should be retried
+This service is responsible for recording, tracking, diagnosing, recovering and retrying flows. It determines whether errored flows should be retried
 from their previous checkpoints or have their errors propagate. Flows may be recoverable under certain scenarios (eg. manual intervention
 may be required to install a missing contract JAR version). For a given errored flow, the flow hospital service determines the next course of
 action towards recovery and retry.
 
-.. note:: The flow hospital will never terminate a flow, but will propagate its error back to the state machine, and ultimately, end user code to handle
-   if it ultimately proves impossible to resolve automatically.
+.. note:: If the raised exception cannot be handled from the hospital, it will be propagated to the application code.
+    If the exception is not handled by the application code either, then the flow will terminate and any records of it will be removed from the hospital.
+    Below, you can find a list of the errors that are handled by the hospital.
 
 This concept is analogous to *exception management handling* associated with enterprise workflow software, or
 *retry queues/stores* in enterprise messaging middleware for recovering from failure to deliver a message.
@@ -67,17 +68,3 @@ Specifically, there are two main ways a flow is hospitalized:
      Database connection pooling errors are dealt with. If this exception occurs, the flow will retry. After retrying a number of times, the errored flow is kept in for observation.
 
 .. note:: Flows that are kept in for observation are retried upon node restart.
-
-Futures
--------
-
-The flow hospital will be extended in the following areas:
-
-- Human Computer Interaction (HCI) with MQ integration <ref design/CID>
-- Addition of Public APIs (and CRaSH utility functions) to trigger retries
-- Improved back-off and retry policies
-- Improved Explorer visualization operational controls (eg. ability to select and retry or terminate a failed flow).
-- Tighter integration with Corda Enterprise monitoring and management tooling
-
-
-

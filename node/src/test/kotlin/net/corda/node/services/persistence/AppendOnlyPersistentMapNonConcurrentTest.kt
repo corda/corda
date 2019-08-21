@@ -4,6 +4,7 @@ import net.corda.core.schemas.MappedSchema
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
+import net.corda.nodeapi.internal.persistence.currentDBSession
 import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.internal.configureDatabase
 import net.corda.testing.node.MockServices
@@ -73,4 +74,60 @@ class AppendOnlyPersistentMapNonConcurrentTest {
         assertThat(result).isEqualTo("1")
     }
 
+    private fun testUpdate(key: Long, value: String): Boolean {
+        val session = currentDBSession()
+        val criteriaBuilder = session.criteriaBuilder
+        val criteriaUpdate = criteriaBuilder.createCriteriaUpdate(PersistentMapEntry::class.java)
+        val queryRoot = criteriaUpdate.from(PersistentMapEntry::class.java)
+        criteriaUpdate.set(PersistentMapEntry::value.name, value)
+        criteriaUpdate.where(criteriaBuilder.equal(queryRoot.get<Long>("key"), key))
+        val update = session.createQuery(criteriaUpdate)
+        val rowsUpdated = update.executeUpdate()
+        return rowsUpdated != 0
+    }
+
+    @Test
+    fun `can update entry in map`() {
+        val map = createMap(1)
+
+        database.transaction {
+            map[1] = "1"
+        }
+
+        database.transaction {
+            map.addOrUpdate(1, "updated") { k, v -> testUpdate(k, v) }
+        }
+
+        val result = database.transaction { map[1] }
+        assertThat(result).isEqualTo("updated")
+    }
+
+    @Test
+    fun `update succeeds if value not in cache but in database`() {
+        val map = createMap(1)
+        database.transaction {
+            map[1] = "1"
+            map[2] = "2"
+            map[3] = "3"
+        }
+
+        database.transaction {
+            map.addOrUpdate(1, "updated") { k, v -> testUpdate(k, v) }
+        }
+
+        val result = database.transaction { map[1] }
+        assertThat(result).isEqualTo("updated")
+    }
+
+    @Test
+    fun `update succeeds if in same transaction as create`() {
+        val map = createMap(1)
+        database.transaction {
+            map[1] = "1"
+            map.addOrUpdate(1, "updated") { k, v -> testUpdate(k, v) }
+        }
+
+        val result = database.transaction { map[1] }
+        assertThat(result).isEqualTo("updated")
+    }
 }

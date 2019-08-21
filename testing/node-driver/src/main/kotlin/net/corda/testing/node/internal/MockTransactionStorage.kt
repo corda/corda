@@ -8,6 +8,7 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.toFuture
 import net.corda.core.transactions.SignedTransaction
 import net.corda.node.services.api.WritableTransactionStorage
+import net.corda.testing.node.MockServices
 import rx.Observable
 import rx.subjects.PublishSubject
 import java.util.*
@@ -17,29 +18,44 @@ import java.util.*
  */
 open class MockTransactionStorage : WritableTransactionStorage, SingletonSerializeAsToken() {
     override fun trackTransaction(id: SecureHash): CordaFuture<SignedTransaction> {
-        return txns[id]?.let { doneFuture(it) } ?: _updatesPublisher.filter { it.id == id }.toFuture()
+        return getTransaction(id)?.let { doneFuture(it) } ?: _updatesPublisher.filter { it.id == id }.toFuture()
     }
 
     override fun track(): DataFeed<List<SignedTransaction>, SignedTransaction> {
-        return DataFeed(txns.values.toList(), _updatesPublisher)
+        return DataFeed(txns.values.mapNotNull { if (it.isVerified) it.stx else null }, _updatesPublisher)
     }
 
-    private val txns = HashMap<SecureHash, SignedTransaction>()
+    private val txns = HashMap<SecureHash, TxHolder>()
 
     private val _updatesPublisher = PublishSubject.create<SignedTransaction>()
 
     override val updates: Observable<SignedTransaction>
         get() = _updatesPublisher
 
-    private fun notify(transaction: SignedTransaction) = _updatesPublisher.onNext(transaction)
-
-    override fun addTransaction(transaction: SignedTransaction): Boolean {
-        val recorded = txns.putIfAbsent(transaction.id, transaction) == null
-        if (recorded) {
-            notify(transaction)
-        }
-        return recorded
+    private fun notify(transaction: SignedTransaction): Boolean {
+        _updatesPublisher.onNext(transaction)
+        return true
     }
 
-    override fun getTransaction(id: SecureHash): SignedTransaction? = txns[id]
+    override fun addTransaction(transaction: SignedTransaction): Boolean {
+        val current = txns.putIfAbsent(transaction.id, TxHolder(transaction, isVerified = true))
+        return if (current == null) {
+            notify(transaction)
+        } else if (!current.isVerified) {
+            current.isVerified = true
+            notify(transaction)
+        } else {
+            false
+        }
+    }
+
+    override fun addUnverifiedTransaction(transaction: SignedTransaction) {
+        txns.putIfAbsent(transaction.id, TxHolder(transaction, isVerified = false))
+    }
+
+    override fun getTransaction(id: SecureHash): SignedTransaction? = txns[id]?.let { if (it.isVerified) it.stx else null }
+
+    override fun getTransactionInternal(id: SecureHash): Pair<SignedTransaction, Boolean>? = txns[id]?.let { Pair(it.stx, it.isVerified) }
+
+    private class TxHolder(val stx: SignedTransaction, var isVerified: Boolean)
 }

@@ -10,7 +10,10 @@ import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.internal.*
+import net.corda.core.internal.NotaryChangeTransactionBuilder
+import net.corda.core.internal.hash
+import net.corda.core.internal.packageName
+import net.corda.core.internal.signWithCert
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NotaryInfo
 import net.corda.core.node.services.Vault
@@ -208,7 +211,8 @@ class VaultStateMigrationTest {
             val persistentTx = DBTransactionStorage.DBTransaction(
                     txId = tx.id.toString(),
                     stateMachineRunId = null,
-                    transaction = tx.serialize(context = SerializationDefaults.STORAGE_CONTEXT).bytes
+                    transaction = tx.serialize(context = SerializationDefaults.STORAGE_CONTEXT).bytes,
+                    status = DBTransactionStorage.TransactionStatus.VERIFIED
             )
             session.save(persistentTx)
         }

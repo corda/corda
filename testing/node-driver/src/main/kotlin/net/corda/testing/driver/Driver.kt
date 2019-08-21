@@ -16,6 +16,7 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.DUMMY_NOTARY_NAME
+import net.corda.testing.driver.internal.SharedMemoryIncremental
 import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.driver.internal.internalServices
 import net.corda.testing.node.NotarySpec
@@ -104,6 +105,7 @@ data class WebserverHandle(
 )
 
 @DoNotImplement
+// Unfortunately cannot be an interface due to `defaultAllocator`
 abstract class PortAllocation {
 
     companion object {
@@ -112,7 +114,6 @@ abstract class PortAllocation {
         const val DEFAULT_START_PORT = 10_000
         const val FIRST_EPHEMERAL_PORT = 30_000
     }
-
 
     /** Get the next available port via [nextPort] and then return a [NetworkHostAndPort] **/
     fun nextHostAndPort(): NetworkHostAndPort = NetworkHostAndPort("localhost", nextPort())
