@@ -23,7 +23,6 @@ class PortAllocationTest {
     
     @Test
     fun `should allocate a port whilst cycling back round if exceeding start of ephemeral range`() {
-        val startingPoint = PortAllocation.DEFAULT_START_PORT
         val portAllocator = PortAllocation.defaultAllocator
 
         var previous = portAllocator.nextPort()
@@ -31,12 +30,7 @@ class PortAllocationTest {
             val next = portAllocator.nextPort()
             Assert.assertThat(next, `is`(not(previous)))
             Assert.assertThat(next, `is`(OrderingComparison.lessThan(PortAllocation.FIRST_EPHEMERAL_PORT)))
-
-            if (next == startingPoint) {
-                Assert.assertThat(previous, `is`(PortAllocation.FIRST_EPHEMERAL_PORT - 1))
-            } else {
-                Assert.assertTrue(next >= previous + 1)
-            }
+            Assert.assertThat(next, `is`(OrderingComparison.greaterThanOrEqualTo(PortAllocation.DEFAULT_START_PORT)))
             previous = next
         }
     }
