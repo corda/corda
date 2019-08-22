@@ -28,7 +28,7 @@ Checkpoint dumper
 The checkpoint dumper outputs information about flows running on a node. This is useful for diagnosing the causes of stuck flows. Using the generated output,
 corrective actions can be taken to resolve the issues flows are facing. One possible solution, is ending a flow using the ``flow kill`` command.
 
-.. warning:: Deleting checkpoints manually or via ``flow kill``/```killFlow`` can lead to an inconsistent ledger among transacting parties. Great care
+.. warning:: Deleting checkpoints manually or via ``flow kill``/``killFlow`` can lead to an inconsistent ledger among transacting parties. Great care
              and coordination with a flow's counterparties must be taken to ensure that a initiating flow and flows responding to it are correctly
              removed. This experience will be improved in the future. Making it easier to kill flows while notifying their counterparties.
 

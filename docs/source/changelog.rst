@@ -12,7 +12,7 @@ Unreleased
 
 * Introduced a new API on ``KeyManagementService`` which facilitates lookups of ``PublicKey`` s to ``externalId`` s (Account IDs).
 
-* Introduced a new low level flow diagnostics tool: checkpoint agent (that can be used standalone or in conjunction with the ``dumpCheckpoints`` shell command).
+* Introduced a new low level flow diagnostics tool: checkpoint agent (that can be used standalone or in conjunction with the ``checkpoints dump`` shell command).
   See :doc:`checkpoint-tooling` for more information.
 
 * The MockNet now supports setting a custom Notary class name, as was already supported by normal node config. See :doc:`tutorial-custom-notary`.
@@ -25,7 +25,7 @@ Unreleased
   into IRS Demo.
 * The introductory and technical white papers have been refreshed. They have new content and a clearer organisation.
 
-* Information about checkpointed flows can be retrieved from the shell. Calling ``dumpCheckpoints`` will create a zip file inside the node's
+* Information about checkpointed flows can be retrieved from the shell. Calling ``checkpoints dump`` will create a zip file inside the node's
   ``log`` directory. This zip will contain a JSON representation of each checkpointed flow. This information can then be used to determine the
   state of stuck flows or flows that experienced internal errors and were kept in the node for manual intervention.
 
