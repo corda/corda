@@ -588,7 +588,7 @@ task commitBuildImageResult(type: DockerCommitImage) {
 task tagBuildImageResult(type: DockerTagImage) {
     dependsOn commitBuildImageResult
     imageId = commitBuildImageResult.getImageId()
-    tag = "${UUID.randomUUID().toString().toLowerCase().subSequence(0, 6)}"
+    tag = "${UUID.randomUUID().toString().toLowerCase().subSequence(0, 12)}"
     repository = "stefanotestingcr.azurecr.io/testing"
 }
 docker {
@@ -599,65 +599,131 @@ docker {
     }
 }
 
-task pushBuildImage(type: DockerPushImage) {
+task pushBuildImage(type: DockerPushImage, dependsOn: tagBuildImageResult) {
     imageName = "stefanotestingcr.azurecr.io/testing"
-    tag = "fb4ce0"
+    tag = tagBuildImageResult.tag
 }
+//task pushBuildImage(type: DockerPushImage) {
+//    imageName = "stefanotestingcr.azurecr.io/testing"
+//    tag = 'd716c854-3fd'
+//}
+
+def imageBuildingTask = rootProject.tasks.getByName("pushBuildImage")
 
 allprojects {
     tasks.withType(Test) { Test task ->
-        def projectContainingTask = getProject()
+        Project projectContainingTask = getProject()
         try {
-            if (!projectContainingTask.getName().contains("deterministic") &&
-                    !projectContainingTask.getName().contains("capsule") &&
-                    !projectContainingTask.getName().contains("rpc")) {
 
-                def taskName = task.getName()
-                def capitalizedTaskName = task.getName().capitalize()
-                def createdListTask = projectContainingTask.tasks.create("listTestsFor" + capitalizedTaskName, com.stefano.testing.ListTests) {
-                    dependsOn projectContainingTask.getTasks().getByName("${taskName}Classes")
+            def taskName = task.getName()
+            def capitalizedTaskName = task.getName().capitalize()
+            def createdListTask = projectContainingTask.tasks.create("listTestsFor" + capitalizedTaskName, com.stefano.testing.ListTests) {
+                dependsOn projectContainingTask.getTasks().getByName("${taskName}Classes")
+                doFirst {
                     scanClassPath = task.getTestClassesDirs() ? task.getTestClassesDirs() : Collections.emptyList()
                 }
-
-                def createdPrintTask = projectContainingTask.tasks.create("printTestsFor" + capitalizedTaskName) {
-                    dependsOn createdListTask
-                    doLast {
-                        createdListTask.getTestsForFork(0, 1, 42).forEach { testName ->
-                            println testName
-                        }
-                    }
-                }
-
-                logger.info("created task: " + createdListTask.getPath() + " in project: " + projectContainingTask + " it dependsOn: " + createdListTask.dependsOn)
-                logger.info("created task: " + createdPrintTask.getPath() + " in project: " + projectContainingTask + " it dependsOn: " + createdPrintTask.dependsOn)
-                println("detected that we are in a docker environment, modifying task: ${task.getPath()} to depend on task ${createdListTask.getPath()}")
-                task.configure {
-                    dependsOn createdListTask
-                    doFirst {
-                        filter {
-                            def includes = createdListTask.getTestsForFork(getPropertyAsInt(projectContainingTask, "dockerFork", 0), getPropertyAsInt(projectContainingTask, "dockerForks", 1), 42)
-                            includes.forEach { include ->
-                                println "including: $include"
-                                includeTestsMatching include
-                            }
-                        }
-                    }
-                }
-
-                def imageBuildingTask = rootProject.tasks.getByName("pushBuildImage")
-                def createdParallelTestTask = projectContainingTask.tasks.create("parallel" + capitalizedTaskName, com.stefano.testing.KubesTest) {
-                    dependsOn imageBuildingTask
-                    printOutput = true
-                    taskToExecute = task.getPath()
-                    doFirst {
-                        dockerTag = imageBuildingTask.imageName.get() + ":" + imageBuildingTask.tag.get()
-                    }
-                }
-                println "Created task: ${createdParallelTestTask.getPath()} to enable testing on kubenetes for task: ${task.getPath()}"
             }
+
+            def createdPrintTask = projectContainingTask.tasks.create("printTestsFor" + capitalizedTaskName) {
+                dependsOn createdListTask
+                doLast {
+                    createdListTask.getTestsForFork(
+                            getPropertyAsInt(projectContainingTask, "dockerFork", 0),
+                            getPropertyAsInt(projectContainingTask, "dockerForks", 1),
+                            42)
+                            .forEach { testName ->
+                                println testName
+                            }
+                }
+            }
+
+            logger.info("created task: " + createdListTask.getPath() + " in project: " + projectContainingTask + " it dependsOn: " + createdListTask.dependsOn)
+            logger.info("created task: " + createdPrintTask.getPath() + " in project: " + projectContainingTask + " it dependsOn: " + createdPrintTask.dependsOn)
+            logger.info("modifying task: ${task.getPath()} to depend on task ${createdListTask.getPath()}")
+            def reportsDir = new File(new File(rootProject.getBuildDir(), "test-reports"), projectContainingTask.name + "-" + task.name)
+
+            task.configure {
+                dependsOn createdListTask
+                binResultsDir new File(reportsDir, "binary")
+                reports.junitXml.destination new File(reportsDir, "xml")
+                doFirst {
+                    filter {
+                        def fork = getPropertyAsInt(projectContainingTask, "dockerFork", 0)
+                        def forks = getPropertyAsInt(projectContainingTask, "dockerForks", 1)
+                        def shuffleSeed = 42
+                        println "requesting tests to include in testing task ${task.getPath()} (${fork}, ${forks}, ${shuffleSeed})"
+                        List<String> includes = createdListTask.getTestsForFork(
+                                fork,
+                                forks,
+                                shuffleSeed)
+                        println "got ${includes.size()} tests to include into testing task ${task.getPath()}"
+
+                        if (includes.size() == 0) {
+                            println "Disabling test executing for testing task ${task.getPath()}"
+                            excludeTestsMatching "*"
+                            failOnNoMatchingTests false
+                        }
+
+                        includes.forEach { include ->
+                            println "including: $include for testing task ${task.getPath()}"
+                            includeTestsMatching include
+                        }
+                    }
+                }
+            }
+
+            def createdParallelTestTask = projectContainingTask.tasks.create("parallel" + capitalizedTaskName, com.stefano.testing.KubesTest) {
+                dependsOn imageBuildingTask
+                printOutput = true
+                fullTaskToExecutePath = task.getPath()
+                taskToExecuteName = taskName
+                doFirst {
+                    dockerTag = imageBuildingTask.imageName.get() + ":" + imageBuildingTask.tag.get()
+                }
+            }
+            println "Created task: ${createdParallelTestTask.getPath()} to enable testing on kubenetes for task: ${task.getPath()}"
+
         } catch (Exception e) {
             System.err.println(e.message)
         }
 
     }
 }
+
+Map<String, List<com.stefano.testing.KubesTest>> allKubesTestingTasksGroupedByType = subprojects.collect { project -> project.getAllTasks(false).values() }
+        .flatten()
+        .findAll { task -> task instanceof com.stefano.testing.KubesTest }
+        .groupBy { task -> task.taskToExecuteName }
+
+allKubesTestingTasksGroupedByType.entrySet().collect { entry ->
+    def taskType = entry.key
+    def allTasksOfType = entry.value
+
+    def allParallelTask = rootProject.tasks.create("allParallel" + taskType.capitalize(), com.stefano.testing.KubesTest) {
+        dependsOn imageBuildingTask
+        printOutput = true
+        fullTaskToExecutePath = allTasksOfType.collect { task -> task.fullTaskToExecutePath }.join(" ")
+        taskToExecuteName = taskType
+        doFirst {
+            dockerTag = imageBuildingTask.imageName.get() + ":" + imageBuildingTask.tag.get()
+        }
+    }
+
+    def reportOnAllTask = rootProject.tasks.create("reportAllParallel${taskType.capitalize()}", com.stefano.testing.KubesReporting) {
+        dependsOn allParallelTask
+        destinationDir new File(rootProject.getBuildDir(), "allResults${taskType.capitalize()}")
+        doFirst {
+            destinationDir.deleteDir()
+            reportOn(allParallelTask.results)
+        }
+    }
+
+    allParallelTask.finalizedBy(reportOnAllTask)
+
+
+    println "Created task: ${allParallelTask.getPath()} to enable testing on kubenetes for tasks: ${allParallelTask.fullTaskToExecutePath}"
+    println "Created task: ${reportOnAllTask.getPath()} to generate test html output for task ${allParallelTask.getPath()}"
+    return allParallelTask
+
+}
+

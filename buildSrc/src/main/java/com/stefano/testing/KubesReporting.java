@@ -140,7 +140,7 @@ public class KubesReporting extends DefaultTask {
         }
     }
 
-    private TestResultsProvider createAggregateProvider() {
+    public TestResultsProvider createAggregateProvider() {
         List<TestResultsProvider> resultsProviders = new LinkedList<TestResultsProvider>();
         try {
             FileCollection resultDirs = getTestResultDirs();

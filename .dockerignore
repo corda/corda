@@ -1,0 +1,7 @@
+.git
+.cache
+.idea
+.ci
+.github
+.bootstrapper
+**/*.class

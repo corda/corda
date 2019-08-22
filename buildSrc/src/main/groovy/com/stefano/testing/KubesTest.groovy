@@ -10,7 +10,9 @@ import org.gradle.api.tasks.TaskAction
 
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.concurrent.CountDownLatch
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
 import java.util.function.Consumer
@@ -19,21 +21,25 @@ import java.util.stream.IntStream
 
 class KubesTest extends DefaultTask {
 
+    static final ExecutorService executorService = Executors.newCachedThreadPool()
+    static final ExecutorService singleThreadedExecutor = Executors.newSingleThreadExecutor()
+
     String dockerTag
-    String taskToExecute
+    String fullTaskToExecutePath
+    String taskToExecuteName
     Boolean printOutput = false
-    public List<File> results = Collections.emptyList()
+    public volatile List<File> results = Collections.emptyList()
 
     private class KubePodResult {
 
         private final Pod createdPod
         private final AtomicReference<Throwable> errorHolder
-        private final CountDownLatch waiter
+        private final CompletableFuture<Void> waiter
         private volatile Integer resultCode = 255
         private final File output;
 
 
-        KubePodResult(Pod createdPod, AtomicReference<Throwable> errorHolder, CountDownLatch waiter, File output) {
+        KubePodResult(Pod createdPod, AtomicReference<Throwable> errorHolder, CompletableFuture<Void> waiter, File output) {
             this.createdPod = createdPod
             this.errorHolder = errorHolder
             this.waiter = waiter
@@ -72,9 +78,6 @@ class KubesTest extends DefaultTask {
         final KubernetesClient client = new DefaultKubernetesClient(config)
 
         String namespace = "thisisatest"
-        client.apps().deployments().inNamespace(namespace).list().getItems().forEach({ deploymentToDelete ->
-            client.resource(deploymentToDelete).delete()
-        })
 
         client.pods().inNamespace(namespace).list().getItems().forEach({ podToDelete ->
             System.out.println("deleting: " + podToDelete.getMetadata().getName())
@@ -85,54 +88,53 @@ class KubesTest extends DefaultTask {
         client.namespaces().createOrReplace(ns)
 
         int numberOfNodes = client.nodes().list().getItems().size()
-        List<KubePodResult> createdPods = IntStream.range(0, numberOfNodes).parallel().mapToObj({ i ->
-            File outputFile = Files.createTempFile("container", ".log").toFile()
+        List<CompletableFuture<KubePodResult>> podCreationFutures = IntStream.range(0, numberOfNodes).mapToObj({ i ->
 
-            String podName = "test" + runId + i
-            Pod podRequest = buildPod(podName)
-            System.out.println("created pod: " + podName)
-            Pod createdPod = client.pods().inNamespace(namespace).create(podRequest)
+            CompletableFuture.supplyAsync({
+                File outputFile = Files.createTempFile("container", ".log").toFile()
+
+                String podName = "test" + runId + i
+                Pod podRequest = buildPod(podName)
+                System.out.println("created pod: " + podName)
+                Pod createdPod = client.pods().inNamespace(namespace).create(podRequest)
 
 
-            AtomicReference<Throwable> errorHolder = new AtomicReference<>()
-            CountDownLatch waiter = new CountDownLatch(1)
-            KubePodResult result = new KubePodResult(createdPod, errorHolder, waiter, outputFile)
-            startBuildAndLogging(client, namespace, numberOfNodes, i, podName, printOutput, errorHolder, waiter, { int resultCode ->
-                result.setResultCode(resultCode)
-            })
+                AtomicReference<Throwable> errorHolder = new AtomicReference<>()
+                CompletableFuture<Void> waiter = new CompletableFuture<Void>()
+                KubePodResult result = new KubePodResult(createdPod, errorHolder, waiter, outputFile)
+                startBuildAndLogging(client, namespace, numberOfNodes, i, podName, printOutput, errorHolder, waiter, { int resultCode ->
+                    result.setResultCode(resultCode)
+                }, outputFile)
 
-            return result
+                return result
+            }, executorService)
+
+
         }).collect(Collectors.toList())
 
-        System.out.println("Pods created, waiting for exit")
+        def binaryFileFutures = podCreationFutures.collect { creationFuture ->
+            return creationFuture.thenComposeAsync({ podResult ->
+                return podResult.waiter.thenApply {
+                    System.out.println("Successfully terminated log streaming for " + podResult.createdPod.getMetadata().getName())
+                    println "Gathering test results from ${podResult.createdPod.metadata.name}"
+                    def binaryResults = downloadTestXmlFromPod(client, namespace, podResult.createdPod)
+                    System.out.println("deleting: " + podResult.createdPod.getMetadata().getName())
+                    client.resource(podResult.createdPod).delete()
+                    return binaryResults
+                }
+            }, singleThreadedExecutor)
+        }
 
-        createdPods.forEach({ pod ->
-            try {
-                pod.waiter.await()
-                System.out.println("Successfully terminated log streaming for "
-                        + pod.createdPod.getMetadata().getName() + " still waiting for "
-                        + createdPods.stream().filter({ cp -> cp.waiter.getCount() > 0 }).map({ cp -> cp.createdPod.getMetadata().getName() }).collect(Collectors.toSet()))
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e)
-            }
-        })
+        def allFilesDownloadedFuture = CompletableFuture.allOf(*binaryFileFutures.toArray(new CompletableFuture[0])).thenApply {
+            def allBinaryFiles = binaryFileFutures.collect { future ->
+                Collection<File> binaryFiles = future.get()
+                return binaryFiles
+            }.flatten()
+            this.results = Collections.synchronizedList(allBinaryFiles)
+            return allBinaryFiles
+        }
 
-        System.out.println("All pods have completed! preparing to gather test results")
-        List<Pod> items = new ArrayList<>(client.pods().inNamespace(namespace).list().getItems())
-        Collections.shuffle(items)
-
-        List<File> downloadedTestDirs = items.stream().parallel().map { pod ->
-            return downloadTestXmlFromPod(client, namespace, pod)
-        }.collect(Collectors.toList())
-
-        this.results = downloadedTestDirs
-
-        createdPods.forEach({ podToDelete ->
-            System.out.println("deleting: " + podToDelete.createdPod.getMetadata().getName())
-            client.resource(podToDelete.createdPod).delete()
-        })
-
-
+        allFilesDownloadedFuture.get()
     }
 
     void startBuildAndLogging(KubernetesClient client,
@@ -142,11 +144,12 @@ class KubesTest extends DefaultTask {
                               String podName,
                               boolean printOutput,
                               AtomicReference<Throwable> errorHolder,
-                              CountDownLatch waiter,
-                              Consumer<Integer> resultSetter) {
+                              CompletableFuture<Void> waiter,
+                              Consumer<Integer> resultSetter,
+                              File outputFileForContainer) {
         try {
             System.out.println("Waiting for pod " + podName + " to start before executing build")
-            client.pods().inNamespace(namespace).withName(podName).waitUntilReady(10, TimeUnit.MINUTES)
+            client.pods().inNamespace(namespace).withName(podName).waitUntilReady(60, TimeUnit.MINUTES)
             System.out.println("pod " + podName + " has started, executing build")
             Watch eventWatch = client.pods().inNamespace(namespace).withName(podName).watch(new Watcher<Pod>() {
                 @Override
@@ -174,15 +177,14 @@ class KubesTest extends DefaultTask {
                             @Override
                             void onFailure(Throwable t, Response response) {
                                 System.out.println("Received error from rom pod + podName")
-                                errorHolder.set(t)
-                                waiter.countDown()
+                                waiter.completeExceptionally(t)
                             }
 
                             @Override
                             void onClose(int code, String reason) {
                                 resultSetter.accept(code)
                                 System.out.println("Received onClose() from pod " + podName)
-                                waiter.countDown()
+                                waiter.complete()
                             }
                         }).exec(getBuildCommand(numberOfPods, podIdx))
 
@@ -198,14 +200,14 @@ class KubesTest extends DefaultTask {
                             @Override
                             void onFailure(Throwable t, Response response) {
                                 System.out.println("Received error from container, exiting")
-                                errorHolder.set(t)
-                                waiter.countDown()
+                                waiter.completeExceptionally(t)
                             }
 
                             @Override
                             void onClose(int code, String reason) {
                                 System.out.println("Received onClose() from container")
-                                waiter.countDown()
+                                resultSetter.accept(code)
+                                waiter.complete()
                             }
                         }).exec(getBuildCommand(numberOfPods, podIdx))
 
@@ -214,10 +216,16 @@ class KubesTest extends DefaultTask {
             System.out.println("Pod: " + podName + " has started ")
             if (printOutput) {
                 Thread loggingThread = new Thread({ ->
+                    BufferedWriter out = new BufferedWriter(new FileWriter(outputFileForContainer))
                     BufferedReader br = new BufferedReader(new InputStreamReader(execWatch.getOutput()))
-                    String line
-                    while ((line = br.readLine()) != null) {
-                        System.out.println(("Container" + podIdx + ":   " + line).trim())
+                    try {
+                        String line
+                        while ((line = br.readLine()) != null) {
+                            System.out.println(("Container" + podIdx + ":   " + line).trim())
+                        }
+                    } finally {
+                        out.close()
+                        br.close()
                     }
                 })
 
@@ -235,7 +243,7 @@ class KubesTest extends DefaultTask {
                 .addNewVolume()
                 .withName("gradlecache")
                 .withNewHostPath()
-                .withPath("/tmp/gradle")
+                .withPath("/gradle")
                 .withType("DirectoryOrCreate")
                 .endHostPath()
                 .endVolume()
@@ -260,12 +268,12 @@ class KubesTest extends DefaultTask {
     }
 
     String[] getBuildCommand(int numberOfPods, int podIdx) {
-        return ["bash", "-c", "cd /tmp/source && ./gradlew -PdockerFork=" + podIdx + " -PdockerForks=" + numberOfPods + " $taskToExecute --info"]
+        return ["bash", "-c", "cd /tmp/source && ./gradlew -PdockerFork=" + podIdx + " -PdockerForks=" + numberOfPods + " $fullTaskToExecutePath --info 2>&1 ; sleep 10"]
     }
 
-    File downloadTestXmlFromPod(KubernetesClient client, String namespace, Pod cp) {
-        String resultsInContainerPath = "/tmp/source/node/build/test-results"
-        String binaryResultsInContainerPath = "/tmp/source/node/build/test-results/test/binary"
+    Collection<File> downloadTestXmlFromPod(KubernetesClient client, String namespace, Pod cp) {
+        String resultsInContainerPath = "/tmp/source/build/test-reports"
+        String binaryResultsFile = "results.bin"
         String podName = cp.getMetadata().getName()
         Path tempDir = Files.createTempDirectory("nodeBuild")
         System.out.println("saving to " + podName + " results to: " + tempDir.toAbsolutePath().toFile().getAbsolutePath())
@@ -278,25 +286,30 @@ class KubesTest extends DefaultTask {
                     .copy(tempDir)
             copiedResult = true
         } catch (Exception ignored) {
+            throw ignored
         }
 
         if (copiedResult) {
-            return findChildPathInDir(new File(tempDir.toFile().getAbsolutePath()), binaryResultsInContainerPath)
+            return findFolderContainingBinaryResultsFile(new File(tempDir.toFile().getAbsolutePath()), binaryResultsFile)
         } else {
-            return null
+            return Collections.emptyList()
         }
     }
 
-    File findChildPathInDir(File start, String pathToFind) {
+    List<File> findFolderContainingBinaryResultsFile(File start, String fileNameToFind) {
         Queue<File> filesToInspect = new LinkedList<>(Collections.singletonList(start))
+        List<File> folders = new ArrayList<>()
         while (!filesToInspect.isEmpty()) {
             File fileToInspect = filesToInspect.poll()
-            if (fileToInspect.getAbsolutePath().endsWith(pathToFind)) {
-                return fileToInspect
+            if (fileToInspect.getAbsolutePath().endsWith(fileNameToFind)) {
+                folders.add(fileToInspect.parentFile)
             }
-            filesToInspect.addAll(Arrays.stream(fileToInspect.listFiles()).filter { f -> f.isDirectory() }.collect(Collectors.toList()))
+
+            if (fileToInspect.isDirectory()) {
+                filesToInspect.addAll(Arrays.stream(fileToInspect.listFiles()).collect(Collectors.toList()))
+            }
         }
-        return null
+        return folders
     }
 
 }
