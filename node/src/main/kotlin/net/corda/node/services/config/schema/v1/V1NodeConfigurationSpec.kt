@@ -11,12 +11,8 @@ import net.corda.common.configuration.parsing.internal.nested
 import net.corda.common.configuration.parsing.internal.toValidationError
 import net.corda.common.validation.internal.Validated.Companion.invalid
 import net.corda.common.validation.internal.Validated.Companion.valid
-import net.corda.node.services.config.JmxReporterType
-import net.corda.node.services.config.NodeConfiguration
-import net.corda.node.services.config.NodeConfigurationImpl
+import net.corda.node.services.config.*
 import net.corda.node.services.config.NodeConfigurationImpl.Defaults
-import net.corda.node.services.config.Valid
-import net.corda.node.services.config.VerifierType
 import net.corda.node.services.config.schema.parsers.badValue
 import net.corda.node.services.config.schema.parsers.toCordaX500Name
 import net.corda.node.services.config.schema.parsers.toNetworkHostAndPort
@@ -75,6 +71,7 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
     private val cordappSignerKeyFingerprintBlacklist by string().list().optional().withDefaultValue(Defaults.cordappSignerKeyFingerprintBlacklist)
     @Suppress("unused")
     private val custom by nestedObject().optional()
+    private val attesterConfiguration by nested(AttesterConfigurationSpec).optional()
 
     override fun parseValid(configuration: Config): Valid<NodeConfiguration> {
 
@@ -128,7 +125,8 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
                     h2port = configuration[h2port],
                     jarDirs = configuration[jarDirs],
                     cordappDirectories = cordappDirectories,
-                    cordappSignerKeyFingerprintBlacklist = configuration[cordappSignerKeyFingerprintBlacklist]
+                    cordappSignerKeyFingerprintBlacklist = configuration[cordappSignerKeyFingerprintBlacklist],
+                    attesterConfiguration = configuration[attesterConfiguration]
             ))
         } catch (e: Exception) {
             return when (e) {

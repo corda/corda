@@ -14,21 +14,10 @@ import net.corda.common.validation.internal.Validated.Companion.invalid
 import net.corda.common.validation.internal.Validated.Companion.valid
 import net.corda.core.context.AuthServiceId
 import net.corda.core.internal.notary.NotaryServiceFlow
-import net.corda.node.services.config.AuthDataSourceType
-import net.corda.node.services.config.CertChainPolicyConfig
-import net.corda.node.services.config.CertChainPolicyType
-import net.corda.node.services.config.DevModeOptions
-import net.corda.node.services.config.FlowOverride
-import net.corda.node.services.config.FlowOverrideConfig
-import net.corda.node.services.config.FlowTimeoutConfiguration
-import net.corda.node.services.config.NetworkServicesConfig
-import net.corda.node.services.config.NodeH2Settings
-import net.corda.node.services.config.NodeRpcSettings
-import net.corda.node.services.config.NotaryConfig
-import net.corda.node.services.config.PasswordEncryption
-import net.corda.node.services.config.SecurityConfiguration
+import net.corda.core.node.services.AttesterServiceType
+import net.corda.node.services.attester.AttesterService
+import net.corda.node.services.config.*
 import net.corda.node.services.config.SecurityConfiguration.AuthService.Companion.defaultAuthServiceId
-import net.corda.node.services.config.Valid
 import net.corda.node.services.config.schema.parsers.attempt
 import net.corda.node.services.config.schema.parsers.badValue
 import net.corda.node.services.config.schema.parsers.toCordaX500Name
@@ -175,6 +164,15 @@ internal object NotaryConfigSpec : Configuration.Specification<NotaryConfig>("No
 
     override fun parseValid(configuration: Config): Valid<NotaryConfig> {
         return valid(NotaryConfig(configuration[validating], configuration[serviceLegalName], configuration[className], configuration[etaMessageThresholdSeconds], configuration[extraConfig], configuration[raft], configuration[bftSMaRt]))
+    }
+}
+
+internal object AttesterConfigurationSpec: Configuration.Specification<AttesterConfiguration>("AttesterConfig") {
+    private val type by enum(AttesterServiceType::class)
+    private val address by string().mapValid(::toNetworkHostAndPort)
+
+    override fun parseValid(configuration: Config): Valid<AttesterConfiguration> {
+        return valid(AttesterConfiguration(configuration[type], configuration[address]))
     }
 }
 

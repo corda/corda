@@ -9,7 +9,9 @@ import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.NetworkParametersService
 import net.corda.core.node.services.TransactionStorage
+import net.corda.core.serialization.deserialize
 import net.corda.core.transactions.ContractUpgradeWireTransaction
+import net.corda.core.transactions.FilteredTransaction
 import net.corda.core.transactions.NotaryChangeWireTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.transactions.WireTransaction.Companion.resolveStateRefBinaryComponent
@@ -27,7 +29,14 @@ data class ServicesForResolutionImpl(
     @Throws(TransactionResolutionException::class)
     override fun loadState(stateRef: StateRef): TransactionState<*> {
         val stx = validatedTransactions.getTransaction(stateRef.txhash) ?: throw TransactionResolutionException(stateRef.txhash)
-        return stx.resolveBaseTransaction(this).outputs[stateRef.index]
+        val baseTx = stx.resolveBaseTransaction(this)
+        if (baseTx is FilteredTransaction) {
+            return validatedTransactions.resolveState(stateRef)?.let { it.deserialize()}
+                    ?: throw TransactionResolutionException(stateRef.txhash)
+        } else {
+            return baseTx.outputs[stateRef.index]
+        }
+
     }
 
     @Throws(TransactionResolutionException::class)
@@ -35,7 +44,14 @@ data class ServicesForResolutionImpl(
         return stateRefs.groupBy { it.txhash }.flatMap {
             val stx = validatedTransactions.getTransaction(it.key) ?: throw TransactionResolutionException(it.key)
             val baseTx = stx.resolveBaseTransaction(this)
-            it.value.map { StateAndRef(baseTx.outputs[it.index], it) }
+            if (baseTx is FilteredTransaction) {
+                it.value.map { stateRef: StateRef ->
+                    val serializedTxState = validatedTransactions.resolveState(stateRef) ?: throw TransactionResolutionException(stateRef.txhash)
+                    StateAndRef(serializedTxState.deserialize(), stateRef)
+                }
+            } else {
+                it.value.map { StateAndRef(baseTx.outputs[it.index], it) }
+            }
         }.toSet()
     }
 

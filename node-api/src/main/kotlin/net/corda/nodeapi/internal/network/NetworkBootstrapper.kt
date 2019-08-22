@@ -5,14 +5,17 @@ import com.typesafe.config.ConfigException
 import com.typesafe.config.ConfigFactory
 import net.corda.common.configuration.parsing.internal.Configuration
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.identity.EnclaveIdentity
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.fork
 import net.corda.core.internal.concurrent.transpose
+import net.corda.core.node.EnclaveHosts
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.NotaryInfo
 import net.corda.core.node.services.AttachmentId
+import net.corda.core.node.services.AttesterServiceType
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
@@ -264,12 +267,14 @@ internal constructor(private val initSerEnv: Boolean,
             println(existingNetParams ?: "none found")
             println("Gathering notary identities")
             val notaryInfos = gatherNotaryInfos(nodeInfoFiles, configs)
+            println("Collect enclave hosts info")
+            val enclaveHosts = populateEnclaveHosts(nodeInfoFiles, configs)
             println("Generating contract implementations whitelist")
             val signedJars = cordappJars.filter { isSigned(it) } // signed JARs are excluded by default, optionally include them in order to transition states from CZ whitelist to signature constraint
             val unsignedJars = cordappJars - signedJars
             val newWhitelist = generateWhitelist(existingNetParams, readExcludeWhitelist(directory), unsignedJars.map(contractsJarConverter),
                     readIncludeWhitelist(directory), signedJars.map(contractsJarConverter))
-            val newNetParams = installNetworkParameters(notaryInfos, newWhitelist, existingNetParams, nodeDirs, networkParametersOverrides)
+            val newNetParams = installNetworkParameters(notaryInfos, newWhitelist, existingNetParams, nodeDirs, networkParametersOverrides, enclaveHosts)
             if (newNetParams != existingNetParams) {
                 println("${if (existingNetParams == null) "New" else "Updated"} $newNetParams")
             } else {
@@ -373,6 +378,24 @@ internal constructor(private val initSerEnv: Boolean,
         }.distinct() // We need distinct as nodes part of a distributed notary share the same notary identity
     }
 
+    /**
+     * SGX: extract SGX-related network parameters
+     */
+    private fun populateEnclaveHosts(nodeInfoFiles: List<Path>, configs: Map<Path, Config>): EnclaveHosts {
+        val hosts = TreeMap<AttesterServiceType, ArrayList<Party>>()
+        val trustedEnclaves = TreeMap<AttesterServiceType, ArrayList<EnclaveIdentity>>()
+        for (nodeInfoFile in nodeInfoFiles) {
+            val config = configs.getValue(nodeInfoFile.parent)
+            if (config.hasPath("attesterConfiguration")) {
+                val nodeInfo = nodeInfoFile.readObject<SignedNodeInfo>().verified()
+                val party = nodeInfo.legalIdentities.first()
+                println("Registering party ${party.name} as back-chain attester")
+                hosts.getOrPut(AttesterServiceType.BACKCHAIN_VALIDATOR) { ArrayList() }.add(party)
+            }
+        }
+        return EnclaveHosts(hosts, trustedEnclaves, null)
+    }
+
     private fun loadNetworkParameters(nodeDirs: List<Path>): NetworkParameters? {
         val netParamsFilesGrouped = nodeDirs.mapNotNull {
             val netParamsFile = it / NETWORK_PARAMS_FILE_NAME
@@ -403,7 +426,8 @@ internal constructor(private val initSerEnv: Boolean,
     }
 
     private fun defaultNetworkParametersWith(notaryInfos: List<NotaryInfo>,
-                                             whitelist: Map<String, List<AttachmentId>>): NetworkParameters {
+                                             whitelist: Map<String, List<AttachmentId>>,
+                                             enclaveHosts: EnclaveHosts): NetworkParameters {
         return NetworkParameters(
                 minimumPlatformVersion = PLATFORM_VERSION,
                 notaries = notaryInfos,
@@ -413,8 +437,9 @@ internal constructor(private val initSerEnv: Boolean,
                 whitelistedContractImplementations = whitelist,
                 packageOwnership = emptyMap(),
                 epoch = 1,
-                eventHorizon = 30.days
-        )
+                eventHorizon = 30.days,
+                enclaveHosts = enclaveHosts
+            )
     }
 
     private fun installNetworkParameters(
@@ -422,11 +447,12 @@ internal constructor(private val initSerEnv: Boolean,
             whitelist: Map<String, List<AttachmentId>>,
             existingNetParams: NetworkParameters?,
             nodeDirs: List<Path>,
-            networkParametersOverrides: NetworkParametersOverrides
+            networkParametersOverrides: NetworkParametersOverrides,
+            enclaveHosts: EnclaveHosts
     ): NetworkParameters {
         val netParams = if (existingNetParams != null) {
             val newNetParams = existingNetParams
-                    .copy(notaries = notaryInfos, whitelistedContractImplementations = whitelist)
+                    .copy(notaries = notaryInfos, whitelistedContractImplementations = whitelist, enclaveHosts = enclaveHosts)
                     .overrideWith(networkParametersOverrides)
             if (newNetParams != existingNetParams) {
                 newNetParams.copy(
@@ -437,7 +463,7 @@ internal constructor(private val initSerEnv: Boolean,
                 existingNetParams
             }
         } else {
-            defaultNetworkParametersWith(notaryInfos, whitelist).overrideWith(networkParametersOverrides)
+            defaultNetworkParametersWith(notaryInfos, whitelist, enclaveHosts).overrideWith(networkParametersOverrides)
         }
         val copier = NetworkParametersCopier(netParams, overwriteFile = true)
         nodeDirs.forEach(copier::install)

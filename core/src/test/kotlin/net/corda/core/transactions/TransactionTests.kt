@@ -240,5 +240,7 @@ class TransactionTests {
         val filteredId = filteredOutputStateGroup.components.indexOf(outputState2Serialized)
         val outputState2Hash = componentHash(filteredOutputStateGroup.nonces[filteredId], outputState2Serialized)
         assertEquals(filteredOutputStateGroup.partialMerkleTree.leafIndex(outputState2Hash), 1)
+        val indexed = filteredOutputStateGroup.indexed()
+        assertEquals(indexed, listOf(Pair(outputState2Serialized, 1)))
     }
 }

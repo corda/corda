@@ -12,6 +12,7 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.utilities.OpaqueBytes
+import sun.java2d.x11.X11SurfaceDataProxy
 import java.lang.IllegalArgumentException
 import java.security.PublicKey
 import java.util.function.Predicate
@@ -359,6 +360,17 @@ data class FilteredComponentGroup(override val groupIndex: Int,
                                   val partialMerkleTree: PartialMerkleTree) : ComponentGroup(groupIndex, components) {
     init {
         check(components.size == nonces.size) { "Size of transaction components and nonces do not match" }
+    }
+
+    /*
+     * SGX: Recover the original offset of each component in the original ComponentGroup,
+     */
+    fun indexed(): List<Pair<OpaqueBytes, Int>> {
+        return components.zip(nonces).map { p: Pair<OpaqueBytes, SecureHash> ->
+            val (bytes, nonce) = p
+            val id = partialMerkleTree.leafIndex(componentHash(nonce, bytes))
+            Pair(bytes, id)
+        }.toList()
     }
 }
 

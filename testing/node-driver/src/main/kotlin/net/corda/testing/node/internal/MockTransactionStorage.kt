@@ -1,9 +1,13 @@
 package net.corda.testing.node.internal
 
 import net.corda.core.concurrent.CordaFuture
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.TransactionState
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.messaging.DataFeed
+import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.toFuture
 import net.corda.core.transactions.SignedTransaction
@@ -42,4 +46,8 @@ open class MockTransactionStorage : WritableTransactionStorage, SingletonSeriali
     }
 
     override fun getTransaction(id: SecureHash): SignedTransaction? = txns[id]
+
+    override fun resolveState(id: StateRef): SerializedBytes<TransactionState<ContractState>>? {
+        return null
+    }
 }

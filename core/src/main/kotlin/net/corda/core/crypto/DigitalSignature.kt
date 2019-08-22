@@ -10,10 +10,10 @@ import java.security.SignatureException
 /** A wrapper around a digital signature. */
 @CordaSerializable
 @KeepForDJVM
-open class DigitalSignature(bytes: ByteArray) : OpaqueBytes(bytes) {
+open class DigitalSignature(bytes: ByteArray): OpaqueBytes(bytes) {
     /** A digital signature that identifies who the public key is owned by. */
     @KeepForDJVM
-    open class WithKey(val by: PublicKey, bytes: ByteArray) : DigitalSignature(bytes) {
+    open class WithKey(val by: PublicKey, bytes: ByteArray): DigitalSignature(bytes) {
         /**
          * Utility to simplify the act of verifying a signature.
          *

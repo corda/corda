@@ -16,6 +16,7 @@ import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.StateMachineTransactionMapping
 import net.corda.core.node.services.Vault
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.toFuture
 import net.corda.core.transactions.SignedTransaction
@@ -756,6 +757,10 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
                 records.add(TxRecord.Get(id))
                 delegate.getTransaction(id)
             }
+        }
+
+        override fun resolveState(id: StateRef): SerializedBytes<TransactionState<ContractState>>? {
+            return null
         }
     }
 

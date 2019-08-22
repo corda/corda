@@ -45,6 +45,8 @@ import net.corda.node.services.ContractUpgradeHandler
 import net.corda.node.services.FinalityHandler
 import net.corda.node.services.NotaryChangeHandler
 import net.corda.node.services.api.*
+import net.corda.node.services.attester.AttesterServiceRegistrar
+import net.corda.node.services.attester.MockBackChainAttesterClient
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
 import net.corda.node.services.config.rpc.NodeRpcOptions
@@ -401,6 +403,17 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             }
 
             schedulerService.start()
+
+            // SGX: register attestation server
+            if (configuration.attesterConfiguration != null) {
+                // TODO: what is the attester key allowed to be?
+                log.info("Initializing backchain attestation service")
+                AttesterServiceRegistrar.register(
+                        configuration.attesterConfiguration!!,
+                        flowManager,
+                        identity.owningKey)
+            }
+
 
             createStartedNode(nodeInfo, rpcOps, notaryService).also { _started = it }
         }
@@ -994,6 +1007,10 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         override val networkMapUpdater: NetworkMapUpdater get() = this@AbstractNode.networkMapUpdater
         override val cacheFactory: NamedCacheFactory get() = this@AbstractNode.cacheFactory
         override val networkParametersService: NetworkParametersStorage get() = this@AbstractNode.networkParametersStorage
+        override fun getAttesterClient(type: AttesterServiceType): AttesterClient? {
+            require(type == AttesterServiceType.BACKCHAIN_VALIDATOR)
+            return MockBackChainAttesterClient
+        }
 
         private lateinit var _myInfo: NodeInfo
         override val myInfo: NodeInfo get() = _myInfo

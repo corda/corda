@@ -1,6 +1,7 @@
 package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
+import com.sun.javaws.progress.Progress
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.identity.Party
@@ -100,6 +101,11 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
                 "accept notarised transactions without first checking their relevancy. Instead, use one of the constructors " +
                 "that requires only FlowSessions."
 
+        object ATTESTER_SIG : ProgressTracker.Step("Requesting signature by transaction attester service") {
+            override fun childProgressTracker() = BackchainAttesterClientFlow.tracker()
+        }
+
+
         object NOTARISING : ProgressTracker.Step("Requesting signature by notary service") {
             override fun childProgressTracker() = NotaryFlow.Client.tracker()
         }
@@ -144,7 +150,12 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
             }
         }
 
-        val notarised = notariseAndRecord()
+        /**
+         * SGX: we assume signature from backchain attester to be mandatory for now
+         */
+        val attested = attestTransaction(transaction)
+
+        val notarised = notariseAndRecord(attested)
 
         progressTracker.currentStep = BROADCASTING
 
@@ -192,19 +203,26 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
     }
 
     @Suspendable
-    private fun notariseAndRecord(): SignedTransaction {
-        val notarised = if (needsNotarySignature(transaction)) {
+    private fun notariseAndRecord(tx: SignedTransaction): SignedTransaction {
+        val notarised = if (needsNotarySignature(tx)) {
             progressTracker.currentStep = NOTARISING
-            val notarySignatures = subFlow(NotaryFlow.Client(transaction))
-            transaction + notarySignatures
+            val notarySignatures = subFlow(NotaryFlow.Client(tx))
+            tx + notarySignatures
         } else {
             logger.info("No need to notarise this transaction.")
-            transaction
+            tx
         }
         logger.info("Recording transaction locally.")
         serviceHub.recordTransactions(notarised)
         logger.info("Recorded transaction locally successfully.")
         return notarised
+    }
+
+    @Suspendable
+    private fun attestTransaction(tx: SignedTransaction): SignedTransaction {
+        progressTracker.currentStep = ATTESTER_SIG
+        val attesterSignature = subFlow(BackchainAttesterClientFlow(tx))
+        return tx + attesterSignature
     }
 
     private fun needsNotarySignature(stx: SignedTransaction): Boolean {

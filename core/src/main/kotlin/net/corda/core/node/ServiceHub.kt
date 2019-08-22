@@ -151,7 +151,12 @@ interface ServiceHub : ServicesForResolution {
      * INTERNAL. DO NOT USE.
      * @suppress
      */
-    val transactionVerifierService: TransactionVerifierService
+    val transactionVerifierService:  TransactionVerifierService
+
+    /**
+     * SGX: Client-side api of attester service
+     */
+    fun getAttesterClient(type: AttesterServiceType): AttesterClient?
 
     /**
      * A [Clock] representing the node's current time. This should be used in preference to directly accessing the

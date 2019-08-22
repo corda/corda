@@ -3,14 +3,17 @@ package net.corda.core.node
 import net.corda.core.CordaRuntimeException
 import net.corda.core.KeepForDJVM
 import net.corda.core.crypto.toStringShort
+import net.corda.core.identity.EnclaveIdentity
 import net.corda.core.identity.Party
 import net.corda.core.internal.noPackageOverlap
 import net.corda.core.internal.requirePackageValid
 import net.corda.core.node.services.AttachmentId
+import net.corda.core.node.services.AttesterServiceType
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.DeprecatedConstructorForDeserialization
 import net.corda.core.utilities.days
 import java.security.PublicKey
+import java.security.cert.X509Certificate
 import java.time.Duration
 import java.time.Instant
 
@@ -45,7 +48,8 @@ data class NetworkParameters(
         @AutoAcceptable val epoch: Int,
         @AutoAcceptable val whitelistedContractImplementations: Map<String, List<AttachmentId>>,
         val eventHorizon: Duration,
-        @AutoAcceptable val packageOwnership: Map<String, PublicKey>
+        @AutoAcceptable val packageOwnership: Map<String, PublicKey>,
+        val enclaveHosts: EnclaveHosts?
 ) {
     // DOCEND 1
     @DeprecatedConstructorForDeserialization(1)
@@ -64,7 +68,8 @@ data class NetworkParameters(
             epoch,
             whitelistedContractImplementations,
             Int.MAX_VALUE.days,
-            emptyMap()
+            emptyMap(),
+            null
     )
 
     @DeprecatedConstructorForDeserialization(2)
@@ -84,8 +89,32 @@ data class NetworkParameters(
             epoch,
             whitelistedContractImplementations,
             eventHorizon,
-            emptyMap()
+            emptyMap(),
+            null
     )
+
+    @DeprecatedConstructorForDeserialization(3)
+    constructor(minimumPlatformVersion: Int,
+                notaries: List<NotaryInfo>,
+                maxMessageSize: Int,
+                maxTransactionSize: Int,
+                modifiedTime: Instant,
+                epoch: Int,
+                whitelistedContractImplementations: Map<String, List<AttachmentId>>,
+                eventHorizon: Duration,
+                packageOwnership: Map<String, PublicKey>
+    ) : this(minimumPlatformVersion,
+            notaries,
+            maxMessageSize,
+            maxTransactionSize,
+            modifiedTime,
+            epoch,
+            whitelistedContractImplementations,
+            eventHorizon,
+            packageOwnership,
+            null
+    )
+
 
     init {
         require(minimumPlatformVersion > 0) { "Minimum platform level must be at least 1" }
@@ -120,7 +149,8 @@ data class NetworkParameters(
                 epoch = epoch,
                 whitelistedContractImplementations = whitelistedContractImplementations,
                 eventHorizon = eventHorizon,
-                packageOwnership = packageOwnership
+                packageOwnership = packageOwnership,
+                enclaveHosts = enclaveHosts
         )
     }
 
@@ -145,7 +175,8 @@ data class NetworkParameters(
                 epoch = epoch,
                 whitelistedContractImplementations = whitelistedContractImplementations,
                 eventHorizon = eventHorizon,
-                packageOwnership = packageOwnership
+                packageOwnership = packageOwnership,
+                enclaveHosts = enclaveHosts
         )
     }
 
@@ -182,3 +213,16 @@ data class NotaryInfo(val identity: Party, val validating: Boolean)
  * version.
  */
 class ZoneVersionTooLowException(message: String) : CordaRuntimeException(message)
+
+/**
+ * SGX: Assumption on SGX enclaves and hosting nodes that the current network trust:
+ *   * list of authorized enclave hosts
+ *   * list of trusted enclave identities
+ *   * root certificate for verifying SGX remote attestation reports
+ */
+@CordaSerializable
+data class EnclaveHosts(
+        val hosts: Map<AttesterServiceType, List<Party>>,
+        val trustedEnclaves: Map<AttesterServiceType, List<EnclaveIdentity>>,
+        val remoteAttestationRoot: X509Certificate? = null
+)

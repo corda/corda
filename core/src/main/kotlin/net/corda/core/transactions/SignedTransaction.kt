@@ -13,6 +13,8 @@ import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.internalFindTrustedAttachmentForClass
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
+import net.corda.core.node.services.AttesterCertificate
+import net.corda.core.node.services.AttesterServiceType
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
@@ -223,6 +225,20 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
     // objects from the TransactionState.
     @DeleteForDJVM
     private fun verifyRegularTransaction(services: ServiceHub, checkSufficientSignatures: Boolean) {
+
+        // SGX: rely on attester signature if we cannot resolve the core transaction
+        if (coreTransaction is FilteredTransaction) {
+            val attester = services.getAttesterClient(AttesterServiceType.BACKCHAIN_VALIDATOR) ?:
+                throw SecurityException("Unavailable attestation verifier service")
+            val validityCerts = getAttesterCertificates(services, AttesterServiceType.BACKCHAIN_VALIDATOR)
+            if (validityCerts.isEmpty()) {
+                throw SecurityException("Failed to verify transaction")
+            } else {
+              validityCerts.forEach { cert -> attester.verify(this, cert) }
+            }
+            return
+        }
+
         val ltx = toLedgerTransaction(services, checkSufficientSignatures)
         try {
             // TODO: allow non-blocking verification.
@@ -285,7 +301,7 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
             is NotaryChangeWireTransaction -> resolveNotaryChangeTransaction(servicesForResolution)
             is ContractUpgradeWireTransaction -> resolveContractUpgradeTransaction(servicesForResolution)
             is WireTransaction -> this.tx
-            is FilteredTransaction -> throw IllegalStateException("Persistence of filtered transactions is not supported.")
+            is FilteredTransaction -> this.tx
             else -> throw IllegalStateException("Unknown transaction type ${coreTransaction::class.qualifiedName}")
         }
     }
@@ -300,7 +316,7 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
             is NotaryChangeWireTransaction -> resolveNotaryChangeTransaction(services)
             is ContractUpgradeWireTransaction -> resolveContractUpgradeTransaction(services)
             is WireTransaction -> this
-            is FilteredTransaction -> throw IllegalStateException("Persistence of filtered transactions is not supported.")
+            is FilteredTransaction -> this
             else -> throw IllegalStateException("Unknown transaction type ${coreTransaction::class.qualifiedName}")
         }
     }
@@ -359,4 +375,22 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
     @Deprecated("No replacement, this should not be used outside of Corda core")
     fun isNotaryChangeTransaction() = this.coreTransaction is NotaryChangeWireTransaction
     //endregion
+
+    fun getAttesterCertificates(services: ServiceHub, type: AttesterServiceType): List<AttesterCertificate> {
+        val enclaveHosts = services.networkParameters.enclaveHosts ?: return emptyList()
+        val trustedAttesterKeys = (enclaveHosts.hosts[type] ?: emptyList()).map { it.owningKey }.toSet()
+        return sigs.filter { it.by in trustedAttesterKeys }
+                .mapNotNull { sig ->
+                    (sig.signatureMetadata.applicationMetadata as? AttesterCertHolder) ?.let { cert ->
+                        if (cert.data.service == type) {
+                            cert.data
+                        } else {
+                            null
+                        }
+                    }
+                }.toList()
+    }
 }
+
+private typealias AttesterCertHolder = ApplicationSignatureMetadata.AttesterCertificateHolder
+

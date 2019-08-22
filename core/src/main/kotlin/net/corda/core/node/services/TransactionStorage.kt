@@ -3,8 +3,12 @@ package net.corda.core.node.services
 import net.corda.core.DeleteForDJVM
 import net.corda.core.DoNotImplement
 import net.corda.core.concurrent.CordaFuture
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.TransactionState
 import net.corda.core.crypto.SecureHash
 import net.corda.core.messaging.DataFeed
+import net.corda.core.serialization.SerializedBytes
 import net.corda.core.transactions.SignedTransaction
 import rx.Observable
 
@@ -34,4 +38,10 @@ interface TransactionStorage {
      * Returns a future that completes with the transaction corresponding to [id] once it has been committed
      */
     fun trackTransaction(id: SecureHash): CordaFuture<SignedTransaction>
+
+    /**
+     * SGX: return serialized transaction state if present, null otherwise. This is the place to look for
+     * output states of filtered transactions
+     */
+    fun resolveState(id: StateRef): SerializedBytes<TransactionState<ContractState>>?
 }
