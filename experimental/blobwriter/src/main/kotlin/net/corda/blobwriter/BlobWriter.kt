@@ -43,14 +43,16 @@ fun initialiseSerialization() {
     )
 }
 
-data class Test (val a: Int, val b: Int)
+data class _i_ (val a: Int)
+data class _is_ (val a: Int, val b: String)
+data class _i_is__ (val a: Int, val b: _is_)
+data class _Li_ (val a: List<Int>)
 
 fun main (args: Array<String>) {
     initialiseSerialization()
 
-    println ("HELLO WORLD!")
-
-    File("./test").writeBytes(Test(1, 2).serialize().bytes)
+    File("/Users/katelynbaker/srcs/corda/experimental/cpp-serializer/bin/test/_i_is__").writeBytes(_i_is__(1, _is_ (2, "three")).serialize().bytes)
+    File("/Users/katelynbaker/srcs/corda/experimental/cpp-serializer/bin/test/_Li_").writeBytes(_Li_(listOf (1, 2, 3, 4, 5, 6)).serialize().bytes)
 }
 
 
