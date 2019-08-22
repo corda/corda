@@ -28,12 +28,12 @@ Joining the UAT environment
 
 **Note**: 
 *Corda Network UAT is governed by an [independent Foundation](https://corda.network/governance/index.html). Corda Network UAT seeks to provide a test environment which is as close as possible to Corda Network in its make-up and operation.*
-=======
+
 
 Steps to join UAT environment
 -----------------------------
 
 Steps to join are outlined on this website: https://corda.network/participation/index.html
-=======
+
 
 For further questions on this process, please contact us - preferably on the mailing list: https://groups.io/g/corda-network

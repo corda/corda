@@ -98,18 +98,19 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
             @Column(name = "transaction_value", nullable = false)
             val transaction: ByteArray,
 
-            @Column(name = "status", nullable = false)
-            val status: Char
+            @Column(name = "status", nullable = false, length = 1)
+            @Convert(converter = TransactionStatusConverter::class)
+            val status: TransactionStatus
     )
 
-    private enum class TransactionStatus {
+    enum class TransactionStatus {
         UNVERIFIED,
         VERIFIED;
 
-        fun toDatabaseChar(): Char {
+        fun toDatabaseValue(): String {
             return when (this) {
-                UNVERIFIED -> 'U'
-                VERIFIED -> 'V'
+                UNVERIFIED -> "U"
+                VERIFIED -> "V"
             }
         }
 
@@ -118,16 +119,27 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
         }
 
         companion object {
-            fun fromDatabaseChar(databaseValue: Char): TransactionStatus {
+            fun fromDatabaseValue(databaseValue: String): TransactionStatus {
                 return when(databaseValue) {
-                    'V' -> VERIFIED
-                    'U' -> UNVERIFIED
+                    "V" -> VERIFIED
+                    "U" -> UNVERIFIED
                     else -> throw UnexpectedStatusValueException(databaseValue)
                 }
             }
         }
 
-        private class UnexpectedStatusValueException(status: Char): Exception("Found unexpected status value $status in transaction store")
+        private class UnexpectedStatusValueException(status: String): Exception("Found unexpected status value $status in transaction store")
+    }
+
+    @Converter
+    class TransactionStatusConverter : AttributeConverter<TransactionStatus, String> {
+        override fun convertToDatabaseColumn(attribute: TransactionStatus): String {
+            return attribute.toDatabaseValue()
+        }
+
+        override fun convertToEntityAttribute(dbData: String): TransactionStatus {
+            return TransactionStatus.fromDatabaseValue(dbData)
+        }
     }
 
     private companion object {
@@ -155,14 +167,14 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
                     fromPersistentEntity = {
                         SecureHash.parse(it.txId) to TxCacheValue(
                                 it.transaction.deserialize(context = contextToUse()),
-                                TransactionStatus.fromDatabaseChar(it.status))
+                                it.status)
                     },
                     toPersistentEntity = { key: SecureHash, value: TxCacheValue ->
                         DBTransaction(
                                 txId = key.toString(),
                                 stateMachineRunId = FlowStateMachineImpl.currentStateMachine()?.id?.uuid?.toString(),
                                 transaction = value.toSignedTx().serialize(context = contextToUse().withEncoding(SNAPPY)).bytes,
-                                status = value.status.toDatabaseChar()
+                                status = value.status
                         )
                     },
                     persistentEntityClass = DBTransaction::class.java,
@@ -183,10 +195,10 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
         val criteriaBuilder = session.criteriaBuilder
         val criteriaUpdate = criteriaBuilder.createCriteriaUpdate(DBTransaction::class.java)
         val updateRoot = criteriaUpdate.from(DBTransaction::class.java)
-        criteriaUpdate.set(DBTransaction::status.name, TransactionStatus.VERIFIED.toDatabaseChar())
+        criteriaUpdate.set(updateRoot.get<TransactionStatus>(DBTransaction::status.name), TransactionStatus.VERIFIED)
         criteriaUpdate.where(criteriaBuilder.and(
                 criteriaBuilder.equal(updateRoot.get<String>(DBTransaction::txId.name), txId.toString()),
-                criteriaBuilder.equal(updateRoot.get<Boolean>(DBTransaction::status.name), TransactionStatus.UNVERIFIED.toDatabaseChar())
+                criteriaBuilder.equal(updateRoot.get<TransactionStatus>(DBTransaction::status.name), TransactionStatus.UNVERIFIED)
         ))
         val update = session.createQuery(criteriaUpdate)
         val rowsUpdated = update.executeUpdate()
