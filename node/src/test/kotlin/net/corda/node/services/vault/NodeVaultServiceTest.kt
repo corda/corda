@@ -945,4 +945,36 @@ class NodeVaultServiceTest {
             assertTrue(it)
         }
     }
+
+    @Test
+    fun `test concurrent update of contract state type mappings`() {
+        // no registered contract state types at start-up.
+        assertEquals(0, vaultService.contractStateTypeMappings.size)
+
+        fun makeCash(amount: Amount<Currency>, issuer: AbstractParty, depositRef: Byte = 1) =
+                StateAndRef(
+                        TransactionState(Cash.State(amount `issued by` issuer.ref(depositRef), identity.party), Cash.PROGRAM_ID, DUMMY_NOTARY, constraint = AlwaysAcceptAttachmentConstraint),
+                        StateRef(SecureHash.randomSHA256(), Random().nextInt(32))
+                )
+
+        val cashIssued = setOf<StateAndRef<ContractState>>(makeCash(100.DOLLARS, dummyCashIssuer.party))
+        val cashUpdate = Vault.Update(emptySet(), cashIssued)
+
+        val service = Executors.newFixedThreadPool(10)
+        (1..100).map {
+            service.submit {
+                database.transaction {
+                    vaultService.publishUpdates.onNext(cashUpdate)
+                }
+            }
+        }.forEach { it.getOrThrow() }
+
+        vaultService.contractStateTypeMappings.forEach {
+            println("${it.key} = ${it.value}")
+        }
+        // Cash.State and its superclasses and interfaces: FungibleAsset, FungibleState, OwnableState, QueryableState
+        assertEquals(4, vaultService.contractStateTypeMappings.size)
+
+        service.shutdown()
+    }
 }
