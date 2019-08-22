@@ -115,10 +115,7 @@ class RpcReconnectTests {
 
             val addressesForRpc = addresses.map { it.proxyAddress }
             // DOCSTART rpcReconnectingRPC
-            val client = CordaRPCClient(addressesForRpc, CordaRPCClientConfiguration.DEFAULT.copy(
-                    maxReconnectAttempts = 3,
-                    connectionRetryInterval = 2.seconds
-            ))
+            val client = CordaRPCClient(addressesForRpc)
             val bankAReconnectingRpc = client.start(demoUser.username, demoUser.password, gracefulReconnect = true).proxy as ReconnectingCordaRPCOps
             // DOCEND rpcReconnectingRPC
 

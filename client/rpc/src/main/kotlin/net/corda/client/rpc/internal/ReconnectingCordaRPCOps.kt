@@ -174,18 +174,19 @@ class ReconnectingCordaRPCOps private constructor(
             return currentRPCConnection!!
         }
 
-        private tailrec fun establishConnectionWithRetry(retryInterval: Duration = 1.seconds, currentAuthenticationRetries: Int = 0): CordaRPCConnection {
+        private tailrec fun establishConnectionWithRetry(retryInterval: Duration = 1.seconds, currentAuthenticationRetries: Int = 0, roundRobinIndex: Int = 0): CordaRPCConnection {
             var _currentAuthenticationRetries = currentAuthenticationRetries
-            log.info("Connecting to: $nodeHostAndPorts")
+            val attemptedAddress = nodeHostAndPorts[roundRobinIndex]
+            log.info("Connecting to: $attemptedAddress")
             try {
                 return CordaRPCClient(
-                        nodeHostAndPorts, CordaRPCClientConfiguration(connectionMaxRetryInterval = retryInterval), sslConfiguration, classLoader
+                        attemptedAddress, CordaRPCClientConfiguration(connectionMaxRetryInterval = retryInterval, maxReconnectAttempts = 1), sslConfiguration, classLoader
                 ).start(username, password).also {
                     // Check connection is truly operational before returning it.
                     require(it.proxy.nodeInfo().legalIdentitiesAndCerts.isNotEmpty()) {
-                        "Could not establish connection to $nodeHostAndPorts."
+                        "Could not establish connection to $attemptedAddress."
                     }
-                    log.debug { "Connection successfully established with: $nodeHostAndPorts" }
+                    log.debug { "Connection successfully established with: $attemptedAddress" }
                 }
             } catch (ex: Exception) {
                 when (ex) {
@@ -218,7 +219,8 @@ class ReconnectingCordaRPCOps private constructor(
             // Could not connect this time round - pause before giving another try.
             Thread.sleep(retryInterval.toMillis())
             // TODO - make the exponential retry factor configurable.
-            return establishConnectionWithRetry((retryInterval * 10) / 9, _currentAuthenticationRetries)
+            val nextRoundRobinIndex = (roundRobinIndex + 1) % nodeHostAndPorts.size
+            return establishConnectionWithRetry((retryInterval * 10) / 9, _currentAuthenticationRetries, nextRoundRobinIndex)
         }
 
         override val proxy: CordaRPCOps
