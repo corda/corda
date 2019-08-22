@@ -237,8 +237,7 @@ class NodeAttachmentService @JvmOverloads constructor(
             }
     }
 
-    @VisibleForTesting
-    internal class AttachmentImpl(
+    private class AttachmentImpl(
         override val id: SecureHash,
         dataLoader: () -> ByteArray,
         private val checkOnLoad: Boolean,
@@ -252,7 +251,7 @@ class NodeAttachmentService @JvmOverloads constructor(
             return if (checkOnLoad && id is SecureHash.SHA256) HashCheckingStream(id, attachmentData.size, stream) else stream
         }
 
-        class Token(
+        private class Token(
             private val id: SecureHash,
             private val checkOnLoad: Boolean,
             private val uploader: String?,

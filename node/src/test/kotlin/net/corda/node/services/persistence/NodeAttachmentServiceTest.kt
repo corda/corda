@@ -1286,12 +1286,6 @@ class NodeAttachmentServiceTest {
             assertThat(result.map { (name, _) -> name }).containsOnly(
                 "A.jar", "B.jar", "C.zip", null
             )
-            assertThat(result.map { (_, attachment) -> attachment::class }).containsOnly(
-                ContractAttachment::class,
-                ContractAttachment::class,
-                NodeAttachmentService.AttachmentImpl::class,
-                NodeAttachmentService.AttachmentImpl::class
-            )
             assertThat(result.map { (_, attachment) -> attachment.signerKeys }).containsOnly(
                 listOf(key), emptyList(), emptyList(), emptyList()
             )
