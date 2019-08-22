@@ -3,7 +3,6 @@ package net.corda.node.services.vault
 import co.paralleluniverse.fibers.Suspendable
 import com.nhaarman.mockito_kotlin.*
 import net.corda.core.contracts.*
-import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.NullKeys
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.generateKeyPair
@@ -14,11 +13,9 @@ import net.corda.core.internal.packageName
 import net.corda.core.node.NotaryInfo
 import net.corda.core.node.StatesToRecord
 import net.corda.core.node.services.*
-import net.corda.core.node.services.vault.Builder.sum
 import net.corda.core.node.services.vault.PageSpecification
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.node.services.vault.QueryCriteria.*
-import net.corda.core.node.services.vault.builder
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.NonEmptySet
@@ -46,7 +43,6 @@ import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.*
 import rx.observers.TestSubscriber
-import java.lang.Thread.sleep
 import java.math.BigDecimal
 import java.security.PublicKey
 import java.util.*
@@ -1016,7 +1012,7 @@ class NodeVaultServiceTest {
         val cashUpdate = Vault.Update(emptySet(), cashIssued)
 
         val service = Executors.newFixedThreadPool(10)
-        (1..1000).map {
+        (1..100).map {
             service.submit {
                 database.transaction {
                     vaultService.publishUpdates.onNext(cashUpdate)
