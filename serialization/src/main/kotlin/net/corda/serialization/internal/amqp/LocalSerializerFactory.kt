@@ -12,6 +12,7 @@ import org.apache.qpid.proton.amqp.Symbol
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
 import java.util.*
+import java.util.function.Function
 import javax.annotation.concurrent.ThreadSafe
 
 /**
@@ -89,6 +90,7 @@ class DefaultLocalSerializerFactory(
         private val fingerPrinter: FingerPrinter,
         override val classloader: ClassLoader,
         private val descriptorBasedSerializerRegistry: DescriptorBasedSerializerRegistry,
+        private val primitiveSerializerFactory: Function<Class<*>, AMQPSerializer<Any>>,
         private val customSerializerRegistry: CustomSerializerRegistry,
         private val onlyCustomSerializers: Boolean)
     : LocalSerializerFactory {
@@ -237,7 +239,7 @@ class DefaultLocalSerializerFactory(
                 throw AMQPNotSerializableException(
                         type,
                         "Serializer does not support synthetic classes")
-            AMQPTypeIdentifiers.isPrimitive(typeInformation.typeIdentifier) -> AMQPPrimitiveSerializer(clazz)
+            AMQPTypeIdentifiers.isPrimitive(typeInformation.typeIdentifier) -> primitiveSerializerFactory.apply(clazz)
             else -> makeNonCustomSerializer(type, typeInformation, clazz)
         }
     }

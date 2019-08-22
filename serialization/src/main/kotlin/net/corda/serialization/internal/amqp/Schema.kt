@@ -4,6 +4,7 @@ import net.corda.core.KeepForDJVM
 import net.corda.core.internal.uncheckedCast
 import net.corda.serialization.internal.CordaSerializationMagic
 import net.corda.serialization.internal.amqp.AMQPTypeIdentifiers.isPrimitive
+import net.corda.serialization.internal.model.TypeIdentifier
 import net.corda.serialization.internal.model.TypeIdentifier.TopType
 import net.corda.serialization.internal.model.TypeIdentifier.Companion.forGenericType
 import org.apache.qpid.proton.amqp.*
@@ -14,7 +15,8 @@ import java.lang.reflect.Type
 const val DESCRIPTOR_DOMAIN: String = "net.corda"
 val amqpMagic = CordaSerializationMagic("corda".toByteArray() + byteArrayOf(1, 0))
 
-fun typeDescriptorFor(type: Type): Symbol = Symbol.valueOf("$DESCRIPTOR_DOMAIN:${AMQPTypeIdentifiers.nameForType(type)}")
+fun typeDescriptorFor(typeId: TypeIdentifier): Symbol = Symbol.valueOf("$DESCRIPTOR_DOMAIN:${AMQPTypeIdentifiers.nameForType(typeId)}")
+fun typeDescriptorFor(type: Type): Symbol = typeDescriptorFor(forGenericType(type))
 
 fun redescribe(obj: Any?, type: Type): Any? {
     return if (obj == null || obj is DescribedType || obj is Binary || forGenericType(type).run { isPrimitive(this) || this == TopType }) {
