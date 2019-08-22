@@ -283,7 +283,7 @@ class RpcReconnectTests {
 
             val allCash = allCashStates.map { it.state.data.amount.quantity }.toSet()
             val missingCash = (1..NUMBER_OF_FLOWS_TO_RUN).filterNot { allCash.contains(it.toLong() * 100) }
-            log.info("MISSING: $missingCash")
+            log.info("Missing cash states: $missingCash")
 
             assertEquals(NUMBER_OF_FLOWS_TO_RUN, allCashStates.size, "Not all flows were executed successfully")
 
@@ -295,14 +295,14 @@ class RpcReconnectTests {
             // Check that enough vault events were received.
             // This check is fuzzy because events can go missing during node restarts.
             // Ideally there should be nrOfFlowsToRun events receive but some might get lost for each restart.
-            assertThat(vaultEvents!!.size + nrFailures * 3).isGreaterThanOrEqualTo(NUMBER_OF_FLOWS_TO_RUN)
+            assertThat(vaultEvents!!.size + nrFailures * 5).isGreaterThanOrEqualTo(NUMBER_OF_FLOWS_TO_RUN)
             // DOCEND missingVaultEvents
 
             // Check that no flow was triggered twice.
             val duplicates = allCashStates.groupBy { it.state.data.amount }.filterValues { it.size > 1 }
             assertTrue(duplicates.isEmpty(), "${duplicates.size} flows were retried illegally.")
 
-            log.info("SM EVENTS: ${stateMachineEvents!!.size}")
+            log.info("State machine events seen: ${stateMachineEvents!!.size}")
             // State machine events are very likely to get lost more often because they seem to be sent with a delay.
             assertTrue(stateMachineEvents.count { it is StateMachineUpdate.Added } > NUMBER_OF_FLOWS_TO_RUN / 3, "Too many Added state machine events lost.")
             assertTrue(stateMachineEvents.count { it is StateMachineUpdate.Removed } > NUMBER_OF_FLOWS_TO_RUN / 3, "Too many Removed state machine events lost.")
