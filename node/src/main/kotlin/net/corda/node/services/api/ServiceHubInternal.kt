@@ -5,13 +5,11 @@ import net.corda.core.context.InvocationContext
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
-import net.corda.core.internal.FlowStateMachine
-import net.corda.core.internal.NamedCacheFactory
+import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.StateMachineTransactionMapping
 import net.corda.core.node.NodeInfo
-import net.corda.core.node.ServiceHub
 import net.corda.core.node.StatesToRecord
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.NetworkMapCacheBase
@@ -20,6 +18,7 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.contextLogger
 import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.internal.cordapp.CordappProviderInternal
+import net.corda.node.services.DbTransactionsResolver
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.network.NetworkMapUpdater
@@ -28,6 +27,7 @@ import net.corda.node.services.statemachine.ExternalEvent
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import java.security.PublicKey
+import java.util.*
 
 interface NetworkMapCacheInternal : NetworkMapCache, NetworkMapCacheBase {
     override val nodeReady: OpenFuture<Void?>
@@ -49,27 +49,38 @@ interface NetworkMapCacheInternal : NetworkMapCache, NetworkMapCacheBase {
     fun removeNode(node: NodeInfo)
 }
 
-interface ServiceHubInternal : ServiceHub {
+interface ServiceHubInternal : ServiceHubCoreInternal {
     companion object {
         private val log = contextLogger()
 
-        fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>,
+        private fun topologicalSort(transactions: Collection<SignedTransaction>): Collection<SignedTransaction> {
+            if (transactions.size == 1) return transactions
+            val sort = TopologicalSort()
+            for (tx in transactions) {
+                sort.add(tx, tx.dependencies)
+            }
+            return sort.complete()
+        }
+
+        fun recordTransactions(statesToRecord: StatesToRecord,
+                               txs: Collection<SignedTransaction>,
                                validatedTransactions: WritableTransactionStorage,
                                stateMachineRecordedTransactionMapping: StateMachineRecordedTransactionMappingStorage,
                                vaultService: VaultServiceInternal,
                                database: CordaPersistence) {
 
             database.transaction {
-                require(txs.any()) { "No transactions passed in for recording" }
+                require(txs.isNotEmpty()) { "No transactions passed in for recording" }
 
+                val orderedTxs = topologicalSort(txs)
                 // Divide transactions into those seen before and those that are new to this node if ALL_VISIBLE states are being recorded.
                 // This allows the node to re-record transactions that have previously only been seen at the ONLY_RELEVANT level. Note that
                 // for transactions being recorded at ONLY_RELEVANT, if this transaction has been seen before its outputs should already
                 // have been recorded at ONLY_RELEVANT, so there shouldn't be anything to re-record here.
                 val (recordedTransactions, previouslySeenTxs) = if (statesToRecord != StatesToRecord.ALL_VISIBLE) {
-                    Pair(txs.filter { validatedTransactions.addTransaction(it) }, emptyList())
+                    orderedTxs.filter(validatedTransactions::addTransaction) to emptyList()
                 } else {
-                    txs.partition { validatedTransactions.addTransaction(it) }
+                    orderedTxs.partition(validatedTransactions::addTransaction)
                 }
                 val stateMachineRunId = FlowStateMachineImpl.currentStateMachine()?.id
                 if (stateMachineRunId != null) {
@@ -139,12 +150,61 @@ interface ServiceHubInternal : ServiceHub {
     val nodeProperties: NodePropertiesStore
     val networkMapUpdater: NetworkMapUpdater
     override val cordappProvider: CordappProviderInternal
-    override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
-        recordTransactions(statesToRecord, txs, validatedTransactions, stateMachineRecordedTransactionMapping, vaultService, database)
-    }
 
     fun getFlowFactory(initiatingFlowClass: Class<out FlowLogic<*>>): InitiatedFlowFactory<*>?
     val cacheFactory: NamedCacheFactory
+
+    override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
+        recordTransactions(
+                statesToRecord,
+                txs as? Collection ?: txs.toList(), // We can't change txs to a Collection as it's now part of the public API
+                validatedTransactions,
+                stateMachineRecordedTransactionMapping,
+                vaultService,
+                database
+        )
+    }
+
+    override fun createTransactionsResolver(flow: ResolveTransactionsFlow): TransactionsResolver = DbTransactionsResolver(flow)
+
+    /**
+     * Provides a way to topologically sort SignedTransactions. This means that given any two transactions T1 and T2 in the
+     * list returned by [complete] if T1 is a dependency of T2 then T1 will occur earlier than T2.
+     */
+    private class TopologicalSort {
+        private val forwardGraph = HashMap<SecureHash, MutableSet<SignedTransaction>>()
+        private val transactions = ArrayList<SignedTransaction>()
+
+        /**
+         * Add a transaction to the to-be-sorted set of transactions.
+         */
+        fun add(stx: SignedTransaction, dependencies: Set<SecureHash>) {
+            dependencies.forEach {
+                // Note that we use a LinkedHashSet here to make the traversal deterministic (as long as the input list is).
+                forwardGraph.computeIfAbsent(it) { LinkedHashSet() }.add(stx)
+            }
+            transactions += stx
+        }
+
+        /**
+         * Return the sorted list of signed transactions.
+         */
+        fun complete(): List<SignedTransaction> {
+            val visited = HashSet<SecureHash>(transactions.size)
+            val result = ArrayList<SignedTransaction>(transactions.size)
+
+            fun visit(transaction: SignedTransaction) {
+                if (visited.add(transaction.id)) {
+                    forwardGraph[transaction.id]?.forEach(::visit)
+                    result += transaction
+                }
+            }
+
+            transactions.forEach(::visit)
+
+            return result.apply(Collections::reverse)
+        }
+    }
 }
 
 interface FlowStarter {
@@ -177,18 +237,29 @@ interface FlowStarter {
 }
 
 interface StartedNodeServices : ServiceHubInternal, FlowStarter
+
 /**
  * Thread-safe storage of transactions.
  */
 interface WritableTransactionStorage : TransactionStorage {
     /**
-     * Add a new transaction to the store. If the store already has a transaction with the same id it will be
-     * overwritten.
+     * Add a new *verified* transaction to the store, or convert the existing unverified transaction into a verified one.
      * @param transaction The transaction to be recorded.
-     * @return true if the transaction was recorded successfully, false if it was already recorded.
+     * @return true if the transaction was recorded as a *new verified* transcation, false if the transaction already exists.
      */
     // TODO: Throw an exception if trying to add a transaction with fewer signatures than an existing entry.
     fun addTransaction(transaction: SignedTransaction): Boolean
+
+    /**
+     * Add a new *unverified* transaction to the store.
+     */
+    fun addUnverifiedTransaction(transaction: SignedTransaction)
+
+    /**
+     * Return the transaction with the given ID from the store, and a flag of whether it's verified. Returns null if no transaction with the
+     * ID exists.
+     */
+    fun getTransactionInternal(id: SecureHash): Pair<SignedTransaction, Boolean>?
 }
 
 /**

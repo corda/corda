@@ -22,7 +22,7 @@ Corda is an open source blockchain project, designed for business from the start
 1. Read the [Getting Started](https://docs.corda.net/getting-set-up.html) documentation
 2. Run the [Example CorDapp](https://docs.corda.net/tutorial-cordapp.html)
 3. Read about Corda's [Key Concepts](https://docs.corda.net/key-concepts.html)
-3. Follow the [Hello, World! tutorial](https://docs.corda.net/hello-world-introduction.html)
+4. Follow the [Hello, World! tutorial](https://docs.corda.net/hello-world-introduction.html)
 
 ## Useful links
 

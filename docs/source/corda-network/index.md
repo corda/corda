@@ -7,22 +7,14 @@ Introduction to Corda Network
 node is identified by a certificate issued by the network's identity service, and will also be discoverable on a network map. 
 
 Corda Network enables interoperability – the exchange of data or assets via a secure, efficient internet layer – in a way 
-that isn't possible with separate, isolated Corda networks. A common trust root surrounds all transactions, and a consistent set of 
-network parameters ensures all participants may transact with each other.
+that isn't possible with separate, isolated Corda networks. A common trust root surrounds all transactions, and a consistent set of network parameters ensures all participants may transact with each other.
 
-The network went live in December 2018, and is currently governed by R3. An independent, not-for-profit foundation has been 
-set up to govern the network, and a transitional board will be selected from initial participants in Spring 2019, which will oversee 
-the foundation until democratic elections are held a year later. See the [governance model](https://corda.network/governance/governance-guidelines.html) 
+The network went live in December 2018, and is currently governed by an independent, not-for-profit foundation with a Board of Directors from initial participants in Spring 2019, which will oversee the foundation until democratic elections are held a year later. See the [governance model](https://corda.network/governance/governance-guidelines.html) 
 for more detail.
 
-The network will support many sub-groups of participants running particular CorDapps (sometimes referred to as 'business networks'), 
-and these groups will often have a co-ordinating party (the 'business network operator') who manages the distribution of the 
-app and rules, including membership, for its use. There is a clear separation between areas of control for the network as a whole 
-and for individual business networks. Like the internet, Corda Network intends to exist as a background utility.
+The network will support many sub-groups of participants running particular CorDapps (sometimes referred to as 'business networks'), and these groups will often have a co-ordinating party (the 'business network operator') who manages the distribution of the app and rules, including membership, for its use. There is a clear separation between areas of control for the network as a whole and for individual business networks. Like the internet, Corda Network intends to exist as a background utility.
 
-The main benefit of Corda Network for participants is being able to move cash, digital assets, and identity data from one application 
-or line of business to another. Business network operators also benefit by being able to access network-wide services, and reuse the 
-[trust root](https://corda.network/trust-root/index.html) and network services, instead of building and managing their own.
+The main benefit of Corda Network for participants is being able to move cash, digital assets, and identity data from one application or line of business to another. Business network operators also benefit by being able to access network-wide services, and reuse the [trust root](https://corda.network/trust-root/index.html) and network services, instead of building and managing their own.
 
 The Corda Network website has a [high level overview](https://corda.network/participation/index.html) of the joining process.
 
@@ -63,16 +55,3 @@ Support Service
 The Support Service is provided to participants and business network operators to manage and resolve inquiries and incidents 
 relating to the Identity Service, Network Map Service and Notary Services.
 
-CRL configuration
------------------
-The Corda Network provides an endpoint serving an empty certificate revocation list for TLS-level certificates.
-This is intended for deployments that do not provide a CRL infrastructure but still require strict CRL mode checking.
-In order to use this, add the following to your configuration file:
-
-.. parsed-literal::
-
-    tlsCertCrlDistPoint = "https://crl.cordaconnect.org/cordatls.crl"
-            tlsCertCrlIssuer = "C=US, L=New York, O=R3 HoldCo LLC, OU=Corda, CN=Corda Root CA"
-
-This set-up ensures that the TLS-level certificates are embedded with the CRL distribution point referencing the CRL issued by R3.
-In cases where a proprietary CRL infrastructure is provided those values need to be changed accordingly.
