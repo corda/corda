@@ -31,6 +31,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 import java.util.*
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
 import kotlin.math.absoluteValue
@@ -251,9 +252,14 @@ class RpcReconnectTests {
             log.info("Started all flows")
 
             // Wait until all flows have been started.
-            flowsCountdownLatch.await()
+            val flowsConfirmed = flowsCountdownLatch.await(10, TimeUnit.MINUTES)
 
-            log.info("Confirmed all flows.")
+            if (flowsConfirmed) {
+                log.info("Confirmed all flows have started.")
+            } else {
+                log.info("Timed out waiting for confirmation that all flows have started. Remaining flows: ${flowsCountdownLatch.count}")
+            }
+
 
             // Wait for all events to come in and flows to finish.
             Thread.sleep(4000)
