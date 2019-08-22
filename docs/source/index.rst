@@ -11,13 +11,20 @@ Welcome to Corda !
          <iframe src="https://player.vimeo.com/video/205410473" width="640" height="360" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe>
        </embed>
 
-   If you want to start coding on Corda, then familiarise yourself with the :doc:`key concepts </key-concepts>`, then read
+   **Want to start coding on Corda?** Familiarise yourself with the :doc:`key concepts </key-concepts>`, then read
    our :doc:`Hello, World! tutorial </hello-world-introduction>`.
 
-   * For the background behind Corda read the `introductory white paper`_ (`Simplified Chinese`_, `Traditional Chinese`_, `Japanese`_).
-   * For much more architectural detail, the `technical white paper`_.
+   **Want background reading material?** The introductory white paper describes Corda's mission and philosophy. It's suitable for a business
+   audience. The technical white paper describes the architecture and protocol.
 
-   If you have questions or comments, then get in touch on `Slack <https://slack.corda.net/>`_ or ask a question on
+   .. raw:: html
+
+      <a href="_static/corda-introductory-whitepaper.pdf"><button class="button button2">Intro white paper</button></a> &nbsp; &nbsp;
+      <a href="_static/corda-technical-whitepaper.pdf"><button class="button button2">Tech white paper</button></a><br><br>
+
+   The introductory paper is also available in `简体中文 (Simplified Chinese)`_, `繁體中文 (Traditional Chinese)`_ and `日本語 (Japanese)`_.
+
+   **Questions or comments?** Get in touch on `Slack <https://slack.corda.net/>`_ or ask a question on
    `Stack Overflow <https://stackoverflow.com/questions/tagged/corda>`_ .
 
    We look forward to seeing what you can do with Corda!
@@ -25,11 +32,9 @@ Welcome to Corda !
    .. note:: You can read this site offline. Either `download the PDF`_ or download the Corda source code, run ``gradle buildDocs`` and you will have
       a copy of this site in the ``docs/build/html`` directory.
 
-   .. _`introductory white paper`: _static/corda-introductory-whitepaper.pdf
-   .. _`Simplified Chinese`: _static/corda-introductory-whitepaper-zhs.pdf
-   .. _`Traditional Chinese`: _static/corda-introductory-whitepaper-zht.pdf
-   .. _`Japanese`: _static/corda-introductory-whitepaper-jp.pdf
-   .. _`technical white paper`: _static/corda-technical-whitepaper.pdf
+   .. _`简体中文 (Simplified Chinese)`: _static/corda-introductory-whitepaper-zhs.pdf
+   .. _`繁體中文 (Traditional Chinese)`: _static/corda-introductory-whitepaper-zht.pdf
+   .. _`日本語 (Japanese)`: _static/corda-introductory-whitepaper-jp.pdf
    .. _`download the PDF`: _static/corda-developer-site.pdf
    
 .. only:: latex
