@@ -4,11 +4,11 @@
 
 namespace amqp::internal::schema {
 
-std::ostream &
-operator << (std::ostream & stream_, const Descriptor & desc_) {
-    stream_ << desc_.m_name;
-    return stream_;
-}
+    std::ostream &
+    operator << (std::ostream & stream_, const Descriptor & desc_) {
+        stream_ << desc_.m_name;
+        return stream_;
+    }
 
 }
 

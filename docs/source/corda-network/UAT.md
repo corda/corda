@@ -1,6 +1,8 @@
 Corda Network: UAT Environment
 =============================
 
+Corda Network UAT seeks to provide a test environment which is as close as possible to Corda Network in its make-up and operation.
+
 For owners of tested CorDapps with a firm plan to take them into production, a bespoke UAT environment can be provided by R3. Here, such CorDapps can be further tested in the network configuration they will experience in production, utilising relevant Corda Network Services (including the Identity Operator, and trusted notaries). 
 
 Corda UAT is not intended for customers' full test cycles, as it is expected that the bulk of CorDapp testing will occur in simpler network configurations run by the CorDapp provider, but is available for testing of functionally complete and tested CorDapps in realistic network settings to simulate the real-world business environment, including the production settings of network parameters, Corda network services and supported Corda versions. 
@@ -27,13 +29,12 @@ Joining the UAT environment
 * Access to the appropriate environment has been agreed with your project representative with sufficient advance notice (4 weeks standard but may be longer if you have special service requirements) to ensure appropriate SLAs can be in place. Your project representative will be able to supply the booking template.
 
 **Note**: 
-*Corda Network UAT is governed by an [independent Foundation](https://corda.network/governance/index.html). Corda Network UAT seeks to provide a test environment which is as close as possible to Corda Network in its make-up and operation.*
-=======
+Corda Network UAT is governed by an [independent Foundation](https://corda.network/governance/index.html). 
+
 
 Steps to join UAT environment
 -----------------------------
 
 Steps to join are outlined on this website: https://corda.network/participation/index.html
-=======
 
 For further questions on this process, please contact us - preferably on the mailing list: https://groups.io/g/corda-network

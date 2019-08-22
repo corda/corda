@@ -2,6 +2,9 @@
 
 #include <iostream>
 
+#include "amqp/schema/Schema.h"
+#include "amqp/schema/ISchema.h"
+
 /******************************************************************************/
 
 namespace amqp::internal::schema {
@@ -25,7 +28,7 @@ operator << (
 
 amqp::internal::schema::
 Envelope::Envelope (
-    std::unique_ptr<Schema> & schema_,
+    uPtr<Schema> & schema_,
     std::string descriptor_
 ) : m_schema (std::move (schema_))
   , m_descriptor (std::move (descriptor_))
@@ -33,10 +36,10 @@ Envelope::Envelope (
 
 /******************************************************************************/
 
-const std::unique_ptr<amqp::internal::schema::Schema> &
+const amqp::internal::schema::ISchemaType &
 amqp::internal::schema::
 Envelope::schema() const {
-    return m_schema;
+    return *m_schema;
 }
 
 /******************************************************************************/

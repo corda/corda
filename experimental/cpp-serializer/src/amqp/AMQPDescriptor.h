@@ -6,7 +6,7 @@
 #include <string>
 #include <iostream>
 
-#include "AMQPDescribed.h"
+#include "amqp/AMQPDescribed.h"
 
 /******************************************************************************
  *

@@ -2,7 +2,7 @@
 
 /******************************************************************************/
 
-namespace amqp::internal {
+namespace amqp {
 
     class AMQPDescribed {
         public :

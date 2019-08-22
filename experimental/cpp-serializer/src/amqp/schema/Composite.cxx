@@ -38,9 +38,9 @@ amqp::internal::schema::
 Composite::Composite (
         const std::string & name_,
         std::string label_,
-        const std::list<std::string> & provides_,
-        std::unique_ptr<Descriptor> & descriptor_,
-        std::vector<std::unique_ptr<Field>> & fields_
+        const sList<std::string> & provides_,
+        uPtr<Descriptor> & descriptor_,
+        std::vector<uPtr<Field>> & fields_
 ) : AMQPTypeNotation (name_, descriptor_)
   , m_label (std::move (label_))
   , m_provides (provides_)
@@ -49,7 +49,7 @@ Composite::Composite (
 
 /******************************************************************************/
 
-const std::vector<std::unique_ptr<amqp::internal::schema::Field>> &
+const std::vector<uPtr<amqp::internal::schema::Field>> &
 amqp::internal::schema::
 Composite::fields() const {
     return m_fields;

@@ -6,19 +6,16 @@
 
 /******************************************************************************/
 
-namespace amqp {
-namespace internal {
+namespace amqp::internal {
 
 
     const uint64_t DESCRIPTOR_TOP_32BITS = 0xc562L << (32 + 16);
 
 }
-}
 
 /******************************************************************************/
 
-namespace amqp {
-namespace internal {
+namespace amqp::internal {
 
     const int ENVELOPE              =  1;
     const int SCHEMA                =  2;
@@ -32,7 +29,6 @@ namespace internal {
     const int TRANSFORM_ELEMENT     = 10;
     const int TRANSFORM_ELEMENT_KEY = 11;
 
-}
 }
 
 /******************************************************************************/
@@ -134,7 +130,7 @@ amqp::stripCorda (uint64_t id) {
 /******************************************************************************/
 
 std::string
-amqp::describedToString(uint64_t val_) {
+amqp::describedToString (uint64_t val_) {
       switch (val_) {
           case (1L  | internal::DESCRIPTOR_TOP_32BITS) : return "ENVELOPE";
           case (2L  | internal::DESCRIPTOR_TOP_32BITS) : return "SCHEMA";
@@ -154,7 +150,7 @@ amqp::describedToString(uint64_t val_) {
 /******************************************************************************/
 
 std::string
-amqp::describedToString(uint32_t val_) {
+amqp::describedToString (uint32_t val_) {
     return describedToString(val_ | internal::DESCRIPTOR_TOP_32BITS);
 }
 
