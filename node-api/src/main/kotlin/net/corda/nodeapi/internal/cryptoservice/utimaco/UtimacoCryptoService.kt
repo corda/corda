@@ -251,7 +251,7 @@ class UtimacoCryptoService(private val cryptoServerProvider: CryptoServerProvide
     companion object {
         val DEFAULT_IDENTITY_SIGNATURE_SCHEME = Crypto.ECDSA_SECP256R1_SHA256
         val DEFAULT_TLS_SIGNATURE_SCHEME = Crypto.ECDSA_SECP256R1_SHA256
-        private const val E_JCSA_CLUSTER_OPEN = 0xB9800021 // "Unable to open any CryptoServer", see HsmErrors
+        private const val E_JCSA_CLUSTER_OPEN = 0xB9800021.toInt() // "Unable to open any CryptoServer", see HsmErrors
 
         private val detailedLogger = detailedLogger()
 
@@ -274,7 +274,7 @@ class UtimacoCryptoService(private val cryptoServerProvider: CryptoServerProvide
             try {
                 return block()
             } catch (e: CryptoServerAPI.CryptoServerException) {
-                if (e.ErrorCode == E_JCSA_CLUSTER_OPEN.toInt()) {
+                if (e.ErrorCode == E_JCSA_CLUSTER_OPEN) {
                     // This error is reported when it's not possible to connect to any CryptoServer in a cluster mode.
                     // In non-cluster mode ConnectException is thrown instead.
                     // To let CryptoServiceSigningService start when connection to HSM cannot be temporarily established,

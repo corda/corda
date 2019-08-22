@@ -15,6 +15,7 @@ import net.corda.testing.driver.internal.incrementalPortAllocation
 import org.junit.ClassRule
 import org.junit.Ignore
 import org.junit.Test
+import org.junit.runners.model.Statement
 import java.io.IOException
 import java.time.Duration
 import java.util.*
@@ -187,5 +188,36 @@ class UtimacoCryptoServiceIntegrationTest {
             val cryptoService = UtimacoCryptoService.fromConfig(conf) { UtimacoCryptoService.UtimacoCredentials(username, pw, keyFile) }
             cryptoService.generateKeyPair("no", cryptoService.defaultIdentitySignatureScheme())
         }
+    }
+
+    @Test
+    fun `Handles re-connection properly`() {
+        lateinit var cryptoService: UtimacoCryptoService
+        val generateKeysAndSign = {
+            val alias = UUID.randomUUID().toString()
+            val pubKey = cryptoService.generateKeyPair(alias, Crypto.ECDSA_SECP256R1_SHA256)
+            assertTrue { cryptoService.containsKey(alias) }
+            val data = UUID.randomUUID().toString().toByteArray()
+            val signed = cryptoService.sign(alias, data)
+            Crypto.doVerify(pubKey, signed, data)
+        }
+
+        // Cannot run before() and after() on a TestRule directly
+        fun HsmSimulator.execute(block: () -> Unit) = apply(object : Statement() {
+            override fun evaluate() = block()
+        }, null).evaluate()
+
+        // Start HSM simulator first time and init CryptoService
+        val hsmSimulatorWithRestart = HsmSimulator(incrementalPortAllocation(12300))
+        hsmSimulatorWithRestart.execute {
+            cryptoService = UtimacoCryptoService.fromConfig(testConfig(hsmSimulatorWithRestart.address.port), login)
+            generateKeysAndSign()
+        }
+
+        // HSM is down
+        assertFailsWith<UtimacoCryptoService.UtimacoHSMException> { generateKeysAndSign() }
+
+        // Start HSM simulator second time, reuse CryptoService
+        hsmSimulatorWithRestart.execute { generateKeysAndSign() }
     }
 }
