@@ -32,12 +32,12 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.dummyCommand
 import net.corda.testing.core.singleIdentity
+import net.corda.testing.flows.registerCordappFlowFactory
 import net.corda.testing.internal.LogHelper
 import net.corda.testing.node.InMemoryMessagingNetwork.MessageTransfer
 import net.corda.testing.node.InMemoryMessagingNetwork.ServicePeerAllocationStrategy.RoundRobin
 import net.corda.testing.node.internal.*
-import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.assertj.core.api.Assertions.*
 import org.assertj.core.api.AssertionsForClassTypes.assertThatExceptionOfType
 import org.assertj.core.api.Condition
 import org.junit.After
@@ -463,6 +463,29 @@ class FlowFrameworkTests {
         )
     }
 
+    @Test
+    fun `initiating flow using unknown AnonymousParty`() {
+        val anonymousBob = bobNode.services.keyManagementService.freshKeyAndCert(bobNode.info.legalIdentitiesAndCerts.single(), false)
+                .party.anonymise()
+        bobNode.registerCordappFlowFactory(SendAndReceiveFlow::class) { SingleInlinedSubFlow(it) }
+        val result = aliceNode.services.startFlow(SendAndReceiveFlow(anonymousBob, "Hello")).resultFuture
+        mockNet.runNetwork()
+        assertThatIllegalArgumentException()
+                .isThrownBy { result.getOrThrow() }
+                .withMessage("We do not know who $anonymousBob belongs to")
+    }
+
+    @Test
+    fun `initiating flow using known AnonymousParty`() {
+        val anonymousBob = bobNode.services.keyManagementService.freshKeyAndCert(bobNode.info.legalIdentitiesAndCerts.single(), false)
+        aliceNode.services.identityService.verifyAndRegisterIdentity(anonymousBob)
+        val bobResponderFlow = bobNode.registerCordappFlowFactory(SendAndReceiveFlow::class) { SingleInlinedSubFlow(it) }
+        val result = aliceNode.services.startFlow(SendAndReceiveFlow(anonymousBob.party.anonymise(), "Hello")).resultFuture
+        mockNet.runNetwork()
+        bobResponderFlow.getOrThrow()
+        assertThat(result.getOrThrow()).isEqualTo("HelloHello")
+    }
+
     //region Helpers
 
     private val normalEnd = ExistingSessionMessage(SessionId(0), EndSessionMessage) // NormalSessionEnd(0)
@@ -762,12 +785,12 @@ internal class MyFlowException(override val message: String) : FlowException() {
 internal class MyPeerFlowException(override val message: String, val peer: Party) : FlowException()
 
 @InitiatingFlow
-internal class SendAndReceiveFlow(private val otherParty: Party, private val payload: Any, private val otherPartySession: FlowSession? = null) : FlowLogic<Any>() {
+internal class SendAndReceiveFlow(private val destination: Destination, private val payload: Any, private val otherPartySession: FlowSession? = null) : FlowLogic<Any>() {
     constructor(otherPartySession: FlowSession, payload: Any) : this(otherPartySession.counterparty, payload, otherPartySession)
 
     @Suspendable
     override fun call(): Any {
-        return (otherPartySession ?: initiateFlow(otherParty)).sendAndReceive<Any>(payload).unwrap { it }
+        return (otherPartySession ?: initiateFlow(destination)).sendAndReceive<Any>(payload).unwrap { it }
     }
 }
 

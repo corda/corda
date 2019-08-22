@@ -10,10 +10,10 @@ import net.corda.tools.shell.utlities.CRaSHANSIProgressRenderer
 import org.apache.commons.lang3.SystemUtils
 import org.assertj.core.api.Assertions.assertThat
 import org.crsh.text.RenderPrintWriter
-import org.junit.Test
-import rx.Observable
 import org.fusesource.jansi.Ansi
 import org.junit.Before
+import org.junit.Test
+import rx.Observable
 import rx.subjects.PublishSubject
 
 class ANSIProgressRendererTest {
@@ -65,7 +65,7 @@ class ANSIProgressRendererTest {
 
     private fun checkTrackingState(captor: KArgumentCaptor<Ansi>, updates: Int, trackerState: List<String>) {
         verify(printWriter, times(updates)).print(captor.capture())
-        assertThat(captor.lastValue.toString()).containsSequence(trackerState)
+        assertThat(captor.lastValue.toString()).containsSubsequence(trackerState)
         verify(printWriter, times(updates)).flush()
     }
 

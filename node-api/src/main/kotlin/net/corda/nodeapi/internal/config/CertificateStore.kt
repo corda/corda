@@ -3,7 +3,6 @@ package net.corda.nodeapi.internal.config
 import net.corda.core.crypto.internal.AliasPrivateKey
 import net.corda.core.internal.outputStream
 import net.corda.nodeapi.internal.crypto.X509KeyStore
-import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.addOrReplaceCertificate
 import java.io.InputStream
 import java.io.OutputStream
@@ -45,7 +44,7 @@ interface CertificateStore : Iterable<Pair<String, X509Certificate>> {
 
     operator fun set(alias: String, certificate: X509Certificate) {
         update {
-            internal.addOrReplaceCertificate(X509Utilities.CORDA_ROOT_CA, certificate)
+            internal.addOrReplaceCertificate(alias, certificate)
         }
     }
 

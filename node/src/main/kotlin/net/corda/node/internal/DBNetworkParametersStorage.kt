@@ -2,7 +2,10 @@ package net.corda.node.internal
 
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
-import net.corda.core.internal.*
+import net.corda.core.internal.DigitalSignatureWithCert
+import net.corda.core.internal.NamedCacheFactory
+import net.corda.core.internal.NetworkParametersStorage
+import net.corda.core.internal.SignedDataWithCert
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NotaryInfo
 import net.corda.core.serialization.SerializedBytes
@@ -115,13 +118,13 @@ class DBNetworkParametersStorage(
         val currentParameters = lookup(currentHash)
                 ?: throw IllegalStateException("Unable to obtain NotaryInfo – current network parameters not set.")
         val inCurrentParams = currentParameters.notaries.singleOrNull { it.identity == party }
-        if (inCurrentParams == null) {
-            val inOldParams = hashToParameters.allPersisted().flatMap { (_, signedParams) ->
-                val parameters = signedParams.raw.deserialize()
-                parameters.notaries.asSequence()
-            }.firstOrNull { it.identity == party }
-            return inOldParams
-        } else return inCurrentParams
+        if (inCurrentParams != null) return inCurrentParams
+        return hashToParameters.allPersisted.use {
+            it.flatMap { (_, signedNetParams) -> signedNetParams.raw.deserialize().notaries.stream() }
+                    .filter { it.identity == party }
+                    .findFirst()
+                    .orElse(null)
+        }
     }
 
     @Entity

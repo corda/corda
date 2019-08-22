@@ -7,7 +7,6 @@ import net.corda.core.serialization.serialize
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.seconds
-import net.corda.core.internal.NODE_INFO_DIRECTORY
 import net.corda.nodeapi.internal.NodeInfoAndSigned
 import net.corda.nodeapi.internal.network.NodeInfoFilesCopier
 import rx.Observable
@@ -63,7 +62,7 @@ class NodeInfoWatcher(private val nodePath: Path,
     val processedNodeInfoHashes: Set<SecureHash> get() = nodeInfoFilesMap.values.map { it.nodeInfohash }.toSet()
 
     init {
-        require(pollInterval >= 5.seconds) { "Poll interval must be 5 seconds or longer." }
+        require(pollInterval >= 1.seconds) { "Poll interval must be 1 second or longer." }
         nodeInfosDir.createDirectories()
     }
 
@@ -78,9 +77,14 @@ class NodeInfoWatcher(private val nodePath: Path,
     }
 
     private fun pollDirectory(): List<NodeInfoUpdate> {
+        logger.debug { "pollDirectory $nodeInfosDir" }
         val processedPaths = HashSet<Path>()
         val result = nodeInfosDir.list { paths ->
             paths
+                    .filter {
+                        logger.debug { "Examining $it" }
+                        true
+                    }
                     .filter { it.isRegularFile() }
                     .filter { file ->
                         val lastModifiedTime = file.lastModifiedTime()

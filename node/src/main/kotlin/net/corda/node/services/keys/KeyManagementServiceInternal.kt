@@ -1,32 +1,39 @@
 package net.corda.node.services.keys
 
-import net.corda.core.crypto.toStringShort
+import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.KeyManagementService
-import org.hibernate.annotations.Type
+import org.bouncycastle.operator.ContentSigner
 import java.security.KeyPair
 import java.security.PublicKey
 import java.util.*
-import javax.persistence.*
 
 interface KeyManagementServiceInternal : KeyManagementService {
+
+    val identityService: IdentityService
+
     fun start(initialKeyPairs: Set<KeyPair>)
+
+    fun freshKeyInternal(externalId: UUID?): PublicKey
+
+    fun getSigner(publicKey: PublicKey): ContentSigner
+
+    // Unlike initial keys, freshkey() is related confidential keys and it utilises platform's software key generation
+    // thus, without using [cryptoService]).
+    override fun freshKey(): PublicKey {
+        return freshKeyInternal(null)
+    }
+
+    override fun freshKey(externalId: UUID): PublicKey {
+        return freshKeyInternal(externalId)
+    }
+
+    override fun freshKeyAndCert(identity: PartyAndCertificate, revocationEnabled: Boolean): PartyAndCertificate {
+        return freshCertificate(identityService, freshKeyInternal(null), identity, getSigner(identity.owningKey))
+    }
+
+    override fun freshKeyAndCert(identity: PartyAndCertificate, revocationEnabled: Boolean, externalId: UUID): PartyAndCertificate {
+        return freshCertificate(identityService, freshKeyInternal(externalId), identity, getSigner(identity.owningKey))
+    }
 }
 
-@Entity
-@Table(name = "pk_hash_to_ext_id_map", indexes = [
-    Index(name = "ext_id_idx", columnList = "external_id")
-])
-class PublicKeyHashToExternalId(
-        @Column(name = "external_id", nullable = false)
-        @Type(type = "uuid-char")
-        val externalId: UUID,
-
-        @Id
-        @Column(name = "public_key_hash", nullable = false)
-        val publicKeyHash: String
-
-) {
-    constructor(accountId: UUID, publicKey: PublicKey)
-            : this(accountId, publicKey.toStringShort())
-
-}

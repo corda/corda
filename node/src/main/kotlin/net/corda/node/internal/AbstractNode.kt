@@ -21,6 +21,7 @@ import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.concurrent.openFuture
+import net.corda.core.internal.messaging.InternalCordaRPCOps
 import net.corda.core.internal.notary.NotaryService
 import net.corda.core.messaging.*
 import net.corda.core.node.*
@@ -62,6 +63,7 @@ import net.corda.node.services.network.NetworkMapUpdater
 import net.corda.node.services.network.NodeInfoWatcher
 import net.corda.node.services.network.PersistentNetworkMapCache
 import net.corda.node.services.persistence.*
+import net.corda.node.services.rpc.CheckpointDumper
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.statemachine.*
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
@@ -109,7 +111,6 @@ import java.util.concurrent.TimeUnit.MINUTES
 import java.util.concurrent.TimeUnit.SECONDS
 import java.util.function.Consumer
 import javax.persistence.EntityManager
-import net.corda.core.crypto.generateKeyPair as cryptoGenerateKeyPair
 
 /**
  * A base node implementation that can be customised either for production (with real implementations that do real
@@ -174,10 +175,15 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     val transactionStorage = makeTransactionStorage(configuration.transactionCacheSizeBytes).tokenize()
     val networkMapClient: NetworkMapClient? = configuration.networkServices?.let { NetworkMapClient(it.networkMapURL, versionInfo) }
     val attachments = NodeAttachmentService(metricRegistry, cacheFactory, database, configuration.devMode).tokenize()
-    val cryptoService = CryptoServiceFactory.makeCryptoService(SupportedCryptoServices.BC_SIMPLE, configuration.myLegalName, configuration.signingCertificateStore)
+    val cryptoService = CryptoServiceFactory.makeCryptoService(
+            SupportedCryptoServices.BC_SIMPLE,
+            configuration.myLegalName,
+            configuration.signingCertificateStore
+    )
     @Suppress("LeakingThis")
     val networkParametersStorage = makeNetworkParametersStorage()
     val cordappProvider = CordappProviderImpl(cordappLoader, CordappConfigFileProvider(configuration.cordappDirectories), attachments).tokenize()
+    val pkToIdCache = PublicKeyToOwningIdentityCacheImpl(database, cacheFactory)
     @Suppress("LeakingThis")
     val keyManagementService = makeKeyManagementService(identityService).tokenize()
     val servicesForResolution = ServicesForResolutionImpl(identityService, attachments, cordappProvider, networkParametersStorage, transactionStorage).also {
@@ -259,16 +265,23 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     }
 
     /** The implementation of the [CordaRPCOps] interface used by this node. */
-    open fun makeRPCOps(cordappLoader: CordappLoader): CordaRPCOps {
-        val ops: CordaRPCOps = CordaRPCOpsImpl(services, smm, flowStarter) { shutdownExecutor.submit { stop() } }.also { it.closeOnStop() }
-        val proxies = mutableListOf<(CordaRPCOps) -> CordaRPCOps>()
+    open fun makeRPCOps(cordappLoader: CordappLoader, checkpointDumper: CheckpointDumper): CordaRPCOps {
+        val ops: InternalCordaRPCOps = CordaRPCOpsImpl(
+                services,
+                smm,
+                flowStarter,
+                checkpointDumper
+        ) {
+            shutdownExecutor.submit(::stop)
+        }.also { it.closeOnStop() }
+        val proxies = mutableListOf<(InternalCordaRPCOps) -> InternalCordaRPCOps>()
         // Mind that order is relevant here.
         proxies += ::AuthenticatedRpcOpsProxy
         if (!configuration.devMode) {
-            proxies += { it -> ExceptionMaskingRpcOpsProxy(it, true) }
+            proxies += { ExceptionMaskingRpcOpsProxy(it, true) }
         }
-        proxies += { it -> ExceptionSerialisingRpcOpsProxy(it, configuration.devMode) }
-        proxies += { it -> ThreadContextAdjustingRpcOpsProxy(it, cordappLoader.appClassLoader) }
+        proxies += { ExceptionSerialisingRpcOpsProxy(it, configuration.devMode) }
+        proxies += { ThreadContextAdjustingRpcOpsProxy(it, cordappLoader.appClassLoader) }
         return proxies.fold(ops) { delegate, decorate -> decorate(delegate) }
     }
 
@@ -329,7 +342,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         installCoreFlows()
         registerCordappFlows()
         services.rpcFlows += cordappLoader.cordapps.flatMap { it.rpcFlows }
-        val rpcOps = makeRPCOps(cordappLoader)
+        val checkpointDumper = CheckpointDumper(checkpointStorage, database, services, services.configuration.baseDirectory)
+        val rpcOps = makeRPCOps(cordappLoader, checkpointDumper)
         startShell()
         networkMapClient?.start(trustRoot)
 
@@ -390,7 +404,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             tokenizableServices = null
 
             verifyCheckpointsCompatible(frozenTokenizableServices)
-
+            checkpointDumper.start(frozenTokenizableServices)
             smm.start(frozenTokenizableServices)
             // Shut down the SMM so no Fibers are scheduled.
             runOnStop += { smm.stop(acceptableLiveFiberCountOnStop()) }
@@ -805,7 +819,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         // Place the long term identity key in the KMS. Eventually, this is likely going to be separated again because
         // the KMS is meant for derived temporary keys used in transactions, and we're not supposed to sign things with
         // the identity key. But the infrastructure to make that easy isn't here yet.
-        return BasicHSMKeyManagementService(cacheFactory, identityService, database, cryptoService)
+        return BasicHSMKeyManagementService(cacheFactory, identityService, database, cryptoService, pkToIdCache)
     }
 
     open fun stop() {

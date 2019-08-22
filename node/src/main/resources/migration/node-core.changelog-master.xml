@@ -15,6 +15,10 @@
     <include file="migration/node-core.changelog-v10.xml"/>
     <include file="migration/node-core.changelog-v11.xml"/>
     <include file="migration/node-core.changelog-v12.xml"/>
+    <!-- This changeset (which creates extra columns in the transactions tables), must be run before the vault state migration (in
+         vault-schema.changelog-v9.xml), as that will use the current hibernate mappings, and those require all DB columns to be
+         created. -->
+    <include file="migration/node-core.changelog-v13.xml"/>
     <!-- This must run after node-core.changelog-init.xml, to prevent database columns being created twice. -->
     <include file="migration/vault-schema.changelog-v9.xml"/>
 </databaseChangeLog>

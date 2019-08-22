@@ -131,3 +131,24 @@ To create nodes locally and run on a remote machine perform the following steps:
 4. Run nodes on the remote machine using :ref:`runnodes command <starting-all-nodes-at-once>`.
 
 The above steps create a test deployment as ``deployNodes`` Gradle task would do on a local machine.
+
+Stability of the Corda Node
+---------------------------
+
+There are a number of critical resources necessary for Corda Node to operate to ensure transactional consistency of the ledger.
+These critical resources include:
+
+1. Connection to a database;
+
+2. Connection to Artemis Broker for P2P communication;
+
+3. Connection to Artemis Broker for RPC communication.
+
+Should any of those critical resources become not available, Corda Node will be getting into an unstable state and as a safety precaution it will
+shut itself down reporting the cause as an error message to the Node's log file.
+
+.. note:: On some operating systems when PC is going to sleep whilst Corda Node is running, imbedded into Node Artemis message broker reports
+    the loss of heartbeat event which in turn causes loss of connectivity to Artemis. In such circumstances Corda Node will exit reporting broker
+    connectivity problem in the log.
+
+Once critical resources node relies upon are available again, it is safe for Node operator to re-start the node for normal operation.

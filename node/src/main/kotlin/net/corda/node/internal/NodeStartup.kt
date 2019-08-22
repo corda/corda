@@ -1,10 +1,10 @@
 package net.corda.node.internal
 
 import io.netty.channel.unix.Errors
-import net.corda.cliutils.printError
 import net.corda.cliutils.CliWrapperBase
 import net.corda.cliutils.CordaCliWrapper
 import net.corda.cliutils.ExitCodes
+import net.corda.cliutils.printError
 import net.corda.common.logging.CordaVersion
 import net.corda.core.contracts.HashAttachmentConstraint
 import net.corda.core.crypto.Crypto
@@ -38,7 +38,6 @@ import java.io.RandomAccessFile
 import java.lang.management.ManagementFactory
 import java.net.InetAddress
 import java.nio.channels.UnresolvedAddressException
-import java.nio.file.Files
 import java.nio.file.Path
 import java.time.DayOfWeek
 import java.time.ZonedDateTime
@@ -278,10 +277,8 @@ open class NodeStartup : NodeStartupLogging {
 
     protected open fun logLoadedCorDapps(corDapps: List<CordappImpl>) {
         Node.printBasicNodeInfo("Loaded ${corDapps.size} CorDapp(s)", corDapps.map { it.info }.joinToString(", "))
-        corDapps.map { it.info }.filter { it.hasUnknownFields() }.let { malformed ->
-            if (malformed.isNotEmpty()) {
-                logger.warn("Found ${malformed.size} CorDapp(s) with unknown information. They will be unable to run on Corda in the future.")
-            }
+        corDapps.filter { it.info.hasUnknownFields() }.forEach {
+            logger.warn("${it.info} will be unable to run on Corda in the future due to missing entries in JAR's manifest file.")
         }
     }
 
@@ -487,11 +484,7 @@ fun CliWrapperBase.initLogging(baseDirectory: Path): Boolean {
     //Test for access to the logging path and shutdown if we are unable to reach it.
     val logPath = baseDirectory / NodeCliCommand.LOGS_DIRECTORY_NAME
     try {
-        if (Files.isSymbolicLink(logPath)){
-            Files.readSymbolicLink(logPath).createDirectories()
-        } else {
-            logPath.createDirectories()
-        }
+        logPath.safeSymbolicRead()?.createDirectories()
     } catch (e: IOException) {
         printError("Unable to create logging directory ${logPath.toString()}. Node will now shutdown.")
         return false

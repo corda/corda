@@ -207,7 +207,8 @@ class VaultStateMigrationTest {
             val persistentTx = DBTransactionStorage.DBTransaction(
                     txId = tx.id.toString(),
                     stateMachineRunId = null,
-                    transaction = tx.serialize(context = SerializationDefaults.STORAGE_CONTEXT).bytes
+                    transaction = tx.serialize(context = SerializationDefaults.STORAGE_CONTEXT).bytes,
+                    status = DBTransactionStorage.TransactionStatus.VERIFIED
             )
             session.save(persistentTx)
         }

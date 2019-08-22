@@ -150,6 +150,7 @@ see changes to this list.
 * Milen Dobrinov (Industria)
 * Mohamed Amine LEGHERABA
 * Mustafa Ozturk (Natixis)
+* Manish Kumar (ChainThat)
 * Nick Skinner (Northern Trust)
 * Nigel King (R3)
 * Nitesh Solanki (Persistent Systems Limited)
@@ -161,6 +162,7 @@ see changes to this list.
 * Pekka Kaipio (OP Financial)
 * Phillip Griffin
 * Piotr Piskorski (Nordea)
+* Prannav Kotamraju (Digiledge)
 * Przemyslaw Bak (R3)
 * quiark
 * RangerOfFire

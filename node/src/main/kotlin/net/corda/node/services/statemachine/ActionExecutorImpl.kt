@@ -4,7 +4,7 @@ import co.paralleluniverse.fibers.Fiber
 import co.paralleluniverse.fibers.Suspendable
 import com.codahale.metrics.*
 import net.corda.core.internal.concurrent.thenMatch
-import net.corda.core.serialization.*
+import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.internal.CheckpointSerializationContext
 import net.corda.core.serialization.internal.checkpointSerialize
 import net.corda.core.utilities.contextLogger
@@ -15,7 +15,6 @@ import net.corda.nodeapi.internal.persistence.contextDatabase
 import net.corda.nodeapi.internal.persistence.contextTransaction
 import net.corda.nodeapi.internal.persistence.contextTransactionOrNull
 import java.time.Duration
-import java.time.Instant
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
 
@@ -157,7 +156,7 @@ class ActionExecutorImpl(
     private fun executeSleepUntil(action: Action.SleepUntil) {
         // TODO introduce explicit sleep state + wakeup event instead of relying on Fiber.sleep. This is so shutdown
         // conditions may "interrupt" the sleep instead of waiting until wakeup.
-        val duration = Duration.between(Instant.now(), action.time)
+        val duration = Duration.between(services.clock.instant(), action.time)
         Fiber.sleep(duration.toNanos(), TimeUnit.NANOSECONDS)
     }
 
@@ -168,7 +167,7 @@ class ActionExecutorImpl(
 
     @Suspendable
     private fun executeSendInitial(action: Action.SendInitial) {
-        flowMessaging.sendSessionMessage(action.party, action.initialise, action.deduplicationId)
+        flowMessaging.sendSessionMessage(action.destination, action.initialise, action.deduplicationId)
     }
 
     @Suspendable

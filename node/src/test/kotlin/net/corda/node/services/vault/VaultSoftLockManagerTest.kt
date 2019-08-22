@@ -3,7 +3,10 @@ package net.corda.node.services.vault
 import co.paralleluniverse.fibers.Suspendable
 import com.nhaarman.mockito_kotlin.*
 import net.corda.core.contracts.*
-import net.corda.core.flows.*
+import net.corda.core.flows.FinalityFlow
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowSession
+import net.corda.core.flows.InitiatingFlow
 import net.corda.core.identity.AbstractParty
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.uncheckedCast
@@ -19,10 +22,11 @@ import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
-import net.corda.nodeapi.internal.cordapp.CordappLoader
 import net.corda.node.services.api.VaultServiceInternal
+import net.corda.nodeapi.internal.cordapp.CordappLoader
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.testing.core.singleIdentity
+import net.corda.testing.flows.registerCoreFlowFactory
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.enclosedCordapp

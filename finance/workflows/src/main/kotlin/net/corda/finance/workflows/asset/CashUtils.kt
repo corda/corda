@@ -154,7 +154,7 @@ object CashUtils {
         // If anonymous is true, generate a new identity that change will be sent to for confidentiality purposes. This means that a
         // third party with a copy of the transaction (such as the notary) cannot identify who the change was
         // sent to
-        val changeIdentity = if (anonymous) services.keyManagementService.freshKeyAndCert(ourIdentity, revocationEnabled).party.anonymise() else ourIdentity.party
+        val changeIdentity: AbstractParty = if (anonymous) services.keyManagementService.freshKeyAndCert(ourIdentity, revocationEnabled).party.anonymise() else ourIdentity.party
         return OnLedgerAsset.generateSpend(
                 tx,
                 payments,

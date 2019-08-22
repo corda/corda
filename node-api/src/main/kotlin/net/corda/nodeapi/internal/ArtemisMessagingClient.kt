@@ -5,11 +5,8 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_P2P_USER
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
-import org.apache.activemq.artemis.api.core.client.ActiveMQClient
+import org.apache.activemq.artemis.api.core.client.*
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient.DEFAULT_ACK_BATCH_SIZE
-import org.apache.activemq.artemis.api.core.client.ClientProducer
-import org.apache.activemq.artemis.api.core.client.ClientSession
-import org.apache.activemq.artemis.api.core.client.ClientSessionFactory
 
 interface ArtemisSessionProvider {
     fun start(): ArtemisMessagingClient.Started
@@ -19,7 +16,8 @@ interface ArtemisSessionProvider {
 
 class ArtemisMessagingClient(private val config: MutualSslConfiguration,
                              private val serverAddress: NetworkHostAndPort,
-                             private val maxMessageSize: Int) : ArtemisSessionProvider {
+                             private val maxMessageSize: Int,
+                             private val failoverCallback: ((FailoverEventType) -> Unit)? = null) : ArtemisSessionProvider {
     companion object {
         private val log = loggerFor<ArtemisMessagingClient>()
     }
@@ -44,6 +42,10 @@ class ArtemisMessagingClient(private val config: MutualSslConfiguration,
             addIncomingInterceptor(ArtemisMessageSizeChecksInterceptor(maxMessageSize))
         }
         val sessionFactory = locator.createSessionFactory()
+
+        // Handle failover events if a callback method is provided
+        if (failoverCallback != null) sessionFactory.addFailoverListener(failoverCallback)
+
         // Login using the node username. The broker will authenticate us as its node (as opposed to another peer)
         // using our TLS certificate.
         // Note that the acknowledgement of messages is not flushed to the Artermis journal until the default buffer

@@ -28,6 +28,7 @@ import net.corda.node.services.statemachine.DeduplicationId
 import net.corda.node.services.statemachine.ExternalEvent
 import net.corda.node.services.statemachine.SenderDeduplicationId
 import net.corda.node.utilities.AffinityExecutor
+import net.corda.node.utilities.errorAndTerminate
 import net.corda.nodeapi.internal.ArtemisMessagingComponent
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.*
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.BRIDGE_CONTROL
@@ -167,7 +168,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
                 minLargeMessageSize = maxMessageSize + JOURNAL_HEADER_SIZE
                 isUseGlobalPools = nodeSerializationEnv != null
             }
-            val sessionFactory = locator!!.createSessionFactory()
+            val sessionFactory = locator!!.createSessionFactory().addFailoverListener(::failoverCallback)
             // Login using the node username. The broker will authenticate us as its node (as opposed to another peer)
             // using our TLS certificate.
             // Note that the acknowledgement of messages is not flushed to the Artermis journal until the default buffer
@@ -206,6 +207,22 @@ class P2PMessagingClient(val config: NodeConfiguration,
 
             registerBridgeControl(bridgeSession!!, inboxes.toList())
             enumerateBridges(bridgeSession!!, inboxes.toList())
+        }
+    }
+
+    private fun failoverCallback(event: FailoverEventType) {
+        when (event) {
+            FailoverEventType.FAILURE_DETECTED -> {
+                errorAndTerminate("Connection to the broker was lost. Node is shutting down.", null)
+            }
+            FailoverEventType.FAILOVER_FAILED -> state.locked {
+                if (running) {
+                    errorAndTerminate("Could not reconnect to the broker. Node is shutting down.", null)
+                }
+            }
+            else -> {
+                log.warn("Cannot handle event $event.")
+            }
         }
     }
 

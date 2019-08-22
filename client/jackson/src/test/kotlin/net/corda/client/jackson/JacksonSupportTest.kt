@@ -697,7 +697,7 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
     }
 
     private fun JsonNode.assertHasOnlyFields(vararg fieldNames: String): List<JsonNode> {
-        assertThat(fieldNames()).containsOnly(*fieldNames)
+        assertThat(fieldNames()).toIterable().containsOnly(*fieldNames)
         return fieldNames.map { this[it] }
     }
 

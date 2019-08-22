@@ -15,7 +15,9 @@ class CordaSecurityProvider : Provider(PROVIDER_NAME, 0.1, "$PROVIDER_NAME secur
     }
 
     init {
-        provideNonDeterministic(this)
+        put("KeyFactory.${CompositeKey.KEY_ALGORITHM}", CompositeKeyFactory::class.java.name)
+        put("Alg.Alias.KeyFactory.$COMPOSITE_KEY", CompositeKey.KEY_ALGORITHM)
+        put("Alg.Alias.KeyFactory.OID.$COMPOSITE_KEY", CompositeKey.KEY_ALGORITHM)
         put("Signature.${CompositeSignature.SIGNATURE_ALGORITHM}", CompositeSignature::class.java.name)
         put("Alg.Alias.Signature.$COMPOSITE_SIGNATURE", CompositeSignature.SIGNATURE_ALGORITHM)
         put("Alg.Alias.Signature.OID.$COMPOSITE_SIGNATURE", CompositeSignature.SIGNATURE_ALGORITHM)
@@ -26,16 +28,6 @@ class CordaSecurityProvider : Provider(PROVIDER_NAME, 0.1, "$PROVIDER_NAME secur
     private fun putPlatformSecureRandomService() {
         putService(PlatformSecureRandomService(this))
     }
-}
-
-/**
- * The core-deterministic module is not allowed to generate keys.
- */
-@StubOutForDJVM
-private fun provideNonDeterministic(provider: Provider) {
-    provider["KeyFactory.${CompositeKey.KEY_ALGORITHM}"] = CompositeKeyFactory::class.java.name
-    provider["Alg.Alias.KeyFactory.$COMPOSITE_KEY"] = CompositeKey.KEY_ALGORITHM
-    provider["Alg.Alias.KeyFactory.OID.$COMPOSITE_KEY"] = CompositeKey.KEY_ALGORITHM
 }
 
 @KeepForDJVM

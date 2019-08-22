@@ -49,8 +49,10 @@ interface ConfigParser<T> {
 const val CUSTOM_NODE_PROPERTIES_ROOT = "custom"
 
 // TODO Move other config parsing to use parseAs and remove this
+// This is to enable constructs like:
+// `val keyStorePassword: String by config`
 operator fun <T : Any> Config.getValue(receiver: Any, metadata: KProperty<*>): T {
-    return getValueInternal(metadata.name, metadata.returnType, UnknownConfigKeysPolicy.IGNORE::handle)
+    return getValueInternal(metadata.name, metadata.returnType, UnknownConfigKeysPolicy.IGNORE::handle, nestedPath = null, baseDirectory = null)
 }
 
 // Problems:
@@ -59,7 +61,8 @@ operator fun <T : Any> Config.getValue(receiver: Any, metadata: KProperty<*>): T
 // - Cannot support a many-to-one relationship between configuration file structures and configuration domain type. This is essential for versioning of the configuration files.
 // - It's complicated and based on reflection, meaning problems with it are typically found at runtime.
 // - It doesn't support validation errors in a structured way. If something goes wrong, it throws exceptions, which doesn't support good usability practices like displaying all the errors at once.
-fun <T : Any> Config.parseAs(clazz: KClass<T>, onUnknownKeys: ((Set<String>, logger: Logger) -> Unit) = UnknownConfigKeysPolicy.FAIL::handle, nestedPath: String? = null): T {
+fun <T : Any> Config.parseAs(clazz: KClass<T>, onUnknownKeys: ((Set<String>, logger: Logger) -> Unit) = UnknownConfigKeysPolicy.FAIL::handle,
+                             nestedPath: String? = null, baseDirectory: Path? = null): T {
     // Use custom parser if provided, instead of treating the object as data class.
     clazz.findAnnotation<CustomConfigParser>()?.let { return uncheckedCast(it.parser.createInstance().parse(this)) }
 
@@ -85,7 +88,7 @@ fun <T : Any> Config.parseAs(clazz: KClass<T>, onUnknownKeys: ((Set<String>, log
         // Get the matching property for this parameter
         val property = clazz.memberProperties.first { it.name == param.name }
         val path = defaultToOldPath(property)
-        getValueInternal<Any>(path, param.type, onUnknownKeys, nestedPath)
+        getValueInternal<Any>(path, param.type, onUnknownKeys, nestedPath, baseDirectory)
     }
     try {
         return constructor.callBy(args)
@@ -114,11 +117,11 @@ fun Config.toProperties(): Properties {
             { it.value.unwrapped().toString() })
 }
 
-private fun <T : Any> Config.getValueInternal(path: String, type: KType, onUnknownKeys: ((Set<String>, logger: Logger) -> Unit), nestedPath: String? = null): T {
-    return uncheckedCast(if (type.arguments.isEmpty()) getSingleValue(path, type, onUnknownKeys, nestedPath) else getCollectionValue(path, type, onUnknownKeys, nestedPath))
+private fun <T : Any> Config.getValueInternal(path: String, type: KType, onUnknownKeys: ((Set<String>, logger: Logger) -> Unit), nestedPath: String?, baseDirectory: Path?): T {
+    return uncheckedCast(if (type.arguments.isEmpty()) getSingleValue(path, type, onUnknownKeys, nestedPath, baseDirectory) else getCollectionValue(path, type, onUnknownKeys, nestedPath, baseDirectory))
 }
 
-private fun Config.getSingleValue(path: String, type: KType, onUnknownKeys: (Set<String>, logger: Logger) -> Unit, nestedPath: String? = null): Any? {
+private fun Config.getSingleValue(path: String, type: KType, onUnknownKeys: (Set<String>, logger: Logger) -> Unit, nestedPath: String?, baseDirectory: Path?): Any? {
     if (type.isMarkedNullable && !hasPath(path)) return null
     val typeClass = type.jvmErasure
     return try {
@@ -132,7 +135,10 @@ private fun Config.getSingleValue(path: String, type: KType, onUnknownKeys: (Set
             Duration::class -> getDuration(path)
             Instant::class -> Instant.parse(getString(path))
             NetworkHostAndPort::class -> NetworkHostAndPort.parse(getString(path))
-            Path::class -> Paths.get(getString(path))
+            Path::class -> {
+                val pathAsString = getString(path)
+                resolvePath(pathAsString, baseDirectory)
+            }
             URL::class -> URL(getString(path))
             UUID::class -> UUID.fromString(getString(path))
             X500Principal::class -> X500Principal(getString(path))
@@ -147,11 +153,21 @@ private fun Config.getSingleValue(path: String, type: KType, onUnknownKeys: (Set
             else -> if (typeClass.java.isEnum) {
                 parseEnum(typeClass.java, getString(path))
             } else {
-                getConfig(path).parseAs(typeClass, onUnknownKeys, nestedPath?.let { "$it.$path" } ?: path)
+                getConfig(path).parseAs(typeClass, onUnknownKeys, nestedPath?.let { "$it.$path" } ?: path, baseDirectory = baseDirectory)
             }
         }
     } catch (e: ConfigException.Missing) {
         throw e.relative(path, nestedPath)
+    }
+}
+
+private fun resolvePath(pathAsString: String, baseDirectory: Path?): Path {
+    val path = Paths.get(pathAsString)
+    return if (baseDirectory != null) {
+        // if baseDirectory been specified try resolving path against it. Note if `pathFromConfig` is an absolute path - this instruction has no effect.
+        baseDirectory.resolve(path)
+    } else {
+        path
     }
 }
 
@@ -162,7 +178,7 @@ private fun ConfigException.Missing.relative(path: String, nestedPath: String?):
     }
 }
 
-private fun Config.getCollectionValue(path: String, type: KType, onUnknownKeys: (Set<String>, logger: Logger) -> Unit, nestedPath: String? = null): Collection<Any> {
+private fun Config.getCollectionValue(path: String, type: KType, onUnknownKeys: (Set<String>, logger: Logger) -> Unit, nestedPath: String?, baseDirectory: Path?): Collection<Any> {
     val typeClass = type.jvmErasure
     require(typeClass == List::class || typeClass == Set::class) { "$typeClass is not supported" }
     val elementClass = type.arguments[0].type?.jvmErasure ?: throw IllegalArgumentException("Cannot work with star projection: $type")
@@ -179,7 +195,7 @@ private fun Config.getCollectionValue(path: String, type: KType, onUnknownKeys: 
             LocalDate::class -> getStringList(path).map(LocalDate::parse)
             Instant::class -> getStringList(path).map(Instant::parse)
             NetworkHostAndPort::class -> getStringList(path).map(NetworkHostAndPort.Companion::parse)
-            Path::class -> getStringList(path).map { Paths.get(it) }
+            Path::class -> getStringList(path).map { resolvePath(it, baseDirectory) }
             URL::class -> getStringList(path).map(::URL)
             X500Principal::class -> getStringList(path).map(::X500Principal)
             UUID::class -> getStringList(path).map { UUID.fromString(it) }
@@ -188,7 +204,7 @@ private fun Config.getCollectionValue(path: String, type: KType, onUnknownKeys: 
             else -> if (elementClass.java.isEnum) {
                 getStringList(path).map { parseEnum(elementClass.java, it) }
             } else {
-                getConfigList(path).map { it.parseAs(elementClass, onUnknownKeys) }
+                getConfigList(path).map { it.parseAs(elementClass, onUnknownKeys, baseDirectory = baseDirectory) }
             }
         }
     } catch (e: ConfigException.Missing) {

@@ -36,7 +36,6 @@ import net.corda.node.services.config.*
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.BasicHSMKeyManagementService
 import net.corda.node.services.keys.KeyManagementServiceInternal
-import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
 import net.corda.node.services.messaging.Message
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.persistence.NodeAttachmentService
@@ -46,6 +45,7 @@ import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
 import net.corda.node.utilities.DefaultNamedCacheFactory
 import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.config.User
+import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
@@ -249,10 +249,10 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
 
     @VisibleForTesting
     internal open fun createNotaries(): List<TestStartedNode> {
-        return notarySpecs.map { (name, validating) ->
+        return notarySpecs.map { spec ->
             createNode(InternalMockNodeParameters(
-                    legalName = name,
-                    configOverrides = { doReturn(NotaryConfig(validating)).whenever(it).notary }
+                    legalName = spec.name,
+                    configOverrides = { doReturn(NotaryConfig(spec.validating, className = spec.className)).whenever(it).notary }
             ))
         }
     }
@@ -373,7 +373,7 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
         }
 
         override fun makeKeyManagementService(identityService: PersistentIdentityService): KeyManagementServiceInternal {
-            return BasicHSMKeyManagementService(cacheFactory, identityService, database, cryptoService)
+            return BasicHSMKeyManagementService(cacheFactory, identityService, database, cryptoService, pkToIdCache)
         }
 
         override fun startShell() {

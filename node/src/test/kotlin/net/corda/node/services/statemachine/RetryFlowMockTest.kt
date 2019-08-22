@@ -20,6 +20,7 @@ import net.corda.testing.core.TestIdentity
 import net.corda.testing.node.internal.*
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.h2.util.Utils
 import org.hibernate.exception.ConstraintViolationException
 import org.junit.After
 import org.junit.Assert.assertTrue
@@ -142,7 +143,8 @@ class RetryFlowMockTest {
         val alice = TestIdentity(CordaX500Name.parse("L=London,O=Alice Ltd,OU=Trade,C=GB")).party
         val records = nodeA.smm.flowHospital.track().updates.toBlocking().toIterable().iterator()
         val flow: FlowStateMachine<Unit> = nodeA.services.startFlow(FinalityHandler(object : FlowSession() {
-            override val counterparty = alice
+            override val destination: Destination get() = alice
+            override val counterparty: Party get() = alice
 
             override fun getCounterpartyFlowInfo(maySkipCheckpoint: Boolean): FlowInfo {
                 TODO("not implemented")
@@ -282,7 +284,7 @@ class RetryFlowMockTest {
         }
 
         private fun doInsert() {
-            val tx = DBTransactionStorage.DBTransaction("Foo")
+            val tx = DBTransactionStorage.DBTransaction("Foo", null, Utils.EMPTY_BYTES, DBTransactionStorage.TransactionStatus.VERIFIED)
             contextTransaction.session.save(tx)
         }
     }

@@ -184,10 +184,9 @@ fun FlowLogic<*>.checkParameterHash(networkParametersHash: SecureHash?) {
     //       For now we don't check whether the attached network parameters match the current ones.
 }
 
-private data class AttachmentAttributeKey(val signers: List<PublicKey>, val contractClasses: List<ContractClassName>?)
-
-// A cache for caching whether a particular attachment ID is trusted
-private val attachmentTrustedCache: MutableMap<AttachmentAttributeKey, Boolean> = createSimpleCache<AttachmentAttributeKey, Boolean>(100).toSynchronised()
+// A cache for caching whether a particular set of signers are trusted
+private val trustedKeysCache: MutableMap<PublicKey, Boolean> =
+        createSimpleCache<PublicKey, Boolean>(100).toSynchronised()
 
 /**
  * Establishes whether an attachment should be trusted. This logic is required in order to verify transactions, as transaction
@@ -195,8 +194,8 @@ private val attachmentTrustedCache: MutableMap<AttachmentAttributeKey, Boolean> 
  *
  * Attachments are trusted if one of the following is true:
  *  - They are uploaded by a trusted uploader
- *  - There is another attachment in the attachment store signed by the same keys (and with the same contract classes if the attachment is a
- *    contract attachment) that is trusted
+ *  - There is another attachment in the attachment store, that is trusted and is signed by at least one key that the input
+ *  attachment is also signed with
  */
 fun isAttachmentTrusted(attachment: Attachment, service: AttachmentStorage?): Boolean {
     val trustedByUploader = when (attachment) {
@@ -208,24 +207,19 @@ fun isAttachmentTrusted(attachment: Attachment, service: AttachmentStorage?): Bo
     if (trustedByUploader) return true
 
     return if (service != null && attachment.signerKeys.isNotEmpty()) {
-        val signers = attachment.signerKeys
-        val contractClasses = if (attachment is ContractAttachment) {
-            attachment.allContracts.toList()
-        } else {
-            null
-        }
-        val key = AttachmentAttributeKey(signers, contractClasses)
-
-        attachmentTrustedCache.computeIfAbsent(key) {
-            val contractClassCondition = it.contractClasses?.let { classes -> Builder.equal(classes) }
-            val queryCriteria = AttachmentQueryCriteria.AttachmentsQueryCriteria(
-                    contractClassNamesCondition = contractClassCondition,
-                    signersCondition = Builder.equal(signers),
+        attachment.signerKeys.any { signer ->
+            trustedKeysCache.computeIfAbsent(signer) {
+                val queryCriteria = AttachmentQueryCriteria.AttachmentsQueryCriteria(
+                        signersCondition = Builder.equal(listOf(signer)),
                     uploaderCondition = Builder.`in`(TRUSTED_UPLOADERS)
-            )
-            service.queryAttachments(queryCriteria).isNotEmpty()
+                )
+                service.queryAttachments(queryCriteria).isNotEmpty()
+            }
         }
     } else {
         false
     }
 }
+
+val SignedTransaction.dependencies: Set<SecureHash>
+    get() = (inputs.asSequence() + references.asSequence()).map { it.txhash }.toSet()
