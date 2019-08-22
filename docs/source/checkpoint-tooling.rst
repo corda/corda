@@ -32,7 +32,7 @@ corrective actions can be taken to resolve the issues flows are facing. One poss
              and coordination with a flow's counterparties must be taken to ensure that a initiating flow and flows responding to it are correctly
              removed. This experience will be improved in the future. Making it easier to kill flows while notifying their counterparties.
 
-To retrieve this information, execute ``run dumpCheckpoints`` in the node's shell. The command creates a zip and generates a JSON file for each flow.
+To retrieve this information, execute ``checkpoints dump`` in the node's shell. The command creates a zip and generates a JSON file for each flow.
 
 - Each file follows the naming format ``<flow name>-<flow id>.json`` (for example, ``CashIssueAndPaymentFlow-90613d6f-be78-41bd-98e1-33a756c28808.json``).
 - The zip is placed into the ``logs`` directory of the node and is named ``checkpoints_dump-<date and time>.zip`` (for example, ``checkpoints_dump-20190812-153847``).
@@ -158,7 +158,7 @@ For a given flow *checkpoint*, the agent outputs:
 
 Diagnostics information is written to standard log files (eg. log4j2 configured logger).
 
-This tool is particularly useful when used in conjunction with the ``dumpCheckpoints`` CRaSH shell command to troubleshoot and identify potential
+This tool is particularly useful when used in conjunction with the ``checkpoints dump`` CRaSH shell command to troubleshoot and identify potential
 problems associated with checkpoints for flows that appear to not be completing.
 
 The checkpoint agent can be downloaded from `here <https://software.r3.com/artifactory/corda-releases/net/corda/corda-tools-checkpoint-agent/>`_.
@@ -199,12 +199,12 @@ These arguments are passed to the JVM along with the agent specification. For ex
 Checkpoint Dump support
 -----------------------
 
-When used in combination with the ``dumpCheckpoints`` shell command (see :ref:`Checkpoint Dumper <checkpoint_dumper>`),
+When used in combination with the ``checkpoints dump`` shell command (see :ref:`Checkpoint Dumper <checkpoint_dumper>`),
 the checkpoint agent will automatically output additional diagnostic information for all checkpoints dumped by the aforementioned tool.
 
 You should therefore see two different output files upon invoking the checkpoint dumper command:
 
-* ``<NODE_BASE>\logs\checkpoints_dump-<date>.zip`` contains zipped JSON representation of checkpoints (from ``dumpCheckpoints`` shell command)
+* ``<NODE_BASE>\logs\checkpoints_dump-<date>.zip`` contains zipped JSON representation of checkpoints (from ``checkpoints dump`` shell command)
 * ``<NODE_BASE>\logs\checkpoints_agent-<date>.log`` contains output from this agent tool (types and sizes of a checkpoint stack)
 
 .. note:: You will only see a separate `checkpoints_agent-<date>.log` file if you configure a separate log4j logger as described below.
@@ -216,7 +216,7 @@ If you **only** wish to log checkpoint data for failing flows, start the checkpo
 
     checkpoint-agent.jar=instrumentType=read,instrumentClassname=NONE
 
-and use the ``dumpCheckpoints`` shell command to trigger diagnostics collection.
+and use the ``checkpoints dump`` shell command to trigger diagnostics collection.
 
 .. warning:: The checkpoint agent JAR file must be called "checkpoint-agent.jar" as the checkpoint dump support code uses Java reflection to
    determine whether the VM has been instrumented or not at runtime.
@@ -309,7 +309,7 @@ Note,
   running on and its checkpoint id (43c7d5c8-aa66-4a98-beed-dc91354d0353)
 
 * on READ (eg. a checkpoint is being deserialized from disk), we only have information about the stack class hierarchy.
-  Additionally, if we are using the CRaSH shell ``dumpCheckpoints`` command, we also see a flows checkpoint id.
+  Additionally, if we are using the CRaSH shell ``checkpoints dump`` command, we also see a flows checkpoint id.
 
 Flow diagnostic process
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -339,14 +339,14 @@ Note that "In progress" indicates the flows above have not completed (and will h
 
 .. note:: Always search for the flow id, in this case **90613d6f-be78-41bd-98e1-33a756c28808**
 
-2. From the CRaSH shell run the ``dumpCheckpoints`` command to trigger diagnostics information.
+2. From the CRaSH shell run the ``checkpoints dump`` command to trigger diagnostics information.
 
 .. sourcecode:: none
 
     Welcome to the Corda interactive shell.
     Useful commands include 'help' to see what is available, and 'bye' to shut down the node.
 
-    Thu Jul 11 18:56:48 BST 2019>>> run dumpCheckpoints
+    Thu Jul 11 18:56:48 BST 2019>>> checkpoints dump
 
 You will now see an addition line in the main corda node log file as follows:
 

@@ -1253,6 +1253,159 @@ class NodeAttachmentServiceTest {
         }
     }
 
+    @Test
+    fun `getAllAttachments returns no attachments if there are no stored attachments`() {
+        assertTrue(storage.getAllAttachments().isEmpty())
+    }
+
+    @Test
+    fun `getAllAttachments returns all stored attachments`() {
+        SelfCleaningDir().use { file ->
+            val aliasA = "Spiderman"
+            val password = "why is Sony taking me out of the MCU?!?!"
+            file.path.generateKey(aliasA, password)
+
+            val signedJar = makeTestContractJar(file.path, "foo.bar.DummyContract")
+            val key = file.path.signJar(signedJar.toAbsolutePath().toString(), aliasA, password)
+
+            val unsignedJar = makeTestContractJar(file.path, "foo.bar.DifferentContract")
+
+            val (zipC, hashB) = makeTestJar(listOf(Pair("file", "content")))
+            val (zipD, hashC) = makeTestJar(listOf(Pair("magic_file", "magic_content_puff")))
+
+            val attachmentA = signedJar.read { storage.privilegedImportAttachment(it, "app", "A.jar") }
+            val attachmentB = unsignedJar.read { storage.privilegedImportAttachment(it, "untrusted", "B.jar") }
+            val attachmentC = zipC.read { storage.privilegedImportAttachment(it, "untrusted", "C.zip") }
+            val attachmentD = zipD.read { storage.privilegedImportAttachment(it, "untrusted", null) }
+
+            val result = storage.getAllAttachments()
+            assertEquals(4, result.size)
+            assertThat(result.map { (_, attachment) -> attachment.id }).containsOnly(
+                attachmentA, attachmentB, attachmentC, attachmentD
+            )
+            assertThat(result.map { (name, _) -> name }).containsOnly(
+                "A.jar", "B.jar", "C.zip", null
+            )
+            assertThat(result.map { (_, attachment) -> attachment::class }).containsOnly(
+                ContractAttachment::class,
+                ContractAttachment::class,
+                NodeAttachmentService.AttachmentImpl::class,
+                NodeAttachmentService.AttachmentImpl::class
+            )
+            assertThat(result.map { (_, attachment) -> attachment.signerKeys }).containsOnly(
+                listOf(key), emptyList(), emptyList(), emptyList()
+            )
+        }
+    }
+
+    @Test
+    fun `resolveAttachmentTrustRoots returns all attachment trust roots`() {
+        SelfCleaningDir().use { file ->
+            val aliasA = "dan"
+            val aliasB = "james"
+            val password = "one day the attachment service will be refactored"
+            file.path.generateKey(aliasA, password)
+            file.path.generateKey(aliasB, password)
+
+            val jarSignedByA = makeTestContractJar(file.path, "foo.bar.AnotherContract")
+            file.path.signJar(jarSignedByA.toAbsolutePath().toString(), aliasA, password)
+
+            val jarSignedByAB = makeTestContractJar(file.path, "foo.bar.DummyContract")
+            file.path.signJar(jarSignedByAB.toAbsolutePath().toString(), aliasA, password)
+            file.path.signJar(jarSignedByAB.toAbsolutePath().toString(), aliasB, password)
+
+            val (zipC, hashB) = makeTestJar(listOf(Pair("file", "content")))
+            val (zipD, hashC) = makeTestJar(listOf(Pair("magic_file", "magic_content_puff")))
+
+            val attachmentA = jarSignedByA.read { storage.privilegedImportAttachment(it, "app", "A.jar") }
+            val attachmentB = jarSignedByAB.read { storage.privilegedImportAttachment(it, "untrusted", "B.jar") }
+            val attachmentC = zipC.read { storage.privilegedImportAttachment(it, "app", "C.zip") }
+            val attachmentD = zipD.read { storage.privilegedImportAttachment(it, "untrusted", null) }
+
+            assertThat(storage.resolveAttachmentTrustRoots()).containsOnly(
+                AttachmentTrustRoot(
+                    attachmentId = attachmentA,
+                    fileName = "A.jar",
+                    uploader = "app",
+                    trustRootId = attachmentA,
+                    trustRootFileName = "A.jar"
+                ),
+                AttachmentTrustRoot(
+                    attachmentId = attachmentB,
+                    fileName = "B.jar",
+                    uploader = "untrusted",
+                    trustRootId = attachmentA,
+                    trustRootFileName = "A.jar"
+                ),
+                AttachmentTrustRoot(
+                    attachmentId = attachmentC,
+                    fileName = "C.zip",
+                    uploader = "app",
+                    trustRootId = attachmentC,
+                    trustRootFileName = "C.zip"
+                ),
+                AttachmentTrustRoot(
+                    attachmentId = attachmentD,
+                    fileName = null,
+                    uploader = "untrusted",
+                    trustRootId = null,
+                    trustRootFileName = null
+                )
+            )
+        }
+    }
+
+    @Test
+    fun `resolveAttachmentTrustRoots attachments signed by blacklisted keys output without trust root fields filled in`() {
+        SelfCleaningDir().use { file ->
+
+            val aliasA = "batman"
+            val aliasB = "the joker"
+            val password = "nanananana batman"
+            file.path.generateKey(aliasA, password)
+            val keyB = file.path.generateKey(aliasB, password)
+
+            storage = NodeAttachmentService(
+                MetricRegistry(),
+                TestingNamedCacheFactory(),
+                database,
+                keysToBlacklist = listOf(keyB.hash.toString())
+            ).also {
+                database.transaction {
+                    it.start()
+                }
+            }
+            storage.servicesForResolution = services
+
+            val jarSignedByA = makeTestContractJar(file.path, "foo.bar.AnotherContract")
+            file.path.signJar(jarSignedByA.toAbsolutePath().toString(), aliasA, password)
+
+            val jarSignedByAB = makeTestContractJar(file.path, "foo.bar.DummyContract")
+            file.path.signJar(jarSignedByAB.toAbsolutePath().toString(), aliasA, password)
+            file.path.signJar(jarSignedByAB.toAbsolutePath().toString(), aliasB, password)
+
+            val attachmentA = jarSignedByA.read { storage.privilegedImportAttachment(it, "app", "A.jar") }
+            val attachmentB = jarSignedByAB.read { storage.privilegedImportAttachment(it, "untrusted", "B.jar") }
+
+            assertThat(storage.resolveAttachmentTrustRoots()).containsOnly(
+                AttachmentTrustRoot(
+                    attachmentId = attachmentA,
+                    fileName = "A.jar",
+                    uploader = "app",
+                    trustRootId = attachmentA,
+                    trustRootFileName = "A.jar"
+                ),
+                AttachmentTrustRoot(
+                    attachmentId = attachmentB,
+                    fileName = "B.jar",
+                    uploader = "untrusted",
+                    trustRootId = null,
+                    trustRootFileName = null
+                )
+            )
+        }
+    }
+
     // Not the real FetchAttachmentsFlow!
     private class FetchAttachmentsFlow : FlowLogic<Unit>() {
         @Suspendable

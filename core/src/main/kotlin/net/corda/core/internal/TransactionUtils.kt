@@ -8,6 +8,7 @@ import net.corda.core.crypto.sha256
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.Party
 import net.corda.core.internal.node.services.AttachmentStorageInternal
+import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.vault.AttachmentQueryCriteria
 import net.corda.core.node.services.vault.Builder
 import net.corda.core.serialization.*
@@ -199,32 +200,100 @@ private val trustedKeysCache: MutableMap<PublicKey, Boolean> =
  */
 fun isAttachmentTrusted(attachment: Attachment, service: AttachmentStorageInternal?): Boolean {
     val trustedByUploader = when (attachment) {
-        is ContractAttachment -> isUploaderTrusted(attachment.uploader)
-        is AbstractAttachment -> isUploaderTrusted(attachment.uploader)
+        is ContractAttachment, is AbstractAttachment -> isUploaderTrusted(attachment.uploader)
         else -> false
     }
 
-    if (trustedByUploader) return true
+    if (trustedByUploader){
+        // add signers to the cache as this is a fully trusted attachment
+        attachment.signerKeys
+            .filter { signer -> service?.let { signer.isBlacklisted(it) } ?: true }
+            .forEach { trustedKeysCache[it] = true }
+        return true
+    }
 
     if (service == null || attachment.isSignedByBlacklistedKeys(service)) return false
 
-    return if (attachment.signerKeys.isNotEmpty()) {
-        attachment.signerKeys.any { signer ->
-            trustedKeysCache.computeIfAbsent(signer) {
-                val queryCriteria = AttachmentQueryCriteria.AttachmentsQueryCriteria(
-                        signersCondition = Builder.equal(listOf(signer)),
-                    uploaderCondition = Builder.`in`(TRUSTED_UPLOADERS)
-                )
-                service.queryAttachments(queryCriteria).isNotEmpty()
-            }
+    return attachment.signerKeys.any { signer ->
+        trustedKeysCache.computeIfAbsent(signer) {
+            val queryCriteria = AttachmentQueryCriteria.AttachmentsQueryCriteria(
+                signersCondition = Builder.equal(listOf(signer)),
+                uploaderCondition = Builder.`in`(TRUSTED_UPLOADERS)
+            )
+            service.queryAttachments(queryCriteria).isNotEmpty()
         }
-    } else {
-        false
     }
 }
 
 private fun Attachment.isSignedByBlacklistedKeys(service: AttachmentStorageInternal) =
-    signerKeys.map { it.hash }.any(service.blacklistedAttachmentSigningKeys::contains)
+    signerKeys.any { it.isBlacklisted(service) }
+
+private fun PublicKey.isBlacklisted(service: AttachmentStorageInternal) =
+    service.blacklistedAttachmentSigningKeys.contains(this.hash)
 
 val SignedTransaction.dependencies: Set<SecureHash>
     get() = (inputs.asSequence() + references.asSequence()).map { it.txhash }.toSet()
+
+/**
+ * Determines the trust of attachments stored within the node. Applies the same logic as
+ * [isAttachmentTrusted] when calculating the trust of an attachment.
+ */
+fun AttachmentStorageInternal.resolveAttachmentTrustRoots(): List<AttachmentTrustRoot> {
+    val attachments = getAllAttachments()
+    return getAllAttachments().map { it.resolveAttachmentTrustRoot(attachments, this) }
+}
+
+private fun Pair<String?, Attachment>.resolveAttachmentTrustRoot(
+    attachments: List<Pair<String?, Attachment>>,
+    service: AttachmentStorageInternal
+): AttachmentTrustRoot {
+    val (name, attachment) = this
+    val trustRoot = when {
+        isUploaderTrusted(attachment.uploader) -> {
+            // add signers to the cache as this is a fully trusted attachment
+            attachment.signerKeys
+                .filter { it.isBlacklisted(service) }
+                .forEach { trustedKeysCache[it] = true }
+            this
+        }
+        attachment.isSignedByBlacklistedKeys(service) -> null
+        else -> {
+            (attachments - this).firstOrNull { (_, attachmentBeingCompared) ->
+                attachment.signerKeys.any { signer ->
+                    isUploaderTrusted(attachmentBeingCompared.uploader) && attachmentBeingCompared.signerKeys.contains(
+                        signer
+                    )
+                }
+            }
+        }
+    }
+    return AttachmentTrustRoot(
+        attachment.id,
+        name,
+        attachment.uploader,
+        trustRoot?.second?.id,
+        trustRoot?.first
+    )
+}
+
+private val Attachment.uploader: String?
+    get() = when (this) {
+        is ContractAttachment -> uploader
+        is AbstractAttachment -> uploader
+        else -> null
+    }
+
+/**
+ * Data class containing information about an attachment's trust root.
+ */
+@CordaSerializable
+data class AttachmentTrustRoot(
+    val attachmentId: AttachmentId,
+    val fileName: String?,
+    val uploader: String?,
+    val trustRootId: AttachmentId?,
+    val trustRootFileName: String?
+) {
+    val isTrusted = trustRootId != null
+    val isTrustRoot = attachmentId == trustRootId
+}

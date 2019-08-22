@@ -147,4 +147,8 @@ class MockAttachmentStorage(override val blacklistedAttachmentSigningKeys: List<
             AttachmentId.parse(faee.message!!)
         }
     }
+
+    override fun getAllAttachments(): List<Pair<String?, Attachment>> {
+        return _files.values.map { (attachment, _) -> null to attachment }
+    }
 }

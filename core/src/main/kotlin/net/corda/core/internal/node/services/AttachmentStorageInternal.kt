@@ -1,5 +1,6 @@
 package net.corda.core.internal.node.services
 
+import net.corda.core.contracts.Attachment
 import net.corda.core.crypto.SecureHash
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.AttachmentStorage
@@ -19,4 +20,9 @@ interface AttachmentStorageInternal : AttachmentStorage {
      * Similar to above but returns existing [AttachmentId] instead of throwing [DuplicateAttachmentException]
      */
     fun privilegedImportOrGetAttachment(jar: InputStream, uploader: String, filename: String?): AttachmentId
+
+    /**
+     * Get all attachments stored within the node paired to their file name's.
+     */
+    fun getAllAttachments(): List<Pair<String?, Attachment>>
 }
