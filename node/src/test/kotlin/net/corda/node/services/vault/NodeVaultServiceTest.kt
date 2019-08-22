@@ -4,6 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import com.nhaarman.mockito_kotlin.*
 import net.corda.core.contracts.*
 import net.corda.core.crypto.NullKeys
+import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.*
 import net.corda.core.internal.NotaryChangeTransactionBuilder
@@ -19,6 +20,7 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.toNonEmptySet
 import net.corda.finance.*
 import net.corda.finance.contracts.asset.Cash
