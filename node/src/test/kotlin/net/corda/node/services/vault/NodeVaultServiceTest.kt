@@ -1003,9 +1003,7 @@ class NodeVaultServiceTest {
 
     @Test
     fun `test concurrent update of contract state type mappings`() {
-        vaultService.contractStateTypeMappings.forEach {
-            println("${it.key} = ${it.value}")
-        }
+        // no registered contract state types at start-up.
         assertEquals(0, vaultService.contractStateTypeMappings.size)
 
         fun makeCash(amount: Amount<Currency>, issuer: AbstractParty, depositRef: Byte = 1) =
@@ -1029,6 +1027,7 @@ class NodeVaultServiceTest {
         vaultService.contractStateTypeMappings.forEach {
             println("${it.key} = ${it.value}")
         }
+        // Cash.State and its superclasses and interfaces: FungibleAsset, FungibleState, OwnableState, QueryableState
         assertEquals(4, vaultService.contractStateTypeMappings.size)
 
         service.shutdown()

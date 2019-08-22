@@ -112,7 +112,7 @@ class NodeVaultService(
         rawUpdates.subscribe { update ->
             (update.produced + update.references).forEach {
                 val concreteType = it.state.data.javaClass
-                log.warn ( "State update of type: $concreteType" )
+                log.trace { "State update of type: $concreteType" }
                 val seen = contractStateTypeMappings.any { it.value.contains(concreteType.name) }
                 if (!seen) {
                     val contractTypes = deriveContractTypes(concreteType)
