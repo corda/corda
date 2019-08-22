@@ -6,6 +6,7 @@ import com.bmuschko.gradle.docker.tasks.image.DockerBuildImage
 import com.bmuschko.gradle.docker.tasks.image.DockerCommitImage
 import com.bmuschko.gradle.docker.tasks.image.DockerTagImage
 import com.bmuschko.gradle.docker.tasks.image.DockerPushImage
+import net.corda.buildtasks.ListTests
 
 buildscript {
     // For sharing constants between builds
@@ -107,7 +108,7 @@ buildscript {
     ext.jsch_version = '0.1.55'
     ext.protonj_version = '0.33.0' // Overide Artemis version
     ext.snappy_version = '0.4'
-    ext.class_graph_version = '4.8.41'
+    ext.class_graph_version = constants.getProperty('classgraphVersion')
     ext.jcabi_manifests_version = '1.1'
     ext.picocli_version = '3.9.6'
     ext.commons_io_version = '2.6'
@@ -170,9 +171,6 @@ plugins {
     id 'com.github.johnrengelman.shadow' version '2.0.4' apply false
     id "com.gradle.build-scan" version "2.2.1"
     id 'com.bmuschko.docker-remote-api' version '5.0.0'
-}
-
-ext {
 }
 
 apply plugin: 'project-report'
@@ -328,6 +326,13 @@ allprojects {
         ext {
             docker_testing_tag = "$docker_testing_tag"
         }
+    }
+
+    task listTests(type: ListTests) {
+        // TODO set parameters
+        randomSeed = 0
+        workers = 1
+        workerId = 0
     }
 }
 
