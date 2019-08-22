@@ -4,6 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.*
+import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.unwrap
 
@@ -48,16 +49,18 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any) 
         // Each time an authorised transaction is requested, the input transactions are added to the list.
         // Once a transaction has been requested, it will be removed from the authorised list. This means that it is a protocol violation to request a transaction twice.
         val authorisedTransactions = when (payload) {
-            is NotarisationPayload -> TransactionAuthorisationFilter().addAuthorised(getInputTransactions(payload.signedTransaction))
-            is SignedTransaction -> TransactionAuthorisationFilter().addAuthorised(getInputTransactions(payload))
-            is RetrieveAnyTransactionPayload -> TransactionAuthorisationFilter(acceptAll = true)
-            is List<*> -> TransactionAuthorisationFilter().addAuthorised(payload.flatMap { stateAndRef ->
+            is NotarisationPayload -> RestrictiveTxAuthorisationFilter(payload.signedTransaction.filterInputTransactions(serviceHub))
+            is SignedTransaction -> RestrictiveTxAuthorisationFilter(payload.filterInputTransactions(serviceHub))
+            is RetrieveAnyTransactionPayload -> TransactionAuthorisationFilterSimple(serviceHub, acceptAll = true)
+            is List<*> ->
+                // SGX: in which case is this used?
+                TransactionAuthorisationFilterSimple(serviceHub, payload.flatMap { stateAndRef ->
                 if (stateAndRef is StateAndRef<*>) {
                     getInputTransactions(serviceHub.validatedTransactions.getTransaction(stateAndRef.ref.txhash)!!) + stateAndRef.ref.txhash
                 } else {
                     throw Exception("Unknown payload type: ${stateAndRef!!::class.java} ?")
                 }
-            }.toSet())
+            }.toMutableSet())
             else -> throw Exception("Unknown payload type: ${payload::class.java} ?")
         }
 
@@ -78,14 +81,7 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any) 
 
             payload = when (dataRequest.dataType) {
                 FetchDataFlow.DataType.TRANSACTION -> dataRequest.hashes.map { txId ->
-                    if (!authorisedTransactions.isAuthorised(txId)) {
-                        throw FetchDataFlow.IllegalTransactionRequest(txId)
-                    }
-                    val tx = serviceHub.validatedTransactions.getTransaction(txId)
-                            ?: throw FetchDataFlow.HashNotFound(txId)
-                    authorisedTransactions.removeAuthorised(tx.id)
-                    authorisedTransactions.addAuthorised(getInputTransactions(tx))
-                    tx
+                    authorisedTransactions.get(txId)
                 }
                 FetchDataFlow.DataType.ATTACHMENT -> dataRequest.hashes.map {
                     serviceHub.attachments.openAttachment(it)?.open()?.readFully()
@@ -99,21 +95,52 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any) 
         }
     }
 
-    @Suspendable
-    private fun getInputTransactions(tx: SignedTransaction): Set<SecureHash> {
-        return tx.inputs.map { it.txhash }.toSet() + tx.references.map { it.txhash }.toSet()
+    // SGX: probably needs to refine the filter implementation based on the requesting party identity
+    interface TransactionAuthorisationFilter {
+        fun get(txId: SecureHash): SignedTransaction
     }
 
-    private class TransactionAuthorisationFilter(private val authorisedTransactions: MutableSet<SecureHash> = mutableSetOf(), val acceptAll: Boolean = false) {
-        fun isAuthorised(txId: SecureHash) = acceptAll || authorisedTransactions.contains(txId)
+    private class TransactionAuthorisationFilterSimple(
+            val services: ServiceHub,
+            val authorisedTransactions: MutableSet<SecureHash> = HashSet(),
+            val acceptAll: Boolean = false) : TransactionAuthorisationFilter {
 
-        fun addAuthorised(txs: Set<SecureHash>): TransactionAuthorisationFilter {
+        override fun get(txId: SecureHash): SignedTransaction {
+            if (!isAuthorised(txId)) {
+                throw FetchDataFlow.IllegalTransactionRequest(txId)
+            }
+            val tx = services.validatedTransactions.getTransaction(txId)
+                    ?: throw FetchDataFlow.HashNotFound(txId)
+            removeAuthorised(tx.id)
+            addAuthorised(getInputTransactions(tx))
+            return tx
+        }
+
+        private fun isAuthorised(txId: SecureHash) = acceptAll || authorisedTransactions.contains(txId)
+
+        private fun addAuthorised(txs: Set<SecureHash>): TransactionAuthorisationFilter {
             authorisedTransactions.addAll(txs)
             return this
         }
 
-        fun removeAuthorised(txId: SecureHash) {
+        private fun removeAuthorised(txId: SecureHash) {
             authorisedTransactions.remove(txId)
+        }
+    }
+
+    private class RestrictiveTxAuthorisationFilter(
+        private val precomputed: Map<SecureHash, SignedTransaction>
+    ): TransactionAuthorisationFilter {
+
+        override fun get(txId: SecureHash): SignedTransaction {
+            return precomputed[txId] ?:
+                    throw FetchDataFlow.IllegalTransactionRequest(txId)
+        }
+    }
+
+    companion object {
+        fun getInputTransactions(tx: SignedTransaction): Set<SecureHash> {
+            return tx.inputs.map { it.txhash }.toSet() + tx.references.map { it.txhash }.toSet()
         }
     }
 }

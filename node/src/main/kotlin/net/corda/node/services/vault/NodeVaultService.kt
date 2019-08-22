@@ -322,7 +322,9 @@ class NodeVaultService(
 
 
         return batch.mapNotNull {
-            if (it is WireTransaction) makeUpdate(it) else resolveAndMakeUpdate(it)
+            if (it is WireTransaction) makeUpdate(it)
+            else if (it is FilteredTransaction) null  //< SGX: filtered transaction are only used in resolution of other txs, we do not notify the vault
+            else resolveAndMakeUpdate(it)
         }
     }
 

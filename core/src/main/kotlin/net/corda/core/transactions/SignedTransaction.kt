@@ -171,6 +171,8 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
      * all required signatures are present. Resolves inputs and attachments from the local storage and performs full
      * transaction verification, including running the contracts.
      *
+     * SGX: contract verification is subsumed by attester signature verification
+     *
      * @throws AttachmentResolutionException if a required attachment was not found in storage.
      * @throws TransactionResolutionException if an input points to a transaction not found in storage.
      * @throws SignatureException if any signatures were invalid or unrecognised
@@ -228,6 +230,32 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
 
         // SGX: rely on attester signature if we cannot resolve the core transaction
         if (coreTransaction is FilteredTransaction) {
+            // Verify all signatures
+            sigs.forEach { it.verify(id) }
+
+            // Notary signature *must* be included
+            val notary = coreTransaction.notary
+            if (notary == null) {
+                throw SecurityException("Attester and notary signatures are required")
+            } else {
+                if (notary.owningKey !in sigs.map { it.by }) {
+                    throw SecurityException("Missing notary signature")
+                }
+            }
+
+            // Network parameters needs to be available and resolvable
+            if (networkParametersHash != null) {
+                val parameters = services.networkParametersService.lookup(networkParametersHash!!)
+                        ?: throw SecurityException("Cannot resolve network parameters")
+                val notaryWhitelist = parameters.notaries.map { it.identity }
+                check(notary in notaryWhitelist) {
+                    "Notary ($notary) specified by the transaction is not on the network parameter whitelist: [${notaryWhitelist.joinToString()}]"
+                }
+            } else {
+                throw SecurityException("Missing network parameters hash")
+            }
+
+            // Check attester signature
             val attester = services.getAttesterClient(AttesterServiceType.BACKCHAIN_VALIDATOR) ?:
                 throw SecurityException("Unavailable attestation verifier service")
             val validityCerts = getAttesterCertificates(services, AttesterServiceType.BACKCHAIN_VALIDATOR)
@@ -376,6 +404,7 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
     fun isNotaryChangeTransaction() = this.coreTransaction is NotaryChangeWireTransaction
     //endregion
 
+    // SGX: extract attester certificates from signatures
     fun getAttesterCertificates(services: ServiceHub, type: AttesterServiceType): List<AttesterCertificate> {
         val enclaveHosts = services.networkParameters.enclaveHosts ?: return emptyList()
         val trustedAttesterKeys = (enclaveHosts.hosts[type] ?: emptyList()).map { it.owningKey }.toSet()
@@ -390,6 +419,38 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
                     }
                 }.toList()
     }
+
+    // SGX: restrict set of signatures to notary and attester of given type
+    fun getAttesterAndNotarySigs(services: ServiceHub, attesterType: AttesterServiceType): List<TransactionSignature> {
+        val enclaveHosts = services.networkParameters.enclaveHosts ?: return emptyList()
+        val trustedAttesterParties = (enclaveHosts.hosts[attesterType] ?: emptyList()).toSet()
+        val relevantSigners = (trustedAttesterParties + notary).mapNotNull { it?.owningKey }.toSet()
+        return sigs.filter { it.by in relevantSigners }
+    }
+
+    /**
+     * SGX: helper function to filter the input transactions by presenting for each of them only:
+     *    - the outputs spent by this transaction
+     *    - notary
+     *    - network map hash
+     *    - signatures from notary and attester node
+     */
+    fun filterInputTransactions(services: ServiceHub): Map<SecureHash, SignedTransaction> {
+        // The assumption here is that input transactions are all fully resolvable
+        val stateRefsByTx = (inputs + references).groupBy { it.txhash }
+        return stateRefsByTx.map { (id, group) ->
+            val signedTx = services.validatedTransactions.getTransaction(id)
+                    ?: throw IllegalStateException("Lookup of transaction $id failed")
+            val requiredIndices = group.map { it.index }.toSet()
+            val filtered = FilteredTransactionBuilder(signedTx.tx)
+                    .includeNetworkParameters(true)
+                    .withOutputStates { _: TransactionState<ContractState>, index: Int -> (index in requiredIndices) }
+                    .build()
+            val filteredSigs = signedTx.getAttesterAndNotarySigs(services, AttesterServiceType.BACKCHAIN_VALIDATOR)
+            id to SignedTransaction(filtered, filteredSigs)
+        }.toMap()
+    }
+
 }
 
 private typealias AttesterCertHolder = ApplicationSignatureMetadata.AttesterCertificateHolder

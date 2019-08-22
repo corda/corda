@@ -17,7 +17,7 @@ data class FilteredTransactionBuilder(
         return copy(revealOutputState = selector)
     }
 
-    fun includeNetworkParameters(flag: Boolean): FilteredTransactionBuilder {
+    fun includeNetworkParameters(flag: Boolean = true): FilteredTransactionBuilder {
         return copy(revealNetworkParametersHash = flag)
     }
 

@@ -17,24 +17,27 @@ class AssetContract : Contract {
      */
     override fun verify(tx: LedgerTransaction) {
         val command = tx.commands.requireSingleCommand<Command>()
+
         when (command.value) {
             is Command.Issue -> requireThat {
                 "No inputs" using (tx.inputs.isEmpty())
                 "Only one output state should be created." using (tx.outputs.size == 1)
-                val out = tx.outputsOfType<Asset>().single()
-                "Non empty clause" using (out.quantity >= 0)
+                val output = tx.outputsOfType<Asset>().single()
+                "Issuer and owner cannot be different" using (output.owner == output.issuer)
             }
 
             is Command.Transfer -> requireThat {
-                val balanceIn = tx.inputsOfType<Asset>().map { it.quantity }.sum()
-                val outputQuantities = tx.outputsOfType<Asset>().map { it.quantity }
-                "At least one output state" using (outputQuantities.isNotEmpty())
-                val balanceOut = outputQuantities.sum()
-                "Overall asset quantity should be preserved" using (balanceIn == balanceOut)
-                "Cannot generate negative assets" using ((outputQuantities.min() ?: 0)  > 0)
-                command
+                val inputs = tx.inputsOfType<Asset>()
+                val outputs = tx.outputsOfType<Asset>()
+                "One input state" using (inputs.size == 1)
+                "One output state" using (outputs.size == 1)
+                val input = inputs.single()
+                val output = outputs.single()
+                "Same issuer" using (input.issuer == output.issuer)
+                "Same id" using (input.id == output.id)
             }
         }
+
         val requiredSigners = (tx.inputsOfType<Asset>() + tx.outputsOfType<Asset>()).map { it.owner.owningKey }
         requireThat { "Missing signer" using (command.signers.containsAll(requiredSigners)) }
     }
