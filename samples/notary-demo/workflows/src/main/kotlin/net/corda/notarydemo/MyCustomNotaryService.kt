@@ -11,8 +11,8 @@ import net.corda.core.internal.notary.SinglePartyNotaryService
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionWithSignatures
 import net.corda.node.services.api.ServiceHubInternal
-import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.services.transactions.ValidatingNotaryFlow
+import net.corda.notary.jpa.JPAUniquenessProvider
 import java.security.PublicKey
 
 /**
@@ -23,7 +23,7 @@ import java.security.PublicKey
  */
 // START 1
 class MyCustomValidatingNotaryService(override val services: ServiceHubInternal, override val notaryIdentityKey: PublicKey) : SinglePartyNotaryService() {
-    override val uniquenessProvider = PersistentUniquenessProvider(services.monitoringService.metrics, services.clock, services.database, services.cacheFactory)
+    override val uniquenessProvider = JPAUniquenessProvider(services.monitoringService.metrics, services.clock, services.database)
 
     override fun createServiceFlow(otherPartySession: FlowSession): FlowLogic<Void?> = MyValidatingNotaryFlow(otherPartySession, this)
 

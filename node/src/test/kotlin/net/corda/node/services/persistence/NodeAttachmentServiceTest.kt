@@ -17,7 +17,6 @@ import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.vault.*
 import net.corda.core.node.services.vault.AttachmentQueryCriteria.AttachmentsQueryCriteria
 import net.corda.core.utilities.getOrThrow
-import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.nodeapi.exceptions.DuplicateAttachmentException
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
@@ -29,7 +28,6 @@ import net.corda.testing.core.internal.ContractJarTestUtils.makeTestSignedContra
 import net.corda.testing.core.internal.JarSignatureTestUtils.generateKey
 import net.corda.testing.core.internal.JarSignatureTestUtils.signJar
 import net.corda.testing.core.internal.SelfCleaningDir
-import net.corda.testing.internal.LogHelper
 import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.internal.configureDatabase
 import net.corda.testing.internal.rigorousMock
@@ -65,8 +63,6 @@ class NodeAttachmentServiceTest {
 
     @Before
     fun setUp() {
-        LogHelper.setLevel(PersistentUniquenessProvider::class)
-
         val dataSourceProperties = makeTestDataSourceProperties()
         database = configureDatabase(dataSourceProperties, DatabaseConfig(runMigration = true), { null }, { null })
         fs = Jimfs.newFileSystem(Configuration.unix())

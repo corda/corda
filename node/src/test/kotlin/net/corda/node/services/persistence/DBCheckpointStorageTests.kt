@@ -12,7 +12,6 @@ import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.statemachine.Checkpoint
 import net.corda.node.services.statemachine.FlowStart
 import net.corda.node.services.statemachine.SubFlowVersion
-import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.core.ALICE_NAME
@@ -50,7 +49,6 @@ class DBCheckpointStorageTests {
 
     @Before
     fun setUp() {
-        LogHelper.setLevel(PersistentUniquenessProvider::class)
         database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(runMigration = true), { null }, { null })
         newCheckpointStorage()
     }
@@ -58,7 +56,6 @@ class DBCheckpointStorageTests {
     @After
     fun cleanUp() {
         database.close()
-        LogHelper.reset(PersistentUniquenessProvider::class)
     }
 
     @Test

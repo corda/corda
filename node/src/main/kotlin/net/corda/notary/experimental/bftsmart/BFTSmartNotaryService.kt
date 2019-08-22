@@ -20,9 +20,9 @@ import net.corda.core.utilities.debug
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
 import net.corda.node.services.api.ServiceHubInternal
-import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
+import net.corda.notary.experimental.NotaryEntities
 import java.security.PublicKey
 import javax.persistence.Column
 import javax.persistence.Entity
@@ -134,7 +134,7 @@ class BFTSmartNotaryService(
 
     @Entity
     @Table(name = "${NODE_DATABASE_PREFIX}bft_committed_states")
-    class CommittedState(id: PersistentStateRef, consumingTxHash: String) : PersistentUniquenessProvider.BaseComittedState(id, consumingTxHash)
+    class CommittedState(id: PersistentStateRef, consumingTxHash: String) : NotaryEntities.BaseComittedState(id, consumingTxHash)
 
     private fun createMap(): AppendOnlyPersistentMap<StateRef, SecureHash, CommittedState, PersistentStateRef> {
         return AppendOnlyPersistentMap(

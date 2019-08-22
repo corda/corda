@@ -28,10 +28,10 @@ import net.corda.core.serialization.serialize
 import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
-import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.currentDBSession
+import net.corda.notary.experimental.NotaryEntities
 import net.corda.serialization.internal.CordaSerializationEncoding
 import java.time.Clock
 
@@ -150,7 +150,7 @@ class RaftTransactionCommitLog<E, EK>(
     }
 
     private fun logRequest(commitCommand: Commands.CommitTransaction) {
-        val request = PersistentUniquenessProvider.Request(
+        val request = NotaryEntities.Request(
                 consumingTxHash = commitCommand.txId.toString(),
                 partyName = commitCommand.requestingParty,
                 requestSignature = commitCommand.requestSignature,
@@ -184,8 +184,8 @@ class RaftTransactionCommitLog<E, EK>(
                 }
             }
 
-            val criteriaQuery = session.criteriaBuilder.createQuery(PersistentUniquenessProvider.Request::class.java)
-            criteriaQuery.select(criteriaQuery.from(PersistentUniquenessProvider.Request::class.java))
+            val criteriaQuery = session.criteriaBuilder.createQuery(NotaryEntities.Request::class.java)
+            criteriaQuery.select(criteriaQuery.from(NotaryEntities.Request::class.java))
             val results = session.createQuery(criteriaQuery).resultList
 
             writer.writeInt(results.size)
@@ -210,14 +210,14 @@ class RaftTransactionCommitLog<E, EK>(
                 map[key] = value
             }
             // Clean notarisation request log
-            val deleteQuery = session.criteriaBuilder.createCriteriaDelete(PersistentUniquenessProvider.Request::class.java)
-            deleteQuery.from(PersistentUniquenessProvider.Request::class.java)
+            val deleteQuery = session.criteriaBuilder.createCriteriaDelete(NotaryEntities.Request::class.java)
+            deleteQuery.from(NotaryEntities.Request::class.java)
             session.createQuery(deleteQuery).executeUpdate()
             // Load and populate request log
             for (i in 1..reader.readInt()) {
                 val bytes = ByteArray(reader.readUnsignedShort())
                 reader.read(bytes)
-                val request = bytes.deserialize<PersistentUniquenessProvider.Request>()
+                val request = bytes.deserialize<NotaryEntities.Request>()
                 session.persist(request)
             }
         }

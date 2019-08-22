@@ -34,9 +34,9 @@ import net.corda.core.serialization.serialize
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.node.services.api.ServiceHubInternal
-import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.nodeapi.internal.persistence.currentDBSession
+import net.corda.notary.experimental.NotaryEntities
 import net.corda.notary.experimental.bftsmart.BFTSmart.Client
 import net.corda.notary.experimental.bftsmart.BFTSmart.Replica
 import java.nio.file.Path
@@ -307,7 +307,7 @@ object BFTSmart {
         }
 
         private fun logRequest(txId: SecureHash, callerName: CordaX500Name, requestSignature: NotarisationRequestSignature) {
-            val request = PersistentUniquenessProvider.Request(
+            val request = NotaryEntities.Request(
                     consumingTxHash = txId.toString(),
                     partyName = callerName.toString(),
                     requestSignature = requestSignature.serialize().bytes,
@@ -336,20 +336,20 @@ object BFTSmart {
             val committedStates = LinkedHashMap<StateRef, SecureHash>()
             val requests = services.database.transaction {
                 commitLog.allPersisted.use { it.forEach { committedStates[it.first] = it.second } }
-                val criteriaQuery = session.criteriaBuilder.createQuery(PersistentUniquenessProvider.Request::class.java)
-                criteriaQuery.select(criteriaQuery.from(PersistentUniquenessProvider.Request::class.java))
+                val criteriaQuery = session.criteriaBuilder.createQuery(NotaryEntities.Request::class.java)
+                criteriaQuery.select(criteriaQuery.from(NotaryEntities.Request::class.java))
                 session.createQuery(criteriaQuery).resultList
             }
             return (committedStates to requests).serialize().bytes
         }
 
         override fun installSnapshot(bytes: ByteArray) {
-            val (committedStates, requests) = bytes.deserialize<Pair<LinkedHashMap<StateRef, SecureHash>, List<PersistentUniquenessProvider.Request>>>()
+            val (committedStates, requests) = bytes.deserialize<Pair<LinkedHashMap<StateRef, SecureHash>, List<NotaryEntities.Request>>>()
             services.database.transaction {
                 commitLog.clear()
                 commitLog.putAll(committedStates)
-                val deleteQuery = session.criteriaBuilder.createCriteriaDelete(PersistentUniquenessProvider.Request::class.java)
-                deleteQuery.from(PersistentUniquenessProvider.Request::class.java)
+                val deleteQuery = session.criteriaBuilder.createCriteriaDelete(NotaryEntities.Request::class.java)
+                deleteQuery.from(NotaryEntities.Request::class.java)
                 session.createQuery(deleteQuery).executeUpdate()
                 requests.forEach { session.persist(it) }
             }

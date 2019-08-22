@@ -1,7 +1,7 @@
 package net.corda.notary.experimental.raft
 
 import net.corda.core.schemas.MappedSchema
-import net.corda.node.services.transactions.PersistentUniquenessProvider
+import net.corda.notary.experimental.NotaryEntities
 
 object RaftNotarySchema
 
@@ -9,8 +9,8 @@ object RaftNotarySchemaV1 : MappedSchema(
         schemaFamily = RaftNotarySchema.javaClass,
         version = 1,
         mappedTypes = listOf(
-                PersistentUniquenessProvider.BaseComittedState::class.java,
-                PersistentUniquenessProvider.Request::class.java,
+                NotaryEntities.BaseComittedState::class.java,
+                NotaryEntities.Request::class.java,
                 RaftUniquenessProvider.CommittedState::class.java,
                 RaftUniquenessProvider.CommittedTransaction::class.java
         )

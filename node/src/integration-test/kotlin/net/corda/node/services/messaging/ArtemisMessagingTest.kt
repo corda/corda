@@ -10,7 +10,6 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.seconds
 import net.corda.node.services.config.*
 import net.corda.node.services.network.PersistentNetworkMapCache
-import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
@@ -18,7 +17,6 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.MAX_MESSAGE_SIZE
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.driver.internal.incrementalPortAllocation
-import net.corda.testing.internal.LogHelper
 import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.internal.configureDatabase
 import net.corda.testing.internal.rigorousMock
@@ -91,7 +89,6 @@ class ArtemisMessagingTest {
             doReturn(true).whenever(it).enableSNI
             doReturn(FlowTimeoutConfiguration(5.seconds, 3, backoffBase = 1.0)).whenever(it).flowTimeout
         }
-        LogHelper.setLevel(PersistentUniquenessProvider::class)
         database = configureDatabase(makeInternalTestDataSourceProperties(configSupplier = { ConfigFactory.empty() }), DatabaseConfig(runMigration = true), { null }, { null })
         networkMapCache = PersistentNetworkMapCache(TestingNamedCacheFactory(), database, rigorousMock()).apply { start(emptyList()) }
     }
@@ -101,7 +98,6 @@ class ArtemisMessagingTest {
         messagingClient?.stop()
         messagingServer?.stop()
         database.close()
-        LogHelper.reset(PersistentUniquenessProvider::class)
     }
 
     @Test

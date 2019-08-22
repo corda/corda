@@ -8,11 +8,9 @@ import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.toFuture
 import net.corda.core.transactions.SignedTransaction
-import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.core.*
-import net.corda.testing.internal.LogHelper
 import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.internal.configureDatabase
 import net.corda.testing.internal.createWireTransaction
@@ -39,7 +37,6 @@ class DBTransactionStorageTests {
     private lateinit var transactionStorage: DBTransactionStorage
     @Before
     fun setUp() {
-        LogHelper.setLevel(PersistentUniquenessProvider::class)
         val dataSourceProps = makeTestDataSourceProperties()
         database = configureDatabase(dataSourceProps, DatabaseConfig(runMigration = true), { null }, { null })
         newTransactionStorage()
@@ -48,7 +45,6 @@ class DBTransactionStorageTests {
     @After
     fun cleanUp() {
         database.close()
-        LogHelper.reset(PersistentUniquenessProvider::class)
     }
 
     @Test
