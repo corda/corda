@@ -3,7 +3,9 @@ package net.corda.node.services.vault
 import co.paralleluniverse.fibers.Suspendable
 import com.nhaarman.mockito_kotlin.*
 import net.corda.core.contracts.*
+import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.NullKeys
+import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.*
 import net.corda.core.internal.NotaryChangeTransactionBuilder
@@ -12,13 +14,16 @@ import net.corda.core.internal.packageName
 import net.corda.core.node.NotaryInfo
 import net.corda.core.node.StatesToRecord
 import net.corda.core.node.services.*
+import net.corda.core.node.services.vault.Builder.sum
 import net.corda.core.node.services.vault.PageSpecification
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.node.services.vault.QueryCriteria.*
+import net.corda.core.node.services.vault.builder
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.toNonEmptySet
 import net.corda.finance.*
 import net.corda.finance.contracts.asset.Cash
@@ -41,6 +46,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.*
 import rx.observers.TestSubscriber
+import java.lang.Thread.sleep
 import java.math.BigDecimal
 import java.security.PublicKey
 import java.util.*
@@ -993,5 +999,38 @@ class NodeVaultServiceTest {
         allCash.subscribe {
             assertTrue(it)
         }
+    }
+
+    @Test
+    fun `test concurrent update of contract state type mappings`() {
+        vaultService.contractStateTypeMappings.forEach {
+            println("${it.key} = ${it.value}")
+        }
+        assertEquals(0, vaultService.contractStateTypeMappings.size)
+
+        fun makeCash(amount: Amount<Currency>, issuer: AbstractParty, depositRef: Byte = 1) =
+                StateAndRef(
+                        TransactionState(Cash.State(amount `issued by` issuer.ref(depositRef), identity.party), Cash.PROGRAM_ID, DUMMY_NOTARY, constraint = AlwaysAcceptAttachmentConstraint),
+                        StateRef(SecureHash.randomSHA256(), Random().nextInt(32))
+                )
+
+        val cashIssued = setOf<StateAndRef<ContractState>>(makeCash(100.DOLLARS, dummyCashIssuer.party))
+        val cashUpdate = Vault.Update(emptySet(), cashIssued)
+
+        val service = Executors.newFixedThreadPool(10)
+        (1..1000).map {
+            service.submit {
+                database.transaction {
+                    vaultService.publishUpdates.onNext(cashUpdate)
+                }
+            }
+        }.forEach { it.getOrThrow() }
+
+        vaultService.contractStateTypeMappings.forEach {
+            println("${it.key} = ${it.value}")
+        }
+        assertEquals(4, vaultService.contractStateTypeMappings.size)
+
+        service.shutdown()
     }
 }
