@@ -304,8 +304,8 @@ class RpcReconnectTests {
 
             log.info("State machine events seen: ${stateMachineEvents!!.size}")
             // State machine events are very likely to get lost more often because they seem to be sent with a delay.
-            assertTrue(stateMachineEvents.count { it is StateMachineUpdate.Added } > NUMBER_OF_FLOWS_TO_RUN / 3, "Too many Added state machine events lost.")
-            assertTrue(stateMachineEvents.count { it is StateMachineUpdate.Removed } > NUMBER_OF_FLOWS_TO_RUN / 3, "Too many Removed state machine events lost.")
+            assertThat(stateMachineEvents.count { it is StateMachineUpdate.Added }).isGreaterThanOrEqualTo(NUMBER_OF_FLOWS_TO_RUN / 3)
+            assertThat(stateMachineEvents.count { it is StateMachineUpdate.Removed }).isGreaterThanOrEqualTo(NUMBER_OF_FLOWS_TO_RUN / 3)
 
             // Stop the observers.
             vaultSubscription.unsubscribe()
