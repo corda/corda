@@ -408,6 +408,13 @@ class RPCClientProxyHandler(
 
         reaperScheduledFuture?.cancel(false)
         observableContext.observableMap.invalidateAll()
+        rpcReplyMap.forEach { _, replyFuture ->
+            replyFuture.setException(ConnectionFailureException())
+        }
+
+        rpcReplyMap.clear()
+        callSiteMap?.clear()
+
         reapObservables(notify)
         reaperExecutor?.shutdownNow()
         sendExecutor?.shutdownNow()
