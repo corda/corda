@@ -192,7 +192,8 @@ object EvolutionPropertyWriteStrategy : PropertyWriteStrategy {
  * Read a type that comes with its own [TypeDescriptor], by calling back into [RemoteSerializerFactory] to obtain a suitable
  * serializer for that descriptor.
  */
-class DescribedTypeReadStrategy(name: String, typeIdentifier: TypeIdentifier,
+class DescribedTypeReadStrategy(name: String,
+                                typeIdentifier: TypeIdentifier,
                                 private val type: Type): PropertyReadStrategy {
 
     private val nameForDebug = "$name(${typeIdentifier.prettyPrint(false)})"

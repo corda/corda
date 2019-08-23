@@ -17,16 +17,18 @@ object SerializerFactoryBuilder {
      * The DJVM will need to override these, but probably not anyone else.
      */
     @Suppress("unchecked_cast")
-    private val javaPrimitiveTypes: Map<Class<*>, Class<*>> = unmodifiableMap(mapOf<Class<out Any>?, Class<out Any>?>(
-        Boolean::class.javaObjectType to Boolean::class.javaPrimitiveType,
-        Byte::class.javaObjectType to Byte::class.javaPrimitiveType,
-        Char::class.javaObjectType to Char::class.javaPrimitiveType,
-        Double::class.javaObjectType to Double::class.javaPrimitiveType,
-        Float::class.javaObjectType to Float::class.javaPrimitiveType,
-        Int::class.javaObjectType to Int::class.javaPrimitiveType,
-        Long::class.javaObjectType to Long::class.javaPrimitiveType,
-        Short::class.javaObjectType to Short::class.javaPrimitiveType
-    )) as Map<Class<*>, Class<*>>
+    private val javaPrimitiveTypes: Map<Class<*>, Class<*>> = unmodifiableMap(listOf(
+        Boolean::class,
+        Byte::class,
+        Char::class,
+        Double::class,
+        Float::class,
+        Int::class,
+        Long::class,
+        Short::class
+    ).associate {
+        klazz -> klazz.javaObjectType to klazz.javaPrimitiveType
+    }) as Map<Class<*>, Class<*>>
 
     @JvmStatic
     fun build(whitelist: ClassWhitelist, classCarpenter: ClassCarpenter): SerializerFactory {
