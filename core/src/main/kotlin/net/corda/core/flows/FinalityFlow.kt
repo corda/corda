@@ -150,7 +150,10 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
         }
 
         /**
-         * SGX: we assume signature from backchain attester to be mandatory for now
+         * SGX: a back-chain certificate on the transaction is mandatory for being approved by
+         * the SGX validating notary. Combined with the fact that the attester service will check backchain
+         * certificate for each input transaction, this gives by recursion a guarantee that each
+         * transaction in the back-chain is valid.
          */
         val attested = attestTransaction(transaction)
 
