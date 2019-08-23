@@ -17,13 +17,15 @@ buildscript {
     ext.kotlin_version = constants.getProperty("kotlinVersion")
 
     ext.quasar_group = 'co.paralleluniverse'
-    // Java 11: pass in -DquasarVersion=0.8.0 -DquasarClassifier
-    ext.quasar_version = System.getProperty("quasarVersion") ?: constants.getProperty("quasarVersion")
-    if (System.getProperty("quasarClassifier") != null)
-        ext.quasar_classifier = System.getProperty("quasarClassifier")
-    else
+    // Set version of Quasar according to version of Java used:
+    if (JavaVersion.current() == JavaVersion.VERSION_11) {
+        ext.quasar_version = constants.getProperty("quasarVersion11")
+        ext.quasar_classifier = constants.getProperty("quasarClassifier11")
+    }
+    else {
+        ext.quasar_version = constants.getProperty("quasarVersion")
         ext.quasar_classifier = constants.getProperty("quasarClassifier")
-
+    }
     ext.quasar_exclusions = [
                 'co.paralleluniverse**',
                 'groovy**',
