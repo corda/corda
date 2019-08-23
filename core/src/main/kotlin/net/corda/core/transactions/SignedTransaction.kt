@@ -264,30 +264,29 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
             } else {
               validityCerts.forEach { cert -> attester.verify(this, cert) }
             }
-            return
-        }
-
-        val ltx = toLedgerTransaction(services, checkSufficientSignatures)
-        try {
-            // TODO: allow non-blocking verification.
-            services.transactionVerifierService.verify(ltx).getOrThrow()
-        } catch (e: NoClassDefFoundError) {
-            if (e.message != null) {
-                verifyWithExtraDependency(e.message!!, ltx, services, e)
-            } else {
-                throw e
-            }
-        } catch (e: NotSerializableException) {
-            if (e.cause is ClassNotFoundException && e.cause!!.message != null) {
-                verifyWithExtraDependency(e.cause!!.message!!.replace(".", "/"), ltx, services, e)
-            } else {
-                throw e
-            }
-        } catch (e: TransactionDeserialisationException) {
-            if (e.cause is NotSerializableException && e.cause.cause is ClassNotFoundException && e.cause.cause!!.message != null) {
-                verifyWithExtraDependency(e.cause.cause!!.message!!.replace(".", "/"), ltx, services, e)
-            } else {
-                throw e
+        } else {
+            val ltx = toLedgerTransaction(services, checkSufficientSignatures)
+            try {
+                // TODO: allow non-blocking verification.
+                services.transactionVerifierService.verify(ltx).getOrThrow()
+            } catch (e: NoClassDefFoundError) {
+                if (e.message != null) {
+                    verifyWithExtraDependency(e.message!!, ltx, services, e)
+                } else {
+                    throw e
+                }
+            } catch (e: NotSerializableException) {
+                if (e.cause is ClassNotFoundException && e.cause!!.message != null) {
+                    verifyWithExtraDependency(e.cause!!.message!!.replace(".", "/"), ltx, services, e)
+                } else {
+                    throw e
+                }
+            } catch (e: TransactionDeserialisationException) {
+                if (e.cause is NotSerializableException && e.cause.cause is ClassNotFoundException && e.cause.cause!!.message != null) {
+                    verifyWithExtraDependency(e.cause.cause!!.message!!.replace(".", "/"), ltx, services, e)
+                } else {
+                    throw e
+                }
             }
         }
     }
@@ -444,6 +443,7 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
             val requiredIndices = group.map { it.index }.toSet()
             val filtered = FilteredTransactionBuilder(signedTx.tx)
                     .includeNetworkParameters(true)
+                    .includeNotary(true)
                     .withOutputStates { _: TransactionState<ContractState>, index: Int -> (index in requiredIndices) }
                     .build()
             val filteredSigs = signedTx.getAttesterAndNotarySigs(services, AttesterServiceType.BACKCHAIN_VALIDATOR)

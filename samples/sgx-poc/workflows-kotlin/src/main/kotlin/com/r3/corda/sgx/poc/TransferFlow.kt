@@ -1,4 +1,4 @@
-package com.r3.corda.sgx.poc
+package com.r3.corda.sgx.poc.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.Command
@@ -8,6 +8,7 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
 import java.lang.IllegalStateException
+import com.r3.corda.sgx.poc.contracts.*
 
 object TransferFlow {
 
@@ -53,11 +54,11 @@ object TransferFlow {
                     ?: throw IllegalStateException("Cannot find any unspent asset with id $id")
 
             val output = input.state.data.copy(owner = receipient)
-
+            val cmd = Command(AssetContract.Command.Transfer(), listOf(self.owningKey, receipient.owningKey))
             val txBuilder = TransactionBuilder(notary)
                     .addInputState(input)
                     .addOutputState(output, AssetContract.ID)
-                    .addCommand(AssetContract.Command.Transfer())
+                    .addCommand(cmd)
 
             // Stage 2.
             progressTracker.currentStep = VERIFYING_TRANSACTION
@@ -70,13 +71,13 @@ object TransferFlow {
             val partSignedTx = serviceHub.signInitialTransaction(txBuilder)
 
             // Step 4
-            val session = initiateFlow(receipient)
             progressTracker.currentStep = GATHERING_SIGS
-            val signedTx = subFlow(CollectSignaturesFlow(partSignedTx, setOf(session), progressTracker))
+            val session = initiateFlow(receipient)
+            val signedTx = subFlow(CollectSignaturesFlow(partSignedTx, setOf(session)))
 
             // Stage 5.
             progressTracker.currentStep = FINALISING_TRANSACTION
-            val notarised = subFlow(FinalityFlow(signedTx, setOf(session), progressTracker))
+            val notarised = subFlow(FinalityFlow(signedTx, setOf(session)))
             return notarised
         }
     }

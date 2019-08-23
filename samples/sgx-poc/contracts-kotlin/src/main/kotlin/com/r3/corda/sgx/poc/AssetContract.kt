@@ -1,4 +1,4 @@
-package com.r3.corda.sgx.poc
+package com.r3.corda.sgx.poc.contracts
 
 import net.corda.core.contracts.CommandData
 import net.corda.core.contracts.Contract
@@ -8,7 +8,7 @@ import net.corda.core.transactions.LedgerTransaction
 
 class AssetContract : Contract {
     companion object {
-        val ID = "com.r3.corda.sgx.poc.AssetContract"
+        val ID = "com.r3.corda.sgx.poc.contracts.AssetContract"
     }
 
     /**

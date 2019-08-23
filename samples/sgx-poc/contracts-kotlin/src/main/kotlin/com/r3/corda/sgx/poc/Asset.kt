@@ -1,4 +1,4 @@
-package com.r3.corda.sgx.poc
+package com.r3.corda.sgx.poc.contracts
 
 import net.corda.core.contracts.BelongsToContract
 import net.corda.core.contracts.ContractState

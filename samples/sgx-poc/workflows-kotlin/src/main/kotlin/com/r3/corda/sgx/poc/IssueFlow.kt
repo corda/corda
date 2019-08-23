@@ -1,17 +1,16 @@
-package com.r3.corda.sgx.poc.internal
+package com.r3.corda.sgx.poc.flows
 
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.StartableByRPC
 import co.paralleluniverse.fibers.Suspendable
-import com.r3.corda.sgx.poc.Asset
-import com.r3.corda.sgx.poc.AssetContract
+import com.r3.corda.sgx.poc.contracts.Asset
+import com.r3.corda.sgx.poc.contracts.AssetContract
 import net.corda.core.contracts.Command
 import net.corda.core.flows.*
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.ProgressTracker.Step
-
 
     @InitiatingFlow
     @StartableByRPC
@@ -67,6 +66,7 @@ import net.corda.core.utilities.ProgressTracker.Step
             progressTracker.currentStep = SIGNING_TRANSACTION
             // Sign the transaction.
             val partSignedTx = serviceHub.signInitialTransaction(txBuilder)
+            check(partSignedTx.notary == notary)
 
             // Stage 5.
             progressTracker.currentStep = FINALISING_TRANSACTION

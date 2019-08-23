@@ -374,6 +374,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                             ?.get(stateRef.index) as SerializedBytes<TransactionState<ContractState>>?
                     is ContractUpgradeWireTransaction -> coreTransaction.resolveOutputComponent(services, stateRef, params)
                     is NotaryChangeWireTransaction -> coreTransaction.resolveOutputComponent(services, stateRef, params)
+                    is FilteredTransaction -> services.validatedTransactions.resolveState(stateRef)
                     else -> throw UnsupportedOperationException("Attempting to resolve input ${stateRef.index} of a ${coreTransaction.javaClass} transaction. This is not supported.")
                 }
             } else {

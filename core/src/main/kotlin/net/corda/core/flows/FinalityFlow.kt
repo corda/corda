@@ -113,7 +113,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
         object BROADCASTING : ProgressTracker.Step("Broadcasting transaction to participants")
 
         @JvmStatic
-        fun tracker() = ProgressTracker(NOTARISING, BROADCASTING)
+        fun tracker() = ProgressTracker(ATTESTER_SIG, NOTARISING, BROADCASTING)
     }
 
     @Suspendable
@@ -226,9 +226,14 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
     }
 
     private fun needsNotarySignature(stx: SignedTransaction): Boolean {
+        // SGX: always notarise in this flow
+        return true
+
+        /*
         val wtx = stx.tx
         val needsNotarisation = wtx.inputs.isNotEmpty() || wtx.references.isNotEmpty() || wtx.timeWindow != null
         return needsNotarisation && hasNoNotarySignature(stx)
+        */
     }
 
     private fun hasNoNotarySignature(stx: SignedTransaction): Boolean {

@@ -121,6 +121,7 @@ class NotaryFlow {
         @Suspendable
         private fun sendAndReceiveNonValidating(notaryParty: Party, session: FlowSession, signature: NotarisationRequestSignature): UntrustworthyData<NotarisationResponse> {
             val ctx = stx.coreTransaction
+            require(ctx.notary == notaryParty)
             val tx = when (ctx) {
                 is ContractUpgradeWireTransaction -> ctx.buildFilteredTransaction()
                 is WireTransaction -> ctx.buildFilteredTransaction(Predicate {
@@ -128,6 +129,7 @@ class NotaryFlow {
                 })
                 else -> ctx
             }
+//            require(tx.notary == notaryParty)
             session.send(NotarisationPayload(tx, signature))
             return receiveResultOrTiming(session)
         }

@@ -113,7 +113,7 @@ class FilteredTransaction internal constructor(
                     return filtering.test(component)
                 }
             }
-            val filteredComponentGroups = filterWithFun(wtx, filtering)
+            val filteredComponentGroups = filterWithFun(wtx, filter)
             return FilteredTransaction(wtx.id, filteredComponentGroups, wtx.groupHashes)
         }
 
