@@ -35,7 +35,7 @@ To enable the service, add the following to the node configuration:
     }
 
 Testing your custom notary service
----------------------------------
+----------------------------------
 
 To create a flow test that uses your custom notary service, you can set the class name of the custom notary service as follows in your flow test:
 

@@ -62,7 +62,6 @@ Welcome to Corda !
    release-notes
    app-upgrade-notes
    node-upgrade-notes
-   corda-api
    cheat-sheet
 
 .. toctree::
@@ -79,8 +78,28 @@ Welcome to Corda !
    node-internals-index.rst
    component-library-index.rst
    serialization-index.rst
-   json.rst
+   versioning-and-upgrades.rst
+   cordapp-advanced-concepts.rst
    troubleshooting.rst
+
+.. toctree::
+   :caption: Corda API
+   :maxdepth: 1
+   :titlesonly:
+
+   api-contracts.rst
+   api-contract-constraints.rst
+   api-core-types.rst
+   api-flows.rst
+   api-identity.rst
+   api-persistence.rst
+   api-rpc.rst
+   api-service-classes.rst
+   api-service-hub.rst
+   api-states.rst
+   api-testing.rst
+   api-transactions.rst
+   api-vault-query.rst
 
 .. toctree::
    :caption: Operations
