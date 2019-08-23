@@ -304,6 +304,7 @@ which is invalid for SQL Server.  This may lead to the node failing to start wit
 
 Oracle
 ''''''
+
 Node configuration for Oracle:
 
   .. sourcecode:: groovy
@@ -332,6 +333,7 @@ Copy the Oracle JDBC driver *ojdbc6.jar* for 11g RC2 or *ojdbc8.jar* for Oracle 
 
 PostgreSQL
 ''''''''''
+
 Node configuration for PostgreSQL:
 
   .. sourcecode:: none
@@ -403,16 +405,13 @@ ensure that:
 
 Those requirements should already be set during :ref:`the initial Corda node configuration <db_setup_developer_step_3_ref>`.
 
-Check if a CorDapp requires custom tables
-'''''''''''''''''''''''''''''''''''''''''
-
 You can optionally check if a CorDapp which is expected to store data in custom tables, is correctly built.
 To check the presence of script files inside *migration* directory,
 verify the content of the CorDapp JAR file with Java ``jar`` command, e.g. for Linux:
 
   .. sourcecode:: bash
 
-    jar -tf <cordapp.jar> | grep -E 'migration.*\.(xml|yml|sql)'
+     jar -tf <cordapp.jar> | grep -E 'migration.*\.(xml|yml|sql)'
 
  .. note:: It is possible that a CorDapp is shipped without a database migration script when it should contain one.
     Liquibase database migration scripts for CorDapps are not used when a node runs with the default embeeded H2 database.
@@ -434,8 +433,8 @@ Database schema cleanup
 When developing/testing CorDapps you may need cleanup the database between test runs
 (e.g. when running using the Gradle plugin ``Cordform`` ``deployNodes``).
 
-SQL Azure & SQL Server
-''''''''''''''''''''''
+SQL Azure and SQL Server
+^^^^^^^^^^^^^^^^^^^^^^^^
 
 To remove node tables run the following SQL script against a user database:
 
@@ -505,7 +504,7 @@ To remove users' logins, run the following script as a database administrator on
         DROP LOGIN my_admin_login;
 
 Oracle
-''''''
+^^^^^^
 
 To remove node tables run the following SQL script:
 
@@ -559,10 +558,11 @@ Additional tables for a Notary node:
 Also delete CorDapps specific tables.
 
 PostgreSQL
-''''''''''
+^^^^^^^^^^
 
 To remove node and CorDapp specific tables run the following SQL script:
 
     .. sourcecode:: sql
 
         DROP SCHEMA IF EXISTS "my_schema" CASCADE;
+        DROP OWNED BY "my_user";

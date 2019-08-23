@@ -338,16 +338,19 @@ The required ``node.conf`` settings for the Database Management Tool using Azure
     dataSourceProperties = {
         dataSourceClassName = "com.microsoft.sqlserver.jdbc.SQLServerDataSource"
         dataSource.url = "jdbc:sqlserver://<database_server>.database.windows.net:1433;databaseName=<my_database>;encrypt=true;trustServerCertificate=false;hostNameInCertificate=*.database.windows.net;loginTimeout=30"
-        dataSource.user = my_admin_login
+        dataSource.user = my_login
         dataSource.password = "my_password"
     }
     database = {
         transactionIsolationLevel = READ_COMMITTED
         schema = my_schema
     }
+    myLegalName = <node_legal_name>
 
 Replace the placeholders *<database_server>* and *<my_database>* with appropriate values (*<my_database>* is a user database).
 The ``database.schema`` is the database schema name assigned to both administrative and restrictive users.
+*<node_legal_name>* is node's Distinguished Name, the option is required for Database Management Tool,
+however is unused in the context of a new schema creation so you can use any valid dummy name e.g. *"O=Dummy,L=London,C=GB"*.
 
 The Microsoft SQL JDBC driver can be downloaded from `Microsoft Download Center <https://www.microsoft.com/en-us/download/details.aspx?id=55539>`_,
 extract the archive and copy the single file *mssql-jdbc-6.2.2.jre8.jar* into the ``drivers`` directory.
@@ -364,15 +367,18 @@ The required ``node.conf`` settings for the Database Management Tool using SQL S
     dataSourceProperties = {
         dataSourceClassName = "com.microsoft.sqlserver.jdbc.SQLServerDataSource"
         dataSource.url = "jdbc:sqlserver://<host>:<port>;databaseName=my_database"
-        dataSource.user = my_admin_login
+        dataSource.user = my_login
         dataSource.password = "my_password"
     }
     database = {
         transactionIsolationLevel = READ_COMMITTED
         schema = my_schema
     }
+    myLegalName = <node_legal_name>
 
 Replace placeholders *<host>*, *<port>* with appropriate values, the default SQL Server port is 1433.
+*<node_legal_name>* is node's Distinguished Name, the option is required for Database Management Tool,
+however is unused in the context of a new schema creation so you can use any valid dummy name e.g. *"O=Dummy,L=London,C=GB"*.
 
 The Microsoft JDBC 6.2 driver can be downloaded from `Microsoft Download Center <https://www.microsoft.com/en-us/download/details.aspx?id=55539>`_,
 extract the archive and copy the single file *mssql-jdbc-6.2.2.jre8.jar* into the ``drivers`` directory.
@@ -396,10 +402,12 @@ The required ``node.conf`` settings for the Database Management Tool using Oracl
         transactionIsolationLevel = READ_COMMITTED
         schema = my_admin_user
     }
+    myLegalName = <node_legal_name>
 
 Replace the placeholders *<host>*, *<port>* and *<sid>* with appropriate values.
 For a basic Oracle installation, the default *<sid>* value is *xe*.
-If the user was created with *administrative* permissions, the schema name ``database.schema`` is equal to the user name (*my_user*).
+*<node_legal_name>* is node's Distinguished Name, the option is required for Database Management Tool,
+however is unused in the context of a new schema creation so you can use any valid dummy name e.g. *"O=Dummy,L=London,C=GB"*.
 
 Copy the Oracle JDBC driver *ojdbc6.jar* for 11g RC2 or *ojdbc8.jar* for Oracle 12c into the ``drivers`` directory.
 
@@ -422,10 +430,13 @@ The required ``node.conf`` settings for the Database Management Tool using Postg
         transactionIsolationLevel = READ_COMMITTED
         schema = my_schema
     }
+     myLegalName = <node_legal_name>
 
 Replace the placeholders *<host>*, *<port>* and *<database>* with appropriate values.
 The ``database.schema`` is the database schema name assigned to the user.
 The value of ``database.schema`` is automatically wrapped in double quotes to preserve case-sensitivity.
+*<node_legal_name>* is node's Distinguished Name, the option is required for Database Management Tool,
+however is unused in the context of a new schema creation so you can use any valid dummy name e.g. *"O=Dummy,L=London,C=GB"*.
 
 Copy PostgreSQL JDBC Driver *42.1.4* version *JDBC 4.2* into the ``drivers`` directory.
 
@@ -450,13 +461,24 @@ Refer to :ref:`Corda Database Management Tool <database-management-tool-ref>` ma
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The generated DDL script can be applied by the database administrator using their tooling of choice.
-The script needs to be executed by a database user with *administrative* permissions,
-with a *<schema>* set as the default schema for that user, and matching the schema used by a Corda node.
-(e.g. for Azure SQL or SQL Server you should not use the default database administrator account).
 
-.. note:: You may connect as a different user than the one used by a Corda node (e.g. when a node connects via
-    a user with *restricted permissions*), as long as the user has the same default schema as node has
-    (the generated DDL script adds a schema prefix to most of the statements but not to all of them).
+The script needs to be executed by a database user with the *administrative* permissions,
+having the default schema set to the schema used by the Corda node.
+This is assured by connecting as a user with the administrative permissions created in the first step:
+
+* SQL Server and Azure SQL - connect as the user with *my_admin_login* login
+
+* Oracle - connect as *my_admin_user*
+
+* PostgreSQL - connect as the database administrator and set the correct current schema by running:
+
+   .. sourcecode:: sql
+
+      SET SCHEMA "my_schema";
+
+.. note:: You may connect to the database as any user with administrative permissions to the schema,
+     as long as you set the default schema for the sessions pointing to the schema where tables need to be created.
+     The reason is that not all SQL statements in the generated DDL script contain the schema prefix.
 
 The whole script needs to be run. Partially running the script would cause the database schema content to be in an inconsistent version.
 
