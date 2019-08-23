@@ -11,6 +11,7 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.*
 import net.corda.core.internal.notary.generateSignature
 import net.corda.core.internal.notary.validateSignatures
+import net.corda.core.node.services.AttesterServiceType
 import net.corda.core.transactions.*
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.UntrustworthyData
@@ -121,7 +122,6 @@ class NotaryFlow {
         @Suspendable
         private fun sendAndReceiveNonValidating(notaryParty: Party, session: FlowSession, signature: NotarisationRequestSignature): UntrustworthyData<NotarisationResponse> {
             val ctx = stx.coreTransaction
-            require(ctx.notary == notaryParty)
             val tx = when (ctx) {
                 is ContractUpgradeWireTransaction -> ctx.buildFilteredTransaction()
                 is WireTransaction -> ctx.buildFilteredTransaction(Predicate {
@@ -129,8 +129,10 @@ class NotaryFlow {
                 })
                 else -> ctx
             }
-//            require(tx.notary == notaryParty)
-            session.send(NotarisationPayload(tx, signature))
+
+            // SGX: we assume for simplicity that
+            val txWithAttesterCert = SignedTransaction(tx, stx.getAttesterAndNotarySigs(serviceHub, AttesterServiceType.BACKCHAIN_VALIDATOR))
+            session.send(NotarisationPayload(txWithAttesterCert, signature))
             return receiveResultOrTiming(session)
         }
 

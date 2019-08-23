@@ -10,6 +10,7 @@ import net.corda.core.internal.notary.NotaryInternalException
 import net.corda.core.internal.notary.NotaryServiceFlow
 import net.corda.core.internal.notary.SinglePartyNotaryService
 import net.corda.core.node.NetworkParameters
+import net.corda.core.node.services.AttesterServiceType
 import net.corda.core.transactions.ContractUpgradeFilteredTransaction
 import net.corda.core.transactions.CoreTransaction
 import net.corda.core.transactions.FilteredTransaction
@@ -24,21 +25,22 @@ import java.time.Duration
  * the caller, it is possible to raise a dispute and verify the validity of the transaction and subsequently
  * undo the commit of the input states (the exact mechanism still needs to be worked out).
  */
+// SGX: this actually now implements an SGX "validating" notary behaviour ;). Well, partially, therre is no network parameters currentness check
 class NonValidatingNotaryFlow(otherSideSession: FlowSession, service: SinglePartyNotaryService, etaThreshold: Duration) : NotaryServiceFlow(otherSideSession, service, etaThreshold) {
     private val minPlatformVersion get() = serviceHub.networkParameters.minimumPlatformVersion
 
     override fun extractParts(requestPayload: NotarisationPayload): TransactionParts {
-        val tx = requestPayload.coreTransaction
+        val tx = requestPayload.signedTransaction?.coreTransaction
         return when (tx) {
             is FilteredTransaction -> TransactionParts(tx.id, tx.inputs, tx.timeWindow, tx.notary, tx.references, networkParametersHash = tx.networkParametersHash)
             is ContractUpgradeFilteredTransaction,
             is NotaryChangeWireTransaction -> TransactionParts(tx.id, tx.inputs, null, tx.notary, networkParametersHash = tx.networkParametersHash)
-            else -> throw unexpectedTransactionType(tx)
-        }
+            else -> throw unexpectedTransactionType(tx!!)
+        }.copy(attesterCerts = requestPayload.signedTransaction.getAttesterCertificates(serviceHub, AttesterServiceType.BACKCHAIN_VALIDATOR))
     }
 
     override fun verifyTransaction(requestPayload: NotarisationPayload) {
-        val tx = requestPayload.coreTransaction
+        val tx = requestPayload.signedTransaction.coreTransaction
         try {
             when (tx) {
                 is FilteredTransaction -> {

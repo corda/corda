@@ -199,6 +199,17 @@ data class NetworkParameters(
     }
 }
 
+// SGX: We require a different type of behaviour for notaries
+@CordaSerializable
+enum class NotaryType(id: Int) {
+    VALIDATING(0),
+    NON_VALIDATING(1),
+
+    //A "validating" notary relying on back-chain attester signatures. This notary *must* exists on the network to permit enclave versioning.
+    // This notary is required to perform currentness checks on network parameters.
+    SGX_VALIDATING(2)
+}
+
 /**
  * Data class storing information about notaries available in the network.
  * @property identity Identity of the notary (note that it can be an identity of the distributed node).
@@ -206,7 +217,7 @@ data class NetworkParameters(
  */
 @KeepForDJVM
 @CordaSerializable
-data class NotaryInfo(val identity: Party, val validating: Boolean)
+data class NotaryInfo(val identity: Party, val validating: Boolean, val type: NotaryType = NotaryType.SGX_VALIDATING)
 
 /**
  * When a Corda feature cannot be used due to the node's compatibility zone not enforcing a high enough minimum platform

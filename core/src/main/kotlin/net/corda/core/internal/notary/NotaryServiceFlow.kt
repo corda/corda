@@ -8,6 +8,8 @@ import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.MIN_PLATFORM_VERSION_FOR_BACKPRESSURE_MESSAGE
 import net.corda.core.internal.checkParameterHash
+import net.corda.core.node.services.AttesterCertificate
+import net.corda.core.node.services.AttesterServiceType
 import net.corda.core.utilities.seconds
 import net.corda.core.utilities.unwrap
 import java.time.Duration
@@ -84,6 +86,7 @@ abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service:
             checkNotary(transaction.notary)
             checkParameterHash(transaction.networkParametersHash)
             checkInputs(transaction.inputs + transaction.references)
+            checkSignatureOfAttesters(transaction.id, transaction.attesterCerts)
             return transaction
         } catch (e: Exception) {
             val error = NotaryError.TransactionInvalid(e)
@@ -116,6 +119,12 @@ abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service:
         request.verifySignature(signature, requestingParty)
     }
 
+    private fun checkSignatureOfAttesters(txId: SecureHash, attesterCerts: List<AttesterCertificate>) {
+        val attester = serviceHub.getAttesterClient(AttesterServiceType.BACKCHAIN_VALIDATOR) ?: throw SecurityException("Unavailable attestation verifier service")
+        // There should really be a single certificate signed by a potentially composite identity
+        attesterCerts.forEach { attester.verify(txId, it) }
+    }
+
     /**
      * Override to implement custom logic to perform transaction verification based on validity and privacy requirements.
      */
@@ -138,7 +147,8 @@ abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service:
             val timeWindow: TimeWindow?,
             val notary: Party?,
             val references: List<StateRef> = emptyList(),
-            val networkParametersHash: SecureHash?
+            val networkParametersHash: SecureHash?,
+            val attesterCerts: List<AttesterCertificate> = emptyList()
     )
 
     private fun logError(error: NotaryError) {

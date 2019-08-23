@@ -54,7 +54,7 @@ class BackchainAttesterClientFlow(
         }
         val attestationCert = (attesterSignature.signatureMetadata.applicationMetadata as? ApplicationSignatureMetadata.AttesterCertificateHolder)
                 ?: throw IllegalStateException("Invalid attester metadata")
-        connector.verify(transaction, attestationCert.data)
+        connector.verify(transaction.id, attestationCert.data)
         return attesterSignature
     }
 

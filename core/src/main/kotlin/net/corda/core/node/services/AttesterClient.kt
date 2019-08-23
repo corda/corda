@@ -18,7 +18,7 @@ import net.corda.core.utilities.OpaqueBytes
  */
 abstract class AttesterClient {
     abstract fun generateAttestationRequest(input: SignedTransaction): AttesterRequest
-    abstract fun verify(input: SignedTransaction, certificate: AttesterCertificate)
+    abstract fun verify(txId: SecureHash, certificate: AttesterCertificate)
 }
 
 @CordaSerializable

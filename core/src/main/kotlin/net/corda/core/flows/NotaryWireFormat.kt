@@ -71,7 +71,7 @@ data class NotarisationPayload(val transaction: Any, val requestSignature: Notar
      * A helper for automatically casting the underlying [transaction] payload to a [CoreTransaction].
      * Should only be used by non-validating notaries.
      */
-    val coreTransaction get() = transaction as? CoreTransaction ?: throw exception()
+    val coreTransaction get() = signedTransaction.coreTransaction
 
     private fun exception() = IllegalArgumentException("Unexpected transaction type in the notarisation payload: " +
             "${transaction::class.java}, it may be that there is a discrepancy between the configured notary type " +

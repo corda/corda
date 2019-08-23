@@ -258,11 +258,13 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
             // Check attester signature
             val attester = services.getAttesterClient(AttesterServiceType.BACKCHAIN_VALIDATOR) ?:
                 throw SecurityException("Unavailable attestation verifier service")
+
+            // There should really be a single certificate signed by a potentially composite identity
             val validityCerts = getAttesterCertificates(services, AttesterServiceType.BACKCHAIN_VALIDATOR)
             if (validityCerts.isEmpty()) {
                 throw SecurityException("Failed to verify transaction")
             } else {
-              validityCerts.forEach { cert -> attester.verify(this, cert) }
+              validityCerts.forEach { cert -> attester.verify(this.id, cert) }
             }
         } else {
             val ltx = toLedgerTransaction(services, checkSufficientSignatures)
@@ -450,7 +452,6 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
             id to SignedTransaction(filtered, filteredSigs)
         }.toMap()
     }
-
 }
 
 private typealias AttesterCertHolder = ApplicationSignatureMetadata.AttesterCertificateHolder
