@@ -357,7 +357,7 @@ extract the archive and copy the single file *mssql-jdbc-6.2.2.jre8.jar* into th
 SQL Server
 ''''''''''
 
-The required ``node.conf`` settings for the Database Management Tool using Azure SQL:
+The required ``node.conf`` settings for the Database Management Tool using SQL Server:
 
   .. sourcecode:: groovy
 
@@ -758,7 +758,7 @@ Finally, start up the node with the following system properties set to the locat
 PostgreSQL
 ^^^^^^^^^^
 
-Node configuration for Oracle:
+Example node configuration file for PostgreSQL:
 
   .. sourcecode:: none
 
