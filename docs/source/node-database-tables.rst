@@ -213,16 +213,18 @@ This table should be empty when no events are scheduled.
 Storage of private keys
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-Read more in :doc:`cryptoservice-configuration`
-These tables are a less secure alternative for storing keys to using an HSM (Hardware Security Module).
-
 ==============================   ==========================================================================================
 NODE_OUR_KEY_PAIRS                  Stores the anonymous identities
 ==============================   ==========================================================================================
 PUBLIC_KEY_HASH                     Primary key
-PRIVATE_KEY                         Binary private key
 PUBLIC_KEY                          Binary public key
+PRIVATE_KEY                         Binary private key
+PRIVATE_KEY_MATERIAL_WRAPPED        Binary (encrypted) private key
+SCHEME_CODE_NAME                    String code representing the key algorithm
 ==============================   ==========================================================================================
+
+The columns ``PRIVATE_KEY_MATERIAL_WRAPPED`` and ``SCHEME_CODE_NAME`` are populated, instead of the column ``PRIVATE_KEY``,
+if an HSM is configured for anonymous identities. For more details about this feature, read :doc:`confidential-identities-hsm`.
 
 ==============================   ==========================================================================================
 PK_HASH_TO_EXT_ID_MAP               Maps public keys to external ids. Mainly used by CorDapps that need to simulate accounts.
