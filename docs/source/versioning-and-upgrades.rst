@@ -18,6 +18,7 @@ the world changes is a key part of any professionally built software.
 .. toctree::
    :maxdepth: 1
 
+   api-stability-guarantees
    versioning
    upgrading-cordapps
    cordapp-constraint-migration

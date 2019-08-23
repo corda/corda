@@ -55,17 +55,17 @@ The set-up instructions are available for the following platforms:
 
 * :ref:`fedora-label`
 
-.. _windows-label:
-
 .. note:: These setup instructions will guide you on how to install the Oracle JDK. Each JDK can be found on their respective sites:
 
-          * `Oracle <http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html>`_
+          * `Oracle Downloads <http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html>`_
 
-          * `Amazon Corretto <https://docs.aws.amazon.com/corretto/latest/corretto-8-ug/downloads-list.html>`_
+          * `Amazon Corretto Downloads <https://docs.aws.amazon.com/corretto/latest/corretto-8-ug/downloads-list.html>`_
 
           * `Red Hat OpenJDK <https://developers.redhat.com/products/openjdk/download/>`_
 
           * `Zulu OpenJDK <https://www.azul.com/downloads/zulu/>`_
+
+.. _windows-label:
 
 Windows
 -------
@@ -205,7 +205,7 @@ Next, read through the :doc:`Corda Key Concepts <key-concepts>` to understand ho
 
 By then, you'll be ready to start writing your own CorDapps. Learn how to do this in the
 :doc:`Hello, World tutorial <hello-world-introduction>`. You may want to refer to the
-:doc:`API documentation <corda-api>`, the :doc:`flow cookbook <flow-cookbook>` and the
+API documentation in the sidebar, the :doc:`flow cookbook <flow-cookbook>` and the
 `samples <https://www.corda.net/samples/>`_ along the way.
 
 If you encounter any issues, please ask on `Stack Overflow <https://stackoverflow.com/questions/tagged/corda>`_ or via
