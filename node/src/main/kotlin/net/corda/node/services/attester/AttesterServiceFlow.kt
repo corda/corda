@@ -26,7 +26,7 @@ class AttesterServiceFlow(val session: FlowSession,
     fun invokeAttester(request: AttesterRequest): TransactionSignature {
         val certificate = service.certify(request)
         val signableData = SignableData(
-                request.txId,
+                request.tx.id,
                 SignatureMetadata(
                         serviceHub.myInfo.platformVersion,
                         Crypto.findSignatureScheme(attesterKey).schemeNumberID,

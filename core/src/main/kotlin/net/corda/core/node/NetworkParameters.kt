@@ -199,7 +199,8 @@ data class NetworkParameters(
     }
 }
 
-// SGX: We require a different type of behaviour for notaries
+// SGX: The attestation model implies the presence a new type notaries, able to validate an enclave signature in the context
+// of the current network parameters
 @CordaSerializable
 enum class NotaryType(id: Int) {
     VALIDATING(0),

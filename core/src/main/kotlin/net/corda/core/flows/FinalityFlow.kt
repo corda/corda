@@ -105,7 +105,6 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
             override fun childProgressTracker() = BackchainAttesterClientFlow.tracker()
         }
 
-
         object NOTARISING : ProgressTracker.Step("Requesting signature by notary service") {
             override fun childProgressTracker() = NotaryFlow.Client.tracker()
         }
@@ -226,8 +225,9 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
     }
 
     private fun needsNotarySignature(stx: SignedTransaction): Boolean {
-        // SGX: always notarise in this flow
-        return true
+        // SGX: issuance needs to be attested and notarised as well, although this could be
+        // achieved in a lazy way (not implemented in this POC for now)
+        return hasNoNotarySignature(stx)
 
         /*
         val wtx = stx.tx

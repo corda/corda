@@ -48,12 +48,6 @@ class MerkleTreeException(val reason: String) : CordaException("Partial Merkle T
 @CordaSerializable
 class PartialMerkleTree(val root: PartialTree) {
 
-    private var depth: Int = root.depth()
-
-    init {
-        require(depth >= 1)
-    }
-
     /**
      * The structure is a little different than that of Merkle Tree.
      * Partial Tree might not be a full binary tree. Leaves represent either original Merkle tree leaves
@@ -182,35 +176,12 @@ class PartialMerkleTree(val root: PartialTree) {
      * @throws MerkleTreeException if the provided hash is not in the tree.
      */
     @Throws(MerkleTreeException::class)
-    /* internal */ fun leafIndex(leaf: SecureHash): Int {
+    internal fun leafIndex(leaf: SecureHash): Int {
         // Special handling if the tree consists of one node only.
         if (root is PartialTree.IncludedLeaf && root.hash == leaf) return 0
         val flagPath = mutableListOf<Boolean>()
         if (!leafIndexHelper(leaf, this.root, flagPath)) throw MerkleTreeException("The provided hash $leaf is not in the tree.")
         return indexFromFlagPath(flagPath)
-    }
-
-    /**
-     * SGX: return number of [IncludedLeaf] appearing before the leaf with given offset in a left-to-right scan of all leaves
-     * in the full merkle tree.
-     */
-    fun countIncludedLeavesBefore(id: Int): Int {
-
-        fun visit(path: Int, node: PartialTree): Int {
-            return when (node) {
-                is PartialTree.Node -> {
-                    visit(path shl 1, node.left) + visit((path shl 1) or 1, node.right)
-                }
-                is PartialTree.Leaf -> 0
-                is PartialTree.IncludedLeaf -> if (path < id) {
-                    1
-                } else {
-                    0
-                }
-            }
-        }
-
-        return visit(0, root)
     }
 
     // Helper function to compute the path. False means go to the left and True to the right.
@@ -234,18 +205,4 @@ class PartialMerkleTree(val root: PartialTree) {
     // Return the leaf index from the path boolean list.
     private fun indexFromFlagPath(pathList: List<Boolean>) =
             pathList.mapIndexed { index, value -> if (value) (1 shl index) else 0 }.sum()
-
-    private fun PartialTree.depth(): Int = when (this) {
-        is PartialTree.Node -> {
-            val leftDepth = left.depth()
-            val rightDepth = right.depth()
-            require(!(leftDepth == -1 && rightDepth == -1))
-            if (leftDepth != -1 && rightDepth != -1) {
-                require(leftDepth == rightDepth)
-            }
-            Math.max(leftDepth, rightDepth) + 1
-        }
-        is PartialTree.Leaf -> -1
-        is PartialTree.IncludedLeaf -> 1
-    }
 }

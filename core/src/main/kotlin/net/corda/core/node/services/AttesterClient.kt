@@ -22,6 +22,12 @@ abstract class AttesterClient {
 }
 
 @CordaSerializable
+enum class AttesterScheme {
+    MOCK,
+    SGX
+}
+
+@CordaSerializable
 enum class AttesterServiceType(val id: Int) {
     BACKCHAIN_VALIDATOR(0),
 }
@@ -29,7 +35,7 @@ enum class AttesterServiceType(val id: Int) {
 @CordaSerializable
 data class AttesterCertificate(
         val service: AttesterServiceType,
-        val schemeId: Int,
+        val schemeId: AttesterScheme,
         val proof: OpaqueBytes,
         val assumptions: OpaqueBytes
 )
@@ -37,7 +43,7 @@ data class AttesterCertificate(
 @CordaSerializable
 data class AttesterRequest(
         val requestType: AttesterServiceType,
-        val schemeId: Int,
-        val txId: SecureHash,
-        val encoded: OpaqueBytes
+        val schemeId: AttesterScheme,
+        val tx: SignedTransaction,
+        val payload: OpaqueBytes
 )

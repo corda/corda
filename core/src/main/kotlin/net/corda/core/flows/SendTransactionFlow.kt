@@ -95,7 +95,7 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any) 
         }
     }
 
-    // SGX: probably needs to refine the filter implementation based on the requesting party identity
+    // SGX: probably needs to refine the filter implementation based on the requesting party
     interface TransactionAuthorisationFilter {
         fun get(txId: SecureHash): SignedTransaction
     }
