@@ -70,7 +70,7 @@ attachmentCacheBound
   *Default:* 1024
 
 blacklistedAttachmentSigningKeys
-  List of public keys (SHA-256 of public key) that prevents the node from accepting attachments over the network that are signed by any of these keys.
+  List of SHA-256 hashes of public keys. Attachments signed by any of these public keys will not be considered as trust roots for any attachments received over the network.
   This property is similar to :ref:`cordappSignerKeyFingerprintBlacklist <corda_configuration_file_signer_blacklist>` but only restricts CorDapps that were
   included as attachments in a transaction and received over the network from a peer.
 

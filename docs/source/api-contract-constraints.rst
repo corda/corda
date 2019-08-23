@@ -102,7 +102,7 @@ Each transaction received by a node will then verify that the apps attached to i
 Signature Constraints. This ensures that the version of each app is acceptable to the transaction's input states.
 
 If a node receives a transaction that uses an attachment that it doesn't trust, but there is an attachment present on the node with
-same at least one common signature, then the node will execute that contract's code as if it were trusted. This means that nodes
+at least one common signature, then the node will trust the received attachment. This means that nodes
 are no longer required to have every version of a CorDapp uploaded to them in order to verify transactions running older version of a CorDapp.
 Instead, it is sufficient to have any version of the CorDapp contract installed.
 
