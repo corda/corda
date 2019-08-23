@@ -130,7 +130,9 @@ class NotaryFlow {
                 else -> ctx
             }
 
-            // SGX: we assume for simplicity that
+            // SGX: the attester signature checks is responsibility of a new "SGX-aware validating" notaries, also
+            // known as semi-validating notary.
+            // For simplicity, in this POC every notary perform this check.
             val txWithAttesterCert = SignedTransaction(tx, stx.getAttesterAndNotarySigs(serviceHub, AttesterServiceType.BACKCHAIN_VALIDATOR))
             session.send(NotarisationPayload(txWithAttesterCert, signature))
             return receiveResultOrTiming(session)

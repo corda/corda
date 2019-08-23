@@ -199,15 +199,17 @@ data class NetworkParameters(
     }
 }
 
-// SGX: The attestation model implies the presence a new type notaries, able to validate an enclave signature in the context
-// of the current network parameters
+// SGX: The attestation model implies the presence a new notary type, able to validate a backchain attester
+// signature in the context  of the current network parameters. This is identified by the SGX_VALIDATING value,
+// but often time this notary has been previously referred as "semi-validating" notary.
 @CordaSerializable
 enum class NotaryType(id: Int) {
     VALIDATING(0),
     NON_VALIDATING(1),
 
-    //A "validating" notary relying on back-chain attester signatures. This notary *must* exists on the network to permit enclave versioning.
-    // This notary is required to perform currentness checks on network parameters.
+    // A "validating" notary relying on back-chain attester signatures (a.k.a semi-validating notary)
+    // This type of notary is *necessary* to permit versioning of enclaves against a trusted set of measurements
+    // given by the network parameters
     SGX_VALIDATING(2)
 }
 
