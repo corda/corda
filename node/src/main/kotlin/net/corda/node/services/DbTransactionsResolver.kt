@@ -79,16 +79,18 @@ class DbTransactionsResolver(private val flow: ResolveTransactionsFlow) : Transa
             for (downloaded in requestedTxs.second) {
                 suspended = false
                 val dependencies = downloaded.dependencies
-                val downloadedTxs = this.downloadedTxs
-                if (downloadedTxs != null) {
-                    if (downloadedTxs.size < MAX_CHECKPOINT_RESOLUTION) {
-                        downloadedTxs[downloaded.id] = downloaded
+                val checkpointedTxs = this.downloadedTxs
+                if (checkpointedTxs != null) {
+                    if (checkpointedTxs.size < MAX_CHECKPOINT_RESOLUTION) {
+                        checkpointedTxs[downloaded.id] = downloaded
                     } else {
-                        logger.debug { "Resolving transaction dependencies has reached a checkpoint limit of $MAX_CHECKPOINT_RESOLUTION " +
-                                "transactions. Switching to the node database for storing the unverified transactions." }
+                        logger.debug {
+                            "Resolving transaction dependencies has reached a checkpoint limit of $MAX_CHECKPOINT_RESOLUTION " +
+                                    "transactions. Switching to the node database for storing the unverified transactions."
+                        }
                         // For locking in this case, the full topological sort contains all the locks to be taken out.
                         transactionStorage.lockObjectsForWrite(topologicalSort.complete(), contextTransaction, false) {
-                            downloadedTxs.values.forEach(transactionStorage::addUnverifiedTransaction)
+                            checkpointedTxs.values.forEach(transactionStorage::addUnverifiedTransaction)
                             // This acts as both a flag that we've switched over to storing the backchain into the db, and to remove what's been
                             // built up in the checkpoint
                             this.downloadedTxs = null
@@ -104,8 +106,9 @@ class DbTransactionsResolver(private val flow: ResolveTransactionsFlow) : Transa
                 // The write locks are only released over a suspend, so need to keep track of whether the flow has been suspended to ensure
                 // that locks are not held beyond each while loop iteration (as doing this would result in a deadlock due to claiming locks
                 // in the wrong order)
-                suspended = suspended || flow.fetchMissingAttachments(downloaded)
-                suspended = suspended || flow.fetchMissingNetworkParameters(downloaded)
+                val suspendedViaAttachments = flow.fetchMissingAttachments(downloaded)
+                val suspendedViaParams = flow.fetchMissingNetworkParameters(downloaded)
+                suspended = suspended || suspendedViaAttachments || suspendedViaParams
 
                 // Add all input states and reference input states to the work queue.
                 nextRequests.addAll(dependencies)
