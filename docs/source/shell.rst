@@ -207,8 +207,8 @@ Shutting down the node
 
 You can shut the node down via shell:
 
-* ``gracefulShutdown`` will put node into draining mode, and shut down when there are no flows running
-* ``shutdown`` will shut the node down immediately
+* ``run gracefulShutdown`` will put node into draining mode, and shut down when there are no flows running
+* ``run shutdown`` will shut the node down immediately
 
 Output Formats
 **********************
