@@ -295,7 +295,7 @@ class RpcReconnectTests {
             // Check that enough vault events were received.
             // This check is fuzzy because events can go missing during node restarts.
             // Ideally there should be nrOfFlowsToRun events receive but some might get lost for each restart.
-            assertThat(vaultEvents!!.size).isGreaterThanOrEqualTo(NUMBER_OF_FLOWS_TO_RUN / 3)
+            assertThat(vaultEvents!!.size + nrFailures * 3).isGreaterThanOrEqualTo(NUMBER_OF_FLOWS_TO_RUN)
             // DOCEND missingVaultEvents
 
             // Check that no flow was triggered twice.
