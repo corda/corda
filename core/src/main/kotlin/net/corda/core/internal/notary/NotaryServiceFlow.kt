@@ -86,6 +86,8 @@ abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service:
             checkNotary(transaction.notary)
             checkParameterHash(transaction.networkParametersHash)
             checkInputs(transaction.inputs + transaction.references)
+            // SGX: this check should only be performed by an SGX "validating" notary, in additiona to is no network parameters currentness.
+            // for simplicity, this POC assumes that all notaries are of this kind.
             checkSignatureOfAttesters(transaction.id, transaction.attesterCerts)
             return transaction
         } catch (e: Exception) {

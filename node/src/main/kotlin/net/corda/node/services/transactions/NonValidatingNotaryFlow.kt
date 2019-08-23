@@ -25,7 +25,6 @@ import java.time.Duration
  * the caller, it is possible to raise a dispute and verify the validity of the transaction and subsequently
  * undo the commit of the input states (the exact mechanism still needs to be worked out).
  */
-// SGX: this actually now implements an SGX "validating" notary behaviour ;). Well, partially, therre is no network parameters currentness check
 class NonValidatingNotaryFlow(otherSideSession: FlowSession, service: SinglePartyNotaryService, etaThreshold: Duration) : NotaryServiceFlow(otherSideSession, service, etaThreshold) {
     private val minPlatformVersion get() = serviceHub.networkParameters.minimumPlatformVersion
 
