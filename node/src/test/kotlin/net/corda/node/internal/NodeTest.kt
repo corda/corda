@@ -178,8 +178,8 @@ class NodeTest {
                 rpcSettings = NodeRpcSettings(address = fakeAddress, adminAddress = null, ssl = null),
                 messagingServerAddress = null,
                 notary = null,
-                flowOverrides = FlowOverrideConfig(listOf())
-
+                flowOverrides = FlowOverrideConfig(listOf()),
+                attesterConfiguration = null
         )
     }
 }

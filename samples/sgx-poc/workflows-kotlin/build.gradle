@@ -26,13 +26,6 @@ sourceSets {
             srcDir "../config/dev"
         }
     }
-    integrationTest {
-        kotlin {
-            compileClasspath += main.output + test.output
-            runtimeClasspath += main.output + test.output
-            srcDir file('src/integration-test/kotlin')
-        }
-    }
 }
 
 dependencies {
