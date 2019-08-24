@@ -41,7 +41,7 @@ class ListTests extends DefaultTask {
 
     @TaskAction
     def discoverTests() {
-        List<String> results = new ClassGraph()
+        Collection<String> results = new ClassGraph()
                 .enableClassInfo()
                 .enableMethodInfo()
                 .ignoreClassVisibility()
@@ -51,9 +51,11 @@ class ListTests extends DefaultTask {
                 .scan()
                 .getClassesWithMethodAnnotation("org.junit.Test")
                 .filter { c -> !c.hasAnnotation("org.junit.Ignore") }
+                .collect { c -> (c.getSubclasses() + Collections.singletonList(c)) }
+                .flatten()
                 .collect { ClassInfo c ->
                     c.name + ".*"
-                }
+                }.toSet()
 
         this.allTests = results.stream().sorted().collect(Collectors.toList())
     }

@@ -28,38 +28,8 @@ class KubesTest extends DefaultTask {
     String fullTaskToExecutePath
     String taskToExecuteName
     Boolean printOutput = false
-    public volatile List<File> results = Collections.emptyList()
-
-    private class KubePodResult {
-
-        private final Pod createdPod
-        private final AtomicReference<Throwable> errorHolder
-        private final CompletableFuture<Void> waiter
-        private volatile Integer resultCode = 255
-        private final File output;
-
-
-        KubePodResult(Pod createdPod, AtomicReference<Throwable> errorHolder, CompletableFuture<Void> waiter, File output) {
-            this.createdPod = createdPod
-            this.errorHolder = errorHolder
-            this.waiter = waiter
-            this.output = output
-        }
-
-        public void setResultCode(Integer code) {
-            synchronized (errorHolder) {
-                this.resultCode = code
-            }
-        }
-
-        public Integer getResultCode() {
-            synchronized (errorHolder) {
-                return this.resultCode
-            }
-        }
-
-
-    }
+    public volatile List<File> testOutput = Collections.emptyList()
+    public volatile List<KubePodResult> containerResults = Collections.emptyList()
 
 
     @TaskAction
@@ -87,7 +57,7 @@ class KubesTest extends DefaultTask {
         Namespace ns = new NamespaceBuilder().withNewMetadata().withName(namespace).addToLabels("this", "rocks").endMetadata().build()
         client.namespaces().createOrReplace(ns)
 
-        int numberOfNodes = client.nodes().list().getItems().size()
+        int numberOfNodes = client.nodes().list().getItems().size() * 2
         List<CompletableFuture<KubePodResult>> podCreationFutures = IntStream.range(0, numberOfNodes).mapToObj({ i ->
 
             CompletableFuture.supplyAsync({
@@ -103,6 +73,7 @@ class KubesTest extends DefaultTask {
                 CompletableFuture<Void> waiter = new CompletableFuture<Void>()
                 KubePodResult result = new KubePodResult(createdPod, errorHolder, waiter, outputFile)
                 startBuildAndLogging(client, namespace, numberOfNodes, i, podName, printOutput, errorHolder, waiter, { int resultCode ->
+                    println podName + " has completed with resultCode=$resultCode"
                     result.setResultCode(resultCode)
                 }, outputFile)
 
@@ -130,11 +101,13 @@ class KubesTest extends DefaultTask {
                 Collection<File> binaryFiles = future.get()
                 return binaryFiles
             }.flatten()
-            this.results = Collections.synchronizedList(allBinaryFiles)
+            this.testOutput = Collections.synchronizedList(allBinaryFiles)
             return allBinaryFiles
         }
 
         allFilesDownloadedFuture.get()
+        this.containerResults = podCreationFutures.collect { it -> it.get() }
+        println ""
     }
 
     void startBuildAndLogging(KubernetesClient client,
@@ -148,6 +121,7 @@ class KubesTest extends DefaultTask {
                               Consumer<Integer> resultSetter,
                               File outputFileForContainer) {
         try {
+
             System.out.println("Waiting for pod " + podName + " to start before executing build")
             client.pods().inNamespace(namespace).withName(podName).waitUntilReady(60, TimeUnit.MINUTES)
             System.out.println("pod " + podName + " has started, executing build")
@@ -162,56 +136,33 @@ class KubesTest extends DefaultTask {
                 }
             })
             ExecWatch execWatch;
-            if (printOutput) {
-                execWatch = client.pods().inNamespace(namespace).withName(podName)
-                        .redirectingInput()
-                        .redirectingOutput()
-                        .redirectingError()
-                        .redirectingErrorChannel()
-                        .usingListener(new ExecListener() {
-                            @Override
-                            void onOpen(Response response) {
-                                System.out.println("Build started on pod " + podName)
-                            }
 
-                            @Override
-                            void onFailure(Throwable t, Response response) {
-                                System.out.println("Received error from rom pod + podName")
-                                waiter.completeExceptionally(t)
-                            }
+            def terminatingListener = new ExecListener() {
+                @Override
+                void onOpen(Response response) {
+                    System.out.println("Build started on pod " + podName)
+                }
 
-                            @Override
-                            void onClose(int code, String reason) {
-                                resultSetter.accept(code)
-                                System.out.println("Received onClose() from pod " + podName)
-                                waiter.complete()
-                            }
-                        }).exec(getBuildCommand(numberOfPods, podIdx))
+                @Override
+                void onFailure(Throwable t, Response response) {
+                    System.out.println("Received error from rom pod + podName")
+                    waiter.completeExceptionally(t)
+                }
 
-            } else {
-                execWatch = client.pods().inNamespace(namespace).withName(podName)
-                        .redirectingInput()
-                        .usingListener(new ExecListener() {
-                            @Override
-                            void onOpen(Response response) {
-                                System.out.println("Build started on pod " + podName)
-                            }
-
-                            @Override
-                            void onFailure(Throwable t, Response response) {
-                                System.out.println("Received error from container, exiting")
-                                waiter.completeExceptionally(t)
-                            }
-
-                            @Override
-                            void onClose(int code, String reason) {
-                                System.out.println("Received onClose() from container")
-                                resultSetter.accept(code)
-                                waiter.complete()
-                            }
-                        }).exec(getBuildCommand(numberOfPods, podIdx))
-
+                @Override
+                void onClose(int code, String reason) {
+                    resultSetter.accept(code)
+                    System.out.println("Received onClose() from pod " + podName + " with returnCode=" + code)
+                    waiter.complete()
+                }
             }
+
+            execWatch = client.pods().inNamespace(namespace).withName(podName)
+                    .redirectingInput()
+                    .redirectingOutput()
+                    .redirectingError()
+                    .redirectingErrorChannel()
+                    .usingListener(terminatingListener).exec(getBuildCommand(numberOfPods, podIdx))
 
             System.out.println("Pod: " + podName + " has started ")
             if (printOutput) {
@@ -221,7 +172,11 @@ class KubesTest extends DefaultTask {
                     try {
                         String line
                         while ((line = br.readLine()) != null) {
-                            System.out.println(("Container" + podIdx + ":   " + line).trim())
+                            def toWrite = ("${taskToExecuteName}/Container" + podIdx + ":   " + line).trim()
+                            if (printOutput) {
+                                System.out.println(toWrite)
+                            }
+                            out.println(toWrite)
                         }
                     } finally {
                         out.close()
@@ -252,9 +207,16 @@ class KubesTest extends DefaultTask {
                 .withCommand("bash")
         //max container life time is 30min
                 .withArgs("-c", "sleep 1800")
+                .addNewEnv()
+                .withName("DRIVER_NODE_MEMORY")
+                .withValue("1024m")
+                .withName("DRIVER_WEB_MEMORY")
+                .withValue("1024m")
+                .endEnv()
                 .withName(podName)
                 .withNewResources()
                 .addToRequests("cpu", new Quantity("2"))
+                .addToRequests("memory", new Quantity("6Gi"))
                 .endResources()
                 .addNewVolumeMount()
                 .withName("gradlecache")

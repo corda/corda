@@ -7,6 +7,8 @@ import com.bmuschko.gradle.docker.tasks.image.DockerCommitImage
 import com.bmuschko.gradle.docker.tasks.image.DockerPushImage
 import com.bmuschko.gradle.docker.tasks.image.DockerTagImage
 
+import java.util.concurrent.CompletableFuture
+
 buildscript {
     // For sharing constants between builds
     Properties constants = new Properties()
@@ -646,6 +648,7 @@ allprojects {
                 dependsOn createdListTask
                 binResultsDir new File(reportsDir, "binary")
                 reports.junitXml.destination new File(reportsDir, "xml")
+                maxHeapSize = "6g"
                 doFirst {
                     filter {
                         def fork = getPropertyAsInt(projectContainingTask, "dockerFork", 0)
@@ -661,13 +664,13 @@ allprojects {
                         if (includes.size() == 0) {
                             println "Disabling test executing for testing task ${task.getPath()}"
                             excludeTestsMatching "*"
-                            failOnNoMatchingTests false
                         }
 
                         includes.forEach { include ->
                             println "including: $include for testing task ${task.getPath()}"
                             includeTestsMatching include
                         }
+                        failOnNoMatchingTests false
                     }
                 }
             }
@@ -696,12 +699,13 @@ Map<String, List<com.stefano.testing.KubesTest>> allKubesTestingTasksGroupedByTy
         .groupBy { task -> task.taskToExecuteName }
 
 allKubesTestingTasksGroupedByType.entrySet().collect { entry ->
+
     def taskType = entry.key
     def allTasksOfType = entry.value
 
     def allParallelTask = rootProject.tasks.create("allParallel" + taskType.capitalize(), com.stefano.testing.KubesTest) {
         dependsOn imageBuildingTask
-        printOutput = true
+        printOutput = false
         fullTaskToExecutePath = allTasksOfType.collect { task -> task.fullTaskToExecutePath }.join(" ")
         taskToExecuteName = taskType
         doFirst {
@@ -714,7 +718,8 @@ allKubesTestingTasksGroupedByType.entrySet().collect { entry ->
         destinationDir new File(rootProject.getBuildDir(), "allResults${taskType.capitalize()}")
         doFirst {
             destinationDir.deleteDir()
-            reportOn(allParallelTask.results)
+            podResults = allParallelTask.containerResults
+            reportOn(allParallelTask.testOutput)
         }
     }
 
@@ -727,3 +732,27 @@ allKubesTestingTasksGroupedByType.entrySet().collect { entry ->
 
 }
 
+rootProject.rootProject.tasks.create("combinedParallelTestAndIntegrationTest") {
+    dependsOn imageBuildingTask
+    doLast {
+        def buildTasks = [rootProject.getTasks().getByPath(":allParallelTest"), rootProject.getTasks().getByPath(":allParallelIntegrationTest")]
+        def reportTasks = [rootProject.getTasks().getByPath(":reportAllParallelTest"), rootProject.getTasks().getByPath(":reportAllParallelIntegrationTest")]
+        def taskFutures = buildTasks.collect { t ->
+            CompletableFuture.runAsync {
+                def actions = t.getActions()
+                for (Action action : actions) {
+                    action.execute(t)
+                }
+            }
+        }
+        CompletableFuture.allOf(*taskFutures.toArray()).thenRun {
+            reportTasks.forEach { rt ->
+                def actions = rt.getActions()
+                for (Action action : actions) {
+                    action.execute(rt)
+                }
+            }
+        }.join()
+    }
+
+}

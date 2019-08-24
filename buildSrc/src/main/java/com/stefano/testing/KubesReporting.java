@@ -17,6 +17,7 @@
 package com.stefano.testing;
 
 import org.gradle.api.DefaultTask;
+import org.gradle.api.GradleException;
 import org.gradle.api.Transformer;
 import org.gradle.api.file.FileCollection;
 import org.gradle.api.internal.file.UnionFileCollection;
@@ -27,6 +28,7 @@ import org.gradle.api.internal.tasks.testing.report.DefaultTestReport;
 import org.gradle.api.tasks.OutputDirectory;
 import org.gradle.api.tasks.TaskAction;
 import org.gradle.api.tasks.testing.Test;
+import org.gradle.internal.logging.ConsoleRenderer;
 import org.gradle.internal.operations.BuildOperationExecutor;
 
 import javax.inject.Inject;
@@ -34,6 +36,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static org.gradle.internal.concurrent.CompositeStoppable.stoppable;
 import static org.gradle.util.CollectionUtils.collect;
@@ -44,6 +47,7 @@ import static org.gradle.util.CollectionUtils.collect;
 public class KubesReporting extends DefaultTask {
     private File destinationDir = new File(getProject().getBuildDir(), "test-reporting");
     private List<Object> results = new ArrayList<Object>();
+    List<KubePodResult> podResults = new ArrayList<>();
 
     @Inject
     protected BuildOperationExecutor getBuildOperationExecutor() {
@@ -131,6 +135,20 @@ public class KubesReporting extends DefaultTask {
             if (resultsProvider.isHasResults()) {
                 DefaultTestReport testReport = new DefaultTestReport(getBuildOperationExecutor());
                 testReport.generateReport(resultsProvider, getDestinationDir());
+                List<KubePodResult> containersWithNonZeroReturnCodes = podResults.stream()
+                        .filter(result -> result.getResultCode() != 0)
+                        .collect(Collectors.toList());
+
+                if (!containersWithNonZeroReturnCodes.isEmpty()) {
+                    String reportUrl = new ConsoleRenderer().asClickableFileUrl(new File(destinationDir, "index.html"));
+
+                    String containerOutputs = containersWithNonZeroReturnCodes.stream().map(KubePodResult::getOutput).map(file -> new ConsoleRenderer().asClickableFileUrl(file)).reduce("",
+                            (s, s2) -> s + "\n" + s2
+                    );
+
+                    String message = "remote build failed, check test report at " + reportUrl + "\n and container outputs at " + containerOutputs;
+                    throw new GradleException(message);
+                }
             } else {
                 getLogger().info("{} - no binary test results found in dirs: {}.", getPath(), getTestResultDirs().getFiles());
                 setDidWork(false);
@@ -138,6 +156,8 @@ public class KubesReporting extends DefaultTask {
         } finally {
             stoppable(resultsProvider).stop();
         }
+
+
     }
 
     public TestResultsProvider createAggregateProvider() {
