@@ -601,20 +601,20 @@ docker {
     }
 }
 
-task pushBuildImage(type: DockerPushImage, dependsOn: tagBuildImageResult) {
-    doFirst {
-        println("About to push image using pwd: " + registryCredentials?.password?.get())
-    }
-    imageName = "stefanotestingcr.azurecr.io/testing"
-    tag = tagBuildImageResult.tag
-}
-//task pushBuildImage(type: DockerPushImage) {
+//task pushBuildImage(type: DockerPushImage, dependsOn: tagBuildImageResult) {
 //    doFirst {
 //        println("About to push image using pwd: " + registryCredentials?.password?.get())
 //    }
 //    imageName = "stefanotestingcr.azurecr.io/testing"
-//    tag = 'b7fe1321-fdb'
+//    tag = tagBuildImageResult.tag
 //}
+task pushBuildImage(type: DockerPushImage) {
+    doFirst {
+        println("About to push image using pwd: " + registryCredentials?.password?.get())
+    }
+    imageName = "stefanotestingcr.azurecr.io/testing"
+    tag = 'b7fe1321-fdb'
+}
 
 def imageBuildingTask = rootProject.tasks.getByName("pushBuildImage")
 allprojects {
@@ -639,7 +639,7 @@ allprojects {
                             getPropertyAsInt(projectContainingTask, "dockerForks", 1),
                             42)
                             .forEach { testName ->
-                                println testName
+                                logger.lifecycle testName
                             }
                 }
             }
@@ -659,20 +659,20 @@ allprojects {
                         def fork = getPropertyAsInt(projectContainingTask, "dockerFork", 0)
                         def forks = getPropertyAsInt(projectContainingTask, "dockerForks", 1)
                         def shuffleSeed = 42
-                        println "requesting tests to include in testing task ${task.getPath()} (${fork}, ${forks}, ${shuffleSeed})"
+                        logger.lifecycle( "requesting tests to include in testing task ${task.getPath()} (${fork}, ${forks}, ${shuffleSeed})" )
                         List<String> includes = createdListTask.getTestsForFork(
                                 fork,
                                 forks,
                                 shuffleSeed)
-                        println "got ${includes.size()} tests to include into testing task ${task.getPath()}"
+                        logger.lifecycle "got ${includes.size()} tests to include into testing task ${task.getPath()}"
 
                         if (includes.size() == 0) {
-                            println "Disabling test executing for testing task ${task.getPath()}"
+                            logger.lifecycle "Disabling test executing for testing task ${task.getPath()}"
                             excludeTestsMatching "*"
                         }
 
                         includes.forEach { include ->
-                            println "including: $include for testing task ${task.getPath()}"
+                            logger.info "including: $include for testing task ${task.getPath()}"
                             includeTestsMatching include
                         }
                         failOnNoMatchingTests false
@@ -689,7 +689,7 @@ allprojects {
                     dockerTag = imageBuildingTask.imageName.get() + ":" + imageBuildingTask.tag.get()
                 }
             }
-            println "Created task: ${createdParallelTestTask.getPath()} to enable testing on kubenetes for task: ${task.getPath()}"
+            logger.info "Created task: ${createdParallelTestTask.getPath()} to enable testing on kubenetes for task: ${task.getPath()}"
 
         } catch (Exception e) {
             System.err.println(e.message)
@@ -731,8 +731,8 @@ allKubesTestingTasksGroupedByType.entrySet().collect { entry ->
     allParallelTask.finalizedBy(reportOnAllTask)
 
 
-    println "Created task: ${allParallelTask.getPath()} to enable testing on kubenetes for tasks: ${allParallelTask.fullTaskToExecutePath}"
-    println "Created task: ${reportOnAllTask.getPath()} to generate test html output for task ${allParallelTask.getPath()}"
+    logger.info "Created task: ${allParallelTask.getPath()} to enable testing on kubenetes for tasks: ${allParallelTask.fullTaskToExecutePath}"
+    logger.info "Created task: ${reportOnAllTask.getPath()} to generate test html output for task ${allParallelTask.getPath()}"
     return allParallelTask
 
 }
