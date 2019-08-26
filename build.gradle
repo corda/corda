@@ -613,7 +613,7 @@ task pushBuildImage(type: DockerPushImage, dependsOn: tagBuildImageResult) {
 //        println("About to push image using pwd: " + registryCredentials?.password?.get())
 //    }
 //    imageName = "stefanotestingcr.azurecr.io/testing"
-//    tag = 'bbea3dea-423'
+//    tag = 'b7fe1321-fdb'
 //}
 
 def imageBuildingTask = rootProject.tasks.getByName("pushBuildImage")

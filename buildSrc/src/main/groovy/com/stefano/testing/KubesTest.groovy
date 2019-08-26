@@ -252,7 +252,12 @@ class KubesTest extends DefaultTask {
         String resultsInContainerPath = "/tmp/source/build/test-reports"
         String binaryResultsFile = "results.bin"
         String podName = cp.getMetadata().getName()
-        Path tempDir = new File(new File(project.getBuildDir(), "test-results"), podName)
+        Path tempDir = new File(new File(project.getBuildDir(), "test-results-xml"), podName).toPath()
+
+        if (!tempDir.toFile().exists()) {
+            tempDir.toFile().mkdirs()
+        }
+
         System.out.println("saving to " + podName + " results to: " + tempDir.toAbsolutePath().toFile().getAbsolutePath())
         boolean copiedResult = false
         try {
