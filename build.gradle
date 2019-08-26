@@ -597,24 +597,24 @@ docker {
     registryCredentials {
         url = "stefanotestingcr.azurecr.io"
         username = "stefanotestingcr"
-        password = System.getProperty("docker.push.password")
+        password = System.getProperty("docker.push.password") ? System.getProperty("docker.push.password") : ""
     }
 }
 
-//task pushBuildImage(type: DockerPushImage, dependsOn: tagBuildImageResult) {
-//    doFirst {
-//        println("About to push image using pwd: " + registryCredentials?.password)
-//    }
-//    imageName = "stefanotestingcr.azurecr.io/testing"
-//    tag = tagBuildImageResult.tag
-//}
-task pushBuildImage(type: DockerPushImage) {
+task pushBuildImage(type: DockerPushImage, dependsOn: tagBuildImageResult) {
     doFirst {
-        println("About to push image using pwd: " + registryCredentials?.password?.get())
+        println("About to push image using pwd: " + registryCredentials?.password?.get()))
     }
     imageName = "stefanotestingcr.azurecr.io/testing"
-    tag = 'bbea3dea-423'
+    tag = tagBuildImageResult.tag
 }
+//task pushBuildImage(type: DockerPushImage) {
+//    doFirst {
+//        println("About to push image using pwd: " + registryCredentials?.password?.get())
+//    }
+//    imageName = "stefanotestingcr.azurecr.io/testing"
+//    tag = 'bbea3dea-423'
+//}
 
 def imageBuildingTask = rootProject.tasks.getByName("pushBuildImage")
 allprojects {
