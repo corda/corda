@@ -18,6 +18,30 @@ struct pn_data_t;
 
 /******************************************************************************
  *
+ * amqp::internal::AMQPDescribed
+ *
+ ******************************************************************************/
+
+namespace amqp::internal {
+
+    class AutoIndent {
+    private :
+        std::string indent;
+    public :
+        AutoIndent() : indent { "" } { }
+
+        AutoIndent (const AutoIndent & ai_)
+            : indent { ai_.indent + "  "}
+        { }
+
+        friend std::ostream &
+        operator << (std::ostream & stream_, const AutoIndent & ai_);
+
+    };
+}
+
+/******************************************************************************
+ *
  * amqp::internal::AMQPDescriptor
  *
  ******************************************************************************/
@@ -35,18 +59,27 @@ namespace amqp::internal {
                 , m_val (-1)
             { }
 
-            AMQPDescriptor(std::string symbol_, int val_)
+            AMQPDescriptor (std::string symbol_, int val_)
                 : m_symbol (std::move (symbol_))
                 , m_val (val_)
             { }
 
             virtual ~AMQPDescriptor() = default;
 
-            const std::string & symbol() const { return m_symbol; }
+            const std::string & symbol() const;
 
             void validateAndNext (pn_data_t *) const;
 
-            virtual std::unique_ptr<AMQPDescribed> build (pn_data_t * data_) const = 0;
+            virtual std::unique_ptr<AMQPDescribed> build (pn_data_t * data_) const;
+
+            virtual void read (
+                pn_data_t *,
+                std::stringstream &) const;
+
+            virtual void read (
+                pn_data_t *,
+                std::stringstream &,
+                const AutoIndent &) const;
     };
 
 }

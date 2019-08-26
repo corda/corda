@@ -47,12 +47,15 @@ data class _i_ (val a: Int)
 data class _is_ (val a: Int, val b: String)
 data class _i_is__ (val a: Int, val b: _is_)
 data class _Li_ (val a: List<Int>)
+data class _Mis_ (val a: Map<Int, String>)
 
 fun main (args: Array<String>) {
     initialiseSerialization()
 
-    File("/Users/katelynbaker/srcs/corda/experimental/cpp-serializer/bin/test/_i_is__").writeBytes(_i_is__(1, _is_ (2, "three")).serialize().bytes)
-    File("/Users/katelynbaker/srcs/corda/experimental/cpp-serializer/bin/test/_Li_").writeBytes(_Li_(listOf (1, 2, 3, 4, 5, 6)).serialize().bytes)
+    File("../cpp-serializer/bin/blob-inspector/test/_i_is__").writeBytes(_i_is__(1, _is_ (2, "three")).serialize().bytes)
+    File("../cpp-serializer/bin/blob-inspector/test/_Li_").writeBytes(_Li_(listOf (1, 2, 3, 4, 5, 6)).serialize().bytes)
+    File("../cpp-serializer/bin/blob-inspector/test/_Mis_").writeBytes(_Mis_(
+            mapOf (1 to "two", 3 to "four", 5 to "six")).serialize().bytes)
 }
 
 
