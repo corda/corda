@@ -609,9 +609,7 @@ task pushBuildImage(type: DockerPushImage, dependsOn: tagBuildImageResult) {
 //    imageName = "stefanotestingcr.azurecr.io/testing"
 //    tag = 'bbea3dea-423'
 //}
-
 def imageBuildingTask = rootProject.tasks.getByName("pushBuildImage")
-
 allprojects {
     tasks.withType(Test) { Test task ->
         Project projectContainingTask = getProject()
