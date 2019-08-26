@@ -4,8 +4,10 @@ import io.fabric8.kubernetes.api.model.*
 import io.fabric8.kubernetes.client.*
 import io.fabric8.kubernetes.client.dsl.ExecListener
 import io.fabric8.kubernetes.client.dsl.ExecWatch
+import io.fabric8.kubernetes.client.utils.Serialization
 import okhttp3.Response
 import org.gradle.api.DefaultTask
+import org.gradle.api.GradleException
 import org.gradle.api.tasks.TaskAction
 
 import java.nio.file.Files
@@ -57,13 +59,13 @@ class KubesTest extends DefaultTask {
         Namespace ns = new NamespaceBuilder().withNewMetadata().withName(namespace).addToLabels("this", "rocks").endMetadata().build()
         client.namespaces().createOrReplace(ns)
 
-        int numberOfNodes = client.nodes().list().getItems().size() * 2
+        int numberOfNodes = 20
         List<CompletableFuture<KubePodResult>> podCreationFutures = IntStream.range(0, numberOfNodes).mapToObj({ i ->
 
             CompletableFuture.supplyAsync({
                 File outputFile = Files.createTempFile("container", ".log").toFile()
 
-                String podName = "test" + runId + i
+                String podName = (taskToExecuteName + "-" + runId + i).toLowerCase()
                 Pod podRequest = buildPod(podName)
                 System.out.println("created pod: " + podName)
                 Pod createdPod = client.pods().inNamespace(namespace).create(podRequest)
@@ -135,9 +137,14 @@ class KubesTest extends DefaultTask {
                 void onClose(KubernetesClientException cause) {
                 }
             })
-            ExecWatch execWatch;
+
+
+            def stdOutOs = new PipedOutputStream()
+            def stdOutIs = new PipedInputStream(4096)
+            ByteArrayOutputStream errChannelStream = new ByteArrayOutputStream();
 
             def terminatingListener = new ExecListener() {
+
                 @Override
                 void onOpen(Response response) {
                     System.out.println("Build started on pod " + podName)
@@ -145,50 +152,58 @@ class KubesTest extends DefaultTask {
 
                 @Override
                 void onFailure(Throwable t, Response response) {
-                    System.out.println("Received error from rom pod + podName")
+                    System.out.println("Received error from rom pod " + podName)
                     waiter.completeExceptionally(t)
                 }
 
                 @Override
                 void onClose(int code, String reason) {
-                    resultSetter.accept(code)
                     System.out.println("Received onClose() from pod " + podName + " with returnCode=" + code)
-                    waiter.complete()
+                    try {
+                        def errChannelContents = errChannelStream.toString()
+                        println errChannelContents
+                        Status status = Serialization.unmarshal(errChannelContents, Status.class);
+                        resultSetter.accept(status.details?.causes?.first()?.message?.toInteger() ? status.details?.causes?.first()?.message?.toInteger() : 0)
+                        waiter.complete()
+                    } catch (Exception e) {
+                        waiter.completeExceptionally(e)
+                    }
                 }
             }
 
-            execWatch = client.pods().inNamespace(namespace).withName(podName)
-                    .redirectingInput()
-                    .redirectingOutput()
-                    .redirectingError()
-                    .redirectingErrorChannel()
+            stdOutIs.connect(stdOutOs)
+
+            ExecWatch execWatch = client.pods().inNamespace(namespace).withName(podName)
+                    .writingOutput(stdOutOs)
+                    .writingErrorChannel(errChannelStream)
                     .usingListener(terminatingListener).exec(getBuildCommand(numberOfPods, podIdx))
 
             System.out.println("Pod: " + podName + " has started ")
-            if (printOutput) {
-                Thread loggingThread = new Thread({ ->
-                    BufferedWriter out = new BufferedWriter(new FileWriter(outputFileForContainer))
-                    BufferedReader br = new BufferedReader(new InputStreamReader(execWatch.getOutput()))
-                    try {
-                        String line
-                        while ((line = br.readLine()) != null) {
-                            def toWrite = ("${taskToExecuteName}/Container" + podIdx + ":   " + line).trim()
-                            if (printOutput) {
-                                System.out.println(toWrite)
-                            }
-                            out.println(toWrite)
-                        }
-                    } finally {
-                        out.close()
-                        br.close()
-                    }
-                })
 
-                loggingThread.setDaemon(true)
-                loggingThread.start()
-            }
+            Thread loggingThread = new Thread({ ->
+                BufferedWriter out = new BufferedWriter(new FileWriter(outputFileForContainer))
+                BufferedReader br = new BufferedReader(new InputStreamReader(stdOutIs))
+                try {
+                    String line
+                    while ((line = br.readLine()) != null) {
+                        def toWrite = ("${taskToExecuteName}/Container" + podIdx + ":   " + line).trim()
+                        if (printOutput) {
+                            System.out.println(toWrite)
+                        }
+                        out.println(toWrite)
+                    }
+                } catch (IOException ignored) {
+                }
+                finally {
+                    out.close()
+                    br.close()
+                }
+            })
+
+            loggingThread.setDaemon(true)
+            loggingThread.start()
         } catch (InterruptedException ignored) {
-            //we were interrupted whilst waiting for container
+            throw new GradleException("Could not get slot on cluster within timeout")
         }
     }
 

@@ -16,12 +16,18 @@ class ListTests extends DefaultTask {
 
     def getTestsForFork(int fork, int forks, Integer seed) {
 
+        def gitSha = new BigInteger(project.hasProperty("corda_revision") ? project.property("corda_revision").toString() : "0", 36)
+
         if (fork >= forks) {
             throw new IllegalArgumentException("requested shard ${fork + 1} for total shards ${forks}")
         }
 
-        Random shuffler = new Random(seed ? seed : 0)
+        Random shuffler = new Random(seed ? (seed + ((String) this.getPath()).hashCode() + gitSha.intValue()) : 0)
         List<String> copy = new ArrayList(allTests)
+        while (copy.size() < forks) {
+            //pad the list
+            copy.add(null)
+        }
         Collections.shuffle(copy, shuffler)
         int numberOfTestsPerFork = Math.max((copy.size() / forks).intValue(), 1)
         def listOfLists = copy.collate(numberOfTestsPerFork)
@@ -31,10 +37,10 @@ class ListTests extends DefaultTask {
         } else {
             //special edge case with some remainder
             if (fork == forks - 1 && listOfLists.size() == forks + 1) {
-                return listOfLists[fork] + listOfLists[forks]
+                return (listOfLists[fork] + listOfLists[forks]).findAll { test -> test != null }
 
             } else {
-                return listOfLists[fork]
+                return listOfLists[fork].findAll { test -> test != null }
             }
         }
     }

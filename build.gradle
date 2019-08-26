@@ -607,7 +607,7 @@ task pushBuildImage(type: DockerPushImage, dependsOn: tagBuildImageResult) {
 }
 //task pushBuildImage(type: DockerPushImage) {
 //    imageName = "stefanotestingcr.azurecr.io/testing"
-//    tag = 'd716c854-3fd'
+//    tag = 'bbea3dea-423'
 //}
 
 def imageBuildingTask = rootProject.tasks.getByName("pushBuildImage")
@@ -705,7 +705,7 @@ allKubesTestingTasksGroupedByType.entrySet().collect { entry ->
 
     def allParallelTask = rootProject.tasks.create("allParallel" + taskType.capitalize(), com.stefano.testing.KubesTest) {
         dependsOn imageBuildingTask
-        printOutput = false
+        printOutput = true
         fullTaskToExecutePath = allTasksOfType.collect { task -> task.fullTaskToExecutePath }.join(" ")
         taskToExecuteName = taskType
         doFirst {
