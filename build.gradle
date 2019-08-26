@@ -603,7 +603,7 @@ docker {
 
 task pushBuildImage(type: DockerPushImage, dependsOn: tagBuildImageResult) {
     doFirst {
-        println("About to push image using pwd: " + registryCredentials?.password?.get()))
+        println("About to push image using pwd: " + registryCredentials?.password?.get())
     }
     imageName = "stefanotestingcr.azurecr.io/testing"
     tag = tagBuildImageResult.tag
