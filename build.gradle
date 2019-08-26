@@ -597,7 +597,7 @@ docker {
     registryCredentials {
         url = "stefanotestingcr.azurecr.io"
         username = "stefanotestingcr"
-        password = System.getenv("DOCKER_PUSH_PWD")
+        password = System.getProperty("docker.push.password")
     }
 }
 
