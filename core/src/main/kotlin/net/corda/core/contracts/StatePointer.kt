@@ -18,6 +18,26 @@ import net.corda.core.transactions.LedgerTransaction
 @CordaSerializable
 @KeepForDJVM
 sealed class StatePointer<T : ContractState> {
+
+    companion object {
+
+        /**
+         * Creates a [StaticPointer] to the specified contract state.
+         *
+         * @param stateAndRef The [StateAndRef] instance from which to construct a static pointer.
+         * @return Returns a [StaticPointer] to the specified contract state.
+         */
+        inline fun <reified T : ContractState> staticPointer(stateAndRef: StateAndRef<T>) = StaticPointer(stateAndRef.ref, T::class.java)
+
+        /**
+         * Creates a [LinearPointer] to the specified linear state.
+         *
+         * @param state The [LinearState] instance from which to construct a linear pointer.
+         * @return Returns a [LinearPointer] to the specified linear state.
+         */
+        inline fun <reified T : LinearState> linearPointer(state: T) = LinearPointer(state.linearId, T::class.java)
+    }
+
     /**
      * An identifier for the [ContractState] that this [StatePointer] points to.
      */
