@@ -601,14 +601,21 @@ docker {
     }
 }
 
-task pushBuildImage(type: DockerPushImage, dependsOn: tagBuildImageResult) {
-    imageName = "stefanotestingcr.azurecr.io/testing"
-    tag = tagBuildImageResult.tag
-}
-//task pushBuildImage(type: DockerPushImage) {
+//task pushBuildImage(type: DockerPushImage, dependsOn: tagBuildImageResult) {
+//    doFirst {
+//        println("About to push image using pwd: " + registryCredentials?.password)
+//    }
 //    imageName = "stefanotestingcr.azurecr.io/testing"
-//    tag = 'bbea3dea-423'
+//    tag = tagBuildImageResult.tag
 //}
+task pushBuildImage(type: DockerPushImage) {
+    doFirst {
+        println("About to push image using pwd: " + registryCredentials?.password?.get())
+    }
+    imageName = "stefanotestingcr.azurecr.io/testing"
+    tag = 'bbea3dea-423'
+}
+
 def imageBuildingTask = rootProject.tasks.getByName("pushBuildImage")
 allprojects {
     tasks.withType(Test) { Test task ->
