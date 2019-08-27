@@ -63,6 +63,8 @@ sealed class TypeIdentifier {
         // This method has locking.  So we memo the value here.
         private val systemClassLoader: ClassLoader = ClassLoader.getSystemClassLoader()
 
+        fun classLoaderFor(clazz: Class<*>): ClassLoader = clazz.classLoader ?: systemClassLoader
+
         /**
          * Obtain the [TypeIdentifier] for an erased Java class.
          *
@@ -206,7 +208,11 @@ sealed class TypeIdentifier {
 
         override fun toString() = "Parameterised(${prettyPrint()})"
         override fun getLocalType(classLoader: ClassLoader): Type {
-            val rawType = Class.forName(name, false, classLoader)
+            // We need to invoke ClassLoader.loadClass() directly, because
+            // the JVM will complain if Class.forName() returns a class
+            // that has a name other than the requested one. This will happen
+            // for "transformative" class loaders, i.e. `A` -> `sandbox.A`.
+            val rawType = classLoader.loadClass(name)
             if (rawType.typeParameters.size != parameters.size) {
                 throw IncompatibleTypeIdentifierException(
                         "Class $rawType expects ${rawType.typeParameters.size} type arguments, " +

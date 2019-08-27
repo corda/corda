@@ -1,7 +1,5 @@
 package net.corda.serialization.internal.model
 
-import net.corda.core.serialization.ClassWhitelist
-import net.corda.serialization.internal.amqp.*
 import java.lang.reflect.*
 
 /**
@@ -54,7 +52,7 @@ class ConfigurableLocalTypeModel(private val typeModelConfiguration: LocalTypeMo
     private val typeInformationCache = DefaultCacheProvider.createCache<TypeIdentifier, LocalTypeInformation>()
 
     /**
-     * We need to provide the [TypeInformationBuilder] with a temporary local cache, so that it doesn't leak
+     * We need to provide the [LocalTypeInformationBuilder] with a temporary local cache, so that it doesn't leak
      * [LocalTypeInformation] with unpatched cycles into the global cache where other threads can access them
      * before we've patched the cycles up.
      */

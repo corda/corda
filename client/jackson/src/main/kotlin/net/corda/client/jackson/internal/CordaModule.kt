@@ -3,6 +3,8 @@
 package net.corda.client.jackson.internal
 
 import com.fasterxml.jackson.annotation.*
+import com.fasterxml.jackson.annotation.JsonAutoDetect.Value
+import com.fasterxml.jackson.annotation.JsonAutoDetect.Visibility
 import com.fasterxml.jackson.annotation.JsonCreator.Mode.DISABLED
 import com.fasterxml.jackson.annotation.JsonInclude.Include
 import com.fasterxml.jackson.core.JsonGenerator
@@ -12,10 +14,14 @@ import com.fasterxml.jackson.core.JsonToken
 import com.fasterxml.jackson.databind.*
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
+import com.fasterxml.jackson.databind.cfg.MapperConfig
 import com.fasterxml.jackson.databind.deser.BeanDeserializerModifier
 import com.fasterxml.jackson.databind.deser.ContextualDeserializer
 import com.fasterxml.jackson.databind.deser.std.DelegatingDeserializer
 import com.fasterxml.jackson.databind.deser.std.FromStringDeserializer
+import com.fasterxml.jackson.databind.introspect.AnnotatedClass
+import com.fasterxml.jackson.databind.introspect.BasicClassIntrospector
+import com.fasterxml.jackson.databind.introspect.POJOPropertiesCollector
 import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.databind.node.IntNode
 import com.fasterxml.jackson.databind.node.ObjectNode
@@ -32,7 +38,6 @@ import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.*
 import net.corda.core.internal.DigitalSignatureWithCert
 import net.corda.core.internal.createComponentGroups
-import net.corda.core.internal.kotlinObjectInstance
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SerializedBytes
@@ -56,7 +61,13 @@ class CordaModule : SimpleModule("corda-core") {
     override fun setupModule(context: SetupContext) {
         super.setupModule(context)
 
+        // For classes which are annotated with CordaSerializable we want to use the same set of properties as the Corda serilasation scheme.
+        // To do that we use CordaSerializableClassIntrospector to first turn on field visibility for these classes (the Jackson default is
+        // private fields are not included) and then we use CordaSerializableBeanSerializerModifier to remove any extra properties that Jackson
+        // might pick up.
+        context.setClassIntrospector(CordaSerializableClassIntrospector(context))
         context.addBeanSerializerModifier(CordaSerializableBeanSerializerModifier())
+
         context.addBeanDeserializerModifier(AmountBeanDeserializerModifier())
 
         context.setMixInAnnotations(PartyAndCertificate::class.java, PartyAndCertificateMixin::class.java)
@@ -88,9 +99,22 @@ class CordaModule : SimpleModule("corda-core") {
     }
 }
 
-/**
- * Use the same properties that AMQP serialization uses if the POJO is @CordaSerializable
- */
+private class CordaSerializableClassIntrospector(private val context: Module.SetupContext) : BasicClassIntrospector() {
+    override fun constructPropertyCollector(
+            config: MapperConfig<*>?,
+            ac: AnnotatedClass?,
+            type: JavaType,
+            forSerialization: Boolean,
+            mutatorPrefix: String?
+    ): POJOPropertiesCollector {
+        if (hasCordaSerializable(type.rawClass)) {
+            // Adjust the field visibility of CordaSerializable classes on the fly as they are encountered.
+            context.configOverride(type.rawClass).visibility = Value.defaultVisibility().withFieldVisibility(Visibility.ANY)
+        }
+        return super.constructPropertyCollector(config, ac, type, forSerialization, mutatorPrefix)
+    }
+}
+
 private class CordaSerializableBeanSerializerModifier : BeanSerializerModifier() {
     // We need to pass in a SerializerFactory when scanning for properties, but don't actually do any serialisation so any will do.
     private val serializerFactory = SerializerFactoryBuilder.build(AllWhitelist, javaClass.classLoader)
@@ -99,17 +123,10 @@ private class CordaSerializableBeanSerializerModifier : BeanSerializerModifier()
                                   beanDesc: BeanDescription,
                                   beanProperties: MutableList<BeanPropertyWriter>): MutableList<BeanPropertyWriter> {
         val beanClass = beanDesc.beanClass
-        if (hasCordaSerializable(beanClass) && beanClass.kotlinObjectInstance == null && !SerializeAsToken::class.java.isAssignableFrom(beanClass)) {
+        if (hasCordaSerializable(beanClass) && !SerializeAsToken::class.java.isAssignableFrom(beanClass)) {
             val typeInformation = serializerFactory.getTypeInformation(beanClass)
-            val properties = typeInformation.propertiesOrEmptyMap
-            val amqpProperties = properties.mapNotNull { (name, property) ->
-                if (property.isCalculated) null else name
-            }
-            val propertyRenames = beanDesc.findProperties().associateBy({ it.name }, { it.internalName })
-            (amqpProperties - propertyRenames.values).let {
-                check(it.isEmpty()) { "Jackson didn't provide serialisers for $it" }
-            }
-            beanProperties.removeIf { propertyRenames[it.name] !in amqpProperties }
+            val propertyNames = typeInformation.propertiesOrEmptyMap.mapNotNull { if (it.value.isCalculated) null else it.key }
+            beanProperties.removeIf { it.name !in propertyNames }
         }
         return beanProperties
     }
