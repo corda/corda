@@ -27,9 +27,6 @@ dependencies {
     // OkHTTP: Simple HTTP library.
     compile "com.squareup.okhttp3:okhttp:$okhttp_version"
     compile project(':confidential-identities')
-    compile group: 'commons-codec', name: 'commons-codec', version: '1.13'
-    compile group: 'org.apache.commons', name: 'commons-compress', version: '1.18'
-    implementation 'io.fabric8:kubernetes-client:4.4.1'
 
 }
 
@@ -39,9 +36,4 @@ jar {
 
 publish {
     name jar.baseName
-}
-
-task runIt(type: JavaExec) {
-    classpath = sourceSets.main.runtimeClasspath
-    main = "net.corda.KubeTest"
 }
