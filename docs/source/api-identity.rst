@@ -44,7 +44,7 @@ Confidential identities
 -----------------------
 
 .. warning:: The ``confidential-identities`` module is still not stabilised, so this API may change in future releases.
-   See :doc:`corda-api`.
+   See :doc:`api-stability-guarantees`.
 
 Confidential identities are key pairs where the corresponding X.509 certificate (and path) are not made public, so that
 parties who are not involved in the transaction cannot identify the owner. They are owned by a well-known identity,

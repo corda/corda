@@ -10,7 +10,7 @@ Version 5.0
 -----------
 
 * Introduced a new low level flow diagnostics tool: checkpoint agent (that can be used standalone or in conjunction with the ``dumpCheckpoints`` shell command).
-  See :doc:`tools-checkpoint-agent` for more information.
+  See :doc:`checkpoint-tooling` for more information.
 
 * The MockNet now supports setting a custom Notary class name, as was already supported by normal node config. See :doc:`tutorial-custom-notary`.
 
@@ -20,6 +20,7 @@ Version 5.0
 
 * Removed ``finance-workflows`` dependency on jackson library.  The functions that used jackson (e.g. ``FinanceJSONSupport``) have been moved
   into IRS Demo.
+* The introductory and technical white papers have been refreshed. They have new content and a clearer organisation.
 
 * Information about checkpointed flows can be retrieved from the shell. Calling ``dumpCheckpoints`` will create a zip file inside the node's
   ``log`` directory. This zip will contain a JSON representation of each checkpointed flow. This information can then be used to determine the

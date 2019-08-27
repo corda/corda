@@ -12,7 +12,7 @@ namespace amqp {
      * The 8th byte is used to store weather the stream is compressed or 
      * not
      */
-    std::array<char, 7> AMQP_HEADER = { { 'c', 'o', 'r', 'd', 'a', 1, 0 } };
+    std::array<char, 7> AMQP_HEADER { { 'c', 'o', 'r', 'd', 'a', 1, 0 } };
 
 }
 

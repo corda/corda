@@ -28,7 +28,7 @@ introduced in Corda Enterprise 3.0 with the following important new additions:
 
 |release| also includes the new features of Corda 4, notably:
 
-* **Reference input states**:
+   * **Reference input states**:
   these allow smart contracts to read data from the ledger without simultaneously updating it.
 
 * **State pointers**:
@@ -70,6 +70,21 @@ application development please continue to refer to `the main project documentat
 .. note:: Corda Enterprise provides platform API version 4, which matches the API available in open source Corda 4.x releases.
 
 .. Documentation is not included in the pdf unless it is included in a toctree somewhere
+
+   Welcome to Corda, a platform for building decentralized applications. This guidebook covers everything you need to know to create
+   apps, run nodes and networks, and operate your new decentralized business network.
+
+   If you're completely new to distributed ledger technology (DLT) or Corda and would like a business-oriented overview, we recommend
+   reading the introductory white paper. If you'd like a detailed architectural description of how the Corda protocol works, why
+   it's designed how it is and what future work is planned, we recommend reading the technical white paper. Both white papers can be
+   found on `the Corda documentation website`_.
+
+   But if you'd like to dive in and start writing apps, or running nodes, this guidebook is for you. It covers the open source Corda
+   distribution. Commercial distributions (like Corda Enterprise from R3) have their own user guides that describe their enhanced features.
+
+   We look forward to seeing what you can do with Corda!
+
+   .. _`the Corda documentation website`: https://docs.corda.net
 
 .. toctree::
     :maxdepth: 1
@@ -139,7 +154,8 @@ application development please continue to refer to `the main project documentat
    node-internals-index.rst
    component-library-index.rst
    serialization-index.rst
-   json.rst
+   versioning-and-upgrades.rst
+   cordapp-advanced-concepts.rst
    troubleshooting.rst
 
 .. conditional-toctree::

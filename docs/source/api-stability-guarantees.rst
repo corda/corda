@@ -1,27 +1,3 @@
-Corda API
-=========
-
-The following are the core APIs that are used in the development of CorDapps:
-
-.. toctree::
-   :maxdepth: 1
-
-   api-states
-   api-persistence
-   api-contracts
-   api-contract-constraints
-   api-vault-query
-   api-transactions
-   api-flows
-   api-identity
-   api-service-hub
-   api-service-classes
-   api-rpc
-   api-core-types
-   api-testing
-
-Before reading this page, you should be familiar with the :doc:`key concepts of Corda <key-concepts>`.
-
 .. _internal-apis-and-stability-guarantees:
 
 API stability guarantees
@@ -50,6 +26,9 @@ The following modules form part of Corda's public API and we commit to API/ABI b
 * **Dummy Contracts (net.corda.testing.contracts)**: dummy state and contracts for testing purposes
 * **Mock Services (net.corda.testing.services)**: mock service implementations for testing purposes
 
+Additionally, the **Tokens SDK (com.r3.corda.lib.tokens)** available in `the Tokens GitHub repository <https://github.com/corda/token-sdk>`_
+has a stable API.
+
 .. _non-public-api:
 
 Non-public API (experimental)
@@ -60,11 +39,13 @@ The following modules are not part of the Corda's public API and no backwards co
 * the incubating modules, for which we will do our best to minimise disruption to developers using them until we are able to graduate them into the public API
 * the internal modules, which are not to be used, and will change without notice
 
+The **finance module** was the first CorDapp ever written and is a legacy module. Although it is not a part of our API guarantees, we also
+don't anticipate much future change to it. Users should use the tokens SDK instead.
+
 Corda incubating modules
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
 * **net.corda.confidential**: experimental support for confidential identities on the ledger
-* **net.corda.finance**: a range of elementary contracts (and associated schemas) and protocols, such as abstract fungible assets, cash, obligation and commercial paper
 * **net.corda.client.jfx**: support for Java FX UI
 * **net.corda.client.mock**: client mock utilities
 * **Cordformation**: Gradle integration plugins

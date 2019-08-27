@@ -11,7 +11,7 @@
 
 std::ostream&
 operator << (std::ostream& stream, pn_data_t * data_) {
-    auto type = pn_data_type(data_);
+    auto type = pn_data_type (data_);
     stream << std::setw (2) << type << " " <<  pn_type_name (type);
 
     switch (type) {
@@ -89,14 +89,14 @@ proton::is_ulong (pn_data_t * data_) {
     auto t = pn_data_type(data_);
     if (t != PN_ULONG) {
         std::stringstream ss;
-        ss << "Expected an unsigned long but recieved " << pn_type_name (t);
+        ss << "Expected an unsigned long but received " << pn_type_name (t);
         throw std::runtime_error (ss.str());
     }
 }
 
 /******************************************************************************/
 
-inline void
+void
 proton::is_symbol (pn_data_t * data_) {
     if (pn_data_type(data_) != PN_SYMBOL) {
         throw std::runtime_error ("Expected an unsigned long");
@@ -114,7 +114,7 @@ proton::is_list (pn_data_t * data_) {
 
 /******************************************************************************/
 
-inline void
+void
 proton::is_string (pn_data_t * data_, bool allowNull) {
     if (pn_data_type(data_) != PN_STRING) {
         if (allowNull && pn_data_type(data_) != PN_NULL) {
@@ -141,9 +141,9 @@ proton::get_string (pn_data_t * data_, bool allowNull) {
 template<>
 std::string
 proton::get_symbol<std::string> (pn_data_t * data_) {
-        is_symbol (data_);
-        auto symbol = pn_data_get_symbol(data_);
-        return std::string (symbol.start, symbol.size);
+    is_symbol (data_);
+    auto symbol = pn_data_get_symbol(data_);
+    return std::string (symbol.start, symbol.size);
 }
 
 template<>
@@ -173,8 +173,8 @@ proton::
 auto_enter::auto_enter (pn_data_t * data_, bool next_)
     : m_data (data_)
 {
-    proton::pn_data_enter(m_data);
-    if (next_) pn_data_next(m_data);
+    proton::pn_data_enter (m_data);
+    if (next_) pn_data_next (m_data);
 }
 
 /******************************************************************************/
@@ -224,7 +224,7 @@ auto_list_enter::auto_list_enter (pn_data_t * data_, bool next_)
 
 proton::
 auto_list_enter::~auto_list_enter() {
-    pn_data_exit(m_data);
+    pn_data_exit (m_data);
 }
 
 /******************************************************************************/
@@ -321,3 +321,16 @@ readAndNext<long> (
 
 /******************************************************************************/
 
+template<>
+u_long
+proton::
+readAndNext<u_long > (
+        pn_data_t * data_,
+        bool tolerateDeviance_
+) {
+    long rtn = pn_data_get_ulong (data_);
+    pn_data_next(data_);
+    return rtn;
+}
+
+/******************************************************************************/

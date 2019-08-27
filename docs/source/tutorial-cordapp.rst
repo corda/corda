@@ -218,9 +218,9 @@ Building the example CorDapp
 * Each node in the ``nodes`` folder will have the following structure:
 
   .. sourcecode:: none
-      
+
       . nodeName
-      ├── additional-node-infos  // 
+      ├── additional-node-infos  //
       ├── certificates
       ├── corda.jar              // The Corda node runtime
       ├── cordapps               // The node's CorDapps
@@ -234,15 +234,15 @@ Building the example CorDapp
       ├── nodeInfo-<HASH>        // The hash will be different each time you generate a node
       └── persistence.mv.db      // The node's database
 
-.. note:: ``deployNodes`` is a utility task to create an entirely new set of nodes for testing your CorDapp. In production, 
-   you would instead create a single node as described in :doc:`generating-a-node` and build your CorDapp JARs as described 
+.. note:: ``deployNodes`` is a utility task to create an entirely new set of nodes for testing your CorDapp. In production,
+   you would instead create a single node as described in :doc:`generating-a-node` and build your CorDapp JARs as described
    in :doc:`cordapp-build-systems`.
-      
+
 Running the example CorDapp
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Start the nodes by running the following command from the root of the ``cordapp-example`` folder:
 
-* Unix/Mac OSX: ``workflows-kotlin/build/nodes/runnodes`` 
+* Unix/Mac OSX: ``workflows-kotlin/build/nodes/runnodes``
 * Windows: ``call workflows-kotlin\build\nodes\runnodes.bat``
 
 Each Spring Boot server needs to be started in its own terminal/command prompt, replace X with A, B and C:
@@ -285,7 +285,7 @@ It usually takes around 60 seconds for the nodes to finish starting up. Each nod
 
 Running the example CorDapp from IntelliJ
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-* Load the project by opening the project folder (Do not use "Import Project" functionality by IntelliJ because it will overwrite the pre-existing configuration) 
+* Load the project by opening the project folder (Do not use "Import Project" functionality by IntelliJ because it will overwrite the pre-existing configuration)
 
 * Follow the prompt to ``import Gradle project``
 
@@ -335,7 +335,7 @@ To create an IOU between PartyA and PartyB, run the following command from the c
 
 .. sourcecode:: bash
 
-   curl -X POST -H 'Content-Type: application/x-www-form-urlencoded' 'http://localhost:50005/api/example/create-iou?iouValue=1&partyName=O=PartyB,L=New%20York,C=US'
+   curl -i -X POST 'http://localhost:50005/api/example/create-iou?iouValue=12&partyName=O=PartyC,L=Paris,C=FR' -H 'Content-Type: application/x-www-form-urlencoded'
 
 Note that both PartyA's port number (``50005``) and PartyB are referenced in the PUT request path. This command
 instructs PartyA to agree an IOU with PartyB. Once the process is complete, both nodes will have a signed, notarised
@@ -457,11 +457,11 @@ The nodes can be configured to communicate as a network even when distributed ac
 
 * After starting each node, the nodes will be able to see one another and agree IOUs among themselves
 
-.. warning:: The bootstrapper must be run **after** the ``node.conf`` files have been modified, but **before** the nodes 
+.. warning:: The bootstrapper must be run **after** the ``node.conf`` files have been modified, but **before** the nodes
    are distributed across machines. Otherwise, the nodes will not be able to communicate.
 
 .. note:: If you are using H2 and wish to use the same ``h2port`` value for two or more nodes, you must only assign them that
-   value after the nodes have been moved to their individual machines. The initial bootstrapping process requires access to 
+   value after the nodes have been moved to their individual machines. The initial bootstrapping process requires access to
    the nodes' databases and if two nodes share the same H2 port, the process will fail.
 
 Testing your CorDapp
