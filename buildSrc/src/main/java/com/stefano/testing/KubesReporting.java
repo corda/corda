@@ -156,8 +156,6 @@ public class KubesReporting extends DefaultTask {
         } finally {
             stoppable(resultsProvider).stop();
         }
-
-
     }
 
     public TestResultsProvider createAggregateProvider() {
