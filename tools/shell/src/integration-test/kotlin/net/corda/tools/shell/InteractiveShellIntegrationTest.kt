@@ -1,19 +1,34 @@
 package net.corda.tools.shell
 
+import co.paralleluniverse.fibers.Suspendable
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.type.TypeFactory
 import com.google.common.io.Files
 import com.jcraft.jsch.ChannelExec
 import com.jcraft.jsch.JSch
 import com.nhaarman.mockito_kotlin.any
 import com.nhaarman.mockito_kotlin.doAnswer
 import com.nhaarman.mockito_kotlin.mock
+import net.corda.client.jackson.JacksonSupport
 import net.corda.client.rpc.RPCException
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.StartableByRPC
+import net.corda.core.contracts.*
+import net.corda.core.flows.*
+import net.corda.core.identity.AbstractParty
+import net.corda.core.identity.Party
+import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
+import net.corda.core.internal.inputStream
+import net.corda.core.internal.list
+import net.corda.core.internal.messaging.InternalCordaRPCOps
 import net.corda.core.messaging.ClientRpcSslOptions
 import net.corda.core.messaging.CordaRPCOps
+import net.corda.core.messaging.startFlow
+import net.corda.core.transactions.LedgerTransaction
+import net.corda.core.transactions.SignedTransaction
+import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.getOrThrow
+import net.corda.node.internal.NodeStartup
 import net.corda.node.services.Permissions
 import net.corda.node.services.Permissions.Companion.all
 import net.corda.node.services.config.shell.toShellConfig
@@ -21,10 +36,7 @@ import net.corda.node.utilities.createKeyPairAndSelfSignedTLSCertificate
 import net.corda.node.utilities.saveToKeyStore
 import net.corda.node.utilities.saveToTrustStore
 import net.corda.nodeapi.BrokerRpcSslOptions
-import net.corda.testing.core.ALICE_NAME
-import net.corda.testing.core.BOB_NAME
-import net.corda.testing.core.DUMMY_BANK_A_NAME
-import net.corda.testing.core.DUMMY_NOTARY_NAME
+import net.corda.testing.core.*
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.driver.internal.NodeHandleInternal
@@ -38,12 +50,14 @@ import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.bouncycastle.util.io.Streams
 import org.crsh.text.RenderPrintWriter
-import org.junit.ClassRule
-import org.junit.Ignore
-import org.junit.Rule
-import org.junit.Test
+import org.junit.*
 import org.junit.rules.TemporaryFolder
+import java.util.*
+import java.util.zip.ZipInputStream
 import javax.security.auth.x500.X500Principal
+import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class InteractiveShellIntegrationTest : IntegrationTest() {
@@ -58,6 +72,13 @@ class InteractiveShellIntegrationTest : IntegrationTest() {
     val tempFolder = TemporaryFolder()
 
     private val testName = X500Principal("CN=Test,O=R3 Ltd,L=London,C=GB")
+
+    private lateinit var inputObjectMapper: ObjectMapper
+
+    @Before
+    fun setup() {
+        inputObjectMapper = objectMapperWithClassLoader(InteractiveShell.getCordappsClassloader())
+    }
 
     @Test
     fun `shell should not log in with invalid credentials`() {
@@ -384,6 +405,70 @@ class InteractiveShellIntegrationTest : IntegrationTest() {
         }
         assertThat(successful).isTrue()
     }
+
+    @Test
+    fun `dumpCheckpoints creates zip with json file for suspended flow`() {
+        val user = User("u", "p", setOf(all()))
+        driver {
+            val aliceNode = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user), startInSameProcess = true).getOrThrow()
+            val bobNode = startNode(providedName = BOB_NAME, rpcUsers = listOf(user), startInSameProcess = true).getOrThrow()
+            bobNode.stop()
+
+            // Create logs directory since the driver is not creating it
+            (aliceNode.baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME).createDirectories()
+
+            val conf = ShellConfiguration(commandsDirectory = Files.createTempDir().toPath(),
+                    user = user.username, password = user.password,
+                    hostAndPort = aliceNode.rpcAddress)
+            InteractiveShell.startShell(conf)
+            // Setup and configure some mocks required by InteractiveShell.runFlowByNameFragment()
+            val output = mock<RenderPrintWriter> {
+                on { println(any<String>()) } doAnswer {
+                    val line = it.arguments[0]
+                    assertNotEquals("Please try 'man run' to learn what syntax is acceptable", line)
+                }
+            }
+
+            val linearId = UniqueIdentifier(id = UUID.fromString("7c0719f0-e489-46e8-bf3b-ee203156fc7c"))
+            aliceNode.rpc.startFlow(
+                ::MyFlow, MyState(
+                    "some random string",
+                    linearId,
+                    listOf(aliceNode.nodeInfo.singleIdentity(), bobNode.nodeInfo.singleIdentity())
+                ), bobNode.nodeInfo.singleIdentity()
+            )
+
+            Thread.sleep(5000)
+
+            InteractiveShell.runRPCFromString(
+                    listOf("dumpCheckpoints"), output, mock(), aliceNode.rpc as InternalCordaRPCOps, inputObjectMapper)
+
+            val checkpointDumperOutputZip = (aliceNode.baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME).list()
+                    .first { it.toString().contains("checkpoints_dump-") }
+
+            val bytes = ZipInputStream((checkpointDumperOutputZip.inputStream())).use { zip ->
+                zip.nextEntry
+                zip.readBytes()
+            }
+            val objectMapper = ObjectMapper()
+            val json = objectMapper.readTree(bytes)
+            assertNotNull(json["flowId"].asText())
+            assertEquals("net.corda.tools.shell.MyFlow", json["topLevelFlowClass"].asText())
+            assertEquals(linearId.id.toString(), json["topLevelFlowLogic"]["myState"]["linearId"]["id"].asText())
+            assertEquals(4, json["flowCallStackSummary"].size())
+            assertEquals(4, json["flowCallStack"].size())
+            assertEquals(bobNode.nodeInfo.singleIdentity().toString(), json["suspendedOn"]["sendAndReceive"].first()["session"]["peer"].asText())
+            assertEquals(SignedTransaction::class.qualifiedName, json["suspendedOn"]["sendAndReceive"].first()["sentPayloadType"].asText())
+        }
+    }
+
+    private fun objectMapperWithClassLoader(classLoader: ClassLoader?): ObjectMapper {
+        val objectMapper = JacksonSupport.createNonRpcMapper()
+        val tf = TypeFactory.defaultInstance().withClassLoader(classLoader)
+        objectMapper.typeFactory = tf
+
+        return objectMapper
+    }
 }
 
 @Suppress("UNUSED")
@@ -412,3 +497,45 @@ class BurbleFlow : FlowLogic<Unit>() {
         println("NO OP! (Burble)")
     }
 }
+
+@InitiatingFlow
+@StartableByRPC
+class MyFlow(private val myState: MyState, private val party: Party): FlowLogic<Unit>() {
+    @Suspendable
+    override fun call() {
+        val tx = TransactionBuilder(serviceHub.networkMapCache.notaryIdentities.first()).apply {
+            addOutputState(myState)
+            addCommand(MyContract.Create(), listOf(ourIdentity, party).map(Party::owningKey))
+        }
+        val sessions = listOf(initiateFlow(party))
+        val stx = serviceHub.signInitialTransaction(tx)
+        subFlow(CollectSignaturesFlow(stx, sessions))
+        throw IllegalStateException("The test should not get here")
+    }
+}
+
+@InitiatedBy(MyFlow::class)
+class MyResponder(private val session: FlowSession): FlowLogic<Unit>() {
+    override fun call() {
+        val signTxFlow = object : SignTransactionFlow(session) {
+            override fun checkTransaction(stx: SignedTransaction) {
+
+            }
+        }
+        subFlow(signTxFlow)
+        throw IllegalStateException("The test should not get here")
+    }
+}
+
+class MyContract: Contract {
+    class Create : CommandData
+    override fun verify(tx: LedgerTransaction) {}
+}
+
+@BelongsToContract(MyContract::class)
+data class MyState(
+    val data: String,
+    override val linearId: UniqueIdentifier,
+    override val participants: List<AbstractParty>
+) : LinearState
+

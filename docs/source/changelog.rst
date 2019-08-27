@@ -17,6 +17,10 @@ Unreleased
   * The cash selection logic. ``AbstractCashSelection`` is now in net.corda.finance.contracts.asset so any custom implementations must now be
     defined in ``META-INF/services/net.corda.finance.workflows.asset.selection.AbstractCashSelection``.
 
+* Information about checkpointed flows can be retrieved from the shell. Calling ``dumpCheckpoints`` will create a zip file inside the node's
+  ``log`` directory. This zip will contain a JSON representation of each checkpointed flow. This information can then be used to determine the
+  state of stuck flows or flows that experienced internal errors and were kept in the node for manual intervention.
+
   * The jackson annotations on ``Expression`` have been removed. You will need to use ``FinanceJSONSupport.registerFinanceJSONMappers`` if
     you wish to preserve the JSON format for this class.
 

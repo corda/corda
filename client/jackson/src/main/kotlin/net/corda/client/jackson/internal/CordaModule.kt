@@ -3,7 +3,7 @@
 package net.corda.client.jackson.internal
 
 import com.fasterxml.jackson.annotation.*
-import com.fasterxml.jackson.annotation.JsonCreator.Mode.*
+import com.fasterxml.jackson.annotation.JsonCreator.Mode.DISABLED
 import com.fasterxml.jackson.annotation.JsonInclude.Include
 import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.core.JsonParseException
@@ -34,6 +34,7 @@ import net.corda.core.internal.DigitalSignatureWithCert
 import net.corda.core.internal.createComponentGroups
 import net.corda.core.internal.kotlinObjectInstance
 import net.corda.core.node.NodeInfo
+import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
@@ -43,7 +44,8 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.parseAsHex
 import net.corda.core.utilities.toHexString
 import net.corda.serialization.internal.AllWhitelist
-import net.corda.serialization.internal.amqp.*
+import net.corda.serialization.internal.amqp.SerializerFactoryBuilder
+import net.corda.serialization.internal.amqp.hasCordaSerializable
 import java.math.BigDecimal
 import java.security.PublicKey
 import java.security.cert.CertPath
@@ -97,7 +99,7 @@ private class CordaSerializableBeanSerializerModifier : BeanSerializerModifier()
                                   beanDesc: BeanDescription,
                                   beanProperties: MutableList<BeanPropertyWriter>): MutableList<BeanPropertyWriter> {
         val beanClass = beanDesc.beanClass
-        if (hasCordaSerializable(beanClass) && beanClass.kotlinObjectInstance == null) {
+        if (hasCordaSerializable(beanClass) && beanClass.kotlinObjectInstance == null && !SerializeAsToken::class.java.isAssignableFrom(beanClass)) {
             val typeInformation = serializerFactory.getTypeInformation(beanClass)
             val properties = typeInformation.propertiesOrEmptyMap
             val amqpProperties = properties.mapNotNull { (name, property) ->
