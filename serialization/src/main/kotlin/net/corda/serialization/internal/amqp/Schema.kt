@@ -18,6 +18,11 @@ val amqpMagic = CordaSerializationMagic("corda".toByteArray() + byteArrayOf(1, 0
 fun typeDescriptorFor(typeId: TypeIdentifier): Symbol = Symbol.valueOf("$DESCRIPTOR_DOMAIN:${AMQPTypeIdentifiers.nameForType(typeId)}")
 fun typeDescriptorFor(type: Type): Symbol = typeDescriptorFor(forGenericType(type))
 
+/**
+ * Repackages a naked, non-primitive [obj] as a [DescribedType]. If [obj] is primitive, [Binary] or already
+ * an instance of [DescribedType]] then it is returned unchanged. This allows Corda to search for a serializer
+ * capable of handling instances of [type].
+ */
 fun redescribe(obj: Any?, type: Type): Any? {
     return if (obj == null || obj is DescribedType || obj is Binary || forGenericType(type).run { isPrimitive(this) || this == TopType }) {
         obj

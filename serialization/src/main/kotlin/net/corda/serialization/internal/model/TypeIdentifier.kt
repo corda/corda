@@ -210,7 +210,8 @@ sealed class TypeIdentifier {
         override fun getLocalType(classLoader: ClassLoader): Type {
             // We need to invoke ClassLoader.loadClass() directly, because
             // the JVM will complain if Class.forName() returns a class
-            // that has a name other than the requested one.
+            // that has a name other than the requested one. This will happen
+            // for "transformative" class loaders, i.e. `A` -> `sandbox.A`.
             val rawType = classLoader.loadClass(name)
             if (rawType.typeParameters.size != parameters.size) {
                 throw IncompatibleTypeIdentifierException(

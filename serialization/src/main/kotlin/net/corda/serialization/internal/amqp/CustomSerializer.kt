@@ -30,7 +30,8 @@ abstract class CustomSerializer<T : Any> : AMQPSerializer<T>, SerializerFor {
     open val additionalSerializers: Iterable<CustomSerializer<out Any>> = emptyList()
 
     /**
-     * This custom serializer is also allowed to deserialize these classes.
+     * This custom serializer is also allowed to deserialize these classes. This allows us
+     * to deserialize objects into completely different types, e.g. `A` -> `sandbox.A`.
      */
     open val deserializationAliases: Set<Class<*>> = emptySet()
 
@@ -57,6 +58,12 @@ abstract class CustomSerializer<T : Any> : AMQPSerializer<T>, SerializerFor {
     abstract fun writeDescribedObject(obj: T, data: Data, type: Type, output: SerializationOutput,
                                       context: SerializationContext)
 
+    /**
+     * [CustomSerializerRegistry.findCustomSerializer] will invoke this method on the [CustomSerializer]
+     * that it selects to give that serializer an opportunity to customise its behaviour. The serializer
+     * can also return `null` here, in which case [CustomSerializerRegistry] will proceed as if no
+     * serializer is available for [declaredType].
+     */
     open fun specialiseFor(declaredType: Type): AMQPSerializer<T>? = this
 
     /**
