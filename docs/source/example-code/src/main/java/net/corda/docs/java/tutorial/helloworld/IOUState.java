@@ -10,6 +10,7 @@ import java.util.List;
 import net.corda.core.identity.Party;
 
 // Replace TemplateState's definition with:
+@BelongsToContract(TemplateContract.class)
 public class IOUState implements ContractState {
     private final int value;
     private final Party lender;

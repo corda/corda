@@ -80,7 +80,7 @@ annotation out will lead to some very weird error messages!
 
 There are also a few more annotations, on the ``FlowLogic`` subclass itself:
 
-  * ``@InitiatingFlow`` means that this flow is part of a flow pair and that it triggers the other side to run the
+  * ``@InitiatingFlow`` means that this flow is part of a flow pair and that it triggers the other side to run
     the counterpart flow (which in our case is the ``IOUFlowResponder`` defined below).
   * ``@StartableByRPC`` allows the node owner to start this flow via an RPC call
 
@@ -90,7 +90,7 @@ issuing the ``IOUState`` onto a ledger.
 Choosing a notary
 ^^^^^^^^^^^^^^^^^
 Every transaction requires a notary to prevent double-spends and serve as a timestamping authority. The first thing we
-do in our flow is retrieve the a notary from the node's ``ServiceHub``. ``ServiceHub.networkMapCache`` provides
+do in our flow is retrieve a notary from the node's ``ServiceHub``. ``ServiceHub.networkMapCache`` provides
 information about the other nodes on the network and the services that they offer.
 
 .. note::

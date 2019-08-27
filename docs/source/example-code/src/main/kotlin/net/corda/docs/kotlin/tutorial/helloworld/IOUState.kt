@@ -9,6 +9,7 @@ import net.corda.core.contracts.ContractState
 import net.corda.core.identity.Party
 
 // Replace TemplateState's definition with:
+@BelongsToContract(TemplateContract::class)
 class IOUState(val value: Int,
                val lender: Party,
                val borrower: Party) : ContractState {

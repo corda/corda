@@ -40,7 +40,7 @@ service.
             p2pPort 10005
             rpcPort 10006
             webPort 10007
-            rpcUsers = [[ user: "user1", "password": "test", "permissions": ["ALL]]]
+            rpcUsers = [[ user: "user1", "password": "test", "permissions": ["ALL"]]]
         }
         node {
             name "O=PartyB,L=New York,C=US"
@@ -153,7 +153,7 @@ The vaults of PartyA and PartyB should both display the following output:
     - ref:
         txhash: "5CED068E790A347B0DD1C6BB5B2B463406807F95E080037208627565E6A2103B"
         index: 0
-      contractStateClassName: "com.template.state.IOUState"
+      contractStateClassName: "com.template.states.IOUState"
       recordedTime: 1506415268.875000000
       consumedTime: null
       status: "UNCONSUMED"

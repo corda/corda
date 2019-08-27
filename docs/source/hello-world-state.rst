@@ -77,6 +77,7 @@ If you're following along in Java, you'll also need to rename ``TemplateState.ja
 
 To define ``IOUState``, we've made the following changes:
 
+* We've added the annotation ``@BelongsToContract`` as a contract state must be tied to a contract since Corda v4
 * We've renamed the ``TemplateState`` class to ``IOUState``
 * We've added properties for ``value``, ``lender`` and ``borrower``, along with the required getters and setters in
   Java:
