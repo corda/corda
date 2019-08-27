@@ -29,7 +29,7 @@ object AMQPTypeIdentifiers {
             Float::class to "float",
             Double::class to "double",
             Decimal32::class to "decimal32",
-            Decimal64::class to "decimal62",
+            Decimal64::class to "decimal64",
             Decimal128::class to "decimal128",
             Date::class to "timestamp",
             UUID::class to "uuid",
