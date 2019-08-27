@@ -55,6 +55,11 @@ Version 4.2
 * :doc:`design/data-model-upgrades/package-namespace-ownership` configurations can be now be set as described in
   :ref:`node_package_namespace_ownership`, when using the Cordformation plugin version 4.0.43.
 
+Unreleased
+----------
+
+* Fix a bug in Corda 4.0 that combined commands in ``TransactionBuilder`` if they only differed by the signers list.  The behaviour is now consistent with prior Corda releases.
+
 * Disabled the default loading of ``hibernate-validator`` as a plugin by hibernate when a CorDapp depends on it. This change will in turn fix the
   (https://github.com/corda/corda/issues/4444) issue, because nodes will no longer need to add ``hibernate-validator`` to the ``\libs`` folder.
   For nodes that already did that, it can be safely removed when the latest Corda is installed.

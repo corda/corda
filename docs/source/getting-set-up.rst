@@ -67,6 +67,16 @@ The set-up instructions are available for the following platforms:
 
 .. _windows-label:
 
+.. note:: These setup instructions will guide you on how to install the Oracle JDK. Each JDK can be found on their respective sites:
+
+          * `Oracle <http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html>`_
+
+          * `Amazon Corretto <https://docs.aws.amazon.com/corretto/latest/corretto-8-ug/downloads-list.html>`_
+
+          * `Red Hat OpenJDK <https://developers.redhat.com/products/openjdk/download/>`_
+
+          * `Zulu OpenJDK <https://www.azul.com/downloads/zulu/>`_
+
 Windows
 -------
 
