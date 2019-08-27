@@ -93,6 +93,9 @@ Let's write a contract that enforces these constraints. We'll do this by modifyi
 
 If you're following along in Java, you'll also need to rename ``TemplateContract.java`` to ``IOUContract.java``.
 
+If you attempt to run the code and create an IOU the contract constraints will trigger, and the IOU creation will fail
+because we have not yet updated the ``IOUFlow`` to obey the contract.  That is covered on the next page.
+
 Let's walk through this code step by step.
 
 The Create command
