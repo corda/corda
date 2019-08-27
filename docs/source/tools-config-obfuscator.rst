@@ -29,7 +29,7 @@ a production server and to which we know the hardware address.
 
 .. code:: bash
 
-    config-obfuscator [-hiV] [-w[=<writeToFile>]] CONFIG_FILE [HARDWARE_ADDRESS] [SEED]
+    config-obfuscator [-hiV] [-w[=<writeToFile>]] CONFIG_FILE [HARDWARE_ADDRESS]
 
 Where:
   - ``CONFIG_FILE`` is the configuration file to obfuscate.
@@ -37,8 +37,6 @@ Where:
     which the configuration file resides. By default, the MAC address of the
     running machine will be used. Supplying ``DEFAULT`` will explicitly
     use the default value.
-  - ``SEED`` is the byte array seeding the encryption key used for obfuscation. Leave blank or supply
-    ``DEFAULT`` to use the default seed bytes.
   - ``-w=[<writeToFile>]`` is a flag to indicate that the tool should write the obfuscated output to
     disk, using the same file name as the input (if left blank and provided at the end of the command line),
     or the provided file name.
@@ -62,7 +60,7 @@ of the command:
     # No output file provided
     $ java -jar corda-tools-config-obfuscator-<version>.jar node_template.conf -w
 
-Note also that ``HARDWARE_ADDRESS`` and ``SEED`` are optional.
+Note also that ``HARDWARE_ADDRESS`` is optional.
 
 
 Configuration directives
