@@ -1,15 +1,30 @@
 package com.stefano.testing
 
+import org.hamcrest.CoreMatchers
+import org.junit.Assert
+import org.junit.Test
+
+import java.util.stream.IntStream
+
 class ListTestsTest {
 
-    public static void main(String[] args) {
-        def lt = new ListTests()
+    @Test
+    void shouldAllocateTests() {
 
-        lt.allTests = Arrays.asList("1", "2", "3", "4", "5", "6", "7", "8")
-        println lt.getTestsForFork(0, 4, 0)
-        println lt.getTestsForFork(1, 4, 0)
-        println lt.getTestsForFork(2, 4, 0)
-        println lt.getTestsForFork(3, 4, 0)
+        def tests = IntStream.range(0, 39).mapToObj { i -> "Test.method$i" }.collect { it -> it }
+        ListShufflerAndAllocator testLister = new ListShufflerAndAllocator(tests)
+
+
+        def forks = 17
+
+        List<String> listOfLists = new ArrayList<>()
+        for (int i = 0; i < forks; i++) {
+            listOfLists.addAll(testLister.getTestsForFork(i, forks, 0))
+        }
+
+//        Assert.assertThat(listOfLists.size(), CoreMatchers.is(tests.size()))
+//        Assert.assertThat(listOfLists.toSet().size(), CoreMatchers.is(tests.size()))
+
     }
 
 }

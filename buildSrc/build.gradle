@@ -37,4 +37,6 @@ dependencies {
     compile 'io.fabric8:kubernetes-client:4.4.1'
     compile group: 'commons-codec', name: 'commons-codec', version: '1.13'
     compile group: "io.github.classgraph", name: "classgraph", version: class_graph_version
+
+    testCompile "junit:junit:$junit_version"
 }

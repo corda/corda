@@ -8,6 +8,36 @@ import org.gradle.api.tasks.TaskAction
 
 import java.util.stream.Collectors
 
+class ListShufflerAndAllocator {
+
+    private final List<String> tests
+
+    public ListShufflerAndAllocator(List<String> tests) {
+        this.tests = new ArrayList<>(tests)
+    }
+
+    def List<String> getTestsForFork(int fork, int forks, Integer seed) {
+        Random shuffler = new Random(seed)
+        List<String> copy = new ArrayList(tests)
+        while (copy.size() < forks) {
+            //pad the list
+            copy.add(null)
+        }
+        Collections.shuffle(copy, shuffler)
+        int numberOfTestsPerFork = Math.max((copy.size() / forks).intValue(), 1)
+        int remainder = copy.size() % numberOfTestsPerFork
+
+        def consumedTests = numberOfTestsPerFork * forks
+
+        def ourStartIdx = numberOfTestsPerFork * fork
+        def ourEndIdx = ourStartIdx + numberOfTestsPerFork
+        def ourSupplementaryIdx = consumedTests + fork
+
+        return copy
+
+    }
+}
+
 class ListTests extends DefaultTask {
 
     FileCollection scanClassPath
@@ -15,34 +45,12 @@ class ListTests extends DefaultTask {
 
 
     def getTestsForFork(int fork, int forks, Integer seed) {
-
         def gitSha = new BigInteger(project.hasProperty("corda_revision") ? project.property("corda_revision").toString() : "0", 36)
-
         if (fork >= forks) {
             throw new IllegalArgumentException("requested shard ${fork + 1} for total shards ${forks}")
         }
-
-        Random shuffler = new Random(seed ? (seed + ((String) this.getPath()).hashCode() + gitSha.intValue()) : 0)
-        List<String> copy = new ArrayList(allTests)
-        while (copy.size() < forks) {
-            //pad the list
-            copy.add(null)
-        }
-        Collections.shuffle(copy, shuffler)
-        int numberOfTestsPerFork = Math.max((copy.size() / forks).intValue(), 1)
-        def listOfLists = copy.collate(numberOfTestsPerFork)
-
-        if (fork >= listOfLists.size()) {
-            return Collections.emptyList()
-        } else {
-            //special edge case with some remainder
-            if (fork == forks - 1 && listOfLists.size() == forks + 1) {
-                return (listOfLists[fork] + listOfLists[forks]).findAll { test -> test != null }
-
-            } else {
-                return listOfLists[fork].findAll { test -> test != null }
-            }
-        }
+        def seedToUse = seed ? (seed + ((String) this.getPath()).hashCode() + gitSha.intValue()) : 0
+        return new ListShufflerAndAllocator(allTests).getTestsForFork(fork, forks, seedToUse)
     }
 
     @TaskAction
