@@ -106,7 +106,7 @@ class NodeVaultService(
                 if (!seen) {
                     val contractTypes = deriveContractTypes(concreteType)
                     contractTypes.map {
-                        val contractStateType = contractStateTypeMappings.getOrPut(it.name) { mutableSetOf() }
+                        val contractStateType = contractStateTypeMappings.getOrPut(it.name) { CopyOnWriteArraySet() }
                         contractStateType.add(concreteType.name)
                     }
                 }
@@ -743,7 +743,7 @@ class NodeVaultService(
             concreteType?.let {
                 val contractTypes = deriveContractTypes(it)
                 contractTypes.map {
-                    val contractStateType = contractStateTypeMappings.getOrPut(it.name) { mutableSetOf() }
+                    val contractStateType = contractStateTypeMappings.getOrPut(it.name) { CopyOnWriteArraySet() }
                     contractStateType.add(concreteType.name)
                 }
             }
