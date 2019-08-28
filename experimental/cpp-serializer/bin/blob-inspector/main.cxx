@@ -75,7 +75,6 @@ data_and_stop(std::ifstream & f_, ssize_t sz) {
                 << reader->dump ("{ Parsed", d, envelope->schema())->dump()
                 << " }" << std::endl;
         }
-
     }
 }
 
@@ -104,7 +103,9 @@ main (int argc, char **argv) {
     if (encoding == amqp::DATA_AND_STOP) {
         data_and_stop(f, results.st_size - 8);
     } else {
-        std::cerr << "BAD ENCODING " << encoding << " != " << amqp::DATA_AND_STOP << std::endl;
+        std::cerr << "BAD ENCODING " << encoding << " != "
+            << amqp::DATA_AND_STOP << std::endl;
+
         return EXIT_FAILURE;
     }
 

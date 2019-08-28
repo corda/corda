@@ -329,7 +329,7 @@ If an attachment constraint cannot be resolved, a ``MissingContractAttachments``
 ``MissingContractAttachments`` exceptions:
 
 Not setting CorDapp packages in tests
-*************************************
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 You are running a test and have not specified the CorDapp packages to scan.
 When using ``MockNetwork`` ensure you have provided a package containing the contract class in ``MockNetworkParameters``. See :doc:`api-testing`.
@@ -368,14 +368,14 @@ Example of creation of two Cordapps with Finance App Flows and Finance App Contr
         );
 
 Starting a node missing CorDapp(s)
-**********************************
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 When running the Corda node ensure all CordDapp JARs are placed in ``cordapps`` directory of each node.
 By default Gradle Cordform task ``deployNodes`` copies all JARs if CorDapps to deploy are specified.
 See :doc:`generating-a-node` for detailed instructions.
 
 Wrong fully-qualified contract name
-***********************************
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 You are specifying the fully-qualified name of the contract incorrectly. For example, you've defined ``MyContract`` in
 the package ``com.mycompany.myapp.contracts``, but the fully-qualified contract name you pass to the

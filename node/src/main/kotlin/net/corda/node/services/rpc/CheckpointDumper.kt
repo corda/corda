@@ -362,9 +362,12 @@ class CheckpointDumper(private val checkpointStorage: CheckpointStorage, private
         override fun changeProperties(config: SerializationConfig,
                                       beanDesc: BeanDescription,
                                       beanProperties: MutableList<BeanPropertyWriter>): MutableList<BeanPropertyWriter> {
-            // Remove references to any node singletons
-            beanProperties.removeIf { it.type.isTypeOrSubTypeOf(SerializeAsToken::class.java) }
-            if (FlowLogic::class.java.isAssignableFrom(beanDesc.beanClass)) {
+            if (SerializeAsToken::class.java.isAssignableFrom(beanDesc.beanClass)) {
+                // Do not serialise node singletons
+                // TODO This will cause the singleton to appear as an empty object. Ideally we don't want it to appear at all but this will
+                // have to do for now.
+                beanProperties.clear()
+            } else if (FlowLogic::class.java.isAssignableFrom(beanDesc.beanClass)) {
                 beanProperties.removeIf {
                     it.type.isTypeOrSubTypeOf(ProgressTracker::class.java) || it.name == "_stateMachine" || it.name == "deprecatedPartySessionMap"
                 }

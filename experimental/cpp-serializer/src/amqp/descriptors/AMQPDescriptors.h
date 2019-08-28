@@ -8,9 +8,12 @@
 #include <memory>
 #include <iostream>
 
+#include "types.h"
 #include "amqp/AMQPDescribed.h"
-#include "amqp/AMQPDescriptor.h"
+#include "AMQPDescriptor.h"
 #include "amqp/schema/Descriptor.h"
+#include "proton/proton_wrapper.h"
+#include "AMQPDescriptorRegistory.h"
 
 /******************************************************************************/
 
@@ -18,116 +21,26 @@ struct pn_data_t;
 
 /******************************************************************************/
 
-namespace amqp::internal {
+namespace amqp::internal::descriptors {
 
-    class EnvelopeDescriptor : public AMQPDescriptor {
-        public :
-            EnvelopeDescriptor() : AMQPDescriptor() { }
+    /**
+     * Look up a described type by its ID in the AMQPDescriptorRegistry and
+     * return the corresponding schema type. Specialised below to avoid
+     * the cast and re-owning of the unigue pointer when we're happy
+     * with a simple uPtr<AMQPDescribed>
+     */
+    template<class T>
+    uPtr <T>
+    dispatchDescribed(pn_data_t *data_) {
+        proton::is_described(data_);
+        proton::auto_enter p(data_);
+        proton::is_ulong(data_);
 
-            EnvelopeDescriptor(const std::string & symbol_, int val_)
-                : AMQPDescriptor(symbol_, val_)
-            { }
+        auto id = pn_data_get_ulong(data_);
 
-            ~EnvelopeDescriptor() final = default;
-
-            std::unique_ptr<AMQPDescribed> build (pn_data_t *) const override;
-    };
-
-}
-
-/******************************************************************************/
-
-namespace amqp::internal {
-
-    class SchemaDescriptor : public AMQPDescriptor {
-        public :
-            SchemaDescriptor() : AMQPDescriptor() { }
-
-            SchemaDescriptor(const std::string & symbol_, int val_)
-                : AMQPDescriptor(symbol_, val_)
-            { }
-
-            ~SchemaDescriptor() final = default;
-
-            std::unique_ptr<AMQPDescribed> build (pn_data_t *) const override;
-    };
-
-}
-
-/******************************************************************************/
-
-namespace amqp::internal {
-
-    class ObjectDescriptor : public AMQPDescriptor {
-        public :
-            ObjectDescriptor() : AMQPDescriptor() { }
-
-            ObjectDescriptor(const std::string & symbol_, int val_)
-                : AMQPDescriptor(symbol_, val_)
-            { }
-
-            ~ObjectDescriptor() final = default;
-
-            std::unique_ptr<AMQPDescribed> build (pn_data_t *) const override;
-    };
-
-}
-
-/******************************************************************************/
-
-namespace amqp::internal {
-
-    class FieldDescriptor : public AMQPDescriptor {
-        public :
-            FieldDescriptor() : AMQPDescriptor() { }
-
-            FieldDescriptor(const std::string & symbol_, int val_)
-                : AMQPDescriptor(symbol_, val_)
-            { }
-
-            ~FieldDescriptor() final = default;
-
-            std::unique_ptr<AMQPDescribed> build (pn_data_t *) const override;
-    };
-
-}
-
-/******************************************************************************/
-
-namespace amqp::internal {
-
-    class CompositeDescriptor : public AMQPDescriptor {
-        public :
-            CompositeDescriptor() : AMQPDescriptor() { }
-
-            CompositeDescriptor(const std::string & symbol_, int val_)
-                : AMQPDescriptor(symbol_, val_)
-            { }
-
-            ~CompositeDescriptor() final = default;
-
-            std::unique_ptr<AMQPDescribed> build (pn_data_t *) const override;
-    };
-
-}
-
-/******************************************************************************/
-
-namespace amqp::internal {
-
-    class RestrictedDescriptor : public AMQPDescriptor {
-        public :
-            RestrictedDescriptor() : AMQPDescriptor() { }
-
-            RestrictedDescriptor(const std::string & symbol_, int val_)
-                : AMQPDescriptor(symbol_, val_)
-            { }
-
-            ~RestrictedDescriptor() final = default;
-
-            std::unique_ptr<AMQPDescribed> build (pn_data_t *) const override;
-    };
-
+        return uPtr<T>(
+                static_cast<T *>(amqp::AMQPDescriptorRegistory[id]->build(data_).release()));
+    }
 }
 
 /******************************************************************************/

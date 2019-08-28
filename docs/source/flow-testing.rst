@@ -15,7 +15,7 @@ A good example to examine for learning how to unit test flows is the ``ResolveTr
 flow takes care of downloading and verifying transaction graphs, with all the needed dependencies. We start
 with this basic skeleton:
 
-.. literalinclude:: ../../core/src/test/kotlin/net/corda/core/internal/ResolveTransactionsFlowTest.kt
+.. literalinclude:: ../../core-tests/src/test/kotlin/net/corda/coretests/internal/ResolveTransactionsFlowTest.kt
     :language: kotlin
     :start-after: DOCSTART 3
     :end-before: DOCEND 3
@@ -25,7 +25,7 @@ of the notary in our test network, which will come in handy later. We also tidy 
 
 Next, we write a test case:
 
-.. literalinclude:: ../../core/src/test/kotlin/net/corda/core/internal/ResolveTransactionsFlowTest.kt
+.. literalinclude:: ../../core-tests/src/test/kotlin/net/corda/coretests/internal/ResolveTransactionsFlowTest.kt
     :language: kotlin
     :start-after: DOCSTART 1
     :end-before: DOCEND 1
@@ -44,7 +44,7 @@ on the node's persistent state.
 
 Here's what ``makeTransactions`` looks like:
 
-.. literalinclude:: ../../core/src/test/kotlin/net/corda/core/internal/ResolveTransactionsFlowTest.kt
+.. literalinclude:: ../../core-tests/src/test/kotlin/net/corda/coretests/internal/ResolveTransactionsFlowTest.kt
     :language: kotlin
     :start-after: DOCSTART 2
     :end-before: DOCEND 2
