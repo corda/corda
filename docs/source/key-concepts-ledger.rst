@@ -17,7 +17,8 @@ The ledger
 
 
 The Ledger Data
---------
+---------------
+
 In Corda, there is **no single central store of data**. Instead, each node maintains its own database of those facts that it is aware of.
 
 The facts that a node knows about are those that it is involved with. For example, if there are nodes representing Alice and Bob on the network and Alice loans Bob some money, both Alice and Bob will store an identical record of the facts about that loan. If the only parties involved with the loan are Alice and Bob, then they will be the only nodes that ever see or store this data.

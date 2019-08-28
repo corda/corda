@@ -12,4 +12,3 @@ wish to try the :doc:`blob-inspector`.
    demobench
    node-explorer
    checkpoint-tooling
-

@@ -80,33 +80,9 @@ application development please continue to refer to `the main project documentat
    release-notes-enterprise.rst
    app-upgrade-notes-enterprise.rst
    node-upgrade-notes.rst
-   corda-api.rst
    version-compatibility.rst
    platform-support-matrix.rst
    cheat-sheet.rst
-
-.. conditional-toctree::
-   :caption: Contents
-   :maxdepth: 2
-   :if_tag: pdfmode
-
-   release-notes-enterprise.rst
-   key-concepts.rst
-   quickstart-index.rst
-   tutorials-index.rst
-   building-a-cordapp-index.rst
-   component-library-index.rst
-   corda-nodes-index.rst
-   corda-networks-index.rst
-   tools-index.rst
-   corda-firewall
-   database-management
-   hot-cold-deployment
-   running-a-notary-cluster/toctree
-   certificate-revocation
-   node-internals-index.rst
-   json.rst
-   troubleshooting.rst
 
 .. conditional-toctree::
    :hidden:
@@ -125,10 +101,10 @@ application development please continue to refer to `the main project documentat
    tools-index-enterprise.rst
 
 .. conditional-toctree::
-   :hidden:
-   :titlesonly:
    :caption: Development
    :maxdepth: 1
+   :hidden:
+   :titlesonly:
    :if_tag: htmlmode
 
    quickstart-index.rst
@@ -139,16 +115,37 @@ application development please continue to refer to `the main project documentat
    node-internals-index.rst
    component-library-index.rst
    serialization-index.rst
-   json.rst
+   versioning-and-upgrades.rst
+   cordapp-advanced-concepts.rst
    troubleshooting.rst
 
-.. conditional-toctree::
-   :hidden:
+.. toctree::
+   :caption: Corda API
+   :maxdepth: 1
    :titlesonly:
+
+   api-contracts.rst
+   api-contract-constraints.rst
+   api-core-types.rst
+   api-flows.rst
+   api-identity.rst
+   api-persistence.rst
+   api-rpc.rst
+   api-service-classes.rst
+   api-service-hub.rst
+   api-states.rst
+   api-testing.rst
+   api-transactions.rst
+   api-vault-query.rst
+
+.. conditional-toctree::
    :caption: Operations
    :maxdepth: 2
+   :hidden:
+   :titlesonly:
    :if_tag: htmlmode
 
+   database-management
    corda-nodes-index.rst
    corda-networks-index.rst
    docker-image.rst
@@ -170,10 +167,9 @@ application development please continue to refer to `the main project documentat
    corda-network/UAT.md
 
 .. conditional-toctree::
-   :caption: Contents
+   :caption: Miscellaneous
    :maxdepth: 2
-   :if_tag: pdfmode
+   :if_tag: htmlmode
 
    deterministic-modules.rst
-   release-notes-enterprise.rst
-   changelog-enterprise.rst
+   changelog-enterprise
