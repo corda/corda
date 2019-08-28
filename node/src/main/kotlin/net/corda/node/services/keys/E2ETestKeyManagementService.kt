@@ -5,6 +5,7 @@ import net.corda.core.crypto.internal.AliasPrivateKey
 import net.corda.core.internal.ThreadBox
 import net.corda.core.node.services.IdentityService
 import net.corda.core.serialization.SingletonSerializeAsToken
+import net.corda.nodeapi.internal.KeyOwningIdentity
 import net.corda.nodeapi.internal.cryptoservice.CryptoService
 import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
 import org.bouncycastle.operator.ContentSigner
@@ -86,5 +87,9 @@ class E2ETestKeyManagementService(override val identityService: IdentityService,
     override fun sign(signableData: SignableData, publicKey: PublicKey): TransactionSignature {
         val keyPair = getSigningKeyPair(publicKey)
         return keyPair.sign(signableData)
+    }
+
+    override fun identityForKey(pk: PublicKey): KeyOwningIdentity? {
+        throw UnsupportedOperationException("This operation is only supported by persistent key management service variants.")
     }
 }

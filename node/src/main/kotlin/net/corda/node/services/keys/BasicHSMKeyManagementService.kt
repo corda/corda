@@ -156,4 +156,8 @@ class BasicHSMKeyManagementService(cacheFactory: NamedCacheFactory,
             keyPair.sign(signableData)
         }
     }
+
+    override fun identityForKey(pk: PublicKey): KeyOwningIdentity? {
+        return pkToIdCache[pk]
+    }
 }

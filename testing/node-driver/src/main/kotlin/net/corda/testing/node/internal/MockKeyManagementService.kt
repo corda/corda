@@ -21,6 +21,7 @@ import java.util.*
 class MockKeyManagementService(override val identityService: IdentityService,
                                vararg initialKeys: KeyPair,
                                private val pkToIdCache: WritablePublicKeyToOwningIdentityCache) : SingletonSerializeAsToken(), KeyManagementServiceInternal {
+
     private val keyStore: MutableMap<PublicKey, PrivateKey> = initialKeys.associateByTo(HashMap(), { it.public }, { it.private })
 
     override val keys: Set<PublicKey> get() = keyStore.keys
@@ -56,5 +57,9 @@ class MockKeyManagementService(override val identityService: IdentityService,
     override fun sign(signableData: SignableData, publicKey: PublicKey): TransactionSignature {
         val keyPair = getSigningKeyPair(publicKey)
         return keyPair.sign(signableData)
+    }
+
+    override fun identityForKey(pk: PublicKey): KeyOwningIdentity? {
+        return pkToIdCache[pk]
     }
 }
