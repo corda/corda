@@ -22,12 +22,12 @@ dependencies {
     // Configure these by hand. It should be a minimal subset of dependencies,
     // and without any obviously non-deterministic ones such as Hibernate.
 
-    // This dependency will become "compile" scoped in our published POM.
+    // These dependencies will become "compile" scoped in our published POM.
     // See publish.dependenciesFrom.defaultScope.
     deterministicLibraries project(path: ':core-deterministic', configuration: 'deterministicArtifacts')
+    deterministicLibraries "org.apache.qpid:proton-j:$protonj_version"
 
     // These "implementation" dependencies will become "runtime" scoped in our published POM.
-    implementation "org.apache.qpid:proton-j:$protonj_version"
     implementation "org.iq80.snappy:snappy:$snappy_version"
     implementation "com.google.guava:guava:$guava_version"
 }

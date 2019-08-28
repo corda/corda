@@ -4,7 +4,9 @@ import com.google.common.hash.Hashing
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.toBase64
 import net.corda.serialization.internal.amqp.*
-import java.io.NotSerializableException
+import net.corda.serialization.internal.model.TypeIdentifier.*
+import net.corda.serialization.internal.model.TypeIdentifier.Companion.classLoaderFor
+import java.lang.reflect.ParameterizedType
 
 /**
  * A fingerprinter that fingerprints [LocalTypeInformation].
@@ -34,11 +36,15 @@ class TypeModellingFingerPrinter(
     private val cache: MutableMap<TypeIdentifier, String> = DefaultCacheProvider.createCache()
 
     override fun fingerprint(typeInformation: LocalTypeInformation): String =
-            cache.computeIfAbsent(typeInformation.typeIdentifier) {
-                FingerPrintingState(
-                        customTypeDescriptorLookup,
-                        FingerprintWriter(debugEnabled)).fingerprint(typeInformation)
-            }
+        /*
+         * We cannot use ConcurrentMap.computeIfAbsent() here because it requires
+         * that the map not be re-entered during the computation function. And
+         * the Fingerprinter cannot guarantee that.
+         */
+        cache.getOrPut(typeInformation.typeIdentifier) {
+            FingerPrintingState(customTypeDescriptorLookup, FingerprintWriter(debugEnabled))
+                    .fingerprint(typeInformation)
+        }
 }
 
 /**
@@ -224,7 +230,22 @@ private class FingerPrintingState(
 
     // Give any custom serializers loaded into the factory the chance to supply their own type-descriptors
     private fun fingerprintWithCustomSerializerOrElse(type: LocalTypeInformation, defaultAction: () -> Unit) {
-        val customTypeDescriptor = customSerializerRegistry.findCustomSerializer(type.observedType.asClass(), type.observedType)?.typeDescriptor?.toString()
+        val observedType = type.observedType
+        val observedClass = observedType.asClass()
+
+        // Any Custom Serializer cached for a ParameterizedType can only be
+        // found by searching for that exact same type. Searching for its raw
+        // class will not work!
+        val observedGenericType = if (observedType !is ParameterizedType && type.typeIdentifier is Parameterised) {
+            type.typeIdentifier.getLocalType(classLoaderFor(observedClass))
+        } else {
+            observedType
+        }
+
+        val customTypeDescriptor = customSerializerRegistry.findCustomSerializer(
+            clazz = observedClass,
+            declaredType = observedGenericType
+        )?.typeDescriptor?.toString()
         if (customTypeDescriptor != null) writer.write(customTypeDescriptor)
         else defaultAction()
     }
