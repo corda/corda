@@ -63,11 +63,10 @@ class ListTests extends DefaultTask {
                 .overrideClasspath(scanClassPath)
                 .scan()
                 .getClassesWithMethodAnnotation("org.junit.Test")
-                .filter { c -> !c.hasAnnotation("org.junit.Ignore") }
                 .collect { c -> (c.getSubclasses() + Collections.singletonList(c)) }
                 .flatten()
                 .collect { ClassInfo c ->
-                    c.getMethodInfo().filter { m -> m.hasAnnotation("org.junit.Test") && !m.hasAnnotation("org.junit.Ignore") }.collect { m -> c.name + "." + m.name }
+                    c.getMethodInfo().filter { m -> m.hasAnnotation("org.junit.Test") }.collect { m -> c.name + "." + m.name }
                 }.flatten()
                 .toSet()
 
