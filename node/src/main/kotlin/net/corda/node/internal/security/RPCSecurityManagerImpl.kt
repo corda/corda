@@ -122,6 +122,7 @@ private class RPCPermission : DomainPermission {
      */
     constructor() : super()
 }
+
 /*
  * A [org.apache.shiro.authz.permission.PermissionResolver] implementation for RPC permissions.
  * Provides a method to construct an [RPCPermission] instance from its string representation
