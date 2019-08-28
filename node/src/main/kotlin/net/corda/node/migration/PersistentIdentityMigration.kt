@@ -1,7 +1,6 @@
 package net.corda.node.migration
 
 import liquibase.change.custom.CustomSqlChange
-import liquibase.change.custom.CustomSqlRollback
 import liquibase.database.Database
 import liquibase.exception.ValidationErrors
 import liquibase.resource.ResourceAccessor
@@ -14,11 +13,7 @@ import net.corda.core.utilities.contextLogger
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
 
-class PersistentIdentityMigration : CustomSqlChange, CustomSqlRollback {
-
-    override fun generateRollbackStatements(database: Database?): Array<SqlStatement> {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
+class PersistentIdentityMigration : CustomSqlChange {
 
     companion object {
         private val logger = contextLogger()
@@ -50,20 +45,20 @@ class PersistentIdentityMigration : CustomSqlChange, CustomSqlRollback {
             val oldPkHash = resultSet.getString(1)
             val identityBytes = resultSet.getBytes(2)
             val partyAndCertificate = PartyAndCertificate(X509CertificateFactory().delegate.generateCertPath(identityBytes.inputStream()))
-            generatedStatements.addAll(MigrationData(oldPkHash, partyAndCertificate).let { listOf(updateHashToIdentityRow(it, database), updateNameToHashRow(it)) })
+            generatedStatements.addAll(MigrationData(oldPkHash, partyAndCertificate).let { listOf(updateHashToIdentityRow(it, dataSource), updateNameToHashRow(it, dataSource)) })
         }
         return generatedStatements.toTypedArray()
     }
 
-    private fun updateHashToIdentityRow(migrationData: MigrationData, database: Database): SqlStatement {
-        return UpdateStatement(null, null, PUB_KEY_HASH_TO_PARTY_AND_CERT_TABLE)
+    private fun updateHashToIdentityRow(migrationData: MigrationData, dataSource: MigrationDataSource): SqlStatement {
+        return UpdateStatement(dataSource.connection.catalog, dataSource.connection.schema, PUB_KEY_HASH_TO_PARTY_AND_CERT_TABLE)
                 .setWhereClause("pk_hash=?")
                 .addNewColumnValue("pk_hash", migrationData.newPkHash)
                 .addWhereParameter(migrationData.oldPkHash)
     }
 
-    private fun updateNameToHashRow(migrationData: MigrationData): UpdateStatement {
-        return UpdateStatement(null, null, X500_NAME_TO_PUB_KEY_HASH_TABLE)
+    private fun updateNameToHashRow(migrationData: MigrationData, dataSource: MigrationDataSource): UpdateStatement {
+        return UpdateStatement(dataSource.connection.catalog, dataSource.connection.schema, X500_NAME_TO_PUB_KEY_HASH_TABLE)
                 .setWhereClause("pk_hash=? AND name=?")
                 .addNewColumnValue("pk_hash", migrationData.newPkHash)
                 .addWhereParameters(migrationData.oldPkHash, migrationData.x500.toString())
