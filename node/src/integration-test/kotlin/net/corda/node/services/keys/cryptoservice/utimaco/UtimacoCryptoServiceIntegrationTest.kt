@@ -207,9 +207,9 @@ class UtimacoCryptoServiceIntegrationTest {
         }, null).evaluate()
 
         // Start HSM simulator first time and init CryptoService
-        val hsmSimulatorWithRestart = HsmSimulator(incrementalPortAllocation(12300))
+        val hsmSimulatorWithRestart = HsmSimulator(incrementalPortAllocation())
         hsmSimulatorWithRestart.execute {
-            cryptoService = UtimacoCryptoService.fromConfig(testConfig(hsmSimulatorWithRestart.address.port), login)
+            cryptoService = UtimacoCryptoService.fromConfig(testConfig(hsmSimulatorWithRestart.address.port)) { login }
             generateKeysAndSign()
         }
 
