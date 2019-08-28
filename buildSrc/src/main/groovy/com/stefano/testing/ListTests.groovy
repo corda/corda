@@ -60,8 +60,9 @@ class ListTests extends DefaultTask {
                 .collect { c -> (c.getSubclasses() + Collections.singletonList(c)) }
                 .flatten()
                 .collect { ClassInfo c ->
-                    c.name + ".*"
-                }.toSet()
+                    c.getMethodInfo().filter { m -> m.hasAnnotation("org.junit.Test") && !m.hasAnnotation("org.junit.Ignore") }.collect { m -> c.name + "." + m.name }
+                }.flatten()
+                .toSet()
 
         this.allTests = results.stream().sorted().collect(Collectors.toList())
     }
