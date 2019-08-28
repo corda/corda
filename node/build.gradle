@@ -50,6 +50,16 @@ configurations {
         cacheChangingModulesFor 0, 'seconds'
     }
     deterministic
+
+    // This is for the latest deterministic Corda SNAPSHOT artifacts...
+    [ compileClasspath, runtimeClasspath ].forEach { cfg ->
+        cfg.resolutionStrategy {
+            dependencySubstitution {
+                substitute module("net.corda:corda-core") with project(':core')
+                substitute module("net.corda:corda-serialization") with project(':serialization')
+            }
+        }
+    }
 }
 
 sourceSets {
@@ -170,9 +180,13 @@ dependencies {
 
     // Sandbox for deterministic contract verification
     compile "net.corda:corda-djvm:$djvm_version"
+    compile "net.corda:corda-djvm-serialization:$djvm_version"
     jdkRt "net.corda:deterministic-rt:latest.integration"
     deterministic project(path: ':core-deterministic', configuration: 'deterministicArtifacts')
     deterministic project(path: ':serialization-deterministic', configuration: 'deterministicArtifacts')
+    deterministic("net.corda:corda-djvm-deserializers:$djvm_version") {
+        transitive = false
+    }
     deterministic "org.slf4j:slf4j-nop:$slf4j_version"
 
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"

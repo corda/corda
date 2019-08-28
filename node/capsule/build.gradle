@@ -36,8 +36,10 @@ capsule {
     version capsule_version
 }
 
+def nodeProject = project(':node')
+
 task buildCordaJAR(type: FatCapsule, dependsOn: [
-        project(':node').tasks.jar,
+        nodeProject.tasks.jar,
         project(':core-deterministic').tasks.assemble,
         project(':serialization-deterministic').tasks.assemble
     ]) {
@@ -47,27 +49,41 @@ task buildCordaJAR(type: FatCapsule, dependsOn: [
     archiveClassifier = jdkClassifier
     archiveName = archiveFileName.get()
     applicationSource = files(
-        project(':node').configurations.runtimeClasspath,
-        project(':node').tasks.jar,
-        project(':node').buildDir.toString() + '/resources/main/reference.conf',
+        nodeProject.configurations.runtimeClasspath,
+        nodeProject.tasks.jar,
+        nodeProject.buildDir.toString() + '/resources/main/reference.conf',
         "$rootDir/config/dev/log4j2.xml",
         'NOTICE' // Copy CDDL notice
     )
     from configurations.capsuleRuntime.files.collect { zipTree(it) }
     with jar
 
-    def deterministicResolved = project(':node').configurations['deterministic'].resolvedConfiguration
-    def deterministicLibs = deterministicResolved.firstLevelModuleDependencies.moduleArtifacts.flatten { it.file }.toSet()
-    def deterministicCordaDependencies = deterministicResolved.files - deterministicLibs
+    // The DJVM will share most of its dependencies with the node, but any extra ones that it needs
+    // are listed in the node's "deterministic" configuration and copied into a djvm subdirectory.
+    //
+    // Gradle may not resolve exactly rhe same transitive dependencies for both the runtimeClasspath
+    // and deterministic configurations - specifically, the artifacts' version numbers may differ slightly.
+    // And so we map the files by the resolved ModuleIdentifier objects instead, which just contain an
+    // artifact's group and name.
+    def cordaResolved = nodeProject.configurations['runtimeClasspath'].resolvedConfiguration.resolvedArtifacts.collectEntries {
+        [ (it.moduleVersion.id.module):it.file ]
+    }
+    def deterministicResolved = nodeProject.configurations['deterministic'].resolvedConfiguration.resolvedArtifacts.collectEntries {
+        [ (it.moduleVersion.id.module):it.file ]
+    }
+    def resolvedDifferences = deterministicResolved.keySet() - cordaResolved.keySet()
+
+    cordaResolved.keySet().retainAll(deterministicResolved.keySet() - resolvedDifferences)
+    deterministicResolved.keySet().retainAll(resolvedDifferences)
 
     manifest {
         // These are the dependencies that the deterministic Corda libraries share with Corda.
-        attributes('Corda-DJVM-Dependencies': deterministicCordaDependencies.collect { it.name }.join(' '))
+        attributes('Corda-DJVM-Dependencies': cordaResolved.values().collect { it.name }.join(' '))
     }
 
     into('djvm') {
-        from project(':node').configurations['jdkRt'].singleFile
-        from deterministicLibs
+        from nodeProject.configurations['jdkRt'].singleFile
+        from deterministicResolved.values()
         fileMode = 0444
     }
 
