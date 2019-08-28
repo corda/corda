@@ -113,8 +113,6 @@
       <module name="corda-project.example-code.test" target="1.8" />
       <module name="corda-project.experimental.avalanche.main" target="1.8" />
       <module name="corda-project.experimental.avalanche.test" target="1.8" />
-      <module name="corda-project.experimental.blobwriter.main" target="1.8" />
-      <module name="corda-project.experimental.blobwriter.test" target="1.8" />
       <module name="corda-project.experimental.corda-utils.integrationTest" target="1.8" />
       <module name="corda-project.experimental.corda-utils.main" target="1.8" />
       <module name="corda-project.experimental.corda-utils.test" target="1.8" />
@@ -217,8 +215,6 @@
       <module name="corda-project.tools.blobinspector.test" target="1.8" />
       <module name="corda-project.tools.bootstrapper.main" target="1.8" />
       <module name="corda-project.tools.bootstrapper.test" target="1.8" />
-      <module name="corda-project.tools.checkpoint-agent.main" target="1.8" />
-      <module name="corda-project.tools.checkpoint-agent.test" target="1.8" />
       <module name="corda-project.tools.cliutils.main" target="1.8" />
       <module name="corda-project.tools.cliutils.test" target="1.8" />
       <module name="corda-project.tools.demobench.main" target="1.8" />
@@ -234,8 +230,6 @@
       <module name="corda-project.tools.main" target="1.8" />
       <module name="corda-project.tools.network-bootstrapper.main" target="1.8" />
       <module name="corda-project.tools.network-bootstrapper.test" target="1.8" />
-      <module name="corda-project.tools.network-builder.main" target="1.8" />
-      <module name="corda-project.tools.network-builder.test" target="1.8" />
       <module name="corda-project.tools.shell-cli.main" target="1.8" />
       <module name="corda-project.tools.shell-cli.test" target="1.8" />
       <module name="corda-project.tools.shell.integrationTest" target="1.8" />

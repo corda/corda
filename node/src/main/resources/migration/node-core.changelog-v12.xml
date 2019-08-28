@@ -25,20 +25,4 @@
         </customChange>
     </changeSet>
 
-    <changeSet author="R3.Corda" id="add-new-persitence-table">
-        <createTable tableName="identities_no_cert">
-            <column name="pk_hash" type="NVARCHAR(130)">
-                <constraints nullable="false"/>
-            </column>
-            <column name="name" type="NVARCHAR(128)">
-                <constraints nullable="false"/>
-            </column>
-        </createTable>
-    </changeSet>
-
-    <changeSet author="R3.Corda" id="transfer-to-new-persistence-table">
-        <customChange class="net.corda.node.migration.PersistentIdentityMigrationNewTable">
-        </customChange>
-    </changeSet>
-
 </databaseChangeLog>
