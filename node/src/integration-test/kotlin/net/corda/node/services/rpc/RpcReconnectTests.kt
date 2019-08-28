@@ -1,6 +1,9 @@
 package net.corda.node.services.rpc
 
+import net.corda.client.rpc.CordaRPCClient
+import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.client.rpc.internal.ReconnectingCordaRPCOps
+import net.corda.client.rpc.notUsed
 import net.corda.core.contracts.Amount
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.concurrent.transpose
@@ -9,10 +12,7 @@ import net.corda.core.node.services.Vault
 import net.corda.core.node.services.vault.PageSpecification
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.node.services.vault.builder
-import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.OpaqueBytes
-import net.corda.core.utilities.contextLogger
-import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.*
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashIssueAndPaymentFlow
 import net.corda.finance.schemas.CashSchemaV1
@@ -28,9 +28,11 @@ import net.corda.testing.driver.internal.OutOfProcessImpl
 import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.FINANCE_CORDAPPS
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 import java.util.*
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
 import kotlin.math.absoluteValue
@@ -98,7 +100,7 @@ class RpcReconnectTests {
             fun startBankA(address: NetworkHostAndPort) = startNode(providedName = DUMMY_BANK_A_NAME, rpcUsers = listOf(demoUser), customOverrides = mapOf("rpcSettings.address" to address.toString()))
             fun startProxy(addressPair: AddressPair) = RandomFailingProxy(serverPort = addressPair.proxyAddress.port, remotePort = addressPair.nodeAddress.port).start()
 
-            val addresses = (1..3).map { getRandomAddressPair() }
+            val addresses = (1..2).map { getRandomAddressPair() }
             currentAddressPair = addresses[0]
 
             proxy = startProxy(currentAddressPair)
@@ -114,7 +116,8 @@ class RpcReconnectTests {
 
             val addressesForRpc = addresses.map { it.proxyAddress }
             // DOCSTART rpcReconnectingRPC
-            val bankAReconnectingRpc = ReconnectingCordaRPCOps(addressesForRpc, demoUser.username, demoUser.password)
+            val client = CordaRPCClient(addressesForRpc)
+            val bankAReconnectingRpc = client.start(demoUser.username, demoUser.password, gracefulReconnect = true).proxy as ReconnectingCordaRPCOps
             // DOCEND rpcReconnectingRPC
 
             // Observe the vault and collect the observations.
@@ -186,7 +189,7 @@ class RpcReconnectTests {
                             log.info("Performing failover to a different node")
                             node.stop()
                             proxy.stop()
-                            currentAddressPair = addresses[Random().nextInt(addresses.size)]
+                            currentAddressPair = (addresses - currentAddressPair).first()
                             node = startBankA(currentAddressPair.nodeAddress).get()
                             proxy = startProxy(currentAddressPair)
                         }
@@ -214,6 +217,8 @@ class RpcReconnectTests {
                             log.info("Started flow $amount with flowId: $flowId")
                             flowProgressEvents.addEvent(flowId, null)
 
+                            flowHandle.stepsTreeFeed?.updates?.notUsed()
+                            flowHandle.stepsTreeIndexFeed?.updates?.notUsed()
                             // No reconnecting possible.
                             flowHandle.progress.subscribe(
                                     { prog ->
@@ -246,9 +251,14 @@ class RpcReconnectTests {
             log.info("Started all flows")
 
             // Wait until all flows have been started.
-            flowsCountdownLatch.await()
+            val flowsConfirmed = flowsCountdownLatch.await(10, TimeUnit.MINUTES)
 
-            log.info("Confirmed all flows.")
+            if (flowsConfirmed) {
+                log.info("Confirmed all flows have started.")
+            } else {
+                log.info("Timed out waiting for confirmation that all flows have started. Remaining flows: ${flowsCountdownLatch.count}")
+            }
+
 
             // Wait for all events to come in and flows to finish.
             Thread.sleep(4000)
@@ -272,7 +282,7 @@ class RpcReconnectTests {
 
             val allCash = allCashStates.map { it.state.data.amount.quantity }.toSet()
             val missingCash = (1..NUMBER_OF_FLOWS_TO_RUN).filterNot { allCash.contains(it.toLong() * 100) }
-            log.info("MISSING: $missingCash")
+            log.info("Missing cash states: $missingCash")
 
             assertEquals(NUMBER_OF_FLOWS_TO_RUN, allCashStates.size, "Not all flows were executed successfully")
 
@@ -284,17 +294,17 @@ class RpcReconnectTests {
             // Check that enough vault events were received.
             // This check is fuzzy because events can go missing during node restarts.
             // Ideally there should be nrOfFlowsToRun events receive but some might get lost for each restart.
-            assertTrue(vaultEvents!!.size + nrFailures * 3 >= NUMBER_OF_FLOWS_TO_RUN, "Not all vault events were received")
+            assertThat(vaultEvents!!.size + nrFailures * 3).isGreaterThanOrEqualTo(NUMBER_OF_FLOWS_TO_RUN)
             // DOCEND missingVaultEvents
 
             // Check that no flow was triggered twice.
             val duplicates = allCashStates.groupBy { it.state.data.amount }.filterValues { it.size > 1 }
             assertTrue(duplicates.isEmpty(), "${duplicates.size} flows were retried illegally.")
 
-            log.info("SM EVENTS: ${stateMachineEvents!!.size}")
+            log.info("State machine events seen: ${stateMachineEvents!!.size}")
             // State machine events are very likely to get lost more often because they seem to be sent with a delay.
-            assertTrue(stateMachineEvents.count { it is StateMachineUpdate.Added } > NUMBER_OF_FLOWS_TO_RUN / 3, "Too many Added state machine events lost.")
-            assertTrue(stateMachineEvents.count { it is StateMachineUpdate.Removed } > NUMBER_OF_FLOWS_TO_RUN / 3, "Too many Removed state machine events lost.")
+            assertThat(stateMachineEvents.count { it is StateMachineUpdate.Added }).isGreaterThanOrEqualTo(NUMBER_OF_FLOWS_TO_RUN / 3)
+            assertThat(stateMachineEvents.count { it is StateMachineUpdate.Removed }).isGreaterThanOrEqualTo(NUMBER_OF_FLOWS_TO_RUN / 3)
 
             // Stop the observers.
             vaultSubscription.unsubscribe()

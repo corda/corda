@@ -407,7 +407,24 @@ class RPCClientProxyHandler(
         }
 
         reaperScheduledFuture?.cancel(false)
+        val observablesMap = observableContext.observableMap.asMap()
+        observablesMap.keys.forEach { key ->
+            observationExecutorPool.run(key) {
+                try {
+                    observablesMap[key]?.onError(ConnectionFailureException())
+                } catch (e: Exception) {
+                    log.error("Unexpected exception when RPC connection failure handling", e)
+                }
+            }
+        }
         observableContext.observableMap.invalidateAll()
+        rpcReplyMap.forEach { _, replyFuture ->
+            replyFuture.setException(ConnectionFailureException())
+        }
+
+        rpcReplyMap.clear()
+        callSiteMap?.clear()
+
         reapObservables(notify)
         reaperExecutor?.shutdownNow()
         sendExecutor?.shutdownNow()
