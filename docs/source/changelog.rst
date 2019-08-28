@@ -48,6 +48,9 @@ Unreleased
 * :doc:`design/data-model-upgrades/package-namespace-ownership` configurations can be now be set as described in
   :ref:`node_package_namespace_ownership`, when using the Cordformation plugin version 4.0.43.
 
+* Wildcards can now be used when specifying RPC permissions, for example ``StartFlow.foo.bar.*`` will allow users to start any flow in the
+  ``foo.bar`` package. See :ref:`rpcUsers <corda_configuration_file_rpc_users>` for more information.
+
 .. _changelog_v4.1:
 
 Version 4.1

@@ -14,6 +14,7 @@ import kotlin.test.assertFailsWith
 class RPCPermissionsTests : AbstractRPCTest() {
     companion object {
         const val DUMMY_FLOW = "StartFlow.net.corda.flows.DummyFlow"
+        const val WILDCARD_FLOW = "StartFlow.net.corda.flows.*"
         const val ALL_ALLOWED = "ALL"
     }
 
@@ -105,6 +106,29 @@ class RPCPermissionsTests : AbstractRPCTest() {
     }
 
     @Test
+    fun `joe user can call different methods matching to a wildcard`() {
+        rpcDriver {
+            val joeUser = userOf("joe", setOf(WILDCARD_FLOW))
+            val proxy = testProxyFor(joeUser)
+            assertNotAllowed {
+                proxy.validatePermission("nodeInfo")
+            }
+
+            proxy.validatePermission("startFlowDynamic", "net.corda.flows.OtherFlow")
+            proxy.validatePermission("startFlowDynamic", "net.corda.flows.DummyFlow")
+            proxy.validatePermission("startTrackedFlowDynamic", "net.corda.flows.DummyFlow")
+            proxy.validatePermission("startTrackedFlowDynamic", "net.corda.flows.OtherFlow")
+            assertNotAllowed {
+                proxy.validatePermission("startTrackedFlowDynamic", "net.banned.flows.OtherFlow")
+            }
+            assertNotAllowed {
+                proxy.validatePermission("startTrackedFlowDynamic", "net.banned.flows")
+            }
+
+        }
+    }
+
+    @Test
     fun `checking invokeRpc permissions entitlements`() {
         rpcDriver {
             val joeUser = userOf("joe", setOf("InvokeRpc.networkMapFeed"))
@@ -120,7 +144,6 @@ class RPCPermissionsTests : AbstractRPCTest() {
     }
 
     private fun assertNotAllowed(action: () -> Unit) {
-
         assertFailsWith(PermissionException::class, "User should not be allowed to perform this action.", action)
     }
 }
