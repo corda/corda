@@ -754,7 +754,7 @@ class NodeVaultService(
     }
 
     private fun <T : ContractState> deriveContractTypes(clazz: Class<T>): Set<Class<T>> {
-        val myTypes : MutableSet<Class<T>> = CopyOnWriteArraySet()
+        val myTypes : MutableSet<Class<T>> = mutableSetOf()
         clazz.superclass?.let {
             if (!it.isInstance(Any::class)) {
                 myTypes.add(uncheckedCast(it))
