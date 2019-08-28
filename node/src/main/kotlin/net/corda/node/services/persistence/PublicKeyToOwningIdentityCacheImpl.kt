@@ -32,10 +32,10 @@ class PublicKeyToOwningIdentityCacheImpl(private val database: CordaPersistence,
         return database.transaction {
             val criteriaBuilder = session.criteriaBuilder
             val criteriaQuery = criteriaBuilder.createQuery(Long::class.java)
-            val queryRoot = criteriaQuery.from(PersistentIdentityService.PersistentIdentity::class.java)
+            val queryRoot = criteriaQuery.from(PersistentIdentityService.PersistentPublicKeyHashToCertificate::class.java)
             criteriaQuery.select(criteriaBuilder.count(queryRoot))
             criteriaQuery.where(
-                    criteriaBuilder.equal(queryRoot.get<String>(PersistentIdentityService.PersistentIdentity::publicKeyHash.name), key.toStringShort())
+                    criteriaBuilder.equal(queryRoot.get<String>(PersistentIdentityService.PersistentPublicKeyHashToCertificate::publicKeyHash.name), key.toStringShort())
             )
             val query = session.createQuery(criteriaQuery)
             query.uniqueResult() > 0

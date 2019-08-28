@@ -9,8 +9,8 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.node.NotaryInfo
+import net.corda.core.node.services.IdentityService
 import net.corda.core.transactions.LedgerTransaction
-import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
@@ -41,7 +41,7 @@ class PackageOwnershipVerificationTests {
     private val ledgerServices = MockServices(
             cordappPackages = listOf("net.corda.finance.contracts.asset"),
             initialIdentity = ALICE,
-            identityService = mock<IdentityServiceInternal>().also {
+            identityService = mock<IdentityService>().also {
                 doReturn(ALICE_PARTY).whenever(it).partyFromKey(ALICE_PUBKEY)
                 doReturn(BOB_PARTY).whenever(it).partyFromKey(BOB_PUBKEY)
             },

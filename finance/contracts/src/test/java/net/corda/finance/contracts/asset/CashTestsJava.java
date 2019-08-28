@@ -4,21 +4,19 @@ import net.corda.core.contracts.PartyAndReference;
 import net.corda.core.identity.AnonymousParty;
 import net.corda.core.identity.CordaX500Name;
 import net.corda.core.identity.Party;
-import net.corda.node.services.api.IdentityServiceInternal;
+import net.corda.core.node.services.IdentityService;
 import net.corda.testing.core.DummyCommandData;
 import net.corda.testing.core.SerializationEnvironmentRule;
 import net.corda.testing.core.TestIdentity;
 import net.corda.testing.node.MockServices;
 import org.junit.Rule;
 import org.junit.Test;
-import org.mockito.Mockito;
 
 import static java.util.Collections.emptyList;
 import static net.corda.finance.Currencies.DOLLARS;
 import static net.corda.finance.Currencies.issuedBy;
-import static net.corda.testing.node.NodeTestUtils.transaction;
-import static net.corda.testing.internal.RigorousMockKt.rigorousMock;
 import static net.corda.testing.core.TestConstants.DUMMY_NOTARY_NAME;
+import static net.corda.testing.node.NodeTestUtils.transaction;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 
@@ -37,7 +35,7 @@ public class CashTestsJava {
 
     @Test
     public void trivial() {
-        IdentityServiceInternal identityService = mock(IdentityServiceInternal.class);
+        IdentityService identityService = mock(IdentityService.class);
         doReturn(MEGA_CORP.getParty()).when(identityService).partyFromKey(MEGA_CORP.getPublicKey());
         doReturn(MINI_CORP.getParty()).when(identityService).partyFromKey(MINI_CORP.getPublicKey());
         transaction(new MockServices(emptyList(), MEGA_CORP.getName(), identityService), DUMMY_NOTARY, tx -> {
