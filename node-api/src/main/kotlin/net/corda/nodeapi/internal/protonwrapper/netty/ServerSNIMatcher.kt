@@ -1,6 +1,7 @@
 package net.corda.nodeapi.internal.protonwrapper.netty
 
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.config.CertificateStore
 import net.corda.nodeapi.internal.crypto.x509
 import sun.security.x509.X500Name
@@ -10,6 +11,10 @@ import javax.net.ssl.SNIServerName
 import javax.net.ssl.StandardConstants
 
 class ServerSNIMatcher(private val keyStore: CertificateStore) : SNIMatcher(0) {
+
+    companion object {
+        val log = contextLogger()
+    }
 
     var matchedAlias: String?  = null
         private set
@@ -31,6 +36,13 @@ class ServerSNIMatcher(private val keyStore: CertificateStore) : SNIMatcher(0) {
             }
         }
 
+        val knownSNIValues = keyStore.aliases().joinToString {
+            val x500Name = keyStore[it].x509.subjectDN as X500Name
+            val cordaX500Name = CordaX500Name.build(x500Name.asX500Principal())
+            "hostname = ${x500toHostName(cordaX500Name)} alias = $it"
+        }
+        val requestedSNIValue = "hostname = ${(serverName as SNIHostName).asciiName}"
+        log.warn("The requested SNI value [$requestedSNIValue] does match any of the following known SNI values [$knownSNIValues]")
         return false
     }
 }
