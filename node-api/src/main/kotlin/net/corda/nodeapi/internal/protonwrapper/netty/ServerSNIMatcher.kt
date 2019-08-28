@@ -42,7 +42,7 @@ class ServerSNIMatcher(private val keyStore: CertificateStore) : SNIMatcher(0) {
             "hostname = ${x500toHostName(cordaX500Name)} alias = $it"
         }
         val requestedSNIValue = "hostname = ${(serverName as SNIHostName).asciiName}"
-        log.warn("The requested SNI value [$requestedSNIValue] does match any of the following known SNI values [$knownSNIValues]")
+        log.warn("The requested SNI value [$requestedSNIValue] does not match any of the following known SNI values [$knownSNIValues]")
         return false
     }
 }
