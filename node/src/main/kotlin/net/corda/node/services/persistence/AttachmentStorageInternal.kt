@@ -1,14 +1,12 @@
-package net.corda.core.internal.node.services
+package net.corda.node.services.persistence
 
 import net.corda.core.contracts.Attachment
-import net.corda.core.crypto.SecureHash
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.AttachmentStorage
+import net.corda.nodeapi.exceptions.DuplicateAttachmentException
 import java.io.InputStream
 
 interface AttachmentStorageInternal : AttachmentStorage {
-
-    val blacklistedAttachmentSigningKeys: List<SecureHash>
 
     /**
      * This is the same as [importAttachment] expect there are no checks done on the uploader field. This API is internal

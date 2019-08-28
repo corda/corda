@@ -22,7 +22,6 @@ import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.messaging.InternalCordaRPCOps
-import net.corda.core.internal.node.services.AttachmentStorageInternal
 import net.corda.core.internal.notary.NotaryService
 import net.corda.core.messaging.*
 import net.corda.core.node.*
@@ -47,6 +46,7 @@ import net.corda.node.services.ContractUpgradeHandler
 import net.corda.node.services.FinalityHandler
 import net.corda.node.services.NotaryChangeHandler
 import net.corda.node.services.api.*
+import net.corda.node.services.attachments.NodeAttachmentTrustCalculator
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
 import net.corda.node.services.config.rpc.NodeRpcOptions
@@ -179,7 +179,10 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         metricRegistry,
         cacheFactory,
         database,
-        configuration.devMode,
+        configuration.devMode
+    ).tokenize()
+    val attachmentTrustCalculator = NodeAttachmentTrustCalculator(
+        attachments,
         configuration.blacklistedAttachmentSigningKeys
     ).tokenize()
     val cryptoService = CryptoServiceFactory.makeCryptoService(
@@ -1017,6 +1020,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         override val networkMapUpdater: NetworkMapUpdater get() = this@AbstractNode.networkMapUpdater
         override val cacheFactory: NamedCacheFactory get() = this@AbstractNode.cacheFactory
         override val networkParametersService: NetworkParametersStorage get() = this@AbstractNode.networkParametersStorage
+        override val attachmentTrustCalculator: AttachmentTrustCalculator get() = this@AbstractNode.attachmentTrustCalculator
 
         private lateinit var _myInfo: NodeInfo
         override val myInfo: NodeInfo get() = _myInfo

@@ -9,9 +9,9 @@ import net.corda.core.internal.AbstractAttachment
 import net.corda.core.internal.TRUSTED_UPLOADERS
 import net.corda.core.internal.UNKNOWN_UPLOADER
 import net.corda.core.internal.cordapp.CordappImpl.Companion.DEFAULT_CORDAPP_VERSION
-import net.corda.core.internal.node.services.AttachmentStorageInternal
 import net.corda.core.internal.readFully
 import net.corda.core.node.services.AttachmentId
+import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.node.services.vault.*
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.nodeapi.internal.withContractsInJar
@@ -22,10 +22,9 @@ import java.util.jar.Attributes
 import java.util.jar.JarInputStream
 
 /**
- * A mock implementation of [AttachmentStorageInternal] for use within tests
+ * A mock implementation of [AttachmentStorage] for use within tests
  */
-class MockAttachmentStorage(override val blacklistedAttachmentSigningKeys: List<SecureHash> = emptyList()) :
-    AttachmentStorageInternal, SingletonSerializeAsToken() {
+class MockAttachmentStorage : AttachmentStorage, SingletonSerializeAsToken() {
 
     private data class ContractAttachmentMetadata(val name: ContractClassName, val version: Int, val isSigned: Boolean, val signers: List<PublicKey>, val uploader: String)
 
@@ -128,27 +127,5 @@ class MockAttachmentStorage(override val blacklistedAttachmentSigningKeys: List<
                 versionCondition = Builder.greaterThanOrEqual(minContractVersion), uploaderCondition = Builder.`in`(TRUSTED_UPLOADERS))
         val attachmentSort = AttachmentSort(listOf(AttachmentSort.AttachmentSortColumn(AttachmentSort.AttachmentSortAttribute.VERSION, Sort.Direction.DESC)))
         return queryAttachments(attachmentQueryCriteria, attachmentSort)
-    }
-
-    override fun privilegedImportAttachment(
-        jar: InputStream,
-        uploader: String,
-        filename: String?
-    ): AttachmentId = importAttachment(jar, uploader, filename)
-
-    override fun privilegedImportOrGetAttachment(
-        jar: InputStream,
-        uploader: String,
-        filename: String?
-    ): AttachmentId {
-        return try {
-            importAttachment(jar, uploader, filename)
-        } catch (faee: java.nio.file.FileAlreadyExistsException) {
-            AttachmentId.parse(faee.message!!)
-        }
-    }
-
-    override fun getAllAttachments(): List<Pair<String?, Attachment>> {
-        return _files.values.map { (attachment, _) -> null to attachment }
     }
 }

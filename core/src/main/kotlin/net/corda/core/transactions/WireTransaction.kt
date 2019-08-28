@@ -9,7 +9,6 @@ import net.corda.core.contracts.ComponentGroupEnum.OUTPUTS_GROUP
 import net.corda.core.crypto.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
-import net.corda.core.internal.node.services.AttachmentStorageInternal
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
@@ -109,7 +108,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                     services.networkParametersService.lookup(hashToResolve)
                 },
                 resolveContractAttachment = { services.loadContractAttachment(it) },
-                isAttachmentTrusted = { isAttachmentTrusted(it, services.attachments as AttachmentStorageInternal) }
+                isAttachmentTrusted = { (services as ServiceHubCoreInternal).attachmentTrustCalculator.calculate(it) }
         )
     }
 
@@ -145,7 +144,13 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                 { null },
                 // Returning a dummy `missingAttachment` Attachment allows this deprecated method to work and it disables "contract version no downgrade rule" as a dummy Attachment returns version 1
                 { resolveAttachment(it.txhash) ?: missingAttachment },
-                { isAttachmentTrusted(it, null) }
+                {
+                    when (it) {
+                        is ContractAttachment -> isUploaderTrusted(it.uploader)
+                        is AbstractAttachment -> isUploaderTrusted(it.uploader)
+                        else -> false
+                    }
+                }
         )
     }
 

@@ -12,8 +12,8 @@ import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.contextLogger
+import net.corda.node.services.persistence.AttachmentStorageInternal
 import net.corda.nodeapi.internal.cordapp.CordappLoader
-import net.corda.core.internal.node.services.AttachmentStorageInternal
 import java.net.URL
 import java.util.concurrent.ConcurrentHashMap
 
@@ -73,8 +73,9 @@ open class CordappProviderImpl(val cordappLoader: CordappLoader,
             cordapps.filter { it.contractClassNames.isNotEmpty() }.map { cordapp ->
                 cordapp.jarPath.openStream().use { stream ->
                     try {
-                        // We can't make attachmentStorage a AttachmentStorageInternal as that ends up requiring
-                        // MockAttachmentStorage to implement it.
+                        // This code can be reached by [MockNetwork] tests which uses [MockAttachmentStorage]
+                        // [MockAttachmentStorage] cannot implement [AttachmentStorageInternal] because
+                        // doing so results in internal functions being exposed in the public API.
                         if (attachmentStorage is AttachmentStorageInternal) {
                             attachmentStorage.privilegedImportAttachment(
                                 stream,

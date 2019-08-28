@@ -8,12 +8,13 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.declaredField
 import net.corda.core.internal.hash
 import net.corda.core.internal.inputStream
-import net.corda.core.internal.isAttachmentTrusted
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.serialization.internal.AttachmentsClassLoader
+import net.corda.node.services.attachments.NodeAttachmentTrustCalculator
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.internal.ContractJarTestUtils.signContractJar
+import net.corda.testing.internal.services.InternalMockAttachmentStorage
 import net.corda.testing.internal.fakeAttachment
 import net.corda.testing.node.internal.FINANCE_CONTRACTS_CORDAPP
 import net.corda.testing.services.MockAttachmentStorage
@@ -43,16 +44,20 @@ class AttachmentsClassLoaderTests {
     }
 
     private var storage = MockAttachmentStorage()
+    private var internalStorage = InternalMockAttachmentStorage(storage)
+    private var attachmentTrustCalculator = NodeAttachmentTrustCalculator(internalStorage)
     private val networkParameters = testNetworkParameters()
 
     private fun make(attachments: List<Attachment>,
                      params: NetworkParameters = networkParameters): AttachmentsClassLoader {
-        return AttachmentsClassLoader(attachments, params, SecureHash.zeroHash, { isAttachmentTrusted(it, storage) })
+        return AttachmentsClassLoader(attachments, params, SecureHash.zeroHash, { attachmentTrustCalculator.calculate(it) })
     }
 
     @Before
     fun setup() {
         storage = MockAttachmentStorage()
+        internalStorage = InternalMockAttachmentStorage(storage)
+        attachmentTrustCalculator = NodeAttachmentTrustCalculator(internalStorage)
     }
 
     @Test
@@ -388,7 +393,10 @@ class AttachmentsClassLoaderTests {
         val keyPairA = Crypto.generateKeyPair()
         val keyPairB = Crypto.generateKeyPair()
 
-        storage = MockAttachmentStorage(listOf(keyPairB.public.hash))
+        attachmentTrustCalculator = NodeAttachmentTrustCalculator(
+            InternalMockAttachmentStorage(storage),
+            listOf(keyPairA.public.hash.toString())
+        )
 
         val classJar = fakeAttachment(
             "/com/example/something/UntrustedClass.class",
@@ -425,7 +433,10 @@ class AttachmentsClassLoaderTests {
     fun `Allow loading a trusted attachment that is signed by a blacklisted key`() {
         val keyPairA = Crypto.generateKeyPair()
 
-        storage = MockAttachmentStorage(listOf(keyPairA.public.hash))
+        attachmentTrustCalculator = NodeAttachmentTrustCalculator(
+            InternalMockAttachmentStorage(storage),
+            listOf(keyPairA.public.hash.toString())
+        )
 
         val classJar = fakeAttachment(
             "/com/example/something/UntrustedClass.class",

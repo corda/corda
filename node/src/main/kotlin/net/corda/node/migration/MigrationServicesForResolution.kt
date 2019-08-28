@@ -4,11 +4,7 @@ import net.corda.core.contracts.*
 import net.corda.core.cordapp.CordappContext
 import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.SecureHash
-import net.corda.core.internal.deserialiseComponentGroup
-import net.corda.core.internal.div
-import net.corda.core.internal.isAttachmentTrusted
-import net.corda.core.internal.node.services.AttachmentStorageInternal
-import net.corda.core.internal.readObject
+import net.corda.core.internal.*
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.*
@@ -19,6 +15,8 @@ import net.corda.core.transactions.NotaryChangeLedgerTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.contextLogger
 import net.corda.node.internal.DBNetworkParametersStorage
+import net.corda.node.services.attachments.NodeAttachmentTrustCalculator
+import net.corda.node.services.persistence.AttachmentStorageInternal
 import net.corda.nodeapi.internal.network.NETWORK_PARAMS_FILE_NAME
 import net.corda.nodeapi.internal.network.SignedNetworkParameters
 import net.corda.nodeapi.internal.persistence.CordaPersistence
@@ -54,6 +52,8 @@ class MigrationServicesForResolution(
             }
         }
     private val cordappLoader = SchemaMigration.loader.get()
+
+    private val attachmentTrustCalculator = NodeAttachmentTrustCalculator(attachments as AttachmentStorageInternal)
 
     private fun defaultNetworkParameters(): NetworkParameters {
         logger.warn("Using a dummy set of network parameters for migration.")
@@ -116,7 +116,7 @@ class MigrationServicesForResolution(
                     txAttachments,
                     networkParameters,
                     tx.id,
-                    { isAttachmentTrusted(it, attachments as AttachmentStorageInternal) },
+                    { attachmentTrustCalculator.calculate(it) },
                     cordappLoader.appClassLoader) {
                 deserialiseComponentGroup(tx.componentGroups, TransactionState::class, ComponentGroupEnum.OUTPUTS_GROUP, forceDeserialize = true)
             }

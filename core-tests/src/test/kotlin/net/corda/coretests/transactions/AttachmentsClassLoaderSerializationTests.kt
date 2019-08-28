@@ -4,18 +4,19 @@ import net.corda.core.contracts.Contract
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.declaredField
-import net.corda.core.internal.isAttachmentTrusted
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.internal.AttachmentsClassLoaderBuilder
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.isolated.contracts.DummyContractBackdoor
+import net.corda.node.services.attachments.NodeAttachmentTrustCalculator
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.internal.fakeAttachment
+import net.corda.testing.internal.services.InternalMockAttachmentStorage
 import net.corda.testing.services.MockAttachmentStorage
 import org.apache.commons.io.IOUtils
 import org.junit.Assert.assertEquals
@@ -36,7 +37,8 @@ class AttachmentsClassLoaderSerializationTests {
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
 
-    private val storage = MockAttachmentStorage()
+    private val storage = InternalMockAttachmentStorage(MockAttachmentStorage())
+    private val attachmentTrustCalculator = NodeAttachmentTrustCalculator(storage)
 
     @Test
     fun `Can serialize and deserialize with an attachment classloader`() {
@@ -52,7 +54,7 @@ class AttachmentsClassLoaderSerializationTests {
                 arrayOf(isolatedId, att1, att2).map { storage.openAttachment(it)!! },
                 testNetworkParameters(),
                 SecureHash.zeroHash,
-                { isAttachmentTrusted(it, storage) }) { classLoader ->
+                { attachmentTrustCalculator.calculate(it) }) { classLoader ->
             val contractClass = Class.forName(ISOLATED_CONTRACT_CLASS_NAME, true, classLoader)
             val contract = contractClass.newInstance() as Contract
             assertEquals("helloworld", contract.declaredField<Any?>("magicString").value)
