@@ -7,9 +7,28 @@ import net.corda.serialization.internal.carpenter.ClassCarpenter
 import net.corda.serialization.internal.carpenter.ClassCarpenterImpl
 import net.corda.serialization.internal.model.*
 import java.io.NotSerializableException
+import java.util.Collections.unmodifiableMap
+import java.util.function.Function
 
 @KeepForDJVM
 object SerializerFactoryBuilder {
+    /**
+     * The standard mapping of Java object types to Java primitive types.
+     * The DJVM will need to override these, but probably not anyone else.
+     */
+    @Suppress("unchecked_cast")
+    private val javaPrimitiveTypes: Map<Class<*>, Class<*>> = unmodifiableMap(listOf(
+        Boolean::class,
+        Byte::class,
+        Char::class,
+        Double::class,
+        Float::class,
+        Int::class,
+        Long::class,
+        Short::class
+    ).associate {
+        klazz -> klazz.javaObjectType to klazz.javaPrimitiveType
+    }) as Map<Class<*>, Class<*>>
 
     @JvmStatic
     fun build(whitelist: ClassWhitelist, classCarpenter: ClassCarpenter): SerializerFactory {
@@ -89,17 +108,19 @@ object SerializerFactoryBuilder {
                 fingerPrinter,
                 classCarpenter.classloader,
                 descriptorBasedSerializerRegistry,
+                Function { clazz -> AMQPPrimitiveSerializer(clazz) },
                 customSerializerRegistry,
                 onlyCustomSerializers)
 
-        val typeLoader = ClassCarpentingTypeLoader(
+        val typeLoader: TypeLoader = ClassCarpentingTypeLoader(
                 SchemaBuildingRemoteTypeCarpenter(classCarpenter),
                 classCarpenter.classloader)
 
         val evolutionSerializerFactory = if (allowEvolution) DefaultEvolutionSerializerFactory(
                 localSerializerFactory,
                 classCarpenter.classloader,
-                mustPreserveDataWhenEvolving
+                mustPreserveDataWhenEvolving,
+                javaPrimitiveTypes
         ) else NoEvolutionSerializerFactory
 
         val remoteSerializerFactory = DefaultRemoteSerializerFactory(
@@ -116,15 +137,17 @@ object SerializerFactoryBuilder {
 }
 
 object NoEvolutionSerializerFactory : EvolutionSerializerFactory {
-    override fun getEvolutionSerializer(remoteTypeInformation: RemoteTypeInformation, localTypeInformation: LocalTypeInformation): AMQPSerializer<Any> {
+    override fun getEvolutionSerializer(remote: RemoteTypeInformation, local: LocalTypeInformation): AMQPSerializer<Any> {
         throw NotSerializableException("""
 Evolution not permitted.
 
 Remote:
-${remoteTypeInformation.prettyPrint(false)}
+${remote.prettyPrint(false)}
 
 Local:
-${localTypeInformation.prettyPrint(false)}
+${local.prettyPrint(false)}
         """)
     }
+
+    override val primitiveTypes: Map<Class<*>, Class<*>> = emptyMap()
 }
