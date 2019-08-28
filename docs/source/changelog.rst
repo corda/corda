@@ -33,6 +33,13 @@ Version 5.0
      However, the node cannot resolve the forward chain of transactions if this is done. This means that if you wish to re-record a chain of
      transactions and get the new output states to be correctly marked as consumed, the full chain must be sent to the node *in order*.
 
+* Information about checkpointed flows can be retrieved from the shell. Calling ``dumpCheckpoints`` will create a zip file inside the node's
+  ``log`` directory. This zip will contain a JSON representation of each checkpointed flow. This information can then be used to determine the
+  state of stuck flows or flows that experienced internal errors and were kept in the node for manual intervention.
+
+  * The jackson annotations on ``Expression`` have been removed. You will need to use ``FinanceJSONSupport.registerFinanceJSONMappers`` if
+    you wish to preserve the JSON format for this class.
+
 * Added ``nodeDiagnosticInfo`` to the RPC API. The new RPC is also available as the ``run nodeDiagnosticInfo`` command executable from
   the Corda shell. It retrieves version information about the Corda platform and the CorDapps installed on the node.
 

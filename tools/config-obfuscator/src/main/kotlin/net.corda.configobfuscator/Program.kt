@@ -56,7 +56,8 @@ class ConfigObfuscatorCli : CordaCliWrapper(
             description = ["The primary hardware address of the machine on which the configuration file resides. By default, " +
                     "the MAC address of the running machine will be used. Supplying 'DEFAULT' will explicitly use the default value."],
             defaultValue = "DEFAULT",
-            showDefaultValue = CommandLine.Help.Visibility.NEVER)
+            showDefaultValue = CommandLine.Help.Visibility.NEVER,
+            arity = "0..1")
     var hardwareAddress: String? = null
 
     @CommandLine.Parameters(
@@ -64,7 +65,9 @@ class ConfigObfuscatorCli : CordaCliWrapper(
             paramLabel = "SEED",
             description = ["Bytes seeding the encryption key used for obfuscation. Leave blank or supply 'DEFAULT' to use the default seed bytes."],
             defaultValue = "DEFAULT",
-            showDefaultValue = CommandLine.Help.Visibility.NEVER)
+            showDefaultValue = CommandLine.Help.Visibility.NEVER,
+            hidden = true,
+            arity = "0..1")
     var seed: String? = null
 
     // Don't produce log file
@@ -90,10 +93,10 @@ class ConfigObfuscatorCli : CordaCliWrapper(
 
         val hardwareAddressBytes = if (!hardwareAddress.isNullOrBlank() && hardwareAddress != "DEFAULT") {
             try {
-                args[1].split(':').map { Integer.parseInt(it, 16).toByte() }.toByteArray()
+                hardwareAddress!!.split(':').map { Integer.parseInt(it, 16).toByte() }.toByteArray()
             } catch (_: Exception) {
-                System.err.println("Warning: Unable to parse the manually provided hardware address '$hardwareAddress'; reverting to using the default")
-                null
+                System.err.println("Error: Unable to parse the manually provided hardware address '$hardwareAddress'")
+                return ExitCodes.FAILURE
             }
         } else {
             null
@@ -106,10 +109,10 @@ class ConfigObfuscatorCli : CordaCliWrapper(
 
         val seedBytes = if (!seed.isNullOrBlank() && seed != "DEFAULT") {
             try {
-                args[2].split(':').map { Integer.parseInt(it, 16).toByte() }.toByteArray()
+                seed!!.split(':').map { Integer.parseInt(it, 16).toByte() }.toByteArray()
             } catch (_: Exception) {
-                System.err.println("Warning: Unable to parse the manually provided seed '$seed'; reverting to using the default")
-                null
+                System.err.println("Error: Unable to parse the manually provided seed '$seed'")
+                return ExitCodes.FAILURE
             }
         } else {
             null
