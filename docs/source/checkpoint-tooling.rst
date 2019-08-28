@@ -1,5 +1,5 @@
 Checkpoint Tooling
-================
+==================
 
 This page contains information about checkpoint tooling. These tools can be used to debug the causes of stuck flows.
 

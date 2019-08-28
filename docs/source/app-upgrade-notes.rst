@@ -8,7 +8,7 @@ Upgrading CorDapps to newer Platform Versions
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 These notes provide instructions for upgrading your CorDapps from previous versions. Corda provides backwards compatibility for public,
-non-experimental APIs that have been committed to. A list can be found in the :doc:`corda-api` page.
+non-experimental APIs that have been committed to. A list can be found in the :doc:`api-stability-guarantees` page.
 
 This means that you can upgrade your node across versions *without recompiling or adjusting your CorDapps*. You just have to upgrade
 your node and restart.

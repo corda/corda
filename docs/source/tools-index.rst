@@ -11,4 +11,4 @@ wish to try the :doc:`blob-inspector`.
    network-bootstrapper
    demobench
    node-explorer
-   tools-checkpoint-agent
+   checkpoint-tooling

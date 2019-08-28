@@ -14,7 +14,6 @@ import net.corda.node.services.api.SchemaService.SchemaOptions
 import net.corda.node.services.events.NodeSchedulerService
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.BasicHSMKeyManagementService
-import net.corda.node.services.keys.PersistentKeyManagementService
 import net.corda.node.services.messaging.P2PMessageDeduplicator
 import net.corda.node.services.persistence.DBCheckpointStorage
 import net.corda.node.services.persistence.DBTransactionStorage
@@ -38,7 +37,6 @@ class NodeSchemaService(private val extraSchemas: Set<MappedSchema> = emptySet()
             mappedTypes = listOf(DBCheckpointStorage.DBCheckpoint::class.java,
                     DBTransactionStorage.DBTransaction::class.java,
                     BasicHSMKeyManagementService.PersistentKey::class.java,
-                    PersistentKeyManagementService.PersistentKey::class.java,
                     NodeSchedulerService.PersistentScheduledState::class.java,
                     NodeAttachmentService.DBAttachment::class.java,
                     P2PMessageDeduplicator.ProcessedMessage::class.java,

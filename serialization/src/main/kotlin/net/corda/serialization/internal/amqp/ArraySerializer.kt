@@ -88,7 +88,9 @@ open class ArraySerializer(override val type: Type, factory: LocalSerializerFact
                             context: SerializationContext
     ): Any {
         if (obj is List<*>) {
-            return obj.map { input.readObjectOrNull(it, schemas, elementType, context) }.toArrayOfType(elementType)
+            return obj.map {
+                input.readObjectOrNull(redescribe(it, elementType), schemas, elementType, context)
+            }.toArrayOfType(elementType)
         } else throw AMQPNotSerializableException(type, "Expected a List but found $obj")
     }
 

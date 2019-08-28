@@ -27,7 +27,7 @@ namespace amqp::internal::schema {
                 std::unique_ptr<Schema> & schema_,
                 std::string descriptor_);
 
-            const std::unique_ptr<Schema> & schema() const;
+            const ISchemaType & schema() const;
 
             const std::string & descriptor() const;
     };
