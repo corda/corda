@@ -12,7 +12,7 @@
         <dropIndex tableName="pk_hash_to_ext_id_map" indexName="pk_hash_to_xid_idx"/>
 
         <!-- create new primary key constraint on key hash -->
-        <addPrimaryKey columnNames="public_key_hash" constraintName="pub_key_hash_to_external_id_pkey" tableName="pk_hash_to_ext_id_map"/>
+        <addPrimaryKey columnNames="public_key_hash" constraintName="pubkey_hash_to_external_id_pk" tableName="pk_hash_to_ext_id_map"/>
 
         <createIndex indexName="ext_id_idx" tableName="pk_hash_to_ext_id_map">
             <column name="external_id"/>
