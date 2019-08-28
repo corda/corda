@@ -52,7 +52,7 @@ class AttachmentTests : WithMockNet {
 
         // Get node one to run a flow to fetch it and insert it.
         assertThat(
-            bobNode.startAttachmentFlow(id, alice),
+                bobNode.startAttachmentFlow(id, alice),
                 willReturn(noAttachments()))
 
         // Verify it was inserted into node one's store.
@@ -63,7 +63,7 @@ class AttachmentTests : WithMockNet {
         aliceNode.dispose()
 
         assertThat(
-            bobNode.startAttachmentFlow(id, alice),
+                bobNode.startAttachmentFlow(id, alice),
                 willReturn(soleAttachment(attachment)))
     }
 
@@ -73,7 +73,7 @@ class AttachmentTests : WithMockNet {
 
         // Get node one to fetch a non-existent attachment.
         assertThat(
-            bobNode.startAttachmentFlow(hash, alice),
+                bobNode.startAttachmentFlow(hash, alice),
                 willThrow(withRequestedHash(hash)))
     }
 
@@ -101,7 +101,7 @@ class AttachmentTests : WithMockNet {
 
         // Get n1 to fetch the attachment. Should receive corrupted bytes.
         assertThat(
-            bobNode.startAttachmentFlow(id, badAlice),
+                bobNode.startAttachmentFlow(id, badAlice),
                 willThrow<FetchDataFlow.DownloadedVsRequestedDataMismatch>()
         )
     }
@@ -123,9 +123,9 @@ class AttachmentTests : WithMockNet {
 
     //region Generators
     override fun makeNode(name: CordaX500Name) =
-        mockNet.createPartyNode(makeUnique(name)).apply {
-            registerInitiatedFlow(FetchAttachmentsResponse::class.java)
-        }
+            mockNet.createPartyNode(makeUnique(name)).apply {
+                registerInitiatedFlow(FetchAttachmentsResponse::class.java)
+            }
 
     // Makes a node that doesn't do sanity checking at load time.
     private fun makeBadNode(name: CordaX500Name) = mockNet.createNode(
@@ -140,10 +140,10 @@ class AttachmentTests : WithMockNet {
 
     //region Operations
     private fun TestStartedNode.importAttachment(attachment: ByteArray) =
-        attachments.importAttachment(attachment.inputStream(), "test", null)
-            .andRunNetwork()
+            attachments.importAttachment(attachment.inputStream(), "test", null)
+                    .andRunNetwork()
 
-    private fun TestStartedNode.updateAttachment(attachment:  NodeAttachmentService.DBAttachment) = database.transaction {
+    private fun TestStartedNode.updateAttachment(attachment: NodeAttachmentService.DBAttachment) = database.transaction {
         session.update(attachment)
     }.andRunNetwork()
 
@@ -151,19 +151,20 @@ class AttachmentTests : WithMockNet {
             InitiatingFetchAttachmentsFlow(otherSide, setOf(hash)))
 
     private fun TestStartedNode.getAttachmentWithId(id: SecureHash) =
-        attachments.openAttachment(id)!!
+            attachments.openAttachment(id)!!
     //endregion
 
     //region Matchers
     private fun noAttachments() = has(FetchDataFlow.Result<Attachment>::fromDisk, isEmpty)
+
     private fun soleAttachment(attachment: Attachment) = has(FetchDataFlow.Result<Attachment>::fromDisk,
             hasSize(equalTo(1)) and
                     hasElement(attachment))
 
     private fun hashesTo(hash: SecureHash) = has<Attachment, SecureHash>(
-        "hash",
-        { it.open().hash() },
-        equalTo(hash))
+            "hash",
+            { it.open().hash() },
+            equalTo(hash))
     //endregion
 
 }

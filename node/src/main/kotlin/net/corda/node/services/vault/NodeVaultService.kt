@@ -209,7 +209,7 @@ class NodeVaultService(
 
     /** Groups adjacent transactions into batches to generate separate net updates per transaction type. */
     override fun notifyAll(statesToRecord: StatesToRecord, txns: Iterable<CoreTransaction>, previouslySeenTxns: Iterable<CoreTransaction>) {
-        if (statesToRecord == StatesToRecord.NONE || (!txns.any() && !previouslySeenTxns.any()))  return
+        if (statesToRecord == StatesToRecord.NONE || (!txns.any() && !previouslySeenTxns.any())) return
         val batch = mutableListOf<CoreTransaction>()
 
         fun flushBatch(previouslySeen: Boolean) {
@@ -217,6 +217,7 @@ class NodeVaultService(
             processAndNotify(updates, previouslySeen)
             batch.clear()
         }
+
         fun processTransactions(txs: Iterable<CoreTransaction>, previouslySeen: Boolean) {
             for (tx in txs) {
                 if (batch.isNotEmpty() && tx.javaClass != batch.last().javaClass) {

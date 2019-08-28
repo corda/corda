@@ -2,13 +2,17 @@ package net.corda.coretests.serialization
 
 import com.nhaarman.mockito_kotlin.mock
 import net.corda.core.contracts.*
-import net.corda.core.crypto.*
+import net.corda.core.crypto.Crypto
+import net.corda.core.crypto.SignatureMetadata
+import net.corda.core.crypto.TransactionSignature
+import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.node.NotaryInfo
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
-import net.corda.core.transactions.*
+import net.corda.core.transactions.LedgerTransaction
+import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.seconds
 import net.corda.finance.POUNDS
 import net.corda.testing.common.internal.testNetworkParameters
@@ -68,7 +72,7 @@ class TransactionSerializationTests {
     val depositRef = MINI_CORP.ref(1)
     val signatures = listOf(TransactionSignature(ByteArray(1), MEGA_CORP_KEY.public, SignatureMetadata(1, Crypto.findSignatureScheme(MEGA_CORP_KEY.public).schemeNumberID)))
 
-    lateinit var inputState : StateAndRef<ContractState>
+    lateinit var inputState: StateAndRef<ContractState>
     val outputState = TransactionState(TestCash.State(depositRef, 600.POUNDS, MEGA_CORP), TEST_CASH_PROGRAM_ID, DUMMY_NOTARY)
     val changeState = TransactionState(TestCash.State(depositRef, 400.POUNDS, MEGA_CORP), TEST_CASH_PROGRAM_ID, DUMMY_NOTARY)
 
@@ -84,7 +88,7 @@ class TransactionSerializationTests {
         //record fake transaction which created inputState
         val fakeTx = megaCorpServices.signInitialTransaction(TransactionBuilder(DUMMY_NOTARY).withItems(outputState, Command(TestCash.Commands.Issue(), arrayListOf(MEGA_CORP.owningKey))))
         megaCorpServices.recordTransactions(fakeTx)
-        val fakeStateRef = StateRef(fakeTx.id,0)
+        val fakeStateRef = StateRef(fakeTx.id, 0)
         inputState = StateAndRef(TransactionState(TestCash.State(depositRef, 100.POUNDS, MEGA_CORP), TEST_CASH_PROGRAM_ID, DUMMY_NOTARY, constraint = AlwaysAcceptAttachmentConstraint), fakeStateRef)
         tx = TransactionBuilder(DUMMY_NOTARY).withItems(inputState, outputState, changeState, Command(TestCash.Commands.Move(), arrayListOf(MEGA_CORP.owningKey)))
     }

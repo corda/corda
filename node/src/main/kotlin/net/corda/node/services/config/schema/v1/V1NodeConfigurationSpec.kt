@@ -3,14 +3,11 @@ package net.corda.node.services.config.schema.v1
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigException
 import net.corda.common.configuration.parsing.internal.*
+import net.corda.common.validation.internal.Validated
 import net.corda.common.validation.internal.Validated.Companion.invalid
 import net.corda.common.validation.internal.Validated.Companion.valid
-import net.corda.node.services.config.JmxReporterType
-import net.corda.node.services.config.NodeConfiguration
-import net.corda.node.services.config.NodeConfigurationImpl
+import net.corda.node.services.config.*
 import net.corda.node.services.config.NodeConfigurationImpl.Defaults
-import net.corda.node.services.config.Valid
-import net.corda.node.services.config.VerifierType
 import net.corda.node.services.config.schema.parsers.*
 
 internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfiguration>("NodeConfiguration") {
@@ -65,7 +62,7 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
     @Suppress("unused")
     private val systemProperties by nestedObject().optional()
 
-    override fun parseValid(configuration: Config): Valid<NodeConfiguration> {
+    override fun parseValid(configuration: Config): Validated<NodeConfiguration, Configuration.Validation.Error> {
 
         val messagingServerExternal = configuration[messagingServerExternal] ?: Defaults.messagingServerExternal(configuration[messagingServerAddress])
         val database = configuration[database] ?: Defaults.database(configuration[devMode])
@@ -127,7 +124,7 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
                 else -> throw e
             }
         }
-        return result.mapValid { conf -> Valid.withResult(conf as NodeConfiguration, conf.validate().map(::toError).toSet()) }
+        return result.mapValid { conf -> Validated.withResult(conf as NodeConfiguration, conf.validate().map(::toError).toSet()) }
     }
 }
 

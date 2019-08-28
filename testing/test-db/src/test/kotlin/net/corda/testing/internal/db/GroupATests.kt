@@ -14,13 +14,10 @@ class GroupATests {
 
     @Test
     fun noSpecialSqlRequired() {
-
     }
 
     @Test
     @SpecialSql1
     fun someSpecialSqlRequired() {
-
     }
-
 }

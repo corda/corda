@@ -28,7 +28,7 @@ class CertRoleTests {
     }
 
     @Test
-    fun `check cert roles verify for various cert hierarchies`(){
+    fun `check cert roles verify for various cert hierarchies`() {
 
         // Testing for various certificate hierarchies (with or without NodeCA).
         // ROOT -> Intermediate Root -> Doorman -> NodeCA -> Legal Identity cert -> Confidential key cert

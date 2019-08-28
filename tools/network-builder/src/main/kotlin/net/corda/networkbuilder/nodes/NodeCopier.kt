@@ -17,7 +17,7 @@ open class NodeCopier(private val cacheDir: File) {
         LOG.info("copying: ${foundNode.baseDirectory} to $nodeCacheDir")
         foundNode.baseDirectory.copyRecursively(nodeCacheDir, overwrite = true)
         //docker-java lib doesn't copy an empty folder, so if it's empty add a dummy file
-        ensureDirectoryIsNonEmpty(nodeCacheDir.toPath()/("cordapps"))
+        ensureDirectoryIsNonEmpty(nodeCacheDir.toPath() / ("cordapps"))
         copyBootstrapperFiles(nodeCacheDir)
         val configInCacheDir = File(nodeCacheDir, "node.conf")
         LOG.info("Applying precanned config $configInCacheDir")
@@ -55,8 +55,8 @@ open class NodeCopier(private val cacheDir: File) {
                 .classLoader
                 .getResourceAsStream("rpc-settings.conf")
                 .reader().use {
-            ConfigFactory.parseReader(it)
-        }.getValue("rpcSettings")
+                    ConfigFactory.parseReader(it)
+                }.getValue("rpcSettings")
     }
 
     internal fun getDefaultSshSettings(): ConfigValue {
@@ -64,8 +64,8 @@ open class NodeCopier(private val cacheDir: File) {
                 .classLoader
                 .getResourceAsStream("ssh.conf")
                 .reader().use {
-            ConfigFactory.parseReader(it)
-        }.getValue("sshd")
+                    ConfigFactory.parseReader(it)
+                }.getValue("sshd")
     }
 
     internal fun mergeConfigs(configInCacheDir: File,

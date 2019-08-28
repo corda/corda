@@ -81,13 +81,14 @@ class BasicHSMKeyManagementService(cacheFactory: NamedCacheFactory,
         }
     }
 
-    override val keys: Set<PublicKey> get() {
-        return database.transaction {
-            val set = LinkedHashSet<PublicKey>(originalKeysMap.keys)
-            keysMap.allPersisted.use { it.forEach { set += it.first } }
-            set
+    override val keys: Set<PublicKey>
+        get() {
+            return database.transaction {
+                val set = LinkedHashSet<PublicKey>(originalKeysMap.keys)
+                keysMap.allPersisted.use { it.forEach { set += it.first } }
+                set
+            }
         }
-    }
 
     private fun containsPublicKey(publicKey: PublicKey): Boolean {
         return (publicKey in originalKeysMap || publicKey in keysMap)

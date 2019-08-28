@@ -3,7 +3,6 @@ package net.corda.testing.internal.db
 import org.assertj.core.api.Assertions.assertThat
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import java.lang.IllegalStateException
 
 class AssertingTestDatabaseContext : TestDatabaseContext {
 
@@ -57,5 +56,4 @@ class AssertingTestDatabaseContext : TestDatabaseContext {
             throw IllegalStateException("Assertion failed: ${e.message}")
         }
     }
-
 }

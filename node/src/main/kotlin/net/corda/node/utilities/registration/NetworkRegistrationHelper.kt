@@ -1,13 +1,12 @@
 package net.corda.node.utilities.registration
 
-import net.corda.core.crypto.internal.AliasPrivateKey
 import net.corda.core.crypto.Crypto
+import net.corda.core.crypto.internal.AliasPrivateKey
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.*
 import net.corda.core.utilities.contextLogger
 import net.corda.node.NodeRegistrationOption
 import net.corda.node.services.config.NodeConfiguration
-import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
 import net.corda.nodeapi.internal.config.CertificateStore
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.crypto.CertificateType
@@ -18,9 +17,10 @@ import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_CLIENT_CA
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_CLIENT_TLS
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_ROOT_CA
 import net.corda.nodeapi.internal.crypto.X509Utilities.DEFAULT_VALIDITY_WINDOW
+import net.corda.nodeapi.internal.cryptoservice.CryptoService
 import net.corda.nodeapi.internal.cryptoservice.CryptoServiceFactory
 import net.corda.nodeapi.internal.cryptoservice.SupportedCryptoServices
-import net.corda.nodeapi.internal.cryptoservice.CryptoService
+import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.openssl.jcajce.JcaPEMWriter
 import org.bouncycastle.operator.ContentSigner
@@ -271,10 +271,10 @@ open class NetworkRegistrationHelper(
     protected open fun isTlsCrlIssuerCertRequired(): Boolean = false
 }
 
-class NodeRegistrationConfiguration (
+class NodeRegistrationConfiguration(
         val p2pSslOptions: MutualSslConfiguration,
-        val myLegalName : CordaX500Name,
-        val tlsCertCrlIssuer : X500Principal?,
+        val myLegalName: CordaX500Name,
+        val tlsCertCrlIssuer: X500Principal?,
         val tlsCertCrlDistPoint: URL?,
         val certificatesDirectory: Path,
         val emailAddress: String,

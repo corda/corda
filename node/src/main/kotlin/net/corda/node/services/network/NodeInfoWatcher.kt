@@ -7,7 +7,6 @@ import net.corda.core.serialization.serialize
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.seconds
-import net.corda.core.internal.NODE_INFO_DIRECTORY
 import net.corda.nodeapi.internal.NodeInfoAndSigned
 import net.corda.nodeapi.internal.network.NodeInfoFilesCopier
 import rx.Observable
@@ -82,8 +81,10 @@ class NodeInfoWatcher(private val nodePath: Path,
         val processedPaths = HashSet<Path>()
         val result = nodeInfosDir.list { paths ->
             paths
-                    .filter { logger.debug { "Examining $it" }
-                            true}
+                    .filter {
+                        logger.debug { "Examining $it" }
+                        true
+                    }
                     .filter { it.isRegularFile() }
                     .filter { file ->
                         val lastModifiedTime = file.lastModifiedTime()

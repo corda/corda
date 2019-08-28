@@ -1,10 +1,10 @@
 package net.corda.networkbuilder.volumes.docker
 
+import net.corda.core.internal.signWithCert
+import net.corda.core.serialization.serialize
 import net.corda.networkbuilder.context.Context
 import net.corda.networkbuilder.notaries.CopiedNotary
 import net.corda.networkbuilder.volumes.Volume
-import net.corda.core.internal.signWithCert
-import net.corda.core.serialization.serialize
 import net.corda.nodeapi.internal.network.NETWORK_PARAMS_FILE_NAME
 import org.slf4j.LoggerFactory
 import java.io.File
@@ -20,7 +20,8 @@ class LocalVolume(scratchDir: File, context: Context) : Volume {
         networkParamsDir.mkdirs()
         val networkParameters = convertNodeIntoToNetworkParams(notaries.map { it.configFile to it.nodeInfoFile })
         val networkParamsFile = File(networkParamsDir, NETWORK_PARAMS_FILE_NAME)
-        networkParamsFile.outputStream().use { networkParameters.signWithCert(Volume.keyPair.private, Volume.networkMapCert).serialize().writeTo(it) }
+        networkParamsFile.outputStream()
+                .use { networkParameters.signWithCert(Volume.keyPair.private, Volume.networkMapCert).serialize().writeTo(it) }
         LOG.info("wrote network params to local file: ${networkParamsFile.absolutePath}")
     }
 

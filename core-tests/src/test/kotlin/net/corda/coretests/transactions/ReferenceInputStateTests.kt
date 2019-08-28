@@ -22,7 +22,7 @@ import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.ledger
-import org.assertj.core.api.Assertions.*
+import org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import org.junit.Rule
 import org.junit.Test
 

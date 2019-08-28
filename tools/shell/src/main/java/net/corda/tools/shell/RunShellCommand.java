@@ -45,22 +45,22 @@ public class RunShellCommand extends InteractiveShellCommand {
         return InteractiveShell.runRPCFromString(command, out, context, ops(), objectMapper(InteractiveShell.getCordappsClassloader()));
     }
 
-  private void emitHelp(InvocationContext<Map> context) {
-    // to handle the lack of working inheritance in [StringToMethodCallParser] two parsers are used
-    StringToMethodCallParser<CordaRPCOps> cordaRpcOpsParser =
-        new StringToMethodCallParser<>(
-            CordaRPCOps.class, objectMapper(InteractiveShell.getCordappsClassloader()));
-    StringToMethodCallParser<InternalCordaRPCOps> internalCordaRpcOpsParser =
-        new StringToMethodCallParser<>(
-            InternalCordaRPCOps.class, objectMapper(InteractiveShell.getCordappsClassloader()));
+    private void emitHelp(InvocationContext<Map> context) {
+        // to handle the lack of working inheritance in [StringToMethodCallParser] two parsers are used
+        StringToMethodCallParser<CordaRPCOps> cordaRpcOpsParser =
+                new StringToMethodCallParser<>(
+                        CordaRPCOps.class, objectMapper(InteractiveShell.getCordappsClassloader()));
+        StringToMethodCallParser<InternalCordaRPCOps> internalCordaRpcOpsParser =
+                new StringToMethodCallParser<>(
+                        InternalCordaRPCOps.class, objectMapper(InteractiveShell.getCordappsClassloader()));
 
-    // Sends data down the pipeline about what commands are available. CRaSH will render it nicely.
-    // Each element we emit is a map of column -> content.
-    Set<Map.Entry<String, String>> entries = cordaRpcOpsParser.getAvailableCommands().entrySet();
-    Set<Map.Entry<String, String>> internalEntries = internalCordaRpcOpsParser.getAvailableCommands().entrySet();
-    Set<Map.Entry<String, String>> entrySet = new HashSet<>(entries);
-    entrySet.addAll(internalEntries);
-    List<Map.Entry<String, String>> entryList = new ArrayList<>(entrySet);
+        // Sends data down the pipeline about what commands are available. CRaSH will render it nicely.
+        // Each element we emit is a map of column -> content.
+        Set<Map.Entry<String, String>> entries = cordaRpcOpsParser.getAvailableCommands().entrySet();
+        Set<Map.Entry<String, String>> internalEntries = internalCordaRpcOpsParser.getAvailableCommands().entrySet();
+        Set<Map.Entry<String, String>> entrySet = new HashSet<>(entries);
+        entrySet.addAll(internalEntries);
+        List<Map.Entry<String, String>> entryList = new ArrayList<>(entrySet);
         entryList.sort(comparing(Map.Entry::getKey));
         for (Map.Entry<String, String> entry : entryList) {
             // Skip these entries as they aren't really interesting for the user.
