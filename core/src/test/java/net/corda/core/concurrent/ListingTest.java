@@ -8,11 +8,14 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import static org.hamcrest.core.Is.is;
+import static org.hamcrest.core.IsEqual.equalTo;
+
 public class ListingTest {
 
-    class ListShufflerAndAllocator {
+    static class ListShufflerAndAllocator {
 
-        private final java.util.List<String> tests;
+        private final List<String> tests;
 
         public ListShufflerAndAllocator(List<String> tests) {
             this.tests = new ArrayList<>(tests);
@@ -20,7 +23,7 @@ public class ListingTest {
 
         List<String> getTestsForFork(int fork, int forks, Integer seed) {
             Random shuffler = new Random(seed);
-            List<java.lang.String> copy = new ArrayList<>(tests);
+            List<String> copy = new ArrayList<>(tests);
             while (copy.size() < forks) {
                 //pad the list
                 copy.add(null);
@@ -50,18 +53,16 @@ public class ListingTest {
                 List<String> tests = IntStream.range(0, numberOfTests).mapToObj(z -> "Test.method" + z).collect(Collectors.toList());
                 ListShufflerAndAllocator testLister = new ListShufflerAndAllocator(tests);
 
-                int forks = numberOfForks;
-
                 List<String> listOfLists = new ArrayList<>();
-                for (int k = 0; k < forks; k++) {
-                    listOfLists.addAll(testLister.getTestsForFork(k, forks, 0));
+                for (int fork = 0; fork < numberOfForks; fork++) {
+                    listOfLists.addAll(testLister.getTestsForFork(fork, numberOfForks, 0));
                 }
 
                 Assert.assertThat(listOfLists.size(), CoreMatchers.is(tests.size()));
                 Assert.assertThat(new HashSet<>(listOfLists).size(), CoreMatchers.is(tests.size()));
+                Assert.assertThat(listOfLists.stream().sorted().collect(Collectors.toList()), is(equalTo(tests.stream().sorted().collect(Collectors.toList()))));
             }
         }
-
 
 
     }

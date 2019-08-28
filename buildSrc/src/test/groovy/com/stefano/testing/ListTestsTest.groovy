@@ -4,26 +4,34 @@ import org.hamcrest.CoreMatchers
 import org.junit.Assert
 import org.junit.Test
 
+import java.util.stream.Collectors
 import java.util.stream.IntStream
+
+import static org.hamcrest.core.Is.is
+import static org.hamcrest.core.IsEqual.equalTo
 
 class ListTestsTest {
 
     @Test
     void shouldAllocateTests() {
 
-        def tests = IntStream.range(0, 39).mapToObj { i -> "Test.method$i" }.collect { it -> it }
-        ListShufflerAndAllocator testLister = new ListShufflerAndAllocator(tests)
+        for (int numberOfTests = 1; numberOfTests < 100; numberOfTests++) {
+            for (int numberOfForks = 1; numberOfForks < 100; numberOfForks++) {
 
 
-        def forks = 17
+                List<String> tests = IntStream.range(0, numberOfTests).mapToObj { z -> "Test.method" + z }.collect(Collectors.toList());
+                ListShufflerAndAllocator testLister = new ListShufflerAndAllocator(tests);
 
-        List<String> listOfLists = new ArrayList<>()
-        for (int i = 0; i < forks; i++) {
-            listOfLists.addAll(testLister.getTestsForFork(i, forks, 0))
+                List<String> listOfLists = new ArrayList<>();
+                for (int fork = 0; fork < numberOfForks; fork++) {
+                    listOfLists.addAll(testLister.getTestsForFork(fork, numberOfForks, 0));
+                }
+
+                Assert.assertThat(listOfLists.size(), CoreMatchers.is(tests.size()));
+                Assert.assertThat(new HashSet<>(listOfLists).size(), CoreMatchers.is(tests.size()));
+                Assert.assertThat(listOfLists.stream().sorted().collect(Collectors.toList()), is(equalTo(tests.stream().sorted().collect(Collectors.toList()))));
+            }
         }
-
-//        Assert.assertThat(listOfLists.size(), CoreMatchers.is(tests.size()))
-//        Assert.assertThat(listOfLists.toSet().size(), CoreMatchers.is(tests.size()))
 
     }
 

@@ -16,25 +16,24 @@ class ListShufflerAndAllocator {
         this.tests = new ArrayList<>(tests)
     }
 
-    def List<String> getTestsForFork(int fork, int forks, Integer seed) {
-        Random shuffler = new Random(seed)
-        List<String> copy = new ArrayList(tests)
+    List<String> getTestsForFork(int fork, int forks, Integer seed) {
+        Random shuffler = new Random(seed);
+        List<String> copy = new ArrayList<>(tests);
         while (copy.size() < forks) {
             //pad the list
-            copy.add(null)
+            copy.add(null);
         }
-        Collections.shuffle(copy, shuffler)
-        int numberOfTestsPerFork = Math.max((copy.size() / forks).intValue(), 1)
-        int remainder = copy.size() % numberOfTestsPerFork
-
-        def consumedTests = numberOfTestsPerFork * forks
-
-        def ourStartIdx = numberOfTestsPerFork * fork
-        def ourEndIdx = ourStartIdx + numberOfTestsPerFork
-        def ourSupplementaryIdx = consumedTests + fork
-
-        return copy
-
+        Collections.shuffle(copy, shuffler);
+        int numberOfTestsPerFork = Math.max((copy.size() / forks).intValue(), 1);
+        int consumedTests = numberOfTestsPerFork * forks;
+        int ourStartIdx = numberOfTestsPerFork * fork;
+        int ourEndIdx = ourStartIdx + numberOfTestsPerFork;
+        int ourSupplementaryIdx = consumedTests + fork;
+        ArrayList<String> toReturn = new ArrayList<>(copy.subList(ourStartIdx, ourEndIdx));
+        if (ourSupplementaryIdx < copy.size()) {
+            toReturn.add(copy.get(ourSupplementaryIdx));
+        }
+        return toReturn.stream().filter { it -> it != null }.collect(Collectors.toList());
     }
 }
 
