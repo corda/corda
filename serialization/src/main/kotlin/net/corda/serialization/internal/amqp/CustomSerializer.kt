@@ -29,6 +29,11 @@ abstract class CustomSerializer<T : Any> : AMQPSerializer<T>, SerializerFor {
      */
     open val additionalSerializers: Iterable<CustomSerializer<out Any>> = emptyList()
 
+    /**
+     * This custom serializer is also allowed to deserialize these classes. This allows us
+     * to deserialize objects into completely different types, e.g. `A` -> `sandbox.A`.
+     */
+    open val deserializationAliases: Set<Class<*>> = emptySet()
 
     protected abstract val descriptor: Descriptor
     /**
@@ -52,6 +57,14 @@ abstract class CustomSerializer<T : Any> : AMQPSerializer<T>, SerializerFor {
 
     abstract fun writeDescribedObject(obj: T, data: Data, type: Type, output: SerializationOutput,
                                       context: SerializationContext)
+
+    /**
+     * [CustomSerializerRegistry.findCustomSerializer] will invoke this method on the [CustomSerializer]
+     * that it selects to give that serializer an opportunity to customise its behaviour. The serializer
+     * can also return `null` here, in which case [CustomSerializerRegistry] will proceed as if no
+     * serializer is available for [declaredType].
+     */
+    open fun specialiseFor(declaredType: Type): AMQPSerializer<T>? = this
 
     /**
      * This custom serializer represents a sort of symbolic link from a subclass to a super class, where the super
@@ -110,7 +123,7 @@ abstract class CustomSerializer<T : Any> : AMQPSerializer<T>, SerializerFor {
      */
     abstract class CustomSerializerImp<T : Any>(protected val clazz: Class<T>, protected val withInheritance: Boolean) : CustomSerializer<T>() {
         override val type: Type get() = clazz
-        override val typeDescriptor: Symbol = Symbol.valueOf("$DESCRIPTOR_DOMAIN:${AMQPTypeIdentifiers.nameForType(clazz)}")
+        override val typeDescriptor: Symbol = typeDescriptorFor(clazz)
         override fun writeClassInfo(output: SerializationOutput) {}
         override val descriptor: Descriptor = Descriptor(typeDescriptor)
         override fun isSerializerFor(clazz: Class<*>): Boolean = if (withInheritance) this.clazz.isAssignableFrom(clazz) else this.clazz == clazz
@@ -119,11 +132,13 @@ abstract class CustomSerializer<T : Any> : AMQPSerializer<T>, SerializerFor {
     /**
      * Additional base features for a custom serializer for a particular class, that excludes subclasses.
      */
+    @KeepForDJVM
     abstract class Is<T : Any>(clazz: Class<T>) : CustomSerializerImp<T>(clazz, false)
 
     /**
      * Additional base features for a custom serializer for all implementations of a particular interface or super class.
      */
+    @KeepForDJVM
     abstract class Implements<T : Any>(clazz: Class<T>) : CustomSerializerImp<T>(clazz, true)
 
     /**
@@ -133,6 +148,7 @@ abstract class CustomSerializer<T : Any> : AMQPSerializer<T>, SerializerFor {
      * The proxy class must use only types which are either native AMQP or other types for which there are pre-registered
      * custom serializers.
      */
+    @KeepForDJVM
     abstract class Proxy<T : Any, P : Any>(clazz: Class<T>,
                                            protected val proxyClass: Class<P>,
                                            protected val factory: LocalSerializerFactory,
@@ -191,6 +207,7 @@ abstract class CustomSerializer<T : Any> : AMQPSerializer<T>, SerializerFor {
      * @param maker A lambda for constructing an instance, that defaults to calling a constructor that expects a string.
      * @param unmaker A lambda that extracts the string value for an instance, that defaults to the [toString] method.
      */
+    @KeepForDJVM
     abstract class ToString<T : Any>(clazz: Class<T>, withInheritance: Boolean = false,
                                      private val maker: (String) -> T = clazz.getConstructor(String::class.java).let { `constructor` ->
                                          { string -> `constructor`.newInstance(string) }

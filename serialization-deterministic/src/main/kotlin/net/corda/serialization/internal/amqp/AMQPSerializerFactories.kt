@@ -13,11 +13,16 @@ import net.corda.serialization.internal.carpenter.Schema
 @Suppress("UNUSED")
 fun createSerializerFactoryFactory(): SerializerFactoryFactory = DeterministicSerializerFactoryFactory()
 
+/**
+ * Creates a [ClassCarpenter] suitable for the DJVM, i.e. one that doesn't work.
+ */
+fun createClassCarpenter(context: SerializationContext): ClassCarpenter = DummyClassCarpenter(context.whitelist, context.deserializationClassLoader)
+
 private class DeterministicSerializerFactoryFactory : SerializerFactoryFactory {
     override fun make(context: SerializationContext) =
             SerializerFactoryBuilder.build(
             whitelist = context.whitelist,
-            classCarpenter = DummyClassCarpenter(context.whitelist, context.deserializationClassLoader))
+            classCarpenter = createClassCarpenter(context))
 }
 
 private class DummyClassCarpenter(

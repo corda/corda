@@ -75,7 +75,6 @@ class RpcReconnectTests {
 
         // When this reaches 0 - the test will end.
         val flowsCountdownLatch = CountDownLatch(NUMBER_OF_FLOWS_TO_RUN)
-
         // These are the expected progress steps for the CashIssueAndPayFlow.
         val expectedProgress = listOf(
                 "Starting",
@@ -153,7 +152,6 @@ class RpcReconnectTests {
                     }
 
                     if (flowsCountdownLatch.count == 0L) break
-
                     when (Random().nextInt().rem(7).absoluteValue) {
                         0 -> {
                             log.info("Forcefully killing node and proxy.")
@@ -310,7 +308,6 @@ class RpcReconnectTests {
             // Stop the observers.
             vaultSubscription.unsubscribe()
             stateMachineSubscription.unsubscribe()
-
             bankAReconnectingRpc.close()
         }
 
@@ -321,7 +318,6 @@ class RpcReconnectTests {
     fun MutableMap<StateMachineRunId, MutableList<String>>.addEvent(id: StateMachineRunId, progress: String?): Boolean {
         return getOrPut(id) { mutableListOf() }.let { if (progress != null) it.add(progress) else false }
     }
-
     private fun getRandomAddressPair() = AddressPair(getRandomAddress(), getRandomAddress())
     private fun getRandomAddress() = NetworkHostAndPort("localhost", portAllocator.nextPort())
 
