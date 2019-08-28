@@ -356,28 +356,40 @@ Reconnecting RPC clients
 ------------------------
 
 In the current version of Corda, an RPC client connected to a node stops functioning when the node becomes unavailable or the associated TCP connection is interrupted.
-Running RPC commands against a stopped node will just throw exceptions. Any subscriptions to ``Observable``\s that have been created before the disconnection will stop receiving events after the node restarts.
-RPCs which have a side effect, such as starting flows, may or may not have executed on the node depending on when the client was disconnected.
+Running RPC commands after this has happened will just throw exceptions. Any subscriptions to ``Observable``\s that have been created before the disconnection will stop receiving events after the connection is re-established.
+RPC calls that have a side effect, such as starting flows, may or may not have executed on the node depending on when the client was disconnected.
 
-It is the client's responsibility to handle these errors and reconnect once the node is running again. The client will have to re-subscribe to any ``Observable``\s in order to keep receiving updates.
-With regards to RPCs with side effects, the client will have to inspect the state of the node to infer whether the flow was executed or not before retrying it.
+It is the responsibility of application code to handle these errors and reconnect once the node is running again. The client will have to retrieve new ``Observable``\s and re-subscribe to them in order to keep receiving updates.
+With regards to RPCs with side effects (e.g. flow invocations), the application code will have to inspect the state of the node to infer whether the call was executed on the server side (e.g. if the flow was executed or not) before retrying it.
 
-Clients can make use of the options described below in order to take advantage of some automatic reconnection functionality that mitigates some of these issues.
+You can make use of the options described below in order to take advantage of some automatic reconnection functionality that mitigates some of these issues.
 
 Enabling automatic reconnection
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 If you provide a list of addresses via the ``haAddressPool`` argument when instantiating a ``CordaRPCClient``, then automatic reconnection will be performed when the existing connection is dropped.
-However, any in-flight calls during reconnection will fail and previously returned observables will call ``onError``. The client code is responsible for waiting for the connection to be established
-in order to retry any calls, retrieve new observables and re-subscribe to them.
+However, the application code is responsible for waiting for the connection to be established again in order to perform any calls, retrieve new observables and re-subscribe to them. This can be done by doing a simple, side-effect free RPC call (e.g. ``nodeInfo``).
+Any RPC calls that had not been acknowledged to the RPC client from the node at the point the disconnection happened, they will fail with a ``ConnectionFailureException``.
+It is important to note this does not mean the node did not execute the RPC calls, it only means the completion was not acknowledged. As described above, application code will have to check after the connection is re-established to determine whether these calls were actually executed.
+Any observables that were returned before the disconnection will call the ``onError`` handlers.
 
 Enabling graceful reconnection
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-A more graceful form of reconnection is also available, which will block all in-flight calls until the connection is re-established and
-will also reconnect the existing ``Observable``\s, so that they keep emitting events to the existing subscribers.
+A more graceful form of reconnection is also available. This will:
 
-.. warning:: In this approach, some events might be lost during a re-connection and not sent from the subscribed ``Observable``\s.
+- reconnect any existing ``Observable``\s after a reconnection, so that they keep emitting events to the existing subscriptions.
+- block any RPC calls that arrive during a reconnection or any RPC calls that were not acknowledged at the point of reconnection and will execute them after the connection is re-established.
+
+More specifically, the behaviour in the second case is a bit more subtle:
+
+- Any RPC calls that do not have any side-effects (e.g. ``nodeInfo``) will be retried automatically across reconnections.
+  This will work transparently for application code that will not be able to determine whether there was a reconnection.
+  These RPC calls will remain blocked during a reconnection and will return successfully after the connection has been re-established.
+- Any RPC calls that do have side-effects, such as the ones invoking flows (e.g. ``startFlow``), will not be retried and they will fail with ``CouldNotStartFlowException``.
+  This is done in order to avoid duplicate invocations of a flow, thus providing at-most-once guarantees. Application code is responsible for determining whether the flow needs to be retried and retrying it, if needed.
+
+.. warning:: In this approach, some events might be lost during a reconnection and not sent from the subscribed ``Observable``\s.
 
 You can enable this graceful form of reconnection by using the ``gracefulReconnect`` parameter in the following way:
 
@@ -385,15 +397,6 @@ You can enable this graceful form of reconnection by using the ``gracefulReconne
 
    val cordaClient = CordaRPCClient(nodeRpcAddress)
    val cordaRpcOps = cordaClient.start(rpcUserName, rpcUserPassword, gracefulReconnect = true).proxy
-
-Logical  retries for flow invocation
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-As described above, if you want to retry a flow that failed during a disconnection, you will first need to verify it has not been previously executed.
-The only way currently to confirm this is by performing a business-level query.
-
-.. note:: Future releases of Corda are expected to contain new APIs for coping with reconnection in a more resilient way providing stricter
-   safety guarantees.
 
 
 Wire security
