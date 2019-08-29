@@ -224,7 +224,7 @@ open class MockServices private constructor(
 
                 override fun jdbcSession(): Connection = persistence.createSession()
 
-                override fun <T : Any> withEntityManager(block: EntityManager.() -> T): T {
+                override fun <T : Any?> withEntityManager(block: EntityManager.() -> T): T {
                     return block(contextTransaction.restrictedEntityManager)
                 }
 
@@ -440,7 +440,7 @@ open class MockServices private constructor(
 
     override fun jdbcSession(): Connection = throw UnsupportedOperationException()
 
-    override fun <T : Any> withEntityManager(block: EntityManager.() -> T): T {
+    override fun <T : Any?> withEntityManager(block: EntityManager.() -> T): T {
         throw UnsupportedOperationException()
     }
 

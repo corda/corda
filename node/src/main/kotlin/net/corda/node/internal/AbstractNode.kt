@@ -1035,12 +1035,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         override fun jdbcSession(): Connection = database.createSession()
 
         override fun <T : Any?> withEntityManager(block: EntityManager.() -> T): T {
-            return if (contextTransactionOrNull != null) {
-                contextTransactionOrNull!!.restrictedEntityManager.let(block)
-            } else {
-                database.transaction {
-                    block(restrictedEntityManager)
-                }
+            return database.transaction {
+                block(restrictedEntityManager)
             }
         }
 
