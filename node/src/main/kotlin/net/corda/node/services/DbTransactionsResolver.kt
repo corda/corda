@@ -12,7 +12,6 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.seconds
 import net.corda.node.services.api.WritableTransactionStorage
-import net.corda.nodeapi.internal.persistence.contextTransaction
 import java.util.*
 
 class DbTransactionsResolver(private val flow: ResolveTransactionsFlow) : TransactionsResolver {
