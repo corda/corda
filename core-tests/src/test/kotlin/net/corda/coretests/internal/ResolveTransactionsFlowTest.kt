@@ -204,28 +204,7 @@ class ResolveTransactionsFlowTest {
         mockNet.runNetwork()
         assertFailsWith<FetchDataFlow.IllegalTransactionRequest> { future.getOrThrow() }
     }
-
-    @Test
-    fun `Switches between checkpoint and DB based resolution correctly`() {
-        System.setProperty(IN_MEMORY_RESOLUTION_LIMIT_PROP_NAME, "20")
-        var numTransactions = 0
-        megaCorpNode.services.validatedTransactions.updates.subscribe {
-            numTransactions++
-        }
-        val txToResolve = makeLargeTransactionChain(50)
-        var numUpdates = 0
-        miniCorpNode.services.validatedTransactions.updates.subscribe {
-            numUpdates++
-        }
-        val p = TestFlow(txToResolve, megaCorp)
-        val future = miniCorpNode.startFlow(p)
-        mockNet.runNetwork()
-        future.getOrThrow()
-        // ResolveTransactionsFlow only stores transaction dependencies and not the requested transaction, so there will be one fewer
-        // transaction stored on the receiving node than on the sending one.
-        assertEquals(numTransactions - 1, numUpdates)
-    }
-
+    
     @Test
     fun `resolution works when transaction in chain is already resolved`() {
         val (tx1, tx2) = makeTransactions()
