@@ -11,6 +11,7 @@ import net.corda.nodeapi.internal.crypto.ContentSignerBuilder
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.cryptoservice.CryptoService
 import net.corda.nodeapi.internal.cryptoservice.CryptoServiceException
+import net.corda.nodeapi.internal.cryptoservice.SupportedCryptoServices
 import org.bouncycastle.operator.ContentSigner
 import java.security.KeyPair
 import java.security.KeyStore
@@ -24,6 +25,8 @@ import javax.security.auth.x500.X500Principal
  * This service reuses the [NodeConfiguration.signingCertificateStore] to store keys.
  */
 class BCCryptoService(private val legalName: X500Principal, private val certificateStoreSupplier: CertificateStoreSupplier) : CryptoService {
+
+    override fun getType(): SupportedCryptoServices = SupportedCryptoServices.BC_SIMPLE
 
     // TODO check if keyStore exists.
     // TODO make it private when E2ETestKeyManagementService does not require direct access to the private key.
