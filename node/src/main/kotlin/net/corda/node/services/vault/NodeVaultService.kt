@@ -32,6 +32,8 @@ import java.security.PublicKey
 import java.time.Clock
 import java.time.Instant
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.CopyOnWriteArraySet
 import javax.persistence.Tuple
 import javax.persistence.criteria.CriteriaBuilder
 import javax.persistence.criteria.CriteriaUpdate
@@ -96,7 +98,8 @@ class NodeVaultService(
      * Maintain a list of contract state interfaces to concrete types stored in the vault
      * for usage in generic queries of type queryBy<LinearState> or queryBy<FungibleState<*>>
      */
-    private val contractStateTypeMappings = mutableMapOf<String, MutableSet<String>>().toSynchronised()
+    @VisibleForTesting
+    internal val contractStateTypeMappings = ConcurrentHashMap<String, MutableSet<String>>()
 
     /**
      * This caches what states are in the vault for a particular transaction.
@@ -114,7 +117,7 @@ class NodeVaultService(
                 if (!seen) {
                     val contractTypes = deriveContractTypes(concreteType)
                     contractTypes.map {
-                        val contractStateType = contractStateTypeMappings.getOrPut(it.name) { mutableSetOf() }
+                        val contractStateType = contractStateTypeMappings.getOrPut(it.name) { CopyOnWriteArraySet() }
                         contractStateType.add(concreteType.name)
                     }
                 }
@@ -228,6 +231,9 @@ class NodeVaultService(
 
     override val updates: Observable<Vault.Update<ContractState>>
         get() = concurrentBox.content._updatesInDbTx
+
+    @VisibleForTesting
+    internal val publishUpdates get() = concurrentBox.content.updatesPublisher
 
     /** Groups adjacent transactions into batches to generate separate net updates per transaction type. */
     override fun notifyAll(statesToRecord: StatesToRecord, txns: Iterable<CoreTransaction>) {
@@ -783,7 +789,7 @@ class NodeVaultService(
             concreteType?.let {
                 val contractTypes = deriveContractTypes(it)
                 contractTypes.map {
-                    val contractStateType = contractStateTypeMappings.getOrPut(it.name) { mutableSetOf() }
+                    val contractStateType = contractStateTypeMappings.getOrPut(it.name) { CopyOnWriteArraySet() }
                     contractStateType.add(concreteType.name)
                 }
             }
