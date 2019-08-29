@@ -22,6 +22,7 @@ interface NetworkBuilder {
     fun onNodeInstance(callback: (NodeInstance) -> Unit): NetworkBuilder
     /** Sets network name */
     fun withNetworkName(networkName: String): NetworkBuilder
+
     fun withBasedir(baseDir: File): NetworkBuilder
     fun withBackend(backendType: Backend.BackendType): NetworkBuilder
     fun withBackendOptions(options: Map<String, String>): NetworkBuilder

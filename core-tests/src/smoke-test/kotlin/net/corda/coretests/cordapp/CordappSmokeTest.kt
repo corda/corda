@@ -66,7 +66,7 @@ class CordappSmokeTest {
 
     @Before
     fun setUp() {
-       notary = factory.create(notaryConfig)
+        notary = factory.create(notaryConfig)
     }
 
     @After

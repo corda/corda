@@ -15,7 +15,7 @@ class NotaryCopier(private val cacheDir: File) : NodeCopier(cacheDir) {
         LOG.info("copying: ${foundNotary.baseDirectory} to $nodeCacheDir")
         foundNotary.baseDirectory.copyRecursively(nodeCacheDir, overwrite = true)
         //docker-java lib doesn't copy an empty folder, so if it's empty add a dummy file
-        ensureDirectoryIsNonEmpty(nodeCacheDir.toPath()/("cordapps"))
+        ensureDirectoryIsNonEmpty(nodeCacheDir.toPath() / ("cordapps"))
         copyNotaryBootstrapperFiles(nodeCacheDir)
         val configInCacheDir = File(nodeCacheDir, "node.conf")
         LOG.info("Applying precanned config $configInCacheDir")

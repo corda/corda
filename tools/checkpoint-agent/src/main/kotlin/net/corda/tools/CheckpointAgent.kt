@@ -8,13 +8,13 @@ import javassist.ClassPool
 import javassist.CtClass
 import net.corda.core.internal.ThreadBox
 import net.corda.core.utilities.debug
+import net.corda.tools.CheckpointAgent.Companion.graphDepth
 import net.corda.tools.CheckpointAgent.Companion.instrumentClassname
 import net.corda.tools.CheckpointAgent.Companion.instrumentType
 import net.corda.tools.CheckpointAgent.Companion.log
 import net.corda.tools.CheckpointAgent.Companion.maximumSize
 import net.corda.tools.CheckpointAgent.Companion.minimumSize
 import net.corda.tools.CheckpointAgent.Companion.printOnce
-import net.corda.tools.CheckpointAgent.Companion.graphDepth
 import org.slf4j.LoggerFactory
 import java.io.ByteArrayInputStream
 import java.lang.instrument.ClassFileTransformer
@@ -65,24 +65,34 @@ class CheckpointAgent {
                     if (nvpItem.size == 2) {
                         when (nvpItem[0].trim()) {
                             "instrumentClassname" -> instrumentClassname = nvpItem[1]
-                            "instrumentType" -> try { instrumentType = InstrumentationType.valueOf(nvpItem[1].toUpperCase()) } catch (e: Exception) {
+                            "instrumentType" -> try {
+                                instrumentType = InstrumentationType.valueOf(nvpItem[1].toUpperCase())
+                            } catch (e: Exception) {
                                 display("Invalid value: ${nvpItem[1]}. Please specify read or write.")
                             }
-                            "minimumSize" -> try { minimumSize = nvpItem[1].toInt() } catch (e: NumberFormatException) {
-                                display("Invalid value: ${nvpItem[1]}. Please specify an integer value.") }
-                            "maximumSize" -> try { maximumSize = nvpItem[1].toInt() } catch (e: NumberFormatException) {
+                            "minimumSize" -> try {
+                                minimumSize = nvpItem[1].toInt()
+                            } catch (e: NumberFormatException) {
                                 display("Invalid value: ${nvpItem[1]}. Please specify an integer value.")
                             }
-                            "graphDepth" -> try { graphDepth = nvpItem[1].toInt() } catch (e: NumberFormatException) {
+                            "maximumSize" -> try {
+                                maximumSize = nvpItem[1].toInt()
+                            } catch (e: NumberFormatException) {
                                 display("Invalid value: ${nvpItem[1]}. Please specify an integer value.")
                             }
-                            "printOnce" -> try { printOnce = nvpItem[1].toBoolean() } catch (e: Exception) {
+                            "graphDepth" -> try {
+                                graphDepth = nvpItem[1].toInt()
+                            } catch (e: NumberFormatException) {
+                                display("Invalid value: ${nvpItem[1]}. Please specify an integer value.")
+                            }
+                            "printOnce" -> try {
+                                printOnce = nvpItem[1].toBoolean()
+                            } catch (e: Exception) {
                                 display("Invalid value: ${nvpItem[1]}. Please specify true or false.")
                             }
                             else -> display("Invalid argument: $nvpItem")
                         }
-                    }
-                    else display("Missing value for argument: $nvpItem")
+                    } else display("Missing value for argument: $nvpItem")
                 }
             }
             println("Running Checkpoint agent with following arguments: instrumentClassname=$instrumentClassname, instrumentType=$instrumentType, minimumSize=$minimumSize, maximumSize=$maximumSize, graphDepth=$graphDepth, printOnce=$printOnce\n")
@@ -208,8 +218,7 @@ object CheckpointHook : ClassFileTransformer {
                 val numberValue = value as Array<Number>
                 log.debug { "readFieldExit array of number: $clazz = ${numberValue.joinToString(",")}" }
                 return numberValue.joinToString(",")
-            }
-            else if (clazz == Array<Boolean>::class.java) {
+            } else if (clazz == Array<Boolean>::class.java) {
                 val arrayValue = value as Array<Boolean>
                 log.debug { "readFieldExit array of boolean: $clazz = ${arrayValue.joinToString(",")}" }
                 return arrayValue.joinToString(",")
@@ -227,38 +236,31 @@ object CheckpointHook : ClassFileTransformer {
                 val arrayValue = value as CharArray
                 log.debug { "readFieldExit char array: $clazz = ${arrayValue.joinToString("")}" }
                 return arrayValue.joinToString("")
-            }
-            else if (clazz == ByteArray::class.java) {
+            } else if (clazz == ByteArray::class.java) {
                 val arrayValue = value as ByteArray
                 log.debug { "readFieldExit byte array: $clazz = ${byteArrayToHex(arrayValue)}" }
                 return byteArrayToHex(arrayValue)
-            }
-            else if (clazz == ShortArray::class.java) {
+            } else if (clazz == ShortArray::class.java) {
                 val arrayValue = value as ShortArray
                 log.debug { "readFieldExit short array: $clazz = ${arrayValue.joinToString(",")}" }
                 return arrayValue.joinToString(",")
-            }
-            else if (clazz == IntArray::class.java) {
+            } else if (clazz == IntArray::class.java) {
                 val arrayValue = value as IntArray
                 log.debug { "readFieldExit int array: $clazz = ${arrayValue.joinToString(",")}" }
                 return arrayValue.joinToString(",")
-            }
-            else if (clazz == LongArray::class.java) {
+            } else if (clazz == LongArray::class.java) {
                 val arrayValue = value as LongArray
                 log.debug { "readFieldExit long array: $clazz = ${arrayValue.joinToString(",")}" }
                 return arrayValue.joinToString(",")
-            }
-            else if (clazz == FloatArray::class.java) {
+            } else if (clazz == FloatArray::class.java) {
                 val arrayValue = value as FloatArray
                 log.debug { "readFieldExit float array: $clazz = ${arrayValue.joinToString(",")}" }
                 return arrayValue.joinToString(",")
-            }
-            else if (clazz == DoubleArray::class.java) {
+            } else if (clazz == DoubleArray::class.java) {
                 val arrayValue = value as DoubleArray
                 log.debug { "readFieldExit double array: $clazz = ${arrayValue.joinToString(",")}" }
                 return arrayValue.joinToString(",")
-            }
-            else if (clazz == BooleanArray::class.java) {
+            } else if (clazz == BooleanArray::class.java) {
                 val arrayValue = value as BooleanArray
                 log.debug { "readFieldExit boolean array: $clazz = ${arrayValue.joinToString(",")}" }
                 return arrayValue.joinToString(",")
@@ -342,8 +344,7 @@ object CheckpointHook : ClassFileTransformer {
             is StatsTree.Object -> {
                 if (printOnce && identityInfo.refCount > 1) {
                     log.debug { "Skipping $statsInfo, $statsTree (count:${identityInfo.refCount})" }
-                }
-                else if (indent/2  < graphDepth) {
+                } else if (indent / 2 < graphDepth) {
                     builder.append(String.format("%03d:", indent / 2))
                     builder.append(CharArray(indent) { ' ' })
                     builder.append(" ${statsInfo.fieldName} ")
@@ -351,14 +352,11 @@ object CheckpointHook : ClassFileTransformer {
                         @Suppress("UNCHECKED_CAST")
                         val arrayValue = (statsTree.value as Array<Any?>)
                         builder.append("${statsInfo.fieldType} (array length:${arrayValue.size})")
-                    }
-                    else if (statsInfo.fieldType != null && statsTree.value is Collection<*>) {
+                    } else if (statsInfo.fieldType != null && statsTree.value is Collection<*>) {
                         builder.append("${statsInfo.fieldType} (collection size:${statsTree.value.size})")
-                    }
-                    else if (statsInfo.fieldType != null && statsTree.value is Map<*,*>) {
+                    } else if (statsInfo.fieldType != null && statsTree.value is Map<*, *>) {
                         builder.append("${statsInfo.fieldType} (map size:${statsTree.value.size})")
-                    }
-                    else {
+                    } else {
                         builder.append("${statsTree.className} (hash:${statsTree.value?.hashCode()}) (count:${identityInfo.refCount})")
                     }
                     builder.append(" ")
@@ -370,7 +368,7 @@ object CheckpointHook : ClassFileTransformer {
                 }
             }
             is StatsTree.BasicType -> {
-                if (indent/2 < graphDepth) {
+                if (indent / 2 < graphDepth) {
                     builder.append(String.format("%03d:", indent / 2))
                     builder.append(CharArray(indent) { ' ' })
                     builder.append(" ${statsInfo.fieldName} ")
@@ -474,15 +472,14 @@ fun readTrees(events: List<StatsEvent>, index: Int, idMap: IdentityHashMap<Any, 
             }
             is StatsEvent.ObjectField -> {
                 val identityInfo =
-                    if (idMap.containsKey(event.value)) {
-                        val identityInfo = idMap[event.value]!!
-                        idMap[event.value] = IdentityInfo(identityInfo.tree, identityInfo.refCount + 1)
-                        log.debug { "Skipping repeated StatsEvent.ObjectField: ${event.value} (hashcode:${event.value.hashCode()}) (count:${idMap[event.value]?.refCount})" }
-                        identityInfo
-                    }
-                    else {
-                        IdentityInfo(StatsTree.Loop(0), 1)
-                    }
+                        if (idMap.containsKey(event.value)) {
+                            val identityInfo = idMap[event.value]!!
+                            idMap[event.value] = IdentityInfo(identityInfo.tree, identityInfo.refCount + 1)
+                            log.debug { "Skipping repeated StatsEvent.ObjectField: ${event.value} (hashcode:${event.value!!.hashCode()}) (count:${idMap[event.value]?.refCount})" }
+                            identityInfo
+                        } else {
+                            IdentityInfo(StatsTree.Loop(0), 1)
+                        }
                 trees += StatsInfo(event.fieldName, event.fieldType) to identityInfo
                 i++
                 inField = false

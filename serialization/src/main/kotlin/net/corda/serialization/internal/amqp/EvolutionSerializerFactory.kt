@@ -17,6 +17,13 @@ interface EvolutionSerializerFactory {
     fun getEvolutionSerializer(
             remote: RemoteTypeInformation,
             local: LocalTypeInformation): AMQPSerializer<Any>?
+
+    /**
+     * A mapping between Java object types and their equivalent Java primitive types.
+     * Predominantly for the sake of the DJVM sandbox where e.g. `char` will map to
+     * sandbox.java.lang.Character instead of java.lang.Character.
+     */
+    val primitiveTypes: Map<Class<*>, Class<*>>
 }
 
 class EvolutionSerializationException(remoteTypeInformation: RemoteTypeInformation, reason: String)
@@ -32,7 +39,9 @@ class EvolutionSerializationException(remoteTypeInformation: RemoteTypeInformati
 class DefaultEvolutionSerializerFactory(
         private val localSerializerFactory: LocalSerializerFactory,
         private val classLoader: ClassLoader,
-        private val mustPreserveDataWhenEvolving: Boolean): EvolutionSerializerFactory {
+        private val mustPreserveDataWhenEvolving: Boolean,
+        override val primitiveTypes: Map<Class<*>, Class<*>>
+): EvolutionSerializerFactory {
 
     override fun getEvolutionSerializer(remote: RemoteTypeInformation,
                                         local: LocalTypeInformation): AMQPSerializer<Any>? =
@@ -77,7 +86,7 @@ class DefaultEvolutionSerializerFactory(
             val localClass = localProperty.type.observedType.asClass()
             val remoteClass = remoteProperty.type.typeIdentifier.getLocalType(classLoader).asClass()
 
-            if (!localClass.isAssignableFrom(remoteClass) && remoteClass != localClass.kotlin.javaPrimitiveType) {
+            if (!localClass.isAssignableFrom(remoteClass) && remoteClass != primitiveTypes[localClass]) {
                 throw EvolutionSerializationException(this,
                         "Local type $localClass of property $name is not assignable from remote type $remoteClass")
             }

@@ -33,7 +33,7 @@ data class NodeParameters(
         val maximumHeapSize: String = System.getenv("DRIVER_NODE_MEMORY") ?: "512m",
         val additionalCordapps: Collection<TestCordapp> = emptySet(),
         val flowOverrides: Map<out Class<out FlowLogic<*>>, Class<out FlowLogic<*>>> = emptyMap(),
-        val logLevelOverride : String? = null
+        val logLevelOverride: String? = null
 ) {
     /**
      * Create a new node parameters object with default values. Each parameter can be specified with its wither method which returns a copy
@@ -49,7 +49,7 @@ data class NodeParameters(
     fun withMaximumHeapSize(maximumHeapSize: String): NodeParameters = copy(maximumHeapSize = maximumHeapSize)
     fun withAdditionalCordapps(additionalCordapps: Set<TestCordapp>): NodeParameters = copy(additionalCordapps = additionalCordapps)
     fun withFlowOverrides(flowOverrides: Map<Class<out FlowLogic<*>>, Class<out FlowLogic<*>>>): NodeParameters = copy(flowOverrides = flowOverrides)
-    fun withLogLevelOverride(logLevelOverride : String?) : NodeParameters = copy(logLevelOverride = logLevelOverride)
+    fun withLogLevelOverride(logLevelOverride: String?): NodeParameters = copy(logLevelOverride = logLevelOverride)
 
     constructor(
             providedName: CordaX500Name?,
@@ -83,6 +83,7 @@ data class NodeParameters(
             maximumHeapSize = maximumHeapSize,
             additionalCordapps = additionalCordapps
     )
+
     constructor(
             providedName: CordaX500Name?,
             rpcUsers: List<User>,

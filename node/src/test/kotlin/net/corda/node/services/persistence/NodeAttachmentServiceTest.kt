@@ -14,8 +14,10 @@ import net.corda.core.internal.*
 import net.corda.core.internal.cordapp.CordappImpl.Companion.DEFAULT_CORDAPP_VERSION
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.AttachmentId
-import net.corda.core.node.services.vault.*
 import net.corda.core.node.services.vault.AttachmentQueryCriteria.AttachmentsQueryCriteria
+import net.corda.core.node.services.vault.AttachmentSort
+import net.corda.core.node.services.vault.Builder
+import net.corda.core.node.services.vault.Sort
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.nodeapi.exceptions.DuplicateAttachmentException
@@ -1082,39 +1084,39 @@ class NodeAttachmentServiceTest {
             val attachmentD = jarSignedByABCD.read { storage.privilegedImportAttachment(it, "app", "D.jar") }
 
             assertEquals(
-                listOf(attachmentA, attachmentB, attachmentC, attachmentD),
-                storage.queryAttachments(
-                    AttachmentsQueryCriteria(
-                        signersCondition = Builder.equal(listOf(keyA))
+                    listOf(attachmentA, attachmentB, attachmentC, attachmentD),
+                    storage.queryAttachments(
+                            AttachmentsQueryCriteria(
+                                    signersCondition = Builder.equal(listOf(keyA))
+                            )
                     )
-                )
             )
 
             assertEquals(
-                listOf(attachmentB, attachmentC, attachmentD),
-                storage.queryAttachments(
-                    AttachmentsQueryCriteria(
-                        signersCondition = Builder.equal(listOf(keyB))
+                    listOf(attachmentB, attachmentC, attachmentD),
+                    storage.queryAttachments(
+                            AttachmentsQueryCriteria(
+                                    signersCondition = Builder.equal(listOf(keyB))
+                            )
                     )
-                )
             )
 
             assertEquals(
-                listOf(attachmentC, attachmentD),
-                storage.queryAttachments(
-                    AttachmentsQueryCriteria(
-                        signersCondition = Builder.equal(listOf(keyC))
+                    listOf(attachmentC, attachmentD),
+                    storage.queryAttachments(
+                            AttachmentsQueryCriteria(
+                                    signersCondition = Builder.equal(listOf(keyC))
+                            )
                     )
-                )
             )
 
             assertEquals(
-                listOf(attachmentD),
-                storage.queryAttachments(
-                    AttachmentsQueryCriteria(
-                        signersCondition = Builder.equal(listOf(keyD))
+                    listOf(attachmentD),
+                    storage.queryAttachments(
+                            AttachmentsQueryCriteria(
+                                    signersCondition = Builder.equal(listOf(keyD))
+                            )
                     )
-                )
             )
         }
     }
@@ -1153,21 +1155,21 @@ class NodeAttachmentServiceTest {
             val attachmentD = jarSignedByCD.read { storage.privilegedImportAttachment(it, "app", "D.jar") }
 
             storage.queryAttachments(
-                AttachmentsQueryCriteria(
-                    signersCondition = Builder.equal(listOf(keyA, keyC))
-                )
+                    AttachmentsQueryCriteria(
+                            signersCondition = Builder.equal(listOf(keyA, keyC))
+                    )
             ).let { result ->
                 assertEquals(4, result.size)
                 assertEquals(
-                    listOf(attachmentA, attachmentB, attachmentC, attachmentD),
-                    result
+                        listOf(attachmentA, attachmentB, attachmentC, attachmentD),
+                        result
                 )
             }
 
             storage.queryAttachments(
-                AttachmentsQueryCriteria(
-                    signersCondition = Builder.equal(listOf(keyA, keyB))
-                )
+                    AttachmentsQueryCriteria(
+                            signersCondition = Builder.equal(listOf(keyA, keyB))
+                    )
             ).let { result ->
                 // made a [Set] due to [NodeAttachmentService.queryAttachments] not returning distinct results
                 assertEquals(3, result.toSet().size)
@@ -1175,9 +1177,9 @@ class NodeAttachmentServiceTest {
             }
 
             storage.queryAttachments(
-                AttachmentsQueryCriteria(
-                    signersCondition = Builder.equal(listOf(keyB, keyC, keyD))
-                )
+                    AttachmentsQueryCriteria(
+                            signersCondition = Builder.equal(listOf(keyB, keyC, keyD))
+                    )
             ).let { result ->
                 // made a [Set] due to [NodeAttachmentService.queryAttachments] not returning distinct results
                 assertEquals(3, result.toSet().size)

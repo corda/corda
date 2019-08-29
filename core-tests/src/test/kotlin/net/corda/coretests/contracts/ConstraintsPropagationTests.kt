@@ -16,13 +16,13 @@ import net.corda.core.internal.canBeTransitionedFrom
 import net.corda.core.internal.inputStream
 import net.corda.core.internal.toPath
 import net.corda.core.node.NotaryInfo
+import net.corda.core.node.services.IdentityService
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.finance.POUNDS
 import net.corda.finance.`issued by`
 import net.corda.finance.contracts.asset.Cash
-import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME
@@ -82,7 +82,7 @@ class ConstraintsPropagationTests {
         ledgerServices = object : MockServices(
                 cordappPackages = listOf("net.corda.finance.contracts.asset"),
                 initialIdentity = ALICE,
-                identityService = mock<IdentityServiceInternal>().also {
+                identityService = mock<IdentityService>().also {
                     doReturn(ALICE_PARTY).whenever(it).partyFromKey(ALICE_PUBKEY)
                     doReturn(BOB_PARTY).whenever(it).partyFromKey(BOB_PUBKEY)
                 },
@@ -120,19 +120,19 @@ class ConstraintsPropagationTests {
     fun `Happy path for Hash to Signature Constraint migration`() {
         val cordapps = (ledgerServices.cordappProvider as MockCordappProvider).cordapps
         val cordappAttachmentIds =
-            cordapps.map { cordapp ->
-                val unsignedAttId =
-                    cordapp.jarPath.toPath().inputStream().use { unsignedJarStream ->
-                        ledgerServices.attachments.importContractAttachment(cordapp.contractClassNames,  "rpc", unsignedJarStream,null)
-                    }
-                val jarAndSigner = ContractJarTestUtils.signContractJar(cordapp.jarPath, copyFirst = true, keyStoreDir = keyStoreDir.path)
-                val signedJar = jarAndSigner.first
-                val signedAttId =
-                    signedJar.inputStream().use { signedJarStream ->
-                        ledgerServices.attachments.importContractAttachment(cordapp.contractClassNames,  "rpc", signedJarStream,null, listOf(jarAndSigner.second))
-                    }
-                Pair(unsignedAttId, signedAttId)
-            }
+                cordapps.map { cordapp ->
+                    val unsignedAttId =
+                            cordapp.jarPath.toPath().inputStream().use { unsignedJarStream ->
+                                ledgerServices.attachments.importContractAttachment(cordapp.contractClassNames, "rpc", unsignedJarStream, null)
+                            }
+                    val jarAndSigner = ContractJarTestUtils.signContractJar(cordapp.jarPath, copyFirst = true, keyStoreDir = keyStoreDir.path)
+                    val signedJar = jarAndSigner.first
+                    val signedAttId =
+                            signedJar.inputStream().use { signedJarStream ->
+                                ledgerServices.attachments.importContractAttachment(cordapp.contractClassNames, "rpc", signedJarStream, null, listOf(jarAndSigner.second))
+                            }
+                    Pair(unsignedAttId, signedAttId)
+                }
 
         val unsignedAttachmentId = cordappAttachmentIds.first().first
         println("Unsigned: $unsignedAttachmentId")
@@ -142,10 +142,10 @@ class ConstraintsPropagationTests {
         ledgerServices.ledger(DUMMY_NOTARY) {
             ledgerServices.recordTransaction(
                     unverifiedTransaction {
-                attachment(Cash.PROGRAM_ID, unsignedAttachmentId)
-                output(Cash.PROGRAM_ID, "c1", DUMMY_NOTARY, null, HashAttachmentConstraint(unsignedAttachmentId), Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), ALICE_PARTY))
-                command(ALICE_PUBKEY, Cash.Commands.Issue())
-            })
+                        attachment(Cash.PROGRAM_ID, unsignedAttachmentId)
+                        output(Cash.PROGRAM_ID, "c1", DUMMY_NOTARY, null, HashAttachmentConstraint(unsignedAttachmentId), Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), ALICE_PARTY))
+                        command(ALICE_PUBKEY, Cash.Commands.Issue())
+                    })
             unverifiedTransaction {
                 attachment(Cash.PROGRAM_ID, signedAttachmentId)
                 input("c1")
@@ -316,7 +316,7 @@ class ConstraintsPropagationTests {
 
         // network parameters
         val netParams = testNetworkParameters(minimumPlatformVersion = 4,
-                packageOwnership = mapOf( "net.corda.core.contracts" to ALICE_PARTY.owningKey))
+                packageOwnership = mapOf("net.corda.core.contracts" to ALICE_PARTY.owningKey))
 
         ledgerServices.attachments.importContractAttachment(attachmentIdSigned, attachmentSigned)
         ledgerServices.attachments.importContractAttachment(attachmentIdUnsigned, attachmentUnsigned)
@@ -371,23 +371,24 @@ class ConstraintsPropagationTests {
         assertFailsWith<IllegalArgumentException> { AutomaticPlaceholderConstraint.canBeTransitionedFrom(AutomaticPlaceholderConstraint, attachment) }
     }
 
-    private fun MockServices.recordTransaction(wireTransaction: WireTransaction){
+    private fun MockServices.recordTransaction(wireTransaction: WireTransaction) {
         val nodeKey = ALICE_PUBKEY
         val sigs = listOf(keyManagementService.sign(
                 SignableData(wireTransaction.id, SignatureMetadata(4, Crypto.findSignatureScheme(nodeKey).schemeNumberID)), nodeKey))
         recordTransactions(SignedTransaction(wireTransaction, sigs))
     }
+
     @Test
     fun `Input state contract version may be incompatible with lower version`() {
         ledgerServices.ledger(DUMMY_NOTARY) {
             ledgerServices.recordTransaction(transaction {
-                attachment(Cash.PROGRAM_ID, SecureHash.allOnesHash, listOf(hashToSignatureConstraintsKey), mapOf(Attributes.Name.IMPLEMENTATION_VERSION.toString() to  "2"))
+                attachment(Cash.PROGRAM_ID, SecureHash.allOnesHash, listOf(hashToSignatureConstraintsKey), mapOf(Attributes.Name.IMPLEMENTATION_VERSION.toString() to "2"))
                 output(Cash.PROGRAM_ID, "c1", DUMMY_NOTARY, null, SignatureAttachmentConstraint(hashToSignatureConstraintsKey), Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), ALICE_PARTY))
                 command(ALICE_PUBKEY, Cash.Commands.Issue())
                 verifies()
             })
             transaction {
-                attachment(Cash.PROGRAM_ID, SecureHash.zeroHash, listOf(hashToSignatureConstraintsKey), mapOf(Attributes.Name.IMPLEMENTATION_VERSION.toString() to  "1"))
+                attachment(Cash.PROGRAM_ID, SecureHash.zeroHash, listOf(hashToSignatureConstraintsKey), mapOf(Attributes.Name.IMPLEMENTATION_VERSION.toString() to "1"))
                 input("c1")
                 output(Cash.PROGRAM_ID, "c2", DUMMY_NOTARY, null, SignatureAttachmentConstraint(hashToSignatureConstraintsKey), Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), BOB_PARTY))
                 command(ALICE_PUBKEY, Cash.Commands.Move())
@@ -400,13 +401,13 @@ class ConstraintsPropagationTests {
     fun `Input state contract version is compatible with the same version`() {
         ledgerServices.ledger(DUMMY_NOTARY) {
             ledgerServices.recordTransaction(transaction {
-                attachment(Cash.PROGRAM_ID, SecureHash.allOnesHash, listOf(hashToSignatureConstraintsKey), mapOf(Attributes.Name.IMPLEMENTATION_VERSION.toString() to  "3"))
+                attachment(Cash.PROGRAM_ID, SecureHash.allOnesHash, listOf(hashToSignatureConstraintsKey), mapOf(Attributes.Name.IMPLEMENTATION_VERSION.toString() to "3"))
                 output(Cash.PROGRAM_ID, "c1", DUMMY_NOTARY, null, SignatureAttachmentConstraint(hashToSignatureConstraintsKey), Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), ALICE_PARTY))
                 command(ALICE_PUBKEY, Cash.Commands.Issue())
                 verifies()
             })
             transaction {
-                attachment(Cash.PROGRAM_ID, SecureHash.zeroHash, listOf(hashToSignatureConstraintsKey), mapOf(Attributes.Name.IMPLEMENTATION_VERSION.toString() to  "3"))
+                attachment(Cash.PROGRAM_ID, SecureHash.zeroHash, listOf(hashToSignatureConstraintsKey), mapOf(Attributes.Name.IMPLEMENTATION_VERSION.toString() to "3"))
                 input("c1")
                 output(Cash.PROGRAM_ID, "c2", DUMMY_NOTARY, null, SignatureAttachmentConstraint(hashToSignatureConstraintsKey), Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), BOB_PARTY))
                 command(ALICE_PUBKEY, Cash.Commands.Move())
@@ -419,13 +420,13 @@ class ConstraintsPropagationTests {
     fun `Input state contract version is compatible with higher version`() {
         ledgerServices.ledger(DUMMY_NOTARY) {
             ledgerServices.recordTransaction(transaction {
-                attachment(Cash.PROGRAM_ID, SecureHash.allOnesHash, listOf(hashToSignatureConstraintsKey), mapOf(Attributes.Name.IMPLEMENTATION_VERSION.toString() to  "1"))
+                attachment(Cash.PROGRAM_ID, SecureHash.allOnesHash, listOf(hashToSignatureConstraintsKey), mapOf(Attributes.Name.IMPLEMENTATION_VERSION.toString() to "1"))
                 output(Cash.PROGRAM_ID, "c1", DUMMY_NOTARY, null, SignatureAttachmentConstraint(hashToSignatureConstraintsKey), Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), ALICE_PARTY))
                 command(ALICE_PUBKEY, Cash.Commands.Issue())
                 verifies()
             })
             transaction {
-                attachment(Cash.PROGRAM_ID, SecureHash.zeroHash, listOf(hashToSignatureConstraintsKey), mapOf(Attributes.Name.IMPLEMENTATION_VERSION.toString() to  "2"))
+                attachment(Cash.PROGRAM_ID, SecureHash.zeroHash, listOf(hashToSignatureConstraintsKey), mapOf(Attributes.Name.IMPLEMENTATION_VERSION.toString() to "2"))
                 input("c1")
                 output(Cash.PROGRAM_ID, "c2", DUMMY_NOTARY, null, SignatureAttachmentConstraint(hashToSignatureConstraintsKey), Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), BOB_PARTY))
                 command(ALICE_PUBKEY, Cash.Commands.Move())
@@ -438,13 +439,13 @@ class ConstraintsPropagationTests {
     fun `Input states contract version may be lower that current contract version`() {
         ledgerServices.ledger(DUMMY_NOTARY) {
             ledgerServices.recordTransaction(transaction {
-                attachment(Cash.PROGRAM_ID, SecureHash.allOnesHash, listOf(hashToSignatureConstraintsKey), mapOf(Attributes.Name.IMPLEMENTATION_VERSION.toString() to  "1"))
+                attachment(Cash.PROGRAM_ID, SecureHash.allOnesHash, listOf(hashToSignatureConstraintsKey), mapOf(Attributes.Name.IMPLEMENTATION_VERSION.toString() to "1"))
                 output(Cash.PROGRAM_ID, "c1", DUMMY_NOTARY, null, SignatureAttachmentConstraint(hashToSignatureConstraintsKey), Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), ALICE_PARTY))
                 command(ALICE_PUBKEY, Cash.Commands.Issue())
                 verifies()
             })
             ledgerServices.recordTransaction(transaction {
-                attachment(Cash.PROGRAM_ID, SecureHash.zeroHash, listOf(hashToSignatureConstraintsKey), mapOf(Attributes.Name.IMPLEMENTATION_VERSION.toString() to  "2"))
+                attachment(Cash.PROGRAM_ID, SecureHash.zeroHash, listOf(hashToSignatureConstraintsKey), mapOf(Attributes.Name.IMPLEMENTATION_VERSION.toString() to "2"))
                 output(Cash.PROGRAM_ID, "c2", DUMMY_NOTARY, null, SignatureAttachmentConstraint(hashToSignatureConstraintsKey), Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), ALICE_PARTY))
                 command(ALICE_PUBKEY, Cash.Commands.Issue())
                 verifies()
@@ -463,7 +464,7 @@ class ConstraintsPropagationTests {
     fun `Input state with contract version can be downgraded to no version`() {
         ledgerServices.ledger(DUMMY_NOTARY) {
             ledgerServices.recordTransaction(transaction {
-                attachment(Cash.PROGRAM_ID, SecureHash.allOnesHash, listOf(hashToSignatureConstraintsKey), mapOf(Attributes.Name.IMPLEMENTATION_VERSION.toString() to  "2"))
+                attachment(Cash.PROGRAM_ID, SecureHash.allOnesHash, listOf(hashToSignatureConstraintsKey), mapOf(Attributes.Name.IMPLEMENTATION_VERSION.toString() to "2"))
                 output(Cash.PROGRAM_ID, "c1", DUMMY_NOTARY, null, SignatureAttachmentConstraint(hashToSignatureConstraintsKey), Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), ALICE_PARTY))
                 command(ALICE_PUBKEY, Cash.Commands.Issue())
                 verifies()
@@ -488,7 +489,7 @@ class ConstraintsPropagationTests {
                 verifies()
             })
             transaction {
-                attachment(Cash.PROGRAM_ID, SecureHash.zeroHash, listOf(hashToSignatureConstraintsKey), mapOf(Attributes.Name.IMPLEMENTATION_VERSION.toString() to  "2"))
+                attachment(Cash.PROGRAM_ID, SecureHash.zeroHash, listOf(hashToSignatureConstraintsKey), mapOf(Attributes.Name.IMPLEMENTATION_VERSION.toString() to "2"))
                 input("c1")
                 output(Cash.PROGRAM_ID, "c2", DUMMY_NOTARY, null, SignatureAttachmentConstraint(hashToSignatureConstraintsKey), Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), BOB_PARTY))
                 command(ALICE_PUBKEY, Cash.Commands.Move())

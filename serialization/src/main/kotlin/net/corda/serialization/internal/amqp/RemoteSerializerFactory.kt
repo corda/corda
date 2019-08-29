@@ -3,7 +3,6 @@ package net.corda.serialization.internal.amqp
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.utilities.contextLogger
 import net.corda.serialization.internal.model.*
-import org.hibernate.type.descriptor.java.ByteTypeDescriptor
 import java.io.NotSerializableException
 
 /**

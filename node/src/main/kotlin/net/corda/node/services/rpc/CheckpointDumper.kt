@@ -1,7 +1,6 @@
 package net.corda.node.services.rpc
 
 import co.paralleluniverse.fibers.Stack
-import co.paralleluniverse.strands.Strand
 import com.fasterxml.jackson.annotation.JsonAutoDetect
 import com.fasterxml.jackson.annotation.JsonAutoDetect.Visibility
 import com.fasterxml.jackson.annotation.JsonFormat
@@ -112,7 +111,7 @@ class CheckpointDumper(private val checkpointStorage: CheckpointStorage, private
 
                                 val (bytes, fileName) = try {
                                     val checkpoint =
-                                        serialisedCheckpoint.checkpointDeserialize(context = checkpointSerializationContext)
+                                            serialisedCheckpoint.checkpointDeserialize(context = checkpointSerializationContext)
                                     val json = checkpoint.toJson(runId.uuid, now)
                                     val jsonBytes = writer.writeValueAsBytes(json)
                                     jsonBytes to "${json.topLevelFlowClass.simpleName}-${runId.uuid}.json"
@@ -145,8 +144,7 @@ class CheckpointDumper(private val checkpointStorage: CheckpointStorage, private
             val instance = checkpointHook.objectOrNewInstance()
             val checkpointIdField = instance.declaredField<UUID>(instance.javaClass, "checkpointId")
             checkpointIdField.value = checkpointId.uuid
-        }
-        catch (e: Exception) {
+        } catch (e: Exception) {
             log.error("Checkpoint agent instrumentation failed for checkpointId: $checkpointId\n. ${e.message}")
         }
     }
@@ -179,66 +177,66 @@ class CheckpointDumper(private val checkpointStorage: CheckpointStorage, private
         }
 
         return CheckpointJson(
-            flowId = id,
-            topLevelFlowClass = flowLogic.javaClass,
-            topLevelFlowLogic = flowLogic,
-            flowCallStackSummary = flowCallStack.toSummary(),
-            flowCallStack = flowCallStack,
-            suspendedOn = (flowState as? FlowState.Started)?.flowIORequest?.toSuspendedOn(
-                suspendedTimestamp(),
-                now
-            ),
-            origin = invocationContext.origin.toOrigin(),
-            ourIdentity = ourIdentity,
-            activeSessions = sessions.mapNotNull { it.value.toActiveSession(it.key) },
-            errored = errorState as? ErrorState.Errored
+                flowId = id,
+                topLevelFlowClass = flowLogic.javaClass,
+                topLevelFlowLogic = flowLogic,
+                flowCallStackSummary = flowCallStack.toSummary(),
+                flowCallStack = flowCallStack,
+                suspendedOn = (flowState as? FlowState.Started)?.flowIORequest?.toSuspendedOn(
+                        suspendedTimestamp(),
+                        now
+                ),
+                origin = invocationContext.origin.toOrigin(),
+                ourIdentity = ourIdentity,
+                activeSessions = sessions.mapNotNull { it.value.toActiveSession(it.key) },
+                errored = errorState as? ErrorState.Errored
         )
     }
 
     private fun Checkpoint.suspendedTimestamp(): Instant = invocationContext.trace.invocationId.timestamp
 
     private fun checkpointDeserializationErrorMessage(
-        checkpointId: StateMachineRunId,
-        exception: Exception
+            checkpointId: StateMachineRunId,
+            exception: Exception
     ): String {
         return """
                 *** Unable to deserialise checkpoint: ${exception.message} ***
                 *** Check logs for further information, checkpoint flowId: ${checkpointId.uuid} ***
                 """
-            .trimIndent()
+                .trimIndent()
     }
 
     private fun FlowStateMachineImpl<*>.getQuasarStack() =
-        declaredField<Stack>("stack").value.declaredField<Array<*>>("dataObject").value
+            declaredField<Stack>("stack").value.declaredField<Array<*>>("dataObject").value
 
     private fun SubFlow.toJson(stackObjects: Array<*>): FlowCall {
         val subFlowLogic = stackObjects.find(flowClass::isInstance) as? FlowLogic<*>
         val currentStep = subFlowLogic?.progressTracker?.currentStep
         return FlowCall(
-            flowClass = flowClass,
-            progressStep = if (currentStep == ProgressTracker.UNSTARTED) null else currentStep?.label,
-            flowLogic = subFlowLogic
+                flowClass = flowClass,
+                progressStep = if (currentStep == ProgressTracker.UNSTARTED) null else currentStep?.label,
+                flowLogic = subFlowLogic
         )
     }
 
     private fun List<FlowCall>.toSummary() = map {
         FlowCallSummary(
-            it.flowClass,
-            it.progressStep
+                it.flowClass,
+                it.progressStep
         )
     }
 
     @Suppress("unused")
     private class FlowCallSummary(
-        val flowClass: Class<*>,
-        val progressStep: String?
+            val flowClass: Class<*>,
+            val progressStep: String?
     )
 
     @Suppress("unused")
     private class FlowCall(
-        val flowClass: Class<*>,
-        val progressStep: String?,
-        val flowLogic: FlowLogic<*>?
+            val flowClass: Class<*>,
+            val progressStep: String?,
+            val flowLogic: FlowLogic<*>?
     )
 
     @Suppress("unused")
@@ -263,16 +261,16 @@ class CheckpointDumper(private val checkpointStorage: CheckpointStorage, private
 
     @Suppress("unused")
     private class CheckpointJson(
-        val flowId: UUID,
-        val topLevelFlowClass: Class<FlowLogic<*>>,
-        val topLevelFlowLogic: FlowLogic<*>,
-        val flowCallStackSummary: List<FlowCallSummary>,
-        val suspendedOn: SuspendedOn?,
-        val flowCallStack: List<FlowCall>,
-        val origin: Origin,
-        val ourIdentity: Party,
-        val activeSessions: List<ActiveSession>,
-        val errored: ErrorState.Errored?
+            val flowId: UUID,
+            val topLevelFlowClass: Class<FlowLogic<*>>,
+            val topLevelFlowLogic: FlowLogic<*>,
+            val flowCallStackSummary: List<FlowCallSummary>,
+            val suspendedOn: SuspendedOn?,
+            val flowCallStack: List<FlowCall>,
+            val origin: Origin,
+            val ourIdentity: Party,
+            val activeSessions: List<ActiveSession>,
+            val errored: ErrorState.Errored?
     )
 
     @Suppress("unused")
@@ -363,9 +361,12 @@ class CheckpointDumper(private val checkpointStorage: CheckpointStorage, private
         override fun changeProperties(config: SerializationConfig,
                                       beanDesc: BeanDescription,
                                       beanProperties: MutableList<BeanPropertyWriter>): MutableList<BeanPropertyWriter> {
-            // Remove references to any node singletons
-            beanProperties.removeIf { it.type.isTypeOrSubTypeOf(SerializeAsToken::class.java) }
-            if (FlowLogic::class.java.isAssignableFrom(beanDesc.beanClass)) {
+            if (SerializeAsToken::class.java.isAssignableFrom(beanDesc.beanClass)) {
+                // Do not serialise node singletons
+                // TODO This will cause the singleton to appear as an empty object. Ideally we don't want it to appear at all but this will
+                // have to do for now.
+                beanProperties.clear()
+            } else if (FlowLogic::class.java.isAssignableFrom(beanDesc.beanClass)) {
                 beanProperties.removeIf {
                     it.type.isTypeOrSubTypeOf(ProgressTracker::class.java) || it.name == "_stateMachine" || it.name == "deprecatedPartySessionMap"
                 }
@@ -381,6 +382,7 @@ class CheckpointDumper(private val checkpointStorage: CheckpointStorage, private
                 writeObjectField("ourSessionId", value.sourceSessionId)
             }
         }
+
         override fun handledType(): Class<FlowSessionImpl> = FlowSessionImpl::class.java
     }
 
@@ -400,6 +402,7 @@ class CheckpointDumper(private val checkpointStorage: CheckpointStorage, private
             }
             gen.writeEndArray()
         }
+
         override fun handledType(): Class<Map<Any, Any>> = uncheckedCast(Map::class.java)
     }
 }
