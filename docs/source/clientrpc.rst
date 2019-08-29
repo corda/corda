@@ -61,18 +61,16 @@ can perform. Permissions are not required to interact with the node via the shel
 
 RPC users are created by adding them to the ``rpcUsers`` list in the node's ``node.conf`` file:
 
-.. container:: codeset
+.. sourcecode:: groovy
 
-    .. sourcecode:: groovy
-
-        rpcUsers=[
-            {
-                username=exampleUser
-                password=examplePass
-                permissions=[]
-            },
-            ...
-        ]
+    rpcUsers=[
+        {
+            username=exampleUser
+            password=examplePass
+            permissions=[]
+        },
+        ...
+    ]
 
 By default, RPC users are not permissioned to perform any RPC operations.
 
@@ -81,80 +79,72 @@ Granting flow permissions
 You provide an RPC user with the permission to start a specific flow using the syntax
 ``StartFlow.<fully qualified flow name>``:
 
-.. container:: codeset
+.. sourcecode:: groovy
 
-    .. sourcecode:: groovy
-
-        rpcUsers=[
-            {
-                username=exampleUser
-                password=examplePass
-                permissions=[
-                    "StartFlow.net.corda.flows.ExampleFlow1",
-                    "StartFlow.net.corda.flows.ExampleFlow2"
-                ]
-            },
-            ...
-        ]
+    rpcUsers=[
+        {
+            username=exampleUser
+            password=examplePass
+            permissions=[
+                "StartFlow.net.corda.flows.ExampleFlow1",
+                "StartFlow.net.corda.flows.ExampleFlow2"
+            ]
+        },
+        ...
+    ]
 
 You can also provide an RPC user with the permission to start any flow using the syntax
 ``InvokeRpc.startFlow``:
 
-.. container:: codeset
+.. sourcecode:: groovy
 
-    .. sourcecode:: groovy
-
-        rpcUsers=[
-            {
-                username=exampleUser
-                password=examplePass
-                permissions=[
-                    "InvokeRpc.startFlow"
-                ]
-            },
-            ...
-        ]
+    rpcUsers=[
+        {
+            username=exampleUser
+            password=examplePass
+            permissions=[
+                "InvokeRpc.startFlow"
+            ]
+        },
+        ...
+    ]
 
 Granting other RPC permissions
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 You provide an RPC user with the permission to perform a specific RPC operation using the syntax
 ``InvokeRpc.<rpc method name>``:
 
-.. container:: codeset
+.. sourcecode:: groovy
 
-    .. sourcecode:: groovy
-
-        rpcUsers=[
-            {
-                username=exampleUser
-                password=examplePass
-                permissions=[
-                    "InvokeRpc.nodeInfo",
-                    "InvokeRpc.networkMapSnapshot"
-                ]
-            },
-            ...
-        ]
+    rpcUsers=[
+        {
+            username=exampleUser
+            password=examplePass
+            permissions=[
+                "InvokeRpc.nodeInfo",
+                "InvokeRpc.networkMapSnapshot"
+            ]
+        },
+        ...
+    ]
 
 Granting all permissions
 ~~~~~~~~~~~~~~~~~~~~~~~~
 You can provide an RPC user with the permission to perform any RPC operation (including starting any flow) using the
 ``ALL`` permission:
 
-.. container:: codeset
+.. sourcecode:: groovy
 
-    .. sourcecode:: groovy
-
-        rpcUsers=[
-            {
-                username=exampleUser
-                password=examplePass
-                permissions=[
-                    "ALL"
-                ]
-            },
-            ...
-        ]
+    rpcUsers=[
+        {
+            username=exampleUser
+            password=examplePass
+            permissions=[
+                "ALL"
+            ]
+        },
+        ...
+    ]
 
 .. _rpc_security_mgmt_ref:
 
@@ -175,53 +165,49 @@ These features are controlled by a set of options nested in the ``security`` fie
 The following example shows how to configure retrieval of users credentials and permissions from a remote database with
 passwords in hash-encrypted format and enable in-memory caching of users data:
 
-.. container:: codeset
+.. sourcecode:: groovy
 
-    .. sourcecode:: groovy
-
-        security = {
-            authService = {
-                dataSource = {
-                    type = "DB"
-                    passwordEncryption = "SHIRO_1_CRYPT"
-                    connection = {
-                       jdbcUrl = "<jdbc connection string>"
-                       username = "<db username>"
-                       password = "<db user password>"
-                       driverClassName = "<JDBC driver>"
-                    }
-                }
-                options = {
-                     cache = {
-                        expireAfterSecs = 120
-                        maxEntries = 10000
-                     }
+    security = {
+        authService = {
+            dataSource = {
+                type = "DB"
+                passwordEncryption = "SHIRO_1_CRYPT"
+                connection = {
+                   jdbcUrl = "<jdbc connection string>"
+                   username = "<db username>"
+                   password = "<db user password>"
+                   driverClassName = "<JDBC driver>"
                 }
             }
+            options = {
+                 cache = {
+                    expireAfterSecs = 120
+                    maxEntries = 10000
+                 }
+            }
         }
+    }
 
 It is also possible to have a static list of users embedded in the ``security`` structure by specifying a ``dataSource``
 of ``INMEMORY`` type:
 
-.. container:: codeset
+.. sourcecode:: groovy
 
-    .. sourcecode:: groovy
-
-        security = {
-            authService = {
-                dataSource = {
-                    type = "INMEMORY"
-                    users = [
-                        {
-                            username = "<username>"
-                            password = "<password>"
-                            permissions = ["<permission 1>", "<permission 2>", ...]
-                        },
-                        ...
-                    ]
-                }
+    security = {
+        authService = {
+            dataSource = {
+                type = "INMEMORY"
+                users = [
+                    {
+                        username = "<username>"
+                        password = "<password>"
+                        permissions = ["<permission 1>", "<permission 2>", ...]
+                    },
+                    ...
+                ]
             }
         }
+    }
 
 .. warning:: A valid configuration cannot specify both the ``rpcUsers`` and ``security`` fields. Doing so will trigger
    an exception at node startup.
@@ -253,11 +239,9 @@ Password encryption
 Storing passwords in plain text is discouraged in applications where security is critical. Passwords are assumed
 to be in plain format by default, unless a different format is specified by the ``passwordEncryption`` field, like:
 
-.. container:: codeset
+.. sourcecode:: groovy
 
-    .. sourcecode:: groovy
-
-        passwordEncryption = SHIRO_1_CRYPT
+    passwordEncryption = SHIRO_1_CRYPT
 
 ``SHIRO_1_CRYPT`` identifies the `Apache Shiro fully reversible
 Modular Crypt Format <https://shiro.apache.org/static/1.2.5/apidocs/org/apache/shiro/crypto/hash/format/Shiro1CryptFormat.html>`_,
@@ -272,16 +256,14 @@ performances in some cases, with the disadvantage of causing a (controllable) de
 Caching is disabled by default, it can be enabled by defining the ``options.cache`` field in ``security.authService``,
 for example:
 
-.. container:: codeset
+.. sourcecode:: groovy
 
-    .. sourcecode:: groovy
-
-        options = {
-             cache = {
-                expireAfterSecs = 120
-                maxEntries = 10000
-             }
-        }
+    options = {
+         cache = {
+            expireAfterSecs = 120
+            maxEntries = 10000
+         }
+    }
 
 This will enable a non-persistent cache contained in the node's memory with maximum number of entries set to ``maxEntries``
 where entries are expired and refreshed after ``expireAfterSecs`` seconds.
@@ -372,9 +354,8 @@ However, the application code is responsible for waiting for the connection to b
 This can be done by doing a simple, side-effect free RPC call (e.g. ``nodeInfo``).
 
 .. note:: Any RPC calls that had not been acknowledged to the RPC client from the node at the point the disconnection happened, they will fail with a ``ConnectionFailureException``.
-
-It is important to note this does not mean the node did not execute the RPC calls, it only means the completion was not acknowledged. As described above, application code will have to check after the connection is re-established to determine whether these calls were actually executed.
-Any observables that were returned before the disconnection will call the ``onError`` handlers.
+    It is important to note this does not mean the node did not execute the RPC calls, it only means the completion was not acknowledged. As described above, application code will have to check after the connection is re-established to determine whether these calls were actually executed.
+    Any observables that were returned before the disconnection will call the ``onError`` handlers.
 
 Enabling graceful reconnection
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -408,17 +389,31 @@ As implied above, when graceful reconnection is enabled, flow invocations will n
 This retrying can be done from the application code after checking whether the flow was triggered previously by inspecting whether its side-effects have taken place.
 A simplified, sample skeleton of such code could look like the following code:
 
-.. sourcecode:: kotlin
+.. container:: codeset
 
-    fun runFlowWithRetries(client: CordaRPCOps) {
-        try {
-            client.startFlow(...)
-        } catch (exception: CouldNotStartFlowException) {
-            if (!wasFlowTriggered()) {
-                runFlowWithRetries(client)
+    .. sourcecode:: kotlin
+
+        fun runFlowWithRetries(client: CordaRPCOps) {
+            try {
+                client.startFlowDynamic(...)
+            } catch (exception: CouldNotStartFlowException) {
+                if (!wasFlowTriggered()) {
+                    runFlowWithRetries(client)
+                }
             }
         }
-    }
+
+    .. sourcecode:: java
+
+        void runFlowWithRetries(CordaRPCOps client) {
+            try {
+                client.startFlowDynamic(...);
+            } catch (CouldNotStartFlowException exception) {
+                if (!wasFlowTriggered()) {
+                    runFlowWithRetries(client);
+                }
+            }
+        }
 
 The logic of the ``wasFlowTriggered()`` function is naturally dependent on the flow logic, so it can differ per use-case.
 
