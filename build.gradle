@@ -635,7 +635,7 @@ allprojects {
                             getPropertyAsInt(projectContainingTask, "dockerFork", 0),
                             getPropertyAsInt(projectContainingTask, "dockerForks", 1),
                             42).forEach { testName ->
-                        logger.lifecycle testName
+                        println testName
                     }
                 }
             }
@@ -655,15 +655,15 @@ allprojects {
                         def fork = getPropertyAsInt(projectContainingTask, "dockerFork", 0)
                         def forks = getPropertyAsInt(projectContainingTask, "dockerForks", 1)
                         def shuffleSeed = 42
-                        logger.lifecycle("requesting tests to include in testing task ${task.getPath()} (${fork}, ${forks}, ${shuffleSeed})")
+                        logger.info("requesting tests to include in testing task ${task.getPath()} (${fork}, ${forks}, ${shuffleSeed})")
                         List<String> includes = createdListTask.getTestsForFork(
                                 fork,
                                 forks,
                                 shuffleSeed)
-                        logger.lifecycle "got ${includes.size()} tests to include into testing task ${task.getPath()}"
+                        logger.info "got ${includes.size()} tests to include into testing task ${task.getPath()}"
 
                         if (includes.size() == 0) {
-                            logger.lifecycle "Disabling test executing for testing task ${task.getPath()}"
+                            logger.info "Disabling test executing for testing task ${task.getPath()}"
                             excludeTestsMatching "*"
                         }
 
