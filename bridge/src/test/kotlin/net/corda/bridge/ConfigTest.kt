@@ -2,15 +2,20 @@ package net.corda.bridge
 
 import com.typesafe.config.ConfigException
 import net.corda.bridge.services.api.FirewallMode
+import net.corda.bridge.services.config.BridgeConfigHelper
 import net.corda.bridge.services.config.BridgeConfigHelper.asString
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.Try
+import net.corda.node.services.config.ConfigHelper
+import net.corda.node.services.config.parseAsNodeConfiguration
 import net.corda.nodeapi.internal.config.UnknownConfigurationKeysException
 import net.corda.nodeapi.internal.config.toConfig
 import net.corda.nodeapi.internal.cryptoservice.SupportedCryptoServices
 import net.corda.nodeapi.internal.protonwrapper.netty.ProxyVersion
 import net.corda.nodeapi.internal.protonwrapper.netty.RevocationConfig
+import net.corda.testing.common.internal.ProjectStructure.projectRootDir
 import net.corda.testing.core.SerializationEnvironmentRule
 import org.assertj.core.api.Assertions
 import org.junit.Assert.assertEquals
@@ -18,7 +23,9 @@ import org.junit.Assert.assertNull
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import java.nio.file.Files
 import java.nio.file.Paths
+import java.util.function.Consumer
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -348,5 +355,29 @@ class ConfigTest {
         val baseDirectory = tempFolder.root.toPath()
         val config = createAndLoadConfigFromResource(baseDirectory, configResource)
         assertTrue(config.useProxyForCrls)
+    }
+
+    @Test
+    fun `Check configs for docs`() {
+        val docsResources = projectRootDir.resolve("docs/source/resources")
+        var firewallConfCount = 0
+        var nodeConfCount = 0
+        Files.walk(docsResources).filter { it.toString().endsWith(".conf") }.forEach {
+            val fileName = it.fileName.toString()
+            // Validate firewall configuration
+            if (fileName.contains("float") || fileName.contains("bridge")) {
+                Try.on { BridgeConfigHelper.loadConfig(it.parent, it) }
+                        .doOnFailure(Consumer { e -> throw Exception("Invalid config $it", e) })
+                firewallConfCount++
+            }
+            // Validate node configuration
+            if (fileName.contains("node")) {
+                assertTrue(ConfigHelper.loadConfig(it.parent, it).parseAsNodeConfiguration().isValid, "Invalid config $it")
+                nodeConfCount++
+            }
+        }
+        // Make sure that resources were checked
+        assertTrue(firewallConfCount > 0)
+        assertTrue(nodeConfCount > 0)
     }
 }
