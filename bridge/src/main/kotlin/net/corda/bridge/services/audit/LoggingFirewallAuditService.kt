@@ -108,7 +108,7 @@ class LoggingFirewallAuditService(val conf: FirewallConfiguration,
     }
 
     override fun successfulConnectionEvent(address: InetSocketAddress, certificateSubject: String, msg: String, direction: RoutingDirection) {
-        logWithSuppression(address, certificateSubject, msg, direction) { log.warn(it) }
+        logWithSuppression(address, certificateSubject, msg, direction) { log.info(it) }
         withDirectionalStatsOf(direction) {
             successfulConnectionCount.getOrPut(address, ::AtomicLong).incrementAndGet()
             activeConnectionCount.getOrPut(address, ::AtomicLong).incrementAndGet()
