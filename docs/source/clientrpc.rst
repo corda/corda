@@ -368,8 +368,11 @@ Enabling automatic reconnection
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 If you provide a list of addresses via the ``haAddressPool`` argument when instantiating a ``CordaRPCClient``, then automatic reconnection will be performed when the existing connection is dropped.
-However, the application code is responsible for waiting for the connection to be established again in order to perform any calls, retrieve new observables and re-subscribe to them. This can be done by doing a simple, side-effect free RPC call (e.g. ``nodeInfo``).
-Any RPC calls that had not been acknowledged to the RPC client from the node at the point the disconnection happened, they will fail with a ``ConnectionFailureException``.
+However, the application code is responsible for waiting for the connection to be established again in order to perform any calls, retrieve new observables and re-subscribe to them.
+This can be done by doing a simple, side-effect free RPC call (e.g. ``nodeInfo``).
+
+.. note:: Any RPC calls that had not been acknowledged to the RPC client from the node at the point the disconnection happened, they will fail with a ``ConnectionFailureException``.
+
 It is important to note this does not mean the node did not execute the RPC calls, it only means the completion was not acknowledged. As described above, application code will have to check after the connection is re-established to determine whether these calls were actually executed.
 Any observables that were returned before the disconnection will call the ``onError`` handlers.
 
@@ -398,6 +401,28 @@ You can enable this graceful form of reconnection by using the ``gracefulReconne
    val cordaClient = CordaRPCClient(nodeRpcAddress)
    val cordaRpcOps = cordaClient.start(rpcUserName, rpcUserPassword, gracefulReconnect = true).proxy
 
+Retrying flow invocations
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+As implied above, when graceful reconnection is enabled, flow invocations will not be retried across reconnections to avoid duplicate invocations.
+This retrying can be done from the application code after checking whether the flow was triggered previously by inspecting whether its side-effects have taken place.
+A simplified, sample skeleton of such code could look like the following code:
+
+.. sourcecode:: kotlin
+
+    fun runFlowWithRetries(client: CordaRPCOps) {
+        try {
+            client.startFlow(...)
+        } catch (exception: CouldNotStartFlowException) {
+            if (!wasFlowTriggered()) {
+                runFlowWithRetries(client)
+            }
+        }
+    }
+
+The logic of the ``wasFlowTriggered()`` function is naturally dependent on the flow logic, so it can differ per use-case.
+
+.. warning:: This approach provides at-least-once guarantees. It cannot provide exactly-once guarantees, because of race conditions between the moment the check is performed and the moment the side-effects of the flow become visible.
 
 Wire security
 -------------
