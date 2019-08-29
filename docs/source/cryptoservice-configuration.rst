@@ -128,7 +128,7 @@ Additionaly, The JAR containing the Futurex JCA provider (version 3.1) must be p
 Azure KeyVault
 --------------
 
-In the ``node.conf``, the ``cryptoServiceName`` needs to be set to "AZURE_KEY_VAULT" and ``cryptoServiceConf`` should cointain the path to the configuration for Azure KeyVault, as shown below.
+In the ``node.conf``, the ``cryptoServiceName`` needs to be set to "AZURE_KEY_VAULT" and ``cryptoServiceConf`` should contain the path to the configuration for Azure KeyVault, as shown below.
 
 .. parsed-literal::
 
@@ -159,6 +159,50 @@ Example configuration file:
     keyVaultURL: "https://<mykeyvault>.vault.azure.net/"
     clientId: "a3d72387-egfa-4bc2-9cba-b0b27c63540e"
     protection: "HARDWARE"
+
+The Azure key vault client jar needs to be placed in the drivers directory.  The dependent jars are azure-keyvault and adal4j.
+The drivers directory needs to contain these dependencies and all their dependencies, i.e. an uber jar is needed.
+
+The gradle script below will build an uber jar. First copy the following text in to a new file called build.gradle anywhere on your file system.
+Please do not change any of your existing build.gradle files.
+
+.. code::
+
+    plugins {
+      id 'com.github.johnrengelman.shadow' version '4.0.4'
+      id 'java'
+    }
+
+    repositories {
+        jcenter()
+    }
+
+    dependencies {
+        compile 'com.microsoft.azure:azure-keyvault:1.2.1'
+        compile 'com.microsoft.azure:adal4j:1.6.4'
+    }
+
+    shadowJar {
+        relocate 'okhttp3', 'shadow.okhttp3'
+        archiveName = 'azure-keyvault-with-deps.jar'
+    }
+
+Then if gradle is on the path run the following command.
+
+.. code::
+
+    gradle shadowJar
+
+or if gradle is not on the path but gradlew is in the current directory then run the following command.
+
+.. code::
+
+    ./gradlew shadowJar
+
+This will create a jar called azure-keyvault-with-deps.jar, copy this into the drivers directory.
+
+Note that okhttp3 needs to be shaded as the latest version of this library will raise an exception on a handle leak which version 1.2.1
+of azure key vault has. This should be rectified in azure key vault 1.2.2. For further details see https://github.com/Azure/azure-sdk-for-java/issues/4879
 
 Securosys Primus X
 ------------
