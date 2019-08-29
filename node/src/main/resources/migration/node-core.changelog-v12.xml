@@ -20,7 +20,6 @@
 
     </changeSet>
 
-
     <changeSet author="R3.Corda" id="migrate_identity_service_to_use_publicKey.toShortString()">
         <customChange class="net.corda.node.migration.PersistentIdentityMigration">
         </customChange>

@@ -16,13 +16,13 @@ import net.corda.core.internal.canBeTransitionedFrom
 import net.corda.core.internal.inputStream
 import net.corda.core.internal.toPath
 import net.corda.core.node.NotaryInfo
+import net.corda.core.node.services.IdentityService
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.finance.POUNDS
 import net.corda.finance.`issued by`
 import net.corda.finance.contracts.asset.Cash
-import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME
@@ -82,7 +82,7 @@ class ConstraintsPropagationTests {
         ledgerServices = object : MockServices(
                 cordappPackages = listOf("net.corda.finance.contracts.asset"),
                 initialIdentity = ALICE,
-                identityService = mock<IdentityServiceInternal>().also {
+                identityService = mock<IdentityService>().also {
                     doReturn(ALICE_PARTY).whenever(it).partyFromKey(ALICE_PUBKEY)
                     doReturn(BOB_PARTY).whenever(it).partyFromKey(BOB_PUBKEY)
                 },
