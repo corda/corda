@@ -90,4 +90,7 @@ interface KeyManagementService {
      */
     @Suspendable
     fun sign(signableData: SignableData, publicKey: PublicKey): TransactionSignature
+
+    @Suspendable
+    fun externalIdForPublicKey(pk: PublicKey): UUID?
 }

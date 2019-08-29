@@ -35,6 +35,7 @@ class BasicHSMKeyManagementService(cacheFactory: NamedCacheFactory,
                                    private val database: CordaPersistence,
                                    private val cryptoService: SignOnlyCryptoService,
                                    private val pkToIdCache: WritablePublicKeyToOwningIdentityCache) : SingletonSerializeAsToken(), KeyManagementServiceInternal {
+
     @Entity
     @Table(name = "${NODE_DATABASE_PREFIX}our_key_pairs")
     class PersistentKey(
@@ -157,7 +158,8 @@ class BasicHSMKeyManagementService(cacheFactory: NamedCacheFactory,
         }
     }
 
-    override fun identityForKey(pk: PublicKey): KeyOwningIdentity? {
-        return pkToIdCache[pk]
+
+    override fun externalIdForPublicKey(pk: PublicKey): UUID? {
+        return pkToIdCache[pk]?.uuid
     }
 }

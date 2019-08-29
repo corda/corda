@@ -3,7 +3,6 @@ package net.corda.node.services.keys
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.KeyManagementService
-import net.corda.nodeapi.internal.KeyOwningIdentity
 import org.bouncycastle.operator.ContentSigner
 import java.security.KeyPair
 import java.security.PublicKey
@@ -36,7 +35,5 @@ interface KeyManagementServiceInternal : KeyManagementService {
     override fun freshKeyAndCert(identity: PartyAndCertificate, revocationEnabled: Boolean, externalId: UUID): PartyAndCertificate {
         return freshCertificate(identityService, freshKeyInternal(externalId), identity, getSigner(identity.owningKey))
     }
-
-    fun identityForKey(pk: PublicKey): KeyOwningIdentity?
 }
 
