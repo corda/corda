@@ -20,7 +20,6 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.sequence
 import net.corda.core.utilities.unwrap
 import net.corda.coretests.flows.TestNoSecurityDataVendingFlow
-import net.corda.node.services.DbTransactionsResolver.Companion.IN_MEMORY_RESOLUTION_LIMIT_PROP_NAME
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyContractV2
 import net.corda.testing.core.DUMMY_BANK_A_NAME
@@ -204,7 +203,7 @@ class ResolveTransactionsFlowTest {
         mockNet.runNetwork()
         assertFailsWith<FetchDataFlow.IllegalTransactionRequest> { future.getOrThrow() }
     }
-    
+
     @Test
     fun `resolution works when transaction in chain is already resolved`() {
         val (tx1, tx2) = makeTransactions()
