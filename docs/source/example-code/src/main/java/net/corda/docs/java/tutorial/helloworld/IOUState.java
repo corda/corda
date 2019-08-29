@@ -1,5 +1,7 @@
 package net.corda.docs.java.tutorial.helloworld;
 
+import com.template.TemplateContract;
+import net.corda.core.contracts.BelongsToContract;
 import net.corda.core.contracts.ContractState;
 import net.corda.core.identity.AbstractParty;
 import java.util.Arrays;

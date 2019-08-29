@@ -2,6 +2,8 @@
 
 package net.corda.docs.kotlin.tutorial.helloworld
 
+import com.template.TemplateContract
+import net.corda.core.contracts.BelongsToContract
 import net.corda.core.contracts.ContractState
 
 // DOCSTART 01
