@@ -158,8 +158,7 @@ class BasicHSMKeyManagementService(cacheFactory: NamedCacheFactory,
         }
     }
 
-
-    override fun externalIdForPublicKey(pk: PublicKey): UUID? {
-        return pkToIdCache[pk]?.uuid
+    override fun externalIdForPublicKey(publicKey: PublicKey): UUID? {
+        return pkToIdCache[publicKey]?.uuid
     }
 }
