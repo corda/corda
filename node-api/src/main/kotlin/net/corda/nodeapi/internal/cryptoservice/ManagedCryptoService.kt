@@ -38,7 +38,7 @@ class ManagedCryptoService(val underlyingService: CryptoService, private val tim
         try {
             return executor.submit(func).getOrThrow(timeout)
         } catch (e: TimeoutException) {
-            throw TimedCryptoServiceException("Timed-out while waiting for $timeout milliseconds")
+            throw TimedCryptoServiceException("Timed-out while waiting for ${timeout?.toMillis()} milliseconds")
         } catch (e: CryptoServiceException) {
             // Nothing to do, already the correct exception type
             throw e

@@ -356,7 +356,12 @@ class NodeRegistrationConfiguration (
             tlsCertCrlDistPoint = config.tlsCertCrlDistPoint,
             certificatesDirectory = config.certificatesDirectory,
             emailAddress = config.emailAddress,
-            cryptoService = CryptoServiceFactory.makeCryptoService(config.cryptoServiceName ?: SupportedCryptoServices.BC_SIMPLE, config.myLegalName, config.signingCertificateStore, config.cryptoServiceConf),
+            cryptoService = CryptoServiceFactory.makeCryptoService(
+                    config.cryptoServiceName ?: SupportedCryptoServices.BC_SIMPLE,
+                    config.myLegalName,
+                    config.signingCertificateStore,
+                    config.cryptoServiceConf
+            ),
             certificateStore = config.signingCertificateStore.get(true),
             freshIdentitiesConfiguration = config.freshIdentitiesConfiguration,
             wrappingKeyStorePath = config.wrappingKeyStorePath,

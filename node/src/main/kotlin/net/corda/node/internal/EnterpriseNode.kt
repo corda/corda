@@ -8,12 +8,12 @@ import com.jcraft.jsch.JSch
 import com.jcraft.jsch.JSchException
 import net.corda.core.crypto.newSecureRandom
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.Emoji
 import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.loggerFor
 import net.corda.node.VersionInfo
+import net.corda.node.services.config.CryptoServiceConfiguration
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.RelayConfiguration
 import net.corda.node.services.identity.PersistentIdentityService
@@ -22,16 +22,11 @@ import net.corda.node.services.keys.KeyManagementServiceInternal
 import net.corda.node.services.statemachine.*
 import net.corda.node.utilities.EnterpriseNamedCacheFactory
 import net.corda.node.utilities.profiling.getTracingConfig
-import net.corda.nodeapi.internal.cryptoservice.CryptoService
-import net.corda.nodeapi.internal.cryptoservice.CryptoServiceFactory
-import net.corda.nodeapi.internal.cryptoservice.SupportedCryptoServices
-import net.corda.nodeapi.internal.cryptoservice.WrappingMode
+import net.corda.nodeapi.internal.cryptoservice.*
 import org.fusesource.jansi.Ansi
 import org.fusesource.jansi.AnsiConsole
 import java.io.IOException
-import java.lang.IllegalStateException
 import java.net.Inet6Address
-import java.security.KeyPair
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.TimeUnit
 
@@ -59,7 +54,7 @@ open class EnterpriseNode(configuration: NodeConfiguration,
         }
     }
 
-    private var wrappingCryptoService: CryptoService? = null
+    private var wrappingCryptoService: ManagedCryptoService? = null
 
     class NodeCli : NodeStartupCli() {
         override val startup = Startup()
@@ -254,10 +249,22 @@ D""".trimStart()
         } else {
             val cryptoServiceConfigBlock = freshIdentitiesConfig.cryptoServiceConfiguration
             val masterKeyAlias = freshIdentitiesConfig.masterKeyAlias
-            wrappingCryptoService = CryptoServiceFactory.makeCryptoService(cryptoServiceConfigBlock.cryptoServiceName, configuration.myLegalName, configuration.signingCertificateStore, cryptoServiceConfigBlock.cryptoServiceConf, configuration.wrappingKeyStorePath)
+            wrappingCryptoService = makeCIManagedCryptoService(cryptoServiceConfigBlock)
+            checkCryptoServiceIsAvailable(wrappingCryptoService!!, "fresh identities")
             verifyConfiguredModeIsSupported(freshIdentitiesConfig.mode, wrappingCryptoService!!, cryptoServiceConfigBlock.cryptoServiceName)
             return BasicHSMKeyManagementService(cacheFactory, identityService, database, cryptoService, wrappingCryptoService!!, masterKeyAlias, pkToIdCache)
         }
+    }
+
+    private fun makeCIManagedCryptoService(cryptoServiceConfigBlock: CryptoServiceConfiguration): ManagedCryptoService {
+        return CryptoServiceFactory.makeManagedCryptoService(
+                cryptoServiceConfigBlock.cryptoServiceName,
+                configuration.myLegalName,
+                configuration.signingCertificateStore,
+                cryptoServiceConfigBlock.cryptoServiceConf,
+                configuration.cryptoServiceTimeout,
+                configuration.wrappingKeyStorePath
+        ).closeOnStop()
     }
 
     private fun createWrappingKeyIfNeeded() {

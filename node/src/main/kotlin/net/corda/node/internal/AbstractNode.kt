@@ -80,6 +80,7 @@ import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_ROOT_CA
 import net.corda.nodeapi.internal.crypto.X509Utilities.DEFAULT_VALIDITY_WINDOW
 import net.corda.nodeapi.internal.crypto.X509Utilities.DISTRIBUTED_NOTARY_ALIAS_PREFIX
 import net.corda.nodeapi.internal.crypto.X509Utilities.NODE_IDENTITY_ALIAS_PREFIX
+import net.corda.nodeapi.internal.cryptoservice.CryptoServiceException
 import net.corda.nodeapi.internal.cryptoservice.CryptoServiceFactory
 import net.corda.nodeapi.internal.cryptoservice.ManagedCryptoService
 import net.corda.nodeapi.internal.cryptoservice.SupportedCryptoServices
@@ -181,13 +182,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     val transactionStorage = makeTransactionStorage(configuration.transactionCacheSizeBytes).tokenize()
     val networkMapClient: NetworkMapClient? = configuration.networkServices?.let { NetworkMapClient(it, versionInfo) }
     val attachments = NodeAttachmentService(metricRegistry, cacheFactory, database, configuration.devMode).tokenize()
-    val cryptoService : ManagedCryptoService = CryptoServiceFactory.makeManagedCryptoService(
-            configuration.cryptoServiceName ?: SupportedCryptoServices.BC_SIMPLE,
-            configuration.myLegalName,
-            configuration.signingCertificateStore,
-            configuration.cryptoServiceConf,
-            configuration.cryptoServiceTimeout
-    ).closeOnStop()
+    val cryptoService = makeManagedCryptoService()
 
     @Suppress("LeakingThis")
     val networkParametersStorage = makeNetworkParametersStorage()
@@ -322,6 +317,16 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
     }
 
+    protected fun checkCryptoServiceIsAvailable(crypto: ManagedCryptoService, description: String) {
+        try {
+            // Check that the HSM is available
+            // The response doesn't matter as long as there's no exception
+            crypto.containsKey("Dummy")
+        } catch (e: CryptoServiceException) {
+            throw IllegalStateException("The cryptoservice configured for $description (${configuration.cryptoServiceName}) is unavailable", e)
+        }
+    }
+
     fun clearNetworkMapCache() {
         Node.printBasicNodeInfo("Clearing network map cache entries")
         log.info("Starting clearing of network map cache entries...")
@@ -339,6 +344,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
         log.info("Node starting up ...")
 
+        checkCryptoServiceIsAvailable(cryptoService, "legal identity keys")
         val trustRoot = initKeyStores()
         initialiseJVMAgents()
 
@@ -773,6 +779,16 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
     protected open fun makeNetworkParametersStorage(): NetworkParametersStorage {
         return DBNetworkParametersStorage(cacheFactory, database, networkMapClient).tokenize()
+    }
+
+    protected open fun makeManagedCryptoService(): ManagedCryptoService {
+        return CryptoServiceFactory.makeManagedCryptoService(
+                configuration.cryptoServiceName ?: SupportedCryptoServices.BC_SIMPLE,
+                configuration.myLegalName,
+                configuration.signingCertificateStore,
+                configuration.cryptoServiceConf,
+                configuration.cryptoServiceTimeout
+        ).closeOnStop()
     }
 
     @VisibleForTesting

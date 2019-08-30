@@ -28,11 +28,11 @@ class ManagedCryptoServiceTest {
 
         assertThatExceptionOfType(TimedCryptoServiceException::class.java).isThrownBy {
             service.generateKeyPair("", RSA_SHA256)
-        }.withMessage("Timed-out while waiting for $timeout milliseconds").matches { it.isRecoverable }
+        }.withMessage("Timed-out while waiting for ${timeout.toMillis()} milliseconds").matches { it.isRecoverable }
 
         assertThatExceptionOfType(TimedCryptoServiceException::class.java).isThrownBy {
             service.createWrappingKey("", true)
-        }.withMessage("Timed-out while waiting for $timeout milliseconds").matches { it.isRecoverable }
+        }.withMessage("Timed-out while waiting for ${timeout.toMillis()} milliseconds").matches { it.isRecoverable }
     }
 
     @Test

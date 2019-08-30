@@ -42,9 +42,10 @@ class CryptoServiceFactory {
                 legalName: CordaX500Name,
                 signingCertificateStore: FileBasedCertificateStoreSupplier? = null,
                 cryptoServiceConf: Path? = null,
-                timeout: Duration? = null
+                timeout: Duration? = null,
+                wrappingKeyStorePath: Path? = null
         ): ManagedCryptoService {
-            return ManagedCryptoService(makeCryptoService(cryptoServiceName, legalName, signingCertificateStore, cryptoServiceConf), timeout)
+            return ManagedCryptoService(makeCryptoService(cryptoServiceName, legalName, signingCertificateStore, cryptoServiceConf, wrappingKeyStorePath), timeout)
         }
     }
 }
