@@ -95,7 +95,7 @@ class BasicHSMKeyManagementService(cacheFactory: NamedCacheFactory,
     }
 
     override fun filterMyKeys(candidateKeys: Iterable<PublicKey>): Iterable<PublicKey> = database.transaction {
-        identityService.stripNotOurKeys(candidateKeys)
+        candidateKeys.filter(::containsPublicKey)
     }
 
     override fun freshKeyInternal(externalId: UUID?): PublicKey {
