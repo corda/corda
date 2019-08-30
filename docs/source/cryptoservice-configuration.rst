@@ -139,6 +139,8 @@ The configuration file for Azure KeyVault contains the fields listed below. For 
 
 :path: path to the key store for login. Note that the .pem file that belongs to your service principal needs to be created to pkcs12. One way of doing this is by using openssl: ``openssl pkcs12 -export -in /home/username/tmpdav8oje3.pem -out keyvault_login.p12``.
 
+.. note:: If a relative path is specified for the pkcs12 key store, it must be relative to the base directory of the running node, firewall or :doc:`HA Utility <ha-utilities>`.
+
 :alias: alias of the key used for login.
 
 :password: password to the key store.
