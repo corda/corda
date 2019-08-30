@@ -4,10 +4,8 @@ Changelog
 Here's a summary of what's changed in each Corda release. For guidance on how to upgrade code from the previous
 release, see :doc:`app-upgrade-notes`.
 
-.. _changelog_v5.0:
-
-Version 5.0
------------
+Unreleased
+----------
 
 * Introduced a new low level flow diagnostics tool: checkpoint agent (that can be used standalone or in conjunction with the ``dumpCheckpoints`` shell command).
   See :doc:`checkpoint-tooling` for more information.
@@ -49,11 +47,6 @@ Version 5.0
 
   .. note:: This is only best-effort and there are no guarantees of reliability.
 
-.. _changelog_v4.2:
-
-Version 4.2
------------
-
 * Contract attachments are now automatically whitelisted by the node if another contract attachment is present with the same contract classes,
   signed by the same public keys, and uploaded by a trusted uploader. This allows the node to resolve transactions that use earlier versions
   of a contract without having to manually install that version, provided a newer version is installed. Similarly, non-contract attachments
@@ -61,6 +54,13 @@ Version 4.2
 
 * :doc:`design/data-model-upgrades/package-namespace-ownership` configurations can be now be set as described in
   :ref:`node_package_namespace_ownership`, when using the Cordformation plugin version 4.0.43.
+
+.. _changelog_v4.1:
+
+Version 4.1
+-----------
+
+* Fix a bug in Corda 4.0 that combined commands in ``TransactionBuilder`` if they only differed by the signers list.  The behaviour is now consistent with prior Corda releases.
 
 * Disabled the default loading of ``hibernate-validator`` as a plugin by hibernate when a CorDapp depends on it. This change will in turn fix the
   (https://github.com/corda/corda/issues/4444) issue, because nodes will no longer need to add ``hibernate-validator`` to the ``\libs`` folder.

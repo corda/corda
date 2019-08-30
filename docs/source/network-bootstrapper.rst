@@ -29,9 +29,7 @@ The Corda Network Bootstrapper can be downloaded from `here <https://software.r3
 Create a directory containing a node config file, ending in "_node.conf", for each node you want to create. "devMode" must be set to true. Then run the
 following command:
 
-.. sourcecode:: bash
-
-    java -jar corda-tools-network-bootstrapper-|corda_version|.jar --dir <nodes-root-dir>
+``java -jar network-bootstrapper-|corda_version|.jar --dir <nodes-root-dir>``
 
 For example running the command on a directory containing these files:
 
@@ -155,9 +153,7 @@ can use the Network Bootstrapper on the following network structure:
 
 Then run the Network Bootstrapper again from the root dir:
 
-.. sourcecode:: bash
-
-    java -jar corda-tools-network-bootstrapper-|corda_version|.jar --dir <nodes-root-dir>
+``java -jar network-bootstrapper-|corda_version|.jar --dir <nodes-root-dir>``
 
 Which will give the following:
 
@@ -228,9 +224,7 @@ For example, with the following pre-generated network:
 
 Then run the Network Bootstrapper again from the root dir:
 
-.. sourcecode:: bash
-
-    java -jar corda-tools-network-bootstrapper-|corda_version|.jar --dir <nodes-root-dir>
+``java -jar network-bootstrapper-|corda_version|.jar --dir <nodes-root-dir>``
 
 To give the following:
 
@@ -277,15 +271,11 @@ Overriding network parameters via a file
 
 You can provide a network parameters overrides file using the following syntax:
 
-.. sourcecode:: bash
-
-    java -jar corda-tools-network-bootstrapper-|corda_version|.jar --network-parameter-overrides=<path_to_file>
+``java -jar network-bootstrapper-|corda_version|.jar --network-parameter-overrides=<path_to_file>``
 
 Or alternatively, by using the short form version:
 
-.. sourcecode:: bash
-
-    java -jar corda-tools-network-bootstrapper-|corda_version|.jar -n=<path_to_file>
+``java -jar network-bootstrapper-|corda_version|.jar -n=<path_to_file>``
 
 The network parameter overrides file is a HOCON file with the following fields, all of which are optional. Any field that is not provided will be
 ignored. If a field is not provided and you are bootstrapping a new network, a sensible default value will be used. If a field is not provided and you
