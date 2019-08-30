@@ -7,6 +7,7 @@ import io.netty.channel.Channel
 import io.netty.channel.ChannelHandlerContext
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.toHexString
 import net.corda.nodeapi.internal.protonwrapper.messages.MessageStatus
 import net.corda.nodeapi.internal.protonwrapper.messages.impl.ReceivedMessageImpl
 import net.corda.nodeapi.internal.protonwrapper.messages.impl.SendableMessageImpl
@@ -366,7 +367,7 @@ internal class ConnectionStateMachine(private val serverMode: Boolean,
                     delivery.context = nextMessage
                     sender.send(messageBuf.array(), messageBuf.arrayOffset() + messageBuf.readerIndex(), messageBuf.readableBytes())
                     nextMessage.status = MessageStatus.Sent
-                    logDebugWithMDC { "Put tag ${javax.xml.bind.DatatypeConverter.printHexBinary(delivery.tag)} on wire uuid: ${nextMessage.applicationProperties["_AMQ_DUPL_ID"]}" }
+                    logDebugWithMDC { "Put tag ${delivery.tag.toHexString()} on wire uuid: ${nextMessage.applicationProperties["_AMQ_DUPL_ID"]}" }
                     unackedQueue.offer(nextMessage)
                     sender.advance()
                 } finally {
@@ -414,7 +415,7 @@ internal class ConnectionStateMachine(private val serverMode: Boolean,
                 }
             }
         } else if (link is Sender) {
-            logDebugWithMDC { "Sender delivery confirmed tag ${javax.xml.bind.DatatypeConverter.printHexBinary(delivery.tag)}" }
+            logDebugWithMDC { "Sender delivery confirmed tag ${delivery.tag.toHexString()}" }
             val ok = delivery.remotelySettled() && delivery.remoteState == Accepted.getInstance()
             val sourceMessage = delivery.context as? SendableMessageImpl
             unackedQueue.remove(sourceMessage)

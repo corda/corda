@@ -1,9 +1,9 @@
 package net.corda.healthsurvey
 
+import net.corda.core.utilities.toHexString
 import java.nio.file.Files
 import java.nio.file.Path
 import java.security.MessageDigest
-import javax.xml.bind.DatatypeConverter
 
 object FileUtils {
 
@@ -12,7 +12,7 @@ object FileUtils {
         val bytes = Files.readAllBytes(path)
         messageDigest.update(bytes, 0, bytes.size)
         val digestBytes = messageDigest.digest()
-        return DatatypeConverter.printHexBinary(digestBytes).toLowerCase()
+        return digestBytes.toHexString().toLowerCase()
     }
 
 }

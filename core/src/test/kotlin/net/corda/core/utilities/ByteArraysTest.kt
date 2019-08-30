@@ -1,8 +1,11 @@
 package net.corda.core.utilities
 
+import net.corda.core.contracts.StateRef
+import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.declaredField
 import org.assertj.core.api.Assertions.catchThrowable
 import org.junit.Assert.assertSame
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.nio.ByteBuffer
 import java.nio.ReadOnlyBufferException
@@ -41,5 +44,18 @@ class ByteArraysTest {
         check(byteArrayOf(2), seq.slice(2, 3))
         check(byteArrayOf(), seq.slice(2, 2))
         check(byteArrayOf(), seq.slice(2, 1))
+    }
+
+    @Test
+    fun `test hex parsing strictly uppercase`() {
+        val HEX_REGEX = "^[0-9A-F]+\$".toRegex()
+
+        val privacySalt = net.corda.core.contracts.PrivacySalt()
+        val privacySaltAsHexString = privacySalt.bytes.toHexString()
+        assertTrue(privacySaltAsHexString.matches(HEX_REGEX))
+
+        val stateRef = StateRef(SecureHash.randomSHA256(), 0)
+        val txhashAsHexString = stateRef.txhash.bytes.toHexString()
+        assertTrue(txhashAsHexString.matches(HEX_REGEX))
     }
 }

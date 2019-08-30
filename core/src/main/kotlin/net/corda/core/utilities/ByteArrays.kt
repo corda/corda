@@ -10,7 +10,6 @@ import java.io.OutputStream
 import java.lang.Math.max
 import java.lang.Math.min
 import java.nio.ByteBuffer
-import javax.xml.bind.DatatypeConverter
 
 /**
  * An abstraction of a byte array, with offset and size that does no copying of bytes unless asked to.
@@ -179,13 +178,60 @@ fun ByteArray.sequence(offset: Int = 0, size: Int = this.size) = ByteSequence.of
 /**
  * Converts this [ByteArray] into a [String] of hexadecimal digits.
  */
-fun ByteArray.toHexString(): String = DatatypeConverter.printHexBinary(this)
+fun ByteArray.toHexString(): String = printHexBinary(this)
+
+private val hexCode = "0123456789ABCDEF".toCharArray()
+private fun printHexBinary(data: ByteArray): String {
+    val r = StringBuilder(data.size * 2)
+    for (b in data) {
+        r.append(hexCode[(b.toInt() shr 4) and 0xF])
+        r.append(hexCode[b.toInt() and 0xF])
+    }
+    return r.toString()
+}
 
 /**
  * Converts this [String] of hexadecimal digits into a [ByteArray].
  * @throws IllegalArgumentException if the [String] contains incorrectly-encoded characters.
  */
-fun String.parseAsHex(): ByteArray = DatatypeConverter.parseHexBinary(this)
+fun String.parseAsHex(): ByteArray = parseHexBinary(this)
+
+private fun parseHexBinary(s: String): ByteArray {
+    val len = s.length
+
+    // "111" is not a valid hex encoding.
+    if (len % 2 != 0) {
+        throw IllegalArgumentException("hexBinary needs to be even-length: $s")
+    }
+
+    val out = ByteArray(len / 2)
+
+    fun hexToBin(ch: Char): Int {
+        if (ch in '0'..'9') {
+            return ch - '0'
+        }
+        if (ch in 'A'..'F') {
+            return ch - 'A' + 10
+        }
+        return if (ch in 'a'..'f') {
+            ch - 'a' + 10
+        } else -1
+    }
+
+    var i = 0
+    while (i < len) {
+        val h = hexToBin(s[i])
+        val l = hexToBin(s[i + 1])
+        if (h == -1 || l == -1) {
+            throw IllegalArgumentException("contains illegal character for hexBinary: $s")
+        }
+
+        out[i / 2] = (h * 16 + l).toByte()
+        i += 2
+    }
+
+    return out
+}
 
 /**
  * Class is public for serialization purposes.

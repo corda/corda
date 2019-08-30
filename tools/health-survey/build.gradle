@@ -19,6 +19,7 @@ configurations {
 }
 
 dependencies {
+    compile project(':core')    // FileUtils requires access to "ByteArray.toHexString()"
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     compile "com.typesafe:config:$typesafe_config_version"
     compile "com.google.code.gson:gson:$gson_version"
