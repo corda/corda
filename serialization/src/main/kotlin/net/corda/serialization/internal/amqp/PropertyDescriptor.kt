@@ -4,7 +4,6 @@ import com.google.common.reflect.TypeToken
 import net.corda.core.KeepForDJVM
 import net.corda.core.internal.isPublic
 import net.corda.core.serialization.SerializableCalculatedProperty
-import net.corda.core.utilities.contextLogger
 import net.corda.serialization.internal.amqp.MethodClassifier.*
 import java.lang.reflect.Field
 import java.lang.reflect.Method
