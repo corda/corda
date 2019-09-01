@@ -16,7 +16,6 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicReference
 import java.util.function.Consumer
 import java.util.stream.Collectors
 import java.util.stream.IntStream
@@ -36,7 +35,13 @@ class KubesTest extends DefaultTask {
 
     @TaskAction
     void runTestsOnKubes() {
-        String runId = new BigInteger(64, new Random()).toString(36).toLowerCase()
+
+        def gitSha = new BigInteger(project.hasProperty("corda_revision") ? project.property("corda_revision").toString() : "0", 36)
+        def buildId = System.hasProperty("buildId") ? System.getProperty("buildId") : "UNKNOWN_BUILD"
+        def currentUser = System.hasProperty("user.name") ? System.getProperty("user.name") : "UNKNOWN_USER"
+
+        String stableRunId = new BigInteger(64, new Random(gitSha.intValue() + buildId.hashCode() + currentUser.hashCode())).toString(36).toLowerCase()
+        String suffix = new BigInteger(64, new Random()).toString(36).toLowerCase()
 
         int k8sTimeout = 50 * 1_000
         io.fabric8.kubernetes.client.Config config = new io.fabric8.kubernetes.client.ConfigBuilder()
@@ -50,39 +55,37 @@ class KubesTest extends DefaultTask {
         final KubernetesClient client = new DefaultKubernetesClient(config)
 
         String namespace = "thisisatest"
-
         client.pods().inNamespace(namespace).list().getItems().forEach({ podToDelete ->
-            System.out.println("deleting: " + podToDelete.getMetadata().getName())
-            client.resource(podToDelete).delete()
+            if (podToDelete.getMetadata().name.contains(stableRunId)) {
+                System.out.println("deleting: " + podToDelete.getMetadata().getName())
+                client.resource(podToDelete).delete()
+            }
         })
 
-        Namespace ns = new NamespaceBuilder().withNewMetadata().withName(namespace).addToLabels("this", "rocks").endMetadata().build()
+        Namespace ns = new NamespaceBuilder().withNewMetadata().withName(namespace).addToLabels("testing-env", "true").endMetadata().build()
         client.namespaces().createOrReplace(ns)
 
         int numberOfNodes = 20
         List<CompletableFuture<KubePodResult>> podCreationFutures = IntStream.range(0, numberOfNodes).mapToObj({ i ->
-
             CompletableFuture.supplyAsync({
                 File outputFile = Files.createTempFile("container", ".log").toFile()
-
-                String podName = (taskToExecuteName + "-" + runId + i).toLowerCase()
+                String podName = (taskToExecuteName + "-" + stableRunId + suffix + i).toLowerCase()
                 Pod podRequest = buildPod(podName)
                 System.out.println("created pod: " + podName)
                 Pod createdPod = client.pods().inNamespace(namespace).create(podRequest)
-
-
-                AtomicReference<Throwable> errorHolder = new AtomicReference<>()
+                Runtime.getRuntime().addShutdownHook({
+                    println "Deleting pod: " + podName
+                    client.pods().delete(createdPod)
+                })
                 CompletableFuture<Void> waiter = new CompletableFuture<Void>()
-                KubePodResult result = new KubePodResult(createdPod, errorHolder, waiter, outputFile)
-                startBuildAndLogging(client, namespace, numberOfNodes, i, podName, printOutput, errorHolder, waiter, { int resultCode ->
+                KubePodResult result = new KubePodResult(createdPod, waiter, outputFile)
+                startBuildAndLogging(client, namespace, numberOfNodes, i, podName, printOutput, waiter, { int resultCode ->
                     println podName + " has completed with resultCode=$resultCode"
                     result.setResultCode(resultCode)
                 }, outputFile)
 
                 return result
             }, executorService)
-
-
         }).collect(Collectors.toList())
 
         def binaryFileFutures = podCreationFutures.collect { creationFuture ->
@@ -109,7 +112,6 @@ class KubesTest extends DefaultTask {
 
         allFilesDownloadedFuture.get()
         this.containerResults = podCreationFutures.collect { it -> it.get() }
-        println ""
     }
 
     void startBuildAndLogging(KubernetesClient client,
@@ -118,7 +120,6 @@ class KubesTest extends DefaultTask {
                               int podIdx,
                               String podName,
                               boolean printOutput,
-                              AtomicReference<Throwable> errorHolder,
                               CompletableFuture<Void> waiter,
                               Consumer<Integer> resultSetter,
                               File outputFileForContainer) {
@@ -245,7 +246,8 @@ class KubesTest extends DefaultTask {
     }
 
     String[] getBuildCommand(int numberOfPods, int podIdx) {
-        return ["bash", "-c", "cd /tmp/source && ./gradlew -PdockerFork=" + podIdx + " -PdockerForks=" + numberOfPods + " $fullTaskToExecutePath --info 2>&1 ; sleep 10"]
+        return ["bash", "-c", "cd /tmp/source && ./gradlew -PdockerFork=" + podIdx + " -PdockerForks=" + numberOfPods + " $fullTaskToExecutePath --info 2>&1 " +
+                "; let rs=\$? ; sleep 10 ; exit \${rs}"]
     }
 
     Collection<File> downloadTestXmlFromPod(KubernetesClient client, String namespace, Pod cp) {
@@ -259,23 +261,13 @@ class KubesTest extends DefaultTask {
         }
 
         System.out.println("saving to " + podName + " results to: " + tempDir.toAbsolutePath().toFile().getAbsolutePath())
-        boolean copiedResult = false
-        try {
-            client.pods()
-                    .inNamespace(namespace)
-                    .withName(podName)
-                    .dir(resultsInContainerPath)
-                    .copy(tempDir)
-            copiedResult = true
-        } catch (Exception ignored) {
-            throw ignored
-        }
+        client.pods()
+                .inNamespace(namespace)
+                .withName(podName)
+                .dir(resultsInContainerPath)
+                .copy(tempDir)
 
-        if (copiedResult) {
-            return findFolderContainingBinaryResultsFile(new File(tempDir.toFile().getAbsolutePath()), binaryResultsFile)
-        } else {
-            return Collections.emptyList()
-        }
+        return findFolderContainingBinaryResultsFile(new File(tempDir.toFile().getAbsolutePath()), binaryResultsFile)
     }
 
     List<File> findFolderContainingBinaryResultsFile(File start, String fileNameToFind) {

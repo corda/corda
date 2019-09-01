@@ -1,11 +1,5 @@
-import com.bmuschko.gradle.docker.tasks.container.DockerCreateContainer
-import com.bmuschko.gradle.docker.tasks.container.DockerLogsContainer
-import com.bmuschko.gradle.docker.tasks.container.DockerStartContainer
-import com.bmuschko.gradle.docker.tasks.container.DockerWaitContainer
-import com.bmuschko.gradle.docker.tasks.image.DockerBuildImage
-import com.bmuschko.gradle.docker.tasks.image.DockerCommitImage
-import com.bmuschko.gradle.docker.tasks.image.DockerPushImage
-import com.bmuschko.gradle.docker.tasks.image.DockerTagImage
+import com.stefano.testing.DistributedTesting
+import com.stefano.testing.ImageBuilding
 
 import java.util.concurrent.CompletableFuture
 
@@ -127,12 +121,10 @@ buildscript {
     ext.corda_revision = {
         try {
             "git rev-parse HEAD".execute().text.trim()
-        } catch (Exception e) {
+        } catch (Exception ignored) {
             "gitNotAvailable"
         }
     }()
-    ext.docker_testing_tag = "$corda_revision-${System.currentTimeMillis()}"
-
     repositories {
         mavenLocal()
         mavenCentral()
@@ -171,7 +163,7 @@ plugins {
     // Add the shadow plugin to the plugins classpath for the entire project.
     id 'com.github.johnrengelman.shadow' version '2.0.4' apply false
     id "com.gradle.build-scan" version "2.2.1"
-    id 'com.bmuschko.docker-remote-api' version '5.0.0'
+    id 'com.bmuschko.docker-remote-api'
 }
 
 ext {
@@ -324,10 +316,6 @@ allprojects {
         runtime {
             // We never want isolated.jar on classPath, since we want to test jar being dynamically loaded as an attachment
             exclude module: 'isolated'
-        }
-
-        ext {
-            docker_testing_tag = "$docker_testing_tag"
         }
     }
 }
@@ -528,232 +516,5 @@ buildScan {
     termsOfServiceAgree = 'yes'
 }
 
-static def getPropertyAsInt(Project proj, String property, Integer defaultValue) {
-    return proj.hasProperty(property) ? Integer.parseInt(proj.property(property).toString()) : defaultValue
-}
-
-//testing workflow
-// 1. build an image from current checkout
-// 2. generate a list of tests
-// 3. invoke containers with params (TBD) which will tell each container which tests to run (this could leverage gradle TestFilter)
-// 4. wait for containers to finish
-// 5. collect all xml reports
-// 6. merge into single xml report
-// 7. convert to html and report results
-// 8. if failures detected, determine which container ran the test
-// 9. commit container to image and provide access to contents
-
-task buildDockerImageForSource(type: DockerBuildImage, dependsOn: project.getTasksByName("clean", true)) {
-    inputDir = new File(".")
-    dockerFile = new File(new File("testing"), "Dockerfile")
-}
-
-task createBuildContainer(type: DockerCreateContainer) {
-    File gradleDir = new File((System.getProperty("java.io.tmpdir") + File.separator + "gradle"))
-    File mavenDir = new File((System.getProperty("java.io.tmpdir") + File.separator + "maven"))
-    doFirst {
-
-        if (!gradleDir.exists()) {
-            gradleDir.mkdirs()
-        }
-        if (!mavenDir.exists()) {
-            mavenDir.mkdirs()
-        }
-    }
-
-    dependsOn buildDockerImageForSource
-    targetImageId buildDockerImageForSource.getImageId()
-    binds = [(gradleDir.absolutePath): "/tmp/gradle", (mavenDir.absolutePath): "/home/root/.m2"]
-}
-
-task startBuildContainer(type: DockerStartContainer) {
-    dependsOn createBuildContainer
-    targetContainerId createBuildContainer.getContainerId()
-}
-
-task logBuildContainer(type: DockerLogsContainer) {
-    dependsOn startBuildContainer
-    targetContainerId createBuildContainer.getContainerId()
-    follow = true
-}
-
-task waitForBuildContainer(type: DockerWaitContainer) {
-    dependsOn logBuildContainer
-    targetContainerId createBuildContainer.getContainerId()
-}
-
-task commitBuildImageResult(type: DockerCommitImage) {
-    dependsOn waitForBuildContainer
-    targetContainerId createBuildContainer.getContainerId()
-}
-
-task tagBuildImageResult(type: DockerTagImage) {
-    dependsOn commitBuildImageResult
-    imageId = commitBuildImageResult.getImageId()
-    tag = "${UUID.randomUUID().toString().toLowerCase().subSequence(0, 12)}"
-    repository = "stefanotestingcr.azurecr.io/testing"
-}
-docker {
-    registryCredentials {
-        url = "stefanotestingcr.azurecr.io"
-        username = "stefanotestingcr"
-        password = System.getProperty("docker.push.password") ? System.getProperty("docker.push.password") : ""
-    }
-}
-
-task pushBuildImage(type: DockerPushImage, dependsOn: tagBuildImageResult) {
-    imageName = "stefanotestingcr.azurecr.io/testing"
-    tag = tagBuildImageResult.tag
-}
-//task pushBuildImage(type: DockerPushImage) {
-//    doFirst {
-//        println("About to push image using pwd: " + registryCredentials?.password?.get())
-//    }
-//    imageName = "stefanotestingcr.azurecr.io/testing"
-//    tag = 'b7fe1321-fdb'
-//}
-
-def imageBuildingTask = rootProject.tasks.getByName("pushBuildImage")
-allprojects {
-    tasks.withType(Test) { Test task ->
-        Project projectContainingTask = getProject()
-        try {
-
-            def taskName = task.getName()
-            def capitalizedTaskName = task.getName().capitalize()
-            def createdListTask = projectContainingTask.tasks.create("listTestsFor" + capitalizedTaskName, com.stefano.testing.ListTests) {
-                dependsOn projectContainingTask.getTasks().getByName("${taskName}Classes")
-                doFirst {
-                    scanClassPath = task.getTestClassesDirs() ? task.getTestClassesDirs() : Collections.emptyList()
-                }
-            }
-
-            def createdPrintTask = projectContainingTask.tasks.create("printTestsFor" + capitalizedTaskName) {
-                dependsOn createdListTask
-                doLast {
-                    createdListTask.getTestsForFork(
-                            getPropertyAsInt(projectContainingTask, "dockerFork", 0),
-                            getPropertyAsInt(projectContainingTask, "dockerForks", 1),
-                            42).forEach { testName ->
-                        println testName
-                    }
-                }
-            }
-
-            logger.info("created task: " + createdListTask.getPath() + " in project: " + projectContainingTask + " it dependsOn: " + createdListTask.dependsOn)
-            logger.info("created task: " + createdPrintTask.getPath() + " in project: " + projectContainingTask + " it dependsOn: " + createdPrintTask.dependsOn)
-            logger.info("modifying task: ${task.getPath()} to depend on task ${createdListTask.getPath()}")
-            def reportsDir = new File(new File(rootProject.getBuildDir(), "test-reports"), projectContainingTask.name + "-" + task.name)
-
-            task.configure {
-                dependsOn createdListTask
-                binResultsDir new File(reportsDir, "binary")
-                reports.junitXml.destination new File(reportsDir, "xml")
-                maxHeapSize = "6g"
-                doFirst {
-                    filter {
-                        def fork = getPropertyAsInt(projectContainingTask, "dockerFork", 0)
-                        def forks = getPropertyAsInt(projectContainingTask, "dockerForks", 1)
-                        def shuffleSeed = 42
-                        logger.info("requesting tests to include in testing task ${task.getPath()} (${fork}, ${forks}, ${shuffleSeed})")
-                        List<String> includes = createdListTask.getTestsForFork(
-                                fork,
-                                forks,
-                                shuffleSeed)
-                        logger.info "got ${includes.size()} tests to include into testing task ${task.getPath()}"
-
-                        if (includes.size() == 0) {
-                            logger.info "Disabling test executing for testing task ${task.getPath()}"
-                            excludeTestsMatching "*"
-                        }
-
-                        includes.forEach { include ->
-                            logger.info "including: $include for testing task ${task.getPath()}"
-                            includeTestsMatching include
-                        }
-                        failOnNoMatchingTests false
-                    }
-                }
-            }
-
-            def createdParallelTestTask = projectContainingTask.tasks.create("parallel" + capitalizedTaskName, com.stefano.testing.KubesTest) {
-                dependsOn imageBuildingTask
-                printOutput = true
-                fullTaskToExecutePath = task.getPath()
-                taskToExecuteName = taskName
-                doFirst {
-                    dockerTag = imageBuildingTask.imageName.get() + ":" + imageBuildingTask.tag.get()
-                }
-            }
-            logger.info "Created task: ${createdParallelTestTask.getPath()} to enable testing on kubenetes for task: ${task.getPath()}"
-
-        } catch (Exception e) {
-            System.err.println(e.message)
-        }
-
-    }
-}
-
-Map<String, List<com.stefano.testing.KubesTest>> allKubesTestingTasksGroupedByType = subprojects.collect { project -> project.getAllTasks(false).values() }
-        .flatten()
-        .findAll { task -> task instanceof com.stefano.testing.KubesTest }
-        .groupBy { task -> task.taskToExecuteName }
-
-allKubesTestingTasksGroupedByType.entrySet().collect { entry ->
-
-    def taskType = entry.key
-    def allTasksOfType = entry.value
-
-    def allParallelTask = rootProject.tasks.create("allParallel" + taskType.capitalize(), com.stefano.testing.KubesTest) {
-        dependsOn imageBuildingTask
-        printOutput = true
-        fullTaskToExecutePath = allTasksOfType.collect { task -> task.fullTaskToExecutePath }.join(" ")
-        taskToExecuteName = taskType
-        doFirst {
-            dockerTag = imageBuildingTask.imageName.get() + ":" + imageBuildingTask.tag.get()
-        }
-    }
-
-    def reportOnAllTask = rootProject.tasks.create("reportAllParallel${taskType.capitalize()}", com.stefano.testing.KubesReporting) {
-        dependsOn allParallelTask
-        destinationDir new File(rootProject.getBuildDir(), "allResults${taskType.capitalize()}")
-        doFirst {
-            destinationDir.deleteDir()
-            podResults = allParallelTask.containerResults
-            reportOn(allParallelTask.testOutput)
-        }
-    }
-
-    allParallelTask.finalizedBy(reportOnAllTask)
-
-
-    logger.info "Created task: ${allParallelTask.getPath()} to enable testing on kubenetes for tasks: ${allParallelTask.fullTaskToExecutePath}"
-    logger.info "Created task: ${reportOnAllTask.getPath()} to generate test html output for task ${allParallelTask.getPath()}"
-    return allParallelTask
-
-}
-
-rootProject.rootProject.tasks.create("combinedParallelTestAndIntegrationTest") {
-    dependsOn imageBuildingTask
-    doLast {
-        def buildTasks = [rootProject.getTasks().getByPath(":allParallelTest"), rootProject.getTasks().getByPath(":allParallelIntegrationTest")]
-        def reportTasks = [rootProject.getTasks().getByPath(":reportAllParallelTest"), rootProject.getTasks().getByPath(":reportAllParallelIntegrationTest")]
-        def taskFutures = buildTasks.collect { t ->
-            CompletableFuture.runAsync {
-                def actions = t.getActions()
-                for (Action action : actions) {
-                    action.execute(t)
-                }
-            }
-        }
-        CompletableFuture.allOf(*taskFutures.toArray()).thenRun {
-            reportTasks.forEach { rt ->
-                def actions = rt.getActions()
-                for (Action action : actions) {
-                    action.execute(rt)
-                }
-            }
-        }.join()
-    }
-
-}
+apply plugin: ImageBuilding
+apply plugin: DistributedTesting

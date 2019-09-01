@@ -19,7 +19,7 @@ class ListTestsTest {
             for (int numberOfForks = 1; numberOfForks < 100; numberOfForks++) {
 
 
-                List<String> tests = IntStream.range(0, numberOfTests).mapToObj { z -> "Test.method" + z }.collect(Collectors.toList());
+                List<String> tests = IntStream.range(0, numberOfTests).collect { z -> "Test.method" + z }
                 ListShufflerAndAllocator testLister = new ListShufflerAndAllocator(tests);
 
                 List<String> listOfLists = new ArrayList<>();

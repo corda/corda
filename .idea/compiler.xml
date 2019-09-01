@@ -65,6 +65,8 @@
       <module name="corda-isolated_test" target="1.8" />
       <module name="corda-project.core.integrationTest" target="1.8" />
       <module name="corda-project.core.smokeTest" target="1.8" />
+      <module name="corda-project.experimental.blobwriter.main" target="1.8" />
+      <module name="corda-project.experimental.blobwriter.test" target="1.8" />
       <module name="corda-project.tools.network-bootstrapper.main" target="1.8" />
       <module name="corda-project.tools.network-bootstrapper.test" target="1.8" />
       <module name="corda-project_buildSrc_main" target="1.8" />

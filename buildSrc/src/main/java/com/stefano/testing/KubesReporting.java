@@ -42,7 +42,7 @@ import static org.gradle.internal.concurrent.CompositeStoppable.stoppable;
 import static org.gradle.util.CollectionUtils.collect;
 
 /**
- * Generates an HTML test report from the results of one or more {@link Test} tasks.
+ * Shameful copy of TestReportTask - modified to handle results from k8s testing.
  */
 public class KubesReporting extends DefaultTask {
     private File destinationDir = new File(getProject().getBuildDir(), "test-reporting");
