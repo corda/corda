@@ -27,6 +27,7 @@ import javax.annotation.concurrent.ThreadSafe
  */
 @ThreadSafe
 class E2ETestKeyManagementService(override val identityService: IdentityService, private val cryptoService: CryptoService? = null) : SingletonSerializeAsToken(), KeyManagementServiceInternal {
+
     private class InnerState {
         val keys = HashMap<PublicKey, PrivateKey>()
     }
@@ -86,5 +87,9 @@ class E2ETestKeyManagementService(override val identityService: IdentityService,
     override fun sign(signableData: SignableData, publicKey: PublicKey): TransactionSignature {
         val keyPair = getSigningKeyPair(publicKey)
         return keyPair.sign(signableData)
+    }
+
+    override fun externalIdForPublicKey(publicKey: PublicKey): UUID? {
+        throw UnsupportedOperationException("This operation is only supported by persistent key management service variants.")
     }
 }
