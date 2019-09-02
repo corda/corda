@@ -81,6 +81,7 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
         open val constraints: Set<Vault.ConstraintInfo> = emptySet()
         open val participants: List<AbstractParty>? = null
         abstract val contractStateTypes: Set<Class<out ContractState>>?
+        open val externalIds: List<UUID> = emptyList()
         override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
             return parser.parseCriteria(this)
         }
@@ -99,7 +100,8 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
             override val relevancyStatus: Vault.RelevancyStatus = Vault.RelevancyStatus.ALL,
             override val constraintTypes: Set<Vault.ConstraintInfo.Type> = emptySet(),
             override val constraints: Set<Vault.ConstraintInfo> = emptySet(),
-            override val participants: List<AbstractParty>? = null
+            override val participants: List<AbstractParty>? = null,
+            override val externalIds: List<UUID> = emptyList()
     ) : CommonQueryCriteria() {
         // V3 c'tors
         // These have to be manually specified as @JvmOverloads for some reason causes declaration clashes
