@@ -10,10 +10,7 @@ import net.corda.core.utilities.detailedLogger
 import net.corda.core.utilities.trace
 import net.corda.nodeapi.internal.config.UnknownConfigurationKeysException
 import net.corda.nodeapi.internal.config.parseAs
-import net.corda.nodeapi.internal.cryptoservice.CryptoService
-import net.corda.nodeapi.internal.cryptoservice.CryptoServiceException
-import net.corda.nodeapi.internal.cryptoservice.WrappedPrivateKey
-import net.corda.nodeapi.internal.cryptoservice.WrappingMode
+import net.corda.nodeapi.internal.cryptoservice.*
 import org.bouncycastle.asn1.x509.AlgorithmIdentifier
 import org.bouncycastle.operator.ContentSigner
 import java.io.ByteArrayOutputStream
@@ -34,6 +31,8 @@ class UtimacoCryptoService(
         private val config: UtimacoConfig,
         private val auth: () -> UtimacoCredentials
 ) : CryptoService {
+
+    override fun getType(): SupportedCryptoServices = SupportedCryptoServices.UTIMACO
 
     private val keyStore: KeyStore
     private val keyTemplate: CryptoServerCXI.KeyAttributes

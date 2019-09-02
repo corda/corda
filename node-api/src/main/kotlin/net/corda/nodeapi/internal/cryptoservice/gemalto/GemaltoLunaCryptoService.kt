@@ -10,10 +10,7 @@ import net.corda.core.utilities.detailedLogger
 import net.corda.core.utilities.trace
 import net.corda.nodeapi.internal.config.UnknownConfigurationKeysException
 import net.corda.nodeapi.internal.config.parseAs
-import net.corda.nodeapi.internal.cryptoservice.CryptoService
-import net.corda.nodeapi.internal.cryptoservice.JCACryptoService
-import net.corda.nodeapi.internal.cryptoservice.WrappedPrivateKey
-import net.corda.nodeapi.internal.cryptoservice.WrappingMode
+import net.corda.nodeapi.internal.cryptoservice.*
 import java.nio.file.Path
 import java.security.KeyStore
 import java.security.Provider
@@ -26,6 +23,8 @@ class GemaltoLunaCryptoService(
         x500Principal: X500Principal = DUMMY_X500_PRINCIPAL,
         private val auth: () -> GemaltoLunaConfiguration
 ) : JCACryptoService(keyStore, provider, x500Principal) {
+
+    override fun getType(): SupportedCryptoServices = SupportedCryptoServices.GEMALTO_LUNA
 
     override fun isLoggedIn(): Boolean {
         return try {

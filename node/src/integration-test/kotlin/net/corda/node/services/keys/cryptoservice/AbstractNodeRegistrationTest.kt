@@ -44,7 +44,7 @@ abstract class AbstractNodeRegistrationTest : IntegrationTest() {
     @JvmField
     val testSerialization = SerializationEnvironmentRule(true)
 
-    private val portAllocation = incrementalPortAllocation()
+    protected val portAllocation = incrementalPortAllocation()
 
     @Rule
     @JvmField

@@ -1,11 +1,11 @@
 package net.corda.nodeapi.internal.cryptoservice
 
-enum class SupportedCryptoServices {
+enum class SupportedCryptoServices(val userFriendlyName: String) {
     /** Identifier for [BCCryptoService]. */
-    BC_SIMPLE,
-    UTIMACO, // Utimaco HSM.
-    AZURE_KEY_VAULT, // Azure key Vault.
-    GEMALTO_LUNA, // Gemalto Luna HSM.
-    FUTUREX, // FutureX HSM.
-    PRIMUS_X // Securosys PrimusX HSM.
+    BC_SIMPLE("file-based keystore"),
+    UTIMACO("Utimaco SecurityServer Se Gen2 HSM"),
+    AZURE_KEY_VAULT("Azure KeyVault"),
+    GEMALTO_LUNA("Gemalto Luna HSM"),
+    FUTUREX("FutureX Excrypt SSP9000 HSM"),
+    PRIMUS_X("Securosys PrimusX HSM")
 }

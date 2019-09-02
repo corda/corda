@@ -14,10 +14,7 @@ import net.corda.nodeapi.internal.crypto.ContentSignerBuilder
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.loadOrCreateKeyStore
 import net.corda.nodeapi.internal.crypto.save
-import net.corda.nodeapi.internal.cryptoservice.CryptoService
-import net.corda.nodeapi.internal.cryptoservice.CryptoServiceException
-import net.corda.nodeapi.internal.cryptoservice.WrappedPrivateKey
-import net.corda.nodeapi.internal.cryptoservice.WrappingMode
+import net.corda.nodeapi.internal.cryptoservice.*
 import org.bouncycastle.operator.ContentSigner
 import java.nio.file.Path
 import java.security.*
@@ -36,6 +33,8 @@ import javax.security.auth.x500.X500Principal
 class BCCryptoService(private val legalName: X500Principal,
                       private val certificateStoreSupplier: CertificateStoreSupplier,
                       private val wrappingKeyStorePath: Path? = null) : CryptoService {
+
+    override fun getType(): SupportedCryptoServices = SupportedCryptoServices.BC_SIMPLE
 
     private companion object {
         val detailedLogger = detailedLogger()

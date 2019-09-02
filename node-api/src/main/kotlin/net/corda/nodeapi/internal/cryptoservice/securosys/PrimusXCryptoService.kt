@@ -7,10 +7,7 @@ import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SignatureScheme
 import net.corda.nodeapi.internal.config.UnknownConfigurationKeysException
 import net.corda.nodeapi.internal.config.parseAs
-import net.corda.nodeapi.internal.cryptoservice.CryptoService
-import net.corda.nodeapi.internal.cryptoservice.JCACryptoService
-import net.corda.nodeapi.internal.cryptoservice.WrappedPrivateKey
-import net.corda.nodeapi.internal.cryptoservice.WrappingMode
+import net.corda.nodeapi.internal.cryptoservice.*
 import java.nio.file.Path
 import java.security.Key
 import java.security.KeyStore
@@ -25,6 +22,8 @@ import javax.crypto.SecretKey
 import javax.security.auth.x500.X500Principal
 
 class PrimusXCryptoService(keyStore: KeyStore, provider: Provider, x500Principal: X500Principal = DUMMY_X500_PRINCIPAL, private val auth: () -> PrimusXConfiguration): JCACryptoService(keyStore, provider) {
+
+    override fun getType(): SupportedCryptoServices = SupportedCryptoServices.PRIMUS_X
 
     private val keyHandleCache: ConcurrentHashMap<String, Key> = ConcurrentHashMap()
 

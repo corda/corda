@@ -14,10 +14,7 @@ import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_CLIENT_TLS
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_ROOT_CA
 import net.corda.nodeapi.internal.crypto.getCertificateAndKeyPair
-import net.corda.nodeapi.internal.cryptoservice.CryptoService
-import net.corda.nodeapi.internal.cryptoservice.CryptoServiceFactory
-import net.corda.nodeapi.internal.cryptoservice.WrappedPrivateKey
-import net.corda.nodeapi.internal.cryptoservice.WrappingMode
+import net.corda.nodeapi.internal.cryptoservice.*
 import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
 import org.bouncycastle.operator.ContentSigner
 import org.junit.After
@@ -226,6 +223,8 @@ class InternalKeystoreGeneratorTest {
 private class MockedCryptoService(val keystorePath: Path) : CryptoService {
 
     private val bouncyCryptoService: BCCryptoService
+
+    override fun getType(): SupportedCryptoServices = SupportedCryptoServices.BC_SIMPLE
 
     init {
         System.out.println("keystorePath used by mock crypto service == " + keystorePath)

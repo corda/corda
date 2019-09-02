@@ -2,11 +2,15 @@ package net.corda.nodeapi.internal.cryptoservice.gemalto
 
 import com.safenetinc.luna.provider.LunaProvider
 import net.corda.core.crypto.Crypto
+import net.corda.core.crypto.SignatureScheme
 import net.corda.core.identity.Party
 import net.corda.core.utilities.days
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
+import net.corda.nodeapi.internal.cryptoservice.CryptoService
 import net.corda.nodeapi.internal.cryptoservice.CryptoServiceException
+import net.corda.nodeapi.internal.cryptoservice.CryptoServiceSpec
+import net.corda.nodeapi.internal.cryptoservice.WrappingMode
 import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.getTestPartyAndCertificate
 import org.junit.Ignore
@@ -34,103 +38,25 @@ import kotlin.test.assertTrue
  *
  */
 @Ignore
-class GemaltoLunaCryptoServiceTest {
+class GemaltoLunaCryptoServiceTest: CryptoServiceSpec() {
+
+    override fun getCryptoService(): CryptoService {
+        return GemaltoLunaCryptoService(keyStore, provider) { config }
+    }
+
+    override fun delete(alias: String) {
+        (getCryptoService() as GemaltoLunaCryptoService).delete(alias)
+    }
+
+    override fun getSupportedSchemes(): List<SignatureScheme> = listOf(Crypto.RSA_SHA256, Crypto.ECDSA_SECP256R1_SHA256, Crypto.ECDSA_SECP256K1_SHA256)
+
+    override fun getSupportedSchemesForWrappingOperations(): List<SignatureScheme> = emptyList()
+
+    override fun getSupportedWrappingMode(): WrappingMode? = null
 
     private val provider = LunaProvider.getInstance()
     private val keyStore = KeyStore.getInstance(GemaltoLunaCryptoService.KEYSTORE_TYPE, provider)
 
     private val config = GemaltoLunaCryptoService.GemaltoLunaConfiguration("tokenlabel:somepartition", "somepassword")
-    
 
-    @Test
-    fun `Generate ECDSA key with r1 curve, then sign and verify data`() {
-        val cryptoService = GemaltoLunaCryptoService(keyStore, provider) { config }
-        val alias = UUID.randomUUID().toString()
-        val pubKey = cryptoService.generateKeyPair(alias, Crypto.ECDSA_SECP256R1_SHA256)
-        assertTrue { cryptoService.containsKey(alias) }
-        val data = UUID.randomUUID().toString().toByteArray()
-        val signed = cryptoService.sign(alias, data)
-        Crypto.doVerify(pubKey, signed, data)
-    }
-
-    @Test
-    fun `Generate key with the default legal identity scheme, then sign and verify data`() {
-        val cryptoService = GemaltoLunaCryptoService(keyStore, provider) { config }
-        val alias = UUID.randomUUID().toString()
-        val pubKey = cryptoService.generateKeyPair(alias, cryptoService.defaultIdentitySignatureScheme())
-        assertTrue { cryptoService.containsKey(alias) }
-        val data = UUID.randomUUID().toString().toByteArray()
-        val signed = cryptoService.sign(alias, data)
-        Crypto.doVerify(pubKey, signed, data)
-    }
-
-    @Test
-    fun `Generate ECDSA key with k1 curve, then sign and verify data`() {
-        val cryptoService = GemaltoLunaCryptoService(keyStore, provider) { config }
-        val alias = UUID.randomUUID().toString()
-        val pubKey = cryptoService.generateKeyPair(alias, Crypto.ECDSA_SECP256K1_SHA256)
-        assertTrue { cryptoService.containsKey(alias) }
-        val data = UUID.randomUUID().toString().toByteArray()
-        val signed = cryptoService.sign(alias, data)
-        Crypto.doVerify(pubKey, signed, data)
-    }
-
-    @Test
-    fun `Generate RSA key, then sign and verify data`() {
-        val cryptoService = GemaltoLunaCryptoService(keyStore, provider) { config }
-        val alias = UUID.randomUUID().toString()
-        val pubKey = cryptoService.generateKeyPair(alias, Crypto.RSA_SHA256)
-        assertTrue { cryptoService.containsKey(alias) }
-        val data = UUID.randomUUID().toString().toByteArray()
-        val signed = cryptoService.sign(alias, data)
-        Crypto.doVerify(pubKey, signed, data)
-    }
-
-    @Test
-    fun `When key does not exist, signing should throw`() {
-        val cryptoService = GemaltoLunaCryptoService(keyStore, provider) { config }
-        val alias = UUID.randomUUID().toString()
-        assertFalse { cryptoService.containsKey(alias) }
-        val data = UUID.randomUUID().toString().toByteArray()
-        assertFailsWith<CryptoServiceException> { cryptoService.sign(alias, data) }
-    }
-
-    @Test
-    fun `When key does not exist, getPublicKey should return null`() {
-        val cryptoService = GemaltoLunaCryptoService(keyStore, provider) { config }
-        val alias = UUID.randomUUID().toString()
-        assertFalse { cryptoService.containsKey(alias) }
-        assertNull(cryptoService.getPublicKey(alias))
-    }
-
-    @Test
-    fun `When key does not exist, getContentSigner should throw`() {
-        val cryptoService = GemaltoLunaCryptoService(keyStore, provider) { config }
-        val alias = UUID.randomUUID().toString()
-        assertFalse { cryptoService.containsKey(alias) }
-        assertFailsWith<CryptoServiceException> { cryptoService.getSigner(alias) }
-    }
-
-    @Test
-    fun `Content signer works with X509Utilities`() {
-        val cryptoService = GemaltoLunaCryptoService(keyStore, provider) { config }
-        val alias = UUID.randomUUID().toString()
-        val pubKey = cryptoService.generateKeyPair(alias, cryptoService.defaultIdentitySignatureScheme())
-        val signer = cryptoService.getSigner(alias)
-        val otherAlias = UUID.randomUUID().toString()
-        val otherPubKey = cryptoService.generateKeyPair(otherAlias, cryptoService.defaultIdentitySignatureScheme())
-        val issuer = Party(DUMMY_BANK_A_NAME, pubKey)
-        val partyAndCert = getTestPartyAndCertificate(issuer)
-        val issuerCert = partyAndCert.certificate
-        val window = X509Utilities.getCertificateValidityWindow(Duration.ZERO, 3650.days, issuerCert)
-        val ourCertificate = X509Utilities.createCertificate(
-                CertificateType.CONFIDENTIAL_LEGAL_IDENTITY,
-                issuerCert.subjectX500Principal,
-                issuerCert.publicKey,
-                signer,
-                partyAndCert.name.x500Principal,
-                otherPubKey,
-                window)
-        ourCertificate.checkValidity()
-    }
 }

@@ -84,12 +84,7 @@ import net.corda.nodeapi.internal.cryptoservice.CryptoServiceException
 import net.corda.nodeapi.internal.cryptoservice.CryptoServiceFactory
 import net.corda.nodeapi.internal.cryptoservice.ManagedCryptoService
 import net.corda.nodeapi.internal.cryptoservice.SupportedCryptoServices
-import net.corda.nodeapi.internal.cryptoservice.azure.AzureKeyVaultCryptoService
 import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
-import net.corda.nodeapi.internal.cryptoservice.futurex.FutureXCryptoService
-import net.corda.nodeapi.internal.cryptoservice.gemalto.GemaltoLunaCryptoService
-import net.corda.nodeapi.internal.cryptoservice.securosys.PrimusXCryptoService
-import net.corda.nodeapi.internal.cryptoservice.utimaco.UtimacoCryptoService
 import net.corda.nodeapi.internal.persistence.*
 import net.corda.tools.shell.InteractiveShell
 import org.apache.activemq.artemis.utils.ReusableLatch
@@ -1048,14 +1043,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
         val identityCertPath = listOf(identityCert) + nodeCaCertPath
         signingCertificateStore.setCertPathOnly(alias, identityCertPath)
-        when(cryptoService.underlyingService) {
-            is GemaltoLunaCryptoService -> log.info("Private key '$alias' stored in Gemalto HSM. Certificate-chain stored in node keystore.")
-            is AzureKeyVaultCryptoService -> log.info("Private key '$alias' stored in Azure KeyVault. Certificate-chain stored in node keystore.")
-            is UtimacoCryptoService -> log.info("Private key '$alias' stored in Utimaco HSM.  Certificate-chain stored in node keystore.")
-            is FutureXCryptoService -> log.info("Private key '$alias' stored in FutureX HSM.  Certificate-chain stored in node keystore.")
-            is PrimusXCryptoService -> log.info("Private key '$alias' stored in PrimusX HSM.  Certificate-chain stored in node keystore.")
-            is BCCryptoService -> log.info("Private key '$alias' and its certificate-chain stored successfully.")
-        }
+        val cryptoServiceType = cryptoService.getType()
+        log.info("Private key '$alias' stored in the configured crypto service (${cryptoServiceType.userFriendlyName}). Certificate-chain stored in node's file-based keystore.")
         return PartyAndCertificate(X509Utilities.buildCertPath(identityCertPath))
     }
 

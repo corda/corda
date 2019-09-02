@@ -22,12 +22,7 @@ import net.corda.nodeapi.internal.cryptoservice.CryptoService
 import net.corda.nodeapi.internal.cryptoservice.CryptoServiceFactory
 import net.corda.nodeapi.internal.cryptoservice.SupportedCryptoServices
 import net.corda.nodeapi.internal.cryptoservice.WrappingMode
-import net.corda.nodeapi.internal.cryptoservice.azure.AzureKeyVaultCryptoService
 import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
-import net.corda.nodeapi.internal.cryptoservice.futurex.FutureXCryptoService
-import net.corda.nodeapi.internal.cryptoservice.gemalto.GemaltoLunaCryptoService
-import net.corda.nodeapi.internal.cryptoservice.securosys.PrimusXCryptoService
-import net.corda.nodeapi.internal.cryptoservice.utimaco.UtimacoCryptoService
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.openssl.jcajce.JcaPEMWriter
 import org.bouncycastle.operator.ContentSigner
@@ -121,15 +116,8 @@ open class NetworkRegistrationHelper(
         certStore.setCertPathOnly(nodeCaKeyAlias, nodeCaCertificates)
         certStore.value.internal.deleteEntry(SELF_SIGNED_PRIVATE_KEY)
         certStore.value.save()
-        when (cryptoService) {
-            is GemaltoLunaCryptoService -> logProgress("Private key '$nodeCaKeyAlias' stored in Gemalto HSM. Certificate-chain stored in node keystore.")
-            is AzureKeyVaultCryptoService -> logProgress("Private key '$nodeCaKeyAlias' stored in Azure KeyVault. Certificate-chain stored in node keystore.")
-            is UtimacoCryptoService -> logProgress("Private key '$nodeCaKeyAlias' stored in Utimaco HSM. Certificate-chain stored in node keystore.")
-            is FutureXCryptoService -> logProgress("Private key '$nodeCaKeyAlias' stored in FutureX HSM. Certificate-chain stored in node keystore.")
-            is PrimusXCryptoService -> logProgress("Private key '$nodeCaKeyAlias' stored in PrimusX HSM. Certificate-chain stored in node keystore.")
-            is BCCryptoService -> logProgress("Private key '$nodeCaKeyAlias' and its certificate-chain stored successfully.")
-        }
-
+        val cryptoServiceType = cryptoService.getType()
+        logProgress("Private key '$nodeCaKeyAlias' stored in the configured crypto service (${cryptoServiceType.userFriendlyName}). Certificate-chain stored in node's file-based keystore.")
 
         onSuccess(nodeCaPublicKey, tslPublicKey, cryptoService.getSigner(nodeCaKeyAlias), nodeCaCertificates, tlsCrlIssuerCert?.subjectX500Principal?.toX500Name())
         // All done, clean up temp files.

@@ -26,6 +26,8 @@ class FutureXCryptoService(
         private val auth: () -> FutureXConfiguration
 ) : JCACryptoService(keyStore, provider, x500Principal) {
 
+    override fun getType(): SupportedCryptoServices = SupportedCryptoServices.FUTUREX
+
     private val cachedKeyHandles: ConcurrentMap<String, PrivateKey> = ConcurrentHashMap()
 
     init {
