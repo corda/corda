@@ -514,5 +514,4 @@ buildScan {
     termsOfServiceAgree = 'yes'
 }
 
-apply plugin: ImageBuilding
 apply plugin: DistributedTesting

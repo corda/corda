@@ -18,33 +18,35 @@ class DistributedTesting implements Plugin<Project> {
 
     @Override
     void apply(Project project) {
-        ensureImagePluginIsApplied(project)
-        ImageBuilding imagePlugin = project.plugins.getPlugin(ImageBuilding)
-        DockerPushImage imageBuildingTask = imagePlugin.pushTask
+        if (System.getProperty("kubenetize") != null) {
+            ensureImagePluginIsApplied(project)
+            ImageBuilding imagePlugin = project.plugins.getPlugin(ImageBuilding)
+            DockerPushImage imageBuildingTask = imagePlugin.pushTask
 
-        //in each subproject
-        //1. add the task to determine all tests within the module
-        //2. modify the underlying testing task to use the output of the listing task to include a subset of tests for each fork
-        //3. KubesTest will invoke these test tasks in a parallel fashion on a remote k8s cluster
-        project.subprojects { Project subProject ->
-            subProject.tasks.withType(Test) { Test task ->
-                ListTests testListerTask = createTestListingTasks(task, subProject)
-                Test modifiedTestTask = modifyTestTaskForParallelExecution(subProject, task, testListerTask)
-                KubesTest parallelTestTask = generateParallelTestingTask(subProject, task, imageBuildingTask)
+            //in each subproject
+            //1. add the task to determine all tests within the module
+            //2. modify the underlying testing task to use the output of the listing task to include a subset of tests for each fork
+            //3. KubesTest will invoke these test tasks in a parallel fashion on a remote k8s cluster
+            project.subprojects { Project subProject ->
+                subProject.tasks.withType(Test) { Test task ->
+                    ListTests testListerTask = createTestListingTasks(task, subProject)
+                    Test modifiedTestTask = modifyTestTaskForParallelExecution(subProject, task, testListerTask)
+                    KubesTest parallelTestTask = generateParallelTestingTask(subProject, task, imageBuildingTask)
+                }
             }
+
+            //now we are going to create "super" groupings of these KubesTest tasks, so that it is possible to invoke all submodule tests with a single command
+            //group all kubes tests by their underlying target task (test/integrationTest/smokeTest ... etc)
+            Map<String, List<KubesTest>> allKubesTestingTasksGroupedByType = project.subprojects.collect { prj -> prj.getAllTasks(false).values() }
+                    .flatten()
+                    .findAll { task -> task instanceof KubesTest }
+                    .groupBy { task -> task.taskToExecuteName }
+
+            //first step is to create a single task which will invoke all the submodule tasks for each grouping
+            //ie allParallelTest will invoke [node:test, core:test, client:rpc:test ... etc]
+            //ie allIntegrationTest will invoke [node:integrationTest, core:integrationTest, client:rpc:integrationTest ... etc]
+            createGroupedParallelTestTasks(allKubesTestingTasksGroupedByType, project, imageBuildingTask)
         }
-
-        //now we are going to create "super" groupings of these KubesTest tasks, so that it is possible to invoke all submodule tests with a single command
-        //group all kubes tests by their underlying target task (test/integrationTest/smokeTest ... etc)
-        Map<String, List<KubesTest>> allKubesTestingTasksGroupedByType = project.subprojects.collect { prj -> prj.getAllTasks(false).values() }
-                .flatten()
-                .findAll { task -> task instanceof KubesTest }
-                .groupBy { task -> task.taskToExecuteName }
-
-        //first step is to create a single task which will invoke all the submodule tasks for each grouping
-        //ie allParallelTest will invoke [node:test, core:test, client:rpc:test ... etc]
-        //ie allIntegrationTest will invoke [node:integrationTest, core:integrationTest, client:rpc:integrationTest ... etc]
-        createGroupedParallelTestTasks(allKubesTestingTasksGroupedByType, project, imageBuildingTask)
     }
 
     private List<Task> createGroupedParallelTestTasks(Map<String, List<KubesTest>> allKubesTestingTasksGroupedByType, Project project, DockerPushImage imageBuildingTask) {
