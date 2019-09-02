@@ -3,15 +3,11 @@ package net.corda.node.migration
 import liquibase.database.Database
 import liquibase.database.jvm.JdbcConnection
 import net.corda.core.contracts.*
-import net.corda.core.crypto.Crypto
-import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.SignableData
-import net.corda.core.crypto.SignatureMetadata
+import net.corda.core.crypto.*
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.NotaryChangeTransactionBuilder
-import net.corda.core.internal.hash
 import net.corda.core.internal.packageName
 import net.corda.core.internal.signWithCert
 import net.corda.core.node.NetworkParameters
@@ -198,8 +194,8 @@ class VaultStateMigrationTest {
     private fun saveAllIdentities(identities: List<PartyAndCertificate>) {
         cordaDB.transaction {
             identities.groupBy { it.name }.forEach { name, certs ->
-                val persistentIDs = certs.map { PersistentIdentityService.PersistentIdentity(it.owningKey.hash.toString(), it.certPath.encoded) }
-                val persistentName = PersistentIdentityService.PersistentIdentityNames(name.toString(), certs.first().owningKey.hash.toString())
+                val persistentIDs = certs.map { PersistentIdentityService.PersistentPublicKeyHashToCertificate(it.owningKey.toStringShort(), it.certPath.encoded) }
+                val persistentName = PersistentIdentityService.PersistentPartyToPublicKeyHash(name.toString(), certs.first().owningKey.toStringShort())
                 persistentIDs.forEach { session.save(it) }
                 session.save(persistentName)
             }
@@ -274,7 +270,7 @@ class VaultStateMigrationTest {
 
     private fun addLinearStates(statesToAdd: Int, parties: List<AbstractParty>) {
         cordaDB.transaction {
-            (1..statesToAdd).map { createLinearStateTransaction("A".repeat(it), parties)}.forEach {
+            (1..statesToAdd).map { createLinearStateTransaction("A".repeat(it), parties) }.forEach {
                 storeTransaction(it)
                 createVaultStatesFromTransaction(it)
             }
@@ -289,7 +285,7 @@ class VaultStateMigrationTest {
 
     private fun addCommodityStates(statesToAdd: Int, owner: AbstractParty) {
         cordaDB.transaction {
-            (1..statesToAdd).map{
+            (1..statesToAdd).map {
                 createCommodityTransaction(Amount(it.toLong(), Issued(bankOfCorda.ref(2), Commodity.getInstance("FCOJ")!!)), owner)
             }.forEach {
                 storeTransaction(it)

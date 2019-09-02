@@ -23,3 +23,4 @@ Design Docs
    versioning/contract-versioning.md
    linear-pointer/design.md
    maximus/design.md
+   accounts/design.md

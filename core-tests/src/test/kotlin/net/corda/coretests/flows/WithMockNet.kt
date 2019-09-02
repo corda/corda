@@ -30,7 +30,7 @@ interface WithMockNet {
     /**
      * Run the mock network before proceeding
      */
-    fun <T: Any> T.andRunNetwork(): T = apply { mockNet.runNetwork() }
+    fun <T : Any> T.andRunNetwork(): T = apply { mockNet.runNetwork() }
 
     //region Operations
     /**
@@ -42,8 +42,8 @@ interface WithMockNet {
     /**
      * Retrieve the sole instance of a state of a particular class from the node's vault
      */
-    fun <S: ContractState> TestStartedNode.getStateFromVault(stateClass: KClass<S>) =
-        services.vaultService.queryBy(stateClass.java).states.single()
+    fun <S : ContractState> TestStartedNode.getStateFromVault(stateClass: KClass<S>) =
+            services.vaultService.queryBy(stateClass.java).states.single()
 
     /**
      * Start a flow
@@ -57,12 +57,12 @@ interface WithMockNet {
             startFlow(logic).andRunNetwork()
 
     fun TestStartedNode.createConfidentialIdentity(party: Party) =
-        services.keyManagementService.freshKeyAndCert(
-                services.myInfo.legalIdentitiesAndCerts.single { it.name == party.name },
-                false)
+            services.keyManagementService.freshKeyAndCert(
+                    services.myInfo.legalIdentitiesAndCerts.single { it.name == party.name },
+                    false)
 
     fun TestStartedNode.verifyAndRegister(identity: PartyAndCertificate) =
-        services.identityService.verifyAndRegisterIdentity(identity)
+            services.identityService.verifyAndRegisterIdentity(identity)
 
     //endregion
 
@@ -85,7 +85,7 @@ interface WithMockNet {
      * The exception has the expected error message
      */
     fun errorMessage(expected: String) = has(
-        Exception::message,
-        equalTo(expected))
+            Exception::message,
+            equalTo(expected))
     //endregion
 }

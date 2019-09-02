@@ -8,12 +8,15 @@ import net.corda.core.crypto.sha256
 import net.corda.nodeapi.internal.crypto.ContentSignerBuilder
 import net.corda.nodeapi.internal.cryptoservice.CryptoService
 import net.corda.nodeapi.internal.cryptoservice.CryptoServiceException
+import net.corda.nodeapi.internal.cryptoservice.SupportedCryptoServices
 import org.bouncycastle.operator.ContentSigner
 import java.security.KeyPair
 import java.security.PublicKey
 import java.security.Signature
 
 class MockCryptoService(initialKeyPairs: Map<String, KeyPair>) : CryptoService {
+
+    override fun getType(): SupportedCryptoServices = SupportedCryptoServices.BC_SIMPLE
 
     private val aliasToKey: MutableMap<String, KeyPair> = mutableMapOf()
 
@@ -33,7 +36,7 @@ class MockCryptoService(initialKeyPairs: Map<String, KeyPair>) : CryptoService {
 
     override fun sign(alias: String, data: ByteArray, signAlgorithm: String?): ByteArray {
         try {
-            return when(signAlgorithm) {
+            return when (signAlgorithm) {
                 null -> Crypto.doSign(aliasToKey[alias]!!.private, data)
                 else -> signWithAlgorithm(alias, data, signAlgorithm)
             }

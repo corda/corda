@@ -5,12 +5,8 @@ import com.natpryce.hamkrest.assertion.assertThat
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.StateAndContract
 import net.corda.core.contracts.requireThat
-import net.corda.core.identity.*
 import net.corda.core.flows.*
-import net.corda.core.identity.CordaX500Name
-import net.corda.core.identity.Party
-import net.corda.core.identity.excludeHostNode
-import net.corda.core.identity.groupAbstractPartyByWellKnownParty
+import net.corda.core.identity.*
 import net.corda.core.node.services.IdentityService
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
@@ -106,7 +102,8 @@ class CollectSignaturesFlowTests : WithContracts {
         val keysToLookup = listOf(bConfidentialIdentity1.owningKey, bConfidentialIdentity2.owningKey, cConfidentialIdentity1.owningKey)
         val keysToKeepAnonymous = listOf(cConfidentialIdentity2.owningKey)
 
-        val future = aliceNode.startFlow(MixAndMatchAnonymousSessionTestFlow(owners, keysToLookup.toSet(), keysToKeepAnonymous.toSet())).resultFuture
+        val future = aliceNode.startFlow(MixAndMatchAnonymousSessionTestFlow(owners, keysToLookup.toSet(), keysToKeepAnonymous.toSet()))
+                .resultFuture
         mockNet.runNetwork()
         val stx = future.get()
         val missingSigners = stx.getMissingSigners()
@@ -205,7 +202,7 @@ class AnonymousSessionTestFlow(private val cis: List<PartyAndCertificate>) : Flo
 
         for (ci in cis) {
             if (ci.name != ourIdentity.name) {
-                (serviceHub.identityService as IdentityServiceInternal).verifyAndRegisterIdentity(ci)
+                serviceHub.identityService.verifyAndRegisterIdentity(ci)
             }
         }
         val state = DummyContract.MultiOwnerState(owners = cis.map { AnonymousParty(it.owningKey) })
@@ -213,7 +210,6 @@ class AnonymousSessionTestFlow(private val cis: List<PartyAndCertificate>) : Flo
         val txBuilder = TransactionBuilder(notary = serviceHub.networkMapCache.notaryIdentities.first())
                 .addOutputState(state)
                 .addCommand(create, cis.map { it.owningKey })
-
 
         val ourKey = cis.single { it.name == ourIdentity.name }.owningKey
         val signedByUsTx = serviceHub.signInitialTransaction(txBuilder, ourKey)
@@ -242,9 +238,9 @@ class MixAndMatchAnonymousSessionTestFlow(private val cis: List<PartyAndCertific
     @Suspendable
     override fun call(): SignedTransaction {
 
-        for (ci  in cis) {
+        for (ci in cis) {
             if (ci.name != ourIdentity.name) {
-                (serviceHub.identityService as IdentityServiceInternal).verifyAndRegisterIdentity(ci)
+                serviceHub.identityService.verifyAndRegisterIdentity(ci)
             }
         }
         val state = DummyContract.MultiOwnerState(owners = cis.map { AnonymousParty(it.owningKey) })
@@ -252,7 +248,6 @@ class MixAndMatchAnonymousSessionTestFlow(private val cis: List<PartyAndCertific
         val txBuilder = TransactionBuilder(notary = serviceHub.networkMapCache.notaryIdentities.first())
                 .addOutputState(state)
                 .addCommand(create, cis.map { it.owningKey })
-
 
         val ourKey = cis.single { it.name == ourIdentity.name }.owningKey
         val signedByUsTx = serviceHub.signInitialTransaction(txBuilder, ourKey)

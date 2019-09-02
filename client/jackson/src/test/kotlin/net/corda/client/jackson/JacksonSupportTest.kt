@@ -29,6 +29,7 @@ import net.corda.core.node.services.NetworkParametersService
 import net.corda.core.node.services.TransactionStorage
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
+import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.CoreTransaction
 import net.corda.core.transactions.SignedTransaction
@@ -659,6 +660,15 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
     }
 
     @Test
+    fun `LinearState where the linearId property does not match the backing field`() {
+        val funkyLinearState = FunkyLinearState(UniqueIdentifier())
+        // As a sanity check, show that this is a valid CordaSerializable class
+        assertThat(funkyLinearState.serialize().deserialize()).isEqualTo(funkyLinearState)
+        val json = mapper.valueToTree<ObjectNode>(funkyLinearState)
+        assertThat(mapper.convertValue<FunkyLinearState>(json)).isEqualTo(funkyLinearState)
+    }
+
+    @Test
     fun `kotlin object`() {
         val json = mapper.valueToTree<ObjectNode>(KotlinObject)
         assertThat(mapper.convertValue<KotlinObject>(json)).isSameAs(KotlinObject)
@@ -711,6 +721,11 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
     private data class NonCtorPropertiesData(val value: Int) {
         @Suppress("unused")
         val nonCtor: Int get() = value
+    }
+
+    private data class FunkyLinearState(private val linearID: UniqueIdentifier) : LinearState {
+        override val linearId: UniqueIdentifier get() = linearID
+        override val participants: List<AbstractParty> get() = emptyList()
     }
 
     private object KotlinObject

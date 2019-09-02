@@ -20,7 +20,7 @@ class PortAllocationTest {
     companion object {
         val logger = contextLogger()
     }
-    
+
     @Test
     fun `should allocate a port whilst cycling back round if exceeding start of ephemeral range`() {
         val startingPoint = PortAllocation.DEFAULT_START_PORT
@@ -48,7 +48,7 @@ class PortAllocationTest {
         logger.info("Starting multiprocess port allocation test")
         val spinnerFile = Files.newTemporaryFile().also { it.deleteOnExit() }.absolutePath
         val iterCount = 8_000 // Default port range 10000-30000 since we will have 2 processes we want to make sure there is enough leg room
-                              // If we rollover, we may well receive the ports that were already given to a different process
+        // If we rollover, we may well receive the ports that were already given to a different process
         val process1 = buildJvmProcess(spinnerFile, 1, iterCount)
         val process2 = buildJvmProcess(spinnerFile, 2, iterCount)
 
@@ -73,12 +73,12 @@ class PortAllocationTest {
         logger.info("Instructing child processes to start allocating ports")
         spinnerBuffer.putShort(0, 8)
         logger.info("Waiting for child processes to terminate")
-        val terminationStatuses = processes.parallelStream().map { if(it.waitFor(1, TimeUnit.MINUTES)) "OK" else "STILL RUNNING" }.toList()
+        val terminationStatuses = processes.parallelStream().map { if (it.waitFor(1, TimeUnit.MINUTES)) "OK" else "STILL RUNNING" }.toList()
         logger.info("child processes terminated: $terminationStatuses")
 
-        fun List<String>.setOfPorts() : Set<Int> {
+        fun List<String>.setOfPorts(): Set<Int> {
             // May include warnings when ports are busy
-            return map { Try.on { Integer.parseInt(it)} }.filter { it.isSuccess }.map { it.getOrThrow() }.toSet()
+            return map { Try.on { Integer.parseInt(it) } }.filter { it.isSuccess }.map { it.getOrThrow() }.toSet()
         }
 
         val lines1 = process1.inputStream.reader().readLines()

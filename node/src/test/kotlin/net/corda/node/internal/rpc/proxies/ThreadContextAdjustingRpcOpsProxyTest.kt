@@ -14,8 +14,7 @@ class ThreadContextAdjustingRpcOpsProxyTest {
     private val mockClassloader = mock<ClassLoader>()
     private val proxy = ThreadContextAdjustingRpcOpsProxy(coreOps, mockClassloader)
 
-
-    private interface InstrumentedCordaRPCOps: InternalCordaRPCOps {
+    private interface InstrumentedCordaRPCOps : InternalCordaRPCOps {
         fun getThreadContextClassLoader(): ClassLoader = Thread.currentThread().contextClassLoader
     }
 

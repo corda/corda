@@ -2,11 +2,11 @@ package net.corda.networkbuilder.volumes
 
 import com.microsoft.azure.storage.file.CloudFile
 import com.typesafe.config.ConfigFactory
-import net.corda.networkbuilder.notaries.CopiedNotary
-import net.corda.networkbuilder.serialization.SerializationEngine
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NotaryInfo
 import net.corda.core.serialization.deserialize
+import net.corda.networkbuilder.notaries.CopiedNotary
+import net.corda.networkbuilder.serialization.SerializationEngine
 import net.corda.nodeapi.internal.DEV_ROOT_CA
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.config.getBooleanCaseInsensitive
@@ -27,7 +27,6 @@ interface Volume {
         internal val networkMapCert: X509Certificate = networkMapCa.certificate
         internal val keyPair = networkMapCa.keyPair
     }
-
 
     fun CloudFile.uploadFromByteArray(array: ByteArray) {
         this.uploadFromByteArray(array, 0, array.size)

@@ -10,7 +10,6 @@ import net.corda.core.internal.hash
 import java.nio.charset.Charset
 import java.security.PublicKey
 import java.util.*
-import javax.xml.bind.DatatypeConverter
 
 // This file includes useful encoding methods and extension functions for the most common encoding/decoding operations.
 
@@ -31,7 +30,7 @@ fun ByteArray.toBase58(): String = Base58.encode(this)
 fun ByteArray.toBase64(): String = Base64.getEncoder().encodeToString(this)
 
 /** Convert a byte array to a hex (Base16) capitalized encoded [String]. */
-fun ByteArray.toHex(): String = DatatypeConverter.printHexBinary(this)
+fun ByteArray.toHex(): String = toHexString()
 
 // [String] encoders and decoders
 
@@ -49,7 +48,7 @@ fun String.base58ToByteArray(): ByteArray = Base58.decode(this)
 fun String.base64ToByteArray(): ByteArray = Base64.getDecoder().decode(this)
 
 /** Hex-String to [ByteArray]. Accept any hex form (capitalized, lowercase, mixed). */
-fun String.hexToByteArray(): ByteArray = DatatypeConverter.parseHexBinary(this)
+fun String.hexToByteArray(): ByteArray = parseAsHex()
 
 // Encoding changers
 

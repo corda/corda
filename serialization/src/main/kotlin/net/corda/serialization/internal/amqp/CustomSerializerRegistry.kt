@@ -44,7 +44,7 @@ interface CustomSerializerRegistry {
      *
      * @param clazz The actual class to look for a custom serializer for.
      * @param declaredType The declared type to look for a custom serializer for.
-     * @return The custom serializer handing the class, if found, or `null`.
+     * @return The custom serializer handling the class, if found, or `null`.
      *
      * @throws IllegalCustomSerializerException If a custom serializer identifies itself as the serializer for
      * a class annotated with [CordaSerializable], since all such classes should be serializable via standard object
@@ -57,8 +57,10 @@ interface CustomSerializerRegistry {
 }
 
 class CachingCustomSerializerRegistry(
-        private val descriptorBasedSerializerRegistry: DescriptorBasedSerializerRegistry)
-    : CustomSerializerRegistry {
+        private val descriptorBasedSerializerRegistry: DescriptorBasedSerializerRegistry,
+        private val allowedFor: Set<Class<*>>
+) : CustomSerializerRegistry {
+    constructor(descriptorBasedSerializerRegistry: DescriptorBasedSerializerRegistry) : this(descriptorBasedSerializerRegistry, emptySet())
 
     companion object {
         val logger = contextLogger()
@@ -84,7 +86,7 @@ class CachingCustomSerializerRegistry(
     }
 
     private val customSerializersCache: MutableMap<CustomSerializerIdentifier, CustomSerializerLookupResult> = DefaultCacheProvider.createCache()
-    private var customSerializers: List<SerializerFor> = emptyList()
+    private val customSerializers: MutableList<SerializerFor> = mutableListOf()
 
     /**
      * Register a custom serializer for any type that cannot be serialized or deserialized by the default serializer
@@ -93,7 +95,7 @@ class CachingCustomSerializerRegistry(
     override fun register(customSerializer: CustomSerializer<out Any>) {
         logger.trace("action=\"Registering custom serializer\", class=\"${customSerializer.type}\"")
 
-        if (!customSerializersCache.isEmpty()) {
+        if (customSerializersCache.isNotEmpty()) {
             logger.warn("Attempting to register custom serializer $customSerializer.type} in an active cache." +
                     "All serializers should be registered before the cache comes into use.")
         }
@@ -103,14 +105,23 @@ class CachingCustomSerializerRegistry(
             for (additional in customSerializer.additionalSerializers) {
                 register(additional)
             }
+
+            for (alias in customSerializer.deserializationAliases) {
+                val aliasDescriptor = typeDescriptorFor(alias)
+                if (aliasDescriptor != customSerializer.typeDescriptor) {
+                    descriptorBasedSerializerRegistry[aliasDescriptor.toString()] = customSerializer
+                }
+            }
+
             customSerializer
         }
+
     }
 
     override fun registerExternal(customSerializer: CorDappCustomSerializer) {
         logger.trace("action=\"Registering external serializer\", class=\"${customSerializer.type}\"")
 
-        if (!customSerializersCache.isEmpty()) {
+        if (customSerializersCache.isNotEmpty()) {
             logger.warn("Attempting to register custom serializer ${customSerializer.type} in an active cache." +
                     "All serializers must be registered before the cache comes into use.")
         }
@@ -120,7 +131,7 @@ class CachingCustomSerializerRegistry(
             customSerializer
         }
     }
-    
+
     override fun findCustomSerializer(clazz: Class<*>, declaredType: Type): AMQPSerializer<Any>? {
         val typeIdentifier = CustomSerializerIdentifier(
                 TypeIdentifier.forClass(clazz),
@@ -164,13 +175,21 @@ class CachingCustomSerializerRegistry(
             throw IllegalCustomSerializerException(declaredSerializers.first(), clazz)
         }
 
-        return declaredSerializers.first()
+        return declaredSerializers.first().let {
+            if (it is CustomSerializer<Any>) {
+                it.specialiseFor(declaredType)
+            } else {
+                it
+            }
+        }
     }
 
     private val Class<*>.isCustomSerializationForbidden: Boolean get() = when {
         AMQPTypeIdentifiers.isPrimitive(this) -> true
         isSubClassOf(CordaThrowable::class.java) -> false
+        allowedFor.any { it.isAssignableFrom(this) } -> false
         isAnnotationPresent(CordaSerializable::class.java) -> true
         else -> false
     }
 }
+

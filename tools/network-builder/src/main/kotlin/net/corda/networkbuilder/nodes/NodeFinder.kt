@@ -3,8 +3,8 @@ package net.corda.networkbuilder.nodes
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigException
 import com.typesafe.config.ConfigFactory
-import net.corda.networkbuilder.Constants
 import net.corda.core.utilities.contextLogger
+import net.corda.networkbuilder.Constants
 import java.io.File
 
 class NodeFinder(private val dirToSearch: File) {

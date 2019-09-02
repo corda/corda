@@ -430,6 +430,7 @@ class ResolveTransactionsFlowTest {
             subFlow(resolveTransactionsFlow)
         }
     }
+
     @Suppress("unused")
     @InitiatedBy(TestFlow::class)
     class TestResponseFlow(private val otherSideSession: FlowSession) : FlowLogic<Void?>() {
@@ -447,6 +448,7 @@ class ResolveTransactionsFlowTest {
             subFlow(DataVendingFlow(session, toVend))
         }
     }
+
     @Suppress("unused")
     @InitiatedBy(TestNoRightsVendingFlow::class)
     private open class TestResponseResolveNoRightsFlow(val otherSideSession: FlowSession) : FlowLogic<Unit>() {
@@ -454,7 +456,8 @@ class ResolveTransactionsFlowTest {
         override fun call() {
             val noRightsTx = otherSideSession.receive<SignedTransaction>().unwrap { it }
             otherSideSession.receive<Any>().unwrap { it }
-            otherSideSession.sendAndReceive<Any>(FetchDataFlow.Request.Data(NonEmptySet.of(noRightsTx.inputs.first().txhash), FetchDataFlow.DataType.TRANSACTION)).unwrap { it }
+            otherSideSession.sendAndReceive<Any>(FetchDataFlow.Request.Data(NonEmptySet.of(noRightsTx.inputs.first().txhash), FetchDataFlow.DataType.TRANSACTION))
+                    .unwrap { it }
             otherSideSession.send(FetchDataFlow.Request.End)
         }
     }
@@ -468,6 +471,7 @@ class ResolveTransactionsFlowTest {
             subFlow(DataVendingFlow(session, tx))
         }
     }
+
     @Suppress("unused")
     @InitiatedBy(TestResolveTwiceVendingFlow::class)
     private open class TestResponseResolveTwiceFlow(val otherSideSession: FlowSession) : FlowLogic<Unit>() {
@@ -475,8 +479,10 @@ class ResolveTransactionsFlowTest {
         override fun call() {
             val tx = otherSideSession.receive<SignedTransaction>().unwrap { it }
             val parent1 = tx.inputs.first().txhash
-            otherSideSession.sendAndReceive<Any>(FetchDataFlow.Request.Data(NonEmptySet.of(parent1), FetchDataFlow.DataType.TRANSACTION)).unwrap { it }
-            otherSideSession.sendAndReceive<Any>(FetchDataFlow.Request.Data(NonEmptySet.of(parent1), FetchDataFlow.DataType.TRANSACTION)).unwrap { it }
+            otherSideSession.sendAndReceive<Any>(FetchDataFlow.Request.Data(NonEmptySet.of(parent1), FetchDataFlow.DataType.TRANSACTION))
+                    .unwrap { it }
+            otherSideSession.sendAndReceive<Any>(FetchDataFlow.Request.Data(NonEmptySet.of(parent1), FetchDataFlow.DataType.TRANSACTION))
+                    .unwrap { it }
             otherSideSession.send(FetchDataFlow.Request.End)
         }
     }

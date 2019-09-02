@@ -4,13 +4,13 @@ Changelog
 Here's a summary of what's changed in each Corda release. For guidance on how to upgrade code from the previous
 release, see :doc:`app-upgrade-notes`.
 
-.. _changelog_v5.0:
+Unreleased
+----------
 
-Version 5.0
------------
+* Introduced a new API on ``KeyManagementService`` which facilitates lookups of ``PublicKey`` s to ``externalId`` s (Account IDs).
 
 * Introduced a new low level flow diagnostics tool: checkpoint agent (that can be used standalone or in conjunction with the ``dumpCheckpoints`` shell command).
-  See :doc:`tools-checkpoint-agent` for more information.
+  See :doc:`checkpoint-tooling` for more information.
 
 * The MockNet now supports setting a custom Notary class name, as was already supported by normal node config. See :doc:`tutorial-custom-notary`.
 
@@ -20,6 +20,7 @@ Version 5.0
 
 * Removed ``finance-workflows`` dependency on jackson library.  The functions that used jackson (e.g. ``FinanceJSONSupport``) have been moved
   into IRS Demo.
+* The introductory and technical white papers have been refreshed. They have new content and a clearer organisation.
 
 * Information about checkpointed flows can be retrieved from the shell. Calling ``dumpCheckpoints`` will create a zip file inside the node's
   ``log`` directory. This zip will contain a JSON representation of each checkpointed flow. This information can then be used to determine the
@@ -41,11 +42,6 @@ Version 5.0
 
   .. note:: This is only best-effort and there are no guarantees of reliability.
 
-.. _changelog_v4.2:
-
-Version 4.2
------------
-
 * Contract attachments are now automatically whitelisted by the node if another contract attachment is present with the same contract classes,
   signed by the same public keys, and uploaded by a trusted uploader. This allows the node to resolve transactions that use earlier versions
   of a contract without having to manually install that version, provided a newer version is installed. Similarly, non-contract attachments
@@ -53,6 +49,16 @@ Version 4.2
 
 * :doc:`design/data-model-upgrades/package-namespace-ownership` configurations can be now be set as described in
   :ref:`node_package_namespace_ownership`, when using the Cordformation plugin version 4.0.43.
+
+* Wildcards can now be used when specifying RPC permissions, for example ``StartFlow.foo.bar.*`` will allow users to start any flow in the
+  ``foo.bar`` package. See :ref:`rpcUsers <corda_configuration_file_rpc_users>` for more information.
+
+.. _changelog_v4.1:
+
+Version 4.1
+-----------
+
+* Fix a bug in Corda 4.0 that combined commands in ``TransactionBuilder`` if they only differed by the signers list.  The behaviour is now consistent with prior Corda releases.
 
 * Disabled the default loading of ``hibernate-validator`` as a plugin by hibernate when a CorDapp depends on it. This change will in turn fix the
   (https://github.com/corda/corda/issues/4444) issue, because nodes will no longer need to add ``hibernate-validator`` to the ``\libs`` folder.

@@ -371,7 +371,7 @@ Once an account has been moved, it is at the discretion of the previous host nod
 
 The key idea is to decouple the creation of external IDs from the assigning of state participants to external IDs. As such, a table will be needed to hold the mapping from public keys to external IDs and there must exist a way to map states to these external IDs.
 
-##### Entity to store `Key -> external ID` mapping
+#### Entity to store `Key -> external ID` mapping
 
 The following exists in Corda 4.
 
@@ -402,7 +402,7 @@ class PublicKeyHashToExternalId(
 }
 ```
 
-##### Key creation
+#### Key creation
 
 When a new key pair is created, it can be assigned to an external ID, like so:
 
@@ -418,7 +418,7 @@ fun freshKey(externalId: UUID): PublicKey {
 
 This exists in Corda 4 and is accessible from the `KeyManagementService`.
 
-##### Transaction recording
+#### Transaction recording
 
 Public key hashes must be are stored for each state. This enables each state party to be mapped to an external ID.
 
@@ -457,7 +457,7 @@ class PersistentParty(
 }
 ```
 
-##### State querying
+#### State querying
 
 Create a view called `StateToExternalId` based upon joining the `PublicKeyHashToExternalId` and `PersistentParty` tables.
 

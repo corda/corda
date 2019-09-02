@@ -58,8 +58,8 @@ class DBRunnerExtension : Extension, BeforeAllCallback, AfterAllCallback, Before
         val rootContext = context?.root ?: return null
 
         val testClass = context.testClass.orElse(null) ?: return null
-        val annotation = testClass.requiredDb ?:
-        throw IllegalStateException("Test run with DBRunnerExtension is not annotated with @RequiresDb")
+        val annotation = testClass.requiredDb
+                ?: throw IllegalStateException("Test run with DBRunnerExtension is not annotated with @RequiresDb")
         val groupName = annotation.group
         val defaultContextClassName = annotation.defaultContextClassName
 
@@ -84,13 +84,14 @@ class DBRunnerExtension : Extension, BeforeAllCallback, AfterAllCallback, Before
     private fun <T : Any> AnnotatedElement.findAnnotations(annotationClass: Class<T>): Sequence<T> = declaredAnnotations.asSequence()
             .filterNot { it.isInternal }
             .flatMap { annotation ->
-                if (annotationClass.isAssignableFrom(annotation::class.java))sequenceOf(annotationClass.cast(annotation))
+                if (annotationClass.isAssignableFrom(annotation::class.java)) sequenceOf(annotationClass.cast(annotation))
                 else annotation.annotationClass.java.findAnnotations(annotationClass)
             }
 
-    private val Annotation.isInternal: Boolean get() = annotationClass.java.name.run {
-        startsWith("java.lang") ||
-                startsWith("org.junit") ||
-                startsWith("kotlin")
-    }
+    private val Annotation.isInternal: Boolean
+        get() = annotationClass.java.name.run {
+            startsWith("java.lang") ||
+                    startsWith("org.junit") ||
+                    startsWith("kotlin")
+        }
 }

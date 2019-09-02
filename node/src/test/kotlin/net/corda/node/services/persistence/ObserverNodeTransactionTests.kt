@@ -48,7 +48,7 @@ class ObserverNodeTransactionTests {
             it.state.data.message.value.startsWith(initialMessage.value)
         }
 
-        for (_i in 0.until(chainLength -1 )) {
+        for (_i in 0.until(chainLength - 1)) {
             node.services.startFlow(ContinueMessageChainFlow(result!!, notary)).resultFuture.getOrThrow()
             result = node.services.vaultService.queryBy(MessageChainState::class.java).states.singleOrNull {
                 it.state.data.message.value.startsWith(initialMessage.value)
@@ -58,7 +58,8 @@ class ObserverNodeTransactionTests {
 
     fun sendTransactionToObserver(transactionIdx: Int, node: TestStartedNode, regulator: TestStartedNode) {
         val transactionList = node.services.validatedTransactions.track().snapshot
-        node.services.startFlow(ReportToCounterparty(regulator.info.singleIdentity(), transactionList[transactionIdx])).resultFuture.getOrThrow()
+        node.services.startFlow(ReportToCounterparty(regulator.info.singleIdentity(), transactionList[transactionIdx]))
+                .resultFuture.getOrThrow()
     }
 
     fun sendTransactionToObserverOnlyRelevant(transactionIdx: Int, node: TestStartedNode, regulator: TestStartedNode) {
@@ -78,7 +79,6 @@ class ObserverNodeTransactionTests {
             assertEquals(expectedMessage, retrievedMessage, "Final unconsumed regulator state is incorrect")
         }
     }
-
 
     @Test
     fun `Broadcasting an old transaction does not cause 2 unconsumed states`() {
@@ -242,7 +242,7 @@ class ObserverNodeTransactionTests {
     @InitiatingFlow
     class SplitMessagesFlow(private val message: MessageData,
                             private val counterparty: Party,
-                            private val notary: Party): FlowLogic<SignedTransaction>() {
+                            private val notary: Party) : FlowLogic<SignedTransaction>() {
         companion object {
             object GENERATING_TRANSACTION : ProgressTracker.Step("Generating transaction based on the message.")
             object VERIFYING_TRANSACTION : ProgressTracker.Step("Verifying contract constraints.")
@@ -285,14 +285,13 @@ class ObserverNodeTransactionTests {
     }
 
     @InitiatedBy(SplitMessagesFlow::class)
-    class ReceiveSplitMessagesFlow(private val otherSideSession: FlowSession): FlowLogic<SignedTransaction>() {
+    class ReceiveSplitMessagesFlow(private val otherSideSession: FlowSession) : FlowLogic<SignedTransaction>() {
 
         @Suspendable
         override fun call(): SignedTransaction {
             val flow = object : SignTransactionFlow(otherSideSession) {
                 @Suspendable
                 override fun checkTransaction(stx: SignedTransaction) {
-
                 }
             }
             subFlow(flow)

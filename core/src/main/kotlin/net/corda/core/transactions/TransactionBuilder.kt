@@ -4,7 +4,10 @@ import co.paralleluniverse.strands.Strand
 import net.corda.core.CordaInternal
 import net.corda.core.DeleteForDJVM
 import net.corda.core.contracts.*
-import net.corda.core.crypto.*
+import net.corda.core.crypto.CompositeKey
+import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.SignableData
+import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
 import net.corda.core.node.NetworkParameters
@@ -268,14 +271,14 @@ open class TransactionBuilder(
         // Filter out all contracts that might have been already used by 'normal' input or output states.
         val referenceStateGroups: Map<ContractClassName, List<TransactionState<ContractState>>> = referencesWithTransactionState.groupBy { it.contract }
         val refStateContractAttachments: List<AttachmentId> = referenceStateGroups
-            .filterNot { it.key in allContracts }
-            .map { refStateEntry ->
-                getInstalledContractAttachmentId(
-                    refStateEntry.key,
-                    refStateEntry.value,
-                    services
-                )
-            }
+                .filterNot { it.key in allContracts }
+                .map { refStateEntry ->
+                    getInstalledContractAttachmentId(
+                            refStateEntry.key,
+                            refStateEntry.value,
+                            services
+                    )
+                }
 
         // For each contract, resolve the AutomaticPlaceholderConstraint, and select the attachment.
         val contractAttachmentsAndResolvedOutputStates: List<Pair<AttachmentId, List<TransactionState<ContractState>>?>> = allContracts.toSet()
@@ -321,9 +324,9 @@ open class TransactionBuilder(
         val inputsAndOutputs = (inputStates ?: emptyList()) + (outputStates ?: emptyList())
 
         fun selectAttachment() = getInstalledContractAttachmentId(
-            contractClassName,
-            inputsAndOutputs.filterNot { it.constraint in automaticConstraints },
-            services
+                contractClassName,
+                inputsAndOutputs.filterNot { it.constraint in automaticConstraints },
+                services
         )
 
         /*
@@ -340,7 +343,7 @@ open class TransactionBuilder(
             require(attachment != null) { "Contract attachment $attachmentId for $contractClassName is missing." }
             if ((attachment as ContractAttachment).isSigned && (explicitContractAttachment == null || explicitContractAttachment == attachment.id)) {
                 val signatureConstraint =
-                    makeSignatureAttachmentConstraint(attachment.signerKeys)
+                        makeSignatureAttachmentConstraint(attachment.signerKeys)
                 require(signatureConstraint.isSatisfiedBy(attachment)) { "Selected output constraint: $signatureConstraint not satisfying ${attachment.id}" }
                 val resolvedOutputStates = outputStates?.map {
                     if (it.constraint in automaticConstraints) {
@@ -432,9 +435,9 @@ open class TransactionBuilder(
      * any possibility of transition off of existing [HashAttachmentConstraint]s.
      */
     private fun canMigrateFromHashToSignatureConstraint(
-        inputStates: List<TransactionState<ContractState>>?,
-        outputStates: List<TransactionState<ContractState>>?,
-        services: ServicesForResolution
+            inputStates: List<TransactionState<ContractState>>?,
+            outputStates: List<TransactionState<ContractState>>?,
+            services: ServicesForResolution
     ): Boolean {
         return HashAttachmentConstraint.disableHashConstraints
                 && services.networkParameters.minimumPlatformVersion >= 4
@@ -478,9 +481,9 @@ open class TransactionBuilder(
      * TODO - once support for third party signing is added, it should be implemented here. ( a constraint with 2 signatures is less restrictive than a constraint with 1 more signature)
      */
     private fun attachmentConstraintsTransition(
-        constraints: Set<AttachmentConstraint>,
-        attachmentToUse: ContractAttachment,
-        services: ServicesForResolution
+            constraints: Set<AttachmentConstraint>,
+            attachmentToUse: ContractAttachment,
+            services: ServicesForResolution
     ): AttachmentConstraint = when {
 
         // Sanity check.
@@ -529,12 +532,12 @@ open class TransactionBuilder(
             SignatureAttachmentConstraint(CompositeKey.Builder().addKeys(attachmentSigners).build())
 
     private fun getInstalledContractAttachmentId(
-        contractClassName: String,
-        states: List<TransactionState<ContractState>>,
-        services: ServicesForResolution
+            contractClassName: String,
+            states: List<TransactionState<ContractState>>,
+            services: ServicesForResolution
     ): AttachmentId {
         return services.cordappProvider.getContractAttachmentID(contractClassName)
-            ?: throw MissingContractAttachments(states, contractClassName)
+                ?: throw MissingContractAttachments(states, contractClassName)
     }
 
     private fun useWhitelistedByZoneAttachmentConstraint(contractClassName: ContractClassName, networkParameters: NetworkParameters) = contractClassName in networkParameters.whitelistedContractImplementations.keys

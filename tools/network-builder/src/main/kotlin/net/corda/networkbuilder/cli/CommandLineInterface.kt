@@ -1,6 +1,8 @@
 package net.corda.networkbuilder.cli
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import net.corda.core.identity.CordaX500Name
+import net.corda.core.utilities.getOrThrow
 import net.corda.networkbuilder.Constants
 import net.corda.networkbuilder.NetworkBuilder
 import net.corda.networkbuilder.backends.Backend
@@ -8,8 +10,6 @@ import net.corda.networkbuilder.context.Context
 import net.corda.networkbuilder.nodes.NodeAdder
 import net.corda.networkbuilder.nodes.NodeInstantiator
 import net.corda.networkbuilder.toSingleFuture
-import net.corda.core.identity.CordaX500Name
-import net.corda.core.utilities.getOrThrow
 import java.io.File
 
 class CommandLineInterface {

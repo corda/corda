@@ -304,13 +304,13 @@ open class Node(configuration: NodeConfiguration,
         )
     }
 
-    private fun makeBridgeControlListener(serverAddress: NetworkHostAndPort, networkParameters: NetworkParameters) : BridgeControlListener {
+    private fun makeBridgeControlListener(serverAddress: NetworkHostAndPort, networkParameters: NetworkParameters): BridgeControlListener {
         val artemisMessagingClientFactory = {
             ArtemisMessagingClient(
                     configuration.p2pSslOptions,
                     serverAddress,
                     networkParameters.maxMessageSize,
-                    failoverCallback =  { errorAndTerminate("ArtemisMessagingClient failed. Shutting down.", null) }
+                    failoverCallback = { errorAndTerminate("ArtemisMessagingClient failed. Shutting down.", null) }
             )
         }
         return BridgeControlListener(configuration.p2pSslOptions, networkParameters.maxMessageSize, configuration.crlCheckSoftFail, artemisMessagingClientFactory)

@@ -1,9 +1,9 @@
 package net.corda.networkbuilder.context
 
+import net.corda.core.identity.CordaX500Name
 import net.corda.networkbuilder.Constants
 import net.corda.networkbuilder.backends.Backend
 import net.corda.networkbuilder.nodes.NodeInstanceRequest
-import net.corda.core.identity.CordaX500Name
 import org.apache.activemq.artemis.utils.collections.ConcurrentHashSet
 import java.util.concurrent.ConcurrentHashMap
 

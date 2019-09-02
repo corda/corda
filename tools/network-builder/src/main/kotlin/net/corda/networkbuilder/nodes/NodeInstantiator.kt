@@ -1,10 +1,10 @@
 package net.corda.networkbuilder.nodes
 
+import net.corda.core.identity.CordaX500Name
 import net.corda.networkbuilder.Constants
 import net.corda.networkbuilder.containers.instance.InstanceInfo
 import net.corda.networkbuilder.containers.instance.Instantiator
 import net.corda.networkbuilder.context.Context
-import net.corda.core.identity.CordaX500Name
 import java.util.concurrent.CompletableFuture
 
 class NodeInstantiator(val instantiator: Instantiator,
