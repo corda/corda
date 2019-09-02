@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.stefano.testing;
+package net.corda.testing;
 
 import org.gradle.api.DefaultTask;
 import org.gradle.api.GradleException;

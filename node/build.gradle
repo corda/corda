@@ -1,5 +1,3 @@
-import com.stefano.testing.KubesTest
-
 // Import private compile time constants
 buildscript {
     def properties = new Properties()

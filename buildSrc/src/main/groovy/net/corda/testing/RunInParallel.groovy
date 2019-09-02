@@ -1,4 +1,4 @@
-package com.stefano.testing
+package net.corda.testing
 
 import org.gradle.api.Action
 import org.gradle.api.DefaultTask

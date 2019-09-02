@@ -1,4 +1,4 @@
-package com.stefano.testing
+package net.corda.testing
 
 import io.github.classgraph.ClassGraph
 import io.github.classgraph.ClassInfo

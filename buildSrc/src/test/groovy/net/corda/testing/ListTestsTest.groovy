@@ -1,4 +1,4 @@
-package com.stefano.testing
+package net.corda.testing
 
 import org.hamcrest.CoreMatchers
 import org.junit.Assert

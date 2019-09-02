@@ -1,7 +1,5 @@
-import com.stefano.testing.DistributedTesting
-import com.stefano.testing.ImageBuilding
-
-import java.util.concurrent.CompletableFuture
+import net.corda.testing.DistributedTesting
+import net.corda.testing.ImageBuilding
 
 buildscript {
     // For sharing constants between builds
