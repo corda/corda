@@ -1,0 +1,102 @@
+plugins {
+    id 'org.jetbrains.kotlin.jvm'
+    id 'java-library'
+    id 'idea'
+}
+
+ext {
+    corda_version = '5.0-SNAPSHOT'
+}
+
+description 'Serialization support for the DJVM'
+
+configurations {
+    sandboxTesting
+    jdkRt.resolutionStrategy {
+        // Always check the repository for a newer SNAPSHOT.
+        cacheChangingModulesFor 0, 'seconds'
+    }
+}
+
+allprojects {
+    repositories {
+        maven {
+            url "$artifactory_contextUrl/corda-dev"
+        }
+    }
+
+    configurations{
+        // This is for the latest deterministic Corda SNAPSHOT artifacts...
+        [ compileClasspath, runtimeClasspath ].forEach { cfg ->
+            cfg.resolutionStrategy {
+                // Always check the repository for a newer SNAPSHOT.
+                cacheChangingModulesFor 0, 'seconds'
+
+                dependencySubstitution {
+                    substitute module("net.corda:corda-core:$corda_version") with module("net.corda:corda-core-deterministic:$corda_version")
+                    substitute module("net.corda:corda-serialization:$corda_version") with module("net.corda:corda-serialization-deterministic:$corda_version")
+                }
+            }
+        }
+    }
+
+    /*
+     * Corda serialization requires parameter names
+     * to be available via Java reflection.
+     */
+    tasks.withType(JavaCompile) {
+        options.compilerArgs += '-parameters'
+    }
+
+    tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile) {
+        kotlinOptions {
+            javaParameters = true
+        }
+    }
+}
+
+dependencies {
+    api project(path: ':djvm', configuration: 'shadow')
+    api "net.corda:corda-core:$corda_version"
+    api "net.corda:corda-serialization:$corda_version"
+    implementation project(':serialization:deserializers')
+
+    testImplementation "org.junit.jupiter:junit-jupiter-api:$junit_jupiter_version"
+    testImplementation "org.junit.jupiter:junit-jupiter-params:$junit_jupiter_version"
+    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junit_jupiter_version"
+
+    // Test utilities
+    testImplementation "org.assertj:assertj-core:$assertj_version"
+    testRuntimeOnly "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
+    jdkRt "net.corda:deterministic-rt:latest.integration"
+
+    // The DJVM will need this classpath to run the unit tests.
+    sandboxTesting files(sourceSets.getByName("test").output)
+    sandboxTesting(project(':serialization:deserializers')) {
+        exclude group: 'net.corda'
+    }
+    sandboxTesting "net.corda:corda-serialization-deterministic:$corda_version"
+    sandboxTesting "org.slf4j:slf4j-nop:$slf4j_version"
+}
+
+jar {
+    manifest {
+        attributes('Sealed': true)
+    }
+}
+
+tasks.withType(Test) {
+    systemProperty 'deterministic-rt.path', configurations.jdkRt.asPath
+    systemProperty 'sandbox-libraries.path', configurations.sandboxTesting.asPath
+}
+
+//publish {
+//    name 'corda-djvm-serialization'
+//}
+
+idea {
+    module {
+        downloadJavadoc = true
+        downloadSources = true
+    }
+}
