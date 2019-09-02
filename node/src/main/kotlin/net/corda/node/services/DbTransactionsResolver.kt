@@ -53,13 +53,6 @@ class DbTransactionsResolver(private val flow: ResolveTransactionsFlow) : Transa
 
             // Request the standalone transaction data (which may refer to things we don't yet have).
             val (existingTxIds, downloadedTxs) = fetchRequiredTransactions(Collections.singleton(nextRequests.first())) // Fetch first item only
-
-            // When acquiring the write locks for the transaction chain, it is important that all required locks are acquired in the same
-            // order when recording both verified and unverified transactions. In the verified case, the transactions must be recorded in
-            // back chain order (i.e. oldest first), so this must also happen for unverified transactions. This sort ensures that locks are
-            // acquired in the right order in the case the transactions should be stored in the database as unverified. The main topological
-            // sort is also updated here to ensure that this contains everything that needs locking in cases where the resolver switches
-            // from checkpointing to storing unverified transactions in the database.
             for (tx in downloadedTxs) {
                 val dependencies = tx.dependencies
                 topologicalSort.add(tx.id, dependencies)
