@@ -75,28 +75,27 @@ class ImageBuilding implements Plugin<Project> {
             tag = "${UUID.randomUUID().toString().toLowerCase().subSequence(0, 12)}"
             repository = "stefanotestingcr.azurecr.io/testing"
         }
+        def registryCredentialsForPush = new DockerRegistryCredentials(project.getObjects())
+        registryCredentialsForPush.username.set("stefanotestingcr")
+        registryCredentialsForPush.password.set(System.getProperty("docker.push.password") ? System.getProperty("docker.push.password") : "")
 
-        if (!System.hasProperty("docker.image") && System.hasProperty("docker.tag")) {
+        if (System.getProperty("docker.tag")) {
             DockerPushImage pushBuildImage = project.tasks.create('pushBuildImage', DockerPushImage) {
-                dependsOn tagBuildImageResult
                 doFirst {
-                    registryCredentials = new DockerRegistryCredentials(project.getObjects())
-                    registryCredentials.username.set("stefanotestingcr")
-                    registryCredentials.password.set(System.getProperty("docker.push.password") ? System.getProperty("docker.push.password") : "")
+                    registryCredentials = registryCredentialsForPush
                 }
                 imageName = "stefanotestingcr.azurecr.io/testing"
-                tag = tagBuildImageResult.tag
+                tag = System.getProperty("docker.tag")
             }
             this.pushTask = pushBuildImage
         } else {
             DockerPushImage pushBuildImage = project.tasks.create('pushBuildImage', DockerPushImage) {
+                dependsOn tagBuildImageResult
                 doFirst {
-                    registryCredentials = new DockerRegistryCredentials(project.getObjects())
-                    registryCredentials.username.set("stefanotestingcr")
-                    registryCredentials.password.set(System.getProperty("docker.push.password") ? System.getProperty("docker.push.password") : "")
+                    registryCredentials = registryCredentialsForPush
                 }
-                imageName = System.getProperty("docker.image")
-                tag = System.getProperty("docker.tag")
+                imageName = "stefanotestingcr.azurecr.io/testing"
+                tag = tagBuildImageResult.tag
             }
             this.pushTask = pushBuildImage
         }
@@ -216,7 +215,7 @@ class DistributedTesting implements Plugin<Project> {
                     subProject.logger.info "got ${includes.size()} tests to include into testing task ${task.getPath()}"
 
                     if (includes.size() == 0) {
-                        subProject.logger.info "Disabling test executing for testing task ${task.getPath()}"
+                        subProject.logger.info "Disabling test execution for testing task ${task.getPath()}"
                         excludeTestsMatching "*"
                     }
 
