@@ -108,7 +108,8 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                     services.networkParametersService.lookup(hashToResolve)
                 },
                 resolveContractAttachment = { services.loadContractAttachment(it) },
-                isAttachmentTrusted = { (services as ServiceHubCoreInternal).attachmentTrustCalculator.calculate(it) }
+                // `as?` is used due to [MockServices] not implementing [ServiceHubCoreInternal]
+                isAttachmentTrusted = { (services as? ServiceHubCoreInternal)?.attachmentTrustCalculator?.calculate(it) ?: true }
         )
     }
 
