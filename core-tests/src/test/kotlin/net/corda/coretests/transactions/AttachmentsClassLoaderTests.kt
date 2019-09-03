@@ -5,6 +5,7 @@ import net.corda.core.contracts.Contract
 import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
+import net.corda.core.internal.AttachmentTrustCalculator
 import net.corda.core.internal.declaredField
 import net.corda.core.internal.hash
 import net.corda.core.internal.inputStream
@@ -14,8 +15,9 @@ import net.corda.core.serialization.internal.AttachmentsClassLoader
 import net.corda.node.services.attachments.NodeAttachmentTrustCalculator
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.internal.ContractJarTestUtils.signContractJar
-import net.corda.testing.internal.services.InternalMockAttachmentStorage
+import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.internal.fakeAttachment
+import net.corda.testing.internal.services.InternalMockAttachmentStorage
 import net.corda.testing.node.internal.FINANCE_CONTRACTS_CORDAPP
 import net.corda.testing.services.MockAttachmentStorage
 import org.apache.commons.io.IOUtils
@@ -43,10 +45,11 @@ class AttachmentsClassLoaderTests {
         }
     }
 
-    private var storage = MockAttachmentStorage()
-    private var internalStorage = InternalMockAttachmentStorage(storage)
-    private var attachmentTrustCalculator = NodeAttachmentTrustCalculator(internalStorage)
+    private lateinit var storage: MockAttachmentStorage
+    private lateinit var internalStorage: InternalMockAttachmentStorage
+    private lateinit var attachmentTrustCalculator: AttachmentTrustCalculator
     private val networkParameters = testNetworkParameters()
+    private val cacheFactory = TestingNamedCacheFactory()
 
     private fun make(attachments: List<Attachment>,
                      params: NetworkParameters = networkParameters): AttachmentsClassLoader {
@@ -57,7 +60,7 @@ class AttachmentsClassLoaderTests {
     fun setup() {
         storage = MockAttachmentStorage()
         internalStorage = InternalMockAttachmentStorage(storage)
-        attachmentTrustCalculator = NodeAttachmentTrustCalculator(internalStorage)
+        attachmentTrustCalculator = NodeAttachmentTrustCalculator(internalStorage, cacheFactory)
     }
 
     @Test
@@ -395,6 +398,7 @@ class AttachmentsClassLoaderTests {
 
         attachmentTrustCalculator = NodeAttachmentTrustCalculator(
             InternalMockAttachmentStorage(storage),
+            cacheFactory,
             listOf(keyPairA.public.hash.toString())
         )
 
@@ -435,6 +439,7 @@ class AttachmentsClassLoaderTests {
 
         attachmentTrustCalculator = NodeAttachmentTrustCalculator(
             InternalMockAttachmentStorage(storage),
+            cacheFactory,
             listOf(keyPairA.public.hash.toString())
         )
 

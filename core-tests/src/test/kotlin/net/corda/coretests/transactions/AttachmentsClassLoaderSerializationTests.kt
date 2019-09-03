@@ -15,6 +15,7 @@ import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
+import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.internal.fakeAttachment
 import net.corda.testing.internal.services.InternalMockAttachmentStorage
 import net.corda.testing.services.MockAttachmentStorage
@@ -38,7 +39,7 @@ class AttachmentsClassLoaderSerializationTests {
     val testSerialization = SerializationEnvironmentRule()
 
     private val storage = InternalMockAttachmentStorage(MockAttachmentStorage())
-    private val attachmentTrustCalculator = NodeAttachmentTrustCalculator(storage)
+    private val attachmentTrustCalculator = NodeAttachmentTrustCalculator(storage, TestingNamedCacheFactory())
 
     @Test
     fun `Can serialize and deserialize with an attachment classloader`() {

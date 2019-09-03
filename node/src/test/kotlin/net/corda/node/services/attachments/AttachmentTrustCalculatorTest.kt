@@ -42,6 +42,7 @@ class AttachmentTrustCalculatorTest {
     private val services = rigorousMock<ServicesForResolution>().also {
         doReturn(testNetworkParameters()).whenever(it).networkParameters
     }
+    private val cacheFactory = TestingNamedCacheFactory()
 
     @Before
     fun setUp() {
@@ -55,7 +56,7 @@ class AttachmentTrustCalculatorTest {
             }
         }
         storage.servicesForResolution = services
-        attachmentTrustCalculator = NodeAttachmentTrustCalculator(storage)
+        attachmentTrustCalculator = NodeAttachmentTrustCalculator(storage, cacheFactory)
     }
 
     @After
@@ -400,6 +401,7 @@ class AttachmentTrustCalculatorTest {
 
             attachmentTrustCalculator = NodeAttachmentTrustCalculator(
                 storage,
+                cacheFactory,
                 listOf(keyB.hash.toString())
             )
 
@@ -429,6 +431,7 @@ class AttachmentTrustCalculatorTest {
 
             attachmentTrustCalculator = NodeAttachmentTrustCalculator(
                 storage,
+                cacheFactory,
                 listOf(key.hash.toString())
             )
 
@@ -511,6 +514,7 @@ class AttachmentTrustCalculatorTest {
 
             attachmentTrustCalculator = NodeAttachmentTrustCalculator(
                 storage,
+                cacheFactory,
                 listOf(keyB.hash.toString())
             )
 

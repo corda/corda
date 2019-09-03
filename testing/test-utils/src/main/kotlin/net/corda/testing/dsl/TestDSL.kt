@@ -20,6 +20,7 @@ import net.corda.node.services.attachments.NodeAttachmentTrustCalculator
 import net.corda.node.services.persistence.AttachmentStorageInternal
 import net.corda.testing.core.dummyCommand
 import net.corda.testing.internal.MockCordappProvider
+import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.internal.services.InternalMockAttachmentStorage
 import net.corda.testing.services.MockAttachmentStorage
 import java.io.InputStream
@@ -97,11 +98,12 @@ data class TestTransactionDSLInterpreter private constructor(
                 // Wrapping to a [InternalMockAttachmentStorage] is needed to prevent leaking internal api
                 // while still allowing the tests to work
                 NodeAttachmentTrustCalculator(
-                    if (it is MockAttachmentStorage) {
+                    attachmentStorage = if (it is MockAttachmentStorage) {
                         InternalMockAttachmentStorage(it)
                     } else {
                         it as AttachmentStorageInternal
-                    }
+                    },
+                    cacheFactory = TestingNamedCacheFactory()
                 )
             }
 

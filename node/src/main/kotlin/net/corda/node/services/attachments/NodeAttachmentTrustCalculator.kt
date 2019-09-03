@@ -1,5 +1,6 @@
 package net.corda.node.services.attachments
 
+import com.github.benmanes.caffeine.cache.Caffeine
 import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.ContractAttachment
 import net.corda.core.crypto.SecureHash
@@ -20,6 +21,7 @@ import java.security.PublicKey
  */
 class NodeAttachmentTrustCalculator(
     private val attachmentStorage: AttachmentStorageInternal,
+    cacheFactory: NamedCacheFactory,
     keysToBlacklist: List<String> = emptyList()
 ) : AttachmentTrustCalculator, SingletonSerializeAsToken() {
 
@@ -28,8 +30,10 @@ class NodeAttachmentTrustCalculator(
     }
 
     // A cache for caching whether a signing key is trusted
-    private val trustedKeysCache: MutableMap<PublicKey, Boolean> =
-        createSimpleCache<PublicKey, Boolean>(100).toSynchronised()
+    private val trustedKeysCache = cacheFactory.buildNamed<PublicKey, Boolean>(
+        Caffeine.newBuilder(),
+        "NodeAttachmentTrustCalculator_trustedKeysCache"
+    )
 
     /**
      * Attachments signed by any of these public keys will not be considered as trust roots for any
@@ -56,20 +60,20 @@ class NodeAttachmentTrustCalculator(
             // add signers to the cache as this is a fully trusted attachment
             attachment.signerKeys
                 .filterNot { it.isBlacklisted() }
-                .forEach { trustedKeysCache[it] = true }
+                .forEach { trustedKeysCache.put(it, true) }
             return true
         }
 
         if (attachment.isSignedByBlacklistedKeys()) return false
 
         return attachment.signerKeys.any { signer ->
-            trustedKeysCache.computeIfAbsent(signer) {
+            trustedKeysCache.get(signer) {
                 val queryCriteria = AttachmentQueryCriteria.AttachmentsQueryCriteria(
                     signersCondition = Builder.equal(listOf(signer)),
                     uploaderCondition = Builder.`in`(TRUSTED_UPLOADERS)
                 )
                 attachmentStorage.queryAttachments(queryCriteria).isNotEmpty()
-            }
+            }!!
         }
     }
 
@@ -81,7 +85,7 @@ class NodeAttachmentTrustCalculator(
         for ((name, attachment) in getTrustedAttachments()) {
             attachment.signerKeys.forEach {
                 // add signers to the cache as this is a fully trusted attachment
-                trustedKeysCache[it] = true
+                trustedKeysCache.put(it, true)
                 publicKeyToTrustRootMap.putIfAbsent(
                     it,
                     TrustedAttachment(attachment.id, name)

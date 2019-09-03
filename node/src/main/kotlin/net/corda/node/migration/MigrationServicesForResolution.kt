@@ -53,7 +53,10 @@ class MigrationServicesForResolution(
         }
     private val cordappLoader = SchemaMigration.loader.get()
 
-    private val attachmentTrustCalculator = NodeAttachmentTrustCalculator(attachments as AttachmentStorageInternal)
+    private val attachmentTrustCalculator = NodeAttachmentTrustCalculator(
+        attachments as AttachmentStorageInternal,
+        cacheFactory
+    )
 
     private fun defaultNetworkParameters(): NetworkParameters {
         logger.warn("Using a dummy set of network parameters for migration.")
