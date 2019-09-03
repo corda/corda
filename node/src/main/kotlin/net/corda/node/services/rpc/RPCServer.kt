@@ -243,7 +243,6 @@ class RPCServer(
         reaperScheduledFuture?.cancel(false)
         rpcExecutor?.shutdownNow()
         reaperExecutor?.shutdownNow()
-        securityManager.close()
         sessionFactory?.close()
         observableMap.invalidateAll()
         reapSubscriptions()

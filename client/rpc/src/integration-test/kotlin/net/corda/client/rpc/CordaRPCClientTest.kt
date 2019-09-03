@@ -116,8 +116,6 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance"), notaries =
                 } catch (e: RPCException) {
                     log.info("... node is not running.")
                     nodeIsShut.onCompleted()
-                } catch (e: ActiveMQSecurityException) {
-                    // nothing here - this happens if trying to connect before the node is started
                 } catch (e: Exception) {
                     nodeIsShut.onError(e)
                 }
