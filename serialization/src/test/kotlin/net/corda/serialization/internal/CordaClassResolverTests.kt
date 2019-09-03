@@ -21,6 +21,7 @@ import net.corda.node.serialization.kryo.CordaClassResolver
 import net.corda.node.serialization.kryo.CordaKryo
 import net.corda.node.services.attachments.NodeAttachmentTrustCalculator
 import net.corda.testing.common.internal.testNetworkParameters
+import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.internal.services.InternalMockAttachmentStorage
 import net.corda.testing.services.MockAttachmentStorage
@@ -214,7 +215,7 @@ class CordaClassResolverTests {
     @Test(expected = KryoException::class)
     fun `Annotation does not work in conjunction with AttachmentClassLoader annotation`() {
         val storage = InternalMockAttachmentStorage(MockAttachmentStorage())
-        val attachmentTrustCalculator = NodeAttachmentTrustCalculator(storage)
+        val attachmentTrustCalculator = NodeAttachmentTrustCalculator(storage, TestingNamedCacheFactory())
         val attachmentHash = importJar(storage)
         val classLoader = AttachmentsClassLoader(arrayOf(attachmentHash).map { storage.openAttachment(it)!! }, testNetworkParameters(), SecureHash.zeroHash, { attachmentTrustCalculator.calculate(it) })
         val attachedClass = Class.forName("net.corda.isolated.contracts.AnotherDummyContract", true, classLoader)
@@ -224,7 +225,7 @@ class CordaClassResolverTests {
     @Test(expected = TransactionVerificationException.UntrustedAttachmentsException::class)
     fun `Attempt to load contract attachment with untrusted uploader should fail with UntrustedAttachmentsException`() {
         val storage = InternalMockAttachmentStorage(MockAttachmentStorage())
-        val attachmentTrustCalculator = NodeAttachmentTrustCalculator(storage)
+        val attachmentTrustCalculator = NodeAttachmentTrustCalculator(storage, TestingNamedCacheFactory())
         val attachmentHash = importJar(storage, "some_uploader")
         val classLoader = AttachmentsClassLoader(arrayOf(attachmentHash).map { storage.openAttachment(it)!! }, testNetworkParameters(), SecureHash.zeroHash, { attachmentTrustCalculator.calculate(it) })
         val attachedClass = Class.forName("net.corda.isolated.contracts.AnotherDummyContract", true, classLoader)
