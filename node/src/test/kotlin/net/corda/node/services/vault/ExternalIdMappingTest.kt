@@ -125,7 +125,7 @@ class ExternalIdMappingTest {
         val resultFour = database.transaction {
             vaultService.queryBy<DummyState>(QueryCriteria.VaultQueryCriteria(externalIds = listOf())).states
         }
-        assertEquals(setOf(dummyStateOne, dummyStateTwo, dummyStateThree), resultThree.map { it.state.data }.toSet())
+        assertEquals(setOf(dummyStateOne, dummyStateTwo, dummyStateThree), resultFour.map { it.state.data }.toSet())
     }
 
     @Test

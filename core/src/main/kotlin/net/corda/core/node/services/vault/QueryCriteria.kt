@@ -103,6 +103,21 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
             override val participants: List<AbstractParty>? = null,
             override val externalIds: List<UUID> = emptyList()
     ) : CommonQueryCriteria() {
+        // V4 constructors.
+        @DeprecatedConstructorForDeserialization(version = 7)
+        constructor(
+                status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
+                contractStateTypes: Set<Class<out ContractState>>? = null,
+                stateRefs: List<StateRef>? = null,
+                notary: List<AbstractParty>? = null,
+                softLockingCondition: SoftLockingCondition? = null,
+                timeCondition: TimeCondition? = null,
+                relevancyStatus: Vault.RelevancyStatus = Vault.RelevancyStatus.ALL,
+                constraintTypes: Set<Vault.ConstraintInfo.Type> = emptySet(),
+                constraints: Set<Vault.ConstraintInfo> = emptySet(),
+                participants: List<AbstractParty>? = null
+        ) : this(status, contractStateTypes, stateRefs, notary, softLockingCondition, timeCondition, relevancyStatus, constraintTypes, constraints, participants, emptyList())
+
         // V3 c'tors
         // These have to be manually specified as @JvmOverloads for some reason causes declaration clashes
         @DeprecatedConstructorForDeserialization(version = 6)
@@ -146,6 +161,34 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
         fun withConstraintTypes(constraintTypes: Set<Vault.ConstraintInfo.Type>): VaultQueryCriteria = copy(constraintTypes = constraintTypes)
         fun withConstraints(constraints: Set<Vault.ConstraintInfo>): VaultQueryCriteria = copy(constraints = constraints)
         fun withParticipants(participants: List<AbstractParty>): VaultQueryCriteria = copy(participants = participants)
+        fun withExternalIds(externalIds: List<UUID>): VaultQueryCriteria = copy(externalIds = externalIds)
+
+        fun copy(
+                status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
+                contractStateTypes: Set<Class<out ContractState>>? = null,
+                stateRefs: List<StateRef>? = null,
+                notary: List<AbstractParty>? = null,
+                softLockingCondition: SoftLockingCondition? = null,
+                timeCondition: TimeCondition? = null,
+                relevancyStatus: Vault.RelevancyStatus = Vault.RelevancyStatus.ALL,
+                constraintTypes: Set<Vault.ConstraintInfo.Type> = emptySet(),
+                constraints: Set<Vault.ConstraintInfo> = emptySet(),
+                participants: List<AbstractParty>? = null
+        ): VaultQueryCriteria {
+            return VaultQueryCriteria(
+                    status,
+                    contractStateTypes,
+                    stateRefs,
+                    notary,
+                    softLockingCondition,
+                    timeCondition,
+                    relevancyStatus,
+                    constraintTypes,
+                    constraints,
+                    participants,
+                    externalIds
+            )
+        }
 
         fun copy(
                 status: Vault.StateStatus = this.status,
@@ -165,7 +208,8 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
                     relevancyStatus,
                     constraintTypes,
                     constraints,
-                    participants
+                    participants,
+                    externalIds
             )
         }
     }
