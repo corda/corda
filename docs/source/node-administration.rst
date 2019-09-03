@@ -211,6 +211,8 @@ in the graphite metric hierarchy.
 The graphite server must be running with python pickle transport enabled. Please refer to the documentation on
 https://graphiteapp.org on how to install and run a graphite server.
 
+.. _memory_usage_and_tuning:
+
 Memory usage and tuning
 -----------------------
 
@@ -228,6 +230,11 @@ node is running out of memory, you can give it more by running the node like thi
 The example command above would give a 1 gigabyte Java heap.
 
 .. note:: Unfortunately the JVM does not let you limit the total memory usage of Java program, just the heap size.
+
+A node which is running out of memory is expected to stop immediately to preserve ledger consistency and avoid flaws in operations.
+Note that it's a responsibility of a client application to handle RPC reconnection in case this happens. It's also advised to have
+necessary JVM monitoring and restart infrastructure in place.
+See :ref:`setting_jvm_args` for further details on JVM out-of-memory related parameters.
 
 Hiding sensitive data
 ---------------------

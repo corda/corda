@@ -43,7 +43,7 @@ There are several ways of setting JVM arguments for the node process (particular
 They are listed here in order of increasing priority, i.e. if the same flag is set in a way later in this list, it will override
 anything set earlier.
 
-:Default arguments in capsule: The capsuled corda node has default flags set to ``-Xmx512m -XX:+UseG1GC`` - this gives the node (a relatively
+:Default arguments in capsule: The capsuled Corda node has default flags set to ``-Xmx512m -XX:+UseG1GC`` - this gives the node (a relatively
    low) 512 MB of heap space and turns on the G1 garbage collector, ensuring low pause times for garbage collection.
 
 :Node configuration: The node configuration file can specify custom default JVM arguments by adding a section like::
@@ -67,6 +67,24 @@ anything set earlier.
 
 :Command line flag: You can set JVM args on the command line that apply to the launcher process and the node process as in the example
       above. This will override any value for the same flag set any other way, but will leave any other JVM arguments alone.
+
+:OutOfMemoryError handling: In addition to the JVM arguments listed above, the capsuled Corda node has two flags that cause the node to stop
+   on out-of-memory error and generate the corresponding diagnostic files::
+
+      -XX:+HeapDumpOnOutOfMemoryError -XX:+CrashOnOutOfMemoryError
+
+   With ``CrashOnOutOfMemoryError`` the node which is running out of memory is expected to stop immediately (fail-fast) to preserve ledger
+   consistency and avoid flaws in operations.
+
+   Unlike for arguments related to memory and GC, to completely replace the default out-of-memory error args, you must explicitly add
+   at least one out-of-memory error related argument into the ``custom.jvmArgs`` section. For example, the following config turns off
+   ``HeapDumpOnOutOfMemoryError`` and doesn't invoke ``CrashOnOutOfMemoryError`` option:
+
+   .. code-block:: none
+
+      custom = {
+         jvmArgs: [ '-Xmx1G', '-XX:+UseG1GC', '-XX:-HeapDumpOnOutOfMemoryError' ]
+      }
 
 
 Command-line options
