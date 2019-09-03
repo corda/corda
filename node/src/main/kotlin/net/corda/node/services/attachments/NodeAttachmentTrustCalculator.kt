@@ -11,6 +11,7 @@ import net.corda.core.node.services.vault.Builder
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.contextLogger
 import net.corda.node.services.persistence.AttachmentStorageInternal
+import net.corda.nodeapi.internal.persistence.CordaPersistence
 import java.security.PublicKey
 
 /**
@@ -21,9 +22,17 @@ import java.security.PublicKey
  */
 class NodeAttachmentTrustCalculator(
     private val attachmentStorage: AttachmentStorageInternal,
+    private val database: CordaPersistence?,
     cacheFactory: NamedCacheFactory,
     keysToBlacklist: List<String> = emptyList()
 ) : AttachmentTrustCalculator, SingletonSerializeAsToken() {
+
+    @VisibleForTesting
+    constructor(
+        attachmentStorage: AttachmentStorageInternal,
+        cacheFactory: NamedCacheFactory,
+        keysToBlacklist: List<String> = emptyList()
+    ) : this(attachmentStorage, null, cacheFactory, keysToBlacklist)
 
     private companion object {
         private val log = contextLogger()
@@ -82,38 +91,44 @@ class NodeAttachmentTrustCalculator(
         val publicKeyToTrustRootMap = mutableMapOf<PublicKey, TrustedAttachment>()
         val attachmentTrustInfos = mutableListOf<AttachmentTrustInfo>()
 
-        for ((name, attachment) in getTrustedAttachments()) {
-            attachment.signerKeys.forEach {
-                // add signers to the cache as this is a fully trusted attachment
-                trustedKeysCache.put(it, true)
-                publicKeyToTrustRootMap.putIfAbsent(
-                    it,
-                    TrustedAttachment(attachment.id, name)
+        require(database != null) {
+            // This should never be hit, except for tests that have not been setup correctly to test internal code
+            "CordaPersistence has not been set"
+        }
+        database!!.transaction {
+            for ((name, attachment) in getTrustedAttachments()) {
+                attachment.signerKeys.forEach {
+                    // add signers to the cache as this is a fully trusted attachment
+                    trustedKeysCache.put(it, true)
+                    publicKeyToTrustRootMap.putIfAbsent(
+                        it,
+                        TrustedAttachment(attachment.id, name)
+                    )
+                }
+                attachmentTrustInfos += AttachmentTrustInfo(
+                    attachmentId = attachment.id,
+                    fileName = name,
+                    uploader = attachment.uploader,
+                    trustRootId = attachment.id,
+                    trustRootFileName = name
                 )
             }
-            attachmentTrustInfos += AttachmentTrustInfo(
-                attachmentId = attachment.id,
-                fileName = name,
-                uploader = attachment.uploader,
-                trustRootId = attachment.id,
-                trustRootFileName = name
-            )
-        }
 
-        for ((name, attachment) in getUntrustedAttachments()) {
-            val trustRoot = when {
-                attachment.isSignedByBlacklistedKeys() -> null
-                else -> attachment.signerKeys
-                    .mapNotNull { publicKeyToTrustRootMap[it] }
-                    .firstOrNull()
+            for ((name, attachment) in getUntrustedAttachments()) {
+                val trustRoot = when {
+                    attachment.isSignedByBlacklistedKeys() -> null
+                    else -> attachment.signerKeys
+                        .mapNotNull { publicKeyToTrustRootMap[it] }
+                        .firstOrNull()
+                }
+                attachmentTrustInfos += AttachmentTrustInfo(
+                    attachmentId = attachment.id,
+                    fileName = name,
+                    uploader = attachment.uploader,
+                    trustRootId = trustRoot?.id,
+                    trustRootFileName = trustRoot?.name
+                )
             }
-            attachmentTrustInfos += AttachmentTrustInfo(
-                attachmentId = attachment.id,
-                fileName = name,
-                uploader = attachment.uploader,
-                trustRootId = trustRoot?.id,
-                trustRootFileName = trustRoot?.name
-            )
         }
 
         return attachmentTrustInfos

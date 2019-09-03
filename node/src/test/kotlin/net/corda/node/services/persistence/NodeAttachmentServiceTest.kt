@@ -52,6 +52,7 @@ import java.nio.file.FileSystem
 import java.nio.file.Path
 import java.util.*
 import java.util.jar.JarInputStream
+import kotlin.streams.toList
 import kotlin.test.*
 
 class NodeAttachmentServiceTest {
@@ -905,7 +906,16 @@ class NodeAttachmentServiceTest {
 
     @Test
     fun `getAllAttachmentsByCriteria returns no attachments if there are no stored attachments`() {
-        assertTrue(storage.getAllAttachmentsByCriteria().isEmpty())
+        assertTrue(database.transaction {
+            storage.getAllAttachmentsByCriteria().toList().isEmpty()
+        })
+    }
+
+    @Test
+    fun `getAllAttachmentsByCriteria fails if no database transaction is set`() {
+        assertThatExceptionOfType(IllegalStateException::class.java).isThrownBy {
+            storage.getAllAttachmentsByCriteria()
+        }.withMessageContaining("Was expecting to find transaction set on current strand")
     }
 
     @Test
@@ -928,7 +938,7 @@ class NodeAttachmentServiceTest {
             val attachmentC = zipC.read { storage.privilegedImportAttachment(it, "untrusted", "C.zip") }
             val attachmentD = zipD.read { storage.privilegedImportAttachment(it, "untrusted", null) }
 
-            val result = storage.getAllAttachmentsByCriteria()
+            val result = database.transaction { storage.getAllAttachmentsByCriteria().toList() }
             assertEquals(4, result.size)
             assertThat(result.map { (_, attachment) -> attachment.id }).containsOnly(
                 attachmentA, attachmentB, attachmentC, attachmentD
@@ -962,7 +972,13 @@ class NodeAttachmentServiceTest {
             zipC.read { storage.privilegedImportAttachment(it, "untrusted", "C.zip") }
             zipD.read { storage.privilegedImportAttachment(it, "untrusted", null) }
 
-            val result = storage.getAllAttachmentsByCriteria(AttachmentsQueryCriteria(filenameCondition = Builder.`in`(listOf("A.jar", "B.jar"))))
+            val result = database.transaction {
+                storage.getAllAttachmentsByCriteria(
+                    AttachmentsQueryCriteria(
+                        filenameCondition = Builder.`in`(listOf("A.jar", "B.jar"))
+                    )
+                ).toList()
+            }
             assertEquals(2, result.size)
             assertThat(result.map { (_, attachment) -> attachment.id }).containsOnly(
                 attachmentA, attachmentB

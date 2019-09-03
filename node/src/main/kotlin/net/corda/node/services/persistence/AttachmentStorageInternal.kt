@@ -6,6 +6,7 @@ import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.node.services.vault.AttachmentQueryCriteria
 import net.corda.nodeapi.exceptions.DuplicateAttachmentException
 import java.io.InputStream
+import java.util.stream.Stream
 
 interface AttachmentStorageInternal : AttachmentStorage {
 
@@ -21,8 +22,8 @@ interface AttachmentStorageInternal : AttachmentStorage {
     fun privilegedImportOrGetAttachment(jar: InputStream, uploader: String, filename: String?): AttachmentId
 
     /**
-     * Get all attachments, filtered by the input [AttachmentQueryCriteria],
+     * Get all attachments as a [Stream], filtered by the input [AttachmentQueryCriteria],
      * stored within the node paired to their file name's.
      */
-    fun getAllAttachmentsByCriteria(criteria: AttachmentQueryCriteria = AttachmentQueryCriteria.AttachmentsQueryCriteria()): List<Pair<String?, Attachment>>
+    fun getAllAttachmentsByCriteria(criteria: AttachmentQueryCriteria = AttachmentQueryCriteria.AttachmentsQueryCriteria()): Stream<Pair<String?, Attachment>>
 }

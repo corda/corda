@@ -182,9 +182,10 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         configuration.devMode
     ).tokenize()
     val attachmentTrustCalculator = NodeAttachmentTrustCalculator(
-        attachments,
-        cacheFactory,
-        configuration.blacklistedAttachmentSigningKeys
+        attachmentStorage = attachments,
+        database = database,
+        cacheFactory = cacheFactory,
+        keysToBlacklist = configuration.blacklistedAttachmentSigningKeys
     ).tokenize()
     val cryptoService = CryptoServiceFactory.makeCryptoService(
             SupportedCryptoServices.BC_SIMPLE,

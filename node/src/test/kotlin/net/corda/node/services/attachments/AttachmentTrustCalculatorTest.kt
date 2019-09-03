@@ -56,7 +56,7 @@ class AttachmentTrustCalculatorTest {
             }
         }
         storage.servicesForResolution = services
-        attachmentTrustCalculator = NodeAttachmentTrustCalculator(storage, cacheFactory)
+        attachmentTrustCalculator = NodeAttachmentTrustCalculator(storage, database, cacheFactory)
     }
 
     @After
@@ -400,9 +400,10 @@ class AttachmentTrustCalculatorTest {
             val keyB = file.path.generateKey(aliasB, password)
 
             attachmentTrustCalculator = NodeAttachmentTrustCalculator(
-                storage,
-                cacheFactory,
-                listOf(keyB.hash.toString())
+                attachmentStorage = storage,
+                database = database,
+                cacheFactory = cacheFactory,
+                keysToBlacklist = listOf(keyB.hash.toString())
             )
 
             val jarA = ContractJarTestUtils.makeTestContractJar(file.path, "foo.bar.DummyContract")
@@ -430,9 +431,10 @@ class AttachmentTrustCalculatorTest {
             val key = file.path.generateKey(aliasA, password)
 
             attachmentTrustCalculator = NodeAttachmentTrustCalculator(
-                storage,
-                cacheFactory,
-                listOf(key.hash.toString())
+                attachmentStorage = storage,
+                database = database,
+                cacheFactory = cacheFactory,
+                keysToBlacklist = listOf(key.hash.toString())
             )
 
             val jar = ContractJarTestUtils.makeTestContractJar(file.path, "foo.bar.DummyContract")
@@ -513,9 +515,10 @@ class AttachmentTrustCalculatorTest {
             val keyB = file.path.generateKey(aliasB, password)
 
             attachmentTrustCalculator = NodeAttachmentTrustCalculator(
-                storage,
-                cacheFactory,
-                listOf(keyB.hash.toString())
+                attachmentStorage = storage,
+                database = database,
+                cacheFactory = cacheFactory,
+                keysToBlacklist = listOf(keyB.hash.toString())
             )
 
             val jarSignedByA =

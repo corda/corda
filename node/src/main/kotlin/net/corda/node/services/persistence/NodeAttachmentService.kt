@@ -43,6 +43,7 @@ import java.time.Instant
 import java.util.*
 import java.util.jar.JarEntry
 import java.util.jar.JarInputStream
+import java.util.stream.Stream
 import javax.annotation.concurrent.ThreadSafe
 import javax.persistence.*
 
@@ -562,12 +563,10 @@ class NodeAttachmentService @JvmOverloads constructor(
             emptyList()
     }
 
-    override fun getAllAttachmentsByCriteria(criteria: AttachmentQueryCriteria): List<Pair<String?, Attachment>> {
-        return database.transaction {
-            createAttachmentsQuery(
-                criteria,
-                null
-            ).resultList.map { it.filename to createAttachmentFromDatabase(it) }
-        }
+    override fun getAllAttachmentsByCriteria(criteria: AttachmentQueryCriteria): Stream<Pair<String?, Attachment>> {
+        return createAttachmentsQuery(
+            criteria,
+            null
+        ).resultStream.map { it.filename to createAttachmentFromDatabase(it) }
     }
 }
