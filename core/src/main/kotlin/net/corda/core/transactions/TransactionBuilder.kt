@@ -645,7 +645,6 @@ open class TransactionBuilder(
         checkNotary(stateAndRef)
         inputs.add(stateAndRef.ref)
         inputsWithTransactionState.add(stateAndRef)
-        resolveStatePointers(stateAndRef.state)
         return this
     }
 
