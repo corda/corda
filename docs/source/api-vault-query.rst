@@ -654,24 +654,5 @@ a view which maps each state to one or more external IDs. The entity relationshi
 
 .. image:: resources/state-to-external-id.png
 
-When performing a vault query, it is now possible to query for states by external ID using a custom query criteria.
-
-.. container:: codeset
-
-   .. sourcecode:: java
-
-        UUID id = someExternalId;
-        FieldInfo externalIdField = getField("externalId", VaultSchemaV1.StateToExternalId.class);
-        CriteriaExpression externalId = Builder.equal(externalIdField, id);
-        QueryCriteria query = new VaultCustomQueryCriteria(externalId);
-        Vault.Page<StateType> results = vaultService.queryBy(StateType.class, query);
-
-   .. sourcecode:: kotlin
-
-        val id: UUID = someExternalId
-        val externalId = builder { VaultSchemaV1.StateToExternalId::externalId.equal(id) }
-        val queryCriteria = QueryCriteria.VaultCustomQueryCriteria(externalId)
-        val results = vaultService.queryBy<StateType>(queryCriteria).states
-
-The ``VaultCustomQueryCriteria`` can also be combined with other query criteria, like custom schemas, for instance. See the vault query API
-examples above for how to combine ``QueryCriteria``.
+When performing a vault query, it is now possible to query for states by external ID using the ``externalIds`` parameter in
+``VaultQueryCriteria``.
