@@ -45,8 +45,6 @@ class AttachmentTrustCalculatorTest {
 
     @Before
     fun setUp() {
-        LogHelper.setLevel(PersistentUniquenessProvider::class)
-
         val dataSourceProperties = MockServices.makeTestDataSourceProperties()
         database = configureDatabase(dataSourceProperties, DatabaseConfig(), { null }, { null })
         fs = Jimfs.newFileSystem(Configuration.unix())
