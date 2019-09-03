@@ -32,9 +32,21 @@ class KubesTest extends DefaultTask {
     public volatile List<File> testOutput = Collections.emptyList()
     public volatile List<KubePodResult> containerResults = Collections.emptyList()
 
+    String namespace = "thisisatest"
+    int k8sTimeout = 50 * 1_000
+    def webSocketTimeout = k8sTimeout * 6
+    int numberOfPods = 20
+    def timeoutInMinutesForPodToStart = 60
+
 
     @TaskAction
     void runTestsOnKubes() {
+
+        try {
+            Class.forName("org.apache.commons.compress.archivers.tar.TarArchiveInputStream")
+        } catch (ClassNotFoundException ignored) {
+            throw new GradleException("Apache Commons compress has not be loaded, this can happen if running from within intellj - please select \"delegate to gradle\" for build and test actions")
+        }
 
         def gitSha = new BigInteger(project.hasProperty("corda_revision") ? project.property("corda_revision").toString() : "0", 36)
         def buildId = System.hasProperty("buildId") ? System.getProperty("buildId") : "UNKNOWN_BUILD"
@@ -43,21 +55,19 @@ class KubesTest extends DefaultTask {
         String stableRunId = new BigInteger(64, new Random(gitSha.intValue() + buildId.hashCode() + currentUser.hashCode())).toString(36).toLowerCase()
         String suffix = new BigInteger(64, new Random()).toString(36).toLowerCase()
 
-        int k8sTimeout = 50 * 1_000
         io.fabric8.kubernetes.client.Config config = new io.fabric8.kubernetes.client.ConfigBuilder()
                 .withConnectionTimeout(k8sTimeout)
                 .withRequestTimeout(k8sTimeout)
                 .withRollingTimeout(k8sTimeout)
-                .withWebsocketTimeout(k8sTimeout * 6)
-                .withWebsocketPingInterval(k8sTimeout * 6)
+                .withWebsocketTimeout(webSocketTimeout)
+                .withWebsocketPingInterval(webSocketTimeout)
                 .build()
 
         final KubernetesClient client = new DefaultKubernetesClient(config)
 
-        String namespace = "thisisatest"
         client.pods().inNamespace(namespace).list().getItems().forEach({ podToDelete ->
             if (podToDelete.getMetadata().name.contains(stableRunId)) {
-                System.out.println("deleting: " + podToDelete.getMetadata().getName())
+                project.logger.lifecycle("deleting: " + podToDelete.getMetadata().getName())
                 client.resource(podToDelete).delete()
             }
         })
@@ -65,13 +75,13 @@ class KubesTest extends DefaultTask {
         Namespace ns = new NamespaceBuilder().withNewMetadata().withName(namespace).addToLabels("testing-env", "true").endMetadata().build()
         client.namespaces().createOrReplace(ns)
 
-        int numberOfNodes = 20
-        List<CompletableFuture<KubePodResult>> podCreationFutures = IntStream.range(0, numberOfNodes).mapToObj({ i ->
+
+        List<CompletableFuture<KubePodResult>> podCreationFutures = IntStream.range(0, numberOfPods).mapToObj({ i ->
             CompletableFuture.supplyAsync({
                 File outputFile = Files.createTempFile("container", ".log").toFile()
                 String podName = (taskToExecuteName + "-" + stableRunId + suffix + i).toLowerCase()
                 Pod podRequest = buildPod(podName)
-                System.out.println("created pod: " + podName)
+                project.logger.lifecycle("created pod: " + podName)
                 Pod createdPod = client.pods().inNamespace(namespace).create(podRequest)
                 Runtime.getRuntime().addShutdownHook({
                     println "Deleting pod: " + podName
@@ -79,7 +89,7 @@ class KubesTest extends DefaultTask {
                 })
                 CompletableFuture<Void> waiter = new CompletableFuture<Void>()
                 KubePodResult result = new KubePodResult(createdPod, waiter, outputFile)
-                startBuildAndLogging(client, namespace, numberOfNodes, i, podName, printOutput, waiter, { int resultCode ->
+                startBuildAndLogging(client, namespace, numberOfPods, i, podName, printOutput, waiter, { int resultCode ->
                     println podName + " has completed with resultCode=$resultCode"
                     result.setResultCode(resultCode)
                 }, outputFile)
@@ -91,10 +101,10 @@ class KubesTest extends DefaultTask {
         def binaryFileFutures = podCreationFutures.collect { creationFuture ->
             return creationFuture.thenComposeAsync({ podResult ->
                 return podResult.waiter.thenApply {
-                    System.out.println("Successfully terminated log streaming for " + podResult.createdPod.getMetadata().getName())
+                    project.logger.lifecycle("Successfully terminated log streaming for " + podResult.createdPod.getMetadata().getName())
                     println "Gathering test results from ${podResult.createdPod.metadata.name}"
                     def binaryResults = downloadTestXmlFromPod(client, namespace, podResult.createdPod)
-                    System.out.println("deleting: " + podResult.createdPod.getMetadata().getName())
+                    project.logger.lifecycle("deleting: " + podResult.createdPod.getMetadata().getName())
                     client.resource(podResult.createdPod).delete()
                     return binaryResults
                 }
@@ -124,21 +134,19 @@ class KubesTest extends DefaultTask {
                               Consumer<Integer> resultSetter,
                               File outputFileForContainer) {
         try {
-
-            System.out.println("Waiting for pod " + podName + " to start before executing build")
-            client.pods().inNamespace(namespace).withName(podName).waitUntilReady(60, TimeUnit.MINUTES)
-            System.out.println("pod " + podName + " has started, executing build")
+            project.logger.lifecycle("Waiting for pod " + podName + " to start before executing build")
+            client.pods().inNamespace(namespace).withName(podName).waitUntilReady(timeoutInMinutesForPodToStart, TimeUnit.MINUTES)
+            project.logger.lifecycle("pod " + podName + " has started, executing build")
             Watch eventWatch = client.pods().inNamespace(namespace).withName(podName).watch(new Watcher<Pod>() {
                 @Override
                 void eventReceived(Watcher.Action action, Pod resource) {
-                    System.out.println("[StatusChange]  pod " + resource.getMetadata().getName() + " " + action.name())
+                    project.logger.lifecycle("[StatusChange]  pod " + resource.getMetadata().getName() + " " + action.name())
                 }
 
                 @Override
                 void onClose(KubernetesClientException cause) {
                 }
             })
-
 
             def stdOutOs = new PipedOutputStream()
             def stdOutIs = new PipedInputStream(4096)
@@ -148,18 +156,18 @@ class KubesTest extends DefaultTask {
 
                 @Override
                 void onOpen(Response response) {
-                    System.out.println("Build started on pod " + podName)
+                    project.logger.lifecycle("Build started on pod " + podName)
                 }
 
                 @Override
                 void onFailure(Throwable t, Response response) {
-                    System.out.println("Received error from rom pod " + podName)
+                    project.logger.lifecycle("Received error from rom pod " + podName)
                     waiter.completeExceptionally(t)
                 }
 
                 @Override
                 void onClose(int code, String reason) {
-                    System.out.println("Received onClose() from pod " + podName + " with returnCode=" + code)
+                    project.logger.lifecycle("Received onClose() from pod " + podName + " with returnCode=" + code)
                     try {
                         def errChannelContents = errChannelStream.toString()
                         println errChannelContents
@@ -179,25 +187,27 @@ class KubesTest extends DefaultTask {
                     .writingErrorChannel(errChannelStream)
                     .usingListener(terminatingListener).exec(getBuildCommand(numberOfPods, podIdx))
 
-            System.out.println("Pod: " + podName + " has started ")
+            project.logger.lifecycle("Pod: " + podName + " has started ")
 
             Thread loggingThread = new Thread({ ->
-                BufferedWriter out = new BufferedWriter(new FileWriter(outputFileForContainer))
-                BufferedReader br = new BufferedReader(new InputStreamReader(stdOutIs))
+                BufferedWriter out = null
+                BufferedReader br = null
                 try {
+                    out = new BufferedWriter(new FileWriter(outputFileForContainer))
+                    br = new BufferedReader(new InputStreamReader(stdOutIs))
                     String line
                     while ((line = br.readLine()) != null) {
                         def toWrite = ("${taskToExecuteName}/Container" + podIdx + ":   " + line).trim()
                         if (printOutput) {
-                            System.out.println(toWrite)
+                            project.logger.lifecycle(toWrite)
                         }
                         out.println(toWrite)
                     }
                 } catch (IOException ignored) {
                 }
                 finally {
-                    out.close()
-                    br.close()
+                    out?.close()
+                    br?.close()
                 }
             })
 
@@ -260,7 +270,7 @@ class KubesTest extends DefaultTask {
             tempDir.toFile().mkdirs()
         }
 
-        System.out.println("saving to " + podName + " results to: " + tempDir.toAbsolutePath().toFile().getAbsolutePath())
+        project.logger.lifecycle("saving to " + podName + " results to: " + tempDir.toAbsolutePath().toFile().getAbsolutePath())
         client.pods()
                 .inNamespace(namespace)
                 .withName(podName)

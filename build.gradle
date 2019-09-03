@@ -1,5 +1,4 @@
 import net.corda.testing.DistributedTesting
-import net.corda.testing.ImageBuilding
 
 buildscript {
     // For sharing constants between builds
@@ -120,7 +119,8 @@ buildscript {
         try {
             "git rev-parse HEAD".execute().text.trim()
         } catch (Exception ignored) {
-            "gitNotAvailable"
+            logger.warn("git is unavailable in build environment")
+            "unknown"
         }
     }()
     repositories {

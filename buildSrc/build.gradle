@@ -33,10 +33,10 @@ dependencies {
         project(p.path)
     }
     compile gradleApi()
-    compile 'io.fabric8:kubernetes-client:4.4.1'
-    compile group: 'commons-codec', name: 'commons-codec', version: '1.13'
-    compile group: "io.github.classgraph", name: "classgraph", version: class_graph_version
-    compile 'com.bmuschko:gradle-docker-plugin:5.0.0'
-
+    compile "io.fabric8:kubernetes-client:4.4.1"
+    compile 'org.apache.commons:commons-compress:1.19'
+    compile 'commons-codec:commons-codec:1.13'
+    compile "io.github.classgraph:classgraph:$class_graph_version"
+    compile "com.bmuschko:gradle-docker-plugin:5.0.0"
     testCompile "junit:junit:$junit_version"
 }

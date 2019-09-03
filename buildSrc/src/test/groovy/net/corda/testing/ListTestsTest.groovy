@@ -15,7 +15,7 @@ class ListTestsTest {
     @Test
     void shouldAllocateTests() {
 
-        for (int numberOfTests = 1; numberOfTests < 100; numberOfTests++) {
+        for (int numberOfTests = 0; numberOfTests < 100; numberOfTests++) {
             for (int numberOfForks = 1; numberOfForks < 100; numberOfForks++) {
 
 

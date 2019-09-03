@@ -138,9 +138,7 @@ class DistributedTesting implements Plugin<Project> {
     }
 
     private static void ensureImagePluginIsApplied(Project project) {
-        if (!project.plugins.hasPlugin(ImageBuilding)) {
-            project.plugins.apply(ImageBuilding)
-        }
+        project.plugins.apply(ImageBuilding)
     }
 
     private ListTests createTestListingTasks(Test task, Project subProject) {

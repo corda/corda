@@ -30,6 +30,7 @@ import org.gradle.api.tasks.TaskAction;
 import org.gradle.api.tasks.testing.Test;
 import org.gradle.internal.logging.ConsoleRenderer;
 import org.gradle.internal.operations.BuildOperationExecutor;
+import org.gradle.internal.operations.BuildOperationFailure;
 
 import javax.inject.Inject;
 import java.io.File;
@@ -42,7 +43,8 @@ import static org.gradle.internal.concurrent.CompositeStoppable.stoppable;
 import static org.gradle.util.CollectionUtils.collect;
 
 /**
- * Shameful copy of TestReportTask - modified to handle results from k8s testing.
+ * Shameful copy of org.gradle.api.tasks.testing.TestReport - modified to handle results from k8s testing.
+ * see https://docs.gradle.org/current/dsl/org.gradle.api.tasks.testing.TestReport.html
  */
 public class KubesReporting extends DefaultTask {
     private File destinationDir = new File(getProject().getBuildDir(), "test-reporting");
