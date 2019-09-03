@@ -14,10 +14,12 @@ import net.corda.core.transactions.LedgerTransaction
  * or included in an off-ledger data structure. [StatePointer]s can be resolved to a [StateAndRef] by performing a
  * vault query. There are two types of pointers; linear and static. [LinearPointer]s are for use with [LinearState]s.
  * [StaticPointer]s are for use with any type of [ContractState].
+ *
+ * @param resolveAtTransaction Determines whether the state pointer should be resolved to a reference input when used in a transaction.
  */
 @CordaSerializable
 @KeepForDJVM
-sealed class StatePointer<T : ContractState> {
+sealed class StatePointer<T : ContractState>(internal open val resolveAtTransaction: Boolean = true) {
     /**
      * An identifier for the [ContractState] that this [StatePointer] points to.
      */
@@ -54,7 +56,11 @@ sealed class StatePointer<T : ContractState> {
  *   throw a [TransactionResolutionException]
  */
 @KeepForDJVM
-class StaticPointer<T : ContractState>(override val pointer: StateRef, override val type: Class<T>) : StatePointer<T>() {
+class StaticPointer<T : ContractState>(
+        override val pointer: StateRef,
+        override val type: Class<T>,
+        override val resolveAtTransaction: Boolean = true
+) : StatePointer<T>(resolveAtTransaction) {
     /**
      * Resolves a [StaticPointer] to a [StateAndRef] via a [StateRef] look-up.
      */
@@ -99,7 +105,11 @@ class StaticPointer<T : ContractState>(override val pointer: StateRef, override 
  *   of the [LinearState] is available. See reference states documentation on docs.corda.net for more info.
  */
 @KeepForDJVM
-class LinearPointer<T : LinearState>(override val pointer: UniqueIdentifier, override val type: Class<T>) : StatePointer<T>() {
+class LinearPointer<T : LinearState>(
+        override val pointer: UniqueIdentifier,
+        override val type: Class<T>,
+        override val resolveAtTransaction: Boolean = true
+) : StatePointer<T>(resolveAtTransaction) {
     /**
      * Resolves a [LinearPointer] using the [UniqueIdentifier] contained in the [pointer] property. Returns a
      * [StateAndRef] containing the latest version of the [LinearState] that the node calling [resolve] is aware of.
