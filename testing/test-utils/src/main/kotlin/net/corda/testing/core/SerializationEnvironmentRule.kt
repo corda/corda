@@ -5,8 +5,7 @@ import com.nhaarman.mockito_kotlin.doAnswer
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.internal.staticField
 import net.corda.core.serialization.SerializationFactory
-import net.corda.core.serialization.internal.SerializationEnvironment
-import net.corda.core.serialization.internal.effectiveSerializationEnv
+import net.corda.core.serialization.internal.*
 import net.corda.testing.internal.*
 import org.apache.activemq.artemis.core.remoting.impl.invm.InVMConnector
 import org.junit.rules.TestRule
@@ -39,6 +38,11 @@ class SerializationEnvironmentRule(private val inheritable: Boolean = false) : T
     val serializationFactory: SerializationFactory get() = env.serializationFactory
 
     override fun apply(base: Statement, description: Description): Statement {
+        if (_allEnabledSerializationEnvs.isNotEmpty()) {
+            _driverSerializationEnv.set(null)
+            _contextSerializationEnv.set(null)
+            _inheritableContextSerializationEnv.set(null)
+        }
         env = createTestSerializationEnv()
         return object : Statement() {
             override fun evaluate() = env.asTestContextEnv(inheritable) { base.evaluate() }
