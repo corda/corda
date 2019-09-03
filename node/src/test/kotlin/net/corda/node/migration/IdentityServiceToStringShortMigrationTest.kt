@@ -57,9 +57,13 @@ class IdentityServiceToStringShortMigrationTest {
 
     @After
     fun close() {
-        contextTransactionOrNull?.close()
-        cordaDB.close()
-        liquibaseDB.close()
+        try{
+            contextTransactionOrNull?.close()
+            cordaDB.close()
+            liquibaseDB.close()
+        }catch (e: Exception){
+            //swallow as we don't need to do anything by this point
+        }
     }
 
     private fun saveAllIdentitiesWithOldHashString(identities: List<PartyAndCertificate>) {
