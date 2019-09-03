@@ -15,14 +15,7 @@ import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.nodeapi.internal.persistence.contextTransaction
 import java.util.*
 
-private const val IN_MEMORY_RESOLUTION_LIMIT_PROP_NAME = "net.corda.node.dbtransactionsresolver.InMemoryResolutionLimit"
-
 class DbTransactionsResolver(private val flow: ResolveTransactionsFlow) : TransactionsResolver {
-    companion object {
-        private val MAX_CHECKPOINT_RESOLUTION: Int = Integer.getInteger(IN_MEMORY_RESOLUTION_LIMIT_PROP_NAME, 0)
-    }
-
-    private var downloadedTxs: MutableMap<SecureHash, SignedTransaction>? = HashMap()
     private var sortedDependencies: List<SecureHash>? = null
     private val logger = flow.logger
 
@@ -60,7 +53,7 @@ class DbTransactionsResolver(private val flow: ResolveTransactionsFlow) : Transa
             }
 
             // Request the standalone transaction data (which may refer to things we don't yet have).
-            val requestedTxs = fetchRequiredTransactions(nextRequests)
+            val (existingTxIds, downloadedTxs) = fetchRequiredTransactions(Collections.singleton(nextRequests.first())) // Fetch first item only
 
             // When acquiring the write locks for the transaction chain, it is important that all required locks are acquired in the same
             // order when recording both verified and unverified transactions. In the verified case, the transactions must be recorded in
@@ -69,38 +62,19 @@ class DbTransactionsResolver(private val flow: ResolveTransactionsFlow) : Transa
             // sort is also updated here to ensure that this contains everything that needs locking in cases where the resolver switches
             // from checkpointing to storing unverified transactions in the database.
             val lockingSort = TopologicalSort()
-            for (tx in requestedTxs.second) {
+            for (tx in downloadedTxs) {
                 val dependencies = tx.dependencies
                 lockingSort.add(tx.id, dependencies)
                 topologicalSort.add(tx.id, dependencies)
             }
 
             var suspended = true
-            for (downloaded in requestedTxs.second) {
+            for (downloaded in downloadedTxs) {
                 suspended = false
                 val dependencies = downloaded.dependencies
-                val checkpointedTxs = this.downloadedTxs
-                if (checkpointedTxs != null) {
-                    if (checkpointedTxs.size < MAX_CHECKPOINT_RESOLUTION) {
-                        checkpointedTxs[downloaded.id] = downloaded
-                    } else {
-                        logger.debug {
-                            "Resolving transaction dependencies has reached a checkpoint limit of $MAX_CHECKPOINT_RESOLUTION " +
-                                    "transactions. Switching to the node database for storing the unverified transactions."
-                        }
-                        // For locking in this case, the full topological sort contains all the locks to be taken out.
-                        transactionStorage.lockObjectsForWrite(topologicalSort.complete(), contextTransaction, false) {
-                            checkpointedTxs.values.forEach(transactionStorage::addUnverifiedTransaction)
-                            // This acts as both a flag that we've switched over to storing the backchain into the db, and to remove what's been
-                            // built up in the checkpoint
-                            this.downloadedTxs = null
-                            transactionStorage.addUnverifiedTransaction(downloaded)
-                        }
-                    }
-                } else {
-                    transactionStorage.lockObjectsForWrite(lockingSort.complete(), contextTransaction, false) {
-                        transactionStorage.addUnverifiedTransaction(downloaded)
-                    }
+                // Do not keep in memory as this bloats the checkpoint. Write each item to the database.
+                transactionStorage.lockObjectsForWrite(lockingSort.complete(), contextTransaction, false) {
+                    transactionStorage.addUnverifiedTransaction(downloaded)
                 }
 
                 // The write locks are only released over a suspend, so need to keep track of whether the flow has been suspended to ensure
@@ -122,41 +96,28 @@ class DbTransactionsResolver(private val flow: ResolveTransactionsFlow) : Transa
 
             // It's possible that the node has a transaction in storage already. Dependencies should also be present for this transaction,
             // so just remove these IDs from the set of next requests.
-            nextRequests.removeAll(requestedTxs.first)
+            nextRequests.removeAll(existingTxIds)
         }
 
         sortedDependencies = topologicalSort.complete()
-        logger.debug { "Downloaded ${sortedDependencies?.size ?: 0} dependencies from remote peer for transactions ${flow.txHashes}" }
+        logger.debug { "Downloaded ${sortedDependencies?.size} dependencies from remote peer for transactions ${flow.txHashes}" }
     }
 
     override fun recordDependencies(usedStatesToRecord: StatesToRecord) {
-        logger.debug { "Recording ${this.sortedDependencies?.size ?: 0} dependencies for ${flow.txHashes.size} transactions" }
-        val downloadedTxs = this.downloadedTxs
         val sortedDependencies = checkNotNull(this.sortedDependencies)
+        logger.debug { "Recording ${sortedDependencies.size} dependencies for ${flow.txHashes.size} transactions" }
         val transactionStorage = flow.serviceHub.validatedTransactions as WritableTransactionStorage
         transactionStorage.lockObjectsForWrite(sortedDependencies, contextTransaction, true) {
-            if (downloadedTxs != null) {
-                for (txId in sortedDependencies) {
-                    val tx = downloadedTxs.getValue(txId)
-                    // For each transaction, verify it and insert it into the database. As we are iterating over them in a
-                    // depth-first order, we should not encounter any verification failures due to missing data. If we fail
-                    // half way through, it's no big deal, although it might result in us attempting to re-download data
-                    // redundantly next time we attempt verification.
+            for (txId in sortedDependencies) {
+                // Retrieve and delete the transaction from the unverified store.
+                val (tx, isVerified) = checkNotNull(transactionStorage.getTransactionInternal(txId)) {
+                    "Somehow the unverified transaction ($txId) that we stored previously is no longer there."
+                }
+                if (!isVerified) {
                     tx.verify(flow.serviceHub)
                     flow.serviceHub.recordTransactions(usedStatesToRecord, listOf(tx))
-                }
-            } else {
-                for (txId in sortedDependencies) {
-                    // Retrieve and delete the transaction from the unverified store.
-                    val (tx, isVerified) = checkNotNull(transactionStorage.getTransactionInternal(txId)) {
-                        "Somehow the unverified transaction ($txId) that we stored previously is no longer there."
-                    }
-                    if (!isVerified) {
-                        tx.verify(flow.serviceHub)
-                        flow.serviceHub.recordTransactions(usedStatesToRecord, listOf(tx))
-                    } else {
-                        logger.debug { "No need to record $txId as it's already been verified" }
-                    }
+                } else {
+                    logger.debug { "No need to record $txId as it's already been verified" }
                 }
             }
         }
@@ -177,17 +138,21 @@ class DbTransactionsResolver(private val flow: ResolveTransactionsFlow) : Transa
     class TopologicalSort {
         private val forwardGraph = HashMap<SecureHash, MutableSet<SecureHash>>()
         val transactionIds = LinkedHashSet<SecureHash>()
+        private val nonDupeHash = HashMap<SecureHash, SecureHash>()
+        private fun dedupe(sh: SecureHash): SecureHash = nonDupeHash.getOrPut(sh) { sh }
 
         /**
          * Add a transaction to the to-be-sorted set of transactions.
          * @param txId The ID of the transaction.
          * @param dependentIds the IDs of all the transactions [txId] depends on.
          */
-        fun add(txId: SecureHash, dependentIds: Set<SecureHash>) {
+        fun add(txIdp: SecureHash, dependentIds: Set<SecureHash>) {
+            val txId = dedupe(txIdp)
             require(transactionIds.add(txId)) { "Transaction ID $txId already seen" }
             dependentIds.forEach {
                 // Note that we use a LinkedHashSet here to make the traversal deterministic (as long as the input list is).
-                forwardGraph.computeIfAbsent(it) { LinkedHashSet() }.add(txId)
+                val deDupeIt = dedupe(it)
+                forwardGraph.computeIfAbsent(deDupeIt) { LinkedHashSet() }.add(txId)
             }
         }
 
@@ -206,7 +171,6 @@ class DbTransactionsResolver(private val flow: ResolveTransactionsFlow) : Transa
             }
 
             transactionIds.forEach(::visit)
-
             return result.apply(Collections::reverse)
         }
     }
