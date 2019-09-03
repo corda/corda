@@ -4,6 +4,7 @@ buildscript {
 
     ext {
         guava_version = constants.getProperty("guavaVersion")
+        class_graph_version = constants.getProperty('classgraphVersion')
         assertj_version = '3.9.1'
         junit_version = '4.12'
     }
@@ -12,6 +13,7 @@ buildscript {
 repositories {
     mavenLocal()
     mavenCentral()
+    jcenter()
 }
 
 allprojects {
@@ -30,4 +32,11 @@ dependencies {
     runtime project.childProjects.collect { n, p ->
         project(p.path)
     }
+    compile gradleApi()
+    compile "io.fabric8:kubernetes-client:4.4.1"
+    compile 'org.apache.commons:commons-compress:1.19'
+    compile 'commons-codec:commons-codec:1.13'
+    compile "io.github.classgraph:classgraph:$class_graph_version"
+    compile "com.bmuschko:gradle-docker-plugin:5.0.0"
+    testCompile "junit:junit:$junit_version"
 }

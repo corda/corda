@@ -5,10 +5,12 @@ import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.node.internal.FINANCE_CONTRACTS_CORDAPP
 import net.corda.testing.node.internal.FINANCE_WORKFLOWS_CORDAPP
+import org.junit.Ignore
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
+@Ignore
 class NodeRPCTests {
     private val CORDA_VERSION_REGEX = "\\d+(\\.\\d+)?(-\\w+)?".toRegex()
     private val CORDA_VENDOR = "Corda Open Source"

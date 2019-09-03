@@ -1,7 +1,3 @@
-plugins {
-    id 'com.bmuschko.docker-remote-api' version '3.4.4'
-}
-
 evaluationDependsOn(":node:capsule")
 
 import com.bmuschko.gradle.docker.tasks.image.DockerBuildImage
@@ -43,7 +39,7 @@ shadowJar {
 
 docker{
     registryCredentials  {
-        url = System.env.DOCKER_URL
+        url = System.env.DOCKER_URL ?: "hub.docker.com"
         username = System.env.DOCKER_USERNAME
         password = System.env.DOCKER_PASSWORD
     }

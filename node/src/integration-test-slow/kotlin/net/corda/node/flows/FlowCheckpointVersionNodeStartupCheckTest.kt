@@ -68,7 +68,7 @@ class FlowCheckpointVersionNodeStartupCheckTest {
 
         alice.stop() // Stop Alice so that Bob never receives the message
 
-        bob.rpc.startFlow(::ReceiverFlow, alice.nodeInfo.singleIdentity())
+        bob.rpc.startFlow(FlowCheckpointVersionNodeStartupCheckTest::ReceiverFlow, alice.nodeInfo.singleIdentity())
         // Wait until Bob's flow has started
         bob.rpc.stateMachinesFeed().let { it.updates.map { it.id }.startWith(it.snapshot.map { it.id }) }.toBlocking().first()
         bob.stop()

@@ -4,7 +4,12 @@ buildscript {
     file("$projectDir/src/main/resources/build.properties").withInputStream { properties.load(it) }
 
     ext.jolokia_version = properties.getProperty('jolokiaAgentVersion')
+
+    dependencies {
+        classpath group: 'com.github.docker-java', name: 'docker-java', version: '3.1.5'
+    }
 }
+
 
 plugins {
     id 'com.google.cloud.tools.jib' version '0.9.4'
@@ -25,6 +30,9 @@ description 'Corda node modules'
 configurations {
     integrationTestCompile.extendsFrom testCompile
     integrationTestRuntimeOnly.extendsFrom testRuntimeOnly
+    
+    slowIntegrationTestCompile.extendsFrom testCompile
+    slowIntegrationTestRuntimeOnly.extendsFrom testRuntimeOnly
 }
 
 sourceSets {
@@ -43,13 +51,28 @@ sourceSets {
             srcDir file('src/integration-test/resources')
         }
     }
+    slowIntegrationTest {
+        kotlin {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test-slow/kotlin')
+        }
+        java {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test-slow/java')
+        }
+        resources {
+            srcDir file('src/integration-test-slow/resources')
+        }
+    }
 }
 
 jib.container {
-  mainClass = "net.corda.node.Corda"
-  args = ['--log-to-console', '--no-local-shell', '--config-file=/config/node.conf']
-  // The Groovy string needs to be converted to a `java.lang.String` below.
-  jvmFlags = ['-Xmx1g', "-javaagent:/app/libs/quasar-core-${quasar_version}-jdk8.jar".toString()]
+    mainClass = "net.corda.node.Corda"
+    args = ['--log-to-console', '--no-local-shell', '--config-file=/config/node.conf']
+    // The Groovy string needs to be converted to a `java.lang.String` below.
+    jvmFlags = ['-Xmx1g', "-javaagent:/app/libs/quasar-core-${quasar_version}-jdk8.jar".toString()]
 }
 
 // Use manual resource copying of log4j2.xml rather than source sets.
@@ -74,7 +97,7 @@ dependencies {
     compile project(':common-validation')
     compile project(':common-configuration-parsing')
     compile project(':common-logging')
-    
+
     // Backwards compatibility goo: Apps expect confidential-identities to be loaded by default.
     // We could eventually gate this on a target-version check.
     compile project(':confidential-identities')
@@ -107,7 +130,7 @@ dependencies {
     compile "commons-beanutils:commons-beanutils:${beanutils_version}"
     compile "org.apache.activemq:artemis-server:${artemis_version}"
     compile "org.apache.activemq:artemis-core-client:${artemis_version}"
-    runtime ("org.apache.activemq:artemis-amqp-protocol:${artemis_version}") {
+    runtime("org.apache.activemq:artemis-amqp-protocol:${artemis_version}") {
         // Gains our proton-j version from core module.
         exclude group: 'org.apache.qpid', module: 'proton-j'
     }
@@ -201,6 +224,13 @@ dependencies {
 
     testCompile(project(':test-cli'))
     testCompile(project(':test-utils'))
+
+    slowIntegrationTestCompile sourceSets.main.output
+    slowIntegrationTestCompile sourceSets.test.output
+    slowIntegrationTestCompile configurations.compile
+    slowIntegrationTestCompile configurations.testCompile
+    slowIntegrationTestRuntime configurations.runtime
+    slowIntegrationTestRuntime configurations.testRuntime
 }
 
 tasks.withType(JavaCompile) {
@@ -208,15 +238,16 @@ tasks.withType(JavaCompile) {
     options.compilerArgs << '-proc:none'
 }
 
-test {
-    maxHeapSize = "3g"
-    maxParallelForks = (System.env.CORDA_NODE_TESTING_FORKS == null) ? 1 : "$System.env.CORDA_NODE_TESTING_FORKS".toInteger()
-}
-
 task integrationTest(type: Test) {
     testClassesDirs = sourceSets.integrationTest.output.classesDirs
     classpath = sourceSets.integrationTest.runtimeClasspath
-    maxParallelForks = (System.env.CORDA_NODE_INT_TESTING_FORKS == null) ? 1 :  "$System.env.CORDA_NODE_INT_TESTING_FORKS".toInteger()
+    maxParallelForks = (System.env.CORDA_NODE_INT_TESTING_FORKS == null) ? 1 : "$System.env.CORDA_NODE_INT_TESTING_FORKS".toInteger()
+}
+
+task slowIntegrationTest(type: Test) {
+    testClassesDirs = sourceSets.slowIntegrationTest.output.classesDirs
+    classpath = sourceSets.slowIntegrationTest.runtimeClasspath
+    maxParallelForks = 1
 }
 
 // quasar exclusions upon agent code instrumentation at run-time
@@ -254,4 +285,9 @@ jar {
 
 publish {
     name jar.baseName
+}
+
+test {
+    maxHeapSize = "3g"
+    maxParallelForks = (System.env.CORDA_NODE_TESTING_FORKS == null) ? 1 : "$System.env.CORDA_NODE_TESTING_FORKS".toInteger()
 }
