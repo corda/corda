@@ -34,9 +34,9 @@ class KubesTest extends DefaultTask {
 
     String namespace = "thisisatest"
     int k8sTimeout = 50 * 1_000
-    def webSocketTimeout = k8sTimeout * 6
+    int webSocketTimeout = k8sTimeout * 6
     int numberOfPods = 20
-    def timeoutInMinutesForPodToStart = 60
+    int timeoutInMinutesForPodToStart = 60
 
 
     @TaskAction
