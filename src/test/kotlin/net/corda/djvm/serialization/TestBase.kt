@@ -2,6 +2,7 @@ package net.corda.djvm.serialization
 
 import net.corda.core.serialization.ConstructorForDeserialization
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.DeprecatedConstructorForDeserialization
 import net.corda.djvm.SandboxConfiguration
 import net.corda.djvm.SandboxConfiguration.Companion.ALL_DEFINITION_PROVIDERS
 import net.corda.djvm.SandboxConfiguration.Companion.ALL_EMITTERS
@@ -52,7 +53,8 @@ abstract class TestBase(type: SandboxType) {
                 whitelist = MINIMAL,
                 visibleAnnotations = setOf(
                     CordaSerializable::class.java,
-                    ConstructorForDeserialization::class.java
+                    ConstructorForDeserialization::class.java,
+                    DeprecatedConstructorForDeserialization::class.java
                 ),
                 bootstrapSource = BootstrapClassLoader(DETERMINISTIC_RT)
             )

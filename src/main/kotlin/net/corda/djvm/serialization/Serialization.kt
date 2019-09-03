@@ -6,6 +6,7 @@ import net.corda.core.serialization.SerializationContext.UseCase
 import net.corda.core.serialization.SerializationFactory
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.internal.SerializationEnvironment
+import net.corda.core.utilities.ByteSequence
 import net.corda.djvm.execution.SandboxRuntimeException
 import net.corda.djvm.rewiring.SandboxClassLoader
 import net.corda.djvm.serialization.serializers.PrimitiveSerializer
@@ -73,11 +74,11 @@ inline fun <reified T : Any> SerializedBytes<T>.deserializeFor(classLoader: Sand
     return deserializeTo(clazz, classLoader)
 }
 
-fun SerializedBytes<*>.deserializeTo(clazz: Class<*>, classLoader: SandboxClassLoader): Any {
+fun ByteSequence.deserializeTo(clazz: Class<*>, classLoader: SandboxClassLoader): Any {
     return deserializeTo(clazz, classLoader, SerializationFactory.defaultFactory)
 }
 
-fun SerializedBytes<*>.deserializeTo(clazz: Class<*>, classLoader: SandboxClassLoader, factory: SerializationFactory): Any {
+fun ByteSequence.deserializeTo(clazz: Class<*>, classLoader: SandboxClassLoader, factory: SerializationFactory): Any {
     val obj = factory.deserialize(this, Any::class.java, factory.defaultContext)
     return if (clazz.isInstance(obj)) {
         obj
