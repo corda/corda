@@ -1,6 +1,6 @@
 package net.corda.core.internal.messaging
 
-import net.corda.core.internal.AttachmentTrustRoot
+import net.corda.core.internal.AttachmentTrustInfo
 import net.corda.core.messaging.CordaRPCOps
 
 /**
@@ -12,5 +12,5 @@ interface InternalCordaRPCOps : CordaRPCOps {
     fun dumpCheckpoints()
 
     /** Get the attachment trust roots */
-    fun getAttachmentTrustRoots(): List<AttachmentTrustRoot>
+    fun getAttachmentTrustRoots(): List<AttachmentTrustInfo>
 }

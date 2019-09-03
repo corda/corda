@@ -1,6 +1,6 @@
 package net.corda.tools.shell
 
-import net.corda.core.internal.AttachmentTrustRoot
+import net.corda.core.internal.AttachmentTrustInfo
 import net.corda.core.internal.P2P_UPLOADER
 import org.crsh.text.Color
 import org.crsh.text.Decoration
@@ -12,7 +12,7 @@ import org.crsh.text.ui.TableElement
 
 class AttachmentTrustTable(
     writer: RenderPrintWriter,
-    private val attachmentTrustRoots: List<AttachmentTrustRoot>
+    private val attachmentTrustInfos: List<AttachmentTrustInfo>
 ) {
 
     private val content: TableElement
@@ -36,8 +36,8 @@ class AttachmentTrustTable(
     }
 
     private fun createRows() {
-        for (attachmentTrustRoot in attachmentTrustRoots) {
-            attachmentTrustRoot.run {
+        for (info in attachmentTrustInfos) {
+            info.run {
                 val name = when {
                     fileName != null -> fileName!!
                     uploader?.startsWith(P2P_UPLOADER) ?: false -> {

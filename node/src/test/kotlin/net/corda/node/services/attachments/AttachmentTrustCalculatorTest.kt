@@ -10,7 +10,6 @@ import net.corda.core.crypto.sha256
 import net.corda.core.internal.*
 import net.corda.core.node.ServicesForResolution
 import net.corda.node.services.persistence.NodeAttachmentService
-import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.common.internal.testNetworkParameters
@@ -18,7 +17,6 @@ import net.corda.testing.core.internal.ContractJarTestUtils
 import net.corda.testing.core.internal.JarSignatureTestUtils.generateKey
 import net.corda.testing.core.internal.JarSignatureTestUtils.signJar
 import net.corda.testing.core.internal.SelfCleaningDir
-import net.corda.testing.internal.LogHelper
 import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.internal.configureDatabase
 import net.corda.testing.internal.rigorousMock
@@ -29,7 +27,6 @@ import org.junit.Before
 import org.junit.Test
 import java.nio.file.FileSystem
 import java.nio.file.Path
-import kotlin.io.outputStream
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
@@ -472,28 +469,28 @@ class AttachmentTrustCalculatorTest {
             val attachmentD = zipD.read { storage.privilegedImportAttachment(it, "untrusted", null) }
 
             assertThat(attachmentTrustCalculator.calculateAllTrustRoots()).containsOnly(
-                AttachmentTrustRoot(
+                AttachmentTrustInfo(
                     attachmentId = attachmentA,
                     fileName = "A.jar",
                     uploader = "app",
                     trustRootId = attachmentA,
                     trustRootFileName = "A.jar"
                 ),
-                AttachmentTrustRoot(
+                AttachmentTrustInfo(
                     attachmentId = attachmentB,
                     fileName = "B.jar",
                     uploader = "untrusted",
                     trustRootId = attachmentA,
                     trustRootFileName = "A.jar"
                 ),
-                AttachmentTrustRoot(
+                AttachmentTrustInfo(
                     attachmentId = attachmentC,
                     fileName = "C.zip",
                     uploader = "app",
                     trustRootId = attachmentC,
                     trustRootFileName = "C.zip"
                 ),
-                AttachmentTrustRoot(
+                AttachmentTrustInfo(
                     attachmentId = attachmentD,
                     fileName = null,
                     uploader = "untrusted",
@@ -532,14 +529,14 @@ class AttachmentTrustCalculatorTest {
             val attachmentB = jarSignedByAB.read { storage.privilegedImportAttachment(it, "untrusted", "B.jar") }
 
             assertThat(attachmentTrustCalculator.calculateAllTrustRoots()).containsOnly(
-                AttachmentTrustRoot(
+                AttachmentTrustInfo(
                     attachmentId = attachmentA,
                     fileName = "A.jar",
                     uploader = "app",
                     trustRootId = attachmentA,
                     trustRootFileName = "A.jar"
                 ),
-                AttachmentTrustRoot(
+                AttachmentTrustInfo(
                     attachmentId = attachmentB,
                     fileName = "B.jar",
                     uploader = "untrusted",

@@ -73,10 +73,10 @@ class NodeAttachmentTrustCalculator(
         }
     }
 
-    override fun calculateAllTrustRoots(): List<AttachmentTrustRoot> {
+    override fun calculateAllTrustRoots(): List<AttachmentTrustInfo> {
 
         val publicKeyToTrustRootMap = mutableMapOf<PublicKey, TrustedAttachment>()
-        val attachmentTrustRoots = mutableListOf<AttachmentTrustRoot>()
+        val attachmentTrustInfos = mutableListOf<AttachmentTrustInfo>()
 
         for ((name, attachment) in getTrustedAttachments()) {
             attachment.signerKeys.forEach {
@@ -87,7 +87,7 @@ class NodeAttachmentTrustCalculator(
                     TrustedAttachment(attachment.id, name)
                 )
             }
-            attachmentTrustRoots += AttachmentTrustRoot(
+            attachmentTrustInfos += AttachmentTrustInfo(
                 attachmentId = attachment.id,
                 fileName = name,
                 uploader = attachment.uploader,
@@ -103,7 +103,7 @@ class NodeAttachmentTrustCalculator(
                     .mapNotNull { publicKeyToTrustRootMap[it] }
                     .firstOrNull()
             }
-            attachmentTrustRoots += AttachmentTrustRoot(
+            attachmentTrustInfos += AttachmentTrustInfo(
                 attachmentId = attachment.id,
                 fileName = name,
                 uploader = attachment.uploader,
@@ -112,7 +112,7 @@ class NodeAttachmentTrustCalculator(
             )
         }
 
-        return attachmentTrustRoots
+        return attachmentTrustInfos
     }
 
     private fun getTrustedAttachments() = attachmentStorage.getAllAttachmentsByCriteria(

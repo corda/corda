@@ -22,16 +22,16 @@ interface AttachmentTrustCalculator {
 
     /**
      * Calculates the trust of attachments stored within the node. Applies the same logic as
-     * [isAttachmentTrusted] when calculating the trust of an attachment.
+     * [calculate] when calculating the trust of an attachment.
      */
-    fun calculateAllTrustRoots(): List<AttachmentTrustRoot>
+    fun calculateAllTrustRoots(): List<AttachmentTrustInfo>
 }
 
 /**
  * Data class containing information about an attachment's trust root.
  */
 @CordaSerializable
-data class AttachmentTrustRoot(
+data class AttachmentTrustInfo(
     val attachmentId: AttachmentId,
     val fileName: String?,
     val uploader: String?,
