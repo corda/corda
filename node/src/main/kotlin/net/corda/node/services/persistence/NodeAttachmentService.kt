@@ -562,10 +562,10 @@ class NodeAttachmentService @JvmOverloads constructor(
             emptyList()
     }
 
-    override fun getAllAttachments(): List<Pair<String?, Attachment>> {
+    override fun getAllAttachmentsByCriteria(criteria: AttachmentQueryCriteria): List<Pair<String?, Attachment>> {
         return database.transaction {
             createAttachmentsQuery(
-                AttachmentQueryCriteria.AttachmentsQueryCriteria(),
+                criteria,
                 null
             ).resultList.map { it.filename to createAttachmentFromDatabase(it) }
         }

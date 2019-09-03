@@ -4,6 +4,7 @@ import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.ContractAttachment
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.*
+import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.vault.AttachmentQueryCriteria
 import net.corda.core.node.services.vault.Builder
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -54,7 +55,7 @@ class NodeAttachmentTrustCalculator(
         if (trustedByUploader) {
             // add signers to the cache as this is a fully trusted attachment
             attachment.signerKeys
-                .filter { signer -> signer.isBlacklisted() }
+                .filterNot { it.isBlacklisted() }
                 .forEach { trustedKeysCache[it] = true }
             return true
         }
@@ -73,41 +74,64 @@ class NodeAttachmentTrustCalculator(
     }
 
     override fun calculateAllTrustRoots(): List<AttachmentTrustRoot> {
-        val attachments = attachmentStorage.getAllAttachments()
-        return attachments.map { it.calculateAttachmentTrustRoot(attachments) }
+
+        val publicKeyToTrustRootMap = mutableMapOf<PublicKey, TrustedAttachment>()
+        val attachmentTrustRoots = mutableListOf<AttachmentTrustRoot>()
+
+        for ((name, attachment) in getTrustedAttachments()) {
+            attachment.signerKeys.forEach {
+                // add signers to the cache as this is a fully trusted attachment
+                trustedKeysCache[it] = true
+                publicKeyToTrustRootMap.putIfAbsent(
+                    it,
+                    TrustedAttachment(attachment.id, name)
+                )
+            }
+            attachmentTrustRoots += AttachmentTrustRoot(
+                attachmentId = attachment.id,
+                fileName = name,
+                uploader = attachment.uploader,
+                trustRootId = attachment.id,
+                trustRootFileName = name
+            )
+        }
+
+        for ((name, attachment) in getUntrustedAttachments()) {
+            val trustRoot = when {
+                attachment.isSignedByBlacklistedKeys() -> null
+                else -> attachment.signerKeys
+                    .mapNotNull { publicKeyToTrustRootMap[it] }
+                    .firstOrNull()
+            }
+            attachmentTrustRoots += AttachmentTrustRoot(
+                attachmentId = attachment.id,
+                fileName = name,
+                uploader = attachment.uploader,
+                trustRootId = trustRoot?.id,
+                trustRootFileName = trustRoot?.name
+            )
+        }
+
+        return attachmentTrustRoots
     }
 
-    private fun Pair<String?, Attachment>.calculateAttachmentTrustRoot(
-        attachments: List<Pair<String?, Attachment>>
-    ): AttachmentTrustRoot {
-        val (name, attachment) = this
-        val trustRoot = when {
-            isUploaderTrusted(attachment.uploader) -> {
-                // add signers to the cache as this is a fully trusted attachment
-                attachment.signerKeys
-                    .filter { it.isBlacklisted() }
-                    .forEach { trustedKeysCache[it] = true }
-                this
-            }
-            attachment.isSignedByBlacklistedKeys() -> null
-            else -> {
-                (attachments - this).firstOrNull { (_, attachmentBeingCompared) ->
-                    attachment.signerKeys.any { signer ->
-                        isUploaderTrusted(attachmentBeingCompared.uploader) && attachmentBeingCompared.signerKeys.contains(
-                            signer
-                        )
-                    }
-                }
-            }
-        }
-        return AttachmentTrustRoot(
-            attachment.id,
-            name,
-            attachment.uploader,
-            trustRoot?.second?.id,
-            trustRoot?.first
+    private fun getTrustedAttachments() = attachmentStorage.getAllAttachmentsByCriteria(
+        AttachmentQueryCriteria.AttachmentsQueryCriteria(
+            uploaderCondition = Builder.`in`(
+                TRUSTED_UPLOADERS
+            )
         )
-    }
+    )
+
+    private fun getUntrustedAttachments() = attachmentStorage.getAllAttachmentsByCriteria(
+        AttachmentQueryCriteria.AttachmentsQueryCriteria(
+            uploaderCondition = Builder.notIn(
+                TRUSTED_UPLOADERS
+            )
+        )
+    )
+
+    private data class TrustedAttachment(val id: AttachmentId, val name: String?)
 
     private fun Attachment.isSignedByBlacklistedKeys() =
         signerKeys.any { it.isBlacklisted() }

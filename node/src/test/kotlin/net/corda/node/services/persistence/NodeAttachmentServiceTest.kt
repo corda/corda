@@ -904,12 +904,12 @@ class NodeAttachmentServiceTest {
     }
 
     @Test
-    fun `getAllAttachments returns no attachments if there are no stored attachments`() {
-        assertTrue(storage.getAllAttachments().isEmpty())
+    fun `getAllAttachmentsByCriteria returns no attachments if there are no stored attachments`() {
+        assertTrue(storage.getAllAttachmentsByCriteria().isEmpty())
     }
 
     @Test
-    fun `getAllAttachments returns all stored attachments`() {
+    fun `getAllAttachmentsByCriteria returns all stored attachments when no filtering is applied`() {
         SelfCleaningDir().use { file ->
             val aliasA = "Spiderman"
             val password = "why is Sony taking me out of the MCU?!?!"
@@ -920,15 +920,15 @@ class NodeAttachmentServiceTest {
 
             val unsignedJar = makeTestContractJar(file.path, "foo.bar.DifferentContract")
 
-            val (zipC, hashB) = makeTestJar(listOf(Pair("file", "content")))
-            val (zipD, hashC) = makeTestJar(listOf(Pair("magic_file", "magic_content_puff")))
+            val (zipC, _) = makeTestJar(listOf(Pair("file", "content")))
+            val (zipD, _) = makeTestJar(listOf(Pair("magic_file", "magic_content_puff")))
 
             val attachmentA = signedJar.read { storage.privilegedImportAttachment(it, "app", "A.jar") }
             val attachmentB = unsignedJar.read { storage.privilegedImportAttachment(it, "untrusted", "B.jar") }
             val attachmentC = zipC.read { storage.privilegedImportAttachment(it, "untrusted", "C.zip") }
             val attachmentD = zipD.read { storage.privilegedImportAttachment(it, "untrusted", null) }
 
-            val result = storage.getAllAttachments()
+            val result = storage.getAllAttachmentsByCriteria()
             assertEquals(4, result.size)
             assertThat(result.map { (_, attachment) -> attachment.id }).containsOnly(
                 attachmentA, attachmentB, attachmentC, attachmentD
@@ -938,6 +938,34 @@ class NodeAttachmentServiceTest {
             )
             assertThat(result.map { (_, attachment) -> attachment.signerKeys }).containsOnly(
                 listOf(key), emptyList(), emptyList(), emptyList()
+            )
+        }
+    }
+
+    @Test
+    fun `getAllAttachmentsByCriteria returns attachments filtered by criteria`() {
+        SelfCleaningDir().use { file ->
+            val aliasA = "Dan"
+            val password = "i am so tired with this work"
+            file.path.generateKey(aliasA, password)
+
+            val signedJar = makeTestContractJar(file.path, "foo.bar.DummyContract")
+            file.path.signJar(signedJar.toAbsolutePath().toString(), aliasA, password)
+
+            val unsignedJar = makeTestContractJar(file.path, "foo.bar.DifferentContract")
+
+            val (zipC, _) = makeTestJar(listOf(Pair("file", "content")))
+            val (zipD, _) = makeTestJar(listOf(Pair("magic_file", "magic_content_puff")))
+
+            val attachmentA = signedJar.read { storage.privilegedImportAttachment(it, "app", "A.jar") }
+            val attachmentB = unsignedJar.read { storage.privilegedImportAttachment(it, "untrusted", "B.jar") }
+            zipC.read { storage.privilegedImportAttachment(it, "untrusted", "C.zip") }
+            zipD.read { storage.privilegedImportAttachment(it, "untrusted", null) }
+
+            val result = storage.getAllAttachmentsByCriteria(AttachmentsQueryCriteria(filenameCondition = Builder.`in`(listOf("A.jar", "B.jar"))))
+            assertEquals(2, result.size)
+            assertThat(result.map { (_, attachment) -> attachment.id }).containsOnly(
+                attachmentA, attachmentB
             )
         }
     }

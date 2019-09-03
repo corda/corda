@@ -33,8 +33,8 @@ class InternalMockAttachmentStorage(storage: MockAttachmentStorage) : Attachment
         }
     }
 
-    override fun getAllAttachments(): List<Pair<String?, Attachment>> {
-        return queryAttachments(AttachmentQueryCriteria.AttachmentsQueryCriteria())
+    override fun getAllAttachmentsByCriteria(criteria: AttachmentQueryCriteria): List<Pair<String?, Attachment>> {
+        return queryAttachments(criteria)
             .map(this::openAttachment)
             .map { null to it!! }
     }
