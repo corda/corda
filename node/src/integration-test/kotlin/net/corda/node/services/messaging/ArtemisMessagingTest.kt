@@ -50,7 +50,7 @@ class ArtemisMessagingTest {
 
     @Rule
     @JvmField
-    val testSerialization = SerializationEnvironmentRule()
+    val testSerialization = SerializationEnvironmentRule(true)
 
     @Rule
     @JvmField
