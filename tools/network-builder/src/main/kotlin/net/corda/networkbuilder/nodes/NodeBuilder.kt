@@ -6,9 +6,9 @@ import com.github.dockerjava.core.command.BuildImageResultCallback
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigValueFactory
-import net.corda.networkbuilder.docker.DockerUtils
 import net.corda.common.configuration.parsing.internal.Configuration
 import net.corda.common.validation.internal.Validated
+import net.corda.networkbuilder.docker.DockerUtils
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.parseAsNodeConfiguration
 import org.slf4j.LoggerFactory

@@ -324,10 +324,10 @@ open class NetworkRegistrationHelper(
     protected open fun isTlsCrlIssuerCertRequired(): Boolean = false
 }
 
-class NodeRegistrationConfiguration (
+class NodeRegistrationConfiguration(
         val p2pSslOptions: MutualSslConfiguration,
-        val myLegalName : CordaX500Name,
-        val tlsCertCrlIssuer : X500Principal?,
+        val myLegalName: CordaX500Name,
+        val tlsCertCrlIssuer: X500Principal?,
         val tlsCertCrlDistPoint: URL?,
         val certificatesDirectory: Path,
         val emailAddress: String,

@@ -17,6 +17,7 @@ import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashIssueAndPaymentFlow
 import net.corda.finance.schemas.CashSchemaV1
 import net.corda.node.services.Permissions
+import net.corda.node.services.rpc.RpcReconnectTests.Companion.NUMBER_OF_FLOWS_TO_RUN
 import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.DUMMY_BANK_B_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME

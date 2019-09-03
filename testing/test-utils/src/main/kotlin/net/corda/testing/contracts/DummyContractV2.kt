@@ -15,7 +15,6 @@ class DummyContractV2 : UpgradedContractWithLegacyConstraint<DummyContract.State
     companion object {
         const val PROGRAM_ID: ContractClassName = "net.corda.testing.contracts.DummyContractV2"
 
-
         /**
          * An overload of move for just one input state.
          */
@@ -27,7 +26,7 @@ class DummyContractV2 : UpgradedContractWithLegacyConstraint<DummyContract.State
          */
         @JvmStatic
         fun move(priors: List<StateAndRef<State>>, newOwner: AbstractParty): TransactionBuilder {
-            require(priors.isNotEmpty()){"States to move to new owner must not be empty"}
+            require(priors.isNotEmpty()) { "States to move to new owner must not be empty" }
             val priorState = priors[0].state.data
             val (cmd, state) = priorState.withNewOwner(newOwner)
             return TransactionBuilder(notary = priors[0].state.notary).withItems(

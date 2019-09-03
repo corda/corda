@@ -3,24 +3,19 @@ package net.corda.node.logging
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.StartableByRPC
-import net.corda.core.internal.div
 import net.corda.core.messaging.FlowHandle
 import net.corda.core.messaging.startFlow
-import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.DUMMY_BANK_A_NAME
-import net.corda.core.utilities.loggerFor
 import net.corda.testing.driver.DriverParameters
-import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.driver
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.ClassRule
 import org.junit.Test
-import java.io.File
 
 class ErrorCodeLoggingTests : IntegrationTest() {
     companion object {
@@ -55,11 +50,11 @@ class ErrorCodeLoggingTests : IntegrationTest() {
             val linesWithoutError = logFile.useLines { lines ->
                 lines.filterNot {
                     it.contains("[ERROR")
-                }.filter{
+                }.filter {
                     it.contains("[INFO")
-                        .or(it.contains("[WARN"))
-                        .or(it.contains("[DEBUG"))
-                        .or(it.contains("[TRACE"))
+                            .or(it.contains("[WARN"))
+                            .or(it.contains("[DEBUG"))
+                            .or(it.contains("[TRACE"))
                 }.toList()
             }
             assertThat(linesWithoutError.isEmpty()).isTrue()

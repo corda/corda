@@ -177,8 +177,9 @@ internal class CordaRPCOpsImpl(
                 platformVersion = CordaVersion.platformVersion,
                 vendor = CordaVersion.vendor,
                 cordapps = services.cordappProvider.cordapps
-                            .filter { !it.jarPath.toString().endsWith("corda-core-${CordaVersion.releaseVersion}.jar") }
-                            .map { CordappInfo(
+                        .filter { !it.jarPath.toString().endsWith("corda-core-${CordaVersion.releaseVersion}.jar") }
+                        .map {
+                            CordappInfo(
                                     type = when (it.info) {
                                         is Cordapp.Info.Contract -> "Contract CorDapp"
                                         is Cordapp.Info.Workflow -> "Workflow CorDapp"
@@ -192,7 +193,7 @@ internal class CordaRPCOpsImpl(
                                     vendor = it.info.vendor,
                                     licence = it.info.licence,
                                     jarHash = it.jarHash)
-                            }
+                        }
         )
     }
 

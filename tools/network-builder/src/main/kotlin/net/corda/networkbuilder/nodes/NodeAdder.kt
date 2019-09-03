@@ -1,8 +1,8 @@
 package net.corda.networkbuilder.nodes
 
+import net.corda.core.identity.CordaX500Name
 import net.corda.networkbuilder.containers.instance.InstanceInfo
 import net.corda.networkbuilder.context.Context
-import net.corda.core.identity.CordaX500Name
 import java.util.concurrent.CompletableFuture
 
 class NodeAdder(val context: Context,
@@ -13,7 +13,8 @@ class NodeAdder(val context: Context,
             val nodeGroup = context.nodes[nodeGroupName]!!
             val nodeInfo = nodeGroup.iterator().next()
             val currentNodeSize = nodeGroup.size
-            val newInstanceX500 = x500ToAdd?.toString() ?: nodeInfo.groupX500!!.copy(commonName = nodeInfo.groupX500.commonName + (currentNodeSize)).toString()
+            val newInstanceX500 = x500ToAdd?.toString()
+                    ?: nodeInfo.groupX500!!.copy(commonName = nodeInfo.groupX500.commonName + (currentNodeSize)).toString()
             val newInstanceName = nodeGroupName + (currentNodeSize)
             val nextNodeInfo = nodeInfo.copy(
                     instanceX500 = newInstanceX500,

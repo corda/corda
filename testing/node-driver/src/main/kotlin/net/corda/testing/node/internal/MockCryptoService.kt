@@ -41,7 +41,7 @@ class MockCryptoService(initialKeyPairs: Map<String, KeyPair>) : CryptoService {
 
     override fun sign(alias: String, data: ByteArray, signAlgorithm: String?): ByteArray {
         try {
-            return when(signAlgorithm) {
+            return when (signAlgorithm) {
                 null -> Crypto.doSign(aliasToKey[alias]!!.private, data)
                 else -> signWithAlgorithm(alias, data, signAlgorithm)
             }

@@ -3,10 +3,10 @@ package net.corda.coretests.transactions
 import net.corda.core.contracts.*
 import net.corda.core.contracts.ComponentGroupEnum.*
 import net.corda.core.crypto.*
-import net.corda.core.internal.createComponentGroups
 import net.corda.core.internal.accessAvailableComponentHashes
 import net.corda.core.internal.accessGroupHashes
 import net.corda.core.internal.accessGroupMerkleRoots
+import net.corda.core.internal.createComponentGroups
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.*
 import net.corda.core.utilities.OpaqueBytes
@@ -17,7 +17,6 @@ import org.junit.Rule
 import org.junit.Test
 import java.time.Instant
 import java.util.function.Predicate
-import kotlin.reflect.KVisibility
 import kotlin.test.*
 
 class CompatibleTransactionTests {
@@ -419,7 +418,6 @@ class CompatibleTransactionTests {
     fun `FilteredTransaction signer manipulation tests`() {
         // Required to call the private constructor.
         val ftxConstructor = FilteredTransaction::class.constructors.first()
-
 
         // 1st and 3rd commands require a signature from KEY_1.
         val twoCommandsforKey1 = listOf(dummyCommand(DUMMY_KEY_1.public, DUMMY_KEY_2.public), dummyCommand(DUMMY_KEY_2.public), dummyCommand(DUMMY_KEY_1.public))
