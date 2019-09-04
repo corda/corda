@@ -41,7 +41,6 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
                                      private val database: CordaPersistence,
                                      private val identityService: IdentityService) : NetworkMapCacheInternal, SingletonSerializeAsToken() {
 
-
     companion object {
         private val logger = contextLogger()
     }

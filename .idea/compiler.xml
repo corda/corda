@@ -301,19 +301,264 @@
       <module name="corda-enterprise-testing_test" target="1.8" />
       <module name="corda-enterprise-tools_main" target="1.8" />
       <module name="corda-enterprise-tools_test" target="1.8" />
+      <module name="corda-enterprise.bridge.bridgecapsule.main" target="1.8" />
+      <module name="corda-enterprise.bridge.bridgecapsule.smokeTest" target="1.8" />
+      <module name="corda-enterprise.bridge.bridgecapsule.test" target="1.8" />
+      <module name="corda-enterprise.bridge.integrationTest" target="1.8" />
+      <module name="corda-enterprise.bridge.main" target="1.8" />
+      <module name="corda-enterprise.bridge.test" target="1.8" />
       <module name="corda-enterprise.buildSrc.canonicalizer.main" target="1.8" />
       <module name="corda-enterprise.buildSrc.canonicalizer.test" target="1.8" />
+      <module name="corda-enterprise.buildSrc.main" target="1.8" />
+      <module name="corda-enterprise.buildSrc.test" target="1.8" />
+      <module name="corda-enterprise.client.jackson.main" target="1.8" />
+      <module name="corda-enterprise.client.jackson.test" target="1.8" />
+      <module name="corda-enterprise.client.jfx.integrationTest" target="1.8" />
+      <module name="corda-enterprise.client.jfx.main" target="1.8" />
+      <module name="corda-enterprise.client.jfx.test" target="1.8" />
+      <module name="corda-enterprise.client.main" target="1.8" />
+      <module name="corda-enterprise.client.mock.main" target="1.8" />
+      <module name="corda-enterprise.client.mock.test" target="1.8" />
+      <module name="corda-enterprise.client.rpc.integrationTest" target="1.8" />
+      <module name="corda-enterprise.client.rpc.main" target="1.8" />
+      <module name="corda-enterprise.client.rpc.smokeTest" target="1.8" />
+      <module name="corda-enterprise.client.rpc.test" target="1.8" />
+      <module name="corda-enterprise.client.test" target="1.8" />
+      <module name="corda-enterprise.common-configuration-parsing.main" target="1.8" />
+      <module name="corda-enterprise.common-configuration-parsing.test" target="1.8" />
+      <module name="corda-enterprise.common-logging.main" target="1.8" />
+      <module name="corda-enterprise.common-logging.test" target="1.8" />
+      <module name="corda-enterprise.common-validation.main" target="1.8" />
+      <module name="corda-enterprise.common-validation.test" target="1.8" />
+      <module name="corda-enterprise.confidential-identities.main" target="1.8" />
+      <module name="corda-enterprise.confidential-identities.test" target="1.8" />
+      <module name="corda-enterprise.core-deterministic.main" target="1.8" />
+      <module name="corda-enterprise.core-deterministic.test" target="1.8" />
+      <module name="corda-enterprise.core-deterministic.testing.data.main" target="1.8" />
+      <module name="corda-enterprise.core-deterministic.testing.data.test" target="1.8" />
+      <module name="corda-enterprise.core-deterministic.testing.main" target="1.8" />
+      <module name="corda-enterprise.core-deterministic.testing.test" target="1.8" />
+      <module name="corda-enterprise.core-deterministic.testing.verifier.main" target="1.8" />
+      <module name="corda-enterprise.core-deterministic.testing.verifier.test" target="1.8" />
+      <module name="corda-enterprise.core-tests.integrationTest" target="1.8" />
+      <module name="corda-enterprise.core-tests.main" target="1.8" />
+      <module name="corda-enterprise.core-tests.smokeTest" target="1.8" />
+      <module name="corda-enterprise.core-tests.test" target="1.8" />
+      <module name="corda-enterprise.core.main" target="1.8" />
+      <module name="corda-enterprise.core.test" target="1.8" />
+      <module name="corda-enterprise.docker.main" target="1.8" />
+      <module name="corda-enterprise.docker.test" target="1.8" />
+      <module name="corda-enterprise.docs.main" target="1.8" />
+      <module name="corda-enterprise.docs.test" target="1.8" />
+      <module name="corda-enterprise.example-code.integrationTest" target="1.8" />
+      <module name="corda-enterprise.example-code.main" target="1.8" />
+      <module name="corda-enterprise.example-code.test" target="1.8" />
+      <module name="corda-enterprise.experimental.avalanche.main" target="1.8" />
+      <module name="corda-enterprise.experimental.avalanche.test" target="1.8" />
       <module name="corda-enterprise.experimental.behave.behave" target="1.8" />
       <module name="corda-enterprise.experimental.behave.main" target="1.8" />
       <module name="corda-enterprise.experimental.behave.smokeTest" target="1.8" />
       <module name="corda-enterprise.experimental.behave.test" target="1.8" />
+      <module name="corda-enterprise.experimental.blobwriter.main" target="1.8" />
+      <module name="corda-enterprise.experimental.blobwriter.test" target="1.8" />
+      <module name="corda-enterprise.experimental.corda-utils.integrationTest" target="1.8" />
+      <module name="corda-enterprise.experimental.corda-utils.main" target="1.8" />
+      <module name="corda-enterprise.experimental.corda-utils.test" target="1.8" />
+      <module name="corda-enterprise.experimental.flow-hook.main" target="1.8" />
+      <module name="corda-enterprise.experimental.flow-hook.test" target="1.8" />
+      <module name="corda-enterprise.experimental.flow-worker.integrationTest" target="1.8" />
+      <module name="corda-enterprise.experimental.flow-worker.main" target="1.8" />
+      <module name="corda-enterprise.experimental.flow-worker.test" target="1.8" />
+      <module name="corda-enterprise.experimental.ha-testing.integrationTest" target="1.8" />
+      <module name="corda-enterprise.experimental.ha-testing.main" target="1.8" />
+      <module name="corda-enterprise.experimental.ha-testing.test" target="1.8" />
+      <module name="corda-enterprise.experimental.main" target="1.8" />
+      <module name="corda-enterprise.experimental.netparams.main" target="1.8" />
+      <module name="corda-enterprise.experimental.netparams.test" target="1.8" />
+      <module name="corda-enterprise.experimental.nodeinfo.main" target="1.8" />
+      <module name="corda-enterprise.experimental.nodeinfo.test" target="1.8" />
+      <module name="corda-enterprise.experimental.quasar-hook.main" target="1.8" />
+      <module name="corda-enterprise.experimental.quasar-hook.test" target="1.8" />
+      <module name="corda-enterprise.experimental.rpc-worker.integrationTest" target="1.8" />
+      <module name="corda-enterprise.experimental.rpc-worker.main" target="1.8" />
+      <module name="corda-enterprise.experimental.rpc-worker.test" target="1.8" />
+      <module name="corda-enterprise.experimental.test" target="1.8" />
+      <module name="corda-enterprise.finance.main" target="1.8" />
+      <module name="corda-enterprise.finance.test" target="1.8" />
+      <module name="corda-enterprise.finance.workflows.integrationTest" target="1.8" />
+      <module name="corda-enterprise.finance.workflows.main" target="1.8" />
+      <module name="corda-enterprise.finance.workflows.test" target="1.8" />
+      <module name="corda-enterprise.hsm-tool.main" target="1.8" />
+      <module name="corda-enterprise.hsm-tool.test" target="1.8" />
+      <module name="corda-enterprise.isolated.main" target="1.8" />
+      <module name="corda-enterprise.isolated.test" target="1.8" />
+      <module name="corda-enterprise.jdk8u-deterministic.main" target="1.8" />
+      <module name="corda-enterprise.jdk8u-deterministic.test" target="1.8" />
+      <module name="corda-enterprise.main" target="1.8" />
+      <module name="corda-enterprise.node-api.main" target="1.8" />
+      <module name="corda-enterprise.node-api.test" target="1.8" />
+      <module name="corda-enterprise.node-driver.integrationTest" target="1.8" />
+      <module name="corda-enterprise.node-driver.main" target="1.8" />
+      <module name="corda-enterprise.node-driver.test" target="1.8" />
+      <module name="corda-enterprise.node.capsule.main" target="1.8" />
+      <module name="corda-enterprise.node.capsule.test" target="1.8" />
+      <module name="corda-enterprise.node.integrationTest" target="1.8" />
+      <module name="corda-enterprise.node.main" target="1.8" />
+      <module name="corda-enterprise.node.test" target="1.8" />
       <module name="corda-enterprise.notary.jpa.main" target="1.8" />
       <module name="corda-enterprise.notary.jpa.test" target="1.8" />
       <module name="corda-enterprise.notary.main" target="1.8" />
       <module name="corda-enterprise.notary.mysql.main" target="1.8" />
       <module name="corda-enterprise.notary.mysql.test" target="1.8" />
       <module name="corda-enterprise.notary.test" target="1.8" />
+      <module name="corda-enterprise.perftestcordapp.integrationTest" target="1.8" />
+      <module name="corda-enterprise.perftestcordapp.main" target="1.8" />
+      <module name="corda-enterprise.perftestcordapp.test" target="1.8" />
+      <module name="corda-enterprise.samples.attachment-demo.contracts.main" target="1.8" />
+      <module name="corda-enterprise.samples.attachment-demo.contracts.test" target="1.8" />
+      <module name="corda-enterprise.samples.attachment-demo.integrationTest" target="1.8" />
+      <module name="corda-enterprise.samples.attachment-demo.main" target="1.8" />
+      <module name="corda-enterprise.samples.attachment-demo.test" target="1.8" />
+      <module name="corda-enterprise.samples.attachment-demo.workflows.main" target="1.8" />
+      <module name="corda-enterprise.samples.attachment-demo.workflows.test" target="1.8" />
+      <module name="corda-enterprise.samples.bank-of-corda-demo.main" target="1.8" />
+      <module name="corda-enterprise.samples.bank-of-corda-demo.test" target="1.8" />
+      <module name="corda-enterprise.samples.cordapp-configuration.main" target="1.8" />
+      <module name="corda-enterprise.samples.cordapp-configuration.test" target="1.8" />
+      <module name="corda-enterprise.samples.cordapp-configuration.workflows.main" target="1.8" />
+      <module name="corda-enterprise.samples.cordapp-configuration.workflows.test" target="1.8" />
+      <module name="corda-enterprise.samples.irs-demo.cordapp.contracts-irs.main" target="1.8" />
+      <module name="corda-enterprise.samples.irs-demo.cordapp.contracts-irs.test" target="1.8" />
+      <module name="corda-enterprise.samples.irs-demo.cordapp.integrationTest" target="1.8" />
+      <module name="corda-enterprise.samples.irs-demo.cordapp.main" target="1.8" />
+      <module name="corda-enterprise.samples.irs-demo.cordapp.test" target="1.8" />
+      <module name="corda-enterprise.samples.irs-demo.cordapp.workflows-irs.main" target="1.8" />
+      <module name="corda-enterprise.samples.irs-demo.cordapp.workflows-irs.test" target="1.8" />
+      <module name="corda-enterprise.samples.irs-demo.integrationTest" target="1.8" />
+      <module name="corda-enterprise.samples.irs-demo.main" target="1.8" />
+      <module name="corda-enterprise.samples.irs-demo.systemTest" target="1.8" />
+      <module name="corda-enterprise.samples.irs-demo.test" target="1.8" />
+      <module name="corda-enterprise.samples.irs-demo.web.main" target="1.8" />
+      <module name="corda-enterprise.samples.irs-demo.web.test" target="1.8" />
+      <module name="corda-enterprise.samples.main" target="1.8" />
+      <module name="corda-enterprise.samples.network-verifier.contracts.main" target="1.8" />
+      <module name="corda-enterprise.samples.network-verifier.contracts.test" target="1.8" />
+      <module name="corda-enterprise.samples.network-verifier.main" target="1.8" />
+      <module name="corda-enterprise.samples.network-verifier.test" target="1.8" />
+      <module name="corda-enterprise.samples.network-verifier.workflows.main" target="1.8" />
+      <module name="corda-enterprise.samples.network-verifier.workflows.test" target="1.8" />
+      <module name="corda-enterprise.samples.notary-demo.contracts.main" target="1.8" />
+      <module name="corda-enterprise.samples.notary-demo.contracts.test" target="1.8" />
+      <module name="corda-enterprise.samples.notary-demo.main" target="1.8" />
+      <module name="corda-enterprise.samples.notary-demo.test" target="1.8" />
+      <module name="corda-enterprise.samples.notary-demo.workflows.main" target="1.8" />
+      <module name="corda-enterprise.samples.notary-demo.workflows.test" target="1.8" />
+      <module name="corda-enterprise.samples.simm-valuation-demo.contracts-states.main" target="1.8" />
+      <module name="corda-enterprise.samples.simm-valuation-demo.contracts-states.test" target="1.8" />
+      <module name="corda-enterprise.samples.simm-valuation-demo.flows.main" target="1.8" />
+      <module name="corda-enterprise.samples.simm-valuation-demo.flows.test" target="1.8" />
+      <module name="corda-enterprise.samples.simm-valuation-demo.integrationTest" target="1.8" />
+      <module name="corda-enterprise.samples.simm-valuation-demo.main" target="1.8" />
       <module name="corda-enterprise.samples.simm-valuation-demo.scenario" target="1.8" />
+      <module name="corda-enterprise.samples.simm-valuation-demo.test" target="1.8" />
+      <module name="corda-enterprise.samples.test" target="1.8" />
+      <module name="corda-enterprise.samples.trader-demo.integrationTest" target="1.8" />
+      <module name="corda-enterprise.samples.trader-demo.main" target="1.8" />
+      <module name="corda-enterprise.samples.trader-demo.test" target="1.8" />
+      <module name="corda-enterprise.samples.trader-demo.workflows-trader.main" target="1.8" />
+      <module name="corda-enterprise.samples.trader-demo.workflows-trader.test" target="1.8" />
+      <module name="corda-enterprise.serialization-deterministic.main" target="1.8" />
+      <module name="corda-enterprise.serialization-deterministic.test" target="1.8" />
+      <module name="corda-enterprise.serialization.main" target="1.8" />
+      <module name="corda-enterprise.serialization.test" target="1.8" />
+      <module name="corda-enterprise.smoke-test-utils.main" target="1.8" />
+      <module name="corda-enterprise.smoke-test-utils.test" target="1.8" />
+      <module name="corda-enterprise.test" target="1.8" />
+      <module name="corda-enterprise.test-cli.main" target="1.8" />
+      <module name="corda-enterprise.test-cli.test" target="1.8" />
+      <module name="corda-enterprise.test-common.main" target="1.8" />
+      <module name="corda-enterprise.test-common.test" target="1.8" />
+      <module name="corda-enterprise.test-db.main" target="1.8" />
+      <module name="corda-enterprise.test-db.test" target="1.8" />
+      <module name="corda-enterprise.test-utils.main" target="1.8" />
+      <module name="corda-enterprise.test-utils.test" target="1.8" />
+      <module name="corda-enterprise.testing.main" target="1.8" />
+      <module name="corda-enterprise.testing.qa.behave.main" target="1.8" />
+      <module name="corda-enterprise.testing.qa.behave.test" target="1.8" />
+      <module name="corda-enterprise.testing.qa.behave.tools.main" target="1.8" />
+      <module name="corda-enterprise.testing.qa.behave.tools.rpc-proxy.main" target="1.8" />
+      <module name="corda-enterprise.testing.qa.behave.tools.rpc-proxy.rpcProxy" target="1.8" />
+      <module name="corda-enterprise.testing.qa.behave.tools.rpc-proxy.smokeTest" target="1.8" />
+      <module name="corda-enterprise.testing.qa.behave.tools.rpc-proxy.test" target="1.8" />
+      <module name="corda-enterprise.testing.qa.behave.tools.test" target="1.8" />
+      <module name="corda-enterprise.testing.qa.main" target="1.8" />
+      <module name="corda-enterprise.testing.qa.test" target="1.8" />
+      <module name="corda-enterprise.testing.test" target="1.8" />
+      <module name="corda-enterprise.tools.blobinspector.main" target="1.8" />
+      <module name="corda-enterprise.tools.blobinspector.test" target="1.8" />
+      <module name="corda-enterprise.tools.bootstrapper.main" target="1.8" />
+      <module name="corda-enterprise.tools.bootstrapper.test" target="1.8" />
+      <module name="corda-enterprise.tools.checkpoint-agent.main" target="1.8" />
+      <module name="corda-enterprise.tools.checkpoint-agent.test" target="1.8" />
+      <module name="corda-enterprise.tools.cliutils.main" target="1.8" />
+      <module name="corda-enterprise.tools.cliutils.test" target="1.8" />
+      <module name="corda-enterprise.tools.config-obfuscator.main" target="1.8" />
+      <module name="corda-enterprise.tools.config-obfuscator.test" target="1.8" />
+      <module name="corda-enterprise.tools.consensus-benchmark.main" target="1.8" />
+      <module name="corda-enterprise.tools.consensus-benchmark.test" target="1.8" />
+      <module name="corda-enterprise.tools.dbmigration.main" target="1.8" />
+      <module name="corda-enterprise.tools.dbmigration.test" target="1.8" />
+      <module name="corda-enterprise.tools.demobench.main" target="1.8" />
+      <module name="corda-enterprise.tools.demobench.test" target="1.8" />
+      <module name="corda-enterprise.tools.explorer.capsule.main" target="1.6" />
+      <module name="corda-enterprise.tools.explorer.capsule.test" target="1.6" />
+      <module name="corda-enterprise.tools.explorer.main" target="1.8" />
+      <module name="corda-enterprise.tools.explorer.test" target="1.8" />
+      <module name="corda-enterprise.tools.graphs.main" target="1.8" />
+      <module name="corda-enterprise.tools.graphs.test" target="1.8" />
+      <module name="corda-enterprise.tools.ha-utilities.main" target="1.8" />
+      <module name="corda-enterprise.tools.ha-utilities.test" target="1.8" />
+      <module name="corda-enterprise.tools.health-survey.main" target="1.8" />
+      <module name="corda-enterprise.tools.health-survey.test" target="1.8" />
+      <module name="corda-enterprise.tools.jmeter.main" target="1.8" />
+      <module name="corda-enterprise.tools.jmeter.test" target="1.8" />
+      <module name="corda-enterprise.tools.loadtest.main" target="1.8" />
+      <module name="corda-enterprise.tools.loadtest.test" target="1.8" />
+      <module name="corda-enterprise.tools.log-tracer.main" target="1.8" />
+      <module name="corda-enterprise.tools.log-tracer.test" target="1.8" />
+      <module name="corda-enterprise.tools.main" target="1.8" />
+      <module name="corda-enterprise.tools.network-builder.main" target="1.8" />
+      <module name="corda-enterprise.tools.network-builder.test" target="1.8" />
+      <module name="corda-enterprise.tools.notary-healthcheck.client.main" target="1.8" />
+      <module name="corda-enterprise.tools.notary-healthcheck.client.test" target="1.8" />
+      <module name="corda-enterprise.tools.notary-healthcheck.contract.main" target="1.8" />
+      <module name="corda-enterprise.tools.notary-healthcheck.contract.test" target="1.8" />
+      <module name="corda-enterprise.tools.notary-healthcheck.cordapp.integrationTest" target="1.8" />
+      <module name="corda-enterprise.tools.notary-healthcheck.cordapp.main" target="1.8" />
+      <module name="corda-enterprise.tools.notary-healthcheck.cordapp.test" target="1.8" />
+      <module name="corda-enterprise.tools.notary-healthcheck.main" target="1.8" />
+      <module name="corda-enterprise.tools.notary-healthcheck.test" target="1.8" />
+      <module name="corda-enterprise.tools.notary-registration.main" target="1.8" />
+      <module name="corda-enterprise.tools.notary-registration.test" target="1.8" />
+      <module name="corda-enterprise.tools.notarytest.main" target="1.8" />
+      <module name="corda-enterprise.tools.notarytest.test" target="1.8" />
+      <module name="corda-enterprise.tools.pinger.capsule.main" target="1.6" />
+      <module name="corda-enterprise.tools.pinger.capsule.test" target="1.6" />
+      <module name="corda-enterprise.tools.pinger.main" target="1.8" />
+      <module name="corda-enterprise.tools.pinger.test" target="1.8" />
+      <module name="corda-enterprise.tools.shell-cli.main" target="1.8" />
+      <module name="corda-enterprise.tools.shell-cli.test" target="1.8" />
+      <module name="corda-enterprise.tools.shell.integrationTest" target="1.8" />
+      <module name="corda-enterprise.tools.shell.main" target="1.8" />
+      <module name="corda-enterprise.tools.shell.test" target="1.8" />
+      <module name="corda-enterprise.tools.test" target="1.8" />
+      <module name="corda-enterprise.tools.worldmap.main" target="1.8" />
+      <module name="corda-enterprise.tools.worldmap.test" target="1.8" />
+      <module name="corda-enterprise.webserver.integrationTest" target="1.8" />
+      <module name="corda-enterprise.webserver.main" target="1.8" />
+      <module name="corda-enterprise.webserver.test" target="1.8" />
+      <module name="corda-enterprise.webserver.webcapsule.main" target="1.6" />
+      <module name="corda-enterprise.webserver.webcapsule.test" target="1.6" />
       <module name="corda-enterprise_buildSrc_main" target="1.8" />
       <module name="corda-enterprise_buildSrc_test" target="1.8" />
       <module name="corda-enterprise_main" target="1.8" />
@@ -677,6 +922,10 @@
       <module name="net.corda.avalanche.test" target="1.8" />
       <module name="net.corda.bank-of-corda-demo.main" target="1.8" />
       <module name="net.corda.bank-of-corda-demo.test" target="1.8" />
+      <module name="net.corda.behave.tools.rpc-proxy.main" target="1.8" />
+      <module name="net.corda.behave.tools.rpc-proxy.rpcProxy" target="1.8" />
+      <module name="net.corda.behave.tools.rpc-proxy.smokeTest" target="1.8" />
+      <module name="net.corda.behave.tools.rpc-proxy.test" target="1.8" />
       <module name="net.corda.blobinspector.main" target="1.8" />
       <module name="net.corda.blobinspector.test" target="1.8" />
       <module name="net.corda.bootstrapper.main" target="1.8" />
@@ -705,10 +954,6 @@
       <module name="net.corda.contracts-states.test" target="1.8" />
       <module name="net.corda.contracts.main" target="1.8" />
       <module name="net.corda.contracts.test" target="1.8" />
-      <module name="net.corda.behave.tools.rpc-proxy.main" target="1.8" />
-      <module name="net.corda.behave.tools.rpc-proxy.rpcProxy" target="1.8" />
-      <module name="net.corda.behave.tools.rpc-proxy.smokeTest" target="1.8" />
-      <module name="net.corda.behave.tools.rpc-proxy.test" target="1.8" />
       <module name="net.corda.corda-project.main" target="1.8" />
       <module name="net.corda.corda-project.test" target="1.8" />
       <module name="net.corda.corda-utils.integrationTest" target="1.8" />

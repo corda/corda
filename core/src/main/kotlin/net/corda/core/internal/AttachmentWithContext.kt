@@ -16,7 +16,7 @@ class AttachmentWithContext(
 ) : Attachment by contractAttachment {
     init {
         require(contract in contractAttachment.allContracts) {
-            "This AttachmentWithContext was not initialised properly"
+            "This AttachmentWithContext was not initialised properly. Please ensure all Corda contracts extending existing Corda contracts also implement the Contract base class."
         }
     }
 }

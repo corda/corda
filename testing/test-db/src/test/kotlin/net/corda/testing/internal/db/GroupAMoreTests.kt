@@ -15,7 +15,5 @@ class GroupAMoreTests {
     @SpecialSql1
     @SpecialSql2
     fun moreSpecialSqlRequired() {
-
     }
-
 }

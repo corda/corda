@@ -59,7 +59,8 @@ class ReferencedStatesFlowTests {
 
         // 4. Try to use the old reference state. This will throw a NotaryException.
         val nodeOneIdentity = nodes[1].info.legalIdentities.first()
-        val useRefTx = nodes[1].services.startFlow(WithReferencedStatesFlow { UseRefState(nodeOneIdentity, newRefState.state.data.linearId) }).resultFuture
+        val useRefTx = nodes[1].services.startFlow(WithReferencedStatesFlow { UseRefState(nodeOneIdentity, newRefState.state.data.linearId) })
+                .resultFuture
 
         // 5. Share the update reference state.
         nodes[0].services.startFlow(Initiator(updatedRefState)).resultFuture.getOrThrow()
@@ -75,7 +76,8 @@ class ReferencedStatesFlowTests {
         val newRefTx = nodes[0].services.startFlow(CreateRefState()).resultFuture.getOrThrow()
         val newRefState = newRefTx.tx.outRefsOfType<RefState.State>().single()
         // 2. Use the "newRefState" a transaction involving another party (nodes[1]) which creates a new state. They should store the new state and the reference state.
-        val newTx = nodes[0].services.startFlow(UseRefState(nodes[1].info.legalIdentities.first(), newRefState.state.data.linearId)).resultFuture.getOrThrow()
+        val newTx = nodes[0].services.startFlow(UseRefState(nodes[1].info.legalIdentities.first(), newRefState.state.data.linearId))
+                .resultFuture.getOrThrow()
         // Wait until node 1 stores the new tx.
         nodes[1].services.validatedTransactions.trackTransaction(newTx.id).getOrThrow()
         // Check that nodes[1] has finished recording the transaction (and updating the vault.. hopefully!).
@@ -106,7 +108,8 @@ class ReferencedStatesFlowTests {
         val newRefTx = nodes[0].services.startFlow(CreateRefState()).resultFuture.getOrThrow()
         val newRefState = newRefTx.tx.outRefsOfType<RefState.State>().single()
         // 2. Use the "newRefState" a transaction involving another party (nodes[1]) which creates a new state. They should store the new state and the reference state.
-        val newTx = nodes[0].services.startFlow(UseRefState(nodes[1].info.legalIdentities.first(), newRefState.state.data.linearId)).resultFuture.getOrThrow()
+        val newTx = nodes[0].services.startFlow(UseRefState(nodes[1].info.legalIdentities.first(), newRefState.state.data.linearId))
+                .resultFuture.getOrThrow()
         // Wait until node 1 stores the new tx.
         nodes[1].services.validatedTransactions.trackTransaction(newTx.id).getOrThrow()
         // Check that nodes[1] has finished recording the transaction (and updating the vault.. hopefully!).

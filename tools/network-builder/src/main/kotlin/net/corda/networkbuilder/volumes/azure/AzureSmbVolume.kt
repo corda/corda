@@ -4,23 +4,21 @@ import com.microsoft.azure.management.Azure
 import com.microsoft.azure.management.resources.ResourceGroup
 import com.microsoft.azure.management.storage.StorageAccount
 import com.microsoft.azure.storage.CloudStorageAccount
+import net.corda.core.internal.signWithCert
+import net.corda.core.serialization.serialize
 import net.corda.networkbuilder.Constants.Companion.restFriendlyName
 import net.corda.networkbuilder.notaries.CopiedNotary
 import net.corda.networkbuilder.volumes.Volume
 import net.corda.networkbuilder.volumes.Volume.Companion.keyPair
 import net.corda.networkbuilder.volumes.Volume.Companion.networkMapCert
-import net.corda.core.internal.signWithCert
-import net.corda.core.serialization.serialize
 import net.corda.nodeapi.internal.network.NETWORK_PARAMS_FILE_NAME
 import org.slf4j.LoggerFactory
-
 
 class AzureSmbVolume(private val azure: Azure, private val resourceGroup: ResourceGroup) : Volume {
 
     private val storageAccount = getStorageAccount()
 
     private val accKeys = storageAccount.keys[0]
-
 
     private val cloudFileShare = CloudStorageAccount.parse(
             "DefaultEndpointsProtocol=https;" +

@@ -1,10 +1,10 @@
 package net.corda.node.internal
 
 import io.netty.channel.unix.Errors
-import net.corda.cliutils.printError
 import net.corda.cliutils.CliWrapperBase
 import net.corda.cliutils.CordaCliWrapper
 import net.corda.cliutils.ExitCodes
+import net.corda.cliutils.printError
 import net.corda.common.logging.CordaVersion
 import net.corda.core.contracts.HashAttachmentConstraint
 import net.corda.core.crypto.Crypto
@@ -12,7 +12,6 @@ import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.internal.cordapp.CordappImpl
 import net.corda.core.internal.errors.AddressBindingException
-import net.corda.core.internal.safeSymbolicRead
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.loggerFor
@@ -40,7 +39,6 @@ import java.io.RandomAccessFile
 import java.lang.management.ManagementFactory
 import java.net.InetAddress
 import java.nio.channels.UnresolvedAddressException
-import java.nio.file.Files
 import java.nio.file.Path
 import java.time.DayOfWeek
 import java.time.ZonedDateTime

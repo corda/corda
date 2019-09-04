@@ -23,7 +23,7 @@ interface TestDatabaseContext : ExtensionContext.Store.CloseableResource {
             get() = _usingRemoteDatabase.get() ?: false
             set(value) = _usingRemoteDatabase.set(value)
     }
-    
+
     /**
      * Called once when the context is first instantiated, i.e. at the start of the test run, before any tests at all have been executed.
      *

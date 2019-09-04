@@ -120,7 +120,7 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
 
         companion object {
             fun fromDatabaseValue(databaseValue: String): TransactionStatus {
-                return when(databaseValue) {
+                return when (databaseValue) {
                     "V" -> VERIFIED
                     "U" -> UNVERIFIED
                     else -> throw UnexpectedStatusValueException(databaseValue)
@@ -128,7 +128,7 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
             }
         }
 
-        private class UnexpectedStatusValueException(status: String): Exception("Found unexpected status value $status in transaction store")
+        private class UnexpectedStatusValueException(status: String) : Exception("Found unexpected status value $status in transaction store")
     }
 
     @Converter
@@ -284,7 +284,8 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
     }
 
     @VisibleForTesting
-    val transactions: List<SignedTransaction> get() = database.transaction { snapshot() }
+    val transactions: List<SignedTransaction>
+        get() = database.transaction { snapshot() }
 
     private fun snapshot(): List<SignedTransaction> {
         return txStorage.content.allPersisted.use {
@@ -302,6 +303,7 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
                 stx.txBits,
                 Collections.unmodifiableList(stx.sigs),
                 status)
+
         fun toSignedTx() = SignedTransaction(txBits, sigs)
     }
 }

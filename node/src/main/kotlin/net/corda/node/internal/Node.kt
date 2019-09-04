@@ -11,6 +11,7 @@ import net.corda.client.rpc.internal.serialization.amqp.AMQPClientSerializationS
 import net.corda.cliutils.ShellConstants
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.flows.FlowLogic
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.Emoji
 import net.corda.core.internal.concurrent.openFuture

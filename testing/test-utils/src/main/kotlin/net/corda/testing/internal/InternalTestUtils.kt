@@ -236,7 +236,7 @@ fun <R> withTestSerializationEnvIfNotSet(block: () -> R): R {
 /**
  * Used to check if particular port is already bound i.e. not vacant
  */
-fun isLocalPortBound(port: Int) : Boolean {
+fun isLocalPortBound(port: Int): Boolean {
     return try {
         ServerSocket(port).use {
             // Successful means that the port was vacant

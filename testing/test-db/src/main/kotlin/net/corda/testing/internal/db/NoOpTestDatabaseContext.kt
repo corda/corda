@@ -16,5 +16,4 @@ class NoOpTestDatabaseContext : TestDatabaseContext {
     override fun afterTest(teardownSql: List<String>) {}
 
     override fun close() {}
-
 }

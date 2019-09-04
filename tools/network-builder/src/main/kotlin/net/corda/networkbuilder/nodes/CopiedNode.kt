@@ -19,7 +19,6 @@ open class CopiedNode(configFile: File, baseDirectory: File,
         return copiedNodeConfig
     }
 
-
     fun builtNode(nodeConfig: NodeConfiguration, imageId: String): BuiltNode {
         return BuiltNode(configFile, baseDirectory, copiedNodeConfig, copiedNodeDir, nodeConfig, imageId)
     }

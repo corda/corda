@@ -161,5 +161,4 @@ class CordaRPCClientReconnectionTest: IntegrationTest() {
             }
         }
     }
-
 }

@@ -3,6 +3,7 @@ package net.corda.node.services.config.schema.v1
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigException
 import net.corda.common.configuration.parsing.internal.*
+import net.corda.common.validation.internal.Validated
 import net.corda.common.validation.internal.Validated.Companion.invalid
 import net.corda.common.validation.internal.Validated.Companion.valid
 import net.corda.node.services.config.*

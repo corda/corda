@@ -171,7 +171,7 @@ class TransactionTests {
         val inputs = listOf(StateAndRef(inState, StateRef(SecureHash.randomSHA256(), 0)))
         val outputs = listOf(outState)
         val commands = emptyList<CommandWithParties<CommandData>>()
-        val attachments = listOf(object : AbstractAttachment( {
+        val attachments = listOf(object : AbstractAttachment({
             AttachmentsClassLoaderTests::class.java.getResource("isolated-4.0.jar").openStream().readBytes()
         }, TESTDSL_UPLOADER) {
             @Suppress("OverridingDeprecatedMember")

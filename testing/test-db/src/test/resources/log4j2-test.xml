@@ -13,7 +13,8 @@
     <Appenders>
         <Console name="Console-Appender" target="SYSTEM_OUT">
             <PatternLayout>
-                <ScriptPatternSelector defaultPattern="%highlight{[%level{length=5}] %date{HH:mm:ss,SSS} [%t] %c{2}.%method - %msg%n}{INFO=white,WARN=red,FATAL=bright red}">
+                <ScriptPatternSelector
+                        defaultPattern="%highlight{[%level{length=5}] %date{HH:mm:ss,SSS} [%t] %c{2}.%method - %msg%n}{INFO=white,WARN=red,FATAL=bright red}">
                     <Script name="MDCSelector" language="javascript"><![CDATA[
                     result = null;
                     if (!logEvent.getContextData().size() == 0) {
@@ -24,7 +25,8 @@
                     result;
                ]]>
                     </Script>
-                    <PatternMatch key="WithMDC" pattern="%highlight{[%level{length=5}] %date{HH:mm:ss,SSS} [%t] %c{2}.%method - %msg %X%n}{INFO=white,WARN=red,FATAL=bright red}"/>
+                    <PatternMatch key="WithMDC"
+                                  pattern="%highlight{[%level{length=5}] %date{HH:mm:ss,SSS} [%t] %c{2}.%method - %msg %X%n}{INFO=white,WARN=red,FATAL=bright red}"/>
                 </ScriptPatternSelector>
             </PatternLayout>
             <ThresholdFilter level="trace"/>
@@ -32,14 +34,14 @@
 
         <!-- Required for printBasicInfo -->
         <Console name="Console-Appender-Println" target="SYSTEM_OUT">
-            <PatternLayout pattern="%msg%n" />
+            <PatternLayout pattern="%msg%n"/>
         </Console>
 
         <!-- Will generate up to 100 log files for a given day. During every rollover it will delete
              those that are older than 60 days, but keep the most recent 10 GB -->
         <RollingRandomAccessFile name="RollingFile-Appender"
-                     fileName="${log-path}/${log-name}.log"
-                     filePattern="${archive}/${log-name}.%date{yyyy-MM-dd}-%i.log.gz">
+                                 fileName="${log-path}/${log-name}.log"
+                                 filePattern="${archive}/${log-name}.%date{yyyy-MM-dd}-%i.log.gz">
 
             <PatternLayout pattern="[%-5level] %date{ISO8601}{UTC}Z [%t] %c{2}.%method - %msg %X%n"/>
 
@@ -83,7 +85,7 @@
         </Root>
         <Logger name="net.corda" level="${defaultLogLevel}" additivity="false">
             <AppenderRef ref="Console-ErrorCode-Appender"/>
-            <AppenderRef ref="RollingFile-ErrorCode-Appender" />
+            <AppenderRef ref="RollingFile-ErrorCode-Appender"/>
         </Logger>
     </Loggers>
 </Configuration>
