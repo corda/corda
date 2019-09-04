@@ -145,6 +145,11 @@ Further improvements, additions and changes
 
 * Support for class evolution using non-nullable properties if you supply an evolution constructor which fills in the missing property values.
 
+* ``-XX:+HeapDumpOnOutOfMemoryError`` and ``-XX:+CrashOnOutOfMemoryError`` have been added to the default JVM options of Corda Node and Firewall components.
+  The components which are running out of memory are now expected to stop immediately to preserve ledger consistency and avoid flaws in operations.
+  Note that it's a responsibility of a client application to handle RPC reconnection in case this happens.
+  See :ref:`setting_jvm_args` and :ref:`memory_usage_and_tuning` for further details.
+
 Known issues
 ************
 

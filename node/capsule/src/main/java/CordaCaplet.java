@@ -143,6 +143,7 @@ public class CordaCaplet extends Capsule {
         } else if (ATTR_JVM_ARGS == attr) {
             // Read JVM args from the config if specified, else leave alone.
             List<String> jvmArgs = new ArrayList<>((List<String>) super.attribute(attr));
+            boolean defaultOutOfMemoryErrorHandling = true;
             try {
                 List<String> configJvmArgs = nodeConfig.getStringList("custom.jvmArgs");
                 jvmArgs.clear();
@@ -154,10 +155,18 @@ public class CordaCaplet extends Capsule {
                         excludeJars.add(arg.substring(EXCLUDE_JAR_CMD_LINE_ARG.length()));
                     }
                 });
+
+                // Switch off default OutOfMemoryError handling if any related JVM arg is specified in custom config
+                defaultOutOfMemoryErrorHandling = configJvmArgs.stream().noneMatch(arg -> arg.contains("OutOfMemoryError"));
             } catch (ConfigException.Missing e) {
                 // Ignore since it's ok to be Missing. Other errors would be unexpected.
             } catch (ConfigException e) {
                 log(LOG_QUIET, e);
+            }
+            // Shutdown and print diagnostics on OutOfMemoryError.
+            if (defaultOutOfMemoryErrorHandling) {
+                jvmArgs.add("-XX:+HeapDumpOnOutOfMemoryError");
+                jvmArgs.add("-XX:+CrashOnOutOfMemoryError");
             }
             return (T) jvmArgs;
         } else if (ATTR_SYSTEM_PROPERTIES == attr) {
