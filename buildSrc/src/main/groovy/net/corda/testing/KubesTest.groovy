@@ -48,7 +48,9 @@ class KubesTest extends DefaultTask {
             throw new GradleException("Apache Commons compress has not be loaded, this can happen if running from within intellj - please select \"delegate to gradle\" for build and test actions")
         }
 
-        def buildId = System.hasProperty("buildId") ? System.getProperty("buildId") : (project.hasProperty("corda_revision") ? project.property("corda_revision").toString() : "0")
+        def buildId = System.hasProperty("buildId") ? System.getProperty("buildId") :
+                (project.hasProperty("corda_revision") ? project.property("corda_revision").toString() : "0")
+
         def currentUser = System.hasProperty("user.name") ? System.getProperty("user.name") : "UNKNOWN_USER"
 
         String stableRunId = new BigInteger(64, new Random(buildId.hashCode() + currentUser.hashCode())).toString(36).toLowerCase()
