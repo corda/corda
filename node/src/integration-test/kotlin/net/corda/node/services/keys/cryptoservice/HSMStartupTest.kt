@@ -15,11 +15,10 @@ import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.InternalMockNodeParameters
 import net.corda.testing.node.internal.TestStartedNode
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
+import org.junit.After
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Test
 
-@Ignore
 class HSMStartupTest {
 
     private lateinit var mockNet: InternalMockNetwork
@@ -39,6 +38,11 @@ class HSMStartupTest {
                 throw CryptoServiceException("We were late!!!")
             }.whenever(it).containsKey(any())
         }
+    }
+
+    @After
+    fun cleanupMockNet() {
+        mockNet.close()
     }
 
     private fun createNode(parameters: InternalMockNodeParameters): TestStartedNode {
