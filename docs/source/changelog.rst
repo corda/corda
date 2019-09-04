@@ -56,6 +56,11 @@ Unreleased
 * Wildcards can now be used when specifying RPC permissions, for example ``StartFlow.foo.bar.*`` will allow users to start any flow in the
   ``foo.bar`` package. See :ref:`rpcUsers <corda_configuration_file_rpc_users>` for more information.
 
+* ``-XX:+HeapDumpOnOutOfMemoryError`` and ``-XX:+CrashOnOutOfMemoryError`` have been added to the default JVM options of the node.
+  A node which is running out of memory is now expected to stop immediately to preserve ledger consistency and avoid flaws in operations.
+  Note that it's a responsibility of a client application to handle RPC reconnection in case this happens.
+  See :ref:`setting_jvm_args` and :ref:`memory_usage_and_tuning` for further details.
+
 .. _changelog_v4.1:
 
 Version 4.1
