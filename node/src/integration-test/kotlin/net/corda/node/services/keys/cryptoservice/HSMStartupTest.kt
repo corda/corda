@@ -16,8 +16,10 @@ import net.corda.testing.node.internal.InternalMockNodeParameters
 import net.corda.testing.node.internal.TestStartedNode
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Test
 
+@Ignore
 class HSMStartupTest {
 
     private lateinit var mockNet: InternalMockNetwork

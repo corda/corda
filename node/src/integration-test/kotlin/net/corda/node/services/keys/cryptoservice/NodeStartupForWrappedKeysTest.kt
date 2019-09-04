@@ -17,9 +17,11 @@ import org.junit.Assume
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import org.junit.Ignore
 import java.lang.IllegalStateException
 import java.net.URL
 
+@Ignore
 class NodeStartupForWrappedKeysTest {
 
     companion object {
