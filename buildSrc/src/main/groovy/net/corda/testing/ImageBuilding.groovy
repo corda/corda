@@ -9,6 +9,7 @@ import com.bmuschko.gradle.docker.tasks.image.DockerBuildImage
 import com.bmuschko.gradle.docker.tasks.image.DockerCommitImage
 import com.bmuschko.gradle.docker.tasks.image.DockerPushImage
 import com.bmuschko.gradle.docker.tasks.image.DockerTagImage
+import org.gradle.api.GradleException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 
@@ -60,6 +61,11 @@ class ImageBuilding implements Plugin<Project> {
         DockerWaitContainer waitForBuildContainer = project.tasks.create('waitForBuildContainer', DockerWaitContainer) {
             dependsOn logBuildContainer
             targetContainerId createBuildContainer.getContainerId()
+            doLast {
+                if (getExitCode() != 0) {
+                    throw new GradleException("Failed to build docker image, aborting build")
+                }
+            }
         }
 
         DockerCommitImage commitBuildImageResult = project.tasks.create('commitBuildImageResult', DockerCommitImage) {

@@ -30,7 +30,6 @@ import org.gradle.api.tasks.TaskAction;
 import org.gradle.api.tasks.testing.Test;
 import org.gradle.internal.logging.ConsoleRenderer;
 import org.gradle.internal.operations.BuildOperationExecutor;
-import org.gradle.internal.operations.BuildOperationFailure;
 
 import javax.inject.Inject;
 import java.io.File;
@@ -50,6 +49,11 @@ public class KubesReporting extends DefaultTask {
     private File destinationDir = new File(getProject().getBuildDir(), "test-reporting");
     private List<Object> results = new ArrayList<Object>();
     List<KubePodResult> podResults = new ArrayList<>();
+
+    public KubesReporting() {
+        //force this task to always run, as it's responsible for parsing exit codes
+        getOutputs().upToDateWhen(t -> false);
+    }
 
     @Inject
     protected BuildOperationExecutor getBuildOperationExecutor() {

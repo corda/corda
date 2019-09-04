@@ -42,7 +42,6 @@ class ListTests extends DefaultTask {
     FileCollection scanClassPath
     List<String> allTests
 
-
     def getTestsForFork(int fork, int forks, Integer seed) {
         def gitSha = new BigInteger(project.hasProperty("corda_revision") ? project.property("corda_revision").toString() : "0", 36)
         if (fork >= forks) {
