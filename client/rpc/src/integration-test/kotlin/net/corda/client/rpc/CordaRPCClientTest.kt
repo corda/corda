@@ -128,7 +128,7 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance"), notaries =
                 val nodeTerminated = try {
                     poll(scheduler, pollName = "node's started state", check = { if (node.node.started == null) true else null })
                             .get(10, TimeUnit.SECONDS)
-                } catch (e: TimeoutException) {
+                } catch (e: Exception) {
                     false
                 }
                 successful = nodeTerminated
