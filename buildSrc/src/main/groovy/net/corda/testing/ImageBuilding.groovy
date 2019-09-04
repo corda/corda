@@ -29,8 +29,9 @@ class ImageBuilding implements Plugin<Project> {
         }
 
         DockerCreateContainer createBuildContainer = project.tasks.create('createBuildContainer', DockerCreateContainer) {
-            File gradleDir = new File((System.getProperty("java.io.tmpdir") + File.separator + "gradle"))
-            File mavenDir = new File((System.getProperty("java.io.tmpdir") + File.separator + "maven"))
+            File baseWorkingDir = new File(System.getProperty("docker.work.dir") ? System.getProperty("docker.work.dir") : System.getProperty("java.io.tmpdir"))
+            File gradleDir = new File(baseWorkingDir, "gradle")
+            File mavenDir = new File(baseWorkingDir, "maven")
             doFirst {
                 if (!gradleDir.exists()) {
                     gradleDir.mkdirs()
