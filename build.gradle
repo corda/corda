@@ -605,42 +605,12 @@ task pushBuildImage(type: DockerPushImage) {
     imageName = "stefanotestingcr.azurecr.io/testing:latest"
 }
 
-
-
 configurations {
     detekt
-    antJUnit
 }
 
 dependencies {
-    antJUnit 'org.apache.ant:ant-junit:1.9.7'
     detekt 'io.gitlab.arturbosch.detekt:detekt-cli:1.0.1'
-}
-
-task mergeJUnitReports {
-    ext {
-        resultsDir = file("$buildDir/xml-report")
-        targetDir = file("$buildDir/merged-report")
-    }
-
-    doLast {
-        ant.taskdef(name: 'junitreport',
-                classname: 'org.apache.tools.ant.taskdefs.optional.junit.XMLResultAggregator',
-                classpath: configurations.antJUnit.asPath)
-
-        ant.junitreport(todir: resultsDir) {
-            fileset(dir: resultsDir, includes: 'TEST-*.xml')
-            report(todir: targetDir, format: 'frames')
-        }
-    }
-}
-
-subprojects {
-    task copyReport(type: Copy) {
-        from "build/test-results/test"
-        into "$rootDir/build/xml-report"
-    }
-    test.finalizedBy(copyReport)
 }
 
 ext.getChangedFiles = { ->
