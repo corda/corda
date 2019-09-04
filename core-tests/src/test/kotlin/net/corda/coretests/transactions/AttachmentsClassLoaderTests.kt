@@ -399,7 +399,7 @@ class AttachmentsClassLoaderTests {
         attachmentTrustCalculator = NodeAttachmentTrustCalculator(
             InternalMockAttachmentStorage(storage),
             cacheFactory,
-            listOf(keyPairA.public.hash.toString())
+            listOf(keyPairA.public.hash)
         )
 
         val classJar = fakeAttachment(
@@ -440,7 +440,7 @@ class AttachmentsClassLoaderTests {
         attachmentTrustCalculator = NodeAttachmentTrustCalculator(
             InternalMockAttachmentStorage(storage),
             cacheFactory,
-            listOf(keyPairA.public.hash.toString())
+            listOf(keyPairA.public.hash)
         )
 
         val classJar = fakeAttachment(

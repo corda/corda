@@ -181,12 +181,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         database,
         configuration.devMode
     ).tokenize()
-    val attachmentTrustCalculator = NodeAttachmentTrustCalculator(
-        attachmentStorage = attachments,
-        database = database,
-        cacheFactory = cacheFactory,
-        keysToBlacklist = configuration.blacklistedAttachmentSigningKeys
-    ).tokenize()
+    val attachmentTrustCalculator = makeAttachmentTrustCalculator(configuration, database)
     val cryptoService = CryptoServiceFactory.makeCryptoService(
             SupportedCryptoServices.BC_SIMPLE,
             configuration.myLegalName,
@@ -585,7 +580,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             try {
                 SecureHash.parse(it)
             } catch (e: IllegalArgumentException) {
-                log.error("Error while adding key fingerprint $it to cordappSignerKeyFingerprintBlacklist due to ${e.message}", e)
+                log.error("Error while adding key fingerprint $it to cordappSignerKeyFingerprintBlacklist due to - ${e.message}", e)
                 throw e
             }
         }
@@ -595,6 +590,30 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                 extraCordapps = generatedCordapps,
                 signerKeyFingerprintBlacklist = blacklistedKeys
         )
+    }
+
+    private fun makeAttachmentTrustCalculator(
+        configuration: NodeConfiguration,
+        database: CordaPersistence
+    ): AttachmentTrustCalculator {
+        val blacklistedAttachmentSigningKeys: List<SecureHash> =
+            configuration.blacklistedAttachmentSigningKeys.map {
+                try {
+                    SecureHash.parse(it)
+                } catch (e: IllegalArgumentException) {
+                    log.error(
+                        "Error while adding signing key $it to blacklistedAttachmentSigningKeys due to - ${e.message}",
+                        e
+                    )
+                    throw e
+                }
+            }
+        return NodeAttachmentTrustCalculator(
+            attachmentStorage = attachments,
+            database = database,
+            cacheFactory = cacheFactory,
+            blacklistedAttachmentSigningKeys = blacklistedAttachmentSigningKeys
+        ).tokenize()
     }
 
     private fun isRunningSimpleNotaryService(configuration: NodeConfiguration): Boolean {

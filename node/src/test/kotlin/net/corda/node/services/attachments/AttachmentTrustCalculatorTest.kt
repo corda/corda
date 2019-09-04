@@ -403,7 +403,7 @@ class AttachmentTrustCalculatorTest {
                 attachmentStorage = storage,
                 database = database,
                 cacheFactory = cacheFactory,
-                keysToBlacklist = listOf(keyB.hash.toString())
+                blacklistedAttachmentSigningKeys = listOf(keyB.hash)
             )
 
             val jarA = ContractJarTestUtils.makeTestContractJar(file.path, "foo.bar.DummyContract")
@@ -434,7 +434,7 @@ class AttachmentTrustCalculatorTest {
                 attachmentStorage = storage,
                 database = database,
                 cacheFactory = cacheFactory,
-                keysToBlacklist = listOf(key.hash.toString())
+                blacklistedAttachmentSigningKeys = listOf(key.hash)
             )
 
             val jar = ContractJarTestUtils.makeTestContractJar(file.path, "foo.bar.DummyContract")
@@ -518,7 +518,7 @@ class AttachmentTrustCalculatorTest {
                 attachmentStorage = storage,
                 database = database,
                 cacheFactory = cacheFactory,
-                keysToBlacklist = listOf(keyB.hash.toString())
+                blacklistedAttachmentSigningKeys = listOf(keyB.hash)
             )
 
             val jarSignedByA =

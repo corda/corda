@@ -9,7 +9,6 @@ import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.vault.AttachmentQueryCriteria
 import net.corda.core.node.services.vault.Builder
 import net.corda.core.serialization.SingletonSerializeAsToken
-import net.corda.core.utilities.contextLogger
 import net.corda.node.services.persistence.AttachmentStorageInternal
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import java.security.PublicKey
@@ -17,47 +16,28 @@ import java.security.PublicKey
 /**
  * Implementation of [AttachmentTrustCalculator].
  *
- * @param keysToBlacklist Is a string representation of a SHA-256 [SecureHash] which is converted
- * during initialisation of this class.
+ * @param blacklistedAttachmentSigningKeys Attachments signed by any of these public keys will not be considered as trust roots for any
+ * attachments received over the network. The list consists of SHA-256 hashes of public keys
  */
 class NodeAttachmentTrustCalculator(
     private val attachmentStorage: AttachmentStorageInternal,
     private val database: CordaPersistence?,
     cacheFactory: NamedCacheFactory,
-    keysToBlacklist: List<String> = emptyList()
+    private val blacklistedAttachmentSigningKeys: List<SecureHash> = emptyList()
 ) : AttachmentTrustCalculator, SingletonSerializeAsToken() {
 
     @VisibleForTesting
     constructor(
         attachmentStorage: AttachmentStorageInternal,
         cacheFactory: NamedCacheFactory,
-        keysToBlacklist: List<String> = emptyList()
-    ) : this(attachmentStorage, null, cacheFactory, keysToBlacklist)
-
-    private companion object {
-        private val log = contextLogger()
-    }
+        blacklistedAttachmentSigningKeys: List<SecureHash> = emptyList()
+    ) : this(attachmentStorage, null, cacheFactory, blacklistedAttachmentSigningKeys)
 
     // A cache for caching whether a signing key is trusted
     private val trustedKeysCache = cacheFactory.buildNamed<PublicKey, Boolean>(
         Caffeine.newBuilder(),
         "NodeAttachmentTrustCalculator_trustedKeysCache"
     )
-
-    /**
-     * Attachments signed by any of these public keys will not be considered as trust roots for any
-     * attachments received over the network.
-     *
-     * The list consists of SHA-256 hashes of public keys
-     */
-    private val blacklistedAttachmentSigningKeys: List<SecureHash> = keysToBlacklist.mapNotNull {
-        try {
-            SecureHash.parse(it)
-        } catch (e: IllegalArgumentException) {
-            log.warn("Failed to parse blacklisted attachment signing key: $it. The key will not be added to the list of blacklisted attachment signing keys")
-            null
-        }
-    }
 
     override fun calculate(attachment: Attachment): Boolean {
         val trustedByUploader = when (attachment) {
