@@ -373,10 +373,29 @@ More specifically, the behaviour in the second case is a bit more subtle:
 
 You can enable this graceful form of reconnection by using the ``gracefulReconnect`` parameter in the following way:
 
-.. sourcecode:: kotlin
+.. container:: codeset
 
-   val cordaClient = CordaRPCClient(nodeRpcAddress)
-   val cordaRpcOps = cordaClient.start(rpcUserName, rpcUserPassword, gracefulReconnect = true).proxy
+    .. sourcecode:: kotlin
+
+       val gracefulReconnect = GracefulReconnect(onDisconnect={/*insert disconnect handling*/}, onReconnect{/*insert reconnect handling*/})
+       val cordaClient = CordaRPCClient(nodeRpcAddress)
+       val cordaRpcOps = cordaClient.start(rpcUserName, rpcUserPassword, gracefulReconnect = gracefulReconnect).proxy
+
+    .. sourcecode:: java
+
+        private void onDisconnect() {
+            // Insert implementation
+        }
+
+        private void onReconnect() {
+            // Insert implementation
+        }
+
+        void method() {
+            GracefulReconnect gracefulReconnect = new GracefulReconnect(this::onDisconnect, this::onReconnect);
+            CordaRPCClient cordaClient = new CordaRPCClient(nodeRpcAddress);
+            CordaRPCConnection cordaRpcOps = cordaClient.start(rpcUserName, rpcUserPassword, gracefulReconnect);
+        }
 
 Retrying flow invocations
 ~~~~~~~~~~~~~~~~~~~~~~~~~
