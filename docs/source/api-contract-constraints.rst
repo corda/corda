@@ -91,6 +91,8 @@ implemented. They make it harder to upgrade applications than when using signatu
 
 Further information into the design of Signature Constraints can be found in its :doc:`design document <design/data-model-upgrades/signature-constraints>`.
 
+.. _signing_cordapps_for_use_with_signature_constraints:
+
 Signing CorDapps for use with Signature Constraints
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -103,7 +105,7 @@ Signature Constraints. This ensures that the version of each app is acceptable t
 
 If a node receives a transaction that uses an attachment that it doesn't trust, but there is an attachment present on the node with
 at least one common signature, then the node will trust the received attachment. This means that nodes
-are no longer required to have every version of a CorDapp uploaded to them in order to verify transactions running older version of a CorDapp.
+are no longer required to have every version of a CorDapp uploaded to them in order to verify transactions running older versions of a CorDapp.
 Instead, it is sufficient to have any version of the CorDapp contract installed.
 
 More information on how to sign an app directly from Gradle can be found in the
