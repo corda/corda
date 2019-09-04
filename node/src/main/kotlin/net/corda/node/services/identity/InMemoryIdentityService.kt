@@ -14,8 +14,11 @@ import net.corda.nodeapi.internal.crypto.x509Certificates
 import java.security.InvalidAlgorithmParameterException
 import java.security.PublicKey
 import java.security.cert.*
+import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import javax.annotation.concurrent.ThreadSafe
+import kotlin.collections.ArrayList
+import kotlin.collections.LinkedHashSet
 
 /**
  * Simple identity service which caches parties and provides functionality for efficient lookup.
@@ -108,10 +111,18 @@ class InMemoryIdentityService(identities: List<PartyAndCertificate> = emptyList(
         return results
     }
 
-    override fun registerKeyToParty(key: PublicKey, party: Party) {
-        if (keyToName[key] == null) {
-            keyToName.putIfAbsent(key, party.name)
+    override fun registerKeyToParty(publicKey: PublicKey, party: Party) {
+        if (keyToName[publicKey] == null) {
+            keyToName.putIfAbsent(publicKey, party.name)
         }
-        throw IllegalArgumentException("An entry for the public key: $key already exists.")
+        throw IllegalArgumentException("An entry for the public publicKey: $publicKey already exists.")
+    }
+
+    override fun externalIdForPublicKey(publicKey: PublicKey): UUID? {
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    }
+
+    override fun registerKeyToExternalId(key: PublicKey, externalId: UUID) {
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 }

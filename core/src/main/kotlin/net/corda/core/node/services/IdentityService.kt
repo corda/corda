@@ -1,5 +1,6 @@
 package net.corda.core.node.services
 
+import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.CordaException
 import net.corda.core.DoNotImplement
 import net.corda.core.contracts.PartyAndReference
@@ -10,6 +11,7 @@ import net.corda.core.utilities.contextLogger
 import java.security.InvalidAlgorithmParameterException
 import java.security.PublicKey
 import java.security.cert.*
+import java.util.*
 
 /**
  * An identity service maintains a directory of parties by their associated distinguished name/public keys and thus
@@ -153,12 +155,35 @@ interface IdentityService {
      * exists for the supplied [PublicKey] but the associated [Party] does not match the one supplied to the method then an exception will
      * be thrown.
      *
-     * @param key The public key that will be registered to the supplied [Party]
-     * @param party The party that the supplied public key will be registered to
-     * @throws IllegalArgumentException if the public key is already registered to a party that does not match the supplied party
+     * @param publicKey The public publicKey that will be registered to the supplied [Party]
+     * @param party The party that the supplied public publicKey will be registered to
+     * @throws IllegalArgumentException if the public publicKey is already registered to a party that does not match the supplied party
      */
     @Throws(IllegalArgumentException::class)
-    fun registerKeyToParty(key: PublicKey, party: Party)
+    fun registerKeyToParty(publicKey: PublicKey, party: Party)
+
+    /**
+     * Registers a mapping in the database between the provided [PublicKey] and [UUID] if one does not already exist. If an entry
+     * exists for the supplied [PublicKey] but the associated [UUID] does not match the one supplied to the method then an exception will
+     * be thrown.
+     *
+     * @param key The public key that will be registered to the supplied [Party]
+     * @param externalId The [UUID] that the supplied public key will be registered to
+     * @throws IllegalArgumentException if the public key is already registered to a [UUID] that does not match the supplied [UUID]
+     */
+    @Throws(IllegalArgumentException::class)
+    fun registerKeyToExternalId(key: PublicKey, externalId: UUID)
+
+    /**
+     * This method allows lookups of [PublicKey]s to an associated "external ID" / [UUID]. Providing a [PublicKey] that is unknown by the node
+     * or is not mapped to an external ID will return null. Otherwise, if the [PublicKey] has been mapped to an external ID, then the [UUID]
+     * for that external ID will be returned.
+     * @param publicKey the [PublicKey] used to perform the lookup to external ID
+     */
+    @Suspendable
+    fun externalIdForPublicKey(publicKey: PublicKey): UUID?
+
+    // TODO: Implement API to return all the keys for a specified externalId.
 }
 
 class UnknownAnonymousPartyException(message: String) : CordaException(message)

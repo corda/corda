@@ -9,7 +9,9 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.MAX_HASH_HEX_SIZE
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
+import net.corda.node.services.persistence.WritablePublicKeyToOwningIdentityCache
 import net.corda.node.utilities.AppendOnlyPersistentMap
+import net.corda.nodeapi.internal.KeyOwningIdentity
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.x509Certificates
@@ -19,11 +21,13 @@ import org.hibernate.internal.util.collections.ArrayHelper.EMPTY_BYTE_ARRAY
 import java.security.InvalidAlgorithmParameterException
 import java.security.PublicKey
 import java.security.cert.*
+import java.util.*
 import javax.annotation.concurrent.ThreadSafe
 import javax.persistence.Column
 import javax.persistence.Entity
 import javax.persistence.Id
 import javax.persistence.Lob
+import kotlin.collections.HashSet
 import kotlin.streams.toList
 
 /**
@@ -146,14 +150,22 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
     // CordaPersistence is not a c'tor parameter to work around the cyclic dependency
     lateinit var database: CordaPersistence
 
+    private lateinit var _pkToIdCache: WritablePublicKeyToOwningIdentityCache
+
     private val keyToPartyAndCert = createKeyToPartyAndCertMap(cacheFactory)
     private val nameToKey = createX500ToKeyMap(cacheFactory)
     private val keyToName = createKeyToX500Map(cacheFactory)
 
-    fun start(trustRoot: X509Certificate, caCertificates: List<X509Certificate> = emptyList(), notaryIdentities: List<Party> = emptyList()) {
+    fun start(
+            trustRoot: X509Certificate,
+            caCertificates: List<X509Certificate> = emptyList(),
+            notaryIdentities: List<Party> = emptyList(),
+            pkToIdCache: WritablePublicKeyToOwningIdentityCache
+    ) {
         _trustRoot = trustRoot
         _trustAnchor = TrustAnchor(trustRoot, null)
         _caCertStore = CertStore.getInstance("Collection", CollectionCertStoreParameters(caCertificates.toSet() + trustRoot))
+        _pkToIdCache = pkToIdCache
         notaryIdentityCache.addAll(notaryIdentities)
     }
 
@@ -289,18 +301,26 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
         return keys.filter { certificateFromKey(it)?.name in ourNames }
     }
 
-    override fun registerKeyToParty(key: PublicKey, party: Party) {
+    override fun registerKeyToParty(publicKey: PublicKey, party: Party) {
         return database.transaction {
-            val existingEntryForKey = keyToName[key.toStringShort()]
+            val existingEntryForKey = keyToName[publicKey.toStringShort()]
             if (existingEntryForKey == null) {
-                log.info("Linking: ${key.hash} to ${party.name}")
-                keyToName[key.toStringShort()] = party.name
+                log.info("Linking: ${publicKey.hash} to ${party.name}")
+                keyToName[publicKey.toStringShort()] = party.name
             } else {
-                log.info("An existing entry for ${key.hash} already exists.")
-                if (party.name != keyToName[key.toStringShort()]) {
-                    throw IllegalArgumentException("The public key ${key.hash} is already assigned to a different party than the supplied .")
+                log.info("An existing entry for ${publicKey.hash} already exists.")
+                if (party.name != keyToName[publicKey.toStringShort()]) {
+                    throw IllegalArgumentException("The public publicKey ${publicKey.hash} is already assigned to a different party than the supplied .")
                 }
             }
         }
+    }
+
+    override fun registerKeyToExternalId(key: PublicKey, externalId: UUID) {
+        _pkToIdCache[key] = KeyOwningIdentity.fromUUID(externalId)
+    }
+
+    override fun externalIdForPublicKey(publicKey: PublicKey): UUID? {
+        return _pkToIdCache[publicKey]?.uuid
     }
 }

@@ -30,11 +30,12 @@ import kotlin.collections.LinkedHashSet
  *
  * This class needs database transactions to be in-flight during method calls and init.
  */
-class BasicHSMKeyManagementService(cacheFactory: NamedCacheFactory,
-                                   override val identityService: PersistentIdentityService,
-                                   private val database: CordaPersistence,
-                                   private val cryptoService: SignOnlyCryptoService,
-                                   private val pkToIdCache: WritablePublicKeyToOwningIdentityCache) : SingletonSerializeAsToken(), KeyManagementServiceInternal {
+class BasicHSMKeyManagementService(
+        cacheFactory: NamedCacheFactory,
+        override val identityService: PersistentIdentityService,
+        private val database: CordaPersistence,
+        private val cryptoService: SignOnlyCryptoService
+) : SingletonSerializeAsToken(), KeyManagementServiceInternal {
 
     @Entity
     @Table(name = "${NODE_DATABASE_PREFIX}our_key_pairs")
@@ -103,7 +104,9 @@ class BasicHSMKeyManagementService(cacheFactory: NamedCacheFactory,
         val keyPair = generateKeyPair()
         database.transaction {
             keysMap[keyPair.public] = keyPair.private
-            pkToIdCache[keyPair.public] = KeyOwningIdentity.fromUUID(externalId)
+            if (externalId != null) {
+                identityService.registerKeyToExternalId(keyPair.public, externalId)
+            }
         }
         return keyPair.public
     }
@@ -156,9 +159,5 @@ class BasicHSMKeyManagementService(cacheFactory: NamedCacheFactory,
             val keyPair = getSigningKeyPair(signingPublicKey)
             keyPair.sign(signableData)
         }
-    }
-
-    override fun externalIdForPublicKey(publicKey: PublicKey): UUID? {
-        return pkToIdCache[publicKey]?.uuid
     }
 }

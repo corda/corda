@@ -72,17 +72,13 @@ class ExternalIdMappingTest {
         val dummyStateTwo = createDummyState(listOf(AnonymousParty(keyTwo.owningKey)))
         // This query should return two states!
         val result = database.transaction {
-            val externalId = builder { VaultSchemaV1.StateToExternalId::externalId.`in`(listOf(id)) }
-            val queryCriteria = QueryCriteria.VaultCustomQueryCriteria(externalId)
-            vaultService.queryBy<DummyState>(queryCriteria).states
+            vaultService.queryBy<DummyState>(QueryCriteria.VaultQueryCriteria(externalIds = listOf(id))).states
         }
         assertEquals(setOf(dummyStateOne, dummyStateTwo), result.map { it.state.data }.toSet())
 
         // This query should return two states!
         val resultTwo = database.transaction {
-            val externalId = builder { VaultSchemaV1.StateToExternalId::externalId.equal(id) }
-            val queryCriteria = QueryCriteria.VaultCustomQueryCriteria(externalId)
-            vaultService.queryBy<DummyState>(queryCriteria).states
+            vaultService.queryBy<DummyState>(QueryCriteria.VaultQueryCriteria(externalIds = listOf(id))).states
         }
         assertEquals(setOf(dummyStateOne, dummyStateTwo), resultTwo.map { it.state.data }.toSet())
     }
@@ -140,9 +136,7 @@ class ExternalIdMappingTest {
         val dummyState = createDummyState(listOf(AnonymousParty(keyOne.owningKey), AnonymousParty(keyTwo.owningKey)))
         // This query should return one state!
         val result = database.transaction {
-            val externalId = builder { VaultSchemaV1.StateToExternalId::externalId.`in`(listOf(idOne, idTwo)) }
-            val queryCriteria = QueryCriteria.VaultCustomQueryCriteria(externalId)
-            vaultService.queryBy<DummyState>(queryCriteria).states
+            vaultService.queryBy<DummyState>(QueryCriteria.VaultQueryCriteria(externalIds = listOf(idOne, idTwo))).states
         }
         assertEquals(dummyState, result.single().state.data)
     }
