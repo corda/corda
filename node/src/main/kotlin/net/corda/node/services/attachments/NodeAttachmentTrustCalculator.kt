@@ -40,12 +40,8 @@ class NodeAttachmentTrustCalculator(
     )
 
     override fun calculate(attachment: Attachment): Boolean {
-        val trustedByUploader = when (attachment) {
-            is ContractAttachment, is AbstractAttachment -> isUploaderTrusted(attachment.uploader)
-            else -> false
-        }
 
-        if (trustedByUploader) {
+        if (attachment.isUploaderTrusted()) {
             // add signers to the cache as this is a fully trusted attachment
             attachment.signerKeys
                 .filterNot { it.isBlacklisted() }

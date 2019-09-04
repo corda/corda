@@ -74,13 +74,7 @@ private constructor(
     private var componentGroups: List<ComponentGroup>? = null
     private var serializedInputs: List<SerializedStateAndRef>? = null
     private var serializedReferences: List<SerializedStateAndRef>? = null
-    private var isAttachmentTrusted: (Attachment) -> Boolean = {
-        when (it) {
-            is ContractAttachment -> isUploaderTrusted(it.uploader)
-            is AbstractAttachment -> isUploaderTrusted(it.uploader)
-            else -> false
-        }
-    }
+    private var isAttachmentTrusted: (Attachment) -> Boolean = { it.isUploaderTrusted() }
 
     init {
         if (timeWindow != null) check(notary != null) { "Transactions with time-windows must be notarised" }
