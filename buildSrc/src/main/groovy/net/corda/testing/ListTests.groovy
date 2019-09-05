@@ -42,7 +42,6 @@ class ListTests extends DefaultTask {
     FileCollection scanClassPath
     List<String> allTests
 
-
     def getTestsForFork(int fork, int forks, Integer seed) {
         def gitSha = new BigInteger(project.hasProperty("corda_revision") ? project.property("corda_revision").toString() : "0", 36)
         if (fork >= forks) {
@@ -66,7 +65,7 @@ class ListTests extends DefaultTask {
                 .collect { c -> (c.getSubclasses() + Collections.singletonList(c)) }
                 .flatten()
                 .collect { ClassInfo c ->
-                    c.getMethodInfo().filter { m -> m.hasAnnotation("org.junit.Test") }.collect { m -> c.name + "." + m.name }
+                    c.getMethodInfo().filter { m -> m.hasAnnotation("org.junit.Test") }.collect { m -> c.name + "." + m.name + "*" }
                 }.flatten()
                 .toSet()
 

@@ -9,6 +9,7 @@ import com.bmuschko.gradle.docker.tasks.image.DockerBuildImage
 import com.bmuschko.gradle.docker.tasks.image.DockerCommitImage
 import com.bmuschko.gradle.docker.tasks.image.DockerPushImage
 import com.bmuschko.gradle.docker.tasks.image.DockerTagImage
+import org.gradle.api.GradleException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 
@@ -29,8 +30,9 @@ class ImageBuilding implements Plugin<Project> {
         }
 
         DockerCreateContainer createBuildContainer = project.tasks.create('createBuildContainer', DockerCreateContainer) {
-            File gradleDir = new File((System.getProperty("java.io.tmpdir") + File.separator + "gradle"))
-            File mavenDir = new File((System.getProperty("java.io.tmpdir") + File.separator + "maven"))
+            File baseWorkingDir = new File(System.getProperty("docker.work.dir") ? System.getProperty("docker.work.dir") : System.getProperty("java.io.tmpdir"))
+            File gradleDir = new File(baseWorkingDir, "gradle")
+            File mavenDir = new File(baseWorkingDir, "maven")
             doFirst {
                 if (!gradleDir.exists()) {
                     gradleDir.mkdirs()
@@ -59,6 +61,11 @@ class ImageBuilding implements Plugin<Project> {
         DockerWaitContainer waitForBuildContainer = project.tasks.create('waitForBuildContainer', DockerWaitContainer) {
             dependsOn logBuildContainer
             targetContainerId createBuildContainer.getContainerId()
+            doLast {
+                if (getExitCode() != 0) {
+                    throw new GradleException("Failed to build docker image, aborting build")
+                }
+            }
         }
 
         DockerCommitImage commitBuildImageResult = project.tasks.create('commitBuildImageResult', DockerCommitImage) {
