@@ -1,7 +1,3 @@
-plugins {
-    id 'com.bmuschko.docker-remote-api' version '3.4.4'
-}
-
 evaluationDependsOn(":node:capsule")
 
 import com.bmuschko.gradle.docker.tasks.image.DockerBuildImage
@@ -12,6 +8,8 @@ import java.time.format.DateTimeFormatter
 
 apply plugin: 'kotlin'
 apply plugin: 'application'
+apply plugin: 'com.bmuschko.docker-remote-api'
+
 // We need to set mainClassName before applying the shadow plugin.
 mainClassName = 'net.corda.core.ConfigExporterMain'
 apply plugin: 'com.github.johnrengelman.shadow'
@@ -43,7 +41,7 @@ shadowJar {
 
 docker{
     registryCredentials  {
-        url = System.env.DOCKER_URL
+        url = System.env.DOCKER_URL ?: "hub.docker.com"
         username = System.env.DOCKER_USERNAME
         password = System.env.DOCKER_PASSWORD
     }

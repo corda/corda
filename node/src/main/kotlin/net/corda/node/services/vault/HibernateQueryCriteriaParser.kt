@@ -659,6 +659,25 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
             }
         }
 
+        // External IDs.
+        if (criteria.externalIds.isNotEmpty()) {
+            val ids = criteria.externalIds
+
+            // Get the state to external id entity.
+            val persistentStateToExternalIdEntity = VaultSchemaV1.StateToExternalId::class.java
+            val entityRoot = rootEntities.getOrElse(persistentStateToExternalIdEntity) {
+                val entityRoot = criteriaQuery.from(persistentStateToExternalIdEntity)
+                rootEntities[persistentStateToExternalIdEntity] = entityRoot
+                entityRoot
+            }
+
+            // Add the join and external id predicates.
+            val externalIdJoin = criteriaBuilder.equal(vaultStates.get<VaultSchemaV1.VaultStates>("stateRef"), entityRoot.get<VaultSchemaV1.StateToExternalId>("compositeKey").get<PersistentStateRef>("stateRef"))
+            val externalIdPredicate = criteriaBuilder.and(entityRoot.get<VaultSchemaV1.StateToExternalId>("externalId").`in`(ids))
+            constraintPredicates.add(externalIdJoin)
+            constraintPredicates.add(externalIdPredicate)
+        }
+
         return emptySet()
     }
 

@@ -35,6 +35,7 @@ class BasicHSMKeyManagementService(cacheFactory: NamedCacheFactory,
                                    private val database: CordaPersistence,
                                    private val cryptoService: SignOnlyCryptoService,
                                    private val pkToIdCache: WritablePublicKeyToOwningIdentityCache) : SingletonSerializeAsToken(), KeyManagementServiceInternal {
+
     @Entity
     @Table(name = "${NODE_DATABASE_PREFIX}our_key_pairs")
     class PersistentKey(
@@ -95,7 +96,7 @@ class BasicHSMKeyManagementService(cacheFactory: NamedCacheFactory,
     }
 
     override fun filterMyKeys(candidateKeys: Iterable<PublicKey>): Iterable<PublicKey> = database.transaction {
-        identityService.stripNotOurKeys(candidateKeys)
+        candidateKeys.filter(::containsPublicKey)
     }
 
     override fun freshKeyInternal(externalId: UUID?): PublicKey {
@@ -155,5 +156,9 @@ class BasicHSMKeyManagementService(cacheFactory: NamedCacheFactory,
             val keyPair = getSigningKeyPair(signingPublicKey)
             keyPair.sign(signableData)
         }
+    }
+
+    override fun externalIdForPublicKey(publicKey: PublicKey): UUID? {
+        return pkToIdCache[publicKey]?.uuid
     }
 }

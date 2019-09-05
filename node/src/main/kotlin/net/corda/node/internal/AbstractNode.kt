@@ -410,7 +410,9 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             // Shut down the SMM so no Fibers are scheduled.
             runOnStop += { smm.stop(acceptableLiveFiberCountOnStop()) }
             (smm as? StateMachineManagerInternal)?.let {
-                val flowMonitor = FlowMonitor({ smm.snapshot().filter { flow -> flow !in smm.flowHospital }.toSet() }, configuration.flowMonitorPeriodMillis, configuration.flowMonitorSuspensionLoggingThresholdMillis)
+                val flowMonitor = FlowMonitor({
+                    smm.snapshot().filter { flow -> flow !in smm.flowHospital }.toSet()
+                }, configuration.flowMonitorPeriodMillis, configuration.flowMonitorSuspensionLoggingThresholdMillis)
                 runOnStop += flowMonitor::stop
                 flowMonitor.start()
             }
@@ -597,7 +599,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         // Needed because of bug CORDA-2653 - some Corda services can utilise third-party libraries that require access to
         // the Thread context class loader
 
-        val oldContextClassLoader : ClassLoader? = Thread.currentThread().contextClassLoader
+        val oldContextClassLoader: ClassLoader? = Thread.currentThread().contextClassLoader
         try {
             Thread.currentThread().contextClassLoader = cordappLoader.appClassLoader
 
@@ -1029,12 +1031,16 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
         override fun jdbcSession(): Connection = database.createSession()
 
-        override fun <T : Any> withEntityManager(block: EntityManager.() -> T): T {
-            return block(contextTransaction.restrictedEntityManager)
+        override fun <T : Any?> withEntityManager(block: EntityManager.() -> T): T {
+            return database.transaction {
+                block(restrictedEntityManager)
+            }
         }
 
         override fun withEntityManager(block: Consumer<EntityManager>) {
-            block.accept(contextTransaction.restrictedEntityManager)
+            withEntityManager {
+                block.accept(this)
+            }
         }
 
         // allows services to register handlers to be informed when the node stop method is called

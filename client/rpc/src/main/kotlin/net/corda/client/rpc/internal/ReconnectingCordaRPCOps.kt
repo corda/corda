@@ -71,9 +71,6 @@ class ReconnectingCordaRPCOps private constructor(
             observersPool ?: Executors.newCachedThreadPool(),
             observersPool != null)
     private companion object {
-        // See https://r3-cev.atlassian.net/browse/CORDA-2890.
-        // TODO Once the bug is fixed, this retry logic should be removed.
-        const val MAX_RETRY_ATTEMPTS_ON_AUTH_ERROR = 3
         private val log = contextLogger()
         private fun proxy(reconnectingRPCConnection: ReconnectingRPCConnection, observersPool: ExecutorService): InternalCordaRPCOps {
             return Proxy.newProxyInstance(
@@ -159,8 +156,7 @@ class ReconnectingCordaRPCOps private constructor(
             return currentRPCConnection!!
         }
 
-        private tailrec fun establishConnectionWithRetry(retryInterval: Duration = 1.seconds, currentAuthenticationRetries: Int = 0, roundRobinIndex: Int = 0): CordaRPCConnection {
-            var _currentAuthenticationRetries = currentAuthenticationRetries
+        private tailrec fun establishConnectionWithRetry(retryInterval: Duration = 1.seconds, roundRobinIndex: Int = 0): CordaRPCConnection {
             val attemptedAddress = nodeHostAndPorts[roundRobinIndex]
             log.info("Connecting to: $attemptedAddress")
             try {
@@ -176,12 +172,8 @@ class ReconnectingCordaRPCOps private constructor(
             } catch (ex: Exception) {
                 when (ex) {
                     is ActiveMQSecurityException -> {
-                        // Happens when incorrect credentials provided.
-                        // It can happen at startup as well when the credentials are correct.
-                        if (_currentAuthenticationRetries++ > MAX_RETRY_ATTEMPTS_ON_AUTH_ERROR) {
-                            log.error("Failed to login to node.", ex)
-                            throw ex
-                        }
+                        log.error("Failed to login to node.", ex)
+                        throw ex
                     }
                     is RPCException -> {
                         // Deliberately not logging full stack trace as it will be full of internal stacktraces.
@@ -204,7 +196,7 @@ class ReconnectingCordaRPCOps private constructor(
             Thread.sleep(retryInterval.toMillis())
             // TODO - make the exponential retry factor configurable.
             val nextRoundRobinIndex = (roundRobinIndex + 1) % nodeHostAndPorts.size
-            return establishConnectionWithRetry((retryInterval * 10) / 9, _currentAuthenticationRetries, nextRoundRobinIndex)
+            return establishConnectionWithRetry((retryInterval * 10) / 9, nextRoundRobinIndex)
         }
         override val proxy: CordaRPCOps
             get() = current.proxy

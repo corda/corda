@@ -7,6 +7,11 @@ release, see :doc:`app-upgrade-notes`.
 Unreleased
 ----------
 
+* Introduced a new parameter ``externalIds: List<UUID>`` to ``VaultQueryCriteria`` which allows CorDapp developers to constrain queries
+  to a specified set of external IDs.
+
+* Introduced a new API on ``KeyManagementService`` which facilitates lookups of ``PublicKey`` s to ``externalId`` s (Account IDs).
+
 * Introduced a new low level flow diagnostics tool: checkpoint agent (that can be used standalone or in conjunction with the ``dumpCheckpoints`` shell command).
   See :doc:`checkpoint-tooling` for more information.
 
