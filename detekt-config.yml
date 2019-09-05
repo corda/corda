@@ -22,7 +22,7 @@ test-pattern: # Configure exclusions for test sources
 build:
   warningThreshold: 5
   failThreshold: 10
-  maxIssues: 10
+  maxIssues: 0
   weights:
     # complexity: 2
     # LongParameterList: 1
