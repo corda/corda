@@ -111,6 +111,7 @@ class NodeAttachmentTrustCalculator(
     }
 
     private fun getTrustedAttachments() = attachmentStorage.getAllAttachmentsByCriteria(
+        // `isSignedCondition` is not included here as attachments uploaded by trusted uploaders are considered trusted
         AttachmentQueryCriteria.AttachmentsQueryCriteria(
             uploaderCondition = Builder.`in`(
                 TRUSTED_UPLOADERS
@@ -119,10 +120,12 @@ class NodeAttachmentTrustCalculator(
     )
 
     private fun getUntrustedAttachments() = attachmentStorage.getAllAttachmentsByCriteria(
+        // Filter by `isSignedCondition` so normal data attachments are not returned
         AttachmentQueryCriteria.AttachmentsQueryCriteria(
             uploaderCondition = Builder.notIn(
                 TRUSTED_UPLOADERS
-            )
+            ),
+            isSignedCondition = Builder.equal(true)
         )
     )
 
