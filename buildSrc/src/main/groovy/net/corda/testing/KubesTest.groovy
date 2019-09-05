@@ -66,12 +66,16 @@ class KubesTest extends DefaultTask {
 
         final KubernetesClient client = new DefaultKubernetesClient(config)
 
-        client.pods().inNamespace(namespace).list().getItems().forEach({ podToDelete ->
-            if (podToDelete.getMetadata().name.contains(stableRunId)) {
-                project.logger.lifecycle("deleting: " + podToDelete.getMetadata().getName())
-                client.resource(podToDelete).delete()
-            }
-        })
+        try {
+            client.pods().inNamespace(namespace).list().getItems().forEach({ podToDelete ->
+                if (podToDelete.getMetadata().name.contains(stableRunId)) {
+                    project.logger.lifecycle("deleting: " + podToDelete.getMetadata().getName())
+                    client.resource(podToDelete).delete()
+                }
+            })
+        } catch (Exception ignored) {
+            //it's possible that a pod is being deleted by the original build, this can lead to racey conditions
+        }
 
         Namespace ns = new NamespaceBuilder().withNewMetadata().withName(namespace).addToLabels("testing-env", "true").endMetadata().build()
         client.namespaces().createOrReplace(ns)
