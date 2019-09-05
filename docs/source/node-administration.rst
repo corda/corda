@@ -22,8 +22,8 @@ with a `Log4j2 <https://logging.apache.org/log4j/2.x>`_ configuration file assig
 To extend the Corda default logging configuration, the ``log4j.configurationFile`` property should list the default ``log4j2.xml`` file
 and the additional file with custom settings e.g.
 ``log4j.configurationFile=log4j2.xml,path_to_custom_config.xml``.
-Corda contains default log4j2 settings in the ``log4j2.xml`` embedded file. If ``log4j.configurationFile`` omits the default file then
-custom configuration replaces the default Corda log4j2 settings entirely.
+Corda contains default log4j2 settings in the ``log4j2.xml`` file embedded within the corda JAR.
+If ``log4j.configurationFile`` omits the default file then custom configuration replaces the default Corda log4j2 settings entirely.
 
 The node is using log4j2 asynchronous logging by default (configured via log4j2 properties file in its resources)
 to ensure that log message flushing is not slowing down the actual processing.
