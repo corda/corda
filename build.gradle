@@ -619,6 +619,7 @@ task detekt(type: JavaExec) {
     main = "io.gitlab.arturbosch.detekt.cli.Main"
     classpath = configurations.detekt
     def files = String.join(",", DetektChangedFiles.getChangedFiles())
+    println files
     def input = files
     def config = "$projectDir/detekt-config.yml"
     def params = ['-i', input, '-c', config]
