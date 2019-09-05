@@ -153,26 +153,16 @@ interface IdentityService {
     /**
      * Registers a mapping in the database between the provided [PublicKey] and [Party] if one does not already exist. If an entry
      * exists for the supplied [PublicKey] but the associated [Party] does not match the one supplied to the method then an exception will
-     * be thrown.
+     * be thrown. This method also optionally adds a mapping from [PublicKey] to external ID if one is provided. Lastly, the [PublicKey] is
+     * also stored (as well as the [PublicKey] hash).
      *
      * @param publicKey The public publicKey that will be registered to the supplied [Party]
      * @param party The party that the supplied public publicKey will be registered to
+     * @param externalId The [UUID] that the supplied public key can be optionally registered to
      * @throws IllegalArgumentException if the public publicKey is already registered to a party that does not match the supplied party
      */
     @Throws(IllegalArgumentException::class)
-    fun registerKeyToParty(publicKey: PublicKey, party: Party)
-
-    /**
-     * Registers a mapping in the database between the provided [PublicKey] and [UUID] if one does not already exist. If an entry
-     * exists for the supplied [PublicKey] but the associated [UUID] does not match the one supplied to the method then an exception will
-     * be thrown.
-     *
-     * @param key The public key that will be registered to the supplied [Party]
-     * @param externalId The [UUID] that the supplied public key will be registered to
-     * @throws IllegalArgumentException if the public key is already registered to a [UUID] that does not match the supplied [UUID]
-     */
-    @Throws(IllegalArgumentException::class)
-    fun registerKeyToExternalId(key: PublicKey, externalId: UUID)
+    fun registerKey(publicKey: PublicKey, party: Party, externalId: UUID? = null)
 
     /**
      * This method allows lookups of [PublicKey]s to an associated "external ID" / [UUID]. Providing a [PublicKey] that is unknown by the node
@@ -183,7 +173,7 @@ interface IdentityService {
     @Suspendable
     fun externalIdForPublicKey(publicKey: PublicKey): UUID?
 
-    // TODO: Implement API to return all the keys for a specified externalId.
+    fun publicKeysForExternalId(externalID: UUID): Iterable<PublicKey>
 }
 
 class UnknownAnonymousPartyException(message: String) : CordaException(message)

@@ -48,6 +48,7 @@ open class DefaultNamedCacheFactory protected constructor(private val metricRegi
                 name == "PersistentIdentityService_keyToPartyAndCert" -> caffeine.maximumSize(defaultCacheSize)
                 name == "PersistentIdentityService_nameToKey" -> caffeine.maximumSize(defaultCacheSize)
                 name == "PersistentIdentityService_keyToName" -> caffeine.maximumSize(defaultCacheSize)
+                name == "PersistentIdentityService_hashToKey" -> caffeine.maximumSize(defaultCacheSize)
                 name == "PersistentNetworkMap_nodesByKey" -> caffeine.maximumSize(defaultCacheSize)
                 name == "PersistentNetworkMap_idByLegalName" -> caffeine.maximumSize(defaultCacheSize)
                 name == "PersistentKeyManagementService_keys" -> caffeine.maximumSize(defaultCacheSize)

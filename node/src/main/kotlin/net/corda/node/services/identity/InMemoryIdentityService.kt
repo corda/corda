@@ -111,18 +111,19 @@ class InMemoryIdentityService(identities: List<PartyAndCertificate> = emptyList(
         return results
     }
 
-    override fun registerKeyToParty(publicKey: PublicKey, party: Party) {
-        if (keyToName[publicKey] == null) {
-            keyToName.putIfAbsent(publicKey, party.name)
-        }
-        throw IllegalArgumentException("An entry for the public publicKey: $publicKey already exists.")
+    override fun registerKey(publicKey: PublicKey, party: Party, externalId: UUID?) {
+        TODO("Not implemented")
     }
 
     override fun externalIdForPublicKey(publicKey: PublicKey): UUID? {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
-    override fun registerKeyToExternalId(key: PublicKey, externalId: UUID) {
+    fun registerKeyToExternalId(key: PublicKey, externalId: UUID) {
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    }
+
+    override fun publicKeysForExternalId(externalID: UUID): Iterable<PublicKey> {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 }
