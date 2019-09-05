@@ -5,6 +5,7 @@ import net.corda.core.crypto.NullKeys
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.utilities.OpaqueBytes
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 import kotlin.test.assertEquals
 
@@ -29,6 +30,15 @@ class StatePointerSearchTests {
     }
 
     private data class StateWithListOfList(val pointerSet: List<List<LinearPointer<LinearState>>>) : ContractState {
+        override val participants: List<AbstractParty> get() = listOf()
+    }
+
+    private data class StateWithStaticField(val blah: Int) : ContractState {
+        companion object {
+            @JvmStatic
+            val pointer = LinearPointer(UniqueIdentifier(), LinearState::class.java)
+        }
+
         override val participants: List<AbstractParty> get() = listOf()
     }
 
@@ -74,4 +84,9 @@ class StatePointerSearchTests {
         assertEquals(results, setOf(linearPointer))
     }
 
+    @Test
+    fun `ignore static fields`() {
+        val results = StatePointerSearch(StateWithStaticField(1)).search()
+        assertThat(results).isEmpty()
+    }
 }
