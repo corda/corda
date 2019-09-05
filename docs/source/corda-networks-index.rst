@@ -18,3 +18,4 @@ Networks
    testnet-explorer-corda
    setting-up-a-dynamic-compatibility-zone
    running-a-notary
+   jpa-notary

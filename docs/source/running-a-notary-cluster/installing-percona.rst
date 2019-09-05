@@ -1,6 +1,5 @@
-==========================================================
-Percona XtraDB Cluster, the underlying replicated Database
-==========================================================
+Notary backend set-up - Percona XtraDB Cluster
+==============================================
 
 The HA notary service is tested against Percona XtraDB Cluster 5.7. Percona's 
 `documentation page <https://www.percona.com/doc/percona-xtradb-cluster/LATEST/index.html>`__ explains the installation 
@@ -28,7 +27,7 @@ percona-3 10.1.0.3
 ========= ========
 
 Installation
-============
+------------
 
 Percona provides repositories for the YUM and APT package managers.
 Alternatively you can install from source. For simplicity, we are going to
@@ -57,7 +56,7 @@ running with ``service mysql status``, start the service with ``sudo service mys
 ``sudo service mysql stop``.
 
 Configuration
-=============
+-------------
 
 Configure the MySQL Root Password (if necessary)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -139,6 +138,10 @@ We need to create three tables in our database:
 
 We can do this using the following commands:
 
+.. note::
+  The below schema is intended to be used with the Percona notary implementation and not the JPA notary implementation. See the note in 
+  :doc:`introduction` for more details on the difference between the Percona and JPA notary implementations.
+  
 .. code:: sql
 
   CREATE DATABASE corda;

@@ -22,56 +22,17 @@ const val JAR_OUTPUT = "jar"
 const val RELEASE_LOCK = "release-lock"
 
 enum class Mode {
-    NODE, DOORMAN
+    NODE, DOORMAN, JPA_NOTARY
 }
 
 fun SharedDbManagerOptions.toConfig(): DbManagerConfiguration {
     return if (this.mode == Mode.DOORMAN) {
         requireNotNull(this.doormanJarPath) { "If running against the doorman you must provide the --$DOORMAN_JAR_PATH" }
         DoormanDbManagerConfiguration(this)
+    } else if (this.mode == Mode.JPA_NOTARY) {
+        JPANotaryDbManagerConfiguration(this)
     } else {
         NodeDbManagerConfiguration(this)
-    }
-}
-
-class DoormanDbManagerConfiguration(cmdLineOptions: SharedDbManagerOptions) : DbManagerConfiguration(cmdLineOptions) {
-    override val defaultConfigFileName get() = "network-management.conf"
-    private val doormanFatJarPath by lazy {
-        val fatJarPath = cmdLineOptions.doormanJarPath!!
-        if (!fatJarPath.exists()) {
-            error("Could not find the doorman JAR in location: '$fatJarPath'.")
-        }
-        fatJarPath
-    }
-    override val cordappLoader = null
-
-    override val parsedConfig: Config by lazy {
-        ConfigFactory.parseFile(configFile.toFile()).resolve()
-    }
-
-    private fun loadMappedSchema(schemaName: String, classLoader: ClassLoader) = classLoader.loadClass(schemaName).kotlin.objectInstance as MappedSchema
-    override val schemas: Set<MappedSchema> by lazy {
-        val doormanSchema = "com.r3.corda.networkmanage.common.persistence.NetworkManagementSchemaServices\$SchemaV1"
-        setOf(loadMappedSchema(doormanSchema, classLoader))
-    }
-
-    private fun classLoaderFromJar(jarPath: Path): ClassLoader = URLClassLoader(listOf(jarPath.toUri().toURL()).toTypedArray())
-    override val classLoader by lazy { classLoaderFromJar(doormanFatJarPath) }
-}
-
-class NodeDbManagerConfiguration(cmdLineOptions: SharedDbManagerOptions) : DbManagerConfiguration(cmdLineOptions) {
-    private val cordappsFolder by lazy { baseDirectory / "cordapps" }
-    private val cordappSchemas by lazy { cordappLoader.cordappSchemas.union(notaryLoader?.builtInNotary?.customSchemas ?: emptySet()) }
-
-    override val cordappLoader by lazy { JarScanningCordappLoader.fromDirectories(setOf(cordappsFolder)) }
-    override val defaultConfigFileName get() = "node.conf"
-    override val classLoader by lazy { cordappLoader.appClassLoader }
-    override val schemas: Set<MappedSchema> by lazy { NodeSchemaService(extraSchemas = cordappSchemas).schemaOptions.keys }
-    override val parsedConfig: Config by lazy {
-        ConfigFactory.parseFile(configFile.toFile())
-                .withFallback(configOf("baseDirectory" to cmdLineOptions.baseDirectory.toString()))
-                .withFallback(ConfigFactory.parseResources("reference.conf", ConfigParseOptions.defaults().setAllowMissing(true)))
-                .resolve()
     }
 }
 

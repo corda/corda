@@ -1,16 +1,16 @@
-Using the Bootstrapper
-++++++++++++++++++++++
+Joining a network - bootstrapped network
+========================================
 
-You can skip this section when you're setting up or joining a cluster with
-doorman and network map.
+.. note::
+
+   If you're setting up or joining a cluster with a doorman and network map, see
+   :doc:`installing-the-notary-service-netman` instead.
 
 Once the database is set up, you can prepare your configuration files of your notary
 nodes and use the bootstrapper to create a Corda network, see
-:doc:`../setting-up-a-corda-network`. Remember to configure
+:doc:`../network-bootstrapper`. Remember to configure
 ``notary.serviceLegalName`` in addition to ``myLegalName`` for all members of
 your cluster.
-
-You can find the documentation of the bootstrapper at :doc:`../setting-up-a-corda-network`.
 
 Expected Outcome
 ~~~~~~~~~~~~~~~~

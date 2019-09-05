@@ -6,6 +6,7 @@ import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.services.Permissions
+import net.corda.notarytest.flows.JPALoadTestFlow
 import net.corda.notarytest.flows.MySQLLoadTestFlow
 import net.corda.testing.node.User
 import java.util.concurrent.TimeUnit
@@ -48,7 +49,7 @@ fun main(args: Array<String>) {
 private fun run(rpc: CordaRPCOps, inputStateCount: Int? = null): List<Long> {
     return (1..TEST_RUNS).map { i ->
         val timer = Stopwatch.createStarted()
-        val commitDuration = rpc.startFlow(::MySQLLoadTestFlow, TRANSACTION_COUNT, BATCH_SIZE, inputStateCount).returnValue.get()
+        val commitDuration = rpc.startFlow(::JPALoadTestFlow, TRANSACTION_COUNT, BATCH_SIZE, inputStateCount).returnValue.get()
         val flowDuration = timer.stop().elapsed(TimeUnit.MILLISECONDS)
         println("#$i: Duration: $flowDuration ms, commit duration: $commitDuration ms")
         flowDuration

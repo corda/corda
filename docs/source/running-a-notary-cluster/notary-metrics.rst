@@ -1,5 +1,5 @@
-HA Notary Metrics
-=================
+Highly-available notary metrics
+===============================
 
 Corda nodes export various performance and health metrics for monitoring, as
 described in :doc:`../node-administration`. The HA notary provides additional

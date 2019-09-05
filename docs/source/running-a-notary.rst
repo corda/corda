@@ -7,8 +7,8 @@ Corda Enterprise comes with two notary implementations built-in:
    and can be used for testing, or networks that do not have strict availability requirements.
 2. **Highly available**: a clustered notary service operated by a single party, able to tolerate crash faults.
 
-Single-node
-===========
+Single-node notary
+==================
 
 To have a regular Corda node provide a notary service you simply need to set appropriate ``notary`` configuration values
 before starting it:
@@ -30,15 +30,14 @@ For clients to be able to use the notary service, its identity must be added to 
 done automatically when creating the network, if using :doc:`network-bootstrapper`. See :doc:`corda-networks-index`
 for more details.
 
-Highly available
-================
+Highly-available notary
+=======================
 
-Corda Enterprise provides a highly available notary service implementation backed by a replicated Percona XtraDB cluster.
-This is the recommended implementation for production networks. See :doc:`running-a-notary-cluster/toctree` for detailed
-setup steps.
+See :doc:`running-a-notary-cluster/toctree`.
 
 .. warning::
     Upgrading an existing single-node notary to be highly available is currently unsupported.
+
 
 Metrics
 -------
@@ -84,14 +83,19 @@ Specific Metrics
 
 Some notary implementations record metrics that are unique to them:
 
-.. _mysql_notary_metrics
+.. _jpa_and_mysql_notary_metrics
 
-MySQL Notary Metrics
-~~~~~~~~~~~~~~~~~~~
+JPA and MySQL Notary Metrics
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
   rollbackCounter
     Tracks the number of rollbacks that occur. When writing to multiple masters with Galera, transaction rollbacks may happen
     due to high contention.
+
+.. _mysql_notary_metrics
+
+MySQL Notary Metrics
+~~~~~~~~~~~~~~~~~~~~
 
   connectionExceptionCounter
     Tracks the number of times that the notary service is unable to obtain a database connection.

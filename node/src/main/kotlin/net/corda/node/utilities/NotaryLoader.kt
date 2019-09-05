@@ -15,6 +15,7 @@ import net.corda.notary.experimental.raft.RaftNotaryService
 import net.corda.notary.jpa.JPANotaryService
 import java.lang.reflect.InvocationTargetException
 import net.corda.notary.mysql.MySQLNotaryService
+import net.corda.notary.standalonejpa.StandaloneJPANotaryService
 import java.security.PublicKey
 
 class NotaryLoader(
@@ -47,6 +48,10 @@ class NotaryLoader(
                 config.mysql != null -> {
                     builtInNotary = VirtualCordapp.generateMySQLNotary(versionInfo)
                     MySQLNotaryService::class.java
+                }
+                config.jpa != null -> {
+                    builtInNotary = VirtualCordapp.generateStandaloneJPANotary(versionInfo)
+                    StandaloneJPANotaryService::class.java
                 }
                 else -> {
                     builtInNotary = VirtualCordapp.generateJPANotary(versionInfo)

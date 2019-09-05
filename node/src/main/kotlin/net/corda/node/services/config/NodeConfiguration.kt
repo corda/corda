@@ -16,6 +16,7 @@ import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.cryptoservice.SupportedCryptoServices
 import net.corda.nodeapi.internal.cryptoservice.WrappingMode
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
+import net.corda.notary.standalonejpa.StandaloneJPANotaryConfig
 import net.corda.notary.experimental.bftsmart.BFTSmartConfig
 import net.corda.notary.experimental.raft.RaftConfig
 import net.corda.notary.mysql.MySQLNotaryConfig
@@ -182,6 +183,7 @@ data class NotaryConfig(
         val raft: RaftConfig? = null,
         val bftSMaRt: BFTSmartConfig? = null,
         val mysql: MySQLNotaryConfig? = null,
+        val jpa: StandaloneJPANotaryConfig? = null,
         val useUnspentStatesCache: Boolean = false
 ) {
     internal object Defaults {

@@ -17,14 +17,18 @@ import net.corda.core.utilities.minutes
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
+import net.corda.notary.standalonejpa.StandaloneJPANotaryConfig
+import net.corda.notary.standalonejpa.StandaloneJPANotaryDatabaseConfig
 import net.corda.notary.experimental.raft.RaftConfig
 import net.corda.notary.experimental.raft.RaftNotarySchemaV1
 import net.corda.notary.experimental.raft.RaftUniquenessProvider
 import net.corda.notary.jpa.JPANotaryConfiguration
 import net.corda.notary.jpa.JPANotarySchemaV1
 import net.corda.notary.jpa.JPAUniquenessProvider
+import net.corda.notary.standalonejpa.StandaloneJPAUniquenessProvider
 import net.corda.notary.mysql.MySQLNotaryConfig
 import net.corda.notary.mysql.MySQLUniquenessProvider
+import net.corda.notary.standalonejpa.SchemaInitializationType
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.core.generateStateRef
@@ -56,6 +60,7 @@ class UniquenessProviderTests(
                 RaftUniquenessProviderFactory(),
                 MySQLUniquenessProviderFactory(),
                 JPAUniquenessProviderFactory(),
+                StandaloneJPAUniquenessProviderFactory(),
                 JPAUniquenessProviderWithUnspentStateCacheFactory()
         )
     }
@@ -74,12 +79,16 @@ class UniquenessProviderTests(
         testClock = TestClock(Clock.systemUTC())
         uniquenessProvider = uniquenessProviderFactory.create(testClock)
         LogHelper.setLevel(uniquenessProvider::class)
+        LogHelper.setLevel("log4j.logger.org.hibernate.type")
+        LogHelper.setLevel("log4j.logger.org.hibernate.SQL")
     }
 
     @After
     fun tearDown() {
         uniquenessProviderFactory.cleanUp()
         LogHelper.reset(uniquenessProvider::class)
+        LogHelper.reset("log4j.logger.org.hibernate.type")
+        LogHelper.reset("log4j.logger.org.hibernate.SQL")
     }
 
     /*
@@ -451,6 +460,20 @@ class JPAUniquenessProviderFactory : UniquenessProviderFactory {
 
     override fun cleanUp() {
         database?.close()
+    }
+}
+
+class StandaloneJPAUniquenessProviderFactory : UniquenessProviderFactory {
+    override fun create(clock: Clock): UniquenessProvider {
+        val dataSourceProperties = makeTestDataSourceProperties()
+
+        val standaloneJPANotaryDatabaseConfig = StandaloneJPANotaryDatabaseConfig(initialiseSchema = SchemaInitializationType.UPDATE_H2_ONLY)
+        val standaloneJPANotaryConfig = StandaloneJPANotaryConfig(dataSourceProperties, standaloneJPANotaryDatabaseConfig)
+
+        return StandaloneJPAUniquenessProvider(MetricRegistry(), clock, standaloneJPANotaryConfig)
+    }
+
+    override fun cleanUp() {
     }
 }
 

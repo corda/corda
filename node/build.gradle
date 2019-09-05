@@ -25,6 +25,8 @@ description 'Corda node modules'
 configurations {
     integrationTestCompile.extendsFrom testCompile
     integrationTestRuntimeOnly.extendsFrom testRuntimeOnly
+    databaseIntegrationTestCompile.extendsFrom integrationTestCompile
+
 }
 
 sourceSets {
@@ -41,6 +43,21 @@ sourceSets {
         }
         resources {
             srcDir file('src/integration-test/resources')
+        }
+    }
+    databaseIntegrationTest {
+        kotlin {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/database-integration-test/kotlin')
+        }
+        java {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/database-integration-test/java')
+        }
+        resources {
+            srcDir file('src/database-integration-test/resources')
         }
     }
 }
@@ -196,6 +213,21 @@ dependencies {
     testCompile "org.glassfish.jersey.containers:jersey-container-servlet-core:${jersey_version}"
     testCompile "org.glassfish.jersey.containers:jersey-container-jetty-http:${jersey_version}"
 
+
+    //These JDBC drivers are requried for the JPA notary integration tests
+    databaseIntegrationTestCompile group: 'mysql', name: 'mysql-connector-java', version: '8.0.16'
+    databaseIntegrationTestCompile group: 'org.postgresql', name: 'postgresql', version: '42.2.6'
+    databaseIntegrationTestCompile group: 'com.microsoft.sqlserver', name: 'mssql-jdbc', version: '7.0.0.jre8'
+    databaseIntegrationTestCompile group: 'org.mariadb.jdbc', name: 'mariadb-java-client', version: '2.2.0'
+    databaseIntegrationTestCompile files('lib/ojdbc8.jar')
+
+    //These testcontainers are required for the JPA notary integration tests
+    databaseIntegrationTestCompile 'org.testcontainers:testcontainers:1.12.0'
+    databaseIntegrationTestCompile "org.testcontainers:mariadb:1.12.0"
+    databaseIntegrationTestCompile 'org.testcontainers:mysql:1.12.0'
+    databaseIntegrationTestCompile 'org.testcontainers:postgresql:1.12.0'
+    databaseIntegrationTestCompile "org.testcontainers:mssqlserver:1.12.0"
+
     // Spotify Docker client for using docker containers in integration tests
     testCompile "com.spotify:docker-client:8.14.5"
 
@@ -262,6 +294,12 @@ test {
 task integrationTest(type: Test) {
     testClassesDirs = sourceSets.integrationTest.output.classesDirs
     classpath = sourceSets.integrationTest.runtimeClasspath
+    maxParallelForks = (System.env.CORDA_NODE_INT_TESTING_FORKS == null) ? 1 :  "$System.env.CORDA_NODE_INT_TESTING_FORKS".toInteger()
+}
+
+task databaseIntegrationTest(type: Test) {
+    testClassesDirs = sourceSets.databaseIntegrationTest.output.classesDirs
+    classpath = sourceSets.databaseIntegrationTest.runtimeClasspath
     maxParallelForks = (System.env.CORDA_NODE_INT_TESTING_FORKS == null) ? 1 :  "$System.env.CORDA_NODE_INT_TESTING_FORKS".toInteger()
 }
 

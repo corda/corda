@@ -142,7 +142,7 @@ We have established results for a number of different software configurations:
    for other nodes.  For Corda Enterprise 4, the notary is actually using a slightly enhanced implementation that is less of a bottleneck and will be released in a
    later point release of Corda Enterprise.
 2. **Highly Available Notary**.  In Figure 3, this uses a notary cluster made up of 3 nodes in non-validating mode.  Normal node persistence uses a **Microsoft SQL Server** database
-   but the notary state is maintained in a version of MySQL utilising a clustering technology as described in :doc:`running-a-notary-cluster/introduction`.
+   but the notary state is maintained in a version of MySQL utilising a clustering technology as described in :doc:`running-a-notary-cluster/ha-notary-service-setup`.
    For full disclosure (and convenience for us) all 3 nodes are running in one data centre, which would not be a typical deployment.  Whilst the latency
    between cluster members influences the performance of the notary itself, it is not operating at its limit even in that scenario here.  These notaries always ran on an 8 core VM.
 3. **Open Source**.  In Figure 3, this uses the latest available open source Corda at the time of the test, persisting to an in-process **H2** database.

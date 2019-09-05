@@ -23,6 +23,8 @@ import net.corda.nodeapi.internal.persistence.SchemaInitializationType
 import net.corda.nodeapi.internal.persistence.TransactionIsolationLevel
 import net.corda.notary.experimental.bftsmart.BFTSmartConfig
 import net.corda.notary.experimental.raft.RaftConfig
+import net.corda.notary.standalonejpa.StandaloneJPANotaryConfig
+import net.corda.notary.standalonejpa.StandaloneJPANotaryDatabaseConfig
 import net.corda.notary.mysql.MySQLNotaryConfig
 import net.corda.tools.shell.SSHDConfiguration
 import java.net.Proxy
@@ -167,11 +169,12 @@ internal object NotaryConfigSpec : Configuration.Specification<NotaryConfig>("No
     private val raft by nested(RaftConfigSpec).optional()
     private val bftSMaRt by nested(BFTSmartConfigSpec).optional()
     private val mysql by nested(MySQLNotaryConfigSpec).optional()
+    private val jpa by nested(StandaloneJPANotaryConfigSpec).optional()
     private val useUnspentStatesCache by boolean().optional().withDefaultValue(NotaryConfig.Defaults.useUnspentStatesCache)
 
     override fun parseValid(configuration: Config, options: Configuration.Options): Valid<NotaryConfig> {
         val config = configuration.withOptions(options)
-        return valid(NotaryConfig(config[validating], config[serviceLegalName], config[className], config[etaMessageThresholdSeconds], config[extraConfig], config[raft], config[bftSMaRt], config[mysql], config[useUnspentStatesCache]))
+        return valid(NotaryConfig(config[validating], config[serviceLegalName], config[className], config[etaMessageThresholdSeconds], config[extraConfig], config[raft], config[bftSMaRt], config[mysql], config[jpa], config[useUnspentStatesCache]))
     }
 }
 
@@ -213,6 +216,34 @@ internal object MySQLNotaryConfigSpec : Configuration.Specification<MySQLNotaryC
     }
 }
 
+internal object StandaloneJPANotaryConfigSpec: Configuration.Specification<StandaloneJPANotaryConfig>("StandaloneJPANotaryConfig") {
+    private val dataSource by nestedObject(sensitive = true).map(::toProperties)
+    private val databaseConfig by nested(StandaloneJPANotaryDatabaseConfigSpec)
+    private val connectionRetries by int().optional().withDefaultValue(StandaloneJPANotaryConfig.Defaults.connectionRetries)
+    private val backOffIncrement by int().optional().withDefaultValue(StandaloneJPANotaryConfig.Defaults.backOffIncrement)
+    private val backOffBase by double().optional().withDefaultValue(StandaloneJPANotaryConfig.Defaults.backOffBase)
+    private val maxBatchSize by int().optional().withDefaultValue(StandaloneJPANotaryConfig.Defaults.maxBatchSize)
+    private val maxBatchInputStates by int().optional().withDefaultValue(StandaloneJPANotaryConfig.Defaults.maxBatchInputStates)
+    private val batchTimeoutMs by long().optional().withDefaultValue(StandaloneJPANotaryConfig.Defaults.batchTimeoutMs)
+    private val maxQueueSize by int().optional().withDefaultValue(StandaloneJPANotaryConfig.Defaults.maxQueueSize)
+    private val maxDBTransactionRetryCount by int().optional().withDefaultValue(StandaloneJPANotaryConfig.Defaults.maxDBTransactionRetryCount)
+
+    override fun parseValid(configuration: Config, options: Configuration.Options): Valid<StandaloneJPANotaryConfig> {
+        val config = configuration.withOptions(options)
+        return valid(StandaloneJPANotaryConfig(config[dataSource], config[databaseConfig], config[connectionRetries], config[backOffIncrement], config[backOffBase], config[maxBatchSize], config[maxBatchInputStates], config[batchTimeoutMs], config[maxQueueSize], config[maxDBTransactionRetryCount]))
+    }
+}
+
+internal object StandaloneJPANotaryDatabaseConfigSpec: Configuration.Specification<StandaloneJPANotaryDatabaseConfig>("StandaloneJPANotaryDatabaseConfig") {
+    private val initialiseSchema by enum(net.corda.notary.standalonejpa.SchemaInitializationType::class).optional().withDefaultValue(StandaloneJPANotaryDatabaseConfig.Defaults.initialiseSchema)
+    private val hibernateDialect by string().optional()
+    private val schema by string().optional()
+
+    override fun parseValid(configuration: Config, options: Configuration.Options): Valid<StandaloneJPANotaryDatabaseConfig> {
+        val config = configuration.withOptions(options)
+        return valid(StandaloneJPANotaryDatabaseConfig(config[initialiseSchema], config[schema], config[hibernateDialect]))
+    }
+}
 internal object NodeRpcSettingsSpec : Configuration.Specification<NodeRpcSettings>("NodeRpcSettings") {
     internal object BrokerRpcSslOptionsSpec : Configuration.Specification<BrokerRpcSslOptions>("BrokerRpcSslOptions") {
         private val keyStorePath by string().mapValid(::toPath)

@@ -108,7 +108,7 @@ Additional options:
 
 * ``--base-directory``, ``-b``: (Required) The node working directory where all the files are kept (default: ``.``).
 * ``--config-file``, ``-f``: The path to the config file. Defaults to ``node.conf``.
-* ``--mode``: The operating mode. Possible values: NODE, DOORMAN. Default: NODE.
+* ``--mode``: The operating mode. Possible values: NODE, DOORMAN, JPA_NOTARY. Default: NODE.
 * ``--doorman-jar-path=<doormanJarPath>``: The path to the doorman JAR.
 * ``--verbose``, ``--log-to-console``, ``-v``: If set, prints logging to the console as well as to a file.
 * ``--logging-level=<loggingLevel>``: Enable logging at this level and higher. Possible values: ERROR, WARN, INFO, DEBUG, TRACE. Default: INFO.
@@ -131,7 +131,7 @@ Usage:
 
 * ``--base-directory``, ``-b``: (Required) The node working directory where all the files are kept (default: ``.``).
 * ``--config-file``, ``-f``: The path to the config file. Defaults to ``node.conf``.
-* ``--mode``: The operating mode. Possible values: NODE, DOORMAN. Default: NODE.
+* ``--mode``: The operating mode. Possible values: NODE, DOORMAN, JPA_NOTARY. Default: NODE.
 * ``--doorman-jar-path=<doormanJarPath>``: The path to the doorman JAR.
 * ``--verbose``, ``--log-to-console``, ``-v``: If set, prints logging to the console as well as to a file.
 * ``--logging-level=<loggingLevel>``: Enable logging at this level and higher. Possible values: ERROR, WARN, INFO, DEBUG, TRACE. Default: INFO.
@@ -158,7 +158,7 @@ Additional options:
 
 * ``--base-directory``, ``-b``: (Required) The node working directory where all the files are kept (default: ``.``).
 * ``--config-file``, ``-f``: The path to the config file. Defaults to ``node.conf``.
-* ``--mode``: The operating mode. Possible values: NODE, DOORMAN. Default: NODE.
+* ``--mode``: The operating mode. Possible values: NODE, DOORMAN, JPA_NOTARY. Default: NODE.
 * ``--doorman-jar-path=<doormanJarPath>``: The path to the doorman JAR.
 * ``--verbose``, ``--log-to-console``, ``-v``: If set, prints logging to the console as well as to a file.
 * ``--logging-level=<loggingLevel>``: Enable logging at this level and higher. Possible values: ERROR, WARN, INFO, DEBUG, TRACE. Default: INFO.

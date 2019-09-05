@@ -1,0 +1,58 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd">
+
+    <changeSet id="1565009625600-1" author="R3.Corda">
+        <addPrimaryKey columnNames="id" constraintName="PRIMARY" tableName="DATABASECHANGELOG"/>
+    </changeSet>
+    
+    <changeSet author="R3.Corda" id="1564991802230-1">
+        <createTable tableName="notary_committed_states">
+            <column name="state_ref" type="VARCHAR(73)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="consuming_transaction_id" type="VARCHAR(64)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet author="R3.Corda" id="1564991802230-2">
+        <createTable tableName="notary_committed_transactions">
+            <column name="transaction_id" type="VARCHAR(64)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet author="R3.Corda" id="1564991802230-3">
+        <createTable tableName="notary_request_log">
+            <column name="id" type="VARCHAR(76)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="consuming_transaction_id" type="VARCHAR(64)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="requesting_party_name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="request_timestamp" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="request_signature" type="varbinary(1024)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet author="R3.Corda" id="1564991802230-4">
+        <addPrimaryKey columnNames="state_ref, consuming_transaction_id" constraintName="committed_states_pkey"
+                       tableName="notary_committed_states"/>
+    </changeSet>
+    <changeSet author="R3.Corda" id="1564991802230-5">
+        <addPrimaryKey columnNames="id" constraintName="request_log_pkey"
+                       tableName="notary_request_log"/>
+    </changeSet>
+    <changeSet author="R3.Corda" id="1564991802230-6">
+        <addPrimaryKey columnNames="transaction_id" constraintName="committed_transactions_pkey"
+                       tableName="notary_committed_transactions"/>
+    </changeSet>
+</databaseChangeLog>

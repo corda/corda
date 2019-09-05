@@ -1,10 +1,12 @@
-In a network with Doorman and Network map
-+++++++++++++++++++++++++++++++++++++++++
+Joining a network - doorman and network map
+===========================================
 
-You can skip this section if you're not setting up or joining a network with
-doorman and network map service.
+.. note::
 
-Expected Outcome
+   If you're setting up or joining a network using the bootstrapper tool, see
+   :doc:`installing-the-notary-service-bootstrapper` instead.
+
+Expected outcome
 ~~~~~~~~~~~~~~~~
 
 You will go from a set of configuration files to a fully functional Corda network.

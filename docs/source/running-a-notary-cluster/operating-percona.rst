@@ -1,9 +1,25 @@
-==============================
-Percona Monitoring, Backup and Restore (Advanced)
-==============================
+Monitoring, backup and restore - Percona XtraDB Cluster
+=======================================================
+
+Networking
+----------
+
+Note the following important ports used by Percona:
+
+=====  =======================
+Port   Purpose
+=====  =======================
+3306   MySQL client connections (from the Corda notary nodes)
+4444   SST via rsync and Percona XtraBackup
+4567   Write-set replication traffic (over TCP) and multicast replication (over TCP and UDP)
+4568   IST (Incremental State Transfer)
+=====  =======================
+
+Follow the `Percona documentation <https://www.percona.com/doc/percona-xtradb-cluster/5.7/security/encrypt-traffic.html>`__
+if you need to encrypt the traffic between your Corda nodes and Percona and between Percona nodes.
 
 Monitoring
-==========
+----------
 
 Percona Monitoring and Management (PMM) is a platform for managing and
 monitoring your Percona cluster.  See the `PMM documentation
@@ -41,10 +57,8 @@ Install and configure PMM Client on all the machines that are running Percona.
   sudo apt-get install pmm-client
   sudo pmm-admin config --server ${PMM_HOST}:${PMM_PORT}
 
-
-
 Backup
-======
+------
 
 You can take backups with the ``XtraBackup`` tool. The command below creates a
 backup in ``/data/backups``.
@@ -55,7 +69,7 @@ backup in ``/data/backups``.
 
 
 Restore
-=======
+-------
 
 Stop the Cluster
 ^^^^^^^^^^^^^^^^
@@ -86,7 +100,7 @@ Start the first Node
   /etc/init.d/mysql bootstrap-pxc
 
 Repair
-======
+------
 
 You can recover from some accidents, e.g. a table drop, by restoring the last
 backup and then applying the binlog up to the offending statement.
@@ -120,7 +134,7 @@ Start remaining Nodes
 Finally, start the remaining nodes of the cluster.
 
 Restarting a Cluster
-====================
+--------------------
 When all nodes of the cluster are down, manual intervention is needed to bring
 the cluster back up. On the node with the most advanced replication index,
 ``set safe_to_bootstrap: 1`` in the file ``grastate.dat`` in the data directory.

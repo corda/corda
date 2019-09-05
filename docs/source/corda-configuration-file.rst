@@ -566,6 +566,49 @@ notary
         new cluster will be bootstrapped.
 
         *Default:* not defined
+  jpa
+    Connect to a JDBC compatible database using a provided driver. Can be used singly or as part of an HA cluster.
+
+      connectionRetries
+        The number of times to retry connection to the database. This should be based on the number of database servers in the replicated
+        setup.
+      
+      databaseConfig
+        initialiseSchema
+        
+        schema
+          Sets the schema to be used by Hibernate
+      
+        hibernateDialect
+          Optionally sets the Hibernate dialect to use when communicating with the database.
+
+      dataSource
+        This section is used to configure the JDBC connection to the database cluster. For example:
+
+        autoCommit
+          JDBC operation mode where every update to the database is immediately made permanent. For HA notary it has to be disabled, i.e. set to ``"false"``.
+
+          *Default:* not defined
+
+        jdbcUrl
+          The JDBC connection string. Has to contain a comma-separated list of IPs for all database servers. For example, if we have a 3-node cluster with addresses 10.18.1.1, 10.18.1.2 and 10.18.1.3,
+          and the database name is ``corda``:
+
+          .. parsed-literal::
+
+             "jdbc:mysql://10.18.1.1,10.18.1.2,10.18.1.3/corda?rewriteBatchedStatements=true&useSSL=false&failOverReadOnly=false"
+
+          *Default:* not defined
+
+        username
+          Database user.
+
+          *Default:* not defined
+
+        password
+          Database password.
+
+          *Default:* not defined
 
 networkParameterAcceptanceSettings
   Optional settings for managing the network parameter auto-acceptance behaviour.

@@ -13,6 +13,7 @@ import net.corda.notary.experimental.raft.RaftNotaryService
 import net.corda.notary.jpa.JPANotarySchemaV1
 import net.corda.notary.jpa.JPANotaryService
 import net.corda.notary.mysql.MySQLNotaryService
+import net.corda.notary.standalonejpa.StandaloneJPANotaryService
 
 internal object VirtualCordapp {
     /** A list of the core RPC flows present in Corda */
@@ -136,4 +137,25 @@ internal object VirtualCordapp {
                 isLoaded = false
         )
     }
+
+    /** A Cordapp for the built-in JPA notary service implementation. */
+    fun generateStandaloneJPANotary(versionInfo: VersionInfo) = CordappImpl(
+            contractClassNames = listOf(),
+            initiatedFlows = listOf(),
+            rpcFlows = listOf(),
+            serviceFlows = listOf(),
+            schedulableFlows = listOf(),
+            services = listOf(),
+            serializationWhitelists = listOf(),
+            serializationCustomSerializers = listOf(),
+            customSchemas = emptySet(),
+            info = Cordapp.Info.Default("corda-notary-standalonejpa", versionInfo.vendor, versionInfo.releaseVersion, "Copyright 2019 R3. Licensed use only"),
+            allFlows = listOf(),
+            jarPath = StandaloneJPANotaryService::class.java.location,
+            jarHash = SecureHash.allOnesHash,
+            minimumPlatformVersion = versionInfo.platformVersion,
+            targetPlatformVersion = versionInfo.platformVersion,
+            notaryService = StandaloneJPANotaryService::class.java,
+            isLoaded = false
+    )
 }
