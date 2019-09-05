@@ -623,6 +623,7 @@ ext.getChangedFiles = { ->
             int endIndex = fileList[i].indexOf(":CHANGED")
             fileList[i] = fileList[i].substring(0, endIndex)
         }
+        return fileList
     } else {
         def stdout = new ByteArrayOutputStream()
         exec {
@@ -637,6 +638,7 @@ task detekt(type: JavaExec) {
     main = "io.gitlab.arturbosch.detekt.cli.Main"
     classpath = configurations.detekt
     def files = String.join(",", getChangedFiles())
+    println files
     def input = files
     //def input = "$projectDir"  //use this to run on whole project
     def config = "$projectDir/detekt-config.yml"
