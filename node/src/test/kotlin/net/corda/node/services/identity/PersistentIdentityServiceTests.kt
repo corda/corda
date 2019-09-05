@@ -7,6 +7,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.services.UnknownAnonymousPartyException
+import net.corda.node.services.persistence.PublicKeyToOwningIdentityCacheImpl
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.x509Certificates
@@ -44,12 +45,14 @@ class PersistentIdentityServiceTests {
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
+    private val cacheFactory = TestingNamedCacheFactory()
     private lateinit var database: CordaPersistence
     private lateinit var identityService: PersistentIdentityService
 
     @Before
     fun setup() {
-        identityService = PersistentIdentityService(TestingNamedCacheFactory())
+        val cacheFactory = TestingNamedCacheFactory()
+        identityService = PersistentIdentityService(cacheFactory = cacheFactory)
         database = configureDatabase(
                 makeTestDataSourceProperties(),
                 DatabaseConfig(),
@@ -58,7 +61,7 @@ class PersistentIdentityServiceTests {
         )
         identityService.database = database
         identityService.ourNames = setOf(ALICE_NAME)
-        identityService.start(DEV_ROOT_CA.certificate)
+        identityService.start(DEV_ROOT_CA.certificate, pkToIdCache = PublicKeyToOwningIdentityCacheImpl(database, cacheFactory))
     }
 
     @After
@@ -223,7 +226,7 @@ class PersistentIdentityServiceTests {
         // Create new identity service mounted onto same DB
         val newPersistentIdentityService = PersistentIdentityService(TestingNamedCacheFactory()).also {
             it.database = database
-            it.start(DEV_ROOT_CA.certificate)
+            it.start(DEV_ROOT_CA.certificate, pkToIdCache = PublicKeyToOwningIdentityCacheImpl(database, cacheFactory))
         }
 
         newPersistentIdentityService.assertOwnership(alice.party, anonymousAlice.party.anonymise())
