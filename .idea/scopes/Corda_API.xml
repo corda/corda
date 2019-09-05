@@ -1,3 +1,0 @@
-<component name="DependencyValidationManager">
-  <scope name="Corda API" pattern="src[core_main]:*..*&amp;&amp;!src[core_main]:net.corda.core.internal..*||src[rpc_main]:net.corda.client.rpc.*||src[jackson_main]:net.corda.client.jackson.*" />
-</component>
