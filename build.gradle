@@ -6,6 +6,7 @@ import com.bmuschko.gradle.docker.tasks.image.DockerBuildImage
 import com.bmuschko.gradle.docker.tasks.image.DockerCommitImage
 import com.bmuschko.gradle.docker.tasks.image.DockerTagImage
 import com.bmuschko.gradle.docker.tasks.image.DockerPushImage
+import net.corda.buildtasks.DetektChangedFiles
 import net.corda.buildtasks.ListTests
 
 buildscript {
@@ -614,33 +615,11 @@ dependencies {
     detekt 'io.gitlab.arturbosch.detekt:detekt-cli:1.0.1'
 }
 
-ext.getChangedFiles = { ->
-    String teamcityFile = System.getProperty("teamcity.build.changedFiles.file") ?: ""
-    if(!teamcityFile.isEmpty()) {
-        String fileContents = new File(teamcityFile).text
-        String[] fileList = fileContents.trim().split("\n")
-        for (int i=0; i<fileList.length; i++) {
-            int endIndex = fileList[i].indexOf(":CHANGED")
-            fileList[i] = fileList[i].substring(0, endIndex)
-        }
-        return fileList
-    } else {
-        def stdout = new ByteArrayOutputStream()
-        exec {
-            commandLine 'git', 'diff', '--name-only'
-            standardOutput = stdout
-        }
-        return stdout.toString().trim().split("\n")
-    }
-}
-
 task detekt(type: JavaExec) {
     main = "io.gitlab.arturbosch.detekt.cli.Main"
     classpath = configurations.detekt
-    def files = String.join(",", getChangedFiles())
-    println files
+    def files = String.join(",", DetektChangedFiles.getChangedFiles())
     def input = files
-    //def input = "$projectDir"  //use this to run on whole project
     def config = "$projectDir/detekt-config.yml"
     def params = ['-i', input, '-c', config]
     args(params)
