@@ -1,5 +1,0 @@
-package net.corda.bootstrapper
-
-import net.corda.testing.CliBackwardsCompatibleTest
-
-class NetworkBootstrapperBackwardsCompatibilityTest : CliBackwardsCompatibleTest(NetworkBootstrapperRunner::class.java)
