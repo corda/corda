@@ -78,9 +78,6 @@ dependencies {
 
     compile group: "io.github.classgraph", name: "classgraph", version: class_graph_version
 
-    // JDK 11 (https://stackoverflow.com/questions/52502189/java-11-package-javax-xml-bind-does-not-exist)
-    compile group: 'javax.xml.bind', name: 'jaxb-api', version: '2.3.0'
-
     // JDK11: required by Quasar at run-time
     testRuntimeOnly "com.esotericsoftware:kryo:4.0.2"
 

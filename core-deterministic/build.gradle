@@ -37,8 +37,6 @@ dependencies {
     deterministicLibraries "org.bouncycastle:bcpkix-jdk15on:$bouncycastle_version"
     deterministicLibraries "net.i2p.crypto:eddsa:$eddsa_version"
     deterministicLibraries "org.slf4j:slf4j-api:$slf4j_version"
-    // JDK 11 (https://stackoverflow.com/questions/52502189/java-11-package-javax-xml-bind-does-not-exist)
-    deterministicLibraries "javax.xml.bind:jaxb-api:2.3.0"
 }
 
 jar {
