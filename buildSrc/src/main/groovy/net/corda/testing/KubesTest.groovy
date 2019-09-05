@@ -77,9 +77,6 @@ class KubesTest extends DefaultTask {
             //it's possible that a pod is being deleted by the original build, this can lead to racey conditions
         }
 
-        Namespace ns = new NamespaceBuilder().withNewMetadata().withName(namespace).addToLabels("testing-env", "true").endMetadata().build()
-        client.namespaces().createOrReplace(ns)
-
 
         List<CompletableFuture<KubePodResult>> podCreationFutures = IntStream.range(0, numberOfPods).mapToObj({ i ->
             CompletableFuture.supplyAsync({
