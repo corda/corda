@@ -197,10 +197,8 @@ class DbSchemaInitialisationTest {
             val logFile = this.baseDirectory(nodeName).logFile()
 
             Assertions.assertThat(logFile.length()).isGreaterThan(0)
-         //  DatabaseInitialisation(id=vCHWuciN;changeset="migration/vault-schema.changelog-v5.xml::add_relevancy_status_column::R3.Corda";status="error";error_code="9";message="Migration failed for change set migration/vault-schema.changelog-v5.xml::add_relevancy_status_column::R3.Corda:      Reason: liquibase.exception.DatabaseException: Table \"VAULT_STATES\" not found\; SQL statement: ALTER TABLE PUBLIC.vault_states ADD relevancy_status INT [42102-199] [Failed SQL: ALTER TABLE PUBLIC.vault_states ADD relevancy_status INT]")
-         //  DatabaseInitialisation(id=vCHWuciN;status="error";error_code="9";message="Could not create the DataSource: Migration failed for change set migration/vault-schema.changelog-v5.xml::add_relevancy_status_column::R3.Corda:      Reason: liquibase.exception.DatabaseException: Table \"VAULT_STATES\" not found\; SQL statement: ALTER TABLE PUBLIC.vault_states ADD relevancy_status INT [42102-199] [Failed SQL: ALTER TABLE PUBLIC.vault_states ADD relevancy_status INT]")
 
-            val sampleChangeSetError = "${loggerPrefix}1changeset=\"migration/vault-schema.changelog-v5.xml::add_relevancy_status_column::R3.Corda\";status=\"error\";error_code=\"${SchemaMigrationError.INCOMPATIBLE_CHANGE_SET.code}\";message=\"Migration failed for change set migration/vault-schema.changelog-v5.xml::add_relevancy_status_column::R3.Corda".toRegex()
+            val sampleChangeSetError = "${loggerPrefix}changeset=\"migration/vault-schema.changelog-v5.xml::add_relevancy_status_column::R3.Corda\";status=\"error\";error_code=\"${SchemaMigrationError.INCOMPATIBLE_CHANGE_SET.code}\";message=\"Migration failed for change set migration/vault-schema.changelog-v5.xml::add_relevancy_status_column::R3.Corda".toRegex()
             val migrationError = "${loggerPrefix}status=\"error\";error_code=\"${SchemaMigrationError.INCOMPATIBLE_CHANGE_SET.code}\";message=\"Could not create the DataSource: Migration failed for change set migration/vault-schema.changelog-v5.xml::add_relevancy_status_column::R3.Corda".toRegex()
 
             var errorLines = logFile.useLines { lines -> lines.filter { it.contains(sampleChangeSetError) }.count() }
