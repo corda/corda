@@ -309,7 +309,7 @@ The following shell command can be used to extract information about attachments
 
     .. code-block:: none
 
-        Name                                          Hash/Id                                                              Installed             Trusted                Trust Root
+        Name                                          Attachment ID                                                        Installed             Trusted                Trust Root
         --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         net.corda.dummy-cordapp-contracts-states      654CDFD0F195269B1C839DD9D539592B4DE7DD09BF29A3762EF600F94AE45E18     true                  true                   net.corda.dummy-cordapp-contracts-states
         Corda Finance Demo                            71154836EBE54C0A60C6C5D9513EE015DB722EED57034B34428C72459CF133D7     true                  true                   Corda Finance Demo

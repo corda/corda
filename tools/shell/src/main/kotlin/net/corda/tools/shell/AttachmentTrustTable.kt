@@ -26,7 +26,7 @@ class AttachmentTrustTable(
     private fun createTable(): TableElement {
         val table = TableElement(2, 3, 1, 1, 3).overflow(Overflow.WRAP).rightCellPadding(3)
         val header =
-            RowElement(true).add("Name", "Hash/Id", "Installed", "Trusted", "Trust Root").style(
+            RowElement(true).add("Name", "Attachment ID", "Installed", "Trusted", "Trust Root").style(
                 Decoration.bold.fg(
                     Color.black
                 ).bg(Color.white)
