@@ -300,9 +300,12 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
                 val legalIdentity = super.wellKnownPartyFromAnonymous(party)
                 if (legalIdentity == null) {
                     // If there is no entry in the legal keyToPartyAndCert table then the party must be a confidential identity so we perform
-                    // a lookup in the keyToName table. If an entry for that public key exists, then we attempt
+                    // a lookup in the keyToName table. If an entry for that public key exists, then we attempt look up the associated node's
+                    // PartyAndCertificate.
                     val name = keyToName[party.owningKey.toStringShort()]
                     if (name != null) {
+                        // This should never return null as this node would not be able to communicate with the node providing a confidential
+                        // identity unless its NodeInfo/PartyAndCertificate were available.
                         wellKnownPartyFromX500Name(name)
                     } else {
                         null
@@ -337,13 +340,12 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
         return database.transaction {
             val publicKeyHash = publicKey.toStringShort()
             // EVERY key should by mapped to a Party in the "keyToName" table. Therefore if there is already a record in that table for the
-            // specified key then it's either our key which has been stored prior (unlikely) or another node's key which we have preciously
-            // mapped.
+            // specified key then it's either our key which has been stored prior or another node's key which we have preciously mapped.
             val existingEntryForKey = keyToName[publicKeyHash]
             if (existingEntryForKey == null) {
                 // Update the three tables as necessary. We definitely store the public key and map it to a party and we optionally update
-                // the public key to external ID mapping table. This blocked will only ever be reached with storing keys generated on other
-                // nodes.
+                // the public key to external ID mapping table. This block will only ever be reached when registering keys generated on
+                // other because when a node generates its own keys "registerKeyToParty" is automatically called by KeyManagementService.freshKey.
                 registerKeyToParty(publicKey, party)
                 hashToKey[publicKeyHash] = publicKey
                 if (externalId != null) {
@@ -352,8 +354,7 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
             } else {
                 log.info("An existing entry for $publicKeyHash already exists.")
                 if (party.name != keyToName[publicKeyHash]) {
-                    throw IllegalArgumentException("The public publicKey $publicKeyHash is already assigned to a different party than " +
-                            "the supplied .")
+                    log.warn("The public publicKey $publicKeyHash is already assigned to a different party than the supplied party.")
                 }
             }
         }

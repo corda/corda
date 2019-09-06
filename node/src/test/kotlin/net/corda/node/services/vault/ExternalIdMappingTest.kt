@@ -37,6 +37,9 @@ class ExternalIdMappingTest {
     private val myself = TestIdentity(CordaX500Name("Me", "London", "GB"))
     private val notary = TestIdentity(CordaX500Name("NotaryService", "London", "GB"), 1337L)
 
+    private val alice = TestIdentity.fresh("ALICE")
+    private val bob = TestIdentity.fresh("BOB")
+
     lateinit var services: MockServices
     lateinit var database: CordaPersistence
 
@@ -46,7 +49,7 @@ class ExternalIdMappingTest {
                 cordappPackages = cordapps,
                 initialIdentity = myself,
                 networkParameters = testNetworkParameters(minimumPlatformVersion = 4),
-                moreIdentities = setOf(notary.identity),
+                moreIdentities = setOf(notary.identity, alice.identity, bob.identity),
                 moreKeys = emptySet()
         )
         services = mockServices
@@ -146,10 +149,6 @@ class ExternalIdMappingTest {
 
     @Test
     fun `roger uber keys test`() {
-        // Other names.
-        val alice = TestIdentity.fresh("ALICE")
-        val bob = TestIdentity.fresh("BOB")
-
         // IDs.
         val id = UUID.randomUUID()
         val idTwo = UUID.randomUUID()
@@ -157,7 +156,7 @@ class ExternalIdMappingTest {
         val idFour = UUID.randomUUID()
 
         // Keys.
-        val A = services.keyManagementService.freshKey(id)
+        val A = services.keyManagementService.freshKey(id)          // Automatically calls registerKeyToParty and registerKeyToExternalId
         val B = services.keyManagementService.freshKey(id)
         val C = services.keyManagementService.freshKey(idTwo)
         val D = services.keyManagementService.freshKey()
@@ -179,10 +178,10 @@ class ExternalIdMappingTest {
         services.identityService.registerKey(G, bob.party)
 
         services.identityService.registerKey(A, myself.party)                                                       // Idempotent call.
-        assertFailsWith(IllegalArgumentException::class) { services.identityService.registerKey(A, alice.party) }
+        assertFailsWith(IllegalArgumentException::class) { services.identityService.registerKey(A, alice.party) }   // Idempotent call.
         services.identityService.registerKey(B, myself.party)                                                       // Idempotent call.
-        assertFailsWith(IllegalArgumentException::class) { services.identityService.registerKey(B, alice.party) }
-        assertFailsWith(IllegalArgumentException::class) { services.identityService.registerKey(C, bob.party) }
+        assertFailsWith(IllegalArgumentException::class) { services.identityService.registerKey(B, alice.party) }   // Idempotent call.
+        assertFailsWith(IllegalArgumentException::class) { services.identityService.registerKey(C, bob.party) }     // Idempotent call.
 
         assertEquals(services.identityService.externalIdForPublicKey(A), id)
         assertEquals(services.identityService.externalIdForPublicKey(B), id)
@@ -190,7 +189,7 @@ class ExternalIdMappingTest {
         assertEquals(services.identityService.externalIdForPublicKey(E), idThree)
         assertEquals(services.identityService.externalIdForPublicKey(F), idFour)
 
-        // TODO: Fails here. Investigate...
+        // ALICE and BOB PartyAndCertificates need to be present in the nameToCert table.
         assertEquals(services.identityService.wellKnownPartyFromAnonymous(AnonymousParty(E)), alice.party)
         assertEquals(services.identityService.wellKnownPartyFromAnonymous(AnonymousParty(F)), alice.party)
         assertEquals(services.identityService.wellKnownPartyFromAnonymous(AnonymousParty(G)), bob.party)
