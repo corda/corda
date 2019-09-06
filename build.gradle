@@ -624,5 +624,3 @@ task detekt(type: JavaExec) {
     def params = ['-i', input, '-c', config]
     args(params)
 }
-
-clean.finalizedBy(detekt)
