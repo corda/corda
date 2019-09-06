@@ -12,6 +12,7 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.node.services.persistence.AttachmentStorageInternal
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import java.security.PublicKey
+import java.util.stream.Stream
 
 /**
  * Implementation of [AttachmentTrustCalculator].
@@ -41,13 +42,7 @@ class NodeAttachmentTrustCalculator(
 
     override fun calculate(attachment: Attachment): Boolean {
 
-        if (attachment.isUploaderTrusted()) {
-            // add signers to the cache as this is a fully trusted attachment
-            attachment.signerKeys
-                .filterNot { it.isBlacklisted() }
-                .forEach { trustedKeysCache.put(it, true) }
-            return true
-        }
+        if (attachment.isUploaderTrusted()) return true
 
         if (attachment.isSignedByBlacklistedKeys()) return false
 
@@ -67,67 +62,76 @@ class NodeAttachmentTrustCalculator(
         val publicKeyToTrustRootMap = mutableMapOf<PublicKey, TrustedAttachment>()
         val attachmentTrustInfos = mutableListOf<AttachmentTrustInfo>()
 
-        require(database != null) {
+        val db = checkNotNull(database) {
             // This should never be hit, except for tests that have not been setup correctly to test internal code
             "CordaPersistence has not been set"
         }
-        database!!.transaction {
-            for ((name, attachment) in getTrustedAttachments()) {
-                attachment.signerKeys.forEach {
-                    // add signers to the cache as this is a fully trusted attachment
-                    trustedKeysCache.put(it, true)
-                    publicKeyToTrustRootMap.putIfAbsent(
-                        it,
-                        TrustedAttachment(attachment.id, name)
+        db.transaction {
+            getTrustedAttachments().use { trustedAttachments ->
+                for ((name, attachment) in trustedAttachments) {
+                    attachment.signerKeys.forEach {
+                        // add signers to the cache as this is a fully trusted attachment
+                        trustedKeysCache.put(it, true)
+                        publicKeyToTrustRootMap.putIfAbsent(
+                            it,
+                            TrustedAttachment(attachment.id, name)
+                        )
+                    }
+                    attachmentTrustInfos += AttachmentTrustInfo(
+                        attachmentId = attachment.id,
+                        fileName = name,
+                        uploader = attachment.uploader,
+                        trustRootId = attachment.id,
+                        trustRootFileName = name
                     )
                 }
-                attachmentTrustInfos += AttachmentTrustInfo(
-                    attachmentId = attachment.id,
-                    fileName = name,
-                    uploader = attachment.uploader,
-                    trustRootId = attachment.id,
-                    trustRootFileName = name
-                )
             }
 
-            for ((name, attachment) in getUntrustedAttachments()) {
-                val trustRoot = when {
-                    attachment.isSignedByBlacklistedKeys() -> null
-                    else -> attachment.signerKeys
-                        .mapNotNull { publicKeyToTrustRootMap[it] }
-                        .firstOrNull()
+            getUntrustedAttachments().use { untrustedAttachments ->
+                for ((name, attachment) in untrustedAttachments) {
+                    val trustRoot = if (attachment.isSignedByBlacklistedKeys()) {
+                        null
+                    } else {
+                        attachment.signerKeys
+                            .mapNotNull { publicKeyToTrustRootMap[it] }
+                            .firstOrNull()
+                    }
+                    attachmentTrustInfos += AttachmentTrustInfo(
+                        attachmentId = attachment.id,
+                        fileName = name,
+                        uploader = attachment.uploader,
+                        trustRootId = trustRoot?.id,
+                        trustRootFileName = trustRoot?.name
+                    )
                 }
-                attachmentTrustInfos += AttachmentTrustInfo(
-                    attachmentId = attachment.id,
-                    fileName = name,
-                    uploader = attachment.uploader,
-                    trustRootId = trustRoot?.id,
-                    trustRootFileName = trustRoot?.name
-                )
             }
         }
 
         return attachmentTrustInfos
     }
 
-    private fun getTrustedAttachments() = attachmentStorage.getAllAttachmentsByCriteria(
-        // `isSignedCondition` is not included here as attachments uploaded by trusted uploaders are considered trusted
-        AttachmentQueryCriteria.AttachmentsQueryCriteria(
-            uploaderCondition = Builder.`in`(
-                TRUSTED_UPLOADERS
+    private fun getTrustedAttachments(): Stream<Pair<String?, Attachment>> {
+        return attachmentStorage.getAllAttachmentsByCriteria(
+            // `isSignedCondition` is not included here as attachments uploaded by trusted uploaders are considered trusted
+            AttachmentQueryCriteria.AttachmentsQueryCriteria(
+                uploaderCondition = Builder.`in`(
+                    TRUSTED_UPLOADERS
+                )
             )
         )
-    )
+    }
 
-    private fun getUntrustedAttachments() = attachmentStorage.getAllAttachmentsByCriteria(
-        // Filter by `isSignedCondition` so normal data attachments are not returned
-        AttachmentQueryCriteria.AttachmentsQueryCriteria(
-            uploaderCondition = Builder.notIn(
-                TRUSTED_UPLOADERS
-            ),
-            isSignedCondition = Builder.equal(true)
+    private fun getUntrustedAttachments(): Stream<Pair<String?, Attachment>> {
+        return attachmentStorage.getAllAttachmentsByCriteria(
+            // Filter by `isSignedCondition` so normal data attachments are not returned
+            AttachmentQueryCriteria.AttachmentsQueryCriteria(
+                uploaderCondition = Builder.notIn(
+                    TRUSTED_UPLOADERS
+                ),
+                isSignedCondition = Builder.equal(true)
+            )
         )
-    )
+    }
 
     private data class TrustedAttachment(val id: AttachmentId, val name: String?)
 
