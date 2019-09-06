@@ -29,7 +29,7 @@ internal val notaryName = CordaX500Name("NotaryService", "Zurich", "CH")
 internal val aliceName = CordaX500Name("Alice", "London", "GB")
 internal val genevieveName = CordaX500Name("Genevieve", "London", "GB")
 
-abstract class AbstractWrappedKeysTest: IntegrationTest() {
+abstract class AbstractWrappedKeysTest : IntegrationTest() {
 
     internal abstract fun configPath(): Path?
 

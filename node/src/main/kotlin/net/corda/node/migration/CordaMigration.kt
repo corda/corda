@@ -12,9 +12,10 @@ import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.persistence.*
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
+import net.corda.nodeapi.internal.persistence.SchemaInitializationType
 import net.corda.nodeapi.internal.persistence.SchemaMigration.Companion.NODE_X500_NAME
-import org.hibernate.type.descriptor.java.JavaTypeDescriptorRegistry
 import net.corda.nodeapi.internal.persistence.TransactionIsolationLevel
+import org.hibernate.type.descriptor.java.JavaTypeDescriptorRegistry
 import java.io.PrintWriter
 import java.sql.Connection
 import java.sql.SQLFeatureNotSupportedException
@@ -84,7 +85,12 @@ abstract class CordaMigration : CustomTaskChange {
                                schema: Set<MappedSchema>,
                                databaseSchemaName: String?,
                                transactionIsolationLevel: TransactionIsolationLevel): CordaPersistence {
-        val configDefaults = DatabaseConfig(schema = databaseSchemaName, transactionIsolationLevel = transactionIsolationLevel)
+        val configDefaults = DatabaseConfig(
+                schema = databaseSchemaName,
+                transactionIsolationLevel = transactionIsolationLevel,
+                initialiseSchema = false,
+                initialiseAppSchema = SchemaInitializationType.NONE
+        )
         // This is necessary to prevent a bug when running as part of the Database Migration Tool, where hibernate treats party instances
         // as mutable and attempts to look up the party in the database when copying it, which eventually results in a flush within a
         // persist call.

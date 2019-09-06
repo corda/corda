@@ -903,6 +903,8 @@
       <module name="launcher_test" target="1.8" />
       <module name="loadtest_main" target="1.8" />
       <module name="loadtest_test" target="1.8" />
+      <module name="log-tracer_main" target="1.8" />
+      <module name="log-tracer_test" target="1.8" />
       <module name="mock_main" target="1.8" />
       <module name="mock_test" target="1.8" />
       <module name="mysql_main" target="1.8" />
@@ -1089,6 +1091,8 @@
       <module name="netparams_test" target="1.8" />
       <module name="network-bootstrapper_main" target="1.8" />
       <module name="network-bootstrapper_test" target="1.8" />
+      <module name="network-builder_main" target="1.8" />
+      <module name="network-builder_test" target="1.8" />
       <module name="network-verifier-contracts_main" target="1.8" />
       <module name="network-verifier-contracts_test" target="1.8" />
       <module name="network-verifier-workflows_main" target="1.8" />
@@ -1108,8 +1112,10 @@
       <module name="node-driver_test" target="1.8" />
       <module name="node-schemas_main" target="1.8" />
       <module name="node-schemas_test" target="1.8" />
+      <module name="node_databaseIntegrationTest" target="1.8" />
       <module name="node_integrationTest" target="1.8" />
       <module name="node_main" target="1.8" />
+      <module name="node_slowIntegrationTest" target="1.8" />
       <module name="node_smokeTest" target="1.8" />
       <module name="node_test" target="1.8" />
       <module name="nodeinfo_main" target="1.8" />
@@ -1135,6 +1141,8 @@
       <module name="notary-healthcheck_test" target="1.8" />
       <module name="notary-raft_main" target="1.8" />
       <module name="notary-raft_test" target="1.8" />
+      <module name="notary-registration_main" target="1.8" />
+      <module name="notary-registration_test" target="1.8" />
       <module name="notary_main" target="1.8" />
       <module name="notary_test" target="1.8" />
       <module name="notarytest_main" target="1.8" />

@@ -4,9 +4,11 @@ import net.corda.core.context.Actor
 import net.corda.core.context.Trace
 import net.corda.core.internal.packageName
 import net.corda.core.messaging.CordaRPCOps
+import net.corda.core.utilities.getOrThrow
 import net.corda.finance.schemas.CashSchemaV1
 import net.corda.node.internal.NodeWithInfo
 import net.corda.node.services.Permissions
+import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.DUMMY_BANK_A_NAME
@@ -19,6 +21,7 @@ import net.corda.testing.internal.chooseIdentity
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.NodeBasedTest
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.Assume.assumeFalse
 import org.junit.Before
 import org.junit.ClassRule
 import org.junit.Test

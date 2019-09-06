@@ -212,7 +212,7 @@ class FlowWorkerStartStopTest {
         val flowWorker = FlowWorker(UUID.randomUUID().toString(), flowWorkerServiceHub)
         flowWorker.start()
         flowWorkerServiceHub.database.transaction {
-            flowWorkerServiceHub.identityService.registerIdentity(notaryPartyAndCertificate)
+            flowWorkerServiceHub.identityService.verifyAndRegisterIdentity(notaryPartyAndCertificate)
         }
         return Pair(flowWorker, flowWorkerServiceHub)
     }

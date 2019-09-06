@@ -184,7 +184,7 @@ class RpcWorkerServiceHub(override val configuration: NodeConfiguration,
         throw NotImplementedError()
     }
 
-    override fun <T : Any> withEntityManager(block: EntityManager.() -> T): T {
+    override fun <T : Any?> withEntityManager(block: EntityManager.() -> T): T {
         throw NotImplementedError()
     }
 

@@ -255,7 +255,7 @@ class FlowWorkerServiceHub(override val configuration: NodeConfiguration,
 
     override fun jdbcSession(): Connection = database.createSession()
 
-    override fun <T : Any> withEntityManager(block: EntityManager.() -> T): T {
+    override fun <T : Any?> withEntityManager(block: EntityManager.() -> T): T {
         throw NotImplementedError()
     }
 
