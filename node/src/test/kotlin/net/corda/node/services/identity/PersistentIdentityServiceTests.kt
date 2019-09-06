@@ -252,23 +252,22 @@ class PersistentIdentityServiceTests {
     fun `register duplicate confidential identities`(){
         val (alice, anonymousAlice) = createConfidentialIdentity(ALICE.name)
 
-        identityService.registerKeyToParty(anonymousAlice.owningKey, alice.party)
+        identityService.registerKey(anonymousAlice.owningKey, alice.party)
 
         // If an existing entry is found matching the party then the method call is idempotent
         assertDoesNotThrow {
-            identityService.registerKeyToParty(anonymousAlice.owningKey, alice.party)
+            identityService.registerKey(anonymousAlice.owningKey, alice.party)
         }
     }
 
     @Test
     fun `register incorrect party to public key `(){
+        database.transaction { identityService.verifyAndRegisterIdentity(ALICE_IDENTITY) }
         val (alice, anonymousAlice) = createConfidentialIdentity(ALICE.name)
-
-        identityService.registerKeyToParty(anonymousAlice.owningKey, alice.party)
-
-        assertThrows<IllegalArgumentException> {
-            identityService.registerKeyToParty(anonymousAlice.owningKey, bob.party)
-        }
+        identityService.registerKey(anonymousAlice.owningKey, alice.party)
+        // Should have no side effect but logs a warning that we tried to overwrite an existing mapping.
+        identityService.registerKey(anonymousAlice.owningKey, bob.party)
+        assertEquals(ALICE, identityService.wellKnownPartyFromAnonymous(AnonymousParty(anonymousAlice.owningKey)))
     }
 
     private fun createConfidentialIdentity(x500Name: CordaX500Name): Pair<PartyAndCertificate, PartyAndCertificate> {
