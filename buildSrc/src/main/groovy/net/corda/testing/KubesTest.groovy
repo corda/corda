@@ -258,7 +258,9 @@ class KubesTest extends DefaultTask {
     }
 
     String[] getBuildCommand(int numberOfPods, int podIdx) {
-        return ["bash", "-c", "cd /tmp/source && ./gradlew -Dkubenetize -PdockerFork=" + podIdx + " -PdockerForks=" + numberOfPods + " $fullTaskToExecutePath --info 2>&1 " +
+        return ["bash", "-c",
+                "let x=1 ; while [ \${x} -ne 0 ] ; do echo \"Waiting for DNS\" ; curl services.gradle.org > /dev/null 2>&1 ; x=\$? ; sleep 1 ; done ; " +
+                "cd /tmp/source && ./gradlew -Dkubenetize -PdockerFork=" + podIdx + " -PdockerForks=" + numberOfPods + " $fullTaskToExecutePath --info 2>&1 " +
                 "; let rs=\$? ; sleep 10 ; exit \${rs}"]
     }
 
