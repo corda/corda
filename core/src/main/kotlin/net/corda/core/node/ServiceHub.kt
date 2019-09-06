@@ -376,7 +376,7 @@ interface ServiceHub : ServicesForResolution {
      *
      * @param block a lambda function with access to an [EntityManager].
      */
-    fun <T : Any> withEntityManager(block: EntityManager.() -> T): T
+    fun <T : Any?> withEntityManager(block: EntityManager.() -> T): T
 
     /**
      * Exposes the Java Persistence API (JPA) to flows via a restricted [EntityManager]. This method can be used to

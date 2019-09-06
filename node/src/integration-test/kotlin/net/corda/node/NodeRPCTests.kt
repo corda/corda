@@ -9,10 +9,12 @@ import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.node.internal.FINANCE_CONTRACTS_CORDAPP
 import net.corda.testing.node.internal.FINANCE_WORKFLOWS_CORDAPP
 import org.junit.ClassRule
+import org.junit.Ignore
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
+@Ignore
 class NodeRPCTests : IntegrationTest() {
     companion object {
         @ClassRule

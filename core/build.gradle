@@ -78,6 +78,8 @@ dependencies {
     testCompile "org.mockito:mockito-core:$mockito_version"
     testCompile "org.assertj:assertj-core:$assertj_version"
     testCompile "com.natpryce:hamkrest:$hamkrest_version"
+    testCompile 'org.hamcrest:hamcrest-library:2.1'
+
 }
 
 // TODO Consider moving it to quasar-utils in the future (introduced with PR-1388)

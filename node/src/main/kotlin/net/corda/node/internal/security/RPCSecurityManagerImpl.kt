@@ -114,7 +114,7 @@ private class RPCPermission : DomainPermission {
      * @param methods Set of allowed RPC methods
      * @param target  An optional "target" type on which methods act
      */
-    constructor(methods: Set<String>, target: String? = null) : super(methods, target?.let { setOf(it) })
+    constructor(methods: Set<String>, target: String? = null) : super(methods, target?.let { setOf(it.replace(".", ":")) })
 
 
     /**

@@ -138,8 +138,9 @@ object VaultMigrationSchemaBuilder {
             MappedSchema(schemaFamily = VaultMigrationSchema.javaClass, version = 1,
                 mappedTypes = listOf(
                         DBTransactionStorage.DBTransaction::class.java,
-                        PersistentIdentityService.PersistentIdentity::class.java,
-                        PersistentIdentityService.PersistentIdentityNames::class.java,
+                        PersistentIdentityService.PersistentPublicKeyHashToCertificate::class.java,
+                PersistentIdentityService.PersistentPartyToPublicKeyHash::class.java,
+                        PersistentIdentityService.PersistentPublicKeyHashToParty::class.java,
                         NodeAttachmentService.DBAttachment::class.java,
                         DBNetworkParametersStorage.PersistentNetworkParameters::class.java
                 ))

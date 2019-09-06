@@ -342,7 +342,6 @@ class RPCServer<OPS : RPCOps>(
         senderThread?.join(queueDrainTimeout.toMillis())
         reaperScheduledFuture?.cancel(false)
         reaperExecutor?.shutdownNow()
-        securityManager.close()
         sessionFactory?.close()
         observableMap.invalidateAll()
         reapSubscriptions()

@@ -202,7 +202,7 @@ class AnonymousSessionTestFlow(private val cis: List<PartyAndCertificate>) : Flo
 
         for (ci in cis) {
             if (ci.name != ourIdentity.name) {
-                (serviceHub.identityService as IdentityServiceInternal).verifyAndRegisterIdentity(ci)
+                serviceHub.identityService.verifyAndRegisterIdentity(ci)
             }
         }
         val state = DummyContract.MultiOwnerState(owners = cis.map { AnonymousParty(it.owningKey) })
@@ -240,7 +240,7 @@ class MixAndMatchAnonymousSessionTestFlow(private val cis: List<PartyAndCertific
 
         for (ci in cis) {
             if (ci.name != ourIdentity.name) {
-                (serviceHub.identityService as IdentityServiceInternal).verifyAndRegisterIdentity(ci)
+                serviceHub.identityService.verifyAndRegisterIdentity(ci)
             }
         }
         val state = DummyContract.MultiOwnerState(owners = cis.map { AnonymousParty(it.owningKey) })

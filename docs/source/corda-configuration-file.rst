@@ -771,7 +771,8 @@ rpcUsers
   permissions
     A list of permissions for starting flows via RPC.
     To give the user the permission to start the flow ``foo.bar.FlowClass``, add the string ``StartFlow.foo.bar.FlowClass`` to the list.
-    If the list contains the string ``ALL``, the user can start any flow via RPC.
+    If the list contains the string ``ALL``, the user can start any flow via RPC. Wildcards are also allowed, for example ``StartFlow.foo.bar.*``
+    will allow the user to start any flow within the ``foo.bar`` package.
     This value is intended for administrator users and for development.
 
     *Default:* not defined

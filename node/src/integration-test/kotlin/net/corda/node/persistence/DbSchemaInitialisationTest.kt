@@ -1,6 +1,7 @@
 package net.corda.node.persistence
 
 import net.corda.core.utilities.getOrThrow
+import net.corda.node.flows.isQuasarAgentSpecified
 import net.corda.nodeapi.internal.persistence.DatabaseIncompatibleException
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME

@@ -90,4 +90,13 @@ interface KeyManagementService {
      */
     @Suspendable
     fun sign(signableData: SignableData, publicKey: PublicKey): TransactionSignature
+
+    /**
+     * This method allows lookups of [PublicKey]s to an associated "external ID" / [UUID]. Providing a [PublicKey] that is unknown by the node
+     * or is not mapped to an external ID will return null. Otherwise, if the [PublicKey] has been mapped to an external ID, then the [UUID]
+     * for that external ID will be returned.
+     * @param publicKey the [PublicKey] used to perform the lookup to external ID
+     */
+    @Suspendable
+    fun externalIdForPublicKey(publicKey: PublicKey): UUID?
 }

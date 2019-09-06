@@ -25,7 +25,6 @@ import net.corda.finance.contracts.DealState;
 import net.corda.finance.contracts.asset.Cash;
 import net.corda.finance.schemas.CashSchemaV1;
 import net.corda.finance.test.SampleCashSchemaV2;
-import net.corda.node.services.api.IdentityServiceInternal;
 import net.corda.node.services.persistence.NodeAttachmentService;
 import net.corda.nodeapi.internal.persistence.CordaPersistence;
 import net.corda.nodeapi.internal.persistence.DatabaseTransaction;
@@ -61,10 +60,10 @@ import static net.corda.core.node.services.vault.Builder.sum;
 import static net.corda.core.node.services.vault.QueryCriteriaUtils.*;
 import static net.corda.core.utilities.ByteArrays.toHexString;
 import static net.corda.testing.common.internal.ParametersUtilitiesKt.testNetworkParameters;
-import static net.corda.testing.core.internal.ContractJarTestUtils.INSTANCE;
 import static net.corda.testing.core.TestConstants.*;
 import static net.corda.testing.core.internal.ContractJarTestUtils.INSTANCE;
 import static net.corda.testing.internal.RigorousMockKt.rigorousMock;
+import static net.corda.testing.core.internal.ContractJarTestUtils.INSTANCE;
 import static net.corda.testing.node.MockServices.makeTestDatabaseAndMockServices;
 import static net.corda.testing.node.MockServicesKt.makeTestIdentityService;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -101,7 +100,7 @@ public class VaultQueryJavaTests {
                 identitySvc,
                 MEGA_CORP,
                 DUMMY_NOTARY.getKeyPair());
-        issuerServices = new MockServices(cordappPackages, DUMMY_CASH_ISSUER_INFO, mock(IdentityServiceInternal.class), BOC.getKeyPair());
+        issuerServices = new MockServices(cordappPackages, DUMMY_CASH_ISSUER_INFO, mock(IdentityService.class), BOC.getKeyPair());
         database = databaseAndServices.getFirst();
         MockServices services = databaseAndServices.getSecond();
         vaultFiller = new VaultFiller(services, DUMMY_NOTARY);

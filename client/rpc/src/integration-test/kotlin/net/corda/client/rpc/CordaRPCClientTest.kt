@@ -28,6 +28,7 @@ import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.NodeBasedTest
 import net.corda.testing.node.internal.ProcessUtilities
+import net.corda.testing.node.internal.poll
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
@@ -39,10 +40,7 @@ import rx.subjects.PublishSubject
 import java.net.URLClassLoader
 import java.nio.file.Paths
 import java.util.*
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.Executors
-import java.util.concurrent.ScheduledExecutorService
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.*
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -107,7 +105,7 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance"), notaries =
         var successful = false
         val maxCount = 120
         var count = 0
-        CloseableExecutor(Executors.newSingleThreadScheduledExecutor()).use { scheduler ->
+        CloseableExecutor(Executors.newScheduledThreadPool(2)).use { scheduler ->
 
             val task = scheduler.scheduleAtFixedRate({
                 try {
@@ -122,8 +120,6 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance"), notaries =
                 } catch (e: RPCException) {
                     log.info("... node is not running.")
                     nodeIsShut.onCompleted()
-                } catch (e: ActiveMQSecurityException) {
-                    // nothing here - this happens if trying to connect before the node is started
                 } catch (e: Exception) {
                     nodeIsShut.onError(e)
                 }
@@ -132,13 +128,19 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance"), notaries =
             nodeIsShut.doOnError { error ->
                 log.error("FAILED TO SHUT DOWN NODE DUE TO", error)
                 successful = false
-                task.cancel(true)
+                task.cancel(false)
                 latch.countDown()
             }.doOnCompleted {
-                        successful = (node.node.started == null)
-                        task.cancel(true)
-                        latch.countDown()
-                    }.subscribe()
+                val nodeTerminated = try {
+                    poll(scheduler, pollName = "node's started state", check = { if (node.node.started == null) true else null })
+                            .get(10, TimeUnit.SECONDS)
+                } catch (e: Exception) {
+                    false
+                }
+                successful = nodeTerminated
+                task.cancel(false)
+                latch.countDown()
+            }.subscribe()
 
             client.start(rpcUser.username, rpcUser.password).use { rpc -> rpc.proxy.shutdown() }
 

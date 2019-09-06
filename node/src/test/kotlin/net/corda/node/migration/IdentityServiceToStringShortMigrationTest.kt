@@ -70,8 +70,8 @@ class IdentityServiceToStringShortMigrationTest {
         cordaDB.transaction {
             val groupedIdentities = identities.groupBy { it.name }
             groupedIdentities.forEach { name, certs ->
-                val persistentIDs = certs.map { PersistentIdentityService.PersistentIdentity(it.owningKey.hash.toString(), it.certPath.encoded) }
-                val persistentName = PersistentIdentityService.PersistentIdentityNames(name.toString(), certs.first().owningKey.hash.toString())
+                val persistentIDs = certs.map { PersistentIdentityService.PersistentPublicKeyHashToCertificate(it.owningKey.hash.toString(), it.certPath.encoded) }
+                val persistentName = PersistentIdentityService.PersistentPartyToPublicKeyHash(name.toString(), certs.first().owningKey.hash.toString())
                 persistentIDs.forEach {
                     session.persist(it)
                 }

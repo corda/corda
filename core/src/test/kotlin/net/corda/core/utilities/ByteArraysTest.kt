@@ -4,6 +4,7 @@ import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.declaredField
 import org.assertj.core.api.Assertions.catchThrowable
+import org.junit.Assert
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
