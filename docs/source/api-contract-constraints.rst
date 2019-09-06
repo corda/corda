@@ -103,10 +103,18 @@ across the nodes that intend to use it.
 Each transaction received by a node will then verify that the apps attached to it have the correct signers as specified by its
 Signature Constraints. This ensures that the version of each app is acceptable to the transaction's input states.
 
-If a node receives a transaction that uses an attachment that it doesn't trust, but there is an attachment present on the node with
+If a node receives a transaction that uses an attachment that it doesn't trust, but there is another attachment present on the node with
 at least one common signature, then the node will trust the received attachment. This means that nodes
 are no longer required to have every version of a CorDapp uploaded to them in order to verify transactions running older versions of a CorDapp.
 Instead, it is sufficient to have any version of the CorDapp contract installed.
+
+.. note:: An attachment is considered trusted if it was manually installed or uploaded to a node.
+
+Signers can also be blacklisted to prevent attachments received from a peer from being loaded and used in processing transactions. Only a
+single signer of an attachment needs to be blacklisted for an attachment to be considered untrusted. CorDapps
+and other attachments installed on a node can still be used without issue, even if they are signed by a blacklisted key. Only attachments
+received from a peer are affected. Information on blacklisting attachment signing keys can be found in the
+:ref:`node configuration documentation <corda_configuration_file_blacklisted_attachment_signer_keys>`.
 
 More information on how to sign an app directly from Gradle can be found in the
 :ref:`CorDapp Jar signing <cordapp_build_system_signing_cordapp_jar_ref>` section of the documentation.

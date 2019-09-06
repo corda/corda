@@ -69,10 +69,15 @@ attachmentCacheBound
 
   *Default:* 1024
 
+.. _corda_configuration_file_blacklisted_attachment_signer_keys:
+
 blacklistedAttachmentSigningKeys
   List of SHA-256 hashes of public keys. Attachments signed by any of these public keys will not be considered as trust roots for any attachments received over the network.
   This property is similar to :ref:`cordappSignerKeyFingerprintBlacklist <corda_configuration_file_signer_blacklist>` but only restricts CorDapps that were
   included as attachments in a transaction and received over the network from a peer.
+
+  See :ref:`Signing CorDapps for use with Signature Constraints <signing_cordapps_for_use_with_signature_constraints>` for more information about signing CorDapps and what
+  makes an attachment trusted (a trust root).
 
   This property requires retrieving the hashes of public keys that need to be blacklisted. More information on this process can be found in :ref:`Generating a public key hash <generating_a_public_key_hash>`.
 

@@ -286,9 +286,8 @@ Managing trusted attachments
 The node comes equipped with tools to manage attachments, including tooling to examine installed and uploaded attachments as well as those
 that were received over the network.
 
-.. note::   A Contract CorDapp (an attachment) received over the network, it is only allowed to evaluated if there are other Contract
+.. note::   A Contract CorDapp (an attachment) received over the network, is only allowed to be evaluated if there are other Contract
             CorDapps installed in the node that have been signed by at least one of the received CorDapp's keys.
-            This CorDapp is stored locally even if it is not used during contract validation.
 
             See :ref:`Signature Constraints <signature_constraints>` and
             :ref:`Signing CorDapps for use with Signature Constraints <signing_cordapps_for_use_with_signature_constraints>` for more information
