@@ -576,14 +576,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
 
         val blacklistedKeys = if (configuration.devMode) emptyList()
-        else configuration.cordappSignerKeyFingerprintBlacklist.map {
-            try {
-                SecureHash.parse(it)
-            } catch (e: IllegalArgumentException) {
-                log.error("Error while adding key fingerprint $it to cordappSignerKeyFingerprintBlacklist due to - ${e.message}", e)
-                throw e
-            }
-        }
+        else parseSecureHashConfiguration(configuration.cordappSignerKeyFingerprintBlacklist) { "Error while adding key fingerprint $it to blacklistedAttachmentSigningKeys" }
         return JarScanningCordappLoader.fromDirectories(
                 configuration.cordappDirectories,
                 versionInfo,
@@ -592,22 +585,23 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         )
     }
 
+    private fun parseSecureHashConfiguration(unparsedConfig: List<String>, errorMessage: (String) -> String): List<SecureHash.SHA256> {
+        return unparsedConfig.map {
+            try {
+                SecureHash.parse(it)
+            } catch (e: IllegalArgumentException) {
+                log.error("${errorMessage(it)} due to - ${e.message}", e)
+                throw e
+            }
+        }
+    }
+
     private fun makeAttachmentTrustCalculator(
         configuration: NodeConfiguration,
         database: CordaPersistence
     ): AttachmentTrustCalculator {
         val blacklistedAttachmentSigningKeys: List<SecureHash> =
-            configuration.blacklistedAttachmentSigningKeys.map {
-                try {
-                    SecureHash.parse(it)
-                } catch (e: IllegalArgumentException) {
-                    log.error(
-                        "Error while adding signing key $it to blacklistedAttachmentSigningKeys due to - ${e.message}",
-                        e
-                    )
-                    throw e
-                }
-            }
+            parseSecureHashConfiguration(configuration.blacklistedAttachmentSigningKeys) { "Error while adding signing key $it to blacklistedAttachmentSigningKeys" }
         return NodeAttachmentTrustCalculator(
             attachmentStorage = attachments,
             database = database,
