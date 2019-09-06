@@ -25,7 +25,7 @@ class CordappConfigFileProviderTests {
 
     @Test
     fun `test that config can be loaded`() {
-        writeConfig(validConfig) //dsadasdaa
+        writeConfig(validConfig) //dsadasdaab
         assertThat(provider.getConfigByName(cordappName)).isEqualTo(validConfig)
     }
 
