@@ -287,26 +287,25 @@ class NodeAttachmentService @JvmOverloads constructor(
     }
 
     private fun createAttachmentFromDatabase(attachment: DBAttachment): Attachment {
-        return AttachmentImpl(
+        val attachmentImpl = AttachmentImpl(
             id = SecureHash.parse(attachment.attId),
             dataLoader = { attachment.content },
             checkOnLoad = checkAttachmentsOnLoad,
             uploader = attachment.uploader,
             signerKeys = attachment.signers?.toList() ?: emptyList()
-        ).let {
-            val contracts = attachment.contractClassNames
-            if (contracts != null && contracts.isNotEmpty()) {
-                ContractAttachment.create(
-                    attachment = it,
-                    contract = contracts.first(),
-                    additionalContracts = contracts.drop(1).toSet(),
-                    uploader = attachment.uploader,
-                    signerKeys = attachment.signers?.toList() ?: emptyList(),
-                    version = attachment.version
-                )
-            } else {
-                it
-            }
+        )
+        val contracts = attachment.contractClassNames
+        return if (contracts != null && contracts.isNotEmpty()) {
+            ContractAttachment.create(
+                attachment = attachmentImpl,
+                contract = contracts.first(),
+                additionalContracts = contracts.drop(1).toSet(),
+                uploader = attachment.uploader,
+                signerKeys = attachment.signers?.toList() ?: emptyList(),
+                version = attachment.version
+            )
+        } else {
+            attachmentImpl
         }
     }
 
@@ -459,6 +458,7 @@ class NodeAttachmentService @JvmOverloads constructor(
         }
     }
 
+    // TODO do not retrieve whole attachments only to return ids
     override fun queryAttachments(criteria: AttachmentQueryCriteria, sorting: AttachmentSort?): List<AttachmentId> {
         log.info("Attachment query criteria: $criteria, sorting: $sorting")
         return database.transaction {
@@ -531,12 +531,10 @@ class NodeAttachmentService @JvmOverloads constructor(
             )
         )
         database.transaction {
-            TreeMap(
-                createAttachmentsQuery(
-                    attachmentQueryCriteria,
-                    attachmentSort
-                ).resultList.groupBy { it.version }.map { makeAttachmentIds(it, name) }.toMap()
-            )
+            createAttachmentsQuery(
+                attachmentQueryCriteria,
+                attachmentSort
+            ).resultList.groupBy { it.version }.map { makeAttachmentIds(it, name) }.toMap(TreeMap())
         }
     }
 
