@@ -618,7 +618,9 @@ dependencies {
 task detekt(type: JavaExec) {
     main = "io.gitlab.arturbosch.detekt.cli.Main"
     classpath = configurations.detekt
-    def files = String.join(",", DetektChangedFiles.getChangedFiles())
+    def changedFiles = DetektChangedFiles.getChangedFiles()
+    println changedFiles
+    def files = String.join(",", changedFiles)
     println files
     def input = files
     def config = "$projectDir/detekt-config.yml"

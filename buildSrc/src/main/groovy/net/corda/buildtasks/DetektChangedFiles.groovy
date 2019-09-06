@@ -3,7 +3,7 @@ package net.corda.buildtasks
 class DetektChangedFiles {
 
     static def getChangedFiles() {
-        String teamcityFile = System.getProperty("teamcity.build.changedFiles.file") ?: ""
+        String teamcityFile = Properties.getProperties()get("teamcity.build.changedFiles.file")
         String[] fileList
 //        if (!teamcityFile.isEmpty()) {
         String fileContents = new File(teamcityFile).text
