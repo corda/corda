@@ -1,9 +1,14 @@
 package net.corda.buildtasks
 
+import org.gradle.api.logging.Logger
+import org.gradle.api.logging.Logging
+
 class DetektChangedFiles {
+    private static final Logger logger = Logging.getLogger(DetektChangedFiles.class)
 
     static def getChangedFiles() {
-        String teamcityFile = Properties.getProperties()get("system.teamcity.build.changedFiles.file")
+        String teamcityFile = System.getProperty("system.teamcity.build.changedFiles.file")
+        logger.debug("TC FILE!!!: " + teamcityFile)
         String[] fileList
 //        if (!teamcityFile.isEmpty()) {
         String fileContents = new File(teamcityFile).text
