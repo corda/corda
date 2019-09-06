@@ -24,20 +24,39 @@ internal class ActivateFloat(val certificates: Map<String, List<X509Certificate>
 @CordaSerializable
 internal interface RequestIdContainer {
     val requestId: Long
+    val digest: String
 }
 
 private val requestCounter = AtomicLong(System.currentTimeMillis()) // Initialise once with current ms value to avoid clash from previous start-ups
 
-internal class SigningRequest(override val requestId: Long = requestCounter.incrementAndGet(), val alias: String, val sigAlgo: String, val data: ByteArray) : TunnelControlMessage(), RequestIdContainer
-internal class SigningResponse(override val requestId: Long, val signature: ByteArray?) : TunnelControlMessage(), RequestIdContainer
+internal class SigningRequest(override val requestId: Long = requestCounter.incrementAndGet(), val alias: String, val sigAlgo: String, val data: ByteArray) : TunnelControlMessage(), RequestIdContainer {
+    override val digest: String
+        get() = "Alias: $alias, sigAlgo: $sigAlgo"
+}
+internal class SigningResponse(override val requestId: Long, val signature: ByteArray?) : TunnelControlMessage(), RequestIdContainer {
+    override val digest: String
+        get() = "Signed bytes length: ${signature?.size}"
+}
 
-internal class CrlRequest(override val requestId: Long = requestCounter.incrementAndGet(), val certificate: X509Certificate) : TunnelControlMessage(), RequestIdContainer
-internal class CrlResponse(override val requestId: Long, val crls: Set<X509CRL>) : TunnelControlMessage(), RequestIdContainer
+internal class CrlRequest(override val requestId: Long = requestCounter.incrementAndGet(), val certificate: X509Certificate) : TunnelControlMessage(), RequestIdContainer {
+    override val digest: String
+        get() = "Certificate: $certificate"
+}
+internal class CrlResponse(override val requestId: Long, val crls: Set<X509CRL>) : TunnelControlMessage(), RequestIdContainer {
+    override val digest: String
+        get() = "CRL size: ${crls.size}, Sample: ${crls.take(10)}"
+}
 object DeactivateFloat : TunnelControlMessage()
 
 // Placeholder for messages to facilitate float health check
-internal class HealthCheckFloat(override val requestId: Long, val command: String) : TunnelControlMessage(), RequestIdContainer
-internal class FloatHealthyAck(override val requestId: Long, val healthy: Boolean, val narrative: String) : TunnelControlMessage(), RequestIdContainer
+internal class HealthCheckFloat(override val requestId: Long, val command: String) : TunnelControlMessage(), RequestIdContainer {
+    override val digest: String
+        get() = "Command: $command"
+}
+internal class FloatHealthyAck(override val requestId: Long, val healthy: Boolean, val narrative: String) : TunnelControlMessage(), RequestIdContainer {
+    override val digest: String
+        get() = "Healthy: $healthy, Narrative: $narrative"
+}
 
 @CordaSerializable
 internal class FloatDataPacket(val topic: String,

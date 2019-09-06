@@ -81,12 +81,12 @@ internal class RequestResponseServiceHelper<in REQ : RequestIdContainer, out RES
                 sourceLegalName,
                 sourceLink,
                 emptyMap())
-        log.info("Sending request: ${request.requestId}")
+        log.info("Sending request with id: ${request.requestId}, Digest: (${request.digest})")
         val resultFuture = getResponseFuture(request.requestId)
         amqpControl.write(amqpMessage)
         // Block until response
         val result = resultFuture.get(responseTimeOut.toMillis(), TimeUnit.MILLISECONDS)
-        log.info("returned response: $result")
+        log.info("Returned response for id: ${result.requestId}, Digest: (${result.digest})")
         return result
     }
 }
