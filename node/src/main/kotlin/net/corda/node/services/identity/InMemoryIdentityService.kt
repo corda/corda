@@ -123,7 +123,7 @@ class InMemoryIdentityService(identities: List<PartyAndCertificate> = emptyList(
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
-    override fun publicKeysForExternalId(externalID: UUID): Iterable<PublicKey> {
+    override fun publicKeysForExternalId(externalId: UUID): Iterable<PublicKey> {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 }

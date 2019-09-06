@@ -175,7 +175,7 @@ interface IdentityService {
     @Suspendable
     fun externalIdForPublicKey(publicKey: PublicKey): UUID?
 
-    fun publicKeysForExternalId(externalID: UUID): Iterable<PublicKey>
+    fun publicKeysForExternalId(externalId: UUID): Iterable<PublicKey>
 }
 
 class UnknownAnonymousPartyException(message: String) : CordaException(message)

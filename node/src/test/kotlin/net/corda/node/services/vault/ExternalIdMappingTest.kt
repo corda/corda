@@ -157,42 +157,57 @@ class ExternalIdMappingTest {
 
         // Keys.
         val A = services.keyManagementService.freshKey(id)          // Automatically calls registerKeyToParty and registerKeyToExternalId
-        val B = services.keyManagementService.freshKey(id)
-        val C = services.keyManagementService.freshKey(idTwo)
-        val D = services.keyManagementService.freshKey()
+        val B = services.keyManagementService.freshKey(id)          // Automatically calls registerKeyToParty and registerKeyToExternalId
+        val C = services.keyManagementService.freshKey(idTwo)       // Automatically calls registerKeyToParty and registerKeyToExternalId
+        val D = services.keyManagementService.freshKey()            // Automatically calls registerKeyToParty and registerKeyToExternalId
         val E = Crypto.generateKeyPair().public
         val F = Crypto.generateKeyPair().public
         val G = Crypto.generateKeyPair().public
 
-        assertEquals(services.identityService.externalIdForPublicKey(A), id)
-        assertEquals(services.identityService.externalIdForPublicKey(B), id)
-        assertEquals(services.identityService.externalIdForPublicKey(C), idTwo)
-        assertEquals(services.identityService.externalIdForPublicKey(D), null)
-        assertEquals(services.identityService.wellKnownPartyFromAnonymous(AnonymousParty(A)), myself.party)
-        assertEquals(services.identityService.wellKnownPartyFromAnonymous(AnonymousParty(B)), myself.party)
-        assertEquals(services.identityService.wellKnownPartyFromAnonymous(AnonymousParty(C)), myself.party)
-        assertEquals(services.identityService.wellKnownPartyFromAnonymous(AnonymousParty(D)), myself.party)
+        // Check we can lookup the Party and external ID (if there is one).
+        assertEquals(id, services.identityService.externalIdForPublicKey(A))
+        assertEquals(id, services.identityService.externalIdForPublicKey(B))
+        assertEquals(idTwo, services.identityService.externalIdForPublicKey(C))
+        assertEquals(null, services.identityService.externalIdForPublicKey(D))
+        assertEquals(myself.party, services.identityService.wellKnownPartyFromAnonymous(AnonymousParty(A)))
+        assertEquals(myself.party, services.identityService.wellKnownPartyFromAnonymous(AnonymousParty(B)))
+        assertEquals(myself.party, services.identityService.wellKnownPartyFromAnonymous(AnonymousParty(C)))
+        assertEquals(myself.party, services.identityService.wellKnownPartyFromAnonymous(AnonymousParty(D)))
 
+        // Register some keys generated on another node.
         services.identityService.registerKey(E, alice.party, idThree)
         services.identityService.registerKey(F, alice.party, idFour)
         services.identityService.registerKey(G, bob.party)
 
-        services.identityService.registerKey(A, myself.party)                                                       // Idempotent call.
-        assertFailsWith(IllegalArgumentException::class) { services.identityService.registerKey(A, alice.party) }   // Idempotent call.
-        services.identityService.registerKey(B, myself.party)                                                       // Idempotent call.
-        assertFailsWith(IllegalArgumentException::class) { services.identityService.registerKey(B, alice.party) }   // Idempotent call.
-        assertFailsWith(IllegalArgumentException::class) { services.identityService.registerKey(C, bob.party) }     // Idempotent call.
+        // Try to override existing mappings.
+        services.identityService.registerKey(A, myself.party)                       // Idempotent call.
+        services.identityService.registerKey(A, alice.party)                        // Idempotent call.
+        services.identityService.registerKey(B, myself.party, UUID.randomUUID())    // Idempotent call.
+        services.identityService.registerKey(B, alice.party)                        // Idempotent call.
+        services.identityService.registerKey(C, bob.party, UUID.randomUUID())       // Idempotent call.
 
-        assertEquals(services.identityService.externalIdForPublicKey(A), id)
-        assertEquals(services.identityService.externalIdForPublicKey(B), id)
-        assertEquals(services.identityService.externalIdForPublicKey(C), idTwo)
-        assertEquals(services.identityService.externalIdForPublicKey(E), idThree)
-        assertEquals(services.identityService.externalIdForPublicKey(F), idFour)
+        // Check the above calls, didn't change anything.
+        assertEquals(myself.party, services.identityService.wellKnownPartyFromAnonymous(AnonymousParty(A)))
+        assertEquals(myself.party, services.identityService.wellKnownPartyFromAnonymous(AnonymousParty(B)))
+        assertEquals(myself.party, services.identityService.wellKnownPartyFromAnonymous(AnonymousParty(C)))
+
+        assertEquals(id, services.identityService.externalIdForPublicKey(A))
+        assertEquals(id, services.identityService.externalIdForPublicKey(B))
+        assertEquals(idTwo, services.identityService.externalIdForPublicKey(C))
+        assertEquals(idThree, services.identityService.externalIdForPublicKey(E))
+        assertEquals(idFour, services.identityService.externalIdForPublicKey(F))
 
         // ALICE and BOB PartyAndCertificates need to be present in the nameToCert table.
-        assertEquals(services.identityService.wellKnownPartyFromAnonymous(AnonymousParty(E)), alice.party)
-        assertEquals(services.identityService.wellKnownPartyFromAnonymous(AnonymousParty(F)), alice.party)
-        assertEquals(services.identityService.wellKnownPartyFromAnonymous(AnonymousParty(G)), bob.party)
+        assertEquals(alice.party, services.identityService.wellKnownPartyFromAnonymous(AnonymousParty(E)))
+        assertEquals(alice.party, services.identityService.wellKnownPartyFromAnonymous(AnonymousParty(F)))
+        assertEquals(bob.party, services.identityService.wellKnownPartyFromAnonymous(AnonymousParty(G)))
+
+        // Check we can look up keys by external ID.
+        assertEquals(setOf(A, B), services.identityService.publicKeysForExternalId(id).toSet())
+        assertEquals(C, services.identityService.publicKeysForExternalId(idTwo).single())
+        assertEquals(E, services.identityService.publicKeysForExternalId(idThree).single())
+        assertEquals(F, services.identityService.publicKeysForExternalId(idFour).single())
+        assertEquals(emptyList(), services.identityService.publicKeysForExternalId(UUID.randomUUID()))
     }
 
 }

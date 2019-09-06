@@ -10,6 +10,8 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.MAX_HASH_HEX_SIZE
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
+import net.corda.node.services.keys.BasicHSMKeyManagementService
+import net.corda.node.services.persistence.PublicKeyHashToExternalId
 import net.corda.node.services.persistence.WritablePublicKeyToOwningIdentityCache
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.nodeapi.internal.KeyOwningIdentity
@@ -377,7 +379,29 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
         return _pkToIdCache[publicKey]?.uuid
     }
 
-    override fun publicKeysForExternalId(externalID: UUID): Iterable<PublicKey> {
-        return emptyList()
+    private fun publicKeysForExternalId(externalId: UUID, table: Class<*>): List<PublicKey> {
+        return database.transaction {
+            val query = session.createQuery(
+                    """
+                        select a.publicKey
+                        from ${table.name} a, ${PublicKeyHashToExternalId::class.java.name} b
+                        where b.externalId = :uuid
+                        and b.publicKeyHash = a.publicKeyHash
+                    """,
+                    ByteArray::class.java
+            )
+            query.setParameter("uuid", externalId)
+            query.resultList.map { Crypto.decodePublicKey(it) }
+        }
+    }
+
+    override fun publicKeysForExternalId(externalId: UUID): Iterable<PublicKey> {
+        // If the externalId was created by this node then we'll find the keys in the KMS, otherwise they'll be in the IdentityService.
+        val keys = publicKeysForExternalId(externalId, BasicHSMKeyManagementService.PersistentKey::class.java)
+        return if (keys.isEmpty()) {
+            publicKeysForExternalId(externalId, PersistentHashToPublicKey::class.java)
+        } else {
+            keys
+        }
     }
 }
