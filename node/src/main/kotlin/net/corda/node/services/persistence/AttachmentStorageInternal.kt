@@ -23,7 +23,9 @@ interface AttachmentStorageInternal : AttachmentStorage {
 
     /**
      * Get all attachments as a [Stream], filtered by the input [AttachmentQueryCriteria],
-     * stored within the node paired to their file name's.
+     * stored within the node paired to their file names.
+     *
+     * The [Stream] must be closed once used.
      */
     fun getAllAttachmentsByCriteria(criteria: AttachmentQueryCriteria = AttachmentQueryCriteria.AttachmentsQueryCriteria()): Stream<Pair<String?, Attachment>>
 }

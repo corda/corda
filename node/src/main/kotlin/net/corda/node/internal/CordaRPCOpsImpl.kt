@@ -136,9 +136,10 @@ internal class CordaRPCOpsImpl(
 
     override fun dumpCheckpoints() = checkpointDumper.dump()
 
-    override fun getAttachmentTrustRoots(): List<AttachmentTrustInfo> {
-        return services.attachmentTrustCalculator.calculateAllTrustRoots()
-    }
+    override val attachmentTrustRoots: List<AttachmentTrustInfo>
+        get() {
+            return services.attachmentTrustCalculator.calculateAllTrustRoots()
+        }
 
     override fun stateMachinesSnapshot(): List<StateMachineInfo> {
         val (snapshot, updates) = stateMachinesFeed()

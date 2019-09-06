@@ -12,5 +12,5 @@ interface InternalCordaRPCOps : CordaRPCOps {
     fun dumpCheckpoints()
 
     /** Get the attachment trust roots */
-    fun getAttachmentTrustRoots(): List<AttachmentTrustInfo>
+    val attachmentTrustRoots: List<AttachmentTrustInfo>
 }

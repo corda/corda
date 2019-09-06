@@ -4,10 +4,15 @@ import net.corda.core.contracts.*
 import net.corda.core.cordapp.CordappContext
 import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.SecureHash
-import net.corda.core.internal.*
+import net.corda.core.internal.deserialiseComponentGroup
+import net.corda.core.internal.div
+import net.corda.core.internal.readObject
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.ServicesForResolution
-import net.corda.core.node.services.*
+import net.corda.core.node.services.AttachmentId
+import net.corda.core.node.services.IdentityService
+import net.corda.core.node.services.NetworkParametersService
+import net.corda.core.node.services.TransactionStorage
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.internal.AttachmentsClassLoaderBuilder
 import net.corda.core.transactions.ContractUpgradeLedgerTransaction
@@ -29,7 +34,7 @@ import java.util.Comparator.comparingInt
 
 class MigrationServicesForResolution(
         override val identityService: IdentityService,
-        override val attachments: AttachmentStorage,
+        override val attachments: AttachmentStorageInternal,
         private val transactions: TransactionStorage,
         private val cordaDB: CordaPersistence,
         cacheFactory: MigrationNamedCacheFactory
@@ -54,7 +59,7 @@ class MigrationServicesForResolution(
     private val cordappLoader = SchemaMigration.loader.get()
 
     private val attachmentTrustCalculator = NodeAttachmentTrustCalculator(
-        attachments as AttachmentStorageInternal,
+        attachments,
         cacheFactory
     )
 
@@ -119,7 +124,7 @@ class MigrationServicesForResolution(
                     txAttachments,
                     networkParameters,
                     tx.id,
-                    { attachmentTrustCalculator.calculate(it) },
+                    attachmentTrustCalculator::calculate,
                     cordappLoader.appClassLoader) {
                 deserialiseComponentGroup(tx.componentGroups, TransactionState::class, ComponentGroupEnum.OUTPUTS_GROUP, forceDeserialize = true)
             }

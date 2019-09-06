@@ -489,7 +489,7 @@ object InteractiveShell {
         out: RenderPrintWriter,
         rpcOps: InternalCordaRPCOps
     ): Any {
-        return AttachmentTrustTable(out, rpcOps.getAttachmentTrustRoots())
+        return AttachmentTrustTable(out, rpcOps.attachmentTrustRoots)
     }
 
     @JvmStatic
