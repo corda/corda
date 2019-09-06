@@ -5,17 +5,17 @@ import com.typesafe.config.ConfigException
 import com.typesafe.config.ConfigFactory
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SignatureScheme
-import net.corda.core.crypto.internal.Instances
 import net.corda.nodeapi.internal.config.UnknownConfigurationKeysException
 import net.corda.nodeapi.internal.config.parseAs
 import net.corda.nodeapi.internal.cryptoservice.CryptoService
 import net.corda.nodeapi.internal.cryptoservice.JCACryptoService
 import net.corda.nodeapi.internal.cryptoservice.WrappedPrivateKey
 import net.corda.nodeapi.internal.cryptoservice.WrappingMode
-import java.lang.IllegalArgumentException
-import java.lang.IllegalStateException
 import java.nio.file.Path
-import java.security.*
+import java.security.Key
+import java.security.KeyStore
+import java.security.Provider
+import java.security.PublicKey
 import java.security.interfaces.ECPrivateKey
 import java.security.interfaces.RSAPrivateKey
 import java.util.*
@@ -30,7 +30,8 @@ class PrimusXCryptoService(keyStore: KeyStore, provider: Provider, x500Principal
     private val keyHandleCache: ConcurrentHashMap<String, Key> = ConcurrentHashMap()
 
     override fun isLoggedIn(): Boolean {
-        return PrimusLogin.isLoggedIn(auth().host, auth().port)
+        // ENT-4130: Added the username as the HSM always returned false otherwise
+        return PrimusLogin.isLoggedIn(auth().host, auth().port, auth().username)
     }
 
     @Synchronized
