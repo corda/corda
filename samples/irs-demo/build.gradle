@@ -30,7 +30,7 @@ apply plugin: 'application'
 mainClassName = 'net.corda.irs.IRSDemo'
 
 sourceSets {
-    integrationTest {
+    slowIntegrationTest {
         kotlin {
             compileClasspath += main.output + test.output
             runtimeClasspath += main.output + test.output
@@ -47,8 +47,8 @@ sourceSets {
 }
 
 configurations {
-    integrationTestCompile.extendsFrom testCompile
-    integrationTestRuntimeOnly.extendsFrom testRuntimeOnly
+    slowIntegrationTestCompile.extendsFrom testCompile
+    slowIntegrationTestRuntimeOnly.extendsFrom testRuntimeOnly
     demoArtifacts.extendsFrom testRuntimeClasspath
     systemTestCompile.extendsFrom testCompile
 }
@@ -79,7 +79,7 @@ dependencies {
 
     testCompile "org.assertj:assertj-core:${assertj_version}"
 
-    integrationTestCompile project(path: ":samples:irs-demo:web", configuration: "demoArtifacts")
+    slowIntegrationTestCompile project(path: ":samples:irs-demo:web", configuration: "demoArtifacts")
     testCompile "com.palantir.docker.compose:docker-compose-rule-junit4:$docker_compose_rule_version"
     testCompile "org.seleniumhq.selenium:selenium-java:$selenium_version"
     testCompile "com.github.detro:ghostdriver:$ghostdriver_version"
@@ -89,9 +89,9 @@ bootRepackage {
     enabled = false
 }
 
-task integrationTest(type: Test, dependsOn: []) {
-    testClassesDirs = sourceSets.integrationTest.output.classesDirs
-    classpath = sourceSets.integrationTest.runtimeClasspath
+task slowIntegrationTest(type: Test, dependsOn: []) {
+    testClassesDirs = sourceSets.slowIntegrationTest.output.classesDirs
+    classpath = sourceSets.slowIntegrationTest.runtimeClasspath
 }
 
 evaluationDependsOn("cordapp")
