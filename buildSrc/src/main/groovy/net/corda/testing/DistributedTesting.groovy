@@ -2,9 +2,11 @@ package net.corda.testing
 
 
 import com.bmuschko.gradle.docker.tasks.image.DockerPushImage
+import org.gradle.api.GradleException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.Task
+import org.gradle.api.tasks.TaskProvider
 import org.gradle.api.tasks.testing.Test
 
 /**
@@ -12,8 +14,19 @@ import org.gradle.api.tasks.testing.Test
  */
 class DistributedTesting implements Plugin<Project> {
 
+    final static String FORK_PROPERTY = "dockerFork"
+    final static String FORKS_PROPERTY = "dockerForks"
+
     static def getPropertyAsInt(Project proj, String property, Integer defaultValue) {
         return proj.hasProperty(property) ? Integer.parseInt(proj.property(property).toString()) : defaultValue
+    }
+
+    static def getPropertyAsInt(Project proj, String property) {
+        if (!proj.hasProperty(property)) {
+            throw new GradleException("property: ${property} is not set on current project")
+        }
+
+        return Integer.parseInt(proj.property(property).toString())
     }
 
     @Override
@@ -27,11 +40,56 @@ class DistributedTesting implements Plugin<Project> {
             //1. add the task to determine all tests within the module
             //2. modify the underlying testing task to use the output of the listing task to include a subset of tests for each fork
             //3. KubesTest will invoke these test tasks in a parallel fashion on a remote k8s cluster
+            List<Test> modifiedTestTasks = new ArrayList<>()
+            List<ListTests> testListers = new ArrayList<>()
+
+
+            def requestedTasks = project.gradle.startParameter.taskNames.collect { project.tasks.findByPath(it) }
+
             project.subprojects { Project subProject ->
                 subProject.tasks.withType(Test) { Test task ->
-                    ListTests testListerTask = createTestListingTasks(task, subProject)
-                    Test modifiedTestTask = modifyTestTaskForParallelExecution(subProject, task, testListerTask)
+                    if (task in requestedTasks) {
+                        TaskProvider<ListTests> testListerTask = createTestListingTasks(task, subProject)
+                        modifiedTestTasks.add(modifyTestTaskForParallelExecution(subProject, task))
+                        testListers.add(testListerTask.get())
+                    }
                     KubesTest parallelTestTask = generateParallelTestingTask(subProject, task, imageBuildingTask)
+                }
+            }
+
+            TaskProvider<TestAllocator> allocator = project.tasks.register("globalAllocator", TestAllocator)
+            allocator.configure {
+                testLists testListers
+            }
+
+            modifiedTestTasks.forEach { task ->
+                task.configure {
+                    def subProject = task.project
+                    if (!subProject.path.contains("core-deterministic")) {
+                        dependsOn allocator.get()
+                        doFirst {
+                            filter {
+                                def fork = getPropertyAsInt(subProject, FORK_PROPERTY, 0)
+                                def forks = getPropertyAsInt(subProject, FORKS_PROPERTY, 1)
+                                subProject.logger.info("requesting tests to include in testing task ${task.getPath()} (${fork})")
+                                List<String> includes = allocator.get().getTestsForTaskAndFork(
+                                        task,
+                                        fork)
+                                subProject.logger.info "got ${includes.size()} tests to include into testing task ${task.getPath()}"
+
+                                if (includes.size() == 0) {
+                                    subProject.logger.info "Disabling test execution for testing task ${task.getPath()}"
+                                    excludeTestsMatching "*"
+                                }
+
+                                includes.forEach { include ->
+                                    subProject.logger.info "including: $include for testing task ${task.getPath()}"
+                                    includeTestsMatching include
+                                }
+                                failOnNoMatchingTests false
+                            }
+                        }
+                    }
                 }
             }
 
@@ -100,40 +158,13 @@ class DistributedTesting implements Plugin<Project> {
         return createdParallelTestTask as KubesTest
     }
 
-    private Test modifyTestTaskForParallelExecution(Project subProject, Test task, ListTests testListerTask) {
-        subProject.logger.info("modifying task: ${task.getPath()} to depend on task ${testListerTask.getPath()}")
+    private Test modifyTestTaskForParallelExecution(Project subProject, Test task) {
         def reportsDir = new File(new File(subProject.rootProject.getBuildDir(), "test-reports"), subProject.name + "-" + task.name)
         task.configure {
-            dependsOn testListerTask
             binResultsDir new File(reportsDir, "binary")
             reports.junitXml.destination new File(reportsDir, "xml")
             maxHeapSize = "6g"
-            doFirst {
-                filter {
-                    def fork = getPropertyAsInt(subProject, "dockerFork", 0)
-                    def forks = getPropertyAsInt(subProject, "dockerForks", 1)
-                    def shuffleSeed = 42
-                    subProject.logger.info("requesting tests to include in testing task ${task.getPath()} (${fork}, ${forks}, ${shuffleSeed})")
-                    List<String> includes = testListerTask.getTestsForFork(
-                            fork,
-                            forks,
-                            shuffleSeed)
-                    subProject.logger.info "got ${includes.size()} tests to include into testing task ${task.getPath()}"
-
-                    if (includes.size() == 0) {
-                        subProject.logger.info "Disabling test execution for testing task ${task.getPath()}"
-                        excludeTestsMatching "*"
-                    }
-
-                    includes.forEach { include ->
-                        subProject.logger.info "including: $include for testing task ${task.getPath()}"
-                        includeTestsMatching include
-                    }
-                    failOnNoMatchingTests false
-                }
-            }
         }
-
         return task
     }
 
@@ -141,22 +172,26 @@ class DistributedTesting implements Plugin<Project> {
         project.plugins.apply(ImageBuilding)
     }
 
-    private ListTests createTestListingTasks(Test task, Project subProject) {
+    private TaskProvider<ListTests> createTestListingTasks(Test task, Project subProject) {
         def taskName = task.getName()
         def capitalizedTaskName = task.getName().capitalize()
         //determine all the tests which are present in this test task.
         //this list will then be shared between the various worker forks
-        def createdListTask = subProject.tasks.create("listTestsFor" + capitalizedTaskName, ListTests) {
+        def createdListTask = subProject.tasks.register("listTestsFor" + capitalizedTaskName, ListTests)
+        createdListTask.configure {
             //the convention is that a testing task is backed by a sourceSet with the same name
+            testTask = task
             dependsOn subProject.getTasks().getByName("${taskName}Classes")
             doFirst {
                 //we want to set the test scanning classpath to only the output of the sourceSet - this prevents dependencies polluting the list
                 scanClassPath = task.getTestClassesDirs() ? task.getTestClassesDirs() : Collections.emptyList()
             }
+            subProject.logger.info("created task: " + it.getPath() + " in project: " + subProject + " it dependsOn: " + it.dependsOn)
         }
 
         //convenience task to utilize the output of the test listing task to display to local console, useful for debugging missing tests
-        def createdPrintTask = subProject.tasks.create("printTestsFor" + capitalizedTaskName) {
+        def createdPrintTask = subProject.tasks.register("printTestsFor" + capitalizedTaskName)
+        createdPrintTask.configure {
             dependsOn createdListTask
             doLast {
                 createdListTask.getTestsForFork(
@@ -166,12 +201,10 @@ class DistributedTesting implements Plugin<Project> {
                     println testName
                 }
             }
+            subProject.logger.info("created task: " + it.getPath() + " in project: " + subProject + " it dependsOn: " + it.dependsOn)
         }
 
-        subProject.logger.info("created task: " + createdListTask.getPath() + " in project: " + subProject + " it dependsOn: " + createdListTask.dependsOn)
-        subProject.logger.info("created task: " + createdPrintTask.getPath() + " in project: " + subProject + " it dependsOn: " + createdPrintTask.dependsOn)
-
-        return createdListTask as ListTests
+        return createdListTask as TaskProvider<ListTests>
     }
 
 }

@@ -5,6 +5,7 @@ import io.github.classgraph.ClassInfo
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.FileCollection
 import org.gradle.api.tasks.TaskAction
+import org.gradle.api.tasks.testing.Test
 
 import java.util.stream.Collectors
 
@@ -39,17 +40,9 @@ class ListShufflerAndAllocator {
 
 class ListTests extends DefaultTask {
 
+    Test testTask
     FileCollection scanClassPath
     List<String> allTests
-
-    def getTestsForFork(int fork, int forks, Integer seed) {
-        def gitSha = new BigInteger(project.hasProperty("corda_revision") ? project.property("corda_revision").toString() : "0", 36)
-        if (fork >= forks) {
-            throw new IllegalArgumentException("requested shard ${fork + 1} for total shards ${forks}")
-        }
-        def seedToUse = seed ? (seed + ((String) this.getPath()).hashCode() + gitSha.intValue()) : 0
-        return new ListShufflerAndAllocator(allTests).getTestsForFork(fork, forks, seedToUse)
-    }
 
     @TaskAction
     def discoverTests() {
