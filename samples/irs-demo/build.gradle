@@ -89,7 +89,7 @@ bootRepackage {
     enabled = false
 }
 
-task integrationTest(type: Test, dependsOn: []) {
+task slowIntegrationTest(type: Test, dependsOn: []) {
     testClassesDirs = sourceSets.integrationTest.output.classesDirs
     classpath = sourceSets.integrationTest.runtimeClasspath
 }
