@@ -7,6 +7,7 @@ import net.corda.core.node.services.Vault
 import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.DeprecatedConstructorForDeserialization
 import net.corda.core.transactions.LedgerTransaction
 
 /**
@@ -14,12 +15,10 @@ import net.corda.core.transactions.LedgerTransaction
  * or included in an off-ledger data structure. [StatePointer]s can be resolved to a [StateAndRef] by performing a
  * vault query. There are two types of pointers; linear and static. [LinearPointer]s are for use with [LinearState]s.
  * [StaticPointer]s are for use with any type of [ContractState].
- *
- * @param resolveAtTransaction Determines whether the state pointer should be resolved to a reference input when used in a transaction.
  */
 @CordaSerializable
 @KeepForDJVM
-sealed class StatePointer<T : ContractState>(internal open val resolveAtTransaction: Boolean = true) {
+sealed class StatePointer<T : ContractState> {
     /**
      * An identifier for the [ContractState] that this [StatePointer] points to.
      */
@@ -29,6 +28,11 @@ sealed class StatePointer<T : ContractState>(internal open val resolveAtTransact
      * Type of the state which is being pointed to.
      */
     abstract val type: Class<T>
+
+    /**
+     * Determines whether the state pointer should be resolved to a reference input when used in a transaction.
+     */
+    abstract val isResolved: Boolean
 
     /**
      * Resolves a [StatePointer] to a [StateAndRef] via a vault query. This method will either return a [StateAndRef]
@@ -59,8 +63,18 @@ sealed class StatePointer<T : ContractState>(internal open val resolveAtTransact
 class StaticPointer<T : ContractState>(
         override val pointer: StateRef,
         override val type: Class<T>,
-        override val resolveAtTransaction: Boolean = true
-) : StatePointer<T>(resolveAtTransaction) {
+        override val isResolved: Boolean = false
+) : StatePointer<T>() {
+
+    /**
+     * Allows this class to be evolved through backwards compatibility with version 1 of this class.
+     *
+     * @param pointer The state reference that this points to.
+     * @param type The underlying [LinearState] type that this points to.
+     */
+    @DeprecatedConstructorForDeserialization(version = 1)
+    constructor(pointer: StateRef, type: Class<T>) : this(pointer, type, false)
+
     /**
      * Resolves a [StaticPointer] to a [StateAndRef] via a [StateRef] look-up.
      */
@@ -108,8 +122,18 @@ class StaticPointer<T : ContractState>(
 class LinearPointer<T : LinearState>(
         override val pointer: UniqueIdentifier,
         override val type: Class<T>,
-        override val resolveAtTransaction: Boolean = true
-) : StatePointer<T>(resolveAtTransaction) {
+        override val isResolved: Boolean = false
+) : StatePointer<T>() {
+
+    /**
+     * Allows this class to be evolved through backwards compatibility with version 1 of this class.
+     *
+     * @param pointer The unique identifier that this points to.
+     * @param type The underlying [LinearState] type that this points to.
+     */
+    @DeprecatedConstructorForDeserialization(version = 1)
+    constructor(pointer: UniqueIdentifier, type: Class<T>) : this(pointer, type, false)
+
     /**
      * Resolves a [LinearPointer] using the [UniqueIdentifier] contained in the [pointer] property. Returns a
      * [StateAndRef] containing the latest version of the [LinearState] that the node calling [resolve] is aware of.
