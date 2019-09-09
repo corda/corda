@@ -44,7 +44,7 @@ class NodeAttachmentTrustCalculator(
 
         if (attachment.isUploaderTrusted()) return true
 
-        if (attachment.isSignedByBlacklistedKeys()) return false
+        if (attachment.isSignedByBlacklistedKey()) return false
 
         return attachment.signerKeys.any { signer ->
             trustedKeysCache.get(signer) {
@@ -57,7 +57,7 @@ class NodeAttachmentTrustCalculator(
         }
     }
 
-    override fun calculateAllTrustRoots(): List<AttachmentTrustInfo> {
+    override fun calculateAllTrustInfo(): List<AttachmentTrustInfo> {
 
         val publicKeyToTrustRootMap = mutableMapOf<PublicKey, TrustedAttachment>()
         val attachmentTrustInfos = mutableListOf<AttachmentTrustInfo>()
@@ -89,7 +89,7 @@ class NodeAttachmentTrustCalculator(
 
             getUntrustedAttachments().use { untrustedAttachments ->
                 for ((name, attachment) in untrustedAttachments) {
-                    val trustRoot = if (attachment.isSignedByBlacklistedKeys()) {
+                    val trustRoot = if (attachment.isSignedByBlacklistedKey()) {
                         null
                     } else {
                         attachment.signerKeys
@@ -135,7 +135,7 @@ class NodeAttachmentTrustCalculator(
 
     private data class TrustedAttachment(val id: AttachmentId, val name: String?)
 
-    private fun Attachment.isSignedByBlacklistedKeys() =
+    private fun Attachment.isSignedByBlacklistedKey() =
         signerKeys.any { it.isBlacklisted() }
 
     private fun PublicKey.isBlacklisted() =

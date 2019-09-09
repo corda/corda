@@ -17,14 +17,14 @@ interface AttachmentTrustCalculator {
      *  - They are uploaded by a trusted uploader
      *  - There is another attachment in the attachment store, that is trusted and is signed by at least one key that the given
      *  attachment is also signed with
-    */
+     */
     fun calculate(attachment: Attachment): Boolean
 
     /**
      * Calculates the trust of attachments stored within the node. Applies the same logic as
      * [calculate] when calculating the trust of an attachment.
      */
-    fun calculateAllTrustRoots(): List<AttachmentTrustInfo>
+    fun calculateAllTrustInfo(): List<AttachmentTrustInfo>
 }
 
 /**
@@ -38,6 +38,6 @@ data class AttachmentTrustInfo(
     val trustRootId: AttachmentId?,
     val trustRootFileName: String?
 ) {
-    val isTrusted = trustRootId != null
-    val isTrustRoot = attachmentId == trustRootId
+    val isTrusted: Boolean get() = trustRootId != null
+    val isTrustRoot: Boolean get() = attachmentId == trustRootId
 }

@@ -297,11 +297,14 @@ Shell commands
 
 The following shell command can be used to extract information about attachments from the node:
 
-    - ``attachments trustRoots``
+    - ``attachments trustInfo``
 
     Outputs to the shell a list of all attachments along with the following information:
 
         - Whether an attachment is installed locally
+
+            - ``True`` if the attachment is installed in the CorDapps directory or uploaded via RPC
+            - ``False`` in all other scenarios, including attachments received from a peer node or uploaded via any means other than RPC
         - If an attachment is trusted
         - Which other attachment, if any, provided trust to an attachment
 

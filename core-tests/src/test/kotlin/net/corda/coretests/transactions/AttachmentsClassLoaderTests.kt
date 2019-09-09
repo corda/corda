@@ -70,11 +70,6 @@ class AttachmentsClassLoaderTests {
         )
     }
 
-//    private fun createClassloader(attachments: List<AttachmentId>,
-//                                  params: NetworkParameters = networkParameters): AttachmentsClassLoader {
-//        return AttachmentsClassLoader(attachments.map { storage.openAttachment(it)!! }, params, SecureHash.zeroHash, { attachmentTrustCalculator.calculate(it) })
-//    }
-
     @Before
     fun setup() {
         storage = MockAttachmentStorage()

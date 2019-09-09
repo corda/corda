@@ -485,11 +485,11 @@ object InteractiveShell {
     }
 
     @JvmStatic
-    fun runAttachmentTrustRootsView(
+    fun runAttachmentTrustInfoView(
         out: RenderPrintWriter,
         rpcOps: InternalCordaRPCOps
     ): Any {
-        return AttachmentTrustTable(out, rpcOps.attachmentTrustRoots)
+        return AttachmentTrustTable(out, rpcOps.attachmentTrustInfos)
     }
 
     @JvmStatic

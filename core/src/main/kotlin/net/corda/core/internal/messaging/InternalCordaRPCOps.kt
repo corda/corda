@@ -11,6 +11,6 @@ interface InternalCordaRPCOps : CordaRPCOps {
     /** Dump all the current flow checkpoints as JSON into a zip file in the node's log directory. */
     fun dumpCheckpoints()
 
-    /** Get the attachment trust roots */
-    val attachmentTrustRoots: List<AttachmentTrustInfo>
+    /** Get all attachment trust information */
+    val attachmentTrustInfos: List<AttachmentTrustInfo>
 }
