@@ -16,8 +16,8 @@ To find out how to contribute, please see our [contributing docs](https://docs.c
  
 Previously, all development work was done on master. Master will no longer be used, owing to the need to support multiple versions of Corda in flight at any time. Instead, development work will be done on branches that represent the appropriate version. Branches will be named according to the following pattern:
 release/os/{major version}.{minor version}
- 
-Thus, the branch release/os/4.1 contains the most recently released major version of Corda. The branch release/os/4.3 contains the next major version of Corda, yet to be released.
+
+The default branch will track the current version of Corda in development and is expected to change over time as new versions of Corda are released.
  
 # Where should I make my change?
  
@@ -26,3 +26,5 @@ If you would like to contribute to Corda, we recommend opening a pull request ag
 # Why was this change made?
  
 The previous branching structure required changes to be made on master first and then backported to older versions. However, backporting was proving to be complicated and time consuming. In order to streamline development, it was decided that forward merging would be used instead, which required moving away from development based around a master branch.
+
+Please see Mike Ward's [blog post](https://medium.com/corda/corda-release-versioning-changes-6281b02348fc) for more detail on why the versioning strategy was changed.
