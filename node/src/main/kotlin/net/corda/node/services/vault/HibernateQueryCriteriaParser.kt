@@ -471,6 +471,9 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
             predicateSet.add(criteriaBuilder.and(vaultFungibleStatesRoot.get<ByteArray>("issuerRef").`in`(issuerRefs)))
         }
 
+        if (criteria.exactParticipants != null && criteria.exactParticipants!!.isNotEmpty())
+            throw VaultQueryException("Cannot specify both participants (${criteria.participants}) and exactParticipants (${criteria.exactParticipants}).")
+
         // Participants.
         criteria.participants?.let {
             // Join VaultFungibleState and PersistentParty tables (participant values are added to the common query criteria predicate)
@@ -478,6 +481,27 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
                 criteriaBuilder.equal(vaultFungibleStatesRoot.get<VaultSchemaV1.VaultFungibleStates>("stateRef"),
                     getPersistentPartyRoot().get<VaultSchemaV1.PersistentParty>("compositeKey").get<PersistentStateRef>("stateRef")))
             predicateSet.add(statePartyToFungibleStatesJoin)
+        }
+
+        // Exact participants.
+        criteria.exactParticipants?.let { exactParticipants ->
+
+            if (criteria.participants != null && criteria.participants!!.isNotEmpty())
+                throw VaultQueryException("Cannot specify both participants (${criteria.participants}) and exactParticipants (${criteria.exactParticipants}).")
+
+            // Get the persistent party entity.
+            val persistentPartyEntity = VaultSchemaV1.PersistentParty::class.java
+            val entityRoot = rootEntities.getOrElse(persistentPartyEntity) {
+                val entityRoot = criteriaQuery.from(persistentPartyEntity)
+                rootEntities[persistentPartyEntity] = entityRoot
+                entityRoot
+            }
+
+            // Add the join and participants predicates.
+            val statePartyJoin = criteriaBuilder.equal(vaultStates.get<VaultSchemaV1.VaultStates>("stateRef"), entityRoot.get<VaultSchemaV1.PersistentParty>("compositeKey").get<PersistentStateRef>("stateRef"))
+            predicateSet.add(statePartyJoin)
+            val participantsPredicate = criteriaBuilder.equal(entityRoot.get<VaultSchemaV1.PersistentParty>("x500Name"), exactParticipants)
+            predicateSet.add(participantsPredicate)
         }
 
         return predicateSet

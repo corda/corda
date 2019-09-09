@@ -799,6 +799,11 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
             val criteria = LinearStateQueryCriteria(participants = listOf(BIG_CORP))
             val results = vaultService.queryBy<ContractState>(criteria)
             assertThat(results.states).hasSize(3)
+
+            // same query using strict participant matching
+            val strictCriteria = LinearStateQueryCriteria(exactParticipants = listOf(BIG_CORP))
+            val strictResults = vaultService.queryBy<ContractState>(strictCriteria)
+            assertThat(strictResults.states).hasSize(1)
         }
     }
 
@@ -813,8 +818,17 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
             val criteria = LinearStateQueryCriteria(participants = listOf(BIG_CORP, MINI_CORP))
             val results = vaultService.queryBy<ContractState>(criteria)
             // DOCEND VaultQueryExample5
-
             assertThat(results.states).hasSize(3)
+
+            // same query using strict participant matching
+//            val strictCriteria = LinearStateQueryCriteria(exactParticipants = listOf(MEGA_CORP, BIG_CORP))
+//            val strictResults = vaultService.queryBy<ContractState>(strictCriteria)
+//            assertThat(strictResults.states).hasSize(1)
+//
+//            // same query using strict participant matching (unordered list of participants)
+//            val strictCriteriaUnordered = LinearStateQueryCriteria(exactParticipants = listOf(BIG_CORP, MEGA_CORP))
+//            val strictResultsUnordered = vaultService.queryBy<ContractState>(strictCriteriaUnordered)
+//            assertThat(strictResultsUnordered.states).hasSize(1)
         }
     }
 
