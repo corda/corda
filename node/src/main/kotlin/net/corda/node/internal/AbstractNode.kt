@@ -575,8 +575,11 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             generatedCordapps += notaryImpl
         }
 
-        val blacklistedKeys = if (configuration.devMode) emptyList()
-        else parseSecureHashConfiguration(configuration.cordappSignerKeyFingerprintBlacklist) { "Error while adding key fingerprint $it to blacklistedAttachmentSigningKeys" }
+        val blacklistedKeys = if (configuration.devMode) {
+            emptyList()
+        } else {
+            parseSecureHashConfiguration(configuration.cordappSignerKeyFingerprintBlacklist) { "Error while adding key fingerprint $it to blacklistedAttachmentSigningKeys" }
+        }
         return JarScanningCordappLoader.fromDirectories(
                 configuration.cordappDirectories,
                 versionInfo,
