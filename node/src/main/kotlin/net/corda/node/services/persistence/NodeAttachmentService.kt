@@ -458,7 +458,7 @@ class NodeAttachmentService @JvmOverloads constructor(
         }
     }
 
-    // TODO do not retrieve whole attachments only to return ids
+    // TODO do not retrieve whole attachments only to return ids - https://r3-cev.atlassian.net/browse/CORDA-3191 raised to address this
     override fun queryAttachments(criteria: AttachmentQueryCriteria, sorting: AttachmentSort?): List<AttachmentId> {
         log.info("Attachment query criteria: $criteria, sorting: $sorting")
         return database.transaction {
