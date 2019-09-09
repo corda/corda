@@ -34,7 +34,7 @@ class EvolvabilityTests {
     // When regenerating the test files this needs to be set to the file system location of the resource files
     @Suppress("UNUSED")
     var localPath: URI = projectRootDir.toUri().resolve(
-            "serialization/src/test/resources/net/corda/serialization/internal/amqp")
+            "serialization-test/src/test/resources/net/corda/serialization/internal/amqp")
 
     @Test
     fun simpleOrderSwapSameType() {

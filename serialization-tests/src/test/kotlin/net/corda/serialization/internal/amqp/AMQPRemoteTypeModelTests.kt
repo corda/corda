@@ -1,15 +1,13 @@
 package net.corda.serialization.internal.amqp
 
-import net.corda.core.flows.FlowException
-import net.corda.serialization.internal.amqp.custom.ThrowableSerializer
 import net.corda.serialization.internal.amqp.testutils.serializeAndReturnSchema
 import net.corda.serialization.internal.amqp.testutils.testDefaultFactory
-import net.corda.serialization.internal.model.*
+import net.corda.serialization.internal.accessAsClass
+import net.corda.serialization.internal.model.RemoteTypeInformation
 import net.corda.testing.core.SerializationEnvironmentRule
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
-import java.lang.IllegalArgumentException
 import java.util.*
 
 class AMQPRemoteTypeModelTests {
@@ -76,7 +74,7 @@ class AMQPRemoteTypeModelTests {
         val schema = output.serializeAndReturnSchema(obj)
         schema.schema.types.forEach { println(it) }
         val values = typeModel.interpret(SerializationSchemas(schema.schema, schema.transformsSchema)).values
-        return values.find { it.typeIdentifier.getLocalType().asClass().isAssignableFrom(obj::class.java) } ?:
+        return values.find { it.typeIdentifier.getLocalType().accessAsClass().isAssignableFrom(obj::class.java) } ?:
         throw IllegalArgumentException(
                 "Can't find ${obj::class.java.name} in ${values.map { it.typeIdentifier.name}}")
     }

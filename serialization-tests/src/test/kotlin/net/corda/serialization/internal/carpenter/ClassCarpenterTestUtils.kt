@@ -4,10 +4,10 @@ import com.google.common.reflect.TypeToken
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializedBytes
+import net.corda.serialization.internal.accessAsClass
 import net.corda.serialization.internal.amqp.*
 import net.corda.serialization.internal.amqp.testutils.deserializeAndReturnEnvelope
 import net.corda.serialization.internal.amqp.testutils.serialize
-import net.corda.serialization.internal.amqp.testutils.testName
 import net.corda.serialization.internal.model.*
 import org.junit.Assert.assertTrue
 
@@ -85,7 +85,7 @@ open class AmqpCarpenterBase(whitelist: ClassWhitelist) {
     }
 
     protected fun RemoteTypeInformation.load(context : SerializationContext): Class<*> =
-            typeLoader.load(listOf(this), context)[typeIdentifier]!!.asClass()
+            typeLoader.load(listOf(this), context)[typeIdentifier]!!.accessAsClass()
 
     protected fun assertCanLoadAll(context: SerializationContext, vararg types: RemoteTypeInformation) {
         assertTrue(typeLoader.load(types.asList(), context).keys.containsAll(types.map { it.typeIdentifier }))

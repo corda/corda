@@ -31,7 +31,7 @@ class GenericsTests {
 
         @Suppress("UNUSED")
         var localPath: URI = projectRootDir.toUri().resolve(
-                "serialization/src/test/resources/net/corda/serialization/internal/amqp")
+                "serialization-tests/src/test/resources/net/corda/serialization/internal/amqp")
 
         val miniCorp = TestIdentity(CordaX500Name("MiniCorp", "London", "GB"))
     }

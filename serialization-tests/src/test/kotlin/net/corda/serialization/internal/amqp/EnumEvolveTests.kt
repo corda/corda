@@ -23,7 +23,7 @@ import kotlin.test.assertNotNull
 class EnumEvolveTests {
     @Suppress("UNUSED")
     var localPath: URI = projectRootDir.toUri().resolve(
-            "serialization/src/test/resources/net/corda/serialization/internal/amqp")
+            "serialization-tests/src/test/resources/net/corda/serialization/internal/amqp")
 
     // Version of the class as it was serialised
     //

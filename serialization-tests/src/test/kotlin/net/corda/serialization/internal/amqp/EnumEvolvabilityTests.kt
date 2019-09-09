@@ -17,7 +17,7 @@ import kotlin.test.assertTrue
 class EnumEvolvabilityTests {
     @Suppress("UNUSED")
     val localPath: URI = projectRootDir.toUri().resolve(
-            "serialization/src/test/resources/net/corda/serialization/internal/amqp")
+            "serialization-tests/src/test/resources/net/corda/serialization/internal/amqp")
 
     companion object {
         const val VERBOSE = false

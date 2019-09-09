@@ -6,15 +6,16 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.node.serialization.kryo.kryoMagic
 import net.corda.node.services.statemachine.DataSessionMessage
-import net.corda.serialization.internal.amqp.propertyDescriptors
+import net.corda.serialization.internal.SectionId
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.internal.kryoSpecific
-import org.junit.Assert.*
+import org.assertj.core.api.Assertions.assertThat
+import org.junit.Assert.assertArrayEquals
+import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import java.io.ByteArrayOutputStream
 import java.util.*
-import org.assertj.core.api.Assertions.assertThat
 
 class SetsSerializationTest {
     private companion object {
@@ -85,7 +86,8 @@ class SetsSerializationTest {
      */
     @Test
     fun `type variance on setter getter pair does not fail validation`() {
-        assertThat(VarOfP::class.java.propertyDescriptors()).containsKey("p")
+        assertThat(VarOfP::class.java.accessPropertyDescriptors()).containsKey("p")
     }
 
 }
+

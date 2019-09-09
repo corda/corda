@@ -17,6 +17,8 @@ import org.junit.Test
 import java.io.File.separatorChar
 import java.io.NotSerializableException
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
+import net.corda.serialization.internal.andFinally
+import net.corda.serialization.internal._serialize
 
 /**
  * For tests that want to see inside the serializer registry
