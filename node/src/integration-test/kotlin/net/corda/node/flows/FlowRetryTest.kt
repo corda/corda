@@ -297,7 +297,6 @@ class RetryFlow() : FlowLogic<String>(), IdempotentFlow {
     override fun call(): String {
         progressTracker.currentStep = FIRST_STEP
         throw ExceptionToCauseFiniteRetry()
-        return "Result"
     }
 }
 

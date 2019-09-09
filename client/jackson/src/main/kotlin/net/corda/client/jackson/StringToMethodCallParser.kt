@@ -195,7 +195,7 @@ open class StringToMethodCallParser<in T : Any> @JvmOverloads constructor(
     @Throws(UnparseableCallException::class)
     fun validateIsMatchingCtor(methodNameHint: String, parameters: List<Pair<String, Type>>, args: String) {
         val tree = createJsonTreeAndValidate(methodNameHint, parameters, args)
-        val inOrderParams: List<Any?> = parameters.mapIndexed { _, (argName, argType) ->
+        parameters.mapIndexed { _, (argName, _) ->
             tree[argName] ?: throw UnparseableCallException.MissingParameter(methodNameHint, argName, args)
         }
     }

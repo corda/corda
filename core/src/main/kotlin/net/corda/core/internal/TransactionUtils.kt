@@ -100,10 +100,12 @@ class TransactionDeserialisationException(groupEnum: ComponentGroupEnum, index: 
  *
  *  This method used the [deserialiseComponentGroup] method.
  */
-fun deserialiseCommands(componentGroups: List<ComponentGroup>,
-                        forceDeserialize: Boolean = false,
-                        factory: SerializationFactory = SerializationFactory.defaultFactory,
-                        context: SerializationContext = factory.defaultContext): List<Command<*>> {
+fun deserialiseCommands(
+        componentGroups: List<ComponentGroup>,
+        forceDeserialize: Boolean = false,
+        factory: SerializationFactory = SerializationFactory.defaultFactory,
+        @Suppress("UNUSED_PARAMETER") context: SerializationContext = factory.defaultContext
+): List<Command<*>> {
     // TODO: we could avoid deserialising unrelated signers.
     //      However, current approach ensures the transaction is not malformed
     //      and it will throw if any of the signers objects is not List of public keys).

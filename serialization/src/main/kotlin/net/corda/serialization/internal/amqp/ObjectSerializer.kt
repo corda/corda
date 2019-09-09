@@ -123,7 +123,13 @@ class ComposableObjectWriter(
         }
     }
 
-    fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput, context: SerializationContext, debugIndent: Int) {
+    fun writeObject(
+            obj: Any, data: Data,
+            @Suppress("UNUSED_PARAMETER") type: Type,
+            output: SerializationOutput,
+            context: SerializationContext,
+            debugIndent: Int
+    ) {
         data.withDescribed(typeNotation.descriptor) {
             withList {
                 propertySerializers.values.forEach { propertySerializer ->

@@ -161,7 +161,7 @@ class NodeVaultService(
         }
     }
 
-    private fun recordUpdate(update: Vault.Update<ContractState>, previouslySeen: Boolean): Vault.Update<ContractState> {
+    private fun recordUpdate(update: Vault.Update<ContractState>): Vault.Update<ContractState> {
         if (!update.isEmpty()) {
             val producedStateRefs = update.produced.map { it.ref }
             val producedStateRefsMap = update.produced.associateBy { it.ref }
@@ -214,7 +214,7 @@ class NodeVaultService(
 
         fun flushBatch(previouslySeen: Boolean) {
             val updates = makeUpdates(batch, statesToRecord, previouslySeen)
-            processAndNotify(updates, previouslySeen)
+            processAndNotify(updates)
             batch.clear()
         }
 
@@ -363,11 +363,11 @@ class NodeVaultService(
         return states
     }
 
-    private fun processAndNotify(updates: List<Vault.Update<ContractState>>, previouslySeen: Boolean) {
+    private fun processAndNotify(updates: List<Vault.Update<ContractState>>) {
         if (updates.isEmpty()) return
         val netUpdate = updates.reduce { update1, update2 -> update1 + update2 }
         if (!netUpdate.isEmpty()) {
-            recordUpdate(netUpdate, previouslySeen)
+            recordUpdate(netUpdate)
             mutex.locked {
                 // flowId was required by SoftLockManager to perform auto-registration of soft locks for new states
                 val uuid = (Strand.currentStrand() as? FlowStateMachineImpl<*>)?.id?.uuid

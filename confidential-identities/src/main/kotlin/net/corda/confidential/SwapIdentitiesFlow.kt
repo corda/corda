@@ -4,7 +4,10 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.CordaInternal
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.verify
-import net.corda.core.flows.*
+import net.corda.core.flows.FlowException
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowSession
+import net.corda.core.flows.InitiatingFlow
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
@@ -41,7 +44,7 @@ private constructor(private val otherSideSession: FlowSession?,
 
     @Deprecated("It is unsafe to use this constructor as it requires nodes to automatically vend anonymous identities without first " +
             "checking if they should. Instead, use the constructor that takes in an existing FlowSession.")
-    constructor(otherParty: Party, revocationEnabled: Boolean, progressTracker: ProgressTracker) : this(null, otherParty, progressTracker)
+    constructor(otherParty: Party, @Suppress("UNUSED_PARAMETER") revocationEnabled: Boolean, progressTracker: ProgressTracker) : this(null, otherParty, progressTracker)
 
     @Deprecated("It is unsafe to use this constructor as it requires nodes to automatically vend anonymous identities without first " +
             "checking if they should. Instead, use the constructor that takes in an existing FlowSession.")

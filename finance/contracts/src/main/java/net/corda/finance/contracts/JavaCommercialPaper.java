@@ -134,6 +134,7 @@ public class JavaCommercialPaper implements Contract {
     }
 
     @NotNull
+    @SuppressWarnings("deprecation")
     private List<CommandWithParties<Commands>> extractCommands(@NotNull LedgerTransaction tx) {
         return tx.getCommands()
                 .stream()

@@ -1,6 +1,5 @@
 package net.corda.contracts
 
-import junit.framework.Assert.assertNotNull
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.contracts.HashAttachmentConstraint
 import net.corda.core.contracts.SignatureAttachmentConstraint
@@ -17,6 +16,7 @@ import net.corda.testing.node.internal.internalDriver
 import org.junit.Assume.assumeFalse
 import org.junit.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 open class SignatureConstraintMigrationFromHashConstraintsTests : SignatureConstraintVersioningTests() {

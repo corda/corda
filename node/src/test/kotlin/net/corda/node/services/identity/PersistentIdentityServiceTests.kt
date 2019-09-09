@@ -169,12 +169,12 @@ class PersistentIdentityServiceTests {
         identityService.verifyAndRegisterIdentity(alice)
         identityService.verifyAndRegisterIdentity(aliceTxIdentity)
 
-        var actual = identityService.certificateFromKey(aliceTxIdentity.party.owningKey)
+        var actual = @Suppress("DEPRECATION") identityService.certificateFromKey(aliceTxIdentity.party.owningKey)
         assertEquals(aliceTxIdentity, actual!!)
 
-        assertNull(identityService.certificateFromKey(bobTxIdentity.party.owningKey))
+        assertNull(@Suppress("DEPRECATION") identityService.certificateFromKey(bobTxIdentity.party.owningKey))
         identityService.verifyAndRegisterIdentity(bobTxIdentity)
-        actual = identityService.certificateFromKey(bobTxIdentity.party.owningKey)
+        actual = @Suppress("DEPRECATION") identityService.certificateFromKey(bobTxIdentity.party.owningKey)
         assertEquals(bobTxIdentity, actual!!)
     }
 
@@ -239,7 +239,7 @@ class PersistentIdentityServiceTests {
 
     @Test
     fun `ensure no exception when looking up an unregistered confidential identity`() {
-        val (alice, anonymousAlice) = createConfidentialIdentity(ALICE.name)
+        val (_, anonymousAlice) = createConfidentialIdentity(ALICE.name)
 
         // Ensure no exceptions are thrown if we attempt to look up an unregistered CI
         assertNull(identityService.wellKnownPartyFromAnonymous(AnonymousParty(anonymousAlice.owningKey)))
