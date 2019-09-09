@@ -15,8 +15,7 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.getOrThrow
-import net.corda.node.services.Permissions.Companion.invokeRpc
-import net.corda.node.services.Permissions.Companion.startFlow
+import net.corda.node.services.Permissions
 import net.corda.testMessage.MESSAGE_CONTRACT_PROGRAM_ID
 import net.corda.testMessage.Message
 import net.corda.testMessage.MessageContract
@@ -29,6 +28,7 @@ import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.node.User
 import org.junit.Assume.assumeFalse
 import org.junit.ClassRule
+import org.junit.Assume
 import org.junit.Test
 import java.lang.management.ManagementFactory
 import kotlin.test.assertEquals
@@ -43,7 +43,7 @@ class NodeStatePersistenceTests : IntegrationTest() {
 
     @Test
     fun `persistent state survives node restart`() {
-        val user = User("mark", "dadada", setOf(startFlow<SendMessageFlow>(), invokeRpc("vaultQuery")))
+        val user = User("mark", "dadada", setOf(Permissions.startFlow<SendMessageFlow>(), Permissions.invokeRpc("vaultQuery")))
         val message = Message("Hello world!")
         val stateAndRef: StateAndRef<MessageState>? = driver(DriverParameters(
                 inMemoryDB = false,
@@ -77,9 +77,9 @@ class NodeStatePersistenceTests : IntegrationTest() {
     fun `persistent state survives node restart without reinitialising database schema`() {
         // Temporary disable this test when executed on Windows. It is known to be sporadically failing.
         // More investigation is needed to establish why.
-        assumeFalse(System.getProperty("os.name").toLowerCase().startsWith("win"))
+        Assume.assumeFalse(System.getProperty("os.name").toLowerCase().startsWith("win"))
 
-        val user = User("mark", "dadada", setOf(startFlow<SendMessageFlow>(), invokeRpc("vaultQuery")))
+        val user = User("mark", "dadada", setOf(Permissions.startFlow<SendMessageFlow>(), Permissions.invokeRpc("vaultQuery")))
         val message = Message("Hello world!")
         val stateAndRef: StateAndRef<MessageState>? = driver(DriverParameters(
                 inMemoryDB = false,

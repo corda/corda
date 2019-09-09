@@ -113,7 +113,7 @@ class CordaPersistence(
     val hibernateConfig: HibernateConfiguration by lazy {
         transaction {
             try {
-                HibernateConfiguration(schemas, databaseConfig, attributeConverters, jdbcUrl, cacheFactory, customClassLoader)
+                HibernateConfiguration(schemas, databaseConfig, attributeConverters, _jdbcUrl, cacheFactory, customClassLoader)
             } catch (e: Exception) {
                 when (e) {
                     is SchemaManagementException -> throw HibernateSchemaChangeException("Incompatible schema change detected. Please run the node with database.initialiseSchema=true. Reason: ${e.message}", e)
@@ -130,11 +130,13 @@ class CordaPersistence(
     private var _dataSource: DataSource? = null
     val dataSource: DataSource get() = checkNotNull(_dataSource) { "CordaPersistence not started" }
 
-    private lateinit var jdbcUrl: String
+    private lateinit var _jdbcUrl: String
+    val jdbcUrl: String get() = _jdbcUrl
 
+    // TODO OS version does not have a jdbcUrl parameter. This divergence needs to be fixed.
     fun start(dataSource: DataSource, jdbcUrl: String) {
         _dataSource = dataSource
-        this.jdbcUrl = jdbcUrl
+        this._jdbcUrl = jdbcUrl
         // Found a unit test that was forgetting to close the database transactions.  When you close() on the top level
         // database transaction it will reset the threadLocalTx back to null, so if it isn't then there is still a
         // database transaction open.  The [transaction] helper above handles this in a finally clause for you

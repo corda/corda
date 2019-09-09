@@ -7,54 +7,28 @@ The Corda Testnet is an open public network of Corda nodes on the internet. It i
 
 The Corda Testnet is based on exactly the same technology as the main Corda Network, but can be joined on a self-service basis through the automated provisioning system described below.
 
-The Corda Testnet is currently in private beta. Interested parties can request in invitation to join the Corda Testnet by completing a short request form (see below).
-   
-
 Deploying a Corda node to the Corda Testnet
 -------------------------------------------
 
-Access to the Corda Testnet is enabled by visiting https://testnet.corda.network.
+The Corda Testnet is accessible via https://marketplace.r3.com/.
 
 .. image:: resources/testnet-landing.png
-   :target: https://testnet.corda.network
+   :target: https://marketplace.r3.com/network
 
-Click on "Join the Corda Testnet".
-
-Select whether you want to register a company or as an individual on the Testnet.
+Click on "Join the Corda Testnet" to begin joining the network.
 
 This will create an account with the Testnet on-boarding application which will enable you to provision and manage multiple Corda nodes on Testnet. You will log in to this account to view and manage you Corda Testnet identity certificates.
 
-.. image:: resources/testnet-account-type.png 
+.. image:: resources/testnet-signup.png
 
-Fill in the form with your details.
 
-.. note::
+   Fill in the registration form and please read and accept the terms of use, then click Next Step; this will take you to the Testnet dashboard where you can see a list of your nodes as well as create new ones.
 
-   Testnet is currently invitation only. If your request is approved you will receive an email. Please fill in as many details as possible as it helps us prioritise requests. The approval process will take place daily by a member of the r3 operations team reviewing all invite requests and making a decision based on current rate of onboarding of new customers.
+When creating a new node you can now choose how to deploy it to the Corda Testnet. We strongly recommend hosting your Corda node on a public cloud resource.
 
-.. image:: resources/testnet-form.png
+Select the cloud provider you wish to use for documentation on how to specifically configure Corda for that environment. 
 
-Once you have been approved, navigate to https://testnet.corda.network and click on "I have an invitation".
-
-Sign in using either your email address and password, or "Sign in with Google":
-
-.. image:: resources/testnet-signin.png
-
-If using Google accounts, approve the Testnet application when prompted:
-
-.. image:: resources/testnet-signin-auth.png
-
-.. note::
-
-   At this point you may need to verify your email address is valid (if you are not using a Gmail address). If prompted check your email and click on the link to validate then return to the sign in page and sign in again.
-
-Next agree to the terms of service:
-
-.. image:: resources/testnet-terms.png
-
-You can now copy the ``ONE-TIME-KEY`` and paste it into the parameter form of your cloud template.
-
-.. image:: resources/testnet-platform-clean.png
+.. image:: resources/testnet-platform.png
 
 Once your cloud instance is set up you can install and run your Testnet pre-provisioned Corda node by clicking on "Copy" and pasting the one time link into your remote cloud terminal.
 	   

@@ -88,6 +88,47 @@ class ExternalIdMappingTest {
     }
 
     @Test
+    fun `externalIds query criteria test`() {
+        val vaultService = services.vaultService
+
+        // Create new external ID and two keys mapped to it.
+        val id = UUID.randomUUID()
+        val idTwo = UUID.randomUUID()
+        val keyOne = services.keyManagementService.freshKeyAndCert(myself.identity, false, id)
+        val keyTwo = services.keyManagementService.freshKeyAndCert(myself.identity, false, id)
+        val keyThree = services.keyManagementService.freshKeyAndCert(myself.identity, false, idTwo)
+
+        // Create states with a public key assigned to the new external ID.
+        val dummyStateOne = createDummyState(listOf(AnonymousParty(keyOne.owningKey)))
+        val dummyStateTwo = createDummyState(listOf(AnonymousParty(keyTwo.owningKey)))
+        val dummyStateThree = createDummyState(listOf(AnonymousParty(keyThree.owningKey)))
+
+        // This query should return two states!
+        val result = database.transaction {
+            vaultService.queryBy<DummyState>(QueryCriteria.VaultQueryCriteria(externalIds = listOf(id))).states
+        }
+        assertEquals(setOf(dummyStateOne, dummyStateTwo), result.map { it.state.data }.toSet())
+
+        // Should return nothing.
+        val resultTwo = database.transaction {
+            vaultService.queryBy<DummyState>(QueryCriteria.VaultQueryCriteria(externalIds = listOf(UUID.randomUUID()))).states
+        }
+        assertEquals(emptyList(), resultTwo)
+
+        // Should return one state.
+        val resultThree = database.transaction {
+            vaultService.queryBy<DummyState>(QueryCriteria.VaultQueryCriteria(externalIds = listOf(idTwo))).states
+        }
+        assertEquals(setOf(dummyStateThree), resultThree.map { it.state.data }.toSet())
+
+        // Should return all states.
+        val resultFour = database.transaction {
+            vaultService.queryBy<DummyState>(QueryCriteria.VaultQueryCriteria(externalIds = listOf())).states
+        }
+        assertEquals(setOf(dummyStateOne, dummyStateTwo, dummyStateThree), resultFour.map { it.state.data }.toSet())
+    }
+
+    @Test
     fun `One state can be mapped to multiple externalIds`() {
         val vaultService = services.vaultService
         // Create new external ID.

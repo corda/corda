@@ -3520,7 +3520,6 @@ public interface net.corda.core.node.ServiceHub extends net.corda.core.node.Serv
   @NotNull
   public abstract net.corda.core.contracts.StateAndRef<T> toStateAndRef(net.corda.core.contracts.StateRef)
   public abstract void withEntityManager(java.util.function.Consumer<javax.persistence.EntityManager>)
-  @NotNull
   public abstract T withEntityManager(kotlin.jvm.functions.Function1<? super javax.persistence.EntityManager, ? extends T>)
 ##
 @DoNotImplement
@@ -7816,7 +7815,6 @@ public class net.corda.testing.node.MockServices extends java.lang.Object implem
   @NotNull
   public net.corda.core.contracts.StateAndRef<T> toStateAndRef(net.corda.core.contracts.StateRef)
   public void withEntityManager(java.util.function.Consumer<javax.persistence.EntityManager>)
-  @NotNull
   public T withEntityManager(kotlin.jvm.functions.Function1<? super javax.persistence.EntityManager, ? extends T>)
   public static final net.corda.testing.node.MockServices$Companion Companion
 ##

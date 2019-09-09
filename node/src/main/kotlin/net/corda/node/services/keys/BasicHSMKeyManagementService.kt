@@ -48,8 +48,6 @@ class BasicHSMKeyManagementService(cacheFactory: NamedCacheFactory,
                                    private val database: CordaPersistence,
                                    private val cryptoService: SignOnlyCryptoService,
                                    private val pkToIdCache: WritablePublicKeyToOwningIdentityCache) : SingletonSerializeAsToken(), KeyManagementServiceInternal {
-    private var wrappingCryptoService: CryptoService? = null
-    private var wrappingKeyAlias: String? = null
 
     constructor(cacheFactory: NamedCacheFactory,
                 identityService: PersistentIdentityService,
@@ -61,6 +59,9 @@ class BasicHSMKeyManagementService(cacheFactory: NamedCacheFactory,
         this.wrappingCryptoService = wrappingCryptoService
         this.wrappingKeyAlias = wrappingKeyAlias
     }
+
+    private var wrappingCryptoService: CryptoService? = null
+    private var wrappingKeyAlias: String? = null
 
     @VisibleForTesting
     public fun wrappingEnabled() = wrappingCryptoService != null
@@ -177,7 +178,7 @@ class BasicHSMKeyManagementService(cacheFactory: NamedCacheFactory,
     }
 
     override fun filterMyKeys(candidateKeys: Iterable<PublicKey>): Iterable<PublicKey> = database.transaction {
-        identityService.stripNotOurKeys(candidateKeys)
+        candidateKeys.filter(::containsPublicKey)
     }
 
     override fun freshKeyInternal(externalId: UUID?): PublicKey {
@@ -258,5 +259,9 @@ class BasicHSMKeyManagementService(cacheFactory: NamedCacheFactory,
                 }
             }
         }
+    }
+
+    override fun externalIdForPublicKey(publicKey: PublicKey): UUID? {
+        return pkToIdCache[publicKey]?.uuid
     }
 }

@@ -9,7 +9,7 @@ import net.corda.testing.internal.IntegrationTestSchemas
 import org.junit.ClassRule
 import java.nio.file.Path
 
-class BouncyCastleWrappedKeysTest: AbstractWrappedKeysTest() {
+class BouncyCastleWrappedKeysTest : AbstractWrappedKeysTest() {
 
     companion object {
         @ClassRule

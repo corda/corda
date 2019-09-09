@@ -126,7 +126,7 @@ class FlowWorkerTest {
         val (flowWorker, flowWorkerServiceHub) = createFlowWorker(config, bankAInfo, signedNetworkParameters, bankAKeyPair, trustRoot, nodeCa)
         try {
             flowWorkerServiceHub.database.transaction {
-                flowWorkerServiceHub.identityService.registerIdentity(notaryPartyAndCertificate)
+                flowWorkerServiceHub.identityService.verifyAndRegisterIdentity(notaryPartyAndCertificate)
             }
 
             val traceId = Trace.InvocationId.newInstance()
@@ -211,13 +211,13 @@ class FlowWorkerTest {
 
         try {
             bankAFlowWorkerServiceHub.database.transaction {
-                bankAFlowWorkerServiceHub.identityService.registerIdentity(notaryPartyAndCertificate)
+                bankAFlowWorkerServiceHub.identityService.verifyAndRegisterIdentity(notaryPartyAndCertificate)
 
                 bankAFlowWorkerServiceHub.networkMapCache.addNode(NodeInfo(listOf(NetworkHostAndPort("localhost", bankBConfig.messagingServerAddress!!.port)), listOf(bankBPartyAndCertificate), 1, 1))
             }
 
             bankBFlowWorkerServiceHub.database.transaction {
-                bankBFlowWorkerServiceHub.identityService.registerIdentity(notaryPartyAndCertificate)
+                bankBFlowWorkerServiceHub.identityService.verifyAndRegisterIdentity(notaryPartyAndCertificate)
 
                 bankBFlowWorkerServiceHub.networkMapCache.addNode(NodeInfo(listOf(NetworkHostAndPort("localhost", bankAConfig.messagingServerAddress!!.port)), listOf(bankAPartyAndCertificate), 1, 1))
             }

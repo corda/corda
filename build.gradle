@@ -1,3 +1,5 @@
+import net.corda.testing.DistributedTesting
+
 buildscript {
     // For sharing constants between builds
     Properties constants = new Properties()
@@ -22,25 +24,25 @@ buildscript {
     ext.quasar_group = 'co.paralleluniverse'
     ext.quasar_version = constants.getProperty("quasarVersion")
     ext.quasar_exclusions = [
-                'co.paralleluniverse**',
-                'groovy**',
-                'com.esotericsoftware.**',
-                'jdk**',
-                'junit**',
-                'kotlin**',
-                'net.rubygrapefruit.**',
-                'org.gradle.**',
-                'org.apache.**',
-                'org.jacoco.**',
-                'org.junit**',
-                'org.slf4j**',
-                'worker.org.gradle.**',
-                'com.nhaarman.mockito_kotlin**',
-                'org.assertj**',
-                'org.hamcrest**',
-                'org.mockito**',
-                'org.opentest4j**'
-        ]
+            'co.paralleluniverse**',
+            'groovy**',
+            'com.esotericsoftware.**',
+            'jdk**',
+            'junit**',
+            'kotlin**',
+            'net.rubygrapefruit.**',
+            'org.gradle.**',
+            'org.apache.**',
+            'org.jacoco.**',
+            'org.junit**',
+            'org.slf4j**',
+            'worker.org.gradle.**',
+            'com.nhaarman.mockito_kotlin**',
+            'org.assertj**',
+            'org.hamcrest**',
+            'org.mockito**',
+            'org.opentest4j**'
+    ]
 
     // gradle-capsule-plugin:1.0.2 contains capsule:1.0.1 by default.
     // We must configure it manually to use the latest capsule version.
@@ -107,7 +109,7 @@ buildscript {
     ext.jsch_version = '0.1.55'
     ext.protonj_version = '0.33.0' // Overide Artemis version
     ext.snappy_version = '0.4'
-    ext.class_graph_version = '4.8.41'
+    ext.class_graph_version = constants.getProperty('classgraphVersion')
     ext.jcabi_manifests_version = '1.1'
     ext.picocli_version = '3.9.6'
     ext.commons_lang_version = '3.9'
@@ -126,7 +128,14 @@ buildscript {
     // Updates [131, 161] also have zip compression bugs on MacOS (High Sierra).
     // when the java version in NodeStartup.hasMinimumJavaVersion() changes, so must this check
     ext.java8_minUpdateVersion = constants.getProperty('java8MinUpdateVersion')
-
+    ext.corda_revision = {
+        try {
+            "git rev-parse HEAD".execute().text.trim()
+        } catch (Exception ignored) {
+            logger.warn("git is unavailable in build environment")
+            "unknown"
+        }
+    }()
     repositories {
         mavenCentral()
         jcenter()
@@ -165,10 +174,10 @@ plugins {
     // Add the shadow plugin to the plugins classpath for the entire project.
     id 'com.github.johnrengelman.shadow' version '2.0.4' apply false
     id "com.gradle.build-scan" version "2.2.1"
+    id 'com.bmuschko.docker-remote-api'
 }
 
 ext {
-    corda_revision = "git rev-parse HEAD".execute().text.trim()
 }
 
 apply plugin: 'project-report'
@@ -184,7 +193,6 @@ apply plugin: 'com.jfrog.artifactory'
 apply plugin: 'java'
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
-
 
 allprojects {
     apply plugin: 'kotlin'
@@ -286,14 +294,14 @@ allprojects {
             ex.append = false
         }
 
-        maxParallelForks = (System.env.CORDA_TESTING_FORKS == null) ? 1 :  "$System.env.CORDA_TESTING_FORKS".toInteger()
+        maxParallelForks = (System.env.CORDA_TESTING_FORKS == null) ? 1 : "$System.env.CORDA_TESTING_FORKS".toInteger()
 
         systemProperty 'java.security.egd', 'file:/dev/./urandom'
     }
 
-    tasks.withType(Test){
-        if (name.contains("integrationTest")){
-            maxParallelForks = (System.env.CORDA_INT_TESTING_FORKS == null) ? 1 :  "$System.env.CORDA_INT_TESTING_FORKS".toInteger()
+    tasks.withType(Test) {
+        if (name.contains("integrationTest")) {
+            maxParallelForks = (System.env.CORDA_INT_TESTING_FORKS == null) ? 1 : "$System.env.CORDA_INT_TESTING_FORKS".toInteger()
         }
     }
 
@@ -542,8 +550,6 @@ if (file('corda-docs-only-build').exists() || (System.getenv('CORDA_DOCS_ONLY_BU
     }
 }
 
-
-
 wrapper {
     gradleVersion = "5.4.1"
     distributionType = Wrapper.DistributionType.ALL
@@ -553,3 +559,5 @@ buildScan {
     termsOfServiceUrl = 'https://gradle.com/terms-of-service'
     termsOfServiceAgree = 'yes'
 }
+
+apply plugin: DistributedTesting

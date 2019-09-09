@@ -15,6 +15,7 @@ import org.apache.activemq.artemis.core.server.ActiveMQServer
 import org.apache.activemq.artemis.core.server.impl.ActiveMQServerImpl
 import org.apache.activemq.artemis.spi.core.security.ActiveMQJAASSecurityManager
 import java.io.IOException
+import java.lang.RuntimeException
 import java.nio.file.Path
 import java.security.KeyStoreException
 import javax.security.auth.login.AppConfigurationEntry
@@ -60,6 +61,7 @@ class ArtemisRpcBroker internal constructor(
     override fun stop() {
         logger.debug("Artemis RPC broker is stopping.")
         server.stop(true)
+        securityManager.close()
         logger.debug("Artemis RPC broker is stopped.")
     }
 

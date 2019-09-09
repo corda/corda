@@ -17,7 +17,7 @@ import java.util.*
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
-class UtimacoCryptoServiceIntegrationTest: CryptoServiceSpec() {
+class UtimacoCryptoServiceIntegrationTest : CryptoServiceSpec() {
 
     override fun getCryptoService(): CryptoService {
         val config = testConfig(hsmSimulator.address.port)

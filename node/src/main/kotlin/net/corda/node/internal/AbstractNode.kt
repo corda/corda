@@ -435,7 +435,9 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             // Shut down the SMM so no Fibers are scheduled.
             runOnStop += { smm.stop(acceptableLiveFiberCountOnStop()) }
             (smm as? StateMachineManagerInternal)?.let {
-                val flowMonitor = FlowMonitor({ smm.snapshot().filter { flow -> flow !in smm.flowHospital }.toSet() }, configuration.flowMonitorPeriodMillis, configuration.flowMonitorSuspensionLoggingThresholdMillis)
+                val flowMonitor = FlowMonitor({
+                    smm.snapshot().filter { flow -> flow !in smm.flowHospital }.toSet()
+                }, configuration.flowMonitorPeriodMillis, configuration.flowMonitorSuspensionLoggingThresholdMillis)
                 runOnStop += flowMonitor::stop
                 flowMonitor.start()
             }
@@ -638,7 +640,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         // Needed because of bug CORDA-2653 - some Corda services can utilise third-party libraries that require access to
         // the Thread context class loader
 
-        val oldContextClassLoader : ClassLoader? = Thread.currentThread().contextClassLoader
+        val oldContextClassLoader: ClassLoader? = Thread.currentThread().contextClassLoader
         try {
             Thread.currentThread().contextClassLoader = cordappLoader.appClassLoader
 
@@ -942,7 +944,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         if (!cryptoService.containsKey(legalIdentityPrivateKeyAlias) && !signingCertificateStore.contains(legalIdentityPrivateKeyAlias)) {
             // Directly use the X500 name to public key map, as the identity service requires the node identity to start correctly.
             database.transaction {
-                val x500Map = PersistentIdentityService.createX500Map(cacheFactory)
+                val x500Map = PersistentIdentityService.createX500ToKeyMap(cacheFactory)
                 require(configuration.myLegalName !in x500Map) {
                     // There is already a party in the identity store for this node, but the key has been lost. If this node starts up, it will
                     // publish it's new key to the network map, which Corda cannot currently handle. To prevent this, stop the node from starting.
@@ -1128,12 +1130,16 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
         override fun jdbcSession(): Connection = database.createSession()
 
-        override fun <T : Any> withEntityManager(block: EntityManager.() -> T): T {
-            return block(contextTransaction.restrictedEntityManager)
+        override fun <T : Any?> withEntityManager(block: EntityManager.() -> T): T {
+            return database.transaction {
+                block(restrictedEntityManager)
+            }
         }
 
         override fun withEntityManager(block: Consumer<EntityManager>) {
-            block.accept(contextTransaction.restrictedEntityManager)
+            withEntityManager {
+                block.accept(this)
+            }
         }
 
         // allows services to register handlers to be informed when the node stop method is called

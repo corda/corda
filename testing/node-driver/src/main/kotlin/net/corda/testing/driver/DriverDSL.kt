@@ -156,7 +156,8 @@ interface DriverDSL {
 
     /** Call [startWebserver] with a default maximumHeapSize. */
     @Suppress("DEPRECATION")
-    fun startWebserver(handle: NodeHandle): CordaFuture<WebserverHandle> = startWebserver(handle, "200m")
+    fun startWebserver(handle: NodeHandle): CordaFuture<WebserverHandle> = startWebserver(handle, System.getenv("DRIVER_WEB_MEMORY")
+            ?: "512m")
 
     /**
      * Starts a web server for a node
