@@ -214,6 +214,9 @@ allprojects {
 
     tasks.withType(JavaCompile) {
         options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation" << "-Xlint:-options" << "-parameters"
+        if (project.property('compilation.allWarningsAsErrors').toBoolean()) {
+            options.compilerArgs << "-Werror"
+        }
         options.encoding = 'UTF-8'
     }
 
@@ -224,7 +227,7 @@ allprojects {
             jvmTarget = "1.8"
             javaParameters = true   // Useful for reflection.
             freeCompilerArgs = ['-Xjvm-default=compatibility']
-            allWarningsAsErrors = project.hasProperty('compilation.allWarningsAsErrors') ? project.property('compilation.allWarningsAsErrors').toBoolean() : false
+            allWarningsAsErrors = project.property('compilation.allWarningsAsErrors').toBoolean()
         }
     }
 
