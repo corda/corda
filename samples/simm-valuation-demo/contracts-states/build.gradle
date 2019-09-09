@@ -8,7 +8,7 @@ cordapp {
     minimumPlatformVersion 1
     signing {
         // Cordapp is signed after the "shrink" task.
-        enabled true
+        enabled false
     }
     sealing {
         // Cannot seal JAR because other module also defines classes in the package net.corda.vega.analytics
