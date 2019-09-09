@@ -5,7 +5,7 @@ Deploying Corda to Corda Testnet from an Azure Cloud Platform VM
 
 This document will describe how to set up a virtual machine on the Azure Cloud Platform to deploy your pre-configured
 Corda node and automatically connnect to Testnet. A self-service download link can be obtained from
-https://testnet.corda.network.
+https://marketplace.r3.com/network/testnet.
 
 Pre-requisites
 --------------
@@ -103,13 +103,13 @@ STEP 4: Download and set up your Corda node
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Now that your Azure environment is configured you can switch to the
-`Testnet web application <https://testnet.corda.network/platform>`_ and click "Copy" to get a one-time installation
+`Testnet dashboard <https://marketplace.r3.com/network/testnet/install-node>`_ and click "Copy" to get a one-time installation
 script.
 
-.. note:: If you have not already set up your account on Testnet, please visit https://testnet.corda.network and sign
+.. note:: If you have not already set up your account on Testnet, please visit https://marketplace.r3.com/network/testnet and sign
     up.
 
-.. note:: You can generate as many Testnet identites as you like by refreshing this page to generate a new one-time
+.. note:: You can generate as many Testnet identites as you like by clicking "Generate new node" to generate a new one-time
     link.
 
 .. image:: resources/testnet-platform.png
@@ -118,7 +118,7 @@ In the terminal of your cloud instance, paste the command you just copied to ins
 
 .. code:: bash
 
-    sudo ONE_TIME_DOWNLOAD_KEY=YOUR_UNIQUE_DOWNLOAD_KEY_HERE bash -c "$(curl -L https://testnet.corda.network/api/user/node/install.sh)"
+    sudo ONE_TIME_DOWNLOAD_KEY=YOUR_UNIQUE_DOWNLOAD_KEY_HERE bash -c "$(curl -L https://onboarder.prod.ws.r3.com/api/user/node/TESTNET/install.sh)"
 
 .. warning:: This command will execute the install script as ROOT on your cloud instance. You may wish to examine the
     script prior to executing it on your machine.
@@ -129,15 +129,6 @@ You can follow the progress of the installation by typing the following command 
 
     tail -f /opt/corda/logs/node-<VM-NAME>.log
 
-Once the node has booted up, you can navigate to the external web address of the instance on port 8080:
-
-.. code:: bash
-
-    http://<PUBLIC-IP-ADDRESS>:8080/
-
-If everything is working, you should see the following:
-
-.. image:: resources/installed-cordapps.png
 
 Testing your deployment
 -----------------------
