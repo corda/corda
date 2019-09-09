@@ -108,12 +108,41 @@ at least one common signature, then the node will trust the received attachment.
 are no longer required to have every version of a CorDapp uploaded to them in order to verify transactions running older versions of a CorDapp.
 Instead, it is sufficient to have any version of the CorDapp contract installed.
 
-.. note:: An attachment is considered trusted if it was manually installed or uploaded to a node.
+.. note:: An attachment is considered trusted if it was manually installed or uploaded via RPC.
 
 Signers can also be blacklisted to prevent attachments received from a peer from being loaded and used in processing transactions. Only a
 single signer of an attachment needs to be blacklisted for an attachment to be considered untrusted. CorDapps
 and other attachments installed on a node can still be used without issue, even if they are signed by a blacklisted key. Only attachments
-received from a peer are affected. Information on blacklisting attachment signing keys can be found in the
+received from a peer are affected.
+
+Below are two examples of possible scenarios around blacklisting signing keys:
+
+    - The statements below are true for both examples:
+
+        - ``Alice`` has ``Contracts CorDapp`` installed
+        - ``Bob`` has an upgraded version of ``Contracts CorDapp`` (known as ``Contracts CorDapp V2``) installed
+        - Both ``Alice`` and ``Bob`` have the ``Workflows CorDapp`` allowing them to transact with each other
+        - ``Contracts CorDapp`` is signed by both ``Alice`` and ``Bob``
+        - ``Contracts CorDapp V2`` is signed by both ``Alice`` and ``Bob``
+
+    - Example 1:
+
+        - ``Alice`` has not blacklisted any attachment signing keys
+        - ``Bob`` transacts with ``Alice``
+        - ``Alice`` receives ``Contracts CorDapp V2`` and stores it
+        - When verifying the attachments loaded into the contract verification code, ``Contracts CorDapp V2`` is accepted and used
+        - The contract verification code in ``Contracts CorDapp V2`` is run
+
+    - Example 2:
+
+        - ``Alice`` blacklists ``Bob``'s attachment signing key
+        - ``Bob`` transacts with ``Alice``
+        - ``Alice`` receives ``Contracts CorDapp V2`` and stores it
+        - When verifying the attachments loaded in the contract verification code, ``Contracts CorDapp V2`` is declined because it is signed
+          by ``Bob``'s blacklisted key
+        - The contract verification code in ``Contracts CorDapp V2`` is not run and the transaction fails
+
+Information on blacklisting attachment signing keys can be found in the
 :ref:`node configuration documentation <corda_configuration_file_blacklisted_attachment_signer_keys>`.
 
 More information on how to sign an app directly from Gradle can be found in the
