@@ -75,11 +75,17 @@ inline fun <reified T : Any> SerializedBytes<T>.deserializeFor(classLoader: Sand
 }
 
 fun ByteSequence.deserializeTo(clazz: Class<*>, classLoader: SandboxClassLoader): Any {
-    return deserializeTo(clazz, classLoader, SerializationFactory.defaultFactory)
+    val factory = SerializationFactory.defaultFactory
+    return deserializeTo(clazz, classLoader, factory, factory.defaultContext)
 }
 
-fun ByteSequence.deserializeTo(clazz: Class<*>, classLoader: SandboxClassLoader, factory: SerializationFactory): Any {
-    val obj = factory.deserialize(this, Any::class.java, factory.defaultContext)
+fun ByteSequence.deserializeTo(
+    clazz: Class<*>,
+    classLoader: SandboxClassLoader,
+    factory: SerializationFactory,
+    context: SerializationContext
+): Any {
+    val obj = factory.deserialize(this, Any::class.java, context)
     return if (clazz.isInstance(obj)) {
         obj
     } else {
