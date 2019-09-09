@@ -44,10 +44,9 @@ class PersistentIdentityMigrationNewTable : CordaMigration() {
             logger.error("Cannot migrate persistent states: Liquibase failed to provide a suitable database connection")
             throw PersistentIdentitiesMigrationException("Cannot migrate persistent states as liquibase failed to provide a suitable database connection")
         }
-        initialiseNodeServices(database, setOf(PersistentIdentitiesMigrationSchemaV1))
+        initialiseNodeServices(database, setOf(PersistentIdentitiesMigrationSchemaBuilder.getMappedSchema()))
 
         val connection = database.connection as JdbcConnection
-
         doAndTestMigration(connection)
     }
 
@@ -150,18 +149,19 @@ class PersistentIdentityMigrationNewTable : CordaMigration() {
  */
 object PersistentIdentitiesMigrationSchema
 
-object PersistentIdentitiesMigrationSchemaV1 : MappedSchema(schemaFamily = PersistentIdentitiesMigrationSchema.javaClass, version = 1,
-        mappedTypes = listOf(
-                DBTransactionStorage.DBTransaction::class.java,
-                PersistentIdentityService.PersistentPublicKeyHashToCertificate::class.java,
-                PersistentIdentityService.PersistentPartyToPublicKeyHash::class.java,
-                PersistentIdentityService.PersistentPublicKeyHashToParty::class.java,
-                BasicHSMKeyManagementService.PersistentKey::class.java,
-                NodeAttachmentService.DBAttachment::class.java,
-                DBNetworkParametersStorage.PersistentNetworkParameters::class.java
-        )
-)
-
+object PersistentIdentitiesMigrationSchemaBuilder {
+    fun getMappedSchema() =
+            MappedSchema(schemaFamily = PersistentIdentitiesMigrationSchema.javaClass, version = 1,
+                    mappedTypes = listOf(
+                            DBTransactionStorage.DBTransaction::class.java,
+                            PersistentIdentityService.PersistentPublicKeyHashToCertificate::class.java,
+                            PersistentIdentityService.PersistentPartyToPublicKeyHash::class.java,
+                            PersistentIdentityService.PersistentPublicKeyHashToParty::class.java,
+                            BasicHSMKeyManagementService.PersistentKey::class.java,
+                            NodeAttachmentService.DBAttachment::class.java,
+                            DBNetworkParametersStorage.PersistentNetworkParameters::class.java
+                    ))
+}
 class PersistentIdentitiesMigrationException(msg: String, cause: Exception? = null) : Exception(msg, cause)
 
 /**
