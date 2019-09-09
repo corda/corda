@@ -233,7 +233,7 @@ class PersistentIdentityServiceTests {
 
         assertEquals(alice.party, aliceParent!!)
 
-        val bobReload = newPersistentIdentityService.certificateFromKey(anonymousBob.party.owningKey)
+        val bobReload = @Suppress("DEPRECATION") newPersistentIdentityService.certificateFromKey(anonymousBob.party.owningKey)
         assertEquals(anonymousBob, bobReload!!)
     }
 
