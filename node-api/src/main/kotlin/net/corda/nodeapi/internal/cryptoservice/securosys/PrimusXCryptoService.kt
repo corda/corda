@@ -28,7 +28,8 @@ class PrimusXCryptoService(keyStore: KeyStore, provider: Provider, x500Principal
     private val keyHandleCache: ConcurrentHashMap<String, Key> = ConcurrentHashMap()
 
     override fun isLoggedIn(): Boolean {
-        return PrimusLogin.isLoggedIn(auth().host, auth().port)
+        // ENT-4130: Added the username as the HSM always returned false otherwise
+        return PrimusLogin.isLoggedIn(auth().host, auth().port, auth().username)
     }
 
     @Synchronized

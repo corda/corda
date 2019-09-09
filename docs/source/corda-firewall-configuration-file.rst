@@ -659,7 +659,7 @@ See ``SWAP1`` note in the ``node.conf`` files.
 For both nodes (``Entity A`` and ``Entity B``) configured on ``vmNodeSecondary``:
 
 - ``messagingServerAddress`` should be set to ``vmInfra2:11005`` ;
-- ``enterpriseConfiguration.messagingServerBackupAddresses`` should be set to ``["vmInfra2:11005"]``.
+- ``enterpriseConfiguration.messagingServerBackupAddresses`` should be set to ``["vmInfra1:11005"]``.
 
 Float VMs setup
 ---------------
