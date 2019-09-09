@@ -47,11 +47,26 @@ Making the required changes
 ---------------------------
 You should make your changes as follows:
 
-1. Create a fork of the master branch of the `Corda repo <https://github.com/corda/corda>`_
+1. Create a fork of the `Corda repo <https://github.com/corda/corda>`_
 2. Clone the fork to your local machine
 3. Build Corda by following the instructions :doc:`here </building-corda>`
-4. Make the changes, in accordance with the :doc:`code style guide </codestyle>`
+4. Be sure to work from the appropriate branch for your changes, as per the section below.
+5. Make the changes, in accordance with the :doc:`code style guide </codestyle>`
 
+Selecting a development branch
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Corda does not use the `master` branch for development. Instead, all development work is done on the branch named 
+according to the release that it represents. The following pattern is used for branch naming:
+`release/os/{major version}.{minor version}`
+
+Note that `release` is always part of the name of the branch, even for unreleased versions of Corda. The default 
+github branch will always be the current development branch of Corda. Development work should target the oldest version 
+of Corda for which the work would be appropriate. For instance, if a pull request would be applicable to Corda 4.1 and 
+Corda 4.3, it would be appropriate to open a pull request for `release/os/4.1`. 
+That work would then be merged forward from `release/os/4.1` to `release/os/4.3`. If the work is only applicable to 
+Corda 4.3, a pull request need only be opened against release/os/4.3.
+ 
 Things to check
 ^^^^^^^^^^^^^^^
 
@@ -91,8 +106,8 @@ You should test your changes as follows:
 3. **Perform manual testing**: Before sending that code for review, spend time poking and prodding the tool and thinking, “Would the
    experience of using this feature make my mum proud of me?”. Automated tests are not a substitute for dogfooding
 
-4. **Build against the master branch**: You can test your changes against CorDapps defined in other repos by following the instructions
-   :doc:`here <building-against-master>`
+4. **Build against the selected development branch**: You can test your changes against CorDapps defined in other repos by following the instructions
+   :doc:`here <building-against-non-release>`
 
 5. **Run the API scanner**: Your changes must also not break compatibility with existing public API. We have an API scanning tool which
    runs as part of the build process which can be used to flag up any accidental changes, which is detailed :doc:`here <api-scanner>`
@@ -105,7 +120,7 @@ You should document any changes to Corda's public API as follows:
    with a full stop. We also start comments with capital letters, even for inline comments. Where Java APIs have
    synonyms (e.g. ``%d`` and ``%date``), we prefer the longer form for legibility reasons. You can configure your IDE
    to highlight these in bright yellow
-2. Update the relevant `.rst file(s) <https://github.com/corda/corda/tree/master/docs/source>`_
+2. Update the relevant `.rst file(s)
 3. Include the change in the :doc:`changelog </changelog>` if the change is external and therefore visible to CorDapp
    developers and/or node operators
 4. :doc:`Build the docs locally </building-the-docs>` and check that the resulting .html files (under ``docs/build/html``) for the modified
@@ -117,7 +132,7 @@ Merging the changes back into Corda
 -----------------------------------
 You should merge the changes back into Corda as follows:
 
-1. Create a pull request from your fork to the ``master`` branch of the Corda repo
+1. Create a pull request from your fork to the current development branch of the Corda repo
 
 2. In the PR comments box:
 
