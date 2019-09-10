@@ -121,7 +121,7 @@ You should document any changes to Corda's public API as follows:
    with a full stop. We also start comments with capital letters, even for inline comments. Where Java APIs have
    synonyms (e.g. ``%d`` and ``%date``), we prefer the longer form for legibility reasons. You can configure your IDE
    to highlight these in bright yellow
-2. Update the relevant `.rst file(s)
+2. Update the relevant .rst file(s)
 3. Include the change in the :doc:`changelog </changelog>` if the change is external and therefore visible to CorDapp
    developers and/or node operators
 4. :doc:`Build the docs locally </building-the-docs>` and check that the resulting .html files (under ``docs/build/html``) for the modified
