@@ -110,10 +110,6 @@ class DefaultSerializableSerializer : Serializer<DefaultSerializable>() {
     }
 }
 
-object EmptyWhitelist : ClassWhitelist {
-    override fun hasListed(type: Class<*>): Boolean = false
-}
-
 class CordaClassResolverTests {
     private companion object {
         val emptyListClass = listOf<Any>().javaClass

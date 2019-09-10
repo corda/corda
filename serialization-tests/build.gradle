@@ -6,6 +6,8 @@ description 'Corda serialization'
 
 dependencies {
     compile project(":serialization")
+
+    testCompile files(project(':serialization').sourceSets.test.output)
     testCompile project(':node-driver')
 
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"

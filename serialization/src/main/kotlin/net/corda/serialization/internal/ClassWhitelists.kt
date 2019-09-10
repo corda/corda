@@ -15,6 +15,11 @@ object AllWhitelist : ClassWhitelist {
 }
 
 @KeepForDJVM
+object EmptyWhitelist : ClassWhitelist {
+    override fun hasListed(type: Class<*>): Boolean = false
+}
+
+@KeepForDJVM
 class BuiltInExceptionsWhitelist : ClassWhitelist {
     companion object {
         private val packageName = "^(?:java|kotlin)(?:[.]|$)".toRegex()

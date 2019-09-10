@@ -1,14 +1,12 @@
 package net.corda.serialization.internal.amqp
 
 import net.corda.serialization.internal.AllWhitelist
-import net.corda.serialization.internal.NotSerializable
 import net.corda.serialization.internal.model.ConfigurableLocalTypeModel
 import net.corda.serialization.internal.model.LocalTypeInformation
 import net.corda.serialization.internal.model.TypeModellingFingerPrinter
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 import kotlin.test.assertNotEquals
-import kotlin.test.assertTrue
 
 class TypeModellingFingerPrinterTests {
 

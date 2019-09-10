@@ -4,15 +4,17 @@ import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.AttachmentConstraint
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.TransactionState
+import net.corda.core.crypto.Crypto
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.identity.Party
 import net.corda.core.serialization.SerializedBytes
 import net.corda.serialization.internal.amqp.testutils.*
 import net.corda.serialization.internal.AllWhitelist
+import net.corda.serialization.internal.amqp.testutils.ProjectStructure.projectRootDir
 import net.corda.serialization.internal.carpenter.ClassCarpenterImpl
-import net.corda.testing.common.internal.ProjectStructure.projectRootDir
-import net.corda.testing.core.TestIdentity
 import org.junit.Test
+import java.math.BigInteger
 import java.net.URI
 import java.util.*
 import kotlin.test.assertEquals
@@ -33,7 +35,8 @@ class GenericsTests {
         var localPath: URI = projectRootDir.toUri().resolve(
                 "serialization-tests/src/test/resources/net/corda/serialization/internal/amqp")
 
-        val miniCorp = TestIdentity(CordaX500Name("MiniCorp", "London", "GB"))
+        private val MINI_CORP_NAME = CordaX500Name("Notary Service", "Zurich", "CH")
+        private val MINI_CORP_PARTY = Party(MINI_CORP_NAME, Crypto.deriveKeyPairFromEntropy(Crypto.DEFAULT_SIGNATURE_SCHEME, BigInteger.valueOf(20)).public)
     }
 
     private fun printSeparator() = if (VERBOSE) println("\n\n-------------------------------------------\n\n") else Unit
@@ -313,8 +316,8 @@ class GenericsTests {
     @Test
     fun fingerprintingDiffers() {
         val state = TransactionState(
-                TestContractState(listOf(miniCorp.party)),
-                "wibble", miniCorp.party,
+                TestContractState(listOf(MINI_CORP_PARTY)),
+                "wibble",MINI_CORP_PARTY,
                 encumbrance = null,
                 constraint = TestAttachmentConstraint())
 
@@ -326,8 +329,8 @@ class GenericsTests {
     @Test
     fun fingerprintingDiffersList() {
         val state = TransactionState(
-                TestContractState(listOf(miniCorp.party)),
-                "wibble", miniCorp.party,
+                TestContractState(listOf(MINI_CORP_PARTY)),
+                "wibble", MINI_CORP_PARTY,
                 encumbrance = null,
                 constraint = TestAttachmentConstraint())
 
@@ -349,8 +352,8 @@ class GenericsTests {
         data class TransactionStateWrapper<out T : ContractState> (val o: List<GenericStateAndString<T>>)
 
         val state = TransactionState<TestContractState> (
-                TestContractState(listOf(miniCorp.party)),
-                "wibble", miniCorp.party,
+                TestContractState(listOf(MINI_CORP_PARTY)),
+                "wibble", MINI_CORP_PARTY,
                 encumbrance = null,
                 constraint = TestAttachmentConstraint())
 

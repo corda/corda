@@ -71,7 +71,8 @@ object PrivateAckWrapper {
 
     fun serialize() {
         val factory = testDefaultFactoryNoEvolution()
-        SerializationOutput(factory).serialize(Ack)
+        SerializationOutput(factory)
+                .serialize(Ack)
     }
 }
 
@@ -222,16 +223,16 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
         val bytes = ser.serialize(obj, compression)
 
         val decoder = DecoderImpl().apply {
-            this.register(Envelope.DESCRIPTOR, Envelope.Companion)
-            this.register(Schema.DESCRIPTOR, Schema.Companion)
-            this.register(Descriptor.DESCRIPTOR, Descriptor.Companion)
-            this.register(Field.DESCRIPTOR, Field.Companion)
-            this.register(CompositeType.DESCRIPTOR, CompositeType.Companion)
-            this.register(Choice.DESCRIPTOR, Choice.Companion)
-            this.register(RestrictedType.DESCRIPTOR, RestrictedType.Companion)
-            this.register(ReferencedObject.DESCRIPTOR, ReferencedObject.Companion)
-            this.register(TransformsSchema.DESCRIPTOR, TransformsSchema.Companion)
-            this.register(TransformTypes.DESCRIPTOR, TransformTypes.Companion)
+            this.register(Envelope.DESCRIPTOR, Envelope)
+            this.register(Schema.DESCRIPTOR, Schema)
+            this.register(Descriptor.DESCRIPTOR, Descriptor)
+            this.register(Field.DESCRIPTOR, Field)
+            this.register(CompositeType.DESCRIPTOR, CompositeType)
+            this.register(Choice.DESCRIPTOR, Choice)
+            this.register(RestrictedType.DESCRIPTOR, RestrictedType)
+            this.register(ReferencedObject.DESCRIPTOR, ReferencedObject)
+            this.register(TransformsSchema.DESCRIPTOR, TransformsSchema)
+            this.register(TransformTypes.DESCRIPTOR, TransformTypes)
         }
         EncoderImpl(decoder)
         DeserializationInput.withDataBytes(bytes, encodingWhitelist) {

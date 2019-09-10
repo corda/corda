@@ -5,12 +5,10 @@ import net.corda.serialization.internal.amqp.testutils.TestSerializationContext;
 import org.junit.Test;
 
 import java.io.NotSerializableException;
-import java.lang.reflect.Field;
-import java.util.Map;
 
-import static net.corda.core.internal.InternalUtils.uncheckedCast;
 import static net.corda.serialization.internal.amqp.testutils.AMQPTestUtilsKt.testDefaultFactory;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 
 public class JavaPrivatePropertyTests {
     static class C {

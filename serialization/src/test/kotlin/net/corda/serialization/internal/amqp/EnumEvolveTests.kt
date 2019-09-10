@@ -1,15 +1,16 @@
 package net.corda.serialization.internal.amqp
 
 import net.corda.core.internal.toPath
-import net.corda.core.serialization.*
+import net.corda.core.serialization.CordaSerializationTransformEnumDefault
+import net.corda.core.serialization.CordaSerializationTransformEnumDefaults
+import net.corda.core.serialization.SerializedBytes
+import net.corda.serialization.internal.amqp.testutils.ProjectStructure.projectRootDir
 import net.corda.serialization.internal.amqp.testutils.deserialize
 import net.corda.serialization.internal.amqp.testutils.serialize
 import net.corda.serialization.internal.amqp.testutils.testDefaultFactory
 import net.corda.serialization.internal.amqp.testutils.testName
-import net.corda.testing.common.internal.ProjectStructure.projectRootDir
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
-import org.junit.Ignore
 import org.junit.Test
 import java.io.File
 import java.io.NotSerializableException

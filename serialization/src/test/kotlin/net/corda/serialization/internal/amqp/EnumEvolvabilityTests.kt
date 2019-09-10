@@ -3,14 +3,12 @@ package net.corda.serialization.internal.amqp
 import net.corda.core.serialization.*
 import net.corda.serialization.internal.NotSerializableDetailedException
 import net.corda.serialization.internal.amqp.testutils.*
-import net.corda.testing.common.internal.ProjectStructure.projectRootDir
+import net.corda.serialization.internal.amqp.testutils.ProjectStructure.projectRootDir
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
 import java.io.NotSerializableException
 import java.net.URI
-import java.util.*
-import java.util.concurrent.ConcurrentHashMap
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
