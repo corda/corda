@@ -7,16 +7,21 @@ import net.corda.core.crypto.NullKeys.NULL_SIGNATURE
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowException
 import net.corda.core.identity.Party
-import net.corda.core.internal.UNKNOWN_UPLOADER
-import net.corda.core.internal.uncheckedCast
+import net.corda.core.internal.*
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.AttachmentId
+import net.corda.core.node.services.TransactionStorage
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
+import net.corda.node.services.DbTransactionsResolver
+import net.corda.node.services.attachments.NodeAttachmentTrustCalculator
+import net.corda.node.services.persistence.AttachmentStorageInternal
 import net.corda.testing.core.dummyCommand
 import net.corda.testing.internal.MockCordappProvider
+import net.corda.testing.internal.TestingNamedCacheFactory
+import net.corda.testing.internal.services.InternalMockAttachmentStorage
 import net.corda.testing.services.MockAttachmentStorage
 import java.io.InputStream
 import java.security.PublicKey
@@ -77,12 +82,43 @@ data class TestTransactionDSLInterpreter private constructor(
             transactionBuilder: TransactionBuilder
     ) : this(ledgerInterpreter, transactionBuilder, HashMap())
 
-    val services = object : ServicesForResolution by ledgerInterpreter.services {
-        override fun loadState(stateRef: StateRef) = ledgerInterpreter.resolveStateRef<ContractState>(stateRef)
+    // Implementing [ServiceHubCoreInternal] allows better use in internal Corda tests
+    val services: ServicesForResolution = object : ServiceHubCoreInternal, ServiceHub by ledgerInterpreter.services {
+
+        // [validatedTransactions.getTransaction] needs overriding as there are no calls to
+        // [ServiceHub.recordTransactions] in the test dsl
+        override val validatedTransactions: TransactionStorage =
+            object : TransactionStorage by ledgerInterpreter.services.validatedTransactions {
+                override fun getTransaction(id: SecureHash): SignedTransaction? =
+                    ledgerInterpreter.getTransaction(id)
+            }
+
+        override val attachmentTrustCalculator: AttachmentTrustCalculator =
+            ledgerInterpreter.services.attachments.let {
+                // Wrapping to a [InternalMockAttachmentStorage] is needed to prevent leaking internal api
+                // while still allowing the tests to work
+                NodeAttachmentTrustCalculator(
+                    attachmentStorage = if (it is MockAttachmentStorage) {
+                        InternalMockAttachmentStorage(it)
+                    } else {
+                        it as AttachmentStorageInternal
+                    },
+                    cacheFactory = TestingNamedCacheFactory()
+                )
+            }
+
+        override fun createTransactionsResolver(flow: ResolveTransactionsFlow): TransactionsResolver =
+            DbTransactionsResolver(flow)
+
+        override fun loadState(stateRef: StateRef) =
+            ledgerInterpreter.resolveStateRef<ContractState>(stateRef)
+
         override fun loadStates(stateRefs: Set<StateRef>): Set<StateAndRef<ContractState>> {
             return stateRefs.map { StateAndRef(loadState(it), it) }.toSet()
         }
-        override val cordappProvider: CordappProvider = ledgerInterpreter.services.cordappProvider
+
+        override val cordappProvider: CordappProvider =
+            ledgerInterpreter.services.cordappProvider
     }
 
     private fun copy(): TestTransactionDSLInterpreter =
@@ -204,6 +240,11 @@ data class TestLedgerDSLInterpreter private constructor(
                     transactionWithLocations = HashMap(transactionWithLocations),
                     nonVerifiedTransactionWithLocations = HashMap(nonVerifiedTransactionWithLocations)
             )
+
+    internal fun getTransaction(id: SecureHash): SignedTransaction? {
+        val tx = transactionWithLocations[id] ?: nonVerifiedTransactionWithLocations[id]
+        return tx?.let { SignedTransaction(it.transaction, listOf(NULL_SIGNATURE)) }
+    }
 
     internal inline fun <reified S : ContractState> resolveStateRef(stateRef: StateRef): TransactionState<S> {
         val transactionWithLocation =
