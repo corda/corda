@@ -54,11 +54,9 @@ class DeserializeCertificatesTest : TestBase(KOTLIN) {
 
             val sandboxCertPath = data.deserializeFor(classLoader)
 
-            val executor = createExecutorFor(classLoader)
-            val result = executor.apply(
-                classLoader.loadClassForSandbox(ShowCertPath::class.java).newInstance(),
-                sandboxCertPath
-            ) ?: fail("Result cannot be null")
+            val taskFactory = classLoader.createRawTaskFactory()
+            val showCertPath = classLoader.createTaskFor(taskFactory, ShowCertPath::class.java)
+            val result = showCertPath.apply(sandboxCertPath) ?: fail("Result cannot be null")
 
             assertEquals(ShowCertPath().apply(certPath), localise(result.toString()))
             assertThat(result::class.java.name).startsWith("sandbox.")
@@ -80,11 +78,9 @@ class DeserializeCertificatesTest : TestBase(KOTLIN) {
 
             val sandboxCertificate = data.deserializeFor(classLoader)
 
-            val executor = createExecutorFor(classLoader)
-            val result = executor.apply(
-                classLoader.loadClassForSandbox(ShowCertificate::class.java).newInstance(),
-                sandboxCertificate
-            ) ?: fail("Result cannot be null")
+            val taskFactory = classLoader.createRawTaskFactory()
+            val showCertificate = classLoader.createTaskFor(taskFactory, ShowCertificate::class.java)
+            val result = showCertificate.apply(sandboxCertificate) ?: fail("Result cannot be null")
 
             assertEquals(ShowCertificate().apply(certificate), localise(result.toString()))
             assertThat(result::class.java.name).startsWith("sandbox.")
@@ -116,11 +112,9 @@ class DeserializeCertificatesTest : TestBase(KOTLIN) {
 
             val sandboxCRL = data.deserializeFor(classLoader)
 
-            val executor = createExecutorFor(classLoader)
-            val result = executor.apply(
-                classLoader.loadClassForSandbox(ShowCRL::class.java).newInstance(),
-                sandboxCRL
-            ) ?: fail("Result cannot be null")
+            val taskFactory = classLoader.createRawTaskFactory()
+            val showCRL = classLoader.createTaskFor(taskFactory, ShowCRL::class.java)
+            val result = showCRL.apply(sandboxCRL) ?: fail("Result cannot be null")
 
             assertEquals(ShowCRL().apply(crl), localise(result.toString()))
             assertThat(result::class.java.name).startsWith("sandbox.")

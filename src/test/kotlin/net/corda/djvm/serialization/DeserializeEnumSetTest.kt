@@ -25,11 +25,9 @@ class DeserializeEnumSetTest : TestBase(KOTLIN) {
 
             val sandboxEnumSet = data.deserializeFor(classLoader)
 
-            val executor = createExecutorFor(classLoader)
-            val result = executor.apply(
-                classLoader.loadClassForSandbox(ShowEnumSet::class.java).newInstance(),
-                sandboxEnumSet
-            ) ?: fail("Result cannot be null")
+            val taskFactory = classLoader.createRawTaskFactory()
+            val showEnumSet = classLoader.createTaskFor(taskFactory, ShowEnumSet::class.java)
+            val result = showEnumSet.apply(sandboxEnumSet) ?: fail("Result cannot be null")
 
             assertEquals(ShowEnumSet().apply(enumSet), result.toString())
             assertEquals("EnumSet: [$value]'", result.toString())

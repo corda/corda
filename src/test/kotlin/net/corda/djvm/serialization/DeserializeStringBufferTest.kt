@@ -19,13 +19,11 @@ class DeserializeStringBufferTest : TestBase(KOTLIN) {
         sandbox {
             _contextSerializationEnv.set(createSandboxSerializationEnv(classLoader))
 
-            val sandboxBigInteger = data.deserializeFor(classLoader)
+            val sandboxBuffer = data.deserializeFor(classLoader)
 
-            val executor = createExecutorFor(classLoader)
-            val result = executor.apply(
-                classLoader.loadClassForSandbox(ShowStringBuffer::class.java).newInstance(),
-                sandboxBigInteger
-            ) ?: fail("Result cannot be null")
+            val taskFactory = classLoader.createRawTaskFactory()
+            val showStringBuffer = classLoader.createTaskFor(taskFactory, ShowStringBuffer::class.java)
+            val result = showStringBuffer.apply(sandboxBuffer) ?: fail("Result cannot be null")
 
             assertEquals(ShowStringBuffer().apply(buffer), result.toString())
             assertEquals(SANDBOX_STRING, result::class.java.name)

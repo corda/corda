@@ -3,27 +3,21 @@ package net.corda.djvm.serialization.serializers
 import net.corda.core.serialization.SerializationContext
 import net.corda.djvm.rewiring.SandboxClassLoader
 import net.corda.djvm.serialization.deserializers.X509CertificateDeserializer
-import net.corda.djvm.serialization.loadClassForSandbox
+import net.corda.djvm.serialization.toSandboxAnyClass
 import net.corda.serialization.internal.amqp.*
 import org.apache.qpid.proton.codec.Data
 import java.lang.reflect.Type
 import java.security.cert.X509Certificate
 import java.util.Collections.singleton
-import java.util.function.BiFunction
 import java.util.function.Function
 
 class SandboxX509CertificateSerializer(
     classLoader: SandboxClassLoader,
-    executor: BiFunction<in Any, in Any?, out Any?>
-) : CustomSerializer.Implements<Any>(classLoader.loadClassForSandbox(X509Certificate::class.java)) {
+    taskFactory: Function<in Any, out Function<in Any?, out Any?>>
+) : CustomSerializer.Implements<Any>(classLoader.toSandboxAnyClass(X509Certificate::class.java)) {
+    @Suppress("unchecked_cast")
     private val generator: Function<ByteArray, out Any?>
-
-    init {
-        val generateTask = classLoader.loadClassForSandbox(X509CertificateDeserializer::class.java).newInstance()
-        generator = Function { inputs ->
-            executor.apply(generateTask, inputs)
-        }
-    }
+        = classLoader.createTaskFor(taskFactory, X509CertificateDeserializer::class.java) as Function<ByteArray, out Any?>
 
     override val schemaForDocumentation: Schema = Schema(emptyList())
 

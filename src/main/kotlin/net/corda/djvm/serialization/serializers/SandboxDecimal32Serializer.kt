@@ -3,26 +3,20 @@ package net.corda.djvm.serialization.serializers
 import net.corda.core.serialization.SerializationContext
 import net.corda.djvm.rewiring.SandboxClassLoader
 import net.corda.djvm.serialization.deserializers.Decimal32Deserializer
-import net.corda.djvm.serialization.loadClassForSandbox
+import net.corda.djvm.serialization.toSandboxAnyClass
 import net.corda.serialization.internal.amqp.*
 import org.apache.qpid.proton.amqp.Decimal32
 import org.apache.qpid.proton.codec.Data
 import java.lang.reflect.Type
-import java.util.function.BiFunction
 import java.util.function.Function
 
 class SandboxDecimal32Serializer(
     classLoader: SandboxClassLoader,
-    executor: BiFunction<in Any, in Any?, out Any?>
-) : CustomSerializer.Is<Any>(classLoader.loadClassForSandbox(Decimal32::class.java)) {
+    taskFactory: Function<in Any, out Function<in Any?, out Any?>>
+) : CustomSerializer.Is<Any>(classLoader.toSandboxAnyClass(Decimal32::class.java)) {
+    @Suppress("unchecked_cast")
     private val transformer: Function<IntArray, out Any?>
-
-    init {
-        val transformTask = classLoader.loadClassForSandbox(Decimal32Deserializer::class.java).newInstance()
-        transformer = Function { inputs ->
-            executor.apply(transformTask, inputs)
-        }
-    }
+            = classLoader.createTaskFor(taskFactory, Decimal32Deserializer::class.java) as Function<IntArray, out Any?>
 
     override val schemaForDocumentation: Schema = Schema(emptyList())
 

@@ -3,26 +3,20 @@ package net.corda.djvm.serialization.serializers
 import net.corda.core.serialization.SerializationContext
 import net.corda.djvm.rewiring.SandboxClassLoader
 import net.corda.djvm.serialization.deserializers.UnsignedByteDeserializer
-import net.corda.djvm.serialization.loadClassForSandbox
+import net.corda.djvm.serialization.toSandboxAnyClass
 import net.corda.serialization.internal.amqp.*
 import org.apache.qpid.proton.amqp.UnsignedByte
 import org.apache.qpid.proton.codec.Data
 import java.lang.reflect.Type
-import java.util.function.BiFunction
 import java.util.function.Function
 
 class SandboxUnsignedByteSerializer(
     classLoader: SandboxClassLoader,
-    executor: BiFunction<in Any, in Any?, out Any?>
-) : CustomSerializer.Is<Any>(classLoader.loadClassForSandbox(UnsignedByte::class.java)) {
+    taskFactory: Function<in Any, out Function<in Any?, out Any?>>
+) : CustomSerializer.Is<Any>(classLoader.toSandboxAnyClass(UnsignedByte::class.java)) {
+    @Suppress("unchecked_cast")
     private val transformer: Function<ByteArray, out Any?>
-
-    init {
-        val transformTask = classLoader.loadClassForSandbox(UnsignedByteDeserializer::class.java).newInstance()
-        transformer = Function { inputs ->
-            executor.apply(transformTask, inputs)
-        }
-    }
+        = classLoader.createTaskFor(taskFactory, UnsignedByteDeserializer::class.java) as Function<ByteArray, out Any?>
 
     override val schemaForDocumentation: Schema = Schema(emptyList())
 

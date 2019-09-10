@@ -22,11 +22,9 @@ class DeserializeYearTest : TestBase(KOTLIN) {
 
             val sandboxYear = data.deserializeFor(classLoader)
 
-            val executor = createExecutorFor(classLoader)
-            val result = executor.apply(
-                classLoader.loadClassForSandbox(ShowYear::class.java).newInstance(),
-                sandboxYear
-            ) ?: fail("Result cannot be null")
+            val taskFactory = classLoader.createRawTaskFactory()
+            val showYear = classLoader.createTaskFor(taskFactory, ShowYear::class.java)
+            val result = showYear.apply(sandboxYear) ?: fail("Result cannot be null")
 
             assertEquals(year.toString(), result.toString())
             assertEquals(SANDBOX_STRING, result::class.java.name)

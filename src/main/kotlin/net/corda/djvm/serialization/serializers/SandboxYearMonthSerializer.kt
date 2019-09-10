@@ -2,30 +2,30 @@ package net.corda.djvm.serialization.serializers
 
 import net.corda.djvm.rewiring.SandboxClassLoader
 import net.corda.djvm.serialization.deserializers.YearMonthDeserializer
-import net.corda.djvm.serialization.loadClassForSandbox
+import net.corda.djvm.serialization.toSandboxAnyClass
 import net.corda.serialization.internal.amqp.CustomSerializer
 import net.corda.serialization.internal.amqp.SerializerFactory
 import net.corda.serialization.internal.amqp.custom.YearMonthSerializer.YearMonthProxy
 import java.time.YearMonth
 import java.util.Collections.singleton
-import java.util.function.BiFunction
+import java.util.function.Function
 
 class SandboxYearMonthSerializer(
     classLoader: SandboxClassLoader,
-    private val executor: BiFunction<in Any, in Any?, out Any?>,
+    taskFactory: Function<in Any, out Function<in Any?, out Any?>>,
     factory: SerializerFactory
 ) : CustomSerializer.Proxy<Any, Any>(
-    clazz = classLoader.loadClassForSandbox(YearMonth::class.java),
-    proxyClass = classLoader.loadClassForSandbox(YearMonthProxy::class.java),
+    clazz = classLoader.toSandboxAnyClass(YearMonth::class.java),
+    proxyClass = classLoader.toSandboxAnyClass(YearMonthProxy::class.java),
     factory = factory
 ) {
-    private val task = classLoader.loadClassForSandbox(YearMonthDeserializer::class.java).newInstance()
+    private val task = classLoader.createTaskFor(taskFactory, YearMonthDeserializer::class.java)
 
     override val deserializationAliases: Set<Class<*>> = singleton(YearMonth::class.java)
 
     override fun toProxy(obj: Any): Any = abortReadOnly()
 
     override fun fromProxy(proxy: Any): Any {
-        return executor.apply(task, proxy)!!
+        return task.apply(proxy)!!
     }
 }

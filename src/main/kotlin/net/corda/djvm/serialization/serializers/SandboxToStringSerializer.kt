@@ -3,31 +3,28 @@ package net.corda.djvm.serialization.serializers
 import net.corda.core.serialization.SerializationContext
 import net.corda.djvm.rewiring.SandboxClassLoader
 import net.corda.djvm.serialization.deserializers.CreateFromString
-import net.corda.djvm.serialization.loadClassForSandbox
+import net.corda.djvm.serialization.toSandboxAnyClass
 import net.corda.serialization.internal.amqp.*
 import org.apache.qpid.proton.codec.Data
 import java.lang.reflect.Constructor
 import java.lang.reflect.Type
 import java.util.Collections.singleton
-import java.util.function.BiFunction
 import java.util.function.Function
 
 class SandboxToStringSerializer(
     unsafeClass: Class<*>,
     classLoader: SandboxClassLoader,
-    executor: BiFunction<in Any, in Any?, out Any?>,
+    taskFactory: Function<in Any, out Function<in Any?, out Any?>>,
     basicInput: Function<in Any?, out Any?>
-) : CustomSerializer.Is<Any>(classLoader.loadClassForSandbox(unsafeClass)) {
+) : CustomSerializer.Is<Any>(classLoader.toSandboxAnyClass(unsafeClass)) {
     private val creator: Function<Any?, Any?>
 
     init {
         val stringClass = classLoader.loadClass("sandbox.java.lang.String")
-        val createTask = classLoader.loadClassForSandbox(CreateFromString::class.java)
+        val createTask = classLoader.toSandboxClass(CreateFromString::class.java)
             .getConstructor(Constructor::class.java)
             .newInstance(clazz.getConstructor(stringClass))
-        creator = basicInput.andThen { input ->
-            executor.apply(createTask, input)
-        }
+        creator = basicInput.andThen(taskFactory.apply(createTask))
     }
 
     override val deserializationAliases: Set<Class<*>> = singleton(unsafeClass)

@@ -3,7 +3,7 @@ package net.corda.djvm.serialization.serializers
 import net.corda.core.serialization.SerializationContext
 import net.corda.djvm.rewiring.SandboxClassLoader
 import net.corda.djvm.serialization.deserializers.DescribeEnum
-import net.corda.djvm.serialization.loadClassForSandbox
+import net.corda.djvm.serialization.toSandboxAnyClass
 import net.corda.serialization.internal.amqp.*
 import net.corda.serialization.internal.model.EnumTransforms
 import net.corda.serialization.internal.model.LocalTypeInformation
@@ -11,23 +11,16 @@ import net.corda.serialization.internal.model.TypeIdentifier
 import org.apache.qpid.proton.amqp.Symbol
 import org.apache.qpid.proton.codec.Data
 import java.lang.reflect.Type
-import java.util.function.BiFunction
 import java.util.function.Function
 
 class SandboxEnumSerializer(
     classLoader: SandboxClassLoader,
-    executor: BiFunction<in Any, in Any?, out Any?>,
+    taskFactory: Function<in Any, out Function<in Any?, out Any?>>,
     private val localFactory: LocalSerializerFactory
-) : CustomSerializer.Implements<Any>(clazz = classLoader.loadClassForSandbox(Enum::class.java)) {
+) : CustomSerializer.Implements<Any>(clazz = classLoader.toSandboxAnyClass(Enum::class.java)) {
+    @Suppress("unchecked_cast")
     private val describer: Function<Class<*>, Array<Any>>
-
-    init {
-        val describeTask = classLoader.loadClassForSandbox(DescribeEnum::class.java).newInstance()
-        describer = Function { inputs ->
-            @Suppress("unchecked_cast")
-            executor.apply(describeTask, inputs) as Array<Any>
-        }
-    }
+        = classLoader.createTaskFor(taskFactory, DescribeEnum::class.java) as Function<Class<*>, Array<Any>>
 
     override val schemaForDocumentation: Schema = Schema(emptyList())
 

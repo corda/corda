@@ -22,11 +22,9 @@ class DeserializeLocalDateTest : TestBase(KOTLIN) {
 
             val sandboxDate = data.deserializeFor(classLoader)
 
-            val executor = createExecutorFor(classLoader)
-            val result = executor.apply(
-                classLoader.loadClassForSandbox(ShowLocalDate::class.java).newInstance(),
-                sandboxDate
-            ) ?: fail("Result cannot be null")
+            val taskFactory = classLoader.createRawTaskFactory()
+            val showLocalDate = classLoader.createTaskFor(taskFactory, ShowLocalDate::class.java)
+            val result = showLocalDate.apply(sandboxDate) ?: fail("Result cannot be null")
 
             assertEquals(date.toString(), result.toString())
             assertEquals(SANDBOX_STRING, result::class.java.name)

@@ -3,29 +3,27 @@ package net.corda.djvm.serialization.serializers
 import net.corda.core.serialization.SerializationContext
 import net.corda.djvm.rewiring.SandboxClassLoader
 import net.corda.djvm.serialization.deserializers.CreateCurrency
-import net.corda.djvm.serialization.loadClassForSandbox
+import net.corda.djvm.serialization.toSandboxAnyClass
 import net.corda.serialization.internal.amqp.*
 import org.apache.qpid.proton.codec.Data
 import java.lang.reflect.Type
 import java.util.*
-import java.util.function.BiFunction
+import java.util.Collections.singleton
 import java.util.function.Function
 
 class SandboxCurrencySerializer(
     classLoader: SandboxClassLoader,
-    executor: BiFunction<in Any, in Any?, out Any?>,
+    taskFactory: Function<in Any, out Function<in Any?, out Any?>>,
     basicInput: Function<in Any?, out Any?>
-) : CustomSerializer.Is<Any>(classLoader.loadClassForSandbox(Currency::class.java)) {
+) : CustomSerializer.Is<Any>(classLoader.toSandboxAnyClass(Currency::class.java)) {
     private val creator: Function<Any?, Any?>
 
     init {
-        val createTask = classLoader.loadClassForSandbox(CreateCurrency::class.java).newInstance()
-        creator = basicInput.andThen { input ->
-            executor.apply(createTask, input)
-        }
+        val createTask = classLoader.createTaskFor(taskFactory, CreateCurrency::class.java)
+        creator = basicInput.andThen(createTask)
     }
 
-    override val deserializationAliases: Set<Class<*>> = Collections.singleton(Currency::class.java)
+    override val deserializationAliases: Set<Class<*>> = singleton(Currency::class.java)
 
     override val schemaForDocumentation: Schema = Schema(emptyList())
 

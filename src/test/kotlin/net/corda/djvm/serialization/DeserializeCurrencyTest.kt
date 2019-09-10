@@ -23,11 +23,9 @@ class DeserializeCurrencyTest : TestBase(KOTLIN) {
 
             val sandboxCurrency = data.deserializeFor(classLoader)
 
-            val executor = createExecutorFor(classLoader)
-            val result = executor.apply(
-                classLoader.loadClassForSandbox(ShowCurrency::class.java).newInstance(),
-                sandboxCurrency
-            ) ?: fail("Result cannot be null")
+            val taskFactory = classLoader.createRawTaskFactory()
+            val showCurrency = classLoader.createTaskFor(taskFactory, ShowCurrency::class.java)
+            val result = showCurrency.apply(sandboxCurrency) ?: fail("Result cannot be null")
 
             assertEquals(ShowCurrency().apply(currency), result.toString())
             assertEquals(SANDBOX_STRING, result::class.java.name)

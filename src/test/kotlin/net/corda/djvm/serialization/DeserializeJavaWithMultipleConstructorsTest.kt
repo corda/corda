@@ -22,11 +22,9 @@ class DeserializeJavaWithMultipleConstructorsTest : TestBase(KOTLIN) {
 
             val sandboxData = data.deserializeFor(classLoader)
 
-            val executor = createExecutorFor(classLoader)
-            val result = executor.apply(
-                classLoader.loadClassForSandbox(ShowMultiData::class.java).newInstance(),
-                sandboxData
-            ) ?: fail("Result cannot be null")
+            val taskFactory = classLoader.createRawTaskFactory()
+            val showMultiData = classLoader.createTaskFor(taskFactory, ShowMultiData::class.java)
+            val result = showMultiData.apply(sandboxData) ?: fail("Result cannot be null")
 
             assertThat(result.toString())
                 .isEqualTo("MultiConstructor[message='Hello World', bigNumber=9223372036854775807, tag=!]")

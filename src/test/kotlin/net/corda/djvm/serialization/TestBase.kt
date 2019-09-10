@@ -11,7 +11,6 @@ import net.corda.djvm.SandboxRuntimeContext
 import net.corda.djvm.analysis.AnalysisConfiguration
 import net.corda.djvm.analysis.Whitelist.Companion.MINIMAL
 import net.corda.djvm.execution.ExecutionProfile.*
-import net.corda.djvm.execution.SandboxRuntimeException
 import net.corda.djvm.messages.Severity
 import net.corda.djvm.messages.Severity.*
 import net.corda.djvm.rewiring.SandboxClassLoader
@@ -21,12 +20,10 @@ import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.fail
 import java.io.File
-import java.lang.reflect.InvocationTargetException
 import java.nio.file.Files.exists
 import java.nio.file.Files.isDirectory
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.util.function.BiFunction
 import kotlin.concurrent.thread
 
 @Suppress("unused", "MemberVisibilityCanBePrivate")
@@ -120,22 +117,5 @@ abstract class TestBase(type: SandboxType) {
             }
         }.join()
         throw thrownException ?: return
-    }
-
-    fun createExecutorFor(classLoader: SandboxClassLoader): BiFunction<in Any, in Any?, out Any?> {
-        val taskClass = classLoader.loadClass("sandbox.RawTask")
-        val taskApply = taskClass.getDeclaredMethod("apply", Any::class.java)
-        val taskConstructor = taskClass.getDeclaredConstructor(classLoader.loadClass("sandbox.java.util.function.Function"))
-        return BiFunction { userTask, arg ->
-            try {
-                taskApply(taskConstructor.newInstance(userTask), arg)
-            } catch (ex: InvocationTargetException) {
-                val target = ex.targetException
-                throw when (target) {
-                    is RuntimeException, is Error -> target
-                    else -> SandboxRuntimeException(target.message, target)
-                }
-            }
-        }
     }
 }

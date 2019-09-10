@@ -22,11 +22,9 @@ class DeserializeZonedDateTimeTest : TestBase(KOTLIN) {
 
             val sandboxDateTime = data.deserializeFor(classLoader)
 
-            val executor = createExecutorFor(classLoader)
-            val result = executor.apply(
-                classLoader.loadClassForSandbox(ShowZonedDateTime::class.java).newInstance(),
-                sandboxDateTime
-            ) ?: fail("Result cannot be null")
+            val taskFactory = classLoader.createRawTaskFactory()
+            val showZonedDateTime = classLoader.createTaskFor(taskFactory, ShowZonedDateTime::class.java)
+            val result = showZonedDateTime.apply(sandboxDateTime) ?: fail("Result cannot be null")
 
             assertEquals(dateTime.toString(), result.toString())
             assertEquals(SANDBOX_STRING, result::class.java.name)

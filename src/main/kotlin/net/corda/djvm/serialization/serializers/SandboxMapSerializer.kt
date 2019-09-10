@@ -3,7 +3,7 @@ package net.corda.djvm.serialization.serializers
 import net.corda.core.serialization.SerializationContext
 import net.corda.djvm.rewiring.SandboxClassLoader
 import net.corda.djvm.serialization.deserializers.CreateMap
-import net.corda.djvm.serialization.loadClassForSandbox
+import net.corda.djvm.serialization.toSandboxAnyClass
 import net.corda.serialization.internal.amqp.*
 import net.corda.serialization.internal.model.LocalTypeInformation
 import net.corda.serialization.internal.model.TypeIdentifier
@@ -12,22 +12,16 @@ import org.apache.qpid.proton.codec.Data
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
 import java.util.*
-import java.util.function.BiFunction
 import java.util.function.Function
 
 class SandboxMapSerializer(
     classLoader: SandboxClassLoader,
-    executor: BiFunction<in Any, in Any?, out Any?>,
+    taskFactory: Function<in Any, out Function<in Any?, out Any?>>,
     private val localFactory: LocalSerializerFactory
-) : CustomSerializer.Implements<Any>(clazz = classLoader.loadClassForSandbox(Map::class.java)) {
+) : CustomSerializer.Implements<Any>(clazz = classLoader.toSandboxAnyClass(Map::class.java)) {
+    @Suppress("unchecked_cast")
     private val creator: Function<Array<Any>, out Any?>
-
-    init {
-        val createTask = classLoader.loadClassForSandbox(CreateMap::class.java).newInstance()
-        creator = Function { inputs ->
-            executor.apply(createTask, inputs)
-        }
-    }
+        = classLoader.createTaskFor(taskFactory, CreateMap::class.java) as Function<Array<Any>, out Any?>
 
     // The order matters here - the first match should be the most specific one.
     // Kotlin preserves the ordering for us by associating into a LinkedHashMap.
@@ -39,7 +33,7 @@ class SandboxMapSerializer(
         EnumMap::class.java,
         Map::class.java
     ).associateBy {
-        classLoader.loadClassForSandbox(it)
+        classLoader.toSandboxAnyClass(it)
     }
 
     private fun getBestMatchFor(type: Class<Any>): Map.Entry<Class<Any>, Class<out Map<*, *>>>

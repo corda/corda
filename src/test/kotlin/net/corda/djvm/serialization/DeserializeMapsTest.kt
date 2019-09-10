@@ -23,11 +23,9 @@ class DeserializeMapsTest : TestBase(KOTLIN) {
 
             val sandboxMap = data.deserializeFor(classLoader)
 
-            val executor = createExecutorFor(classLoader)
-            val result = executor.apply(
-                classLoader.loadClassForSandbox(ShowStringMap::class.java).newInstance(),
-                sandboxMap
-            ) ?: fail("Result cannot be null")
+            val taskFactory = classLoader.createRawTaskFactory()
+            val showStringMap = classLoader.createTaskFor(taskFactory, ShowStringMap::class.java)
+            val result = showStringMap.apply(sandboxMap) ?: fail("Result cannot be null")
 
             assertEquals(stringMap.values.entries.joinToString(), result.toString())
             assertEquals("Open=Hello World, Close=Goodbye, Cruel World", result.toString())
@@ -54,11 +52,9 @@ class DeserializeMapsTest : TestBase(KOTLIN) {
 
             val sandboxMap = data.deserializeFor(classLoader)
 
-            val executor = createExecutorFor(classLoader)
-            val result = executor.apply(
-                classLoader.loadClassForSandbox(ShowStringSortedMap::class.java).newInstance(),
-                sandboxMap
-            ) ?: fail("Result cannot be null")
+            val taskFactory = classLoader.createRawTaskFactory()
+            val showStringSortedMap = classLoader.createTaskFor(taskFactory, ShowStringSortedMap::class.java)
+            val result = showStringSortedMap.apply(sandboxMap) ?: fail("Result cannot be null")
 
             assertEquals(sortedMap.values.entries.joinToString(), result.toString())
             assertEquals("10=Hello World, 50=Having Fun!, 100=Goodbye, Cruel World", result.toString())
@@ -85,11 +81,9 @@ class DeserializeMapsTest : TestBase(KOTLIN) {
 
             val sandboxMap = data.deserializeFor(classLoader)
 
-            val executor = createExecutorFor(classLoader)
-            val result = executor.apply(
-                classLoader.loadClassForSandbox(ShowStringNavigableMap::class.java).newInstance(),
-                sandboxMap
-            ) ?: fail("Result cannot be null")
+            val taskFactory = classLoader.createRawTaskFactory()
+            val showStringNavigableMap = classLoader.createTaskFor(taskFactory, ShowStringNavigableMap::class.java)
+            val result = showStringNavigableMap.apply(sandboxMap) ?: fail("Result cannot be null")
 
             assertEquals(navigableMap.values.entries.joinToString(), result.toString())
             assertEquals("1000=Hello World, 5000=Having Fun!, 10000=Goodbye, Cruel World", result.toString())
@@ -116,11 +110,9 @@ class DeserializeMapsTest : TestBase(KOTLIN) {
 
             val sandboxMap = data.deserializeFor(classLoader)
 
-            val executor = createExecutorFor(classLoader)
-            val result = executor.apply(
-                classLoader.loadClassForSandbox(ShowStringLinkedHashMap::class.java).newInstance(),
-                sandboxMap
-            ) ?: fail("Result cannot be null")
+            val taskFactory = classLoader.createRawTaskFactory()
+            val showStringLinkedHashMap = classLoader.createTaskFor(taskFactory, ShowStringLinkedHashMap::class.java)
+            val result = showStringLinkedHashMap.apply(sandboxMap) ?: fail("Result cannot be null")
 
             assertEquals(linkedHashMap.values.entries.joinToString(), result.toString())
             assertEquals("Close=Goodbye, Cruel World, Open=Hello World, During=Having Fun!", result.toString())
@@ -147,11 +139,9 @@ class DeserializeMapsTest : TestBase(KOTLIN) {
 
             val sandboxMap = data.deserializeFor(classLoader)
 
-            val executor = createExecutorFor(classLoader)
-            val result = executor.apply(
-                classLoader.loadClassForSandbox(ShowStringTreeMap::class.java).newInstance(),
-                sandboxMap
-            ) ?: fail("Result cannot be null")
+            val taskFactory = classLoader.createRawTaskFactory()
+            val showStringTreeMap = classLoader.createTaskFor(taskFactory, ShowStringTreeMap::class.java)
+            val result = showStringTreeMap.apply(sandboxMap) ?: fail("Result cannot be null")
 
             assertEquals(treeMap.values.entries.joinToString(), result.toString())
             assertEquals("1000=Hello World, 5000=Having Fun!, 10000=Goodbye, Cruel World", result.toString())
@@ -177,11 +167,9 @@ class DeserializeMapsTest : TestBase(KOTLIN) {
 
             val sandboxMap = data.deserializeFor(classLoader)
 
-            val executor = createExecutorFor(classLoader)
-            val result = executor.apply(
-                classLoader.loadClassForSandbox(ShowEnumMap::class.java).newInstance(),
-                sandboxMap
-            ) ?: fail("Result cannot be null")
+            val taskFactory = classLoader.createRawTaskFactory()
+            val showEnumMap = classLoader.createTaskFor(taskFactory, ShowEnumMap::class.java)
+            val result = showEnumMap.apply(sandboxMap) ?: fail("Result cannot be null")
 
             assertEquals(enumMap.toString(), result.toString())
             assertEquals("{ONE=One!, TWO=Two!}", result.toString())

@@ -2,24 +2,24 @@ package net.corda.djvm.serialization.serializers
 
 import net.corda.djvm.rewiring.SandboxClassLoader
 import net.corda.djvm.serialization.deserializers.ZoneIdDeserializer
-import net.corda.djvm.serialization.loadClassForSandbox
+import net.corda.djvm.serialization.toSandboxAnyClass
 import net.corda.serialization.internal.amqp.CustomSerializer
 import net.corda.serialization.internal.amqp.SerializerFactory
 import net.corda.serialization.internal.amqp.custom.ZoneIdSerializer.ZoneIdProxy
 import java.time.ZoneId
 import java.util.Collections.singleton
-import java.util.function.BiFunction
+import java.util.function.Function
 
 class SandboxZoneIdSerializer(
     classLoader: SandboxClassLoader,
-    private val executor: BiFunction<in Any, in Any?, out Any?>,
+    taskFactory: Function<in Any, out Function<in Any?, out Any?>>,
     factory: SerializerFactory
 ) : CustomSerializer.Proxy<Any, Any>(
-    clazz = classLoader.loadClassForSandbox(ZoneId::class.java),
-    proxyClass = classLoader.loadClassForSandbox(ZoneIdProxy::class.java),
+    clazz = classLoader.toSandboxAnyClass(ZoneId::class.java),
+    proxyClass = classLoader.toSandboxAnyClass(ZoneIdProxy::class.java),
     factory = factory
 ) {
-    private val task = classLoader.loadClassForSandbox(ZoneIdDeserializer::class.java).newInstance()
+    private val task = classLoader.createTaskFor(taskFactory, ZoneIdDeserializer::class.java)
 
     override val revealSubclassesInSchema: Boolean = true
 
@@ -28,6 +28,6 @@ class SandboxZoneIdSerializer(
     override fun toProxy(obj: Any): Any = abortReadOnly()
 
     override fun fromProxy(proxy: Any): Any {
-        return executor.apply(task, proxy)!!
+        return task.apply(proxy)!!
     }
 }
