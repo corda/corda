@@ -61,11 +61,12 @@ according to the release that it represents. The following pattern is used for b
 `release/os/{major version}.{minor version}`
 
 Note that `release` is always part of the name of the branch, even for unreleased versions of Corda. The default 
-github branch will always be the current development branch of Corda. Development work should target the oldest version 
+github branch will always be the current development branch of Corda. Development work should target the default branch 
+unless the work is needed in a specific version of Corda. In that case, development work should target the oldest version 
 of Corda for which the work would be appropriate. For instance, if a pull request would be applicable to Corda 4.1 and 
-Corda 4.3, it would be appropriate to open a pull request for `release/os/4.1`. 
-That work would then be merged forward from `release/os/4.1` to `release/os/4.3`. If the work is only applicable to 
-Corda 4.3, a pull request need only be opened against release/os/4.3.
+Corda 4.3, it would be appropriate to open a pull request for `release/os/4.1`. That work would then be merged forward 
+from `release/os/4.1` to `release/os/4.3`. If the work is only applicable to Corda 4.3, a pull request need only be 
+opened against release/os/4.3.
  
 Things to check
 ^^^^^^^^^^^^^^^
