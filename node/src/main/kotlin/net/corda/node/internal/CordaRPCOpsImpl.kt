@@ -17,11 +17,8 @@ import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
-import net.corda.core.internal.FlowStateMachine
-import net.corda.core.internal.RPC_UPLOADER
-import net.corda.core.internal.STRUCTURAL_STEP_PREFIX
+import net.corda.core.internal.*
 import net.corda.core.internal.messaging.InternalCordaRPCOps
-import net.corda.core.internal.sign
 import net.corda.core.messaging.*
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeDiagnosticInfo
@@ -138,6 +135,11 @@ internal class CordaRPCOpsImpl(
     }
 
     override fun dumpCheckpoints() = checkpointDumper.dump()
+
+    override val attachmentTrustInfos: List<AttachmentTrustInfo>
+        get() {
+            return services.attachmentTrustCalculator.calculateAllTrustInfo()
+        }
 
     override fun stateMachinesSnapshot(): List<StateMachineInfo> {
         val (snapshot, updates) = stateMachinesFeed()

@@ -44,26 +44,14 @@ class PersistentIdentityMigrationNewTable : CordaMigration() {
             logger.error("Cannot migrate persistent states: Liquibase failed to provide a suitable database connection")
             throw PersistentIdentitiesMigrationException("Cannot migrate persistent states as liquibase failed to provide a suitable database connection")
         }
-        initialiseNodeServices(database, setOf(PersistentIdentitiesMigrationSchemaV1))
+        initialiseNodeServices(database, setOf(PersistentIdentitiesMigrationSchemaBuilder.getMappedSchema()))
 
         val connection = database.connection as JdbcConnection
-
-        doAndTestMigration(connection)
-    }
-
-    private fun doAndTestMigration(connection: JdbcConnection) {
-        val alice = TestIdentity(CordaX500Name("Alice Corp", "Madrid", "ES"), 70)
-        val pkHash = addTestMapping(connection, alice)
-
-        // Extract data from old table needed to populate the new table
         val keyPartiesMap = extractKeyParties(connection)
 
         keyPartiesMap.forEach {
             insertEntry(connection, it)
         }
-
-        verifyTestMigration(connection, pkHash, alice.name.toString())
-        deleteTestMapping(connection, pkHash)
     }
 
     private fun extractKeyParties(connection: JdbcConnection): Map<String, CordaX500Name> {
@@ -104,41 +92,6 @@ class PersistentIdentityMigrationNewTable : CordaMigration() {
     override fun validate(database: Database?): ValidationErrors? {
         return null
     }
-
-    private fun addTestMapping(connection: JdbcConnection, testIdentity: TestIdentity): String {
-        val pkHash = UUID.randomUUID().toString()
-        val cert = testIdentity.identity.certPath.encoded
-
-        connection.prepareStatement("INSERT INTO node_identities (pk_hash, identity_value) VALUES (?,?)").use {
-            it.setString(1, pkHash)
-            it.setBytes(2, cert)
-            it.executeUpdate()
-        }
-        return pkHash
-    }
-
-    private fun deleteTestMapping(connection: JdbcConnection, pkHash: String) {
-        connection.prepareStatement("DELETE FROM node_identities WHERE pk_hash = ?").use {
-            it.setString(1, pkHash)
-            it.executeUpdate()
-        }
-    }
-
-    private fun verifyTestMigration(connection: JdbcConnection, pk: String, name: String) {
-        connection.createStatement().use {
-            try {
-                val rs = it.executeQuery("SELECT (pk_hash, name) FROM node_identities_no_cert")
-                while (rs.next()) {
-                    val result = rs.getString(1)
-                    require(result.contains(pk))
-                    require(result.contains(name))
-                }
-                rs.close()
-            } catch (e: Exception) {
-                logger.error(e.localizedMessage)
-            }
-        }
-    }
 }
 
 /**
@@ -150,49 +103,17 @@ class PersistentIdentityMigrationNewTable : CordaMigration() {
  */
 object PersistentIdentitiesMigrationSchema
 
-object PersistentIdentitiesMigrationSchemaV1 : MappedSchema(schemaFamily = PersistentIdentitiesMigrationSchema.javaClass, version = 1,
-        mappedTypes = listOf(
-                DBTransactionStorage.DBTransaction::class.java,
-                PersistentIdentityService.PersistentPublicKeyHashToCertificate::class.java,
-                PersistentIdentityService.PersistentPartyToPublicKeyHash::class.java,
-                PersistentIdentityService.PersistentPublicKeyHashToParty::class.java,
-                BasicHSMKeyManagementService.PersistentKey::class.java,
-                NodeAttachmentService.DBAttachment::class.java,
-                DBNetworkParametersStorage.PersistentNetworkParameters::class.java
-        )
-)
-
-class PersistentIdentitiesMigrationException(msg: String, cause: Exception? = null) : Exception(msg, cause)
-
-/**
- * A class that encapsulates a test identity containing a [CordaX500Name] and a [KeyPair]. Duplicate of [net.corda.testing.core.TestIdentity]
- * to avoid circular dependencies.
- */
-private class TestIdentity(val name: CordaX500Name, val keyPair: KeyPair) {
-
-    /** Creates an identity with a deterministic [keyPair] i.e. same [entropy] same keyPair. */
-    @JvmOverloads
-    constructor(name: CordaX500Name, entropy: Long, signatureScheme: SignatureScheme = Crypto.DEFAULT_SIGNATURE_SCHEME)
-            : this(name, Crypto.deriveKeyPairFromEntropy(signatureScheme, BigInteger.valueOf(entropy)))
-
-    val publicKey: PublicKey get() = keyPair.public
-    val party: Party = Party(name, publicKey)
-    val identity: PartyAndCertificate by lazy { getTestPartyAndCertificate(party) } // Often not needed.
-
-    fun getTestPartyAndCertificate(party: Party): PartyAndCertificate {
-        val trustRoot: X509Certificate = DEV_ROOT_CA.certificate
-        val intermediate: CertificateAndKeyPair = DEV_INTERMEDIATE_CA
-
-        val (nodeCaCert, nodeCaKeyPair) = createDevNodeCa(intermediate, party.name)
-
-        val identityCert = X509Utilities.createCertificate(
-                CertificateType.LEGAL_IDENTITY,
-                nodeCaCert,
-                nodeCaKeyPair,
-                party.name.x500Principal,
-                party.owningKey)
-
-        val certPath = X509Utilities.buildCertPath(identityCert, nodeCaCert, intermediate.certificate, trustRoot)
-        return PartyAndCertificate(certPath)
-    }
+object PersistentIdentitiesMigrationSchemaBuilder {
+    fun getMappedSchema() =
+            MappedSchema(schemaFamily = PersistentIdentitiesMigrationSchema.javaClass, version = 1,
+                    mappedTypes = listOf(
+                            DBTransactionStorage.DBTransaction::class.java,
+                            PersistentIdentityService.PersistentPublicKeyHashToCertificate::class.java,
+                            PersistentIdentityService.PersistentPartyToPublicKeyHash::class.java,
+                            PersistentIdentityService.PersistentPublicKeyHashToParty::class.java,
+                            BasicHSMKeyManagementService.PersistentKey::class.java,
+                            NodeAttachmentService.DBAttachment::class.java,
+                            DBNetworkParametersStorage.PersistentNetworkParameters::class.java
+                    ))
 }
+class PersistentIdentitiesMigrationException(msg: String, cause: Exception? = null) : Exception(msg, cause)

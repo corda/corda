@@ -12,8 +12,8 @@ import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.contextLogger
-import net.corda.nodeapi.internal.cordapp.CordappLoader
 import net.corda.node.services.persistence.AttachmentStorageInternal
+import net.corda.nodeapi.internal.cordapp.CordappLoader
 import java.net.URL
 import java.util.concurrent.ConcurrentHashMap
 
@@ -70,20 +70,29 @@ open class CordappProviderImpl(val cordappLoader: CordappLoader,
     fun getCordappAttachmentId(cordapp: Cordapp): SecureHash? = cordappAttachments.inverse()[cordapp.jarPath]
 
     private fun loadContractsIntoAttachmentStore(): Map<SecureHash, URL> =
-            cordapps.filter { !it.contractClassNames.isEmpty() }.map {
-                it.jarPath.openStream().use { stream ->
+            cordapps.filter { it.contractClassNames.isNotEmpty() }.map { cordapp ->
+                cordapp.jarPath.openStream().use { stream ->
                     try {
-                        // We can't make attachmentStorage a AttachmentStorageInternal as that ends up requiring
-                        // MockAttachmentStorage to implement it.
+                        // This code can be reached by [MockNetwork] tests which uses [MockAttachmentStorage]
+                        // [MockAttachmentStorage] cannot implement [AttachmentStorageInternal] because
+                        // doing so results in internal functions being exposed in the public API.
                         if (attachmentStorage is AttachmentStorageInternal) {
-                            attachmentStorage.privilegedImportAttachment(stream, DEPLOYED_CORDAPP_UPLOADER, null)
+                            attachmentStorage.privilegedImportAttachment(
+                                stream,
+                                DEPLOYED_CORDAPP_UPLOADER,
+                                cordapp.info.shortName
+                            )
                         } else {
-                            attachmentStorage.importAttachment(stream, DEPLOYED_CORDAPP_UPLOADER, null)
+                            attachmentStorage.importAttachment(
+                                stream,
+                                DEPLOYED_CORDAPP_UPLOADER,
+                                cordapp.info.shortName
+                            )
                         }
                     } catch (faee: java.nio.file.FileAlreadyExistsException) {
                         AttachmentId.parse(faee.message!!)
                     }
-                } to it.jarPath
+                } to cordapp.jarPath
             }.toMap()
 
     /**

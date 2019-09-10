@@ -281,7 +281,7 @@ a drain is complete there should be no outstanding checkpoints or running flows.
 A node can be drained or undrained via RPC using the ``setFlowsDrainingModeEnabled`` method, and via the shell using
 the standard ``run`` command to invoke the RPC. See :doc:`shell` to learn more.
 
-To assist in draining a node, the ``dumpCheckpoints`` shell command will output JSON representations of each checkpointed flow.
+To assist in draining a node, the ``checkpoints dump`` shell command will output JSON representations of each checkpointed flow.
 A zip containing the JSON files is created in the ``logs`` directory of the node. This information can then be used to determine the
 state of stuck flows or flows that experienced internal errors and were kept in the node for manual intervention. To drain these flows,
 the node will need to be restarted or the flow will need to be removed using ``killFlow``.
@@ -719,3 +719,29 @@ Although not strictly related to versioning, AMQP serialisation dictates that we
   wildcard
 * Any superclass must adhere to the same rules, but can be abstract
 * Object graph cycles are not supported, so an object cannot refer to itself, directly or indirectly
+
+
+Testing CorDapp upgrades
+------------------------
+
+At the time of this writing there is no platform support to test CorDapp upgrades. There are plans to add support in a future version.
+This means that it is not possible to write automated tests using just the provided tooling.
+
+To test an implicit upgrade, you must simulate a network that initially has only nodes with the old version of the CorDapp, and then nodes gradually transition to the new version.
+Typically, in such a complex upgrade scenario, there must be a deadline by which time all nodes that want to continue to use the CorDapp must upgrade.
+To achieve this, this deadline must be configured in the flow logic which must only use new features afterwards.
+
+This can be simulated with a scenario like this:
+
+1. Write and individually test the new version of the state and contract.
+2. Setup a network of nodes with the previous version. In the simplest form, `deployNodes` can be used for this purpose.
+3. Run some transactions between nodes.
+4. Upgrade a couple of nodes to the new version of the CorDapp.
+5. Continue running transactions between various combinations of versions. Also make sure transactions that were created between nodes with the new version
+are being successfully read by nodes with the old CorDapp.
+6. Upgrade all nodes and simulate the deadline expiration.
+7. Make sure old transactions can be consumed, and new features are successfully used in new transactions.
+
+
+
+

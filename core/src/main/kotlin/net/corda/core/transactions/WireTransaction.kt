@@ -107,7 +107,8 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                     val hashToResolve = it ?: services.networkParametersService.defaultHash
                     services.networkParametersService.lookup(hashToResolve)
                 },
-                isAttachmentTrusted = { isAttachmentTrusted(it, services.attachments) }
+                // `as?` is used due to [MockServices] not implementing [ServiceHubCoreInternal]
+                isAttachmentTrusted = { (services as? ServiceHubCoreInternal)?.attachmentTrustCalculator?.calculate(it) ?: true }
         )
     }
 
@@ -142,7 +143,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                 resolveAttachment,
                 { stateRef -> resolveStateRef(stateRef)?.serialize() },
                 { null },
-                { isAttachmentTrusted(it, null) }
+                { it.isUploaderTrusted() }
         )
     }
 
