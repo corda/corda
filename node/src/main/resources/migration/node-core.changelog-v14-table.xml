@@ -15,9 +15,4 @@
         </createTable>
     </changeSet>
 
-    <changeSet author="R3.Corda" id="transfer-to-new-persistence-table">
-        <customChange class="net.corda.node.migration.PersistentIdentityMigrationNewTable">
-        </customChange>
-    </changeSet>
-
 </databaseChangeLog>
