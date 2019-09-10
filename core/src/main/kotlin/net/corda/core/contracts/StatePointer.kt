@@ -1,6 +1,7 @@
 package net.corda.core.contracts
 
 import net.corda.core.DeleteForDJVM
+import net.corda.core.DoNotImplement
 import net.corda.core.KeepForDJVM
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.Vault
@@ -18,6 +19,7 @@ import net.corda.core.transactions.LedgerTransaction
  */
 @CordaSerializable
 @KeepForDJVM
+@DoNotImplement
 sealed class StatePointer<T : ContractState> {
     /**
      * An identifier for the [ContractState] that this [StatePointer] points to.
@@ -122,7 +124,7 @@ class StaticPointer<T : ContractState>(
 class LinearPointer<T : LinearState>(
         override val pointer: UniqueIdentifier,
         override val type: Class<T>,
-        override val isResolved: Boolean = false
+        override val isResolved: Boolean = true
 ) : StatePointer<T>() {
 
     /**
@@ -132,7 +134,7 @@ class LinearPointer<T : LinearState>(
      * @param type The underlying [LinearState] type that this points to.
      */
     @DeprecatedConstructorForDeserialization(version = 1)
-    constructor(pointer: UniqueIdentifier, type: Class<T>) : this(pointer, type, false)
+    constructor(pointer: UniqueIdentifier, type: Class<T>) : this(pointer, type, true)
 
     /**
      * Resolves a [LinearPointer] using the [UniqueIdentifier] contained in the [pointer] property. Returns a

@@ -38,7 +38,7 @@ class ResolveStatePointersTest {
     ) : LinearState
 
     @BelongsToContract(DummyContract::class)
-    private data class Foo<T : LinearState>(val baz: LinearPointer<T>, override val participants: List<AbstractParty>) : ContractState
+    private data class Foo<T : ContractState>(val baz: StatePointer<T>, override val participants: List<AbstractParty>) : ContractState
 
     private val barOne = Bar(listOf(myself.party), 1)
     private val barTwo = Bar(listOf(myself.party), 2, LinearPointer(barOne.linearId, barOne::class.java))
@@ -67,18 +67,78 @@ class ResolveStatePointersTest {
     }
 
     @Test
-    fun `resolve state pointers and check reference state is added to transaction`() {
+    fun `resolve linear pointers and check reference state is not added to transaction when isResolved is false`() {
         val stateAndRef = createPointedToState(barOne)
         val linearId = stateAndRef.state.data.linearId
 
         // Add a new state containing a linear pointer.
         val tx = TransactionBuilder(notary = notary.party, serviceHub = services).apply {
-            val pointer = LinearPointer(linearId, barOne::class.java)
+            val pointer = LinearPointer(linearId, barOne::class.java, false)
             addOutputState(Foo(pointer, listOf(myself.party)), DummyContract.PROGRAM_ID)
             addCommand(Command(DummyContract.Commands.Create(), myself.party.owningKey))
         }
 
-        // Check the StateRef for the pointed-to state is added as a reference.
+        // Check the StateRef for the pointed-to state is not added as a reference.
+        assert(tx.referenceStates().none { it == stateAndRef.ref })
+
+        // Resolve the StateRef to the actual state.
+        val ltx = tx.toLedgerTransaction(services)
+        assertEquals(barOne, ltx.referenceStates.single())
+    }
+
+    @Test
+    fun `resolve linear pointers and check reference state is added to transaction when isResolved is true`() {
+        val stateAndRef = createPointedToState(barOne)
+        val linearId = stateAndRef.state.data.linearId
+
+        // Add a new state containing a linear pointer.
+        val tx = TransactionBuilder(notary = notary.party, serviceHub = services).apply {
+            val pointer = LinearPointer(linearId, barOne::class.java, true)
+            addOutputState(Foo(pointer, listOf(myself.party)), DummyContract.PROGRAM_ID)
+            addCommand(Command(DummyContract.Commands.Create(), myself.party.owningKey))
+        }
+
+        // Check the StateRef for the pointed-to state is not added as a reference.
+        assertEquals(stateAndRef.ref, tx.referenceStates().single())
+
+        // Resolve the StateRef to the actual state.
+        val ltx = tx.toLedgerTransaction(services)
+        assertEquals(barOne, ltx.referenceStates.single())
+    }
+
+    @Test
+    fun `resolve static pointers and check reference state is not added to transaction when isResolved is false`() {
+        val stateAndRef = createPointedToState(barOne)
+        val stateRef = stateAndRef.ref
+
+        // Add a new state containing a linear pointer.
+        val tx = TransactionBuilder(notary = notary.party, serviceHub = services).apply {
+            val pointer = StaticPointer(stateRef, barOne::class.java, false)
+            addOutputState(Foo(pointer, listOf(myself.party)), DummyContract.PROGRAM_ID)
+            addCommand(Command(DummyContract.Commands.Create(), myself.party.owningKey))
+        }
+
+        // Check the StateRef for the pointed-to state is not added as a reference.
+        assert(tx.referenceStates().none { it == stateAndRef.ref })
+
+        // Resolve the StateRef to the actual state.
+        val ltx = tx.toLedgerTransaction(services)
+        assertEquals(barOne, ltx.referenceStates.single())
+    }
+
+    @Test
+    fun `resolve static pointers and check reference state is added to transaction when isResolved is true`() {
+        val stateAndRef = createPointedToState(barOne)
+        val stateRef = stateAndRef.ref
+
+        // Add a new state containing a linear pointer.
+        val tx = TransactionBuilder(notary = notary.party, serviceHub = services).apply {
+            val pointer = StaticPointer(stateRef, barOne::class.java, true)
+            addOutputState(Foo(pointer, listOf(myself.party)), DummyContract.PROGRAM_ID)
+            addCommand(Command(DummyContract.Commands.Create(), myself.party.owningKey))
+        }
+
+        // Check the StateRef for the pointed-to state is not added as a reference.
         assertEquals(stateAndRef.ref, tx.referenceStates().single())
 
         // Resolve the StateRef to the actual state.
