@@ -5,7 +5,7 @@
                    logicalFilePath="migration/node-services.changelog-init.xml">
 
     <changeSet author="R3.Corda" id="add-new-persistence-table">
-        <createTable tableName="identities_no_cert">
+        <createTable tableName="node_identities_no_cert">
             <column name="pk_hash" type="NVARCHAR(130)">
                 <constraints nullable="false"/>
             </column>
