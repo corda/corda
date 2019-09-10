@@ -21,6 +21,34 @@ import net.corda.core.transactions.LedgerTransaction
 @KeepForDJVM
 @DoNotImplement
 sealed class StatePointer<T : ContractState> {
+
+    companion object {
+
+        /**
+         * Creates a [StaticPointer] to the specified contract state.
+         *
+         * @param stateAndRef The [StateAndRef] instance from which to construct a static pointer.
+         * @param isResolved Determines whether the state pointer should be resolved to a reference input when included in a transaction.
+         * @return Returns a [StaticPointer] to the specified contract state.
+         */
+        inline fun <reified T : ContractState> staticPointer(
+                stateAndRef: StateAndRef<T>,
+                isResolved: Boolean = false
+        ) = StaticPointer(stateAndRef.ref, T::class.java, isResolved)
+
+        /**
+         * Creates a [LinearPointer] to the specified linear state.
+         *
+         * @param state The [LinearState] instance from which to construct a linear pointer.
+         * @param isResolved Determines whether the state pointer should be resolved to a reference input when included in a transaction.
+         * @return Returns a [LinearPointer] to the specified linear state.
+         */
+        inline fun <reified T : LinearState> linearPointer(
+                state: T,
+                isResolved: Boolean = true
+        ) = LinearPointer(state.linearId, T::class.java, isResolved)
+    }
+
     /**
      * An identifier for the [ContractState] that this [StatePointer] points to.
      */

@@ -83,7 +83,7 @@ class ResolveStatePointersTest {
 
         // Resolve the StateRef to the actual state.
         val ltx = tx.toLedgerTransaction(services)
-        assertEquals(barOne, ltx.referenceStates.single())
+        assertEquals(emptyList(), ltx.referenceStates)
     }
 
     @Test
@@ -123,7 +123,7 @@ class ResolveStatePointersTest {
 
         // Resolve the StateRef to the actual state.
         val ltx = tx.toLedgerTransaction(services)
-        assertEquals(barOne, ltx.referenceStates.single())
+        assertEquals(emptyList(), ltx.referenceStates)
     }
 
     @Test
