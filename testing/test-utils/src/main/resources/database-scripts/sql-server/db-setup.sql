@@ -84,6 +84,7 @@ DROP TABLE IF EXISTS ${schema}.unique_dummy_fungible_state;
 DROP TABLE IF EXISTS ${schema}.unique_dummy_linear_state;
 DROP TABLE IF EXISTS ${schema}.locktestobjects;
 DROP TABLE IF EXISTS ${schema}.otherlockobjects;
+DROP TABLE IF EXISTS ${schema}.node_identities_no_cert;
 DROP VIEW IF EXISTS ${schema}.v_pkey_hash_ex_id_map;
 DROP SEQUENCE IF EXISTS ${schema}.hibernate_sequence;
 IF NOT EXISTS (SELECT schema_name FROM information_schema.schemata WHERE schema_name = '${schema}') EXEC('CREATE SCHEMA ${schema}');

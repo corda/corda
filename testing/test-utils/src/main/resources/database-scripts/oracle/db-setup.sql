@@ -83,5 +83,6 @@ DROP TABLE ${schema}.unique_dummy_fungible_state CASCADE CONSTRAINTS
 DROP TABLE ${schema}.unique_dummy_linear_state CASCADE CONSTRAINTS
 DROP TABLE ${schema}.locktestobjects CASCADE CONSTRAINTS
 DROP TABLE ${schema}.otherlockobjects CASCADE CONSTRAINTS
+DROP TABLE ${schema}.node_identities_no_cert CASCADE CONSTRAINTS
 DROP VIEW ${schema}.v_pkey_hash_ex_id_map CASCADE CONSTRAINTS
 DROP SEQUENCE ${schema}.hibernate_sequence
