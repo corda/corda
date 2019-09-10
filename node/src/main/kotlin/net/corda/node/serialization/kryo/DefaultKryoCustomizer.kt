@@ -47,6 +47,7 @@ import java.io.ByteArrayOutputStream
 import java.io.FileInputStream
 import java.io.InputStream
 import java.lang.reflect.Modifier.isPublic
+import java.security.PrivateKey
 import java.security.PublicKey
 import java.security.cert.CertPath
 import java.security.cert.X509Certificate
@@ -95,6 +96,8 @@ object DefaultKryoCustomizer {
             register(BufferedInputStream::class.java, InputStreamSerializer)
             register(Class.forName("sun.net.www.protocol.jar.JarURLConnection\$JarURLInputStream"), InputStreamSerializer)
             noReferencesWithin<WireTransaction>()
+            register(PublicKey::class.java, publicKeySerializer)
+            register(PrivateKey::class.java, PrivateKeySerializer)
             register(EdDSAPublicKey::class.java, publicKeySerializer)
             register(EdDSAPrivateKey::class.java, PrivateKeySerializer)
             register(CompositeKey::class.java, publicKeySerializer)  // Using a custom serializer for compactness
