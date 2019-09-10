@@ -6,15 +6,25 @@
 
 Corda is an open source blockchain project, designed for business from the start. Only Corda allows you to build interoperable blockchain networks that transact in strict privacy. Corda's smart contract technology allows businesses to transact directly, with value.
 
-# Default branch
+# Contributing
 
-Master is no longer the default branch for Corda. New development work is committed to the latest release branch, which is named in the following format:
-release/os/{major}.{minor}
+Corda is an open-source project and contributions are welcome! Please note that we do not use the master branch. Please see below for more detail.
 
-Any new work should be committed to the earliest release branch for which the work is appropriate and then forward ported to newer branches.
+To find out how to contribute, please see our [contributing docs](https://docs.corda.net/head/contributing-index.html).
 
-# Example
+# Development of Corda going forward 
+ 
+Previously, all development work was done on master. Master will no longer be used, owing to the need to support multiple versions of Corda in flight at any time. Instead, development work will be done on branches that represent the appropriate version. Branches will be named according to the following pattern:
+release/os/{major version}.{minor version}
 
-You would like to fix an issue that is relevent to Corda 4.1 and 4.3. You create a Pull Request against release/os/4.1. Once this PR is merged, you would then have the PR forward merged from release/os/4.3
+The default branch will track the current version of Corda in development and is expected to change over time as new versions of Corda are released.
+ 
+# Where should I make my change?
+ 
+If you would like to contribute to Corda, we recommend opening a pull request against the oldest version of Corda to which your work would apply. For instance, if your work would be applicable to Corda 4.1 and Corda 4.3, it would be appropriate to open a pull request for release/os/4.1. That work would then be merged forward from release/os/4.1 to release/os/4.3. If your work is only applicable to Corda 4.3, simply open a pull request against release/os/4.3.
+ 
+# Why was this change made?
+ 
+The previous branching structure required changes to be made on master first and then backported to older versions. However, backporting was proving to be complicated and time consuming. In order to streamline development, it was decided that forward merging would be used instead, which required moving away from development based around a master branch.
 
-If the work is only relevant to Corda 4.3, it need not be merged into 4.1 first.
+Please see Mike Ward's [blog post](https://medium.com/corda/corda-release-versioning-changes-6281b02348fc) for more detail on why the versioning strategy was changed.
