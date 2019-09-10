@@ -133,7 +133,7 @@ Merging the changes back into Corda
 -----------------------------------
 You should merge the changes back into Corda as follows:
 
-1. Create a pull request from your fork to the current development branch of the Corda repo
+1. Create a pull request from your fork to the equivalent branch of the Corda repo
 
 2. In the PR comments box:
 
