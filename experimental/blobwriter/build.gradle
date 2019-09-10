@@ -1,0 +1,27 @@
+apply plugin : 'kotlin'
+apply plugin : 'application'
+
+mainClassName = "net.corda.blobwriter.BlobWriter.kt"
+
+dependencies {
+    compile project(':tools:cliutils')
+    compile project(":common-logging")
+    compile project(':serialization')
+
+    compile "org.slf4j:jul-to-slf4j:$slf4j_version"
+    compile "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
+}
+
+jar {
+    from (configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }) {
+        exclude "META-INF/*.SF"
+        exclude "META-INF/*.DSA"
+        exclude "META-INF/*.RSA"
+    }
+    baseName = "blobwriter"
+    manifest {
+        attributes(
+                'Main-Class': 'net.corda.blobwriter.BlobWriterKt'
+        )
+    }
+}

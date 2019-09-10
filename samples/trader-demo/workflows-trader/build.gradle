@@ -9,7 +9,7 @@ dependencies {
     // The trader demo CorDapp depends upon Cash CorDapp features
     cordapp project(':finance:contracts')
     cordapp project(':finance:workflows')
-    
+
     testCompile project(':node-driver')
     
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"

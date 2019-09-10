@@ -3,7 +3,6 @@ package net.corda.tools.shell;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import net.corda.client.jackson.StringToMethodCallParser;
-import net.corda.core.internal.messaging.InternalCordaRPCOps;
 import net.corda.core.messaging.CordaRPCOps;
 import org.crsh.cli.Argument;
 import org.crsh.cli.Command;
@@ -14,7 +13,10 @@ import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import static java.util.Comparator.comparing;
 
@@ -46,21 +48,14 @@ public class RunShellCommand extends InteractiveShellCommand {
     }
 
   private void emitHelp(InvocationContext<Map> context) {
-    // to handle the lack of working inheritance in [StringToMethodCallParser] two parsers are used
-    StringToMethodCallParser<CordaRPCOps> cordaRpcOpsParser =
-        new StringToMethodCallParser<>(
-            CordaRPCOps.class, objectMapper(InteractiveShell.getCordappsClassloader()));
-    StringToMethodCallParser<InternalCordaRPCOps> internalCordaRpcOpsParser =
-        new StringToMethodCallParser<>(
-            InternalCordaRPCOps.class, objectMapper(InteractiveShell.getCordappsClassloader()));
+        StringToMethodCallParser<CordaRPCOps> cordaRpcOpsParser =
+            new StringToMethodCallParser<>(
+                CordaRPCOps.class, objectMapper(InteractiveShell.getCordappsClassloader()));
 
-    // Sends data down the pipeline about what commands are available. CRaSH will render it nicely.
-    // Each element we emit is a map of column -> content.
-    Set<Map.Entry<String, String>> entries = cordaRpcOpsParser.getAvailableCommands().entrySet();
-    Set<Map.Entry<String, String>> internalEntries = internalCordaRpcOpsParser.getAvailableCommands().entrySet();
-    Set<Map.Entry<String, String>> entrySet = new HashSet<>(entries);
-    entrySet.addAll(internalEntries);
-    List<Map.Entry<String, String>> entryList = new ArrayList<>(entrySet);
+        // Sends data down the pipeline about what commands are available. CRaSH will render it nicely.
+        // Each element we emit is a map of column -> content.
+        Set<Map.Entry<String, String>> entries = cordaRpcOpsParser.getAvailableCommands().entrySet();
+        List<Map.Entry<String, String>> entryList = new ArrayList<>(entries);
         entryList.sort(comparing(Map.Entry::getKey));
         for (Map.Entry<String, String> entry : entryList) {
             // Skip these entries as they aren't really interesting for the user.

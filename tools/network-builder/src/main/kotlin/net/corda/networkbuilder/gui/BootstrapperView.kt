@@ -14,6 +14,7 @@ import javafx.scene.layout.HBox
 import javafx.scene.layout.Priority
 import javafx.scene.layout.VBox
 import javafx.stage.DirectoryChooser
+import net.corda.core.identity.CordaX500Name
 import net.corda.networkbuilder.Constants
 import net.corda.networkbuilder.GuiUtils
 import net.corda.networkbuilder.NetworkBuilder
@@ -21,7 +22,6 @@ import net.corda.networkbuilder.backends.Backend
 import net.corda.networkbuilder.baseArgs
 import net.corda.networkbuilder.context.Context
 import net.corda.networkbuilder.nodes.*
-import net.corda.core.identity.CordaX500Name
 import org.apache.commons.lang3.RandomStringUtils
 import org.controlsfx.control.SegmentedButton
 import tornadofx.*
@@ -104,6 +104,7 @@ class BootstrapperView : View("Corda Network Builder") {
                         override fun get(index: Int): String {
                             return controller.foundNodes[index].id
                         }
+
                         override val size: Int
                             get() = controller.foundNodes.size
                     }
@@ -291,7 +292,6 @@ class BootstrapperView : View("Corda Network Builder") {
                     unsortedNodes.add(NodeTemplateInfo(it.name, NodeType.NOTARY))
                 }
             }
-
         }
 
         var baseDir = SimpleObjectProperty<File>(null)
@@ -363,7 +363,6 @@ class BootstrapperView : View("Corda Network Builder") {
                                  val locallyReachableAddress: String,
                                  val rpcPort: Int,
                                  val sshPort: Int)
-
 }
 
 data class FoundNodeTableEntry(val id: String, @Volatile var count: Int = 1)

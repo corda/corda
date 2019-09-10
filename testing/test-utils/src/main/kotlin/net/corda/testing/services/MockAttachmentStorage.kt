@@ -25,6 +25,7 @@ import java.util.jar.JarInputStream
  * A mock implementation of [AttachmentStorage] for use within tests
  */
 class MockAttachmentStorage : AttachmentStorage, SingletonSerializeAsToken() {
+
     private data class ContractAttachmentMetadata(val name: ContractClassName, val version: Int, val isSigned: Boolean, val signers: List<PublicKey>, val uploader: String)
 
     private val _files = HashMap<SecureHash, Pair<Attachment, ByteArray>>()

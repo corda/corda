@@ -20,7 +20,6 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.sequence
 import net.corda.core.utilities.unwrap
 import net.corda.coretests.flows.TestNoSecurityDataVendingFlow
-import net.corda.node.services.DbTransactionsResolver.Companion.IN_MEMORY_RESOLUTION_LIMIT_PROP_NAME
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyContractV2
 import net.corda.testing.core.DUMMY_BANK_A_NAME
@@ -203,27 +202,6 @@ class ResolveTransactionsFlowTest {
         val future = megaCorpNode.startFlow(p)
         mockNet.runNetwork()
         assertFailsWith<FetchDataFlow.IllegalTransactionRequest> { future.getOrThrow() }
-    }
-
-    @Test
-    fun `Switches between checkpoint and DB based resolution correctly`() {
-        System.setProperty(IN_MEMORY_RESOLUTION_LIMIT_PROP_NAME, "20")
-        var numTransactions = 0
-        megaCorpNode.services.validatedTransactions.updates.subscribe {
-            numTransactions++
-        }
-        val txToResolve = makeLargeTransactionChain(50)
-        var numUpdates = 0
-        miniCorpNode.services.validatedTransactions.updates.subscribe {
-            numUpdates++
-        }
-        val p = TestFlow(txToResolve, megaCorp)
-        val future = miniCorpNode.startFlow(p)
-        mockNet.runNetwork()
-        future.getOrThrow()
-        // ResolveTransactionsFlow only stores transaction dependencies and not the requested transaction, so there will be one fewer
-        // transaction stored on the receiving node than on the sending one.
-        assertEquals(numTransactions - 1, numUpdates)
     }
 
     @Test
@@ -430,6 +408,7 @@ class ResolveTransactionsFlowTest {
             subFlow(resolveTransactionsFlow)
         }
     }
+
     @Suppress("unused")
     @InitiatedBy(TestFlow::class)
     class TestResponseFlow(private val otherSideSession: FlowSession) : FlowLogic<Void?>() {
@@ -447,6 +426,7 @@ class ResolveTransactionsFlowTest {
             subFlow(DataVendingFlow(session, toVend))
         }
     }
+
     @Suppress("unused")
     @InitiatedBy(TestNoRightsVendingFlow::class)
     private open class TestResponseResolveNoRightsFlow(val otherSideSession: FlowSession) : FlowLogic<Unit>() {
@@ -454,7 +434,8 @@ class ResolveTransactionsFlowTest {
         override fun call() {
             val noRightsTx = otherSideSession.receive<SignedTransaction>().unwrap { it }
             otherSideSession.receive<Any>().unwrap { it }
-            otherSideSession.sendAndReceive<Any>(FetchDataFlow.Request.Data(NonEmptySet.of(noRightsTx.inputs.first().txhash), FetchDataFlow.DataType.TRANSACTION)).unwrap { it }
+            otherSideSession.sendAndReceive<Any>(FetchDataFlow.Request.Data(NonEmptySet.of(noRightsTx.inputs.first().txhash), FetchDataFlow.DataType.TRANSACTION))
+                    .unwrap { it }
             otherSideSession.send(FetchDataFlow.Request.End)
         }
     }
@@ -468,6 +449,7 @@ class ResolveTransactionsFlowTest {
             subFlow(DataVendingFlow(session, tx))
         }
     }
+
     @Suppress("unused")
     @InitiatedBy(TestResolveTwiceVendingFlow::class)
     private open class TestResponseResolveTwiceFlow(val otherSideSession: FlowSession) : FlowLogic<Unit>() {
@@ -475,8 +457,10 @@ class ResolveTransactionsFlowTest {
         override fun call() {
             val tx = otherSideSession.receive<SignedTransaction>().unwrap { it }
             val parent1 = tx.inputs.first().txhash
-            otherSideSession.sendAndReceive<Any>(FetchDataFlow.Request.Data(NonEmptySet.of(parent1), FetchDataFlow.DataType.TRANSACTION)).unwrap { it }
-            otherSideSession.sendAndReceive<Any>(FetchDataFlow.Request.Data(NonEmptySet.of(parent1), FetchDataFlow.DataType.TRANSACTION)).unwrap { it }
+            otherSideSession.sendAndReceive<Any>(FetchDataFlow.Request.Data(NonEmptySet.of(parent1), FetchDataFlow.DataType.TRANSACTION))
+                    .unwrap { it }
+            otherSideSession.sendAndReceive<Any>(FetchDataFlow.Request.Data(NonEmptySet.of(parent1), FetchDataFlow.DataType.TRANSACTION))
+                    .unwrap { it }
             otherSideSession.send(FetchDataFlow.Request.End)
         }
     }

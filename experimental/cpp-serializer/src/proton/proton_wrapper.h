@@ -46,7 +46,7 @@ namespace proton {
             pn_data_t * m_data;
 
         public :
-            auto_enter (pn_data_t *, bool next_ = false);
+            explicit auto_enter (pn_data_t *, bool next_ = false);
             ~auto_enter();
     };
 
@@ -55,8 +55,12 @@ namespace proton {
             pn_data_t * m_data;
 
         public :
-            auto_next (pn_data_t *);
+            explicit auto_next (pn_data_t *);
             auto_next (const auto_next &) = delete;
+
+            explicit operator pn_data_t *() {
+                return m_data;
+            }
 
             ~auto_next();
     };
@@ -67,7 +71,7 @@ namespace proton {
             pn_data_t * m_data;
 
         public :
-            auto_list_enter (pn_data_t *, bool next_ = false);
+            explicit auto_list_enter (pn_data_t *, bool next_ = false);
             ~auto_list_enter();
 
             size_t elements() const;
@@ -81,7 +85,7 @@ namespace proton {
 
     template<typename T>
     T
-    readAndNext (pn_data_t * data_, bool tolerateDeviance_ = false) {
+    readAndNext (pn_data_t *, bool tolerateDeviance_ = false) {
         return T{};
     }
 

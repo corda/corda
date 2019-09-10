@@ -59,6 +59,11 @@ interface CryptoService : SignOnlyCryptoService {
      * Returns the [PublicKey] of the generated [KeyPair].
      */
     fun generateKeyPair(alias: String, scheme: SignatureScheme): PublicKey
+
+    /**
+     * Returns the type of the service.
+     */
+    fun getType(): SupportedCryptoServices
 }
 
 open class CryptoServiceException(message: String?, cause: Throwable? = null) : Exception(message, cause)

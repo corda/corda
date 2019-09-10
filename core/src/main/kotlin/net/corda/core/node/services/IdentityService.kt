@@ -7,7 +7,6 @@ import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.*
 import net.corda.core.internal.hash
 import net.corda.core.utilities.contextLogger
-import net.corda.core.utilities.debug
 import java.security.InvalidAlgorithmParameterException
 import java.security.PublicKey
 import java.security.cert.*
@@ -69,6 +68,8 @@ interface IdentityService {
      * @param owningKey The [PublicKey] to determine well known identity for.
      * @return the party and certificate, or null if unknown.
      */
+    @Deprecated("This method has been deprecated in favour of using a new way to generate and use confidential identities. See the new " +
+            "confidential identities repository.")
     fun certificateFromKey(owningKey: PublicKey): PartyAndCertificate?
 
     /**
@@ -101,7 +102,7 @@ interface IdentityService {
         // The original version of this would return the party as-is if it was a Party (rather than AnonymousParty),
         // however that means that we don't verify that we know who owns the key. As such as now enforce turning the key
         // into a party, and from there figure out the well known party.
-        log.debug { "Attempting to find wellKnownParty for: ${party.owningKey.hash}" }
+        log.debug("Attempting to find wellKnownParty for: ${party.owningKey.hash}")
         val candidate = partyFromKey(party.owningKey)
         // TODO: This should be done via the network map cache, which is the authoritative source of well known identities
         return if (candidate != null) {
@@ -146,6 +147,18 @@ interface IdentityService {
      * @param exactMatch If true, a case sensitive match is done against each component of each X.500 name.
      */
     fun partiesFromName(query: String, exactMatch: Boolean): Set<Party>
+
+    /**
+     * Registers a mapping in the database between the provided [PublicKey] and [Party] if one does not already exist. If an entry
+     * exists for the supplied [PublicKey] but the associated [Party] does not match the one supplied to the method then an exception will
+     * be thrown.
+     *
+     * @param key The public key that will be registered to the supplied [Party]
+     * @param party The party that the supplied public key will be registered to
+     * @throws IllegalArgumentException if the public key is already registered to a party that does not match the supplied party
+     */
+    @Throws(IllegalArgumentException::class)
+    fun registerKeyToParty(key: PublicKey, party: Party)
 }
 
 class UnknownAnonymousPartyException(message: String) : CordaException(message)

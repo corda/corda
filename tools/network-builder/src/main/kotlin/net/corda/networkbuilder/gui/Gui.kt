@@ -1,7 +1,7 @@
 package net.corda.networkbuilder.gui
 
 import javafx.stage.Stage
-import tornadofx.App
+import tornadofx.*
 
 class Gui : App(BootstrapperView::class) {
     override fun start(stage: Stage) {

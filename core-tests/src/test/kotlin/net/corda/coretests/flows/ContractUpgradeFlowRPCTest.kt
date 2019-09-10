@@ -75,7 +75,7 @@ class ContractUpgradeFlowRPCTest : WithContracts, WithFinality {
 
         // Party A initiates contract upgrade flow, expected to succeed this time.
         assertThat(
-            rpcA.initiateDummyContractUpgrade(atx),
+                rpcA.initiateDummyContractUpgrade(atx),
                 willReturn(
                         aliceNode.hasDummyContractUpgradeTransaction()
                                 and bobNode.hasDummyContractUpgradeTransaction()))
@@ -113,23 +113,23 @@ class ContractUpgradeFlowRPCTest : WithContracts, WithFinality {
     private fun TestStartedNode.hasDummyContractUpgradeTransaction() =
             hasContractUpgradeTransaction<DummyContract.State, DummyContractV2.State>()
 
-    private inline fun <reified FROM : Any, reified TO: Any> TestStartedNode.hasContractUpgradeTransaction() =
-        has<StateAndRef<ContractState>, ContractUpgradeLedgerTransaction>(
-            "a contract upgrade transaction",
-            { getContractUpgradeTransaction(it) },
-            isUpgrade<FROM, TO>())
+    private inline fun <reified FROM : Any, reified TO : Any> TestStartedNode.hasContractUpgradeTransaction() =
+            has<StateAndRef<ContractState>, ContractUpgradeLedgerTransaction>(
+                    "a contract upgrade transaction",
+                    { getContractUpgradeTransaction(it) },
+                    isUpgrade<FROM, TO>())
 
     private fun TestStartedNode.getContractUpgradeTransaction(state: StateAndRef<ContractState>) =
-        services.validatedTransactions.getTransaction(state.ref.txhash)!!
-                .resolveContractUpgradeTransaction(services)
+            services.validatedTransactions.getTransaction(state.ref.txhash)!!
+                    .resolveContractUpgradeTransaction(services)
 
     private inline fun <reified FROM : Any, reified TO : Any> isUpgrade() =
             isUpgradeFrom<FROM>() and isUpgradeTo<TO>()
 
-    private inline fun <reified T: Any> isUpgradeFrom() =
+    private inline fun <reified T : Any> isUpgradeFrom() =
             has<ContractUpgradeLedgerTransaction, Any>("input data", { it.inputs.single().state.data }, isA<T>(anything))
 
-    private inline fun <reified T: Any> isUpgradeTo() =
+    private inline fun <reified T : Any> isUpgradeTo() =
             has<ContractUpgradeLedgerTransaction, Any>("output data", { it.outputs.single().data }, isA<T>(anything))
     //endregion
 }

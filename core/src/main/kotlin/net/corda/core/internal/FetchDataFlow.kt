@@ -118,8 +118,8 @@ sealed class FetchDataFlow<T : NamedByHash, in W : Any>(
             if (stx == null)
                 toFetch += txid
             else
-                // Although the full object is loaded here, only return the id. This prevents the full set of objects already present from
-                // being checkpointed every time a request is made to download an object the node does not yet have.
+            // Although the full object is loaded here, only return the id. This prevents the full set of objects already present from
+            // being checkpointed every time a request is made to download an object the node does not yet have.
                 fromDisk += txid
         }
         return Pair(fromDisk, toFetch)

@@ -5,20 +5,25 @@ import net.corda.core.contracts.Contract
 import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
+import net.corda.core.internal.AttachmentTrustCalculator
 import net.corda.core.internal.declaredField
+import net.corda.core.internal.hash
 import net.corda.core.internal.inputStream
-import net.corda.core.internal.isAttachmentTrusted
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.serialization.internal.AttachmentsClassLoader
+import net.corda.node.services.attachments.NodeAttachmentTrustCalculator
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.internal.ContractJarTestUtils.signContractJar
+import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.internal.fakeAttachment
+import net.corda.testing.internal.services.InternalMockAttachmentStorage
 import net.corda.testing.node.internal.FINANCE_CONTRACTS_CORDAPP
 import net.corda.testing.services.MockAttachmentStorage
 import org.apache.commons.io.IOUtils
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
+import org.junit.Before
 import org.junit.Test
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
@@ -40,11 +45,36 @@ class AttachmentsClassLoaderTests {
         }
     }
 
-    private val storage = MockAttachmentStorage()
+    private lateinit var storage: MockAttachmentStorage
+    private lateinit var internalStorage: InternalMockAttachmentStorage
+    private lateinit var attachmentTrustCalculator: AttachmentTrustCalculator
     private val networkParameters = testNetworkParameters()
-    private fun make(attachments: List<Attachment>,
-                     params: NetworkParameters = networkParameters): AttachmentsClassLoader {
-        return AttachmentsClassLoader(attachments, params, SecureHash.zeroHash, { isAttachmentTrusted(it, storage) })
+    private val cacheFactory = TestingNamedCacheFactory()
+
+    private fun createClassloader(
+        attachment: AttachmentId,
+        params: NetworkParameters = networkParameters
+    ): AttachmentsClassLoader {
+        return createClassloader(listOf(attachment), params)
+    }
+
+    private fun createClassloader(
+        attachments: List<AttachmentId>,
+        params: NetworkParameters = networkParameters
+    ): AttachmentsClassLoader {
+        return AttachmentsClassLoader(
+            attachments.map { storage.openAttachment(it)!! },
+            params,
+            SecureHash.zeroHash,
+            attachmentTrustCalculator::calculate
+        )
+    }
+
+    @Before
+    fun setup() {
+        storage = MockAttachmentStorage()
+        internalStorage = InternalMockAttachmentStorage(storage)
+        attachmentTrustCalculator = NodeAttachmentTrustCalculator(internalStorage, cacheFactory)
     }
 
     @Test
@@ -58,7 +88,7 @@ class AttachmentsClassLoaderTests {
     fun `Dynamically load AnotherDummyContract from isolated contracts jar using the AttachmentsClassLoader`() {
         val isolatedId = importAttachment(ISOLATED_CONTRACTS_JAR_PATH.openStream(), "app", "isolated.jar")
 
-        val classloader = make(listOf(storage.openAttachment(isolatedId)!!))
+        val classloader = createClassloader(isolatedId)
         val contractClass = Class.forName(ISOLATED_CONTRACT_CLASS_NAME, true, classloader)
         val contract = contractClass.newInstance() as Contract
         assertEquals("helloworld", contract.declaredField<Any?>("magicString").value)
@@ -70,7 +100,7 @@ class AttachmentsClassLoaderTests {
         val att2 = importAttachment(ISOLATED_CONTRACTS_JAR_PATH_V4.openStream(), "app", "isolated-4.0.jar")
 
         assertFailsWith(TransactionVerificationException.OverlappingAttachmentsException::class) {
-            make(arrayOf(att1, att2).map { storage.openAttachment(it)!! })
+            createClassloader(listOf(att1, att2))
         }
     }
 
@@ -81,7 +111,7 @@ class AttachmentsClassLoaderTests {
         val isolatedSignedId = importAttachment(signedJar.first.toUri().toURL().openStream(), "app", "isolated-signed.jar")
 
         // does not throw OverlappingAttachments exception
-        make(arrayOf(isolatedId, isolatedSignedId).map { storage.openAttachment(it)!! })
+        createClassloader(listOf(isolatedId, isolatedSignedId))
     }
 
     @Test
@@ -90,7 +120,7 @@ class AttachmentsClassLoaderTests {
         val att2 = importAttachment(FINANCE_CONTRACTS_CORDAPP.jarFile.inputStream(), "app", "finance.jar")
 
         // does not throw OverlappingAttachments exception
-        make(arrayOf(att1, att2).map { storage.openAttachment(it)!! })
+        createClassloader(listOf(att1, att2))
     }
 
     @Test
@@ -98,7 +128,7 @@ class AttachmentsClassLoaderTests {
         val att1 = importAttachment(fakeAttachment("file1.txt", "some data").inputStream(), "app", "file1.jar")
         val att2 = importAttachment(fakeAttachment("file2.txt", "some other data").inputStream(), "app", "file2.jar")
 
-        val cl = make(arrayOf(att1, att2).map { storage.openAttachment(it)!! })
+        val cl = createClassloader(listOf(att1, att2))
         val txt = IOUtils.toString(cl.getResourceAsStream("file1.txt"), Charsets.UTF_8.name())
         assertEquals("some data", txt)
 
@@ -108,10 +138,10 @@ class AttachmentsClassLoaderTests {
 
     @Test
     fun `Test valid overlapping file condition`() {
-        val att1 = importAttachment(fakeAttachment("file1.txt", "same data", "file2.txt", "same other data" ).inputStream(), "app", "file1.jar")
+        val att1 = importAttachment(fakeAttachment("file1.txt", "same data", "file2.txt", "same other data").inputStream(), "app", "file1.jar")
         val att2 = importAttachment(fakeAttachment("file1.txt", "same data", "file3.txt", "same totally different").inputStream(), "app", "file2.jar")
 
-        val cl = make(arrayOf(att1, att2).map { storage.openAttachment(it)!! })
+        val cl = createClassloader(listOf(att1, att2))
         val txt = IOUtils.toString(cl.getResourceAsStream("file1.txt"), Charsets.UTF_8.name())
         assertEquals("same data", txt)
     }
@@ -122,7 +152,7 @@ class AttachmentsClassLoaderTests {
             val att1 = importAttachment(fakeAttachment(path, "some data").inputStream(), "app", "file1.jar")
             val att2 = importAttachment(fakeAttachment(path, "some other data").inputStream(), "app", "file2.jar")
 
-            make(arrayOf(att1, att2).map { storage.openAttachment(it)!! })
+            createClassloader(listOf(att1, att2))
         }
     }
 
@@ -131,7 +161,7 @@ class AttachmentsClassLoaderTests {
         val att1 = importAttachment(fakeAttachment("meta-inf/services/net.corda.core.serialization.SerializationWhitelist", "some data").inputStream(), "app", "file1.jar")
         val att2 = importAttachment(fakeAttachment("meta-inf/services/net.corda.core.serialization.SerializationWhitelist", "some other data").inputStream(), "app", "file2.jar")
 
-        make(arrayOf(att1, att2).map { storage.openAttachment(it)!! })
+        createClassloader(listOf(att1, att2))
     }
 
     @Test
@@ -140,7 +170,7 @@ class AttachmentsClassLoaderTests {
         val att2 = importAttachment(fakeAttachment("meta-inf/services/com.example.something", "some other data").inputStream(), "app", "file2.jar")
 
         assertFailsWith(TransactionVerificationException.OverlappingAttachmentsException::class) {
-            make(arrayOf(att1, att2).map { storage.openAttachment(it)!! })
+            createClassloader(listOf(att1, att2))
         }
     }
 
@@ -150,7 +180,7 @@ class AttachmentsClassLoaderTests {
         val att2 = storage.importAttachment(fakeAttachment("file1.txt", "some other data").inputStream(), "app", "file2.jar")
 
         assertFailsWith(TransactionVerificationException.OverlappingAttachmentsException::class) {
-            make(arrayOf(att1, att2).map { storage.openAttachment(it)!! })
+            createClassloader(listOf(att1, att2))
         }
     }
 
@@ -161,7 +191,7 @@ class AttachmentsClassLoaderTests {
         val att1 = importAttachment(ISOLATED_CONTRACTS_JAR_PATH.openStream(), "app", ISOLATED_CONTRACTS_JAR_PATH.file)
         val att2 = importAttachment(fakeAttachment("net/corda/finance/contracts/isolated/AnotherDummyContract\$State.class", "some attackdata").inputStream(), "app", "file2.jar")
         assertFailsWith(TransactionVerificationException.OverlappingAttachmentsException::class) {
-            make(arrayOf(att1, att2).map { storage.openAttachment(it)!! })
+            createClassloader(listOf(att1, att2))
         }
     }
 
@@ -190,10 +220,10 @@ class AttachmentsClassLoaderTests {
         val untrustedClassJar = importAttachment(fakeAttachment("/com/example/something/MaliciousClass.class", "some malicious data").inputStream(), "untrusted", "file2.jar")
         val trustedClassJar = importAttachment(fakeAttachment("/com/example/something/VirtuousClass.class", "some other data").inputStream(), "app", "file3.jar")
 
-        make(arrayOf(trustedResourceJar, untrustedResourceJar, trustedClassJar).map { storage.openAttachment(it)!! })
+        createClassloader(listOf(trustedResourceJar, untrustedResourceJar, trustedClassJar))
 
         assertFailsWith(TransactionVerificationException.UntrustedAttachmentsException::class) {
-            make(arrayOf(trustedResourceJar, untrustedResourceJar, trustedClassJar, untrustedClassJar).map { storage.openAttachment(it)!! })
+            createClassloader(listOf(trustedResourceJar, untrustedResourceJar, trustedClassJar, untrustedClassJar))
         }
     }
 
@@ -206,32 +236,28 @@ class AttachmentsClassLoaderTests {
         val keyPairA = Crypto.generateKeyPair()
         val keyPairB = Crypto.generateKeyPair()
         val classJar = fakeAttachment(
-            "/com/example/something/UntrustedClass.class",
+            "/com/example/something/TrustedClass.class",
             "Signed by someone trusted"
         ).inputStream()
-        classJar.use {
-            storage.importContractAttachment(
-                listOf("UntrustedClass.class"),
-                "rpc",
-                it,
-                signers = listOf(keyPairA.public, keyPairB.public)
-            )
-        }
+        storage.importContractAttachment(
+            listOf("TrustedClass.class"),
+            "rpc",
+            classJar,
+            signers = listOf(keyPairA.public, keyPairB.public)
+        )
 
         val untrustedClassJar = fakeAttachment(
             "/com/example/something/UntrustedClass.class",
             "Signed by someone untrusted"
         ).inputStream()
-        val untrustedAttachment = untrustedClassJar.use {
-            storage.importContractAttachment(
-                listOf("UntrustedClass.class"),
-                "untrusted",
-                it,
-                signers = listOf(keyPairA.public, keyPairB.public)
-            )
-        }
+        val untrustedAttachment = storage.importContractAttachment(
+            listOf("UntrustedClass.class"),
+            "untrusted",
+            untrustedClassJar,
+            signers = listOf(keyPairA.public, keyPairB.public)
+        )
 
-        make(arrayOf(untrustedAttachment).map { storage.openAttachment(it)!! })
+        createClassloader(untrustedAttachment)
     }
 
     @Test
@@ -240,32 +266,28 @@ class AttachmentsClassLoaderTests {
         val keyPairB = Crypto.generateKeyPair()
         val keyPairC = Crypto.generateKeyPair()
         val classJar = fakeAttachment(
-            "/com/example/something/UntrustedClass.class",
+            "/com/example/something/TrustedClass.class",
             "Signed by someone trusted"
         ).inputStream()
-        classJar.use {
-            storage.importContractAttachment(
-                listOf("UntrustedClass.class"),
-                "rpc",
-                it,
-                signers = listOf(keyPairA.public, keyPairC.public)
-            )
-        }
+        storage.importContractAttachment(
+            listOf("TrustedClass.class"),
+            "rpc",
+            classJar,
+            signers = listOf(keyPairA.public, keyPairC.public)
+        )
 
         val untrustedClassJar = fakeAttachment(
             "/com/example/something/UntrustedClass.class",
             "Signed by someone untrusted"
         ).inputStream()
-        val untrustedAttachment = untrustedClassJar.use {
-            storage.importContractAttachment(
-                listOf("UntrustedClass.class"),
-                "untrusted",
-                it,
-                signers = listOf(keyPairA.public, keyPairB.public)
-            )
-        }
+        val untrustedAttachment = storage.importContractAttachment(
+            listOf("UntrustedClass.class"),
+            "untrusted",
+            untrustedClassJar,
+            signers = listOf(keyPairA.public, keyPairB.public)
+        )
 
-        make(arrayOf(untrustedAttachment).map { storage.openAttachment(it)!! })
+        createClassloader(untrustedAttachment)
     }
 
     @Test
@@ -276,17 +298,15 @@ class AttachmentsClassLoaderTests {
             "/com/example/something/UntrustedClass.class",
             "Signed by someone untrusted"
         ).inputStream()
-        val untrustedAttachment = untrustedClassJar.use {
-            storage.importContractAttachment(
-                listOf("UntrustedClass.class"),
-                "untrusted",
-                it,
-                signers = listOf(keyPairA.public, keyPairB.public)
-            )
-        }
+        val untrustedAttachment = storage.importContractAttachment(
+            listOf("UntrustedClass.class"),
+            "untrusted",
+            untrustedClassJar,
+            signers = listOf(keyPairA.public, keyPairB.public)
+        )
 
         assertFailsWith(TransactionVerificationException.UntrustedAttachmentsException::class) {
-            make(arrayOf(untrustedAttachment).map { storage.openAttachment(it)!! })
+            createClassloader(untrustedAttachment)
         }
     }
 
@@ -298,30 +318,26 @@ class AttachmentsClassLoaderTests {
             "/com/example/something/UntrustedClass.class",
             "Signed by someone untrusted with the same keys"
         ).inputStream()
-        classJar.use {
-            storage.importContractAttachment(
-                listOf("UntrustedClass.class"),
-                "untrusted",
-                it,
-                signers = listOf(keyPairA.public, keyPairB.public)
-            )
-        }
+        storage.importContractAttachment(
+            listOf("UntrustedClass.class"),
+            "untrusted",
+            classJar,
+            signers = listOf(keyPairA.public, keyPairB.public)
+        )
 
         val untrustedClassJar = fakeAttachment(
             "/com/example/something/UntrustedClass.class",
             "Signed by someone untrusted"
         ).inputStream()
-        val untrustedAttachment = untrustedClassJar.use {
-            storage.importContractAttachment(
-                listOf("UntrustedClass.class"),
-                "untrusted",
-                it,
-                signers = listOf(keyPairA.public, keyPairB.public)
-            )
-        }
+        val untrustedAttachment = storage.importContractAttachment(
+            listOf("UntrustedClass.class"),
+            "untrusted",
+            untrustedClassJar,
+            signers = listOf(keyPairA.public, keyPairB.public)
+        )
 
         assertFailsWith(TransactionVerificationException.UntrustedAttachmentsException::class) {
-            make(arrayOf(untrustedAttachment).map { storage.openAttachment(it)!! })
+            createClassloader(untrustedAttachment)
         }
     }
 
@@ -331,47 +347,105 @@ class AttachmentsClassLoaderTests {
         val keyPairB = Crypto.generateKeyPair()
         val keyPairC = Crypto.generateKeyPair()
         val classJar = fakeAttachment(
-            "/com/example/something/UntrustedClass.class",
+            "/com/example/something/TrustedClass.class",
             "Signed by someone untrusted with the same keys"
         ).inputStream()
-        classJar.use {
-            storage.importContractAttachment(
-                listOf("UntrustedClass.class"),
-                "app",
-                it,
-                signers = listOf(keyPairA.public)
-            )
-        }
+        storage.importContractAttachment(
+            listOf("TrustedClass.class"),
+            "app",
+            classJar,
+            signers = listOf(keyPairA.public)
+        )
 
         val inheritedTrustClassJar = fakeAttachment(
             "/com/example/something/UntrustedClass.class",
             "Signed by someone who inherits trust"
         ).inputStream()
-        val inheritedTrustAttachment = inheritedTrustClassJar.use {
-            storage.importContractAttachment(
-                listOf("UntrustedClass.class"),
-                "untrusted",
-                it,
-                signers = listOf(keyPairB.public, keyPairA.public)
-            )
-        }
+        val inheritedTrustAttachment = storage.importContractAttachment(
+            listOf("UntrustedClass.class"),
+            "untrusted",
+            inheritedTrustClassJar,
+            signers = listOf(keyPairB.public, keyPairA.public)
+        )
 
         val untrustedClassJar = fakeAttachment(
             "/com/example/something/UntrustedClass.class",
             "Signed by someone untrusted"
         ).inputStream()
-        val untrustedAttachment = untrustedClassJar.use {
-            storage.importContractAttachment(
-                listOf("UntrustedClass.class"),
-                "untrusted",
-                it,
-                signers = listOf(keyPairB.public, keyPairC.public)
-            )
-        }
+        val untrustedAttachment = storage.importContractAttachment(
+            listOf("UntrustedClass.class"),
+            "untrusted",
+            untrustedClassJar,
+            signers = listOf(keyPairB.public, keyPairC.public)
+        )
 
-        make(arrayOf(inheritedTrustAttachment).map { storage.openAttachment(it)!! })
+        // pass the inherited trust attachment through the classloader first to ensure it does not affect the next loaded attachment
+        createClassloader(inheritedTrustAttachment)
+
         assertFailsWith(TransactionVerificationException.UntrustedAttachmentsException::class) {
-            make(arrayOf(untrustedAttachment).map { storage.openAttachment(it)!! })
+            createClassloader(untrustedAttachment)
         }
+    }
+
+    @Test
+    fun `Cannot load an untrusted contract jar if it is signed by a blacklisted key even if there is another attachment signed by the same keys that is trusted`() {
+        val keyPairA = Crypto.generateKeyPair()
+        val keyPairB = Crypto.generateKeyPair()
+
+        attachmentTrustCalculator = NodeAttachmentTrustCalculator(
+            InternalMockAttachmentStorage(storage),
+            cacheFactory,
+            blacklistedAttachmentSigningKeys = listOf(keyPairA.public.hash)
+        )
+
+        val classJar = fakeAttachment(
+            "/com/example/something/TrustedClass.class",
+            "Signed by someone trusted"
+        ).inputStream()
+        storage.importContractAttachment(
+            listOf("TrustedClass.class"),
+            "rpc",
+            classJar,
+            signers = listOf(keyPairA.public, keyPairB.public)
+        )
+
+        val untrustedClassJar = fakeAttachment(
+            "/com/example/something/UntrustedClass.class",
+            "Signed by someone untrusted"
+        ).inputStream()
+        val untrustedAttachment = storage.importContractAttachment(
+            listOf("UntrustedClass.class"),
+            "untrusted",
+            untrustedClassJar,
+            signers = listOf(keyPairA.public, keyPairB.public)
+        )
+
+        assertFailsWith(TransactionVerificationException.UntrustedAttachmentsException::class) {
+            createClassloader(untrustedAttachment)
+        }
+    }
+
+    @Test
+    fun `Allow loading a trusted attachment that is signed by a blacklisted key`() {
+        val keyPairA = Crypto.generateKeyPair()
+
+        attachmentTrustCalculator = NodeAttachmentTrustCalculator(
+            InternalMockAttachmentStorage(storage),
+            cacheFactory,
+            blacklistedAttachmentSigningKeys = listOf(keyPairA.public.hash)
+        )
+
+        val classJar = fakeAttachment(
+            "/com/example/something/TrustedClass.class",
+            "Signed by someone trusted"
+        ).inputStream()
+        val trustedAttachment = storage.importContractAttachment(
+            listOf("TrustedClass.class"),
+            "rpc",
+            classJar,
+            signers = listOf(keyPairA.public)
+        )
+
+        createClassloader(trustedAttachment)
     }
 }

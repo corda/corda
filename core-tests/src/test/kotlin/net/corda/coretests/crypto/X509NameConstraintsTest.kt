@@ -31,7 +31,6 @@ class X509NameConstraintsTest {
     private fun makeKeyStores(subjectName: X500Name, nameConstraints: NameConstraints): Pair<X509KeyStore, X509KeyStore> {
         val (rootCa, intermediateCa) = createDevIntermediateCaCertPath()
 
-
         val trustStore = X509KeyStore(storePassword).apply {
             setCertificate(X509Utilities.CORDA_ROOT_CA, rootCa.certificate)
         }

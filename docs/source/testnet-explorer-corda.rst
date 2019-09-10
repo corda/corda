@@ -42,13 +42,13 @@ couple of resources.
 
    .. code-block:: bash
 
-       sudo cp /home/<USER>/corda-finance-*-|corda_version|.jar /opt/corda/cordapps/
+       sudo cp /home/<USER>/corda-finance-|corda_version|-corda.jar /opt/corda/cordapps/
 
 #. Run the following to create a config file for the finance CorDapp:
 
    .. code-block:: bash
 
-       echo "issuableCurrencies = [ USD ]" > /opt/corda/cordapps/config/corda-finance-|corda_version|.conf
+       echo "issuableCurrencies = [ USD ]" > /opt/corda/cordapps/config/corda-finance-|corda_version|-corda.conf
 
 #. Restart the Corda node:
 
@@ -70,7 +70,7 @@ couple of resources.
 
    .. code:: bash
 
-       http://ci-artifactory.corda.r3cev.com/artifactory/corda-releases/net/corda/corda-tools-explorer/|corda_version|/corda-tools-explorer-|corda_version|.jar
+       http://ci-artifactory.corda.r3cev.com/artifactory/corda-releases/net/corda/corda-tools-explorer/|corda_version|-corda/corda-tools-explorer-|corda_version|-corda.jar
 
    .. warning:: This Node Explorer is incompatible with the Corda Enterprise distribution and vice versa as they currently
       use different serialisation schemes (Kryo vs AMQP).
@@ -79,7 +79,7 @@ couple of resources.
 
    .. code:: bash
 
-       java -jar corda-tools-explorer-|corda_version|.jar
+       java -jar corda-tools-explorer-|corda_version|-corda.jar
 
    .. image:: resources/explorer-login.png
 

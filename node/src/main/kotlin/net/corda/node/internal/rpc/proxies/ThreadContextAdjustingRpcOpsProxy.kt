@@ -13,7 +13,7 @@ import java.lang.reflect.Proxy
  * without sensible fallbacks to the classloader of the current instance.
  * If clients' CorDapps use one of these libraries, this temporary adjustment can ensure that any provided classes from these libraries will be available during RPC calls.
  */
-internal class ThreadContextAdjustingRpcOpsProxy(private val delegate: InternalCordaRPCOps, private val classLoader: ClassLoader): InternalCordaRPCOps by proxy(delegate, classLoader) {
+internal class ThreadContextAdjustingRpcOpsProxy(private val delegate: InternalCordaRPCOps, private val classLoader: ClassLoader) : InternalCordaRPCOps by proxy(delegate, classLoader) {
     private companion object {
         private fun proxy(delegate: InternalCordaRPCOps, classLoader: ClassLoader): InternalCordaRPCOps {
             val handler = ThreadContextAdjustingRpcOpsProxy.ThreadContextAdjustingInvocationHandler(delegate, classLoader)

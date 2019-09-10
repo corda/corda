@@ -3,12 +3,12 @@ package net.corda.coretests.flows
 import com.natpryce.hamkrest.and
 import com.natpryce.hamkrest.assertion.assertThat
 import net.corda.core.flows.FinalityFlow
-import net.corda.coretests.flows.WithFinality.FinalityInvoker
 import net.corda.core.identity.Party
 import net.corda.core.internal.cordapp.CordappResolver
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
+import net.corda.coretests.flows.WithFinality.FinalityInvoker
 import net.corda.finance.POUNDS
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.issuedBy
@@ -40,7 +40,7 @@ class FinalityFlowTests : WithFinality {
         val stx = aliceNode.issuesCashTo(bob)
 
         assertThat(
-            aliceNode.finalise(stx, bob.info.singleIdentity()),
+                aliceNode.finalise(stx, bob.info.singleIdentity()),
                 willReturn(
                         requiredSignatures(1)
                                 and visibleTo(bob)))
@@ -52,7 +52,7 @@ class FinalityFlowTests : WithFinality {
         val stx = aliceNode.issuesCashTo(CHARLIE)
 
         assertThat(
-            aliceNode.finalise(stx),
+                aliceNode.finalise(stx),
                 willThrow<IllegalArgumentException>())
     }
 

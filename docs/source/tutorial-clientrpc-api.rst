@@ -139,6 +139,14 @@ When starting a standalone node using a configuration file we must supply the RP
         { username=user, password=password, permissions=[ StartFlow.net.corda.finance.flows.CashFlow ] }
     ]
 
+Wildcard permissions can be set by using the `*` character, e.g.:
+
+.. code-block:: text
+
+    rpcUsers : [
+        { username=user, password=password, permissions=[ StartFlow.net.corda.finance.flows.* ] }
+    ]
+
 When using the gradle Cordformation plugin to configure and deploy a node you must supply the RPC credentials in a similar
 manner:
 

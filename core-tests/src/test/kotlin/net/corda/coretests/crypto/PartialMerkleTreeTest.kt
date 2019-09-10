@@ -10,6 +10,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.accessLeafIndex
 import net.corda.core.node.NotaryInfo
+import net.corda.core.node.services.IdentityService
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.ReferenceStateRef
@@ -17,7 +18,6 @@ import net.corda.core.transactions.WireTransaction
 import net.corda.finance.DOLLARS
 import net.corda.finance.`issued by`
 import net.corda.finance.contracts.asset.Cash
-import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
@@ -70,7 +70,7 @@ class PartialMerkleTreeTest {
         testLedger = MockServices(
                 cordappPackages = emptyList(),
                 initialIdentity = TestIdentity(MEGA_CORP.name),
-                identityService = mock<IdentityServiceInternal>().also {
+                identityService = mock<IdentityService>().also {
                     doReturn(MEGA_CORP).whenever(it).partyFromKey(MEGA_CORP_PUBKEY)
                 },
                 networkParameters = testNetworkParameters(minimumPlatformVersion = 4, notaries = listOf(NotaryInfo(DUMMY_NOTARY, true)))

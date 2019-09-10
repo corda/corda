@@ -142,12 +142,12 @@ class DeserializationInput constructor(
                 envelope)
     }
 
-    internal fun readObjectOrNull(obj: Any?, schema: SerializationSchemas, type: Type, context: SerializationContext
+    fun readObjectOrNull(obj: Any?, schema: SerializationSchemas, type: Type, context: SerializationContext
     ): Any? {
         return if (obj == null) null else readObject(obj, schema, type, context)
     }
 
-    internal fun readObject(obj: Any, schemas: SerializationSchemas, type: Type, context: SerializationContext): Any =
+    fun readObject(obj: Any, schemas: SerializationSchemas, type: Type, context: SerializationContext): Any =
             if (obj is DescribedType && ReferencedObject.DESCRIPTOR == obj.descriptor) {
                 // It must be a reference to an instance that has already been read, cheaply and quickly returning it by reference.
                 val objectIndex = (obj.described as UnsignedInteger).toInt()

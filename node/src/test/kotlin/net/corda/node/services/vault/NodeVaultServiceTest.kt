@@ -1,9 +1,13 @@
 package net.corda.node.services.vault
 
 import co.paralleluniverse.fibers.Suspendable
-import com.nhaarman.mockito_kotlin.*
+import com.nhaarman.mockito_kotlin.argThat
+import com.nhaarman.mockito_kotlin.doNothing
+import com.nhaarman.mockito_kotlin.mock
+import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.*
 import net.corda.core.crypto.NullKeys
+import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.*
 import net.corda.core.internal.NotaryChangeTransactionBuilder
@@ -19,6 +23,7 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.toNonEmptySet
 import net.corda.finance.*
 import net.corda.finance.contracts.asset.Cash
@@ -26,7 +31,6 @@ import net.corda.finance.contracts.utils.sumCash
 import net.corda.finance.schemas.CashSchemaV1
 import net.corda.finance.workflows.asset.CashUtils
 import net.corda.finance.workflows.getCashBalance
-import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.testing.common.internal.testNetworkParameters
@@ -40,9 +44,13 @@ import net.corda.testing.node.makeTestIdentityService
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.*
+import org.mockito.Mockito.doReturn
 import rx.observers.TestSubscriber
 import java.math.BigDecimal
 import java.security.PublicKey
+import java.security.cert.CertStore
+import java.security.cert.TrustAnchor
+import java.security.cert.X509Certificate
 import java.util.*
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
@@ -565,17 +573,17 @@ class NodeVaultServiceTest {
 
     @Test
     fun `is ownable state relevant`() {
-            val myAnonymousIdentity = services.keyManagementService.freshKeyAndCert(identity, false)
-            val myKeys = services.keyManagementService.filterMyKeys(listOf(identity.owningKey, myAnonymousIdentity.owningKey)).toSet()
+        val myAnonymousIdentity = services.keyManagementService.freshKeyAndCert(identity, false)
+        val myKeys = services.keyManagementService.filterMyKeys(listOf(identity.owningKey, myAnonymousIdentity.owningKey)).toSet()
 
-            // Well-known owner
-            assertTrue { myKeys.isOwnableStateRelevant(identity.party, participants = emptyList()) }
-            // Anonymous owner
-            assertTrue { myKeys.isOwnableStateRelevant(myAnonymousIdentity.party, participants = emptyList()) }
-            // Unknown owner
-            assertFalse { myKeys.isOwnableStateRelevant(createUnknownIdentity(), participants = emptyList()) }
-            // Under target version 3 only the owner is relevant. This is to preserve backwards compatibility
-            assertFalse { myKeys.isOwnableStateRelevant(createUnknownIdentity(), participants = listOf(identity.party)) }
+        // Well-known owner
+        assertTrue { myKeys.isOwnableStateRelevant(identity.party, participants = emptyList()) }
+        // Anonymous owner
+        assertTrue { myKeys.isOwnableStateRelevant(myAnonymousIdentity.party, participants = emptyList()) }
+        // Unknown owner
+        assertFalse { myKeys.isOwnableStateRelevant(createUnknownIdentity(), participants = emptyList()) }
+        // Under target version 3 only the owner is relevant. This is to preserve backwards compatibility
+        assertFalse { myKeys.isOwnableStateRelevant(createUnknownIdentity(), participants = listOf(identity.party)) }
     }
 
     private fun createUnknownIdentity() = AnonymousParty(generateKeyPair().public)
@@ -647,8 +655,8 @@ class NodeVaultServiceTest {
         val identity = services.myInfo.singleIdentityAndCert()
         assertEquals(services.identityService.partyFromKey(identity.owningKey), identity.party)
         val anonymousIdentity = services.keyManagementService.freshKeyAndCert(identity, false)
-        val thirdPartyServices = MockServices(emptyList(), MEGA_CORP.name, mock<IdentityServiceInternal>().also {
-            doNothing().whenever(it).justVerifyAndRegisterIdentity(argThat { name == MEGA_CORP.name }, any())
+        val thirdPartyServices = MockServices(emptyList(), MEGA_CORP.name, mock<IdentityService>().also {
+            doReturn(null).whenever(it).verifyAndRegisterIdentity(argThat { name == MEGA_CORP.name })
         })
         val thirdPartyIdentity = thirdPartyServices.keyManagementService.freshKeyAndCert(thirdPartyServices.myInfo.singleIdentityAndCert(), false)
         val amount = Amount(1000, Issued(BOC.ref(1), GBP))
@@ -944,5 +952,37 @@ class NodeVaultServiceTest {
         allCash.subscribe {
             assertTrue(it)
         }
+    }
+
+    @Test
+    fun `test concurrent update of contract state type mappings`() {
+        // no registered contract state types at start-up.
+        assertEquals(0, vaultService.contractStateTypeMappings.size)
+
+        fun makeCash(amount: Amount<Currency>, issuer: AbstractParty, depositRef: Byte = 1) =
+                StateAndRef(
+                        TransactionState(Cash.State(amount `issued by` issuer.ref(depositRef), identity.party), Cash.PROGRAM_ID, DUMMY_NOTARY, constraint = AlwaysAcceptAttachmentConstraint),
+                        StateRef(SecureHash.randomSHA256(), Random().nextInt(32))
+                )
+
+        val cashIssued = setOf<StateAndRef<ContractState>>(makeCash(100.DOLLARS, dummyCashIssuer.party))
+        val cashUpdate = Vault.Update(emptySet(), cashIssued)
+
+        val service = Executors.newFixedThreadPool(10)
+        (1..100).map {
+            service.submit {
+                database.transaction {
+                    vaultService.publishUpdates.onNext(cashUpdate)
+                }
+            }
+        }.forEach { it.getOrThrow() }
+
+        vaultService.contractStateTypeMappings.forEach {
+            println("${it.key} = ${it.value}")
+        }
+        // Cash.State and its superclasses and interfaces: FungibleAsset, FungibleState, OwnableState, QueryableState
+        assertEquals(4, vaultService.contractStateTypeMappings.size)
+
+        service.shutdown()
     }
 }

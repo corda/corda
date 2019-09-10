@@ -1,14 +1,13 @@
 package net.corda.node.logging
 
+import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.internal.div
 import net.corda.core.messaging.FlowHandle
 import net.corda.core.messaging.startFlow
-import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
-import net.corda.core.utilities.loggerFor
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.driver
@@ -38,19 +37,8 @@ class ErrorCodeLoggingTests {
             val node = startNode(startInSameProcess = false, logLevelOverride = "ERROR").getOrThrow()
             node.rpc.startFlow(::MyFlow).waitForCompletion()
             val logFile = node.logFile()
-            assertThat(logFile.length()).isGreaterThan(0)
-
-            val linesWithoutError = logFile.useLines { lines ->
-                lines.filterNot {
-                    it.contains("[ERROR")
-                }.filter{
-                    it.contains("[INFO")
-                        .or(it.contains("[WARN"))
-                        .or(it.contains("[DEBUG"))
-                        .or(it.contains("[TRACE"))
-                }.toList()
-            }
-            assertThat(linesWithoutError.isEmpty()).isTrue()
+            // An exception thrown in a flow will log at the "INFO" level.
+            assertThat(logFile.length()).isEqualTo(0)
         }
     }
 
@@ -70,3 +58,5 @@ private fun FlowHandle<*>.waitForCompletion() {
         // This is expected to throw an exception, using getOrThrow() just to wait until done.
     }
 }
+
+fun NodeHandle.logFile(): File = (baseDirectory / "logs").toFile().walk().filter { it.name.startsWith("node-") && it.extension == "log" }.single()

@@ -10,7 +10,6 @@ import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.NodeStartup
 import net.corda.node.services.Permissions.Companion.startFlow
-import net.corda.nodeapi.exceptions.InternalNodeException
 import net.corda.nodeapi.internal.crypto.X509Utilities.NODE_IDENTITY_ALIAS_PREFIX
 import net.corda.nodeapi.internal.installDevNodeCaCertPath
 import net.corda.testing.core.ALICE_NAME
@@ -49,7 +48,7 @@ class BootTests {
             val node = startNode(ALICE_NAME, devMode = false, parameters = params).getOrThrow()
 
             assertThatThrownBy { devModeNode.attemptJavaDeserialization() }.isInstanceOf(CordaRuntimeException::class.java)
-            assertThatThrownBy { node.attemptJavaDeserialization() }.isInstanceOf(InternalNodeException::class.java)
+            assertThatThrownBy { node.attemptJavaDeserialization() }.isInstanceOf(CordaRuntimeException::class.java)
         }
     }
 

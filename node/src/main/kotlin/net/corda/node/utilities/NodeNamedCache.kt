@@ -45,8 +45,9 @@ open class DefaultNamedCacheFactory protected constructor(private val metricRegi
                 name == "NodeAttachmentService_attachmentContent" -> caffeine.maximumWeight(attachmentContentCacheSizeBytes)
                 name == "NodeAttachmentService_attachmentPresence" -> caffeine.maximumSize(attachmentCacheBound)
                 name == "NodeAttachmentService_contractAttachmentVersions" -> caffeine.maximumSize(defaultCacheSize)
-                name == "PersistentIdentityService_partyByKey" -> caffeine.maximumSize(defaultCacheSize)
-                name == "PersistentIdentityService_partyByName" -> caffeine.maximumSize(defaultCacheSize)
+                name == "PersistentIdentityService_keyToPartyAndCert" -> caffeine.maximumSize(defaultCacheSize)
+                name == "PersistentIdentityService_nameToKey" -> caffeine.maximumSize(defaultCacheSize)
+                name == "PersistentIdentityService_keyToName" -> caffeine.maximumSize(defaultCacheSize)
                 name == "PersistentNetworkMap_nodesByKey" -> caffeine.maximumSize(defaultCacheSize)
                 name == "PersistentNetworkMap_idByLegalName" -> caffeine.maximumSize(defaultCacheSize)
                 name == "PersistentKeyManagementService_keys" -> caffeine.maximumSize(defaultCacheSize)
@@ -60,6 +61,7 @@ open class DefaultNamedCacheFactory protected constructor(private val metricRegi
                 name == "BasicHSMKeyManagementService_keys" -> caffeine.maximumSize(defaultCacheSize)
                 name == "NodeParametersStorage_networkParametersByHash" -> caffeine.maximumSize(defaultCacheSize)
                 name == "PublicKeyToOwningIdentityCache_cache" -> caffeine.maximumSize(defaultCacheSize)
+                name == "NodeAttachmentTrustCalculator_trustedKeysCache" -> caffeine.maximumSize(defaultCacheSize)
                 else -> throw IllegalArgumentException("Unexpected cache name $name. Did you add a new cache?")
             }
         }

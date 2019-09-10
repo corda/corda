@@ -39,13 +39,12 @@ import net.corda.node.VersionInfo
 import net.corda.node.internal.classloading.requireAnnotation
 import net.corda.node.internal.cordapp.*
 import net.corda.node.internal.rpc.proxies.AuthenticatedRpcOpsProxy
-import net.corda.node.internal.rpc.proxies.ExceptionMaskingRpcOpsProxy
-import net.corda.node.internal.rpc.proxies.ExceptionSerialisingRpcOpsProxy
 import net.corda.node.internal.rpc.proxies.ThreadContextAdjustingRpcOpsProxy
 import net.corda.node.services.ContractUpgradeHandler
 import net.corda.node.services.FinalityHandler
 import net.corda.node.services.NotaryChangeHandler
 import net.corda.node.services.api.*
+import net.corda.node.services.attachments.NodeAttachmentTrustCalculator
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
 import net.corda.node.services.config.rpc.NodeRpcOptions
@@ -174,7 +173,13 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     @Suppress("LeakingThis")
     val transactionStorage = makeTransactionStorage(configuration.transactionCacheSizeBytes).tokenize()
     val networkMapClient: NetworkMapClient? = configuration.networkServices?.let { NetworkMapClient(it.networkMapURL, versionInfo) }
-    val attachments = NodeAttachmentService(metricRegistry, cacheFactory, database, configuration.devMode).tokenize()
+    val attachments = NodeAttachmentService(
+        metricRegistry,
+        cacheFactory,
+        database,
+        configuration.devMode
+    ).tokenize()
+    val attachmentTrustCalculator = makeAttachmentTrustCalculator(configuration, database)
     val cryptoService = CryptoServiceFactory.makeCryptoService(
             SupportedCryptoServices.BC_SIMPLE,
             configuration.myLegalName,
@@ -277,10 +282,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         val proxies = mutableListOf<(InternalCordaRPCOps) -> InternalCordaRPCOps>()
         // Mind that order is relevant here.
         proxies += ::AuthenticatedRpcOpsProxy
-        if (!configuration.devMode) {
-            proxies += { ExceptionMaskingRpcOpsProxy(it, true) }
-        }
-        proxies += { ExceptionSerialisingRpcOpsProxy(it, configuration.devMode) }
         proxies += { ThreadContextAdjustingRpcOpsProxy(it, cordappLoader.appClassLoader) }
         return proxies.fold(ops) { delegate, decorate -> decorate(delegate) }
     }
@@ -409,7 +410,9 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             // Shut down the SMM so no Fibers are scheduled.
             runOnStop += { smm.stop(acceptableLiveFiberCountOnStop()) }
             (smm as? StateMachineManagerInternal)?.let {
-                val flowMonitor = FlowMonitor({ smm.snapshot().filter { flow -> flow !in smm.flowHospital }.toSet() }, configuration.flowMonitorPeriodMillis, configuration.flowMonitorSuspensionLoggingThresholdMillis)
+                val flowMonitor = FlowMonitor({
+                    smm.snapshot().filter { flow -> flow !in smm.flowHospital }.toSet()
+                }, configuration.flowMonitorPeriodMillis, configuration.flowMonitorSuspensionLoggingThresholdMillis)
                 runOnStop += flowMonitor::stop
                 flowMonitor.start()
             }
@@ -566,14 +569,10 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             generatedCordapps += notaryImpl
         }
 
-        val blacklistedKeys = if (configuration.devMode) emptyList()
-        else configuration.cordappSignerKeyFingerprintBlacklist.map {
-            try {
-                SecureHash.parse(it)
-            } catch (e: IllegalArgumentException) {
-                log.error("Error while adding key fingerprint $it to cordappSignerKeyFingerprintBlacklist due to ${e.message}", e)
-                throw e
-            }
+        val blacklistedKeys = if (configuration.devMode) {
+            emptyList()
+        } else {
+            parseSecureHashConfiguration(configuration.cordappSignerKeyFingerprintBlacklist) { "Error while adding key fingerprint $it to blacklistedAttachmentSigningKeys" }
         }
         return JarScanningCordappLoader.fromDirectories(
                 configuration.cordappDirectories,
@@ -581,6 +580,31 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                 extraCordapps = generatedCordapps,
                 signerKeyFingerprintBlacklist = blacklistedKeys
         )
+    }
+
+    private fun parseSecureHashConfiguration(unparsedConfig: List<String>, errorMessage: (String) -> String): List<SecureHash.SHA256> {
+        return unparsedConfig.map {
+            try {
+                SecureHash.parse(it)
+            } catch (e: IllegalArgumentException) {
+                log.error("${errorMessage(it)} due to - ${e.message}", e)
+                throw e
+            }
+        }
+    }
+
+    private fun makeAttachmentTrustCalculator(
+        configuration: NodeConfiguration,
+        database: CordaPersistence
+    ): AttachmentTrustCalculator {
+        val blacklistedAttachmentSigningKeys: List<SecureHash> =
+            parseSecureHashConfiguration(configuration.blacklistedAttachmentSigningKeys) { "Error while adding signing key $it to blacklistedAttachmentSigningKeys" }
+        return NodeAttachmentTrustCalculator(
+            attachmentStorage = attachments,
+            database = database,
+            cacheFactory = cacheFactory,
+            blacklistedAttachmentSigningKeys = blacklistedAttachmentSigningKeys
+        ).tokenize()
     }
 
     private fun isRunningSimpleNotaryService(configuration: NodeConfiguration): Boolean {
@@ -596,7 +620,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         // Needed because of bug CORDA-2653 - some Corda services can utilise third-party libraries that require access to
         // the Thread context class loader
 
-        val oldContextClassLoader : ClassLoader? = Thread.currentThread().contextClassLoader
+        val oldContextClassLoader: ClassLoader? = Thread.currentThread().contextClassLoader
         try {
             Thread.currentThread().contextClassLoader = cordappLoader.appClassLoader
 
@@ -856,7 +880,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         if (!cryptoService.containsKey(legalIdentityPrivateKeyAlias) && !signingCertificateStore.contains(legalIdentityPrivateKeyAlias)) {
             // Directly use the X500 name to public key map, as the identity service requires the node identity to start correctly.
             database.transaction {
-                val x500Map = PersistentIdentityService.createX500Map(cacheFactory)
+                val x500Map = PersistentIdentityService.createX500ToKeyMap(cacheFactory)
                 require(configuration.myLegalName !in x500Map) {
                     // There is already a party in the identity store for this node, but the key has been lost. If this node starts up, it will
                     // publish it's new key to the network map, which Corda cannot currently handle. To prevent this, stop the node from starting.
@@ -1008,6 +1032,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         override val networkMapUpdater: NetworkMapUpdater get() = this@AbstractNode.networkMapUpdater
         override val cacheFactory: NamedCacheFactory get() = this@AbstractNode.cacheFactory
         override val networkParametersService: NetworkParametersStorage get() = this@AbstractNode.networkParametersStorage
+        override val attachmentTrustCalculator: AttachmentTrustCalculator get() = this@AbstractNode.attachmentTrustCalculator
 
         private lateinit var _myInfo: NodeInfo
         override val myInfo: NodeInfo get() = _myInfo
@@ -1032,12 +1057,16 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
         override fun jdbcSession(): Connection = database.createSession()
 
-        override fun <T : Any> withEntityManager(block: EntityManager.() -> T): T {
-            return block(contextTransaction.restrictedEntityManager)
+        override fun <T : Any?> withEntityManager(block: EntityManager.() -> T): T {
+            return database.transaction {
+                block(restrictedEntityManager)
+            }
         }
 
         override fun withEntityManager(block: Consumer<EntityManager>) {
-            block.accept(contextTransaction.restrictedEntityManager)
+            withEntityManager {
+                block.accept(this)
+            }
         }
 
         // allows services to register handlers to be informed when the node stop method is called

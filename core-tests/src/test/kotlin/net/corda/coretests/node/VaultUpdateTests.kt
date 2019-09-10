@@ -11,7 +11,6 @@ import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
-
 class VaultUpdateTests {
     private companion object {
         const val DUMMY_PROGRAM_ID = "net.corda.coretests.node.VaultUpdateTests\$DummyContract"

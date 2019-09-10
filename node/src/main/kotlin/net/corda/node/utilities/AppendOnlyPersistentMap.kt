@@ -138,17 +138,18 @@ abstract class AppendOnlyPersistentMapBase<K, V, E, out EK>(
      * underlying storage if this races with another database transaction to store a value for the same key.
      * @return true if added key was unique, otherwise false
      */
-    fun addWithDuplicatesAllowed(key: K, value: V, logWarning: Boolean = true): Boolean =
-            set(key, value, logWarning) { k, v ->
-                val session = currentDBSession()
-                val existingEntry = session.find(persistentEntityClass, toPersistentEntityKey(k))
-                if (existingEntry == null) {
-                    session.save(toPersistentEntity(k, v))
-                    null
-                } else {
-                    fromPersistentEntity(existingEntry).second
-                }
+    fun addWithDuplicatesAllowed(key: K, value: V, logWarning: Boolean = true): Boolean {
+        return set(key, value, logWarning) { k, v ->
+            val session = currentDBSession()
+            val existingEntry = session.find(persistentEntityClass, toPersistentEntityKey(k))
+            if (existingEntry == null) {
+                session.save(toPersistentEntity(k, v))
+                null
+            } else {
+                fromPersistentEntity(existingEntry).second
             }
+        }
+    }
 
     /**
      * Associates the specified value with the specified key in this map and persists it.
