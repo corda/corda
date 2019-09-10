@@ -214,7 +214,7 @@ allprojects {
 
     tasks.withType(JavaCompile) {
         options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation" << "-Xlint:-options" << "-parameters"
-        if (project.property('compilation.allWarningsAsErrors').toBoolean()) {
+        if (project.property('compilation.warningsAsErrors').toBoolean()) {
             // We cannot fail the build on compiler warnings because we have java warnings that you cannot disable:
             // Signal is internal proprietary API and may be removed in a future release
             // otherwise we should have the following line here:
@@ -230,7 +230,7 @@ allprojects {
             jvmTarget = "1.8"
             javaParameters = true   // Useful for reflection.
             freeCompilerArgs = ['-Xjvm-default=compatibility']
-            allWarningsAsErrors = project.property('compilation.allWarningsAsErrors').toBoolean()
+            allWarningsAsErrors = project.property('compilation.warningsAsErrors').toBoolean()
         }
     }
 
