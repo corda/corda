@@ -39,8 +39,6 @@ import net.corda.node.VersionInfo
 import net.corda.node.internal.classloading.requireAnnotation
 import net.corda.node.internal.cordapp.*
 import net.corda.node.internal.rpc.proxies.AuthenticatedRpcOpsProxy
-import net.corda.node.internal.rpc.proxies.ExceptionMaskingRpcOpsProxy
-import net.corda.node.internal.rpc.proxies.ExceptionSerialisingRpcOpsProxy
 import net.corda.node.internal.rpc.proxies.ThreadContextAdjustingRpcOpsProxy
 import net.corda.node.services.ContractUpgradeHandler
 import net.corda.node.services.FinalityHandler
@@ -284,10 +282,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         val proxies = mutableListOf<(InternalCordaRPCOps) -> InternalCordaRPCOps>()
         // Mind that order is relevant here.
         proxies += ::AuthenticatedRpcOpsProxy
-        if (!configuration.devMode) {
-            proxies += { ExceptionMaskingRpcOpsProxy(it, true) }
-        }
-        proxies += { ExceptionSerialisingRpcOpsProxy(it, configuration.devMode) }
         proxies += { ThreadContextAdjustingRpcOpsProxy(it, cordappLoader.appClassLoader) }
         return proxies.fold(ops) { delegate, decorate -> decorate(delegate) }
     }

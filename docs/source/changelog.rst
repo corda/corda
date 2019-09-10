@@ -7,6 +7,9 @@ release, see :doc:`app-upgrade-notes`.
 Unreleased
 ----------
 
+* Removed the RPC exception privacy feature. Previously, in production mode, the exceptions thrown on the node were stripped of all content
+  when rethrown on the RPC client.
+
 * Introduced a new parameter ``externalIds: List<UUID>`` to ``VaultQueryCriteria`` which allows CorDapp developers to constrain queries
   to a specified set of external IDs.
 
