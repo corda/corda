@@ -38,7 +38,6 @@ class KubesTest extends DefaultTask {
     int numberOfPods = 20
     int timeoutInMinutesForPodToStart = 60
 
-
     @TaskAction
     void runTestsOnKubes() {
 
@@ -226,15 +225,14 @@ class KubesTest extends DefaultTask {
                 .addNewVolume()
                 .withName("gradlecache")
                 .withNewHostPath()
-                .withPath("/gradle")
+                .withPath("/tmp/gradle")
                 .withType("DirectoryOrCreate")
                 .endHostPath()
                 .endVolume()
                 .addNewContainer()
                 .withImage(dockerTag)
                 .withCommand("bash")
-        //max container life time is 30min
-                .withArgs("-c", "sleep 1800")
+                .withArgs("-c", "sleep 3600")
                 .addNewEnv()
                 .withName("DRIVER_NODE_MEMORY")
                 .withValue("1024m")

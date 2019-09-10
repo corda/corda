@@ -5,6 +5,9 @@ import com.bmuschko.gradle.docker.tasks.image.DockerPushImage
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.Task
+import org.gradle.api.execution.TaskExecutionGraph
+import org.gradle.api.execution.TaskExecutionGraphListener
+import org.gradle.api.tasks.TaskCollection
 import org.gradle.api.tasks.testing.Test
 
 /**
@@ -46,6 +49,34 @@ class DistributedTesting implements Plugin<Project> {
             //ie allParallelTest will invoke [node:test, core:test, client:rpc:test ... etc]
             //ie allIntegrationTest will invoke [node:integrationTest, core:integrationTest, client:rpc:integrationTest ... etc]
             createGroupedParallelTestTasks(allKubesTestingTasksGroupedByType, project, imageBuildingTask)
+
+            Collection<ParallelTestGroup> userDefinedGroups = project.tasks.withType(ParallelTestGroup).forEach { testGrouping ->
+                List<KubesTest> groups = ((ParallelTestGroup) testGrouping).groups.collect {
+                    allKubesTestingTasksGroupedByType.get(it)
+                }.flatten()
+                String superListOfTasks = groups.collect { it.fullTaskToExecutePath}.join(" ")
+
+                def userDefinedParallelTask = project.rootProject.tasks.create("userDefined" + testGrouping.name.capitalize(), KubesTest) {
+                    dependsOn imageBuildingTask
+                    printOutput = false
+                    fullTaskToExecutePath = superListOfTasks
+                    taskToExecuteName = "userDefined"
+                    doFirst {
+                        dockerTag = imageBuildingTask.imageName.get() + ":" + imageBuildingTask.tag.get()
+                    }
+                }
+                def reportOnAllTask = project.rootProject.tasks.create("userDefinedReports${testGrouping.name.capitalize()}", KubesReporting) {
+                    dependsOn userDefinedParallelTask
+                    destinationDir new File(project.rootProject.getBuildDir(), "userDefinedReports${testGrouping.name.capitalize()}")
+                    doFirst {
+                        destinationDir.deleteDir()
+                        podResults = userDefinedParallelTask.containerResults
+                        reportOn(userDefinedParallelTask.testOutput)
+                    }
+                }
+                userDefinedParallelTask.finalizedBy(reportOnAllTask)
+                testGrouping.dependsOn(userDefinedParallelTask)
+            }
         }
     }
 
@@ -79,7 +110,6 @@ class DistributedTesting implements Plugin<Project> {
             project.logger.info "Created task: ${allParallelTask.getPath()} to enable testing on kubenetes for tasks: ${allParallelTask.fullTaskToExecutePath}"
             project.logger.info "Created task: ${reportOnAllTask.getPath()} to generate test html output for task ${allParallelTask.getPath()}"
             return allParallelTask
-
         }
     }
 

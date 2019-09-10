@@ -1,4 +1,5 @@
 import net.corda.testing.DistributedTesting
+import net.corda.testing.ParallelTestGroup
 
 buildscript {
     // For sharing constants between builds
@@ -513,5 +514,8 @@ buildScan {
     termsOfServiceUrl = 'https://gradle.com/terms-of-service'
     termsOfServiceAgree = 'yes'
 }
-
+task parallelUnitAndIntegrationTest(type: ParallelTestGroup) {
+    testGroups "test", "integrationTest"
+}
 apply plugin: DistributedTesting
+
