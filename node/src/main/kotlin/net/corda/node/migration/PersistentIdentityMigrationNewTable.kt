@@ -24,9 +24,6 @@ class PersistentIdentityMigrationNewTable : CordaMigration() {
         private val logger = contextLogger()
     }
 
-    // First name is the node's transacting identity.
-    private val us = identityService.ourNames.first()
-
     override fun execute(database: Database?) {
         logger.info("Migrating persistent identities with certificates table into persistent table with no certificate data.")
 
@@ -72,6 +69,7 @@ class PersistentIdentityMigrationNewTable : CordaMigration() {
             it.setString(2, name.toString())
             it.executeUpdate()
         }
+        val us = identityService.ourNames.first()
         if (name != us) {
             connection.prepareStatement("INSERT INTO node_hash_to_key (pk_hash, public_key) VALUES (?,?)").use {
                 it.setString(1, publicKeyHash)
