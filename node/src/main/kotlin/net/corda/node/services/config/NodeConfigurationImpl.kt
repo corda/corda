@@ -88,7 +88,7 @@ data class NodeConfigurationImpl(
         override val networkParameterAcceptanceSettings: NetworkParameterAcceptanceSettings = Defaults.networkParameterAcceptanceSettings,
         override val freshIdentitiesConfiguration: FreshIdentitiesConfiguration? = null,
         override val disableFreshIdentitiesWarning: Boolean = false,
-        override val cryptoServiceTimeout: Duration = Defaults.cryptoServiceTimeout
+        override val cryptoServiceTimeout: Duration = Defaults.cryptoServiceTimeout,
         override val blacklistedAttachmentSigningKeys: List<String> = Defaults.blacklistedAttachmentSigningKeys
 ) : NodeConfiguration {
     internal object Defaults {

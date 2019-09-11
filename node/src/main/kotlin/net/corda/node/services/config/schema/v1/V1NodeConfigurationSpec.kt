@@ -139,7 +139,7 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
                     useOpenSsl = config[useOpenSsl],
                     graphiteOptions = config[graphiteOptions],
                     enterpriseConfiguration = config[enterpriseConfiguration],
-                    blacklistedAttachmentSigningKeys = configuration[blacklistedAttachmentSigningKeys]
+                    blacklistedAttachmentSigningKeys = config[blacklistedAttachmentSigningKeys]
             ))
         } catch (e: Exception) {
             return when (e) {
