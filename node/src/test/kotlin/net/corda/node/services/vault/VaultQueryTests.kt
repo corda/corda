@@ -240,9 +240,9 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
             vaultFiller.fillWithDummyState(participants = listOf(MEGA_CORP, MINI_CORP))
             vaultFiller.fillWithDummyState(participants = listOf(MEGA_CORP, BIG_CORP)) // true
             vaultFiller.fillWithDummyState(participants = listOf(BIG_CORP))
-            val criteria = VaultQueryCriteria(participants = listOf(MINI_CORP))
+            val criteria = VaultQueryCriteria(participants = listOf(BIG_CORP))
             val results = vaultService.queryBy<ContractState>(criteria)
-            assertThat(results.states).hasSize(3)
+            assertThat(results.states).hasSize(2)
 
         }
     }
