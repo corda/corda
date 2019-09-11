@@ -314,6 +314,29 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
             val expression = CriteriaExpression.ColumnPredicateExpression(timeColumn, timeCondition.predicate)
             predicateSet.add(parseExpression(vaultStates, expression) as Predicate)
         }
+
+        // Participants.
+        criteria.participants?.let {
+            val participants = criteria.participants!!
+
+            // Get the persistent party entity.
+            val persistentPartyEntity = VaultSchemaV1.PersistentParty::class.java
+            val entityRoot = rootEntities.getOrElse(persistentPartyEntity) {
+                val entityRoot = criteriaQuery.from(persistentPartyEntity)
+                rootEntities[persistentPartyEntity] = entityRoot
+                entityRoot
+            }
+
+            // Add the join and participants predicates.
+            val statePartyJoin = criteriaBuilder.equal(vaultStates.get<VaultSchemaV1.VaultStates>("stateRef"), entityRoot.get<VaultSchemaV1.PersistentParty>("compositeKey").get<PersistentStateRef>("stateRef"))
+            println("ENTITYPRINT " + entityRoot.get<VaultSchemaV1.PersistentParty>("x500Name"))
+
+            val participantsPredicate = criteriaBuilder.and(entityRoot.get<VaultSchemaV1.PersistentParty>("x500Name").`in`(participants))
+            predicateSet.add(statePartyJoin)
+            predicateSet.add(participantsPredicate)
+            println(participantsPredicate.toString())
+        }
+
         return predicateSet
     }
 

@@ -229,6 +229,38 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
      * Query API tests
      */
 
+    /**
+     * VaultQueryCriteria tests for base ContractState
+     * */
+
+    @Test
+    fun `unconsumed base contract states for single participant`() {
+        database.transaction {
+            identitySvc.verifyAndRegisterIdentity(BIG_CORP_IDENTITY)
+            vaultFiller.fillWithDummyState(participants = listOf(MEGA_CORP, MINI_CORP))
+            vaultFiller.fillWithDummyState(participants = listOf(MEGA_CORP, BIG_CORP)) // true
+            vaultFiller.fillWithDummyState(participants = listOf(BIG_CORP))
+            val criteria = VaultQueryCriteria(participants = listOf(MINI_CORP))
+            val results = vaultService.queryBy<ContractState>(criteria)
+            assertThat(results.states).hasSize(3)
+
+        }
+    }
+
+    @Test
+    fun `unconsumed base contract states for two participants`() {
+        database.transaction {
+            identitySvc.verifyAndRegisterIdentity(BIG_CORP_IDENTITY)
+            vaultFiller.fillWithDummyState(participants = listOf(MEGA_CORP, MINI_CORP)) // true
+            vaultFiller.fillWithDummyState(participants = listOf(MEGA_CORP, BIG_CORP)) // true
+            vaultFiller.fillWithDummyState(participants = listOf(MEGA_CORP))
+            val criteria = VaultQueryCriteria(participants = listOf(BIG_CORP, MINI_CORP))
+            val results = vaultService.queryBy<ContractState>(criteria)
+            assertThat(results.states).hasSize(2)
+        }
+    }
+
+
     /** Generic Query tests
     (combining both FungibleState and LinearState contract types) */
 
