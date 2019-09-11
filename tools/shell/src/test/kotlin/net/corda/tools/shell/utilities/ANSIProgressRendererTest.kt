@@ -19,7 +19,7 @@ import rx.subjects.PublishSubject
 class ANSIProgressRendererTest {
 
     companion object {
-        private const val INTENSITY_BOLD_ON_ASCII = "[1m";
+        private const val INTENSITY_BOLD_ON_ASCII = "[1m"
         private const val INTENSITY_OFF_ASCII = "[22m"
         private const val INTENSITY_FAINT_ON_ASCII = "[2m"
 

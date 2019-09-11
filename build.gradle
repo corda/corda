@@ -537,7 +537,7 @@ docker {
         url = "stefanotestingcr.azurecr.io"
     }
 }
-//
+
 //testing workflow
 // 1. build an image from current checkout
 // 2. generate a list of tests
