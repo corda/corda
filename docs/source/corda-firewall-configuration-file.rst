@@ -234,20 +234,18 @@ absolute path to the firewall's base directory.
 
 :revocationConfig: Controls the way Certificate Revocation Lists (CRL) are handled for TLS connections.
 
-        :revocationConfig:
+    :mode: Either ``SOFT_FAIL`` or ``HARD_FAIL`` or ``OFF`` or ``EXTERNAL_SOURCE``
 
-            :mode: Either ``SOFT_FAIL`` or ``HARD_FAIL`` or ``OFF`` or ``EXTERNAL_SOURCE``
+        ``SOFT_FAIL`` : Causes CRL checking to use soft fail mode. Soft fail mode allows the revocation check to succeed if the revocation status cannot be determined because of a network error.
 
-                ``SOFT_FAIL`` : Causes CRL checking to use soft fail mode. Soft fail mode allows the revocation check to succeed if the revocation status cannot be determined because of a network error.
+        ``HARD_FAIL`` :  Rigorous CRL checking takes place. This involves each certificate in the certificate path being checked for a CRL distribution point extension, and that this extension points to a URL serving a valid CRL.
+            This means that if any CRL URL in the certificate path is inaccessible, the connection with the other party will fail and be marked as bad.
+            Additionally, if any certificate in the hierarchy, including the self-generated node SSL certificate, is missing a valid CRL URL, then the certificate path will be marked as invalid.
 
-                ``HARD_FAIL`` :  Rigorous CRL checking takes place. This involves each certificate in the certificate path being checked for a CRL distribution point extension, and that this extension points to a URL serving a valid CRL.
-                    This means that if any CRL URL in the certificate path is inaccessible, the connection with the other party will fail and be marked as bad.
-                    Additionally, if any certificate in the hierarchy, including the self-generated node SSL certificate, is missing a valid CRL URL, then the certificate path will be marked as invalid.
+        ``OFF`` : do not perform CRL check.
 
-                ``OFF`` : do not perform CRL check.
-
-                ``EXTERNAL_SOURCE`` : only makes sense for Float component i.e. with ``firewallMode = FloatOuter``. When ``mode = EXTERNAL_SOURCE`` is specified, Float component will fetch CRLs using tunnel connection it maintains with Bridge. This allows Float to correctly obtain CRLs without
-                    initiating direct outgoing connections to the Delivery Points specified in TLS certificates.
+        ``EXTERNAL_SOURCE`` : only makes sense for Float component i.e. with ``firewallMode = FloatOuter``. When ``mode = EXTERNAL_SOURCE`` is specified, Float component will fetch CRLs using tunnel connection it maintains with Bridge. This allows Float to correctly obtain CRLs without
+            initiating direct outgoing connections to the Delivery Points specified in TLS certificates.
 
 .. _p2pTlsSigningCryptoServiceConfig :
 
