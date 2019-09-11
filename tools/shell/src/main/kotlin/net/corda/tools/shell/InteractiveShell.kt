@@ -568,6 +568,7 @@ object InteractiveShell {
             cordaRPCOps.terminate(true)
 
             val latch = CountDownLatch(1)
+            @Suppress("DEPRECATION")
             cordaRPCOps.pendingFlowsCount().updates.doOnError { error ->
                 log.error(error.message)
                 throw error

@@ -221,19 +221,19 @@ internal inline fun <reified T : MoveCommand> verifyFlattenedMoveCommand(inputs:
     // see a signature from each of those keys. The actual signatures have been verified against the transaction
     // data by the platform before execution.
     val owningPubKeys = inputs.map { it.owner.owningKey }.toSet()
-    val commands = commands.groupCommands<T>()
+    val groupedCommands = commands.groupCommands<T>()
     // Does not use requireThat to maintain message compatibility with verifyMoveCommand.
-    if (commands.isEmpty()) {
+    if (groupedCommands.isEmpty()) {
         throw IllegalStateException("Required ${T::class.qualifiedName} command")
     }
     requireThat {
-        "move commands can only differ by signing keys" using (commands.size == 1)
+        "move commands can only differ by signing keys" using (groupedCommands.size == 1)
     }
-    val keysThatSigned = commands.values.first()
+    val keysThatSigned = groupedCommands.values.first()
     requireThat {
         "the owning keys are a subset of the signing keys" using keysThatSigned.containsAll(owningPubKeys)
     }
-    return commands.keys.single()
+    return groupedCommands.keys.single()
 }
 
 /** Group commands by instances of the given type. */

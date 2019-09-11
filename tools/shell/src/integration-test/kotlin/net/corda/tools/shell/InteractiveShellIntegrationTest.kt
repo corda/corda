@@ -307,7 +307,7 @@ class InteractiveShellIntegrationTest {
 
             Thread.sleep(5000)
 
-            val (output) = mockRenderPrintWriter()
+            mockRenderPrintWriter()
             InteractiveShell.runDumpCheckpoints(aliceNode.rpc as InternalCordaRPCOps)
 
             val zipFile = (aliceNode.baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME).list().first { "checkpoints_dump-" in it.toString() }

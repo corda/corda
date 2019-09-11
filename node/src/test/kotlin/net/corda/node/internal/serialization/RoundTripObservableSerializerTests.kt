@@ -84,7 +84,7 @@ class RoundTripObservableSerializerTests {
 
 
         // What we're actually going to serialize then deserialize
-        val obs = Observable.create<Int> { Math.random() }
+        val obs = Observable.unsafeCreate<Int> { Math.random() }
 
         val serverSerializationContext = RpcServerObservableSerializer.createContext(
                 serializationContext, serverObservableContext)

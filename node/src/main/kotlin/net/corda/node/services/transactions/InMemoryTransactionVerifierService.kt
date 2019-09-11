@@ -10,7 +10,7 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.nodeapi.internal.persistence.withoutDatabaseAccess
 
-class InMemoryTransactionVerifierService(numberOfWorkers: Int) : SingletonSerializeAsToken(), TransactionVerifierService, TransactionVerifierServiceInternal, AutoCloseable {
+class InMemoryTransactionVerifierService(@Suppress("UNUSED_PARAMETER") numberOfWorkers: Int) : SingletonSerializeAsToken(), TransactionVerifierService, TransactionVerifierServiceInternal, AutoCloseable {
     override fun verify(transaction: LedgerTransaction): CordaFuture<Unit> = this.verify(transaction, emptyList())
 
     override fun verify(transaction: LedgerTransaction, extraAttachments: List<Attachment>): CordaFuture<Unit> {

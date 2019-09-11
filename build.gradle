@@ -14,6 +14,7 @@ buildscript {
     //
     // TODO: Sort this alphabetically.
     ext.kotlin_version = constants.getProperty("kotlinVersion")
+    ext.warnings_as_errors = project.hasProperty("compilation.warningsAsErrors") ? project.property("compilation.warningsAsErrors").toBoolean() : false
 
     ext.quasar_group = 'co.paralleluniverse'
     ext.quasar_version = constants.getProperty("quasarVersion")
@@ -214,6 +215,12 @@ allprojects {
 
     tasks.withType(JavaCompile) {
         options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation" << "-Xlint:-options" << "-parameters"
+        if (warnings_as_errors) {
+            // We cannot fail the build on compiler warnings because we have java warnings that you cannot disable:
+            // Signal is internal proprietary API and may be removed in a future release
+            // otherwise we should have the following line here:
+            // options.compilerArgs << "-Werror"
+        }
         options.encoding = 'UTF-8'
     }
 
@@ -224,7 +231,7 @@ allprojects {
             jvmTarget = "1.8"
             javaParameters = true   // Useful for reflection.
             freeCompilerArgs = ['-Xjvm-default=compatibility']
-            allWarningsAsErrors = project.hasProperty('compilation.allWarningsAsErrors') ? project.property('compilation.allWarningsAsErrors').toBoolean() : false
+            allWarningsAsErrors = warnings_as_errors
         }
     }
 
