@@ -1,7 +1,6 @@
 package net.corda.node.services.rpc
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.ClientRelevantException
 import net.corda.core.CordaRuntimeException
 import net.corda.core.flows.*
 import net.corda.core.identity.CordaX500Name
@@ -10,7 +9,6 @@ import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
 import net.corda.node.services.Permissions
-import net.corda.nodeapi.exceptions.InternalNodeException
 import net.corda.testing.core.*
 import net.corda.testing.driver.*
 import net.corda.testing.internal.IntegrationTest
@@ -36,7 +34,7 @@ class RpcExceptionHandlingTest : IntegrationTest() {
     private val users = listOf(user)
 
     @Test
-    fun `rpc client receives wrapped exceptions in devMode with no stacktraces`() {
+    fun `rpc client receives relevant exceptions`() {
         val params = NodeParameters(rpcUsers = users)
         val clientRelevantMessage = "This is for the players!"
 
@@ -46,17 +44,15 @@ class RpcExceptionHandlingTest : IntegrationTest() {
 
         driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
             val devModeNode = startNode(params, BOB_NAME).getOrThrow()
-            assertThatThrownBy { devModeNode.throwExceptionFromFlow() }.isInstanceOfSatisfying(ClientRelevantException::class.java) { exception ->
+            assertThatThrownBy { devModeNode.throwExceptionFromFlow() }.isInstanceOfSatisfying(CordaRuntimeException::class.java) { exception ->
                 assertEquals((exception.cause as CordaRuntimeException).originalExceptionClassName, SQLException::class.qualifiedName)
-                assertThat(exception.stackTrace).isEmpty()
-                assertThat((exception.cause as CordaRuntimeException).stackTrace).isEmpty()
-                assertThat(exception.message).isEqualTo(clientRelevantMessage)
+                assertThat(exception.originalMessage).isEqualTo(clientRelevantMessage)
             }
         }
     }
 
     @Test
-    fun `rpc client receives client-relevant message regardless of devMode`() {
+    fun `rpc client receives client-relevant message`() {
         val params = NodeParameters(rpcUsers = users)
         val clientRelevantMessage = "This is for the players!"
 
@@ -65,8 +61,8 @@ class RpcExceptionHandlingTest : IntegrationTest() {
         }
 
         fun assertThatThrownExceptionIsReceivedUnwrapped(node: NodeHandle) {
-            assertThatThrownBy { node.throwExceptionFromFlow() }.isInstanceOfSatisfying(ClientRelevantException::class.java) { exception ->
-                assertThat(exception.message).isEqualTo(clientRelevantMessage)
+            assertThatThrownBy { node.throwExceptionFromFlow() }.isInstanceOfSatisfying(CordaRuntimeException::class.java) { exception ->
+                assertThat(exception.originalMessage).isEqualTo(clientRelevantMessage)
             }
         }
 
@@ -80,26 +76,7 @@ class RpcExceptionHandlingTest : IntegrationTest() {
     }
 
     @Test
-    fun `rpc client receives no specific information in non devMode`() {
-        val params = NodeParameters(rpcUsers = users)
-        val clientRelevantMessage = "This is for the players!"
-
-        fun NodeHandle.throwExceptionFromFlow() {
-            rpc.startFlow(::ClientRelevantErrorFlow, clientRelevantMessage).returnValue.getOrThrow()
-        }
-
-        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
-            val node = startNode(ALICE_NAME, devMode = false, parameters = params).getOrThrow()
-            assertThatThrownBy { node.throwExceptionFromFlow() }.isInstanceOfSatisfying(ClientRelevantException::class.java) { exception ->
-                assertThat(exception).hasNoCause()
-                assertThat(exception.stackTrace).isEmpty()
-                assertThat(exception.message).isEqualTo(clientRelevantMessage)
-            }
-        }
-    }
-
-    @Test
-    fun `FlowException is received by the RPC client only if in devMode`() {
+    fun `FlowException is received by the RPC client`() {
         val params = NodeParameters(rpcUsers = users)
         val expectedMessage = "Flow error!"
         val expectedErrorId = 123L
@@ -113,17 +90,16 @@ class RpcExceptionHandlingTest : IntegrationTest() {
             val node = startNode(ALICE_NAME, devMode = false, parameters = params).getOrThrow()
 
             assertThatThrownBy { devModeNode.throwExceptionFromFlow() }.isInstanceOfSatisfying(FlowException::class.java) { exception ->
-
                 assertThat(exception).hasNoCause()
                 assertThat(exception.stackTrace).isEmpty()
                 assertThat(exception.message).isEqualTo(expectedMessage)
                 assertThat(exception.errorId).isEqualTo(expectedErrorId)
             }
-            assertThatThrownBy { node.throwExceptionFromFlow() }.isInstanceOfSatisfying(InternalNodeException::class.java) { exception ->
 
+            assertThatThrownBy { node.throwExceptionFromFlow() }.isInstanceOfSatisfying(FlowException::class.java) { exception ->
                 assertThat(exception).hasNoCause()
                 assertThat(exception.stackTrace).isEmpty()
-                assertThat(exception.message).isEqualTo(InternalNodeException.message)
+                assertThat(exception.message).isEqualTo(expectedMessage)
                 assertThat(exception.errorId).isEqualTo(expectedErrorId)
             }
         }
@@ -152,12 +128,8 @@ class RpcExceptionHandlingTest : IntegrationTest() {
             assertThatThrownBy { scenario(
                     DUMMY_BANK_A_NAME,
                     DUMMY_BANK_B_NAME,
-                    false) }.isInstanceOfSatisfying(InternalNodeException::class.java) { exception ->
-
-                assertThat(exception).hasNoCause()
-                assertThat(exception.stackTrace).isEmpty()
-                assertThat(exception.message).isEqualTo(InternalNodeException.message)
-            }
+                    false)
+            }.isInstanceOf(UnexpectedFlowEndException::class.java)
         }
     }
 }
@@ -184,7 +156,7 @@ class InitiatedFlow(private val initiatingSession: FlowSession) : FlowLogic<Unit
 @StartableByRPC
 class ClientRelevantErrorFlow(private val message: String) : FlowLogic<String>() {
     @Suspendable
-    override fun call(): String = throw ClientRelevantException(message, SQLException("Oops!"))
+    override fun call(): String = throw Exception(message, SQLException("Oops!"))
 }
 
 @StartableByRPC

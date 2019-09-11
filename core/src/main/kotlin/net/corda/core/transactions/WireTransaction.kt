@@ -108,7 +108,8 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                     services.networkParametersService.lookup(hashToResolve)
                 },
                 resolveContractAttachment = { services.loadContractAttachment(it) },
-                isAttachmentTrusted = { isAttachmentTrusted(it, services.attachments) }
+                // `as?` is used due to [MockServices] not implementing [ServiceHubCoreInternal]
+                isAttachmentTrusted = { (services as? ServiceHubCoreInternal)?.attachmentTrustCalculator?.calculate(it) ?: true }
         )
     }
 
@@ -144,7 +145,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                 { null },
                 // Returning a dummy `missingAttachment` Attachment allows this deprecated method to work and it disables "contract version no downgrade rule" as a dummy Attachment returns version 1
                 { resolveAttachment(it.txhash) ?: missingAttachment },
-                { isAttachmentTrusted(it, null) }
+                { it.isUploaderTrusted() }
         )
     }
 

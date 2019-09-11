@@ -368,8 +368,7 @@ The webserver JAR will be copied into the node's ``build`` folder with the name 
 The Dockerform task
 -------------------
 
-The ``Dockerform`` is a sister task of ``Cordform`` that provides an extra file allowing you to easily spin up 
-nodes using ``docker-compose``. It supports the following configuration options for each node:
+The ``Dockerform`` is a sister task of ``Cordform`` that provides an extra file allowing you to easily spin up nodes using ``docker-compose``. It supports the following configuration options for each node:
 
 * ``name``
 * ``notary``
@@ -377,65 +376,90 @@ nodes using ``docker-compose``. It supports the following configuration options 
 * ``rpcUsers``
 * ``useTestClock``
 
-There is no need to specify the nodes' ports, as every node has a separate container, so no ports conflict will occur. 
-Every node will expose port ``10003`` for RPC connections.
 
-The nodes' webservers will not be started. Instead, you should interact with each node via its shell over SSH 
-(see the :doc:`node configuration options <corda-configuration-file>`). You have to enable the shell by adding the 
+The nodes' webservers will not be started. Instead, you should interact with each node via its shell over SSH
+(see the :doc:`node configuration options <corda-configuration-file>`). You have to enable the shell by adding the
 following line to each node's ``node.conf`` file:
 
-    ``sshd { port = 2222 }``
+    ``sshd { port = <NUMBER> }``
 
-Where ``2222`` is the port you want to open to SSH into the shell.
+Where ``<NUMBER>`` is the port you want to open to SSH into the shell.
 
-Below you can find the example task from the `IRS Demo <|os_branch|/samples/irs-demo/cordapp/build.gradle#L111>`_ included in the samples directory of main Corda GitHub repository:
+To run the Dockerform task, follow these steps:
 
-.. sourcecode:: groovy
+1. Run ``./gradlew deployNodes`` to generate the node files and folder structure.
 
-    def rpcUsersList = [
-        ['username' : "user",
-         'password' : "password",
-         'permissions' : [
-                 "StartFlow.net.corda.irs.flows.AutoOfferFlow\$Requester",
-                 "StartFlow.net.corda.irs.flows.UpdateBusinessDayFlow\$Broadcast",
-                 "StartFlow.net.corda.irs.api.NodeInterestRates\$UploadFixesFlow",
-                 "InvokeRpc.vaultQueryBy",
-                 "InvokeRpc.networkMapSnapshot",
-                 "InvokeRpc.currentNodeTime",
-                 "InvokeRpc.wellKnownPartyFromX500Name"
-         ]]
-    ]
+2. Open the ``build.gradle`` file and add a new ``dockerform`` task after the existing ``deployNodes`` task:
 
-    // (...)
+    .. sourcecode:: groovy
 
-    task deployNodes(type: net.corda.plugins.Dockerform, dependsOn: ['jar']) {
-
-        node {
-            name "O=Notary Service,L=Zurich,C=CH"
-            notary = [validating : true]
-            cordapps = ["$corda_release_group:corda-finance:$corda_release_version"]
-            rpcUsers = rpcUsersList
-            useTestClock true
+        task prepareDockerNodes(type: net.corda.plugins.Dockerform, dependsOn: ['jar']) {
+            nodeDefaults {
+                cordapp project(":contracts-java")
+                }
+            node {
+                name "O=Notary,L=London,C=GB"
+                notary = [validating : false]
+                p2pPort 10002
+                rpcSettings {
+                    address("localhost:10003")
+                    adminAddress("localhost:10023")
+                    }
+                projectCordapp {
+                    deploy = false
+                    }
+                cordapps.clear()
+                }
+            node {
+                name "O=PartyA,L=London,C=GB"
+                p2pPort 10002
+                rpcSettings {
+                    address("localhost:10003")
+                    adminAddress("localhost:10023")
+                    }
+                rpcUsers = [[user: "user1", "password": "test", "permissions": ["ALL"]]]
+                }
+            node {
+                name "O=PartyB,L=New York,C=US"
+                p2pPort 10002
+                rpcSettings {
+                    address("localhost:10003")
+                    adminAddress("localhost:10023")
+                    }
+                rpcUsers = [[user: "user1", "password": "test", "permissions": ["ALL"]]]
+                }
         }
-        node {
-            name "O=Bank A,L=London,C=GB"
-            cordapps = ["$corda_release_group:corda-finance:$corda_release_version"]
-            rpcUsers = rpcUsersList
-            useTestClock true
-        }
-        node {
-            name "O=Bank B,L=New York,C=US"
-            cordapps = ["$corda_release_group:corda-finance:$corda_release_version"]
-            rpcUsers = rpcUsersList
-            useTestClock true
-        }
-        node {
-            name "O=Regulator,L=Moscow,C=RU"
-            cordapps = ["$corda_release_group:corda-finance:$corda_release_version"]
-            rpcUsers = rpcUsersList
-            useTestClock true
-        }
-    }
+
+3. Create an empty ``docker-compose.yml`` file using the following command on Mac or Linux:
+
+    ``touch workflows-java/build/nodes/docker-compose.yml``
+
+  For Windows, use the following command:
+
+    ``echo.> workflows-java\build\nodes\docker-compose.yml``
+
+4. Run ``./gradlew prepareDockerNodes`` and edit the generated ``docker-compose.yml`` file to change the ports:
+
+    .. sourcecode:: groovy
+
+      version: '3'
+      services:
+        notary:
+          build: /Users/<USER>/Projects/json-cordapp/workflows-java/build/nodes/Notary
+          ports:
+            - "10002"
+            - "10003"
+        partya:
+          build: /Users/<USER>/Projects/json-cordapp/workflows-java/build/nodes/PartyA
+          ports:
+            - "10002"
+            - "10003"
+        partyb:
+          build: /Users/<USER>/Projects/json-cordapp/workflows-java/build/nodes/PartyB
+          ports:
+            - "10002"
+            - "10003"
+
 
 Running the Cordform/Dockerform tasks
 -------------------------------------
@@ -451,6 +475,4 @@ for testing and development purposes. If you make any changes to your CorDapp so
 need to re-run the task to see the changes take effect.
 
 If the task is a ``Dockerform`` task, running the task will also create an additional ``Dockerfile`` in each node
-directory, and a ``docker-compose.yml`` file in the ``build/nodes`` directory.
-
-You can now run the nodes by following the instructions in :doc:`Running a node <running-a-node>`.
+directory in the ``build/nodes`` directory.

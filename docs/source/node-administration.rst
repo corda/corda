@@ -379,3 +379,48 @@ Here is a sample output displayed by the ``run nodeDiagnosticInfo`` command exec
       vendor: "R3"
       licence: "Open Source (Apache 2)"
       jarHash: "6EA4E0B36010F1DD27B5677F3686B4713BA40C316804A4188DCA20F477FDB23F"
+
+Managing trusted attachments
+----------------------------
+
+The node comes equipped with tools to manage attachments, including tooling to examine installed and uploaded attachments as well as those
+that were received over the network.
+
+.. note::   A Contract CorDapp (an attachment) received over the network, is only allowed to be evaluated if there are other Contract
+            CorDapps installed in the node that have been signed by at least one of the received CorDapp's keys.
+
+            See :ref:`Signature Constraints <signature_constraints>` and
+            :ref:`Signing CorDapps for use with Signature Constraints <signing_cordapps_for_use_with_signature_constraints>` for more information
+
+Shell commands
+++++++++++++++
+
+The following shell command can be used to extract information about attachments from the node:
+
+    - ``attachments trustInfo``
+
+    Outputs to the shell a list of all attachments along with the following information:
+
+        - Whether an attachment is installed locally
+
+            - ``True`` if the attachment is installed in the CorDapps directory or uploaded via RPC
+            - ``False`` in all other scenarios, including attachments received from a peer node or uploaded via any means other than RPC
+        - If an attachment is trusted
+        - Which other attachment, if any, provided trust to an attachment
+
+    Below is an example out the command's output:
+
+    .. code-block:: none
+
+        Name                                          Attachment ID                                                        Installed             Trusted                Trust Root
+        --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        net.corda.dummy-cordapp-contracts-states      654CDFD0F195269B1C839DD9D539592B4DE7DD09BF29A3762EF600F94AE45E18     true                  true                   net.corda.dummy-cordapp-contracts-states
+        Corda Finance Demo                            71154836EBE54C0A60C6C5D9513EE015DB722EED57034B34428C72459CF133D7     true                  true                   Corda Finance Demo
+        Received from: O=PartyA, L=London, C=GB       CDDDD9A5C97DBF839445FFD79F604078D9D9766D178F698780EA4F9EA7A02D5F     false                 true                   net.corda.dummy-cordapp-contracts-states
+
+    .. note::   The ``Name`` column will be empty if the attachment has been stored without a name. ``Trust Root`` will also display an attachment
+                hash if there is no name to display.
+
+    The output above shows that two CorDapps have been installed locally and are therefore trusted. The 3rd record is an attachment received
+    from another node, hence the ``Name`` field containing ``Received from: O=PartyA, L=London, C=GB``. The CorDapp is also trusted as another
+    CorDapp has been signed by a common key, the ``Trust Root`` field is filled in to highlight this.

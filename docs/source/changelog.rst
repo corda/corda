@@ -7,12 +7,17 @@ release, see :doc:`app-upgrade-notes`.
 Unreleased
 ----------
 
+* Removed the RPC exception privacy feature. Previously, in production mode, the exceptions thrown on the node were stripped of all content
+  when rethrown on the RPC client.
+
 * Introduced a new parameter ``externalIds: List<UUID>`` to ``VaultQueryCriteria`` which allows CorDapp developers to constrain queries
   to a specified set of external IDs.
 
 * Introduced a new API on ``KeyManagementService`` which facilitates lookups of ``PublicKey`` s to ``externalId`` s (Account IDs).
 
-* Introduced a new low level flow diagnostics tool: checkpoint agent (that can be used standalone or in conjunction with the ``dumpCheckpoints`` shell command).
+* ``StatePointer`` has been marked as ```@DoNotImplement``, which was an omission in the original release.
+
+* Introduced a new low level flow diagnostics tool: checkpoint agent (that can be used standalone or in conjunction with the ``checkpoints dump`` shell command).
   See :doc:`checkpoint-tooling` for more information.
 
 * The MockNet now supports setting a custom Notary class name, as was already supported by normal node config. See :doc:`tutorial-custom-notary`.
@@ -25,7 +30,7 @@ Unreleased
   into IRS Demo.
 * The introductory and technical white papers have been refreshed. They have new content and a clearer organisation.
 
-* Information about checkpointed flows can be retrieved from the shell. Calling ``dumpCheckpoints`` will create a zip file inside the node's
+* Information about checkpointed flows can be retrieved from the shell. Calling ``checkpoints dump`` will create a zip file inside the node's
   ``log`` directory. This zip will contain a JSON representation of each checkpointed flow. This information can then be used to determine the
   state of stuck flows or flows that experienced internal errors and were kept in the node for manual intervention.
 
@@ -62,6 +67,11 @@ Unreleased
 
 * Wildcards can now be used when specifying RPC permissions, for example ``StartFlow.foo.bar.*`` will allow users to start any flow in the
   ``foo.bar`` package. See :ref:`rpcUsers <corda_configuration_file_rpc_users>` for more information.
+
+* ``-XX:+HeapDumpOnOutOfMemoryError`` and ``-XX:+CrashOnOutOfMemoryError`` have been added to the default JVM options of the node.
+  A node which is running out of memory is now expected to stop immediately to preserve ledger consistency and avoid flaws in operations.
+  Note that it's a responsibility of a client application to handle RPC reconnection in case this happens.
+  See :ref:`setting_jvm_args` and :ref:`memory_usage_and_tuning` for further details.
 
 .. _changelog_v4.1:
 

@@ -1,5 +1,6 @@
 package net.corda.node.logging
 
+import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.StartableByRPC
@@ -48,19 +49,8 @@ class ErrorCodeLoggingTests : IntegrationTest() {
             val node = startNode(startInSameProcess = false, logLevelOverride = "ERROR").getOrThrow()
             node.rpc.startFlow(::MyFlow).waitForCompletion()
             val logFile = node.logFile()
-            assertThat(logFile.length()).isGreaterThan(0)
-
-            val linesWithoutError = logFile.useLines { lines ->
-                lines.filterNot {
-                    it.contains("[ERROR")
-                }.filter {
-                    it.contains("[INFO")
-                            .or(it.contains("[WARN"))
-                            .or(it.contains("[DEBUG"))
-                            .or(it.contains("[TRACE"))
-                }.toList()
-            }
-            assertThat(linesWithoutError.isEmpty()).isTrue()
+            // An exception thrown in a flow will log at the "INFO" level.
+            assertThat(logFile.length()).isEqualTo(0)
         }
     }
 

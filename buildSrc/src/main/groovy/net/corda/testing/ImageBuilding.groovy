@@ -5,10 +5,7 @@ import com.bmuschko.gradle.docker.tasks.container.DockerCreateContainer
 import com.bmuschko.gradle.docker.tasks.container.DockerLogsContainer
 import com.bmuschko.gradle.docker.tasks.container.DockerStartContainer
 import com.bmuschko.gradle.docker.tasks.container.DockerWaitContainer
-import com.bmuschko.gradle.docker.tasks.image.DockerBuildImage
-import com.bmuschko.gradle.docker.tasks.image.DockerCommitImage
-import com.bmuschko.gradle.docker.tasks.image.DockerPushImage
-import com.bmuschko.gradle.docker.tasks.image.DockerTagImage
+import com.bmuschko.gradle.docker.tasks.image.*
 import org.gradle.api.GradleException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -23,8 +20,21 @@ class ImageBuilding implements Plugin<Project> {
 
     @Override
     void apply(Project project) {
+
+        def registryCredentialsForPush = new DockerRegistryCredentials(project.getObjects())
+        registryCredentialsForPush.username.set("stefanotestingcr")
+        registryCredentialsForPush.password.set(System.getProperty("docker.push.password") ? System.getProperty("docker.push.password") : "")
+
+        DockerPullImage pullTask = project.tasks.create("pullBaseImage", DockerPullImage){
+            repository = "stefanotestingcr.azurecr.io/buildbase"
+            tag = "latest"
+            doFirst {
+                registryCredentials = registryCredentialsForPush
+            }
+        }
+
         DockerBuildImage buildDockerImageForSource = project.tasks.create('buildDockerImageForSource', DockerBuildImage) {
-            dependsOn project.rootProject.getTasksByName("clean", true)
+            dependsOn Arrays.asList(project.rootProject.getTasksByName("clean", true), pullTask)
             inputDir.set(new File("."))
             dockerFile.set(new File(new File("testing"), "Dockerfile"))
         }
@@ -79,9 +89,6 @@ class ImageBuilding implements Plugin<Project> {
             tag = "${UUID.randomUUID().toString().toLowerCase().subSequence(0, 12)}"
             repository = "stefanotestingcr.azurecr.io/testing"
         }
-        def registryCredentialsForPush = new DockerRegistryCredentials(project.getObjects())
-        registryCredentialsForPush.username.set("stefanotestingcr")
-        registryCredentialsForPush.password.set(System.getProperty("docker.push.password") ? System.getProperty("docker.push.password") : "")
 
         if (System.getProperty("docker.tag")) {
             DockerPushImage pushBuildImage = project.tasks.create('pushBuildImage', DockerPushImage) {

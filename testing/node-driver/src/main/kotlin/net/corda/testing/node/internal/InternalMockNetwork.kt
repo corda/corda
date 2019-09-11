@@ -610,6 +610,7 @@ private fun mockNodeConfiguration(certificatesDirectory: Path, wrappingKeyStoreP
         doReturn("").whenever(it).emailAddress
         doReturn(null).whenever(it).jmxMonitoringHttpPort
         doReturn(true).whenever(it).devMode
+        doReturn(emptyList<String>()).whenever(it).blacklistedAttachmentSigningKeys
         doReturn(null).whenever(it).compatibilityZoneURL
         doReturn(null).whenever(it).networkServices
         doReturn(VerifierType.InMemory).whenever(it).verifierType

@@ -89,6 +89,7 @@ data class NodeConfigurationImpl(
         override val freshIdentitiesConfiguration: FreshIdentitiesConfiguration? = null,
         override val disableFreshIdentitiesWarning: Boolean = false,
         override val cryptoServiceTimeout: Duration = Defaults.cryptoServiceTimeout
+        override val blacklistedAttachmentSigningKeys: List<String> = Defaults.blacklistedAttachmentSigningKeys
 ) : NodeConfiguration {
     internal object Defaults {
         val jmxMonitoringHttpPort: Int? = null
@@ -128,6 +129,7 @@ data class NodeConfigurationImpl(
         val cryptoServiceTimeout: Duration = Duration.ofSeconds(1)
         val networkParameterAcceptanceSettings: NetworkParameterAcceptanceSettings = NetworkParameterAcceptanceSettings()
         val masterKeyAlias = "wrapping-key-alias"
+        val blacklistedAttachmentSigningKeys: List<String> = emptyList()
 
         fun cordappsDirectories(baseDirectory: Path) = listOf(baseDirectory / CORDAPPS_DIR_NAME_DEFAULT)
 

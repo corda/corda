@@ -90,10 +90,12 @@ private constructor(private val otherSideSession: FlowSession?,
 
     @Suspendable
     override fun call(): LinkedHashMap<Party, AnonymousParty> {
-        val session = otherSideSession ?: run {
+        val session = if (otherParty != null && otherParty != otherSideSession?.counterparty) {
             logger.warnOnce("The current usage of SwapIdentitiesFlow is unsafe. Please consider upgrading your CorDapp to use " +
                     "SwapIdentitiesFlow with FlowSessions. (${CordappResolver.currentCordapp?.info})")
-            initiateFlow(otherParty!!)
+            initiateFlow(otherParty)
+        } else {
+            otherSideSession!!
         }
         progressTracker.currentStep = GENERATING_IDENTITY
         val ourAnonymousIdentity = serviceHub.keyManagementService.freshKeyAndCert(ourIdentityAndCert, false)

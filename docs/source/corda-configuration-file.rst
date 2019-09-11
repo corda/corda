@@ -69,6 +69,19 @@ attachmentCacheBound
 
   *Default:* 1024
 
+.. _corda_configuration_file_blacklisted_attachment_signer_keys:
+
+blacklistedAttachmentSigningKeys
+  List of SHA-256 hashes of public keys. Attachments signed by any of these public keys will not be considered as trust roots for any attachments received over the network.
+  This property is similar to :ref:`cordappSignerKeyFingerprintBlacklist <corda_configuration_file_signer_blacklist>` but only restricts CorDapps that were
+  included as attachments in a transaction and received over the network from a peer.
+
+  See :ref:`Signing CorDapps for use with Signature Constraints <signing_cordapps_for_use_with_signature_constraints>` for more information about signing CorDapps and what
+  makes an attachment trusted (a trust root).
+
+  This property requires retrieving the hashes of public keys that need to be blacklisted. More information on this process can be found in :ref:`Generating a public key hash <generating_a_public_key_hash>`.
+
+   *Default:* not defined
 
 compatibilityZoneURL (deprecated)
   The root address of the Corda compatibility zone network management services, it is used by the Corda node to register with the network and obtain a Corda node certificate, (See :doc:`permissioning` for more information.) and also is used by the node to obtain network map information.
@@ -84,6 +97,8 @@ cordappSignerKeyFingerprintBlacklist
   List of the public keys fingerprints (SHA-256 of public key hash) not allowed as Cordapp JARs signers.
   The node will not load Cordapps signed by those keys.
   The option takes effect only in production mode and defaults to Corda development keys (``["56CA54E803CB87C8472EBD3FBC6A2F1876E814CEEBF74860BD46997F40729367", "83088052AF16700457AE2C978A7D8AC38DD6A7C713539D00B897CD03A5E5D31D"]``), in development mode any key is allowed to sign Cordpapp JARs.
+
+  This property requires retrieving the hashes of public keys that need to be blacklisted. More information on this process can be found in :ref:`Generating a public key hash <generating_a_public_key_hash>`.
 
   *Default:* not defined
 
@@ -908,4 +923,23 @@ Configuring a node where the Corda Compatibility Zone's registration and Network
 .. literalinclude:: example-code/src/main/resources/example-node-with-networkservices.conf
     :language: none
 
+.. _generating_a_public_key_hash:
 
+Generating a public key hash
+----------------------
+
+This section details how a public key hash can be extracted and generated from a signed CorDapp. This is required for a select number of
+configuration properties.
+
+Below are the steps to generate a hash for a CorDapp signed with a RSA certificate. A similar process should work for other certificate types.
+
+ - Extract the contents of the signed CorDapp jar.
+ - Run the following command (replacing the < > variables):
+
+   .. code-block:: none
+
+        openssl pkcs7 -in <extract_signed_jar_directory>/META-INF/<signature_to_hash>.RSA -print_certs -inform DER -outform DER \
+        | openssl x509 -pubkey -noout \
+        | openssl rsa -pubin -outform der | openssl dgst -sha256
+
+ - Copy the public key hash that is generated and place it into the required location (e.g. in ``node.conf``).

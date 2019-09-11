@@ -16,27 +16,6 @@ class DuplicateAttachmentException(attachmentHash: String) : java.nio.file.FileA
  */
 class NonRpcFlowException(logicType: Class<*>) : IllegalArgumentException("${logicType.name} was not designed for RPC"), ClientRelevantError
 
-/**
- * An [Exception] to signal RPC clients that something went wrong within a Corda node.
- * The message is generic on purpose, as this prevents internal information from reaching RPC clients.
- * Leaking internal information outside can compromise privacy e.g., party names and security e.g., passwords, stacktraces, etc.
- *
- * @param errorIdentifier an optional identifier for tracing problems across parties.
- */
-class InternalNodeException(private val errorIdentifier: Long? = null) : CordaRuntimeException(message), ClientRelevantError, IdentifiableException {
-
-    companion object {
-        /**
-         * Message for the exception.
-         */
-        const val message = "Something went wrong within the Corda node."
-    }
-
-    override fun getErrorId(): Long? {
-        return errorIdentifier
-    }
-}
-
 class OutdatedNetworkParameterHashException(old: SecureHash, new: SecureHash) : CordaRuntimeException(TEMPLATE.format(old, new)), ClientRelevantError {
 
     private companion object {
