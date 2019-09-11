@@ -114,7 +114,6 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
 
     // Helper for deprecated toLedgerTransaction
     // TODO: revisit once Deterministic JVM code updated
-    @Suppress("UNUSED") // not sure if this field can be removed safely??
     private val missingAttachment: Attachment by lazy {
         object : AbstractAttachment({ byteArrayOf() }, DEPLOYED_CORDAPP_UPLOADER ) {
             override val id: SecureHash get() = throw UnsupportedOperationException()
