@@ -1,14 +1,13 @@
 apply plugin: 'kotlin'
-apply plugin: 'net.corda.plugins.publish-utils'
-apply plugin: 'com.jfrog.artifactory'
 
-description 'Corda serialization'
+// Any serialization tests that require further Corda dependencies (other than `core`) should be added to this module.
+description 'Corda serialization tests'
 
 dependencies {
     compile project(":serialization")
 
-    testCompile files(project(':serialization').sourceSets.test.output)
     testCompile project(':node-driver')
+    testCompile project(path: ':serialization', configuration: 'testArtifacts')
 
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
     testImplementation "junit:junit:$junit_version"
@@ -23,21 +22,4 @@ dependencies {
 
 configurations {
     testArtifacts.extendsFrom testRuntimeClasspath
-}
-
-task testJar(type: Jar) {
-    classifier "tests"
-    from sourceSets.test.output
-}
-
-artifacts {
-    testArtifacts testJar
-}
-
-jar {
-    baseName 'corda-serialization'
-}
-
-publish {
-    name jar.baseName
 }
