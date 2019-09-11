@@ -1,4 +1,4 @@
-package net.corda.bridge.services.api
+package net.corda.nodeapi.internal.lifecycle
 
 import rx.Observable
 

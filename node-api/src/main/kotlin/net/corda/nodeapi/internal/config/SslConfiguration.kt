@@ -1,5 +1,8 @@
 package net.corda.nodeapi.internal.config
 
+import net.corda.nodeapi.internal.cryptoservice.SupportedCryptoServices
+import java.nio.file.Path
+
 interface SslConfiguration {
 
     val keyStore: FileBasedCertificateStoreSupplier?
@@ -21,5 +24,10 @@ interface MutualSslConfiguration : SslConfiguration {
 }
 
 private class MutualSslOptions(override val keyStore: FileBasedCertificateStoreSupplier, override val trustStore: FileBasedCertificateStoreSupplier, override val useOpenSsl: Boolean ) : MutualSslConfiguration
+
+interface CryptoServiceConfig {
+    val name: SupportedCryptoServices
+    val conf: Path?
+}
 
 const val DEFAULT_SSL_HANDSHAKE_TIMEOUT_MILLIS = 60000L // Set at least 3 times higher than sun.security.provider.certpath.URICertStore.DEFAULT_CRL_CONNECT_TIMEOUT which is 15 sec

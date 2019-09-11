@@ -6,9 +6,9 @@ import net.corda.bridge.createAndLoadConfigFromResource
 import net.corda.bridge.createBridgeKeyStores
 import net.corda.bridge.createNetworkParams
 import net.corda.bridge.services.api.FirewallConfiguration
-import net.corda.bridge.services.api.TLSSigningService
+import net.corda.nodeapi.internal.cryptoservice.TLSSigningService
 import net.corda.bridge.services.artemis.BridgeArtemisConnectionServiceImpl
-import net.corda.bridge.services.receiver.CryptoServiceSigningService
+import net.corda.nodeapi.internal.cryptoservice.CryptoServiceSigningService
 import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.services.config.EnterpriseConfiguration
@@ -132,6 +132,6 @@ class ArtemisConnectionTest {
 
     private fun createArtemisSigningService(conf: FirewallConfiguration): TLSSigningService {
         val artemisSSlConfiguration = conf.outboundConfig?.artemisSSLConfiguration ?: conf.publicSSLConfiguration
-        return CryptoServiceSigningService(conf.artemisCryptoServiceConfig, DUMMY_BANK_A_NAME, artemisSSlConfiguration, conf.sslHandshakeTimeout, TestAuditService(), name = "Artemis")
+        return CryptoServiceSigningService(conf.artemisCryptoServiceConfig, DUMMY_BANK_A_NAME, artemisSSlConfiguration, conf.sslHandshakeTimeout, name = "Artemis")
     }
 }

@@ -1,8 +1,8 @@
 package net.corda.bridge
 
-import net.corda.bridge.services.api.ServiceStateSupport
-import net.corda.bridge.services.util.ServiceStateCombiner
-import net.corda.bridge.services.util.ServiceStateHelper
+import net.corda.nodeapi.internal.lifecycle.ServiceStateSupport
+import net.corda.nodeapi.internal.lifecycle.ServiceStateCombiner
+import net.corda.nodeapi.internal.lifecycle.ServiceStateHelper
 import net.corda.core.utilities.contextLogger
 import org.junit.Assert.assertEquals
 import org.junit.Test

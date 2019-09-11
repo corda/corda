@@ -4,25 +4,18 @@ import com.nhaarman.mockito_kotlin.any
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
 import com.r3.ha.utilities.InternalTunnelKeystoreGenerator
-import net.corda.bridge.services.TestAuditService
-import net.corda.bridge.services.api.CryptoServiceConfig
 import net.corda.bridge.services.config.BridgeConfigHelper
 import net.corda.cliutils.CommonCliConstants
 import net.corda.core.crypto.Crypto
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.div
 import net.corda.core.internal.exists
-import net.corda.nodeapi.internal.config.CertificateStore
-import net.corda.nodeapi.internal.config.CertificateStoreSupplier
-import net.corda.nodeapi.internal.config.FileBasedCertificateStoreSupplier
-import net.corda.nodeapi.internal.config.MutualSslConfiguration
+import net.corda.nodeapi.internal.config.*
 import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_ROOT_CA
 import net.corda.nodeapi.internal.crypto.getCertificateAndKeyPair
-import net.corda.nodeapi.internal.cryptoservice.CryptoService
-import net.corda.nodeapi.internal.cryptoservice.CryptoServiceException
-import net.corda.nodeapi.internal.cryptoservice.SupportedCryptoServices
+import net.corda.nodeapi.internal.cryptoservice.*
 import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
 import net.corda.testing.common.internal.isInstanceOf
 import net.corda.testing.internal.participant
@@ -113,7 +106,7 @@ class CryptoServiceSigningServiceUnitTest {
     @Test
     fun testNormalStart() {
 
-        val instance = CryptoServiceSigningService(null, dummyLegalName, sslConfiguration, null, TestAuditService(),
+        val instance = CryptoServiceSigningService(null, dummyLegalName, sslConfiguration, null,
                 "testNormalStart", {}, { bouncyCryptoService })
         instance.start()
         // Also test ability to sign
@@ -131,7 +124,7 @@ class CryptoServiceSigningServiceUnitTest {
             first.update { setPrivateKey(second, Crypto.generateKeyPair().private, listOf(rootCa), entryPassword) }
         }
 
-        val instance = CryptoServiceSigningService(null, dummyLegalName, sslConfiguration, null, TestAuditService(),
+        val instance = CryptoServiceSigningService(null, dummyLegalName, sslConfiguration, null,
                 "testUnmappedAliasedStart", {}, { bouncyCryptoService })
         Assertions.assertThatThrownBy { instance.start() }.isInstanceOf<CryptoServiceException>()
     }
@@ -188,9 +181,9 @@ class CryptoServiceSigningServiceUnitTest {
     @Test
     fun testLifecycleWithBCCryptoService() {
         // create signing service
-        val mock = CryptoServiceMock { BridgeConfigHelper.makeCryptoService(null, dummyLegalName, sslConfiguration.keyStore) }
+        val mock = CryptoServiceMock { CryptoServiceFactory.makeCryptoService(null, dummyLegalName, sslConfiguration.keyStore) }
         val signingService = CryptoServiceSigningService(null, dummyLegalName, sslConfiguration, 10000,
-                TestAuditService(), name = "Test", sleep = mock::sleep, makeCryptoService = mock::connect)
+                name = "Test", sleep = mock::sleep, makeCryptoService = mock::connect)
         val stateFollower = signingService.activeChange.toBlocking().iterator
         assertEquals(false, stateFollower.next())
         assertEquals(false, signingService.active)
@@ -269,7 +262,7 @@ class CryptoServiceSigningServiceUnitTest {
 
         // generate keys in HSM and add corresponding certificate to the signing service after first connect to HSM
         val makeCryptoService = {
-            val cryptoService = BridgeConfigHelper.makeCryptoService(csConfig, dummyLegalName, sslConfiguration.keyStore)
+            val cryptoService = CryptoServiceFactory.makeCryptoService(csConfig, dummyLegalName, sslConfiguration.keyStore)
             println("CryptoService created")
             if (certList.isEmpty()) {
                 println("Creating certificate ...")
@@ -285,7 +278,7 @@ class CryptoServiceSigningServiceUnitTest {
 
         // create signing service
         val signingService = CryptoServiceSigningService(csConfig, dummyLegalName, sslConfiguration, 10000,
-                TestAuditService(), name = "Tunnel", sleep = {
+                name = "Tunnel", sleep = {
             println("Sleeping 1 sec ...")
             Thread.sleep(1000)
         }, makeCryptoService = makeCryptoService)

@@ -1,5 +1,7 @@
 package net.corda.bridge.services.api
 
+import net.corda.nodeapi.internal.lifecycle.ServiceLifecycleSupport
+
 /**
  * This service controls when a bridge may become active and start relaying messages to/from the artemis broker.
  * The active flag is the used to gate dependent services, which should hold off connecting to the bus until this service

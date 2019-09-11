@@ -1,9 +1,11 @@
 package net.corda.bridge.services.receiver
 
 import net.corda.bridge.services.api.*
-import net.corda.bridge.services.util.ServiceStateCombiner
-import net.corda.bridge.services.util.ServiceStateHelper
+import net.corda.nodeapi.internal.lifecycle.ServiceStateCombiner
+import net.corda.nodeapi.internal.lifecycle.ServiceStateHelper
 import net.corda.core.utilities.contextLogger
+import net.corda.nodeapi.internal.cryptoservice.TLSSigningService
+import net.corda.nodeapi.internal.lifecycle.ServiceStateSupport
 import net.corda.nodeapi.internal.protonwrapper.messages.ReceivedMessage
 import rx.Subscription
 

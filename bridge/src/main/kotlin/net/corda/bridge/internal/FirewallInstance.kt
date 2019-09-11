@@ -5,8 +5,8 @@ import net.corda.bridge.services.api.*
 import net.corda.bridge.services.audit.LoggingFirewallAuditService
 import net.corda.bridge.services.supervisors.BridgeSupervisorServiceImpl
 import net.corda.bridge.services.supervisors.FloatSupervisorServiceImpl
-import net.corda.bridge.services.util.ServiceStateCombiner
-import net.corda.bridge.services.util.ServiceStateHelper
+import net.corda.nodeapi.internal.lifecycle.ServiceStateCombiner
+import net.corda.nodeapi.internal.lifecycle.ServiceStateHelper
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.exists
@@ -18,6 +18,8 @@ import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.ShutdownHook
 import net.corda.nodeapi.internal.addShutdownHook
+import net.corda.nodeapi.internal.lifecycle.ServiceLifecycleSupport
+import net.corda.nodeapi.internal.lifecycle.ServiceStateSupport
 import net.corda.nodeapi.internal.network.SignedNetworkParameters
 import net.corda.serialization.internal.AMQP_P2P_CONTEXT
 import net.corda.serialization.internal.SerializationFactoryImpl

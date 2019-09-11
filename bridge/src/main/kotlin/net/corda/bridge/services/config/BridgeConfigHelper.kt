@@ -3,16 +3,12 @@ package net.corda.bridge.services.config
 import com.typesafe.config.*
 import com.typesafe.config.ConfigFactory.systemEnvironment
 import com.typesafe.config.ConfigFactory.systemProperties
-import net.corda.bridge.services.api.CryptoServiceConfig
 import net.corda.bridge.services.api.FirewallConfiguration
 import net.corda.bridge.services.config.internal.Version3BridgeConfigurationImpl
 import net.corda.bridge.services.config.internal.Version4FirewallConfiguration
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.div
 import net.corda.nodeapi.internal.config.*
-import net.corda.nodeapi.internal.cryptoservice.CryptoService
-import net.corda.nodeapi.internal.cryptoservice.CryptoServiceFactory
-import net.corda.nodeapi.internal.cryptoservice.SupportedCryptoServices
 import org.slf4j.LoggerFactory
 import java.nio.file.Path
 
@@ -101,13 +97,5 @@ object BridgeConfigHelper {
                 else -> config
             }
         }
-    }
-
-    fun makeCryptoService(csConf: CryptoServiceConfig?, legalName: CordaX500Name, keyStoreSupplier: FileBasedCertificateStoreSupplier? = null): CryptoService {
-        return CryptoServiceFactory.makeCryptoService(
-                csConf?.name ?: SupportedCryptoServices.BC_SIMPLE,
-                legalName,
-                keyStoreSupplier,
-                csConf?.conf)
     }
 }

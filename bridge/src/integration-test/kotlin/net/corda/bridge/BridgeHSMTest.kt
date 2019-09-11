@@ -1,7 +1,6 @@
 package net.corda.bridge
 
 import com.typesafe.config.ConfigFactory
-import net.corda.bridge.services.config.BridgeConfigHelper.makeCryptoService
 import net.corda.bridge.services.config.CryptoServiceConfigImpl
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.crypto.SecureHash
@@ -18,6 +17,7 @@ import net.corda.nodeapi.internal.config.CertificateStore
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.crypto.X509Utilities
+import net.corda.nodeapi.internal.cryptoservice.CryptoServiceFactory.Companion.makeCryptoService
 import net.corda.nodeapi.internal.cryptoservice.SupportedCryptoServices
 import net.corda.nodeapi.internal.hsm.HsmSimulator
 import net.corda.testing.core.*

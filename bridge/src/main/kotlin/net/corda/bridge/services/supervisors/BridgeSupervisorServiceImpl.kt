@@ -6,13 +6,15 @@ import net.corda.bridge.services.config.BridgeConfigHelper.BRIDGE_NAME
 import net.corda.bridge.services.filter.SimpleMessageFilterService
 import net.corda.bridge.services.ha.ExternalMasterElectionService
 import net.corda.bridge.services.ha.SingleInstanceMasterService
-import net.corda.bridge.services.receiver.CryptoServiceSigningService
+import net.corda.nodeapi.internal.cryptoservice.CryptoServiceSigningService
 import net.corda.bridge.services.receiver.InProcessBridgeReceiverService
 import net.corda.bridge.services.receiver.TunnelingBridgeReceiverService
 import net.corda.bridge.services.sender.DirectBridgeSenderService
-import net.corda.bridge.services.util.ServiceStateCombiner
-import net.corda.bridge.services.util.ServiceStateHelper
+import net.corda.nodeapi.internal.lifecycle.ServiceStateCombiner
+import net.corda.nodeapi.internal.lifecycle.ServiceStateHelper
 import net.corda.core.utilities.contextLogger
+import net.corda.nodeapi.internal.cryptoservice.TLSSigningService
+import net.corda.nodeapi.internal.lifecycle.ServiceStateSupport
 import net.corda.nodeapi.internal.protonwrapper.netty.RevocationConfig
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -44,7 +46,7 @@ class BridgeSupervisorServiceImpl(conf: FirewallConfiguration,
         val artemisSSlConfiguration = conf.outboundConfig?.artemisSSLConfiguration ?: conf.publicSSLConfiguration
         // The fact that we pass BRIDGE_NAME has no effect as Crypto service obtained will only be used to sign data and never to create new key pairs
         val legalName = BRIDGE_NAME
-        artemisSigningService = CryptoServiceSigningService(conf.artemisCryptoServiceConfig, legalName, artemisSSlConfiguration, conf.sslHandshakeTimeout, auditService, name = "Artemis")
+        artemisSigningService = CryptoServiceSigningService(conf.artemisCryptoServiceConfig, legalName, artemisSSlConfiguration, conf.sslHandshakeTimeout, name = "Artemis")
 
         artemisService = BridgeArtemisConnectionServiceImpl(artemisSigningService, conf, maxMessageSize, auditService)
         haService = if (conf.haConfig == null) {
@@ -54,10 +56,10 @@ class BridgeSupervisorServiceImpl(conf: FirewallConfiguration,
         }
 
         // TODO: get keystore public data from crypto service? or from config?
-        signingService = CryptoServiceSigningService(conf.p2pTlsSigningCryptoServiceConfig, legalName, conf.publicSSLConfiguration, conf.sslHandshakeTimeout, auditService, name = "P2P")
+        signingService = CryptoServiceSigningService(conf.p2pTlsSigningCryptoServiceConfig, legalName, conf.publicSSLConfiguration, conf.sslHandshakeTimeout, name = "P2P")
 
         val controlLinkSSLConfiguration = conf.bridgeInnerConfig?.tunnelSSLConfiguration ?: conf.publicSSLConfiguration
-        tunnelingSigningService = CryptoServiceSigningService(conf.tunnelingCryptoServiceConfig, legalName, controlLinkSSLConfiguration, auditService = auditService, name = "Tunnel")
+        tunnelingSigningService = CryptoServiceSigningService(conf.tunnelingCryptoServiceConfig, legalName, controlLinkSSLConfiguration, name = "Tunnel")
         senderService = DirectBridgeSenderService(conf, maxMessageSize, signingService, auditService, haService, artemisService)
         filterService = SimpleMessageFilterService(conf, auditService, artemisService, senderService)
         receiverService = if (conf.firewallMode == FirewallMode.SenderReceiver) {

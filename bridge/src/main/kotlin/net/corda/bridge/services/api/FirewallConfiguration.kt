@@ -2,8 +2,8 @@ package net.corda.bridge.services.api
 
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.nodeapi.internal.config.CryptoServiceConfig
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
-import net.corda.nodeapi.internal.cryptoservice.SupportedCryptoServices
 import net.corda.nodeapi.internal.protonwrapper.netty.ProxyConfig
 import net.corda.nodeapi.internal.protonwrapper.netty.RevocationConfig
 import java.nio.file.Path
@@ -131,9 +131,4 @@ interface FirewallConfiguration {
     // Internal use property which specifies whether Proxy settings, if provided, should be used for CRL retrieval when requested by Float via tunnel.
     // This makes sense only for Bridge.
     val useProxyForCrls: Boolean
-}
-
-interface CryptoServiceConfig {
-    val name: SupportedCryptoServices
-    val conf: Path?
 }

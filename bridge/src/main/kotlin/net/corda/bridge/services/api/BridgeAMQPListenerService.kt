@@ -1,6 +1,7 @@
 package net.corda.bridge.services.api
 
 import net.corda.nodeapi.internal.config.CertificateStore
+import net.corda.nodeapi.internal.lifecycle.ServiceLifecycleSupport
 import net.corda.nodeapi.internal.protonwrapper.messages.ReceivedMessage
 import net.corda.nodeapi.internal.protonwrapper.netty.ConnectionChange
 import rx.Observable

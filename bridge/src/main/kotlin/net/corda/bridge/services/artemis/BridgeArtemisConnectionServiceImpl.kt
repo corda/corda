@@ -1,8 +1,8 @@
 package net.corda.bridge.services.artemis
 
 import net.corda.bridge.services.api.*
-import net.corda.bridge.services.util.ServiceStateCombiner
-import net.corda.bridge.services.util.ServiceStateHelper
+import net.corda.nodeapi.internal.lifecycle.ServiceStateCombiner
+import net.corda.nodeapi.internal.lifecycle.ServiceStateHelper
 import net.corda.core.internal.ThreadBox
 import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.utilities.contextLogger
@@ -12,6 +12,8 @@ import net.corda.nodeapi.internal.ArtemisMessagingClient.Companion.CORDA_ARTEMIS
 import net.corda.nodeapi.internal.ArtemisMessagingComponent
 import net.corda.nodeapi.internal.ArtemisTcpTransport
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
+import net.corda.nodeapi.internal.cryptoservice.TLSSigningService
+import net.corda.nodeapi.internal.lifecycle.ServiceStateSupport
 import net.corda.nodeapi.internal.provider.DelegatedKeystoreProvider
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient
 import org.apache.activemq.artemis.api.core.client.FailoverEventType

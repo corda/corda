@@ -1,7 +1,7 @@
 package net.corda.bridge.services
 
-import net.corda.bridge.services.api.ServiceLifecycleSupport
-import net.corda.bridge.services.util.ServiceStateHelper
+import net.corda.nodeapi.internal.lifecycle.ServiceLifecycleSupport
+import net.corda.nodeapi.internal.lifecycle.ServiceStateHelper
 import org.slf4j.helpers.NOPLogger
 import rx.Observable
 

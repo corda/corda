@@ -1,6 +1,7 @@
 package net.corda.bridge.services.api
 
 import net.corda.nodeapi.internal.ArtemisMessagingClient
+import net.corda.nodeapi.internal.lifecycle.ServiceLifecycleSupport
 
 /**
  * This provides a service to manage connection to the local broker as defined in the [FirewallConfiguration.outboundConfig] section.

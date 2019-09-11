@@ -1,21 +1,16 @@
-package net.corda.bridge.services.receiver
+package net.corda.nodeapi.internal.cryptoservice
 
-import net.corda.bridge.services.api.CryptoServiceConfig
-import net.corda.bridge.services.api.FirewallAuditService
-import net.corda.bridge.services.api.ServiceStateSupport
-import net.corda.bridge.services.api.TLSSigningService
-import net.corda.bridge.services.config.BridgeConfigHelper
-import net.corda.bridge.services.util.ServiceStateHelper
 import net.corda.core.crypto.Crypto
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.ThreadBox
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.trace
+import net.corda.nodeapi.internal.lifecycle.ServiceStateSupport
+import net.corda.nodeapi.internal.lifecycle.ServiceStateHelper
 import net.corda.nodeapi.internal.config.CertificateStore
+import net.corda.nodeapi.internal.config.CryptoServiceConfig
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
-import net.corda.nodeapi.internal.cryptoservice.CryptoService
-import net.corda.nodeapi.internal.cryptoservice.SupportedCryptoServices
 import net.corda.nodeapi.internal.provider.extractCertificates
 import java.io.IOException
 import java.lang.Math.min
@@ -25,10 +20,9 @@ class CryptoServiceSigningService(private val csConfig: CryptoServiceConfig?,
                                   private val legalName: CordaX500Name,
                                   sslConfig: MutualSslConfiguration,
                                   private val sslHandshakeTimeout: Long? = null,
-                                  private val auditService: FirewallAuditService,
                                   private val name: String,
                                   private val sleep: (Long) -> Unit = Thread::sleep,
-                                  private val makeCryptoService: () -> CryptoService = { BridgeConfigHelper.makeCryptoService(csConfig, legalName, sslConfig.keyStore) },
+                                  private val makeCryptoService: () -> CryptoService = { CryptoServiceFactory.makeCryptoService(csConfig, legalName, sslConfig.keyStore) },
                                   private val stateHelper: ServiceStateHelper = ServiceStateHelper(log)) : TLSSigningService, ServiceStateSupport by stateHelper {
     companion object {
         private val log = contextLogger()

@@ -2,6 +2,7 @@ package net.corda.bridge.services.api
 
 import net.corda.core.identity.CordaX500Name
 import net.corda.nodeapi.internal.bridging.BridgeControlListener
+import net.corda.nodeapi.internal.lifecycle.ServiceLifecycleSupport
 
 /**
  * This service is responsible for the outgoing path of messages from the local Artemis broker

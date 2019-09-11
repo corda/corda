@@ -1,5 +1,7 @@
 package net.corda.bridge.services.api
 
+import net.corda.nodeapi.internal.lifecycle.ServiceLifecycleSupport
+
 /**
  * This is the top level service representing the [FirewallMode.BridgeInner] service stack. The primary role of this component is to
  * create and wire up concrete implementations of the relevant services according to the [FirewallConfiguration] details.

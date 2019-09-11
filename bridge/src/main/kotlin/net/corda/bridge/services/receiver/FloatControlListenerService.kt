@@ -4,8 +4,8 @@ import net.corda.bridge.services.api.*
 import net.corda.bridge.services.config.BridgeConfigHelper.FLOAT_NAME
 import net.corda.bridge.services.receiver.FloatControlTopics.FLOAT_CONTROL_TOPIC
 import net.corda.bridge.services.receiver.FloatControlTopics.FLOAT_DATA_TOPIC
-import net.corda.bridge.services.util.ServiceStateCombiner
-import net.corda.bridge.services.util.ServiceStateHelper
+import net.corda.nodeapi.internal.lifecycle.ServiceStateCombiner
+import net.corda.nodeapi.internal.lifecycle.ServiceStateHelper
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.deserialize
@@ -17,6 +17,9 @@ import net.corda.nodeapi.internal.config.CertificateStore
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.crypto.KEYSTORE_TYPE
 import net.corda.nodeapi.internal.crypto.X509KeyStore
+import net.corda.nodeapi.internal.cryptoservice.CryptoServiceSigningService
+import net.corda.nodeapi.internal.cryptoservice.TLSSigningService
+import net.corda.nodeapi.internal.lifecycle.ServiceStateSupport
 import net.corda.nodeapi.internal.protonwrapper.messages.MessageStatus
 import net.corda.nodeapi.internal.protonwrapper.messages.ReceivedMessage
 import net.corda.nodeapi.internal.protonwrapper.netty.*
@@ -54,7 +57,7 @@ class FloatControlListenerService(val conf: FirewallConfiguration,
     private var tunnelExternalCrlSourceService: TunnelExternalCrlSourceService? = null
     private val tunnelSigningService: TLSSigningService
     private val tunnelingTruststore: CertificateStore
-    private val statusFollower:ServiceStateCombiner
+    private val statusFollower: ServiceStateCombiner
 
     private var maxMessageSize :Int? = null
 
@@ -64,7 +67,7 @@ class FloatControlListenerService(val conf: FirewallConfiguration,
     init {
         val sslConfiguration: MutualSslConfiguration = conf.floatOuterConfig?.tunnelSSLConfiguration ?: conf.publicSSLConfiguration
         // The fact that we pass FLOAT_NAME has no effect as Crypto service obtained will only be used to sign data and never to create new key pairs
-        tunnelSigningService = CryptoServiceSigningService(conf.tunnelingCryptoServiceConfig, FLOAT_NAME, sslConfiguration, auditService = auditService, name = "Tunnel")
+        tunnelSigningService = CryptoServiceSigningService(conf.tunnelingCryptoServiceConfig, FLOAT_NAME, sslConfiguration, name = "Tunnel")
         tunnelingTruststore = sslConfiguration.trustStore.get()
         statusFollower = ServiceStateCombiner(listOf(auditService, amqpListener, tunnelSigningService))
     }

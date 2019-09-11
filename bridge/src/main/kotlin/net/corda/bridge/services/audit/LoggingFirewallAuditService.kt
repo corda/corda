@@ -3,8 +3,8 @@ package net.corda.bridge.services.audit
 import net.corda.bridge.services.api.FirewallAuditService
 import net.corda.bridge.services.api.FirewallConfiguration
 import net.corda.bridge.services.api.RoutingDirection
-import net.corda.bridge.services.api.ServiceStateSupport
-import net.corda.bridge.services.util.ServiceStateHelper
+import net.corda.nodeapi.internal.lifecycle.ServiceStateSupport
+import net.corda.nodeapi.internal.lifecycle.ServiceStateHelper
 import net.corda.core.internal.utilities.JvmStatsHelper
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.trace

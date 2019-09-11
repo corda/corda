@@ -1,6 +1,5 @@
-package net.corda.bridge.services.util
+package net.corda.nodeapi.internal.lifecycle
 
-import net.corda.bridge.services.api.ServiceStateSupport
 import org.slf4j.Logger
 import rx.Observable
 import rx.subjects.BehaviorSubject

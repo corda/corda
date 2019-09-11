@@ -2,9 +2,9 @@ package net.corda.bridge.services.receiver
 
 import net.corda.bridge.services.api.FirewallAuditService
 import net.corda.bridge.services.api.RoutingDirection
-import net.corda.bridge.services.api.ServiceLifecycleSupport
-import net.corda.bridge.services.api.ServiceStateSupport
-import net.corda.bridge.services.util.ServiceStateHelper
+import net.corda.nodeapi.internal.lifecycle.ServiceLifecycleSupport
+import net.corda.nodeapi.internal.lifecycle.ServiceStateSupport
+import net.corda.nodeapi.internal.lifecycle.ServiceStateHelper
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SerializationFactory

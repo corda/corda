@@ -1,6 +1,7 @@
 package net.corda.nodeapi.internal.cryptoservice
 
 import net.corda.core.identity.CordaX500Name
+import net.corda.nodeapi.internal.config.CryptoServiceConfig
 import net.corda.nodeapi.internal.config.FileBasedCertificateStoreSupplier
 import net.corda.nodeapi.internal.cryptoservice.azure.AzureKeyVaultCryptoService
 import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
@@ -36,6 +37,12 @@ class CryptoServiceFactory {
                 SupportedCryptoServices.FUTUREX -> FutureXCryptoService.fromConfigurationFile(legalName.x500Principal, cryptoServiceConf)
                 SupportedCryptoServices.PRIMUS_X -> PrimusXCryptoService.fromConfigurationFile(legalName.x500Principal, cryptoServiceConf)
             }
+        }
+        fun makeCryptoService(csConf: CryptoServiceConfig?, legalName: CordaX500Name, keyStoreSupplier: FileBasedCertificateStoreSupplier? = null): CryptoService {
+            return makeCryptoService( csConf?.name ?: SupportedCryptoServices.BC_SIMPLE,
+                    legalName,
+                    keyStoreSupplier,
+                    csConf?.conf)
         }
         fun makeManagedCryptoService(
                 cryptoServiceName: SupportedCryptoServices,

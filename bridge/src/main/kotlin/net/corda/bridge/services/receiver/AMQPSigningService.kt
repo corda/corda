@@ -1,9 +1,9 @@
 package net.corda.bridge.services.receiver
 
 import net.corda.bridge.services.api.FirewallAuditService
-import net.corda.bridge.services.api.ServiceLifecycleSupport
-import net.corda.bridge.services.api.TLSSigningService
-import net.corda.bridge.services.util.ServiceStateHelper
+import net.corda.nodeapi.internal.lifecycle.ServiceLifecycleSupport
+import net.corda.nodeapi.internal.cryptoservice.TLSSigningService
+import net.corda.nodeapi.internal.lifecycle.ServiceStateHelper
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger

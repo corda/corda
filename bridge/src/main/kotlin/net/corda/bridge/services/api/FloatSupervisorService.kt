@@ -1,5 +1,7 @@
 package net.corda.bridge.services.api
 
+import net.corda.nodeapi.internal.lifecycle.ServiceLifecycleSupport
+
 /**
  * This is the top level service responsible for creating and managing the [FirewallMode.FloatOuter] portions of the bridge.
  * It exposes a possibly proxied [BridgeAMQPListenerService] component that is used in the [BridgeSupervisorService]
