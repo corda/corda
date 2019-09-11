@@ -1,5 +1,6 @@
 package net.corda.serialization.internal
 
+import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializedBytes
 import net.corda.serialization.internal.amqp.*
@@ -16,3 +17,7 @@ fun Type.accessAsClass(): Class<*> = asClass()
 fun <T> ifThrowsAppend(strToAppendFn: () -> String, block: () -> T): T = net.corda.serialization.internal.amqp.ifThrowsAppend(strToAppendFn, block)
 fun SerializationOutput.andFinally() = this.andFinally()
 fun <T : Any> SerializationOutput._serialize(obj: T, context: SerializationContext): SerializedBytes<T> = this._serialize(obj, context)
+
+object EmptyWhitelist : ClassWhitelist {
+    override fun hasListed(type: Class<*>): Boolean = false
+}
