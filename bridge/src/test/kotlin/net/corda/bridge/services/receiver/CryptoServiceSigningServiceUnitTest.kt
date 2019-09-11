@@ -4,7 +4,6 @@ import com.nhaarman.mockito_kotlin.any
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
 import com.r3.ha.utilities.InternalTunnelKeystoreGenerator
-import net.corda.bridge.services.config.BridgeConfigHelper
 import net.corda.cliutils.CommonCliConstants
 import net.corda.core.crypto.Crypto
 import net.corda.core.identity.CordaX500Name
