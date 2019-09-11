@@ -6,7 +6,6 @@ import com.bmuschko.gradle.docker.tasks.image.DockerBuildImage
 import com.bmuschko.gradle.docker.tasks.image.DockerCommitImage
 import com.bmuschko.gradle.docker.tasks.image.DockerTagImage
 import com.bmuschko.gradle.docker.tasks.image.DockerPushImage
-import net.corda.buildtasks.DetektChangedFiles
 import net.corda.buildtasks.ListTests
 
 buildscript {
@@ -173,7 +172,6 @@ plugins {
     id "com.gradle.build-scan" version "2.2.1"
     id 'com.bmuschko.docker-remote-api' version '5.0.0'
 }
-
 
 apply plugin: 'project-report'
 apply plugin: 'com.github.ben-manes.versions'
@@ -400,7 +398,6 @@ tasks.withType(Test) {
 task testReport(type: TestReport) {
     destinationDir = file("$buildDir/reports/allTests")
     // Include the results from the `test` task in all subprojects
-
     reportOn subprojects*.test
 }
 
@@ -540,7 +537,7 @@ docker {
         url = "stefanotestingcr.azurecr.io"
     }
 }
-
+//
 //testing workflow
 // 1. build an image from current checkout
 // 2. generate a list of tests
@@ -618,9 +615,19 @@ dependencies {
 task detekt(type: JavaExec) {
     main = "io.gitlab.arturbosch.detekt.cli.Main"
     classpath = configurations.detekt
-    def files = String.join(",", DetektChangedFiles.getChangedFiles())
-    def input = files
+    def input = "$projectDir"
     def config = "$projectDir/detekt-config.yml"
-    def params = ['-i', input, '-c', config]
+    def baseline = "$projectDir/baseline.xml"
+    def params = ['-i', input, '-c', config, '-b', baseline]
+    args(params)
+}
+
+task detektBaseline(type: JavaExec) {
+    main = "io.gitlab.arturbosch.detekt.cli.Main"
+    classpath = configurations.detekt
+    def input = "$projectDir"
+    def config = "$projectDir/detekt-config.yml"
+    def baseline = "$projectDir/baseline.xml"
+    def params = ['-i', input, '-c', config, '-b', baseline, '--create-baseline']
     args(params)
 }

@@ -19,7 +19,7 @@ import rx.subjects.PublishSubject
 class ANSIProgressRendererTest {
 
     companion object {
-        private const val INTENSITY_BOLD_ON_ASCII = "[1m"
+        private const val INTENSITY_BOLD_ON_ASCII = "[1m";
         private const val INTENSITY_OFF_ASCII = "[22m"
         private const val INTENSITY_FAINT_ON_ASCII = "[2m"
 
@@ -38,7 +38,10 @@ class ANSIProgressRendererTest {
         }
 
         fun stepActive(stepLabel: String): String {
-            return if (SystemUtils.IS_OS_WINDOWS) """CURRENT: $INTENSITY_BOLD_ON_ASCII$stepLabel$INTENSITY_OFF_ASCII""" else """▶︎ $INTENSITY_BOLD_ON_ASCII$stepLabel$INTENSITY_OFF_ASCII"""
+            return if (SystemUtils.IS_OS_WINDOWS)
+                """CURRENT: $INTENSITY_BOLD_ON_ASCII$stepLabel$INTENSITY_OFF_ASCII"""
+            else
+                """▶︎ $INTENSITY_BOLD_ON_ASCII$stepLabel$INTENSITY_OFF_ASCII"""
         }
 
         fun stepNotRun(stepLabel: String): String {
