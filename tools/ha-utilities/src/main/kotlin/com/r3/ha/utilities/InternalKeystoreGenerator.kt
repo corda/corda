@@ -30,51 +30,53 @@ private val hsmOptionMap = mapOf(
         'f' to SupportedCryptoServices.FUTUREX,
         's' to SupportedCryptoServices.PRIMUS_X)
 
-class InternalArtemisKeystoreGenerator : AbstractInternalKeystoreGenerator("generate-internal-artemis-ssl-keystores", "Generate self-signed root and SSL certificates for internal communication between the services and external Artemis broker.") {
+class
+InternalArtemisKeystoreGenerator : AbstractInternalKeystoreGenerator("generate-internal-artemis-ssl-keystores", "Generate self-signed root and SSL certificates for internal communication between the services and external Artemis broker.") {
     companion object {
         private val logger by lazy { contextLogger() }
     }
 
-    @Option(names = ["--hsm-name", "-m"],
-            description = ["The HSM name. One of ${HSM_LIST}. The first x characters to uniquely identify the name is adequate (case insensitive)"])
-    var cryptoServiceName: String? = null
-    @Option(names = ["--hsm-config-file", "-f"], paramLabel = "FILE", description = ["The path to the HSM config file. Only required if the HSM name has been specified"])
-    var cryptoServiceConfigFile: Path? = null
+    @Option(names = ["--bridge-hsm-name", "-m"],
+            description = ["The Bridge HSM name. One of ${HSM_LIST}. The first x characters to uniquely identify the name is adequate (case insensitive)"])
+    var cryptoServiceNameBridge: String? = null
+    @Option(names = ["--bridge-hsm-config-file", "-f"], paramLabel = "FILE", description = ["The path to the HSM config file. Only required if the HSM name has been specified"])
+    var cryptoServiceConfigFileBridge: Path? = null
+
+    @Option(names = ["--node-hsm-name", "-s"],
+            description = ["The Node HSM name. One of ${HSM_LIST}. The first x characters to uniquely identify the name is adequate (case insensitive)"])
+    var cryptoServiceNameNode: String? = null
+    @Option(names = ["--node-hsm-config-file", "-i"], paramLabel = "FILE", description = ["The path to the HSM config file. Only required if the HSM name has been specified"])
+    var cryptoServiceConfigFileNode: Path? = null
 
 
     override fun createKeyStores() {
         logger.info("Generating Artemis keystores")
-        if (errorInHSMOptions(cryptoServiceName, cryptoServiceConfigFile, "Error in HSM options for Artemis key")) {
+        if (errorInHSMOptions(cryptoServiceNameBridge, cryptoServiceConfigFileBridge, "Error in Bridge HSM options for Artemis key")) {
+            throw IllegalArgumentException("Error in HSM options for Artemis key")
+        }
+        if (errorInHSMOptions(cryptoServiceNameNode, cryptoServiceConfigFileNode, "Error in Node HSM options for Artemis key")) {
             throw IllegalArgumentException("Error in HSM options for Artemis key")
         }
         val artemisCertDir = baseDirectory / "artemis"
         val root = createRootKeystore("Internal Artemis Root", artemisCertDir / "artemis-root.jks", artemisCertDir / "artemis-truststore.jks",
                 keyStorePassword, keyStorePassword, trustStorePassword).getCertificateAndKeyPair(X509Utilities.CORDA_ROOT_CA, keyStorePassword)
 
-        // The file artemisbridge.jks will only be created if an HSM has been specified. In this case it will contain a
-        // public key and dummy private key. The actual private key will be in HSM.
-        // If no HSM has been specified then bouncy castle is used (file based) and only artemis.jks is created for private keys.
-        var usingBouncyCastle = false
-        var keystoreFileName = "artemisbridge.jks"
+        createArtemisKeystore( "NodeArtemis","artemisnode.jks", root, cryptoServiceNameNode, cryptoServiceConfigFileNode)
+        createArtemisKeystore( "BridgeArtemis", "artemisbridge.jks", root, cryptoServiceNameBridge, cryptoServiceConfigFileBridge)
+        createFileBasedTLSKeystore("artemis", root, artemisCertDir / "artemis.jks",
+                keyStorePassword, keyStorePassword, X509Utilities.CORDA_CLIENT_TLS)
+    }
 
-        if (resolveCryptoServiceName(cryptoServiceName) == SupportedCryptoServices.BC_SIMPLE) {
-            usingBouncyCastle = true
-            keystoreFileName = "artemis.jks"
-        }
+    private fun createArtemisKeystore(commonName: String, keystoreFileName: String, root: CertificateAndKeyPair,
+                                      cryptoServiceName: String?, cryptoServiceConfigFile: Path?) {
+        val artemisCertDir = baseDirectory / "artemis"
 
-        val x500Name = CordaX500Name("Bridge", organizationUnit, organization, locality, null, country )
+        val x500Name = CordaX500Name( commonName, organizationUnit, organization, locality, null, country )
         val cryptoService = createCryptoService(cryptoServiceName, cryptoServiceConfigFile,
                 artemisCertDir / keystoreFileName, keyStorePassword, keyStorePassword, x500Name)
 
         createTLSKeystore("artemis", root, artemisCertDir / keystoreFileName, keyStorePassword, keyStorePassword,
-                           X509Utilities.CORDA_CLIENT_TLS, cryptoService)
-
-        if (!usingBouncyCastle) {
-            // If not using bouncy castle create a artemis.jks file containing a proper private/public key pair. This will be used by the
-            // node. If we are using bouncy castle then the steps above will have already created a artemis.jks file.
-            createFileBasedTLSKeystore("artemis", root, artemisCertDir / "artemis.jks",
-                    keyStorePassword, keyStorePassword, X509Utilities.CORDA_CLIENT_TLS)
-        }
+                "${X509Utilities.CORDA_CLIENT_TLS}$commonName", cryptoService)
     }
 }
 

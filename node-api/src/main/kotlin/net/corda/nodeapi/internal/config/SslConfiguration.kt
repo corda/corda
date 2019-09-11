@@ -31,3 +31,5 @@ interface CryptoServiceConfig {
 }
 
 const val DEFAULT_SSL_HANDSHAKE_TIMEOUT_MILLIS = 60000L // Set at least 3 times higher than sun.security.provider.certpath.URICertStore.DEFAULT_CRL_CONNECT_TIMEOUT which is 15 sec
+
+const val ARTEMIS_SIGNING_SERVICE_NAME = "ArtemisSigningService" // The artemis signing service security provider name

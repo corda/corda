@@ -59,11 +59,12 @@ import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.INTERNAL_S
 import net.corda.nodeapi.internal.ShutdownHook
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.nodeapi.internal.bridging.BridgeControlListener
-import net.corda.nodeapi.internal.config.MessagingServerConnectionConfiguration
-import net.corda.nodeapi.internal.config.MutualSslConfiguration
-import net.corda.nodeapi.internal.config.User
+import net.corda.nodeapi.internal.config.*
+import net.corda.nodeapi.internal.cryptoservice.CryptoServiceSigningService
+import net.corda.nodeapi.internal.cryptoservice.TLSSigningService
 import net.corda.nodeapi.internal.persistence.CouldNotCreateDataSourceException
 import net.corda.nodeapi.internal.protonwrapper.netty.toRevocationConfig
+import net.corda.nodeapi.internal.provider.DelegatedKeystoreProvider
 import net.corda.serialization.internal.*
 import net.corda.serialization.internal.amqp.SerializationFactoryCacheKey
 import net.corda.serialization.internal.amqp.SerializerFactory
@@ -80,6 +81,7 @@ import java.net.BindException
 import java.net.InetAddress
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.security.Security
 import java.time.Clock
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
@@ -281,14 +283,24 @@ open class Node(configuration: NodeConfiguration,
         val rpcServerConfiguration = RPCServerConfiguration.DEFAULT.copy(
                 rpcThreadPoolSize = configuration.enterpriseConfiguration.tuning.rpcThreadPoolSize
         )
+
+        val artemisSigningService = createArtemisSigningService(configuration, nodeInfo.legalIdentities[0].name.commonName, sslOptions)
+
         rpcServerAddresses?.let {
             internalRpcMessagingClient = InternalRPCMessagingClient(sslOptions,
                     it.admin,
                     MAX_RPC_MESSAGE_SIZE,
                     configuration.myLegalName,
-                    rpcServerConfiguration)
+                    rpcServerConfiguration, ARTEMIS_SIGNING_SERVICE_NAME)
             printBasicNodeInfo("RPC connection address", it.primary.toString())
             printBasicNodeInfo("RPC admin connection address", it.admin.toString())
+        }
+
+        // Start up the Artemis signing service
+        artemisSigningService?.apply {
+            closeOnStop()
+            setupArtemisSigningServiceProvider(this)
+            start()
         }
 
         // Start up the embedded MQ server
@@ -376,6 +388,22 @@ open class Node(configuration: NodeConfiguration,
         } else {
             null
         }
+    }
+
+    private fun setupArtemisSigningServiceProvider(artemisSigningService: TLSSigningService) {
+        val provider = Security.getProvider(DelegatedKeystoreProvider.PROVIDER_NAME)
+        val delegatedKeystoreProvider = if (provider != null) {
+            provider as DelegatedKeystoreProvider
+        } else {
+            DelegatedKeystoreProvider().apply { Security.addProvider(this) }
+        }
+        delegatedKeystoreProvider.putService(ARTEMIS_SIGNING_SERVICE_NAME, artemisSigningService)
+    }
+
+    private fun createArtemisSigningService(config: NodeConfiguration, commonName: String?, sslOptions: MutualSslConfiguration): TLSSigningService {
+        return CryptoServiceSigningService(config.enterpriseConfiguration?.artemisCryptoServiceConfig,
+                CordaX500Name(commonName, null, organisation = "CORDA", locality = "London", state = null, country = "GB"),
+                sslOptions, DEFAULT_SSL_HANDSHAKE_TIMEOUT_MILLIS, name = "Artemis")
     }
 
     private fun startLocalRpcBroker(securityManager: RPCSecurityManager, sslOptions: MutualSslConfiguration): BrokerAddresses? {

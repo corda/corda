@@ -22,7 +22,8 @@ class InternalRPCMessagingClient<OPS : RPCOps>(val sslConfig: MutualSslConfigura
                                                val serverAddress: NetworkHostAndPort,
                                                val maxMessageSize: Int,
                                                val nodeName: CordaX500Name,
-                                               val rpcServerConfiguration: RPCServerConfiguration) : SingletonSerializeAsToken(), AutoCloseable {
+                                               val rpcServerConfiguration: RPCServerConfiguration,
+                                               val keyStoreProvider: String? = null) : SingletonSerializeAsToken(), AutoCloseable {
     private var locator: ServerLocator? = null
     private var rpcServer: RPCServer<OPS>? = null
 
@@ -32,7 +33,7 @@ class InternalRPCMessagingClient<OPS : RPCOps>(val sslConfig: MutualSslConfigura
 
     fun init(rpcOpsRouting: RPCOpsRouting<OPS>, securityManager: RPCSecurityManager, cacheFactory: NamedCacheFactory) = synchronized(this) {
 
-        val tcpTransport = ArtemisTcpTransport.rpcInternalClientTcpTransport(serverAddress, sslConfig)
+        val tcpTransport = ArtemisTcpTransport.rpcInternalClientTcpTransport(serverAddress, sslConfig, keyStoreProvider)
 
         locator = ActiveMQClient.createServerLocatorWithoutHA(tcpTransport).apply {
             // Never time out on our loopback Artemis connections. If we switch back to using the InVM transport this

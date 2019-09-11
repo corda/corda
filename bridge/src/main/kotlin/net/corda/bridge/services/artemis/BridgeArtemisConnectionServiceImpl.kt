@@ -11,6 +11,7 @@ import net.corda.nodeapi.internal.ArtemisMessagingClient.Companion.CORDA_ARTEMIS
 import net.corda.nodeapi.internal.ArtemisMessagingClient.Companion.CORDA_ARTEMIS_CALL_TIMEOUT_PROP_NAME
 import net.corda.nodeapi.internal.ArtemisMessagingComponent
 import net.corda.nodeapi.internal.ArtemisTcpTransport
+import net.corda.nodeapi.internal.config.ARTEMIS_SIGNING_SERVICE_NAME
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.cryptoservice.TLSSigningService
 import net.corda.nodeapi.internal.lifecycle.ServiceStateSupport
@@ -31,7 +32,6 @@ class BridgeArtemisConnectionServiceImpl(artemisSigningService: TLSSigningServic
                                          private val stateHelper: ServiceStateHelper = ServiceStateHelper(log)) : BridgeArtemisConnectionService, ServiceStateSupport by stateHelper {
     companion object {
         val log = contextLogger()
-        const val signingServiceName = "ArtemisSigningService"
     }
 
     private class InnerState {
@@ -56,7 +56,7 @@ class BridgeArtemisConnectionServiceImpl(artemisSigningService: TLSSigningServic
         } else {
             DelegatedKeystoreProvider().apply { Security.addProvider(this) }
         }
-        delegatedKeystoreProvider.putService(signingServiceName, artemisSigningService)
+        delegatedKeystoreProvider.putService(ARTEMIS_SIGNING_SERVICE_NAME, artemisSigningService)
     }
 
     override fun start() {
@@ -77,7 +77,7 @@ class BridgeArtemisConnectionServiceImpl(artemisSigningService: TLSSigningServic
             log.info("Connecting to message broker: ${outboundConf.artemisBrokerAddress}")
             val brokerAddresses = listOf(outboundConf.artemisBrokerAddress) + outboundConf.alternateArtemisBrokerAddresses
             val tcpTransports = brokerAddresses.map { ArtemisTcpTransport.p2pConnectorTcpTransport(it, sslConfiguration,
-                    keyStoreProvider = signingServiceName) }
+                    keyStoreProvider = ARTEMIS_SIGNING_SERVICE_NAME) }
             locator = ActiveMQClient.createServerLocatorWithoutHA(*tcpTransports.toTypedArray()).apply {
                 // Never time out on our loopback Artemis connections. If we switch back to using the InVM transport this
                 // would be the default and the two lines below can be deleted.

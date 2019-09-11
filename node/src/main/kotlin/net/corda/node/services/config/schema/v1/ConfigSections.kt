@@ -14,6 +14,7 @@ import net.corda.node.services.config.Valid
 import net.corda.node.services.config.SecurityConfiguration.AuthService.Companion.defaultAuthServiceId
 import net.corda.node.services.config.schema.parsers.*
 import net.corda.nodeapi.BrokerRpcSslOptions
+import net.corda.nodeapi.internal.config.CryptoServiceConfig
 import net.corda.nodeapi.internal.config.MessagingServerConnectionConfiguration
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.cryptoservice.SupportedCryptoServices
@@ -28,6 +29,7 @@ import net.corda.notary.standalonejpa.StandaloneJPANotaryDatabaseConfig
 import net.corda.notary.mysql.MySQLNotaryConfig
 import net.corda.tools.shell.SSHDConfiguration
 import java.net.Proxy
+import java.nio.file.Path
 
 internal object UserSpec : Configuration.Specification<User>("User") {
     private val username by string().optional()
@@ -355,6 +357,7 @@ internal object EnterpriseConfigurationSpec : Configuration.Specification<Enterp
     private val traceTargetDirectory by string().mapValid(::toPath).optional().withDefaultValue(EnterpriseConfiguration.Defaults.traceTargetDirectory)
     private val messagingServerSslConfiguration by nested(MessagingServerSslConfigurationSpec).optional()
     private val processedMessageCleanup by nested(ProcessedMessageCleanupSpec).optional()
+    private val artemisCryptoServiceConfig by nested(CryptoServiceConfigSpec).optional()
 
     override fun parseValid(configuration: Config, options: Configuration.Options): Valid<EnterpriseConfiguration> {
         val config = configuration.withOptions(options)
@@ -368,7 +371,8 @@ internal object EnterpriseConfigurationSpec : Configuration.Specification<Enterp
                 config[externalBridge],
                 config[enableCacheTracing],
                 config[traceTargetDirectory],
-                config[processedMessageCleanup])
+                config[processedMessageCleanup],
+                config[artemisCryptoServiceConfig])
         )
     }
 }
@@ -439,5 +443,21 @@ internal object CryptoServiceConfigurationSpec: Configuration.Specification<Cryp
     override fun parseValid(configuration: Config, options: Configuration.Options): Valid<CryptoServiceConfiguration> {
         val config = configuration.withOptions(options)
         return valid(CryptoServiceConfiguration(config[cryptoServiceName], config[cryptoServiceConf]))
+    }
+}
+
+// TODO: Need to consolidate above and this one
+internal object CryptoServiceConfigSpec: Configuration.Specification<CryptoServiceConfig>("CryptoServiceConfig") {
+    private val cryptoServiceName by enum(SupportedCryptoServices::class)
+    private val cryptoServiceConf by string().mapValid(::toPath).optional()
+
+    override fun parseValid(configuration: Config, options: Configuration.Options): Valid<CryptoServiceConfig> {
+        val config = configuration.withOptions(options)
+        return valid(object : CryptoServiceConfig {
+            override val name: SupportedCryptoServices
+                get() = config[cryptoServiceName]
+            override val conf: Path?
+                get() = config[cryptoServiceConf]
+        })
     }
 }

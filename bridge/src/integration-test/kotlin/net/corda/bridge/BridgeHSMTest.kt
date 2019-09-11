@@ -1,7 +1,6 @@
 package net.corda.bridge
 
 import com.typesafe.config.ConfigFactory
-import net.corda.bridge.services.config.CryptoServiceConfigImpl
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.copyToDirectory
@@ -14,6 +13,7 @@ import net.corda.node.services.Permissions
 import net.corda.nodeapi.internal.DEV_CA_KEY_STORE_PASS
 import net.corda.nodeapi.internal.DEV_CA_TRUST_STORE_PASS
 import net.corda.nodeapi.internal.config.CertificateStore
+import net.corda.nodeapi.internal.config.CryptoServiceConfig
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.crypto.X509Utilities
@@ -67,6 +67,8 @@ class BridgeHSMTest : IntegrationTest() {
     @Rule
     @JvmField
     val bridgeArtemisHSM = HsmSimulator(portAllocation)
+
+    private data class CryptoServiceConfigImpl(override val name: SupportedCryptoServices, override val conf: Path?) : CryptoServiceConfig
 
     @Test
     fun `Nodes behind all in one bridge can communicate with external node when using HSM`() {
