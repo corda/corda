@@ -252,9 +252,6 @@ class NodeVaultService(
     @VisibleForTesting
     internal val publishUpdates get() = concurrentBox.content.updatesPublisher
 
-    @VisibleForTesting
-    internal val publishUpdates get() = mutex.locked { updatesPublisher }
-
     /** Groups adjacent transactions into batches to generate separate net updates per transaction type. */
     override fun notifyAll(statesToRecord: StatesToRecord, txns: Iterable<CoreTransaction>, previouslySeenTxns: Iterable<CoreTransaction>) {
         if (statesToRecord == StatesToRecord.NONE || (!txns.any() && !previouslySeenTxns.any())) {

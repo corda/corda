@@ -652,10 +652,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         ).tokenize()
     }
 
-    private fun isRunningSimpleNotaryService(configuration: NodeConfiguration): Boolean {
-        return configuration.notary != null && configuration.notary?.className == SimpleNotaryService::class.java.name
-    }
-
     private class ServiceInstantiationException(cause: Throwable?) : CordaException("Service Instantiation Error", cause)
 
     private fun installCordaServices() {

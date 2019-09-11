@@ -286,12 +286,12 @@ class NodeAttachmentService @JvmOverloads constructor(
             detailedLogger.trace { "Attachment(action=loading;id=$id)" }
             val attachment = currentDBSession().get(NodeAttachmentService.DBAttachment::class.java, id.toString())
                     ?: return@transaction null
+            detailedLogger.trace { "Attachment(action=loaded;id=$id;uploader=${attachment.uploader})"}
             Pair(createAttachmentFromDatabase(attachment), attachment.content)
         }
     }
 
     private fun createAttachmentFromDatabase(attachment: DBAttachment): Attachment {
-        detailedLogger.trace { "Attachment(action=loaded;id=$id;uploader=${attachment.uploader})"}
         val attachmentImpl = AttachmentImpl(
             id = SecureHash.parse(attachment.attId),
             dataLoader = { attachment.content },
