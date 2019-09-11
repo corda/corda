@@ -21,6 +21,7 @@ import net.corda.nodeapi.internal.crypto.x509Certificates
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import org.apache.commons.lang3.ArrayUtils
+import org.hibernate.annotations.Type
 import org.hibernate.internal.util.collections.ArrayHelper.EMPTY_BYTE_ARRAY
 import java.security.InvalidAlgorithmParameterException
 import java.security.PublicKey
@@ -163,7 +164,7 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
             @Column(name = PK_HASH_COLUMN_NAME, length = MAX_HASH_HEX_SIZE, nullable = false)
             var publicKeyHash: String = "",
 
-            @Lob
+            @Type(type = "corda-blob")
             @Column(name = "public_key", nullable = false)
             var publicKey: ByteArray = ArrayUtils.EMPTY_BYTE_ARRAY
     )
@@ -338,11 +339,12 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
         return keys.filter { certificateFromKey(it)?.name in ourNames }
     }
 
+    @JvmOverloads
     override fun registerKey(publicKey: PublicKey, party: Party, externalId: UUID?) {
         return database.transaction {
             val publicKeyHash = publicKey.toStringShort()
-            // EVERY key should by mapped to a Party in the "keyToName" table. Therefore if there is already a record in that table for the
-            // specified key then it's either our key which has been stored prior or another node's key which we have preciously mapped.
+            // EVERY key should be mapped to a Party in the "keyToName" table. Therefore if there is already a record in that table for the
+            // specified key then it's either our key which has been stored prior or another node's key which we have previously mapped.
             val existingEntryForKey = keyToName[publicKeyHash]
             if (existingEntryForKey == null) {
                 // Update the three tables as necessary. We definitely store the public key and map it to a party and we optionally update
@@ -355,7 +357,7 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
                 }
             } else {
                 log.info("An existing entry for $publicKeyHash already exists.")
-                if (party.name != keyToName[publicKeyHash]) {
+                if (party.name != existingEntryForKey) {
                     log.warn("The public publicKey $publicKeyHash is already assigned to a different party than the supplied party.")
                 }
             }
