@@ -91,7 +91,7 @@ class IdentitySyncFlowTests {
         val issueFlow = charlieNode.services.startFlow(CashIssueAndPaymentFlow(1000.DOLLARS, ref, charlie, anonymous, notary))
         val issueTx = issueFlow.resultFuture.getOrThrow().stx
         val confidentialIdentity = issueTx.tx.outputs.map { it.data }.filterIsInstance<Cash.State>().single().owner
-        val confidentialIdentCert = charlieNode.services.identityService.certificateFromKey(confidentialIdentity.owningKey)!!
+        val confidentialIdentCert = @Suppress("DEPRECATION") charlieNode.services.identityService.certificateFromKey(confidentialIdentity.owningKey)!!
 
         // Manually inject this identity into Alice's database so the node could leak it, but we prove won't
         aliceNode.database.transaction { aliceNode.services.identityService.verifyAndRegisterIdentity(confidentialIdentCert) }

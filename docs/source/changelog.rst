@@ -15,6 +15,8 @@ Unreleased
 
 * Introduced a new API on ``KeyManagementService`` which facilitates lookups of ``PublicKey`` s to ``externalId`` s (Account IDs).
 
+* ``StatePointer`` has been marked as ```@DoNotImplement``, which was an omission in the original release.
+
 * Introduced a new low level flow diagnostics tool: checkpoint agent (that can be used standalone or in conjunction with the ``checkpoints dump`` shell command).
   See :doc:`checkpoint-tooling` for more information.
 

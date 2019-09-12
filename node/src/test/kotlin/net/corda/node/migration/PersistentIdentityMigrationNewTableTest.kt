@@ -59,6 +59,7 @@ class PersistentIdentityMigrationNewTableTest{
     fun setUp() {
         val identityService = makeTestIdentityService(PersistentIdentityMigrationNewTableTest.dummyNotary.identity, BOB_IDENTITY, ALICE_IDENTITY)
         notaryServices = MockServices(listOf("net.corda.finance.contracts"), dummyNotary, identityService, dummyCashIssuer.keyPair, BOC_KEY)
+
         // Runs migration tasks
         cordaDB = configureDatabase(
                 MockServices.makeTestDataSourceProperties(),

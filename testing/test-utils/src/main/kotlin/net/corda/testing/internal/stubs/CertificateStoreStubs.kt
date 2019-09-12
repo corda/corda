@@ -5,8 +5,8 @@ import net.corda.nodeapi.internal.DEV_CA_KEY_STORE_PASS
 import net.corda.nodeapi.internal.DEV_CA_TRUST_STORE_PASS
 import net.corda.nodeapi.internal.DEV_CA_TRUST_STORE_PRIVATE_KEY_PASS
 import net.corda.nodeapi.internal.config.FileBasedCertificateStoreSupplier
-import net.corda.nodeapi.internal.config.SslConfiguration
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
+import net.corda.nodeapi.internal.config.SslConfiguration
 import java.nio.file.Path
 
 class CertificateStoreStubs {
@@ -47,7 +47,7 @@ class CertificateStoreStubs {
             fun withCertificatesDirectory(certificatesDirectory: Path, keyStoreFileName: String = KeyStore.DEFAULT_STORE_FILE_NAME,
                                           keyStorePassword: String = KeyStore.DEFAULT_STORE_PASSWORD, keyPassword: String = keyStorePassword,
                                           trustStoreFileName: String = TrustStore.DEFAULT_STORE_FILE_NAME, trustStorePassword: String = TrustStore.DEFAULT_STORE_PASSWORD, trustStoreKeyPassword: String = TrustStore.DEFAULT_KEY_PASSWORD,
-                                          useOpenSsl: Boolean = false): MutualSslConfiguration {
+                                          @Suppress("UNUSED_PARAMETER") useOpenSsl: Boolean = false): MutualSslConfiguration {
 
                 val keyStore = FileBasedCertificateStoreSupplier(certificatesDirectory / keyStoreFileName, keyStorePassword, keyPassword)
                 val trustStore = FileBasedCertificateStoreSupplier(certificatesDirectory / trustStoreFileName, trustStorePassword, trustStoreKeyPassword)
