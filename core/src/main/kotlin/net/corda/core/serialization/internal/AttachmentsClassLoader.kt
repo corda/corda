@@ -304,8 +304,10 @@ object AttachmentsClassLoaderBuilder {
     // may behave differently, so that has to be a part of the cache key.
     private data class Key(val hashes: Set<SecureHash>, val params: NetworkParameters)
 
+    data class CachedTransactionClassloader(val classLoader: ClassLoader, val serializers: Set<SerializationCustomSerializer<*, *>>, val whitelistedClasses: List<Class<*>>)
+
     // This runs in the DJVM so it can't use caffeine.
-    private val cache: MutableMap<Key, SerializationContext> = createSimpleCache<Key, SerializationContext>(CACHE_SIZE).toSynchronised()
+    private val cache: MutableMap<Key, CachedTransactionClassloader> = createSimpleCache<Key, CachedTransactionClassloader>(CACHE_SIZE).toSynchronised()
 
     /**
      * Runs the given block with serialization execution context set up with a (possibly cached) attachments classloader.
@@ -318,26 +320,38 @@ object AttachmentsClassLoaderBuilder {
                                               isAttachmentTrusted: (Attachment) -> Boolean,
                                               parent: ClassLoader = ClassLoader.getSystemClassLoader(),
                                               block: (ClassLoader) -> T): T {
-        val attachmentIds = attachments.map(Attachment::id).toSet()
 
-        val serializationContext = cache.computeIfAbsent(Key(attachmentIds, params)) {
+        // Create and Cache the base classloader that contains only the JAR attachments.
+        val jarAttachments = attachments.filter(::isJAR)
+        val jarAttachmentIds = jarAttachments.map { it.id }.toSet()
+        val transactionCodeClassloader = cache.computeIfAbsent(Key(jarAttachmentIds, params)) {
             // Create classloader and load serializers, whitelisted classes
-            val transactionClassLoader = AttachmentsClassLoader(attachments, params, txId, isAttachmentTrusted, parent)
+            val transactionClassLoader = AttachmentsClassLoader(jarAttachments, params, txId, isAttachmentTrusted, parent)
             val serializers = createInstancesOfClassesImplementing(transactionClassLoader, SerializationCustomSerializer::class.java)
             val whitelistedClasses = ServiceLoader.load(SerializationWhitelist::class.java, transactionClassLoader)
                     .flatMap(SerializationWhitelist::whitelist)
-
-            // Create a new serializationContext for the current transaction. In this context we will forbid
-            // deserialization of objects from the future, i.e. disable forwards compatibility. This is to ensure
-            // that app logic doesn't ignore newly added fields or accidentally downgrade data from newer state
-            // schemas to older schemas by discarding fields.
-            SerializationFactory.defaultFactory.defaultContext
-                    .withPreventDataLoss()
-                    .withClassLoader(transactionClassLoader)
-                    .withWhitelist(whitelistedClasses)
-                    .withCustomSerializers(serializers)
-                    .withoutCarpenter()
+            CachedTransactionClassloader(transactionClassLoader, serializers, whitelistedClasses)
         }
+
+        // If there are non-JAR attachments, create a classloader
+        val transactionClassLoader = if (jarAttachments != attachments) {
+            val zipAttachments = attachments.filterNot(::isJAR)
+            // TODO non-overlap?
+            AttachmentsClassLoader(zipAttachments, params, txId, isAttachmentTrusted, transactionCodeClassloader.classLoader)
+        } else {
+            transactionCodeClassloader.classLoader
+        }
+
+        // Create a new serializationContext for the current transaction. In this context we will forbid
+        // deserialization of objects from the future, i.e. disable forwards compatibility. This is to ensure
+        // that app logic doesn't ignore newly added fields or accidentally downgrade data from newer state
+        // schemas to older schemas by discarding fields.
+        val serializationContext = SerializationFactory.defaultFactory.defaultContext
+                .withPreventDataLoss()
+                .withClassLoader(transactionClassLoader)
+                .withWhitelist(transactionCodeClassloader.whitelistedClasses)
+                .withCustomSerializers(transactionCodeClassloader.serializers)
+                .withoutCarpenter()
 
         // Deserialize all relevant classes in the transaction classloader.
         return SerializationFactory.defaultFactory.withCurrentContext(serializationContext) {

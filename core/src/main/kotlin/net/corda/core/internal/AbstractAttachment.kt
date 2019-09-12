@@ -8,6 +8,7 @@ import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.ContractAttachment
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
+import net.corda.core.node.services.AttachmentId
 import net.corda.core.serialization.MissingAttachmentsException
 import net.corda.core.serialization.SerializeAsTokenContext
 import java.io.FileNotFoundException
@@ -36,6 +37,15 @@ fun Attachment.isUploaderTrusted(): Boolean = when (this) {
     is ContractAttachment -> isUploaderTrusted(uploader)
     is AbstractAttachment -> isUploaderTrusted(uploader)
     else -> false
+}
+
+private const val CACHE_SIZE = 1000
+private val attachmentsTypeCache: MutableMap<AttachmentId, Boolean> = createSimpleCache<AttachmentId, Boolean>(CACHE_SIZE).toSynchronised()
+// We consider a JAR an archive that has a manifest.
+private fun Attachment.isJar(): Boolean = this.openAsJAR().use { it.manifest != null }
+
+fun isJAR(attachment: Attachment): Boolean = attachmentsTypeCache.computeIfAbsent(attachment.id) {
+    attachment.isJar()
 }
 
 @KeepForDJVM
