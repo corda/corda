@@ -6,7 +6,6 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.node.serialization.kryo.kryoMagic
 import net.corda.node.services.statemachine.DataSessionMessage
-import net.corda.serialization.internal.SectionId
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.internal.kryoSpecific
 import org.assertj.core.api.Assertions.assertThat

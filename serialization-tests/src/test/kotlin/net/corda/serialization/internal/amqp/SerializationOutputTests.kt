@@ -71,8 +71,7 @@ object PrivateAckWrapper {
 
     fun serialize() {
         val factory = testDefaultFactoryNoEvolution()
-        SerializationOutput(factory)
-                .serialize(Ack)
+        SerializationOutput(factory).serialize(Ack)
     }
 }
 
@@ -425,7 +424,6 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
         serdes(obj)
     }
 
-
     @Test
     fun `test inherits generic captured`() {
         val obj = CapturesGenericX(InheritGenericX(1.0, "Ginger"))
@@ -665,7 +663,6 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
 
     object FooContract : Contract {
         override fun verify(tx: LedgerTransaction) {
-
         }
     }
 
