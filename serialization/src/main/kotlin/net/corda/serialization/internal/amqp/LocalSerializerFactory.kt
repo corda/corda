@@ -83,7 +83,7 @@ interface LocalSerializerFactory {
      * Determines whether instances of this type should be added to the object history
      * when serialising and deserialising.
      */
-    fun isSuitebleForObjectReference(type: Type): Boolean
+    fun isSuitableForObjectReference(type: Type): Boolean
 }
 
 /**
@@ -136,7 +136,7 @@ class DefaultLocalSerializerFactory(
             get(typeInformation.observedType, typeInformation)
 
     // ByteArrays, primitives and boxed primitives are not stored in the object history
-    override fun isSuitebleForObjectReference(type: Type): Boolean {
+    override fun isSuitableForObjectReference(type: Type): Boolean {
         val clazz = type.asClass()
         return type != ByteArray::class.java && !isPrimitiveType.test(clazz)
     }
