@@ -34,7 +34,7 @@ pipeline {
 
         stage('Clear testing images') {
             steps {
-                sh """docker rmi -f \$(docker images | grep ${DOCKER_TAG_TO_USE} | awk '{print \$3}') || echo \"there were no images to delete\""""
+                sh """docker rmi -f \$(docker images | grep \${DOCKER_TAG_TO_USE} | awk '{print \$3}') || echo \"there were no images to delete\""""
             }
         }
     }
