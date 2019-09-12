@@ -37,13 +37,12 @@ import net.corda.node.VersionInfo
 import net.corda.node.internal.classloading.requireAnnotation
 import net.corda.node.internal.cordapp.*
 import net.corda.node.internal.rpc.proxies.AuthenticatedRpcOpsProxy
-import net.corda.node.internal.rpc.proxies.ExceptionMaskingRpcOpsProxy
-import net.corda.node.internal.rpc.proxies.ExceptionSerialisingRpcOpsProxy
 import net.corda.node.internal.rpc.proxies.ThreadContextAdjustingRpcOpsProxy
 import net.corda.node.services.ContractUpgradeHandler
 import net.corda.node.services.FinalityHandler
 import net.corda.node.services.NotaryChangeHandler
 import net.corda.node.services.api.*
+import net.corda.node.services.attachments.NodeAttachmentTrustCalculator
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
 import net.corda.node.services.config.rpc.NodeRpcOptions
@@ -176,9 +175,14 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     @Suppress("LeakingThis")
     val transactionStorage = makeTransactionStorage(configuration.transactionCacheSizeBytes).tokenize()
     val networkMapClient: NetworkMapClient? = configuration.networkServices?.let { NetworkMapClient(it, versionInfo) }
-    val attachments = NodeAttachmentService(metricRegistry, cacheFactory, database, configuration.devMode).tokenize()
+    val attachments = NodeAttachmentService(
+        metricRegistry,
+        cacheFactory,
+        database,
+        configuration.devMode
+    ).tokenize()
+    val attachmentTrustCalculator = makeAttachmentTrustCalculator(configuration, database)
     val cryptoService = makeManagedCryptoService()
-
     @Suppress("LeakingThis")
     val networkParametersStorage = makeNetworkParametersStorage()
     val cordappProvider = CordappProviderImpl(cordappLoader, CordappConfigFileProvider(configuration.cordappDirectories), attachments).tokenize()
@@ -276,10 +280,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         val proxies = mutableListOf<(InternalCordaRPCOps) -> InternalCordaRPCOps>()
         // Mind that order is relevant here.
         proxies += ::AuthenticatedRpcOpsProxy
-        if (!configuration.devMode) {
-            proxies += { ExceptionMaskingRpcOpsProxy(it, true) }
-        }
-        proxies += { ExceptionSerialisingRpcOpsProxy(it, configuration.devMode) }
         proxies += { ThreadContextAdjustingRpcOpsProxy(it, cordappLoader.appClassLoader) }
         return proxies.fold(ops) { delegate, decorate -> decorate(delegate) }
     }
@@ -614,14 +614,10 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             generatedCordapps += notaryImpl
         }
 
-        val blacklistedKeys = if (configuration.devMode) emptyList()
-        else configuration.cordappSignerKeyFingerprintBlacklist.map {
-            try {
-                SecureHash.parse(it)
-            } catch (e: IllegalArgumentException) {
-                log.error("Error while adding key fingerprint $it to cordappSignerKeyFingerprintBlacklist due to ${e.message}", e)
-                throw e
-            }
+        val blacklistedKeys = if (configuration.devMode) {
+            emptyList()
+        } else {
+            parseSecureHashConfiguration(configuration.cordappSignerKeyFingerprintBlacklist) { "Error while adding key fingerprint $it to blacklistedAttachmentSigningKeys" }
         }
         return JarScanningCordappLoader.fromDirectories(
                 configuration.cordappDirectories,
@@ -629,6 +625,31 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                 extraCordapps = generatedCordapps,
                 signerKeyFingerprintBlacklist = blacklistedKeys
         )
+    }
+
+    private fun parseSecureHashConfiguration(unparsedConfig: List<String>, errorMessage: (String) -> String): List<SecureHash.SHA256> {
+        return unparsedConfig.map {
+            try {
+                SecureHash.parse(it)
+            } catch (e: IllegalArgumentException) {
+                log.error("${errorMessage(it)} due to - ${e.message}", e)
+                throw e
+            }
+        }
+    }
+
+    private fun makeAttachmentTrustCalculator(
+        configuration: NodeConfiguration,
+        database: CordaPersistence
+    ): AttachmentTrustCalculator {
+        val blacklistedAttachmentSigningKeys: List<SecureHash> =
+            parseSecureHashConfiguration(configuration.blacklistedAttachmentSigningKeys) { "Error while adding signing key $it to blacklistedAttachmentSigningKeys" }
+        return NodeAttachmentTrustCalculator(
+            attachmentStorage = attachments,
+            database = database,
+            cacheFactory = cacheFactory,
+            blacklistedAttachmentSigningKeys = blacklistedAttachmentSigningKeys
+        ).tokenize()
     }
 
     private class ServiceInstantiationException(cause: Throwable?) : CordaException("Service Instantiation Error", cause)
@@ -1106,6 +1127,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         override val networkMapUpdater: NetworkMapUpdater get() = this@AbstractNode.networkMapUpdater
         override val cacheFactory: NamedCacheFactory get() = this@AbstractNode.cacheFactory
         override val networkParametersService: NetworkParametersStorage get() = this@AbstractNode.networkParametersStorage
+        override val attachmentTrustCalculator: AttachmentTrustCalculator get() = this@AbstractNode.attachmentTrustCalculator
 
         private lateinit var _myInfo: NodeInfo
         override val myInfo: NodeInfo get() = _myInfo

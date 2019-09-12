@@ -35,6 +35,7 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.nodeapi.internal.persistence.currentDBSession
 import net.corda.nodeapi.internal.withContractsInJar
+import org.hibernate.query.Query
 import java.io.FilterInputStream
 import java.io.IOException
 import java.io.InputStream
@@ -44,6 +45,7 @@ import java.time.Instant
 import java.util.*
 import java.util.jar.JarEntry
 import java.util.jar.JarInputStream
+import java.util.stream.Stream
 import javax.annotation.concurrent.ThreadSafe
 import javax.persistence.*
 
@@ -51,15 +53,12 @@ import javax.persistence.*
  * Stores attachments using Hibernate to database.
  */
 @ThreadSafe
-class NodeAttachmentService(
-        metrics: MetricRegistry,
-        cacheFactory: NamedCacheFactory,
-        private val database: CordaPersistence,
-        val devMode: Boolean
+class NodeAttachmentService @JvmOverloads constructor(
+    metrics: MetricRegistry,
+    cacheFactory: NamedCacheFactory,
+    private val database: CordaPersistence,
+    val devMode: Boolean = false
 ) : AttachmentStorageInternal, SingletonSerializeAsToken() {
-    constructor(metrics: MetricRegistry,
-                cacheFactory: NamedCacheFactory,
-                database: CordaPersistence) : this(metrics, cacheFactory, database, false)
 
     // This is to break the circular dependency.
     lateinit var servicesForResolution: ServicesForResolution
@@ -230,18 +229,37 @@ class NodeAttachmentService(
             }
     }
 
-    private class AttachmentImpl(override val id: SecureHash, dataLoader: () -> ByteArray, private val checkOnLoad: Boolean, uploader: String?) : AbstractAttachment(dataLoader, uploader), SerializeAsToken {
+    private class AttachmentImpl(
+        override val id: SecureHash,
+        dataLoader: () -> ByteArray,
+        private val checkOnLoad: Boolean,
+        uploader: String?,
+        override val signerKeys: List<PublicKey>
+    ) : AbstractAttachment(dataLoader, uploader), SerializeAsToken {
+
         override fun open(): InputStream {
             val stream = super.open()
             // This is just an optional safety check. If it slows things down too much it can be disabled.
             return if (checkOnLoad && id is SecureHash.SHA256) HashCheckingStream(id, attachmentData.size, stream) else stream
         }
 
-        private class Token(private val id: SecureHash, private val checkOnLoad: Boolean, private val uploader: String?) : SerializationToken {
-            override fun fromToken(context: SerializeAsTokenContext) = AttachmentImpl(id, context.attachmentDataLoader(id), checkOnLoad, uploader)
+        private class Token(
+            private val id: SecureHash,
+            private val checkOnLoad: Boolean,
+            private val uploader: String?,
+            private val signerKeys: List<PublicKey>
+        ) : SerializationToken {
+            override fun fromToken(context: SerializeAsTokenContext) = AttachmentImpl(
+                id,
+                context.attachmentDataLoader(id),
+                checkOnLoad,
+                uploader,
+                signerKeys
+            )
         }
 
-        override fun toToken(context: SerializeAsTokenContext) = Token(id, checkOnLoad, uploader)
+        override fun toToken(context: SerializeAsTokenContext) =
+            Token(id, checkOnLoad, uploader, signerKeys)
     }
 
     // slightly complex 2 level approach to attachment caching:
@@ -269,16 +287,30 @@ class NodeAttachmentService(
             val attachment = currentDBSession().get(NodeAttachmentService.DBAttachment::class.java, id.toString())
                     ?: return@transaction null
             detailedLogger.trace { "Attachment(action=loaded;id=$id;uploader=${attachment.uploader})"}
-            val attachmentImpl = AttachmentImpl(id, { attachment.content }, checkAttachmentsOnLoad, attachment.uploader).let {
-                val contracts = attachment.contractClassNames
-                if (contracts != null && contracts.isNotEmpty()) {
-                    ContractAttachment.create(it, contracts.first(), contracts.drop(1).toSet(), attachment.uploader, attachment.signers?.toList()
-                            ?: emptyList(), attachment.version)
-                } else {
-                    it
-                }
-            }
-            Pair(attachmentImpl, attachment.content)
+            Pair(createAttachmentFromDatabase(attachment), attachment.content)
+        }
+    }
+
+    private fun createAttachmentFromDatabase(attachment: DBAttachment): Attachment {
+        val attachmentImpl = AttachmentImpl(
+            id = SecureHash.parse(attachment.attId),
+            dataLoader = { attachment.content },
+            checkOnLoad = checkAttachmentsOnLoad,
+            uploader = attachment.uploader,
+            signerKeys = attachment.signers?.toList() ?: emptyList()
+        )
+        val contracts = attachment.contractClassNames
+        return if (contracts != null && contracts.isNotEmpty()) {
+            ContractAttachment.create(
+                attachment = attachmentImpl,
+                contract = contracts.first(),
+                additionalContracts = contracts.drop(1).toSet(),
+                uploader = attachment.uploader,
+                signerKeys = attachment.signers?.toList() ?: emptyList(),
+                version = attachment.version
+            )
+        } else {
+            attachmentImpl
         }
     }
 
@@ -433,29 +465,39 @@ class NodeAttachmentService(
         }
     }
 
+    // TODO do not retrieve whole attachments only to return ids - https://r3-cev.atlassian.net/browse/CORDA-3191 raised to address this
     override fun queryAttachments(criteria: AttachmentQueryCriteria, sorting: AttachmentSort?): List<AttachmentId> {
         log.info("Attachment query criteria: $criteria, sorting: $sorting")
         return database.transaction {
             detailedLogger.trace { "Attachment(action=query_start;criteria=$criteria;sorting=$sorting)" }
-            val session = currentDBSession()
-            val criteriaBuilder = session.criteriaBuilder
-
-            val criteriaQuery = criteriaBuilder.createQuery(DBAttachment::class.java)
-            val root = criteriaQuery.from(DBAttachment::class.java)
-
-            val criteriaParser = HibernateAttachmentQueryCriteriaParser(criteriaBuilder, criteriaQuery, root)
-
-            // parse criteria and build where predicates
-            criteriaParser.parse(criteria, sorting)
-
-            // prepare query for execution
-            val query = session.createQuery(criteriaQuery)
-
-            // execution
-            val result = query.resultList
+            val result = createAttachmentsQuery(
+                criteria,
+                sorting
+            )
             detailedLogger.trace { "Attachment(action=query_end;criteria=$criteria;sorting=$sorting)" }
-            result.map { AttachmentId.parse(it.attId) }
+            result.resultList.map { AttachmentId.parse(it.attId) }
         }
+    }
+
+    private fun createAttachmentsQuery(
+        criteria: AttachmentQueryCriteria,
+        sorting: AttachmentSort?
+    ): Query<DBAttachment> {
+        val session = currentDBSession()
+        val criteriaBuilder = session.criteriaBuilder
+
+        val criteriaQuery = criteriaBuilder.createQuery(DBAttachment::class.java)
+
+        val criteriaParser = HibernateAttachmentQueryCriteriaParser(
+            criteriaBuilder,
+            criteriaQuery,
+            criteriaQuery.from(DBAttachment::class.java)
+        )
+
+        // parse criteria and build where predicates
+        criteriaParser.parse(criteria, sorting)
+        // prepare query for execution
+        return session.createQuery(criteriaQuery)
     }
 
     // Holds onto a signed and/or unsigned attachment (at least one or the other).
@@ -481,30 +523,32 @@ class NodeAttachmentService(
     private val contractsCache = InfrequentlyMutatedCache<ContractClassName, NavigableMap<Version, AttachmentIds>>("NodeAttachmentService_contractAttachmentVersions", cacheFactory)
 
     private fun getContractAttachmentVersions(contractClassName: String): NavigableMap<Version, AttachmentIds> = contractsCache.get(contractClassName) { name ->
-        val attachmentQueryCriteria = AttachmentQueryCriteria.AttachmentsQueryCriteria(contractClassNamesCondition = Builder.equal(listOf(name)),
-                versionCondition = Builder.greaterThanOrEqual(0), uploaderCondition = Builder.`in`(TRUSTED_UPLOADERS))
-        val attachmentSort = AttachmentSort(listOf(AttachmentSort.AttachmentSortColumn(AttachmentSort.AttachmentSortAttribute.VERSION, Sort.Direction.DESC),
-                AttachmentSort.AttachmentSortColumn(AttachmentSort.AttachmentSortAttribute.INSERTION_DATE, Sort.Direction.DESC)))
+        val attachmentQueryCriteria = AttachmentQueryCriteria.AttachmentsQueryCriteria(
+            contractClassNamesCondition = Builder.equal(listOf(name)),
+            versionCondition = Builder.greaterThanOrEqual(0),
+            uploaderCondition = Builder.`in`(TRUSTED_UPLOADERS)
+        )
+        val attachmentSort = AttachmentSort(
+            listOf(
+                AttachmentSort.AttachmentSortColumn(
+                    AttachmentSort.AttachmentSortAttribute.VERSION,
+                    Sort.Direction.DESC
+                ),
+                AttachmentSort.AttachmentSortColumn(
+                    AttachmentSort.AttachmentSortAttribute.INSERTION_DATE,
+                    Sort.Direction.DESC
+                )
+            )
+        )
         database.transaction {
-            val session = currentDBSession()
-            val criteriaBuilder = session.criteriaBuilder
-
-            val criteriaQuery = criteriaBuilder.createQuery(DBAttachment::class.java)
-            val root = criteriaQuery.from(DBAttachment::class.java)
-
-            val criteriaParser = HibernateAttachmentQueryCriteriaParser(criteriaBuilder, criteriaQuery, root)
-
-            // parse criteria and build where predicates
-            criteriaParser.parse(attachmentQueryCriteria, attachmentSort)
-
-            // prepare query for execution
-            val query = session.createQuery(criteriaQuery)
-
-            // execution
+            val query = createAttachmentsQuery(
+                attachmentQueryCriteria,
+                attachmentSort
+            )
             detailedLogger.trace { "Attachment(action=query_version_start;type=contract;className=$contractClassName;criteria=$attachmentQueryCriteria)" }
             val resultList = query.resultList
             detailedLogger.trace { "Attachment(action=query_version_end;type=contract;className=$contractClassName;criteria=$attachmentQueryCriteria)" }
-            TreeMap(resultList.groupBy { it.version }.map { makeAttachmentIds(it, name) }.toMap())
+            resultList.groupBy { it.version }.map { makeAttachmentIds(it, name) }.toMap(TreeMap())
         }
     }
 
@@ -529,5 +573,12 @@ class NodeAttachmentService(
             AttachmentIds(newestSignedAttachment, newestUnsignedAttachment).toList()
         else
             emptyList()
+    }
+
+    override fun getAllAttachmentsByCriteria(criteria: AttachmentQueryCriteria): Stream<Pair<String?, Attachment>> {
+        return createAttachmentsQuery(
+            criteria,
+            null
+        ).resultStream.map { it.filename to createAttachmentFromDatabase(it) }
     }
 }

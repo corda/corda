@@ -4,8 +4,10 @@ import com.codahale.metrics.MetricRegistry
 import com.jcabi.manifests.Manifests
 import net.corda.client.rpc.internal.serialization.amqp.AMQPClientSerializationScheme
 import net.corda.core.contracts.*
+import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sign
 import net.corda.core.flows.FlowLogic
+import net.corda.core.internal.AttachmentTrustCalculator
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.ContractUpgradeService
 import net.corda.core.node.services.TransactionVerifierService
@@ -28,6 +30,7 @@ import net.corda.node.services.api.AuditService
 import net.corda.node.services.api.MonitoringService
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.api.WritableTransactionStorage
+import net.corda.node.services.attachments.NodeAttachmentTrustCalculator
 import net.corda.node.services.config.NetworkParameterAcceptanceSettings
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.identity.PersistentIdentityService
@@ -102,7 +105,7 @@ class RpcWorkerServiceHub(override val configuration: NodeConfiguration,
     override val validatedTransactions: WritableTransactionStorage = DBTransactionStorage(database, cacheFactory)
     private val networkMapClient: NetworkMapClient? = configuration.networkServices?.let { NetworkMapClient(it, versionInfo) }
     override val attachments = NodeAttachmentService(metricRegistry, cacheFactory, database)
-
+    override val attachmentTrustCalculator = makeAttachmentTrustCalculator(configuration, database)
     override val cordappProvider = CordappProviderImpl(cordappLoader, CordappConfigFileProvider(emptyList()), attachments)
 
     private val pkToIdCache = PublicKeyToOwningIdentityCacheImpl(database, cacheFactory)
@@ -210,6 +213,31 @@ class RpcWorkerServiceHub(override val configuration: NodeConfiguration,
                 manifestValue("Corda-Revision") ?: "Unknown",
                 manifestValue("Corda-Vendor") ?: "Unknown"
         )
+    }
+
+    private fun makeAttachmentTrustCalculator(
+        configuration: NodeConfiguration,
+        database: CordaPersistence
+    ): AttachmentTrustCalculator {
+        val blacklistedAttachmentSigningKeys: List<SecureHash> =
+            parseSecureHashConfiguration(configuration.blacklistedAttachmentSigningKeys) { "Error while adding signing key $it to blacklistedAttachmentSigningKeys" }
+        return NodeAttachmentTrustCalculator(
+            attachmentStorage = attachments,
+            database = database,
+            cacheFactory = cacheFactory,
+            blacklistedAttachmentSigningKeys = blacklistedAttachmentSigningKeys
+        )
+    }
+
+    private fun parseSecureHashConfiguration(unparsedConfig: List<String>, errorMessage: (String) -> String): List<SecureHash.SHA256> {
+        return unparsedConfig.map {
+            try {
+                SecureHash.parse(it)
+            } catch (e: IllegalArgumentException) {
+                log.error("${errorMessage(it)} due to - ${e.message}", e)
+                throw e
+            }
+        }
     }
 
     private fun initialiseSerialization() {

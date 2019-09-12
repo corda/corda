@@ -6,10 +6,12 @@ import com.google.common.util.concurrent.MoreExecutors
 import com.jcabi.manifests.Manifests
 import net.corda.client.rpc.internal.serialization.amqp.AMQPClientSerializationScheme
 import net.corda.core.contracts.*
+import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.newSecureRandom
 import net.corda.core.crypto.sign
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
+import net.corda.core.internal.AttachmentTrustCalculator
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.node.NetworkParameters
@@ -39,6 +41,7 @@ import net.corda.node.services.api.DummyAuditService
 import net.corda.node.services.api.MonitoringService
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.api.WritableTransactionStorage
+import net.corda.node.services.attachments.NodeAttachmentTrustCalculator
 import net.corda.node.services.config.NetworkParameterAcceptanceSettings
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.identity.PersistentIdentityService
@@ -143,6 +146,7 @@ class FlowWorkerServiceHub(override val configuration: NodeConfiguration,
     @Suppress("LeakingThis")
     override val validatedTransactions: WritableTransactionStorage = DBTransactionStorage(database, cacheFactory).tokenize()
     override val attachments = NodeAttachmentService(metricRegistry, cacheFactory, database).tokenize()
+    override val attachmentTrustCalculator = makeAttachmentTrustCalculator(configuration, database)
     override val cordappProvider = CordappProviderImpl(cordappLoader, CordappConfigFileProvider(emptyList()), attachments).tokenize()
     private val pkToIdCache = PublicKeyToOwningIdentityCacheImpl(database, cacheFactory)
     private val cryptoService : ManagedCryptoService = CryptoServiceFactory.makeManagedCryptoService(
@@ -204,6 +208,31 @@ class FlowWorkerServiceHub(override val configuration: NodeConfiguration,
                 busyNodeLatch,
                 cordappLoader.appClassLoader
         )
+    }
+
+    private fun makeAttachmentTrustCalculator(
+        configuration: NodeConfiguration,
+        database: CordaPersistence
+    ): AttachmentTrustCalculator {
+        val blacklistedAttachmentSigningKeys: List<SecureHash> =
+            parseSecureHashConfiguration(configuration.blacklistedAttachmentSigningKeys) { "Error while adding signing key $it to blacklistedAttachmentSigningKeys" }
+        return NodeAttachmentTrustCalculator(
+            attachmentStorage = attachments,
+            database = database,
+            cacheFactory = cacheFactory,
+            blacklistedAttachmentSigningKeys = blacklistedAttachmentSigningKeys
+        ).tokenize()
+    }
+
+    private fun parseSecureHashConfiguration(unparsedConfig: List<String>, errorMessage: (String) -> String): List<SecureHash.SHA256> {
+        return unparsedConfig.map {
+            try {
+                SecureHash.parse(it)
+            } catch (e: IllegalArgumentException) {
+                log.error("${errorMessage(it)} due to - ${e.message}", e)
+                throw e
+            }
+        }
     }
 
     private val cordappServices = MutableClassToInstanceMap.create<SerializeAsToken>()

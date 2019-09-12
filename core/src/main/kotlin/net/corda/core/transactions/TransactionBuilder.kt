@@ -595,7 +595,7 @@ open class TransactionBuilder(
         while (statePointerQueue.isNotEmpty()) {
             val nextStatePointer = statePointerQueue.pop()
             val hub = serviceHub
-            if (hub != null) {
+            if (hub != null && nextStatePointer.isResolved) {
                 val resolvedStateAndRef = nextStatePointer.resolve(hub)
                 // Don't add dupe reference states because CoreTransaction doesn't allow it.
                 if (resolvedStateAndRef.ref !in referenceStates()) {
