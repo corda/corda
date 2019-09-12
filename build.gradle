@@ -5,7 +5,7 @@ plugins {
 }
 
 ext {
-    corda_version = '5.0-SNAPSHOT'
+    corda_version = '4.3-SNAPSHOT'
 }
 
 description 'Serialization support for the DJVM'

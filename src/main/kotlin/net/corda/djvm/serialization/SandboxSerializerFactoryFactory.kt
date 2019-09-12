@@ -10,6 +10,7 @@ import java.lang.Double
 import java.lang.Float
 import java.lang.Long
 import java.lang.Short
+import java.util.*
 import java.util.Collections.singleton
 import java.util.Collections.unmodifiableMap
 import java.util.function.Function
@@ -32,7 +33,11 @@ class SandboxSerializerFactoryFactory(
             classLoader.loadClass("sandbox.java.lang.Float") to Float.TYPE,
             classLoader.loadClass("sandbox.java.lang.Integer") to Integer.TYPE,
             classLoader.loadClass("sandbox.java.lang.Long") to Long.TYPE,
-            classLoader.loadClass("sandbox.java.lang.Short") to Short.TYPE
+            classLoader.loadClass("sandbox.java.lang.Short") to Short.TYPE,
+            classLoader.loadClass("sandbox.java.lang.String") to String::class.java,
+            classLoader.loadClass("sandbox.java.util.Date") to Date::class.java,
+            classLoader.loadClass("sandbox.java.util.UUID") to UUID::class.java,
+            Void::class.java to Void.TYPE
         ))
 
         val classCarpenter = createClassCarpenter(context)

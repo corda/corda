@@ -39,12 +39,14 @@ abstract class TestBase(type: SandboxType) {
         val TESTING_LIBRARIES: List<Path> = (System.getProperty("sandbox-libraries.path") ?: fail("sandbox-libraries.path property not set"))
                 .split(File.pathSeparator).map { Paths.get(it) }.filter { exists(it) }
 
+        private lateinit var bootstrapClassLoader: BootstrapClassLoader
         private lateinit var configuration: SandboxConfiguration
         private lateinit var classLoader: SandboxClassLoader
 
         @BeforeAll
         @JvmStatic
         fun setupClassLoader() {
+            bootstrapClassLoader = BootstrapClassLoader(DETERMINISTIC_RT)
             val rootConfiguration = AnalysisConfiguration.createRoot(
                 userSource = UserPathSource(emptyList()),
                 whitelist = MINIMAL,
@@ -53,7 +55,7 @@ abstract class TestBase(type: SandboxType) {
                     ConstructorForDeserialization::class.java,
                     DeprecatedConstructorForDeserialization::class.java
                 ),
-                bootstrapSource = BootstrapClassLoader(DETERMINISTIC_RT)
+                bootstrapSource = bootstrapClassLoader
             )
             configuration = SandboxConfiguration.of(
                 UNLIMITED,
@@ -69,7 +71,7 @@ abstract class TestBase(type: SandboxType) {
         @AfterAll
         @JvmStatic
         fun destroyRootContext() {
-            configuration.analysisConfiguration.closeAll()
+            bootstrapClassLoader.close()
         }
     }
 
@@ -95,11 +97,12 @@ abstract class TestBase(type: SandboxType) {
         var thrownException: Throwable? = null
         thread {
             try {
-                configuration.analysisConfiguration.createChild(
-                    userSource = UserPathSource(classPaths),
-                    newMinimumSeverityLevel = minimumSeverityLevel,
-                    visibleAnnotations = visibleAnnotations
-                ).use { analysisConfiguration ->
+                UserPathSource(classPaths).use { userSource ->
+                    val analysisConfiguration = configuration.analysisConfiguration.createChild(
+                        userSource = userSource,
+                        newMinimumSeverityLevel = minimumSeverityLevel,
+                        visibleAnnotations = visibleAnnotations
+                    )
                     SandboxRuntimeContext(SandboxConfiguration.of(
                         configuration.executionProfile,
                         configuration.rules,

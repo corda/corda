@@ -54,11 +54,10 @@ fun createSandboxSerializationEnv(classLoader: SandboxClassLoader): Serializatio
 
 inline fun <reified T : Any> SerializedBytes<T>.deserializeFor(classLoader: SandboxClassLoader): Any {
     val clazz = classLoader.toSandboxClass(T::class.java)
-    return deserializeTo(clazz, classLoader)
+    return deserializeTo(clazz, classLoader, SerializationFactory.defaultFactory)
 }
 
-fun ByteSequence.deserializeTo(clazz: Class<*>, classLoader: SandboxClassLoader): Any {
-    val factory = SerializationFactory.defaultFactory
+fun ByteSequence.deserializeTo(clazz: Class<*>, classLoader: SandboxClassLoader, factory: SerializationFactory): Any {
     return deserializeTo(clazz, classLoader, factory, factory.defaultContext)
 }
 
