@@ -15,6 +15,7 @@ pipeline {
             steps {
                 withCredentials([string(credentialsId: 'container_reg_passwd', variable: 'DOCKER_PUSH_PWD')]) {
                     sh "./gradlew " +
+                            "-Dkubenetize=true " +
                             "-Ddocker.push.password=\"\${DOCKER_PUSH_PWD}\" " +
                             "-Ddocker.work.dir=\"/tmp/${env.EXECUTOR_NUMBER}\" " +
                             "-Ddocker.provided.tag=\"\${DOCKER_TAG_TO_USE}\"" +
