@@ -1,11 +1,6 @@
 HA notary service set-up
 ========================
 
-This guide assumes you're running a Debian-based Linux OS. See the 
-`Percona documentation <https://www.percona.com/doc/percona-xtradb-cluster/LATEST/index.html>`__ for a full list of 
-supported operating systems.
-
-
 Double curly braces ``{{ }}`` are used to represent placeholder values throughout this guide.
 
 HA notary implementations
@@ -13,12 +8,15 @@ HA notary implementations
 
 There are two HA notary implementations available in Corda Enterprise:
 
-  * The legacy Percona notary implementation, which connects specifically to a Percona/XtraDB (Percona) cluster
-  * The JPA notary implementation, which can connect to any supported database, as long as an
-    appropriate JDBC driver is provided
+  * The JPA notary - this is the standard HA notary and is recommended for all new deployments
+  * The Percona notary - this is a legacy notary that connects specifically to a Percona/XtraDB (Percona) cluster
 
-Note that the JPA notary notary implementation is recommended for all new deployments. The JPA notary has been 
-tested and confirmed to work with the following database implementations:
+The JPA notary uses the Java Persistence API (JPA) interface to connect to the notary state DB. It has been tested against and confirmed to work with the following database versions in HA mode:
+
+* CockroachDB version 19.1.2
+* Oracle 12cR2 in an RAC configuration
+
+And with the following database versions in non-HA mode:
 
 * Percona version 5.7
 * Postgres version 9.6
@@ -27,9 +25,11 @@ tested and confirmed to work with the following database implementations:
 * Oracle 11gR2
 * Oracle 12cR2
 
+It can also be configured to connect to other JPA-compliant databases.
+
 The corresponding database driver must be in the form of a JAR file and located inside the "drivers"
 folder of the notary service. Note that R3 does not provide database support. Should you require
-support for your database. We recommend contacting your database vendor instead.
+support for your database, we recommend contacting your database vendor instead.
 
 If CockroachDB is used as the database, each worker node requires a PostgreSQL JDBC driver to be
 placed in the ``drivers`` directory to be able to communicate with the CockroachDB Cluster.
