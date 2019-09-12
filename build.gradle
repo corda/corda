@@ -522,3 +522,31 @@ buildScan {
 }
 
 apply plugin: DistributedTesting
+
+configurations {
+    detekt
+}
+
+dependencies {
+    detekt 'io.gitlab.arturbosch.detekt:detekt-cli:1.0.1'
+}
+
+task detekt(type: JavaExec) {
+    main = "io.gitlab.arturbosch.detekt.cli.Main"
+    classpath = configurations.detekt
+    def input = "$projectDir"
+    def config = "$projectDir/detekt-config.yml"
+    def baseline = "$projectDir/detekt-baseline.xml"
+    def params = ['-i', input, '-c', config, '-b', baseline]
+    args(params)
+}
+
+task detektBaseline(type: JavaExec) {
+    main = "io.gitlab.arturbosch.detekt.cli.Main"
+    classpath = configurations.detekt
+    def input = "$projectDir"
+    def config = "$projectDir/detekt-config.yml"
+    def baseline = "$projectDir/detekt-baseline.xml"
+    def params = ['-i', input, '-c', config, '-b', baseline, '--create-baseline']
+    args(params)
+}
