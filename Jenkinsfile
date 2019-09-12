@@ -56,7 +56,7 @@ def killall_jobs() {
             continue
         }
 
-        echo "Kill task = ${build}"
+        echo "Killing task = ${build}"
         build.doStop();
     }
 }
