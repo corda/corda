@@ -1,5 +1,27 @@
 pipeline {
 
+    killall_jobs()
+
+    @NonCPS
+    def killall_jobs() {
+        def jobname = env.JOB_NAME
+        def buildnum = env.BUILD_NUMBER.toInteger()
+
+        def job = Jenkins.instance.getItemByFullName(jobname)
+        for (build in job.builds) {
+            if (!build.isBuilding()) {
+                continue;
+            }
+
+            if (buildnum == build.getNumber().toInteger()) {
+                continue
+            }
+
+            echo "Kill task = ${build}"
+            build.doStop();
+        }
+    }
+
     agent { label 'k8s' }
     environment {
         DOCKER_TAG_TO_USE = "${UUID.randomUUID().toString().toLowerCase().subSequence(0, 12)}"
