@@ -307,8 +307,8 @@ class InteractiveShellIntegrationTest {
 
             Thread.sleep(5000)
 
-            val (output) = mockRenderPrintWriter()
-            InteractiveShell.runRPCFromString(listOf("dumpCheckpoints"), output, mock(), aliceNode.rpc as InternalCordaRPCOps, inputObjectMapper)
+            mockRenderPrintWriter()
+            InteractiveShell.runDumpCheckpoints(aliceNode.rpc as InternalCordaRPCOps)
 
             val zipFile = (aliceNode.baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME).list().first { "checkpoints_dump-" in it.toString() }
             val json = ZipInputStream(zipFile.inputStream()).use { zip ->

@@ -215,16 +215,19 @@ object CheckpointHook : ClassFileTransformer {
             log.debug { "readFieldExit array type: $clazz, value: $value]" }
             @Suppress("UNCHECKED_CAST")
             if (Array<Number>::class.java.isAssignableFrom(clazz)) {
+                @Suppress("UNCHECKED_CAST")
                 val numberValue = value as Array<Number>
                 log.debug { "readFieldExit array of number: $clazz = ${numberValue.joinToString(",")}" }
                 return numberValue.joinToString(",")
             } else if (clazz == Array<Boolean>::class.java) {
+                @Suppress("UNCHECKED_CAST")
                 val arrayValue = value as Array<Boolean>
                 log.debug { "readFieldExit array of boolean: $clazz = ${arrayValue.joinToString(",")}" }
                 return arrayValue.joinToString(",")
             }
             // N dimensional arrays
             else if (arrayOf<Array<*>>()::class.java.isAssignableFrom(clazz)) {
+                @Suppress("UNCHECKED_CAST")
                 val arrayValue = value as Array<Array<*>>
                 return arrayValue.map { arrayEntry ->
                     log.debug { "N Dimensional: $clazz, $arrayEntry, ${arrayEntry::class.java}" }
@@ -457,7 +460,6 @@ fun readTrees(events: List<StatsEvent>, index: Int, idMap: IdentityHashMap<Any, 
                 inField = true
             }
             is StatsEvent.Exit -> {
-                arrayIdx = 0
                 if (idMap.containsKey(event.value)) {
                     val identityInfo = idMap[event.value]!!
                     idMap[event.value] = IdentityInfo(identityInfo.tree, identityInfo.refCount + 1)
@@ -475,7 +477,7 @@ fun readTrees(events: List<StatsEvent>, index: Int, idMap: IdentityHashMap<Any, 
                         if (idMap.containsKey(event.value)) {
                             val identityInfo = idMap[event.value]!!
                             idMap[event.value] = IdentityInfo(identityInfo.tree, identityInfo.refCount + 1)
-                            log.debug { "Skipping repeated StatsEvent.ObjectField: ${event.value} (hashcode:${event.value!!.hashCode()}) (count:${idMap[event.value]?.refCount})" }
+                            log.debug { "Skipping repeated StatsEvent.ObjectField: ${event.value} (hashcode:${event.value.hashCode()}) (count:${idMap[event.value]?.refCount})" }
                             identityInfo
                         } else {
                             IdentityInfo(StatsTree.Loop(0), 1)

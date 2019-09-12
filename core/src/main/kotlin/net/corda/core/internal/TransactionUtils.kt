@@ -7,9 +7,6 @@ import net.corda.core.crypto.componentHash
 import net.corda.core.crypto.sha256
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.Party
-import net.corda.core.node.services.AttachmentStorage
-import net.corda.core.node.services.vault.AttachmentQueryCriteria
-import net.corda.core.node.services.vault.Builder
 import net.corda.core.serialization.*
 import net.corda.core.transactions.*
 import net.corda.core.utilities.OpaqueBytes
@@ -100,10 +97,12 @@ class TransactionDeserialisationException(groupEnum: ComponentGroupEnum, index: 
  *
  *  This method used the [deserialiseComponentGroup] method.
  */
-fun deserialiseCommands(componentGroups: List<ComponentGroup>,
-                        forceDeserialize: Boolean = false,
-                        factory: SerializationFactory = SerializationFactory.defaultFactory,
-                        context: SerializationContext = factory.defaultContext): List<Command<*>> {
+fun deserialiseCommands(
+        componentGroups: List<ComponentGroup>,
+        forceDeserialize: Boolean = false,
+        factory: SerializationFactory = SerializationFactory.defaultFactory,
+        @Suppress("UNUSED_PARAMETER") context: SerializationContext = factory.defaultContext
+): List<Command<*>> {
     // TODO: we could avoid deserialising unrelated signers.
     //      However, current approach ensures the transaction is not malformed
     //      and it will throw if any of the signers objects is not List of public keys).
@@ -184,42 +183,6 @@ fun FlowLogic<*>.checkParameterHash(networkParametersHash: SecureHash?) {
     //       For now we don't check whether the attached network parameters match the current ones.
 }
 
-// A cache for caching whether a particular set of signers are trusted
-private val trustedKeysCache: MutableMap<PublicKey, Boolean> =
-        createSimpleCache<PublicKey, Boolean>(100).toSynchronised()
-
-/**
- * Establishes whether an attachment should be trusted. This logic is required in order to verify transactions, as transaction
- * verification should only be carried out using trusted attachments.
- *
- * Attachments are trusted if one of the following is true:
- *  - They are uploaded by a trusted uploader
- *  - There is another attachment in the attachment store, that is trusted and is signed by at least one key that the input
- *  attachment is also signed with
- */
-fun isAttachmentTrusted(attachment: Attachment, service: AttachmentStorage?): Boolean {
-    val trustedByUploader = when (attachment) {
-        is ContractAttachment -> isUploaderTrusted(attachment.uploader)
-        is AbstractAttachment -> isUploaderTrusted(attachment.uploader)
-        else -> false
-    }
-
-    if (trustedByUploader) return true
-
-    return if (service != null && attachment.signerKeys.isNotEmpty()) {
-        attachment.signerKeys.any { signer ->
-            trustedKeysCache.computeIfAbsent(signer) {
-                val queryCriteria = AttachmentQueryCriteria.AttachmentsQueryCriteria(
-                        signersCondition = Builder.equal(listOf(signer)),
-                    uploaderCondition = Builder.`in`(TRUSTED_UPLOADERS)
-                )
-                service.queryAttachments(queryCriteria).isNotEmpty()
-            }
-        }
-    } else {
-        false
-    }
-}
-
 val SignedTransaction.dependencies: Set<SecureHash>
     get() = (inputs.asSequence() + references.asSequence()).map { it.txhash }.toSet()
+

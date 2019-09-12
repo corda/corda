@@ -66,15 +66,16 @@ class KubesTest extends DefaultTask {
 
         final KubernetesClient client = new DefaultKubernetesClient(config)
 
-        client.pods().inNamespace(namespace).list().getItems().forEach({ podToDelete ->
-            if (podToDelete.getMetadata().name.contains(stableRunId)) {
-                project.logger.lifecycle("deleting: " + podToDelete.getMetadata().getName())
-                client.resource(podToDelete).delete()
-            }
-        })
-
-        Namespace ns = new NamespaceBuilder().withNewMetadata().withName(namespace).addToLabels("testing-env", "true").endMetadata().build()
-        client.namespaces().createOrReplace(ns)
+        try {
+            client.pods().inNamespace(namespace).list().getItems().forEach({ podToDelete ->
+                if (podToDelete.getMetadata().name.contains(stableRunId)) {
+                    project.logger.lifecycle("deleting: " + podToDelete.getMetadata().getName())
+                    client.resource(podToDelete).delete()
+                }
+            })
+        } catch (Exception ignored) {
+            //it's possible that a pod is being deleted by the original build, this can lead to racey conditions
+        }
 
 
         List<CompletableFuture<KubePodResult>> podCreationFutures = IntStream.range(0, numberOfPods).mapToObj({ i ->
@@ -257,8 +258,12 @@ class KubesTest extends DefaultTask {
     }
 
     String[] getBuildCommand(int numberOfPods, int podIdx) {
-        return ["bash", "-c", "cd /tmp/source && ./gradlew -Dkubenetize -PdockerFork=" + podIdx + " -PdockerForks=" + numberOfPods + " $fullTaskToExecutePath --info 2>&1 " +
-                "; let rs=\$? ; sleep 10 ; exit \${rs}"]
+        return ["bash", "-c",
+                "let x=1 ; while [ \${x} -ne 0 ] ; do echo \"Waiting for DNS\" ; curl services.gradle.org > /dev/null 2>&1 ; x=\$? ; sleep 1 ; done ; " +
+                        "cd /tmp/source ; " +
+                        "let y=1 ; while [ \${y} -ne 0 ] ; do echo \"Preparing build directory\" ; ./gradlew testClasses integrationTestClasses --parallel 2>&1 ; y=\$? ; sleep 1 ; done ;" +
+                        "./gradlew -Dkubenetize -PdockerFork=" + podIdx + " -PdockerForks=" + numberOfPods + " $fullTaskToExecutePath --info 2>&1 ;" +
+                        "let rs=\$? ; sleep 10 ; exit \${rs}"]
     }
 
     Collection<File> downloadTestXmlFromPod(KubernetesClient client, String namespace, Pod cp) {

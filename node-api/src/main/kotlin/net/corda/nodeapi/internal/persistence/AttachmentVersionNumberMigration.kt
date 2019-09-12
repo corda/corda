@@ -55,15 +55,15 @@ class AttachmentVersionNumberMigration : CustomTaskChange {
             }
 
             availableAttachments.forEach { attachmentId ->
-                val versions = networkParameters?.whitelistedContractImplementations?.values.mapNotNull { it.indexOfFirst { it.toString() == attachmentId } }.filter { it >= 0 }
+                val versions = networkParameters.whitelistedContractImplementations.values.map { it.indexOfFirst { aid -> aid.toString() == attachmentId } }.filter { it >= 0 }
                 val maxPosition = versions.max() ?: 0
                 if (maxPosition > 0) {
                     val version = maxPosition + 1
-                    val msg = "Updating version of attachment $attachmentId to '$version'."
+                    val updateVersionMsg = "Updating version of attachment $attachmentId to '$version'."
                     if (versions.toSet().size > 1)
-                        logger.warn("Several versions based on whitelistedContractImplementations position are available: ${versions.toSet()}. $msg")
+                        logger.warn("Several versions based on whitelistedContractImplementations position are available: ${versions.toSet()}. $updateVersionMsg")
                     else
-                        logger.info(msg)
+                        logger.info(updateVersionMsg)
                     updateVersion(connection, attachmentId, version)
                 }
             }
@@ -88,8 +88,8 @@ class AttachmentVersionNumberMigration : CustomTaskChange {
 
     private fun getNetworkParametersFromFile(path: Path): NetworkParameters? {
         return try {
-            val networkParametersBytes = path?.readObject<SignedNetworkParameters>()
-            networkParametersBytes?.raw?.deserialize()
+            val networkParametersBytes = path.readObject<SignedNetworkParameters>()
+            networkParametersBytes.raw.deserialize()
         } catch (e: Exception) {
             // This condition is logged in the calling function, so no need to do that here.
             null

@@ -6,11 +6,13 @@ import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.deserialiseComponentGroup
 import net.corda.core.internal.div
-import net.corda.core.internal.isAttachmentTrusted
 import net.corda.core.internal.readObject
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.ServicesForResolution
-import net.corda.core.node.services.*
+import net.corda.core.node.services.AttachmentId
+import net.corda.core.node.services.IdentityService
+import net.corda.core.node.services.NetworkParametersService
+import net.corda.core.node.services.TransactionStorage
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.internal.AttachmentsClassLoaderBuilder
 import net.corda.core.transactions.ContractUpgradeLedgerTransaction
@@ -18,6 +20,8 @@ import net.corda.core.transactions.NotaryChangeLedgerTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.contextLogger
 import net.corda.node.internal.DBNetworkParametersStorage
+import net.corda.node.services.attachments.NodeAttachmentTrustCalculator
+import net.corda.node.services.persistence.AttachmentStorageInternal
 import net.corda.nodeapi.internal.network.NETWORK_PARAMS_FILE_NAME
 import net.corda.nodeapi.internal.network.SignedNetworkParameters
 import net.corda.nodeapi.internal.persistence.CordaPersistence
@@ -29,7 +33,7 @@ import java.util.Comparator.comparingInt
 
 class MigrationServicesForResolution(
         override val identityService: IdentityService,
-        override val attachments: AttachmentStorage,
+        override val attachments: AttachmentStorageInternal,
         private val transactions: TransactionStorage,
         private val cordaDB: CordaPersistence,
         cacheFactory: MigrationNamedCacheFactory
@@ -52,6 +56,11 @@ class MigrationServicesForResolution(
             }
         }
     private val cordappLoader = SchemaMigration.loader.get()
+
+    private val attachmentTrustCalculator = NodeAttachmentTrustCalculator(
+        attachments,
+        cacheFactory
+    )
 
     private fun defaultNetworkParameters(): NetworkParameters {
         logger.warn("Using a dummy set of network parameters for migration.")
@@ -114,7 +123,7 @@ class MigrationServicesForResolution(
                     txAttachments,
                     networkParameters,
                     tx.id,
-                    { isAttachmentTrusted(it, attachments) },
+                    attachmentTrustCalculator::calculate,
                     cordappLoader.appClassLoader) {
                 deserialiseComponentGroup(tx.componentGroups, TransactionState::class, ComponentGroupEnum.OUTPUTS_GROUP, forceDeserialize = true)
             }

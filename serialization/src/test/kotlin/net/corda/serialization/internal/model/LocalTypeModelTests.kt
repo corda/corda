@@ -37,12 +37,12 @@ class LocalTypeModelTests {
     class Nested(
             val collectionHolder: StringKeyedCollectionHolder<out Int>?,
             private val intArray: IntArray,
-            optionalParam: Short?)
+            @Suppress("UNUSED_PARAMETER") optionalParam: Short?)
 
     // This can't be treated as a composable type, because the [intArray] parameter is mandatory but we have no readable
     // field or property to populate it from.
     @Suppress("unused")
-    class NonComposableNested(val collectionHolder: StringKeyedCollectionHolder<out Int>?, intArray: IntArray)
+    class NonComposableNested(val collectionHolder: StringKeyedCollectionHolder<out Int>?, @Suppress("UNUSED_PARAMETER") intArray: IntArray)
 
     @Test
     fun `Primitives and collections`() {
@@ -149,7 +149,7 @@ class LocalTypeModelTests {
 
     class AnotherTransitivelyNonComposable(val e: String, val f: Exception, val g: OneMoreTransitivelyNonComposable)
     class OneMoreTransitivelyNonComposable(val h: String, val i: Exception)
-    class MissingConstructorParameter(val a: String, b: Exception)
+    class MissingConstructorParameter(val a: String, @Suppress("UNUSED_PARAMETER") b: Exception)
 
     @Test
     fun `no unique deserialization constructor creates non-composable type`() {

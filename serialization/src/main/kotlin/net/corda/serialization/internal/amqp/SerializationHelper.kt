@@ -118,7 +118,7 @@ internal fun suitableForObjectReference(type: Type): Boolean {
 /**
  * Common properties that are to be used in the [SerializationContext.properties] to alter serialization behavior/content
  */
-internal enum class CommonPropertyNames {
+enum class CommonPropertyNames {
     IncludeInternalInfo,
 }
 

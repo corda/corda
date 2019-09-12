@@ -132,6 +132,7 @@ class HibernateConfiguration(
                     ClassLoaderServiceImpl(customClassLoader))
         }
 
+        @Suppress("DEPRECATION")
         val metadataBuilder = metadataSources.getMetadataBuilder(config.standardServiceRegistryBuilder.build())
         val metadata = buildHibernateMetadata(metadataBuilder, jdbcUrl, attributeConverters)
         return metadata.sessionFactoryBuilder.run {

@@ -42,7 +42,7 @@ object CordappResolver {
         for ((className, registeredCordapps) in alreadyRegistered) {
             if (registeredCordapps.any { it.jarHash == cordapp.jarHash }) continue
             if (className in contractClasses) {
-                logger.warnOnce("More than one CorDapp registered for contract $className.")
+                logger.error("ATTENTION: More than one CorDapp installed on the node for contract $className. Please remove the previous version when upgrading to a new version.")
             }
             cordappClasses[className] = registeredCordapps + cordapp
         }

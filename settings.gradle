@@ -77,6 +77,7 @@ include 'samples:cordapp-configuration:workflows'
 include 'samples:network-verifier:contracts'
 include 'samples:network-verifier:workflows'
 include 'serialization'
+include 'serialization-tests'
 
 // Common libraries - start
 include 'common-validation'

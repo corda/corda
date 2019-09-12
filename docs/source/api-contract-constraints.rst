@@ -91,6 +91,8 @@ implemented. They make it harder to upgrade applications than when using signatu
 
 Further information into the design of Signature Constraints can be found in its :doc:`design document <design/data-model-upgrades/signature-constraints>`.
 
+.. _signing_cordapps_for_use_with_signature_constraints:
+
 Signing CorDapps for use with Signature Constraints
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -101,13 +103,47 @@ across the nodes that intend to use it.
 Each transaction received by a node will then verify that the apps attached to it have the correct signers as specified by its
 Signature Constraints. This ensures that the version of each app is acceptable to the transaction's input states.
 
-If a node receives a transaction that uses a contract attachment that it doesn't trust, but there is an attachment present on the node with
-the same contract classes and same signatures, then the node will execute that contract's code as if it were trusted. This means that nodes
-are no longer required to have every version of a CorDapp uploaded to them in order to verify transactions running older version of a CorDapp.
+If a node receives a transaction that uses an attachment that it doesn't trust, but there is another attachment present on the node with
+at least one common signature, then the node will trust the received attachment. This means that nodes
+are no longer required to have every version of a CorDapp uploaded to them in order to verify transactions running older versions of a CorDapp.
 Instead, it is sufficient to have any version of the CorDapp contract installed.
 
-For third party dependencies attached to the transaction, the rule is slightly different. In this case, the attachment will be trusted by the
-node provided there is another trusted attachment in the node's attachment store that has been signed with the same keys.
+.. note:: An attachment is considered trusted if it was manually installed or uploaded via RPC.
+
+Signers can also be blacklisted to prevent attachments received from a peer from being loaded and used in processing transactions. Only a
+single signer of an attachment needs to be blacklisted for an attachment to be considered untrusted. CorDapps
+and other attachments installed on a node can still be used without issue, even if they are signed by a blacklisted key. Only attachments
+received from a peer are affected.
+
+Below are two examples of possible scenarios around blacklisting signing keys:
+
+    - The statements below are true for both examples:
+
+        - ``Alice`` has ``Contracts CorDapp`` installed
+        - ``Bob`` has an upgraded version of ``Contracts CorDapp`` (known as ``Contracts CorDapp V2``) installed
+        - Both ``Alice`` and ``Bob`` have the ``Workflows CorDapp`` allowing them to transact with each other
+        - ``Contracts CorDapp`` is signed by both ``Alice`` and ``Bob``
+        - ``Contracts CorDapp V2`` is signed by both ``Alice`` and ``Bob``
+
+    - Example 1:
+
+        - ``Alice`` has not blacklisted any attachment signing keys
+        - ``Bob`` transacts with ``Alice``
+        - ``Alice`` receives ``Contracts CorDapp V2`` and stores it
+        - When verifying the attachments loaded into the contract verification code, ``Contracts CorDapp V2`` is accepted and used
+        - The contract verification code in ``Contracts CorDapp V2`` is run
+
+    - Example 2:
+
+        - ``Alice`` blacklists ``Bob``'s attachment signing key
+        - ``Bob`` transacts with ``Alice``
+        - ``Alice`` receives ``Contracts CorDapp V2`` and stores it
+        - When verifying the attachments loaded in the contract verification code, ``Contracts CorDapp V2`` is declined because it is signed
+          by ``Bob``'s blacklisted key
+        - The contract verification code in ``Contracts CorDapp V2`` is not run and the transaction fails
+
+Information on blacklisting attachment signing keys can be found in the
+:ref:`node configuration documentation <corda_configuration_file_blacklisted_attachment_signer_keys>`.
 
 More information on how to sign an app directly from Gradle can be found in the
 :ref:`CorDapp Jar signing <cordapp_build_system_signing_cordapp_jar_ref>` section of the documentation.

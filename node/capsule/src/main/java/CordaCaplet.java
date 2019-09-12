@@ -113,6 +113,9 @@ public class CordaCaplet extends Capsule {
                 // If it fails, just return the existing class path. The main Corda jar will detect the error and fail gracefully.
                 return cp;
             }
+
+            // Add additional directories of JARs to the classpath (at the end), e.g., for JDBC drivers.
+            augmentClasspath((List<Path>) cp, new File(baseDir, "drivers"));
             try {
                 List<String> jarDirs = nodeConfig.getStringList("jarDirs");
                 log(LOG_VERBOSE, "Configured JAR directories = " + jarDirs);
@@ -128,15 +131,24 @@ public class CordaCaplet extends Capsule {
         } else if (ATTR_JVM_ARGS == attr) {
             // Read JVM args from the config if specified, else leave alone.
             List<String> jvmArgs = new ArrayList<>((List<String>) super.attribute(attr));
+            boolean defaultOutOfMemoryErrorHandling = true;
             try {
                 List<String> configJvmArgs = nodeConfig.getStringList("custom.jvmArgs");
                 jvmArgs.clear();
                 jvmArgs.addAll(configJvmArgs);
                 log(LOG_VERBOSE, "Configured JVM args = " + jvmArgs);
+
+                // Switch off default OutOfMemoryError handling if any related JVM arg is specified in custom config
+                defaultOutOfMemoryErrorHandling = configJvmArgs.stream().noneMatch(arg -> arg.contains("OutOfMemoryError"));
             } catch (ConfigException.Missing e) {
                 // Ignore since it's ok to be Missing. Other errors would be unexpected.
             } catch (ConfigException e) {
                 log(LOG_QUIET, e);
+            }
+            // Shutdown and print diagnostics on OutOfMemoryError.
+            if (defaultOutOfMemoryErrorHandling) {
+                jvmArgs.add("-XX:+HeapDumpOnOutOfMemoryError");
+                jvmArgs.add("-XX:+CrashOnOutOfMemoryError");
             }
             return (T) jvmArgs;
         } else if (ATTR_SYSTEM_PROPERTIES == attr) {

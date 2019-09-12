@@ -1,14 +1,12 @@
 package net.corda.serialization.internal.amqp
 
 import net.corda.serialization.internal.AllWhitelist
-import net.corda.serialization.internal.NotSerializable
 import net.corda.serialization.internal.model.ConfigurableLocalTypeModel
 import net.corda.serialization.internal.model.LocalTypeInformation
 import net.corda.serialization.internal.model.TypeModellingFingerPrinter
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 import kotlin.test.assertNotEquals
-import kotlin.test.assertTrue
 
 class TypeModellingFingerPrinterTests {
 
@@ -26,7 +24,7 @@ class TypeModellingFingerPrinterTests {
     }
 
     // Not serializable, because there is no readable property corresponding to the constructor parameter
-    class NonSerializable(a: String)
+    class NonSerializable(@Suppress("UNUSED_PARAMETER") a: String)
 
     class HasTypeParameter<T>
     data class SuppliesTypeParameter(val value: HasTypeParameter<NonSerializable>)

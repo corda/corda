@@ -27,8 +27,10 @@ import org.junit.ClassRule
 import org.junit.Test
 import org.mockito.Mockito
 import java.security.KeyPair
+import java.sql.Connection
 import java.time.Clock
 import java.time.Duration
+import java.util.*
 
 class PersistentIdentityMigrationNewTableTest{
     companion object {
@@ -57,6 +59,7 @@ class PersistentIdentityMigrationNewTableTest{
     fun setUp() {
         val identityService = makeTestIdentityService(PersistentIdentityMigrationNewTableTest.dummyNotary.identity, BOB_IDENTITY, ALICE_IDENTITY)
         notaryServices = MockServices(listOf("net.corda.finance.contracts"), dummyNotary, identityService, dummyCashIssuer.keyPair, BOC_KEY)
+
         // Runs migration tasks
         cordaDB = configureDatabase(
                 MockServices.makeTestDataSourceProperties(),
@@ -83,15 +86,9 @@ class PersistentIdentityMigrationNewTableTest{
 
     @Test
     fun `migrate identities to new table`() {
-        /**
-         * TODO - We have to mock every statement/ result to test this properly.
-         *
-         * The workaround for now is the [PersistentIdentitiesMigration.addTestMapping] and
-         * [PersistentIdentitiesMigration.deleteTestMapping] methods that allow us to see the migration occur properly during debugging.
-         *
-         * Since [PersistentIdentitiesMigration] implements [CordaMigration] the migration will run when the DB is setup.
-         */
-        PersistentIdentityMigrationNewTable()
+         val pkHash = addTestMapping(cordaDB.dataSource.connection, alice)
+         PersistentIdentityMigrationNewTable()
+         verifyTestMigration(cordaDB.dataSource.connection, pkHash, alice.name.toString())
     }
 
     private fun saveAllIdentities(identities: List<PartyAndCertificate>) {
@@ -135,6 +132,41 @@ class PersistentIdentityMigrationNewTableTest{
                     X509Utilities.buildCertPath(signedParams.sig.parentCertsChain).encoded
             )
             session.save(persistentParams)
+        }
+    }
+
+        private fun addTestMapping(connection: Connection, testIdentity: TestIdentity): String {
+        val pkHash = UUID.randomUUID().toString()
+        val cert = testIdentity.identity.certPath.encoded
+
+        connection.prepareStatement("INSERT INTO node_identities (pk_hash, identity_value) VALUES (?,?)").use {
+            it.setString(1, pkHash)
+            it.setBytes(2, cert)
+            it.executeUpdate()
+        }
+        return pkHash
+    }
+
+//    private fun deleteTestMapping(connection: Connection, pkHash: String) {
+//        connection.prepareStatement("DELETE FROM node_identities WHERE pk_hash = ?").use {
+//            it.setString(1, pkHash)
+//            it.executeUpdate()
+//        }
+//    }
+
+    private fun verifyTestMigration(connection: Connection, pk: String, name: String) {
+        connection.createStatement().use {
+            try {
+                val rs = it.executeQuery("SELECT (pk_hash, name) FROM node_identities_no_cert")
+                while (rs.next()) {
+                    val result = rs.getString(1)
+                    require(result.contains(pk))
+                    require(result.contains(name))
+                }
+                rs.close()
+            } catch (e: Exception) {
+                println(e.localizedMessage)
+            }
         }
     }
 }

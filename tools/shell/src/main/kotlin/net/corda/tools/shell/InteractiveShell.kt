@@ -132,6 +132,8 @@ object InteractiveShell {
         ExternalResolver.INSTANCE.addCommand("flow", "Commands to work with flows. Flows are how you can change the ledger.", FlowShellCommand::class.java)
         ExternalResolver.INSTANCE.addCommand("start", "An alias for 'flow start'", StartShellCommand::class.java)
         ExternalResolver.INSTANCE.addCommand("hashLookup", "Checks if a transaction with matching Id hash exists.", HashLookupShellCommand::class.java)
+        ExternalResolver.INSTANCE.addCommand("attachments", "Commands to extract information about attachments stored within the node", AttachmentShellCommand::class.java)
+        ExternalResolver.INSTANCE.addCommand("checkpoints", "Commands to extract information about checkpoints stored within the node", CheckpointShellCommand::class.java)
         shell = ShellLifecycle(configuration.commandsDirectory).start(config, configuration.user, configuration.password)
     }
 
@@ -473,6 +475,7 @@ object InteractiveShell {
             try {
                 result = result.get()
             } catch (e: InterruptedException) {
+                subscriber.unsubscribe()
                 Thread.currentThread().interrupt()
             } catch (e: ExecutionException) {
                 throw e.rootCause
@@ -484,7 +487,20 @@ object InteractiveShell {
     }
 
     @JvmStatic
-    fun runRPCFromString(input: List<String>, out: RenderPrintWriter, context: InvocationContext<out Any>, cordaRPCOps: InternalCordaRPCOps,
+    fun runAttachmentTrustInfoView(
+        out: RenderPrintWriter,
+        rpcOps: InternalCordaRPCOps
+    ): Any {
+        return AttachmentTrustTable(out, rpcOps.attachmentTrustInfos)
+    }
+
+    @JvmStatic
+    fun runDumpCheckpoints(rpcOps: InternalCordaRPCOps) {
+        rpcOps.dumpCheckpoints()
+    }
+
+    @JvmStatic
+    fun runRPCFromString(input: List<String>, out: RenderPrintWriter, context: InvocationContext<out Any>, cordaRPCOps: CordaRPCOps,
                          inputObjectMapper: ObjectMapper): Any? {
         val cmd = input.joinToString(" ").trim { it <= ' ' }
         if (cmd.startsWith("startflow", ignoreCase = true)) {
@@ -500,7 +516,7 @@ object InteractiveShell {
         var result: Any? = null
         try {
             InputStreamSerializer.invokeContext = context
-            val parser = StringToMethodCallParser(InternalCordaRPCOps::class.java, inputObjectMapper)
+            val parser = StringToMethodCallParser(CordaRPCOps::class.java, inputObjectMapper)
             val call = parser.parse(cordaRPCOps, cmd)
             result = call.call()
             if (result != null && result !== kotlin.Unit && result !is Void) {
@@ -554,6 +570,7 @@ object InteractiveShell {
             cordaRPCOps.terminate(true)
 
             val latch = CountDownLatch(1)
+            @Suppress("DEPRECATION")
             cordaRPCOps.pendingFlowsCount().updates.doOnError { error ->
                 log.error(error.message)
                 throw error

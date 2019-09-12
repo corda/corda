@@ -244,7 +244,7 @@ class NetworkBootstrapperRunnerTests {
 
     @Test
     fun `test when packages overlap that the bootstrapper fails with a sensible message`() {
-        val (runner, mockBootstrapper) = getRunner()
+        val (runner, _) = getRunner()
         val conf = packageOverlapConfigFile.copyToTestDir()
         runner.networkParametersFile = conf
         val exitCode = runner.runProgram()
@@ -255,7 +255,7 @@ class NetworkBootstrapperRunnerTests {
 
     @Test
     fun `test when keyfile does not exist then bootstrapper fails with a sensible message`() {
-        val (runner, mockBootstrapper) = getRunner()
+        val (runner, _) = getRunner()
         runner.networkParametersFile = dirAlice / "filename-that-doesnt-exist"
         val exception = assertFailsWith<FileNotFoundException> { runner.runProgram() }
         assert(exception.message!!.startsWith("Unable to find specified network parameters config file at"))

@@ -107,13 +107,14 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                     val hashToResolve = it ?: services.networkParametersService.defaultHash
                     services.networkParametersService.lookup(hashToResolve)
                 },
-                resolveContractAttachment = { services.loadContractAttachment(it) },
-                isAttachmentTrusted = { isAttachmentTrusted(it, services.attachments) }
+                // `as?` is used due to [MockServices] not implementing [ServiceHubCoreInternal]
+                isAttachmentTrusted = { (services as? ServiceHubCoreInternal)?.attachmentTrustCalculator?.calculate(it) ?: true }
         )
     }
 
     // Helper for deprecated toLedgerTransaction
     // TODO: revisit once Deterministic JVM code updated
+    @Suppress("UNUSED") // not sure if this field can be removed safely??
     private val missingAttachment: Attachment by lazy {
         object : AbstractAttachment({ byteArrayOf() }, DEPLOYED_CORDAPP_UPLOADER ) {
             override val id: SecureHash get() = throw UnsupportedOperationException()
@@ -142,9 +143,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                 resolveAttachment,
                 { stateRef -> resolveStateRef(stateRef)?.serialize() },
                 { null },
-                // Returning a dummy `missingAttachment` Attachment allows this deprecated method to work and it disables "contract version no downgrade rule" as a dummy Attachment returns version 1
-                { resolveAttachment(it.txhash) ?: missingAttachment },
-                { isAttachmentTrusted(it, null) }
+                { it.isUploaderTrusted() }
         )
     }
 
@@ -160,7 +159,6 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                 resolveAttachment,
                 { stateRef -> resolveStateRef(stateRef)?.serialize() },
                 resolveParameters,
-                { resolveAttachment(it.txhash) ?: missingAttachment },
                 { true } // Any attachment loaded through the DJVM should be trusted
         )
     }
@@ -170,7 +168,6 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
             resolveAttachment: (SecureHash) -> Attachment?,
             resolveStateRefAsSerialized: (StateRef) -> SerializedBytes<TransactionState<ContractState>>?,
             resolveParameters: (SecureHash?) -> NetworkParameters?,
-            resolveContractAttachment: (StateRef) -> Attachment,
             isAttachmentTrusted: (Attachment) -> Boolean
     ): LedgerTransaction {
         // Look up public keys to authenticated identities.
