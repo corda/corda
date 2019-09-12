@@ -13,7 +13,6 @@ import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.DEPLOYED_CORDAPP_UPLOADER
 import net.corda.core.node.services.AttachmentStorage
-import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.internal.AttachmentsClassLoader
 import net.corda.core.serialization.internal.CheckpointSerializationContext
@@ -108,10 +107,6 @@ class DefaultSerializableSerializer : Serializer<DefaultSerializable>() {
     override fun read(kryo: Kryo, input: Input, type: Class<DefaultSerializable>): DefaultSerializable {
         return DefaultSerializable()
     }
-}
-
-object EmptyWhitelist : ClassWhitelist {
-    override fun hasListed(type: Class<*>): Boolean = false
 }
 
 class CordaClassResolverTests {

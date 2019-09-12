@@ -5,8 +5,10 @@ import net.corda.core.serialization.SerializationContext;
 import net.corda.core.serialization.SerializationFactory;
 import net.corda.core.serialization.SerializedBytes;
 import net.corda.serialization.internal.AllWhitelist;
-import net.corda.serialization.internal.amqp.*;
-import net.corda.serialization.internal.amqp.Schema;
+import net.corda.serialization.internal.amqp.DeserializationInput;
+import net.corda.serialization.internal.amqp.Envelope;
+import net.corda.serialization.internal.amqp.ObjectAndEnvelope;
+import net.corda.serialization.internal.amqp.SerializerFactory;
 import net.corda.serialization.internal.amqp.testutils.TestSerializationContext;
 import net.corda.serialization.internal.model.RemoteTypeInformation;
 import net.corda.serialization.internal.model.TypeIdentifier;
@@ -15,10 +17,8 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
-import static java.util.Collections.singletonList;
 import static net.corda.serialization.internal.amqp.testutils.AMQPTestUtilsKt.testDefaultFactoryNoEvolution;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 public class JavaCalculatedValuesToClassCarpenterTest extends AmqpCarpenterBase {
     public JavaCalculatedValuesToClassCarpenterTest() {
