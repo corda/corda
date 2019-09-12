@@ -474,6 +474,7 @@ object InteractiveShell {
             try {
                 result = result.get()
             } catch (e: InterruptedException) {
+                subscriber.unsubscribe()
                 Thread.currentThread().interrupt()
             } catch (e: ExecutionException) {
                 throw e.rootCause
