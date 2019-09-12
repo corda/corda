@@ -80,6 +80,10 @@ fun AttachmentConstraint.canBeTransitionedFrom(input: AttachmentConstraint, atta
     }
 }
 
+fun producesWarning(param: AutomaticHashConstraint): Unit {
+    // nothing
+}
+
 private val validConstraints = setOf(
         AlwaysAcceptAttachmentConstraint::class,
         HashAttachmentConstraint::class,
