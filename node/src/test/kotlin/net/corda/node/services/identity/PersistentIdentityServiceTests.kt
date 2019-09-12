@@ -7,6 +7,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.services.UnknownAnonymousPartyException
+import net.corda.core.serialization.serialize
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.x509Certificates
@@ -266,6 +267,13 @@ class PersistentIdentityServiceTests {
         assertThrows<IllegalArgumentException> {
             identityService.registerKeyToParty(anonymousAlice.owningKey, bob.party)
         }
+    }
+
+    @Test
+    fun `P&C size`() {
+        val (_, anonymousAlice) = createConfidentialIdentity(ALICE.name)
+        val serializedCert = anonymousAlice.serialize()
+        println(serializedCert)
     }
 
     private fun createConfidentialIdentity(x500Name: CordaX500Name): Pair<PartyAndCertificate, PartyAndCertificate> {

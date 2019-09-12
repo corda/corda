@@ -16,7 +16,7 @@
 
         <dropColumn tableName="node_identities" columnName="identity_value"/>
         <addColumn tableName="node_identities">
-            <column name="identity_value" type="varbinary(33554432)">
+            <column name="identity_value" type="varbinary(64000)">
                 <constraints nullable="false"/>
             </column>
         </addColumn>
