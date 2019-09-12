@@ -10,7 +10,7 @@ job('Corda OS Pull Request Integration Tests') {
                     withCredentials([string(credentialsId: 'container_reg_passwd', variable: 'DOCKER_PUSH_PWD')]) {
                         sh "./gradlew " +
                                 "-Ddocker.push.password=\"\${DOCKER_PUSH_PWD}\" " +
-                                "-Ddocker.work.dir=\"${env.WORKSPACE}/tmp\" " +
+                                "-Ddocker.work.dir=\"/tmp/${env.EXECUTOR_NUMBER}\" " +
                                 "-Ddocker.provided.tag=\"${dockerTagToUse}\""
                         "clean pushBuildImage"
                     }
