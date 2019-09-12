@@ -6,6 +6,11 @@ import org.gradle.api.tasks.TaskAction
 class ParallelTestGroup extends DefaultTask {
 
     List<String> groups = new ArrayList<>()
+    int shardCount = 20
+
+    void numberOfShards(int shards){
+        this.shardCount = shards
+    }
 
     void testGroups(String... group) {
         testGroups(group.toList())

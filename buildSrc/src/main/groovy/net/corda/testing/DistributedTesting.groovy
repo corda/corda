@@ -48,9 +48,11 @@ class DistributedTesting implements Plugin<Project> {
             //first step is to create a single task which will invoke all the submodule tasks for each grouping
             //ie allParallelTest will invoke [node:test, core:test, client:rpc:test ... etc]
             //ie allIntegrationTest will invoke [node:integrationTest, core:integrationTest, client:rpc:integrationTest ... etc]
-            createGroupedParallelTestTasks(allKubesTestingTasksGroupedByType, project, imageBuildingTask)
+//            createGroupedParallelTestTasks(allKubesTestingTasksGroupedByType, project, imageBuildingTask)
 
-            Collection<ParallelTestGroup> userDefinedGroups = project.tasks.withType(ParallelTestGroup).forEach { testGrouping ->
+            Set<ParallelTestGroup> userGroups = new HashSet<>(project.tasks.withType(ParallelTestGroup))
+
+            Collection<ParallelTestGroup> userDefinedGroups = userGroups.forEach { testGrouping ->
                 List<KubesTest> groups = ((ParallelTestGroup) testGrouping).groups.collect {
                     allKubesTestingTasksGroupedByType.get(it)
                 }.flatten()
@@ -58,6 +60,7 @@ class DistributedTesting implements Plugin<Project> {
 
                 def userDefinedParallelTask = project.rootProject.tasks.create("userDefined" + testGrouping.name.capitalize(), KubesTest) {
                     dependsOn imageBuildingTask
+                    numberOfPods = testGrouping.getShardCount()
                     printOutput = false
                     fullTaskToExecutePath = superListOfTasks
                     taskToExecuteName = "userDefined"

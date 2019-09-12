@@ -514,8 +514,18 @@ buildScan {
     termsOfServiceUrl = 'https://gradle.com/terms-of-service'
     termsOfServiceAgree = 'yes'
 }
-task parallelUnitAndIntegrationTest(type: ParallelTestGroup) {
+
+task allParallelIntegrationTest(type: ParallelTestGroup) {
+    testGroups "integrationTest"
+    numberOfShards 10
+}
+task allParallelUnitTest(type: ParallelTestGroup) {
+    testGroups "test"
+    numberOfShards 15
+}
+task allParallelUnitAndIntegrationTest(type: ParallelTestGroup) {
     testGroups "test", "integrationTest"
+    numberOfShards 15
 }
 apply plugin: DistributedTesting
 
