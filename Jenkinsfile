@@ -1,7 +1,6 @@
+killall_jobs()
+
 pipeline {
-
-    killall_jobs()
-
     agent { label 'k8s' }
     environment {
         DOCKER_TAG_TO_USE = "${UUID.randomUUID().toString().toLowerCase().subSequence(0, 12)}"
