@@ -17,7 +17,7 @@ In Corda Enterprise 4.0 an additional table ``notary_committed_transactions`` is
 
 Upgrade steps:
 
-1) Backup your Percona XtraDB Cluster, see :doc:`operating percona <./operating-percona>`.
+1) Backup your Percona XtraDB Cluster.
 2) Test you can restore from backup.
 3) Log in to any Percona XtraDB Cluster database server and create the ``notary_committed_transactions`` table. It will be replicated to all other database servers.
 
@@ -28,5 +28,5 @@ Upgrade steps:
             CONSTRAINT tid PRIMARY KEY (transaction_id)
         );
 
-4) In the unlikely event that the database gets corrupted, take all the notary worker nodes down and follow the "Repair" guide under :doc:`operating percona <./operating-percona>` to restore the database.
+4) In the unlikely event that the database gets corrupted, take all the notary worker nodes down and restore the database.
 5) Perform a rolling upgrade on the notary worker nodes. Follow the :doc:`node upgrade guide<../node-upgrade-notes>` for each node, and make sure the node is running and is no longer in flow draining mode before moving on to the next one.

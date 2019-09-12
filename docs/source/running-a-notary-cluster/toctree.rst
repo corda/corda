@@ -19,4 +19,3 @@ including in a highly-available configuration.
   upgrading-the-ha-notary-service
   notary-db-migration
   notary-metrics
-  operating-percona

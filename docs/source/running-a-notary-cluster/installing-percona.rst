@@ -205,5 +205,5 @@ nodes.
   mysql> use corda;
   # The output should be `Database changed`.
 
-In the next section, we're :doc:`installing-the-notary-service`. You can read about :doc:`operating-percona` in a later section of this tutorial.
+In the next section, we're :doc:`installing-the-notary-service`.
 
