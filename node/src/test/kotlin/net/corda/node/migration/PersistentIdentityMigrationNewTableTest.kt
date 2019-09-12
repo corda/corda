@@ -59,9 +59,15 @@ class PersistentIdentityMigrationNewTableTest{
     fun setUp() {
         val identityService = makeTestIdentityService(PersistentIdentityMigrationNewTableTest.dummyNotary.identity, BOB_IDENTITY, ALICE_IDENTITY)
         notaryServices = MockServices(listOf("net.corda.finance.contracts"), dummyNotary, identityService, dummyCashIssuer.keyPair, BOC_KEY)
+
+        val props = Properties()
+        props.setProperty("dataSourceClassName", "org.postgresql.ds.PGSimpleDataSource")
+        props.setProperty("dataSource.url", "jdbc:postgresql://localhost:5432/postgres")
+        props.setProperty("dataSource.user", "my_user")
+        props.setProperty("dataSource.password", "my_password")
         // Runs migration tasks
         cordaDB = configureDatabase(
-                MockServices.makeTestDataSourceProperties(),
+                props,
                 DatabaseConfig(),
                 notaryServices.identityService::wellKnownPartyFromX500Name,
                 notaryServices.identityService::wellKnownPartyFromAnonymous,
