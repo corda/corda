@@ -6,11 +6,6 @@ pipeline {
     }
 
     stages {
-        stage('Clear existing testing images') {
-            steps {
-                sh """docker rmi -f \$(docker images | grep stefanotestingcr.azurecr.io/testing | awk '{print \$3}') || echo \"there were no images to delete\""""
-            }
-        }
         stage('Corda Pull Request Integration Tests - Generate Build Image') {
             steps {
                 withCredentials([string(credentialsId: 'container_reg_passwd', variable: 'DOCKER_PUSH_PWD')]) {
@@ -34,6 +29,12 @@ pipeline {
                             " allParallelIntegrationTest"
                 }
                 junit '**/build/test-results-xml/**/*.xml'
+            }
+        }
+
+        stage('Clear testing images') {
+            steps {
+                sh """docker rmi -f \$(docker images | grep ${DOCKER_TAG_TO_USE} | awk '{print \$3}') || echo \"there were no images to delete\""""
             }
         }
     }
