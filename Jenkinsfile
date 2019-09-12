@@ -17,8 +17,8 @@ pipeline {
                     sh "./gradlew " +
                             "-Ddocker.push.password=\"\${DOCKER_PUSH_PWD}\" " +
                             "-Ddocker.work.dir=\"/tmp/${env.EXECUTOR_NUMBER}\" " +
-                            "-Ddocker.provided.tag=\"\${DOCKER_TAG_TO_USE}\""
-                    "clean pushBuildImage"
+                            "-Ddocker.provided.tag=\"\${DOCKER_TAG_TO_USE}\"" +
+                    " clean pushBuildImage"
                 }
             }
         }
