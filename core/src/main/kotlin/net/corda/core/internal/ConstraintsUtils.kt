@@ -49,7 +49,7 @@ val ContractState.requiredContractClassName: String? get() {
 fun AttachmentConstraint.canBeTransitionedFrom(input: AttachmentConstraint, attachment: ContractAttachment): Boolean {
     val output = this
 
-    @Suppress("DEPRECATION")
+//    @Suppress("DEPRECATION")
     fun AttachmentConstraint.isAutomaticHashConstraint() =
             this is AutomaticHashConstraint
 
