@@ -1,12 +1,11 @@
 pipeline {
 
+    agent { label 'k8s' }
     environment {
         DOCKER_TAG_TO_USE = "${UUID.randomUUID().toString().toLowerCase().subSequence(0, 12)}"
     }
 
-    agent {
-        label 'k8s'
-
+    stages {
         stage('Clear existing testing images') {
             sh """docker rmi -f \$(docker images | grep stefanotestingcr.azurecr.io/testing | awk '{print \$3}') || echo \"there were no images to delete\""""
         }
@@ -21,7 +20,6 @@ pipeline {
                 }
             }
         }
-
         stage('Corda Pull Request Integration Tests - Run Integration Tests') {
             script {
                 try {
