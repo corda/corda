@@ -18,24 +18,21 @@ pipeline {
                             "-Ddocker.push.password=\"\${DOCKER_PUSH_PWD}\" " +
                             "-Ddocker.work.dir=\"/tmp/${env.EXECUTOR_NUMBER}\" " +
                             "-Ddocker.provided.tag=\"\${DOCKER_TAG_TO_USE}\"" +
-                    " clean pushBuildImage"
+                            " clean pushBuildImage"
                 }
             }
         }
         stage('Corda Pull Request Integration Tests - Run Integration Tests') {
             steps {
-                try {
-                    withCredentials([string(credentialsId: 'container_reg_passwd', variable: 'DOCKER_PUSH_PWD')]) {
-                        sh "./gradlew " +
-                                "-DbuildId=\"${env.BUILD_ID}-${env.JOB_NAME}\" " +
-                                "-Ddocker.push.password=\"\${DOCKER_PUSH_PWD}\" " +
-                                "-Dkubenetize=true " +
-                                "-Ddocker.tag=\"\${DOCKER_TAG_TO_USE}\""
-                        "allParallelIntegrationTest"
-                    }
-                } finally {
-                    junit '**/build/test-results-xml/**/*.xml'
+                withCredentials([string(credentialsId: 'container_reg_passwd', variable: 'DOCKER_PUSH_PWD')]) {
+                    sh "./gradlew " +
+                            "-DbuildId=\"${env.BUILD_ID}-${env.JOB_NAME}\" " +
+                            "-Ddocker.push.password=\"\${DOCKER_PUSH_PWD}\" " +
+                            "-Dkubenetize=true " +
+                            "-Ddocker.tag=\"\${DOCKER_TAG_TO_USE}\""
+                    "allParallelIntegrationTest"
                 }
+                junit '**/build/test-results-xml/**/*.xml'
             }
         }
     }
