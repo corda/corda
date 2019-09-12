@@ -7,10 +7,12 @@ pipeline {
 
     stages {
         stage('Clear existing testing images') {
-            sh """docker rmi -f \$(docker images | grep stefanotestingcr.azurecr.io/testing | awk '{print \$3}') || echo \"there were no images to delete\""""
+            steps {
+                sh """docker rmi -f \$(docker images | grep stefanotestingcr.azurecr.io/testing | awk '{print \$3}') || echo \"there were no images to delete\""""
+            }
         }
         stage('Corda Pull Request Integration Tests - Generate Build Image') {
-            script {
+            steps {
                 withCredentials([string(credentialsId: 'container_reg_passwd', variable: 'DOCKER_PUSH_PWD')]) {
                     sh "./gradlew " +
                             "-Ddocker.push.password=\"\${DOCKER_PUSH_PWD}\" " +
@@ -21,7 +23,7 @@ pipeline {
             }
         }
         stage('Corda Pull Request Integration Tests - Run Integration Tests') {
-            script {
+            steps {
                 try {
                     withCredentials([string(credentialsId: 'container_reg_passwd', variable: 'DOCKER_PUSH_PWD')]) {
                         sh "./gradlew " +
