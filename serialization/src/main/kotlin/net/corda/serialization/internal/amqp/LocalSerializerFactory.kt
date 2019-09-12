@@ -13,6 +13,7 @@ import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
 import java.util.*
 import java.util.function.Function
+import java.util.function.Predicate
 import javax.annotation.concurrent.ThreadSafe
 
 /**
@@ -77,6 +78,12 @@ interface LocalSerializerFactory {
      * Use the [FingerPrinter] to create a type descriptor for the given [typeInformation].
      */
     fun createDescriptor(typeInformation: LocalTypeInformation): Symbol
+
+    /**
+     * Determines whether instances of this type should be added to the object history
+     * when serialising and deserialising.
+     */
+    fun isSuitebleForObjectReference(type: Type): Boolean
 }
 
 /**
@@ -91,6 +98,7 @@ class DefaultLocalSerializerFactory(
         override val classloader: ClassLoader,
         private val descriptorBasedSerializerRegistry: DescriptorBasedSerializerRegistry,
         private val primitiveSerializerFactory: Function<Class<*>, AMQPSerializer<Any>>,
+        private val isPrimitiveType: Predicate<Class<*>>,
         private val customSerializerRegistry: CustomSerializerRegistry,
         private val onlyCustomSerializers: Boolean)
     : LocalSerializerFactory {
@@ -127,6 +135,12 @@ class DefaultLocalSerializerFactory(
     override fun get(typeInformation: LocalTypeInformation): AMQPSerializer<Any> =
             get(typeInformation.observedType, typeInformation)
 
+    // ByteArrays, primitives and boxed primitives are not stored in the object history
+    override fun isSuitebleForObjectReference(type: Type): Boolean {
+        val clazz = type.asClass()
+        return type != ByteArray::class.java && !isPrimitiveType.test(clazz)
+    }
+
     private fun makeAndCache(typeInformation: LocalTypeInformation, build: () -> AMQPSerializer<Any>) =
             makeAndCache(typeInformation.typeIdentifier, build)
 
@@ -144,7 +158,9 @@ class DefaultLocalSerializerFactory(
             // Any Custom Serializer cached for a ParameterizedType can only be
             // found by searching for that exact same type. Searching for its raw
             // class will not work!
-            val declaredGenericType = if (declaredType !is ParameterizedType && localTypeInformation.typeIdentifier is Parameterised) {
+            val declaredGenericType = if (declaredType !is ParameterizedType
+                    && localTypeInformation.typeIdentifier is Parameterised
+                    && declaredClass != Class::class.java) {
                 localTypeInformation.typeIdentifier.getLocalType(classLoaderFor(declaredClass))
             } else {
                 declaredType
