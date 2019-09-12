@@ -18,6 +18,7 @@ import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.x509Certificates
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
+import org.hibernate.annotations.Type
 import org.hibernate.internal.util.collections.ArrayHelper.EMPTY_BYTE_ARRAY
 import java.security.InvalidAlgorithmParameterException
 import java.security.PublicKey
@@ -107,7 +108,7 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
             @Column(name = PK_HASH_COLUMN_NAME, length = MAX_HASH_HEX_SIZE, nullable = false)
             var publicKeyHash: String = "",
 
-            @Lob
+            @Type(type = "corda-blob")
             @Column(name = IDENTITY_COLUMN_NAME, nullable = false)
             var identity: ByteArray = EMPTY_BYTE_ARRAY
     )
