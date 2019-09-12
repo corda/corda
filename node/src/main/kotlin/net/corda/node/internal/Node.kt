@@ -401,7 +401,7 @@ open class Node(configuration: NodeConfiguration,
     }
 
     private fun createArtemisSigningService(config: NodeConfiguration, commonName: String?, sslOptions: MutualSslConfiguration): TLSSigningService {
-        return CryptoServiceSigningService(config.enterpriseConfiguration?.artemisCryptoServiceConfig,
+        return CryptoServiceSigningService(config.artemisCryptoServiceConfig,
                 CordaX500Name(commonName, null, organisation = "CORDA", locality = "London", state = null, country = "GB"),
                 sslOptions, DEFAULT_SSL_HANDSHAKE_TIMEOUT_MILLIS, name = "Artemis")
     }

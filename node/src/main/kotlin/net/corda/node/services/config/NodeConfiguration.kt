@@ -10,6 +10,7 @@ import net.corda.core.internal.notary.NotaryServiceFlow
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.services.config.rpc.NodeRpcOptions
 import net.corda.node.services.config.schema.v1.V1NodeConfigurationSpec
+import net.corda.nodeapi.internal.config.CryptoServiceConfig
 import net.corda.nodeapi.internal.config.FileBasedCertificateStoreSupplier
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.config.User
@@ -103,6 +104,7 @@ interface NodeConfiguration {
     val networkParameterAcceptanceSettings: NetworkParameterAcceptanceSettings
 
     val blacklistedAttachmentSigningKeys: List<String>
+    val artemisCryptoServiceConfig: CryptoServiceConfig?
 
     companion object {
         // default to at least 8MB and a bit extra for larger heap sizes

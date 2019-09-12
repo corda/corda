@@ -9,11 +9,7 @@ import net.corda.core.utilities.seconds
 import net.corda.node.services.config.rpc.NodeRpcOptions
 import net.corda.nodeapi.BrokerRpcSslOptions
 import net.corda.nodeapi.internal.DEV_PUB_KEY_HASHES
-import net.corda.nodeapi.internal.config.FileBasedCertificateStoreSupplier
-import net.corda.nodeapi.internal.config.MutualSslConfiguration
-import net.corda.nodeapi.internal.config.SslConfiguration
-import net.corda.nodeapi.internal.config.DEFAULT_SSL_HANDSHAKE_TIMEOUT_MILLIS
-import net.corda.nodeapi.internal.config.User
+import net.corda.nodeapi.internal.config.*
 import net.corda.nodeapi.internal.cryptoservice.SupportedCryptoServices
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
@@ -90,7 +86,8 @@ data class NodeConfigurationImpl(
         override val freshIdentitiesConfiguration: FreshIdentitiesConfiguration? = null,
         override val disableFreshIdentitiesWarning: Boolean = false,
         override val cryptoServiceTimeout: Duration = Defaults.cryptoServiceTimeout,
-        override val blacklistedAttachmentSigningKeys: List<String> = Defaults.blacklistedAttachmentSigningKeys
+        override val blacklistedAttachmentSigningKeys: List<String> = Defaults.blacklistedAttachmentSigningKeys,
+        override val artemisCryptoServiceConfig: CryptoServiceConfig? = null
 
 ) : NodeConfiguration {
     internal object Defaults {

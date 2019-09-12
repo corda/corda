@@ -357,7 +357,6 @@ internal object EnterpriseConfigurationSpec : Configuration.Specification<Enterp
     private val traceTargetDirectory by string().mapValid(::toPath).optional().withDefaultValue(EnterpriseConfiguration.Defaults.traceTargetDirectory)
     private val messagingServerSslConfiguration by nested(MessagingServerSslConfigurationSpec).optional()
     private val processedMessageCleanup by nested(ProcessedMessageCleanupSpec).optional()
-    private val artemisCryptoServiceConfig by nested(CryptoServiceConfigSpec).optional()
 
     override fun parseValid(configuration: Config, options: Configuration.Options): Valid<EnterpriseConfiguration> {
         val config = configuration.withOptions(options)
@@ -371,8 +370,7 @@ internal object EnterpriseConfigurationSpec : Configuration.Specification<Enterp
                 config[externalBridge],
                 config[enableCacheTracing],
                 config[traceTargetDirectory],
-                config[processedMessageCleanup],
-                config[artemisCryptoServiceConfig])
+                config[processedMessageCleanup])
         )
     }
 }
