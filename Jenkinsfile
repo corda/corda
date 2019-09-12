@@ -29,8 +29,8 @@ pipeline {
                             "-DbuildId=\"${env.BUILD_ID}-${env.JOB_NAME}\" " +
                             "-Ddocker.push.password=\"\${DOCKER_PUSH_PWD}\" " +
                             "-Dkubenetize=true " +
-                            "-Ddocker.tag=\"\${DOCKER_TAG_TO_USE}\""
-                    "allParallelIntegrationTest"
+                            "-Ddocker.tag=\"\${DOCKER_TAG_TO_USE}\"" +
+                            " allParallelIntegrationTest"
                 }
                 junit '**/build/test-results-xml/**/*.xml'
             }
