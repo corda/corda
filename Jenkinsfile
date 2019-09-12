@@ -1,5 +1,8 @@
 pipeline {
-    def dockerTagToUse = "${UUID.randomUUID().toString().toLowerCase().subSequence(0, 12)}"
+
+    environment {
+        DOCKER_TAG_TO_USE = "${UUID.randomUUID().toString().toLowerCase().subSequence(0, 12)}"
+    }
 
     agent {
         label 'k8s'
@@ -13,7 +16,7 @@ pipeline {
                     sh "./gradlew " +
                             "-Ddocker.push.password=\"\${DOCKER_PUSH_PWD}\" " +
                             "-Ddocker.work.dir=\"/tmp/${env.EXECUTOR_NUMBER}\" " +
-                            "-Ddocker.provided.tag=\"${dockerTagToUse}\""
+                            "-Ddocker.provided.tag=\"\${DOCKER_TAG_TO_USE}\""
                     "clean pushBuildImage"
                 }
             }
@@ -27,7 +30,7 @@ pipeline {
                                 "-DbuildId=\"${env.BUILD_ID}-${env.JOB_NAME}\" " +
                                 "-Ddocker.push.password=\"\${DOCKER_PUSH_PWD}\" " +
                                 "-Dkubenetize=true " +
-                                "-Ddocker.tag=\"${dockerTagToUse}\""
+                                "-Ddocker.tag=\"\${DOCKER_TAG_TO_USE}\""
                         "allParallelIntegrationTest"
                     }
                 } finally {
