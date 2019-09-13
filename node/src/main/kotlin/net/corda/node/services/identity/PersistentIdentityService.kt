@@ -26,6 +26,7 @@ import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import org.apache.commons.lang3.ArrayUtils
 import org.hibernate.annotations.Type
 import org.hibernate.internal.util.collections.ArrayHelper.EMPTY_BYTE_ARRAY
+import java.lang.IllegalStateException
 import java.security.InvalidAlgorithmParameterException
 import java.security.PublicKey
 import java.security.cert.*
@@ -360,7 +361,8 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
             } else {
                 log.info("An existing entry for $publicKeyHash already exists.")
                 if (party.name != existingEntryForKey) {
-                    log.warn("The public publicKey $publicKeyHash is already assigned to a different party than the supplied party.")
+                    throw IllegalStateException("The public publicKey $publicKeyHash is already assigned to a different party than the " +
+                            "supplied party.")
                 }
             }
         }
