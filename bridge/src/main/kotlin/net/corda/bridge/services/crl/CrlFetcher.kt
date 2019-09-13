@@ -54,16 +54,24 @@ class CrlFetcher(val proxyConfig: ProxyConfig?) {
         logger.debug("Checking CRLDPs for ${cert.subjectX500Principal}")
 
         val crldpExtBytes = cert.getExtensionValue(Extension.cRLDistributionPoints.id)
-        if(crldpExtBytes == null) {
+        if (crldpExtBytes == null) {
             logger.debug("No CRLDP ext")
             return emptySet()
         }
 
         val derObjCrlDP = ASN1InputStream(ByteArrayInputStream(crldpExtBytes)).readObject()
-        val dosCrlDP = derObjCrlDP as DEROctetString
+        val dosCrlDP = derObjCrlDP as? DEROctetString
+        if (dosCrlDP == null) {
+            logger.error("Expected to have DEROctetString, actual type: ${derObjCrlDP.javaClass}")
+            return emptySet()
+        }
         val crldpExtOctetsBytes = dosCrlDP.octets
         val dpObj = ASN1InputStream(ByteArrayInputStream(crldpExtOctetsBytes)).readObject()
         val distPoint = CRLDistPoint.getInstance(dpObj)
+        if (distPoint == null) {
+            logger.error("Could not instantiate CRLDistPoint, from: $dpObj")
+            return emptySet()
+        }
 
         val dpNames = distPoint.distributionPoints.mapNotNull { it.distributionPoint }.filter { it.type == DistributionPointName.FULL_NAME }
         val generalNames = dpNames.flatMap { GeneralNames.getInstance(it.name).names.asList() }
