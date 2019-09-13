@@ -1,6 +1,5 @@
 package net.corda.serialization.internal.amqp;
 
-import net.corda.core.serialization.SerializedBytes;
 import net.corda.serialization.internal.amqp.testutils.TestSerializationContext;
 import org.junit.Test;
 

@@ -8,5 +8,5 @@ import net.corda.core.contracts.ContractState
 
 @Suppress("unused")
 object StateContractValidationEnforcementRule {
-    fun shouldEnforce(state: ContractState): Boolean = true
+    fun shouldEnforce(@Suppress("UNUSED_PARAMETER") state: ContractState): Boolean = true
 }

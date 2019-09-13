@@ -1,8 +1,6 @@
 package net.corda.serialization.internal.amqp.testutils
 
-import net.corda.core.internal.copyTo
-import net.corda.core.internal.div
-import net.corda.core.internal.packageName
+import net.corda.core.internal.*
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationEncoding
 import net.corda.core.serialization.SerializedBytes
@@ -11,11 +9,11 @@ import net.corda.serialization.internal.AllWhitelist
 import net.corda.serialization.internal.EmptyWhitelist
 import net.corda.serialization.internal.amqp.*
 import net.corda.serialization.internal.carpenter.ClassCarpenterImpl
-import net.corda.testing.common.internal.ProjectStructure
 import org.apache.qpid.proton.codec.Data
 import org.junit.Test
 import java.io.File.separatorChar
 import java.io.NotSerializableException
+import java.nio.file.Path
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 
 /**
@@ -98,6 +96,16 @@ fun testName(): String {
 }
 
 fun Any.testResourceName(): String = "${javaClass.simpleName}.${testName()}"
+
+internal object ProjectStructure {
+    val projectRootDir: Path = run {
+        var dir = javaClass.getResource("/").toPath()
+        while (!(dir / ".git").isDirectory()) {
+            dir = dir.parent
+        }
+        dir
+    }
+}
 
 fun Any.writeTestResource(bytes: OpaqueBytes) {
     val dir = ProjectStructure.projectRootDir / "serialization" / "src" / "test" / "resources" / javaClass.packageName.replace('.', separatorChar)

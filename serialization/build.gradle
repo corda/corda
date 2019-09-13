@@ -37,7 +37,9 @@ dependencies {
     
     testCompile "org.assertj:assertj-core:$assertj_version"
     testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
-    testCompile project(':node-driver')
+    testCompile "org.mockito:mockito-core:$mockito_version"
+    testCompile 'org.hamcrest:hamcrest-library:2.1'
+    testCompile "com.fasterxml.jackson.core:jackson-databind:$jackson_version"
 }
 
 configurations {

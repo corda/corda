@@ -390,5 +390,7 @@ private constructor(
             privacySalt: PrivacySalt = this.privacySalt,
             sigs: List<TransactionSignature> = this.sigs,
             networkParameters: NetworkParameters = this.networkParameters
-    ) = ContractUpgradeLedgerTransaction(inputs, notary, legacyContractAttachment, upgradedContractClassName, upgradedContractAttachment, id, privacySalt, sigs, networkParameters)
+    ) =
+            @Suppress("DEPRECATION")
+            ContractUpgradeLedgerTransaction(inputs, notary, legacyContractAttachment, upgradedContractClassName, upgradedContractAttachment, id, privacySalt, sigs, networkParameters)
 }

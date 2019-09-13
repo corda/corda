@@ -50,6 +50,7 @@ interface IdentityService {
      */
     @Throws(UnknownAnonymousPartyException::class)
     fun assertOwnership(party: Party, anonymousParty: AnonymousParty) {
+        @Suppress("DEPRECATION")
         val anonymousIdentity = certificateFromKey(anonymousParty.owningKey)
                 ?: throw UnknownAnonymousPartyException("Unknown $anonymousParty")
         val issuingCert = anonymousIdentity.certPath.certificates[1]
@@ -79,7 +80,9 @@ interface IdentityService {
      * @param key The owning [PublicKey] of the [Party].
      * @return Returns a [Party] with a matching owningKey if known, else returns null.
      */
-    fun partyFromKey(key: PublicKey): Party? = certificateFromKey(key)?.party
+    fun partyFromKey(key: PublicKey): Party? =
+            @Suppress("DEPRECATION")
+            certificateFromKey(key)?.party
 
     /**
      * Resolves a party name to the well known identity [Party] instance for this name. Where possible well known identity

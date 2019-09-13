@@ -69,7 +69,10 @@ object IdentitySyncFlow {
                     .filter { serviceHub.networkMapCache.getNodesByLegalIdentityKey(it.owningKey).isEmpty() }
                     .toList()
             return confidentialIdentities
-                    .map { Pair(it, serviceHub.identityService.certificateFromKey(it.owningKey)) }
+                    .map {
+                        @Suppress("DEPRECATION")
+                        Pair(it, serviceHub.identityService.certificateFromKey(it.owningKey))
+                    }
                     // Filter down to confidential identities of our well known identity
                     // TODO: Consider if this too restrictive - we perhaps should be checking the name on the signing certificate in the certificate path instead
                     .filter { it.second?.name == ourIdentity.name }

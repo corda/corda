@@ -11,8 +11,10 @@ import net.corda.core.node.services.CordaService
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
-import net.corda.testing.core.*
-import org.assertj.core.api.Assertions.*
+import net.corda.testing.core.DUMMY_BANK_A_NAME
+import net.corda.testing.core.DUMMY_BANK_B_NAME
+import net.corda.testing.core.singleIdentity
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
@@ -68,7 +70,7 @@ class MockNetworkTest {
     }
 
     @CordaService
-    class TestService(services: AppServiceHub) : SingletonSerializeAsToken()
+    class TestService(@Suppress("UNUSED_PARAMETER") services: AppServiceHub) : SingletonSerializeAsToken()
 
     @InitiatingFlow
     class TestInitiator(private val party: Party) : FlowLogic<String>() {

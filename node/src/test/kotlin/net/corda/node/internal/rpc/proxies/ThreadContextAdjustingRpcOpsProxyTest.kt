@@ -25,7 +25,7 @@ class ThreadContextAdjustingRpcOpsProxyTest {
             true
         }
 
-        val result = proxy.killFlow(StateMachineRunId.createRandom())
+        proxy.killFlow(StateMachineRunId.createRandom())
         assertThat(Thread.currentThread().contextClassLoader).isNotEqualTo(mockClassloader)
     }
 }

@@ -339,7 +339,7 @@ internal class CordaRPCOpsImpl(
         if (drainPendingFlows) {
             logger.info("Waiting for pending flows to complete before shutting down.")
             setFlowsDrainingModeEnabled(true)
-            val subscription = pendingFlowsCount()
+            val subscription = @Suppress("DEPRECATION") pendingFlowsCount()
                     .updates
                     .doOnNext { (completed, total) -> logger.info("Pending flows progress before shutdown: $completed / $total.") }
                     .doOnCompleted { setPersistentDrainingModeProperty(enabled = false, propagateChange = false) }

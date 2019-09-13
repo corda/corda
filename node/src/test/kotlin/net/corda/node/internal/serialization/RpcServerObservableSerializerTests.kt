@@ -71,7 +71,7 @@ class RpcServerObservableSerializerTests {
             register(RpcServerObservableSerializer())
         }
 
-        val obs = Observable.create<Int> { Math.random() }
+        val obs = Observable.unsafeCreate<Int> { Math.random() }
         val newContext = RpcServerObservableSerializer.createContext(serializationContext, observable)
 
         try {

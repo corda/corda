@@ -315,7 +315,7 @@ class ConstraintsPropagationTests {
         whenever(attachmentSigned.allContracts).thenReturn(setOf(propagatingContractClassName))
 
         // network parameters
-        val netParams = testNetworkParameters(minimumPlatformVersion = 4,
+        testNetworkParameters(minimumPlatformVersion = 4,
                 packageOwnership = mapOf("net.corda.core.contracts" to ALICE_PARTY.owningKey))
 
         ledgerServices.attachments.importContractAttachment(attachmentIdSigned, attachmentSigned)

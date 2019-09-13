@@ -269,6 +269,7 @@ class CordaPersistence(
         (_dataSource as? AutoCloseable)?.close()
     }
 
+    @Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN")
     val hikariPoolThreadLocal: ThreadLocal<List<Object>>? by lazy(LazyThreadSafetyMode.PUBLICATION) {
         val hikariDataSource = dataSource as? HikariDataSource
         if (hikariDataSource == null) {
@@ -279,9 +280,11 @@ class CordaPersistence(
             val pool: HikariPool = poolField.get(hikariDataSource) as HikariPool
             val connectionBagField: Field = HikariPool::class.java.getDeclaredField("connectionBag")
             connectionBagField.isAccessible = true
+            @Suppress("UNCHECKED_CAST")
             val connectionBag: ConcurrentBag<ConcurrentBag.IConcurrentBagEntry> = connectionBagField.get(pool) as ConcurrentBag<ConcurrentBag.IConcurrentBagEntry>
             val threadListField: Field = ConcurrentBag::class.java.getDeclaredField("threadList")
             threadListField.isAccessible = true
+            @Suppress("UNCHECKED_CAST")
             val threadList: ThreadLocal<List<Object>> = threadListField.get(connectionBag) as ThreadLocal<List<Object>>
             threadList
         }
