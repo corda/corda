@@ -339,7 +339,6 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
         return keys.filter { certificateFromKey(it)?.name in ourNames }
     }
 
-    @JvmOverloads
     override fun registerKey(publicKey: PublicKey, party: Party, externalId: UUID?) {
         return database.transaction {
             val publicKeyHash = publicKey.toStringShort()
@@ -364,7 +363,7 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
         }
     }
 
-    // Internal function used by the KMS.
+    // Internal function used by the KMS to register a public key to a Corda Party.
     fun registerKeyToParty(publicKey: PublicKey, party: Party) {
         return database.transaction {
             log.info("Linking: ${publicKey.hash} to ${party.name}")
@@ -372,7 +371,7 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
         }
     }
 
-    // Internal function used by the KMS.
+    // Internal function used by the KMS to register a public key to an external ID.
     fun registerKeyToExternalId(publicKey: PublicKey, externalId: UUID) {
         _pkToIdCache[publicKey] = KeyOwningIdentity.fromUUID(externalId)
     }

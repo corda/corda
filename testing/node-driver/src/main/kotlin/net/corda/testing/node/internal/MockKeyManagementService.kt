@@ -4,6 +4,7 @@ import net.corda.core.crypto.*
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.KeyManagementService
 import net.corda.core.serialization.SingletonSerializeAsToken
+import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.services.keys.KeyManagementServiceInternal
 import net.corda.node.services.persistence.WritablePublicKeyToOwningIdentityCache
 import net.corda.nodeapi.internal.KeyOwningIdentity
@@ -18,10 +19,10 @@ import java.util.*
  *
  * @property identityService The [IdentityService] which contains the given identities.
  */
-class MockKeyManagementService(override val identityService: IdentityService,
-                               vararg initialKeys: KeyPair,
-                               private val pkToIdCache: WritablePublicKeyToOwningIdentityCache) : SingletonSerializeAsToken(), KeyManagementServiceInternal {
-
+class MockKeyManagementService(
+        override val identityService: InMemoryIdentityService,
+        vararg initialKeys: KeyPair
+) : SingletonSerializeAsToken(), KeyManagementServiceInternal {
 
     private val keyStore: MutableMap<PublicKey, PrivateKey> = initialKeys.associateByTo(HashMap(), { it.public }, { it.private })
 
@@ -32,7 +33,9 @@ class MockKeyManagementService(override val identityService: IdentityService,
     override fun freshKeyInternal(externalId: UUID?): PublicKey {
         val k = nextKeys.poll() ?: generateKeyPair()
         keyStore[k.public] = k.private
-        pkToIdCache[k.public] = KeyOwningIdentity.fromUUID(externalId)
+        if (externalId != null) {
+            identityService.registerKeyToExternalId(k.public, externalId)
+        }
         return k.public
     }
 
