@@ -78,6 +78,7 @@ private constructor(
         checkNotaryWhitelisted()
     }
 
+    @KeepForDJVM
     companion object {
         private val logger = contextLogger()
 
@@ -123,6 +124,41 @@ private constructor(
                 serializedInputs = protect(serializedInputs),
                 serializedReferences = protect(serializedReferences),
                 isAttachmentTrusted = isAttachmentTrusted,
+                verifierFactory = ::BasicVerifier
+            )
+        }
+
+        /**
+         * This factory function will create an instance of [LedgerTransaction]
+         * that will be used inside the DJVM sandbox.
+         */
+        @CordaInternal
+        fun createForSandbox(
+                inputs: List<StateAndRef<ContractState>>,
+                outputs: List<TransactionState<ContractState>>,
+                commands: List<CommandWithParties<CommandData>>,
+                attachments: List<Attachment>,
+                id: SecureHash,
+                notary: Party?,
+                timeWindow: TimeWindow?,
+                privacySalt: PrivacySalt,
+                networkParameters: NetworkParameters,
+                references: List<StateAndRef<ContractState>>): LedgerTransaction {
+            return LedgerTransaction(
+                inputs = inputs,
+                outputs = outputs,
+                commands = commands,
+                attachments = attachments,
+                id = id,
+                notary = notary,
+                timeWindow = timeWindow,
+                privacySalt = privacySalt,
+                networkParameters = networkParameters,
+                references = references,
+                componentGroups = null,
+                serializedInputs = null,
+                serializedReferences = null,
+                isAttachmentTrusted = { true },
                 verifierFactory = ::BasicVerifier
             )
         }
@@ -179,8 +215,8 @@ private constructor(
      * Pass all of this [LedgerTransaction] object's serialized state to a [transformer] function.
      */
     @CordaInternal
-    fun <T> transform(transformer: (List<ComponentGroup>?, List<SerializedStateAndRef>?, List<SerializedStateAndRef>?) -> T): T {
-        return transformer(componentGroups, serializedInputs, serializedReferences)
+    fun <T> transform(transformer: (List<ComponentGroup>, List<SerializedStateAndRef>, List<SerializedStateAndRef>) -> T): T {
+        return transformer(componentGroups ?: emptyList(), serializedInputs ?: emptyList(), serializedReferences ?: emptyList())
     }
 
     /**

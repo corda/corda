@@ -33,14 +33,11 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.days
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.minutes
-import net.corda.djvm.analysis.AnalysisConfiguration
-import net.corda.djvm.analysis.Whitelist
 import net.corda.djvm.source.*
 import net.corda.node.CordaClock
 import net.corda.node.VersionInfo
 import net.corda.node.internal.classloading.requireAnnotation
 import net.corda.node.internal.cordapp.*
-import net.corda.node.internal.djvm.DeterministicVerifier
 import net.corda.node.internal.rpc.proxies.AuthenticatedRpcOpsProxy
 import net.corda.node.internal.rpc.proxies.ThreadContextAdjustingRpcOpsProxy
 import net.corda.node.services.ContractUpgradeHandler
@@ -68,6 +65,7 @@ import net.corda.node.services.persistence.*
 import net.corda.node.services.rpc.CheckpointDumper
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.statemachine.*
+import net.corda.node.services.transactions.DeterministicVerifierFactoryService
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.node.services.upgrade.ContractUpgradeServiceImpl
@@ -98,8 +96,6 @@ import rx.Observable
 import rx.Scheduler
 import java.io.IOException
 import java.lang.reflect.InvocationTargetException
-import java.net.URL
-import java.net.URLClassLoader
 import java.nio.file.Path
 import java.security.KeyPair
 import java.security.KeyStoreException
@@ -221,6 +217,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     ).closeOnStop()
     @Suppress("LeakingThis")
     val transactionVerifierService = InMemoryTransactionVerifierService(transactionVerifierWorkerCount).tokenize()
+    val deterministicVerifierFactoryService = DeterministicVerifierFactoryService(djvmBootstrapSource, djvmCordaSource).tokenize()
     val contractUpgradeService = ContractUpgradeServiceImpl(cacheFactory).tokenize()
     val auditService = DummyAuditService().tokenize()
     @Suppress("LeakingThis")
@@ -1081,28 +1078,11 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             val ledgerTransaction = servicesForResolution.specialise(ltx)
 
             // Do nothing unless we have Corda's deterministic libraries.
-            val cordaSource = djvmCordaSource ?: return ledgerTransaction
+            djvmCordaSource ?: return ledgerTransaction
 
             // Specialise the LedgerTransaction here so that
             // contracts are verified inside the DJVM!
-            return ledgerTransaction.specialise { tx, cl ->
-                (cl as? URLClassLoader)?.run { DeterministicVerifier(tx, cl, createSandbox(cordaSource, cl.urLs)) } ?: BasicVerifier(tx, cl)
-            }
-        }
-
-        private fun createSandbox(cordaSource: UserSource, userSource: Array<URL>): AnalysisConfiguration {
-            return AnalysisConfiguration.createRoot(
-                userSource = cordaSource,
-                whitelist = Whitelist.MINIMAL,
-                bootstrapSource = djvmBootstrapSource
-            ).createChild(
-                userSource = UserPathSource(userSource),
-                newMinimumSeverityLevel = null,
-                visibleAnnotations = setOf(
-                    CordaSerializable::class.java,
-                    ConstructorForDeserialization::class.java
-                )
-            )
+            return ledgerTransaction.specialise(deterministicVerifierFactoryService::specialise)
         }
     }
 }

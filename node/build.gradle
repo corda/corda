@@ -181,10 +181,16 @@ dependencies {
     // Sandbox for deterministic contract verification
     compile "net.corda:corda-djvm:$djvm_version"
     compile "net.corda:corda-djvm-serialization:$djvm_version"
+    compile(project(':node:djvm')) {
+        transitive = false
+    }
     jdkRt "net.corda:deterministic-rt:latest.integration"
     deterministic project(path: ':core-deterministic', configuration: 'deterministicArtifacts')
     deterministic project(path: ':serialization-deterministic', configuration: 'deterministicArtifacts')
     deterministic("net.corda:corda-djvm-deserializers:$djvm_version") {
+        transitive = false
+    }
+    deterministic(project(':node:djvm')) {
         transitive = false
     }
     deterministic "org.slf4j:slf4j-nop:$slf4j_version"
