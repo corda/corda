@@ -1,5 +1,6 @@
 package net.corda.testing.node.internal
 
+import co.paralleluniverse.fibers.instrument.SuspendableHelper
 import com.google.common.util.concurrent.ThreadFactoryBuilder
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
@@ -54,7 +55,6 @@ import okhttp3.Request
 import rx.Subscription
 import rx.schedulers.Schedulers
 import java.io.File
-import java.lang.management.ManagementFactory
 import java.net.ConnectException
 import java.net.URL
 import java.net.URLClassLoader
@@ -708,7 +708,7 @@ class DriverDSLImpl(
             val effectiveP2PAddress = config.corda.messagingServerAddress ?: config.corda.p2pAddress
             return executorService.fork {
                 log.info("Starting in-process Node ${config.corda.myLegalName.organisation}")
-                if (!(ManagementFactory.getRuntimeMXBean().inputArguments.any { it.contains("quasar") })) {
+                if (!SuspendableHelper.isJavaAgentActive()) {
                     throw IllegalStateException("No quasar agent: -javaagent:lib/quasar.jar and working directory project root might fix")
                 }
                 // Write node.conf
