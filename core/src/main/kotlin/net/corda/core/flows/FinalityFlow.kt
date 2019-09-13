@@ -40,7 +40,8 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
                                        private val oldParticipants: Collection<Party>,
                                        override val progressTracker: ProgressTracker,
                                        private val sessions: Collection<FlowSession>,
-                                       private val newApi: Boolean) : FlowLogic<SignedTransaction>() {
+                                       private val newApi: Boolean,
+                                       private val statesToRecord: StatesToRecord = ONLY_RELEVANT) : FlowLogic<SignedTransaction>() {
     @Deprecated(DEPRECATION_MSG)
     constructor(transaction: SignedTransaction, extraRecipients: Set<Party>, progressTracker: ProgressTracker) : this(
             transaction, extraRecipients, progressTracker, emptyList(), false
@@ -73,8 +74,9 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
     constructor(
             transaction: SignedTransaction,
             sessions: Collection<FlowSession>,
-            progressTracker: ProgressTracker = tracker()
-    ) : this(transaction, emptyList(), progressTracker, sessions, true)
+            progressTracker: ProgressTracker = tracker(),
+            statesToRecord: StatesToRecord = ONLY_RELEVANT
+    ) : this(transaction, emptyList(), progressTracker, sessions, true, statesToRecord)
 
     /**
      * Notarise the given transaction and broadcast it to all the participants.
@@ -202,7 +204,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
             transaction
         }
         logger.info("Recording transaction locally.")
-        serviceHub.recordTransactions(notarised)
+        serviceHub.recordTransactions(statesToRecord, listOf(notarised))
         logger.info("Recorded transaction locally successfully.")
         return notarised
     }
