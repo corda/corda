@@ -384,17 +384,17 @@ class NodeConfigurationImplTest {
 
     @Test
     fun `can successfully read artemis crypto service config`() {
-        var rawConfig = ConfigFactory.parseResources("working-config.conf", ConfigParseOptions.defaults().setAllowMissing(false))
+        val rawConfig = ConfigFactory.parseResources("working-config.conf", ConfigParseOptions.defaults().setAllowMissing(false))
         val nodeConfig = rawConfig.parseAsNodeConfiguration()
         assertThat(nodeConfig.isValid).isTrue()
-        assertEquals(SupportedCryptoServices.AZURE_KEY_VAULT, nodeConfig.value().artemisCryptoServiceConfig?.name)
-        assertEquals( Paths.get("./azure.conf"), nodeConfig.value().artemisCryptoServiceConfig?.conf)
+        assertEquals(SupportedCryptoServices.AZURE_KEY_VAULT, nodeConfig.value().enterpriseConfiguration.artemisCryptoServiceConfig?.name)
+        assertEquals( Paths.get("./azure.conf"), nodeConfig.value().enterpriseConfiguration.artemisCryptoServiceConfig?.conf)
     }
 
     @Test
     fun `error on wrong crypto service name `() {
         var rawConfig = ConfigFactory.parseResources("working-config.conf", ConfigParseOptions.defaults().setAllowMissing(false))
-        rawConfig = rawConfig.withValue("artemisCryptoServiceConfig.cryptoServiceName", ConfigValueFactory.fromAnyRef("UNSUPPORTED"))
+        rawConfig = rawConfig.withValue("enterpriseConfiguration.artemisCryptoServiceConfig.cryptoServiceName", ConfigValueFactory.fromAnyRef("UNSUPPORTED"))
         val nodeConfig = rawConfig.parseAsNodeConfiguration()
         assertThat(nodeConfig.errors.asSequence().map(Configuration.Validation.Error::message).filter
             { it.contains("The enum class SupportedCryptoServices has no constant of the name 'UNSUPPORTED'") }.toList()).isNotEmpty

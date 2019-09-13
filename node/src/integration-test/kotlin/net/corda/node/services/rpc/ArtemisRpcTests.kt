@@ -17,10 +17,7 @@ import net.corda.node.utilities.saveToKeyStore
 import net.corda.node.utilities.saveToTrustStore
 import net.corda.nodeapi.BrokerRpcSslOptions
 import net.corda.nodeapi.internal.ArtemisTcpTransport.Companion.rpcConnectorTcpTransport
-import net.corda.nodeapi.internal.config.ARTEMIS_SIGNING_SERVICE_NAME
-import net.corda.nodeapi.internal.config.CryptoServiceConfig
-import net.corda.nodeapi.internal.config.MutualSslConfiguration
-import net.corda.nodeapi.internal.config.User
+import net.corda.nodeapi.internal.config.*
 import net.corda.nodeapi.internal.cryptoservice.CryptoServiceSigningService
 import net.corda.nodeapi.internal.cryptoservice.TLSSigningService
 import net.corda.nodeapi.internal.provider.DelegatedKeystoreProvider
@@ -121,7 +118,7 @@ class ArtemisRpcTests {
         }
         artemisBroker.use { broker ->
             broker.start()
-            InternalRPCMessagingClient<TestRpcOps>(nodeSSlconfig, adminAddress, maxMessageSize, CordaX500Name("MegaCorp", "London", "GB"), RPCServerConfiguration.DEFAULT, ARTEMIS_SIGNING_SERVICE_NAME).use { server ->
+            InternalRPCMessagingClient<TestRpcOps>(nodeSSlconfig, adminAddress, maxMessageSize, CordaX500Name("MegaCorp", "London", "GB"), RPCServerConfiguration.DEFAULT, artemisSigningServiceName(nodeSSlconfig)).use { server ->
                 server.start(TestRpcOpsImpl(), securityManager, broker.serverControl)
 
                 val client = RPCClient<TestRpcOps>(rpcConnectorTcpTransport(broker.addresses.primary, clientSslOptions))
@@ -141,14 +138,14 @@ class ArtemisRpcTests {
         }
     }
 
-    private fun setupArtemisSigningServiceProvider(artemisSigningService: CryptoServiceSigningService) {
+    private fun setupArtemisSigningServiceProvider(artemisSigningService: CryptoServiceSigningService, sslOptions: MutualSslConfiguration) {
         val provider = Security.getProvider(DelegatedKeystoreProvider.PROVIDER_NAME)
         val delegatedKeystoreProvider = if (provider != null) {
             provider as DelegatedKeystoreProvider
         } else {
             DelegatedKeystoreProvider().apply { Security.addProvider(this) }
         }
-        delegatedKeystoreProvider.putService(ARTEMIS_SIGNING_SERVICE_NAME, artemisSigningService)
+        delegatedKeystoreProvider.putService(artemisSigningServiceName(sslOptions), artemisSigningService)
     }
 
     private fun createAndStartArtemisSigningService(cryptoServiceConfig: CryptoServiceConfig?, sslOptions: MutualSslConfiguration): TLSSigningService {
@@ -157,9 +154,8 @@ class ArtemisRpcTests {
                 sslOptions, 60000L, name = "Artemis")
         artemisSigningService.apply {
             start()
-            setupArtemisSigningServiceProvider(this)
+            setupArtemisSigningServiceProvider(this, sslOptions)
         }
-        setupArtemisSigningServiceProvider(artemisSigningService)
         return artemisSigningService
     }
 

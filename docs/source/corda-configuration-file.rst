@@ -59,20 +59,6 @@ additionalP2PAddresses
 
   *Default:* empty list
 
-artemisCryptoServiceConfig
-  This is an optional crypto service configuration which will be used for HSM TLS signing when interacting with the Artemis message bus.
-  This option only makes sense when running a standalone Artemis to connect to the Bridge.
-  If this option is missing, the local file system will be used to store private keys inside ``JKS`` key stores.
-
-    cryptoServiceName
-      The name of HSM provider to be used. E.g.: ``UTIMACO``, ``GEMALTO_LUNA``, etc. Please see: :doc:`Crypto service configuration <cryptoservice-configuration>`.
-    cryptoServiceConf
-      Absolute path to HSM provider specific configuration which will contain everything necessary to establish connection with HSM.
-
-  **Important: Please do not change.**
-
-  *Default* Not present so local file system is used.
-
 attachmentContentCacheSizeMegaBytes
   Optionally specify how much memory should be used to cache attachment contents in memory.
 
@@ -317,6 +303,19 @@ enterpriseConfiguration
     List of Artemis Server back-up addresses. If any back-ups are specified, the client will be configured to automatically failover to the first server it can connect to.
 
     *Default:* empty list
+
+
+  artemisCryptoServiceConfig
+    This is an optional crypto service configuration which will be used for HSM TLS signing when interacting with the Artemis message server.
+    This option only makes sense when running a standalone Artemis messaging server to connect to the Bridge.
+    If this option is missing, the local file system will be used to store private keys inside ``JKS`` key stores.
+
+      cryptoServiceName
+        The name of HSM provider to be used. E.g.: ``UTIMACO``, ``GEMALTO_LUNA``, etc. Please see: :doc:`Crypto service configuration <cryptoservice-configuration>`.
+      cryptoServiceConf
+        Absolute path to HSM provider specific configuration which will contain everything necessary to establish connection with HSM.
+
+    *Default* Not present so local file system is used.
 
 .. _enterprise_config_tuning:
 
@@ -821,6 +820,13 @@ sshd
     The port to start SSH server on e.g. ``sshd { port = 2222 }``.
 
     *Default:* not defined
+
+sslHandshakeTimeout
+  Internal option.
+
+  **Important: Please do not change.**
+
+  *Default:* 60000 milliseconds
 
 systemProperties
   An optional map of additional system properties to be set when launching via ``corda.jar`` only.

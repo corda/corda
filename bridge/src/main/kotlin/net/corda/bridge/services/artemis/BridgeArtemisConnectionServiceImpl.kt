@@ -11,7 +11,7 @@ import net.corda.nodeapi.internal.ArtemisMessagingClient.Companion.CORDA_ARTEMIS
 import net.corda.nodeapi.internal.ArtemisMessagingClient.Companion.CORDA_ARTEMIS_CALL_TIMEOUT_PROP_NAME
 import net.corda.nodeapi.internal.ArtemisMessagingComponent
 import net.corda.nodeapi.internal.ArtemisTcpTransport
-import net.corda.nodeapi.internal.config.ARTEMIS_SIGNING_SERVICE_NAME
+import net.corda.nodeapi.internal.config.artemisSigningServiceName
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.cryptoservice.TLSSigningService
 import net.corda.nodeapi.internal.lifecycle.ServiceStateSupport
@@ -56,7 +56,7 @@ class BridgeArtemisConnectionServiceImpl(artemisSigningService: TLSSigningServic
         } else {
             DelegatedKeystoreProvider().apply { Security.addProvider(this) }
         }
-        delegatedKeystoreProvider.putService(ARTEMIS_SIGNING_SERVICE_NAME, artemisSigningService)
+        delegatedKeystoreProvider.putService(artemisSigningServiceName(sslConfiguration), artemisSigningService)
     }
 
     override fun start() {
@@ -77,7 +77,7 @@ class BridgeArtemisConnectionServiceImpl(artemisSigningService: TLSSigningServic
             log.info("Connecting to message broker: ${outboundConf.artemisBrokerAddress}")
             val brokerAddresses = listOf(outboundConf.artemisBrokerAddress) + outboundConf.alternateArtemisBrokerAddresses
             val tcpTransports = brokerAddresses.map { ArtemisTcpTransport.p2pConnectorTcpTransport(it, sslConfiguration,
-                    keyStoreProvider = ARTEMIS_SIGNING_SERVICE_NAME) }
+                    keyStoreProvider = artemisSigningServiceName(sslConfiguration)) }
             locator = ActiveMQClient.createServerLocatorWithoutHA(*tcpTransports.toTypedArray()).apply {
                 // Never time out on our loopback Artemis connections. If we switch back to using the InVM transport this
                 // would be the default and the two lines below can be deleted.

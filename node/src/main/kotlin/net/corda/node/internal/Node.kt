@@ -252,6 +252,14 @@ open class Node(configuration: NodeConfiguration,
 
         // When using external Artemis for P2P messaging, the node's p2pSslOptions are no longer used.
         val sslOptions = configuration.enterpriseConfiguration.messagingServerSslConfiguration ?: configuration.p2pSslOptions
+        val artemisSigningService = createArtemisSigningService(configuration, nodeInfo.legalIdentities[0].name.commonName, sslOptions)
+
+        // Start up the Artemis signing service
+        artemisSigningService?.apply {
+            closeOnStop()
+            setupArtemisSigningServiceProvider(this, sslOptions)
+            start()
+        }
 
         // Construct security manager reading users data either from the 'security' config section
         // if present or from rpcUsers list if the former is missing from config.
@@ -284,23 +292,14 @@ open class Node(configuration: NodeConfiguration,
                 rpcThreadPoolSize = configuration.enterpriseConfiguration.tuning.rpcThreadPoolSize
         )
 
-        val artemisSigningService = createArtemisSigningService(configuration, nodeInfo.legalIdentities[0].name.commonName, sslOptions)
-
         rpcServerAddresses?.let {
             internalRpcMessagingClient = InternalRPCMessagingClient(sslOptions,
                     it.admin,
                     MAX_RPC_MESSAGE_SIZE,
                     configuration.myLegalName,
-                    rpcServerConfiguration, ARTEMIS_SIGNING_SERVICE_NAME)
+                    rpcServerConfiguration, artemisSigningServiceName(sslOptions))
             printBasicNodeInfo("RPC connection address", it.primary.toString())
             printBasicNodeInfo("RPC admin connection address", it.admin.toString())
-        }
-
-        // Start up the Artemis signing service
-        artemisSigningService?.apply {
-            closeOnStop()
-            setupArtemisSigningServiceProvider(this)
-            start()
         }
 
         // Start up the embedded MQ server
@@ -390,20 +389,20 @@ open class Node(configuration: NodeConfiguration,
         }
     }
 
-    private fun setupArtemisSigningServiceProvider(artemisSigningService: TLSSigningService) {
+    private fun setupArtemisSigningServiceProvider(artemisSigningService: TLSSigningService, sslOptions: MutualSslConfiguration) {
         val provider = Security.getProvider(DelegatedKeystoreProvider.PROVIDER_NAME)
         val delegatedKeystoreProvider = if (provider != null) {
             provider as DelegatedKeystoreProvider
         } else {
             DelegatedKeystoreProvider().apply { Security.addProvider(this) }
         }
-        delegatedKeystoreProvider.putService(ARTEMIS_SIGNING_SERVICE_NAME, artemisSigningService)
+        delegatedKeystoreProvider.putService(artemisSigningServiceName(sslOptions), artemisSigningService)
     }
 
     private fun createArtemisSigningService(config: NodeConfiguration, commonName: String?, sslOptions: MutualSslConfiguration): TLSSigningService {
-        return CryptoServiceSigningService(config.artemisCryptoServiceConfig,
+        return CryptoServiceSigningService(config.enterpriseConfiguration.artemisCryptoServiceConfig,
                 CordaX500Name(commonName, null, organisation = "CORDA", locality = "London", state = null, country = "GB"),
-                sslOptions, DEFAULT_SSL_HANDSHAKE_TIMEOUT_MILLIS, name = "Artemis")
+                sslOptions, config.sslHandshakeTimeout, name = "Artemis")
     }
 
     private fun startLocalRpcBroker(securityManager: RPCSecurityManager, sslOptions: MutualSslConfiguration): BrokerAddresses? {

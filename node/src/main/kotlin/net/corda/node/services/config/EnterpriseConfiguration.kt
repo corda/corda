@@ -19,7 +19,8 @@ data class EnterpriseConfiguration(
         val externalBridge: Boolean? = null,
         val enableCacheTracing: Boolean = Defaults.enableCacheTracing,
         val traceTargetDirectory: Path = Defaults.traceTargetDirectory,
-        val processedMessageCleanup: ProcessedMessageCleanup? = null
+        val processedMessageCleanup: ProcessedMessageCleanup? = null,
+        val artemisCryptoServiceConfig: CryptoServiceConfig? = null
 ) {
     internal object Defaults {
         val messagingServerConnectionConfiguration: MessagingServerConnectionConfiguration = MessagingServerConnectionConfiguration.DEFAULT

@@ -9,7 +9,7 @@ import net.corda.nodeapi.RPCApi
 import net.corda.nodeapi.internal.ArtemisMessagingComponent
 import net.corda.nodeapi.internal.ArtemisTcpTransport.Companion.rpcAcceptorTcpTransport
 import net.corda.nodeapi.internal.ArtemisTcpTransport.Companion.rpcInternalAcceptorTcpTransport
-import net.corda.nodeapi.internal.config.ARTEMIS_SIGNING_SERVICE_NAME
+import net.corda.nodeapi.internal.config.artemisSigningServiceName
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.core.config.CoreQueueConfiguration
@@ -30,7 +30,7 @@ internal class RpcBrokerConfiguration(baseDirectory: Path, maxMessageSize: Int, 
                 rpcAcceptorTcpTransport(address, sslOptions, useSsl)
         )
         adminAddress?.let {
-            acceptorConfigurationsSet += rpcInternalAcceptorTcpTransport(it, nodeConfiguration, ARTEMIS_SIGNING_SERVICE_NAME)
+            acceptorConfigurationsSet += rpcInternalAcceptorTcpTransport(it, nodeConfiguration, artemisSigningServiceName(nodeConfiguration))
         }
         acceptorConfigurations = acceptorConfigurationsSet
 
