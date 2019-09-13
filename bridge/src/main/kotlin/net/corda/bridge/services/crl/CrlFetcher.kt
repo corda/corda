@@ -4,16 +4,17 @@ import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.protonwrapper.netty.ProxyConfig
 import net.corda.nodeapi.internal.proxy.ProxySettings
 import net.corda.nodeapi.internal.proxy.ProxyUtils
-import sun.security.x509.CRLDistributionPointsExtension
-import sun.security.x509.GeneralNameInterface.NAME_URI
-import sun.security.x509.URIName
-import sun.security.x509.X509CertImpl
 import java.net.Authenticator
 import java.net.Proxy
 import java.net.URL
 import java.security.cert.CertificateFactory
 import java.security.cert.X509CRL
 import java.security.cert.X509Certificate
+import org.bouncycastle.asn1.ASN1InputStream
+import org.bouncycastle.asn1.DERIA5String
+import org.bouncycastle.asn1.DEROctetString
+import org.bouncycastle.asn1.x509.*
+import java.io.ByteArrayInputStream
 
 /**
  * Responsible for fetching CRLs by performing remote communication using optional Proxy configuration provided.
@@ -48,23 +49,27 @@ class CrlFetcher(val proxyConfig: ProxyConfig?) {
 
     private val proxySettings: ProxySettings = proxyConfig?.let { ProxyUtils.fromConfig(it) } ?: ProxySettings(Proxy.NO_PROXY, null)
 
-    fun fetch(certificate: X509Certificate): Set<X509CRL> {
+    fun fetch(cert: X509Certificate): Set<X509CRL> {
 
-        val certImpl = X509CertImpl.toImpl(certificate)
-        logger.debug("Checking CRLDPs for ${certImpl.subjectX500Principal}")
+        logger.debug("Checking CRLDPs for ${cert.subjectX500Principal}")
 
-        val ext = certImpl.crlDistributionPointsExtension
-        if (ext == null) {
+        val crldpExtBytes = cert.getExtensionValue(Extension.cRLDistributionPoints.id)
+        if(crldpExtBytes == null) {
             logger.debug("No CRLDP ext")
             return emptySet()
         }
 
-        val points = ext.get(CRLDistributionPointsExtension.POINTS)
+        val derObjCrlDP = ASN1InputStream(ByteArrayInputStream(crldpExtBytes)).readObject()
+        val dosCrlDP = derObjCrlDP as DEROctetString
+        val crldpExtOctetsBytes = dosCrlDP.octets
+        val dpObj = ASN1InputStream(ByteArrayInputStream(crldpExtOctetsBytes)).readObject()
+        val distPoint = CRLDistPoint.getInstance(dpObj)
 
-        // Logic borrowed from sun.security.provider.certpath.DistributionPointFetcher.getCRLs()
-        val uriNames = points.flatMap { point -> point.fullName.names().filter { it.type == NAME_URI }}.map { it.name as URIName }
+        val dpNames = distPoint.distributionPoints.mapNotNull { it.distributionPoint }.filter { it.type == DistributionPointName.FULL_NAME }
+        val generalNames = dpNames.flatMap { GeneralNames.getInstance(it.name).names.asList() }
+        val crlUrls = generalNames.filter { it.tagNo == GeneralName.uniformResourceIdentifier}.map { DERIA5String.getInstance(it.name).string }.toSet().map { URL(it) }
 
-        return uriNames.map { it.uri.toURL() }.mapNotNull { url ->
+        return crlUrls.mapNotNull { url ->
             retrieveCrl(url, proxySettings)
         }.toSet()
     }
