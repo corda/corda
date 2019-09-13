@@ -236,7 +236,9 @@ private class FingerPrintingState(
         // Any Custom Serializer cached for a ParameterizedType can only be
         // found by searching for that exact same type. Searching for its raw
         // class will not work!
-        val observedGenericType = if (observedType !is ParameterizedType && type.typeIdentifier is Parameterised) {
+        val observedGenericType = if (observedType !is ParameterizedType
+                && type.typeIdentifier is Parameterised
+                && observedClass != Class::class.java) {
             type.typeIdentifier.getLocalType(classLoaderFor(observedClass))
         } else {
             observedType
