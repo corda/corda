@@ -137,7 +137,12 @@ class MultiThreadedStateMachineManager(
         checkQuasarJavaAgentPresence()
         this.tokenizableServices = tokenizableServices
         val checkpointSerializationContext = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT.withTokenContext(
-                CheckpointSerializeAsTokenContextImpl(tokenizableServices, CheckpointSerializationDefaults.CHECKPOINT_SERIALIZER, CheckpointSerializationDefaults.CHECKPOINT_CONTEXT, serviceHub)
+                CheckpointSerializeAsTokenContextImpl(
+                        tokenizableServices,
+                        CheckpointSerializationDefaults.CHECKPOINT_SERIALIZER,
+                        CheckpointSerializationDefaults.CHECKPOINT_CONTEXT,
+                        serviceHub
+                )
         )
         this.checkpointSerializationContext = checkpointSerializationContext
         this.actionExecutor = makeActionExecutor(checkpointSerializationContext)
@@ -220,7 +225,7 @@ class MultiThreadedStateMachineManager(
     }
 
     override fun killFlow(id: StateMachineRunId): Boolean {
-        concurrentBox.concurrent {
+        return concurrentBox.concurrent {
             cancelTimeoutIfScheduled(id)
             val flow = flows.remove(id)
             if (flow != null) {
@@ -229,7 +234,7 @@ class MultiThreadedStateMachineManager(
                 totalFinishedFlows.inc()
                 try {
                     flow.fiber.interrupt()
-                    return true
+                    true
                 } finally {
                     database.transaction {
                         checkpointStorage.removeCheckpoint(id)
@@ -238,9 +243,10 @@ class MultiThreadedStateMachineManager(
                     unfinishedFibers.countDown()
                 }
             } else {
-                // TODO replace with a clustered delete after we'll support clustered nodes
-                logger.debug("Unable to kill a flow unknown to physical node. Might be processed by another physical node.")
-                return false
+                // It may be that the id refers to a checkpoint that couldn't be deserialised into a flow, so we delete it if it exists.
+                database.transaction {
+                    checkpointStorage.removeCheckpoint(id)
+                }
             }
         }
     }
@@ -319,10 +325,9 @@ class MultiThreadedStateMachineManager(
             it.mapNotNull { (id, serializedCheckpoint) ->
                 // If a flow is added before start() then don't attempt to restore it
                 if (concurrentBox.content.flows.containsKey(id)) return@mapNotNull null
-                val checkpoint = deserializeCheckpoint(serializedCheckpoint) ?: return@mapNotNull null
                 createFlowFromCheckpoint(
                         id = id,
-                        checkpoint = checkpoint,
+                        serializedCheckpoint = serializedCheckpoint,
                         initialDeduplicationHandler = null,
                         isAnyCheckpointPersisted = true,
                         isStartIdempotent = false
@@ -346,24 +351,21 @@ class MultiThreadedStateMachineManager(
             return
         }
         val flow = if (currentState.isAnyCheckpointPersisted) {
+            // We intentionally grab the checkpoint from storage rather than relying on the one referenced by currentState. This is so that
+            // we mirror exactly what happens when restarting the node.
             val serializedCheckpoint = checkpointStorage.getCheckpoint(flowId)
             if (serializedCheckpoint == null) {
                 logger.error("Unable to find database checkpoint for flow $flowId. Something is very wrong. The flow will not retry.")
                 return
             }
-            val checkpoint = deserializeCheckpoint(serializedCheckpoint)
-            if (checkpoint == null) {
-                logger.error("Unable to deserialize database checkpoint for flow $flowId. Something is very wrong. The flow will not retry.")
-                return
-            }
             // Resurrect flow
             createFlowFromCheckpoint(
                     id = flowId,
-                    checkpoint = checkpoint,
+                    serializedCheckpoint = serializedCheckpoint,
                     initialDeduplicationHandler = null,
                     isAnyCheckpointPersisted = true,
                     isStartIdempotent = false
-            )
+            ) ?: return
         } else {
             // Just flow initiation message
             null
@@ -641,15 +643,6 @@ class MultiThreadedStateMachineManager(
         }
     }
 
-    private fun deserializeCheckpoint(serializedCheckpoint: SerializedBytes<Checkpoint>): Checkpoint? {
-        return try {
-            serializedCheckpoint.checkpointDeserialize(context = checkpointSerializationContext!!)
-        } catch (exception: Throwable) {
-            logger.error("Encountered unrestorable checkpoint!", exception)
-            null
-        }
-    }
-
     private fun verifyFlowLogicIsSuspendable(logic: FlowLogic<Any?>) {
         // Quasar requires (in Java 8) that at least the call method be annotated suspendable. Unfortunately, it's
         // easy to forget to add this when creating a new flow, so we check here to give the user a better error.
@@ -678,19 +671,29 @@ class MultiThreadedStateMachineManager(
         )
     }
 
+    private inline fun <reified T : Any> tryCheckpointDeserialize(bytes: SerializedBytes<T>, flowId: StateMachineRunId): T? {
+        return try {
+            bytes.checkpointDeserialize(context = checkpointSerializationContext!!)
+        } catch (e: Exception) {
+            logger.error("Unable to deserialize checkpoint for flow $flowId. Something is very wrong and this flow will be ignored.", e)
+            null
+        }
+    }
+
     private fun createFlowFromCheckpoint(
             id: StateMachineRunId,
-            checkpoint: Checkpoint,
+            serializedCheckpoint: SerializedBytes<Checkpoint>,
             isAnyCheckpointPersisted: Boolean,
             isStartIdempotent: Boolean,
             initialDeduplicationHandler: DeduplicationHandler?
-    ): Flow {
+    ): Flow? {
+        val checkpoint = tryCheckpointDeserialize(serializedCheckpoint, id) ?: return null
         val flowState = checkpoint.flowState
         val resultFuture = openFuture<Any?>()
         traceWithCheckpoint("create_from_checkpoint", id, checkpoint)
         val fiber = when (flowState) {
             is FlowState.Unstarted -> {
-                val logic = flowState.frozenFlowLogic.checkpointDeserialize(context = checkpointSerializationContext!!)
+                val logic = tryCheckpointDeserialize(flowState.frozenFlowLogic, id) ?: return null
                 val state = StateMachineState(
                         checkpoint = checkpoint,
                         pendingDeduplicationHandlers = initialDeduplicationHandler?.let { listOf(it) } ?: emptyList(),
@@ -709,7 +712,7 @@ class MultiThreadedStateMachineManager(
                 fiber
             }
             is FlowState.Started -> {
-                val fiber = flowState.frozenFiber.checkpointDeserialize(context = checkpointSerializationContext!!)
+                val fiber = tryCheckpointDeserialize(flowState.frozenFiber, id) ?: return null
                 val state = StateMachineState(
                         checkpoint = checkpoint,
                         pendingDeduplicationHandlers = initialDeduplicationHandler?.let { listOf(it) } ?: emptyList(),
