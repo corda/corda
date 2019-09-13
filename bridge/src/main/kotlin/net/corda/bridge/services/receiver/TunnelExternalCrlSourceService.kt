@@ -1,5 +1,6 @@
 package net.corda.bridge.services.receiver
 
+import com.github.benmanes.caffeine.cache.CacheLoader
 import com.github.benmanes.caffeine.cache.Caffeine
 import com.github.benmanes.caffeine.cache.LoadingCache
 import net.corda.bridge.services.api.FirewallAuditService
@@ -35,10 +36,21 @@ internal class TunnelExternalCrlSourceService(amqpControl: AMQPServer,
         private val log = contextLogger()
     }
 
-    private val cache: LoadingCache<X509Certificate, CrlResponse> = Caffeine.newBuilder()
+    private val cache: LoadingCache<X509Certificate, CrlResponse?> = Caffeine.newBuilder()
             .maximumSize(java.lang.Long.getLong("net.corda.bridge.services.receiver.crl.cacheSize", 100))
             .expireAfterWrite(java.lang.Long.getLong("net.corda.bridge.services.receiver.crl.expireMinutes", 60), TimeUnit.MINUTES)
-            .build { reqRespHelper.enquire(CrlRequest(certificate = it)) }
+            .build(CrlCacheLoader())
+
+    inner class CrlCacheLoader : CacheLoader<X509Certificate, CrlResponse?> {
+        override fun load(cert: X509Certificate): CrlResponse? {
+            return try {
+                reqRespHelper.enquire(CrlRequest(certificate = cert))
+            } catch (ex: Exception) {
+                log.error("Unexpected error when retrieving CRL for certificate $cert", ex)
+                null
+            }
+        }
+    }
 
     override fun fetch(certificate: X509Certificate): Set<X509CRL> {
         val response = cache.get(certificate)

@@ -28,8 +28,6 @@ import javax.net.ssl.*
 import kotlin.system.measureTimeMillis
 
 private const val HOSTNAME_FORMAT = "%s.corda.net"
-internal const val SSL_HANDSHAKE_TIMEOUT_PROP_NAME = "corda.netty.sslHelper.handshakeTimeout"
-internal const val DEFAULT_SSL_TIMEOUT = 20000 // Aligned with sun.security.provider.certpath.URICertStore.DEFAULT_CRL_CONNECT_TIMEOUT
 internal const val DEFAULT = "default"
 
 fun X509Certificate.distributionPointsToString() : String {
@@ -215,7 +213,7 @@ internal fun initialiseTrustStoreAndEnableCrlChecking(trustStore: CertificateSto
         RevocationConfig.Mode.OFF -> AllowAllRevocationChecker  // Custom PKIXRevocationChecker skipping CRL check
         RevocationConfig.Mode.EXTERNAL_SOURCE -> {
             require(revocationConfig.externalCrlSource != null) { "externalCrlSource must not be null" }
-            ExternalSourceRevocationChecker(revocationConfig.externalCrlSource!!) { pkixParams.date } // Custom PKIXRevocationChecker which uses `externalCrlSource`
+            ExternalSourceRevocationChecker(revocationConfig.externalCrlSource!!) { Date() } // Custom PKIXRevocationChecker which uses `externalCrlSource`
         }
         else -> {
             val certPathBuilder = CertPathBuilder.getInstance("PKIX")
