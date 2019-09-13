@@ -67,7 +67,11 @@ data class RevocationConfigImpl(override val mode: RevocationConfig.Mode, overri
 
 class RevocationConfigParser : ConfigParser<RevocationConfig> {
     override fun parse(config: Config): RevocationConfig {
-        val mode = config.getString("mode")
+        val oneAndTheOnly = "mode"
+        val allKeys = config.entrySet().map { it.key }
+        require(allKeys.size == 1 && allKeys.contains(oneAndTheOnly)) {"For RevocationConfig, it is expected to have '$oneAndTheOnly' property only. " +
+                "Actual set of properties: $allKeys. Please check 'revocationConfig' section."}
+        val mode = config.getString(oneAndTheOnly)
         return when (mode.toUpperCase()) {
             "SOFT_FAIL" -> RevocationConfigImpl(RevocationConfig.Mode.SOFT_FAIL)
             "HARD_FAIL" -> RevocationConfigImpl(RevocationConfig.Mode.HARD_FAIL)
