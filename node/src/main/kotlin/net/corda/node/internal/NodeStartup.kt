@@ -467,6 +467,8 @@ interface NodeStartupLogging {
             error is Errors.NativeIoException && error.message?.contains("Address already in use") == true -> error.logAsExpected("One of the ports required by the Corda node is already in use.")
             error is Errors.NativeIoException && error.message?.contains("Can't assign requested address") == true -> error.logAsExpected("Exception during node startup. Check that addresses in node config resolve correctly.")
             error is UnresolvedAddressException -> error.logAsExpected("Exception during node startup. Check that addresses in node config resolve correctly.")
+            error is java.nio.file.AccessDeniedException -> error.logAsExpected("Exception during node startup. Corda started with insufficient privileges to access ${error.file}")
+            error is java.nio.file.NoSuchFileException -> error.logAsExpected("Exception during node startup. Corda cannot find file ${error.file}")
             error.isOpenJdkKnownIssue() -> error.logAsExpected("Exception during node startup - ${error.message}. This is a known OpenJDK issue on some Linux distributions, please use OpenJDK from zulu.org or Oracle JDK.")
             else -> error.logAsUnexpected("Exception during node startup")
         }
