@@ -196,6 +196,7 @@ open class CordaRPCClientConfiguration @JvmOverloads constructor(
         if (trackRpcCallSites != other.trackRpcCallSites) return false
         if (reapInterval != other.reapInterval) return false
         if (observationExecutorPoolSize != other.observationExecutorPoolSize) return false
+        @Suppress("DEPRECATION")
         if (cacheConcurrencyLevel != other.cacheConcurrencyLevel) return false
         if (connectionRetryInterval != other.connectionRetryInterval) return false
         if (connectionRetryIntervalMultiplier != other.connectionRetryIntervalMultiplier) return false
@@ -212,6 +213,7 @@ open class CordaRPCClientConfiguration @JvmOverloads constructor(
         result = 31 * result + trackRpcCallSites.hashCode()
         result = 31 * result + reapInterval.hashCode()
         result = 31 * result + observationExecutorPoolSize
+        @Suppress("DEPRECATION")
         result = 31 * result + cacheConcurrencyLevel
         result = 31 * result + connectionRetryInterval.hashCode()
         result = 31 * result + connectionRetryIntervalMultiplier.hashCode()

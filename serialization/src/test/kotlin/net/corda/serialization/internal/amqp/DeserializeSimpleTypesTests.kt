@@ -3,10 +3,7 @@ package net.corda.serialization.internal.amqp
 import net.corda.core.serialization.CordaSerializable
 import net.corda.serialization.internal.amqp.testutils.*
 import org.junit.Test
-import java.io.NotSerializableException
 import kotlin.test.assertEquals
-import kotlin.test.assertFails
-import kotlin.test.assertFailsWith
 import kotlin.test.fail
 
 // Prior to certain fixes being made within the [PropertySerializaer] classes these simple
@@ -533,7 +530,7 @@ class DeserializeSimpleTypesTests {
     }
 
     @CordaSerializable
-    class Garbo private constructor(value: Int) {
+    class Garbo private constructor(@Suppress("UNUSED_PARAMETER", "unused") value: Int) {
         companion object {
             fun make(value: Int) = Garbo(value)
         }
@@ -600,6 +597,7 @@ No custom serializers registered.
 
     // See CORDA-2782
     @Test
+    @Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN")
     fun comparableNotWhitelistedOk() {
         @CordaSerializable
         class Ok(val value: String) : java.lang.Comparable<Ok> {

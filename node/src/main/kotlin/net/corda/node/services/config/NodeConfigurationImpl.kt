@@ -208,6 +208,7 @@ data class NodeConfigurationImpl(
         }
 
         // Support the deprecated method of configuring network services with a single compatibilityZoneURL option
+        @Suppress("DEPRECATION")
         if (compatibilityZoneURL != null && networkServices == null) {
             networkServices = NetworkServicesConfig(compatibilityZoneURL, compatibilityZoneURL, inferred = true)
         }
@@ -304,6 +305,7 @@ data class NodeConfigurationImpl(
 
     private fun validateDevModeOptions(): List<String> {
         if (devMode) {
+            @Suppress("DEPRECATION")
             compatibilityZoneURL?.let {
                 if (devModeOptions?.allowCompatibilityZone != true) {
                     return listOf("cannot specify 'compatibilityZoneURL' when 'devMode' is true, unless 'devModeOptions.allowCompatibilityZone' is also true")
@@ -324,6 +326,7 @@ data class NodeConfigurationImpl(
     private fun validateNetworkServices(): List<String> {
         val errors = mutableListOf<String>()
 
+        @Suppress("DEPRECATION")
         if (compatibilityZoneURL != null && networkServices != null && !(networkServices!!.inferred)) {
             errors += "cannot specify both 'compatibilityZoneUrl' and 'networkServices'"
         }

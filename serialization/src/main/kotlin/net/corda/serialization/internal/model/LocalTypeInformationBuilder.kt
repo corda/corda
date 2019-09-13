@@ -51,7 +51,7 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
         val previous = validateProperties
         return try {
             validateProperties = false
-            block()
+            this.block()
         } finally {
             validateProperties = previous
         }
@@ -183,7 +183,7 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
         val previous = resolutionContext
         return try {
             resolutionContext = newContext
-            block()
+            this.block()
         } finally {
             resolutionContext = previous
         }
@@ -253,9 +253,9 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
         }
 
         val evolutionConstructors = evolutionConstructors(type).map { ctor ->
-            val constructorInformation = buildConstructorInformation(type, ctor)
-            val evolutionProperties = buildObjectProperties(rawType, constructorInformation)
-            EvolutionConstructorInformation(constructorInformation, evolutionProperties)
+            val evolutionConstructorInformation = buildConstructorInformation(type, ctor)
+            val evolutionProperties = buildObjectProperties(rawType, evolutionConstructorInformation)
+            EvolutionConstructorInformation(evolutionConstructorInformation, evolutionProperties)
         }
 
         return LocalTypeInformation.Composable(type, typeIdentifier, constructorInformation, evolutionConstructors, properties,
@@ -514,7 +514,7 @@ private fun evolutionConstructors(type: Type): List<KFunction<Any>> {
                 val version = it.findAnnotation<DeprecatedConstructorForDeserialization>()?.version
                 if (version == null) null else version to it
             }
-            .sortedBy { (version, ctor) -> version }
-            .map { (version, ctor) -> ctor.apply { isAccessible = true} }
+            .sortedBy { (version, _) -> version }
+            .map { (_, ctor) -> ctor.apply { isAccessible = true} }
             .toList()
 }

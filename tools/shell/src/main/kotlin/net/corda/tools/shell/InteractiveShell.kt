@@ -474,6 +474,7 @@ object InteractiveShell {
             try {
                 result = result.get()
             } catch (e: InterruptedException) {
+                subscriber.unsubscribe()
                 Thread.currentThread().interrupt()
             } catch (e: ExecutionException) {
                 throw e.rootCause
@@ -568,6 +569,7 @@ object InteractiveShell {
             cordaRPCOps.terminate(true)
 
             val latch = CountDownLatch(1)
+            @Suppress("DEPRECATION")
             cordaRPCOps.pendingFlowsCount().updates.doOnError { error ->
                 log.error(error.message)
                 throw error

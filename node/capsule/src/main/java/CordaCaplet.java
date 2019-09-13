@@ -126,8 +126,9 @@ public class CordaCaplet extends Capsule {
                 // If it fails, just return the existing class path. The main Corda jar will detect the error and fail gracefully.
                 return (T) cp;
             }
+
             // Add additional directories of JARs to the classpath (at the end), e.g., for JDBC drivers.
-            augmentClasspath(cp, new File(baseDir, "drivers"));
+            augmentClasspath((List<Path>) cp, new File(baseDir, "drivers"));
             try {
                 List<String> jarDirs = nodeConfig.getStringList("jarDirs");
                 log(LOG_VERBOSE, "Configured JAR directories = " + jarDirs);

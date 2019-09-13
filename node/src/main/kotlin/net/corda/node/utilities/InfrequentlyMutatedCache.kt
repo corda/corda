@@ -38,7 +38,7 @@ class InfrequentlyMutatedCache<K : Any, V : Any>(name: String, cacheFactory: Nam
      * @param key The key to retrieve.
      */
     fun getIfPresent(key: K): V? {
-        val wrapper = backingCache.get(key) { k: K ->
+        val wrapper = backingCache.get(key) {
             null
         }
         return when (wrapper) {
@@ -89,9 +89,9 @@ class InfrequentlyMutatedCache<K : Any, V : Any>(name: String, cacheFactory: Nam
     private fun decrementInvalidators(key: K, value: Wrapper.Invalidated<V>) {
         if(value.invalidators.decrementAndGet() == 0) {
             // Maybe we can replace the invalidated value with nothing, so it gets loaded next time.
-            backingCache.asMap().compute(key) { key: K, currentValue: Wrapper<V>? ->
+            backingCache.asMap().compute(key) { computeKey: K, currentValue: Wrapper<V>? ->
                 if(currentValue === value && value.invalidators.get() == 0) {
-                    currentlyInvalid.remove(key)
+                    currentlyInvalid.remove(computeKey)
                     null
                 } else currentValue
             }

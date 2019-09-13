@@ -61,7 +61,7 @@ class NotaryFlow {
             logger.info("Sending transaction to notary: ${notaryParty.name}.")
             progressTracker.currentStep = REQUESTING
             val response = notarise(notaryParty)
-            logger.info("Notary responded.")
+            logger.info("Notary responded (${notaryParty.name}).")
             progressTracker.currentStep = VALIDATING
             return validateResponse(response, notaryParty)
         }

@@ -1,8 +1,11 @@
 package net.corda.serialization.internal.amqp
 
+import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.Crypto.generateKeyPair
 import net.corda.core.crypto.SignedData
 import net.corda.core.crypto.sign
+import net.corda.core.identity.CordaX500Name
+import net.corda.core.identity.Party
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NotaryInfo
 import net.corda.core.serialization.ConstructorForDeserialization
@@ -10,9 +13,6 @@ import net.corda.core.serialization.DeprecatedConstructorForDeserialization
 import net.corda.core.serialization.SerializableCalculatedProperty
 import net.corda.core.serialization.SerializedBytes
 import net.corda.serialization.internal.amqp.testutils.*
-import net.corda.testing.common.internal.ProjectStructure.projectRootDir
-import net.corda.testing.core.DUMMY_NOTARY_NAME
-import net.corda.testing.core.TestIdentity
 import org.junit.Ignore
 import org.junit.Test
 import java.io.File
@@ -21,6 +21,8 @@ import java.net.URI
 import java.time.Instant
 import kotlin.test.assertEquals
 import net.corda.serialization.internal.amqp.custom.InstantSerializer
+import net.corda.serialization.internal.amqp.testutils.ProjectStructure.projectRootDir
+import java.math.BigInteger
 
 // To regenerate any of the binary test files do the following
 //
@@ -34,7 +36,12 @@ class EvolvabilityTests {
     // When regenerating the test files this needs to be set to the file system location of the resource files
     @Suppress("UNUSED")
     var localPath: URI = projectRootDir.toUri().resolve(
-            "serialization/src/test/resources/net/corda/serialization/internal/amqp")
+            "serialization-test/src/test/resources/net/corda/serialization/internal/amqp")
+
+    companion object {
+        private val DUMMY_NOTARY_NAME = CordaX500Name("Notary Service", "Zurich", "CH")
+        private val DUMMY_NOTARY_PARTY = Party(DUMMY_NOTARY_NAME, Crypto.deriveKeyPairFromEntropy(Crypto.DEFAULT_SIGNATURE_SCHEME, BigInteger.valueOf(20)).public)
+    }
 
     @Test
     fun simpleOrderSwapSameType() {
@@ -619,7 +626,7 @@ class EvolvabilityTests {
         assertEquals(1000, networkParams.maxTransactionSize)
         assertEquals(3, networkParams.minimumPlatformVersion)
         assertEquals(1, networkParams.notaries.size)
-        assertEquals(TestIdentity(DUMMY_NOTARY_NAME, 20).party, networkParams.notaries.firstOrNull()?.identity)
+        assertEquals(DUMMY_NOTARY_PARTY, networkParams.notaries.firstOrNull()?.identity)
     }
 
     //
@@ -631,9 +638,8 @@ class EvolvabilityTests {
     fun `regenerate broken network parameters`() {
         // note: 6a6b6f256 is the sha that generates the file
         val resource = "networkParams.<corda version>.<commit sha>"
-        val DUMMY_NOTARY = TestIdentity(DUMMY_NOTARY_NAME, 20).party
         val networkParameters = NetworkParameters(
-                3, listOf(NotaryInfo(DUMMY_NOTARY, false)), 1000, 1000, Instant.EPOCH, 1, emptyMap())
+                3, listOf(NotaryInfo(DUMMY_NOTARY_PARTY, false)), 1000, 1000, Instant.EPOCH, 1, emptyMap())
 
         val sf = testDefaultFactory()
         sf.register(net.corda.serialization.internal.amqp.custom.InstantSerializer(sf))

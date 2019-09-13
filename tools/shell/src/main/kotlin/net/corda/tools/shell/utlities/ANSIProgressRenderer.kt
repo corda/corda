@@ -295,6 +295,7 @@ object StdoutANSIProgressRenderer : ANSIProgressRenderer() {
         // This line looks weird as hell because the magic code to decide if we really have a TTY or not isn't
         // actually exposed anywhere as a function (weak sauce). So we have to rely on our knowledge of jansi
         // implementation details.
+        @Suppress("DEPRECATION")
         usingANSI = AnsiConsole.wrapOutputStream(System.out) !is AnsiOutputStream
 
         if (usingANSI) {
@@ -307,6 +308,7 @@ object StdoutANSIProgressRenderer : ANSIProgressRenderer() {
                 loggerFor<StdoutANSIProgressRenderer>().warn("Cannot find console appender - progress tracking may not work as expected")
                 return
             }
+            @Suppress("DEPRECATION")
             val scrollingAppender = object : AbstractOutputStreamAppender<OutputStreamManager>(
                     consoleAppender.name, consoleAppender.layout, consoleAppender.filter,
                     consoleAppender.ignoreExceptions(), true, consoleAppender.manager) {

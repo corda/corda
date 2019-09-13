@@ -574,7 +574,7 @@ public class VaultQueryJavaTests {
     private Pair<Path, SecureHash> makeTestJar(Path path) throws IOException {
         Path file = Paths.get(path.toAbsolutePath().toString(), "$counter.jar");
         ContractJarTestUtils.INSTANCE.makeTestJar(Files.newOutputStream(file));
-        return new Pair(file, SecureHash.sha256(Files.readAllBytes(file)));
+        return new Pair<>(file, SecureHash.sha256(Files.readAllBytes(file)));
     }
 
     @Test

@@ -96,6 +96,7 @@ class InitialRegistrationCmdLineOptions : SharedNodeCmdLineOptions() {
             require(!config.devMode || config.devModeOptions?.allowCompatibilityZone == true) {
                 "Cannot perform initial registration when 'devMode' is true, unless 'devModeOptions.allowCompatibilityZone' is also true."
             }
+            @Suppress("DEPRECATION")
             require(config.compatibilityZoneURL != null || config.networkServices != null) {
                 "compatibilityZoneURL or networkServices must be present in the node configuration file in registration mode."
             }
@@ -167,6 +168,7 @@ open class NodeCmdLineOptions : SharedNodeCmdLineOptions() {
     override fun parseConfiguration(configuration: Config): Valid<NodeConfiguration> {
         return super.parseConfiguration(configuration).doIfValid { config ->
             if (isRegistration) {
+                @Suppress("DEPRECATION")
                 require(config.compatibilityZoneURL != null || config.networkServices != null) {
                     "compatibilityZoneURL or networkServices must be present in the node configuration file in registration mode."
                 }

@@ -14,7 +14,7 @@ import java.math.BigInteger;
 import java.util.*;
 
 import static net.corda.serialization.internal.amqp.testutils.AMQPTestUtilsKt.testDefaultFactory;
-import static org.jgroups.util.Util.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @SuppressWarnings("unchecked")
 public class JavaGenericsTest {

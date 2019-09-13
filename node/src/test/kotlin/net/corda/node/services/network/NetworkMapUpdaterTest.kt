@@ -111,10 +111,10 @@ class NetworkMapUpdaterTest {
     @Test
     fun `process add node updates from network map, with additional node infos from dir`() {
         setUpdater()
-        val (nodeInfo1, signedNodeInfo1) = createNodeInfoAndSigned("Info 1")
-        val (nodeInfo2, signedNodeInfo2) = createNodeInfoAndSigned("Info 2")
-        val (nodeInfo3, signedNodeInfo3) = createNodeInfoAndSigned("Info 3")
-        val (nodeInfo4, signedNodeInfo4) = createNodeInfoAndSigned("Info 4")
+        val (_, signedNodeInfo1) = createNodeInfoAndSigned("Info 1")
+        val (_, signedNodeInfo2) = createNodeInfoAndSigned("Info 2")
+        val (_, signedNodeInfo3) = createNodeInfoAndSigned("Info 3")
+        val (_, signedNodeInfo4) = createNodeInfoAndSigned("Info 4")
         val fileNodeInfoAndSigned = createNodeInfoAndSigned("Info from file")
 
         //Test adding new node.
@@ -469,6 +469,7 @@ class NetworkMapUpdaterTest {
             }
 
             on { addNodes(any<List<NodeInfo>>()) }.then {
+                @Suppress("UNCHECKED_CAST")
                 val nodeInfos = it.arguments[0] as List<NodeInfo>
                 nodeInfos.forEach { nodeInfo ->
                     addNodeToMockCache(nodeInfo, data)

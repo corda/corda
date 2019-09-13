@@ -12,7 +12,7 @@ import rx.Observer
 // TODO Delete this file once the Future stuff is out of here
 
 fun <A> CordaFuture<out A>.toObservable(): Observable<A> {
-    return Observable.create { subscriber ->
+    return Observable.unsafeCreate { subscriber ->
         thenMatch({
             subscriber.onNext(it)
             subscriber.onCompleted()

@@ -62,7 +62,10 @@ class BFTSmartNotaryService(
 
     private val cluster: BFTSmart.Cluster = makeBFTCluster(notaryIdentityKey, bftSMaRtConfig)
 
-    protected open fun makeBFTCluster(notaryKey: PublicKey, bftSMaRtConfig: BFTSmartConfig): BFTSmart.Cluster {
+    private fun makeBFTCluster(
+            @Suppress("UNUSED_PARAMETER") notaryKey: PublicKey,
+            @Suppress("UNUSED_PARAMETER") bftSMaRtConfig: BFTSmartConfig
+    ): BFTSmart.Cluster {
         return object : BFTSmart.Cluster {
             override fun waitUntilAllReplicasHaveInitialized() {
                 log.warn("A BFT replica may still be initializing, in which case the upcoming consensus change may cause it to spin.")
@@ -180,6 +183,7 @@ class BFTSmartNotaryService(
                 val references = transaction.references
                 val notary = transaction.notary
                 val timeWindow = (transaction as? FilteredTransaction)?.timeWindow
+                @Suppress("DEPRECATION")
                 if (notary !in services.myInfo.legalIdentities) throw NotaryInternalException(NotaryError.WrongNotary)
                 commitInputStates(inputs, id, callerIdentity.name, requestSignature, timeWindow, references)
                 log.debug { "Inputs committed successfully, signing $id" }

@@ -2,7 +2,10 @@ package net.corda.node.services.identity
 
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.*
-import net.corda.core.internal.*
+import net.corda.core.internal.CertRole
+import net.corda.core.internal.NamedCacheFactory
+import net.corda.core.internal.hash
+import net.corda.core.internal.toSet
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.UnknownAnonymousPartyException
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -15,6 +18,7 @@ import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.x509Certificates
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
+import org.hibernate.annotations.Type
 import org.hibernate.internal.util.collections.ArrayHelper.EMPTY_BYTE_ARRAY
 import java.security.InvalidAlgorithmParameterException
 import java.security.PublicKey
@@ -104,7 +108,7 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
             @Column(name = PK_HASH_COLUMN_NAME, length = MAX_HASH_HEX_SIZE, nullable = false)
             var publicKeyHash: String = "",
 
-            @Lob
+            @Type(type = "corda-blob")
             @Column(name = IDENTITY_COLUMN_NAME, nullable = false)
             var identity: ByteArray = EMPTY_BYTE_ARRAY
     )
@@ -286,7 +290,7 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
     // Allows us to eliminate keys we know belong to others by using the cache contents that might have been seen during other identity activity.
     // Concentrating activity on the identity cache works better than spreading checking across identity and key management, because we cache misses too.
     fun stripNotOurKeys(keys: Iterable<PublicKey>): Iterable<PublicKey> {
-        return keys.filter { certificateFromKey(it)?.name in ourNames }
+        return keys.filter { (@Suppress("DEPRECATION") certificateFromKey(it))?.name in ourNames }
     }
 
     override fun registerKeyToParty(key: PublicKey, party: Party) {

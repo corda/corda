@@ -624,7 +624,7 @@ open class Node(configuration: NodeConfiguration,
         log.info("Shutdown complete")
     }
 
-    fun <T : FlowLogic<*>> registerInitiatedFlow(smm: StateMachineManager, initiatedFlowClass: Class<T>) {
+    fun <T : FlowLogic<*>> registerInitiatedFlow(@Suppress("UNUSED_PARAMETER") smm: StateMachineManager, initiatedFlowClass: Class<T>) {
         this.flowManager.registerInitiatedFlow(initiatedFlowClass)
     }
 }
