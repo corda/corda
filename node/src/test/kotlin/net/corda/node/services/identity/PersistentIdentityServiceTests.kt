@@ -267,7 +267,7 @@ class PersistentIdentityServiceTests {
         val (alice, anonymousAlice) = createConfidentialIdentity(ALICE.name)
         identityService.registerKey(anonymousAlice.owningKey, alice.party)
         // Should have no side effect but logs a warning that we tried to overwrite an existing mapping.
-        identityService.registerKey(anonymousAlice.owningKey, bob.party)
+        assertFailsWith<IllegalStateException> { identityService.registerKey(anonymousAlice.owningKey, bob.party) }
         assertEquals(ALICE, identityService.wellKnownPartyFromAnonymous(AnonymousParty(anonymousAlice.owningKey)))
     }
 

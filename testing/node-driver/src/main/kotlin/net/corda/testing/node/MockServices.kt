@@ -79,8 +79,7 @@ open class MockServices private constructor(
         private val moreKeys: Array<out KeyPair>,
         override val keyManagementService: KeyManagementService = MockKeyManagementService(
                 identityService,
-                *arrayOf(initialIdentity.keyPair) + moreKeys,
-                pkToIdCache = MockPublicKeyToOwningIdentityCache()
+                *arrayOf(initialIdentity.keyPair) + moreKeys
         )
 ) : ServiceHub {
 
@@ -128,8 +127,7 @@ open class MockServices private constructor(
             val database = configureDatabase(dataSourceProps, DatabaseConfig(), identityService::wellKnownPartyFromX500Name, identityService::wellKnownPartyFromAnonymous, schemaService, schemaService.internalSchemas())
             val keyManagementService = MockKeyManagementService(
                     identityService,
-                    *arrayOf(initialIdentity.keyPair) + moreKeys,
-                    pkToIdCache = MockPublicKeyToOwningIdentityCache()
+                    *arrayOf(initialIdentity.keyPair) + moreKeys
             )
             val mockService = database.transaction {
                 makeMockMockServices(cordappLoader, identityService, networkParameters, initialIdentity, moreKeys.toSet(), keyManagementService, schemaService, database)

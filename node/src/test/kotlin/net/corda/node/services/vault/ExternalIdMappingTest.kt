@@ -180,12 +180,12 @@ class ExternalIdMappingTest {
 
         // Try to override existing mappings.
         services.identityService.registerKey(A, myself.party)                       // Idempotent call.
-        services.identityService.registerKey(A, alice.party)                        // Idempotent call.
+        assertFailsWith<IllegalStateException> { services.identityService.registerKey(A, alice.party) }
         services.identityService.registerKey(B, myself.party, UUID.randomUUID())    // Idempotent call.
-        services.identityService.registerKey(B, alice.party)                        // Idempotent call.
-        services.identityService.registerKey(C, bob.party, UUID.randomUUID())       // Idempotent call.
+        assertFailsWith<IllegalStateException> { services.identityService.registerKey(B, alice.party) }
+        assertFailsWith<IllegalStateException> { services.identityService.registerKey(C, bob.party, UUID.randomUUID()) }
 
-        // Check the above calls, didn't change anything.
+        // Check the above calls didn't change anything.
         assertEquals(myself.party, services.identityService.wellKnownPartyFromAnonymous(AnonymousParty(A)))
         assertEquals(myself.party, services.identityService.wellKnownPartyFromAnonymous(AnonymousParty(B)))
         assertEquals(myself.party, services.identityService.wellKnownPartyFromAnonymous(AnonymousParty(C)))
