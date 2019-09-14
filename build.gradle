@@ -25,7 +25,7 @@ allprojects {
         }
     }
 
-    configurations{
+    configurations {
         // This is for the latest deterministic Corda SNAPSHOT artifacts...
         [ compileClasspath, runtimeClasspath ].forEach { cfg ->
             cfg.resolutionStrategy {
@@ -37,6 +37,11 @@ allprojects {
                     substitute module("net.corda:corda-serialization") with module("net.corda:corda-serialization-deterministic:$corda_version")
                 }
             }
+        }
+
+        testRuntimeClasspath.resolutionStrategy {
+            // Always check the repository for a newer SNAPSHOT.
+            cacheChangingModulesFor 0, 'seconds'
         }
     }
 

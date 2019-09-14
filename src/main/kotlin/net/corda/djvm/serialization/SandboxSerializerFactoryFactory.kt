@@ -14,6 +14,7 @@ import java.util.*
 import java.util.Collections.singleton
 import java.util.Collections.unmodifiableMap
 import java.util.function.Function
+import java.util.function.Predicate
 
 /**
  * This has all been lovingly copied from [SerializerFactoryBuilder].
@@ -60,6 +61,7 @@ class SandboxSerializerFactoryFactory(
             classloader = classLoader,
             descriptorBasedSerializerRegistry = descriptorBasedSerializerRegistry,
             primitiveSerializerFactory = primitiveSerializerFactory,
+            isPrimitiveType = Predicate { clazz -> clazz.isPrimitive || clazz in primitiveTypes.keys },
             customSerializerRegistry = customSerializerRegistry,
             onlyCustomSerializers = false
         )
