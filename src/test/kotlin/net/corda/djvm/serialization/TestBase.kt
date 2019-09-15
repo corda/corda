@@ -41,7 +41,7 @@ abstract class TestBase(type: SandboxType) {
 
         private lateinit var bootstrapClassLoader: BootstrapClassLoader
         private lateinit var configuration: SandboxConfiguration
-        private lateinit var classLoader: SandboxClassLoader
+        private lateinit var parentClassLoader: SandboxClassLoader
 
         @BeforeAll
         @JvmStatic
@@ -65,7 +65,7 @@ abstract class TestBase(type: SandboxType) {
                 true,
                 rootConfiguration
             )
-            classLoader = SandboxClassLoader.createFor(configuration)
+            parentClassLoader = SandboxClassLoader.createFor(configuration)
         }
 
         @AfterAll
@@ -110,7 +110,7 @@ abstract class TestBase(type: SandboxType) {
                         configuration.definitionProviders,
                         enableTracing,
                         analysisConfiguration,
-                        classLoader
+                        parentClassLoader
                     )).use {
                         action(this)
                     }

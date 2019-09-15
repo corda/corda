@@ -17,7 +17,7 @@ class DeserializeEnumTest : TestBase(KOTLIN) {
     @EnumSource(ExampleEnum::class)
     fun `test deserialize basic enum`(value: ExampleEnum) {
         val example = ExampleData(value)
-        val data =example.serialize()
+        val data = example.serialize()
 
         sandbox {
             _contextSerializationEnv.set(createSandboxSerializationEnv(classLoader))
