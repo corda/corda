@@ -2,6 +2,8 @@
 
 package net.corda.docs.kotlin.tutorial.helloworld
 
+import com.template.contracts.TemplateContract
+import net.corda.core.contracts.BelongsToContract
 import net.corda.core.contracts.ContractState
 
 // DOCSTART 01
@@ -9,6 +11,7 @@ import net.corda.core.contracts.ContractState
 import net.corda.core.identity.Party
 
 // Replace TemplateState's definition with:
+@BelongsToContract(TemplateContract::class)
 class IOUState(val value: Int,
                val lender: Party,
                val borrower: Party) : ContractState {
