@@ -11,6 +11,11 @@ import java.lang.reflect.Field;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 
+/**
+ * JDK11 upgrade: rewritten in Java to gain access to private internal JDK classes via module directives (not available to Kotlin compiler):
+ * import sun.misc.Unsafe;
+ * import sun.nio.ch.DirectBuffer;
+ */
 class SharedMemoryIncremental extends PortAllocation {
 
     static private final int DEFAULT_START_PORT = 10_000;

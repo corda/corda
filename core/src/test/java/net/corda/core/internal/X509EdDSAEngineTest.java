@@ -18,6 +18,13 @@ import java.util.Random;
 
 import static org.junit.Assert.assertTrue;
 
+/**
+ * JDK11 upgrade: rewritten in Java to gain access to private internal JDK classes via module directives (not available to Kotlin compiler):
+ * import sun.security.util.BitArray;
+ * import sun.security.util.ObjectIdentifier;
+ * import sun.security.x509.AlgorithmId;
+ * import sun.security.x509.X509Key;
+ */
 public class X509EdDSAEngineTest {
 
     private static long SEED = 20170920L;

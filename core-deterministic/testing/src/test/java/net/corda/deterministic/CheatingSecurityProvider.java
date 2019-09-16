@@ -11,6 +11,9 @@ import static org.junit.Assert.assertEquals;
 /**
  * Temporarily restore Sun's [SecureRandom] provider.
  * This is ONLY for allowing us to generate test data, e.g. signatures.
+ *
+ * JDK11 upgrade: rewritten in Java to gain access to private internal JDK classes via module directives (not available to Kotlin compiler):
+ * sun.security.provider.SecureRandom()
  */
 public class CheatingSecurityProvider extends Provider implements AutoCloseable {
 
@@ -29,6 +32,7 @@ public class CheatingSecurityProvider extends Provider implements AutoCloseable 
 
     private class SunSecureRandom extends SecureRandom {
         public SunSecureRandom() {
+            // JDK11 upgrade: rewritten in Java to gain access to private internal JDK classes via open module directive
             super(new sun.security.provider.SecureRandom(), null);
         }
     }
