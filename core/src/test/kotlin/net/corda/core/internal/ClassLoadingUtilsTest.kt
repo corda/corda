@@ -4,8 +4,6 @@ import com.nhaarman.mockito_kotlin.mock
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
-import java.lang.IllegalArgumentException
-import java.lang.RuntimeException
 
 class ClassLoadingUtilsTest {
 
@@ -33,7 +31,7 @@ class ClassLoadingUtilsTest {
 
     @Test(expected = IllegalArgumentException::class)
     fun throwsExceptionWhenClassDoesNotContainProperConstructors() {
-        val classes = createInstancesOfClassesImplementing(BaseInterface::class.java.classLoader, BaseInterface2::class.java)
+        createInstancesOfClassesImplementing(BaseInterface::class.java.classLoader, BaseInterface2::class.java)
     }
 
     @Test

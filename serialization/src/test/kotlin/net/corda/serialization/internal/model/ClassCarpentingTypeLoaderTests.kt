@@ -3,7 +3,7 @@ package net.corda.serialization.internal.model
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.google.common.reflect.TypeToken
 import net.corda.serialization.internal.AllWhitelist
-import net.corda.serialization.internal.amqp.asClass
+import net.corda.serialization.internal.accessAsClass
 import net.corda.serialization.internal.amqp.testutils.testSerializationContext
 import net.corda.serialization.internal.carpenter.ClassCarpenterImpl
 import org.junit.Test
@@ -75,7 +75,7 @@ class ClassCarpentingTypeLoaderTests {
     }
 
     private fun Type.make(vararg params: Any): Any {
-        val cls = this.asClass()
+        val cls = this.accessAsClass()
         val paramTypes = params.map { it::class.javaPrimitiveType ?: it::class.javaObjectType }.toTypedArray()
         val constructor = cls.constructors.find { it.parameterTypes.zip(paramTypes).all {
             (expected, actual) -> expected.isAssignableFrom(actual)

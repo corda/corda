@@ -10,6 +10,7 @@ import java.time.LocalDateTime
 import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import net.corda.serialization.internal.MAX_TYPE_PARAM_DEPTH
 
 class AMQPTypeIdentifierParserTests {
 
@@ -157,7 +158,7 @@ class AMQPTypeIdentifierParserTests {
     @Test(expected = NotSerializableException::class)
     fun `test excessive nesting`() {
         var nested = "java.lang.Integer"
-        for (i in 1..AMQPTypeIdentifierParser.MAX_TYPE_PARAM_DEPTH) {
+        for (i in 1..MAX_TYPE_PARAM_DEPTH) {
             nested = "java.util.List<$nested>"
         }
         verify(nested)

@@ -86,7 +86,7 @@ class NodeMonitorModel : AutoCloseable {
         vaultUpdates.startWith(initialVaultUpdate).subscribe(vaultUpdatesSubject::onNext)
 
         // Transactions
-        val (transactions, newTransactions) = rpc.internalVerifiedTransactionsFeed()
+        val (transactions, newTransactions) = @Suppress("DEPRECATION") rpc.internalVerifiedTransactionsFeed()
         newTransactions.startWith(transactions).subscribe(transactionsSubject::onNext)
 
         // SM -> TX mapping

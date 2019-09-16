@@ -246,7 +246,9 @@ open class TransactionBuilder(
      * TODO also on the versions of the attachments of the transactions generating the input states. ( after we add versioning)
      */
     private fun selectContractAttachmentsAndOutputStateConstraints(
-            services: ServicesForResolution, serializationContext: SerializationContext?): Pair<Collection<SecureHash>, List<TransactionState<ContractState>>> {
+            services: ServicesForResolution,
+            @Suppress("UNUSED_PARAMETER") serializationContext: SerializationContext?
+    ): Pair<Collection<SecureHash>, List<TransactionState<ContractState>>> {
 
         // Determine the explicitly set contract attachments.
         val explicitAttachmentContracts: List<Pair<ContractClassName, SecureHash>> = this.attachments
@@ -297,7 +299,10 @@ open class TransactionBuilder(
         return Pair(attachments, resolvedOutputStatesInTheOriginalOrder)
     }
 
-    private val automaticConstraints = setOf(AutomaticPlaceholderConstraint, AutomaticHashConstraint)
+    private val automaticConstraints = setOf(
+            AutomaticPlaceholderConstraint,
+            @Suppress("DEPRECATION") AutomaticHashConstraint
+    )
 
     /**
      * Selects an attachment and resolves the constraints for the output states with [AutomaticPlaceholderConstraint].
@@ -593,7 +598,7 @@ open class TransactionBuilder(
         while (statePointerQueue.isNotEmpty()) {
             val nextStatePointer = statePointerQueue.pop()
             val hub = serviceHub
-            if (hub != null) {
+            if (hub != null && nextStatePointer.isResolved) {
                 val resolvedStateAndRef = nextStatePointer.resolve(hub)
                 // Don't add dupe reference states because CoreTransaction doesn't allow it.
                 if (resolvedStateAndRef.ref !in referenceStates()) {

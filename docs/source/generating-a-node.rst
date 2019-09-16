@@ -7,10 +7,7 @@ Handcrafting a node
 -------------------
 A node can be created manually by creating a folder that contains the following items:
 
-* The Corda Enterprise JAR
-
-    * The binary ``corda-|corda_version|.jar`` provided to your organisation.
-
+* The Corda JAR, downloaded from https://r3.bintray.com/corda/net/corda/corda/ (under /|corda_version|/corda-|corda_version|.jar)
 * A node configuration file entitled ``node.conf``, configured as per :doc:`corda-configuration-file`
 
 * A folder entitled ``cordapps`` containing any CorDapp JARs you want the node to load
@@ -83,8 +80,6 @@ in the `Kotlin CorDapp Template <https://github.com/corda/cordapp-template-kotli
             rpcUsers = [[ user: "user1", "password": "test", "permissions": ["StartFlow.net.corda.flows.MyFlow"]]]
         }
     }
-
-Ensure Corda Enterprise binaries are available on your machine as described in :ref:`Getting Set Up <resolve-corda-enterprise-binaries>`.
 
 Running this task will create three nodes in the ``build/nodes`` folder:
 
@@ -237,9 +232,6 @@ Following the previous example ``PartyB`` node will have additional configuratio
         }
     }
 
-Additional properties can be also specified directly by the ``extraConfig`` property which defines a map of keys and values. The example config above uses ``extraConfig`` to set value of the ``jvmArgs`` property.
-See the extended example of :ref:`adding database configuration <testing_cordform_ref>`.
-
 Cordform parameter `drivers` of the `node` entry lists paths of the files to be copied to the `./drivers` subdirectory of the node.
 To copy the same file to all nodes `ext.drivers` can be defined in the top level and reused for each node via `drivers=ext.drivers``.
 
@@ -278,7 +270,7 @@ To specify :doc:`design/data-model-upgrades/package-namespace-ownership` configu
     }
 
 
-Signing Cordapp JARs
+Signing CorDapp JARs
 ^^^^^^^^^^^^^^^^^^^^
 The default behaviour of Cordform is to deploy CorDapp JARs "as built":
 

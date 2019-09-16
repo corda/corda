@@ -48,8 +48,8 @@ class CarpentryDependencyGraph private constructor(private val typesRequiringCar
     private fun RemoteTypeInformation.dependsOn(dependees: Collection<RemoteTypeInformation>) {
         val dependeesInTypesRequiringCarpentry = dependees.filter { it in typesRequiringCarpentry }
         if (dependeesInTypesRequiringCarpentry.isEmpty()) return // we don't want to put empty sets into the map.
-            dependencies.compute(this) { _, dependees ->
-                dependees?.apply { addAll(dependeesInTypesRequiringCarpentry) } ?:
+            dependencies.compute(this) { _, dependeesInner ->
+                dependeesInner?.apply { addAll(dependeesInTypesRequiringCarpentry) } ?:
                 dependeesInTypesRequiringCarpentry.toMutableSet()
             }
     }

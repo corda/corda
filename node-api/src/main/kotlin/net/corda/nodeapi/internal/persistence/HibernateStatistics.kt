@@ -118,6 +118,7 @@ class DelegatingStatisticsService(private val delegate: Statistics) : Statistics
         return delegate.naturalIdCachePutCount
     }
 
+    @Suppress("DEPRECATION")
     override fun getNaturalIdCacheStatistics(arg0: String): NaturalIdCacheStatistics {
         return delegate.getNaturalIdCacheStatistics(arg0)
     }
@@ -190,6 +191,7 @@ class DelegatingStatisticsService(private val delegate: Statistics) : Statistics
         return delegate.secondLevelCacheRegionNames
     }
 
+    @Suppress("DEPRECATION")
     override fun getSecondLevelCacheStatistics(arg0: String): SecondLevelCacheStatistics {
         return delegate.getSecondLevelCacheStatistics(arg0)
     }

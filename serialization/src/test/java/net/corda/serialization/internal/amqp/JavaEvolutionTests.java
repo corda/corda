@@ -1,6 +1,5 @@
 package net.corda.serialization.internal.amqp;
 
-import kotlin.Suppress;
 import net.corda.core.serialization.SerializedBytes;
 import net.corda.serialization.internal.amqp.testutils.AMQPTestUtilsKt;
 import net.corda.serialization.internal.amqp.testutils.TestSerializationContext;
@@ -8,7 +7,9 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
-import java.io.*;
+import java.io.IOException;
+import java.io.NotSerializableException;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 

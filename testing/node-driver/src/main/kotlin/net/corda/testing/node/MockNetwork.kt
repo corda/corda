@@ -303,7 +303,7 @@ open class MockNetwork(
     constructor(parameters: MockNetworkParameters) : this(emptyList(), defaultParameters = parameters)
 
     private val internalMockNetwork = InternalMockNetwork(
-            cordappPackages,
+            @Suppress("DEPRECATION") cordappPackages,
             defaultParameters,
             networkSendManuallyPumped,
             threadPerNode,

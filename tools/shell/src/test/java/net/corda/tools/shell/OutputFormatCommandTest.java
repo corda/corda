@@ -6,13 +6,15 @@ import org.crsh.text.RenderPrintWriter;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.Map;
+
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
 public class OutputFormatCommandTest {
 
-    private InvocationContext mockInvocationContext;
+    private InvocationContext<Map> mockInvocationContext;
     private RenderPrintWriter printWriter;
 
     private OutputFormatCommand outputFormatCommand;

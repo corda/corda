@@ -1,15 +1,13 @@
 package net.corda.serialization.internal.amqp;
 
-import net.corda.serialization.internal.AllWhitelist;
 import net.corda.serialization.internal.amqp.testutils.TestSerializationContext;
-import org.assertj.core.api.Assertions;
 import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.NotSerializableException;
 
 import static net.corda.serialization.internal.amqp.testutils.AMQPTestUtilsKt.testDefaultFactory;
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @Ignore("Current behaviour allows for the serialization of objects with private members, this will be disallowed at some point in the future")
 public class ErrorMessageTests {

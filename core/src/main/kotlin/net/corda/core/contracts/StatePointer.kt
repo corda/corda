@@ -1,12 +1,14 @@
 package net.corda.core.contracts
 
 import net.corda.core.DeleteForDJVM
+import net.corda.core.DoNotImplement
 import net.corda.core.KeepForDJVM
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.DeprecatedConstructorForDeserialization
 import net.corda.core.transactions.LedgerTransaction
 
 /**
@@ -17,7 +19,36 @@ import net.corda.core.transactions.LedgerTransaction
  */
 @CordaSerializable
 @KeepForDJVM
+@DoNotImplement
 sealed class StatePointer<T : ContractState> {
+
+    companion object {
+
+        /**
+         * Creates a [StaticPointer] to the specified contract state.
+         *
+         * @param stateAndRef The [StateAndRef] instance from which to construct a static pointer.
+         * @param isResolved Determines whether the state pointer should be resolved to a reference input when included in a transaction.
+         * @return Returns a [StaticPointer] to the specified contract state.
+         */
+        inline fun <reified T : ContractState> staticPointer(
+                stateAndRef: StateAndRef<T>,
+                isResolved: Boolean = false
+        ) = StaticPointer(stateAndRef.ref, T::class.java, isResolved)
+
+        /**
+         * Creates a [LinearPointer] to the specified linear state.
+         *
+         * @param state The [LinearState] instance from which to construct a linear pointer.
+         * @param isResolved Determines whether the state pointer should be resolved to a reference input when included in a transaction.
+         * @return Returns a [LinearPointer] to the specified linear state.
+         */
+        inline fun <reified T : LinearState> linearPointer(
+                state: T,
+                isResolved: Boolean = true
+        ) = LinearPointer(state.linearId, T::class.java, isResolved)
+    }
+
     /**
      * An identifier for the [ContractState] that this [StatePointer] points to.
      */
@@ -27,6 +58,11 @@ sealed class StatePointer<T : ContractState> {
      * Type of the state which is being pointed to.
      */
     abstract val type: Class<T>
+
+    /**
+     * Determines whether the state pointer should be resolved to a reference input when used in a transaction.
+     */
+    abstract val isResolved: Boolean
 
     /**
      * Resolves a [StatePointer] to a [StateAndRef] via a vault query. This method will either return a [StateAndRef]
@@ -54,7 +90,21 @@ sealed class StatePointer<T : ContractState> {
  *   throw a [TransactionResolutionException]
  */
 @KeepForDJVM
-class StaticPointer<T : ContractState>(override val pointer: StateRef, override val type: Class<T>) : StatePointer<T>() {
+class StaticPointer<T : ContractState>(
+        override val pointer: StateRef,
+        override val type: Class<T>,
+        override val isResolved: Boolean = false
+) : StatePointer<T>() {
+
+    /**
+     * Allows this class to be evolved through backwards compatibility with version 1 of this class.
+     *
+     * @param pointer The state reference that this points to.
+     * @param type The underlying [LinearState] type that this points to.
+     */
+    @DeprecatedConstructorForDeserialization(version = 1)
+    constructor(pointer: StateRef, type: Class<T>) : this(pointer, type, false)
+
     /**
      * Resolves a [StaticPointer] to a [StateAndRef] via a [StateRef] look-up.
      */
@@ -99,7 +149,21 @@ class StaticPointer<T : ContractState>(override val pointer: StateRef, override 
  *   of the [LinearState] is available. See reference states documentation on docs.corda.net for more info.
  */
 @KeepForDJVM
-class LinearPointer<T : LinearState>(override val pointer: UniqueIdentifier, override val type: Class<T>) : StatePointer<T>() {
+class LinearPointer<T : LinearState>(
+        override val pointer: UniqueIdentifier,
+        override val type: Class<T>,
+        override val isResolved: Boolean = true
+) : StatePointer<T>() {
+
+    /**
+     * Allows this class to be evolved through backwards compatibility with version 1 of this class.
+     *
+     * @param pointer The unique identifier that this points to.
+     * @param type The underlying [LinearState] type that this points to.
+     */
+    @DeprecatedConstructorForDeserialization(version = 1)
+    constructor(pointer: UniqueIdentifier, type: Class<T>) : this(pointer, type, true)
+
     /**
      * Resolves a [LinearPointer] using the [UniqueIdentifier] contained in the [pointer] property. Returns a
      * [StateAndRef] containing the latest version of the [LinearState] that the node calling [resolve] is aware of.

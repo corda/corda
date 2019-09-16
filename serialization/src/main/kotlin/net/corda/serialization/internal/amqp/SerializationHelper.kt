@@ -1,6 +1,5 @@
 package net.corda.serialization.internal.amqp
 
-import com.google.common.primitives.Primitives
 import com.google.common.reflect.TypeToken
 import net.corda.core.serialization.*
 import net.corda.serialization.internal.model.TypeIdentifier
@@ -109,16 +108,10 @@ internal fun Type.isSubClassOf(type: Type): Boolean {
     return TypeToken.of(this).isSubtypeOf(TypeToken.of(type).rawType)
 }
 
-// ByteArrays, primitives and boxed primitives are not stored in the object history
-internal fun suitableForObjectReference(type: Type): Boolean {
-    val clazz = type.asClass()
-    return type != ByteArray::class.java && (!clazz.isPrimitive && !Primitives.unwrap(clazz).isPrimitive)
-}
-
 /**
  * Common properties that are to be used in the [SerializationContext.properties] to alter serialization behavior/content
  */
-internal enum class CommonPropertyNames {
+enum class CommonPropertyNames {
     IncludeInternalInfo,
 }
 
