@@ -3,8 +3,8 @@ package net.corda.node.internal.artemis
 import net.corda.core.identity.CordaX500Name
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import java.security.KeyStore
-import javax.security.cert.CertificateException
-import javax.security.cert.X509Certificate
+import java.security.cert.CertificateException
+import java.security.cert.X509Certificate
 
 sealed class CertificateChainCheckPolicy {
     @FunctionalInterface

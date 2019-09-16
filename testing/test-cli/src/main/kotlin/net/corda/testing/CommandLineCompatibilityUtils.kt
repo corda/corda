@@ -13,7 +13,7 @@ import kotlin.collections.ArrayList
 class CommandLineCompatibilityChecker {
     companion object {
         fun printCommandLineYAML(clazz: Class<*>) {
-            CommandLineCompatibilityChecker().printCommandDescription(CommandLine(clazz.newInstance()))
+            CommandLineCompatibilityChecker().printCommandDescription(CommandLine(clazz.getDeclaredConstructor().newInstance()))
         }
     }
 
@@ -154,7 +154,7 @@ class CommandLineCompatibilityChecker {
 
     fun checkCommandLineIsBackwardsCompatible(commandLineToCheck: Class<*>): List<CliBackwardsCompatibilityValidationCheck> {
         val commandLineToCheckName = commandLineToCheck.canonicalName
-        val instance = commandLineToCheck.newInstance()
+        val instance = commandLineToCheck.getDeclaredConstructor().newInstance()
         val resourceAsStream = this.javaClass.classLoader.getResourceAsStream("$commandLineToCheckName.yml")
                 ?: throw IllegalStateException("$commandLineToCheckName.yml not found on classpath").also {
                     printCommandLineYAML(commandLineToCheck)

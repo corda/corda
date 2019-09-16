@@ -16,8 +16,7 @@ class AggregatedListTest {
     @Before
     fun setup() {
         sourceList = FXCollections.observableArrayList<Int>()
-        @Suppress("UNCHECKED_CAST")
-        aggregatedList = AggregatedList(sourceList, { it % 3 }) { mod3, group -> Pair(mod3, group) } as ObservableList<Pair<Int, ObservableList<Int>>>
+        aggregatedList = AggregatedList(sourceList, { it % 3 }) { mod3, group -> Pair(mod3, group) }
         replayedList = ReplayedList(aggregatedList)
     }
 

@@ -138,7 +138,7 @@ class DriverDSLImpl(
         return try {
             val type = Class.forName(className)
             val src = type.protectionDomain.codeSource
-            return src.location.toPath().toString()
+            src.location.toPath().toString()
         } catch (e: Exception) {
             log.warn("Unable to locate JAR for class given by `$className` on classpath: ${e.message}", e)
             throw e

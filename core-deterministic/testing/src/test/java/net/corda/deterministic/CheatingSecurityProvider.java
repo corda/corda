@@ -16,6 +16,7 @@ public class CheatingSecurityProvider extends Provider implements AutoCloseable 
 
     private static AtomicInteger counter = new AtomicInteger();
 
+    @SuppressWarnings("deprecation")    // JDK11: should replace with Provider(String name, double version, String info) (since 9)
     public CheatingSecurityProvider() {
         super("Cheat-" + counter.getAndIncrement(), 1.8, "Cheat security provider");
         putService(new CheatingSecureRandomService(this));

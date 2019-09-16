@@ -31,7 +31,7 @@ class ClassCarpenterTest {
         assertEquals(0, clazz.nonSyntheticFields.size)
         assertEquals(2, clazz.nonSyntheticMethods.size)   // get, toString
         assertEquals(0, clazz.declaredConstructors[0].parameterCount)
-        clazz.newInstance()   // just test there's no exception.
+        clazz.getDeclaredConstructor().newInstance()
     }
 
     @Test

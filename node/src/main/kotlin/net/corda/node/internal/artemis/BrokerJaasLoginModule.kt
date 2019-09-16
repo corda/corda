@@ -23,7 +23,7 @@ import javax.security.auth.callback.UnsupportedCallbackException
 import javax.security.auth.login.FailedLoginException
 import javax.security.auth.login.LoginException
 import javax.security.auth.spi.LoginModule
-import javax.security.cert.X509Certificate
+import java.security.cert.X509Certificate
 
 /**
  *
@@ -188,7 +188,8 @@ abstract class BaseBrokerJaasLoginModule : LoginModule {
 
         val username = nameCallback.name ?: throw FailedLoginException("Username not provided")
         val password = String(passwordCallback.password ?: throw FailedLoginException("Password not provided"))
-        val certificates = certificateCallback.certificates
+        @Suppress("UNCHECKED_CAST")     // JDK11: javax.security.cert.X509Certificate deprecated in favour of java.security.cert.X509Certificate
+        val certificates = certificateCallback.certificates as Array<X509Certificate>
         return Triple(username, password, certificates)
     }
 
