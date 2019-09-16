@@ -23,25 +23,21 @@ pipeline {
         }
         stage('Corda Pull Request Integration Tests - Run Integration Tests') {
             steps {
-                try{
-                    withCredentials([string(credentialsId: 'container_reg_passwd', variable: 'DOCKER_PUSH_PWD')]) {
-                        sh "./gradlew " +
-                                "-DbuildId=\"\${BUILD_ID}\" " +
-                                "-Ddocker.push.password=\"\${DOCKER_PUSH_PWD}\" " +
-                                "-Dkubenetize=true " +
-                                "-Ddocker.tag=\"\${DOCKER_TAG_TO_USE}\"" +
-                                " allParallelIntegrationTest"
-                    }
-                }finally{
-                    junit '**/build/test-results-xml/**/*.xml'
+                withCredentials([string(credentialsId: 'container_reg_passwd', variable: 'DOCKER_PUSH_PWD')]) {
+                    sh "./gradlew " +
+                            "-DbuildId=\"\${BUILD_ID}\" " +
+                            "-Ddocker.push.password=\"\${DOCKER_PUSH_PWD}\" " +
+                            "-Dkubenetize=true " +
+                            "-Ddocker.tag=\"\${DOCKER_TAG_TO_USE}\"" +
+                            " allParallelIntegrationTest"
                 }
+
             }
         }
-
-        stage('Clear testing images') {
-            steps {
-                sh """docker rmi -f \$(docker images | grep \${DOCKER_TAG_TO_USE} | awk '{print \$3}') || echo \"there were no images to delete\""""
-            }
+    }
+    post {
+        always {
+            junit '**/build/test-results-xml/**/*.xml'
         }
     }
 }
