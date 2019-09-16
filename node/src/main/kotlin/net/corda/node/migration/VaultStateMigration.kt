@@ -129,6 +129,7 @@ object VaultMigrationSchemaV1 : MappedSchema(schemaFamily = VaultMigrationSchema
                 PersistentIdentityService.PersistentPublicKeyHashToCertificate::class.java,
                 PersistentIdentityService.PersistentPartyToPublicKeyHash::class.java,
                 PersistentIdentityService.PersistentPublicKeyHashToParty::class.java,
+                PersistentIdentityService.PersistentHashToPublicKey::class.java,
                 BasicHSMKeyManagementService.PersistentKey::class.java,
                 NodeAttachmentService.DBAttachment::class.java,
                 DBNetworkParametersStorage.PersistentNetworkParameters::class.java

@@ -7,6 +7,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.services.UnknownAnonymousPartyException
+import net.corda.node.services.persistence.PublicKeyToOwningIdentityCacheImpl
 import net.corda.core.serialization.serialize
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
@@ -45,12 +46,14 @@ class PersistentIdentityServiceTests {
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
+    private val cacheFactory = TestingNamedCacheFactory()
     private lateinit var database: CordaPersistence
     private lateinit var identityService: PersistentIdentityService
 
     @Before
     fun setup() {
-        identityService = PersistentIdentityService(TestingNamedCacheFactory())
+        val cacheFactory = TestingNamedCacheFactory()
+        identityService = PersistentIdentityService(cacheFactory = cacheFactory)
         database = configureDatabase(
                 makeTestDataSourceProperties(),
                 DatabaseConfig(),
@@ -59,7 +62,7 @@ class PersistentIdentityServiceTests {
         )
         identityService.database = database
         identityService.ourNames = setOf(ALICE_NAME)
-        identityService.start(DEV_ROOT_CA.certificate)
+        identityService.start(DEV_ROOT_CA.certificate, pkToIdCache = PublicKeyToOwningIdentityCacheImpl(database, cacheFactory))
     }
 
     @After
@@ -224,7 +227,7 @@ class PersistentIdentityServiceTests {
         // Create new identity service mounted onto same DB
         val newPersistentIdentityService = PersistentIdentityService(TestingNamedCacheFactory()).also {
             it.database = database
-            it.start(DEV_ROOT_CA.certificate)
+            it.start(DEV_ROOT_CA.certificate, pkToIdCache = PublicKeyToOwningIdentityCacheImpl(database, cacheFactory))
         }
 
         newPersistentIdentityService.assertOwnership(alice.party, anonymousAlice.party.anonymise())
@@ -250,23 +253,22 @@ class PersistentIdentityServiceTests {
     fun `register duplicate confidential identities`(){
         val (alice, anonymousAlice) = createConfidentialIdentity(ALICE.name)
 
-        identityService.registerKeyToParty(anonymousAlice.owningKey, alice.party)
+        identityService.registerKey(anonymousAlice.owningKey, alice.party)
 
         // If an existing entry is found matching the party then the method call is idempotent
         assertDoesNotThrow {
-            identityService.registerKeyToParty(anonymousAlice.owningKey, alice.party)
+            identityService.registerKey(anonymousAlice.owningKey, alice.party)
         }
     }
 
     @Test
     fun `register incorrect party to public key `(){
+        database.transaction { identityService.verifyAndRegisterIdentity(ALICE_IDENTITY) }
         val (alice, anonymousAlice) = createConfidentialIdentity(ALICE.name)
-
-        identityService.registerKeyToParty(anonymousAlice.owningKey, alice.party)
-
-        assertThrows<IllegalArgumentException> {
-            identityService.registerKeyToParty(anonymousAlice.owningKey, bob.party)
-        }
+        identityService.registerKey(anonymousAlice.owningKey, alice.party)
+        // Should have no side effect but logs a warning that we tried to overwrite an existing mapping.
+        assertFailsWith<IllegalStateException> { identityService.registerKey(anonymousAlice.owningKey, bob.party) }
+        assertEquals(ALICE, identityService.wellKnownPartyFromAnonymous(AnonymousParty(anonymousAlice.owningKey)))
     }
 
     @Test

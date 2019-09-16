@@ -88,8 +88,4 @@ class E2ETestKeyManagementService(override val identityService: IdentityService,
         val keyPair = getSigningKeyPair(publicKey)
         return keyPair.sign(signableData)
     }
-
-    override fun externalIdForPublicKey(publicKey: PublicKey): UUID? {
-        throw UnsupportedOperationException("This operation is only supported by persistent key management service variants.")
-    }
 }
