@@ -17,12 +17,12 @@ import java.util.*
 class CashSelectionSQLServerImpl : AbstractCashSelection(maxRetries = 16, retrySleep = 1000, retryCap = 5000) {
 
     companion object {
-        val JDBC_DRIVER_NAME = "Microsoft JDBC Driver 6.2 for SQL Server"
+        const val JDBC_DRIVER_NAME = "Microsoft JDBC Driver"
         private val log = contextLogger()
     }
 
     override fun isCompatible(metadata: DatabaseMetaData): Boolean {
-        return metadata.driverName == JDBC_DRIVER_NAME
+        return metadata.driverName.startsWith(JDBC_DRIVER_NAME, ignoreCase = true)
     }
 
     override fun toString() = "${this::class.java} for $JDBC_DRIVER_NAME"
@@ -48,7 +48,7 @@ class CashSelectionSQLServerImpl : AbstractCashSelection(maxRetries = 16, retryS
                     " AND ccs.issuer_ref IN (?)" else "") +
                 """)
             SELECT row.transaction_id, row.output_index, row.pennies, row.total, row.lock_id
-            FROM row where row.total <= ? + row.pennies"""
+            FROM row where row.total < ? + row.pennies"""
 
         // Use prepared statement for protection against SQL Injection
         connection.prepareStatement(selectJoin).use { statement ->
