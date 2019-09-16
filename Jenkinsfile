@@ -2,6 +2,8 @@ killall_jobs()
 
 pipeline {
     agent { label 'k8s' }
+    options { timestamps () }
+
     environment {
         DOCKER_TAG_TO_USE = "${UUID.randomUUID().toString().toLowerCase().subSequence(0, 12)}"
         EXECUTOR_NUMBER = "${env.EXECUTOR_NUMBER}"
@@ -30,7 +32,6 @@ pipeline {
                             "-Ddocker.tag=\"\${DOCKER_TAG_TO_USE}\"" +
                             " allParallelIntegrationTest"
                 }
-
             }
         }
     }
