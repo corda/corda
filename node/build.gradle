@@ -32,6 +32,7 @@ apply plugin: 'com.jfrog.artifactory'
 description 'Corda node modules'
 
 repositories {
+    mavenLocal()
     // Extra repository for the deterministic-rt JAR.
     maven {
         url "$artifactory_contextUrl/corda-dev"
@@ -309,11 +310,12 @@ quasar {
             "com.google.**",
             "com.lmax.**",
             "com.zaxxer.**",
-            "djvm.**",
+            "djvm**",
             "net.bytebuddy**",
             "io.github.classgraph**",
             "io.netty*",
             "liquibase**",
+            "net.corda.djvm**",
             "net.i2p.crypto.**",
             "nonapi.io.github.classgraph.**",
             "org.apiguardian.**",
@@ -327,7 +329,7 @@ quasar {
             "org.xml**",
             "org.yaml**",
             "rx**",
-            "sandbox.**")
+            "sandbox**")
 }
 
 jar {
