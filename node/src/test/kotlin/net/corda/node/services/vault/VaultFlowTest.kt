@@ -6,6 +6,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.node.services.queryBy
 import net.corda.core.transactions.TransactionBuilder
+import net.corda.node.services.statemachine.StaffedFlowHospital
 import net.corda.testing.core.DummyCommandData
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.internal.vault.DUMMY_DEAL_PROGRAM_ID
@@ -48,10 +49,12 @@ class VaultFlowTest {
     @After
     fun tearDown() {
         mockNetwork.stopNodes()
+        StaffedFlowHospital.DatabaseEndocrinologist.customConditions.clear()
     }
 
     @Test
     fun `Unique column constraint failing causes states to not persist to vaults`() {
+        StaffedFlowHospital.DatabaseEndocrinologist.customConditions.add( { t: Throwable -> t is javax.persistence.PersistenceException })
         partyA.startFlow(Initiator(listOf(partyA.info.singleIdentity(), partyB.info.singleIdentity()))).get()
         Assertions.assertThatExceptionOfType(ExecutionException::class.java).isThrownBy {
             partyA.startFlow(Initiator(listOf(partyA.info.singleIdentity(), partyB.info.singleIdentity()))).get()

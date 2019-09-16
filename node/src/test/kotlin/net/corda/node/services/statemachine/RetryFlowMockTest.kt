@@ -49,6 +49,8 @@ class RetryFlowMockTest {
         SendAndRetryFlow.count = 0
         RetryInsertFlow.count = 0
         KeepSendingFlow.count.set(0)
+        StaffedFlowHospital.DatabaseEndocrinologist.customConditions.add { t -> t is LimitedRetryCausingError }
+        StaffedFlowHospital.DatabaseEndocrinologist.customConditions.add { t -> t is RetryCausingError }
     }
 
     private fun <T> TestStartedNode.startFlow(logic: FlowLogic<T>): CordaFuture<T> {
@@ -58,6 +60,7 @@ class RetryFlowMockTest {
     @After
     fun cleanUp() {
         mockNet.stopNodes()
+        StaffedFlowHospital.DatabaseEndocrinologist.customConditions.clear()
     }
 
     @Test

@@ -7,10 +7,7 @@ import net.corda.core.flows.ReceiveTransactionFlow
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.flows.UnexpectedFlowEndException
 import net.corda.core.identity.Party
-import net.corda.core.internal.DeclaredField
-import net.corda.core.internal.ThreadBox
-import net.corda.core.internal.TimedFlow
-import net.corda.core.internal.bufferUntilSubscribed
+import net.corda.core.internal.*
 import net.corda.core.messaging.DataFeed
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.seconds
@@ -22,6 +19,7 @@ import java.sql.SQLTransientConnectionException
 import java.time.Duration
 import java.time.Instant
 import java.util.*
+import javax.persistence.PersistenceException
 import kotlin.math.pow
 
 /**
@@ -31,11 +29,12 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val 
     private companion object {
         private val log = contextLogger()
         private val staff = listOf(
-                DeadlockNurse,
-                DuplicateInsertSpecialist,
-                DoctorTimeout,
-                FinalityDoctor,
-                TransientConnectionCardiologist
+            DeadlockNurse,
+            DuplicateInsertSpecialist,
+            DoctorTimeout,
+            FinalityDoctor,
+            TransientConnectionCardiologist,
+            DatabaseEndocrinologist
         )
     }
 
@@ -259,7 +258,6 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val 
         NOT_MY_SPECIALTY
     }
 
-
     interface Staff {
         fun consult(flowFiber: FlowFiber, currentState: StateMachineState, newError: Throwable, history: FlowMedicalHistory): Diagnosis
     }
@@ -334,7 +332,7 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val 
         }
 
         private fun isErrorPropagatedFromCounterparty(error: Throwable): Boolean {
-            return when(error) {
+            return when (error) {
                 is UnexpectedFlowEndException -> {
                     val peer = DeclaredField<Party?>(UnexpectedFlowEndException::class.java, "peer", error).value
                     peer != null
@@ -361,7 +359,6 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val 
             return strippedStacktrace.isNotEmpty() &&
                     strippedStacktrace.first().className.startsWith(ReceiveTransactionFlow::class.qualifiedName!! )
         }
-
     }
 
     /**
@@ -384,6 +381,23 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val 
             return exception.mentionsThrowable(SQLTransientConnectionException::class.java, "connection is not available")
         }
     }
+
+    /**
+     * Hospitalise any database (SQL) exception that wasn't handled otherwise, unless on the configurable whitelist
+     * Note that retry decisions from other specialists will not be affected as retries take precedence over hospitalisation.
+     */
+    object DatabaseEndocrinologist : Staff {
+        override fun consult(flowFiber: FlowFiber, currentState: StateMachineState, newError: Throwable, history: FlowMedicalHistory): Diagnosis {
+            return if (( newError is SQLException || newError is PersistenceException )&& !customConditions.any{it(newError)}) {
+                Diagnosis.OVERNIGHT_OBSERVATION
+            } else {
+                Diagnosis.NOT_MY_SPECIALTY
+            }
+        }
+
+        @VisibleForTesting
+        val customConditions = mutableSetOf<(t: Throwable) -> Boolean>()
+    }
 }
 
 private fun <T : Throwable> Throwable?.mentionsThrowable(exceptionType: Class<T>, errorMessage: String? = null): Boolean {
@@ -397,3 +411,4 @@ private fun <T : Throwable> Throwable?.mentionsThrowable(exceptionType: Class<T>
     }
     return (exceptionType.isAssignableFrom(this::class.java) && containsMessage) || cause.mentionsThrowable(exceptionType, errorMessage)
 }
+
