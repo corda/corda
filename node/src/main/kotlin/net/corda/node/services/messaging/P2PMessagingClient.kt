@@ -46,6 +46,7 @@ import net.corda.nodeapi.internal.ArtemisTcpTransport.Companion.p2pConnectorTcpT
 import net.corda.nodeapi.internal.RoundRobinConnectionPolicy
 import net.corda.nodeapi.internal.bridging.BridgeControl
 import net.corda.nodeapi.internal.bridging.BridgeEntry
+import net.corda.nodeapi.internal.config.artemisSigningServiceName
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.requireMessageSize
 import net.corda.nodeapi.internal.stillOpen
@@ -201,8 +202,9 @@ class P2PMessagingClient(val config: NodeConfiguration,
             } else {
                 config.p2pSslOptions
             }
-            val tcpTransport = p2pConnectorTcpTransport(serverAddress, sslOptions)
-            val backupTransports = p2pConnectorTcpTransportFromList(config.enterpriseConfiguration.messagingServerBackupAddresses, sslOptions)
+            val tcpTransport = p2pConnectorTcpTransport(serverAddress, sslOptions, keyStoreProvider = artemisSigningServiceName(sslOptions))
+            val backupTransports = p2pConnectorTcpTransportFromList(config.enterpriseConfiguration.messagingServerBackupAddresses, sslOptions,
+                    keyStoreProvider = artemisSigningServiceName(sslOptions))
             log.info("Connecting to message broker: $serverAddress")
             if (backupTransports.isNotEmpty()) {
                 log.info("Back-up message broker addresses: ${config.enterpriseConfiguration.messagingServerBackupAddresses}")

@@ -103,6 +103,7 @@ interface NodeConfiguration {
     val networkParameterAcceptanceSettings: NetworkParameterAcceptanceSettings
 
     val blacklistedAttachmentSigningKeys: List<String>
+    val sslHandshakeTimeout:Long
 
     companion object {
         // default to at least 8MB and a bit extra for larger heap sizes

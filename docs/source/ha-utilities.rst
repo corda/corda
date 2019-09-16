@@ -83,8 +83,8 @@ Self signed internal Artemis SSL keystore
 
 TLS is used to ensure communications between HA components and standalone Artemis are secured. This tool can be used to generate the required keystores if TLS cert signing infrastructure is not available within your organisation.
 Please note that for Artemis to work correctly, the password for the store and the password for the private key will need to be set to the same value.
-This tool can also create the private key used by the Bridge for the SSL communication in an HSM.
-This will happen if the HSM name and HSM config file option is specified, otherwise the file based keystore is used.
+This tool can generate the private key used by the Bridge or the Node in an HSM.
+This will happen if the HSM name and HSM config file option is specified. Otherwise the file based keystore is used.
 Regardless where the private keys are stored the public certificates are stored in the file based keystores.
 
 The tool does not include any third party supplied client side jar files needed when connecting to an HSM. These jar files are supplied by the HSM vendor. The tool does however assume that it can load
@@ -105,8 +105,10 @@ Command-line options
 * ``-l``, ``--locality=<locality>``: X500Name's locality attribute. Default: London
 * ``-c``, ``--country=<country>``: X500Name's country attribute. Default: GB
 * ``-b``, ``--base-directory=<baseDirectory>``: The working directory where all the files are kept.
-* ``-m``, ``--hsm-name``: The HSM name. One of Azure, Utimaco, Gemalto, FutureX. The first x characters to uniquely identify the name is adequate.
-* ``-f``, ``--hsm-config-file``: The path to the HSM config file. Only required if the HSM name has been specified.
+* ``-m``, ``--bridge-hsm-name``: The HSM name used by the bridge. One of Azure, Utimaco, Gemalto, FutureX. The first x characters to uniquely identify the name is adequate.
+* ``-f``, ``--bridge-hsm-config-file``: The path to the bridge HSM config file. Only required if the HSM name has been specified.
+* ``-s``, ``--node-hsm-name``: The HSM name used by the node. One of Azure, Utimaco, Gemalto, FutureX. The first x characters to uniquely identify the name is adequate.
+* ``-i``, ``--node-hsm-config-file``: The path to the node HSM config file. Only required if the HSM name has been specified.
 * ``-h``, ``--help``: Show this help message and exit.
 * ``-V``, ``--version``: Print version information and exit.
 

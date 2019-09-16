@@ -31,3 +31,7 @@ interface CryptoServiceConfig {
 }
 
 const val DEFAULT_SSL_HANDSHAKE_TIMEOUT_MILLIS = 60000L // Set at least 3 times higher than sun.security.provider.certpath.URICertStore.DEFAULT_CRL_CONNECT_TIMEOUT which is 15 sec
+
+// There may be multiple nodes in a JVM e.g integration tests, each node will have its own DelegatedKeyStore, so this makes sure
+// each node has a distinct name.
+fun artemisSigningServiceName(sslOptions: MutualSslConfiguration?): String = "ArtemisSigningService-${sslOptions?.keyStore?.path.toString()}"

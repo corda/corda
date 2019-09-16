@@ -132,8 +132,8 @@ class ArtemisTcpTransport {
             return TransportConfiguration(connectorFactoryClassName, options)
         }
 
-        fun p2pConnectorTcpTransportFromList(hostAndPortList: List<NetworkHostAndPort>, config: MutualSslConfiguration?, enableSSL: Boolean = true): List<TransportConfiguration> = hostAndPortList.map {
-            p2pConnectorTcpTransport(it, config, enableSSL)
+        fun p2pConnectorTcpTransportFromList(hostAndPortList: List<NetworkHostAndPort>, config: MutualSslConfiguration?, enableSSL: Boolean = true, keyStoreProvider: String? = null): List<TransportConfiguration> = hostAndPortList.map {
+            p2pConnectorTcpTransport(it, config, enableSSL, keyStoreProvider)
         }
 
         fun rpcAcceptorTcpTransport(hostAndPort: NetworkHostAndPort, config: BrokerRpcSslOptions?, enableSSL: Boolean = true): TransportConfiguration {
@@ -163,13 +163,17 @@ class ArtemisTcpTransport {
             rpcConnectorTcpTransport(it, config, enableSSL)
         }
 
-        fun rpcInternalClientTcpTransport(hostAndPort: NetworkHostAndPort, config: SslConfiguration): TransportConfiguration {
-            return TransportConfiguration(connectorFactoryClassName, defaultArtemisOptions(hostAndPort) + defaultSSLOptions + config.toTransportOptions())
+        fun rpcInternalClientTcpTransport(hostAndPort: NetworkHostAndPort, config: SslConfiguration, keyStoreProvider: String? = null): TransportConfiguration {
+            return TransportConfiguration(connectorFactoryClassName, defaultArtemisOptions(hostAndPort) + defaultSSLOptions + config.toTransportOptions() + asMap(keyStoreProvider))
         }
 
+        fun rpcInternalAcceptorTcpTransport(hostAndPort: NetworkHostAndPort, config: SslConfiguration, keyStoreProvider: String? = null): TransportConfiguration {
+            return TransportConfiguration(acceptorFactoryClassName, defaultArtemisOptions(hostAndPort) + defaultSSLOptions +
+                    config.toTransportOptions() + (TransportConstants.HANDSHAKE_TIMEOUT to 0) + asMap(keyStoreProvider))
+        }
 
-        fun rpcInternalAcceptorTcpTransport(hostAndPort: NetworkHostAndPort, config: SslConfiguration): TransportConfiguration {
-            return TransportConfiguration(acceptorFactoryClassName, defaultArtemisOptions(hostAndPort) + defaultSSLOptions + config.toTransportOptions() + (TransportConstants.HANDSHAKE_TIMEOUT to 0))
+        private fun asMap(keyStoreProvider: String?): Map<String, String>  {
+            return keyStoreProvider?.let {mutableMapOf(TransportConstants.KEYSTORE_PROVIDER_PROP_NAME to it)} ?: emptyMap()
         }
     }
 }

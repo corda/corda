@@ -5,14 +5,21 @@ import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
 import com.typesafe.config.ConfigFactory
 import net.corda.core.crypto.generateKeyPair
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.seconds
 import net.corda.node.services.config.*
 import net.corda.node.services.network.PersistentNetworkMapCache
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
+import net.corda.nodeapi.internal.config.CryptoServiceConfig
+import net.corda.nodeapi.internal.config.MutualSslConfiguration
+import net.corda.nodeapi.internal.config.artemisSigningServiceName
+import net.corda.nodeapi.internal.cryptoservice.CryptoServiceSigningService
+import net.corda.nodeapi.internal.cryptoservice.TLSSigningService
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
+import net.corda.nodeapi.internal.provider.DelegatedKeystoreProvider
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.MAX_MESSAGE_SIZE
 import net.corda.testing.core.SerializationEnvironmentRule
@@ -34,6 +41,7 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import rx.subjects.PublishSubject
 import java.net.ServerSocket
+import java.security.Security
 import java.time.Clock
 import java.util.concurrent.BlockingQueue
 import java.util.concurrent.LinkedBlockingQueue
@@ -64,6 +72,7 @@ class ArtemisMessagingTest {
     private lateinit var database: CordaPersistence
     private var messagingClient: P2PMessagingClient? = null
     private var messagingServer: ArtemisMessagingServer? = null
+    private lateinit var p2pSslConfiguration: MutualSslConfiguration
 
     private lateinit var networkMapCache: PersistentNetworkMapCache
 
@@ -74,7 +83,7 @@ class ArtemisMessagingTest {
         val baseDirectory = temporaryFolder.root.toPath()
         val certificatesDirectory = baseDirectory / "certificates"
         val signingCertificateStore = CertificateStoreStubs.Signing.withCertificatesDirectory(certificatesDirectory)
-        val p2pSslConfiguration = CertificateStoreStubs.P2P.withCertificatesDirectory(certificatesDirectory)
+        p2pSslConfiguration = CertificateStoreStubs.P2P.withCertificatesDirectory(certificatesDirectory)
 
         config = rigorousMock<AbstractNodeConfiguration>().also {
             doReturn(temporaryFolder.root.toPath()).whenever(it).baseDirectory
@@ -114,6 +123,7 @@ class ArtemisMessagingTest {
 
         createMessagingServer(remoteServerAddress.port).start()
         createMessagingClient(server = remoteServerAddress)
+        createAndStartArtemisSigningService(null, p2pSslConfiguration)
         startNodeMessagingClient()
     }
 
@@ -125,6 +135,7 @@ class ArtemisMessagingTest {
         createMessagingServer(serverAddress.port).start()
 
         messagingClient = createMessagingClient(server = invalidServerAddress)
+        createAndStartArtemisSigningService(null, p2pSslConfiguration)
         assertThatThrownBy { startNodeMessagingClient() }
         messagingClient = null
     }
@@ -133,6 +144,7 @@ class ArtemisMessagingTest {
     fun `client should connect to local server`() {
         createMessagingServer().start()
         createMessagingClient()
+        createAndStartArtemisSigningService(null, p2pSslConfiguration)
         startNodeMessagingClient()
     }
 
@@ -230,6 +242,7 @@ class ArtemisMessagingTest {
         // Now change the sender
         try {
             val messagingClient2 = createMessagingClient()
+            createAndStartArtemisSigningService(null, p2pSslConfiguration)
             startNodeMessagingClient()
 
             val fakeMsg2 = messagingClient2.messagingExecutor!!.cordaToArtemisMessage(message)
@@ -262,6 +275,7 @@ class ArtemisMessagingTest {
                 handle.afterDatabaseTransaction() // We ACK first so that if it fails we won't get a duplicate in [receivedMessages]
                 receivedMessages.add(msg)
             }
+            createAndStartArtemisSigningService(null, p2pSslConfiguration)
             startNodeMessagingClient()
 
             messagingClient2.deliver(fakeMsg)
@@ -303,6 +317,7 @@ class ArtemisMessagingTest {
                     receivedMessages.add(msg)
                 }
             }
+            createAndStartArtemisSigningService(null, p2pSslConfiguration)
             startNodeMessagingClient()
 
             messagingClient2.deliver(fakeMsg1)
@@ -331,6 +346,7 @@ class ArtemisMessagingTest {
 
         // Now change the send *and* receiver
         val messagingClient2 = createMessagingClient()
+        createAndStartArtemisSigningService(null, p2pSslConfiguration)
         try {
             startNodeMessagingClient()
             val fakeMsg2 = messagingClient2.messagingExecutor!!.cordaToArtemisMessage(message)
@@ -375,6 +391,7 @@ class ArtemisMessagingTest {
             handle.afterDatabaseTransaction() // We ACK first so that if it fails we won't get a duplicate in [receivedMessages]
             receivedMessages.add(message)
         }
+        createAndStartArtemisSigningService(null, p2pSslConfiguration)
         startNodeMessagingClient(maxMessageSize = clientMaxMessageSize)
 
         // Run after the handlers are added, otherwise (some of) the messages get delivered and discarded / dead-lettered.
@@ -409,5 +426,27 @@ class ArtemisMessagingTest {
             config.configureWithDevSSLCertificate()
             messagingServer = this
         }
+    }
+
+
+    private fun setupArtemisSigningServiceProvider(artemisSigningService: CryptoServiceSigningService, sslOptions: MutualSslConfiguration) {
+        val provider = Security.getProvider(DelegatedKeystoreProvider.PROVIDER_NAME)
+        val delegatedKeystoreProvider = if (provider != null) {
+            provider as DelegatedKeystoreProvider
+        } else {
+            DelegatedKeystoreProvider().apply { Security.addProvider(this) }
+        }
+        delegatedKeystoreProvider.putService(artemisSigningServiceName(sslOptions), artemisSigningService)
+    }
+
+    private fun createAndStartArtemisSigningService(cryptoServiceConfig: CryptoServiceConfig?, sslOptions: MutualSslConfiguration): TLSSigningService {
+        val artemisSigningService = CryptoServiceSigningService(cryptoServiceConfig,
+                CordaX500Name(null, null, organisation = "CORDA", locality = "London", state = null, country = "GB"),
+                sslOptions, 60000L, name = "Artemis")
+        artemisSigningService.apply {
+            start()
+            setupArtemisSigningServiceProvider(this, sslOptions)
+        }
+        return artemisSigningService
     }
 }

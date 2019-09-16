@@ -186,12 +186,13 @@ class InternalKeystoreGeneratorTest {
                 BASE_DIR, workingDirectory.toString(),
                 "--keyStorePassword", keyStorePassword,
                 "--trustStorePassword", trustStorePassword,
-                "--hsm-name", "a",
-                "--hsm-config-file", "./azure.conf")
+                "--bridge-hsm-name", "a",
+                "--bridge-hsm-config-file", "./azure.conf")
         assertEquals(workingDirectory, generator.baseDirectory)
         assertEquals(keyStorePassword, generator.keyStorePassword)
         assertEquals(trustStorePassword, generator.trustStorePassword)
         generator.runProgram()
+
 
         listOf("artemis.jks").map { workingDirectory / "artemis" / it }.forEach {
             assertTrue(it.exists())
@@ -199,13 +200,14 @@ class InternalKeystoreGeneratorTest {
             assertTrue(X509KeyStore.fromFile(it, keyStorePassword).internal.isKeyEntry(CORDA_CLIENT_TLS))
         }
 
+        val bridgeAlias = "${CORDA_CLIENT_TLS}BridgeArtemis"
         listOf("artemisbridge.jks").map { workingDirectory / "artemis" / it }.forEach {
             assertTrue(it.exists())
-            assertTrue(X509KeyStore.fromFile(it, keyStorePassword).contains(CORDA_CLIENT_TLS))
-            assertTrue(X509KeyStore.fromFile(it, keyStorePassword).internal.isKeyEntry(CORDA_CLIENT_TLS))
+            assertTrue(X509KeyStore.fromFile(it, keyStorePassword).contains(bridgeAlias))
+            assertTrue(X509KeyStore.fromFile(it, keyStorePassword).internal.isKeyEntry(bridgeAlias))
         }
 
-        checkKeystore(workingDirectory / "artemis/artemisbridge.jks", "${CORDA_CLIENT_TLS}", keyStorePassword,
+        checkKeystore(workingDirectory / "artemis/artemisbridge.jks", bridgeAlias, keyStorePassword,
                 keyStorePassword)
 
         X509KeyStore.fromFile(workingDirectory / "artemis" / "artemis-root.jks", keyStorePassword).update {
@@ -220,14 +222,14 @@ class InternalKeystoreGeneratorTest {
     }
 }
 
-private class MockedCryptoService(val keystorePath: Path) : CryptoService {
+private class MockedCryptoService(keystorePath: Path) : CryptoService {
 
     private val bouncyCryptoService: BCCryptoService
 
     override fun getType(): SupportedCryptoServices = SupportedCryptoServices.BC_SIMPLE
 
     init {
-        System.out.println("keystorePath used by mock crypto service == " + keystorePath)
+        System.out.println("keystorePath used by mock crypto service == $keystorePath")
         val certificateStoreSupplier = FileBasedCertificateStoreSupplier(keystorePath / "keys.jks", "password", "password")
         val principal = CordaX500Name("aa","bb","cc","GB").x500Principal
         bouncyCryptoService = BCCryptoService(principal, certificateStoreSupplier)

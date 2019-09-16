@@ -17,8 +17,10 @@ import net.corda.node.utilities.saveToKeyStore
 import net.corda.node.utilities.saveToTrustStore
 import net.corda.nodeapi.BrokerRpcSslOptions
 import net.corda.nodeapi.internal.ArtemisTcpTransport.Companion.rpcConnectorTcpTransport
-import net.corda.nodeapi.internal.config.MutualSslConfiguration
-import net.corda.nodeapi.internal.config.User
+import net.corda.nodeapi.internal.config.*
+import net.corda.nodeapi.internal.cryptoservice.CryptoServiceSigningService
+import net.corda.nodeapi.internal.cryptoservice.TLSSigningService
+import net.corda.nodeapi.internal.provider.DelegatedKeystoreProvider
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.internal.incrementalPortAllocation
@@ -33,6 +35,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.nio.file.Path
+import java.security.Security
 import javax.security.auth.x500.X500Principal
 
 class ArtemisRpcTests {
@@ -107,6 +110,7 @@ class ArtemisRpcTests {
         val maxMessageSize = 10000
         val jmxEnabled = false
 
+        createAndStartArtemisSigningService(null, nodeSSlconfig)
         val artemisBroker: ArtemisBroker = if (useSslForBroker) {
             ArtemisRpcBroker.withSsl(nodeSSlconfig, address, adminAddress, brokerSslOptions!!, securityManager, maxMessageSize, jmxEnabled, baseDirectory, false)
         } else {
@@ -114,7 +118,7 @@ class ArtemisRpcTests {
         }
         artemisBroker.use { broker ->
             broker.start()
-            InternalRPCMessagingClient<TestRpcOps>(nodeSSlconfig, adminAddress, maxMessageSize, CordaX500Name("MegaCorp", "London", "GB"), RPCServerConfiguration.DEFAULT).use { server ->
+            InternalRPCMessagingClient<TestRpcOps>(nodeSSlconfig, adminAddress, maxMessageSize, CordaX500Name("MegaCorp", "London", "GB"), RPCServerConfiguration.DEFAULT, artemisSigningServiceName(nodeSSlconfig)).use { server ->
                 server.start(TestRpcOpsImpl(), securityManager, broker.serverControl)
 
                 val client = RPCClient<TestRpcOps>(rpcConnectorTcpTransport(broker.addresses.primary, clientSslOptions))
@@ -132,6 +136,27 @@ class ArtemisRpcTests {
             init(ops, securityManager, TestingNamedCacheFactory())
             start(brokerControl)
         }
+    }
+
+    private fun setupArtemisSigningServiceProvider(artemisSigningService: CryptoServiceSigningService, sslOptions: MutualSslConfiguration) {
+        val provider = Security.getProvider(DelegatedKeystoreProvider.PROVIDER_NAME)
+        val delegatedKeystoreProvider = if (provider != null) {
+            provider as DelegatedKeystoreProvider
+        } else {
+            DelegatedKeystoreProvider().apply { Security.addProvider(this) }
+        }
+        delegatedKeystoreProvider.putService(artemisSigningServiceName(sslOptions), artemisSigningService)
+    }
+
+    private fun createAndStartArtemisSigningService(cryptoServiceConfig: CryptoServiceConfig?, sslOptions: MutualSslConfiguration): TLSSigningService {
+        val artemisSigningService = CryptoServiceSigningService(cryptoServiceConfig,
+                CordaX500Name(null, null, organisation = "CORDA", locality = "London", state = null, country = "GB"),
+                sslOptions, 60000L, name = "Artemis")
+        artemisSigningService.apply {
+            start()
+            setupArtemisSigningServiceProvider(this, sslOptions)
+        }
+        return artemisSigningService
     }
 
     interface TestRpcOps : RPCOps {

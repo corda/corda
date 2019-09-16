@@ -1,6 +1,7 @@
 package net.corda.node.services.config
 
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.nodeapi.internal.config.CryptoServiceConfig
 import java.io.File
 import java.net.InetAddress
 import java.nio.file.Path
@@ -18,7 +19,8 @@ data class EnterpriseConfiguration(
         val externalBridge: Boolean? = null,
         val enableCacheTracing: Boolean = Defaults.enableCacheTracing,
         val traceTargetDirectory: Path = Defaults.traceTargetDirectory,
-        val processedMessageCleanup: ProcessedMessageCleanup? = null
+        val processedMessageCleanup: ProcessedMessageCleanup? = null,
+        val artemisCryptoServiceConfig: CryptoServiceConfig? = null
 ) {
     internal object Defaults {
         val messagingServerConnectionConfiguration: MessagingServerConnectionConfiguration = MessagingServerConnectionConfiguration.DEFAULT
