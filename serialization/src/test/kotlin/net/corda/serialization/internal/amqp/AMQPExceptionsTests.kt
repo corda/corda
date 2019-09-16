@@ -4,6 +4,7 @@ import org.assertj.core.api.Assertions
 import org.junit.Test
 import java.io.NotSerializableException
 import kotlin.test.assertEquals
+import net.corda.serialization.internal.ifThrowsAppend
 
 class AMQPExceptionsTests {
 

@@ -2,9 +2,10 @@ package net.corda.nodeinfo
 
 import net.corda.cliutils.CordaCliWrapper
 import net.corda.cliutils.start
-import net.corda.core.crypto.*
+import net.corda.core.crypto.sign
 import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.internal.*
+import net.corda.core.internal.div
+import net.corda.core.internal.readAll
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializedBytes
@@ -15,9 +16,13 @@ import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.crypto.X509KeyStore
-import net.corda.serialization.internal.*
-import net.corda.serialization.internal.amqp.*
-import picocli.CommandLine.*
+import net.corda.serialization.internal.AMQP_P2P_CONTEXT
+import net.corda.serialization.internal.CordaSerializationMagic
+import net.corda.serialization.internal.SerializationFactoryImpl
+import net.corda.serialization.internal.amqp.AbstractAMQPSerializationScheme
+import net.corda.serialization.internal.amqp.amqpMagic
+import picocli.CommandLine.ITypeConverter
+import picocli.CommandLine.Option
 import java.io.File
 import java.nio.file.Path
 import java.security.cert.CertificateFactory
@@ -164,7 +169,7 @@ class NodeInfoSigner : CordaCliWrapper("nodeinfo-signer", "Display and generate 
 
         println(outputFile)
 
-        outputFile!!.toFile().writeBytes(nodeInfoSigned.signedInfoNode.serialize().bytes)
+        outputFile.toFile().writeBytes(nodeInfoSigned.signedInfoNode.serialize().bytes)
         return 0
     }
 

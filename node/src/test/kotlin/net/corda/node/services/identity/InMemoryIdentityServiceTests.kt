@@ -125,12 +125,12 @@ class InMemoryIdentityServiceTests {
         val service = createService(alice)
         service.verifyAndRegisterIdentity(aliceTxIdentity)
 
-        var actual = service.certificateFromKey(aliceTxIdentity.party.owningKey)
+        var actual = @Suppress("DEPRECATION") service.certificateFromKey(aliceTxIdentity.party.owningKey)
         assertEquals(aliceTxIdentity, actual!!)
 
-        assertNull(service.certificateFromKey(bobTxIdentity.party.owningKey))
+        assertNull(@Suppress("DEPRECATION") service.certificateFromKey(bobTxIdentity.party.owningKey))
         service.verifyAndRegisterIdentity(bobTxIdentity)
-        actual = service.certificateFromKey(bobTxIdentity.party.owningKey)
+        actual = @Suppress("DEPRECATION") service.certificateFromKey(bobTxIdentity.party.owningKey)
         assertEquals(bobTxIdentity, actual!!)
     }
 

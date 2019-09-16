@@ -38,7 +38,10 @@ class ANSIProgressRendererTest {
         }
 
         fun stepActive(stepLabel: String): String {
-            return if (SystemUtils.IS_OS_WINDOWS) """CURRENT: $INTENSITY_BOLD_ON_ASCII$stepLabel$INTENSITY_OFF_ASCII""" else """▶︎ $INTENSITY_BOLD_ON_ASCII$stepLabel$INTENSITY_OFF_ASCII"""
+            return if (SystemUtils.IS_OS_WINDOWS)
+                """CURRENT: $INTENSITY_BOLD_ON_ASCII$stepLabel$INTENSITY_OFF_ASCII"""
+            else
+                """▶︎ $INTENSITY_BOLD_ON_ASCII$stepLabel$INTENSITY_OFF_ASCII"""
         }
 
         fun stepNotRun(stepLabel: String): String {

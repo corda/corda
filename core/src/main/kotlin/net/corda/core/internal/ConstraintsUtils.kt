@@ -48,10 +48,15 @@ val ContractState.requiredContractClassName: String? get() {
  */
 fun AttachmentConstraint.canBeTransitionedFrom(input: AttachmentConstraint, attachment: ContractAttachment): Boolean {
     val output = this
+
+    @Suppress("DEPRECATION")
+    fun AttachmentConstraint.isAutomaticHashConstraint() =
+            this is AutomaticHashConstraint
+
     return when {
         // These branches should not happen, as this has been already checked.
         input is AutomaticPlaceholderConstraint || output is AutomaticPlaceholderConstraint -> throw IllegalArgumentException("Illegal constraint: AutomaticPlaceholderConstraint.")
-        input is AutomaticHashConstraint || output is AutomaticHashConstraint -> throw IllegalArgumentException("Illegal constraint: AutomaticHashConstraint.")
+        input.isAutomaticHashConstraint() || output.isAutomaticHashConstraint() -> throw IllegalArgumentException("Illegal constraint: AutomaticHashConstraint.")
 
         // Transition to the same constraint.
         input == output -> true

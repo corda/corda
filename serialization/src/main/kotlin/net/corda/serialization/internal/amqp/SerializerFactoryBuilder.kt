@@ -1,5 +1,6 @@
 package net.corda.serialization.internal.amqp
 
+import com.google.common.primitives.Primitives
 import net.corda.core.DeleteForDJVM
 import net.corda.core.KeepForDJVM
 import net.corda.core.serialization.ClassWhitelist
@@ -9,6 +10,7 @@ import net.corda.serialization.internal.model.*
 import java.io.NotSerializableException
 import java.util.Collections.unmodifiableMap
 import java.util.function.Function
+import java.util.function.Predicate
 
 @KeepForDJVM
 object SerializerFactoryBuilder {
@@ -109,6 +111,7 @@ object SerializerFactoryBuilder {
                 classCarpenter.classloader,
                 descriptorBasedSerializerRegistry,
                 Function { clazz -> AMQPPrimitiveSerializer(clazz) },
+                Predicate { clazz -> clazz.isPrimitive || Primitives.unwrap(clazz).isPrimitive },
                 customSerializerRegistry,
                 onlyCustomSerializers)
 

@@ -44,7 +44,7 @@ abstract class MutableClock(private var _delegateClock: Clock) : CordaClock() {
         }
     private val _version = AtomicLong(0L)
     override val mutations: Observable<Long> by lazy {
-        Observable.create { subscriber: Subscriber<in Long> ->
+        Observable.unsafeCreate { subscriber: Subscriber<in Long> ->
             if (!subscriber.isUnsubscribed) {
                 mutationObservers.add(subscriber)
                 // This is not very intuitive, but subscribing to a subscriber observes unsubscribes.

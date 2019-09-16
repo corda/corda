@@ -98,7 +98,11 @@ data class NotaryChangeWireTransaction(
      * TODO - currently this uses the main classloader.
      */
     @CordaInternal
-    internal fun resolveOutputComponent(services: ServicesForResolution, stateRef: StateRef, params: NetworkParameters): SerializedBytes<TransactionState<ContractState>> {
+    internal fun resolveOutputComponent(
+            services: ServicesForResolution,
+            stateRef: StateRef,
+            @Suppress("UNUSED_PARAMETER") params: NetworkParameters
+    ): SerializedBytes<TransactionState<ContractState>> {
         return services.loadState(stateRef).serialize()
     }
 

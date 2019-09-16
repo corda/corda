@@ -38,7 +38,7 @@ class CheckpointSerializationEnvironmentRule(private val inheritable: Boolean = 
         }
 
         /** Do not call, instead use [SerializationEnvironmentRule] as a [org.junit.Rule]. */
-        fun <T> run(taskLabel: String, task: (SerializationEnvironment) -> T): T {
+        fun <T> run(@Suppress("UNUSED_PARAMETER") taskLabel: String, task: (SerializationEnvironment) -> T): T {
             return CheckpointSerializationEnvironmentRule().apply { init() }.runTask(task)
         }
     }
