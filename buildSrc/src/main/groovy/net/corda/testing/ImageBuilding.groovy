@@ -1,10 +1,7 @@
 package net.corda.testing
 
 import com.bmuschko.gradle.docker.DockerRegistryCredentials
-import com.bmuschko.gradle.docker.tasks.container.DockerCreateContainer
-import com.bmuschko.gradle.docker.tasks.container.DockerLogsContainer
-import com.bmuschko.gradle.docker.tasks.container.DockerStartContainer
-import com.bmuschko.gradle.docker.tasks.container.DockerWaitContainer
+import com.bmuschko.gradle.docker.tasks.container.*
 import com.bmuschko.gradle.docker.tasks.image.*
 import org.gradle.api.GradleException
 import org.gradle.api.Plugin
@@ -25,7 +22,7 @@ class ImageBuilding implements Plugin<Project> {
         registryCredentialsForPush.username.set("stefanotestingcr")
         registryCredentialsForPush.password.set(System.getProperty("docker.push.password") ? System.getProperty("docker.push.password") : "")
 
-        DockerPullImage pullTask = project.tasks.create("pullBaseImage", DockerPullImage){
+        DockerPullImage pullTask = project.tasks.create("pullBaseImage", DockerPullImage) {
             repository = "stefanotestingcr.azurecr.io/buildbase"
             tag = "latest"
             doFirst {
@@ -83,15 +80,16 @@ class ImageBuilding implements Plugin<Project> {
             targetContainerId createBuildContainer.getContainerId()
         }
 
+
         DockerTagImage tagBuildImageResult = project.tasks.create('tagBuildImageResult', DockerTagImage) {
             dependsOn commitBuildImageResult
             imageId = commitBuildImageResult.getImageId()
-            tag = System.getProperty("docker.provided.tag") ? System.getProperty("docker.provided.tag") :  "${UUID.randomUUID().toString().toLowerCase().subSequence(0, 12)}"
+            tag = System.getProperty("docker.provided.tag") ? System.getProperty("docker.provided.tag") : "${UUID.randomUUID().toString().toLowerCase().subSequence(0, 12)}"
             repository = "stefanotestingcr.azurecr.io/testing"
         }
-
+        DockerPushImage pushBuildImage
         if (System.getProperty("docker.tag")) {
-            DockerPushImage pushBuildImage = project.tasks.create('pushBuildImage', DockerPushImage) {
+            pushBuildImage = project.tasks.create('pushBuildImage', DockerPushImage) {
                 doFirst {
                     registryCredentials = registryCredentialsForPush
                 }
@@ -100,7 +98,7 @@ class ImageBuilding implements Plugin<Project> {
             }
             this.pushTask = pushBuildImage
         } else {
-            DockerPushImage pushBuildImage = project.tasks.create('pushBuildImage', DockerPushImage) {
+            pushBuildImage = project.tasks.create('pushBuildImage', DockerPushImage) {
                 dependsOn tagBuildImageResult
                 doFirst {
                     registryCredentials = registryCredentialsForPush
@@ -110,6 +108,23 @@ class ImageBuilding implements Plugin<Project> {
             }
             this.pushTask = pushBuildImage
         }
+
+        DockerRemoveContainer deleteContainer = project.tasks.create('deleteBuildContainer', DockerRemoveContainer) {
+            dependsOn pushBuildImage
+            targetContainerId createBuildContainer.getContainerId()
+        }
+        DockerRemoveImage deleteTaggedImage = project.tasks.create('deleteTaggedImage', DockerRemoveImage) {
+            dependsOn pushBuildImage
+            force = true
+            targetImageId commitBuildImageResult.getImageId()
+        }
+        DockerRemoveImage deleteBuildImage = project.tasks.create('deleteBuildImage', DockerRemoveImage) {
+            dependsOn deleteContainer, deleteTaggedImage
+            force = true
+            targetImageId buildDockerImageForSource.getImageId()
+        }
+
+        pushBuildImage.finalizedBy(deleteContainer, deleteBuildImage, deleteTaggedImage)
 
     }
 }
