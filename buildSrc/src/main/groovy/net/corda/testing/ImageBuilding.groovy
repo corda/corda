@@ -88,27 +88,16 @@ class ImageBuilding implements Plugin<Project> {
             repository = "stefanotestingcr.azurecr.io/testing"
         }
 
-        DockerPushImage pushBuildImage
-        if (System.getProperty("docker.tag")) {
-            pushBuildImage = project.tasks.create('pushBuildImage', DockerPushImage) {
-                doFirst {
-                    registryCredentials = registryCredentialsForPush
-                }
-                imageName = "stefanotestingcr.azurecr.io/testing"
-                tag = System.getProperty("docker.tag")
+        DockerPushImage pushBuildImage = project.tasks.create('pushBuildImage', DockerPushImage) {
+            dependsOn tagBuildImageResult
+            doFirst {
+                registryCredentials = registryCredentialsForPush
             }
-            this.pushTask = pushBuildImage
-        } else {
-            pushBuildImage = project.tasks.create('pushBuildImage', DockerPushImage) {
-                dependsOn tagBuildImageResult
-                doFirst {
-                    registryCredentials = registryCredentialsForPush
-                }
-                imageName = "stefanotestingcr.azurecr.io/testing"
-                tag = tagBuildImageResult.tag
-            }
-            this.pushTask = pushBuildImage
+            imageName = "stefanotestingcr.azurecr.io/testing"
+            tag = tagBuildImageResult.tag
         }
+        this.pushTask = pushBuildImage
+
 
         DockerRemoveContainer deleteContainer = project.tasks.create('deleteBuildContainer', DockerRemoveContainer) {
             dependsOn pushBuildImage
