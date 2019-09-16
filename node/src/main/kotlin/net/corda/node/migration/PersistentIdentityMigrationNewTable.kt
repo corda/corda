@@ -69,8 +69,7 @@ class PersistentIdentityMigrationNewTable : CordaMigration() {
             it.setString(2, name.toString())
             it.executeUpdate()
         }
-        val us = identityService.ourNames.first()
-        if (name != us) {
+        if (name !in identityService.ourNames) {
             connection.prepareStatement("INSERT INTO node_hash_to_key (pk_hash, public_key) VALUES (?,?)").use {
                 it.setString(1, publicKeyHash)
                 it.setBytes(2, publicKey.encoded)
