@@ -313,6 +313,14 @@ class ConfigTest {
     }
 
     @Test
+    fun `invalid revocationConfig`() {
+        val configResource = "/net/corda/bridge/crlCheckSoftFail/firewall_new_invalid.conf"
+        Assertions.assertThatThrownBy {
+            createAndLoadConfigFromResource(tempFolder.root.toPath(), configResource)
+        }.hasMessageContaining("revocationConfig")
+    }
+
+    @Test
     fun `External CRL config`() {
         val configResource = "/net/corda/bridge/externalSourceCrl/firewall.conf"
         val config = createAndLoadConfigFromResource(tempFolder.root.toPath(), configResource)
