@@ -62,7 +62,7 @@ class DistributedTesting implements Plugin<Project> {
                     fullTaskToExecutePath = superListOfTasks
                     taskToExecuteName = "userDefined"
                     doFirst {
-                        dockerTag = dockerTag = providedTag ? providedTag : (imageBuildingTask.imageName.get() + ":" + imageBuildingTask.tag.get())
+                        dockerTag = dockerTag = providedTag ? ImageBuilding.registryName +":" + providedTag : (imageBuildingTask.imageName.get() + ":" + imageBuildingTask.tag.get())
                     }
                 }
                 def reportOnAllTask = project.rootProject.tasks.create("userDefinedReports${testGrouping.name.capitalize()}", KubesReporting) {
@@ -93,7 +93,7 @@ class DistributedTesting implements Plugin<Project> {
             fullTaskToExecutePath = task.getPath()
             taskToExecuteName = taskName
             doFirst {
-                dockerTag = providedTag ? providedTag : (imageBuildingTask.imageName.get() + ":" + imageBuildingTask.tag.get())
+                dockerTag = providedTag ? ImageBuilding.registryName +":" + providedTag : (imageBuildingTask.imageName.get() + ":" + imageBuildingTask.tag.get())
             }
         }
         projectContainingTask.logger.info "Created task: ${createdParallelTestTask.getPath()} to enable testing on kubenetes for task: ${task.getPath()}"

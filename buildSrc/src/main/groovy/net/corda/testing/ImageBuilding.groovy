@@ -13,6 +13,7 @@ import org.gradle.api.Project
  */
 class ImageBuilding implements Plugin<Project> {
 
+    public static final String registryName = "stefanotestingcr.azurecr.io/testing"
     DockerPushImage pushTask
 
     @Override
@@ -85,7 +86,7 @@ class ImageBuilding implements Plugin<Project> {
             dependsOn commitBuildImageResult
             imageId = commitBuildImageResult.getImageId()
             tag = System.getProperty("docker.provided.tag") ? System.getProperty("docker.provided.tag") : "${UUID.randomUUID().toString().toLowerCase().subSequence(0, 12)}"
-            repository = "stefanotestingcr.azurecr.io/testing"
+            repository = registryName
         }
 
         DockerPushImage pushBuildImage = project.tasks.create('pushBuildImage', DockerPushImage) {
@@ -93,7 +94,7 @@ class ImageBuilding implements Plugin<Project> {
             doFirst {
                 registryCredentials = registryCredentialsForPush
             }
-            imageName = "stefanotestingcr.azurecr.io/testing"
+            imageName = registryName
             tag = tagBuildImageResult.tag
         }
         this.pushTask = pushBuildImage

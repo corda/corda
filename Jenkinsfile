@@ -26,7 +26,6 @@ pipeline {
                 withCredentials([string(credentialsId: 'container_reg_passwd', variable: 'DOCKER_PUSH_PWD')]) {
                     sh "./gradlew " +
                             "-DbuildId=\"\${BUILD_ID}\" " +
-                            "-Ddocker.push.password=\"\${DOCKER_PUSH_PWD}\" " +
                             "-Dkubenetize=true " +
                             "-Ddocker.tag=\"\${DOCKER_TAG_TO_USE}\"" +
                             " allParallelIntegrationTest"
