@@ -7,10 +7,15 @@ class ParallelTestGroup extends DefaultTask {
 
     List<String> groups = new ArrayList<>()
     int shardCount = 20
-    boolean printOutput = true
+    boolean printToStdOut = true
 
     void numberOfShards(int shards){
         this.shardCount = shards
+    }
+
+    //when this is false, only containers will "failed" exit codes will be printed to stdout
+    void streamOutput(boolean print){
+        this.printToStdOut = print
     }
 
     void testGroups(String... group) {

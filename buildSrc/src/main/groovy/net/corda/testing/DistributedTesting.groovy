@@ -58,7 +58,7 @@ class DistributedTesting implements Plugin<Project> {
                         dependsOn imageBuildingTask
                     }
                     numberOfPods = testGrouping.getShardCount()
-                    printOutput = testGrouping.printOutput
+                    printOutput = testGrouping.printToStdOut
                     fullTaskToExecutePath = superListOfTasks
                     taskToExecuteName = "userDefined"
                     doFirst {
@@ -70,7 +70,7 @@ class DistributedTesting implements Plugin<Project> {
                     destinationDir new File(project.rootProject.getBuildDir(), "userDefinedReports${testGrouping.name.capitalize()}")
                     doFirst {
                         destinationDir.deleteDir()
-                        shouldPrintOutput = testGrouping.printOutput
+                        shouldPrintOutput = testGrouping.printToStdOut
                         podResults = userDefinedParallelTask.containerResults
                         reportOn(userDefinedParallelTask.testOutput)
                     }

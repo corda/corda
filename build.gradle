@@ -550,14 +550,17 @@ buildScan {
 task allParallelIntegrationTest(type: ParallelTestGroup) {
     testGroups "integrationTest"
     numberOfShards 15
+    streamOutput false
 }
 task allParallelUnitTest(type: ParallelTestGroup) {
     testGroups "test"
     numberOfShards 15
+    streamOutput false
 }
 task allParallelUnitAndIntegrationTest(type: ParallelTestGroup) {
     testGroups "test", "integrationTest"
     numberOfShards 15
+    streamOutput false
 }
 apply plugin: DistributedTesting
 
