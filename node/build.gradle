@@ -238,23 +238,12 @@ tasks.withType(JavaCompile) {
     options.compilerArgs << '-proc:none'
 }
 
-test {
-    maxHeapSize = "3g"
-    maxParallelForks = (System.env.CORDA_NODE_TESTING_FORKS == null) ? 1 : "$System.env.CORDA_NODE_TESTING_FORKS".toInteger()
-    jvmArgs '-Djdk.attach.allowAttachSelf=true'
-}
-
 tasks.withType(Test) {
-    maxHeapSize = "1536m"
-    // fork a new test process for every test class
-    forkEvery = 20
+    if (JavaVersion.current() == JavaVersion.VERSION_11)
+        jvmArgs '-Djdk.attach.allowAttachSelf=true'
 }
 
 task integrationTest(type: Test) {
-    maxHeapSize = "1536m"
-    // fork a new test process for every test class
-    forkEvery = 10
-    
     testClassesDirs = sourceSets.integrationTest.output.classesDirs
     classpath = sourceSets.integrationTest.runtimeClasspath
     maxParallelForks = (System.env.CORDA_NODE_INT_TESTING_FORKS == null) ? 1 : "$System.env.CORDA_NODE_INT_TESTING_FORKS".toInteger()
