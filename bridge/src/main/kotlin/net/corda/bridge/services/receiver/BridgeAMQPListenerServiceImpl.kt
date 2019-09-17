@@ -45,7 +45,7 @@ class BridgeAMQPListenerServiceImpl(val conf: FirewallConfiguration,
             override val healthCheckPhrase = conf.healthCheckPhrase
             override val silencedIPs: Set<String> = conf.silencedIPs
             override val sslHandshakeTimeout: Long = conf.sslHandshakeTimeout
-            override val revocationConfig: RevocationConfig = conf.revocationConfigSett.enrichExternalCrlSource(extSourceSupplier)
+            override val revocationConfig: RevocationConfig = conf.revocationConfigSection.enrichExternalCrlSource(extSourceSupplier)
         }
         val server = AMQPServer(bindAddress.host,
                 bindAddress.port,

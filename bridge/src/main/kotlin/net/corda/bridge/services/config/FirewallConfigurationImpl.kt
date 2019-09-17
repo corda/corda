@@ -105,7 +105,7 @@ data class FirewallConfigurationImpl(
     private val p2pTrustStore = FileBasedCertificateStoreSupplier(p2pTrustStoreFilePath, trustStorePassword, entryPassword = trustStorePassword)
     override val publicSSLConfiguration: MutualSslConfiguration = SslConfiguration.mutual(p2pKeyStore, p2pTrustStore)
 
-    override val revocationConfigSett: RevocationConfig
+    override val revocationConfigSection: RevocationConfig
         get() = revocationConfig ?: when (firewallMode) {
             FirewallMode.FloatOuter -> RevocationConfigImpl(RevocationConfig.Mode.EXTERNAL_SOURCE)
             else -> RevocationConfigImpl(RevocationConfig.Mode.SOFT_FAIL)

@@ -295,21 +295,21 @@ class ConfigTest {
     fun `crlCheckSoftFail old style implicit`() {
         val configResource = "/net/corda/bridge/crlCheckSoftFail/firewall_old_implicit.conf"
         val config = createAndLoadConfigFromResource(tempFolder.root.toPath(), configResource)
-        assertEquals(RevocationConfig.Mode.SOFT_FAIL, config.revocationConfigSett.mode)
+        assertEquals(RevocationConfig.Mode.SOFT_FAIL, config.revocationConfigSection.mode)
     }
 
     @Test
     fun `crlCheckSoftFail old style explicit`(){
         val configResource = "/net/corda/bridge/crlCheckSoftFail/firewall_old_explicit.conf"
         val config = createAndLoadConfigFromResource(tempFolder.root.toPath(), configResource)
-        assertEquals(RevocationConfig.Mode.HARD_FAIL, config.revocationConfigSett.mode)
+        assertEquals(RevocationConfig.Mode.HARD_FAIL, config.revocationConfigSection.mode)
     }
 
     @Test
     fun `crlCheckSoftFail new style`() {
         val configResource = "/net/corda/bridge/crlCheckSoftFail/firewall_new.conf"
         val config = createAndLoadConfigFromResource(tempFolder.root.toPath(), configResource)
-        assertEquals(RevocationConfig.Mode.OFF, config.revocationConfigSett.mode)
+        assertEquals(RevocationConfig.Mode.OFF, config.revocationConfigSection.mode)
     }
 
     @Test
@@ -324,7 +324,7 @@ class ConfigTest {
     fun `External CRL config`() {
         val configResource = "/net/corda/bridge/externalSourceCrl/firewall.conf"
         val config = createAndLoadConfigFromResource(tempFolder.root.toPath(), configResource)
-        assertEquals(RevocationConfig.Mode.EXTERNAL_SOURCE, config.revocationConfigSett.mode)
+        assertEquals(RevocationConfig.Mode.EXTERNAL_SOURCE, config.revocationConfigSection.mode)
     }
 
     @Test

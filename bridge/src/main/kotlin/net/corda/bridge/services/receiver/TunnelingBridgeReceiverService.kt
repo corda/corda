@@ -79,7 +79,7 @@ class TunnelingBridgeReceiverService(val conf: FirewallConfiguration,
                     override val enableSNI: Boolean = conf.bridgeInnerConfig!!.enableSNI
                     override val healthCheckPhrase = conf.healthCheckPhrase
                     override val sslHandshakeTimeout: Long = conf.sslHandshakeTimeout
-                    override val revocationConfig: RevocationConfig = conf.revocationConfigSett
+                    override val revocationConfig: RevocationConfig = conf.revocationConfigSection
                 }
                 val controlClient = AMQPClient(floatAddresses,
                         setOf(expectedCertificateSubject),
