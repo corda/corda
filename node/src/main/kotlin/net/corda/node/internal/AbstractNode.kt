@@ -304,7 +304,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         startDatabase()
         val (identity, identityKeyPair) = obtainIdentity()
         val nodeCa = configuration.signingCertificateStore.get()[CORDA_CLIENT_CA]
-        identityService.start(trustRoot, listOf(identity.certificate, nodeCa))
+        identityService.start(trustRoot, listOf(identity.certificate, nodeCa), pkToIdCache = pkToIdCache)
         return database.use {
             it.transaction {
                 val (_, nodeInfoAndSigned) = updateNodeInfo(identity, identityKeyPair, publish = false)
@@ -359,7 +359,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         X509Utilities.validateCertPath(trustRoot, identity.certPath)
 
         val nodeCa = configuration.signingCertificateStore.get()[CORDA_CLIENT_CA]
-        identityService.start(trustRoot, listOf(identity.certificate, nodeCa), netParams.notaries.map { it.identity })
+        identityService.start(trustRoot, listOf(identity.certificate, nodeCa), netParams.notaries.map { it.identity }, pkToIdCache)
 
         val (keyPairs, nodeInfoAndSigned, myNotaryIdentity) = database.transaction {
             updateNodeInfo(identity, identityKeyPair, publish = true)
@@ -842,7 +842,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         // Place the long term identity key in the KMS. Eventually, this is likely going to be separated again because
         // the KMS is meant for derived temporary keys used in transactions, and we're not supposed to sign things with
         // the identity key. But the infrastructure to make that easy isn't here yet.
-        return BasicHSMKeyManagementService(cacheFactory, identityService, database, cryptoService, pkToIdCache)
+        return BasicHSMKeyManagementService(cacheFactory, identityService, database, cryptoService)
     }
 
     open fun stop() {
