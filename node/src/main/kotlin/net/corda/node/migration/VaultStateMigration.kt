@@ -137,17 +137,18 @@ object VaultMigrationSchema
 object VaultMigrationSchemaBuilder {
     fun getMappedSchema() =
             MappedSchema(schemaFamily = VaultMigrationSchema.javaClass, version = 1,
-                mappedTypes = listOf(
-                        DBTransactionStorage.DBTransaction::class.java,
-                        PersistentIdentityService.PersistentPublicKeyHashToCertificate::class.java,
-                        PersistentIdentityService.PersistentPartyToPublicKeyHash::class.java,
-                        PersistentIdentityService.PersistentPublicKeyHashToParty::class.java,
-                        PersistentIdentityService.PersistentHashToPublicKey::class.java,
-                        BasicHSMKeyManagementService.PersistentKey::class.java,
-                        NodeAttachmentService.DBAttachment::class.java,
-                        DBNetworkParametersStorage.PersistentNetworkParameters::class.java
-        )
-)
+                    mappedTypes = listOf(
+                            DBTransactionStorage.DBTransaction::class.java,
+                            PersistentIdentityService.PersistentPublicKeyHashToCertificate::class.java,
+                            PersistentIdentityService.PersistentPartyToPublicKeyHash::class.java,
+                            PersistentIdentityService.PersistentPublicKeyHashToParty::class.java,
+                            PersistentIdentityService.PersistentHashToPublicKey::class.java,
+                            BasicHSMKeyManagementService.PersistentKey::class.java,
+                            NodeAttachmentService.DBAttachment::class.java,
+                            DBNetworkParametersStorage.PersistentNetworkParameters::class.java
+                    )
+            )
+}
 
 /**
  * Provides a mechanism for iterating through all persistent vault states.

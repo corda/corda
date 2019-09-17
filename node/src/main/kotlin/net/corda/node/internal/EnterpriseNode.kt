@@ -245,14 +245,14 @@ D""".trimStart()
                         "Review the documentation to see how this can be enabled via the `freshIdentitiesConfiguration` entry. Alternatively, you can disable this warning by setting `disableFreshIdentitiesWarning` to true in the node's configuration."
                 Node.printWarning(warningMsg)
             }
-            return BasicHSMKeyManagementService(cacheFactory, identityService, database, cryptoService, pkToIdCache)
+            return BasicHSMKeyManagementService(cacheFactory, identityService, database, cryptoService)
         } else {
             val cryptoServiceConfigBlock = freshIdentitiesConfig.cryptoServiceConfiguration
             val masterKeyAlias = freshIdentitiesConfig.masterKeyAlias
             wrappingCryptoService = makeCIManagedCryptoService(cryptoServiceConfigBlock)
             checkCryptoServiceIsAvailable(wrappingCryptoService!!, "fresh identities")
             verifyConfiguredModeIsSupported(freshIdentitiesConfig.mode, wrappingCryptoService!!, cryptoServiceConfigBlock.cryptoServiceName)
-            return BasicHSMKeyManagementService(cacheFactory, identityService, database, cryptoService, wrappingCryptoService!!, masterKeyAlias, pkToIdCache)
+            return BasicHSMKeyManagementService(cacheFactory, identityService, database, cryptoService, wrappingCryptoService!!, masterKeyAlias)
         }
     }
 

@@ -11,9 +11,9 @@ import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.BasicHSMKeyManagementService.PrivateKeyType.REGULAR
 import net.corda.node.services.keys.BasicHSMKeyManagementService.PrivateKeyType.WRAPPED
 import net.corda.node.utilities.AppendOnlyPersistentMap
-import net.corda.nodeapi.internal.KeyOwningIdentity
 import net.corda.nodeapi.internal.cryptoservice.CryptoService
 import net.corda.nodeapi.internal.cryptoservice.SignOnlyCryptoService
+import net.corda.nodeapi.internal.cryptoservice.WrappedPrivateKey
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import org.apache.commons.lang3.ArrayUtils.EMPTY_BYTE_ARRAY
