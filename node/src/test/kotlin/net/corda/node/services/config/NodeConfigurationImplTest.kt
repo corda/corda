@@ -400,6 +400,14 @@ class NodeConfigurationImplTest {
             { it.contains("The enum class SupportedCryptoServices has no constant of the name 'UNSUPPORTED'") }.toList()).isNotEmpty
     }
 
+    @Test
+    fun `can successfully read sslHandshakeTimeout`() {
+        val rawConfig = ConfigFactory.parseResources("working-config.conf", ConfigParseOptions.defaults().setAllowMissing(false))
+        val nodeConfig = rawConfig.parseAsNodeConfiguration()
+        assertThat(nodeConfig.isValid).isTrue()
+        assertEquals(20000L, nodeConfig.value().sslHandshakeTimeout)
+    }
+
     private fun configDebugOptions(devMode: Boolean, devModeOptions: DevModeOptions?): NodeConfigurationImpl {
         return testConfiguration.copy(devMode = devMode, devModeOptions = devModeOptions)
     }
