@@ -1,6 +1,8 @@
 package com.r3.ha.utilities
 
+import com.r3.ha.utilities.RegistrationTool.Companion.toBridgeConfiguration
 import com.r3.ha.utilities.RegistrationTool.Companion.toFolderName
+import com.r3.ha.utilities.RegistrationTool.Companion.toNodeConfiguration
 import com.r3.ha.utilities.RegistrationTool.Companion.x500PrincipalToTLSAlias
 import net.corda.cliutils.CommonCliConstants.BASE_DIR
 import net.corda.cliutils.ExitCodes
@@ -8,6 +10,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.copyTo
 import net.corda.core.internal.div
 import net.corda.core.internal.exists
+import net.corda.core.internal.toPath
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.DEV_ROOT_CA
@@ -25,6 +28,7 @@ import picocli.CommandLine
 import java.io.ByteArrayInputStream
 import java.io.InputStream
 import java.io.InputStreamReader
+import java.nio.file.Paths
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -237,5 +241,19 @@ class RegistrationToolTest {
         }
 
         assertEquals(ExitCodes.FAILURE, runResult)
+    }
+
+    @Test
+    fun `resolve path for crypto service configuration files`() {
+        val nodeConf = javaClass.getResource("/path-resolution/node.conf").toPath().toNodeConfiguration(tempFolder.root.toPath())
+        assertTrue(nodeConf.cryptoServiceConf!!.exists())
+        assertTrue(nodeConf.cryptoServiceConf!!.toString().endsWith("gemalto.conf"))
+        assertTrue(nodeConf.freshIdentitiesConfiguration!!.cryptoServiceConfiguration.cryptoServiceConf!!.exists())
+        assertTrue(nodeConf.freshIdentitiesConfiguration!!.cryptoServiceConfiguration.cryptoServiceConf!!.toString().endsWith("securosys.conf"))
+
+        val bridgeConf = javaClass.getResource("/path-resolution/firewall.conf").toPath().toBridgeConfiguration()
+        val cryptoServiceConf = bridgeConf.getString("p2pTlsSigningCryptoServiceConfig.conf")
+        assertTrue(cryptoServiceConf.endsWith("gemalto.conf"))
+        assertTrue(Paths.get(cryptoServiceConf).exists())
     }
 }

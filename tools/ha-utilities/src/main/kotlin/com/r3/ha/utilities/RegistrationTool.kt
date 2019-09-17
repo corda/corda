@@ -77,6 +77,29 @@ class RegistrationTool : HAToolBase("node-registration", "Corda registration too
         private fun String.toFileName(): String {
             return replace("[^a-zA-Z0-9-_.]".toRegex(), "_")
         }
+
+        private val Path.parentOrDefault get() = this.parent ?: Paths.get(".")
+
+        // Convert relative crypto service file path to absolute for specified configuration property name
+        private fun Config.resolvePathValue(configFile: Path, propertyName: String): Config {
+            if (hasPath(propertyName)) {
+                val pathValue = Paths.get(getString(propertyName))
+                if (!pathValue.isAbsolute) {
+                    val resolvedPathValue = configFile.parentOrDefault.toAbsolutePath().resolve(pathValue)
+                    return withValue(propertyName, ConfigValueFactory.fromAnyRef(resolvedPathValue.toString()))
+                }
+            }
+            return this
+        }
+
+        internal fun Path.toNodeConfiguration(baseDir: Path? = null): NodeConfiguration = ConfigHelper.loadConfig(parentOrDefault, this)
+                .resolvePathValue(this, "cryptoServiceConf")
+                .resolvePathValue(this, "freshIdentitiesConfiguration.cryptoServiceConfiguration.cryptoServiceConf")
+                .run { if (baseDir != null) withValue("baseDirectory", ConfigValueFactory.fromAnyRef(baseDir.toString())) else this }
+                .parseAsNodeConfiguration().value()
+
+        internal fun Path.toBridgeConfiguration(): Config = ConfigHelper.loadConfig(parentOrDefault, this)
+                .resolvePathValue(this, "p2pTlsSigningCryptoServiceConfig.conf")
     }
 
     @Option(names = ["-b", BASE_DIR], paramLabel = "FOLDER", description = ["The node working directory where all the files are kept."])
@@ -107,19 +130,17 @@ class RegistrationTool : HAToolBase("node-registration", "Corda registration too
     override fun runTool() {
         initialiseSerialization() // Should be called after CliWrapperBase.initLogging()
         validateNodeHsmConfigs(configFiles)
-        val bridgeConfig = bridgeConfigFile?.let {
-            logger.logConfigPath(it)
-            ConfigHelper.loadConfig(it.parentOrDefault, it)
-        }
+
+        logger.logConfigPath(bridgeConfigFile)
+        val bridgeConfig = bridgeConfigFile?.toBridgeConfiguration()
         // Return null for BC_SIMPLE
-        val bridgeCryptoService = bridgeConfig?.let {
-            makeBridgeCryptoService(it, bridgeConfigFile!!.parentOrDefault)
-        }
+        val bridgeCryptoService = bridgeConfig?.makeBridgeCryptoService("p2pTlsSigningCryptoServiceConfig")
+
         // Parallel processing is beneficial as it is possible to submit multiple CSR in close succession
         // If manual interaction will be needed - it would be possible to sign them all off at once on Doorman side.
         val nodeConfigurations = ConcurrentLinkedQueue<Pair<CordaX500Name, Try<NodeConfiguration>>>()
-        val startedThreads = configFiles.map {
-            val legalName = ConfigHelper.loadConfig(it.parentOrDefault, it).parseAsNodeConfiguration().value().myLegalName
+        val startedThreads = configFiles.map { configFile ->
+            val legalName = configFile.toNodeConfiguration().myLegalName
             thread(name = legalName.toString(), start = true) {
                 nodeConfigurations.add(Pair(legalName, Try.on {
                     try {
@@ -127,11 +148,7 @@ class RegistrationTool : HAToolBase("node-registration", "Corda registration too
                         // Load the config again with modified base directory.
                         val folderName = if (legalName.commonName == null) legalName.organisation else "${legalName.commonName},${legalName.organisation}"
                         val baseDir = baseDirectory / folderName.toFileName()
-                        val parsedConfig = resolveCryptoServiceConfPathToAbsolutePath(it.parentOrDefault,
-                                ConfigHelper.loadConfig(it.parentOrDefault, it))
-                                .withValue("baseDirectory", ConfigValueFactory.fromAnyRef(baseDir.toString()))
-                                .parseAsNodeConfiguration()
-                                .value()
+                        val parsedConfig = configFile.toNodeConfiguration(baseDir)
                         val sslPublicKey = if (bridgeCryptoService != null) {
                             val alias = x500PrincipalToTLSAlias(legalName.x500Principal) // must be lower case to stay consistent with public .JKS file
                             bridgeCryptoService.generateKeyPair(alias, X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
@@ -193,46 +210,17 @@ class RegistrationTool : HAToolBase("node-registration", "Corda registration too
         }
     }
 
-    private fun resolveCryptoServiceConfPathToAbsolutePath(configFileParentPath: Path, config: Config): Config {
-        if (config.hasPath("cryptoServiceConf")) {
-            val cryptoServiceConfPath = Paths.get(config.getString("cryptoServiceConf"))
-            if (!cryptoServiceConfPath.isAbsolute) {
-                return config.withValue("cryptoServiceConf",
-                        ConfigValueFactory.fromAnyRef(resolveRelativeCryptoConfPath(configFileParentPath, cryptoServiceConfPath).toString()))
-            }
-        }
-        return config
-    }
-
-    private fun resolveCryptoConfPath(configFileParentPath: Path, configFilePath: Path): Path {
-        if (!configFilePath.isAbsolute) {
-            return resolveRelativeCryptoConfPath(configFileParentPath, configFilePath)
-        }
-        return configFilePath
-    }
-
-    private fun resolveRelativeCryptoConfPath(configFileParentPath: Path, relativeConfigFilePath: Path): Path {
-        val absoluteParentPath = configFileParentPath.toAbsolutePath()
-        return absoluteParentPath.resolve(relativeConfigFilePath)
-    }
-
-    private fun String.toFileName(): String {
-        return replace("[^a-zA-Z0-9-_.]".toRegex(), "_")
-    }
-
-    private val Path.parentOrDefault get() = this.parent ?: Paths.get(".")
-
     // Make sure the nodes don't have conflicting crypto service configurations
     private fun validateNodeHsmConfigs(configFiles: List<Path>) {
         val cryptoServicesTypes = mutableMapOf<SupportedCryptoServices, MutableList<Any>>()
         configFiles.forEach { configPath ->
             logger.logConfigPath(configPath)
-            val nodeConfig = ConfigHelper.loadConfig(configPath.parentOrDefault, configPath).parseAsNodeConfiguration().value()
+            val nodeConfig = configPath.toNodeConfiguration()
             val errorMessage = "Node ${nodeConfig.myLegalName} has conflicting crypto service configuration."
             logger.logCryptoServiceName(nodeConfig.cryptoServiceName, nodeConfig.myLegalName)
             nodeConfig.cryptoServiceName?.let { nodeCryptoServiceName ->
                 val configs = cryptoServicesTypes.getOrDefault(nodeCryptoServiceName, mutableListOf())
-                val cryptoServiceConfigPath = resolveCryptoConfPath(configPath.parentOrDefault, nodeConfig.cryptoServiceConf!!)
+                val cryptoServiceConfigPath = nodeConfig.cryptoServiceConf!!
                 logger.logConfigPath(cryptoServiceConfigPath)
                 val toProcess = readCryptoConfigFile(nodeCryptoServiceName, cryptoServiceConfigPath)
                 configs.forEach {
@@ -312,15 +300,15 @@ class RegistrationTool : HAToolBase("node-registration", "Corda registration too
         return args
     }
 
-    private fun makeBridgeCryptoService(bridgeConfig: Config, configDir: Path): CryptoService? {
+    private fun Config.makeBridgeCryptoService(propertyName: String): CryptoService? {
         // Get CryptoService type from bridge configuration
-        if (!bridgeConfig.hasPath("p2pTlsSigningCryptoServiceConfig")) {
+        if (!hasPath(propertyName)) {
             logger.logCryptoServiceName(SupportedCryptoServices.BC_SIMPLE, DUMMY_X500_NAME)
             return null // Use BC_SIMPLE by default
         }
-        val bridgeCryptoServiceConfig = bridgeConfig.getConfig("p2pTlsSigningCryptoServiceConfig")
+        val bridgeCryptoServiceConfig = getConfig(propertyName)
         if (!bridgeCryptoServiceConfig.hasPath("name")) {
-            throw IllegalArgumentException("Key 'name' is not specified in Bridge 'p2pTlsSigningCryptoServiceConfig'.")
+            throw IllegalArgumentException("Key 'name' is not specified in Bridge '$propertyName'.")
         }
         val bridgeCryptoServiceName = SupportedCryptoServices.valueOf(bridgeCryptoServiceConfig.getString("name"))
         logger.logCryptoServiceName(bridgeCryptoServiceName, DUMMY_X500_NAME)
@@ -328,10 +316,9 @@ class RegistrationTool : HAToolBase("node-registration", "Corda registration too
             return null // Skip crypto service creation for BC_SIMPLE
         }
         if (!bridgeCryptoServiceConfig.hasPath("conf")) {
-            throw IllegalArgumentException("Key 'conf' is not specified in Bridge 'p2pTlsSigningCryptoServiceConfig'.")
+            throw IllegalArgumentException("Key 'conf' is not specified in Bridge '$propertyName'.")
         }
-        // Resolve crypto service config path in the same way as for nodes
-        val bridgeCryptoServiceConfigPath = resolveCryptoConfPath(configDir, Paths.get(bridgeCryptoServiceConfig.getString("conf")))
+        val bridgeCryptoServiceConfigPath = Paths.get(bridgeCryptoServiceConfig.getString("conf"))
         logger.logConfigPath(bridgeCryptoServiceConfigPath)
         return CryptoServiceFactory.makeCryptoService(bridgeCryptoServiceName, DUMMY_X500_NAME, null, bridgeCryptoServiceConfigPath)
     }
