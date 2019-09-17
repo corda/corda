@@ -15,9 +15,7 @@ import net.corda.testing.driver.driver
 import net.corda.testing.node.internal.cordappForClasses
 import org.hamcrest.CoreMatchers.`is`
 import org.junit.Assert.assertThat
-import org.junit.Rule
 import org.junit.Test
-import org.junit.rules.Timeout
 
 class FlowOverrideTests {
 
@@ -66,10 +64,6 @@ class FlowOverrideTests {
 
     private val nodeAClasses = setOf(Ping::class.java, Pong::class.java, Pongiest::class.java)
     private val nodeBClasses = setOf(Ping::class.java, Pong::class.java)
-
-    @Rule
-    @JvmField
-    val globalTimeout = Timeout.seconds(180)
 
     @Test
     fun `should use the most specific implementation of a responding flow`() {

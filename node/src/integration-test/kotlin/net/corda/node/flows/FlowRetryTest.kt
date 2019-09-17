@@ -26,9 +26,7 @@ import net.corda.testing.node.User
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.hibernate.exception.ConstraintViolationException
 import org.junit.Before
-import org.junit.Rule
 import org.junit.Test
-import org.junit.rules.Timeout
 import java.lang.management.ManagementFactory
 import java.sql.SQLException
 import java.sql.SQLTransientConnectionException
@@ -49,10 +47,6 @@ class FlowRetryTest {
         WrappedTransientConnectionFailureFlow.retryCount = -1
         GeneralExternalFailureFlow.retryCount = -1
     }
-
-    @Rule
-    @JvmField
-    val globalTimeout = Timeout.seconds(180)
 
     @Test
     fun `flows continue despite errors`() {
