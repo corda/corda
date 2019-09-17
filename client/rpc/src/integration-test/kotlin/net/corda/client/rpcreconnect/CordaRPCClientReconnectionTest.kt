@@ -3,6 +3,7 @@ package net.corda.client.rpcreconnect
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.client.rpc.CordaRPCClientTest
+import net.corda.client.rpc.GracefulReconnect
 import net.corda.client.rpc.internal.ReconnectingCordaRPCOps
 import net.corda.core.messaging.startTrackedFlow
 import net.corda.core.utilities.NetworkHostAndPort
@@ -34,6 +35,8 @@ class CordaRPCClientReconnectionTest: IntegrationTest() {
 
     private val portAllocator = incrementalPortAllocation()
 
+    private val gracefulReconnect = GracefulReconnect()
+
     companion object {
 
         @ClassRule
@@ -61,7 +64,7 @@ class CordaRPCClientReconnectionTest: IntegrationTest() {
                     maxReconnectAttempts = 5
             ))
 
-            (client.start(rpcUser.username, rpcUser.password, gracefulReconnect = true).proxy as ReconnectingCordaRPCOps).use {
+            (client.start(rpcUser.username, rpcUser.password, gracefulReconnect = gracefulReconnect).proxy as ReconnectingCordaRPCOps).use {
                 val rpcOps = it
                 val networkParameters = rpcOps.networkParameters
                 val cashStatesFeed = rpcOps.vaultTrack(Cash.State::class.java)
@@ -76,7 +79,7 @@ class CordaRPCClientReconnectionTest: IntegrationTest() {
                 val networkParametersAfterCrash = rpcOps.networkParameters
                 assertThat(networkParameters).isEqualTo(networkParametersAfterCrash)
                 assertTrue {
-                    latch.await(2, TimeUnit.SECONDS)
+                    latch.await(20, TimeUnit.SECONDS)
                 }
             }
         }
@@ -101,7 +104,7 @@ class CordaRPCClientReconnectionTest: IntegrationTest() {
                     maxReconnectAttempts = 5
             ))
 
-            (client.start(rpcUser.username, rpcUser.password, gracefulReconnect = true).proxy as ReconnectingCordaRPCOps).use {
+            (client.start(rpcUser.username, rpcUser.password, gracefulReconnect = gracefulReconnect).proxy as ReconnectingCordaRPCOps).use {
                 val rpcOps = it
                 val cashStatesFeed = rpcOps.vaultTrack(Cash.State::class.java)
                 val subscription = cashStatesFeed.updates.subscribe { latch.countDown() }
@@ -141,7 +144,7 @@ class CordaRPCClientReconnectionTest: IntegrationTest() {
                     maxReconnectAttempts = 5
             ))
 
-            (client.start(rpcUser.username, rpcUser.password, gracefulReconnect = true).proxy as ReconnectingCordaRPCOps).use {
+            (client.start(rpcUser.username, rpcUser.password, gracefulReconnect = gracefulReconnect).proxy as ReconnectingCordaRPCOps).use {
                 val rpcOps = it
                 val networkParameters = rpcOps.networkParameters
                 val cashStatesFeed = rpcOps.vaultTrack(Cash.State::class.java)

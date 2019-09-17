@@ -51,8 +51,9 @@ Unreleased
 * Added ``nodeDiagnosticInfo`` to the RPC API. The new RPC is also available as the ``run nodeDiagnosticInfo`` command executable from
   the Corda shell. It retrieves version information about the Corda platform and the CorDapps installed on the node.
 
-* ``CordaRPCClient.start`` has a new ``gracefulReconnect`` parameter. When ``true`` (the default is ``false``) it will cause the RPC client
-  to try to automatically reconnect to the node on disconnect. Further any ``Observable`` s previously created will continue to vend new
+* ``CordaRPCClient.start`` has a new ``gracefulReconnect`` parameter. The class ``GracefulReconnect`` takes two lambdas - one for callbacks
+  on disconnect, and one for callbacks on reconnection.  When provided (ie. the ``gracefulReconnect`` parameter is not null) the RPC client
+  will to try to automatically reconnect to the node on disconnect. Further any ``Observable`` s previously created will continue to vend new
   events on reconnect.
 
   .. note:: This is only best-effort and there are no guarantees of reliability.

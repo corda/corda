@@ -104,7 +104,7 @@ class NetworkMapUpdaterTest {
                 server.networkParameters.serialize().hash,
                 ourNodeInfo,
                 networkParameters,
-                MockKeyManagementService(makeTestIdentityService(), ourKeyPair, pkToIdCache = MockPublicKeyToOwningIdentityCache()),
+                MockKeyManagementService(makeTestIdentityService(), ourKeyPair),
                 NetworkParameterAcceptanceSettings(autoAcceptNetworkParameters, excludedAutoAcceptNetworkParameters))
     }
 

@@ -79,8 +79,7 @@ open class MockServices private constructor(
         private val moreKeys: Array<out KeyPair>,
         override val keyManagementService: KeyManagementService = MockKeyManagementService(
                 identityService,
-                *arrayOf(initialIdentity.keyPair) + moreKeys,
-                pkToIdCache = MockPublicKeyToOwningIdentityCache()
+                *arrayOf(initialIdentity.keyPair) + moreKeys
         )
 ) : ServiceHub {
 
@@ -125,8 +124,7 @@ open class MockServices private constructor(
             val database = configureDatabase(dataSourceProps, makeTestDatabaseProperties(initialIdentity.name.organisation), identityService::wellKnownPartyFromX500Name, identityService::wellKnownPartyFromAnonymous, schemaService)
             val keyManagementService = MockKeyManagementService(
                     identityService,
-                    *arrayOf(initialIdentity.keyPair) + moreKeys,
-                    pkToIdCache = MockPublicKeyToOwningIdentityCache()
+                    *arrayOf(initialIdentity.keyPair) + moreKeys
             )
             val mockService = database.transaction {
                 makeMockMockServices(cordappLoader, identityService, networkParameters, initialIdentity, moreKeys.toSet(), keyManagementService, schemaService, database)
@@ -157,20 +155,27 @@ open class MockServices private constructor(
             val dataSourceProps = makeTestDataSourceProperties()
             val schemaService = NodeSchemaService(cordappLoader.cordappSchemas)
             val identityService = PersistentIdentityService(TestingNamedCacheFactory())
-            val persistence = configureDatabase(dataSourceProps, DatabaseConfig(), identityService::wellKnownPartyFromX500Name, identityService::wellKnownPartyFromAnonymous, schemaService)
+            val persistence = configureDatabase(
+                    hikariProperties = dataSourceProps,
+                    databaseConfig = DatabaseConfig(),
+                    wellKnownPartyFromX500Name = identityService::wellKnownPartyFromX500Name,
+                    wellKnownPartyFromAnonymous = identityService::wellKnownPartyFromAnonymous,
+                    schemaService = schemaService
+            )
+
+            val pkToIdCache = PublicKeyToOwningIdentityCacheImpl(persistence, TestingNamedCacheFactory())
 
             // Create a persistent identity service and add all the supplied identities.
             identityService.apply {
                 ourNames = setOf(initialIdentity.name)
                 database = persistence
-                start(DEV_ROOT_CA.certificate)
+                start(DEV_ROOT_CA.certificate, pkToIdCache = pkToIdCache)
                 persistence.transaction { identityService.loadIdentities(moreIdentities + initialIdentity.identity) }
             }
 
             // Create a persistent key management service and add the key pair which was created for the TestIdentity.
             // We only add the keypair for the initial identity and any other keys which this node may control. Note: We don't add the keys
             // for the other identities.
-            val pkToIdCache = PublicKeyToOwningIdentityCacheImpl(persistence, TestingNamedCacheFactory())
             val aliasKeyMap = mutableMapOf<String, KeyPair>()
             val aliasedMoreKeys = moreKeys.mapIndexed { index, keyPair ->
                 val alias = "Extra key $index"
@@ -184,8 +189,7 @@ open class MockServices private constructor(
                     TestingNamedCacheFactory(),
                     identityService,
                     persistence,
-                    MockCryptoService(aliasKeyMap),
-                    pkToIdCache
+                    MockCryptoService(aliasKeyMap)
             )
             persistence.transaction { keyManagementService.start(aliasedMoreKeys + aliasedIdentityKey) }
 

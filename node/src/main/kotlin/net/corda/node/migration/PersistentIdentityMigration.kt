@@ -45,7 +45,12 @@ class PersistentIdentityMigration : CustomSqlChange {
             val oldPkHash = resultSet.getString(1)
             val identityBytes = resultSet.getBytes(2)
             val partyAndCertificate = PartyAndCertificate(X509CertificateFactory().delegate.generateCertPath(identityBytes.inputStream()))
-            generatedStatements.addAll(MigrationData(oldPkHash, partyAndCertificate).let { listOf(updateHashToIdentityRow(it, dataSource), updateNameToHashRow(it, dataSource)) })
+            generatedStatements.addAll(MigrationData(oldPkHash, partyAndCertificate).let {
+                listOf(
+                        updateHashToIdentityRow(it, dataSource),
+                        updateNameToHashRow(it, dataSource)
+                )
+            })
         }
         return generatedStatements.toTypedArray()
     }

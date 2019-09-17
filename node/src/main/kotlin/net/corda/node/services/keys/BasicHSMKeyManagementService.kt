@@ -10,12 +10,10 @@ import net.corda.core.utilities.MAX_HASH_HEX_SIZE
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.BasicHSMKeyManagementService.PrivateKeyType.REGULAR
 import net.corda.node.services.keys.BasicHSMKeyManagementService.PrivateKeyType.WRAPPED
-import net.corda.node.services.persistence.WritablePublicKeyToOwningIdentityCache
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.nodeapi.internal.KeyOwningIdentity
 import net.corda.nodeapi.internal.cryptoservice.CryptoService
 import net.corda.nodeapi.internal.cryptoservice.SignOnlyCryptoService
-import net.corda.nodeapi.internal.cryptoservice.WrappedPrivateKey
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import org.apache.commons.lang3.ArrayUtils.EMPTY_BYTE_ARRAY
@@ -43,19 +41,19 @@ import kotlin.collections.LinkedHashSet
  * - Signing with fresh keys that have been previously generated will be performed locally or using [wrappingCryptoService], depending
  *  on how the keys were generated and stored.
  */
-class BasicHSMKeyManagementService(cacheFactory: NamedCacheFactory,
-                                   override val identityService: PersistentIdentityService,
-                                   private val database: CordaPersistence,
-                                   private val cryptoService: SignOnlyCryptoService,
-                                   private val pkToIdCache: WritablePublicKeyToOwningIdentityCache) : SingletonSerializeAsToken(), KeyManagementServiceInternal {
+class BasicHSMKeyManagementService(
+        cacheFactory: NamedCacheFactory,
+        override val identityService: PersistentIdentityService,
+        private val database: CordaPersistence,
+        private val cryptoService: SignOnlyCryptoService
+) : SingletonSerializeAsToken(), KeyManagementServiceInternal {
 
     constructor(cacheFactory: NamedCacheFactory,
                 identityService: PersistentIdentityService,
                 database: CordaPersistence,
                 cryptoService: CryptoService,
                 wrappingCryptoService: CryptoService,
-                wrappingKeyAlias: String,
-                pkToIdCache: WritablePublicKeyToOwningIdentityCache): this(cacheFactory, identityService, database, cryptoService, pkToIdCache) {
+                wrappingKeyAlias: String): this(cacheFactory, identityService, database, cryptoService) {
         this.wrappingCryptoService = wrappingCryptoService
         this.wrappingKeyAlias = wrappingKeyAlias
     }
@@ -186,14 +184,28 @@ class BasicHSMKeyManagementService(cacheFactory: NamedCacheFactory,
             val keyPair = generateKeyPair()
             database.transaction {
                 keysMap[keyPair.public] = GenericPrivateKey(keyPair.private)
-                pkToIdCache[keyPair.public] = KeyOwningIdentity.fromUUID(externalId)
+                // Register the key to our identity.
+                val ourIdentity = identityService.wellKnownPartyFromX500Name(identityService.ourNames.first())
+                        ?: throw IllegalStateException("Could not lookup node Identity.")
+                // No checks performed here as entries for the new key couldn't have existed before in the maps.
+                identityService.registerKeyToParty(keyPair.public, ourIdentity)
+                if (externalId != null) {
+                    identityService.registerKeyToExternalId(keyPair.public, externalId)
+                }
             }
             keyPair.public
         } else {
             val (publicKey, privateWrappedKey) = wrappingCryptoService!!.generateWrappedKeyPair(wrappingKeyAlias!!)
             database.transaction {
                 keysMap[publicKey] = GenericPrivateKey(privateWrappedKey)
-                pkToIdCache[publicKey] = KeyOwningIdentity.fromUUID(externalId)
+                // Register the key to our identity.
+                val ourIdentity = identityService.wellKnownPartyFromX500Name(identityService.ourNames.first())
+                        ?: throw IllegalStateException("Could not lookup node Identity.")
+                // No checks performed here as entries for the new key couldn't have existed before in the maps.
+                identityService.registerKeyToParty(publicKey, ourIdentity)
+                if (externalId != null) {
+                    identityService.registerKeyToExternalId(publicKey, externalId)
+                }
             }
             publicKey
         }
@@ -259,9 +271,5 @@ class BasicHSMKeyManagementService(cacheFactory: NamedCacheFactory,
                 }
             }
         }
-    }
-
-    override fun externalIdForPublicKey(publicKey: PublicKey): UUID? {
-        return pkToIdCache[publicKey]?.uuid
     }
 }

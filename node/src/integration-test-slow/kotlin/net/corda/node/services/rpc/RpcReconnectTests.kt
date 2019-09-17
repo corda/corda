@@ -1,7 +1,7 @@
 package net.corda.node.services.rpc
 
 import net.corda.client.rpc.CordaRPCClient
-import net.corda.client.rpc.CordaRPCClientConfiguration
+import net.corda.client.rpc.GracefulReconnect
 import net.corda.client.rpc.internal.ReconnectingCordaRPCOps
 import net.corda.client.rpc.notUsed
 import net.corda.core.contracts.Amount
@@ -12,7 +12,10 @@ import net.corda.core.node.services.Vault
 import net.corda.core.node.services.vault.PageSpecification
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.node.services.vault.builder
-import net.corda.core.utilities.*
+import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.getOrThrow
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashIssueAndPaymentFlow
 import net.corda.finance.schemas.CashSchemaV1
@@ -40,8 +43,10 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
 import kotlin.math.absoluteValue
+import kotlin.math.max
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import kotlin.test.currentStackTrace
 
 /**
  * This is a stress test for the rpc reconnection logic, which triggers failures in a probabilistic way.
@@ -122,10 +127,21 @@ class RpcReconnectTests : IntegrationTest() {
             val baseAmount = Amount.parseCurrency("0 USD")
             val issuerRef = OpaqueBytes.of(0x01)
 
+            var numDisconnects = 0
+            var numReconnects = 0
+            val maxStackOccurrences = AtomicInteger()
+
             val addressesForRpc = addresses.map { it.proxyAddress }
             // DOCSTART rpcReconnectingRPC
+            val onReconnect = {
+                numReconnects++
+                // We only expect to see a single reconnectOnError in the stack trace.  Otherwise we're in danger of stack overflow recursion
+                maxStackOccurrences.set(max(maxStackOccurrences.get(), currentStackTrace().count { it.methodName == "reconnectOnError" }))
+                Unit
+            }
+            val reconnect = GracefulReconnect(onDisconnect = { numDisconnects++ }, onReconnect = onReconnect)
             val client = CordaRPCClient(addressesForRpc)
-            val bankAReconnectingRpc = client.start(demoUser.username, demoUser.password, gracefulReconnect = true).proxy as ReconnectingCordaRPCOps
+            val bankAReconnectingRpc = client.start(demoUser.username, demoUser.password, gracefulReconnect = reconnect).proxy as ReconnectingCordaRPCOps
             // DOCEND rpcReconnectingRPC
 
             // Observe the vault and collect the observations.
@@ -273,6 +289,11 @@ class RpcReconnectTests : IntegrationTest() {
 
             val nrFailures = nrRestarts.get()
             log.info("Checking results after $nrFailures restarts.")
+
+            // We should get one disconnect and one reconnect for each failure
+            assertThat(numDisconnects).isEqualTo(numReconnects)
+            assertThat(numReconnects).isLessThanOrEqualTo(nrFailures)
+            assertThat(maxStackOccurrences.get()).isLessThan(2)
 
             // Query the vault and check that states were created for all flows.
             fun readCashStates() = bankAReconnectingRpc
