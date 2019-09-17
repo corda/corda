@@ -52,13 +52,6 @@ dependencies {
     testCompile "org.assertj:assertj-core:$assertj_version"
 }
 
-tasks.withType(Test) {
-    // fork a new test process for every test class to resolve TC reported error:
-    // java.lang.IllegalArgumentException: There is more than one CorDapp containing the package net.corda.finance.workflows on the classpath 
-    // Specify a package name which is unique to the CorDapp.
-    forkEvery = 1
-}
-
 task testJar(type: Jar) {
     classifier "tests"
     from sourceSets.test.output
