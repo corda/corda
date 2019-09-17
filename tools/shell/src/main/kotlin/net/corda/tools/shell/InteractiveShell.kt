@@ -91,7 +91,7 @@ object InteractiveShell {
     fun startShell(configuration: ShellConfiguration, classLoader: ClassLoader? = null, standalone: Boolean = false) {
         rpcOps = { username: String, password: String ->
             if (standalone) {
-                ReconnectingCordaRPCOps(configuration.hostAndPort, username, password, configuration.ssl, classLoader).also {
+                ReconnectingCordaRPCOps(configuration.hostAndPort, username, password, CordaRPCClientConfiguration.DEFAULT, configuration.ssl, classLoader).also {
                     rpcConn = it
                 }
             } else {
