@@ -50,7 +50,7 @@ class NodeInfoWatcherTest {
     fun start() {
         nodeInfoAndSigned = createNodeInfoAndSigned(ALICE_NAME)
         val identityService = makeTestIdentityService()
-        keyManagementService = MockKeyManagementService(identityService, pkToIdCache = MockPublicKeyToOwningIdentityCache())
+        keyManagementService = MockKeyManagementService(identityService)
         nodeInfoWatcher = NodeInfoWatcher(tempFolder.root.toPath(), scheduler)
         nodeInfoPath = tempFolder.root.toPath() / NODE_INFO_DIRECTORY
     }

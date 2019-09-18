@@ -117,7 +117,7 @@ class RpcWorkerServiceHub(override val configuration: NodeConfiguration,
             configuration.cryptoServiceTimeout
     ).closeOnStop()
     @Suppress("LeakingThis")
-    override val keyManagementService = BasicHSMKeyManagementService(cacheFactory, identityService, database, cryptoService, pkToIdCache)
+    override val keyManagementService = BasicHSMKeyManagementService(cacheFactory, identityService, database, cryptoService)
     override val networkParametersService = DBNetworkParametersStorage(cacheFactory, database, networkMapClient)
     private val servicesForResolution = ServicesForResolutionImpl(identityService, attachments, cordappProvider, networkParametersService, validatedTransactions)
     @Suppress("LeakingThis")
@@ -272,7 +272,7 @@ class RpcWorkerServiceHub(override val configuration: NodeConfiguration,
         networkMapClient?.start(trustRoot)
 
         database.startHikariPool(configuration.dataSourceProperties, configuration.database, schemaService.schemaOptions.keys, ourName = myInfo.legalIdentities.first().name)
-        identityService.start(trustRoot, listOf(myInfo.legalIdentitiesAndCerts.first().certificate, nodeCa))
+        identityService.start(trustRoot, listOf(myInfo.legalIdentitiesAndCerts.first().certificate, nodeCa), listOf(), pkToIdCache)
 
         // networkParametersService needs the database started
         networkParametersService.setCurrentParameters(signedNetworkParameters.signed, trustRoot)

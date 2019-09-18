@@ -157,7 +157,7 @@ class FlowWorkerServiceHub(override val configuration: NodeConfiguration,
             configuration.cryptoServiceTimeout
     ).closeOnStop()
     @Suppress("LeakingThis")
-    override val keyManagementService = BasicHSMKeyManagementService(cacheFactory, identityService, database, cryptoService, pkToIdCache).tokenize()
+    override val keyManagementService = BasicHSMKeyManagementService(cacheFactory, identityService, database, cryptoService).tokenize()
     override val nodeProperties = NodePropertiesPersistentStore(StubbedNodeUniqueIdProvider::value, database, cacheFactory)
     val flowLogicRefFactory = EnterpriseFlowLogicRefFactoryImpl(cordappLoader.appClassLoader, cacheFactory)
     override val monitoringService = MonitoringService(metricRegistry).tokenize()
@@ -438,7 +438,7 @@ class FlowWorkerServiceHub(override val configuration: NodeConfiguration,
         registerCordappFlows()
 
         database.startHikariPool(configuration.dataSourceProperties, configuration.database, schemaService.schemaOptions.keys, ourName = myInfo.legalIdentities.first().name)
-        identityService.start(trustRoot, listOf(myInfo.legalIdentitiesAndCerts.first().certificate, nodeCa))
+        identityService.start(trustRoot, listOf(myInfo.legalIdentitiesAndCerts.first().certificate, nodeCa), listOf(), pkToIdCache)
         networkParametersService.setCurrentParameters(signedNetworkParameters.signed, trustRoot)
         database.transaction {
             networkMapCache.start(networkParameters.notaries)
