@@ -75,6 +75,20 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
     constructor(
             transaction: SignedTransaction,
             sessions: Collection<FlowSession>,
+            progressTracker: ProgressTracker = tracker()
+    ) : this(transaction, emptyList(), progressTracker, sessions, true)
+
+    /**
+     * Notarise the given transaction and broadcast it to all the participants.
+     *
+     * @param transaction What to commit.
+     * @param sessions A collection of [FlowSession]s for each non-local participant of the transaction. Sessions to non-participants can
+     * also be provided.
+     * @param statesToRecord Which transactions to commit to the vault. Defaults to [StatesToRecord.ONLY_RELEVANT].
+     */
+    constructor(
+            transaction: SignedTransaction,
+            sessions: Collection<FlowSession>,
             progressTracker: ProgressTracker = tracker(),
             statesToRecord: StatesToRecord = ONLY_RELEVANT
     ) : this(transaction, emptyList(), progressTracker, sessions, true, statesToRecord)
