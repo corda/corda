@@ -73,7 +73,7 @@ class DBRunnerExtension : Extension, BeforeAllCallback, AfterAllCallback, Before
     private fun createDatabaseContext(groupName: String, defaultContextClassName: String): TestDatabaseContext {
         val className = System.getProperty("test.db.context") ?: defaultContextClassName
 
-        val ctx = Class.forName(className).newInstance() as TestDatabaseContext
+        val ctx = Class.forName(className).getDeclaredConstructor().newInstance() as TestDatabaseContext
         ctx.initialize(groupName)
         return ctx
     }

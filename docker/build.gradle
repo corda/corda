@@ -183,7 +183,7 @@ task buildAllImages(dependsOn: [buildDockerFolder]) {
 }
 
 task scanAllBuiltTags(dependsOn: [buildAllImages]) {
-    doLast{
+    doLast {
         exec {
             workingDir new File(project.projectDir, "container-scan")
             executable "./docker_up.sh"

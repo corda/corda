@@ -53,8 +53,12 @@ task shrink(type: ProGuardTask) {
     injars jar
     outjars shrinkJar
 
-    libraryjars "$javaHome/lib/rt.jar"
-    libraryjars "$javaHome/lib/jce.jar"
+    if (JavaVersion.current().isJava9Compatible()) {
+        libraryjars "$javaHome/jmods"
+    } else {
+        libraryjars "$javaHome/lib/rt.jar"
+        libraryjars "$javaHome/lib/jce.jar"
+    }
     configurations.runtimeClasspath.forEach {
         libraryjars it.path, filter: '!META-INF/versions/**'
     }

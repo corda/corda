@@ -173,3 +173,4 @@ application development please continue to refer to `the main project documentat
 
    deterministic-modules.rst
    changelog-enterprise
+    legal-info

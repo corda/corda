@@ -27,10 +27,12 @@ dependencies {
 
     // OkHTTP: Simple HTTP library.
     compile "com.squareup.okhttp3:okhttp:$okhttp_version"
-    compile project(':confidential-identities') 
+    compile project(':confidential-identities')
 
     // integration test helpers
     compile "org.springframework:spring-jdbc:$spring_jdbc_version"
+
+    testCompile "org.apache.commons:commons-lang3:3.9"
 }
 
 jar {

@@ -86,10 +86,10 @@ sourceSets {
 }
 
 jib.container {
-    mainClass = "net.corda.node.Corda"
-    args = ['--log-to-console', '--no-local-shell', '--config-file=/config/node.conf']
-    // The Groovy string needs to be converted to a `java.lang.String` below.
-    jvmFlags = ['-Xmx1g', "-javaagent:/app/libs/quasar-core-${quasar_version}-jdk8.jar".toString()]
+  mainClass = "net.corda.node.Corda"
+  args = ['--log-to-console', '--no-local-shell', '--config-file=/config/node.conf']
+  // The Groovy string needs to be converted to a `java.lang.String` below.
+  jvmFlags = ['-Xmx1g', "-javaagent:/app/libs/quasar-core-${quasar_version}.jar".toString()]
 }
 
 // Use manual resource copying of log4j2.xml rather than source sets.
@@ -120,7 +120,7 @@ dependencies {
     // Backwards compatibility goo: Apps expect confidential-identities to be loaded by default.
     // We could eventually gate this on a target-version check.
     compile project(':confidential-identities')
-    
+
     // Log4J: logging framework (with SLF4J bindings)
     compile "org.apache.logging.log4j:log4j-slf4j-impl:${log4j_version}"
     compile "org.apache.logging.log4j:log4j-web:${log4j_version}"
@@ -213,9 +213,6 @@ dependencies {
     integrationTestCompile "junit:junit:$junit_version"
     integrationTestCompile "org.assertj:assertj-core:${assertj_version}"
 
-    // AgentLoader: dynamic loading of JVM agents
-    compile group: 'com.ea.agentloader', name: 'ea-agent-loader', version: "${eaagentloader_version}"
-
     // BFT-Smart dependencies
     compile 'com.github.bft-smart:library:master-v1.1-beta-g6215ec8-87'
 
@@ -282,7 +279,7 @@ dependencies {
     compile "org.jolokia:jolokia-jvm:${jolokia_version}:agent"
     // Optional New Relic JVM reporter, used to push metrics to the configured account associated with a newrelic.yml configuration. See https://mvnrepository.com/artifact/com.palominolabs.metrics/metrics-new-relic
     compile "com.palominolabs.metrics:metrics-new-relic:${metrics_new_relic_version}"
-    
+
     // Allow access to simple SOCKS Server for integration testing
     integrationTestCompile("io.netty:netty-example:$netty_version") {
         exclude group: "io.netty", module: "netty-tcnative"
@@ -292,13 +289,16 @@ dependencies {
     // Adding native SSL library to allow using native SSL with Artemis and AMQP
     compile "io.netty:netty-tcnative-boringssl-static:$tcnative_version"
 
+    // Required by JVMAgentUtil (x-compatible java 8 & 11 agent lookup mechanism)
+    compile files("${System.properties['java.home']}/../lib/tools.jar")
+
     testCompile(project(':test-cli'))
     testCompile(project(':test-utils'))
 
     testCompile ("net.corda:corda-finance-contracts:$os_corda_release_version"){
         transitive = false
     }
-    
+
     slowIntegrationTestCompile sourceSets.main.output
     slowIntegrationTestCompile sourceSets.test.output
     slowIntegrationTestCompile configurations.compile
@@ -310,6 +310,11 @@ dependencies {
 tasks.withType(JavaCompile) {
     // Resolves a Gradle warning about not scanning for pre-processors.
     options.compilerArgs << '-proc:none'
+}
+
+tasks.withType(Test) {
+    if (JavaVersion.current() == JavaVersion.VERSION_11)
+        jvmArgs '-Djdk.attach.allowAttachSelf=true'
 }
 
 task integrationTest(type: Test) {

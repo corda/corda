@@ -73,6 +73,9 @@ dependencies {
     compile "com.fasterxml.jackson.core:jackson-databind:$jackson_version"
     runtime 'com.mattbertolini:liquibase-slf4j:2.0.0'
 
+    // JDK11: required by Quasar at run-time
+    runtime "com.esotericsoftware:kryo:4.0.2"
+
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
     testImplementation "junit:junit:$junit_version"
 

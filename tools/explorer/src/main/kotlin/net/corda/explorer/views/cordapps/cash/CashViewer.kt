@@ -1,6 +1,5 @@
 package net.corda.explorer.views.cordapps.cash
 
-import com.sun.javafx.collections.ObservableListWrapper
 import de.jensd.fx.glyphs.fontawesome.FontAwesomeIcon
 import de.jensd.fx.glyphs.fontawesome.FontAwesomeIconView
 import javafx.beans.binding.Bindings
@@ -270,7 +269,7 @@ class CashViewer : CordaView("Cash") {
 
         cashStatesList.apply {
             // TODO update this once we have actual timestamps.
-            itemsProperty().bind(selectedNode.map { it?.states?.map { StateRow(LocalDateTime.now(), it) } ?: ObservableListWrapper(emptyList()) })
+            itemsProperty().bind(selectedNode.map { it?.states?.map { StateRow(LocalDateTime.now(), it) } ?: FXCollections.emptyObservableList() })
             setCustomCellFactory { StateRowGraphic(it).root }
         }
 

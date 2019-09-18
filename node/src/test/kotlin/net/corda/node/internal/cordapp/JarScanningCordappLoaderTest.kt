@@ -2,13 +2,13 @@ package net.corda.node.internal.cordapp
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.*
-import net.corda.core.internal.packageName
 import net.corda.node.VersionInfo
 import net.corda.nodeapi.internal.DEV_PUB_KEY_HASHES
 import net.corda.testing.node.internal.cordappWithPackages
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 import java.nio.file.Paths
+import net.corda.core.internal.packageName_
 
 @InitiatingFlow
 class DummyFlow : FlowLogic<Unit>() {
@@ -79,7 +79,7 @@ class JarScanningCordappLoaderTest {
 
     @Test
     fun `flows are loaded by loader`() {
-        val jarFile = cordappWithPackages(javaClass.packageName).jarFile
+        val jarFile = cordappWithPackages(javaClass.packageName_).jarFile
         val loader = JarScanningCordappLoader.fromJarUrls(listOf(jarFile.toUri().toURL()))
 
         // One cordapp from this source tree. In gradle it will also pick up the node jar.

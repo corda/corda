@@ -50,6 +50,15 @@ dependencies {
     compile "org.glassfish.jersey.containers:jersey-container-jetty-http:${jersey_version}"
 }
 
+compileJava {
+    doFirst {
+        if (JavaVersion.current() == JavaVersion.VERSION_11)
+            options.compilerArgs = [
+                    '--add-exports', 'java.base/sun.nio.ch=ALL-UNNAMED'
+            ]
+    }
+}
+
 task integrationTest(type: Test) {
     testClassesDirs = sourceSets.integrationTest.output.classesDirs
     classpath = sourceSets.integrationTest.runtimeClasspath
@@ -60,6 +69,8 @@ jar {
 }
 
 publish {
+    publishSources = false
+    publishJavadoc = false
     name jar.baseName
 }
 

@@ -366,7 +366,7 @@ class Verifier(val ltx: LedgerTransaction, private val transactionClassLoader: C
 
         val contractInstances: List<Contract> = contractClasses.map { (contractClassName, contractClass) ->
             try {
-                contractClass.newInstance()
+                contractClass.getDeclaredConstructor().newInstance()
             } catch (e: Exception) {
                 throw TransactionVerificationException.ContractCreationError(ltx.id, contractClassName, e)
             }

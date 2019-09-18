@@ -22,6 +22,7 @@ import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.messaging.InternalCordaRPCOps
+import net.corda.core.internal.packageName_
 import net.corda.core.messaging.*
 import net.corda.tools.shell.utlities.ANSIProgressRenderer
 import net.corda.tools.shell.utlities.StdoutANSIProgressRenderer
@@ -417,7 +418,7 @@ object InteractiveShell {
                                                          inputData: String,
                                                          clazz: Class<out FlowLogic<T>>) : List<Pair<String, Type>> {
         val errors = ArrayList<String>()
-        val classPackage = clazz.packageName
+        val classPackage = clazz.packageName_
         lateinit var paramNamesFromConstructor: List<String>
 
         for (ctor in clazz.constructors) {                // Attempt construction with the given arguments.

@@ -14,7 +14,8 @@ import static org.mockito.Mockito.verify;
 
 public class OutputFormatCommandTest {
 
-    private InvocationContext<Map> mockInvocationContext;
+    @SuppressWarnings("unchecked")
+    private InvocationContext<Map> mockInvocationContext = mock(InvocationContext.class);
     private RenderPrintWriter printWriter;
 
     private OutputFormatCommand outputFormatCommand;
@@ -24,9 +25,7 @@ public class OutputFormatCommandTest {
 
     @Before
     public void setup() {
-        mockInvocationContext = mock(InvocationContext.class);
         printWriter = mock(RenderPrintWriter.class);
-
         outputFormatCommand = new OutputFormatCommand(printWriter);
     }
 
