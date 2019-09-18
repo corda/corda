@@ -123,10 +123,10 @@ class DriverDSLImpl(
     private val quasarJarPath: String by lazy { resolveJar("co.paralleluniverse.fibers.Suspendable") }
 
     private val bytemanJarPath: String? by lazy {
-        val maybeResolvedJar = resolveJar(".*byteman-\\d.*\\.jar$", verbose = false)
-        when (maybeResolvedJar) {
-            is Try.Success -> maybeResolvedJar.getOrThrow()
-            is Try.Failure -> null
+        try {
+            resolveJar("org.jboss.byteman.agent.Transformer")
+        } catch (e: Exception) {
+            null
         }
     }
 
