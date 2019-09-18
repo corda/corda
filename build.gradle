@@ -239,7 +239,7 @@ allprojects {
         // JDK11 official support (https://github.com/jacoco/jacoco/releases/tag/v0.8.3)
         toolVersion = "0.8.3"    
     }
-    
+
     tasks.withType(JavaCompile) {
         options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation" << "-Xlint:-options" << "-parameters"
         if (warnings_as_errors) {
@@ -261,6 +261,10 @@ allprojects {
             allWarningsAsErrors = warnings_as_errors
         }
     }
+
+    task('compileAll') {}
+    compileAll.dependsOn tasks.withType(JavaCompile)
+    compileAll.dependsOn tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile)
 
     tasks.withType(Jar) { task ->
         // Includes War and Ear
