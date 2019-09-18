@@ -126,7 +126,7 @@ interface FirewallConfiguration {
     val silencedIPs: Set<String>
 
     val sslHandshakeTimeout:Long
-    val revocationConfig: RevocationConfig
+    val revocationConfigSection: RevocationConfig
 
     // Internal use property which specifies whether Proxy settings, if provided, should be used for CRL retrieval when requested by Float via tunnel.
     // This makes sense only for Bridge.

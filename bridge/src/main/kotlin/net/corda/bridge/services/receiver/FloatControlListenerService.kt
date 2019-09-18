@@ -101,7 +101,7 @@ class FloatControlListenerService(val conf: FirewallConfiguration,
                 override val healthCheckPhrase = conf.healthCheckPhrase
                 override val silencedIPs: Set<String> = conf.silencedIPs
                 override val sslHandshakeTimeout: Long = conf.sslHandshakeTimeout
-                override val revocationConfig: RevocationConfig = if (conf.revocationConfig.mode != RevocationConfig.Mode.EXTERNAL_SOURCE) conf.revocationConfig else RevocationConfigImpl(RevocationConfig.Mode.OFF)
+                override val revocationConfig: RevocationConfig = if (conf.revocationConfigSection.mode != RevocationConfig.Mode.EXTERNAL_SOURCE) conf.revocationConfigSection else RevocationConfigImpl(RevocationConfig.Mode.OFF)
             }
             val controlServer = AMQPServer(floatControlAddress.host,
                     floatControlAddress.port,
