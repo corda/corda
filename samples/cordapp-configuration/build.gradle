@@ -16,7 +16,7 @@ dependencies {
 }
 
 def nodeTask = tasks.getByPath(':node:capsule:assemble')
-def webTask = tasks.getByPath(':webserver:webcapsule:assemble')
+def webTask = tasks.getByPath(':testing:testserver:testcapsule::assemble')
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask, webTask]) {
     directory file("$buildDir/nodes")
     nodeDefaults {
