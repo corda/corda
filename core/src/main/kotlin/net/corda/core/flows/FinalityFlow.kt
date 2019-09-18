@@ -90,7 +90,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
             transaction: SignedTransaction,
             sessions: Collection<FlowSession>,
             progressTracker: ProgressTracker = tracker(),
-            statesToRecord: StatesToRecord = ONLY_RELEVANT
+            statesToRecord: StatesToRecord
     ) : this(transaction, emptyList(), progressTracker, sessions, true, statesToRecord)
 
     /**
