@@ -20,6 +20,10 @@ import net.corda.core.utilities.debug
  * is acceptable then it is from that point onwards committed to the ledger, and will be written through to the
  * vault. Additionally it will be distributed to the parties reflected in the participants list of the states.
  *
+ * By default, the initiating flow will commit states that are relevant to the initiating party as indicated by
+ * [StatesToRecord.ALL_VISIBLE]. Relevance is determined by the union of all participants to states which have been
+ * included in the transaction. This default behaviour may be modified by passing in an alternate value for [StatesToRecord].
+ *
  * The transaction is expected to have already been resolved: if its dependencies are not available in local
  * storage, verification will fail. It must have signatures from all necessary parties other than the notary.
  *
@@ -83,7 +87,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
      * @param transaction What to commit.
      * @param sessions A collection of [FlowSession]s for each non-local participant of the transaction. Sessions to non-participants can
      * also be provided.
-     * @param statesToRecord Which transactions to commit to the vault. Defaults to [StatesToRecord.ONLY_RELEVANT].
+     * @param statesToRecord Which transactions to commit to the vault.
      */
     @JvmOverloads
     constructor(
