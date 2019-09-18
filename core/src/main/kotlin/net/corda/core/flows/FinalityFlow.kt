@@ -21,7 +21,7 @@ import net.corda.core.utilities.debug
  * vault. Additionally it will be distributed to the parties reflected in the participants list of the states.
  *
  * By default, the initiating flow will commit states that are relevant to the initiating party as indicated by
- * [StatesToRecord.ALL_VISIBLE]. Relevance is determined by the union of all participants to states which have been
+ * [StatesToRecord.ONLY_RELEVANT]. Relevance is determined by the union of all participants to states which have been
  * included in the transaction. This default behaviour may be modified by passing in an alternate value for [StatesToRecord].
  *
  * The transaction is expected to have already been resolved: if its dependencies are not available in local
