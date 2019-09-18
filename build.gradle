@@ -262,9 +262,9 @@ allprojects {
         }
     }
 
-    task('compileAll') {}
-    compileAll.dependsOn tasks.withType(JavaCompile)
-    compileAll.dependsOn tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile)
+    tasks.register('compileAll') { task ->
+        task.dependsOn tasks.withType(AbstractCompile)
+    }
 
     tasks.withType(Jar) { task ->
         // Includes War and Ear
