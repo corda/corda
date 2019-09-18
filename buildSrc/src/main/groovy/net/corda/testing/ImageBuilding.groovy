@@ -114,6 +114,8 @@ class ImageBuilding implements Plugin<Project> {
             force = true
             targetImageId buildDockerImageForSource.getImageId()
         }
-        pushBuildImage.finalizedBy(deleteContainer, deleteBuildImage, deleteTaggedImage)
+        if (!(System.getProperty("keepImage"))) {
+            pushBuildImage.finalizedBy(deleteContainer, deleteBuildImage, deleteTaggedImage)
+        }
     }
 }

@@ -120,8 +120,8 @@ class KubesTest extends DefaultTask {
 
                     startLogPumping(outputFile, stdOutIs, podIdx, printOutput)
                     KubePodResult execResult = waiter.join()
-                    project.logger.lifecycle("Successfully terminated log streaming for " + execResult.createdPod.getMetadata().getName())
-                    println "Gathering test results from ${execResult.createdPod.metadata.name}"
+                    project.logger.lifecycle("build has ended on on pod ${podName} (${podIdx}/${numberOfPods})")
+                    project.logger.lifecycle "Gathering test results from ${execResult.createdPod.metadata.name}"
                     def binaryResults = downloadTestXmlFromPod(client, namespace, execResult.createdPod)
                     project.logger.lifecycle("deleting: " + execResult.createdPod.getMetadata().getName())
                     client.resource(execResult.createdPod).delete()
@@ -256,8 +256,8 @@ class KubesTest extends DefaultTask {
                 .endEnv()
                 .withName(podName)
                 .withNewResources()
-                .addToRequests("cpu", new Quantity("2"))
-                .addToRequests("memory", new Quantity("6Gi"))
+                .addToRequests("cpu", new Quantity("6"))
+                .addToRequests("memory", new Quantity("12Gi"))
                 .endResources()
                 .addNewVolumeMount()
                 .withName("gradlecache")
