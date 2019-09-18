@@ -17,7 +17,7 @@ capsule {
 
 task buildExplorerJAR(type: FatCapsule, dependsOn: project(':tools:explorer').tasks.jar) {
     applicationClass 'net.corda.explorer.Main'
-    archiveName "node-explorer-${corda_release_version}.jar"
+    archiveName jdkClassifier == null ? "node-explorer-${corda_release_version}.jar" : "node-explorer-${corda_release_version}-${jdkClassifier}.jar"
     applicationSource = files(
         project(':tools:explorer').configurations.runtimeClasspath,
         project(':tools:explorer').tasks.jar,

@@ -36,7 +36,7 @@ capsule {
 
 task buildCordaJAR(type: FatCapsule, dependsOn: project(':node').tasks.jar) {
     applicationClass 'net.corda.node.Corda'
-    archiveName "corda-${corda_release_version}.jar"
+    archiveName jdkClassifier == null ? "corda-${corda_release_version}.jar" : "corda-${corda_release_version}-${jdkClassifier}.jar"
     applicationSource = files(
         project(':node').configurations.runtimeClasspath,
         project(':node').tasks.jar,

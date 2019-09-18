@@ -26,7 +26,7 @@ capsule {
 
 task buildWebserverJar(type: FatCapsule, dependsOn: project(':node').tasks.jar) {
     applicationClass 'net.corda.webserver.WebServer'
-    archiveName "corda-webserver-${corda_release_version}.jar"
+    archiveName jdkClassifier == null ? "corda-webserver-${corda_release_version}.jar" : "corda-webserver-${corda_release_version}-${jdkClassifier}.jar"
     applicationSource = files(
         project(':webserver').configurations.runtimeClasspath,
         project(':webserver').tasks.jar,

@@ -35,12 +35,11 @@ assemble.dependsOn buildShellCli
 
 artifacts {
     publish shadowJar {
-        classifier = ""
+        archiveClassifier = jdkClassifier
     }
 }
 
 jar {
-    classifier "ignore"
     enabled = false
 }
 
