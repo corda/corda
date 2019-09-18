@@ -346,7 +346,7 @@ class ClassCarpenterImpl @JvmOverloads constructor (override val whitelist: Clas
             visitCode()
             visitLdcInsn(Type.getType("L${schema.jvmName};"))
             visitVarInsn(ALOAD, 0)
-            visitMethodInsn(INVOKESTATIC, jlEnum, "valueOf", "(L$jlClass;L$jlString;)L$jlEnum;", true)
+            visitMethodInsn(INVOKESTATIC, jlEnum, "valueOf", "(L$jlClass;L$jlString;)L$jlEnum;", false)
             visitTypeInsn(CHECKCAST, schema.jvmName)
             visitInsn(ARETURN)
             visitMaxs(0, 0)

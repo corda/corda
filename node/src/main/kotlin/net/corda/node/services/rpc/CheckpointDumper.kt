@@ -41,10 +41,10 @@ import net.corda.core.utilities.contextLogger
 import net.corda.node.internal.NodeStartup
 import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.statemachine.*
+import net.corda.node.utilities.JVMAgentUtil.getJvmAgentProperties
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.serialization.internal.CheckpointSerializeAsTokenContextImpl
 import net.corda.serialization.internal.withTokenContext
-import sun.misc.VMSupport
 import java.nio.file.Path
 import java.time.Duration
 import java.time.Instant
@@ -150,9 +150,9 @@ class CheckpointDumper(private val checkpointStorage: CheckpointStorage, private
     }
 
     private fun checkpointAgentRunning(): Boolean {
-        val agentProperties = VMSupport.getAgentProperties()
+        val agentProperties = getJvmAgentProperties(log)
         return agentProperties.values.any { value ->
-            (value is String && value.contains("checkpoint-agent.jar"))
+            value is String && value.contains("checkpoint-agent.jar")
         }
     }
 

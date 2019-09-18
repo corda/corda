@@ -1,5 +1,8 @@
 import net.corda.testing.DistributedTesting
 
+import static org.gradle.api.JavaVersion.VERSION_1_8
+import static org.gradle.api.JavaVersion.VERSION_11
+
 buildscript {
     // For sharing constants between builds
     Properties constants = new Properties()
@@ -17,7 +20,15 @@ buildscript {
     ext.warnings_as_errors = project.hasProperty("compilation.warningsAsErrors") ? project.property("compilation.warningsAsErrors").toBoolean() : false
 
     ext.quasar_group = 'co.paralleluniverse'
-    ext.quasar_version = constants.getProperty("quasarVersion")
+    // Set version of Quasar according to version of Java used:
+    if (JavaVersion.current() == JavaVersion.VERSION_11) {
+        ext.quasar_version = constants.getProperty("quasarVersion11")
+        ext.quasar_classifier = constants.getProperty("quasarClassifier11")
+    }
+    else {
+        ext.quasar_version = constants.getProperty("quasarVersion")
+        ext.quasar_classifier = constants.getProperty("quasarClassifier")
+    }
     ext.quasar_exclusions = [
             'co.paralleluniverse**',
             'groovy**',
@@ -80,7 +91,7 @@ buildscript {
     ext.h2_version = '1.4.199' // Update docs if renamed or removed.
     ext.postgresql_version = '42.2.5'
     ext.rxjava_version = '1.3.8'
-    ext.dokka_version = '0.9.17'
+    ext.dokka_version = '0.9.18'
     ext.eddsa_version = '0.2.0'
     ext.dependency_checker_version = '5.2.0'
     ext.commons_collections_version = '4.3'
@@ -96,7 +107,6 @@ buildscript {
     ext.docker_compose_rule_version = '0.35.0'
     ext.selenium_version = '3.141.59'
     ext.ghostdriver_version = '2.1.0'
-    ext.eaagentloader_version = '1.0.3'
     ext.proguard_version = constants.getProperty('proguardVersion')
     ext.jsch_version = '0.1.55'
     ext.protonj_version = '0.33.0' // Overide Artemis version
@@ -106,8 +116,8 @@ buildscript {
     ext.picocli_version = '3.9.6'
     ext.commons_io_version = '2.6'
     ext.controlsfx_version = '8.40.15'
-    ext.fontawesomefx_commons_version = '8.15'
-    ext.fontawesomefx_fontawesome_version = '4.7.0-5'
+    ext.fontawesomefx_commons_version = '11.0'
+    ext.fontawesomefx_fontawesome_version = '4.7.0-11'
 
     // Name of the IntelliJ SDK created for the deterministic Java rt.jar.
     // ext.deterministic_idea_sdk = '1.8 (Deterministic)'
@@ -179,8 +189,17 @@ apply plugin: 'com.jfrog.artifactory'
 // with the run configurations. It also doesn't realise that the project is a Java 8 project and misconfigures
 // the resulting import. This fixes it.
 apply plugin: 'java'
-sourceCompatibility = 1.8
-targetCompatibility = 1.8
+
+println "Java version: " + JavaVersion.current()
+sourceCompatibility = VERSION_1_8
+if (JavaVersion.current() == JavaVersion.VERSION_1_8)
+    targetCompatibility = VERSION_1_8
+else
+    targetCompatibility = VERSION_11
+println "Java source compatibility: " + sourceCompatibility
+println "Java target compatibility: " + targetCompatibility
+println "Quasar version: " + quasar_version
+println "Quasar classifier: " + quasar_classifier
 
 allprojects {
     apply plugin: 'kotlin'
@@ -210,9 +229,17 @@ allprojects {
             nugetconfEnabled = false
         }
     }
-    sourceCompatibility = 1.8
-    targetCompatibility = 1.8
+    sourceCompatibility = VERSION_1_8
+    if (JavaVersion.current() == JavaVersion.VERSION_1_8)
+        targetCompatibility = VERSION_1_8
+    else
+        targetCompatibility = VERSION_11
 
+    jacoco {
+        // JDK11 official support (https://github.com/jacoco/jacoco/releases/tag/v0.8.3)
+        toolVersion = "0.8.3"    
+    }
+    
     tasks.withType(JavaCompile) {
         options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation" << "-Xlint:-options" << "-parameters"
         if (warnings_as_errors) {
@@ -248,6 +275,7 @@ allprojects {
 
     tasks.withType(Test) {
         forkEvery = 10
+        ignoreFailures = project.hasProperty('tests.ignoreFailures') ? project.property('tests.ignoreFailures').toBoolean() : false
         failFast = project.hasProperty('tests.failFast') ? project.property('tests.failFast').toBoolean() : false
 
         // Prevent the project from creating temporary files outside of the build directory.

@@ -98,6 +98,9 @@ dependencies {
     smokeTestImplementation "junit:junit:$junit_version"
     smokeTestRuntimeOnly "org.junit.vintage:junit-vintage-engine:${junit_vintage_version}"
     smokeTestRuntimeOnly "org.junit.platform:junit-platform-launcher:${junit_platform_version}"
+
+    // JDK11: required by Quasar at run-time
+    smokeTestRuntimeOnly "com.esotericsoftware:kryo:4.0.2"
 }
 
 task integrationTest(type: Test) {

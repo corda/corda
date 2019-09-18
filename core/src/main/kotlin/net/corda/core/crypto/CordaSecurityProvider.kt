@@ -9,6 +9,7 @@ import org.bouncycastle.asn1.ASN1ObjectIdentifier
 import java.security.Provider
 
 @KeepForDJVM
+@Suppress("DEPRECATION")    // JDK11: should replace with Provider(String name, double version, String info) (since 9)
 class CordaSecurityProvider : Provider(PROVIDER_NAME, 0.1, "$PROVIDER_NAME security provider wrapper") {
     companion object {
         const val PROVIDER_NAME = "Corda"

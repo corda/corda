@@ -1,3 +1,19 @@
+// JDK 11 JavaFX
+plugins {
+    id 'org.openjfx.javafxplugin' version '0.0.7' apply false
+}
+
+if (JavaVersion.current().isJava9Compatible()) {
+    apply plugin: 'org.openjfx.javafxplugin'
+    javafx {
+        version = "11.0.2"
+        modules = ['javafx.controls',
+                   'javafx.fxml',
+                   'javafx.swing'
+        ]
+    }
+}
+
 apply plugin: 'java'
 apply plugin: 'kotlin'
 apply plugin: 'application'

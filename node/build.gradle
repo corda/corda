@@ -69,10 +69,10 @@ sourceSets {
 }
 
 jib.container {
-    mainClass = "net.corda.node.Corda"
-    args = ['--log-to-console', '--no-local-shell', '--config-file=/config/node.conf']
-    // The Groovy string needs to be converted to a `java.lang.String` below.
-    jvmFlags = ['-Xmx1g', "-javaagent:/app/libs/quasar-core-${quasar_version}-jdk8.jar".toString()]
+  mainClass = "net.corda.node.Corda"
+  args = ['--log-to-console', '--no-local-shell', '--config-file=/config/node.conf']
+  // The Groovy string needs to be converted to a `java.lang.String` below.
+  jvmFlags = ['-Xmx1g', "-javaagent:/app/libs/quasar-core-${quasar_version}.jar".toString()]
 }
 
 // Use manual resource copying of log4j2.xml rather than source sets.
@@ -194,10 +194,7 @@ dependencies {
     // Integration test helpers
     integrationTestCompile "junit:junit:$junit_version"
     integrationTestCompile "org.assertj:assertj-core:${assertj_version}"
-
-    // AgentLoader: dynamic loading of JVM agents
-    compile group: 'com.ea.agentloader', name: 'ea-agent-loader', version: "${eaagentloader_version}"
-
+    
     // BFT-Smart dependencies
     compile 'com.github.bft-smart:library:master-v1.1-beta-g6215ec8-87'
 
@@ -221,7 +218,10 @@ dependencies {
     compile "org.jolokia:jolokia-jvm:${jolokia_version}:agent"
     // Optional New Relic JVM reporter, used to push metrics to the configured account associated with a newrelic.yml configuration. See https://mvnrepository.com/artifact/com.palominolabs.metrics/metrics-new-relic
     compile "com.palominolabs.metrics:metrics-new-relic:${metrics_new_relic_version}"
-
+    
+    // Required by JVMAgentUtil (x-compatible java 8 & 11 agent lookup mechanism)
+    compile files("${System.properties['java.home']}/../lib/tools.jar")
+    
     testCompile(project(':test-cli'))
     testCompile(project(':test-utils'))
 
@@ -236,6 +236,11 @@ dependencies {
 tasks.withType(JavaCompile) {
     // Resolves a Gradle warning about not scanning for pre-processors.
     options.compilerArgs << '-proc:none'
+}
+
+tasks.withType(Test) {
+    if (JavaVersion.current() == JavaVersion.VERSION_11)
+        jvmArgs '-Djdk.attach.allowAttachSelf=true'
 }
 
 task integrationTest(type: Test) {

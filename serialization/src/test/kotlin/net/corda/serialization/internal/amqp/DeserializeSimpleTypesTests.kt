@@ -3,6 +3,7 @@ package net.corda.serialization.internal.amqp
 import net.corda.core.serialization.CordaSerializable
 import net.corda.serialization.internal.amqp.testutils.*
 import org.junit.Test
+import java.lang.Character.valueOf
 import kotlin.test.assertEquals
 import kotlin.test.fail
 
@@ -49,9 +50,9 @@ class DeserializeSimpleTypesTests {
     @Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN")
     @Test
     fun testCharacter() {
-        data class C(val c: Character)
+        data class C(val c: Char)
 
-        val c = C(Character('c'))
+        val c = C(valueOf('c'))
         val serialisedC = SerializationOutput(sf1).serialize(c)
         val deserializedC = DeserializationInput(sf1).deserialize(serialisedC)
 
@@ -90,9 +91,9 @@ class DeserializeSimpleTypesTests {
     @Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN")
     @Test
     fun testArrayOfInteger() {
-        class IA(val ia: Array<Integer>)
+        class IA(val ia: Array<Int>)
 
-        val ia = IA(arrayOf(Integer(1), Integer(2), Integer(3)))
+        val ia = IA(arrayOf(Integer.valueOf(1), Integer.valueOf(2), Integer.valueOf(3)))
 
         assertEquals("class [Ljava.lang.Integer;", ia.ia::class.java.toString())
         assertEquals(AMQPTypeIdentifiers.nameForType(ia.ia::class.java), "int[]")

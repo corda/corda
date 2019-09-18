@@ -26,10 +26,12 @@ private class ConstructorCaller(private val javaConstructor: Constructor<Any>): 
         try {
             javaConstructor.newInstance(*parameters)
         } catch (e: InvocationTargetException) {
+            @Suppress("DEPRECATION")    // JDK11: isAccessible() should be replaced with canAccess() (since 9)
             throw NotSerializableException(
                     "Constructor for ${javaConstructor.declaringClass} (isAccessible=${javaConstructor.isAccessible}) " +
                     "failed when called with parameters ${parameters.toList()}: ${e.cause!!.message}")
         } catch (e: IllegalAccessException) {
+            @Suppress("DEPRECATION")    // JDK11: isAccessible() should be replaced with canAccess() (since 9)
             throw NotSerializableException(
                     "Constructor for ${javaConstructor.declaringClass} (isAccessible=${javaConstructor.isAccessible}) " +
                     "not accessible: ${e.message}")
@@ -44,10 +46,12 @@ private class SetterCaller(val setter: Method): (Any, Any?) -> Unit {
         try {
             setter.invoke(target, value)
         } catch (e: InvocationTargetException) {
+            @Suppress("DEPRECATION")    // JDK11: isAccessible() should be replaced with canAccess() (since 9)
             throw NotSerializableException(
                     "Setter ${setter.declaringClass}.${setter.name} (isAccessible=${setter.isAccessible} " +
                             "failed when called with parameter $value: ${e.cause!!.message}")
         } catch (e: IllegalAccessException) {
+            @Suppress("DEPRECATION")    // JDK11: isAccessible() should be replaced with canAccess() (since 9)
             throw NotSerializableException(
                     "Setter ${setter.declaringClass}.${setter.name} (isAccessible=${setter.isAccessible} " +
                     "not accessible: ${e.message}")

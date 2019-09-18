@@ -5,7 +5,7 @@ import com.esotericsoftware.kryo.KryoException
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.packageName
+import net.corda.core.internal.packageName_
 import net.corda.core.schemas.MappedSchema
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.testing.common.internal.testNetworkParameters
@@ -45,7 +45,7 @@ class ExposeJpaToFlowsTests {
     fun setUp() {
         mockNet = MockNetwork(MockNetworkParameters(cordappsForAllNodes = listOf(enclosedCordapp())))
         val (db, mockServices) = MockServices.makeTestDatabaseAndMockServices(
-                cordappPackages = listOf(javaClass.packageName),
+                cordappPackages = listOf(javaClass.packageName_),
                 identityService = makeTestIdentityService(myself.identity),
                 initialIdentity = myself,
                 networkParameters = testNetworkParameters(minimumPlatformVersion = 4)

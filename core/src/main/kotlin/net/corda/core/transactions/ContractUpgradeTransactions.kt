@@ -133,7 +133,7 @@ data class ContractUpgradeWireTransaction(
 
     private fun upgradedContract(className: ContractClassName, classLoader: ClassLoader): UpgradedContract<ContractState, ContractState> = try {
         @Suppress("UNCHECKED_CAST")
-        classLoader.loadClass(className).asSubclass(UpgradedContract::class.java).newInstance() as UpgradedContract<ContractState, ContractState>
+        classLoader.loadClass(className).asSubclass(UpgradedContract::class.java).getDeclaredConstructor().newInstance() as UpgradedContract<ContractState, ContractState>
     } catch (e: Exception) {
         throw TransactionVerificationException.ContractCreationError(id, className, e)
     }
