@@ -25,6 +25,7 @@ import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.getOrThrow
 import net.corda.nodeapi.RPCApi
+import net.corda.nodeapi.RPCApi.CLASS_METHOD_DIVIDER
 import net.corda.nodeapi.internal.DeduplicationChecker
 import org.apache.activemq.artemis.api.core.ActiveMQException
 import org.apache.activemq.artemis.api.core.ActiveMQNotConnectedException
@@ -123,7 +124,6 @@ class RPCClientProxyHandler(
         }
 
         private const val METHOD_FQN_CUTOFF_VERSION = 5
-        const val CLASS_METHOD_DIVIDER = "."
     }
 
     // Used for reaping
@@ -286,12 +286,19 @@ class RPCClientProxyHandler(
         }
     }
 
-    private fun produceMethodFullyQualifiedName(method: Method) = if (serverProtocolVersion!! > METHOD_FQN_CUTOFF_VERSION) {
-        // We are talking to a newer version of the server which will be able to understand names with class prefix.
-        rpcOpsClass.name + CLASS_METHOD_DIVIDER + method.name
-    } else {
-        // Legacy mode.
-        method.name
+    private fun produceMethodFullyQualifiedName(method: Method) : String {
+        // NB: `serverProtocolVersion` can be null as might be just about to make a call to server side to retrieve `serverProtocolVersion`
+        // Since we are not sure which version the server is running - we are always retrieving `serverProtocolVersion` using legacy method
+        // I.e. by sending just the method name without the class name appended.
+        val serverProtocolVersionSnapshot = serverProtocolVersion
+
+        return if (serverProtocolVersionSnapshot != null && serverProtocolVersionSnapshot > METHOD_FQN_CUTOFF_VERSION) {
+            // We are talking to a newer version of the server which will be able to understand names with class prefix.
+            rpcOpsClass.name + CLASS_METHOD_DIVIDER + method.name
+        } else {
+            // Legacy mode.
+            method.name
+        }
     }
 
     private fun sendMessage(message: RPCApi.ClientToServer) {
