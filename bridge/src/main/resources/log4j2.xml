@@ -148,34 +148,16 @@
 
         </RollingRandomAccessFile>
 
-        <Rewrite name="Console-ErrorCode-Selector">
-            <AppenderRef ref="Console-Selector"/>
-            <ErrorCodeRewritePolicy/>
-        </Rewrite>
-
-        <Rewrite name="Console-ErrorCode-Appender-Println">
-            <AppenderRef ref="Console-Appender-Println"/>
-            <ErrorCodeRewritePolicy/>
-        </Rewrite>
-
-        <Rewrite name="RollingFile-ErrorCode-Appender">
-            <AppenderRef ref="RollingFile-Appender"/>
-            <ErrorCodeRewritePolicy/>
-        </Rewrite>
-        <Rewrite name="Diagnostic-RollingFile-ErrorCode-Appender">
-            <AppenderRef ref="Diagnostic-RollingFile-Appender"/>
-            <ErrorCodeRewritePolicy/>
-        </Rewrite>
     </Appenders>
 
     <Loggers>
         <Root level="${defaultLogLevel}">
-            <AppenderRef ref="Console-ErrorCode-Selector" level="${consoleLogLevel}"/>
-            <AppenderRef ref="RollingFile-ErrorCode-Appender"/>
+            <AppenderRef ref="Console-Selector" level="${consoleLogLevel}"/>
+            <AppenderRef ref="RollingFile-Appender"/>
         </Root>
         <Logger name="BasicInfo" additivity="false">
-            <AppenderRef ref="Console-ErrorCode-Appender-Println"/>
-            <AppenderRef ref="RollingFile-ErrorCode-Appender"/>
+            <AppenderRef ref="Console-Appender-Println"/>
+            <AppenderRef ref="RollingFile-Appender"/>
         </Logger>
         <Logger name="DetailedInfo" additivity="false" level="${detailLogLevel}">
             <AppenderRef ref="Detailed-RollingFile-Appender"/>

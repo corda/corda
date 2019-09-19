@@ -16,6 +16,9 @@ fun configOf(vararg pairs: Pair<String, Any?>): Config = ConfigFactory.parseMap(
 operator fun Config.plus(overrides: Map<String, Any?>): Config = ConfigFactory.parseMap(overrides).withFallback(this)
 
 object BridgeConfigHelper {
+    const val FILTER_SERVICE_MAX_CACHE_SIZE = "net.corda.bridge.services.filter.cacheSize"
+    const val FILTER_SERVICE_CACHE_EXPIRY_SECONDS = "net.corda.bridge.services.filter.expireSeconds"
+
     private const val BRIDGE_PROPERTY_PREFIX = "bridge."
     private val passwordRegex = ".*(pass|password|pwd)$".toRegex(RegexOption.IGNORE_CASE)
 

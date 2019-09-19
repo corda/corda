@@ -91,7 +91,7 @@ data class NodeConfigurationImpl(
         override val disableFreshIdentitiesWarning: Boolean = false,
         override val cryptoServiceTimeout: Duration = Defaults.cryptoServiceTimeout,
         override val blacklistedAttachmentSigningKeys: List<String> = Defaults.blacklistedAttachmentSigningKeys,
-        override val sslHandshakeTimeout: Long = DEFAULT_SSL_HANDSHAKE_TIMEOUT_MILLIS
+        override val sslHandshakeTimeout: Long = Defaults.sslHandshakeTimeout
 
 ) : NodeConfiguration {
     internal object Defaults {
@@ -133,6 +133,7 @@ data class NodeConfigurationImpl(
         val networkParameterAcceptanceSettings: NetworkParameterAcceptanceSettings = NetworkParameterAcceptanceSettings()
         val masterKeyAlias = "wrapping-key-alias"
         val blacklistedAttachmentSigningKeys: List<String> = emptyList()
+        val sslHandshakeTimeout: Long = DEFAULT_SSL_HANDSHAKE_TIMEOUT_MILLIS
 
         fun cordappsDirectories(baseDirectory: Path) = listOf(baseDirectory / CORDAPPS_DIR_NAME_DEFAULT)
 

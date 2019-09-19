@@ -1,6 +1,7 @@
 package net.corda.bank.api
 
 import net.corda.bank.api.BankOfCordaWebApi.IssueRequestParams
+import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.client.rpc.internal.ReconnectingCordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.transactions.SignedTransaction
@@ -43,7 +44,7 @@ object BankOfCordaClientApi {
      */
     fun requestRPCIssueHA(availableRpcServers: List<NetworkHostAndPort>, params: IssueRequestParams): SignedTransaction {
         // TODO: privileged security controls required
-        ReconnectingCordaRPCOps(availableRpcServers, BOC_RPC_USER, BOC_RPC_PWD).use { rpc->
+        ReconnectingCordaRPCOps(availableRpcServers, BOC_RPC_USER, BOC_RPC_PWD, CordaRPCClientConfiguration.DEFAULT).use { rpc->
             rpc.waitUntilNetworkReady().getOrThrow()
 
             // Resolve parties via RPC

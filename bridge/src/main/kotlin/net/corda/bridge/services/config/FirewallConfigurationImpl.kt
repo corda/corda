@@ -9,6 +9,7 @@ import net.corda.nodeapi.internal.config.*
 import net.corda.nodeapi.internal.cryptoservice.SupportedCryptoServices
 import net.corda.nodeapi.internal.protonwrapper.netty.ProxyConfig
 import net.corda.nodeapi.internal.protonwrapper.netty.RevocationConfig
+import net.corda.nodeapi.internal.protonwrapper.netty.RevocationConfigImpl
 import java.nio.file.Path
 
 data class BridgeSSLConfigurationImpl(private val sslKeystore: Path,
@@ -84,7 +85,7 @@ data class FirewallConfigurationImpl(
         override val p2pTlsSigningCryptoServiceConfig: CryptoServiceConfigImpl?,
         override val tunnelingCryptoServiceConfig: CryptoServiceConfigImpl?,
         override val artemisCryptoServiceConfig: CryptoServiceConfigImpl?,
-        override val revocationConfig: RevocationConfig,
+        private val revocationConfig: RevocationConfig?,
         override val sslHandshakeTimeout: Long = DEFAULT_SSL_HANDSHAKE_TIMEOUT_MILLIS,
         override val useProxyForCrls: Boolean = false
         ) : FirewallConfiguration {
@@ -103,6 +104,12 @@ data class FirewallConfigurationImpl(
     // Due to Artemis limitations setting private key password same as key store password.
     private val p2pTrustStore = FileBasedCertificateStoreSupplier(p2pTrustStoreFilePath, trustStorePassword, entryPassword = trustStorePassword)
     override val publicSSLConfiguration: MutualSslConfiguration = SslConfiguration.mutual(p2pKeyStore, p2pTrustStore)
+
+    override val revocationConfigSection: RevocationConfig
+        get() = revocationConfig ?: when (firewallMode) {
+            FirewallMode.FloatOuter -> RevocationConfigImpl(RevocationConfig.Mode.EXTERNAL_SOURCE)
+            else -> RevocationConfigImpl(RevocationConfig.Mode.SOFT_FAIL)
+        }
 }
 
 

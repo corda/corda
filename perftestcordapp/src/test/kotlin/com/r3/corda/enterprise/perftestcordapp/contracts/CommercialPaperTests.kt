@@ -12,11 +12,11 @@ import com.r3.corda.enterprise.perftestcordapp.contracts.asset.STATE
 import net.corda.core.contracts.*
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
+import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.VaultService
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.days
-import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.testing.core.*
 import net.corda.testing.dsl.EnforceVerifyOrFail
 import net.corda.testing.dsl.TransactionDSL
@@ -98,7 +98,7 @@ class CommercialPaperTestsGeneric {
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
     val issuer = MEGA_CORP.ref(123)
-    private val ledgerServices = MockServices(emptyList(), MEGA_CORP.name, mock<IdentityServiceInternal>().also {
+    private val ledgerServices = MockServices(emptyList(), MEGA_CORP.name, mock<IdentityService>().also {
         doReturn(MEGA_CORP).whenever(it).partyFromKey(MEGA_CORP_PUBKEY)
         doReturn(MINI_CORP).whenever(it).partyFromKey(MINI_CORP_PUBKEY)
         doReturn(null).whenever(it).partyFromKey(ALICE_PUBKEY)

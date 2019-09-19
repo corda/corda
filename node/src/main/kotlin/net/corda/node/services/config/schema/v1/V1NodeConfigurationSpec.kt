@@ -65,6 +65,7 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
     private val disableFreshIdentitiesWarning by boolean().optional().withDefaultValue(false)
     private val cryptoServiceTimeout by duration().optional().withDefaultValue(Defaults.cryptoServiceTimeout)
     private val blacklistedAttachmentSigningKeys by string().list().optional().withDefaultValue(Defaults.blacklistedAttachmentSigningKeys)
+    private val sslHandshakeTimeout by long().optional().withDefaultValue(Defaults.sslHandshakeTimeout)
     @Suppress("unused")
     private val custom by nestedObject().optional()
     private val relay by nested(RelayConfigurationSpec).optional()
@@ -139,7 +140,8 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
                     useOpenSsl = config[useOpenSsl],
                     graphiteOptions = config[graphiteOptions],
                     enterpriseConfiguration = config[enterpriseConfiguration],
-                    blacklistedAttachmentSigningKeys = config[blacklistedAttachmentSigningKeys]
+                    blacklistedAttachmentSigningKeys = config[blacklistedAttachmentSigningKeys],
+                    sslHandshakeTimeout = config[sslHandshakeTimeout]
             ))
         } catch (e: Exception) {
             return when (e) {

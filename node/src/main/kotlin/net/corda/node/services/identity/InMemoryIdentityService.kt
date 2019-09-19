@@ -1,21 +1,27 @@
 package net.corda.node.services.identity
 
+import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.identity.x500Matches
 import net.corda.core.internal.CertRole
+import net.corda.core.internal.hash
 import net.corda.core.node.services.IdentityService
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.trace
+import net.corda.node.services.persistence.WritablePublicKeyToOwningIdentityCache
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.x509Certificates
 import java.security.InvalidAlgorithmParameterException
 import java.security.PublicKey
 import java.security.cert.*
+import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import javax.annotation.concurrent.ThreadSafe
+import kotlin.collections.ArrayList
+import kotlin.collections.LinkedHashSet
 
 /**
  * Simple identity service which caches parties and provides functionality for efficient lookup.
@@ -23,8 +29,10 @@ import javax.annotation.concurrent.ThreadSafe
  * @param identities initial set of identities for the service, typically only used for unit tests.
  */
 @ThreadSafe
-class InMemoryIdentityService(identities: List<PartyAndCertificate> = emptyList(),
-                              override val trustRoot: X509Certificate) : SingletonSerializeAsToken(), IdentityService {
+class InMemoryIdentityService(
+        identities: List<PartyAndCertificate> = emptyList(),
+        override val trustRoot: X509Certificate
+) : SingletonSerializeAsToken(), IdentityService {
     companion object {
         private val log = contextLogger()
     }
@@ -34,14 +42,16 @@ class InMemoryIdentityService(identities: List<PartyAndCertificate> = emptyList(
      */
     override val caCertStore: CertStore = CertStore.getInstance("Collection", CollectionCertStoreParameters(setOf(trustRoot)))
     override val trustAnchor: TrustAnchor = TrustAnchor(trustRoot, null)
+    private val keyToExternalId = ConcurrentHashMap<String, UUID>()
     private val keyToPartyAndCerts = ConcurrentHashMap<PublicKey, PartyAndCertificate>()
     private val nameToKey = ConcurrentHashMap<CordaX500Name, PublicKey>()
-    private val keyToName = ConcurrentHashMap<PublicKey, CordaX500Name>()
+    private val keyToName = ConcurrentHashMap<String, CordaX500Name>()
+    private val hashToKey = ConcurrentHashMap<String, PublicKey>()
 
     init {
         keyToPartyAndCerts.putAll(identities.associateBy { it.owningKey })
         nameToKey.putAll(identities.associateBy { it.name }.mapValues { it.value.owningKey })
-        keyToName.putAll(identities.associateBy{ it.owningKey }.mapValues { it.value.party.name })
+        keyToName.putAll(identities.associateBy{ it.owningKey.toStringShort() }.mapValues { it.value.party.name })
     }
 
 
@@ -81,7 +91,7 @@ class InMemoryIdentityService(identities: List<PartyAndCertificate> = emptyList(
         keyToPartyAndCerts[identity.owningKey] = identity
         // Always keep the first party we registered, as that's the well known identity
         nameToKey.computeIfAbsent(identity.name) {identity.owningKey}
-        keyToName.putIfAbsent(identity.owningKey, identity.name)
+        keyToName.putIfAbsent(identity.owningKey.toStringShort(), identity.name)
         return keyToPartyAndCerts[identityCertChain[1].publicKey]
     }
 
@@ -108,10 +118,34 @@ class InMemoryIdentityService(identities: List<PartyAndCertificate> = emptyList(
         return results
     }
 
-    override fun registerKeyToParty(key: PublicKey, party: Party) {
-        if (keyToName[key] == null) {
-            keyToName.putIfAbsent(key, party.name)
+    override fun registerKey(publicKey: PublicKey, party: Party, externalId: UUID?) {
+        val publicKeyHash = publicKey.toStringShort()
+        val existingEntry = keyToName[publicKeyHash]
+        if (existingEntry == null) {
+            registerKeyToParty(publicKey, party)
+            hashToKey[publicKeyHash] = publicKey
+            if (externalId != null) {
+                registerKeyToExternalId(publicKey, externalId)
+            }
+        } else {
+            if (party.name != existingEntry) {
+            }
         }
-        throw IllegalArgumentException("An entry for the public key: $key already exists.")
+    }
+
+    override fun externalIdForPublicKey(publicKey: PublicKey): UUID? {
+        return keyToExternalId[publicKey.toStringShort()]
+    }
+
+    fun registerKeyToExternalId(key: PublicKey, externalId: UUID) {
+        keyToExternalId[key.toStringShort()] = externalId
+    }
+
+    fun registerKeyToParty(publicKey: PublicKey, party: Party) {
+        keyToName[publicKey.toStringShort()] = party.name
+    }
+
+    override fun publicKeysForExternalId(externalId: UUID): Iterable<PublicKey> {
+        throw NotImplementedError("This method is not implemented in the InMemoryIdentityService at it requires access to CordaPersistence.")
     }
 }

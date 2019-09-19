@@ -42,7 +42,7 @@ class BridgeSupervisorServiceImpl(conf: FirewallConfiguration,
     private val artemisSigningService: TLSSigningService
 
     init {
-        require(conf.revocationConfig.mode != RevocationConfig.Mode.EXTERNAL_SOURCE) { "The BridgeInner and SenderReceiver modes do not support Revocation from External sources" }
+        require(conf.revocationConfigSection.mode != RevocationConfig.Mode.EXTERNAL_SOURCE) { "The BridgeInner and SenderReceiver modes do not support Revocation from External sources" }
         val artemisSSlConfiguration = conf.outboundConfig?.artemisSSLConfiguration ?: conf.publicSSLConfiguration
         // The fact that we pass BRIDGE_NAME has no effect as Crypto service obtained will only be used to sign data and never to create new key pairs
         val legalName = BRIDGE_NAME

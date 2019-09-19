@@ -1,6 +1,7 @@
 package net.corda.client.jfx.model
 
 import javafx.beans.property.SimpleObjectProperty
+import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.client.rpc.internal.ReconnectingCordaRPCOps
 import net.corda.core.contracts.ContractState
 import net.corda.core.flows.StateMachineRunId
@@ -71,7 +72,7 @@ class NodeMonitorModel : AutoCloseable {
      * TODO provide an unsubscribe mechanism
      */
     fun register(nodeHostAndPort: NetworkHostAndPort, username: String, password: String) {
-        rpc = ReconnectingCordaRPCOps(nodeHostAndPort, username, password)
+        rpc = ReconnectingCordaRPCOps(nodeHostAndPort, username, password, CordaRPCClientConfiguration.DEFAULT)
 
         proxyObservable.value = rpc
 

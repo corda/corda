@@ -57,10 +57,11 @@ class HibernateColumnConverterTests {
         val ref = OpaqueBytes.of(0x01)
 
         // Create parallel set of key and identity services so that the values are not cached, forcing the node caches to do a lookup.
-        val identityService = PersistentIdentityService(TestingNamedCacheFactory())
+        val cacheFactory = TestingNamedCacheFactory()
+        val identityService = PersistentIdentityService(cacheFactory)
         val originalIdentityService: PersistentIdentityService = services.identityService as PersistentIdentityService
         identityService.database = originalIdentityService.database
-        identityService.start(originalIdentityService.trustRoot)
+        identityService.start(originalIdentityService.trustRoot, pkToIdCache = PublicKeyToOwningIdentityCacheImpl(database, cacheFactory))
         val keyService = E2ETestKeyManagementService(identityService)
         keyService.start(setOf(myself.keyPair))
 
