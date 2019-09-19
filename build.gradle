@@ -191,6 +191,10 @@ allprojects {
         }
     }
 
+    tasks.register('compileAll') { task ->
+        task.dependsOn tasks.withType(AbstractCompile)
+    }
+
     tasks.withType(Jar) { task ->
         // Includes War and Ear
         manifest {
