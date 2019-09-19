@@ -2,7 +2,7 @@ killall_jobs()
 
 pipeline {
     agent { label 'k8s' }
-    options { timestamps () }
+    options { timestamps() }
 
     environment {
         DOCKER_TAG_TO_USE = "${UUID.randomUUID().toString().toLowerCase().subSequence(0, 12)}"
@@ -11,7 +11,7 @@ pipeline {
     }
 
     stages {
-        stage('Corda Pull Request Integration Tests - Generate Build Image') {
+        stage('Corda Pull Request - Generate Build Image') {
             steps {
                 withCredentials([string(credentialsId: 'container_reg_passwd', variable: 'DOCKER_PUSH_PWD')]) {
                     sh "./gradlew " +
@@ -23,21 +23,39 @@ pipeline {
                 }
             }
         }
-        stage('Corda Pull Request Integration Tests - Run Integration Tests') {
-            steps {
-                withCredentials([string(credentialsId: 'container_reg_passwd', variable: 'DOCKER_PUSH_PWD')]) {
-                    sh "./gradlew " +
-                            "-DbuildId=\"\${BUILD_ID}\" " +
-                            "-Dkubenetize=true " +
-                            "-Ddocker.tag=\"\${DOCKER_TAG_TO_USE}\"" +
-                            " allParallelIntegrationTest"
+
+        stage('Corda Pull Request - Run Tests') {
+            parallel {
+                stage('Integration Tests') {
+                    steps {
+                        sh "./gradlew " +
+                                "-DbuildId=\"\${BUILD_ID}\" " +
+                                "-Dkubenetize=true " +
+                                "-Ddocker.tag=\"\${DOCKER_TAG_TO_USE}\"" +
+                                " allParallelIntegrationTest"
+                    }
+                    post {
+                        always {
+                            junit '**/build/test-results-xml/**/*.xml'
+                        }
+                    }
+                }
+                stage('Unit Tests') {
+                    steps {
+                        sh "./gradlew " +
+                                "-DbuildId=\"\${BUILD_ID}\" " +
+                                "-Dkubenetize=true " +
+                                "-Ddocker.tag=\"\${DOCKER_TAG_TO_USE}\"" +
+                                " allParallelIntegrationTest"
+                    }
+                    post {
+                        always {
+                            junit '**/build/test-results-xml/**/*.xml'
+                        }
+                    }
                 }
             }
-        }
-    }
-    post {
-        always {
-            junit '**/build/test-results-xml/**/*.xml'
+
         }
     }
 }
@@ -59,5 +77,14 @@ def killall_jobs() {
 
         echo "Killing task = ${build}"
         build.doStop();
+    }
+}
+
+
+pipeline {
+    agent none
+    stages {
+        stage('Run Tests') {
+        }
     }
 }

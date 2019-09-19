@@ -53,7 +53,7 @@ class KubesTest extends DefaultTask {
 
         def currentUser = System.getProperty("user.name") ? System.getProperty("user.name") : "UNKNOWN_USER"
 
-        String stableRunId = new BigInteger(64, new Random(buildId.hashCode() + currentUser.hashCode())).toString(36).toLowerCase()
+        String stableRunId = new BigInteger(64, new Random(buildId.hashCode() + currentUser.hashCode() + taskToExecuteName.hashCode())).toString(36).toLowerCase()
         String suffix = new BigInteger(64, new Random()).toString(36).toLowerCase()
 
         io.fabric8.kubernetes.client.Config config = new io.fabric8.kubernetes.client.ConfigBuilder()
