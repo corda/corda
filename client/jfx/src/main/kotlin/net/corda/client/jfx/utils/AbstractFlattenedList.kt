@@ -8,11 +8,10 @@ import javafx.collections.transformation.TransformationList
 import java.util.*
 
 /**
- * [FlattenedList] flattens the passed in list of [ObservableValue]s so that changes in individual updates to the values
+ * [AbstractFlattenedList] flattens the passed in list of [ObservableValue]s so that changes in individual updates to the values
  * are reflected in the exposed list as expected.
  */
-class FlattenedList<A>(val sourceList: ObservableList<out ObservableValue<out A>>) : TransformationList<A, ObservableValue<out A>>(sourceList) {
-
+abstract class AbstractFlattenedList<A>(val sourceList: ObservableList<out ObservableValue<out A>>) : TransformationList<A, ObservableValue<out A>>(sourceList) {
     /**
      * We maintain an ObservableValue->index map. This is needed because we need the ObservableValue's index in order to
      * propagate a change and if the listener closure captures the index at the time of the call to

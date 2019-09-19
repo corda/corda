@@ -107,7 +107,7 @@ class AttachmentsClassLoaderStaticContractTests {
     @Test
     fun `verify that contract DummyContract is in classPath`() {
         val contractClass = Class.forName(ATTACHMENT_PROGRAM_ID)
-        assertThat(contractClass.newInstance()).isInstanceOf(Contract::class.java)
+        assertThat(contractClass.getDeclaredConstructor().newInstance()).isInstanceOf(Contract::class.java)
     }
 
     private fun cordappLoaderForPackages(packages: Collection<String>): CordappLoader {

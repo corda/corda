@@ -213,6 +213,7 @@ object CheckpointHook : ClassFileTransformer {
     private fun <T> getArrayValue(clazz: Class<T>, value: Any?): String? {
         if (clazz.isArray) {
             log.debug { "readFieldExit array type: $clazz, value: $value]" }
+            @Suppress("UNCHECKED_CAST")
             if (Array<Number>::class.java.isAssignableFrom(clazz)) {
                 @Suppress("UNCHECKED_CAST")
                 val numberValue = value as Array<Number>

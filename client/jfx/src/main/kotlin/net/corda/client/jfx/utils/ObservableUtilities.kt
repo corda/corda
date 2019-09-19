@@ -143,14 +143,16 @@ fun <A, B> ObservableList<out A>.foldObservable(initial: B, folderFunction: (B, 
  * val people: ObservableList<Person> = (..)
  * val heights: ObservableList<Long> = people.map(Person::height).flatten()
  */
-fun <A> ObservableList<out ObservableValue<out A>>.flatten(): ObservableList<A> = FlattenedList(this)
+@Suppress("UNCHECKED_CAST")
+fun <A> ObservableList<out ObservableValue<out A>>.flatten(): ObservableList<A> = FlattenedList(this) as ObservableList<A>
 
 /**
  * data class Person(val height: ObservableValue<Long>)
  * val people: List<Person> = listOf(alice, bob)
  * val heights: ObservableList<Long> = people.map(Person::height).sequence()
  */
-fun <A> Collection<ObservableValue<out A>>.sequence(): ObservableList<A> = FlattenedList(FXCollections.observableArrayList(this))
+@Suppress("UNCHECKED_CAST")
+fun <A> Collection<ObservableValue<out A>>.sequence(): ObservableList<A> = FlattenedList(FXCollections.observableArrayList(this)) as ObservableList<A>
 
 /**
  * data class Person(val height: Long)
@@ -173,9 +175,12 @@ fun <K, A> ObservableList<out A>.associateBy(toKey: (A) -> K): ObservableMap<K, 
  * val people: ObservableList<Person> = (..)
  * val heightToNames: ObservableMap<Long, ObservableList<String>> = people.associateByAggregation(Person::height) { name, person -> person.name }
  */
+@Suppress("UNCHECKED_CAST")
 fun <K : Any, A : Any, B> ObservableList<out A>.associateByAggregation(toKey: (A) -> K, assemble: (K, A) -> B): ObservableMap<K, ObservableList<B>> {
-    return AssociatedList(AggregatedList(this, toKey) { key, members -> Pair(key, members) }, { it.first }) { key, pair ->
-        pair.second.map { assemble(key, it) }
+    @Suppress("UNCHECKED_CAST")
+    val sourceList = AggregatedList(this, toKey) { key, members -> Pair(key, members) } as AggregatedList<Pair<K, ObservableList<A>>, A, K>
+    return AssociatedList(sourceList, { (it as Pair<K,ObservableList<A>>).first }) { key, pair ->
+        (pair as Pair<K,ObservableList<A>>).second.map { assemble(key, it) }
     }
 }
 

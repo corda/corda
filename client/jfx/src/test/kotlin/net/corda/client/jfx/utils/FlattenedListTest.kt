@@ -16,7 +16,8 @@ class FlattenedListTest {
     @Before
     fun setup() {
         sourceList = FXCollections.observableArrayList(SimpleObjectProperty(1234))
-        flattenedList = FlattenedList(sourceList)
+        @Suppress("UNCHECKED_CAST")
+        flattenedList = FlattenedList(sourceList) as ObservableList<Int>
         replayedList = ReplayedList(flattenedList)
     }
 

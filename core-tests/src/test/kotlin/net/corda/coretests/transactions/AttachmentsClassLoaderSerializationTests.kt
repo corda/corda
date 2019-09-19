@@ -57,7 +57,7 @@ class AttachmentsClassLoaderSerializationTests {
                 SecureHash.zeroHash,
                 { attachmentTrustCalculator.calculate(it) }) { classLoader ->
             val contractClass = Class.forName(ISOLATED_CONTRACT_CLASS_NAME, true, classLoader)
-            val contract = contractClass.newInstance() as Contract
+            val contract = contractClass.getDeclaredConstructor().newInstance() as Contract
             assertEquals("helloworld", contract.declaredField<Any?>("magicString").value)
 
             val txt = IOUtils.toString(classLoader.getResourceAsStream("file1.txt"), Charsets.UTF_8.name())

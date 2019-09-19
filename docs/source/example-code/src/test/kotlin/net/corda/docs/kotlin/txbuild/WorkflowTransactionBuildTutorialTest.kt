@@ -4,7 +4,7 @@ import net.corda.core.contracts.LinearState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.identity.Party
-import net.corda.core.internal.packageName
+import net.corda.core.internal.packageName_
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.QueryCriteria
@@ -34,7 +34,7 @@ class WorkflowTransactionBuildTutorialTest {
 
     @Before
     fun setup() {
-        mockNet = MockNetwork(threadPerNode = true, cordappPackages = listOf(javaClass.packageName))
+        mockNet = MockNetwork(threadPerNode = true, cordappPackages = listOf(javaClass.packageName_))
         aliceNode = mockNet.createPartyNode(ALICE_NAME)
         bobNode = mockNet.createPartyNode(BOB_NAME)
         alice = aliceNode.services.myInfo.identityFromX500Name(ALICE_NAME)

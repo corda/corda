@@ -35,7 +35,7 @@ object ContractUpgradeFlow {
         // DOCEND 1
         @Suspendable
         override fun call(): Void? {
-            val upgrade = upgradedContractClass.newInstance()
+            val upgrade = upgradedContractClass.getDeclaredConstructor().newInstance()
             if (upgrade.legacyContract != stateAndRef.state.contract) {
                 throw FlowException("The contract state cannot be upgraded using provided UpgradedContract.")
             }

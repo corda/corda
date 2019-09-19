@@ -54,7 +54,6 @@ import java.io.File
 import java.lang.management.ManagementFactory
 import java.net.ConnectException
 import java.net.URL
-import java.net.URLClassLoader
 import java.nio.file.Path
 import java.security.cert.X509Certificate
 import java.time.Duration
@@ -121,13 +120,13 @@ class DriverDSLImpl(
     private val state = ThreadBox(State())
 
     //TODO: remove this once we can bundle quasar properly.
-    private val quasarJarPath: String by lazy { resolveJar(".*quasar.*\\.jar$").getOrThrow() }
+    private val quasarJarPath: String by lazy { resolveJar("co.paralleluniverse.fibers.Suspendable") }
 
     private val bytemanJarPath: String? by lazy {
-        val maybeResolvedJar = resolveJar(".*byteman-\\d.*\\.jar$", verbose = false)
-        when (maybeResolvedJar) {
-            is Try.Success -> maybeResolvedJar.getOrThrow()
-            is Try.Failure -> null
+        try {
+            resolveJar("org.jboss.byteman.agent.Transformer")
+        } catch (e: Exception) {
+            null
         }
     }
 
@@ -141,20 +140,14 @@ class DriverDSLImpl(
         }
     }
 
-    private fun resolveJar(jarNamePattern: String, verbose: Boolean = true): Try<String> {
+    private fun resolveJar(className: String): String {
         return try {
-            val cl = ClassLoader.getSystemClassLoader()
-            val urls = (cl as URLClassLoader).urLs
-            val jarPattern = jarNamePattern.toRegex()
-            val jarFileUrl = urls.first { jarPattern.matches(it.path) }
-            Try.Success(jarFileUrl.toPath().toString())
+            val type = Class.forName(className)
+            val src = type.protectionDomain.codeSource
+            src.location.toPath().toString()
         } catch (e: Exception) {
-            if(verbose) {
-                log.warn("Unable to locate JAR `$jarNamePattern` on classpath: ${e.message}", e)
-            } else {
-                log.info("Unable to locate JAR `$jarNamePattern` on classpath")
-            }
-            Try.Failure(e)
+            log.warn("Unable to locate JAR for class given by `$className` on classpath: ${e.message}", e)
+            throw e
         }
     }
 
@@ -405,7 +398,7 @@ class DriverDSLImpl(
             // In this case we're dealing with the the RPCDriver or one of it's cousins which are internal and we don't care about them
             emptyList()
         } else {
-            listOf(Class.forName(stackTrace[index + 1].className).packageName)
+            listOf(Class.forName(stackTrace[index + 1].className).packageName_)
         }
     }
 

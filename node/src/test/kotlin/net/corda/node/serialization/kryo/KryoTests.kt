@@ -24,6 +24,7 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.core.internal.CheckpointSerializationEnvironmentRule
 import net.corda.testing.internal.rigorousMock
+import org.apache.commons.lang3.SystemUtils
 import org.assertj.core.api.Assertions.*
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
@@ -353,8 +354,11 @@ class KryoTests(private val compression: CordaSerializationEncoding?) {
         val obj = Holder(ByteArray(20000))
         val uncompressedSize = obj.checkpointSerialize(context.withEncoding(null)).size
         val compressedSize = obj.checkpointSerialize(context.withEncoding(CordaSerializationEncoding.SNAPPY)).size
-        // If these need fixing, sounds like Kryo wire format changed and checkpoints might not surive an upgrade.
-        assertEquals(20222, uncompressedSize)
+        // If these need fixing, sounds like Kryo wire format changed and checkpoints might not survive an upgrade.
+        if (SystemUtils.IS_JAVA_11)
+            assertEquals(20172, uncompressedSize)
+        else
+            assertEquals(20222, uncompressedSize)
         assertEquals(1111, compressedSize)
     }
 }

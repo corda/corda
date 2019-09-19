@@ -23,7 +23,9 @@ import net.corda.testing.internal.configureDatabase
 import net.corda.testing.internal.createNodeInfoAndSigned
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
+import org.apache.commons.lang3.SystemUtils
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -32,6 +34,7 @@ import java.time.Duration
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class NodeTest {
     @Rule
@@ -143,6 +146,14 @@ class NodeTest {
         }
     }
 
+    // JDK 11 check
+    @Test
+    fun `test getJavaRuntimeVersion`() {
+        assertTrue(SystemUtils.IS_JAVA_1_8 || SystemUtils.IS_JAVA_11)
+    }
+
+    // JDK11: revisit (JDK 9+ uses different numbering scheme: see https://docs.oracle.com/javase/9/docs/api/java/lang/Runtime.Version.html)
+    @Ignore
     @Test
     fun `test getJavaUpdateVersion`() {
         assertThat(getJavaUpdateVersion("1.8.0_202-ea")).isEqualTo(202)

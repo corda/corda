@@ -90,7 +90,7 @@ class AttachmentsClassLoaderTests {
 
         val classloader = createClassloader(isolatedId)
         val contractClass = Class.forName(ISOLATED_CONTRACT_CLASS_NAME, true, classloader)
-        val contract = contractClass.newInstance() as Contract
+        val contract = contractClass.getDeclaredConstructor().newInstance() as Contract
         assertEquals("helloworld", contract.declaredField<Any?>("magicString").value)
     }
 
