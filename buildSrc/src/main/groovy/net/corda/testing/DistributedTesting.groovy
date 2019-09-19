@@ -3,7 +3,6 @@ package net.corda.testing
 import com.bmuschko.gradle.docker.tasks.image.DockerPushImage
 import org.gradle.api.Plugin
 import org.gradle.api.Project
-import org.gradle.api.Task
 import org.gradle.api.tasks.testing.Test
 
 /**
@@ -54,15 +53,17 @@ class DistributedTesting implements Plugin<Project> {
                 String superListOfTasks = groups.collect { it.fullTaskToExecutePath }.join(" ")
 
                 def userDefinedParallelTask = project.rootProject.tasks.create("userDefined" + testGrouping.name.capitalize(), KubesTest) {
-                    if (!providedTag){
+                    if (!providedTag) {
                         dependsOn imageBuildingTask
                     }
                     numberOfPods = testGrouping.getShardCount()
                     printOutput = testGrouping.printToStdOut
                     fullTaskToExecutePath = superListOfTasks
                     taskToExecuteName = "userDefined"
+                    memoryGbPerFork = testGrouping.gbOfMemory
+                    numberOfCoresPerFork = testGrouping.coresToUse
                     doFirst {
-                        dockerTag = dockerTag = providedTag ? ImageBuilding.registryName +":" + providedTag : (imageBuildingTask.imageName.get() + ":" + imageBuildingTask.tag.get())
+                        dockerTag = dockerTag = providedTag ? ImageBuilding.registryName + ":" + providedTag : (imageBuildingTask.imageName.get() + ":" + imageBuildingTask.tag.get())
                     }
                 }
                 def reportOnAllTask = project.rootProject.tasks.create("userDefinedReports${testGrouping.name.capitalize()}", KubesReporting) {
@@ -70,7 +71,7 @@ class DistributedTesting implements Plugin<Project> {
                     destinationDir new File(project.rootProject.getBuildDir(), "userDefinedReports${testGrouping.name.capitalize()}")
                     doFirst {
                         destinationDir.deleteDir()
-                        shouldPrintOutput = testGrouping.printToStdOut
+                        shouldPrintOutput = !testGrouping.printToStdOut
                         podResults = userDefinedParallelTask.containerResults
                         reportOn(userDefinedParallelTask.testOutput)
                     }
@@ -86,14 +87,14 @@ class DistributedTesting implements Plugin<Project> {
         def capitalizedTaskName = task.getName().capitalize()
 
         KubesTest createdParallelTestTask = projectContainingTask.tasks.create("parallel" + capitalizedTaskName, KubesTest) {
-            if (!providedTag){
+            if (!providedTag) {
                 dependsOn imageBuildingTask
             }
             printOutput = true
             fullTaskToExecutePath = task.getPath()
             taskToExecuteName = taskName
             doFirst {
-                dockerTag = providedTag ? ImageBuilding.registryName +":" + providedTag : (imageBuildingTask.imageName.get() + ":" + imageBuildingTask.tag.get())
+                dockerTag = providedTag ? ImageBuilding.registryName + ":" + providedTag : (imageBuildingTask.imageName.get() + ":" + imageBuildingTask.tag.get())
             }
         }
         projectContainingTask.logger.info "Created task: ${createdParallelTestTask.getPath()} to enable testing on kubenetes for task: ${task.getPath()}"

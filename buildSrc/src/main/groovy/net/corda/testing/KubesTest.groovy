@@ -28,6 +28,8 @@ class KubesTest extends DefaultTask {
     String fullTaskToExecutePath
     String taskToExecuteName
     Boolean printOutput = false
+    Integer numberOfCoresPerFork = 4
+    Integer memoryGbPerFork = 6
     public volatile List<File> testOutput = Collections.emptyList()
     public volatile List<KubePodResult> containerResults = Collections.emptyList()
 
@@ -219,7 +221,7 @@ class KubesTest extends DefaultTask {
         client.pods().inNamespace(namespace).withName(podName).watch(new Watcher<Pod>() {
             @Override
             void eventReceived(Watcher.Action action, Pod resource) {
-                project.logger.lifecycle("[StatusChange]  pod " + resource.getMetadata().getName() + " " + action.name())
+                project.logger.lifecycle("[StatusChange]  pod ${resource.getMetadata().getName()}  ${action.name()} (${resource.status.phase})")
             }
 
             @Override
@@ -256,8 +258,8 @@ class KubesTest extends DefaultTask {
                 .endEnv()
                 .withName(podName)
                 .withNewResources()
-                .addToRequests("cpu", new Quantity("6"))
-                .addToRequests("memory", new Quantity("12Gi"))
+                .addToRequests("cpu", new Quantity("${numberOfCoresPerFork}"))
+                .addToRequests("memory", new Quantity("${memoryGbPerFork}Gi"))
                 .endResources()
                 .addNewVolumeMount()
                 .withName("gradlecache")
@@ -289,7 +291,7 @@ class KubesTest extends DefaultTask {
             tempDir.toFile().mkdirs()
         }
 
-        project.logger.lifecycle("saving to " + podName + " results to: " + tempDir.toAbsolutePath().toFile().getAbsolutePath())
+        project.logger.lifecycle("Saving " + podName + " results to: " + tempDir.toAbsolutePath().toFile().getAbsolutePath())
         client.pods()
                 .inNamespace(namespace)
                 .withName(podName)

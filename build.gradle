@@ -551,16 +551,22 @@ task allParallelIntegrationTest(type: ParallelTestGroup) {
     testGroups "integrationTest"
     numberOfShards 15
     streamOutput false
+    coresPerFork 6
+    memoryInGbPerFork 10
 }
 task allParallelUnitTest(type: ParallelTestGroup) {
     testGroups "test"
     numberOfShards 15
     streamOutput false
+    coresPerFork 4
+    memoryInGbPerFork 6
 }
 task allParallelUnitAndIntegrationTest(type: ParallelTestGroup) {
     testGroups "test", "integrationTest"
-    numberOfShards 15
+    numberOfShards 20
     streamOutput false
+    coresPerFork 6
+    memoryInGbPerFork 10
 }
 apply plugin: DistributedTesting
 

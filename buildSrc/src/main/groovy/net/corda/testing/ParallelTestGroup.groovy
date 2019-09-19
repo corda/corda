@@ -7,10 +7,20 @@ class ParallelTestGroup extends DefaultTask {
 
     List<String> groups = new ArrayList<>()
     int shardCount = 20
+    int coresToUse = 4
+    int gbOfMemory = 4
     boolean printToStdOut = true
 
     void numberOfShards(int shards){
         this.shardCount = shards
+    }
+
+    void coresPerFork(int cores){
+        this.coresToUse = cores
+    }
+
+    void memoryInGbPerFork(int gb){
+        this.gbOfMemory = gbOfMemory
     }
 
     //when this is false, only containers will "failed" exit codes will be printed to stdout
@@ -27,10 +37,5 @@ class ParallelTestGroup extends DefaultTask {
             groups.add(it)
         }
     }
-
-    @TaskAction
-    def wire() {
-    }
-
 
 }
