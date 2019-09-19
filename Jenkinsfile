@@ -46,7 +46,7 @@ pipeline {
                                 "-DbuildId=\"\${BUILD_ID}\" " +
                                 "-Dkubenetize=true " +
                                 "-Ddocker.tag=\"\${DOCKER_TAG_TO_USE}\"" +
-                                " allParallelIntegrationTest"
+                                " allParallelUnitTest"
                     }
                     post {
                         always {
@@ -77,14 +77,5 @@ def killall_jobs() {
 
         echo "Killing task = ${build}"
         build.doStop();
-    }
-}
-
-
-pipeline {
-    agent none
-    stages {
-        stage('Run Tests') {
-        }
     }
 }

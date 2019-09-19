@@ -558,7 +558,7 @@ task allParallelUnitTest(type: ParallelTestGroup) {
     testGroups "test"
     numberOfShards 15
     streamOutput false
-    coresPerFork 4
+    coresPerFork 3
     memoryInGbPerFork 6
 }
 task allParallelUnitAndIntegrationTest(type: ParallelTestGroup) {
