@@ -6,8 +6,11 @@ These files might contain data used for transaction verification, or more likely
 There are a couple problems that this requirement causes in the current implementation of Corda: 
 
 1. Having a per-transaction specific file attached renders the ``AttachmentsClasssloader`` caching mechanism useless, which significantly impacts performance. 
+   Without the caching, we are seeing clients take 3 seconds to create a transaction due to the scan for custom serializers making it's way through large ZIP files.
 2. Reference files are subject to the the no-overlap rule. This causes pain to clients who wish to attach archives of user uploaded content.
 3. Attached files must not exceed: ``(maxTransactionSize - restOfTheTransaction)``   
+
+Note: 1. and 2. were not problems in Corda 3.x because there was no ``AttachmentsClasssloader``.
 
 To solve 3., we must implement the ``Data streams`` approach described in the refreshed TWP.
 
