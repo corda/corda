@@ -81,16 +81,21 @@ abstract class TestBase(type: SandboxType) {
     }
 
     fun sandbox(action: SandboxRuntimeContext.() -> Unit) {
-        return sandbox(WARNING, emptySet(), false, action)
+        return sandbox(WARNING, emptySet(), emptySet(), false, action)
     }
 
     fun sandbox(visibleAnnotations: Set<Class<out Annotation>>, action: SandboxRuntimeContext.() -> Unit) {
-        return sandbox(WARNING, visibleAnnotations, false, action)
+        return sandbox(WARNING, visibleAnnotations, emptySet(), false, action)
+    }
+
+    fun sandbox(visibleAnnotations: Set<Class<out Annotation>>, sandboxOnlyAnnotations: Set<String>, action: SandboxRuntimeContext.() -> Unit) {
+        return sandbox(WARNING, visibleAnnotations, sandboxOnlyAnnotations, false, action)
     }
 
     fun sandbox(
         minimumSeverityLevel: Severity,
         visibleAnnotations: Set<Class<out Annotation>>,
+        sandboxOnlyAnnotations: Set<String>,
         enableTracing: Boolean,
         action: SandboxRuntimeContext.() -> Unit
     ) {
@@ -101,7 +106,8 @@ abstract class TestBase(type: SandboxType) {
                     val analysisConfiguration = configuration.analysisConfiguration.createChild(
                         userSource = userSource,
                         newMinimumSeverityLevel = minimumSeverityLevel,
-                        visibleAnnotations = visibleAnnotations
+                        visibleAnnotations = visibleAnnotations,
+                        sandboxOnlyAnnotations = sandboxOnlyAnnotations
                     )
                     SandboxRuntimeContext(SandboxConfiguration.of(
                         configuration.executionProfile,

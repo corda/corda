@@ -23,6 +23,9 @@ allprojects {
         maven {
             url "$artifactory_contextUrl/corda-dev"
         }
+        maven {
+            url "$artifactory_contextUrl/corda-dependencies"
+        }
     }
 
     configurations {
