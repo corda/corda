@@ -46,10 +46,8 @@ import java.util.concurrent.TimeUnit
 // TODO The executor service is not needed. All we need is a single thread that deals with reconnecting and onto which ReconnectingObservables
 //  and other things can attach themselves as listeners for reconnect events.
 class ReconnectingCordaRPCOps private constructor(
-        val reconnectingRPCConnection: ReconnectingRPCConnection,
-        private val observersPool: ExecutorService,
-        private val userPool: Boolean
-) : AutoCloseable, InternalCordaRPCOps by proxy(reconnectingRPCConnection, observersPool) {
+        val reconnectingRPCConnection: ReconnectingRPCConnection
+) : InternalCordaRPCOps by proxy(reconnectingRPCConnection) {
     // Constructors that mirror CordaRPCClient.
     constructor(
             nodeHostAndPort: NetworkHostAndPort,
@@ -58,11 +56,16 @@ class ReconnectingCordaRPCOps private constructor(
             rpcConfiguration: CordaRPCClientConfiguration,
             sslConfiguration: ClientRpcSslOptions? = null,
             classLoader: ClassLoader? = null,
-            observersPool: ExecutorService? = null
+            observersPool: ExecutorService
     ) : this(
-            ReconnectingRPCConnection(listOf(nodeHostAndPort), username, password, rpcConfiguration, sslConfiguration, classLoader),
-            observersPool ?: Executors.newCachedThreadPool(),
-            observersPool != null)
+            listOf(nodeHostAndPort),
+            username,
+            password,
+            rpcConfiguration,
+            null,
+            sslConfiguration,
+            classLoader,
+            observersPool)
     constructor(
             nodeHostAndPorts: List<NetworkHostAndPort>,
             username: String,
@@ -71,18 +74,23 @@ class ReconnectingCordaRPCOps private constructor(
             gracefulReconnect: GracefulReconnect? = null,
             sslConfiguration: ClientRpcSslOptions? = null,
             classLoader: ClassLoader? = null,
-            observersPool: ExecutorService? = null
-    ) : this(
-            ReconnectingRPCConnection(nodeHostAndPorts, username, password, rpcConfiguration, sslConfiguration, classLoader, gracefulReconnect),
-            observersPool ?: Executors.newCachedThreadPool(),
-            observersPool != null)
+            observersPool: ExecutorService
+    ) : this(ReconnectingRPCConnection(
+            nodeHostAndPorts,
+            username,
+            password,
+            rpcConfiguration,
+            sslConfiguration,
+            classLoader,
+            gracefulReconnect,
+            observersPool))
     private companion object {
         private val log = contextLogger()
-        private fun proxy(reconnectingRPCConnection: ReconnectingRPCConnection, observersPool: ExecutorService): InternalCordaRPCOps {
+        private fun proxy(reconnectingRPCConnection: ReconnectingRPCConnection): InternalCordaRPCOps {
             return Proxy.newProxyInstance(
                     this::class.java.classLoader,
                     arrayOf(InternalCordaRPCOps::class.java),
-                    ErrorInterceptingHandler(reconnectingRPCConnection, observersPool)) as InternalCordaRPCOps
+                    ErrorInterceptingHandler(reconnectingRPCConnection)) as InternalCordaRPCOps
         }
     }
     private val retryFlowsPool = Executors.newScheduledThreadPool(1)
@@ -125,7 +133,8 @@ class ReconnectingCordaRPCOps private constructor(
             val rpcConfiguration: CordaRPCClientConfiguration,
             val sslConfiguration: ClientRpcSslOptions? = null,
             val classLoader: ClassLoader?,
-            val gracefulReconnect: GracefulReconnect? = null
+            val gracefulReconnect: GracefulReconnect? = null,
+            val observersPool: ExecutorService
     ) : RPCConnection<CordaRPCOps> {
         private var currentRPCConnection: CordaRPCConnection? = null
         enum class CurrentState {
@@ -178,12 +187,18 @@ class ReconnectingCordaRPCOps private constructor(
             return currentRPCConnection!!
         }
 
-        private tailrec fun establishConnectionWithRetry(retryInterval: Duration = 1.seconds, roundRobinIndex: Int = 0): CordaRPCConnection {
+        private tailrec fun establishConnectionWithRetry(
+                retryInterval: Duration = 1.seconds,
+                roundRobinIndex: Int = 0
+        ): CordaRPCConnection {
             val attemptedAddress = nodeHostAndPorts[roundRobinIndex]
             log.info("Connecting to: $attemptedAddress")
             try {
                 return CordaRPCClient(
-                        attemptedAddress, rpcConfiguration.copy(connectionMaxRetryInterval = retryInterval, maxReconnectAttempts = 1), sslConfiguration, classLoader
+                        attemptedAddress,
+                        rpcConfiguration.copy(connectionMaxRetryInterval = retryInterval, maxReconnectAttempts = 1),
+                        sslConfiguration,
+                        classLoader
                 ).start(username, password).also {
                     // Check connection is truly operational before returning it.
                     require(it.proxy.nodeInfo().legalIdentitiesAndCerts.isNotEmpty()) {
@@ -240,7 +255,7 @@ class ReconnectingCordaRPCOps private constructor(
             currentRPCConnection?.close()
         }
     }
-    private class ErrorInterceptingHandler(val reconnectingRPCConnection: ReconnectingRPCConnection, val observersPool: ExecutorService) : InvocationHandler {
+    private class ErrorInterceptingHandler(val reconnectingRPCConnection: ReconnectingRPCConnection) : InvocationHandler {
         private fun Method.isStartFlow() = name.startsWith("startFlow") || name.startsWith("startTrackedFlow")
 
         private fun checkIfIsStartFlow(method: Method, e: InvocationTargetException) {
@@ -290,7 +305,7 @@ class ReconnectingCordaRPCOps private constructor(
                 DataFeed::class.java -> {
                     // Intercept the data feed methods and return a ReconnectingObservable instance
                     val initialFeed: DataFeed<Any, Any?> = uncheckedCast(doInvoke(method, args))
-                    val observable = ReconnectingObservable(reconnectingRPCConnection, observersPool, initialFeed) {
+                    val observable = ReconnectingObservable(reconnectingRPCConnection, initialFeed) {
                         // This handles reconnecting and creates new feeds.
                         uncheckedCast(this.invoke(reconnectingRPCConnection.proxy, method, args))
                     }
@@ -302,8 +317,7 @@ class ReconnectingCordaRPCOps private constructor(
         }
     }
 
-    override fun close() {
-        if (!userPool) observersPool.shutdown()
+    fun close() {
         retryFlowsPool.shutdown()
         reconnectingRPCConnection.forceClose()
     }
