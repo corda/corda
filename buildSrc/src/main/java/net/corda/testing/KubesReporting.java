@@ -16,6 +16,7 @@
 
 package net.corda.testing;
 
+import org.apache.commons.compress.utils.IOUtils;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.GradleException;
 import org.gradle.api.Transformer;
@@ -33,6 +34,8 @@ import org.gradle.internal.operations.BuildOperationExecutor;
 
 import javax.inject.Inject;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -49,6 +52,7 @@ public class KubesReporting extends DefaultTask {
     private File destinationDir = new File(getProject().getBuildDir(), "test-reporting");
     private List<Object> results = new ArrayList<Object>();
     List<KubePodResult> podResults = new ArrayList<>();
+    boolean shouldPrintOutput = true;
 
     public KubesReporting() {
         //force this task to always run, as it's responsible for parsing exit codes
@@ -147,12 +151,17 @@ public class KubesReporting extends DefaultTask {
 
                 if (!containersWithNonZeroReturnCodes.isEmpty()) {
                     String reportUrl = new ConsoleRenderer().asClickableFileUrl(new File(destinationDir, "index.html"));
-
-                    String containerOutputs = containersWithNonZeroReturnCodes.stream().map(KubePodResult::getOutput).map(file -> new ConsoleRenderer().asClickableFileUrl(file)).reduce("",
-                            (s, s2) -> s + "\n" + s2
-                    );
-
-                    String message = "remote build failed, check test report at " + reportUrl + "\n and container outputs at " + containerOutputs;
+                    if (shouldPrintOutput){
+                        containersWithNonZeroReturnCodes.forEach(container -> {
+                            try {
+                                System.out.println("\n##### CONTAINER OUTPUT START #####");
+                                IOUtils.copy(new FileInputStream(container.getOutput()), System.out);
+                                System.out.println("##### CONTAINER OUTPUT END #####\n");
+                            } catch (IOException ignored) {
+                            }
+                        });
+                    }
+                    String message = "remote build failed, check test report at " + reportUrl;
                     throw new GradleException(message);
                 }
             } else {
