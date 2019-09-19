@@ -21,7 +21,7 @@ import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.security.auth.x500.X500Principal
 
-class PrimusXCryptoService(keyStore: KeyStore, provider: Provider, x500Principal: X500Principal = DUMMY_X500_PRINCIPAL, private val auth: () -> PrimusXConfiguration): JCACryptoService(keyStore, provider) {
+class PrimusXCryptoService(keyStore: KeyStore, provider: Provider, @Suppress("UNUSED_PARAMETER") x500Principal: X500Principal = DUMMY_X500_PRINCIPAL, private val auth: () -> PrimusXConfiguration): JCACryptoService(keyStore, provider) {
 
     override fun getType(): SupportedCryptoServices = SupportedCryptoServices.PRIMUS_X
 

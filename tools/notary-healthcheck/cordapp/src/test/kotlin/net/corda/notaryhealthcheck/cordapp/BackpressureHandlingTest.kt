@@ -157,7 +157,7 @@ class BackpressureHandlingTest {
             val flow = HealthCheckFlow(Monitorable(notary, notary))
             val progressTracker = flow.progressTracker
             assertNotEquals(ProgressTracker.DONE, progressTracker.currentStep)
-            val progressTrackerDone = getDoneFuture(progressTracker)
+            getDoneFuture(progressTracker)
 
             val resultFuture = services.startFlow(flow).resultFuture
             var exceptionThrown = false

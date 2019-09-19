@@ -27,10 +27,10 @@ class RpcWorkerPaidTest {
 
             val bankAProxy = CordaRPCClient(bankA.rpcAddress).start("username", "password").proxy
 
-            val cashIssueResult = bankB.rpc.startFlow(::CashIssueFlow, 10.POUNDS, OpaqueBytes.of(0x01), defaultNotaryIdentity).returnValue.get()
+            bankB.rpc.startFlow(::CashIssueFlow, 10.POUNDS, OpaqueBytes.of(0x01), defaultNotaryIdentity).returnValue.get()
             assertEquals(10.POUNDS, bankB.rpc.getCashBalances()[GBP])
 
-            val cashPayResult = bankB.rpc.startFlow(::CashPaymentFlow, 2.POUNDS, bankAProxy.nodeInfo().singleIdentity(), false).returnValue.get()
+            bankB.rpc.startFlow(::CashPaymentFlow, 2.POUNDS, bankAProxy.nodeInfo().singleIdentity(), false).returnValue.get()
             assertEquals(8.POUNDS, bankB.rpc.getCashBalances()[GBP])
             Thread.sleep(10000)
             // This can sometimes fail due to slow update. Similar to the RpcWorkerMultiIdentityTest, a timeout worked but the test should be re-written, perhaps to track the vault?

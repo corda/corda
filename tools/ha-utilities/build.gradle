@@ -24,11 +24,30 @@ dependencies {
     testImplementation "io.mockk:mockk:1.9.kotlin12"
 }
 
+/*
+ * A bit of explanation on the two jar tasks.
+ * The ultimate artifact this module needs to produce is a fat jar, that contains the kotlin runtime.
+ * This allows the jar to be used as a stand alone tool.
+ *
+ * However this module is also used as a dependency in another module (:bridge).
+ * The kotlin compiler plugin produces a warning in case a dependency jar contains kotlin runtime.
+ *
+ * Therefore we need a thin jar, that is used by gradle when the module is depended on
+ * and we need the fat jar that we already have.
+ */
 jar {
+    // jar by default is thin. adding a classifier, because the unclassified jar needs to be the fat jar.
+    archiveClassifier = "thin"
+}
+
+task fatJar(type: Jar, dependsOn: jar) {
+    // the executable fat jar
+    with jar
     from(configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }) {
         exclude "META-INF/*.SF"
         exclude "META-INF/*.DSA"
         exclude "META-INF/*.RSA"
+        exclude "META-INF/INDEX.LIST"
         exclude "log4j2.xml"
     }
     baseName = "ha-utilities"
@@ -38,7 +57,14 @@ jar {
         )
     }
 }
+// we need to make sure the fat jar gets published
+assemble.dependsOn fatJar
+artifacts {
+    publish fatJar
+}
 
 publish {
+    // we dont really need the default (thin) jar to be published
+    disableDefaultJar = true
     name 'corda-tools-ha-utilities'
 }

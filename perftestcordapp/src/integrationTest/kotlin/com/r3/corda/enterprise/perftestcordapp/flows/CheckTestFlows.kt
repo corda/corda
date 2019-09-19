@@ -43,7 +43,7 @@ class CheckAllTheTestFlows {
                 isDebug = driverParameters.isDebug,
                 startNodesInProcess = driverParameters.startNodesInProcess,
                 waitForAllNodesToFinish = driverParameters.waitForAllNodesToFinish,
-                extraCordappPackagesToScan = driverParameters.extraCordappPackagesToScan,
+                extraCordappPackagesToScan = @Suppress("DEPRECATION") driverParameters.extraCordappPackagesToScan,
                 notarySpecs = driverParameters.notarySpecs,
                 jmxPolicy = driverParameters.jmxPolicy,
                 compatibilityZone = null,

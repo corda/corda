@@ -14,7 +14,7 @@ import net.corda.core.utilities.toBase58
 import net.corda.core.utilities.toSHA256Bytes
 import org.bouncycastle.asn1.x509.CRLDistPoint
 import org.bouncycastle.asn1.x509.Extension
-import org.bouncycastle.x509.extension.X509ExtensionUtil
+import org.bouncycastle.cert.jcajce.JcaX509ExtensionUtils
 import java.math.BigInteger
 import java.nio.ByteBuffer
 import java.security.*
@@ -293,7 +293,7 @@ fun isCRLDistributionPointBlacklisted(certChain: List<X509Certificate>): Boolean
     // Doorman certificate checks for mis-configured CRL endpoint.
     return certChain.any {
         it.getExtensionValue(Extension.cRLDistributionPoints.id)?.let {
-            CRLDistPoint.getInstance(X509ExtensionUtil.fromExtensionValue(it)).distributionPoints.any { distPoint ->
+            CRLDistPoint.getInstance(JcaX509ExtensionUtils.parseExtensionValue(it)).distributionPoints.any { distPoint ->
                 blacklistedCrlEndpoints.any { distPoint.distributionPoint.toString().contains(it) }
             }
         } ?: false

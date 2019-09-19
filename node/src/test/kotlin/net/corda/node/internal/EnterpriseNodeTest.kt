@@ -67,7 +67,7 @@ class EnterpriseNodeTest {
                 NodeConfigurationImpl.Defaults.masterKeyAlias)
         val nodeConfig = createConfig(freshIdentitiesConfiguration)
 
-        assertThatThrownBy { val node = EnterpriseNode(nodeConfig, versionInfo) }
+        assertThatThrownBy { EnterpriseNode(nodeConfig, versionInfo) }
                 .isInstanceOf(ConfigurationException::class.java)
                 .hasMessageContaining("The crypto service configured for fresh identities (BC_SIMPLE) supports the DEGRADED_WRAPPED mode, but the node is configured to use WRAPPED")
     }

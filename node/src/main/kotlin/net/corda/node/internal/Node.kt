@@ -259,7 +259,7 @@ open class Node(configuration: NodeConfiguration,
         val artemisSigningService = createArtemisSigningService(configuration, nodeInfo.legalIdentities[0].name.commonName, sslOptions)
 
         // Start up the Artemis signing service
-        artemisSigningService?.apply {
+        artemisSigningService.apply {
             closeOnStop()
             setupArtemisSigningServiceProvider(this, sslOptions)
             start()

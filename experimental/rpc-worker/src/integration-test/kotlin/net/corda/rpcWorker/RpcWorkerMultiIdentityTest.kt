@@ -29,15 +29,15 @@ class RpcWorkerMultiIdentityTest {
             val bankAProxy = CordaRPCClient(combinedRpcHandle.rpcAddress).start(rpcUser.username, rpcUser.password, DUMMY_BANK_A_NAME).proxy
             val bankBProxy = CordaRPCClient(combinedRpcHandle.rpcAddress).start(rpcUser.username, rpcUser.password, DUMMY_BANK_B_NAME).proxy
 
-            val cashIssueResult = bankAProxy.startFlow(::CashIssueFlow, 11.POUNDS, OpaqueBytes.of(0x01), defaultNotaryIdentity)
+            bankAProxy.startFlow(::CashIssueFlow, 11.POUNDS, OpaqueBytes.of(0x01), defaultNotaryIdentity)
                     .returnValue.get()
             assertEquals(11.POUNDS, bankAProxy.getCashBalances()[GBP])
 
-            val cashPayResult = bankAProxy.startFlow(::CashPaymentFlow, 8.POUNDS, bankC.nodeInfo.singleIdentity(), false).returnValue.get()
+            bankAProxy.startFlow(::CashPaymentFlow, 8.POUNDS, bankC.nodeInfo.singleIdentity(), false).returnValue.get()
             assertEquals(3.POUNDS, bankAProxy.getCashBalances()[GBP])
             assertEquals(8.POUNDS, bankC.rpc.getCashBalances()[GBP])
 
-            val cashPayResult2 = bankC.rpc.startFlow(::CashPaymentFlow, 2.POUNDS, bankBProxy.nodeInfo().singleIdentity()).returnValue.get()
+            bankC.rpc.startFlow(::CashPaymentFlow, 2.POUNDS, bankBProxy.nodeInfo().singleIdentity()).returnValue.get()
             assertEquals(3.POUNDS, bankAProxy.getCashBalances()[GBP])
             assertEquals(6.POUNDS, bankC.rpc.getCashBalances()[GBP])
             // assertEquals(2.POUNDS, bankBProxy.getCashBalances()[GBP]) TODO: Investigate race condition, this condition sometimes passes and sometimes not

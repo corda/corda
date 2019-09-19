@@ -266,7 +266,7 @@ class JPAUniquenessProvider(
         val committedStates = mutableListOf<CommittedState>()
 
         for (idsBatch in persistentStateRefs.chunked(config.maxInputStates)) {
-            @SuppressWarnings("unchecked")
+            @Suppress("UNCHECKED_CAST")
             val existing = session
                     .createNamedQuery("CommittedState.select")
                     .setParameter("ids", idsBatch)

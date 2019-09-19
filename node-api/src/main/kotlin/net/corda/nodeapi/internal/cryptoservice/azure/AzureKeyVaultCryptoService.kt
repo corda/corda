@@ -116,7 +116,7 @@ class AzureKeyVaultCryptoService(
         val keyBundle = keyVaultClient.getKey(createIdentifier(alias))
         val keyType = keyBundle.key().kty()
         val algorithm = determineAlgorithm(keyBundle, hashAlgo)
-        val transformedHash = transformHash(hashAlgo, hash, keyType)
+        val transformedHash = transformHash(hash, keyType)
         val result = keyVaultClient.sign(createIdentifier(alias), algorithm, transformedHash)
         detailedLogger.trace { "CryptoService(action=signing_end;alias=$alias;algorithm=$signAlgorithm)" }
         return when (keyType) {
@@ -126,7 +126,7 @@ class AzureKeyVaultCryptoService(
         }
     }
 
-    private fun transformHash(hashAlgo: DigestAlgo, digest: ByteArray, keyType: JsonWebKeyType): ByteArray {
+    private fun transformHash(digest: ByteArray, keyType: JsonWebKeyType): ByteArray {
         return when(keyType) {
             JsonWebKeyType.RSA, JsonWebKeyType.RSA_HSM -> digest
             JsonWebKeyType.EC, JsonWebKeyType.EC_HSM -> getECHash(digest)
@@ -226,12 +226,12 @@ class AzureKeyVaultCryptoService(
     private fun determineAlgorithm(keyBundle: KeyBundle, hashAlgo: DigestAlgo): JsonWebKeySignatureAlgorithm {
         return when (keyBundle.key().kty()) {
             JsonWebKeyType.RSA, JsonWebKeyType.RSA_HSM -> determineRSASignAlgorithmFrom(hashAlgo)
-            JsonWebKeyType.EC, JsonWebKeyType.EC_HSM -> determineECAlgorithm(keyBundle, hashAlgo)
+            JsonWebKeyType.EC, JsonWebKeyType.EC_HSM -> determineECAlgorithm(keyBundle)
             else -> throw IllegalArgumentException("Key type ${keyBundle.key().kty()} not supported.")
         }
     }
 
-    private fun determineECAlgorithm(keyBundle: KeyBundle, hashAlgo: DigestAlgo): JsonWebKeySignatureAlgorithm {
+    private fun determineECAlgorithm(keyBundle: KeyBundle): JsonWebKeySignatureAlgorithm {
         return if (keyBundle.key().crv() == P_256) {
             JsonWebKeySignatureAlgorithm.ES256
         }

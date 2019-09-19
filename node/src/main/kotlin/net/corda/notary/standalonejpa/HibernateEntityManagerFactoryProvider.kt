@@ -53,7 +53,7 @@ object HibernateEntityManagerFactoryProvider {
         //if one is present, it creates the necessary tables. If not, it silently does nothing and then
         //complains that the tables do not exist
         if (isH2Database(jdbcUrl)) {
-            val connection = dataSource.connection
+            dataSource.connection
         }
         if (databaseConfig.initialiseSchema == SchemaInitializationType.NONE) {
             dataSourceProperties.setProperty("hibernate.hbm2ddl.auto", "none")
@@ -65,11 +65,12 @@ object HibernateEntityManagerFactoryProvider {
 
         databaseConfig.schema?.apply {
             // Enterprise only - preserving case-sensitive schema name for PostgreSQL by wrapping in double quotes, schema without double quotes would be treated as case-insensitive (lower cases)
-            val schemaName = if (jdbcUrl.contains(":postgresql:", ignoreCase = true) && databaseConfig.schema?.startsWith("\"") == false) {
-                "\"" + databaseConfig.schema + "\""
-            } else {
-                databaseConfig.schema
-            }
+            val schemaName =
+                    if (jdbcUrl.contains(":postgresql:", ignoreCase = true) && !this.startsWith("\"")) {
+                        "\"" + this + "\""
+                    } else {
+                        this
+                    }
             dataSourceProperties.setProperty("hibernate.default_schema", schemaName)
         }
 
