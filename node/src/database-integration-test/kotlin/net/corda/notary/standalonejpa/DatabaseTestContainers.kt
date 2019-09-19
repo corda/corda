@@ -170,7 +170,6 @@ class MySQLDataSourceFactory(override val dockerImageName: String) : DataSourceF
         try {
             container.start()
         } catch (e: Exception) {
-            var logs = container.logs
             throw e
         }
     }

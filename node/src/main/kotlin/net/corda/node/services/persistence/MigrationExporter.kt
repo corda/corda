@@ -79,7 +79,7 @@ class MigrationExporter(val parent: Path, val datasourceProperties: Properties, 
                 .applySettings(config.properties)
                 .applySetting(Environment.DATASOURCE, dataSource)
 
-        val metadataBuilder = metadataSources.getMetadataBuilder(registryBuilder.build())
+        val metadataBuilder = @Suppress("DEPRECATION") metadataSources.getMetadataBuilder(registryBuilder.build())
 
         return buildHibernateMetadata(metadataBuilder, datasourceProperties.getProperty(CordaPersistence.DataSourceConfigTag.DATA_SOURCE_URL),
                 listOf(DummyAbstractPartyToX500NameAsStringConverter()))

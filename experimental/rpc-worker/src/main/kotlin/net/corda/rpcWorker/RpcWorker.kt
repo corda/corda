@@ -77,15 +77,14 @@ class Main : Runnable {
         val artemisDir = FileSystems.getDefault().getPath(config.getString("artemisDir"))
 
         val rpcWorkerConfig = getRpcWorkerConfig(port, user, artemisDir)
-        val ourKeyPair = getIdentity()
-        val myInfo = getNodeInfo()
+        getIdentity()
+        getNodeInfo()
 
         val trustRoot = rpcWorkerConfig.p2pSslOptions.trustStore.get().query { getCertificate(X509Utilities.CORDA_ROOT_CA) }
-        val nodeCa = rpcWorkerConfig.signingCertificateStore.get().query { getCertificate(X509Utilities.CORDA_CLIENT_CA) }
+        rpcWorkerConfig.signingCertificateStore.get().query { getCertificate(X509Utilities.CORDA_CLIENT_CA) }
 
         val signedNetworkParameters = NetworkParametersReader(trustRoot, null, rpcWorkerConfig.baseDirectory).read()
-        val rpcWorkerBroker = createRpcWorkerBroker(rpcWorkerConfig, signedNetworkParameters.networkParameters.maxMessageSize)
-        createRpcWorker(rpcWorkerConfig, myInfo, signedNetworkParameters, ourKeyPair, trustRoot, nodeCa, rpcWorkerBroker.serverControl)
+        createRpcWorkerBroker(rpcWorkerConfig, signedNetworkParameters.networkParameters.maxMessageSize)
     }
 
     private fun getRpcWorkerConfig(port: Int, user: User, artemisDir: Path): NodeConfiguration {
@@ -112,12 +111,6 @@ class Main : Runnable {
         return broker
     }
 
-    private fun createRpcWorker(config: NodeConfiguration, myInfo: NodeInfo, signedNetworkParameters: NetworkParametersReader.NetworkParametersAndSigned, ourKeyPair: KeyPair, trustRoot: X509Certificate, nodeCa: X509Certificate, serverControl: ActiveMQServerControl): Pair<RpcWorker, RpcWorkerServiceHub> {
-        val rpcWorkerServiceHub = RpcWorkerServiceHub(config, myInfo, signedNetworkParameters, ourKeyPair, trustRoot, nodeCa)
-        val rpcWorker = RpcWorker(serverControl, TODO(), rpcWorkerServiceHub)
-        rpcWorker.start()
-        return Pair(rpcWorker, rpcWorkerServiceHub)
-    }
 }
 
 class RpcWorker(private val serverControl: ActiveMQServerControl, private val rpcWorkerConfig: NodeConfiguration, private vararg val rpcWorkerServiceHubs: RpcWorkerServiceHub) {

@@ -35,7 +35,7 @@ abstract class BackpressureAwareTimedFlow<ResultType> : FlowLogic<ResultType>(),
         }
     }
 
-    protected open fun applyWaitTimeUpdate(session: FlowSession, update: WaitTimeUpdate) {
+    open fun applyWaitTimeUpdate(session: FlowSession, update: WaitTimeUpdate) {
         logger.info("Counterparty [${session.counterparty}] is busy - TimedFlow $runId has been asked to wait for an additional ${update.waitTime} seconds for completion.")
         stateMachine.updateTimedFlowTimeout(update.waitTime.seconds)
     }

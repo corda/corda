@@ -106,7 +106,7 @@ object NodeJanitor {
         }
 
         var totalRemoved = 0
-        findSendersForCleanup().forEach { (senderHash, msgCount) ->
+        findSendersForCleanup().forEach { (senderHash, _) ->
             val cutoffSeqNo = findCutoffSeqNo(senderHash)
             log.trace { "Lowest message sequence number for sender $senderHash to keep: $cutoffSeqNo" }
 

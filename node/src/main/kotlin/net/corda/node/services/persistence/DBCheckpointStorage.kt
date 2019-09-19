@@ -80,9 +80,9 @@ class DBCheckpointStorage : CheckpointStorage {
         }
     }
 
-    override fun getCheckpointCount(connection: Connection): Long {
-        return try {
-            return connection.prepareStatement("select count(*) from node_checkpoints").use { ps ->
+    override fun getCheckpointCount(connection: Connection): Long =
+        try {
+            connection.prepareStatement("select count(*) from node_checkpoints").use { ps ->
                 ps.executeQuery().use { rs ->
                     rs.next()
                     rs.getLong(1)
@@ -90,7 +90,6 @@ class DBCheckpointStorage : CheckpointStorage {
             }
         } catch (e: SQLException) {
             // Happens when the table was not created yet.
-            return 0L
+            0L
         }
-    }
 }

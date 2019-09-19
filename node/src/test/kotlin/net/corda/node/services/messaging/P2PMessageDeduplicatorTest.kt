@@ -3,7 +3,6 @@ package net.corda.node.services.messaging
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.whenever
-import junit.framework.Assert.assertFalse
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.elapsedTime
 import net.corda.core.utilities.contextLogger
@@ -27,6 +26,7 @@ import java.security.SecureRandom
 import java.time.Clock
 import java.util.*
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class P2PMessageDeduplicatorTest {

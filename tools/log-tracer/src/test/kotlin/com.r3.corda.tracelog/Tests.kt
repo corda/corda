@@ -12,7 +12,7 @@ class TestSource {
     // TODO: turn into an actual test; currently used for debugging without having to build the tool
     @Test fun f() {
         val logPath = Paths.get(javaClass.classLoader.getResource("details.log").toURI())
-        val tracer = LogTracer.INSTANCE.apply {
+        LogTracer.INSTANCE.apply {
             val now = Instant.now()
             val timeWindow = findTimeWindow(listOf(logPath))
             val (startTime, endTime) = timeWindow.padded(5.seconds)

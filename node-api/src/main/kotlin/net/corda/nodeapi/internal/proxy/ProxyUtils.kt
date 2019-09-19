@@ -23,7 +23,6 @@ object ProxyUtils {
                         ProxyVersion.HTTP -> Authenticator.RequestorType.PROXY
                         ProxyVersion.SOCKS4 -> Authenticator.RequestorType.SERVER
                         ProxyVersion.SOCKS5 -> Authenticator.RequestorType.SERVER
-                        else -> null
                     }
 
             object : Authenticator() {
@@ -45,7 +44,6 @@ object ProxyUtils {
             ProxyVersion.SOCKS4 -> ProxySettings(Proxy(Proxy.Type.SOCKS, address), null)
             ProxyVersion.SOCKS5 -> ProxySettings(Proxy(Proxy.Type.SOCKS, address), authenticator)
             ProxyVersion.HTTP -> ProxySettings(Proxy(Proxy.Type.HTTP, address), authenticator, ::httpsAdditionalSetup)
-            else -> throw IllegalArgumentException("Unhandled ProxyVersion: ${proxyConfig.version}")
         }
     }
 
