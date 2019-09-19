@@ -87,7 +87,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
      * @param transaction What to commit.
      * @param sessions A collection of [FlowSession]s for each non-local participant of the transaction. Sessions to non-participants can
      * also be provided.
-     * @param statesToRecord Which transactions to commit to the vault.
+     * @param statesToRecord Which states to commit to the vault.
      */
     @JvmOverloads
     constructor(
@@ -267,7 +267,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
  * @param otherSideSession The session which is providing the transaction to record.
  * @param expectedTxId Expected ID of the transaction that's about to be received. This is typically retrieved from
  * [SignTransactionFlow]. Setting it to null disables the expected transaction ID check.
- * @param statesToRecord Which transactions to commit to the vault. Defaults to [StatesToRecord.ONLY_RELEVANT].
+ * @param statesToRecord Which states to commit to the vault. Defaults to [StatesToRecord.ONLY_RELEVANT].
  */
 class ReceiveFinalityFlow @JvmOverloads constructor(private val otherSideSession: FlowSession,
                                                     private val expectedTxId: SecureHash? = null,
