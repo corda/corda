@@ -20,7 +20,7 @@ class ParallelTestGroup extends DefaultTask {
     }
 
     void memoryInGbPerFork(int gb){
-        this.gbOfMemory = gbOfMemory
+        this.gbOfMemory = gb
     }
 
     //when this is false, only containers will "failed" exit codes will be printed to stdout
