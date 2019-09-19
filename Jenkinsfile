@@ -41,20 +41,20 @@ pipeline {
                         }
                     }
                 }
-                stage('Unit Tests') {
-                    steps {
-                        sh "./gradlew " +
-                                "-DbuildId=\"\${BUILD_ID}\" " +
-                                "-Dkubenetize=true " +
-                                "-Ddocker.tag=\"\${DOCKER_TAG_TO_USE}\"" +
-                                " allParallelUnitTest"
-                    }
-                    post {
-                        always {
-                            junit '**/build/test-results-xml/**/*.xml'
-                        }
-                    }
-                }
+//                stage('Unit Tests') {
+//                    steps {
+//                        sh "./gradlew " +
+//                                "-DbuildId=\"\${BUILD_ID}\" " +
+//                                "-Dkubenetize=true " +
+//                                "-Ddocker.tag=\"\${DOCKER_TAG_TO_USE}\"" +
+//                                " allParallelUnitTest"
+//                    }
+//                    post {
+//                        always {
+//                            junit '**/build/test-results-xml/**/*.xml'
+//                        }
+//                    }
+//                }
             }
 
         }
