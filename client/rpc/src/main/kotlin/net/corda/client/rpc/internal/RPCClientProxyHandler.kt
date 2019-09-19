@@ -121,6 +121,9 @@ class RPCClientProxyHandler(
                 }
             }
         }
+
+        private const val METHOD_FQN_CUTOFF_VERSION = 5
+        const val CLASS_METHOD_DIVIDER = "."
     }
 
     // Used for reaping
@@ -229,7 +232,7 @@ class RPCClientProxyHandler(
     }
 
     /** A throwable that doesn't represent a real error - it's just here to wrap a stack trace. */
-    class CallSite(val rpcName: String) : Throwable("<Call site of root RPC '$rpcName'>")
+    class CallSite(rpcName: String) : Throwable("<Call site of root RPC '$rpcName'>")
 
     // This is the general function that transforms a client side RPC to internal Artemis messages.
     override fun invoke(proxy: Any, method: Method, arguments: Array<out Any?>?): Any? {
@@ -252,12 +255,13 @@ class RPCClientProxyHandler(
             throw RPCException("RPC server is not available.")
 
         val replyId = InvocationId.newInstance()
-        callSiteMap?.set(replyId, CallSite(method.name))
+        val methodFqn = produceMethodFullyQualifiedName(method)
+        callSiteMap?.set(replyId, CallSite(methodFqn))
         try {
             val serialisedArguments = (arguments?.toList() ?: emptyList()).serialize(context = serializationContextWithObservableContext)
             val request = RPCApi.ClientToServer.RpcRequest(
                     clientAddress,
-                    method.name,
+                    methodFqn,
                     serialisedArguments,
                     replyId,
                     sessionId,
@@ -280,6 +284,14 @@ class RPCClientProxyHandler(
         } finally {
             callSiteMap?.remove(replyId)
         }
+    }
+
+    private fun produceMethodFullyQualifiedName(method: Method) = if (serverProtocolVersion!! > METHOD_FQN_CUTOFF_VERSION) {
+        // We are talking to a newer version of the server which will be able to understand names with class prefix.
+        rpcOpsClass.name + CLASS_METHOD_DIVIDER + method.name
+    } else {
+        // Legacy mode.
+        method.name
     }
 
     private fun sendMessage(message: RPCApi.ClientToServer) {
