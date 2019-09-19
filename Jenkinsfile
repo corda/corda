@@ -21,7 +21,7 @@ pipeline {
                             "-Ddocker.provided.tag=\"\${DOCKER_TAG_TO_USE}\"" +
                             " clean pushBuildImage"
                 }
-                sh "kubectl auth can-i get nodes"
+                sh "kubectl auth can-i get pods"
             }
         }
 
