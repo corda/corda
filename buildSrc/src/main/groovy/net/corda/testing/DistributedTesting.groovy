@@ -59,7 +59,7 @@ class DistributedTesting implements Plugin<Project> {
                     numberOfPods = testGrouping.getShardCount()
                     printOutput = testGrouping.printToStdOut
                     fullTaskToExecutePath = superListOfTasks
-                    taskToExecuteName = "userDefined"
+                    taskToExecuteName = testGrouping.groups.join("And")
                     memoryGbPerFork = testGrouping.gbOfMemory
                     numberOfCoresPerFork = testGrouping.coresToUse
                     doFirst {
