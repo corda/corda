@@ -404,6 +404,10 @@ allprojects {
 if (!JavaVersion.current().java8Compatible)
     throw new GradleException("Corda requires Java 8, please upgrade to at least 1.8.0_$java8_minUpdateVersion")
 
+configurations {
+    detekt
+}
+
 // Required for building out the fat JAR.
 dependencies {
     compile project(':node')
@@ -425,6 +429,7 @@ dependencies {
     }
     runtime project(':webserver')
     testCompile project(':test-utils')
+    detekt 'io.gitlab.arturbosch.detekt:detekt-cli:1.0.1'
 }
 
 jar {
@@ -451,6 +456,26 @@ task jacocoRootReport(type: org.gradle.testing.jacoco.tasks.JacocoReport) {
             it.exists()
         })
     }
+}
+
+task detekt(type: JavaExec) {
+    main = "io.gitlab.arturbosch.detekt.cli.Main"
+    classpath = configurations.detekt
+    def input = "$projectDir"
+    def config = "$projectDir/detekt-config.yml"
+    def baseline = "$projectDir/detekt-baseline.xml"
+    def params = ['-i', input, '-c', config, '-b', baseline]
+    args(params)
+}
+
+task detektBaseline(type: JavaExec) {
+    main = "io.gitlab.arturbosch.detekt.cli.Main"
+    classpath = configurations.detekt
+    def input = "$projectDir"
+    def config = "$projectDir/detekt-config.yml"
+    def baseline = "$projectDir/detekt-baseline.xml"
+    def params = ['-i', input, '-c', config, '-b', baseline, '--create-baseline']
+    args(params)
 }
 
 tasks.withType(Test) {
@@ -597,31 +622,3 @@ buildScan {
 }
 
 apply plugin: DistributedTesting
-
-configurations {
-    detekt
-}
-
-dependencies {
-    detekt 'io.gitlab.arturbosch.detekt:detekt-cli:1.0.1'
-}
-
-task detekt(type: JavaExec) {
-    main = "io.gitlab.arturbosch.detekt.cli.Main"
-    classpath = configurations.detekt
-    def input = "$projectDir"
-    def config = "$projectDir/detekt-config.yml"
-    def baseline = "$projectDir/detekt-baseline.xml"
-    def params = ['-i', input, '-c', config, '-b', baseline]
-    args(params)
-}
-
-task detektBaseline(type: JavaExec) {
-    main = "io.gitlab.arturbosch.detekt.cli.Main"
-    classpath = configurations.detekt
-    def input = "$projectDir"
-    def config = "$projectDir/detekt-config.yml"
-    def baseline = "$projectDir/detekt-baseline.xml"
-    def params = ['-i', input, '-c', config, '-b', baseline, '--create-baseline']
-    args(params)
-}
