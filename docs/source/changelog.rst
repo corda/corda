@@ -7,6 +7,9 @@ release, see :doc:`app-upgrade-notes`.
 Unreleased
 ----------
 
+* Updating FinalityFlow with functionality to indicate the appropriate StatesToRecord. This allows the initiating party to record states
+  from transactions which they are proposing, but are not necessarily participants of.
+
 * Removed the RPC exception privacy feature. Previously, in production mode, the exceptions thrown on the node were stripped of all content
   when rethrown on the RPC client.
 
