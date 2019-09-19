@@ -239,7 +239,7 @@ allprojects {
         // JDK11 official support (https://github.com/jacoco/jacoco/releases/tag/v0.8.3)
         toolVersion = "0.8.3"    
     }
-    
+
     tasks.withType(JavaCompile) {
         options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation" << "-Xlint:-options" << "-parameters"
         if (warnings_as_errors) {
@@ -260,6 +260,10 @@ allprojects {
             freeCompilerArgs = ['-Xjvm-default=compatibility']
             allWarningsAsErrors = warnings_as_errors
         }
+    }
+
+    tasks.register('compileAll') { task ->
+        task.dependsOn tasks.withType(AbstractCompile)
     }
 
     tasks.withType(Jar) { task ->
