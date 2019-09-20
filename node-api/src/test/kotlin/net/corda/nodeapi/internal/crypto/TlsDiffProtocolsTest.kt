@@ -70,7 +70,9 @@ class TlsDiffProtocolsTest(private val serverAlgo: String, private val clientAlg
             CIPHER_SUITES_ALL(arrayOf(
                     // 1.3 only
                     "TLS_AES_128_GCM_SHA256",
-                    "TLS_CHACHA20_POLY1305_SHA256",
+//                    Unsupported CipherSuite: TLS_CHACHA20_POLY1305_SHA256 (java version "11.0.2" 2019-01-15 LTS)
+//                    Works with: openjdk version "12.0.1" 2019-04-16 (OpenJDK Runtime Environment (build 12.0.1+12))
+//                    "TLS_CHACHA20_POLY1305_SHA256",
                     // 1.2 only
                     "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
                     "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"

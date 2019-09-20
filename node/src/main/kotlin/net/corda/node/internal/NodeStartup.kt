@@ -24,6 +24,7 @@ import net.corda.node.internal.subcommands.ValidateConfigurationCli.Companion.lo
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.shouldStartLocalShell
 import net.corda.node.services.config.shouldStartSSHDaemon
+import net.corda.node.utilities.JVMAgentUtil.getJvmAgentProperties
 import net.corda.node.utilities.registration.NodeRegistrationException
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.nodeapi.internal.persistence.CouldNotCreateDataSourceException
@@ -32,7 +33,6 @@ import net.corda.tools.shell.InteractiveShell
 import org.fusesource.jansi.Ansi
 import org.slf4j.bridge.SLF4JBridgeHandler
 import picocli.CommandLine.Mixin
-import sun.misc.VMSupport
 import java.io.IOException
 import java.io.RandomAccessFile
 import java.lang.management.ManagementFactory
@@ -245,12 +245,13 @@ open class NodeStartup : NodeStartupLogging {
         logger.info("PID: ${info.name.split("@").firstOrNull()}")  // TODO Java 9 has better support for this
         logger.info("Main class: ${NodeConfiguration::class.java.location.toURI().path}")
         logger.info("CommandLine Args: ${info.inputArguments.joinToString(" ")}")
-        logger.info("bootclasspath: ${info.bootClassPath}")
+        // JDK 11 (bootclasspath no longer supported from JDK 9)
+        if (info.isBootClassPathSupported) logger.info("bootclasspath: ${info.bootClassPath}")
         logger.info("classpath: ${info.classPath}")
         logger.info("VM ${info.vmName} ${info.vmVendor} ${info.vmVersion}")
         logger.info("Machine: ${lookupMachineNameAndMaybeWarn()}")
         logger.info("Working Directory: ${cmdLineOptions.baseDirectory}")
-        val agentProperties = VMSupport.getAgentProperties()
+        val agentProperties = getJvmAgentProperties(logger)
         if (agentProperties.containsKey("sun.jdwp.listenerAddress")) {
             logger.info("Debug port: ${agentProperties.getProperty("sun.jdwp.listenerAddress")}")
         }
@@ -467,6 +468,8 @@ interface NodeStartupLogging {
             error is Errors.NativeIoException && error.message?.contains("Address already in use") == true -> error.logAsExpected("One of the ports required by the Corda node is already in use.")
             error is Errors.NativeIoException && error.message?.contains("Can't assign requested address") == true -> error.logAsExpected("Exception during node startup. Check that addresses in node config resolve correctly.")
             error is UnresolvedAddressException -> error.logAsExpected("Exception during node startup. Check that addresses in node config resolve correctly.")
+            error is java.nio.file.AccessDeniedException -> error.logAsExpected("Exception during node startup. Corda started with insufficient privileges to access ${error.file}")
+            error is java.nio.file.NoSuchFileException -> error.logAsExpected("Exception during node startup. Corda cannot find file ${error.file}")
             error.isOpenJdkKnownIssue() -> error.logAsExpected("Exception during node startup - ${error.message}. This is a known OpenJDK issue on some Linux distributions, please use OpenJDK from zulu.org or Oracle JDK.")
             else -> error.logAsUnexpected("Exception during node startup")
         }

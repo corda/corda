@@ -352,6 +352,7 @@ class DeclaredField<T>(clazz: Class<*>, name: String, private val receiver: Any?
     val name: String = javaField.name
 
     private fun <RESULT> Field.accessible(action: Field.() -> RESULT): RESULT {
+        @Suppress("DEPRECATION")    // JDK11: isAccessible() should be replaced with canAccess() (since 9)
         val accessible = isAccessible
         isAccessible = true
         try {
@@ -393,16 +394,17 @@ fun <K, V> Iterable<Pair<K, V>>.toMultiMap(): Map<K, List<V>> = this.groupBy({ i
 val Class<*>.location: URL get() = protectionDomain.codeSource.location
 
 /** Convenience method to get the package name of a class literal. */
-val KClass<*>.packageName: String get() = java.packageName
-val Class<*>.packageName: String get() = requireNotNull(this.packageNameOrNull) { "$this not defined inside a package" }
+val KClass<*>.packageName: String get() = java.packageName_
+// re-defined to prevent clash with Java 9 Class.packageName: https://docs.oracle.com/javase/9/docs/api/java/lang/Class.html#getPackageName--
+val Class<*>.packageName_: String get() = requireNotNull(this.packageNameOrNull) { "$this not defined inside a package" }
 val Class<*>.packageNameOrNull: String? // This intentionally does not go via `package` as that code path is slow and contended and just ends up doing this.
     get() {
-        val name = this.getName()
+        val name = this.name
         val i = name.lastIndexOf('.')
-        if (i != -1) {
-            return name.substring(0, i)
+        return if (i != -1) {
+            name.substring(0, i)
         } else {
-            return null
+            null
         }
     }
 

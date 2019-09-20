@@ -34,11 +34,18 @@ dependencies {
     cordapp project(path: ':samples:simm-valuation-demo:contracts-states', configuration: 'shrinkArtifacts')
     cordapp project(':samples:simm-valuation-demo:flows')
 
+    // Cordformation needs a SLF4J implementation when executing the Network
+    // Bootstrapper, but Log4J doesn't shutdown completely from within Gradle.
+    // Use a much simpler SLF4J implementation here instead.
+    cordaRuntime "org.slf4j:slf4j-simple:$slf4j_version"
+
     // Corda integration dependencies
     cordaRuntime project(path: ":node:capsule", configuration: 'runtimeArtifacts')
     cordaRuntime project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
     cordaCompile project(':core')
-    cordaCompile project(':webserver')
+    cordaCompile (project(':webserver')) {
+        exclude group: "org.apache.logging.log4j"
+    }
 
     // Javax is required for webapis
     compile "org.glassfish.jersey.core:jersey-server:$jersey_version"

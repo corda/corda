@@ -28,6 +28,7 @@ dependencies {
     compile "com.squareup.okhttp3:okhttp:$okhttp_version"
     compile project(':confidential-identities')
 
+    testCompile "org.apache.commons:commons-lang3:3.9"
 }
 
 jar {

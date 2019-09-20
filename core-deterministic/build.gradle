@@ -8,6 +8,9 @@ apply plugin: 'idea'
 
 evaluationDependsOn(":core")
 
+// required by DJVM and Avian JVM (for running inside the SGX enclave) which only supports Java 8.
+targetCompatibility = VERSION_1_8
+
 def javaHome = System.getProperty('java.home')
 def jarBaseName = "corda-${project.name}".toString()
 
@@ -69,8 +72,12 @@ task predeterminise(type: ProGuardTask) {
     injars patchCore
     outjars file("$buildDir/proguard/pre-deterministic-${project.version}.jar")
 
-    libraryjars file("$javaHome/lib/rt.jar")
-    libraryjars file("$javaHome/lib/jce.jar")
+    if (JavaVersion.current().isJava9Compatible()) {
+        libraryjars "$javaHome/jmods"
+    } else {
+        libraryjars "$javaHome/lib/rt.jar"
+        libraryjars "$javaHome/lib/jce.jar"
+    }
     configurations.compileClasspath.forEach {
         if (originalJar != it) {
             libraryjars it, filter: '!META-INF/versions/**'
@@ -118,8 +125,12 @@ task determinise(type: ProGuardTask) {
     injars jarFilter
     outjars file("$buildDir/proguard/$jarBaseName-${project.version}.jar")
 
-    libraryjars file("$javaHome/lib/rt.jar")
-    libraryjars file("$javaHome/lib/jce.jar")
+    if (JavaVersion.current().isJava9Compatible()) {
+        libraryjars "$javaHome/jmods"
+    } else {
+        libraryjars "$javaHome/lib/rt.jar"
+        libraryjars "$javaHome/lib/jce.jar"
+    }
     configurations.deterministicLibraries.forEach {
         libraryjars it, filter: '!META-INF/versions/**'
     }
@@ -145,6 +156,8 @@ task determinise(type: ProGuardTask) {
 }
 
 import net.corda.gradle.jarfilter.MetaFixerTask
+import static org.gradle.api.JavaVersion.VERSION_1_8
+
 task metafix(type: MetaFixerTask) {
     outputDir file("$buildDir/libs")
     jars determinise

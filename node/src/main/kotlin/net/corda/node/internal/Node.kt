@@ -159,10 +159,14 @@ open class Node(configuration: NodeConfiguration,
         }
 
         private fun hasMinimumJavaVersion(): Boolean {
-            // when the ext.java8_minUpdateVersion gradle constant changes, so must this check
+            // JDK 11: review naming convention and checking of 'minUpdateVersion' and 'distributionType` (OpenJDK, Oracle, Zulu, AdoptOpenJDK, Cornetto)
             return try {
-                val update = getJavaUpdateVersion(SystemUtils.JAVA_VERSION) // To filter out cases like 1.8.0_202-ea
-                SystemUtils.IS_JAVA_1_8 && update >= 171
+                if (SystemUtils.IS_JAVA_11)
+                    return true
+                else {
+                    val update = getJavaUpdateVersion(SystemUtils.JAVA_VERSION) // To filter out cases like 1.8.0_202-ea
+                    (SystemUtils.IS_JAVA_1_8 && update >= 171)
+                }
             } catch (e: NumberFormatException) { // custom JDKs may not have the update version (e.g. 1.8.0-adoptopenjdk)
                 false
             }

@@ -63,7 +63,7 @@ object Models {
      */
     private val dependencyGraph = HashMap<KClass<*>, MutableSet<KClass<*>>>()
 
-    fun <M : Any> initModel(klass: KClass<M>) = modelStore.getOrPut(klass) { klass.java.newInstance() }
+    fun <M : Any> initModel(klass: KClass<M>) = modelStore.getOrPut(klass) { klass.java.getDeclaredConstructor().newInstance() }
     fun <M : Any> get(klass: KClass<M>, origin: KClass<*>): M {
         dependencyGraph.getOrPut(origin) { mutableSetOf() }.add(klass)
         val model = initModel(klass)

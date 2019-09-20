@@ -88,13 +88,14 @@ import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
 import net.corda.nodeapi.internal.persistence.*
 import net.corda.tools.shell.InteractiveShell
 import org.apache.activemq.artemis.utils.ReusableLatch
+import org.jolokia.jvmagent.JolokiaServer
+import org.jolokia.jvmagent.JolokiaServerConfig
 import org.slf4j.Logger
 import rx.Observable
 import rx.Scheduler
 import java.io.IOException
 import java.lang.reflect.InvocationTargetException
 import java.nio.file.Path
-import java.nio.file.Paths
 import java.security.KeyPair
 import java.security.KeyStoreException
 import java.security.cert.X509Certificate
@@ -331,7 +332,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         log.info("Node starting up ...")
 
         val trustRoot = initKeyStores()
-        initialiseJVMAgents()
+        initialiseJolokia()
 
         schemaService.mappedSchemasWarnings().forEach {
             val warning = it.toWarning()
@@ -992,19 +993,15 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         return NodeVaultService(platformClock, keyManagementService, services, database, schemaService, cordappLoader.appClassLoader)
     }
 
-    /** Load configured JVM agents */
-    private fun initialiseJVMAgents() {
+    // JDK 11: switch to directly instantiating jolokia server (rather than indirectly via dynamically self attaching Java Agents,
+    // which is no longer supported from JDK 9 onwards (https://bugs.java.com/bugdatabase/view_bug.do?bug_id=8180425).
+    // No longer need to use https://github.com/electronicarts/ea-agent-loader either (which is also deprecated)
+    private fun initialiseJolokia() {
         configuration.jmxMonitoringHttpPort?.let { port ->
-            requireNotNull(NodeBuildProperties.JOLOKIA_AGENT_VERSION) {
-                "'jolokiaAgentVersion' missing from build properties"
-            }
-            log.info("Starting Jolokia agent on HTTP port: $port")
-            val libDir = Paths.get(configuration.baseDirectory.toString(), "drivers")
-            val jarFilePath = JVMAgentRegistry.resolveAgentJar(
-                    "jolokia-jvm-${NodeBuildProperties.JOLOKIA_AGENT_VERSION}-agent.jar", libDir)
-                    ?: throw Error("Unable to locate agent jar file")
-            log.info("Agent jar file: $jarFilePath")
-            JVMAgentRegistry.attach("jolokia", "port=$port", jarFilePath)
+            val config = JolokiaServerConfig(mapOf("port" to port.toString()))
+            val server = JolokiaServer(config, false)
+            log.info("Starting Jolokia server on HTTP port: $port")
+            server.start()
         }
     }
 

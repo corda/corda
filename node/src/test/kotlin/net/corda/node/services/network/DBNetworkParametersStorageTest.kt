@@ -4,7 +4,6 @@ import com.nhaarman.mockito_kotlin.any
 import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.times
 import com.nhaarman.mockito_kotlin.verify
-import com.sun.xml.internal.messaging.saaj.util.ByteOutputStream
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.SignedDataWithCert
 import net.corda.core.node.NetworkParameters
@@ -26,8 +25,7 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
-import java.io.PrintStream
-import kotlin.streams.toList
+import kotlin.test.assertNull
 
 class DBNetworkParametersStorageTest {
     @Rule
@@ -98,22 +96,9 @@ class DBNetworkParametersStorageTest {
     @Test
     fun `try save parameters with incorrect signature`() {
         database.transaction {
-            val consoleOutput = interceptConsoleOutput {
-                networkParametersService.lookup(hash3)
-            }
-            assertThat(consoleOutput).anySatisfy {
-                it.contains("Caused by: java.security.cert.CertPathValidatorException: subject/issuer name chaining check failed")
-            }
+            // logs a warning (java.security.cert.CertPathValidatorException: Cert path failed to validate)
+            assertNull(networkParametersService.lookup(hash3))
         }
-    }
-
-    private fun interceptConsoleOutput(block: () -> Unit): List<String> {
-        val oldOut = System.out
-        val out = ByteOutputStream()
-        System.setOut(PrintStream(out))
-        block()
-        System.setOut(oldOut)
-        return out.bytes.inputStream().bufferedReader().lines().toList()
     }
 
     private fun createMockNetworkMapClient(): NetworkMapClient {

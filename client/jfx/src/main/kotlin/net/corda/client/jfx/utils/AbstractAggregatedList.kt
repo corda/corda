@@ -6,7 +6,7 @@ import javafx.collections.ObservableList
 import javafx.collections.transformation.TransformationList
 
 /**
- * Given an [ObservableList]<[E]> and a grouping key [K], [AggregatedList] groups the elements by the key into a fresh
+ * Given an [ObservableList]<[E]> and a grouping key [K], [AbstractAggregatedList] groups the elements by the key into a fresh
  * [ObservableList]<[E]> for each group and exposes the groups as an observable list of [A]s by calling [assemble] on each.
  *
  * Changes done to elements of the input list are reflected in the observable list of the respective group, whereas
@@ -36,8 +36,8 @@ import javafx.collections.transformation.TransformationList
  * @param toKey Function to extract the key from an element.
  * @param assemble Function to assemble the aggregation into the exposed [A].
  */
-class AggregatedList<A, E : Any, K : Any>(
-        list: ObservableList<out E>,
+abstract class AbstractAggregatedList<A, E : Any, K : Any>(
+        val list: ObservableList<out E>,
         val toKey: (E) -> K,
         val assemble: (K, ObservableList<E>) -> A
 ) : TransformationList<A, E>(list) {

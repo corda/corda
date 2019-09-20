@@ -108,7 +108,7 @@ internal object ProjectStructure {
 }
 
 fun Any.writeTestResource(bytes: OpaqueBytes) {
-    val dir = ProjectStructure.projectRootDir / "serialization" / "src" / "test" / "resources" / javaClass.packageName.replace('.', separatorChar)
+    val dir = ProjectStructure.projectRootDir / "serialization" / "src" / "test" / "resources" / javaClass.packageName_.replace('.', separatorChar)
     bytes.open().copyTo(dir / testResourceName(), REPLACE_EXISTING)
 }
 

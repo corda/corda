@@ -84,7 +84,7 @@ complexity:
   ComplexMethod:
     active: true
     threshold: 10
-    ignoreSingleWhenExpression: false
+    ignoreSingleWhenExpression: true
   LabeledExpression:
     active: false
   LargeClass:
@@ -92,7 +92,7 @@ complexity:
     threshold: 150
   LongMethod:
     active: true
-    threshold: 20
+    threshold: 120
   LongParameterList:
     active: true
     threshold: 6
@@ -135,7 +135,7 @@ empty-blocks:
   EmptyForBlock:
     active: true
   EmptyFunctionBlock:
-    active: true
+    active: false
   EmptyIfBlock:
     active: true
   EmptyInitBlock:
@@ -240,7 +240,7 @@ naming:
   VariableNaming:
     active: true
     variablePattern: '[a-z][A-Za-z0-9]*'
-    privateVariablePattern: '(_)?[a-z][A-Za-z0-9]*'
+    privateVariablePattern: '(_)?[A-Za-z][_A-Za-z0-9]*'
     excludeClassPattern: '$^'
 
 performance:
@@ -321,7 +321,7 @@ style:
     ignoreEnums: false
   MaxLineLength:
     active: true
-    maxLineLength: 120
+    maxLineLength: 140
     excludePackageStatements: false
     excludeImportStatements: false
   MayBeConst:
@@ -331,7 +331,7 @@ style:
   NestedClassesVisibility:
     active: false
   NewLineAtEndOfFile:
-    active: true
+    active: false
   NoTabs:
     active: false
   OptionalAbstractKeyword:

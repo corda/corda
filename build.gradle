@@ -1,4 +1,8 @@
 import net.corda.testing.DistributedTesting
+import net.corda.testing.ParallelTestGroup
+
+import static org.gradle.api.JavaVersion.VERSION_1_8
+import static org.gradle.api.JavaVersion.VERSION_11
 
 buildscript {
     // For sharing constants between builds
@@ -17,7 +21,15 @@ buildscript {
     ext.warnings_as_errors = project.hasProperty("compilation.warningsAsErrors") ? project.property("compilation.warningsAsErrors").toBoolean() : false
 
     ext.quasar_group = 'co.paralleluniverse'
-    ext.quasar_version = constants.getProperty("quasarVersion")
+    // Set version of Quasar according to version of Java used:
+    if (JavaVersion.current() == JavaVersion.VERSION_11) {
+        ext.quasar_version = constants.getProperty("quasarVersion11")
+        ext.quasar_classifier = constants.getProperty("quasarClassifier11")
+    }
+    else {
+        ext.quasar_version = constants.getProperty("quasarVersion")
+        ext.quasar_classifier = constants.getProperty("quasarClassifier")
+    }
     ext.quasar_exclusions = [
             'co.paralleluniverse**',
             'groovy**',
@@ -96,7 +108,6 @@ buildscript {
     ext.docker_compose_rule_version = '0.35.0'
     ext.selenium_version = '3.141.59'
     ext.ghostdriver_version = '2.1.0'
-    ext.eaagentloader_version = '1.0.3'
     ext.proguard_version = constants.getProperty('proguardVersion')
     ext.jsch_version = '0.1.55'
     ext.protonj_version = '0.33.0' // Overide Artemis version
@@ -106,8 +117,8 @@ buildscript {
     ext.picocli_version = '3.9.6'
     ext.commons_io_version = '2.6'
     ext.controlsfx_version = '8.40.15'
-    ext.fontawesomefx_commons_version = '8.15'
-    ext.fontawesomefx_fontawesome_version = '4.7.0-5'
+    ext.fontawesomefx_commons_version = '11.0'
+    ext.fontawesomefx_fontawesome_version = '4.7.0-11'
 
     // Name of the IntelliJ SDK created for the deterministic Java rt.jar.
     // ext.deterministic_idea_sdk = '1.8 (Deterministic)'
@@ -179,8 +190,17 @@ apply plugin: 'com.jfrog.artifactory'
 // with the run configurations. It also doesn't realise that the project is a Java 8 project and misconfigures
 // the resulting import. This fixes it.
 apply plugin: 'java'
-sourceCompatibility = 1.8
-targetCompatibility = 1.8
+
+println "Java version: " + JavaVersion.current()
+sourceCompatibility = VERSION_1_8
+if (JavaVersion.current() == JavaVersion.VERSION_1_8)
+    targetCompatibility = VERSION_1_8
+else
+    targetCompatibility = VERSION_11
+println "Java source compatibility: " + sourceCompatibility
+println "Java target compatibility: " + targetCompatibility
+println "Quasar version: " + quasar_version
+println "Quasar classifier: " + quasar_classifier
 
 allprojects {
     apply plugin: 'kotlin'
@@ -210,8 +230,16 @@ allprojects {
             nugetconfEnabled = false
         }
     }
-    sourceCompatibility = 1.8
-    targetCompatibility = 1.8
+    sourceCompatibility = VERSION_1_8
+    if (JavaVersion.current() == JavaVersion.VERSION_1_8)
+        targetCompatibility = VERSION_1_8
+    else
+        targetCompatibility = VERSION_11
+
+    jacoco {
+        // JDK11 official support (https://github.com/jacoco/jacoco/releases/tag/v0.8.3)
+        toolVersion = "0.8.3"    
+    }
 
     tasks.withType(JavaCompile) {
         options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation" << "-Xlint:-options" << "-parameters"
@@ -235,6 +263,10 @@ allprojects {
         }
     }
 
+    tasks.register('compileAll') { task ->
+        task.dependsOn tasks.withType(AbstractCompile)
+    }
+
     tasks.withType(Jar) { task ->
         // Includes War and Ear
         manifest {
@@ -248,6 +280,7 @@ allprojects {
 
     tasks.withType(Test) {
         forkEvery = 10
+        ignoreFailures = project.hasProperty('tests.ignoreFailures') ? project.property('tests.ignoreFailures').toBoolean() : false
         failFast = project.hasProperty('tests.failFast') ? project.property('tests.failFast').toBoolean() : false
 
         // Prevent the project from creating temporary files outside of the build directory.
@@ -333,6 +366,10 @@ allprojects {
 if (!JavaVersion.current().java8Compatible)
     throw new GradleException("Corda requires Java 8, please upgrade to at least 1.8.0_$java8_minUpdateVersion")
 
+configurations {
+    detekt
+}
+
 // Required for building out the fat JAR.
 dependencies {
     compile project(':node')
@@ -352,6 +389,7 @@ dependencies {
     runtime project(':finance:contracts')
     runtime project(':webserver')
     testCompile project(':test-utils')
+    detekt 'io.gitlab.arturbosch.detekt:detekt-cli:1.0.1'
 }
 
 jar {
@@ -378,6 +416,26 @@ task jacocoRootReport(type: org.gradle.testing.jacoco.tasks.JacocoReport) {
             it.exists()
         })
     }
+}
+
+task detekt(type: JavaExec) {
+    main = "io.gitlab.arturbosch.detekt.cli.Main"
+    classpath = configurations.detekt
+    def input = "$projectDir"
+    def config = "$projectDir/detekt-config.yml"
+    def baseline = "$projectDir/detekt-baseline.xml"
+    def params = ['-i', input, '-c', config, '-b', baseline]
+    args(params)
+}
+
+task detektBaseline(type: JavaExec) {
+    main = "io.gitlab.arturbosch.detekt.cli.Main"
+    classpath = configurations.detekt
+    def input = "$projectDir"
+    def config = "$projectDir/detekt-config.yml"
+    def baseline = "$projectDir/detekt-baseline.xml"
+    def params = ['-i', input, '-c', config, '-b', baseline, '--create-baseline']
+    args(params)
 }
 
 tasks.withType(Test) {
@@ -521,32 +579,27 @@ buildScan {
     termsOfServiceAgree = 'yes'
 }
 
+task allParallelIntegrationTest(type: ParallelTestGroup) {
+    testGroups "integrationTest"
+    numberOfShards 15
+    streamOutput false
+    coresPerFork 6
+    memoryInGbPerFork 10
+}
+task allParallelUnitTest(type: ParallelTestGroup) {
+    testGroups "test"
+    numberOfShards 15
+    streamOutput false
+    coresPerFork 3
+    memoryInGbPerFork 6
+}
+task allParallelUnitAndIntegrationTest(type: ParallelTestGroup) {
+    testGroups "test", "integrationTest"
+    numberOfShards 20
+    streamOutput false
+    coresPerFork 6
+    memoryInGbPerFork 10
+}
 apply plugin: DistributedTesting
 
-configurations {
-    detekt
-}
 
-dependencies {
-    detekt 'io.gitlab.arturbosch.detekt:detekt-cli:1.0.1'
-}
-
-task detekt(type: JavaExec) {
-    main = "io.gitlab.arturbosch.detekt.cli.Main"
-    classpath = configurations.detekt
-    def input = "$projectDir"
-    def config = "$projectDir/detekt-config.yml"
-    def baseline = "$projectDir/detekt-baseline.xml"
-    def params = ['-i', input, '-c', config, '-b', baseline]
-    args(params)
-}
-
-task detektBaseline(type: JavaExec) {
-    main = "io.gitlab.arturbosch.detekt.cli.Main"
-    classpath = configurations.detekt
-    def input = "$projectDir"
-    def config = "$projectDir/detekt-config.yml"
-    def baseline = "$projectDir/detekt-baseline.xml"
-    def params = ['-i', input, '-c', config, '-b', baseline, '--create-baseline']
-    args(params)
-}

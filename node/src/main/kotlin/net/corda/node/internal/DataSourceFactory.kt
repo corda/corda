@@ -43,7 +43,7 @@ object DataSourceFactory {
             dataSource
         } else {
             // Basic init for the one test that wants to go via this API but without starting a HikariPool:
-            (Class.forName(hikariProperties.getProperty("dataSourceClassName")).newInstance() as DataSource).also {
+            (Class.forName(hikariProperties.getProperty("dataSourceClassName")).getDeclaredConstructor().newInstance() as DataSource).also {
                 PropertyElf.setTargetFromProperties(it, config.dataSourceProperties)
             }
         }

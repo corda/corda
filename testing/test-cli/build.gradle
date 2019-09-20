@@ -6,7 +6,7 @@ dependencies {
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
     compile "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:$jackson_version"
     compile "com.fasterxml.jackson.core:jackson-databind:$jackson_version"
-    compile "com.fasterxml.jackson.module:jackson-module-kotlin:2.9.+"
+    compile "com.fasterxml.jackson.module:jackson-module-kotlin:$jackson_version"
     
     compile "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
     compile "junit:junit:${junit_version}"

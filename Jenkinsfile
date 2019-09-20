@@ -2,6 +2,8 @@ killall_jobs()
 
 pipeline {
     agent { label 'k8s' }
+    options { timestamps() }
+
     environment {
         DOCKER_TAG_TO_USE = "${UUID.randomUUID().toString().toLowerCase().subSequence(0, 12)}"
         EXECUTOR_NUMBER = "${env.EXECUTOR_NUMBER}"
@@ -9,7 +11,7 @@ pipeline {
     }
 
     stages {
-        stage('Corda Pull Request Integration Tests - Generate Build Image') {
+        stage('Corda Pull Request - Generate Build Image') {
             steps {
                 withCredentials([string(credentialsId: 'container_reg_passwd', variable: 'DOCKER_PUSH_PWD')]) {
                     sh "./gradlew " +
@@ -19,26 +21,42 @@ pipeline {
                             "-Ddocker.provided.tag=\"\${DOCKER_TAG_TO_USE}\"" +
                             " clean pushBuildImage"
                 }
-            }
-        }
-        stage('Corda Pull Request Integration Tests - Run Integration Tests') {
-            steps {
-                withCredentials([string(credentialsId: 'container_reg_passwd', variable: 'DOCKER_PUSH_PWD')]) {
-                    sh "./gradlew " +
-                            "-DbuildId=\"\${BUILD_ID}\" " +
-                            "-Ddocker.push.password=\"\${DOCKER_PUSH_PWD}\" " +
-                            "-Dkubenetize=true " +
-                            "-Ddocker.tag=\"\${DOCKER_TAG_TO_USE}\"" +
-                            " allParallelIntegrationTest"
-                }
-                junit '**/build/test-results-xml/**/*.xml'
+                sh "kubectl auth can-i get pods"
             }
         }
 
-        stage('Clear testing images') {
-            steps {
-                sh """docker rmi -f \$(docker images | grep \${DOCKER_TAG_TO_USE} | awk '{print \$3}') || echo \"there were no images to delete\""""
+        stage('Corda Pull Request - Run Tests') {
+            parallel {
+                stage('Integration Tests') {
+                    steps {
+                        sh "./gradlew " +
+                                "-DbuildId=\"\${BUILD_ID}\" " +
+                                "-Dkubenetize=true " +
+                                "-Ddocker.tag=\"\${DOCKER_TAG_TO_USE}\"" +
+                                " allParallelIntegrationTest"
+                    }
+                    post {
+                        always {
+                            junit '**/build/test-results-xml/**/*.xml'
+                        }
+                    }
+                }
+//                stage('Unit Tests') {
+//                    steps {
+//                        sh "./gradlew " +
+//                                "-DbuildId=\"\${BUILD_ID}\" " +
+//                                "-Dkubenetize=true " +
+//                                "-Ddocker.tag=\"\${DOCKER_TAG_TO_USE}\"" +
+//                                " allParallelUnitTest"
+//                    }
+//                    post {
+//                        always {
+//                            junit '**/build/test-results-xml/**/*.xml'
+//                        }
+//                    }
+//                }
             }
+
         }
     }
 }
