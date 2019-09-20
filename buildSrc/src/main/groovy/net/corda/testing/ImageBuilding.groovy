@@ -1,10 +1,7 @@
 package net.corda.testing
 
 import com.bmuschko.gradle.docker.DockerRegistryCredentials
-import com.bmuschko.gradle.docker.tasks.container.DockerCreateContainer
-import com.bmuschko.gradle.docker.tasks.container.DockerLogsContainer
-import com.bmuschko.gradle.docker.tasks.container.DockerStartContainer
-import com.bmuschko.gradle.docker.tasks.container.DockerWaitContainer
+import com.bmuschko.gradle.docker.tasks.container.*
 import com.bmuschko.gradle.docker.tasks.image.*
 import org.gradle.api.GradleException
 import org.gradle.api.Plugin
@@ -16,6 +13,7 @@ import org.gradle.api.Project
  */
 class ImageBuilding implements Plugin<Project> {
 
+    public static final String registryName = "stefanotestingcr.azurecr.io/testing"
     DockerPushImage pushTask
 
     @Override
@@ -25,7 +23,7 @@ class ImageBuilding implements Plugin<Project> {
         registryCredentialsForPush.username.set("stefanotestingcr")
         registryCredentialsForPush.password.set(System.getProperty("docker.push.password") ? System.getProperty("docker.push.password") : "")
 
-        DockerPullImage pullTask = project.tasks.create("pullBaseImage", DockerPullImage){
+        DockerPullImage pullTask = project.tasks.create("pullBaseImage", DockerPullImage) {
             repository = "stefanotestingcr.azurecr.io/buildbase"
             tag = "latest"
             doFirst {
@@ -83,33 +81,41 @@ class ImageBuilding implements Plugin<Project> {
             targetContainerId createBuildContainer.getContainerId()
         }
 
+
         DockerTagImage tagBuildImageResult = project.tasks.create('tagBuildImageResult', DockerTagImage) {
             dependsOn commitBuildImageResult
             imageId = commitBuildImageResult.getImageId()
-            tag = System.getProperty("docker.provided.tag") ? System.getProperty("docker.provided.tag") :  "${UUID.randomUUID().toString().toLowerCase().subSequence(0, 12)}"
-            repository = "stefanotestingcr.azurecr.io/testing"
+            tag = System.getProperty("docker.provided.tag") ? System.getProperty("docker.provided.tag") : "${UUID.randomUUID().toString().toLowerCase().subSequence(0, 12)}"
+            repository = registryName
         }
 
-        if (System.getProperty("docker.tag")) {
-            DockerPushImage pushBuildImage = project.tasks.create('pushBuildImage', DockerPushImage) {
-                doFirst {
-                    registryCredentials = registryCredentialsForPush
-                }
-                imageName = "stefanotestingcr.azurecr.io/testing"
-                tag = System.getProperty("docker.tag")
+        DockerPushImage pushBuildImage = project.tasks.create('pushBuildImage', DockerPushImage) {
+            dependsOn tagBuildImageResult
+            doFirst {
+                registryCredentials = registryCredentialsForPush
             }
-            this.pushTask = pushBuildImage
-        } else {
-            DockerPushImage pushBuildImage = project.tasks.create('pushBuildImage', DockerPushImage) {
-                dependsOn tagBuildImageResult
-                doFirst {
-                    registryCredentials = registryCredentialsForPush
-                }
-                imageName = "stefanotestingcr.azurecr.io/testing"
-                tag = tagBuildImageResult.tag
-            }
-            this.pushTask = pushBuildImage
+            imageName = registryName
+            tag = tagBuildImageResult.tag
         }
+        this.pushTask = pushBuildImage
 
+
+        DockerRemoveContainer deleteContainer = project.tasks.create('deleteBuildContainer', DockerRemoveContainer) {
+            dependsOn pushBuildImage
+            targetContainerId createBuildContainer.getContainerId()
+        }
+        DockerRemoveImage deleteTaggedImage = project.tasks.create('deleteTaggedImage', DockerRemoveImage) {
+            dependsOn pushBuildImage
+            force = true
+            targetImageId commitBuildImageResult.getImageId()
+        }
+        DockerRemoveImage deleteBuildImage = project.tasks.create('deleteBuildImage', DockerRemoveImage) {
+            dependsOn deleteContainer, deleteTaggedImage
+            force = true
+            targetImageId buildDockerImageForSource.getImageId()
+        }
+        if (System.getProperty("docker.keep.image") == null) {
+            pushBuildImage.finalizedBy(deleteContainer, deleteBuildImage, deleteTaggedImage)
+        }
     }
 }
