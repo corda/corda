@@ -1,40 +1,19 @@
 package net.corda.client.rpc
 
+import net.corda.client.rpc.RPCMultipleInterfacesTests.LegacyIntRPCOpsImpl.testValue
 import net.corda.client.rpc.RPCMultipleInterfacesTests.StringRPCOpsImpl.testPhrase
-import net.corda.client.rpc.internal.RPCClient
-import net.corda.core.context.Trace
-import net.corda.core.crypto.random63BitValue
-import net.corda.core.internal.concurrent.fork
-import net.corda.core.internal.concurrent.transpose
 import net.corda.core.messaging.RPCOps
-import net.corda.core.serialization.SerializationDefaults
-import net.corda.core.serialization.serialize
-import net.corda.core.utilities.*
-import net.corda.node.services.rpc.RPCServerConfiguration
 import net.corda.nodeapi.RPCApi
-import net.corda.testing.common.internal.eventually
-import net.corda.testing.common.internal.succeeds
+import net.corda.testing.common.internal.isInstanceOf
 import net.corda.testing.core.SerializationEnvironmentRule
-import net.corda.testing.driver.internal.incrementalPortAllocation
-import net.corda.testing.internal.testThreadFactory
-import net.corda.testing.node.internal.*
-import org.apache.activemq.artemis.api.config.ActiveMQDefaultConfiguration
-import org.apache.activemq.artemis.api.core.SimpleString
-import org.junit.After
-import org.junit.Assert.*
-import org.junit.Ignore
+import net.corda.testing.node.internal.rpcDriver
+import net.corda.testing.node.internal.startRpcClient
+import org.assertj.core.api.Assertions
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import rx.Observable
-import rx.subjects.PublishSubject
-import rx.subjects.UnicastSubject
-import java.time.Duration
-import java.util.concurrent.ConcurrentLinkedQueue
-import java.util.concurrent.Executors
-import java.util.concurrent.ScheduledExecutorService
-import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicInteger
-import java.util.concurrent.atomic.AtomicLong
 
 class RPCMultipleInterfacesTests {
     @Rule
@@ -43,6 +22,8 @@ class RPCMultipleInterfacesTests {
 
     interface IntRPCOps : RPCOps {
         fun stream(size: Int): Observable<Int>
+
+        fun intTestMethod(): Int
     }
 
     interface StringRPCOps : RPCOps {
@@ -57,6 +38,21 @@ class RPCMultipleInterfacesTests {
         override fun stream(size: Int): Observable<Int> {
             return Observable.range(0, size)
         }
+
+        override fun intTestMethod(): Int = protocolVersion
+    }
+
+    object LegacyIntRPCOpsImpl : IntRPCOps {
+
+        const val testValue = 99
+
+        override val protocolVersion = RPCApi.METHOD_FQN_CUTOFF_VERSION
+
+        override fun stream(size: Int): Observable<Int> {
+            return Observable.range(0, size)
+        }
+
+        override fun intTestMethod(): Int = testValue
     }
 
     object StringRPCOpsImpl : StringRPCOps {
@@ -81,12 +77,36 @@ class RPCMultipleInterfacesTests {
             val intList = clientInt.stream(20).toList().toBlocking().single()
             assertEquals(20, intList.size)
 
+            assertEquals(1000, clientInt.intTestMethod())
+
             val clientString = startRpcClient<StringRPCOps>(server.broker.hostAndPort!!).get()
             val stringList = clientString.stream(100).toList().toBlocking().single()
             assertEquals(100, stringList.size)
             assertTrue(stringList.toString(), stringList.all { it.matches("[0-7]*".toRegex()) })
 
             assertEquals(testPhrase, clientString.stringTestMethod())
+
+            server.rpcServer.close()
+        }
+    }
+
+    @Test
+    fun `legacy mode operation`() {
+        rpcDriver {
+            // This is slightly artificial, as in legacy mode it will not be possible to pass more that 1 interface
+            // However, this proves the point that anything from `StringRPCOps` will not be accessible.
+            val server = startRpcServer(listOps = listOf(LegacyIntRPCOpsImpl, StringRPCOpsImpl)).get()
+
+            val clientInt = startRpcClient<IntRPCOps>(server.broker.hostAndPort!!).get()
+            val intList = clientInt.stream(30).toList().toBlocking().single()
+            assertEquals(30, intList.size)
+
+            assertEquals(testValue, clientInt.intTestMethod())
+
+            val clientString = startRpcClient<StringRPCOps>(server.broker.hostAndPort!!).get()
+            Assertions.assertThatThrownBy { clientString.stringTestMethod() }
+                    .isInstanceOf<RPCException>()
+                    .hasMessageContaining("IntRPCOps#stringTestMethod")
 
             server.rpcServer.close()
         }

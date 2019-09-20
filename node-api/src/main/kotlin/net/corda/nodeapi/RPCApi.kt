@@ -75,7 +75,9 @@ object RPCApi {
 
     const val DEDUPLICATION_SEQUENCE_NUMBER_FIELD_NAME = "deduplication-sequence-number"
 
-    const val CLASS_METHOD_DIVIDER = "."
+    const val CLASS_METHOD_DIVIDER = "#"
+
+    const val METHOD_FQN_CUTOFF_VERSION = 5
 
     val RPC_CLIENT_BINDING_REMOVAL_FILTER_EXPRESSION =
             "${ManagementHelper.HDR_NOTIFICATION_TYPE} = '${CoreNotificationType.BINDING_REMOVED.name}' AND " +

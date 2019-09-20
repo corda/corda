@@ -26,6 +26,7 @@ import net.corda.core.utilities.debug
 import net.corda.core.utilities.getOrThrow
 import net.corda.nodeapi.RPCApi
 import net.corda.nodeapi.RPCApi.CLASS_METHOD_DIVIDER
+import net.corda.nodeapi.RPCApi.METHOD_FQN_CUTOFF_VERSION
 import net.corda.nodeapi.internal.DeduplicationChecker
 import org.apache.activemq.artemis.api.core.ActiveMQException
 import org.apache.activemq.artemis.api.core.ActiveMQNotConnectedException
@@ -122,8 +123,6 @@ class RPCClientProxyHandler(
                 }
             }
         }
-
-        private const val METHOD_FQN_CUTOFF_VERSION = 5
     }
 
     // Used for reaping
