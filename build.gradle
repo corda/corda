@@ -1,4 +1,5 @@
 import net.corda.testing.DistributedTesting
+import net.corda.testing.ParallelTestGroup
 
 import static org.gradle.api.JavaVersion.VERSION_1_8
 import static org.gradle.api.JavaVersion.VERSION_11
@@ -91,7 +92,7 @@ buildscript {
     ext.h2_version = '1.4.199' // Update docs if renamed or removed.
     ext.postgresql_version = '42.2.5'
     ext.rxjava_version = '1.3.8'
-    ext.dokka_version = '0.9.18'
+    ext.dokka_version = '0.9.17'
     ext.eddsa_version = '0.2.0'
     ext.dependency_checker_version = '5.2.0'
     ext.commons_collections_version = '4.3'
@@ -239,7 +240,7 @@ allprojects {
         // JDK11 official support (https://github.com/jacoco/jacoco/releases/tag/v0.8.3)
         toolVersion = "0.8.3"    
     }
-    
+
     tasks.withType(JavaCompile) {
         options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation" << "-Xlint:-options" << "-parameters"
         if (warnings_as_errors) {
@@ -260,6 +261,10 @@ allprojects {
             freeCompilerArgs = ['-Xjvm-default=compatibility']
             allWarningsAsErrors = warnings_as_errors
         }
+    }
+
+    tasks.register('compileAll') { task ->
+        task.dependsOn tasks.withType(AbstractCompile)
     }
 
     tasks.withType(Jar) { task ->
@@ -361,6 +366,10 @@ allprojects {
 if (!JavaVersion.current().java8Compatible)
     throw new GradleException("Corda requires Java 8, please upgrade to at least 1.8.0_$java8_minUpdateVersion")
 
+configurations {
+    detekt
+}
+
 // Required for building out the fat JAR.
 dependencies {
     compile project(':node')
@@ -380,6 +389,7 @@ dependencies {
     runtime project(':finance:contracts')
     runtime project(':webserver')
     testCompile project(':test-utils')
+    detekt 'io.gitlab.arturbosch.detekt:detekt-cli:1.0.1'
 }
 
 jar {
@@ -406,6 +416,26 @@ task jacocoRootReport(type: org.gradle.testing.jacoco.tasks.JacocoReport) {
             it.exists()
         })
     }
+}
+
+task detekt(type: JavaExec) {
+    main = "io.gitlab.arturbosch.detekt.cli.Main"
+    classpath = configurations.detekt
+    def input = "$projectDir"
+    def config = "$projectDir/detekt-config.yml"
+    def baseline = "$projectDir/detekt-baseline.xml"
+    def params = ['-i', input, '-c', config, '-b', baseline]
+    args(params)
+}
+
+task detektBaseline(type: JavaExec) {
+    main = "io.gitlab.arturbosch.detekt.cli.Main"
+    classpath = configurations.detekt
+    def input = "$projectDir"
+    def config = "$projectDir/detekt-config.yml"
+    def baseline = "$projectDir/detekt-baseline.xml"
+    def params = ['-i', input, '-c', config, '-b', baseline, '--create-baseline']
+    args(params)
 }
 
 tasks.withType(Test) {
@@ -549,32 +579,27 @@ buildScan {
     termsOfServiceAgree = 'yes'
 }
 
+task allParallelIntegrationTest(type: ParallelTestGroup) {
+    testGroups "integrationTest"
+    numberOfShards 15
+    streamOutput false
+    coresPerFork 6
+    memoryInGbPerFork 10
+}
+task allParallelUnitTest(type: ParallelTestGroup) {
+    testGroups "test"
+    numberOfShards 15
+    streamOutput false
+    coresPerFork 3
+    memoryInGbPerFork 6
+}
+task allParallelUnitAndIntegrationTest(type: ParallelTestGroup) {
+    testGroups "test", "integrationTest"
+    numberOfShards 20
+    streamOutput false
+    coresPerFork 6
+    memoryInGbPerFork 10
+}
 apply plugin: DistributedTesting
 
-configurations {
-    detekt
-}
 
-dependencies {
-    detekt 'io.gitlab.arturbosch.detekt:detekt-cli:1.0.1'
-}
-
-task detekt(type: JavaExec) {
-    main = "io.gitlab.arturbosch.detekt.cli.Main"
-    classpath = configurations.detekt
-    def input = "$projectDir"
-    def config = "$projectDir/detekt-config.yml"
-    def baseline = "$projectDir/detekt-baseline.xml"
-    def params = ['-i', input, '-c', config, '-b', baseline]
-    args(params)
-}
-
-task detektBaseline(type: JavaExec) {
-    main = "io.gitlab.arturbosch.detekt.cli.Main"
-    classpath = configurations.detekt
-    def input = "$projectDir"
-    def config = "$projectDir/detekt-config.yml"
-    def baseline = "$projectDir/detekt-baseline.xml"
-    def params = ['-i', input, '-c', config, '-b', baseline, '--create-baseline']
-    args(params)
-}
