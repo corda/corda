@@ -6,6 +6,12 @@ apply plugin: 'net.corda.plugins.quasar-utils'
 configurations {
     integrationTestCompile.extendsFrom testCompile
     integrationTestRuntime.extendsFrom testRuntime
+
+    compile {
+        // We already have a SLF4J implementation on our runtime classpath,
+        // and we don't need another one.
+        exclude group: "org.apache.logging.log4j"
+    }
 }
 
 sourceSets {
@@ -33,14 +39,9 @@ dependencies {
 
     compile project(':core')
     compile project(':client:jfx')
-    compile (project(':node-driver')) {
-        // We already have a SLF4J implementation on our runtime classpath,
-        // and we don't need another one.
-        exclude group: 'org.apache.logging.log4j'
-    }
-    compile (project(':webserver')) {
-        exclude group: "org.apache.logging.log4j"
-    }
+    compile project(':node-driver')
+    compile project(':webserver')
+
     testCompile project(':test-utils')
 
     compile "org.graphstream:gs-core:1.3"
@@ -49,8 +50,8 @@ dependencies {
         exclude group: "junit"
     }
 
-    compile project(path: ":node:capsule", configuration: 'runtimeArtifacts')
-    compile project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
+    cordaRuntime project(path: ":node:capsule", configuration: 'runtimeArtifacts')
+    cordaRuntime project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
 
     // CorDapps: dependent flows and services
     compile project(':finance:contracts')
