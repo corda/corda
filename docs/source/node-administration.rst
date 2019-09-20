@@ -130,7 +130,8 @@ via a file called ``jolokia-access.xml``.
 Several Jolokia policy based security configuration files (``jolokia-access.xml``) are available for dev, test, and prod
 environments under ``/config/<env>``.
 
-* To pass a security policy use ``java -Dcapsule.jvm.args=-javaagent:./drivers/jolokia-jvm-1.6.0-agent.jar,policyLocation=file:./config-path/jolokia-access.xml -jar corda.jar``
+To pass a security policy use ``java -Dcapsule.jvm.args=-javaagent:./drivers/jolokia-jvm-1.6.0-agent.jar,policyLocation=file:./config-path/jolokia-access.xml -jar corda.jar``
+Note that this will **not** work if you are loading jolokia using the ``jmxMonitoringHttpPort`` config option.
 
 Notes for development use
 +++++++++++++++++++++++++
