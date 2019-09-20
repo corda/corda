@@ -25,6 +25,9 @@ If you need to switch to synchronous logging (e.g. for debugging/testing purpose
 by adding ``-DLog4jContextSelector=org.apache.logging.log4j.core.selector.ClassLoaderContextSelector`` to the node's
 command line or to the ``jvmArgs`` section of the node configuration (see :doc:`corda-configuration-file`).
 
+.. warning:: Ensure that ``shutdownHook="disable"`` is set if you are overriding the log4j2 configuration file
+   otherwise logs will not be flushed properly on shutdown and loss may occur.
+
 Example
 +++++++
 
