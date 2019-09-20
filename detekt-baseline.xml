@@ -4516,7 +4516,6 @@
     <ID>MaxLineLength:RPCClientProxyHandler.kt$RPCClientProxyHandler$return cacheFactory.buildNamed(Caffeine.newBuilder().weakValues().removalListener(onObservableRemove).executor(SameThreadExecutor.getExecutor()), "RpcClientProxyHandler_rpcObservable")</ID>
     <ID>MaxLineLength:RPCClientProxyHandler.kt$RPCClientProxyHandler$throw UnsupportedOperationException("Method $calledMethod was added in RPC protocol version $sinceVersion but the server is running $serverProtocolVersion")</ID>
     <ID>MaxLineLength:RPCDriver.kt$RPCDriverDSL$val artemisConfig = createRpcServerArtemisConfig(maxFileSize, maxBufferedBytesPerClient, driverDSL.driverDirectory / serverName, hostAndPort)</ID>
-    <ID>MaxLineLength:RPCDriver.kt$RPCDriverDSL$val rpcSecurityManager = RPCSecurityManagerImpl.fromUserList(users = listOf(InternalUser(rpcUser.username, rpcUser.password, rpcUser.permissions)), id = AuthServiceId("TEST_SECURITY_MANAGER"))</ID>
     <ID>MaxLineLength:RPCDriver.kt$RPCDriverDSL.Companion$fun createRpcServerArtemisConfig(maxFileSize: Int, maxBufferedBytesPerClient: Long, baseDirectory: Path, hostAndPort: NetworkHostAndPort): Configuration</ID>
     <ID>MaxLineLength:RPCDriver.kt$RandomRpcUser.Companion$private inline fun &lt;reified T&gt; HashMap&lt;Class&lt;*&gt;, Generator&lt;*&gt;&gt;.add(generator: Generator&lt;T&gt;)</ID>
     <ID>MaxLineLength:RPCDriver.kt$RandomRpcUser.Companion$val handle = RPCClient&lt;RPCOps&gt;(hostAndPort, null, serializationContext = AMQP_RPC_CLIENT_CONTEXT).start(rpcClass, username, password)</ID>
@@ -4526,6 +4525,8 @@
     <ID>MaxLineLength:RPCOpsWithContext.kt$fun makeRPCOps(getCordaRPCOps: (username: String, credential: String) -&gt; InternalCordaRPCOps, username: String, credential: String): InternalCordaRPCOps</ID>
     <ID>MaxLineLength:RPCOpsWithContext.kt$return Proxy.newProxyInstance(InternalCordaRPCOps::class.java.classLoader, arrayOf(InternalCordaRPCOps::class.java)) { _, method, args -&gt; try { method.invoke(cordaRPCOps, *(args ?: arrayOf())) } catch (e: InvocationTargetException) { // Unpack exception. throw e.targetException } } as InternalCordaRPCOps</ID>
     <ID>MaxLineLength:RPCSecurityManagerWithAdditionalUser.kt$RPCSecurityManagerWithAdditionalUser : RPCSecurityManager</ID>
+    <ID>MaxLineLength:RPCServer.kt$RPCServer</ID>
+    <ID>MaxLineLength:RPCServer.kt$RPCServer$( ops: RPCOps, rpcServerUsername: String, rpcServerPassword: String, serverLocator: ServerLocator, securityManager: RPCSecurityManager, nodeLegalName: CordaX500Name, rpcConfiguration: RPCServerConfiguration, cacheFactory: NamedCacheFactory )</ID>
     <ID>MaxLineLength:RPCServer.kt$RPCServer$consumerSession = sessionFactory!!.createSession(rpcServerUsername, rpcServerPassword, false, true, true, false, DEFAULT_ACK_BATCH_SIZE)</ID>
     <ID>MaxLineLength:RPCServer.kt$RPCServer$private</ID>
     <ID>MaxLineLength:RPCServer.kt$RPCServer$producerSession = sessionFactory!!.createSession(rpcServerUsername, rpcServerPassword, false, true, true, false, DEFAULT_ACK_BATCH_SIZE)</ID>
