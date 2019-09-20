@@ -303,15 +303,7 @@ data class RPCDriverDSL(
         return session
     }
 
-    /**
-     * Starts a Netty RPC server.
-     *
-     * @param serverName The name of the server, to be used for the folder created for Artemis files.
-     * @param rpcUser The single user who can access the server through RPC, and their permissions.
-     * @param nodeLegalName The legal name of the node to check against to authenticate a super user.
-     * @param configuration The RPC server configuration.
-     * @param ops The server-side implementation of the RPC interface.
-     */
+
     fun <I : RPCOps> startRpcServer(
             serverName: String = "driver-rpc-server-${random63BitValue()}",
             rpcUser: User = rpcTestUser,
@@ -321,9 +313,29 @@ data class RPCDriverDSL(
             configuration: RPCServerConfiguration = RPCServerConfiguration.DEFAULT,
             customPort: NetworkHostAndPort? = null,
             ops: I
+    ) = startRpcServer(serverName, rpcUser, nodeLegalName, maxFileSize, maxBufferedBytesPerClient, configuration, customPort, listOf(ops))
+
+    /**
+     * Starts a Netty RPC server.
+     *
+     * @param serverName The name of the server, to be used for the folder created for Artemis files.
+     * @param rpcUser The single user who can access the server through RPC, and their permissions.
+     * @param nodeLegalName The legal name of the node to check against to authenticate a super user.
+     * @param configuration The RPC server configuration.
+     * @param listOps The server-side implementation of the RPC interfaces.
+     */
+    fun <I : RPCOps> startRpcServer(
+            serverName: String = "driver-rpc-server-${random63BitValue()}",
+            rpcUser: User = rpcTestUser,
+            nodeLegalName: CordaX500Name = fakeNodeLegalName,
+            maxFileSize: Int = MAX_MESSAGE_SIZE,
+            maxBufferedBytesPerClient: Long = 5L * MAX_MESSAGE_SIZE,
+            configuration: RPCServerConfiguration = RPCServerConfiguration.DEFAULT,
+            customPort: NetworkHostAndPort? = null,
+            listOps: List<I>
     ): CordaFuture<RpcServerHandle> {
         return startRpcBroker(serverName, rpcUser, maxFileSize, maxBufferedBytesPerClient, customPort).map { broker ->
-            startRpcServerWithBrokerRunning(rpcUser, nodeLegalName, configuration, ops, broker)
+            startRpcServerWithBrokerRunning(rpcUser, nodeLegalName, configuration, listOps, broker)
         }
     }
 
@@ -477,14 +489,24 @@ data class RPCDriverDSL(
             ops: I,
             brokerHandle: RpcBrokerHandle,
             queueDrainTimeout: Duration = 5.seconds
+    ) = startRpcServerWithBrokerRunning(rpcUser, nodeLegalName, configuration, listOf(ops), brokerHandle, queueDrainTimeout)
+
+    fun <I : RPCOps> startRpcServerWithBrokerRunning(
+            rpcUser: User = rpcTestUser,
+            nodeLegalName: CordaX500Name = fakeNodeLegalName,
+            configuration: RPCServerConfiguration = RPCServerConfiguration.DEFAULT,
+            listOps: List<I>,
+            brokerHandle: RpcBrokerHandle,
+            queueDrainTimeout: Duration = 5.seconds
     ): RpcServerHandle {
         val locator = ActiveMQClient.createServerLocatorWithoutHA(brokerHandle.clientTransportConfiguration).apply {
             minLargeMessageSize = MAX_MESSAGE_SIZE
             isUseGlobalPools = false
         }
-        val rpcSecurityManager = RPCSecurityManagerImpl.fromUserList(users = listOf(InternalUser(rpcUser.username, rpcUser.password, rpcUser.permissions)), id = AuthServiceId("TEST_SECURITY_MANAGER"))
+        val rpcSecurityManager = RPCSecurityManagerImpl.fromUserList(users = listOf(InternalUser(rpcUser.username,
+                rpcUser.password, rpcUser.permissions)), id = AuthServiceId("TEST_SECURITY_MANAGER"))
         val rpcServer = RPCServer(
-                ops,
+                listOps,
                 rpcUser.username,
                 rpcUser.password,
                 locator,
