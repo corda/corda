@@ -303,7 +303,6 @@ data class RPCDriverDSL(
         return session
     }
 
-
     fun <I : RPCOps> startRpcServer(
             serverName: String = "driver-rpc-server-${random63BitValue()}",
             rpcUser: User = rpcTestUser,
@@ -491,7 +490,7 @@ data class RPCDriverDSL(
             queueDrainTimeout: Duration = 5.seconds
     ) = startRpcServerWithBrokerRunning(rpcUser, nodeLegalName, configuration, listOf(ops), brokerHandle, queueDrainTimeout)
 
-    fun <I : RPCOps> startRpcServerWithBrokerRunning(
+    private fun <I : RPCOps> startRpcServerWithBrokerRunning(
             rpcUser: User = rpcTestUser,
             nodeLegalName: CordaX500Name = fakeNodeLegalName,
             configuration: RPCServerConfiguration = RPCServerConfiguration.DEFAULT,

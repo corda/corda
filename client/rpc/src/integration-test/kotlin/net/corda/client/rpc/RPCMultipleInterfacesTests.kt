@@ -3,7 +3,7 @@ package net.corda.client.rpc
 import net.corda.client.rpc.RPCMultipleInterfacesTests.LegacyIntRPCOpsImpl.testValue
 import net.corda.client.rpc.RPCMultipleInterfacesTests.StringRPCOpsImpl.testPhrase
 import net.corda.core.messaging.RPCOps
-import net.corda.nodeapi.RPCApi
+import net.corda.nodeapi.RPCApi.METHOD_FQN_CUTOFF_VERSION
 import net.corda.testing.common.internal.isInstanceOf
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.node.internal.rpcDriver
@@ -20,6 +20,10 @@ class RPCMultipleInterfacesTests {
     @JvmField
     val testSerialization = SerializationEnvironmentRule(true)
 
+    companion object {
+        const val sampleSize = 30
+    }
+
     interface IntRPCOps : RPCOps {
         fun stream(size: Int): Observable<Int>
 
@@ -33,7 +37,7 @@ class RPCMultipleInterfacesTests {
     }
 
     class IntRPCOpsImpl : IntRPCOps {
-        override val protocolVersion = 1000
+        override val protocolVersion = METHOD_FQN_CUTOFF_VERSION + 1
 
         override fun stream(size: Int): Observable<Int> {
             return Observable.range(0, size)
@@ -44,9 +48,9 @@ class RPCMultipleInterfacesTests {
 
     object LegacyIntRPCOpsImpl : IntRPCOps {
 
-        const val testValue = 99
+        const val testValue = METHOD_FQN_CUTOFF_VERSION
 
-        override val protocolVersion = RPCApi.METHOD_FQN_CUTOFF_VERSION
+        override val protocolVersion = METHOD_FQN_CUTOFF_VERSION
 
         override fun stream(size: Int): Observable<Int> {
             return Observable.range(0, size)
@@ -59,7 +63,7 @@ class RPCMultipleInterfacesTests {
 
         const val testPhrase = "I work with Strings."
 
-        override val protocolVersion = 1000
+        override val protocolVersion = METHOD_FQN_CUTOFF_VERSION + 1
 
         override fun stream(size: Int): Observable<String> {
             return Observable.range(0, size).map { it.toString(8) }
@@ -74,14 +78,14 @@ class RPCMultipleInterfacesTests {
             val server = startRpcServer(listOps = listOf(IntRPCOpsImpl(), StringRPCOpsImpl)).get()
 
             val clientInt = startRpcClient<IntRPCOps>(server.broker.hostAndPort!!).get()
-            val intList = clientInt.stream(20).toList().toBlocking().single()
-            assertEquals(20, intList.size)
+            val intList = clientInt.stream(sampleSize).toList().toBlocking().single()
+            assertEquals(sampleSize, intList.size)
 
-            assertEquals(1000, clientInt.intTestMethod())
+            assertEquals(METHOD_FQN_CUTOFF_VERSION + 1, clientInt.intTestMethod())
 
             val clientString = startRpcClient<StringRPCOps>(server.broker.hostAndPort!!).get()
-            val stringList = clientString.stream(100).toList().toBlocking().single()
-            assertEquals(100, stringList.size)
+            val stringList = clientString.stream(sampleSize).toList().toBlocking().single()
+            assertEquals(sampleSize, stringList.size)
             assertTrue(stringList.toString(), stringList.all { it.matches("[0-7]*".toRegex()) })
 
             assertEquals(testPhrase, clientString.stringTestMethod())
@@ -98,8 +102,8 @@ class RPCMultipleInterfacesTests {
             val server = startRpcServer(listOps = listOf(LegacyIntRPCOpsImpl, StringRPCOpsImpl)).get()
 
             val clientInt = startRpcClient<IntRPCOps>(server.broker.hostAndPort!!).get()
-            val intList = clientInt.stream(30).toList().toBlocking().single()
-            assertEquals(30, intList.size)
+            val intList = clientInt.stream(sampleSize).toList().toBlocking().single()
+            assertEquals(sampleSize, intList.size)
 
             assertEquals(testValue, clientInt.intTestMethod())
 
