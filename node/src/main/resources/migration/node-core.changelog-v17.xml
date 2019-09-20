@@ -1,0 +1,36 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd"
+                   logicalFilePath="migration/node-services.changelog-init.xml">
+
+    <changeSet author="R3.Corda" id="increase size of the x500 name column">
+
+        <dropPrimaryKey tableName="node_named_identities" constraintName="node_named_identities_pkey"/>
+        <dropForeignKeyConstraint baseTableName="node_link_nodeinfo_party" constraintName="FK__link_ni_p__info_p_cert"/>
+        <dropPrimaryKey tableName="node_info_party_cert" constraintName="node_info_party_cert_pkey"/>
+
+        <modifyDataType tableName="node_named_identities" columnName="name" newDataType="NVARCHAR(512) NOT NULL"/>
+        <modifyDataType tableName="node_info_party_cert" columnName="party_name" newDataType="NVARCHAR(512) NOT NULL"/>
+
+        <modifyDataType tableName="node_link_nodeinfo_party" columnName="party_name" newDataType="NVARCHAR(512) NOT NULL"/>
+
+        <addPrimaryKey tableName="node_info_party_cert" columnNames="party_name" constraintName="node_info_party_cert_pkey"/>
+        <addForeignKeyConstraint baseColumnNames="party_name" baseTableName="node_link_nodeinfo_party"
+                                 constraintName="FK__link_ni_p__info_p_cert"
+                                 referencedColumnNames="party_name" referencedTableName="node_info_party_cert"/>
+
+        <modifyDataType tableName="node_identities_no_cert" columnName="name" newDataType="NVARCHAR(512) NOT NULL"/>
+    </changeSet>
+
+    <changeSet author="R3.Corda" id="add primary key back" onValidationFail="MARK_RAN">
+        <comment>This changeset must run after the previous.</comment>
+        <addPrimaryKey tableName="node_named_identities" columnNames="name" constraintName="node_named_identities_pkey"
+                       clustered="false"/>
+    </changeSet>
+
+    <changeSet author="R3.Corda" id="add primary key back h2" dbms="h2">
+        <addPrimaryKey tableName="node_named_identities" columnNames="name" constraintName="node_named_identities_pkey"/>
+    </changeSet>
+
+</databaseChangeLog>

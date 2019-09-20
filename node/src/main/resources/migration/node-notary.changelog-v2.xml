@@ -34,4 +34,9 @@
         <addPrimaryKey columnNames="id" constraintName="node_notary_request_log_pkey"
                        tableName="node_notary_request_log"/>
     </changeSet>
+
+    <changeSet author="R3.Corda" id="change-requesting_party_name-type">
+        <modifyDataType tableName="node_notary_request_log" columnName="requesting_party_name" newDataType="NVARCHAR(512) NOT NULL"/>
+    </changeSet>
+
 </databaseChangeLog>

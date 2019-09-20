@@ -56,6 +56,9 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
         const val IDENTITY_COLUMN_NAME = "identity_value"
         const val NAME_COLUMN_NAME = "name"
 
+        // This value is slightly larger then what is allowed by the [CordaX500Name] constraints.
+        const val X500_SIZE = 512
+
         fun createKeyToPartyAndCertMap(cacheFactory: NamedCacheFactory): AppendOnlyPersistentMap<String, PartyAndCertificate, PersistentPublicKeyHashToCertificate, String> {
             return AppendOnlyPersistentMap(
                     cacheFactory = cacheFactory,
@@ -142,7 +145,7 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
     @javax.persistence.Table(name = NAME_TO_HASH_TABLE_NAME)
     class PersistentPartyToPublicKeyHash(
             @Id
-            @Column(name = NAME_COLUMN_NAME, length = 128, nullable = false)
+            @Column(name = NAME_COLUMN_NAME, length = X500_SIZE, nullable = false)
             var name: String = "",
 
             @Column(name = PK_HASH_COLUMN_NAME, length = MAX_HASH_HEX_SIZE, nullable = false)
@@ -156,7 +159,7 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
             @Column(name = PK_HASH_COLUMN_NAME, length = MAX_HASH_HEX_SIZE, nullable = false)
             var publicKeyHash: String = "",
 
-            @Column(name = NAME_COLUMN_NAME, length = 128, nullable = false)
+            @Column(name = NAME_COLUMN_NAME, length = X500_SIZE, nullable = false)
             var name: String = ""
     )
 
