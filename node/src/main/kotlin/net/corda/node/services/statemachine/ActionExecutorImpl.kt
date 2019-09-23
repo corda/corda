@@ -123,7 +123,17 @@ class ActionExecutorImpl(
     @Suspendable
     private fun executeAcknowledgeMessages(action: Action.AcknowledgeMessages) {
         action.deduplicationHandlers.forEach {
-            it.afterDatabaseTransaction()
+            try {
+                it.afterDatabaseTransaction()
+            } catch (e: Exception) {
+                // Catch all exceptions that occur in the [DeduplicationHandler]s (although errors should be unlikely)
+                // It is deemed safe for errors to occur here
+                // Therefore the current transition should not fail is something does go wrong
+                log.info(
+                    "An error occurred executing a deduplication post-database commit handler. Continuing, as it is safe to do so.",
+                    e
+                )
+            }
         }
     }
 
@@ -220,15 +230,21 @@ class ActionExecutorImpl(
 
     @Suspendable
     private fun executeAsyncOperation(fiber: FlowFiber, action: Action.ExecuteAsyncOperation) {
-        val operationFuture = action.operation.execute(action.deduplicationId)
-        operationFuture.thenMatch(
+        try {
+            val operationFuture = action.operation.execute(action.deduplicationId)
+            operationFuture.thenMatch(
                 success = { result ->
                     fiber.scheduleEvent(Event.AsyncOperationCompletion(result))
                 },
                 failure = { exception ->
                     fiber.scheduleEvent(Event.Error(exception))
                 }
-        )
+            )
+        } catch (e: Exception) {
+            // Catch and wrap any unexpected exceptions from the async operation
+            // Wrapping the exception allows it to be better handled by the flow hospital
+            throw AsyncOperationTransitionException(e)
+        }
     }
 
     private fun executeRetryFlowFromSafePoint(action: Action.RetryFlowFromSafePoint) {

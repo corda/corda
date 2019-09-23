@@ -51,11 +51,12 @@ class TransitionExecutorImpl(
                 } else {
                     // Otherwise error the state manually keeping the old flow state and schedule a DoRemainingWork
                     // to trigger error propagation
-                    log.info("Error while executing $action, erroring state", exception)
+                    log.info("Error while executing $action, with event $event, erroring state", exception)
                     val newState = previousState.copy(
                             checkpoint = previousState.checkpoint.copy(
                                     errorState = previousState.checkpoint.errorState.addErrors(
-                                            listOf(FlowError(secureRandom.nextLong(), exception))
+                                            // Wrap the exception with [StateTransitionException] for handling by the flow hospital
+                                            listOf(FlowError(secureRandom.nextLong(), StateTransitionException(action, event, exception)))
                                     )
                             ),
                             isFlowResumed = false

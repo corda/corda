@@ -10,6 +10,7 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.*
 import net.corda.core.messaging.DataFeed
 import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.debug
 import net.corda.core.utilities.seconds
 import net.corda.node.services.FinalityHandler
 import org.hibernate.exception.ConstraintViolationException
@@ -34,7 +35,8 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val 
             DoctorTimeout,
             FinalityDoctor,
             TransientConnectionCardiologist,
-            DatabaseEndocrinologist
+            DatabaseEndocrinologist,
+            TransitionErrorGeneralPractitioner
         )
     }
 
@@ -125,7 +127,7 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val 
                     // We don't schedule a next event for the flow - it will automatically retry from its checkpoint on node restart
                     Triple(Outcome.OVERNIGHT_OBSERVATION, null, 0.seconds)
                 }
-                Diagnosis.NOT_MY_SPECIALTY -> {
+                Diagnosis.NOT_MY_SPECIALTY, Diagnosis.TERMINAL -> {
                     // None of the staff care for these errors so we let them propagate
                     log.info("Flow error allowed to propagate", report.error)
                     Triple(Outcome.UNTREATABLE, Event.StartErrorPropagation, 0.seconds)
@@ -250,6 +252,8 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val 
 
     /** The order of the enum values are in priority order. */
     enum class Diagnosis {
+        /** The flow should not see other staff members */
+        TERMINAL,
         /** Retry from last safe point. */
         DISCHARGE,
         /** Park and await intervention. */
@@ -286,8 +290,12 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val 
      */
     object DuplicateInsertSpecialist : Staff {
         override fun consult(flowFiber: FlowFiber, currentState: StateMachineState, newError: Throwable, history: FlowMedicalHistory): Diagnosis {
-            return if (newError.mentionsThrowable(ConstraintViolationException::class.java) && history.notDischargedForTheSameThingMoreThan(3, this, currentState)) {
-                Diagnosis.DISCHARGE
+            return if (newError.mentionsThrowable(ConstraintViolationException::class.java)) {
+                if(history.notDischargedForTheSameThingMoreThan(3, this, currentState)) {
+                    Diagnosis.DISCHARGE
+                } else {
+                    Diagnosis.TERMINAL
+                }
             } else {
                 Diagnosis.NOT_MY_SPECIALTY
             }
@@ -397,6 +405,47 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val 
 
         @VisibleForTesting
         val customConditions = mutableSetOf<(t: Throwable) -> Boolean>()
+    }
+
+    /**
+     * Handles exceptions from internal state transitions that are not dealt with by the rest of the staff.
+     *
+     * [InterruptedException]s are diagnosed as [Diagnosis.TERMINAL] so they are never retried
+     * (can occur when a flow is killed - `killFlow`).
+     * [AsyncOperationTransitionException]s ares ignored as the error is likely to have originated in user async code rather than inside of a
+     * transition.
+     * All other exceptions are retried a maximum of 3 times before being kept in for observation.
+     */
+    object TransitionErrorGeneralPractitioner : Staff {
+        override fun consult(
+            flowFiber: FlowFiber,
+            currentState: StateMachineState,
+            newError: Throwable,
+            history: FlowMedicalHistory
+        ): Diagnosis {
+            return if (newError.mentionsThrowable(StateTransitionException::class.java)) {
+                when {
+                    newError.mentionsThrowable(InterruptedException::class.java) -> Diagnosis.TERMINAL
+                    newError.mentionsThrowable(AsyncOperationTransitionException::class.java) -> Diagnosis.NOT_MY_SPECIALTY
+                    history.notDischargedForTheSameThingMoreThan(2, this, currentState) -> Diagnosis.DISCHARGE
+                    else -> Diagnosis.OVERNIGHT_OBSERVATION
+                }
+            } else {
+                Diagnosis.NOT_MY_SPECIALTY
+            }.also { diagnosis ->
+                if (diagnosis != Diagnosis.NOT_MY_SPECIALTY) {
+                    log.debug {
+                        """
+                        Flow ${flowFiber.id} given $diagnosis diagnosis due to a transition error
+                        - Exception: ${newError.message}
+                        - History: $history
+                        ${(newError as? StateTransitionException)?.transitionAction?.let { "- Action: $it" }}
+                        ${(newError as? StateTransitionException)?.transitionEvent?.let { "- Event: $it" }}
+                        """.trimIndent()
+                    }
+                }
+            }
+        }
     }
 }
 

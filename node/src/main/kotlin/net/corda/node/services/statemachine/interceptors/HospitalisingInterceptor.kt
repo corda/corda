@@ -2,13 +2,7 @@ package net.corda.node.services.statemachine.interceptors
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.StateMachineRunId
-import net.corda.node.services.statemachine.ActionExecutor
-import net.corda.node.services.statemachine.ErrorState
-import net.corda.node.services.statemachine.Event
-import net.corda.node.services.statemachine.FlowFiber
-import net.corda.node.services.statemachine.StaffedFlowHospital
-import net.corda.node.services.statemachine.StateMachineState
-import net.corda.node.services.statemachine.TransitionExecutor
+import net.corda.node.services.statemachine.*
 import net.corda.node.services.statemachine.transitions.FlowContinuation
 import net.corda.node.services.statemachine.transitions.TransitionResult
 import java.util.concurrent.ConcurrentHashMap
@@ -41,19 +35,21 @@ class HospitalisingInterceptor(
             transition: TransitionResult,
             actionExecutor: ActionExecutor
     ): Pair<FlowContinuation, StateMachineState> {
+
+        // If the fiber's previous state was clean then remove it from the [hospitalisedFlows] map
+        // This is important for retrying a flow that has errored during a state machine transition
+        if(previousState.checkpoint.errorState is ErrorState.Clean) {
+            hospitalisedFlows.remove(fiber.id)
+        }
+
         val (continuation, nextState) = delegate.executeTransition(fiber, previousState, event, transition, actionExecutor)
 
-            when (nextState.checkpoint.errorState) {
-                is ErrorState.Clean -> {
-                    hospitalisedFlows.remove(fiber.id)
-                }
-                is ErrorState.Errored -> {
-                    val exceptionsToHandle = nextState.checkpoint.errorState.errors.map { it.exception }
-                    if (hospitalisedFlows.putIfAbsent(fiber.id, fiber) == null) {
-                        flowHospital.flowErrored(fiber, previousState, exceptionsToHandle)
-                    }
-                }
+        if (nextState.checkpoint.errorState is ErrorState.Errored) {
+            val exceptionsToHandle = nextState.checkpoint.errorState.errors.map { it.exception }
+            if (hospitalisedFlows.putIfAbsent(fiber.id, fiber) == null) {
+                flowHospital.flowErrored(fiber, previousState, exceptionsToHandle)
             }
+        }
         if (nextState.isRemoved) {
             removeFlow(fiber.id)
         }

@@ -1097,6 +1097,7 @@ class FlowStarterImpl(private val smm: StateMachineManager, private val flowLogi
             override val deduplicationHandler: DeduplicationHandler
                 get() = this
 
+            override val flowId: StateMachineRunId = StateMachineRunId.createRandom()
             override val flowLogic: FlowLogic<T>
                 get() = logic
             override val context: InvocationContext

@@ -121,6 +121,7 @@ interface ExternalEvent {
      * An external request to start a flow, from the scheduler for example.
      */
     interface ExternalStartFlowEvent<T> : ExternalEvent {
+        val flowId: StateMachineRunId
         val flowLogic: FlowLogic<T>
         val context: InvocationContext
 
