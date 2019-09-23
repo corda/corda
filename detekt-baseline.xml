@@ -227,6 +227,7 @@
     <ID>EmptyClassBlock:ClassLoadingUtilsTest.kt$ClassLoadingUtilsTest$ConcreteClassWithEmptyConstructor : BaseInterface</ID>
     <ID>EmptyClassBlock:ClassLoadingUtilsTest.kt$ClassLoadingUtilsTest$ConcreteClassWithNonEmptyConstructor : BaseInterface2</ID>
     <ID>EmptyClassBlock:CordaRPCClient.kt$CordaRPCClient$Companion</ID>
+    <ID>EmptyClassBlock:RPCMultipleInterfacesTests.kt$RPCMultipleInterfacesTests$ImaginaryFriend : RPCOps</ID>
     <ID>EmptyDefaultConstructor:FlowRetryTest.kt$AsyncRetryFlow$()</ID>
     <ID>EmptyDefaultConstructor:FlowRetryTest.kt$RetryFlow$()</ID>
     <ID>EmptyDefaultConstructor:FlowRetryTest.kt$ThrowingFlow$()</ID>
@@ -2137,6 +2138,8 @@
     <ID>MagicNumber:RPCHighThroughputObservableTests.kt$RPCHighThroughputObservableTests$3</ID>
     <ID>MagicNumber:RPCHighThroughputObservableTests.kt$RPCHighThroughputObservableTests$4</ID>
     <ID>MagicNumber:RPCHighThroughputObservableTests.kt$RPCHighThroughputObservableTests.TestOpsImpl$1000</ID>
+    <ID>MagicNumber:RPCMultipleInterfacesTests.kt$RPCMultipleInterfacesTests.IntRPCOpsImpl$1000</ID>
+    <ID>MagicNumber:RPCMultipleInterfacesTests.kt$RPCMultipleInterfacesTests.StringRPCOpsImpl$1000</ID>
     <ID>MagicNumber:RPCMultipleInterfacesTests.kt$RPCMultipleInterfacesTests.StringRPCOpsImpl$8</ID>
     <ID>MagicNumber:RPCPerformanceTests.kt$RPCPerformanceTests$100</ID>
     <ID>MagicNumber:RPCPerformanceTests.kt$RPCPerformanceTests$1000</ID>

@@ -408,7 +408,8 @@ class RPCServer(
         inMethodName
     } else {
         // Legacy client, assuming call by method is made against `CordaRPCOps`
-        log.warn("Call from a legacy client for method name $inMethodName. To avoid seeing this message in the future please upgrade your RPC client code.")
+        log.warn("Call from a legacy client for method name $inMethodName. " +
+                "To avoid seeing this message in the future please upgrade your RPC client code.")
         CordaRPCOps::class.java.name + CLASS_METHOD_DIVIDER + inMethodName
     }
 
