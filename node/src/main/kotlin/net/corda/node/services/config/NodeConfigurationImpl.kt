@@ -75,7 +75,8 @@ data class NodeConfigurationImpl(
         override val jmxReporterType: JmxReporterType? = Defaults.jmxReporterType,
         override val flowOverrides: FlowOverrideConfig?,
         override val cordappSignerKeyFingerprintBlacklist: List<String> = Defaults.cordappSignerKeyFingerprintBlacklist,
-        override val networkParameterAcceptanceSettings: NetworkParameterAcceptanceSettings? = Defaults.networkParameterAcceptanceSettings,
+        override val networkParameterAcceptanceSettings: NetworkParameterAcceptanceSettings? =
+                Defaults.networkParameterAcceptanceSettings,
         override val blacklistedAttachmentSigningKeys: List<String> = Defaults.blacklistedAttachmentSigningKeys
 ) : NodeConfiguration {
     internal object Defaults {
