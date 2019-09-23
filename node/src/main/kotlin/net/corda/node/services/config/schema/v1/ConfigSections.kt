@@ -14,21 +14,8 @@ import net.corda.common.validation.internal.Validated.Companion.invalid
 import net.corda.common.validation.internal.Validated.Companion.valid
 import net.corda.core.context.AuthServiceId
 import net.corda.core.internal.notary.NotaryServiceFlow
-import net.corda.node.services.config.AuthDataSourceType
-import net.corda.node.services.config.CertChainPolicyConfig
-import net.corda.node.services.config.CertChainPolicyType
-import net.corda.node.services.config.DevModeOptions
-import net.corda.node.services.config.FlowOverride
-import net.corda.node.services.config.FlowOverrideConfig
-import net.corda.node.services.config.FlowTimeoutConfiguration
-import net.corda.node.services.config.NetworkServicesConfig
-import net.corda.node.services.config.NodeH2Settings
-import net.corda.node.services.config.NodeRpcSettings
-import net.corda.node.services.config.NotaryConfig
-import net.corda.node.services.config.PasswordEncryption
-import net.corda.node.services.config.SecurityConfiguration
+import net.corda.node.services.config.*
 import net.corda.node.services.config.SecurityConfiguration.AuthService.Companion.defaultAuthServiceId
-import net.corda.node.services.config.Valid
 import net.corda.node.services.config.schema.parsers.attempt
 import net.corda.node.services.config.schema.parsers.badValue
 import net.corda.node.services.config.schema.parsers.toCordaX500Name
@@ -142,6 +129,15 @@ internal object NetworkServicesConfigSpec : Configuration.Specification<NetworkS
         return valid(NetworkServicesConfig(configuration[doormanURL], configuration[networkMapURL], configuration[pnm], configuration[inferred]))
     }
 }
+
+internal object NetworkParameterAcceptanceSettingsSpec : Configuration.Specification<NetworkParameterAcceptanceSettings>("NetworkParameterAcceptanceSettings") {
+    private val autoAcceptEnabled by boolean().optional().withDefaultValue(true)
+    private val excludedAutoAcceptableParameters by string().listOrEmpty()
+    override fun parseValid(configuration: Config): Valid<NetworkParameterAcceptanceSettings> {
+        return valid(NetworkParameterAcceptanceSettings(configuration[autoAcceptEnabled], configuration[excludedAutoAcceptableParameters].toSet()))
+    }
+}
+
 
 @Suppress("DEPRECATION")
 internal object CertChainPolicyConfigSpec : Configuration.Specification<CertChainPolicyConfig>("CertChainPolicyConfig") {

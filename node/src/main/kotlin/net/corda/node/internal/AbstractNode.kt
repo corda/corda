@@ -375,7 +375,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                 signedNodeInfo,
                 netParams,
                 keyManagementService,
-                configuration.networkParameterAcceptanceSettings)
+                configuration.networkParameterAcceptanceSettings!!)
         try {
             startMessagingService(rpcOps, nodeInfo, myNotaryIdentity, netParams)
         } catch (e: Exception) {
