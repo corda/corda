@@ -411,8 +411,16 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
     }
 
     private fun getVaultFungibleStateRoot(): Root<out Any> {
-        // ensure we re-use any existing instance of the same root entity
         val entityStateClass = VaultSchemaV1.VaultFungibleStates::class.java
+        return rootEntities.getOrElse(entityStateClass) {
+            val entityRoot = criteriaQuery.from(entityStateClass)
+            rootEntities[entityStateClass] = entityRoot
+            entityRoot
+        }
+    }
+
+    private fun getVaultLinearStatesRoot(): Root<out Any> {
+        val entityStateClass = VaultSchemaV1.VaultLinearStates::class.java
         return rootEntities.getOrElse(entityStateClass) {
             val entityRoot = criteriaQuery.from(entityStateClass)
             rootEntities[entityStateClass] = entityRoot
@@ -472,15 +480,6 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
         }
 
         return predicateSet
-    }
-
-    private fun getVaultLinearStatesRoot(): Root<out Any> {
-        val entityStateClass = VaultSchemaV1.VaultLinearStates::class.java
-        return rootEntities.getOrElse(entityStateClass) {
-            val entityRoot = criteriaQuery.from(entityStateClass)
-            rootEntities[entityStateClass] = entityRoot
-            entityRoot
-        }
     }
 
     override fun parseCriteria(criteria: QueryCriteria.LinearStateQueryCriteria): Collection<Predicate> {
@@ -678,14 +677,13 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
         criteria.participants?.let {
             val participants = criteria.participants!!
 
+            // use a single predicate for querying the persistent party table (incrementally add additional parties)
             val predicateID = Pair(VaultSchemaV1.PersistentParty::x500Name.name, EQUAL)
             if (commonPredicates.containsKey(predicateID)) {
                 val existingParticipants = ((((commonPredicates[predicateID]) as CompoundPredicate).expressions[0]) as InPredicate<*>)
                         .values.map { participant -> (participant as LiteralExpression<*>).literal }
                 log.warn("Adding new participants: $participants to existing participants: $existingParticipants")
-                val persistentPartyEntity = VaultSchemaV1.PersistentParty::class.java
-                val entityRoot = rootEntities[persistentPartyEntity]!!
-                commonPredicates.replace(predicateID, criteriaBuilder.and(entityRoot.get<VaultSchemaV1.PersistentParty>("x500Name").`in`(existingParticipants + participants)))
+                commonPredicates.replace(predicateID, criteriaBuilder.and(getPersistentPartyRoot().get<VaultSchemaV1.PersistentParty>("x500Name").`in`(existingParticipants + participants)))
             }
             else {
                 // Get the persistent party entity.
@@ -694,9 +692,8 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
 
             // Add the join for vault states to persistent entities (if this is not a Fungible nor Linear criteria query)
             if (criteria !is QueryCriteria.FungibleAssetQueryCriteria && criteria !is QueryCriteria.LinearStateQueryCriteria ) {
-                val persistentPartyEntity = VaultSchemaV1.PersistentParty::class.java
-                val persistentPartyRoot = rootEntities[persistentPartyEntity]!!
-                val statePartyJoin = criteriaBuilder.equal(vaultStates.get<VaultSchemaV1.VaultStates>("stateRef"), persistentPartyRoot.get<VaultSchemaV1.PersistentParty>("compositeKey").get<PersistentStateRef>("stateRef"))
+                val statePartyJoin = criteriaBuilder.equal(vaultStates.get<VaultSchemaV1.VaultStates>("stateRef"),
+                        getPersistentPartyRoot().get<VaultSchemaV1.PersistentParty>("compositeKey").get<PersistentStateRef>("stateRef"))
                 constraintPredicates.add(statePartyJoin)
             }
         }

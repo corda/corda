@@ -2406,13 +2406,12 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
             identitySvc.verifyAndRegisterIdentity(ALICE_IDENTITY)
             identitySvc.verifyAndRegisterIdentity(BOB_IDENTITY)
             identitySvc.verifyAndRegisterIdentity(CHARLIE_IDENTITY)
-            identitySvc.verifyAndRegisterIdentity(BIG_CORP_IDENTITY)
             vaultFiller.fillWithSomeTestLinearStates(1, "TEST1", listOf(ALICE))
             vaultFiller.fillWithSomeTestLinearStates(1, "TEST2", listOf(BOB))
             vaultFiller.fillWithSomeTestLinearStates(1, "TEST3", listOf(CHARLIE))
             vaultFiller.fillWithSomeTestCash(100.DOLLARS, notaryServices, 1, DUMMY_CASH_ISSUER)
             vaultFiller.fillWithSomeTestCommodity(Amount(100, Commodity.getInstance("FCOJ")!!), notaryServices, DUMMY_OBLIGATION_ISSUER.ref(1))
-            vaultFiller.fillWithDummyState(participants = listOf(MEGA_CORP, BIG_CORP))
+            vaultFiller.fillWithDummyState()
             // all contract states query
             val results = vaultService.queryBy<ContractState>()
             assertThat(results.states).hasSize(6)
@@ -2428,7 +2427,7 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
             val resultsComposite = vaultService.queryBy<ContractState>(linearStateCriteria.or(fungibleAssetStateCriteria))
             assertThat(resultsComposite.states).hasSize(5)
             // composite query both linear and fungible and dummy asset states by participants
-            val commonQueryCriteria = VaultQueryCriteria(participants = listOf(BIG_CORP))
+            val commonQueryCriteria = VaultQueryCriteria(participants = listOf(MEGA_CORP))
             val resultsAll = vaultService.queryBy<ContractState>(linearStateCriteria.or(fungibleAssetStateCriteria).or(commonQueryCriteria))
             assertThat(resultsAll.states).hasSize(6)
         }
