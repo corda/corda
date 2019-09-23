@@ -449,25 +449,6 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
             predicateSet.add(criteriaBuilder.and(vaultFungibleStates.get<ByteArray>("issuerRef").`in`(issuerRefs)))
         }
 
-        // Participants.
-        criteria.participants?.let {
-            val participants = criteria.participants!!
-
-            // Get the persistent party entity.
-            val persistentPartyEntity = VaultSchemaV1.PersistentParty::class.java
-            val entityRoot = rootEntities.getOrElse(persistentPartyEntity) {
-                val entityRoot = criteriaQuery.from(persistentPartyEntity)
-                rootEntities[persistentPartyEntity] = entityRoot
-                entityRoot
-            }
-
-            // Add the join and participants predicates.
-            val statePartyJoin = criteriaBuilder.equal(vaultStates.get<VaultSchemaV1.VaultStates>("stateRef"), entityRoot.get<VaultSchemaV1.PersistentParty>("compositeKey").get<PersistentStateRef>("stateRef"))
-            val participantsPredicate = criteriaBuilder.and(entityRoot.get<VaultSchemaV1.PersistentParty>("x500Name").`in`(participants))
-            predicateSet.add(statePartyJoin)
-            predicateSet.add(participantsPredicate)
-        }
-
         return predicateSet
     }
 
@@ -499,25 +480,6 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
             val externalIds = criteria.externalId as List<String>
             if (externalIds.isNotEmpty())
                 predicateSet.add(criteriaBuilder.and(vaultLinearStates.get<String>("externalId").`in`(externalIds)))
-        }
-
-        // Participants.
-        criteria.participants?.let {
-            val participants = criteria.participants!!
-
-            // Get the persistent party entity.
-            val persistentPartyEntity = VaultSchemaV1.PersistentParty::class.java
-            val entityRoot = rootEntities.getOrElse(persistentPartyEntity) {
-                val entityRoot = criteriaQuery.from(persistentPartyEntity)
-                rootEntities[persistentPartyEntity] = entityRoot
-                entityRoot
-            }
-
-            // Add the join and participants predicates.
-            val statePartyJoin = criteriaBuilder.equal(vaultStates.get<VaultSchemaV1.VaultStates>("stateRef"), entityRoot.get<VaultSchemaV1.PersistentParty>("compositeKey").get<PersistentStateRef>("stateRef"))
-            val participantsPredicate = criteriaBuilder.and(entityRoot.get<VaultSchemaV1.PersistentParty>("x500Name").`in`(participants))
-            predicateSet.add(statePartyJoin)
-            predicateSet.add(participantsPredicate)
         }
 
         return predicateSet
@@ -676,6 +638,25 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
             val externalIdPredicate = criteriaBuilder.and(entityRoot.get<VaultSchemaV1.StateToExternalId>("externalId").`in`(ids))
             constraintPredicates.add(externalIdJoin)
             constraintPredicates.add(externalIdPredicate)
+        }
+
+        // Participants.
+        criteria.participants?.let {
+            val participants = criteria.participants!!
+
+            // Get the persistent party entity.
+            val persistentPartyEntity = VaultSchemaV1.PersistentParty::class.java
+            val entityRoot = rootEntities.getOrElse(persistentPartyEntity) {
+                val entityRoot = criteriaQuery.from(persistentPartyEntity)
+                rootEntities[persistentPartyEntity] = entityRoot
+                entityRoot
+            }
+
+            // Add the join and participants predicates.
+            val statePartyJoin = criteriaBuilder.equal(vaultStates.get<VaultSchemaV1.VaultStates>("stateRef"), entityRoot.get<VaultSchemaV1.PersistentParty>("compositeKey").get<PersistentStateRef>("stateRef"))
+            val participantsPredicate = criteriaBuilder.and(entityRoot.get<VaultSchemaV1.PersistentParty>("x500Name").`in`(participants))
+            constraintPredicates.add(statePartyJoin)
+            constraintPredicates.add(participantsPredicate)
         }
 
         return emptySet()
