@@ -603,6 +603,99 @@ inline fun <T, A, B, C, D, E, F, reified R : FlowLogic<T>> CordaRPCOps.startTrac
         arg5: F
 ): FlowProgressHandle<T> = startTrackedFlowDynamic(R::class.java, arg0, arg1, arg2, arg3, arg4, arg5)
 
+@Suppress("unused")
+inline fun <T, A, B, C, D, E, F, G, reified R : FlowLogic<T>> CordaRPCOps.startTrackedFlow(
+        @Suppress("unused_parameter")
+        flowConstructor: (A, B, C, D, E, F, G) -> R,
+        arg0: A,
+        arg1: B,
+        arg2: C,
+        arg3: D,
+        arg4: E,
+        arg5: F,
+        arg6: G
+): FlowProgressHandle<T> = startTrackedFlowDynamic(R::class.java, arg0, arg1, arg2, arg3, arg4, arg5, arg6)
+
+@Suppress("unused")
+inline fun <T, A, B, C, D, E, F, G, H, reified R : FlowLogic<T>> CordaRPCOps.startTrackedFlow(
+        @Suppress("unused_parameter")
+        flowConstructor: (A, B, C, D, E, F, G, H) -> R,
+        arg0: A,
+        arg1: B,
+        arg2: C,
+        arg3: D,
+        arg4: E,
+        arg5: F,
+        arg6: G,
+        arg7: H
+): FlowProgressHandle<T> = startTrackedFlowDynamic(R::class.java, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7)
+
+@Suppress("unused")
+inline fun <T, A, B, C, D, E, F, G, H, I, reified R : FlowLogic<T>> CordaRPCOps.startTrackedFlow(
+        @Suppress("unused_parameter")
+        flowConstructor: (A, B, C, D, E, F, G, H, I) -> R,
+        arg0: A,
+        arg1: B,
+        arg2: C,
+        arg3: D,
+        arg4: E,
+        arg5: F,
+        arg6: G,
+        arg7: H,
+        arg8: I
+): FlowProgressHandle<T> = startTrackedFlowDynamic(R::class.java, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8)
+
+@Suppress("unused")
+inline fun <T, A, B, C, D, E, F, G, H, I, J, reified R : FlowLogic<T>> CordaRPCOps.startTrackedFlow(
+        @Suppress("unused_parameter")
+        flowConstructor: (A, B, C, D, E, F, G, H, I, J) -> R,
+        arg0: A,
+        arg1: B,
+        arg2: C,
+        arg3: D,
+        arg4: E,
+        arg5: F,
+        arg6: G,
+        arg7: H,
+        arg8: I,
+        arg9: J
+): FlowProgressHandle<T> = startTrackedFlowDynamic(R::class.java, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9)
+
+@Suppress("unused")
+inline fun <T, A, B, C, D, E, F, G, H, I, J, K, reified R : FlowLogic<T>> CordaRPCOps.startTrackedFlow(
+        @Suppress("unused_parameter")
+        flowConstructor: (A, B, C, D, E, F, G, H, I, J, K) -> R,
+        arg0: A,
+        arg1: B,
+        arg2: C,
+        arg3: D,
+        arg4: E,
+        arg5: F,
+        arg6: G,
+        arg7: H,
+        arg8: I,
+        arg9: J,
+        arg10: K
+): FlowProgressHandle<T> = startTrackedFlowDynamic(R::class.java, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10)
+
+@Suppress("unused")
+inline fun <T, A, B, C, D, E, F, G, H, I, J, K, L, reified R : FlowLogic<T>> CordaRPCOps.startTrackedFlow(
+        @Suppress("unused_parameter")
+        flowConstructor: (A, B, C, D, E, F, G, H, I, J, K, L) -> R,
+        arg0: A,
+        arg1: B,
+        arg2: C,
+        arg3: D,
+        arg4: E,
+        arg5: F,
+        arg6: G,
+        arg7: H,
+        arg8: I,
+        arg9: J,
+        arg10: K,
+        arg11: L
+): FlowProgressHandle<T> = startTrackedFlowDynamic(R::class.java, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11)
+
 /**
  * The Data feed contains a snapshot of the requested data and an [Observable] of future updates.
  */
