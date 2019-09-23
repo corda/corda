@@ -101,13 +101,16 @@ class RPCMultipleInterfacesTests {
             // However, this proves the point that anything from `StringRPCOps` will not be accessible.
             val server = startRpcServer(listOps = listOf(LegacyIntRPCOpsImpl, StringRPCOpsImpl)).get()
 
-            val clientInt = startRpcClient<IntRPCOps>(server.broker.hostAndPort!!).get()
+            // Talking to old server - expressing version explicitly
+            val rpcClientConfiguration = CordaRPCClientConfiguration.DEFAULT.copy(minimumServerProtocolVersion = METHOD_FQN_CUTOFF_VERSION)
+
+            val clientInt = startRpcClient<IntRPCOps>(server.broker.hostAndPort!!, configuration = rpcClientConfiguration).get()
             val intList = clientInt.stream(sampleSize).toList().toBlocking().single()
             assertEquals(sampleSize, intList.size)
 
             assertEquals(testValue, clientInt.intTestMethod())
 
-            val clientString = startRpcClient<StringRPCOps>(server.broker.hostAndPort!!).get()
+            val clientString = startRpcClient<StringRPCOps>(server.broker.hostAndPort!!, configuration = rpcClientConfiguration).get()
             Assertions.assertThatThrownBy { clientString.stringTestMethod() }
                     .isInstanceOf<RPCException>()
                     .hasMessageContaining("IntRPCOps#stringTestMethod")
