@@ -27,7 +27,8 @@ command line or to the ``jvmArgs`` section of the node configuration (see :doc:`
 
 .. warning:: Ensure that ``shutdownHook="disable"`` is set if you are overriding the log4j2 configuration file
    otherwise logs will not be flushed properly on shutdown and loss may occur. The option is set at the ``Configuration``
-   tag, for example ``<Configuration ... shutdownHook="disable">
+   tag, for example ``<Configuration ... shutdownHook="disable">``. This has to be set as Corda is calling shutdown after
+   everything finishes instead of relying on the normal log4j2 shutdown logic.
 
 Example
 +++++++
