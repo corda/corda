@@ -178,6 +178,11 @@ interface IdentityService {
     @Suspendable
     fun externalIdForPublicKey(publicKey: PublicKey): UUID?
 
+    /**
+     * This method returns all the [PublicKey]s which have been mapped to the supplied external ID.
+     *
+     * @param externalId the external ID to lookup [PublicKey]s for
+     */
     fun publicKeysForExternalId(externalId: UUID): Iterable<PublicKey>
 }
 
