@@ -17,6 +17,7 @@ import net.corda.core.context.Trace
 import net.corda.core.context.Trace.InvocationId
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.*
+import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.RPCOps
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.serialize
@@ -230,7 +231,7 @@ class RPCClientProxyHandler(
     }
 
     /** A throwable that doesn't represent a real error - it's just here to wrap a stack trace. */
-    class CallSite(rpcName: String) : Throwable("<Call site of root RPC '$rpcName'>")
+    class CallSite(val rpcName: String) : Throwable("<Call site of root RPC '$rpcName'>")
 
     // This is the general function that transforms a client side RPC to internal Artemis messages.
     override fun invoke(proxy: Any, method: Method, arguments: Array<out Any?>?): Any? {
@@ -285,7 +286,12 @@ class RPCClientProxyHandler(
     }
 
     private fun produceMethodFullyQualifiedName(method: Method) : String {
-        return rpcOpsClass.name + CLASS_METHOD_DIVIDER + method.name
+        // For CordaRPCOps send method only - for backwards compatibility
+        return if (CordaRPCOps::class.java.isAssignableFrom(rpcOpsClass)) {
+            method.name
+        } else {
+            rpcOpsClass.name + CLASS_METHOD_DIVIDER + method.name
+        }
     }
 
     private fun sendMessage(message: RPCApi.ClientToServer) {
