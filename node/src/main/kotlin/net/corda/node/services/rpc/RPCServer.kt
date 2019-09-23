@@ -150,7 +150,7 @@ class RPCServer(
     init {
         val mutableMethodTable = mutableMapOf<String, InvocationTarget>()
         opsList.forEach { ops ->
-            listOfApplicableInterfaces(ops).forEach { interfaceClass ->
+            listOfApplicableInterfacesRec(ops.javaClass).forEach { interfaceClass ->
                 val groupedMethods = with(interfaceClass) {
                     methods.groupBy { interfaceClass.name + CLASS_METHOD_DIVIDER + it.name }
                 }
@@ -168,8 +168,10 @@ class RPCServer(
         methodTable = mutableMethodTable
     }
 
-    private fun listOfApplicableInterfaces(ops: RPCOps) =
-            ops.javaClass.interfaces.filter { RPCOps::class.java.isAssignableFrom(it) }
+    private fun listOfApplicableInterfacesRec(clazz: Class<*>): List<Class<*>> =
+        clazz.interfaces.filter { RPCOps::class.java.isAssignableFrom(it) }.flatMap {
+            listOf(it) + listOfApplicableInterfacesRec(it)
+        }
 
     private fun createObservableSubscriptionMap(): ObservableSubscriptionMap {
         val onObservableRemove = RemovalListener<InvocationId, ObservableSubscription> { key, value, cause ->
@@ -405,7 +407,7 @@ class RPCServer(
         inMethodName
     } else {
         // Legacy client
-        val listOfApplicableInterfaces = listOfApplicableInterfaces(opsList.first())
+        val listOfApplicableInterfaces = listOfApplicableInterfacesRec(opsList.first().javaClass)
         listOfApplicableInterfaces.first().name + CLASS_METHOD_DIVIDER + inMethodName
     }
 
