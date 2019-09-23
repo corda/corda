@@ -77,8 +77,6 @@ object RPCApi {
 
     const val CLASS_METHOD_DIVIDER = "#"
 
-    const val METHOD_FQN_CUTOFF_VERSION = 5
-
     val RPC_CLIENT_BINDING_REMOVAL_FILTER_EXPRESSION =
             "${ManagementHelper.HDR_NOTIFICATION_TYPE} = '${CoreNotificationType.BINDING_REMOVED.name}' AND " +
                     "${ManagementHelper.HDR_ROUTING_NAME} LIKE '$RPC_CLIENT_QUEUE_NAME_PREFIX.%'"
@@ -107,7 +105,7 @@ object RPCApi {
          * Request to a server to trigger the specified method with the provided arguments.
          *
          * @param clientAddress return address to contact the client at.
-         * @param id a unique ID for the request, which the server will use to identify its response with.
+         * @param replyId a unique ID for the request, which the server will use to identify its response with.
          * @param methodName name of the method (procedure) to be called.
          * @param serialisedArguments Serialised arguments to pass to the method, if any.
          */

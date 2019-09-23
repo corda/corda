@@ -14,6 +14,7 @@ import net.corda.core.context.Trace.InvocationId
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.LifeCycle
 import net.corda.core.internal.NamedCacheFactory
+import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.RPCOps
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationDefaults
@@ -406,9 +407,9 @@ class RPCServer(
         // This is newer version client calling
         inMethodName
     } else {
-        // Legacy client
-        val listOfApplicableInterfaces = listOfApplicableInterfacesRec(opsList.first().javaClass)
-        listOfApplicableInterfaces.first().name + CLASS_METHOD_DIVIDER + inMethodName
+        // Legacy client, assuming call by method is made against `CordaRPCOps`
+        log.warn("Call from a legacy client for method name $inMethodName. To avoid seeing this message in the future please upgrade your RPC client code.")
+        CordaRPCOps::class.java.name + CLASS_METHOD_DIVIDER + inMethodName
     }
 
     private fun sendReply(replyId: InvocationId, clientAddress: SimpleString, result: Try<Any>) {

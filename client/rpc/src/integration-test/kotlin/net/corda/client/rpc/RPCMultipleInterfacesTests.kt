@@ -1,10 +1,7 @@
 package net.corda.client.rpc
 
-import net.corda.client.rpc.RPCMultipleInterfacesTests.LegacyIntRPCOpsImpl.testValue
 import net.corda.client.rpc.RPCMultipleInterfacesTests.StringRPCOpsImpl.testPhrase
 import net.corda.core.messaging.RPCOps
-import net.corda.nodeapi.RPCApi.METHOD_FQN_CUTOFF_VERSION
-import net.corda.testing.common.internal.isInstanceOf
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.node.internal.rpcDriver
 import net.corda.testing.node.internal.startRpcClient
@@ -37,7 +34,7 @@ class RPCMultipleInterfacesTests {
     }
 
     class IntRPCOpsImpl : IntRPCOps {
-        override val protocolVersion = METHOD_FQN_CUTOFF_VERSION + 1
+        override val protocolVersion = 1000
 
         override fun stream(size: Int): Observable<Int> {
             return Observable.range(0, size)
@@ -46,30 +43,20 @@ class RPCMultipleInterfacesTests {
         override fun intTestMethod(): Int = protocolVersion
     }
 
-    object LegacyIntRPCOpsImpl : IntRPCOps {
-
-        const val testValue = METHOD_FQN_CUTOFF_VERSION
-
-        override val protocolVersion = METHOD_FQN_CUTOFF_VERSION
-
-        override fun stream(size: Int): Observable<Int> {
-            return Observable.range(0, size)
-        }
-
-        override fun intTestMethod(): Int = testValue
-    }
-
     object StringRPCOpsImpl : StringRPCOps {
 
         const val testPhrase = "I work with Strings."
 
-        override val protocolVersion = METHOD_FQN_CUTOFF_VERSION + 1
+        override val protocolVersion = 1000
 
         override fun stream(size: Int): Observable<String> {
             return Observable.range(0, size).map { it.toString(8) }
         }
 
         override fun stringTestMethod(): String = testPhrase
+    }
+
+    interface ImaginaryFriend : RPCOps {
     }
 
     @Test
@@ -81,8 +68,6 @@ class RPCMultipleInterfacesTests {
             val intList = clientInt.stream(sampleSize).toList().toBlocking().single()
             assertEquals(sampleSize, intList.size)
 
-            assertEquals(METHOD_FQN_CUTOFF_VERSION + 1, clientInt.intTestMethod())
-
             val clientString = startRpcClient<StringRPCOps>(server.broker.hostAndPort!!).get()
             val stringList = clientString.stream(sampleSize).toList().toBlocking().single()
             assertEquals(sampleSize, stringList.size)
@@ -90,30 +75,8 @@ class RPCMultipleInterfacesTests {
 
             assertEquals(testPhrase, clientString.stringTestMethod())
 
-            server.rpcServer.close()
-        }
-    }
-
-    @Test
-    fun `legacy mode operation`() {
-        rpcDriver {
-            // This is slightly artificial, as in legacy mode it will not be possible to pass more that 1 interface
-            // However, this proves the point that anything from `StringRPCOps` will not be accessible.
-            val server = startRpcServer(listOps = listOf(LegacyIntRPCOpsImpl, StringRPCOpsImpl)).get()
-
-            // Talking to old server - expressing version explicitly
-            val rpcClientConfiguration = CordaRPCClientConfiguration.DEFAULT.copy(minimumServerProtocolVersion = METHOD_FQN_CUTOFF_VERSION)
-
-            val clientInt = startRpcClient<IntRPCOps>(server.broker.hostAndPort!!, configuration = rpcClientConfiguration).get()
-            val intList = clientInt.stream(sampleSize).toList().toBlocking().single()
-            assertEquals(sampleSize, intList.size)
-
-            assertEquals(testValue, clientInt.intTestMethod())
-
-            val clientString = startRpcClient<StringRPCOps>(server.broker.hostAndPort!!, configuration = rpcClientConfiguration).get()
-            Assertions.assertThatThrownBy { clientString.stringTestMethod() }
-                    .isInstanceOf<RPCException>()
-                    .hasMessageContaining("IntRPCOps#stringTestMethod")
+            Assertions.assertThatThrownBy { startRpcClient<ImaginaryFriend>(server.broker.hostAndPort!!).get() }
+                    .hasCauseInstanceOf(RPCException::class.java).hasMessageContaining("possible client/server version skew")
 
             server.rpcServer.close()
         }
