@@ -40,7 +40,7 @@ task buildWebserverJar(type: FatCapsule, dependsOn: project(':node').tasks.jar) 
 
     capsuleManifest {
         applicationVersion = corda_release_version
-        javaAgents = ["quasar-core-${quasar_version}.jar"]
+        javaAgents = quasar_classifier == null ? ["quasar-core-${quasar_version}.jar"] : ["quasar-core-${quasar_version}-${quasar_classifier}.jar"]
         systemProperties['visualvm.display.name'] = 'Corda Webserver'
         minJavaVersion = '1.8.0'
         minUpdateVersion['1.8'] = java8_minUpdateVersion
