@@ -6,6 +6,7 @@ import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.trace
+import net.corda.serialization.internal.model.resolveAgainst
 import org.apache.qpid.proton.amqp.Symbol
 import org.apache.qpid.proton.codec.Data
 import java.lang.reflect.Type
@@ -37,20 +38,21 @@ open class ArraySerializer(override val type: Type, factory: LocalSerializerFact
     private fun calcTypeName(type: Type, debugOffset : Int = 0): String {
         logger.trace { "${"".padStart(debugOffset, ' ') }  calcTypeName - ${type.typeName}" }
 
-        return if (type.componentType().isArray()) {
+        val componentType = type.componentType()
+        return if (componentType.isArray()) {
             // Special case handler for primitive byte arrays. This is needed because we can silently
             // coerce a byte[] to our own binary type. Normally, if the component type was itself an
             // array we'd keep walking down the chain but for byte[] stop here and use binary instead
-            val typeName =  if (AMQPTypeIdentifiers.isPrimitive(type.componentType())) {
-                AMQPTypeIdentifiers.nameForType(type.componentType())
+            val typeName =  if (AMQPTypeIdentifiers.isPrimitive(componentType)) {
+                AMQPTypeIdentifiers.nameForType(componentType)
             } else {
-                calcTypeName(type.componentType(), debugOffset + 4)
+                calcTypeName(componentType, debugOffset + 4)
             }
 
             "$typeName[]"
         } else {
             val arrayType = if (type.asClass().componentType.isPrimitive) "[p]" else "[]"
-            "${type.componentType().typeName}$arrayType"
+            "${componentType.typeName}$arrayType"
         }
     }
 
@@ -58,7 +60,7 @@ open class ArraySerializer(override val type: Type, factory: LocalSerializerFact
         factory.createDescriptor(type)
     }
 
-    internal val elementType: Type by lazy { type.componentType() }
+    internal val elementType: Type by lazy { type.componentType().resolveAgainst(type) }
     internal open val typeName by lazy { calcTypeName(type) }
 
     internal val typeNotation: TypeNotation by lazy {
