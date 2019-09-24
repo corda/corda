@@ -6,6 +6,11 @@ release, see :doc:`app-upgrade-notes`.
 
 Unreleased
 ----------
+
+* ``NotaryFlow.Client`` now performs transaction verification by default to prevent accidentally sending an invalid transaction to a
+  non-validating notary. The behaviour can be controlled by passing a constructor parameter flag ``skipVerification``.
+  Note: this only affects flows that invoke ``NotaryFlow.Client`` directly – no behavioural change if using ``FinalityFlow``.
+
 * Support for Java 11 (compatibility mode). Please read https://github.com/corda/corda/pull/5356.
 
 * Updating FinalityFlow with functionality to indicate the appropriate StatesToRecord. This allows the initiating party to record states
