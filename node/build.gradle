@@ -302,6 +302,9 @@ task slowIntegrationTest(type: Test) {
 
 // quasar exclusions upon agent code instrumentation at run-time
 quasar {
+    excludeClassLoaders.addAll(
+            'net.corda.djvm.**'
+    )
     excludePackages.addAll(
             "antlr**",
             "com.codahale**",
@@ -328,8 +331,7 @@ quasar {
             "org.w3c.**",
             "org.xml**",
             "org.yaml**",
-            "rx**",
-            "sandbox**")
+            "rx**")
 }
 
 jar {
