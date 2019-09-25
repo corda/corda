@@ -12,15 +12,12 @@
 
         <modifyDataType tableName="node_named_identities" columnName="name" newDataType="NVARCHAR(512) NOT NULL"/>
         <modifyDataType tableName="node_info_party_cert" columnName="party_name" newDataType="NVARCHAR(512) NOT NULL"/>
-
         <modifyDataType tableName="node_link_nodeinfo_party" columnName="party_name" newDataType="NVARCHAR(512) NOT NULL"/>
 
         <addPrimaryKey tableName="node_info_party_cert" columnNames="party_name" constraintName="node_info_party_cert_pkey"/>
         <addForeignKeyConstraint baseColumnNames="party_name" baseTableName="node_link_nodeinfo_party"
                                  constraintName="FK__link_ni_p__info_p_cert"
                                  referencedColumnNames="party_name" referencedTableName="node_info_party_cert"/>
-
-        <modifyDataType tableName="node_identities_no_cert" columnName="name" newDataType="NVARCHAR(512) NOT NULL"/>
     </changeSet>
 
     <changeSet author="R3.Corda" id="add primary key back" onValidationFail="MARK_RAN">
@@ -31,6 +28,10 @@
 
     <changeSet author="R3.Corda" id="add primary key back h2" dbms="h2">
         <addPrimaryKey tableName="node_named_identities" columnNames="name" constraintName="node_named_identities_pkey"/>
+    </changeSet>
+
+    <changeSet author="R3.Corda" id="increase node_identities_no_cert x500 size">
+        <modifyDataType tableName="node_identities_no_cert" columnName="name" newDataType="NVARCHAR(512) NOT NULL"/>
     </changeSet>
 
 </databaseChangeLog>

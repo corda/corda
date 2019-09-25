@@ -24,4 +24,9 @@
             <column name="pennies"/>
         </createIndex>
     </changeSet>
+
+    <changeSet author="R3.Corda" id="increase-x500-cash">
+        <modifyDataType tableName="contract_cash_states" columnName="owner_name" newDataType="NVARCHAR(512)"/>
+    </changeSet>
+
 </databaseChangeLog>

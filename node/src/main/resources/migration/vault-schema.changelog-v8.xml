@@ -39,4 +39,9 @@
             on state_party.public_key_hash = pk_hash_to_ext_id_map.public_key_hash
         </createView>
     </changeSet>
+
+    <changeSet author="R3.Corda" id="increase-x500-size-state_party">
+        <modifyDataType tableName="state_party" columnName="x500_name" newDataType="NVARCHAR(512)"/>
+    </changeSet>
+
 </databaseChangeLog>

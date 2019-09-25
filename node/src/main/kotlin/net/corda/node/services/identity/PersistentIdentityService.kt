@@ -23,6 +23,7 @@ import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.x509Certificates
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
+import net.corda.nodeapi.internal.persistence.X500_NAME_SIZE
 import org.apache.commons.lang3.ArrayUtils
 import org.hibernate.annotations.Type
 import org.hibernate.internal.util.collections.ArrayHelper.EMPTY_BYTE_ARRAY
@@ -55,9 +56,6 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
         const val PK_HASH_COLUMN_NAME = "pk_hash"
         const val IDENTITY_COLUMN_NAME = "identity_value"
         const val NAME_COLUMN_NAME = "name"
-
-        // This value is slightly larger then what is allowed by the [CordaX500Name] constraints.
-        const val X500_SIZE = 512
 
         fun createKeyToPartyAndCertMap(cacheFactory: NamedCacheFactory): AppendOnlyPersistentMap<String, PartyAndCertificate, PersistentPublicKeyHashToCertificate, String> {
             return AppendOnlyPersistentMap(
@@ -145,7 +143,7 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
     @javax.persistence.Table(name = NAME_TO_HASH_TABLE_NAME)
     class PersistentPartyToPublicKeyHash(
             @Id
-            @Column(name = NAME_COLUMN_NAME, length = X500_SIZE, nullable = false)
+            @Column(name = NAME_COLUMN_NAME, length = X500_NAME_SIZE, nullable = false)
             var name: String = "",
 
             @Column(name = PK_HASH_COLUMN_NAME, length = MAX_HASH_HEX_SIZE, nullable = false)
@@ -159,7 +157,7 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
             @Column(name = PK_HASH_COLUMN_NAME, length = MAX_HASH_HEX_SIZE, nullable = false)
             var publicKeyHash: String = "",
 
-            @Column(name = NAME_COLUMN_NAME, length = X500_SIZE, nullable = false)
+            @Column(name = NAME_COLUMN_NAME, length = X500_NAME_SIZE, nullable = false)
             var name: String = ""
     )
 

@@ -9,8 +9,8 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.MAX_HASH_HEX_SIZE
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.node.services.identity.PersistentIdentityService.Companion.X500_SIZE
 import net.corda.node.services.persistence.NodePropertiesPersistentStore
+import net.corda.nodeapi.internal.persistence.X500_NAME_SIZE
 import javax.persistence.*
 
 object NodeInfoSchema
@@ -95,7 +95,7 @@ object NodeInfoSchemaV1 : MappedSchema(
     @Table(name = "node_info_party_cert")
     data class DBPartyAndCertificate(
             @Id
-            @Column(name = "party_name", nullable = false, length = X500_SIZE)
+            @Column(name = "party_name", nullable = false, length = X500_NAME_SIZE)
             val name: String,
 
             @Column(name = "owning_key_hash", length = MAX_HASH_HEX_SIZE, nullable = false)

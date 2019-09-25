@@ -27,6 +27,9 @@ import javax.sql.DataSource
  */
 const val NODE_DATABASE_PREFIX = "node_"
 
+// This value is slightly larger then what is allowed by the [CordaX500Name] constraints.
+const val X500_NAME_SIZE = 512
+
 enum class SchemaInitializationType{
     NONE,
     VALIDATE,

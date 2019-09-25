@@ -6,4 +6,15 @@
     <changeSet author="R3.Corda" id="update-vault-states">
         <customChange class="net.corda.node.migration.VaultStateMigration"/>
     </changeSet>
+
+    <changeSet author="R3.Corda" id="x500 vault">
+        <modifyDataType tableName="vault_states" columnName="notary_name" newDataType="NVARCHAR(512)"/>
+
+        <modifyDataType tableName="vault_fungible_states" columnName="issuer_name" newDataType="NVARCHAR(512)"/>
+        <modifyDataType tableName="vault_fungible_states" columnName="owner_name" newDataType="NVARCHAR(512)"/>
+        <modifyDataType tableName="vault_fungible_states_parts" columnName="participants" newDataType="NVARCHAR(512)"/>
+
+        <modifyDataType tableName="vault_linear_states_parts" columnName="participants" newDataType="NVARCHAR(512)"/>
+    </changeSet>
+
 </databaseChangeLog>
