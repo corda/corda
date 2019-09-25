@@ -2,7 +2,7 @@
 
 package net.corda.core.internal
 
-import co.paralleluniverse.strands.concurrent.ReentrantLock
+import java.util.concurrent.locks.ReentrantLock
 import io.github.classgraph.ClassGraph
 import io.github.classgraph.ScanResult
 import net.corda.core.DeleteForDJVM

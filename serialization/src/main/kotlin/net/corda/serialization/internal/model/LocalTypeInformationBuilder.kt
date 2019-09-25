@@ -209,7 +209,12 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
                 observedType = type,
                 typeIdentifier = typeIdentifier,
                 constructor = null,
-                properties = buildReadOnlyProperties(rawType),
+                properties = if (rawType == Class::class.java) {
+                    // Do NOT drill down into the internals of java.lang.Class.
+                    emptyMap()
+                } else {
+                    buildReadOnlyProperties(rawType)
+                },
                 superclass = superclassInformation,
                 interfaces = interfaceInformation,
                 typeParameters = typeParameterInformation,

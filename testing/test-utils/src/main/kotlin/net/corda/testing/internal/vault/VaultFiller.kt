@@ -224,15 +224,16 @@ class VaultFiller @JvmOverloads constructor(
     /**
      * Records a dummy state in the Vault (useful for creating random states when testing vault queries)
      */
-    fun fillWithDummyState() : Vault<DummyState> {
+    fun fillWithDummyState(participants: List<AbstractParty> = listOf(services.myInfo.singleIdentity())) : Vault<DummyState> {
         val outputState = TransactionState(
-                data = DummyState(Random().nextInt(), participants = listOf(services.myInfo.singleIdentity())),
+                data = DummyState(Random().nextInt(), participants = participants),
                 contract = DummyContract.PROGRAM_ID,
                 notary = defaultNotary.party
         )
+        val participantKeys : List<PublicKey> = participants.map { it.owningKey }
         val builder = TransactionBuilder()
                 .addOutputState(outputState)
-                .addCommand(DummyCommandData, defaultNotary.party.owningKey)
+                .addCommand(DummyCommandData, participantKeys)
         val stxn = services.signInitialTransaction(builder)
         services.recordTransactions(stxn)
         return Vault(setOf(stxn.tx.outRef(0)))

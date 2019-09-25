@@ -36,7 +36,7 @@ Welcome to Corda !
    .. _`繁體中文 (Traditional Chinese)`: _static/corda-introductory-whitepaper-zht.pdf
    .. _`日本語 (Japanese)`: _static/corda-introductory-whitepaper-jp.pdf
    .. _`download the PDF`: _static/corda-developer-site.pdf
-   
+
 .. only:: latex
 
    Welcome to Corda, a platform for building decentralized applications. This guidebook covers everything you need to know to create
@@ -147,3 +147,4 @@ Welcome to Corda !
    deterministic-modules.rst
    design/design-docs-index.rst
    changelog
+   legal-info
