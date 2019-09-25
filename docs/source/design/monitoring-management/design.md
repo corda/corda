@@ -53,10 +53,10 @@ human readable and machine readable.
 
 In addition, in-house Corda networks at R3 use the following tools:
 
-* Standard [DataDog](https://docs.datadoghq.com/guides/overview/) probes are currently used to provide e-mail based 
-  alerting for running Corda nodes. [Telegraf](https://github.com/influxdata/telegraf) is used in conjunction with a 
+* Standard [DataDog](https://docs.datadoghq.com/guides/overview/) probes are currently used to provide e-mail based
+  alerting for running Corda nodes. [Telegraf](https://github.com/influxdata/telegraf) is used in conjunction with a
   [Jolokia agent](https://jolokia.org/agent.html) as a collector to parse emitted metric data and push these to DataDog.
-* Investigation is underway to evaluate [ELK](https://logz.io/learn/complete-guide-elk-stack/) as a mechanism for parsing, 
+* Investigation is underway to evaluate [ELK](https://logz.io/learn/complete-guide-elk-stack/) as a mechanism for parsing,
   indexing, storing, searching, and visualising log file data.
 
 ## Scope
@@ -121,15 +121,15 @@ design, either directly or through an integrated enterprise-wide systems managem
 - Validate liveness and correctness of Corda nodes and deployed CorDapps, and the physical machine or VM they are hosted on.
 
 * Use logging to troubleshoot operational failures (in conjunction with other supporting failure information: eg. GC logs, stack traces)
-* Use reported metrics to fine-tune and tweak operational systems parameters (including dynamic setting of logging 
+* Use reported metrics to fine-tune and tweak operational systems parameters (including dynamic setting of logging
   modules and severity levels to enable detailed logging).
 
 ## Design Decisions
 
 The following design decisions are to be confirmed:
 
-1. JMX for metric eventing and SLF4J for logging 
-   Both above are widely adopted mechanisms that enable pluggability and seamless interoperability with other 3rd party 
+1. JMX for metric eventing and SLF4J for logging
+   Both above are widely adopted mechanisms that enable pluggability and seamless interoperability with other 3rd party
    enterprise-wide system management solutions.
 2. Continue or discontinue usage of Jolokia? (TBC - most likely yes, subject to read-only security lock-down)
 3. Separation of Corda Node and CorDapp log outputs (TBC)
@@ -138,54 +138,54 @@ The following design decisions are to be confirmed:
 
 There are a number of activities and parts to the solution proposal:
 
-1. Extend JMX metric reporting through the Corda Monitoring Service and associated jolokia conversion to REST/JSON) 
-   coverage (see implementation details) to include all Corda services (vault, key management, transaction storage, 
+1. Extend JMX metric reporting through the Corda Monitoring Service and associated jolokia conversion to REST/JSON)
+   coverage (see implementation details) to include all Corda services (vault, key management, transaction storage,
    network map, attachment storage, identity, cordapp provision) & sub-sytems components (state machine)
 
 2. Review and extend Corda log4j2 coverage (see implementation details) to ensure
 
    - consistent use of severities according to situation
    - consistent coverage across all modules and libraries
-   - consistent output format with all relevant contextual information (node identity, user/execution identity, flow 
+   - consistent output format with all relevant contextual information (node identity, user/execution identity, flow
      session identity, version information)
    - separation of Corda Node and CorDapp log outputs (TBC)
      For consistent interleaving reasons, it may be desirable to continue using combined log output.
 
    Publication of a *code style guide* to define when to use different severity levels.
 
-3. Implement a CorDapp to perform sanity checking of flow framework, fundamental corda services (vault, identity), and 
+3. Implement a CorDapp to perform sanity checking of flow framework, fundamental corda services (vault, identity), and
    dependent middleware infrastructure (message broker, database).
 
-4. Revisit and enhance as necessary the [Audit service API]( https://github.com/corda/corda/pull/620 ), and provide a 
+4. Revisit and enhance as necessary the [Audit service API]( https://github.com/corda/corda/pull/620 ), and provide a
   persistent backed implementation, to include:
 
-   - specification of Business Event Categories (eg. User authentication and authorisation, Flow-based triggering, Corda 
+   - specification of Business Event Categories (eg. User authentication and authorisation, Flow-based triggering, Corda
      Service invocations, Oracle invocations, Flow-based send/receive calls, RPC invocations)
    - auto-enabled with Progress Tracker as Business Event generator
-   - RDBMS backed persistent store (independent of Corda database), with adequate security controls (authenticated access 
+   - RDBMS backed persistent store (independent of Corda database), with adequate security controls (authenticated access
      and read-only permissioning). Captured information should be consistent with standard logging, and it may be desirable
-     to define auditable loggers within log4j2 to automatically redirect certain types of log events to the audit service. 
+     to define auditable loggers within log4j2 to automatically redirect certain types of log events to the audit service.
 
-5. Ensure 3rd party middleware drivers (JDBC for database, MQ for messaging) and the JVM are correctly configured to export 
-   JMX metrics. Ensure the [JVM Hotspot VM command-line parameters](https://docs.oracle.com/javase/8/docs/technotes/guides/troubleshoot/clopts001.html) 
-   are tuned correctly to enable detailed troubleshooting upon failure. Many of these metrics are already automatically 
-   exposed to 3rd party profiling tools such as Yourkit. 
+5. Ensure 3rd party middleware drivers (JDBC for database, MQ for messaging) and the JVM are correctly configured to export
+   JMX metrics. Ensure the [JVM Hotspot VM command-line parameters](https://docs.oracle.com/javase/8/docs/technotes/guides/troubleshoot/clopts001.html)
+   are tuned correctly to enable detailed troubleshooting upon failure. Many of these metrics are already automatically
+   exposed to 3rd party profiling tools such as Yourkit.
 
-   Apache Artemis has a comprehensive [management API](https://activemq.apache.org/artemis/docs/latest/management.html) 
-   that allows a user to modify a server configuration, create new resources (e.g. addresses and queues), inspect these 
-   resources (e.g. how many messages are currently held in a queue) and interact with it (e.g. to remove messages from a 
-   queue), and exposes key metrics using JMX (using role-based authentication using Artemis's JAAS plug-in support to 
+   Apache Artemis has a comprehensive [management API](https://activemq.apache.org/artemis/docs/latest/management.html)
+   that allows a user to modify a server configuration, create new resources (e.g. addresses and queues), inspect these
+   resources (e.g. how many messages are currently held in a queue) and interact with it (e.g. to remove messages from a
+   queue), and exposes key metrics using JMX (using role-based authentication using Artemis's JAAS plug-in support to
    ensure Artemis cannot be controlled via JMX)..
 
 ### Restrictions
 
 As of Corda M11, Java serialisation in the Corda node has been restricted, meaning MBeans access via the JMX port will no longer work.
 
-Usage of Jolokia requires bundling an associated *jolokia-agent-war* file on the classpath, and associated configuration 
-to export JMX monitoring statistics and data over the Jolokia REST/JSON interface. An associated *jolokia-access.xml* 
+Usage of Jolokia requires bundling an associated *jolokia-agent-war* file on the classpath, and associated configuration
+to export JMX monitoring statistics and data over the Jolokia REST/JSON interface. An associated *jolokia-access.xml*
 configuration file defines role based permissioning to HTTP operations.
 
-## Complementary solutions 
+## Complementary solutions
 
 A number of 3rd party libraries and frameworks have been proposed which solve different parts of the end to end
 solution, albeit with most focusing on the Agent Collector (eg. collect metrics from systems then output them to some
@@ -207,7 +207,7 @@ include:
 
 Most of the above solutions are not within the scope of this design proposal, but should be capable of ingesting the outputs (logging and metrics) defined by this design.
 
-## Technical design 
+## Technical design
 
 In general, the requirements outlined in this design are cross-cutting concerns which affect the Corda codebase holistically, both for logging and capture/export of JMX metrics.
 
@@ -238,7 +238,7 @@ In general, the requirements outlined in this design are cross-cutting concerns 
 
 #### Health Checker
 
-The Health checker is a CorDapp which verifies the health and liveliness of the Corda node it is deployed and running within by performing the following activities: 
+The Health checker is a CorDapp which verifies the health and liveliness of the Corda node it is deployed and running within by performing the following activities:
 
 1. Corda network and middleware infrastructure connectivity checking:
 
@@ -263,7 +263,7 @@ The Health checker is a CorDapp which verifies the health and liveliness of the 
 4. RPC triggering
    Autotriggering of above flow using RPC to exercise the following:
 
-   - messaging subsystem verification (RPC queuing) 
+   - messaging subsystem verification (RPC queuing)
    - authenticaton and permissions checking (against underlying configuration)
 
 
@@ -272,12 +272,12 @@ The Health checker may be deployed as part of a Corda distribution and automatic
 Please note that the Health checker application is not responsible for determining the healthiness of a Corda Network. This is the responsibility of the network operator, and may include verification checks such as:
 
 - correct functioning of Network Map Service (registration, discovery)
-- correct functioning of configured Notary 
+- correct functioning of configured Notary
 - remote messaging sub-sytem (including bridge creation)
 
 #### Metrics augmentation within Corda Subsystems and Components
 
-*Codahale* provides the following types of reportable metrics: 
+*Codahale* provides the following types of reportable metrics:
 
 - Gauge: is an instantaneous measurement of a value.
 - Counter: is a gauge for a numeric value (specifically of type `AtomicLong`) which can be incremented or decremented.
@@ -288,7 +288,7 @@ Please note that the Health checker application is not responsible for determini
 
 See Appendix B for summary of current JMX Metrics exported by the Corda codebase.
 
-The following table identifies additional metrics to report for a Corda node: 
+The following table identifies additional metrics to report for a Corda node:
 
 | Component / Subsystem                    | Proposed Metric(s)                       |
 | ---------------------------------------- | ---------------------------------------- |
@@ -333,7 +333,7 @@ A *logging style guide* will be published to answer questions such as what sever
 
 - A connection to a remote peer is unexpectedly terminated.
 - A database connection timed out but was successfully re-established.
-- A message was sent to a peer. 
+- A message was sent to a peer.
 
 It is also important that we capture the correct amount of contextual information to enable rapid identification and resolution of issues using log file output. Specifically, within Corda we should include the following information in logged messages:
 
@@ -342,7 +342,7 @@ It is also important that we capture the correct amount of contextual informatio
 - Flow id (runId, also referred to as `StateMachineRunId`), if logging within a flow
 - Other contextual Flow information (eg. counterparty), if logging within a flow
 - `FlowStackSnapshot` information for catastrophic flow failures.
-  Note: this information is not currently supposed to be used in production (???). 
+  Note: this information is not currently supposed to be used in production (???).
 - Session id information for RPC calls
 - CorDapp name, if logging from within a CorDapp
 
@@ -406,10 +406,6 @@ The following metrics are exposed directly by a Corda Node at run-time:
 | Module                   | Metric                       | Desccription                             |
 | ------------------------ | ---------------------------- | ---------------------------------------- |
 | Attachment Service       | Attachments                  | Counts number of attachments persisted in database. |
-| Verification Service     | VerificationsInFlight        | Gauge of number of in flight verifications handled by the out of process verification service. |
-| Verification Service     | Verification.Duration        | Timer                                    |
-| Verification Service     | Verification.Success         | Count                                    |
-| Verification Service     | Verification.Failure         | Count                                    |
 | RAFT Uniqueness Provider | RaftCluster.ThisServerStatus | Gauge                                    |
 | RAFT Uniqueness Provider | RaftCluster.MembersCount     | Count                                    |
 | RAFT Uniqueness Provider | RaftCluster.Members          | Gauge, containing a list of members (by server address) |
@@ -417,7 +413,6 @@ The following metrics are exposed directly by a Corda Node at run-time:
 | State Machine Manager    | Flows.CheckpointingRate      | Meter                                    |
 | State Machine Manager    | Flows.Started                | Count                                    |
 | State Machine Manager    | Flows.Finished               | Count                                    |
-| Flow State Machine       | FlowDuration                 | Timer                                    |
 
 Additionally, JMX metrics are also generated within the Corda *node-driver* performance testing utilities. Specifically, the `startPublishingFixedRateInjector` defines and exposes `QueueSize` and `WorkDuration` metrics.
 
@@ -536,4 +531,3 @@ The following table summarised the types of metrics associated with Message Queu
 | messageCountDelta | *overall* number of messages added/removed from the queue *since the last message counter update*. Positive value indicated more messages were added, negative vice versa. |
 | lastAddTimestamp  | timestamp of the last time a message was added to the queue |
 | updateTimestamp   | timestamp of the last message counter update |
-
