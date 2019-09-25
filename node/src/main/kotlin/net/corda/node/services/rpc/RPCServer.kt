@@ -151,7 +151,7 @@ class RPCServer(
     init {
         val mutableMethodTable = mutableMapOf<String, InvocationTarget>()
         opsList.forEach { ops ->
-            listOfApplicableInterfacesRec(ops.javaClass).forEach { interfaceClass ->
+            listOfApplicableInterfacesRec(ops.javaClass).toSet().forEach { interfaceClass ->
                 val groupedMethods = with(interfaceClass) {
                     methods.groupBy { interfaceClass.name + CLASS_METHOD_DIVIDER + it.name }
                 }
@@ -407,9 +407,8 @@ class RPCServer(
         // This is newer version client calling
         inMethodName
     } else {
-        // Legacy client, assuming call by method is made against `CordaRPCOps`
-        log.warn("Call from a legacy client for method name $inMethodName. " +
-                "To avoid seeing this message in the future please upgrade your RPC client code.")
+        // Assuming call by method is made against `CordaRPCOps`
+        log.trace { "Call with method name alone: $inMethodName. This is assumed to be coming for CordaRPCOps." }
         CordaRPCOps::class.java.name + CLASS_METHOD_DIVIDER + inMethodName
     }
 
