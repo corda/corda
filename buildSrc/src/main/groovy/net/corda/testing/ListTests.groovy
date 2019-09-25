@@ -39,8 +39,11 @@ class ListShufflerAndAllocator {
 
 class ListTests extends DefaultTask {
 
+    public static final String DISTRIBUTION_PROPERTY = "distributeBy"
+
     FileCollection scanClassPath
     List<String> allTests
+    Distribution distribution = System.getProperty(DISTRIBUTION_PROPERTY) ? Distribution.valueOf(System.getProperty(DISTRIBUTION_PROPERTY)) : Distribution.METHOD
 
     def getTestsForFork(int fork, int forks, Integer seed) {
         def gitSha = new BigInteger(project.hasProperty("corda_revision") ? project.property("corda_revision").toString() : "0", 36)
@@ -53,22 +56,46 @@ class ListTests extends DefaultTask {
 
     @TaskAction
     def discoverTests() {
-        Collection<String> results = new ClassGraph()
-                .enableClassInfo()
-                .enableMethodInfo()
-                .ignoreClassVisibility()
-                .ignoreMethodVisibility()
-                .enableAnnotationInfo()
-                .overrideClasspath(scanClassPath)
-                .scan()
-                .getClassesWithMethodAnnotation("org.junit.Test")
-                .collect { c -> (c.getSubclasses() + Collections.singletonList(c)) }
-                .flatten()
-                .collect { ClassInfo c ->
-                    c.getMethodInfo().filter { m -> m.hasAnnotation("org.junit.Test") }.collect { m -> c.name + "." + m.name + "*" }
-                }.flatten()
-                .toSet()
+        switch (distribution) {
+            case Distribution.METHOD:
+                Collection<String> results = new ClassGraph()
+                        .enableClassInfo()
+                        .enableMethodInfo()
+                        .ignoreClassVisibility()
+                        .ignoreMethodVisibility()
+                        .enableAnnotationInfo()
+                        .overrideClasspath(scanClassPath)
+                        .scan()
+                        .getClassesWithMethodAnnotation("org.junit.Test")
+                        .collect { c -> (c.getSubclasses() + Collections.singletonList(c)) }
+                        .flatten()
+                        .collect { ClassInfo c ->
+                            c.getMethodInfo().filter { m -> m.hasAnnotation("org.junit.Test") }.collect { m -> c.name + "." + m.name + "*" }
+                        }.flatten()
+                        .toSet()
 
-        this.allTests = results.stream().sorted().collect(Collectors.toList())
+                this.allTests = results.stream().sorted().collect(Collectors.toList())
+                break
+            case Distribution.CLASS:
+                Collection<String> results = new ClassGraph()
+                        .enableClassInfo()
+                        .enableMethodInfo()
+                        .ignoreClassVisibility()
+                        .ignoreMethodVisibility()
+                        .enableAnnotationInfo()
+                        .overrideClasspath(scanClassPath)
+                        .scan()
+                        .getClassesWithMethodAnnotation("org.junit.Test")
+                        .collect { c -> (c.getSubclasses() + Collections.singletonList(c)) }
+                        .flatten()
+                        .collect { ClassInfo c -> c.name + "*" }.flatten()
+                        .toSet()
+                this.allTests = results.stream().sorted().collect(Collectors.toList())
+                break
+        }
     }
+}
+
+public enum Distribution {
+    CLASS, METHOD
 }

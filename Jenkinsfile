@@ -1,4 +1,7 @@
-killall_jobs()
+@Library('existing-build-control')
+import static com.r3.build.BuildControl.killAllExistingBuildsForJob
+
+killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
 
 pipeline {
     agent { label 'k8s' }
@@ -35,48 +38,27 @@ pipeline {
                                 "-Ddocker.tag=\"\${DOCKER_TAG_TO_USE}\"" +
                                 " allParallelIntegrationTest"
                     }
-                    post {
-                        always {
-                            junit '**/build/test-results-xml/**/*.xml'
-                        }
+                }
+                stage('Unit Tests') {
+                    steps {
+                        sh "./gradlew " +
+                                "-DbuildId=\"\${BUILD_ID}\" " +
+                                "-Dkubenetize=true " +
+                                "-Ddocker.tag=\"\${DOCKER_TAG_TO_USE}\"" +
+                                " allParallelUnitTest"
                     }
                 }
-//                stage('Unit Tests') {
-//                    steps {
-//                        sh "./gradlew " +
-//                                "-DbuildId=\"\${BUILD_ID}\" " +
-//                                "-Dkubenetize=true " +
-//                                "-Ddocker.tag=\"\${DOCKER_TAG_TO_USE}\"" +
-//                                " allParallelUnitTest"
-//                    }
-//                    post {
-//                        always {
-//                            junit '**/build/test-results-xml/**/*.xml'
-//                        }
-//                    }
-//                }
             }
 
         }
     }
-}
 
-@NonCPS
-def killall_jobs() {
-    def jobname = env.JOB_NAME
-    def buildnum = env.BUILD_NUMBER.toInteger()
-
-    def job = Jenkins.instance.getItemByFullName(jobname)
-    for (build in job.builds) {
-        if (!build.isBuilding()) {
-            continue;
+    post {
+        always {
+            junit '**/build/test-results-xml/**/*.xml'
         }
-
-        if (buildnum == build.getNumber().toInteger()) {
-            continue
+        cleanup {
+            deleteDir() /* clean up our workspace */
         }
-
-        echo "Killing task = ${build}"
-        build.doStop();
     }
 }

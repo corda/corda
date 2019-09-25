@@ -39,6 +39,8 @@ class KubesTest extends DefaultTask {
     int numberOfPods = 20
     int timeoutInMinutesForPodToStart = 60
 
+    Distribution distribution = Distribution.METHOD
+
     @TaskAction
     void runTestsOnKubes() {
 
@@ -115,10 +117,11 @@ class KubesTest extends DefaultTask {
                     CompletableFuture<KubePodResult> waiter = new CompletableFuture<>()
                     ExecListener execListener = buildExecListenerForPod(podName, errChannelStream, waiter, result)
                     stdOutIs.connect(stdOutOs)
+                    String[] buildCommand = getBuildCommand(numberOfPods, podIdx)
                     ExecWatch execWatch = client.pods().inNamespace(namespace).withName(podName)
                             .writingOutput(stdOutOs)
                             .writingErrorChannel(errChannelStream)
-                            .usingListener(execListener).exec(getBuildCommand(numberOfPods, podIdx))
+                            .usingListener(execListener).exec(buildCommand)
 
                     startLogPumping(outputFile, stdOutIs, podIdx, printOutput)
                     KubePodResult execResult = waiter.join()
@@ -183,20 +186,21 @@ class KubesTest extends DefaultTask {
     ExecListener buildExecListenerForPod(podName, errChannelStream, CompletableFuture<KubePodResult> waitingFuture, KubePodResult result) {
 
         new ExecListener() {
+            final Long start = System.currentTimeMillis()
             @Override
             void onOpen(Response response) {
-                project.logger.lifecycle("Build started on pod " + podName)
+                project.logger.lifecycle("Build started on pod $podName")
             }
 
             @Override
             void onFailure(Throwable t, Response response) {
-                project.logger.lifecycle("Received error from rom pod " + podName)
+                project.logger.lifecycle("Received error from rom pod $podName")
                 waitingFuture.completeExceptionally(t)
             }
 
             @Override
             void onClose(int code, String reason) {
-                project.logger.lifecycle("Received onClose() from pod " + podName + " with returnCode=" + code)
+                project.logger.lifecycle("Received onClose() from pod ${podName}, build took: ${(System.currentTimeMillis() - start) / 1000} seconds")
                 try {
                     def errChannelContents = errChannelStream.toString()
                     Status status = Serialization.unmarshal(errChannelContents, Status.class);
@@ -277,7 +281,7 @@ class KubesTest extends DefaultTask {
                 "let x=1 ; while [ \${x} -ne 0 ] ; do echo \"Waiting for DNS\" ; curl services.gradle.org > /dev/null 2>&1 ; x=\$? ; sleep 1 ; done ; " +
                         "cd /tmp/source ; " +
                         "let y=1 ; while [ \${y} -ne 0 ] ; do echo \"Preparing build directory\" ; ./gradlew testClasses integrationTestClasses --parallel 2>&1 ; y=\$? ; sleep 1 ; done ;" +
-                        "./gradlew -Dkubenetize -PdockerFork=" + podIdx + " -PdockerForks=" + numberOfPods + " $fullTaskToExecutePath --info 2>&1 ;" +
+                        "./gradlew -D${ListTests.DISTRIBUTION_PROPERTY}=${distribution.name()} -Dkubenetize -PdockerFork=" + podIdx + " -PdockerForks=" + numberOfPods + " $fullTaskToExecutePath --info 2>&1 ;" +
                         "let rs=\$? ; sleep 10 ; exit \${rs}"]
     }
 

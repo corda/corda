@@ -1,5 +1,6 @@
 import net.corda.testing.DistributedTesting
 import net.corda.testing.ParallelTestGroup
+import net.corda.testing.Distribution
 
 import static org.gradle.api.JavaVersion.VERSION_1_8
 import static org.gradle.api.JavaVersion.VERSION_11
@@ -588,17 +589,19 @@ buildScan {
 
 task allParallelIntegrationTest(type: ParallelTestGroup) {
     testGroups "integrationTest"
-    numberOfShards 15
+    numberOfShards 10
     streamOutput false
     coresPerFork 6
     memoryInGbPerFork 10
+    distribute Distribution.METHOD
 }
 task allParallelUnitTest(type: ParallelTestGroup) {
     testGroups "test"
-    numberOfShards 15
+    numberOfShards 10
     streamOutput false
     coresPerFork 3
     memoryInGbPerFork 6
+    distribute Distribution.CLASS
 }
 task allParallelUnitAndIntegrationTest(type: ParallelTestGroup) {
     testGroups "test", "integrationTest"
@@ -606,6 +609,7 @@ task allParallelUnitAndIntegrationTest(type: ParallelTestGroup) {
     streamOutput false
     coresPerFork 6
     memoryInGbPerFork 10
+    distribute Distribution.CLASS
 }
 apply plugin: DistributedTesting
 

@@ -62,6 +62,7 @@ class DistributedTesting implements Plugin<Project> {
                     taskToExecuteName = testGrouping.groups.join("And")
                     memoryGbPerFork = testGrouping.gbOfMemory
                     numberOfCoresPerFork = testGrouping.coresToUse
+                    distribution = testGrouping.distribution
                     doFirst {
                         dockerTag = dockerTag = providedTag ? ImageBuilding.registryName + ":" + providedTag : (imageBuildingTask.imageName.get() + ":" + imageBuildingTask.tag.get())
                     }
