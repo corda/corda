@@ -21,6 +21,7 @@ import net.corda.node.services.config.DevModeOptions
 import net.corda.node.services.config.FlowOverride
 import net.corda.node.services.config.FlowOverrideConfig
 import net.corda.node.services.config.FlowTimeoutConfiguration
+import net.corda.node.services.config.NetworkParameterAcceptanceSettings
 import net.corda.node.services.config.NetworkServicesConfig
 import net.corda.node.services.config.NodeH2Settings
 import net.corda.node.services.config.NodeRpcSettings
@@ -142,6 +143,18 @@ internal object NetworkServicesConfigSpec : Configuration.Specification<NetworkS
         return valid(NetworkServicesConfig(configuration[doormanURL], configuration[networkMapURL], configuration[pnm], configuration[inferred]))
     }
 }
+
+internal object NetworkParameterAcceptanceSettingsSpec :
+        Configuration.Specification<NetworkParameterAcceptanceSettings>("NetworkParameterAcceptanceSettings") {
+    private val autoAcceptEnabled by boolean().optional().withDefaultValue(true)
+    private val excludedAutoAcceptableParameters by string().listOrEmpty()
+    override fun parseValid(configuration: Config): Valid<NetworkParameterAcceptanceSettings> {
+        return valid(NetworkParameterAcceptanceSettings(configuration[autoAcceptEnabled],
+                configuration[excludedAutoAcceptableParameters].toSet())
+        )
+    }
+}
+
 
 @Suppress("DEPRECATION")
 internal object CertChainPolicyConfigSpec : Configuration.Specification<CertChainPolicyConfig>("CertChainPolicyConfig") {
