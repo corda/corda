@@ -471,7 +471,7 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
             predicateSet.add(criteriaBuilder.and(vaultFungibleStatesRoot.get<ByteArray>("issuerRef").`in`(issuerRefs)))
         }
 
-        if (criteria.exactParticipants != null && criteria.exactParticipants != null)
+        if (criteria.participants != null && criteria.exactParticipants != null)
             throw VaultQueryException("Cannot specify both participants (${criteria.participants}) and exactParticipants (${criteria.exactParticipants}).")
 
         // Participants.
