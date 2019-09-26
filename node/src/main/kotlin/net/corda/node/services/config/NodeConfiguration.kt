@@ -81,7 +81,7 @@ interface NodeConfiguration {
 
     val cordappSignerKeyFingerprintBlacklist: List<String>
 
-    val networkParameterAcceptanceSettings: NetworkParameterAcceptanceSettings
+    val networkParameterAcceptanceSettings: NetworkParameterAcceptanceSettings?
 
     val blacklistedAttachmentSigningKeys: List<String>
 

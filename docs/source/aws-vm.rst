@@ -53,11 +53,11 @@ For example: with cordapp-example (IOU app) the following commands would be run:
     ./gradlew deployNodes
     ./kotlin-source/build/nodes/runnodes
 
-Then start the Corda webserver
+Then start the Corda test webserver
 
 .. sourcecode:: shell
 
-    find ~/dev/cordapp-example/kotlin-source/ -name corda-webserver.jar -execdir sh -c 'java -jar {} &' \;
+    find ~/dev/cordapp-example/kotlin-source/ -name corda-testserver.jar -execdir sh -c 'java -jar {} &' \;
 
 You can now interact with your running CorDapp. See the instructions `here <https://docs.corda.net/tutorial-cordapp.html#via-http>`__.
 

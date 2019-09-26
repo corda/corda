@@ -55,7 +55,7 @@ Since the CorDapp models a car dealership network, a state must be created to re
 
   It's important to specify what classes are required in each state, contract, and flow. This process must be repeated with each file as it is created.
 
-5. Update ``@BelongsToContract(TemplateContract:class)`` to specify ``CarContract::class``.
+5. Update ``@BelongsToContract(TemplateContract::class)`` to specify ``CarContract::class``.
 
 6. Add the following fields to the state:
   * ``owningBank`` of type ``Party``

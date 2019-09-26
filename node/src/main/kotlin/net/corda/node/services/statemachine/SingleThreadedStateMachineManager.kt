@@ -3,7 +3,7 @@ package net.corda.node.services.statemachine
 import co.paralleluniverse.fibers.Fiber
 import co.paralleluniverse.fibers.FiberExecutorScheduler
 import co.paralleluniverse.fibers.Suspendable
-import co.paralleluniverse.fibers.instrument.SuspendableHelper
+import co.paralleluniverse.fibers.instrument.JavaAgent
 import co.paralleluniverse.strands.channels.Channels
 import com.codahale.metrics.Gauge
 import net.corda.core.concurrent.CordaFuture
@@ -307,7 +307,7 @@ class SingleThreadedStateMachineManager(
     }
 
     private fun checkQuasarJavaAgentPresence() {
-        check(SuspendableHelper.isJavaAgentActive()) {
+        check(JavaAgent.isActive()) {
             """Missing the '-javaagent' JVM argument. Make sure you run the tests with the Quasar java agent attached to your JVM.
                #See https://docs.corda.net/head/testing.html#running-tests-in-intellij - 'Fiber classes not instrumented' for more details.""".trimMargin("#")
         }

@@ -31,7 +31,7 @@ dependencies {
 }
 
 def nodeTask = tasks.getByPath(':node:capsule:assemble')
-def webTask = tasks.getByPath(':webserver:webcapsule:assemble')
+def webTask = tasks.getByPath(':testing:testserver:testcapsule::assemble')
 
 task deployNodes(dependsOn: ['deployNodesSingle', 'deployNodesRaft', 'deployNodesBFT', 'deployNodesCustom'])
 

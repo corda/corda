@@ -6,6 +6,8 @@ release, see :doc:`app-upgrade-notes`.
 
 Unreleased
 ----------
+* Moved and renamed the testing web server to the ``testing`` subproject. Also renamed the published artifact to ``corda-testserver.jar``.
+
 * Support for Java 11 (compatibility mode). Please read https://github.com/corda/corda/pull/5356.
 
 * Updating FinalityFlow with functionality to indicate the appropriate StatesToRecord. This allows the initiating party to record states
