@@ -2502,24 +2502,6 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
             val commonQueryCriteria = VaultQueryCriteria(participants = listOf(MEGA_CORP))
             val resultsAll = vaultService.queryBy<ContractState>(linearStateCriteria.or(fungibleAssetStateCriteria).or(commonQueryCriteria))
             assertThat(resultsAll.states).hasSize(6)
-
-            // same query using strict participant matching
-            val strictCriteriaLinear = LinearStateQueryCriteria().withExactParticipants(listOf(ALICE,BOB))
-            val strictResultsLinear = vaultService.queryBy<ContractState>(strictCriteriaLinear)
-            assertThat(strictResultsLinear.states).hasSize(0)
-
-            val strictCriteriaFungible = FungibleAssetQueryCriteria().withExactParticipants(listOf(services.myInfo.singleIdentity()))
-            val strictResultsFungible = vaultService.queryBy<ContractState>(strictCriteriaFungible)
-            assertThat(strictResultsFungible.states).hasSize(2)
-
-            // composite query for both linear and fungible asset states by participants
-            val strictResultsComposite = vaultService.queryBy<ContractState>(strictCriteriaLinear.or(strictCriteriaFungible))
-            assertThat(strictResultsComposite.states).hasSize(2)
-
-            // composite query both linear and fungible and dummy asset states by participants
-            val strictCommonQueryCriteria = VaultQueryCriteria().withExactParticipants(listOf(MEGA_CORP))
-            val strictCommonQueryCriteriaResults = vaultService.queryBy<ContractState>(strictCriteriaLinear.or(strictCriteriaFungible).or(strictCommonQueryCriteria))
-            assertThat(strictCommonQueryCriteriaResults.states).hasSize(2)
         }
     }
 
