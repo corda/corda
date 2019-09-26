@@ -6,6 +6,8 @@ release, see :doc:`app-upgrade-notes`.
 
 Unreleased
 ----------
+* New Vault Query criteria to specify exact matches for specified participants.
+
 * Support for Java 11 (compatibility mode). Please read https://github.com/corda/corda/pull/5356.
 
 * Removed the RPC exception privacy feature. Previously, in production mode, the exceptions thrown on the node were stripped of all content
