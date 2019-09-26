@@ -64,7 +64,8 @@ object ConfigHelper {
     }
 
     private fun Config.cordaEntriesOnly(): Config {
-        return ConfigFactory.parseMap(toProperties()
+        return ConfigFactory.parseMap(
+                toProperties()
                 .mapKeys {
                     (it.key as String)
                         .replace(CORDA_PROPERTY_PREFIX_LINUX, CORDA_PROPERTY_PREFIX)
