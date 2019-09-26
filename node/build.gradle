@@ -180,15 +180,15 @@ dependencies {
     compile "com.typesafe:config:$typesafe_config_version"
 
     // Sandbox for deterministic contract verification
-    compile "net.corda:corda-djvm:$djvm_version"
-    compile "net.corda:corda-djvm-serialization:$djvm_version"
+    compile "net.corda.djvm:corda-djvm:$djvm_version"
+    compile "net.corda.djvm:corda-djvm-serialization:$djvm_version"
     compile(project(':node:djvm')) {
         transitive = false
     }
     jdkRt "net.corda:deterministic-rt:latest.integration"
     deterministic project(path: ':core-deterministic', configuration: 'deterministicArtifacts')
     deterministic project(path: ':serialization-deterministic', configuration: 'deterministicArtifacts')
-    deterministic("net.corda:corda-djvm-deserializers:$djvm_version") {
+    deterministic("net.corda.djvm:corda-djvm-deserializers:$djvm_version") {
         transitive = false
     }
     deterministic(project(':node:djvm')) {

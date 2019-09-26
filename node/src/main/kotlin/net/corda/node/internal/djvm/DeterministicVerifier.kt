@@ -9,7 +9,6 @@ import net.corda.core.internal.*
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.djvm.SandboxConfiguration
-import net.corda.djvm.analysis.AnalysisConfiguration
 import net.corda.djvm.execution.*
 import net.corda.djvm.messages.Message
 import net.corda.djvm.source.ClassSource
@@ -18,17 +17,11 @@ import net.corda.node.djvm.LtxFactory
 class DeterministicVerifier(
     ltx: LedgerTransaction,
     transactionClassLoader: ClassLoader,
-    private val analysisConfiguration: AnalysisConfiguration
+    private val sandboxConfiguration: SandboxConfiguration
 ) : Verifier(ltx, transactionClassLoader) {
 
     override fun verifyContracts() {
-        val configuration = SandboxConfiguration.createFor(
-            analysisConfiguration = analysisConfiguration,
-            profile = ExecutionProfile.DEFAULT,
-            enableTracing = false
-        )
-
-        val result = IsolatedTask(ltx.id.toString(), configuration).run {
+        val result = IsolatedTask(ltx.id.toString(), sandboxConfiguration).run {
             val taskFactory = classLoader.createRawTaskFactory()
             val sandboxBasicInput = classLoader.createBasicInput()
 
@@ -98,7 +91,6 @@ class DeterministicVerifier(
 
     @Throws(Exception::class)
     override fun close() {
-    //    analysisConfiguration.closeAll()
     }
 }
 
