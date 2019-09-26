@@ -32,40 +32,24 @@ import java.util.concurrent.TimeUnit
 /**
  * Wrapper over [CordaRPCOps] that handles exceptions when the node or the connection to the node fail.
  *
- * All operations are retried on failure, except flow start operations that die before receiving a valid [FlowHandle], in which case a [CouldNotStartFlowException] is thrown.
+ * All operations are retried on failure, except flow start operations that die before receiving a valid [FlowHandle], in which case a
+ * [CouldNotStartFlowException] is thrown.
  *
  * When calling methods that return a [DataFeed] like [CordaRPCOps.vaultTrackBy], the returned [DataFeed.updates] object will no longer
  * be a usable [rx.Observable] but an instance of [ReconnectingObservable].
- * The caller has to explicitly cast to [ReconnectingObservable] and call [ReconnectingObservable.subscribe]. If used as an [rx.Observable] it will just fail.
+ * The caller has to explicitly cast to [ReconnectingObservable] and call [ReconnectingObservable.subscribe]. If used as an [rx.Observable]
+ * it will just fail.
  * The returned [DataFeed.snapshot] is the snapshot as it was when the feed was first retrieved.
  *
  * Note: There is no guarantee that observations will not be lost.
  *
  * *This class is not a stable API. Any project that wants to use it, must copy and paste it.*
  */
-// TODO The executor service is not needed. All we need is a single thread that deals with reconnecting and onto which ReconnectingObservables
-//  and other things can attach themselves as listeners for reconnect events.
+// TODO The executor service is not needed. All we need is a single thread that deals with reconnecting and onto which
+//  ReconnectingObservables and other things can attach themselves as listeners for reconnect events.
 class ReconnectingCordaRPCOps private constructor(
         val reconnectingRPCConnection: ReconnectingRPCConnection
 ) : InternalCordaRPCOps by proxy(reconnectingRPCConnection) {
-    // Constructors that mirror CordaRPCClient.
-    constructor(
-            nodeHostAndPort: NetworkHostAndPort,
-            username: String,
-            password: String,
-            rpcConfiguration: CordaRPCClientConfiguration,
-            sslConfiguration: ClientRpcSslOptions? = null,
-            classLoader: ClassLoader? = null,
-            observersPool: ExecutorService
-    ) : this(
-            listOf(nodeHostAndPort),
-            username,
-            password,
-            rpcConfiguration,
-            null,
-            sslConfiguration,
-            classLoader,
-            observersPool)
     constructor(
             nodeHostAndPorts: List<NetworkHostAndPort>,
             username: String,

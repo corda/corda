@@ -4,6 +4,7 @@ import com.google.common.html.HtmlEscapers.htmlEscaper
 import io.netty.channel.unix.Errors
 import net.corda.client.jackson.JacksonSupport
 import net.corda.client.rpc.CordaRPCClient
+import net.corda.client.rpc.CordaRPCConnection
 import net.corda.client.rpc.GracefulReconnect
 import net.corda.core.internal.errors.AddressBindingException
 import net.corda.core.messaging.CordaRPCOps
@@ -46,8 +47,12 @@ class NodeWebServer(val config: WebServerConfig) {
     }
 
     fun run() {
-        while (server.isRunning) {
-            Thread.sleep(100) // TODO: Redesign
+        try {
+            while (server.isRunning) {
+                Thread.sleep(100) // TODO: Redesign
+            }
+        } finally {
+            rpc.close()
         }
     }
 
@@ -75,7 +80,11 @@ class NodeWebServer(val config: WebServerConfig) {
             sslContextFactory.setIncludeProtocols("TLSv1.2")
             sslContextFactory.setExcludeCipherSuites(".*NULL.*", ".*RC4.*", ".*MD5.*", ".*DES.*", ".*DSS.*")
             sslContextFactory.setIncludeCipherSuites(".*AES.*GCM.*")
-            val sslConnector = ServerConnector(server, SslConnectionFactory(sslContextFactory, "http/1.1"), HttpConnectionFactory(httpsConfiguration))
+            val sslConnector = ServerConnector(
+                    server,
+                    SslConnectionFactory(sslContextFactory, "http/1.1"),
+                    HttpConnectionFactory(httpsConfiguration)
+            )
             sslConnector.port = address.port
             sslConnector
         } else {
@@ -175,13 +184,16 @@ class NodeWebServer(val config: WebServerConfig) {
         }
     }
 
-    private fun reconnectingCordaRPCOps() =
-            CordaRPCClient(config.rpcAddress, null, javaClass.classLoader)
-                    .start(
-                            config.runAs.username,
-                            config.runAs.password,
-                            GracefulReconnect()
-                    ).proxy
+    private lateinit var rpc: CordaRPCConnection
+    private fun reconnectingCordaRPCOps(): CordaRPCOps {
+        rpc = CordaRPCClient(config.rpcAddress, null, javaClass.classLoader)
+                .start(
+                        config.runAs.username,
+                        config.runAs.password,
+                        GracefulReconnect()
+                )
+        return rpc.proxy
+    }
 
     /**
      *  Fetch WebServerPluginRegistry classes registered in META-INF/services/net.corda.webserver.services.WebServerPluginRegistry

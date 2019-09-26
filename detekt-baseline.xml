@@ -1221,7 +1221,6 @@
     <ID>MagicNumber:CordaRPCClient.kt$CordaRPCClientConfiguration$3</ID>
     <ID>MagicNumber:CordaRPCClient.kt$CordaRPCClientConfiguration$31</ID>
     <ID>MagicNumber:CordaRPCClient.kt$CordaRPCClientConfiguration$5</ID>
-    <ID>MagicNumber:CordaRPCClient.kt$CordaRPCConnection$30</ID>
     <ID>MagicNumber:CordaRPCClientReconnectionTest.kt$CordaRPCClientReconnectionTest$10</ID>
     <ID>MagicNumber:CordaRPCClientReconnectionTest.kt$CordaRPCClientReconnectionTest$20</ID>
     <ID>MagicNumber:CordaRPCClientReconnectionTest.kt$CordaRPCClientReconnectionTest$4</ID>
@@ -4194,7 +4193,6 @@
     <ID>MaxLineLength:NodeVaultServiceTest.kt$NodeVaultServiceTest$val unlockedStates1 = vaultService.queryBy&lt;Cash.State&gt;(VaultQueryCriteria(softLockingCondition = SoftLockingCondition(SoftLockingType.UNLOCKED_ONLY))).states</ID>
     <ID>MaxLineLength:NodeVaultServiceTest.kt$NodeVaultServiceTest$val unlockedStates2 = vaultService.queryBy&lt;Cash.State&gt;(VaultQueryCriteria(softLockingCondition = SoftLockingCondition(SoftLockingType.UNLOCKED_ONLY))).states</ID>
     <ID>MaxLineLength:NodeVaultServiceTest.kt$NodeVaultServiceTest$vaultService.queryBy(Cash.State::class.java, QueryCriteria.VaultQueryCriteria(relevancyStatus = Vault.RelevancyStatus.ALL), PageSpecification(1)).totalStatesAvailable</ID>
-    <ID>MaxLineLength:NodeWebServer.kt$NodeWebServer$val sslConnector = ServerConnector(server, SslConnectionFactory(sslContextFactory, "http/1.1"), HttpConnectionFactory(httpsConfiguration))</ID>
     <ID>MaxLineLength:NonInvalidatingCache.kt$NonInvalidatingWeightBasedCache.Companion$private</ID>
     <ID>MaxLineLength:NonInvalidatingUnboundCache.kt$NonInvalidatingUnboundCache$constructor(name: String, cacheFactory: NamedCacheFactory, loadFunction: (K) -&gt; V, removalListener: RemovalListener&lt;K, V&gt; = RemovalListener { _, _, _ -&gt; }, keysToPreload: () -&gt; Iterable&lt;K&gt; = { emptyList() }) : this(buildCache(name, cacheFactory, loadFunction, removalListener, keysToPreload))</ID>
     <ID>MaxLineLength:NonInvalidatingUnboundCache.kt$NonInvalidatingUnboundCache.Companion$private</ID>
@@ -4540,7 +4538,6 @@
     <ID>MaxLineLength:ReceiveTransactionFlow.kt$ReceiveStateAndRefFlow&lt;out T : ContractState&gt; : FlowLogic</ID>
     <ID>MaxLineLength:ReceiveTransactionFlow.kt$ReceiveTransactionFlow : FlowLogic</ID>
     <ID>MaxLineLength:ReceiveTransactionFlow.kt$ReceiveTransactionFlow$private val statesToRecord: StatesToRecord = StatesToRecord.NONE</ID>
-    <ID>MaxLineLength:ReconnectingCordaRPCOps.kt$ReconnectingCordaRPCOps : AutoCloseableInternalCordaRPCOps</ID>
     <ID>MaxLineLength:ReconnectingCordaRPCOps.kt$ReconnectingCordaRPCOps$ fun runFlowWithLogicalRetry(runFlow: (CordaRPCOps) -&gt; StateMachineRunId, hasFlowStarted: (CordaRPCOps) -&gt; Boolean, onFlowConfirmed: () -&gt; Unit = {}, timeout: Duration = 4.seconds)</ID>
     <ID>MaxLineLength:ReferenceInputStateTests.kt$ReferenceStateTests$output(ExampleContract::class.java.typeName, "UPDATED REF DATA", "REF DATA".output&lt;ExampleState&gt;().copy(data = "NEW STUFF!"))</ID>
     <ID>MaxLineLength:ReferenceInputStateTests.kt$ReferenceStateTests$val stateAndRef = StateAndRef(TransactionState(state, CONTRACT_ID, DUMMY_NOTARY, constraint = AlwaysAcceptAttachmentConstraint), StateRef(SecureHash.zeroHash, 0))</ID>
@@ -4582,7 +4579,6 @@
     <ID>MaxLineLength:RpcReconnectTests.kt$RpcReconnectTests$fun startBankA(address: NetworkHostAndPort)</ID>
     <ID>MaxLineLength:RpcReconnectTests.kt$RpcReconnectTests$fun startProxy(addressPair: AddressPair)</ID>
     <ID>MaxLineLength:RpcReconnectTests.kt$RpcReconnectTests$numReconnects++ // We only expect to see a single reconnectOnError in the stack trace. Otherwise we're in danger of stack overflow recursion maxStackOccurrences.set(max(maxStackOccurrences.get(), currentStackTrace().count { it.methodName == "reconnectOnError" })) Unit</ID>
-    <ID>MaxLineLength:RpcReconnectTests.kt$RpcReconnectTests$val bankAReconnectingRpc = client.start(demoUser.username, demoUser.password, gracefulReconnect = reconnect).proxy as ReconnectingCordaRPCOps</ID>
     <ID>MaxLineLength:RpcReconnectTests.kt$RpcReconnectTests$val criteria = QueryCriteria.VaultCustomQueryCriteria(builder { CashSchemaV1.PersistentCashState::pennies.equal(amount.toLong() * 100) }, status = Vault.StateStatus.ALL)</ID>
     <ID>MaxLineLength:SSLHelper.kt$val trustManagers = trustManagerFactory.trustManagers.filterIsInstance(X509ExtendedTrustManager::class.java).map { LoggingTrustManagerWrapper(it) }.toTypedArray()</ID>
     <ID>MaxLineLength:SSLHelperTest.kt$SSLHelperTest$trustManagerFactory.init(initialiseTrustStoreAndEnableCrlChecking(CertificateStore.fromFile(trustStore.path, trustStore.storePassword, trustStore.entryPassword, false), false))</ID>

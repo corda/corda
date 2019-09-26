@@ -85,7 +85,7 @@ class CordaRPCConnection private constructor(
         } finally {
             observersPool?.apply {
                 shutdown()
-                if (!awaitTermination(30, TimeUnit.SECONDS)) {
+                if (!awaitTermination(@Suppress("MagicNumber")30, TimeUnit.SECONDS)) {
                     shutdownNow()
                 }
             }
