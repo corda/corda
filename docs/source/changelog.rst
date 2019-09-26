@@ -6,6 +6,8 @@ release, see :doc:`app-upgrade-notes`.
 
 Unreleased
 ----------
+* Moved and renamed the testing web server to the ``testing`` subproject. Also renamed the published artifact to ``corda-testserver.jar``.
+
 * New Vault Query criteria to specify exact matches for specified participants.
 
 * Support for Java 11 (compatibility mode). Please read https://github.com/corda/corda/pull/5356.
@@ -14,9 +16,17 @@ Unreleased
   when rethrown on the RPC client.
 
 * Introduced a new parameter ``externalIds: List<UUID>`` to ``VaultQueryCriteria`` which allows CorDapp developers to constrain queries
-  to a specified set of external IDs.
+  to a specified set of external IDs. This feature should be used when querying states for a particular "account" (see accounts CorDapp for
+  further information).
 
-* Introduced a new API on ``KeyManagementService`` which facilitates lookups of ``PublicKey`` s to ``externalId`` s (Account IDs).
+* Introduced a new API on ``IdentityService`` called ``RegisterKey`` which maps a ``PublicKey`` to a specified ``CordaX500Name`` and to an
+  optional ``UUID`` (external Id).
+
+* Introduced a new API on ``IdentityService`` called ``publicKeyToExternalId` which facilitates lookups of ``PublicKey`` s to
+  ``externalId`` s (Account IDs).
+
+* Introduced a new API on ``IdentityService`` called ``publicKeysForExternalId`` which returns all the ``PublicKey`` s associated with a
+  particular external ID.
 
 * ``StatePointer`` has been marked as ```@DoNotImplement``, which was an omission in the original release.
 

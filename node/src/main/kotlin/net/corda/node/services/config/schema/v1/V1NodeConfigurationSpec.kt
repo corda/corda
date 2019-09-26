@@ -58,6 +58,9 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
     private val cordappDirectories by string().mapValid(::toPath).list().optional()
     private val cordappSignerKeyFingerprintBlacklist by string().list().optional().withDefaultValue(Defaults.cordappSignerKeyFingerprintBlacklist)
     private val blacklistedAttachmentSigningKeys by string().list().optional().withDefaultValue(Defaults.blacklistedAttachmentSigningKeys)
+    private val networkParameterAcceptanceSettings by nested(NetworkParameterAcceptanceSettingsSpec)
+            .optional()
+            .withDefaultValue(Defaults.networkParameterAcceptanceSettings)
     @Suppress("unused")
     private val custom by nestedObject().optional()
     @Suppress("unused")
@@ -117,7 +120,8 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
                     jarDirs = configuration[jarDirs],
                     cordappDirectories = cordappDirectories.map { baseDirectoryPath.resolve(it) },
                     cordappSignerKeyFingerprintBlacklist = configuration[cordappSignerKeyFingerprintBlacklist],
-                    blacklistedAttachmentSigningKeys = configuration[blacklistedAttachmentSigningKeys]
+                    blacklistedAttachmentSigningKeys = configuration[blacklistedAttachmentSigningKeys],
+                    networkParameterAcceptanceSettings = configuration[networkParameterAcceptanceSettings]
             ))
         } catch (e: Exception) {
             return when (e) {

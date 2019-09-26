@@ -117,8 +117,15 @@ buildscript {
     ext.picocli_version = '3.9.6'
     ext.commons_io_version = '2.6'
     ext.controlsfx_version = '8.40.15'
-    ext.fontawesomefx_commons_version = '11.0'
-    ext.fontawesomefx_fontawesome_version = '4.7.0-11'
+    if (JavaVersion.current() == JavaVersion.VERSION_11) {
+        // has been compiled by a more recent version of the Java Runtime (class file version 55.0)
+        ext.fontawesomefx_commons_version = '11.0'
+        ext.fontawesomefx_fontawesome_version = '4.7.0-11'
+    }
+    else {
+        ext.fontawesomefx_commons_version = '8.15'
+        ext.fontawesomefx_fontawesome_version = '4.7.0-5'
+    }
 
     // Name of the IntelliJ SDK created for the deterministic Java rt.jar.
     // ext.deterministic_idea_sdk = '1.8 (Deterministic)'
@@ -377,7 +384,7 @@ dependencies {
 
     // Set to corda compile to ensure it exists now deploy nodes no longer relies on build
     compile project(path: ":node:capsule", configuration: 'runtimeArtifacts')
-    compile project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
+    compile project(path: ":testing:testserver:testcapsule:", configuration: 'runtimeArtifacts')
 
     // For the buildCordappDependenciesJar task
     runtime project(':client:jfx')
@@ -387,7 +394,7 @@ dependencies {
     runtime project(':confidential-identities')
     runtime project(':finance:workflows')
     runtime project(':finance:contracts')
-    runtime project(':webserver')
+    runtime project(':testing:testserver')
     testCompile project(':test-utils')
     detekt 'io.gitlab.arturbosch.detekt:detekt-cli:1.0.1'
 }
@@ -474,8 +481,8 @@ bintrayConfig {
             'corda-test-utils',
             'corda-test-db',
             'corda-jackson',
-            'corda-webserver-impl',
-            'corda-webserver',
+            'corda-testserver-impl',
+            'corda-testserver',
             'corda-node-driver',
             'corda-confidential-identities',
             'corda-shell',

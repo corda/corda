@@ -1,8 +1,8 @@
 package net.corda.bank.api
 
 import net.corda.bank.api.BankOfCordaWebApi.IssueRequestParams
-import net.corda.client.rpc.CordaRPCClientConfiguration
-import net.corda.client.rpc.internal.ReconnectingCordaRPCOps
+import net.corda.client.rpc.CordaRPCClient
+import net.corda.client.rpc.GracefulReconnect
 import net.corda.core.messaging.startFlow
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.NetworkHostAndPort
@@ -35,7 +35,9 @@ object BankOfCordaClientApi {
      *
      * @return a payment transaction (following successful issuance of cash to self).
      */
-    fun requestRPCIssue(rpcAddress: NetworkHostAndPort, params: IssueRequestParams): SignedTransaction = requestRPCIssueHA(listOf(rpcAddress), params)
+    fun requestRPCIssue(rpcAddress: NetworkHostAndPort, params: IssueRequestParams): SignedTransaction {
+        return requestRPCIssueHA(listOf(rpcAddress), params)
+    }
 
     /**
      * RPC API
@@ -44,20 +46,28 @@ object BankOfCordaClientApi {
      */
     fun requestRPCIssueHA(availableRpcServers: List<NetworkHostAndPort>, params: IssueRequestParams): SignedTransaction {
         // TODO: privileged security controls required
-        ReconnectingCordaRPCOps(availableRpcServers, BOC_RPC_USER, BOC_RPC_PWD, CordaRPCClientConfiguration.DEFAULT).use { rpc->
-            rpc.waitUntilNetworkReady().getOrThrow()
+        CordaRPCClient(availableRpcServers)
+                .start(BOC_RPC_USER, BOC_RPC_PWD, gracefulReconnect = GracefulReconnect()).use { rpc->
+            rpc.proxy.waitUntilNetworkReady().getOrThrow()
 
             // Resolve parties via RPC
-            val issueToParty = rpc.wellKnownPartyFromX500Name(params.issueToPartyName)
+            val issueToParty = rpc.proxy.wellKnownPartyFromX500Name(params.issueToPartyName)
                     ?: throw IllegalStateException("Unable to locate ${params.issueToPartyName} in Network Map Service")
-            val notaryLegalIdentity = rpc.notaryIdentities().firstOrNull { it.name == params.notaryName }
+            val notaryLegalIdentity = rpc.proxy.notaryIdentities().firstOrNull { it.name == params.notaryName }
                     ?: throw IllegalStateException("Couldn't locate notary ${params.notaryName} in NetworkMapCache")
 
             val anonymous = true
             val issuerBankPartyRef = OpaqueBytes.of(params.issuerBankPartyRef.toByte())
 
-            logger.info("${rpc.nodeInfo()} issuing ${params.amount} to transfer to $issueToParty ...")
-            return rpc.startFlow(::CashIssueAndPaymentFlow, params.amount, issuerBankPartyRef, issueToParty, anonymous, notaryLegalIdentity)
+            logger.info("${rpc.proxy.nodeInfo()} issuing ${params.amount} to transfer to $issueToParty ...")
+            return rpc.proxy.startFlow(
+                    ::CashIssueAndPaymentFlow,
+                    params.amount,
+                    issuerBankPartyRef,
+                    issueToParty,
+                    anonymous,
+                    notaryLegalIdentity
+            )
                     .returnValue.getOrThrow().stx
         }
     }
