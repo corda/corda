@@ -323,7 +323,8 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
         fun withStatus(status: Vault.StateStatus): LinearStateQueryCriteria = copy(status = status)
         fun withContractStateTypes(contractStateTypes: Set<Class<out ContractState>>): LinearStateQueryCriteria = copy(contractStateTypes = contractStateTypes)
         fun withRelevancyStatus(relevancyStatus: Vault.RelevancyStatus): LinearStateQueryCriteria = copy(relevancyStatus = relevancyStatus)
-        fun withExactParticipants(exactParticipants: List<AbstractParty>): LinearStateQueryCriteria = copy(exactParticipants = exactParticipants)
+        fun withExactParticipants(exactParticipants: List<AbstractParty>): LinearStateQueryCriteria =
+                copy(exactParticipants = exactParticipants)
 
         fun copy(
                 participants: List<AbstractParty>? = this.participants,
@@ -374,7 +375,8 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
         fun withStatus(status: Vault.StateStatus): FungibleStateQueryCriteria = copy(status = status)
         fun withContractStateTypes(contractStateTypes: Set<Class<out ContractState>>): FungibleStateQueryCriteria = copy(contractStateTypes = contractStateTypes)
         fun withRelevancyStatus(relevancyStatus: Vault.RelevancyStatus): FungibleStateQueryCriteria = copy(relevancyStatus = relevancyStatus)
-        fun withExactParticipants(exactParticipants: List<AbstractParty>): FungibleStateQueryCriteria = copy(exactParticipants = exactParticipants)
+        fun withExactParticipants(exactParticipants: List<AbstractParty>): FungibleStateQueryCriteria
+                = copy(exactParticipants = exactParticipants)
     }
 
     /**
@@ -428,7 +430,8 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
         fun withStatus(status: Vault.StateStatus): FungibleAssetQueryCriteria = copy(status = status)
         fun withContractStateTypes(contractStateTypes: Set<Class<out ContractState>>): FungibleAssetQueryCriteria = copy(contractStateTypes = contractStateTypes)
         fun withRelevancyStatus(relevancyStatus: Vault.RelevancyStatus): FungibleAssetQueryCriteria = copy(relevancyStatus = relevancyStatus)
-        fun withExactParticipants(exactParticipants: List<AbstractParty>): FungibleAssetQueryCriteria = copy(exactParticipants = exactParticipants)
+        fun withExactParticipants(exactParticipants: List<AbstractParty>): FungibleAssetQueryCriteria
+                = copy(exactParticipants = exactParticipants)
 
         fun copy(
                 participants: List<AbstractParty>? = this.participants,

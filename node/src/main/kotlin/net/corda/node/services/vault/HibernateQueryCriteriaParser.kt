@@ -472,7 +472,8 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
         }
 
         if (criteria.participants != null && criteria.exactParticipants != null)
-            throw VaultQueryException("Cannot specify both participants (${criteria.participants}) and exactParticipants (${criteria.exactParticipants}).")
+            throw VaultQueryException("Cannot specify both participants (${criteria.participants}) and exactParticipants " +
+                    "(${criteria.exactParticipants}).")
 
         // Participants.
         if (criteria.participants != null || criteria.exactParticipants != null) {
@@ -512,7 +513,8 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
         }
 
         if (criteria.participants != null && criteria.exactParticipants != null)
-            throw VaultQueryException("Cannot specify both participants (${criteria.participants}) and exactParticipants (${criteria.exactParticipants}).")
+            throw VaultQueryException("Cannot specify both participants (${criteria.participants}) " +
+                    "and exactParticipants (${criteria.exactParticipants}).")
 
         // Participants.
         if (criteria.participants != null || criteria.exactParticipants != null) {
