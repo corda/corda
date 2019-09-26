@@ -284,6 +284,7 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
                 relevancyStatus: Vault.RelevancyStatus = Vault.RelevancyStatus.ALL
         ) : this(participants, uuid, externalId, status, contractStateTypes, relevancyStatus, null)
         // V3 c'tor
+        @JvmOverloads
         @DeprecatedConstructorForDeserialization(version = 2)
         constructor(
                 participants: List<AbstractParty>? = null,

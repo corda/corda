@@ -471,37 +471,16 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
             predicateSet.add(criteriaBuilder.and(vaultFungibleStatesRoot.get<ByteArray>("issuerRef").`in`(issuerRefs)))
         }
 
-        if (criteria.exactParticipants != null && criteria.exactParticipants!!.isNotEmpty())
+        if (criteria.exactParticipants != null && criteria.exactParticipants != null)
             throw VaultQueryException("Cannot specify both participants (${criteria.participants}) and exactParticipants (${criteria.exactParticipants}).")
 
         // Participants.
-        criteria.participants?.let {
+        if (criteria.participants != null || criteria.exactParticipants != null) {
             // Join VaultFungibleState and PersistentParty tables (participant values are added to the common query criteria predicate)
             val statePartyToFungibleStatesJoin = criteriaBuilder.and(
                 criteriaBuilder.equal(vaultFungibleStatesRoot.get<VaultSchemaV1.VaultFungibleStates>("stateRef"),
                     getPersistentPartyRoot().get<VaultSchemaV1.PersistentParty>("compositeKey").get<PersistentStateRef>("stateRef")))
             predicateSet.add(statePartyToFungibleStatesJoin)
-        }
-
-        // Exact participants.
-        criteria.exactParticipants?.let { exactParticipants ->
-
-            if (criteria.participants != null && criteria.participants!!.isNotEmpty())
-                throw VaultQueryException("Cannot specify both participants (${criteria.participants}) and exactParticipants (${criteria.exactParticipants}).")
-
-            // Get the persistent party entity.
-            val persistentPartyEntity = VaultSchemaV1.PersistentParty::class.java
-            val entityRoot = rootEntities.getOrElse(persistentPartyEntity) {
-                val entityRoot = criteriaQuery.from(persistentPartyEntity)
-                rootEntities[persistentPartyEntity] = entityRoot
-                entityRoot
-            }
-
-            // Add the join and participants predicates.
-            val statePartyJoin = criteriaBuilder.equal(vaultStates.get<VaultSchemaV1.VaultStates>("stateRef"), entityRoot.get<VaultSchemaV1.PersistentParty>("compositeKey").get<PersistentStateRef>("stateRef"))
-            predicateSet.add(statePartyJoin)
-            val participantsPredicate = criteriaBuilder.equal(entityRoot.get<VaultSchemaV1.PersistentParty>("x500Name"), exactParticipants)
-            predicateSet.add(participantsPredicate)
         }
 
         return predicateSet
@@ -532,8 +511,11 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
                 predicateSet.add(criteriaBuilder.and(vaultLinearStatesRoot.get<String>("externalId").`in`(externalIds)))
         }
 
+        if (criteria.participants != null && criteria.exactParticipants != null)
+            throw VaultQueryException("Cannot specify both participants (${criteria.participants}) and exactParticipants (${criteria.exactParticipants}).")
+
         // Participants.
-        criteria.participants?.let {
+        if (criteria.participants != null || criteria.exactParticipants != null) {
             // Join VaultLinearState and PersistentParty tables (participant values are added to the common query criteria predicate)
             val statePartyToLinearStatesJoin = criteriaBuilder.and(
                 criteriaBuilder.equal(vaultLinearStatesRoot.get<VaultSchemaV1.VaultLinearStates>("stateRef"),
@@ -724,6 +706,38 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
                         getPersistentPartyRoot().get<VaultSchemaV1.PersistentParty>("compositeKey").get<PersistentStateRef>("stateRef"))
                 constraintPredicates.add(statePartyJoin)
             }
+        }
+
+        // Exact participants
+        // Requires a tricky SQL query to ensure *only* exact matches are selected (eg. a transaction cannot have more nor less than the
+        // exact participants specified in the query criteria).
+        criteria.exactParticipants?.let {
+            val exactParticipants = criteria.exactParticipants!!
+
+            // obtain all transactions where other participants are not present
+            val subQueryNotExists = criteriaQuery.subquery(Tuple::class.java)
+            val subRoot = subQueryNotExists.from(VaultSchemaV1.PersistentParty::class.java)
+            subQueryNotExists.select(subRoot.get("x500Name"))
+            subQueryNotExists.where(criteriaBuilder.and(
+                    criteriaBuilder.equal(vaultStates.get<VaultSchemaV1.VaultStates>("stateRef"),
+                            subRoot.get<VaultSchemaV1.PersistentParty>("compositeKey").get<PersistentStateRef>("stateRef"))),
+                    criteriaBuilder.not(subRoot.get<VaultSchemaV1.PersistentParty>("x500Name").`in`(exactParticipants)))
+            val subQueryNotExistsPredicate = criteriaBuilder.and(criteriaBuilder.not(criteriaBuilder.exists(subQueryNotExists)))
+            constraintPredicates.add(subQueryNotExistsPredicate)
+
+            // join with transactions for each matching participant (only required where more than one)
+            if (exactParticipants.size > 1)
+                exactParticipants.forEach { participant ->
+                    val subQueryExists = criteriaQuery.subquery(Tuple::class.java)
+                    val subRoot = subQueryExists.from(VaultSchemaV1.PersistentParty::class.java)
+                    subQueryExists.select(subRoot.get("x500Name"))
+                    subQueryExists.where(criteriaBuilder.and(
+                            criteriaBuilder.equal(vaultStates.get<VaultSchemaV1.VaultStates>("stateRef"),
+                                subRoot.get<VaultSchemaV1.PersistentParty>("compositeKey").get<PersistentStateRef>("stateRef"))),
+                            criteriaBuilder.equal(subRoot.get<VaultSchemaV1.PersistentParty>("x500Name"), participant))
+                    val subQueryExistsPredicate = criteriaBuilder.and(criteriaBuilder.exists(subQueryExists))
+                    constraintPredicates.add(subQueryExistsPredicate)
+                }
         }
 
         return emptySet()
