@@ -27,6 +27,7 @@ operator fun Config.plus(overrides: Map<String, Any?>): Config = ConfigFactory.p
 object ConfigHelper {
 
     private const val CORDA_PROPERTY_PREFIX = "corda."
+    private const val CORDA_PROPERTY_PREFIX_LINUX = "corda_"
 
     private val log = LoggerFactory.getLogger(javaClass)
     fun loadConfig(baseDirectory: Path,
@@ -63,8 +64,13 @@ object ConfigHelper {
     }
 
     private fun Config.cordaEntriesOnly(): Config {
-
-        return ConfigFactory.parseMap(toProperties().filterKeys { (it as String).startsWith(CORDA_PROPERTY_PREFIX) }.mapKeys { (it.key as String).removePrefix(CORDA_PROPERTY_PREFIX) })
+        return ConfigFactory.parseMap(toProperties()
+                .mapKeys {
+                    (it.key as String)
+                        .replace(CORDA_PROPERTY_PREFIX_LINUX, CORDA_PROPERTY_PREFIX)
+                        .replace("_", ".")
+                }.filterKeys { it.startsWith(CORDA_PROPERTY_PREFIX) }
+                .mapKeys { it.key.removePrefix(CORDA_PROPERTY_PREFIX) })
     }
 }
 
