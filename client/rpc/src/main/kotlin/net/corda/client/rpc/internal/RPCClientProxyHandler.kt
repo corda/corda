@@ -287,7 +287,7 @@ class RPCClientProxyHandler(
 
     private fun produceMethodFullyQualifiedName(method: Method) : String {
         // For CordaRPCOps send method only - for backwards compatibility
-        return if (CordaRPCOps::class == rpcOpsClass) {
+        return if (CordaRPCOps::class.java == rpcOpsClass) {
             method.name
         } else {
             rpcOpsClass.name + CLASS_METHOD_DIVIDER + method.name

@@ -109,7 +109,12 @@ class RPCServer(
     private data class MessageAndContext(val message: RPCApi.ServerToClient.RpcReply, val context: ObservableContext)
 
     private val lifeCycle = LifeCycle(State.UNSTARTED)
-    /** The methodname->Method map to use for dispatching. */
+    /**
+     * The method name -> InvocationTarget used for servicing the actual call.
+     * NB: The key in this map can either be:
+     * - FQN of the method including interface name for all the interfaces except `CordaRPCOps`;
+     * - For `CordaRPCOps` interface this will be just plain method name. This is done to maintain wire compatibility with previous versions.
+     */
     private val methodTable: Map<String, InvocationTarget>
     /** The observable subscription mapping. */
     private val observableMap = createObservableSubscriptionMap()
@@ -153,7 +158,11 @@ class RPCServer(
         opsList.forEach { ops ->
             listOfApplicableInterfacesRec(ops.javaClass).toSet().forEach { interfaceClass ->
                 val groupedMethods = with(interfaceClass) {
-                    methods.groupBy { interfaceClass.name + CLASS_METHOD_DIVIDER + it.name }
+                    if(interfaceClass == CordaRPCOps::class.java) {
+                        methods.groupBy { it.name }
+                    } else {
+                        methods.groupBy { interfaceClass.name + CLASS_METHOD_DIVIDER + it.name }
+                    }
                 }
                 groupedMethods.forEach { name, methods ->
                     if (methods.size > 1) {
@@ -385,31 +394,21 @@ class RPCServer(
 
     private fun invokeRpc(context: RpcAuthContext, inMethodName: String, arguments: List<Any?>): Try<Any> {
         return Try.on {
-            val fqMethodName = deriveFqMethodName(inMethodName)
             try {
                 CURRENT_RPC_CONTEXT.set(context)
-                log.trace { "Calling $fqMethodName" }
-                val invocationTarget = methodTable[fqMethodName] ?:
-                        throw RPCException("Received RPC for unknown method $fqMethodName - possible client/server version skew?")
+                log.trace { "Calling $inMethodName" }
+                val invocationTarget = methodTable[inMethodName] ?:
+                        throw RPCException("Received RPC for unknown method $inMethodName - possible client/server version skew?")
                 invocationTarget.method.invoke(invocationTarget.instance, *arguments.toTypedArray())
             } catch (e: InvocationTargetException) {
                 throw e.cause ?: RPCException("Caught InvocationTargetException without cause")
             } catch (e: Exception) {
-                log.warn("Caught exception attempting to invoke RPC $fqMethodName", e)
+                log.warn("Caught exception attempting to invoke RPC $inMethodName", e)
                 throw e
             } finally {
                 CURRENT_RPC_CONTEXT.remove()
             }
         }
-    }
-
-    private fun deriveFqMethodName(inMethodName: String) = if (inMethodName.contains(CLASS_METHOD_DIVIDER)) {
-        // This is newer version client calling
-        inMethodName
-    } else {
-        // Assuming call by method is made against `CordaRPCOps`
-        log.trace { "Call with method name alone: $inMethodName. This is assumed to be coming for CordaRPCOps." }
-        CordaRPCOps::class.java.name + CLASS_METHOD_DIVIDER + inMethodName
     }
 
     private fun sendReply(replyId: InvocationId, clientAddress: SimpleString, result: Try<Any>) {

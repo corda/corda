@@ -227,7 +227,6 @@
     <ID>EmptyClassBlock:ClassLoadingUtilsTest.kt$ClassLoadingUtilsTest$ConcreteClassWithEmptyConstructor : BaseInterface</ID>
     <ID>EmptyClassBlock:ClassLoadingUtilsTest.kt$ClassLoadingUtilsTest$ConcreteClassWithNonEmptyConstructor : BaseInterface2</ID>
     <ID>EmptyClassBlock:CordaRPCClient.kt$CordaRPCClient$Companion</ID>
-    <ID>EmptyClassBlock:RPCMultipleInterfacesTests.kt$RPCMultipleInterfacesTests$ImaginaryFriend : RPCOps</ID>
     <ID>EmptyDefaultConstructor:FlowRetryTest.kt$AsyncRetryFlow$()</ID>
     <ID>EmptyDefaultConstructor:FlowRetryTest.kt$RetryFlow$()</ID>
     <ID>EmptyDefaultConstructor:FlowRetryTest.kt$ThrowingFlow$()</ID>
@@ -2139,6 +2138,7 @@
     <ID>MagicNumber:RPCHighThroughputObservableTests.kt$RPCHighThroughputObservableTests$4</ID>
     <ID>MagicNumber:RPCHighThroughputObservableTests.kt$RPCHighThroughputObservableTests.TestOpsImpl$1000</ID>
     <ID>MagicNumber:RPCMultipleInterfacesTests.kt$RPCMultipleInterfacesTests.IntRPCOpsImpl$1000</ID>
+    <ID>MagicNumber:RPCMultipleInterfacesTests.kt$RPCMultipleInterfacesTests.MyCordaRpcOpsImpl$1000</ID>
     <ID>MagicNumber:RPCMultipleInterfacesTests.kt$RPCMultipleInterfacesTests.StringRPCOpsImpl$1000</ID>
     <ID>MagicNumber:RPCMultipleInterfacesTests.kt$RPCMultipleInterfacesTests.StringRPCOpsImpl$8</ID>
     <ID>MagicNumber:RPCPerformanceTests.kt$RPCPerformanceTests$100</ID>
@@ -4530,6 +4530,7 @@
     <ID>MaxLineLength:RPCSecurityManagerWithAdditionalUser.kt$RPCSecurityManagerWithAdditionalUser : RPCSecurityManager</ID>
     <ID>MaxLineLength:RPCServer.kt$RPCServer</ID>
     <ID>MaxLineLength:RPCServer.kt$RPCServer$( ops: RPCOps, rpcServerUsername: String, rpcServerPassword: String, serverLocator: ServerLocator, securityManager: RPCSecurityManager, nodeLegalName: CordaX500Name, rpcConfiguration: RPCServerConfiguration, cacheFactory: NamedCacheFactory )</ID>
+    <ID>MaxLineLength:RPCServer.kt$RPCServer$/** * The method name -&gt; InvocationTarget used for servicing the actual call. * NB: The key in this map can either be: * - FQN of the method including interface name for all the interfaces except `CordaRPCOps`; * - For `CordaRPCOps` interface this will be just plain method name. This is done to maintain wire compatibility with previous versions. */ private val methodTable: Map&lt;String, InvocationTarget&gt;</ID>
     <ID>MaxLineLength:RPCServer.kt$RPCServer$consumerSession = sessionFactory!!.createSession(rpcServerUsername, rpcServerPassword, false, true, true, false, DEFAULT_ACK_BATCH_SIZE)</ID>
     <ID>MaxLineLength:RPCServer.kt$RPCServer$private</ID>
     <ID>MaxLineLength:RPCServer.kt$RPCServer$producerSession = sessionFactory!!.createSession(rpcServerUsername, rpcServerPassword, false, true, true, false, DEFAULT_ACK_BATCH_SIZE)</ID>
@@ -6666,6 +6667,7 @@
     <ID>WildcardImport:QueryCriteriaUtils.kt$import net.corda.core.node.services.vault.LikenessOperator.*</ID>
     <ID>WildcardImport:RPCClientProxyHandler.kt$import net.corda.core.internal.*</ID>
     <ID>WildcardImport:RPCClientProxyHandler.kt$import org.apache.activemq.artemis.api.core.client.*</ID>
+    <ID>WildcardImport:RPCMultipleInterfacesTests.kt$import org.junit.Assert.*</ID>
     <ID>WildcardImport:RPCSecurityManagerImpl.kt$import org.apache.shiro.authc.*</ID>
     <ID>WildcardImport:RPCServer.kt$import net.corda.core.utilities.*</ID>
     <ID>WildcardImport:RPCServer.kt$import org.apache.activemq.artemis.api.core.client.*</ID>
