@@ -304,10 +304,10 @@ Query for unconsumed states for a given set of participants (matches any state t
 Query for unconsumed states for a given set of participants (exactly matches only states that contain all specified participants):
 
 .. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTests.kt
-:language: kotlin
-        :start-after: DOCSTART VaultQueryExample51
-        :end-before: DOCEND VaultQueryExample51
-        :dedent: 12
+    :language: kotlin
+    :start-after: DOCSTART VaultQueryExample51
+    :end-before: DOCEND VaultQueryExample51
+    :dedent: 12
 
 Query for unconsumed states recorded between two time intervals:
 
@@ -384,10 +384,10 @@ Query for unconsumed deal states with deals parties (any match):
 Query for unconsumed deal states with deals parties (exact match):
 
 .. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTests.kt
-:language: kotlin
-        :start-after: DOCSTART VaultQueryExample52
-        :end-before: DOCEND VaultQueryExample52
-        :dedent: 12
+    :language: kotlin
+    :start-after: DOCSTART VaultQueryExample52
+    :end-before: DOCEND VaultQueryExample52
+    :dedent: 12
 
 Query for only relevant linear states in the vault:
 
