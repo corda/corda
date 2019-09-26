@@ -872,8 +872,10 @@
     <ID>LongParameterList:QueryCriteria.kt$QueryCriteria.VaultQueryCriteria$( status: Vault.StateStatus = this.status, contractStateTypes: Set&lt;Class&lt;out ContractState&gt;&gt;? = this.contractStateTypes, stateRefs: List&lt;StateRef&gt;? = this.stateRefs, notary: List&lt;AbstractParty&gt;? = this.notary, softLockingCondition: SoftLockingCondition? = this.softLockingCondition, timeCondition: TimeCondition? = this.timeCondition )</ID>
     <ID>LongParameterList:RPCClient.kt$RPCClient$( rpcOpsClass: Class&lt;I&gt;, username: String, password: String, externalTrace: Trace? = null, impersonatedActor: Actor? = null, targetLegalIdentity: CordaX500Name? = null )</ID>
     <ID>LongParameterList:RPCDriver.kt$( isDebug: Boolean = false, driverDirectory: Path = Paths.get("build") / "rpc-driver" / getTimestampAsDirectoryName(), portAllocation: PortAllocation = globalPortAllocation, debugPortAllocation: PortAllocation = globalDebugPortAllocation, systemProperties: Map&lt;String, String&gt; = emptyMap(), useTestClock: Boolean = false, startNodesInProcess: Boolean = false, waitForNodesToFinish: Boolean = false, extraCordappPackagesToScan: List&lt;String&gt; = emptyList(), notarySpecs: List&lt;NotarySpec&gt; = emptyList(), externalTrace: Trace? = null, @Suppress("DEPRECATION") jmxPolicy: JmxPolicy = JmxPolicy(), networkParameters: NetworkParameters = testNetworkParameters(), notaryCustomOverrides: Map&lt;String, Any?&gt; = emptyMap(), inMemoryDB: Boolean = true, cordappsForAllNodes: Collection&lt;TestCordappInternal&gt;? = null, dsl: RPCDriverDSL.() -&gt; A )</ID>
+    <ID>LongParameterList:RPCDriver.kt$RPCDriverDSL$( rpcUser: User = rpcTestUser, nodeLegalName: CordaX500Name = fakeNodeLegalName, configuration: RPCServerConfiguration = RPCServerConfiguration.DEFAULT, listOps: List&lt;I&gt;, brokerHandle: RpcBrokerHandle, queueDrainTimeout: Duration = 5.seconds )</ID>
     <ID>LongParameterList:RPCDriver.kt$RPCDriverDSL$( rpcUser: User = rpcTestUser, nodeLegalName: CordaX500Name = fakeNodeLegalName, configuration: RPCServerConfiguration = RPCServerConfiguration.DEFAULT, ops: I, brokerHandle: RpcBrokerHandle, queueDrainTimeout: Duration = 5.seconds )</ID>
     <ID>LongParameterList:RPCDriver.kt$RPCDriverDSL$( rpcUser: User = rpcTestUser, nodeLegalName: CordaX500Name = fakeNodeLegalName, maxFileSize: Int = MAX_MESSAGE_SIZE, maxBufferedBytesPerClient: Long = 10L * MAX_MESSAGE_SIZE, configuration: RPCServerConfiguration = RPCServerConfiguration.DEFAULT, ops: I, queueDrainTimeout: Duration = 5.seconds )</ID>
+    <ID>LongParameterList:RPCDriver.kt$RPCDriverDSL$( serverName: String = "driver-rpc-server-${random63BitValue()}", rpcUser: User = rpcTestUser, nodeLegalName: CordaX500Name = fakeNodeLegalName, maxFileSize: Int = MAX_MESSAGE_SIZE, maxBufferedBytesPerClient: Long = 5L * MAX_MESSAGE_SIZE, configuration: RPCServerConfiguration = RPCServerConfiguration.DEFAULT, customPort: NetworkHostAndPort? = null, listOps: List&lt;I&gt; )</ID>
     <ID>LongParameterList:RPCDriver.kt$RPCDriverDSL$( serverName: String = "driver-rpc-server-${random63BitValue()}", rpcUser: User = rpcTestUser, nodeLegalName: CordaX500Name = fakeNodeLegalName, maxFileSize: Int = MAX_MESSAGE_SIZE, maxBufferedBytesPerClient: Long = 5L * MAX_MESSAGE_SIZE, configuration: RPCServerConfiguration = RPCServerConfiguration.DEFAULT, customPort: NetworkHostAndPort? = null, ops: I )</ID>
     <ID>LongParameterList:RpcBrokerConfiguration.kt$RpcBrokerConfiguration$(name: String, send: Boolean = false, consume: Boolean = false, createDurableQueue: Boolean = false, deleteDurableQueue: Boolean = false, createNonDurableQueue: Boolean = false, deleteNonDurableQueue: Boolean = false, manage: Boolean = false, browse: Boolean = false)</ID>
     <ID>LongParameterList:SerializationEnvironment.kt$SerializationEnvironment.Companion$( serializationFactory: SerializationFactory, p2pContext: SerializationContext, rpcServerContext: SerializationContext? = null, rpcClientContext: SerializationContext? = null, storageContext: SerializationContext? = null, checkpointContext: CheckpointSerializationContext? = null, checkpointSerializer: CheckpointSerializer? = null )</ID>
@@ -2135,6 +2137,10 @@
     <ID>MagicNumber:RPCHighThroughputObservableTests.kt$RPCHighThroughputObservableTests$3</ID>
     <ID>MagicNumber:RPCHighThroughputObservableTests.kt$RPCHighThroughputObservableTests$4</ID>
     <ID>MagicNumber:RPCHighThroughputObservableTests.kt$RPCHighThroughputObservableTests.TestOpsImpl$1000</ID>
+    <ID>MagicNumber:RPCMultipleInterfacesTests.kt$RPCMultipleInterfacesTests.IntRPCOpsImpl$1000</ID>
+    <ID>MagicNumber:RPCMultipleInterfacesTests.kt$RPCMultipleInterfacesTests.MyCordaRpcOpsImpl$1000</ID>
+    <ID>MagicNumber:RPCMultipleInterfacesTests.kt$RPCMultipleInterfacesTests.StringRPCOpsImpl$1000</ID>
+    <ID>MagicNumber:RPCMultipleInterfacesTests.kt$RPCMultipleInterfacesTests.StringRPCOpsImpl$8</ID>
     <ID>MagicNumber:RPCPerformanceTests.kt$RPCPerformanceTests$100</ID>
     <ID>MagicNumber:RPCPerformanceTests.kt$RPCPerformanceTests$1000</ID>
     <ID>MagicNumber:RPCPerformanceTests.kt$RPCPerformanceTests$1000.0</ID>
@@ -4510,7 +4516,6 @@
     <ID>MaxLineLength:RPCClientProxyHandler.kt$RPCClientProxyHandler$return cacheFactory.buildNamed(Caffeine.newBuilder().weakValues().removalListener(onObservableRemove).executor(SameThreadExecutor.getExecutor()), "RpcClientProxyHandler_rpcObservable")</ID>
     <ID>MaxLineLength:RPCClientProxyHandler.kt$RPCClientProxyHandler$throw UnsupportedOperationException("Method $calledMethod was added in RPC protocol version $sinceVersion but the server is running $serverProtocolVersion")</ID>
     <ID>MaxLineLength:RPCDriver.kt$RPCDriverDSL$val artemisConfig = createRpcServerArtemisConfig(maxFileSize, maxBufferedBytesPerClient, driverDSL.driverDirectory / serverName, hostAndPort)</ID>
-    <ID>MaxLineLength:RPCDriver.kt$RPCDriverDSL$val rpcSecurityManager = RPCSecurityManagerImpl.fromUserList(users = listOf(InternalUser(rpcUser.username, rpcUser.password, rpcUser.permissions)), id = AuthServiceId("TEST_SECURITY_MANAGER"))</ID>
     <ID>MaxLineLength:RPCDriver.kt$RPCDriverDSL.Companion$fun createRpcServerArtemisConfig(maxFileSize: Int, maxBufferedBytesPerClient: Long, baseDirectory: Path, hostAndPort: NetworkHostAndPort): Configuration</ID>
     <ID>MaxLineLength:RPCDriver.kt$RandomRpcUser.Companion$private inline fun &lt;reified T&gt; HashMap&lt;Class&lt;*&gt;, Generator&lt;*&gt;&gt;.add(generator: Generator&lt;T&gt;)</ID>
     <ID>MaxLineLength:RPCDriver.kt$RandomRpcUser.Companion$val handle = RPCClient&lt;RPCOps&gt;(hostAndPort, null, serializationContext = AMQP_RPC_CLIENT_CONTEXT).start(rpcClass, username, password)</ID>
@@ -4520,6 +4525,9 @@
     <ID>MaxLineLength:RPCOpsWithContext.kt$fun makeRPCOps(getCordaRPCOps: (username: String, credential: String) -&gt; InternalCordaRPCOps, username: String, credential: String): InternalCordaRPCOps</ID>
     <ID>MaxLineLength:RPCOpsWithContext.kt$return Proxy.newProxyInstance(InternalCordaRPCOps::class.java.classLoader, arrayOf(InternalCordaRPCOps::class.java)) { _, method, args -&gt; try { method.invoke(cordaRPCOps, *(args ?: arrayOf())) } catch (e: InvocationTargetException) { // Unpack exception. throw e.targetException } } as InternalCordaRPCOps</ID>
     <ID>MaxLineLength:RPCSecurityManagerWithAdditionalUser.kt$RPCSecurityManagerWithAdditionalUser : RPCSecurityManager</ID>
+    <ID>MaxLineLength:RPCServer.kt$RPCServer</ID>
+    <ID>MaxLineLength:RPCServer.kt$RPCServer$( ops: RPCOps, rpcServerUsername: String, rpcServerPassword: String, serverLocator: ServerLocator, securityManager: RPCSecurityManager, nodeLegalName: CordaX500Name, rpcConfiguration: RPCServerConfiguration, cacheFactory: NamedCacheFactory )</ID>
+    <ID>MaxLineLength:RPCServer.kt$RPCServer$/** * The method name -&gt; InvocationTarget used for servicing the actual call. * NB: The key in this map can either be: * - FQN of the method including interface name for all the interfaces except `CordaRPCOps`; * - For `CordaRPCOps` interface this will be just plain method name. This is done to maintain wire compatibility with previous versions. */ private val methodTable: Map&lt;String, InvocationTarget&gt;</ID>
     <ID>MaxLineLength:RPCServer.kt$RPCServer$consumerSession = sessionFactory!!.createSession(rpcServerUsername, rpcServerPassword, false, true, true, false, DEFAULT_ACK_BATCH_SIZE)</ID>
     <ID>MaxLineLength:RPCServer.kt$RPCServer$private</ID>
     <ID>MaxLineLength:RPCServer.kt$RPCServer$producerSession = sessionFactory!!.createSession(rpcServerUsername, rpcServerPassword, false, true, true, false, DEFAULT_ACK_BATCH_SIZE)</ID>
@@ -5429,7 +5437,7 @@
     <ID>SpreadOperator:RPCDriver.kt$RandomRpcUser.Companion$(handle.proxy, *arguments.toTypedArray())</ID>
     <ID>SpreadOperator:RPCOpsWithContext.kt$(cordaRPCOps, *(args ?: arrayOf()))</ID>
     <ID>SpreadOperator:RPCSecurityManagerTest.kt$RPCSecurityManagerTest$(request.first(), *args)</ID>
-    <ID>SpreadOperator:RPCServer.kt$RPCServer$(ops, *arguments.toTypedArray())</ID>
+    <ID>SpreadOperator:RPCServer.kt$RPCServer$(invocationTarget.instance, *arguments.toTypedArray())</ID>
     <ID>SpreadOperator:ReactiveArtemisConsumer.kt$ReactiveArtemisConsumer.Companion$(queueName, *queueNames)</ID>
     <ID>SpreadOperator:ReconnectingCordaRPCOps.kt$ReconnectingCordaRPCOps.ErrorInterceptingHandler$(reconnectingRPCConnection.proxy, *(args ?: emptyArray()))</ID>
     <ID>SpreadOperator:ServiceHub.kt$ServiceHub$(first, *remaining)</ID>
@@ -5477,7 +5485,7 @@
     <ID>ThrowsCount:NonValidatingNotaryFlow.kt$NonValidatingNotaryFlow$ private fun checkNotaryWhitelisted(notary: Party, attachedParameterHash: SecureHash?)</ID>
     <ID>ThrowsCount:PropertyDescriptor.kt$PropertyDescriptor$ fun validate()</ID>
     <ID>ThrowsCount:RPCApi.kt$RPCApi.ServerToClient.Companion$fun fromClientMessage(context: SerializationContext, message: ClientMessage): ServerToClient</ID>
-    <ID>ThrowsCount:RPCServer.kt$RPCServer$private fun invokeRpc(context: RpcAuthContext, methodName: String, arguments: List&lt;Any?&gt;): Try&lt;Any&gt;</ID>
+    <ID>ThrowsCount:RPCServer.kt$RPCServer$private fun invokeRpc(context: RpcAuthContext, inMethodName: String, arguments: List&lt;Any?&gt;): Try&lt;Any&gt;</ID>
     <ID>ThrowsCount:SchemaMigration.kt$SchemaMigration$private fun doRunMigration(run: Boolean, check: Boolean, existingCheckpoints: Boolean? = null)</ID>
     <ID>ThrowsCount:ServicesForResolutionImpl.kt$ServicesForResolutionImpl$// We may need to recursively chase transactions if there are notary changes. fun inner(stateRef: StateRef, forContractClassName: String?): Attachment</ID>
     <ID>ThrowsCount:SignedNodeInfo.kt$SignedNodeInfo$// TODO Add root cert param (or TrustAnchor) to make sure all the identities belong to the same root fun verified(): NodeInfo</ID>
@@ -6656,6 +6664,7 @@
     <ID>WildcardImport:QueryCriteriaUtils.kt$import net.corda.core.node.services.vault.LikenessOperator.*</ID>
     <ID>WildcardImport:RPCClientProxyHandler.kt$import net.corda.core.internal.*</ID>
     <ID>WildcardImport:RPCClientProxyHandler.kt$import org.apache.activemq.artemis.api.core.client.*</ID>
+    <ID>WildcardImport:RPCMultipleInterfacesTests.kt$import org.junit.Assert.*</ID>
     <ID>WildcardImport:RPCSecurityManagerImpl.kt$import org.apache.shiro.authc.*</ID>
     <ID>WildcardImport:RPCServer.kt$import net.corda.core.utilities.*</ID>
     <ID>WildcardImport:RPCServer.kt$import org.apache.activemq.artemis.api.core.client.*</ID>

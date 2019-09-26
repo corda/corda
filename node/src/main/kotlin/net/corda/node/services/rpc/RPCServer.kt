@@ -14,6 +14,7 @@ import net.corda.core.context.Trace.InvocationId
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.LifeCycle
 import net.corda.core.internal.NamedCacheFactory
+import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.RPCOps
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationDefaults
@@ -25,6 +26,7 @@ import net.corda.node.internal.security.RPCSecurityManager
 import net.corda.node.serialization.amqp.RpcServerObservableSerializer
 import net.corda.node.services.logging.pushToLoggingContext
 import net.corda.nodeapi.RPCApi
+import net.corda.nodeapi.RPCApi.CLASS_METHOD_DIVIDER
 import net.corda.nodeapi.externalTrace
 import net.corda.nodeapi.impersonatedActor
 import net.corda.nodeapi.internal.DeduplicationChecker
@@ -67,15 +69,18 @@ data class RPCServerConfiguration(
 }
 
 /**
- * The [RPCServer] implements the complement of [RPCClient]. When an RPC request arrives it dispatches to the
- * corresponding function in [ops]. During serialisation of the reply (and later observations) the server subscribes to
+ * The [RPCServer] implements the complement of [net.corda.client.rpc.internal.RPCClient]. When an RPC request arrives it dispatches to the
+ * corresponding function in [opsList]. During serialisation of the reply (and later observations) the server subscribes to
  * each Observable it encounters and captures the client address to associate with these Observables. Later it uses this
  * address to forward observations arriving on the Observables.
  *
- * The way this is done is similar to that in [RPCClient], we use Kryo and add a context to stores the subscription map.
+ * The way this is done is similar to that in [net.corda.client.rpc.internal.RPCClient], we use AMQP and add a context to stores the subscription map.
+ *
+ * NB: The order of elements in [opsList] matters in case of legacy RPC clients who do not specify class name of the RPC Ops they are after.
+ * For Legacy RPC clients who supply method name alone, the calls are being targeted at first element in [opsList].
  */
 class RPCServer(
-        private val ops: RPCOps,
+        private val opsList: List<RPCOps>,
         private val rpcServerUsername: String,
         private val rpcServerPassword: String,
         private val serverLocator: ServerLocator,
@@ -86,6 +91,8 @@ class RPCServer(
 ) {
     private companion object {
         private val log = contextLogger()
+
+        private data class InvocationTarget(val method: Method, val instance: RPCOps)
     }
 
     private enum class State {
@@ -102,8 +109,13 @@ class RPCServer(
     private data class MessageAndContext(val message: RPCApi.ServerToClient.RpcReply, val context: ObservableContext)
 
     private val lifeCycle = LifeCycle(State.UNSTARTED)
-    /** The methodname->Method map to use for dispatching. */
-    private val methodTable: Map<String, Method>
+    /**
+     * The method name -> InvocationTarget used for servicing the actual call.
+     * NB: The key in this map can either be:
+     * - FQN of the method including interface name for all the interfaces except `CordaRPCOps`;
+     * - For `CordaRPCOps` interface this will be just plain method name. This is done to maintain wire compatibility with previous versions.
+     */
+    private val methodTable: Map<String, InvocationTarget>
     /** The observable subscription mapping. */
     private val observableMap = createObservableSubscriptionMap()
     /** A mapping from client addresses to IDs of associated Observables */
@@ -130,15 +142,46 @@ class RPCServer(
     private val deduplicationChecker = DeduplicationChecker(rpcConfiguration.deduplicationCacheExpiry, cacheFactory = cacheFactory)
     private var deduplicationIdentity: String? = null
 
+    constructor (
+            ops: RPCOps,
+            rpcServerUsername: String,
+            rpcServerPassword: String,
+            serverLocator: ServerLocator,
+            securityManager: RPCSecurityManager,
+            nodeLegalName: CordaX500Name,
+            rpcConfiguration: RPCServerConfiguration,
+            cacheFactory: NamedCacheFactory
+    ) : this(listOf(ops), rpcServerUsername, rpcServerPassword, serverLocator, securityManager, nodeLegalName, rpcConfiguration, cacheFactory)
+
     init {
-        val groupedMethods = ops.javaClass.declaredMethods.groupBy { it.name }
-        groupedMethods.forEach { name, methods ->
-            if (methods.size > 1) {
-                throw IllegalArgumentException("Encountered more than one method called $name on ${ops.javaClass.name}")
+        val mutableMethodTable = mutableMapOf<String, InvocationTarget>()
+        opsList.forEach { ops ->
+            listOfApplicableInterfacesRec(ops.javaClass).toSet().forEach { interfaceClass ->
+                val groupedMethods = with(interfaceClass) {
+                    if(interfaceClass == CordaRPCOps::class.java) {
+                        methods.groupBy { it.name }
+                    } else {
+                        methods.groupBy { interfaceClass.name + CLASS_METHOD_DIVIDER + it.name }
+                    }
+                }
+                groupedMethods.forEach { name, methods ->
+                    if (methods.size > 1) {
+                        throw IllegalArgumentException("Encountered more than one method called $name on ${interfaceClass.name}")
+                    }
+                }
+                val interimMap = groupedMethods.mapValues { InvocationTarget(it.value.single(), ops) }
+                mutableMethodTable.putAll(interimMap)
             }
         }
-        methodTable = groupedMethods.mapValues { it.value.single() }
+
+        // Going forward it is should be treated as immutable construct.
+        methodTable = mutableMethodTable
     }
+
+    private fun listOfApplicableInterfacesRec(clazz: Class<*>): List<Class<*>> =
+        clazz.interfaces.filter { RPCOps::class.java.isAssignableFrom(it) }.flatMap {
+            listOf(it) + listOfApplicableInterfacesRec(it)
+        }
 
     private fun createObservableSubscriptionMap(): ObservableSubscriptionMap {
         val onObservableRemove = RemovalListener<InvocationId, ObservableSubscription> { key, value, cause ->
@@ -349,18 +392,18 @@ class RPCServer(
         }
     }
 
-    private fun invokeRpc(context: RpcAuthContext, methodName: String, arguments: List<Any?>): Try<Any> {
+    private fun invokeRpc(context: RpcAuthContext, inMethodName: String, arguments: List<Any?>): Try<Any> {
         return Try.on {
             try {
                 CURRENT_RPC_CONTEXT.set(context)
-                log.trace { "Calling $methodName" }
-                val method = methodTable[methodName] ?:
-                        throw RPCException("Received RPC for unknown method $methodName - possible client/server version skew?")
-                method.invoke(ops, *arguments.toTypedArray())
+                log.trace { "Calling $inMethodName" }
+                val invocationTarget = methodTable[inMethodName] ?:
+                        throw RPCException("Received RPC for unknown method $inMethodName - possible client/server version skew?")
+                invocationTarget.method.invoke(invocationTarget.instance, *arguments.toTypedArray())
             } catch (e: InvocationTargetException) {
                 throw e.cause ?: RPCException("Caught InvocationTargetException without cause")
             } catch (e: Exception) {
-                log.warn("Caught exception attempting to invoke RPC $methodName", e)
+                log.warn("Caught exception attempting to invoke RPC $inMethodName", e)
                 throw e
             } finally {
                 CURRENT_RPC_CONTEXT.remove()
@@ -393,7 +436,7 @@ class RPCServer(
      * we receive a notification that the client queue bindings were added.
      */
     private fun bufferIfQueueNotBound(clientAddress: SimpleString, message: RPCApi.ServerToClient.RpcReply, context: ObservableContext): Boolean {
-        val clientBuffer = responseMessageBuffer.compute(clientAddress, { _, value ->
+        val clientBuffer = responseMessageBuffer.compute(clientAddress) { _, value ->
             when (value) {
                 null -> BufferOrNone.Buffer(ArrayList()).apply {
                     container.add(MessageAndContext(message, context))
@@ -403,7 +446,7 @@ class RPCServer(
                 }
                 is BufferOrNone.None -> value
             }
-        })
+        }
         return clientBuffer is BufferOrNone.Buffer
     }
 
