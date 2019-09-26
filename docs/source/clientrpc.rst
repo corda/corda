@@ -16,7 +16,7 @@ This class allows you to connect to your node via a message queue protocol and p
 interacting with the node. You make calls on a JVM object as normal, and the marshalling back-and-forth is handled for
 you.
 
-.. warning:: The built-in Corda webserver is deprecated and unsuitable for production use. If you want to interact with
+.. warning:: The built-in Corda test webserver is deprecated and unsuitable for production use. If you want to interact with
    your node via HTTP, you will need to stand up your own webserver that connects to your node using the
    `CordaRPCClient`_ class. You can find an example of how to do this using the popular Spring Boot server
    `here <https://github.com/corda/spring-webserver>`_.

@@ -40,7 +40,7 @@ dependencies {
     compile project(':core')
     compile project(':client:jfx')
     compile project(':node-driver')
-    compile project(':webserver')
+    compile project(':testing:testserver')
 
     testCompile project(':test-utils')
 
@@ -51,7 +51,7 @@ dependencies {
     }
 
     cordaRuntime project(path: ":node:capsule", configuration: 'runtimeArtifacts')
-    cordaRuntime project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
+    cordaRuntime project(path: ":testing:testserver:testcapsule:", configuration: 'runtimeArtifacts')
 
     // CorDapps: dependent flows and services
     compile project(':finance:contracts')

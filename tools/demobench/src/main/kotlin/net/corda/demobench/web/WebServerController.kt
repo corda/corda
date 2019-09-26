@@ -5,7 +5,7 @@ import tornadofx.*
 
 class WebServerController : Controller() {
     private val jvm by inject<JVMConfig>()
-    private val webserverPath = jvm.applicationDir.resolve("corda").resolve("corda-webserver.jar")
+    private val webserverPath = jvm.applicationDir.resolve("corda").resolve("corda-testserver.jar")
 
     init {
         log.info("Web Server JAR: $webserverPath")

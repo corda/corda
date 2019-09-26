@@ -19,11 +19,11 @@ dependencies {
 
     // Corda integration dependencies
     cordaRuntime project(path: ":node:capsule", configuration: 'runtimeArtifacts')
-    cordaRuntime project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
+    cordaRuntime project(path: ":testing:testserver:testcapsule:", configuration: 'runtimeArtifacts')
     cordaCompile project(':core')
     cordaCompile project(':client:jfx')
     cordaCompile project(':client:rpc')
-    cordaCompile (project(':webserver')) {
+    cordaCompile(project(':testing:testserver')) {
         exclude group: "org.apache.logging.log4j"
     }
     cordaCompile (project(':node-driver')) {
@@ -43,7 +43,7 @@ dependencies {
 }
 
 def nodeTask = tasks.getByPath(':node:capsule:assemble')
-def webTask = tasks.getByPath(':webserver:webcapsule:assemble')
+def webTask = tasks.getByPath(':testing:testserver:testcapsule::assemble')
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask, webTask]) {
     nodeDefaults {
         cordapp project(':finance:workflows')
