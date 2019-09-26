@@ -731,12 +731,12 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
             if (exactParticipants.size > 1)
                 exactParticipants.forEach { participant ->
                     val subQueryExists = criteriaQuery.subquery(Tuple::class.java)
-                    val subRoot = subQueryExists.from(VaultSchemaV1.PersistentParty::class.java)
-                    subQueryExists.select(subRoot.get("x500Name"))
+                    val subRootExists = subQueryExists.from(VaultSchemaV1.PersistentParty::class.java)
+                    subQueryExists.select(subRootExists.get("x500Name"))
                     subQueryExists.where(criteriaBuilder.and(
                             criteriaBuilder.equal(vaultStates.get<VaultSchemaV1.VaultStates>("stateRef"),
-                                subRoot.get<VaultSchemaV1.PersistentParty>("compositeKey").get<PersistentStateRef>("stateRef"))),
-                            criteriaBuilder.equal(subRoot.get<VaultSchemaV1.PersistentParty>("x500Name"), participant))
+                                subRootExists.get<VaultSchemaV1.PersistentParty>("compositeKey").get<PersistentStateRef>("stateRef"))),
+                            criteriaBuilder.equal(subRootExists.get<VaultSchemaV1.PersistentParty>("x500Name"), participant))
                     val subQueryExistsPredicate = criteriaBuilder.and(criteriaBuilder.exists(subQueryExists))
                     constraintPredicates.add(subQueryExistsPredicate)
                 }
