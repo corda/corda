@@ -338,6 +338,23 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
                     uuid,
                     externalId,
                     status,
+                    contractStateTypes
+            )
+        }
+
+        fun copy(
+                participants: List<AbstractParty>? = this.participants,
+                uuid: List<UUID>? = this.uuid,
+                externalId: List<String>? = this.externalId,
+                status: Vault.StateStatus = this.status,
+                contractStateTypes: Set<Class<out ContractState>>? = this.contractStateTypes,
+                relevancyStatus: Vault.RelevancyStatus = this.relevancyStatus
+        ): LinearStateQueryCriteria {
+            return LinearStateQueryCriteria(
+                    participants,
+                    uuid,
+                    externalId,
+                    status,
                     contractStateTypes,
                     relevancyStatus
             )
@@ -352,31 +369,18 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
             val quantity: ColumnPredicate<Long>? = null,
             override val status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
             override val contractStateTypes: Set<Class<out ContractState>>? = null,
-            override val relevancyStatus: Vault.RelevancyStatus = Vault.RelevancyStatus.ALL,
-            override val exactParticipants: List<AbstractParty>?
+            override val relevancyStatus: Vault.RelevancyStatus = Vault.RelevancyStatus.ALL
     ) : CommonQueryCriteria() {
         override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
             super.visit(parser)
             return parser.parseCriteria(this)
         }
 
-        // V4 c'tor
-        @DeprecatedConstructorForDeserialization(version = 1)
-        constructor(
-                participants: List<AbstractParty>? = null,
-                quantity: ColumnPredicate<Long>? = null,
-                status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
-                contractStateTypes: Set<Class<out ContractState>>? = null,
-                relevancyStatus: Vault.RelevancyStatus = Vault.RelevancyStatus.ALL
-        ) : this(participants, quantity, status, contractStateTypes, relevancyStatus, null)
-
         fun withParticipants(participants: List<AbstractParty>): FungibleStateQueryCriteria = copy(participants = participants)
         fun withQuantity(quantity: ColumnPredicate<Long>): FungibleStateQueryCriteria = copy(quantity = quantity)
         fun withStatus(status: Vault.StateStatus): FungibleStateQueryCriteria = copy(status = status)
         fun withContractStateTypes(contractStateTypes: Set<Class<out ContractState>>): FungibleStateQueryCriteria = copy(contractStateTypes = contractStateTypes)
         fun withRelevancyStatus(relevancyStatus: Vault.RelevancyStatus): FungibleStateQueryCriteria = copy(relevancyStatus = relevancyStatus)
-        fun withExactParticipants(exactParticipants: List<AbstractParty>): FungibleStateQueryCriteria
-                = copy(exactParticipants = exactParticipants)
     }
 
     /**
@@ -441,7 +445,7 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
                 issuerRef: List<OpaqueBytes>? = this.issuerRef,
                 status: Vault.StateStatus = this.status,
                 contractStateTypes: Set<Class<out ContractState>>? = this.contractStateTypes,
-                exactParticipants: List<AbstractParty>? = this.exactParticipants
+                relevancyStatus: Vault.RelevancyStatus = this.relevancyStatus
         ): FungibleAssetQueryCriteria {
             return FungibleAssetQueryCriteria(
                     participants,
@@ -451,8 +455,7 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
                     issuerRef,
                     status,
                     contractStateTypes,
-                    relevancyStatus,
-                    exactParticipants
+                    relevancyStatus
             )
         }
 
