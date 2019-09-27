@@ -50,7 +50,7 @@ class NodeConfigParsingTests {
         val sshPort = portAllocator.nextPort()
 
         driver(DriverParameters(
-                systemProperties = mapOf("corda.sShD.pOrt" to sshPort.toString()),
+                systemProperties = mapOf("cOrda.sShD.pOrt" to sshPort.toString()),
                 startNodesInProcess = false,
                 portAllocation = portAllocator)) {
             val hasSsh = startNode().get()

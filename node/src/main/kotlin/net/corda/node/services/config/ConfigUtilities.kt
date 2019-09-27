@@ -90,8 +90,8 @@ object ConfigHelper {
                 toProperties()
                 .mapKeys {
                     (it.key as String)
-                        .replace(CORDA_PROPERTY_PREFIX_LINUX, CORDA_PROPERTY_PREFIX)
-                        .replace("_", ".")
+                            .replace("_", ".")
+                            .toLowerCase()
                 }.filterKeys { it.startsWith(CORDA_PROPERTY_PREFIX) }
                 .mapKeys { it.key.removePrefix(CORDA_PROPERTY_PREFIX) }
                 .mapKeys { getCaseSensitivePropertyPath(NodeConfiguration::class, it.key.split(".")) })
