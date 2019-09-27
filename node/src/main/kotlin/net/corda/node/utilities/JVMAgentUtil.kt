@@ -16,7 +16,7 @@ object JVMAgentUtil {
         return try {
             val vm = VirtualMachine.attach(jvmPid)
             return vm.agentProperties
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             log.warn("Unable to determine whether checkpoint agent is running: ${e.message}.\n" +
                      "You may need to pass in -Djdk.attach.allowAttachSelf=true if running on a Java 9 or later VM")
             Properties()
