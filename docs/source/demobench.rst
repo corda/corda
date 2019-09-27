@@ -126,7 +126,7 @@ current working directory of the JVM):
 
     corda/
         corda.jar
-        corda-webserver.jar
+        corda-testserver.jar
     explorer/
         node-explorer.jar
     cordapps/
