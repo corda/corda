@@ -25,4 +25,40 @@ class NodeConfigParsingTests {
             assert(hasSsh)
         }
     }
+
+    @Test
+    fun `config is overriden by case insensitive underscore variable`() {
+        val portAllocator = incrementalPortAllocation()
+        val sshPort = portAllocator.nextPort()
+
+        driver(DriverParameters(
+                systemProperties = mapOf("cORDa_sShD_pOrt" to sshPort.toString()),
+                startNodesInProcess = false,
+                portAllocation = portAllocator)) {
+            val hasSsh = startNode().get()
+                    .logFile()
+                    .readLines()
+                    .filter { it.contains("SSH server listening on port") }
+                    .any { it.contains(sshPort.toString()) }
+            assert(hasSsh)
+        }
+    }
+
+    @Test
+    fun `config is overriden by case insensitive dot variable`() {
+        val portAllocator = incrementalPortAllocation()
+        val sshPort = portAllocator.nextPort()
+
+        driver(DriverParameters(
+                systemProperties = mapOf("corda.sShD.pOrt" to sshPort.toString()),
+                startNodesInProcess = false,
+                portAllocation = portAllocator)) {
+            val hasSsh = startNode().get()
+                    .logFile()
+                    .readLines()
+                    .filter { it.contains("SSH server listening on port") }
+                    .any { it.contains(sshPort.toString()) }
+            assert(hasSsh)
+        }
+    }
 }

@@ -20,6 +20,9 @@ import net.corda.nodeapi.internal.loadDevCaTrustStore
 import net.corda.nodeapi.internal.registerDevP2pCertificates
 import org.slf4j.LoggerFactory
 import java.nio.file.Path
+import kotlin.reflect.KClass
+import kotlin.reflect.full.declaredMemberProperties
+import kotlin.reflect.full.memberProperties
 
 fun configOf(vararg pairs: Pair<String, Any?>): Config = ConfigFactory.parseMap(mapOf(*pairs))
 operator fun Config.plus(overrides: Map<String, Any?>): Config = ConfigFactory.parseMap(overrides).withFallback(this)
@@ -63,6 +66,25 @@ object ConfigHelper {
         return finalConfig
     }
 
+    fun <T: Any> getCaseSensitivePropertyPath(target : KClass<T>, path : List<String>) : String {
+        if (path.size == 0)
+            throw java.lang.IllegalArgumentException("Path cannot be empty.")
+
+        val lookFor = path.first()
+        target.memberProperties.forEach {
+            if (it.name.toLowerCase() == lookFor.toLowerCase()) {
+                return if (path.size > 1)
+                    "${it.name}." +
+                            getCaseSensitivePropertyPath(
+                                    (it.getter.returnType.classifier as KClass<*>),
+                                    path.subList(1, path.size))
+                else
+                    it.name
+            }
+        }
+        return ""
+    }
+
     private fun Config.cordaEntriesOnly(): Config {
         return ConfigFactory.parseMap(
                 toProperties()
@@ -71,7 +93,8 @@ object ConfigHelper {
                         .replace(CORDA_PROPERTY_PREFIX_LINUX, CORDA_PROPERTY_PREFIX)
                         .replace("_", ".")
                 }.filterKeys { it.startsWith(CORDA_PROPERTY_PREFIX) }
-                .mapKeys { it.key.removePrefix(CORDA_PROPERTY_PREFIX) })
+                .mapKeys { it.key.removePrefix(CORDA_PROPERTY_PREFIX) }
+                .mapKeys { getCaseSensitivePropertyPath(NodeConfiguration::class, it.key.split(".")) })
     }
 }
 
