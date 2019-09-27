@@ -20,6 +20,18 @@
 
     </changeSet>
 
+    <changeSet author="R3.Corda" id="modify identity_value column type" dbms="postgresql">
+        <addColumn tableName="node_identities">
+            <column name="temp_identity_value" type="varbinary(64000)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+        <sql>UPDATE node_identities SET temp_identity_value = lo_get(identity_value)</sql>
+        <addNotNullConstraint tableName="node_identities" columnName="temp_identity_value"/>
+        <dropColumn tableName="node_identities" columnName="identity_value"/>
+        <renameColumn tableName="node_identities" oldColumnName="temp_identity_value" newColumnName="identity_value"/>
+    </changeSet>
+
     <changeSet author="R3.Corda" id="migrate_identity_service_to_use_publicKey.toShortString()">
         <customChange class="net.corda.node.migration.PersistentIdentityMigration">
         </customChange>
