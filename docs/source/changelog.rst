@@ -7,9 +7,7 @@ release, see :doc:`app-upgrade-notes`.
 Unreleased
 ----------
 
-* ``NotaryFlow.Client`` now performs transaction verification by default to prevent accidentally sending an invalid transaction to a
-  non-validating notary. The behaviour can be controlled by passing a constructor parameter flag ``skipVerification``.
-  Note: this only affects flows that invoke ``NotaryFlow.Client`` directly – no behavioural change if using ``FinalityFlow``.
+* Moved and renamed the testing web server to the ``testing`` subproject. Also renamed the published artifact to ``corda-testserver.jar``.
 
 * Support for Java 11 (compatibility mode). Please read https://github.com/corda/corda/pull/5356.
 
@@ -36,6 +34,10 @@ Unreleased
 
 * Introduced a new low level flow diagnostics tool: checkpoint agent (that can be used standalone or in conjunction with the ``checkpoints dump`` shell command).
   See :doc:`checkpoint-tooling` for more information.
+  
+* ``NotaryFlow.Client`` now performs transaction verification by default to prevent accidentally sending an invalid transaction to a
+  non-validating notary. The behaviour can be controlled by passing a constructor parameter flag ``skipVerification``.
+  Note: this only affects flows that invoke ``NotaryFlow.Client`` directly – no behavioural change if using ``FinalityFlow``.
 
 * The MockNet now supports setting a custom Notary class name, as was already supported by normal node config. See :doc:`tutorial-custom-notary`.
 

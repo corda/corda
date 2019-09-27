@@ -126,8 +126,6 @@ Here is an overview of the various Corda dependencies:
 * ``corda-tools-explorer`` - The Node Explorer tool. Do not depend on
 * ``corda-tools-network-bootstrapper`` - The Network Builder tool. Useful in build scripts
 * ``corda-tools-shell-cli`` - The Shell CLI tool. Useful in build scripts
-* ``corda-webserver-impl`` - The Corda webserver fat JAR. Deprecated. Usually only used by build scripts
-* ``corda-websever`` - The Corda webserver library. Deprecated. Use a standard webserver library such as Spring instead
 
 Dependencies on other CorDapps
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -308,7 +306,7 @@ Below is a sample CorDapp Gradle dependencies block. When building your own CorD
             cordaCompile "net.corda:corda-node-api:$corda_release_version"
             cordaCompile "net.corda:corda-webserver-impl:$corda_release_version"
             cordaRuntime "net.corda:corda:$corda_release_version"
-            cordaRuntime "net.corda:corda-webserver:$corda_release_version"
+            cordaRuntime "net.corda:corda-testserver:$corda_release_version"
             testCompile "net.corda:corda-test-utils:$corda_release_version"
 
             // Corda Plugins: dependent flows and services

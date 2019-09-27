@@ -9,7 +9,7 @@ Deploying a node to a server
 
 Linux: Installing and running Corda as a system service
 -------------------------------------------------------
-We recommend creating system services to run a node and the optional webserver. This provides logging and service
+We recommend creating system services to run a node and the optional test webserver. This provides logging and service
 handling, and ensures the Corda service is run at boot.
 
 **Prerequisites**:
@@ -123,7 +123,7 @@ handling, and ensures the Corda service is run at boot.
         * ``sudo chown root:root /etc/init/corda.conf``
         * ``sudo chmod 644 /etc/init/corda.conf``
 
-.. note:: The Corda webserver provides a simple interface for interacting with your installed CorDapps in a browser.
+.. note:: The Corda test webserver provides a simple interface for interacting with your installed CorDapps in a browser.
    Running the webserver is optional.
 
 10. **SystemD**: Create a ``corda-webserver.service`` file based on the example below and save it in the ``/etc/systemd/system/``
