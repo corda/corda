@@ -216,7 +216,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
     private fun notariseAndRecord(): SignedTransaction {
         val notarised = if (needsNotarySignature(transaction)) {
             progressTracker.currentStep = NOTARISING
-            val notarySignatures = subFlow(NotaryFlow.Client(transaction))
+            val notarySignatures = subFlow(NotaryFlow.Client(transaction, skipVerification = true))
             transaction + notarySignatures
         } else {
             logger.info("No need to notarise this transaction.")
@@ -249,6 +249,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
         val notary = transaction.tx.notary
         // The notary signature(s) are allowed to be missing but no others.
         if (notary != null) transaction.verifySignaturesExcept(notary.owningKey) else transaction.verifyRequiredSignatures()
+        // TODO= [CORDA-3267] Remove duplicate signature verification
         val ltx = transaction.toLedgerTransaction(serviceHub, false)
         ltx.verify()
         return ltx
