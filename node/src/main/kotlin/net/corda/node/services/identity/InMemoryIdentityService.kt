@@ -11,6 +11,7 @@ import net.corda.core.node.services.IdentityService
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.trace
+import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.node.services.persistence.WritablePublicKeyToOwningIdentityCache
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.x509Certificates
@@ -32,7 +33,7 @@ import kotlin.collections.LinkedHashSet
 class InMemoryIdentityService(
         identities: List<PartyAndCertificate> = emptyList(),
         override val trustRoot: X509Certificate
-) : SingletonSerializeAsToken(), IdentityService {
+) : SingletonSerializeAsToken(), IdentityServiceInternal {
     companion object {
         private val log = contextLogger()
     }
@@ -61,6 +62,11 @@ class InMemoryIdentityService(
     }
 
     @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
+    override fun verifyAndRegisterIdentity(identity: PartyAndCertificate, isNewRandomIdentity: Boolean): PartyAndCertificate? {
+        return verifyAndRegisterIdentity(trustAnchor, identity)
+    }
+
+    @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
     private fun verifyAndRegisterIdentity(trustAnchor: TrustAnchor, identity: PartyAndCertificate): PartyAndCertificate? {
         // Validate the chain first, before we do anything clever with it
         val identityCertChain = identity.certPath.x509Certificates
@@ -82,10 +88,10 @@ class InMemoryIdentityService(
             val firstPath = X509Utilities.buildCertPath(identityCertChain.slice(idx until identityCertChain.size))
             verifyAndRegisterIdentity(trustAnchor, PartyAndCertificate(firstPath))
         }
-        return registerIdentity(identity)
+        return registerIdentity(identity, false)
     }
 
-    private fun registerIdentity(identity: PartyAndCertificate): PartyAndCertificate? {
+    private fun registerIdentity(identity: PartyAndCertificate, isNewRandomIdentity: Boolean): PartyAndCertificate? {
         val identityCertChain = identity.certPath.x509Certificates
         log.trace { "Registering identity $identity" }
         keyToPartyAndCerts[identity.owningKey] = identity

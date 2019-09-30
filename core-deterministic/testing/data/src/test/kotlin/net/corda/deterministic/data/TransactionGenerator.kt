@@ -7,7 +7,6 @@ import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
-import net.corda.core.node.services.IdentityService
 import net.corda.core.serialization.serialize
 import net.corda.deterministic.verifier.MockContractAttachment
 import net.corda.deterministic.verifier.SampleCommandData
@@ -18,6 +17,7 @@ import net.corda.finance.contracts.asset.Cash.Commands.Issue
 import net.corda.finance.contracts.asset.Cash.Commands.Move
 import net.corda.finance.contracts.asset.Cash.Companion.PROGRAM_ID
 import net.corda.finance.contracts.asset.Cash.State
+import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.core.getTestPartyAndCertificate
@@ -40,7 +40,7 @@ object TransactionGenerator {
     private val MEGA_CORP_PUBKEY: PublicKey = megaCorp.keyPair.public
     private val MINI_CORP_PUBKEY: PublicKey = TestIdentity(CordaX500Name("MiniCorp", "London", "GB")).keyPair.public
 
-    private val ledgerServices = MockServices(emptyList(), MEGA_CORP.name, mock<IdentityService>().also {
+    private val ledgerServices = MockServices(emptyList(), MEGA_CORP.name, mock<IdentityServiceInternal>().also {
         doReturn(MEGA_CORP).whenever(it).partyFromKey(MEGA_CORP_PUBKEY)
         doReturn(DUMMY_CASH_ISSUER.party).whenever(it).partyFromKey(DUMMY_CASH_ISSUER_KEY.public)
     })

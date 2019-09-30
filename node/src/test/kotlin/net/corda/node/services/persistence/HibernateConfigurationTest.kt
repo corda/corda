@@ -28,6 +28,7 @@ import net.corda.finance.schemas.CashSchemaV1
 import net.corda.finance.test.SampleCashSchemaV1
 import net.corda.finance.test.SampleCashSchemaV2
 import net.corda.finance.test.SampleCashSchemaV3
+import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.node.services.schema.ContractStateAndRef
 import net.corda.node.services.schema.NodeSchemaService
@@ -118,7 +119,7 @@ class HibernateConfigurationTest {
             hibernateConfig = database.hibernateConfig
 
             // `consumeCash` expects we can self-notarise transactions
-            services = object : MockServices(cordappPackages, BOB_NAME, mock<IdentityService>().also {
+            services = object : MockServices(cordappPackages, BOB_NAME, mock<IdentityServiceInternal>().also {
                 doReturn(null).whenever(it).verifyAndRegisterIdentity(argThat { name == BOB_NAME })
             }, generateKeyPair(), dummyNotary.keyPair) {
                 override val vaultService = NodeVaultService(Clock.systemUTC(), keyManagementService, servicesForResolution, database, schemaService, cordappClassloader).apply { start() }
