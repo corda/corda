@@ -56,8 +56,8 @@ class CordaRPCClientReconnectionTest {
                     maxReconnectAttempts = 5
             ))
 
-            (client.start(rpcUser.username, rpcUser.password, gracefulReconnect = gracefulReconnect).proxy as ReconnectingCordaRPCOps).use {
-                val rpcOps = it
+            (client.start(rpcUser.username, rpcUser.password, gracefulReconnect = gracefulReconnect)).use {
+                val rpcOps = it.proxy as ReconnectingCordaRPCOps
                 val networkParameters = rpcOps.networkParameters
                 val cashStatesFeed = rpcOps.vaultTrack(Cash.State::class.java)
                 cashStatesFeed.updates.subscribe { latch.countDown() }
@@ -96,8 +96,8 @@ class CordaRPCClientReconnectionTest {
                     maxReconnectAttempts = 5
             ))
 
-            (client.start(rpcUser.username, rpcUser.password, gracefulReconnect = gracefulReconnect).proxy as ReconnectingCordaRPCOps).use {
-                val rpcOps = it
+            (client.start(rpcUser.username, rpcUser.password, gracefulReconnect = gracefulReconnect)).use {
+                val rpcOps = it.proxy as ReconnectingCordaRPCOps
                 val cashStatesFeed = rpcOps.vaultTrack(Cash.State::class.java)
                 val subscription = cashStatesFeed.updates.subscribe { latch.countDown() }
                 rpcOps.startTrackedFlow(::CashIssueFlow, 10.DOLLARS, OpaqueBytes.of(0), defaultNotaryIdentity).returnValue.get()
@@ -113,6 +113,7 @@ class CordaRPCClientReconnectionTest {
                     latch.await(4, TimeUnit.SECONDS)
                 }
             }
+
         }
     }
 
@@ -136,8 +137,8 @@ class CordaRPCClientReconnectionTest {
                     maxReconnectAttempts = 5
             ))
 
-            (client.start(rpcUser.username, rpcUser.password, gracefulReconnect = gracefulReconnect).proxy as ReconnectingCordaRPCOps).use {
-                val rpcOps = it
+            (client.start(rpcUser.username, rpcUser.password, gracefulReconnect = gracefulReconnect)).use {
+                val rpcOps = it.proxy as ReconnectingCordaRPCOps
                 val networkParameters = rpcOps.networkParameters
                 val cashStatesFeed = rpcOps.vaultTrack(Cash.State::class.java)
                 cashStatesFeed.updates.subscribe { latch.countDown() }

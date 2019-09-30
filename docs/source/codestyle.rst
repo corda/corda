@@ -5,8 +5,9 @@ This document explains the coding style used in the Corda repository. You will b
 recommendations when submitting patches for review. Please take the time to read them and internalise them, to save
 time during code review.
 
-What follows are *recommendations* and not *rules*. They are in places intentionally vague, so use your good judgement
-when interpreting them.
+What follows are mostly *recommendations* and not *rules*. They are in places intentionally vague, so use your good judgement
+when interpreting them. The rules that are currently being enforced via the Detekt PR gateway can be found `here
+<https://github.com/corda/corda/blob/release/os/4.3/detekt-config.yml>`_.
 
 1. General style
 ################
@@ -35,10 +36,9 @@ that doesn't mean it's always better. In particular:
 1.1 Line Length and Spacing
 ---------------------------
 
-We aim for line widths of no more than 120 characters. That is wide enough to avoid lots of pointless wrapping but
+We aim for line widths of no more than 140 characters. That is wide enough to avoid lots of pointless wrapping but
 narrow enough that with a widescreen monitor and a 12 point fixed width font (like Menlo) you can fit two files
-next to each other. This is not a rigidly enforced rule and if wrapping a line would be excessively awkward, let it
-overflow. Overflow of a few characters here and there isn't a big deal: the goal is general convenience.
+next to each other. This is a rule that we enforce.
 
 Where the number of parameters in a function, class, etc. causes an overflow past the end of the first line, they should
 be structured one parameter per line.

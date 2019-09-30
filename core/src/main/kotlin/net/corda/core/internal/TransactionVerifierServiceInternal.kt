@@ -366,7 +366,14 @@ class Verifier(val ltx: LedgerTransaction, private val transactionClassLoader: C
 
         val contractInstances: List<Contract> = contractClasses.map { (contractClassName, contractClass) ->
             try {
-                contractClass.getDeclaredConstructor().newInstance()
+                /**
+                 * This function must execute with the DJVM's sandbox, which does not
+                 * permit user code to access [java.lang.reflect.Constructor] objects.
+                 *
+                 * [Class.newInstance] is deprecated as of Java 9.
+                 */
+                @Suppress("deprecation")
+                contractClass.newInstance()
             } catch (e: Exception) {
                 throw TransactionVerificationException.ContractCreationError(ltx.id, contractClassName, e)
             }
