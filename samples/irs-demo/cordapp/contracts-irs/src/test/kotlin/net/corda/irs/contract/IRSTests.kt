@@ -16,6 +16,7 @@ import net.corda.finance.DOLLARS
 import net.corda.finance.EUR
 import net.corda.finance.contracts.*
 import net.corda.finance.workflows.utils.loadTestCalendar
+import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.testing.common.internal.addNotary
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.DUMMY_NOTARY_NAME
@@ -235,7 +236,7 @@ class IRSTests {
     private val ledgerServices = MockServices(
             emptyList(),
             megaCorp,
-            mock<IdentityService>().also {
+            mock<IdentityServiceInternal>().also {
                 doReturn(megaCorp.party).whenever(it).partyFromKey(megaCorp.publicKey)
                 doReturn(null).whenever(it).partyFromKey(ORACLE_PUBKEY)
             },
