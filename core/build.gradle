@@ -9,8 +9,6 @@ apply plugin: 'com.jfrog.artifactory'
 
 description 'Corda core'
 
-evaluationDependsOn(':node:capsule')
-
 // required by DJVM and Avian JVM (for running inside the SGX enclave) which only supports Java 8.
 targetCompatibility = VERSION_1_8
 
