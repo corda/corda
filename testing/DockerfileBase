@@ -2,7 +2,7 @@ FROM ubuntu:18.04
 ENV GRADLE_USER_HOME=/tmp/gradle
 RUN mkdir /tmp/gradle && mkdir -p /home/root/.m2/repository
 
-RUN apt-get update && apt-get install -y curl git && \
+RUN apt-get update && apt-get install -y curl && \
     curl -O https://d3pxv6yz143wms.cloudfront.net/8.222.10.1/java-1.8.0-amazon-corretto-jdk_8.222.10-1_amd64.deb && \
     apt-get install -y java-common && dpkg -i java-1.8.0-amazon-corretto-jdk_8.222.10-1_amd64.deb && \
     apt-get clean && \
