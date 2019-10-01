@@ -589,7 +589,7 @@ buildScan {
 
 task allParallelIntegrationTest(type: ParallelTestGroup) {
     testGroups "integrationTest"
-    numberOfShards 10
+    numberOfShards 15
     streamOutput false
     coresPerFork 6
     memoryInGbPerFork 10
