@@ -20,6 +20,7 @@ import net.corda.core.contracts.withoutIssuer
 import net.corda.core.flows.FlowException
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.messaging.FlowHandle
 import net.corda.core.messaging.startFlow
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.OpaqueBytes
@@ -93,14 +94,15 @@ class NewTransaction : Fragment() {
                 initOwner(window)
                 show()
             }
+            val handle: FlowHandle<AbstractCashFlow.Result> = when (request) {
+                is IssueAndPaymentRequest -> rpcProxy.value!!.startFlow(::CashIssueAndPaymentFlow, request)
+                is PaymentRequest -> rpcProxy.value!!.startFlow(::CashPaymentFlow, request)
+                is ExitRequest -> rpcProxy.value!!.startFlow(::CashExitFlow, request)
+                else -> throw IllegalArgumentException("Unexpected request type: $request")
+            }
             runAsync {
                 try {
-                    when (request) {
-                        is IssueAndPaymentRequest -> rpcProxy.value!!.startFlow(::CashIssueAndPaymentFlow, request)
-                        is PaymentRequest -> rpcProxy.value!!.startFlow(::CashPaymentFlow, request)
-                        is ExitRequest -> rpcProxy.value!!.startFlow(::CashExitFlow, request)
-                        else -> throw IllegalArgumentException("Unexpected request type: $request")
-                    }.returnValue.getOrThrow()
+                    handle.returnValue.getOrThrow()
                 } finally {
                     dialog.dialogPane.isDisable = false
                 }

@@ -86,8 +86,7 @@ There are four implementations of this interface which can be chained together t
 
 1. ``VaultQueryCriteria`` provides filterable criteria on attributes within the Vault states table: status (UNCONSUMED,
    CONSUMED), state reference(s), contract state type(s), notaries, soft locked states, timestamps (RECORDED, CONSUMED),
-   state constraints (see :ref:`Constraint Types <implicit_constraint_types>`), relevancy (ALL, RELEVANT, NON_RELEVANT),
-   participants (exact or any match).
+   state constraints (see :ref:`Constraint Types <implicit_constraint_types>`), relevancy (ALL, RELEVANT, NON_RELEVANT).
 
 	.. note:: Sensible defaults are defined for frequently used attributes (status = UNCONSUMED, always include soft
 	   locked states).
@@ -95,7 +94,7 @@ There are four implementations of this interface which can be chained together t
 2. ``FungibleAssetQueryCriteria`` provides filterable criteria on attributes defined in the Corda Core
    ``FungibleAsset`` contract state interface, used to represent assets that are fungible, countable and issued by a
    specific party (eg. ``Cash.State`` and ``CommodityContract.State`` in the Corda finance module). Filterable
-   attributes include: participants (exact or any match), owner(s), quantity, issuer party(s) and issuer reference(s).
+   attributes include: participants(s), owner(s), quantity, issuer party(s) and issuer reference(s).
 	   
 	.. note:: All contract states that extend the ``FungibleAsset`` now automatically persist that interfaces common
 	   state attributes to the **vault_fungible_states** table.
@@ -103,7 +102,7 @@ There are four implementations of this interface which can be chained together t
 3. ``LinearStateQueryCriteria`` provides filterable criteria on attributes defined in the Corda Core ``LinearState``
    and ``DealState`` contract state interfaces, used to represent entities that continuously supersede themselves, all
    of which share the same ``linearId`` (e.g. trade entity states such as the ``IRSState`` defined in the SIMM
-   valuation demo). Filterable attributes include: participants (exact or any match), linearId(s), uuid(s), and externalId(s).
+   valuation demo). Filterable attributes include: participant(s), linearId(s), uuid(s), and externalId(s).
 	   
 	.. note:: All contract states that extend ``LinearState`` or ``DealState`` now automatically persist those
 	   interfaces common state attributes to the **vault_linear_states** table.
@@ -293,20 +292,12 @@ Query for unconsumed states for a given notary:
     :end-before: DOCEND VaultQueryExample4
     :dedent: 12
 
-Query for unconsumed states for a given set of participants (matches any state that contains at least one of the specified participants):
+Query for unconsumed states for a given set of participants:
 
 .. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTests.kt
     :language: kotlin
     :start-after: DOCSTART VaultQueryExample5
     :end-before: DOCEND VaultQueryExample5
-    :dedent: 12
-
-Query for unconsumed states for a given set of participants (exactly matches only states that contain all specified participants):
-
-.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTests.kt
-    :language: kotlin
-    :start-after: DOCSTART VaultQueryExample51
-    :end-before: DOCEND VaultQueryExample51
     :dedent: 12
 
 Query for unconsumed states recorded between two time intervals:
@@ -373,20 +364,12 @@ Query for unconsumed deal states with deals references:
     :end-before: DOCEND VaultQueryExample10
     :dedent: 12
 
-Query for unconsumed deal states with deals parties (any match):
+Query for unconsumed deal states with deals parties:
 
 .. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTests.kt
     :language: kotlin
     :start-after: DOCSTART VaultQueryExample11
     :end-before: DOCEND VaultQueryExample11
-    :dedent: 12
-
-Query for unconsumed deal states with deals parties (exact match):
-
-.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTests.kt
-    :language: kotlin
-    :start-after: DOCSTART VaultQueryExample52
-    :end-before: DOCEND VaultQueryExample52
     :dedent: 12
 
 Query for only relevant linear states in the vault:
