@@ -19,9 +19,9 @@ import net.corda.nodeapi.internal.installDevNodeCaCertPath
 import net.corda.nodeapi.internal.loadDevCaTrustStore
 import net.corda.nodeapi.internal.registerDevP2pCertificates
 import org.slf4j.LoggerFactory
+import java.lang.IllegalStateException
 import java.nio.file.Path
 import kotlin.reflect.KClass
-import kotlin.reflect.full.declaredMemberProperties
 import kotlin.reflect.full.memberProperties
 
 fun configOf(vararg pairs: Pair<String, Any?>): Config = ConfigFactory.parseMap(mapOf(*pairs))
@@ -85,12 +85,24 @@ object ConfigHelper {
     }
 
     private fun Config.cordaEntriesOnly(): Config {
+
+        val codaPropOccurrences = mutableSetOf<String>()
+
         return ConfigFactory.parseMap(
                 toProperties()
                 .mapKeys {
-                    (it.key as String)
-                            .replace("_", ".")
-                            .toLowerCase()
+                    val newKey = (it.key as String)
+                                .replace("_", ".")
+                                .toLowerCase()
+
+                    if (newKey.contains(CORDA_PROPERTY_PREFIX) && codaPropOccurrences.contains(newKey)) {
+                            val errMsg = "Environment variable ${it.key} is shadowing another property transformed to $newKey"
+                            log.error(errMsg)
+                            throw IllegalStateException(errMsg)
+                    }
+
+                    codaPropOccurrences.add(newKey)
+                    newKey
                 }.filterKeys { it.startsWith(CORDA_PROPERTY_PREFIX) }
                 .mapKeys { it.key.removePrefix(CORDA_PROPERTY_PREFIX) }
                 .mapKeys { getCaseSensitivePropertyPath(NodeConfiguration::class, it.key.split(".")) })
