@@ -3,16 +3,36 @@ package net.corda.testing
 import com.bmuschko.gradle.docker.tasks.image.DockerPushImage
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.Task
 import org.gradle.api.tasks.testing.Test
+
+import java.util.stream.Collectors
 
 /**
  This plugin is responsible for wiring together the various components of test task modification
  */
 class DistributedTesting implements Plugin<Project> {
 
+    //<editor-fold desc="statics">
     static def getPropertyAsInt(Project proj, String property, Integer defaultValue) {
         return proj.hasProperty(property) ? Integer.parseInt(proj.property(property).toString()) : defaultValue
     }
+
+    static def getForkCount(Project project) {
+        return getPropertyAsInt(project, "dockerForks", 1)
+    }
+
+    static def getForkIdx(Project project) {
+        return getPropertyAsInt(project, "dockerFork", 0)
+    }
+
+    static def getDockerTag() {
+        return System.getProperty("docker.tag")
+    }
+    //</editor-fold>
+
+    // All the tests marked '@Test' in all the projects are going to be stored in here
+    List<String> allTestsInAllProjects = new ArrayList<>()
 
     @Override
     void apply(Project project) {
@@ -20,19 +40,38 @@ class DistributedTesting implements Plugin<Project> {
             ensureImagePluginIsApplied(project)
             ImageBuilding imagePlugin = project.plugins.getPlugin(ImageBuilding)
             DockerPushImage imageBuildingTask = imagePlugin.pushTask
-            String providedTag = System.getProperty("docker.tag")
+            String dockerTag = getDockerTag()
+
+            // This makes all tests depend on the compilation phase of every other test
+            // so that we can inspect every jar for their tests, and then allocate tests
+            // to a k8s fork.
+            def globalDependency = project.tasks.create("GlobalDependency")
 
             //in each subproject
             //1. add the task to determine all tests within the module
             //2. modify the underlying testing task to use the output of the listing task to include a subset of tests for each fork
             //3. KubesTest will invoke these test tasks in a parallel fashion on a remote k8s cluster
-            project.subprojects { Project subProject ->
-                subProject.tasks.withType(Test) { Test task ->
-                    ListTests testListerTask = createTestListingTasks(task, subProject)
-                    Test modifiedTestTask = modifyTestTaskForParallelExecution(subProject, task, testListerTask)
-                    KubesTest parallelTestTask = generateParallelTestingTask(subProject, task, imageBuildingTask, providedTag)
+            project.subprojects { Project subproject ->
+                subproject.tasks.withType(Test) { Test testTask ->
+                    if (! testTask.path.contains("core-deterministic")) {
+
+                        testTask.dependsOn globalDependency
+                        ListTests testListerTask = createTestListingTasks(testTask, subproject, allTestsInAllProjects, globalDependency)
+                        globalDependency.dependsOn testListerTask
+
+                        subproject.logger.info("Added dependency: {} -> {} -> {}", testTask, globalDependency, testListerTask)
+                        configureTestTaskForParallelExecution(subproject, testTask, testListerTask)
+                        createParallelTestingTask(subproject, testTask, imageBuildingTask, dockerTag)
+                    } else {
+                        subproject.logger.info("Skipping core-deterministic tests")
+                        subproject.logger.info("+ has {} dependencies", testTask.dependsOn.size())
+                        testTask.dependsOn.forEach {
+                            subproject.logger.info("+  dependency:  {}", it.toString())
+                        }
+                    }
                 }
             }
+
 
             //now we are going to create "super" groupings of these KubesTest tasks, so that it is possible to invoke all submodule tests with a single command
             //group all kubes tests by their underlying target task (test/integrationTest/smokeTest ... etc)
@@ -53,7 +92,7 @@ class DistributedTesting implements Plugin<Project> {
                 String superListOfTasks = groups.collect { it.fullTaskToExecutePath }.join(" ")
 
                 def userDefinedParallelTask = project.rootProject.tasks.create("userDefined" + testGrouping.name.capitalize(), KubesTest) {
-                    if (!providedTag) {
+                    if (!dockerTag) {
                         dependsOn imageBuildingTask
                     }
                     numberOfPods = testGrouping.getShardCount()
@@ -63,7 +102,7 @@ class DistributedTesting implements Plugin<Project> {
                     memoryGbPerFork = testGrouping.gbOfMemory
                     numberOfCoresPerFork = testGrouping.coresToUse
                     doFirst {
-                        dockerTag = dockerTag = providedTag ? ImageBuilding.registryName + ":" + providedTag : (imageBuildingTask.imageName.get() + ":" + imageBuildingTask.tag.get())
+                        dockerTag = dockerTag = dockerTag ? ImageBuilding.registryName + ":" + dockerTag : (imageBuildingTask.imageName.get() + ":" + imageBuildingTask.tag.get())
                     }
                 }
                 def reportOnAllTask = project.rootProject.tasks.create("userDefinedReports${testGrouping.name.capitalize()}", KubesReporting) {
@@ -82,90 +121,92 @@ class DistributedTesting implements Plugin<Project> {
         }
     }
 
-    private KubesTest generateParallelTestingTask(Project projectContainingTask, Test task, DockerPushImage imageBuildingTask, String providedTag) {
-        def taskName = task.getName()
-        def capitalizedTaskName = task.getName().capitalize()
+    private KubesTest createParallelTestingTask(Project projectContainingTask,
+                                                Test testTask,
+                                                DockerPushImage imageBuildingTask,
+                                                String dockerTag) {
+        def taskName = testTask.getName()
+        def capitalizedTaskName = testTask.getName().capitalize()
 
         KubesTest createdParallelTestTask = projectContainingTask.tasks.create("parallel" + capitalizedTaskName, KubesTest) {
-            if (!providedTag) {
+            if (!dockerTag) {
                 dependsOn imageBuildingTask
             }
             printOutput = true
-            fullTaskToExecutePath = task.getPath()
+            fullTaskToExecutePath = testTask.getPath()
             taskToExecuteName = taskName
             doFirst {
-                dockerTag = providedTag ? ImageBuilding.registryName + ":" + providedTag : (imageBuildingTask.imageName.get() + ":" + imageBuildingTask.tag.get())
+                dockerTag = dockerTag ? ImageBuilding.registryName + ":" + dockerTag : (imageBuildingTask.imageName.get() + ":" + imageBuildingTask.tag.get())
             }
         }
-        projectContainingTask.logger.info "Created task: ${createdParallelTestTask.getPath()} to enable testing on kubenetes for task: ${task.getPath()}"
+        projectContainingTask.logger.info "Created task: ${createdParallelTestTask.getPath()} to enable testing on kubenetes for task: ${testTask.getPath()}"
         return createdParallelTestTask as KubesTest
     }
 
-    private Test modifyTestTaskForParallelExecution(Project subProject, Test task, ListTests testListerTask) {
-        subProject.logger.info("modifying task: ${task.getPath()} to depend on task ${testListerTask.getPath()}")
-        def reportsDir = new File(new File(subProject.rootProject.getBuildDir(), "test-reports"), subProject.name + "-" + task.name)
-        task.configure {
+    private Test configureTestTaskForParallelExecution(Project subProject, Test testTask, ListTests testListerTask) {
+        subProject.logger.info("modifying task: ${testTask.getPath()} to depend on task ${testListerTask.getPath()}")
+        def reportsDir = new File(new File(subProject.rootProject.getBuildDir(), "test-reports"), subProject.name + "-" + testTask.name)
+        testTask.configure {
             dependsOn testListerTask
             binResultsDir new File(reportsDir, "binary")
             reports.junitXml.destination new File(reportsDir, "xml")
             maxHeapSize = "6g"
             doFirst {
                 filter {
-                    def fork = getPropertyAsInt(subProject, "dockerFork", 0)
-                    def forks = getPropertyAsInt(subProject, "dockerForks", 1)
+                    def fork = getForkIdx(subProject)
+                    def forks = getForkCount(subProject)
                     def shuffleSeed = 42
-                    subProject.logger.info("requesting tests to include in testing task ${task.getPath()} (${fork}, ${forks}, ${shuffleSeed})")
-                    List<String> includes = testListerTask.getTestsForFork(
-                            fork,
-                            forks,
-                            shuffleSeed)
-                    subProject.logger.info "got ${includes.size()} tests to include into testing task ${task.getPath()}"
+                    subProject.logger.info("requesting tests to include in testing task ${testTask.getPath()} (${fork}, ${forks}, ${shuffleSeed})")
+                    List<String> includes = testListerTask.getTestsForFork(fork, forks, shuffleSeed)
+                    subProject.logger.info "got ${includes.size()} tests to include into testing task ${testTask.getPath()}"
 
                     if (includes.size() == 0) {
-                        subProject.logger.info "Disabling test execution for testing task ${task.getPath()}"
+                        subProject.logger.info "Disabling test execution for testing task ${testTask.getPath()}"
                         excludeTestsMatching "*"
                     }
 
                     includes.forEach { include ->
-                        subProject.logger.info "including: $include for testing task ${task.getPath()}"
-                        includeTestsMatching include
+                        subProject.logger.info "including: $include for testing task ${testTask.getPath()}"
+                        includeTestsMatching include + "*"
                     }
                     failOnNoMatchingTests false
                 }
             }
         }
 
-        return task
+        return testTask
     }
 
     private static void ensureImagePluginIsApplied(Project project) {
         project.plugins.apply(ImageBuilding)
     }
 
-    private ListTests createTestListingTasks(Test task, Project subProject) {
-        def taskName = task.getName()
-        def capitalizedTaskName = task.getName().capitalize()
+    private ListTests createTestListingTasks(Test testTask,
+                                             Project subProject,
+                                             List<String> allTestsInAllProjects,
+                                             Task globalDependencyTask) {
+        def taskName = testTask.getName()
+        def capitalizedTaskName = testTask.getName().capitalize()
+        def testClassesTask = subProject.getTasks().getByName("${taskName}Classes")
         //determine all the tests which are present in this test task.
         //this list will then be shared between the various worker forks
-        def createdListTask = subProject.tasks.create("listTestsFor" + capitalizedTaskName, ListTests) {
+        def createdListTask = subProject.tasks.create("listTestsFor" + capitalizedTaskName, ListTests, allTestsInAllProjects)
+        createdListTask.configure {
             //the convention is that a testing task is backed by a sourceSet with the same name
-            dependsOn subProject.getTasks().getByName("${taskName}Classes")
+            dependsOn testClassesTask
             doFirst {
                 //we want to set the test scanning classpath to only the output of the sourceSet - this prevents dependencies polluting the list
-                scanClassPath = task.getTestClassesDirs() ? task.getTestClassesDirs() : Collections.emptyList()
+                scanClassPath = testTask.getTestClassesDirs() ? testTask.getTestClassesDirs() : Collections.emptyList()
             }
         }
 
         //convenience task to utilize the output of the test listing task to display to local console, useful for debugging missing tests
         def createdPrintTask = subProject.tasks.create("printTestsFor" + capitalizedTaskName) {
-            dependsOn createdListTask
+            dependsOn globalDependencyTask  // which will depend on createdListTask
+
             doLast {
-                createdListTask.getTestsForFork(
-                        getPropertyAsInt(subProject, "dockerFork", 0),
-                        getPropertyAsInt(subProject, "dockerForks", 1),
-                        42).forEach { testName ->
-                    println testName
-                }
+                createdListTask.getTestsForFork(getForkIdx(subProject), getForkCount(subProject), 42).forEach { println it }
+                println "+  end of list of tests) for partition " + (getForkIdx(subProject) + 1) + " of " + getForkCount(subProject)
             }
         }
 
