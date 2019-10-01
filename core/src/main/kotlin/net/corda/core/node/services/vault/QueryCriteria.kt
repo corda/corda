@@ -8,7 +8,6 @@ import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.identity.AbstractParty
-import net.corda.core.identity.Party
 import net.corda.core.node.services.Vault
 import net.corda.core.schemas.StatePersistable
 import net.corda.core.serialization.CordaSerializable
@@ -83,7 +82,6 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
         open val participants: List<AbstractParty>? = null
         abstract val contractStateTypes: Set<Class<out ContractState>>?
         open val externalIds: List<UUID> = emptyList()
-        open val exactParticipants: List<AbstractParty>? = null
         override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
             return parser.parseCriteria(this)
         }
@@ -103,23 +101,8 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
             override val constraintTypes: Set<Vault.ConstraintInfo.Type> = emptySet(),
             override val constraints: Set<Vault.ConstraintInfo> = emptySet(),
             override val participants: List<AbstractParty>? = null,
-            override val externalIds: List<UUID> = emptyList(),
-            override val exactParticipants: List<AbstractParty>? = null
+            override val externalIds: List<UUID> = emptyList()
     ) : CommonQueryCriteria() {
-        @DeprecatedConstructorForDeserialization(version = 7)
-        constructor(
-                status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
-                contractStateTypes: Set<Class<out ContractState>>? = null,
-                stateRefs: List<StateRef>? = null,
-                notary: List<AbstractParty>? = null,
-                softLockingCondition: SoftLockingCondition? = null,
-                timeCondition: TimeCondition? = null,
-                relevancyStatus: Vault.RelevancyStatus = Vault.RelevancyStatus.ALL,
-                constraintTypes: Set<Vault.ConstraintInfo.Type> = emptySet(),
-                constraints: Set<Vault.ConstraintInfo> = emptySet(),
-                participants: List<AbstractParty>? = null,
-                externalIds: List<UUID> = emptyList()
-        ) : this(status, contractStateTypes, stateRefs, notary, softLockingCondition, timeCondition, relevancyStatus, constraintTypes, constraints, participants, externalIds, null)
         // V4 constructors.
         @DeprecatedConstructorForDeserialization(version = 7)
         constructor(
@@ -179,36 +162,6 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
         fun withConstraints(constraints: Set<Vault.ConstraintInfo>): VaultQueryCriteria = copy(constraints = constraints)
         fun withParticipants(participants: List<AbstractParty>): VaultQueryCriteria = copy(participants = participants)
         fun withExternalIds(externalIds: List<UUID>): VaultQueryCriteria = copy(externalIds = externalIds)
-        fun withExactParticipants(exactParticipants: List<AbstractParty>): VaultQueryCriteria = copy(exactParticipants = exactParticipants)
-
-        fun copy(
-                status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
-                contractStateTypes: Set<Class<out ContractState>>? = null,
-                stateRefs: List<StateRef>? = null,
-                notary: List<AbstractParty>? = null,
-                softLockingCondition: SoftLockingCondition? = null,
-                timeCondition: TimeCondition? = null,
-                relevancyStatus: Vault.RelevancyStatus = Vault.RelevancyStatus.ALL,
-                constraintTypes: Set<Vault.ConstraintInfo.Type> = emptySet(),
-                constraints: Set<Vault.ConstraintInfo> = emptySet(),
-                participants: List<AbstractParty>? = null,
-                externalIds: List<UUID> = emptyList()
-        ): VaultQueryCriteria {
-            return VaultQueryCriteria(
-                    status,
-                    contractStateTypes,
-                    stateRefs,
-                    notary,
-                    softLockingCondition,
-                    timeCondition,
-                    relevancyStatus,
-                    constraintTypes,
-                    constraints,
-                    participants,
-                    externalIds,
-                    exactParticipants
-            )
-        }
 
         fun copy(
                 status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
@@ -265,24 +218,13 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
      * LinearStateQueryCriteria: provides query by attributes defined in [VaultSchema.VaultLinearState]
      */
     data class LinearStateQueryCriteria(
-            override val participants: List<AbstractParty>? = null,
+            override val participants: List<AbstractParty>?,
             val uuid: List<UUID>? = null,
             val externalId: List<String>? = null,
             override val status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
             override val contractStateTypes: Set<Class<out ContractState>>? = null,
-            override val relevancyStatus: Vault.RelevancyStatus = Vault.RelevancyStatus.ALL,
-            override val exactParticipants: List<AbstractParty>?
+            override val relevancyStatus: Vault.RelevancyStatus = Vault.RelevancyStatus.ALL
     ) : CommonQueryCriteria() {
-        // V4 c'tor
-        @DeprecatedConstructorForDeserialization(version = 4)
-        constructor(
-                participants: List<AbstractParty>? = null,
-                uuid: List<UUID>? = null,
-                externalId: List<String>? = null,
-                status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
-                contractStateTypes: Set<Class<out ContractState>>? = null,
-                relevancyStatus: Vault.RelevancyStatus = Vault.RelevancyStatus.ALL
-        ) : this(participants, uuid, externalId, status, contractStateTypes, relevancyStatus, null)
         // V3 c'tor
         @JvmOverloads
         @DeprecatedConstructorForDeserialization(version = 2)
@@ -323,8 +265,6 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
         fun withStatus(status: Vault.StateStatus): LinearStateQueryCriteria = copy(status = status)
         fun withContractStateTypes(contractStateTypes: Set<Class<out ContractState>>): LinearStateQueryCriteria = copy(contractStateTypes = contractStateTypes)
         fun withRelevancyStatus(relevancyStatus: Vault.RelevancyStatus): LinearStateQueryCriteria = copy(relevancyStatus = relevancyStatus)
-        fun withExactParticipants(exactParticipants: List<AbstractParty>): LinearStateQueryCriteria =
-                copy(exactParticipants = exactParticipants)
 
         fun copy(
                 participants: List<AbstractParty>? = this.participants,
@@ -332,23 +272,6 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
                 externalId: List<String>? = this.externalId,
                 status: Vault.StateStatus = this.status,
                 contractStateTypes: Set<Class<out ContractState>>? = this.contractStateTypes
-        ): LinearStateQueryCriteria {
-            return LinearStateQueryCriteria(
-                    participants,
-                    uuid,
-                    externalId,
-                    status,
-                    contractStateTypes
-            )
-        }
-
-        fun copy(
-                participants: List<AbstractParty>? = this.participants,
-                uuid: List<UUID>? = this.uuid,
-                externalId: List<String>? = this.externalId,
-                status: Vault.StateStatus = this.status,
-                contractStateTypes: Set<Class<out ContractState>>? = this.contractStateTypes,
-                relevancyStatus: Vault.RelevancyStatus = this.relevancyStatus
         ): LinearStateQueryCriteria {
             return LinearStateQueryCriteria(
                     participants,
@@ -394,21 +317,8 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
             val issuerRef: List<OpaqueBytes>? = null,
             override val status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
             override val contractStateTypes: Set<Class<out ContractState>>? = null,
-            override val relevancyStatus: Vault.RelevancyStatus,
-            override val exactParticipants: List<AbstractParty>? = null
+            override val relevancyStatus: Vault.RelevancyStatus
     ) : CommonQueryCriteria() {
-        // V4 c'tor
-        @DeprecatedConstructorForDeserialization(version = 1)
-        constructor(
-                participants: List<AbstractParty>? = null,
-                owner: List<AbstractParty>? = null,
-                quantity: ColumnPredicate<Long>? = null,
-                issuer: List<AbstractParty>? = null,
-                issuerRef: List<OpaqueBytes>? = null,
-                status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
-                contractStateTypes: Set<Class<out ContractState>>? = null,
-                relevancyStatus: Vault.RelevancyStatus
-        ) : this(participants, owner, quantity, issuer, issuerRef, status, contractStateTypes, relevancyStatus, null)
         @JvmOverloads
         @DeprecatedConstructorForDeserialization(version = 1)
         constructor(
@@ -434,30 +344,6 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
         fun withStatus(status: Vault.StateStatus): FungibleAssetQueryCriteria = copy(status = status)
         fun withContractStateTypes(contractStateTypes: Set<Class<out ContractState>>): FungibleAssetQueryCriteria = copy(contractStateTypes = contractStateTypes)
         fun withRelevancyStatus(relevancyStatus: Vault.RelevancyStatus): FungibleAssetQueryCriteria = copy(relevancyStatus = relevancyStatus)
-        fun withExactParticipants(exactParticipants: List<AbstractParty>): FungibleAssetQueryCriteria
-                = copy(exactParticipants = exactParticipants)
-
-        fun copy(
-                participants: List<AbstractParty>? = this.participants,
-                owner: List<AbstractParty>? = this.owner,
-                quantity: ColumnPredicate<Long>? = this.quantity,
-                issuer: List<AbstractParty>? = this.issuer,
-                issuerRef: List<OpaqueBytes>? = this.issuerRef,
-                status: Vault.StateStatus = this.status,
-                contractStateTypes: Set<Class<out ContractState>>? = this.contractStateTypes,
-                relevancyStatus: Vault.RelevancyStatus = this.relevancyStatus
-        ): FungibleAssetQueryCriteria {
-            return FungibleAssetQueryCriteria(
-                    participants,
-                    owner,
-                    quantity,
-                    issuer,
-                    issuerRef,
-                    status,
-                    contractStateTypes,
-                    relevancyStatus
-            )
-        }
 
         fun copy(
                 participants: List<AbstractParty>? = this.participants,
