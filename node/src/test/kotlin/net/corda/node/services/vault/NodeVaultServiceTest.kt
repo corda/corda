@@ -31,7 +31,6 @@ import net.corda.finance.contracts.utils.sumCash
 import net.corda.finance.schemas.CashSchemaV1
 import net.corda.finance.workflows.asset.CashUtils
 import net.corda.finance.workflows.getCashBalance
-import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.testing.common.internal.testNetworkParameters
@@ -656,7 +655,7 @@ class NodeVaultServiceTest {
         val identity = services.myInfo.singleIdentityAndCert()
         assertEquals(services.identityService.partyFromKey(identity.owningKey), identity.party)
         val anonymousIdentity = services.keyManagementService.freshKeyAndCert(identity, false)
-        val thirdPartyServices = MockServices(emptyList(), MEGA_CORP.name, mock<IdentityServiceInternal>().also {
+        val thirdPartyServices = MockServices(emptyList(), MEGA_CORP.name, mock<IdentityService>().also {
             doReturn(null).whenever(it).verifyAndRegisterIdentity(argThat { name == MEGA_CORP.name })
         })
         val thirdPartyIdentity = thirdPartyServices.keyManagementService.freshKeyAndCert(thirdPartyServices.myInfo.singleIdentityAndCert(), false)
