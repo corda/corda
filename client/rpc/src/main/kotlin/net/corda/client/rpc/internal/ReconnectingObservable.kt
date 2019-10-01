@@ -4,21 +4,18 @@ import net.corda.core.messaging.DataFeed
 import rx.Observable
 import rx.Subscriber
 import rx.Subscription
-import java.util.concurrent.ExecutorService
 import java.util.concurrent.atomic.AtomicReference
 
 class ReconnectingObservable<T> private constructor(subscriber: ReconnectingSubscriber<T>) : Observable<T>(subscriber) {
 
     constructor(
             reconnectingRPCConnection: ReconnectingCordaRPCOps.ReconnectingRPCConnection,
-            executor: ExecutorService,
             initialDataFeed: DataFeed<*, T>,
             createDataFeed: () -> DataFeed<*, T>
-    ) : this(ReconnectingSubscriber(reconnectingRPCConnection, executor, initialDataFeed, createDataFeed))
+    ) : this(ReconnectingSubscriber(reconnectingRPCConnection, initialDataFeed, createDataFeed))
 
     private class ReconnectingSubscriber<T>(
             private val reconnectingRPCConnection: ReconnectingCordaRPCOps.ReconnectingRPCConnection,
-            private val executor: ExecutorService,
             private val initialDataFeed: DataFeed<*, T>,
             private val createDataFeed: () -> DataFeed<*, T>
     ) : OnSubscribe<T>, Subscription {
@@ -59,7 +56,7 @@ class ReconnectingObservable<T> private constructor(subscriber: ReconnectingSubs
 
         private fun scheduleResubscribe(error: Throwable) {
             if (unsubscribed) return
-            executor.execute {
+            reconnectingRPCConnection.observersPool.execute {
                 if (unsubscribed) return@execute
                 reconnectingRPCConnection.reconnectOnError(error)
                 val newDataFeed = createDataFeed()
