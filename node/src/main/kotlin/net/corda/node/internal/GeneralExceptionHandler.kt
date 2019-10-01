@@ -15,7 +15,7 @@ class GeneralExceptionHandler(private val parentHandler: Thread.UncaughtExceptio
 
         // fail fast with minimal overhead and further processing
         if (e is VirtualMachineError) {
-            println("${e.message}")
+            System.err.println("${e.message}")
             Runtime.getRuntime().halt(1)
         }
         // the error is a database connection issue - pull the rug
