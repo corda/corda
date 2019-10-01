@@ -11,8 +11,8 @@ import net.corda.client.jackson.JacksonSupport
 import net.corda.client.jackson.StringToMethodCallParser
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCClientConfiguration
+import net.corda.client.rpc.GracefulReconnect
 import net.corda.client.rpc.PermissionException
-import net.corda.client.rpc.internal.ReconnectingCordaRPCOps
 import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.UniqueIdentifier
@@ -22,7 +22,6 @@ import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.messaging.InternalCordaRPCOps
-import net.corda.core.internal.packageName_
 import net.corda.core.messaging.*
 import net.corda.tools.shell.utlities.ANSIProgressRenderer
 import net.corda.tools.shell.utlities.StdoutANSIProgressRenderer
@@ -91,21 +90,24 @@ object InteractiveShell {
 
     fun startShell(configuration: ShellConfiguration, classLoader: ClassLoader? = null, standalone: Boolean = false) {
         rpcOps = { username: String, password: String ->
-            if (standalone) {
-                ReconnectingCordaRPCOps(configuration.hostAndPort, username, password, CordaRPCClientConfiguration.DEFAULT, configuration.ssl, classLoader).also {
-                    rpcConn = it
-                }
+            val connection = if (standalone) {
+                CordaRPCClient(
+                        configuration.hostAndPort,
+                        configuration.ssl,
+                        classLoader
+                ).start(username, password, gracefulReconnect = GracefulReconnect())
             } else {
-                val client = CordaRPCClient(hostAndPort = configuration.hostAndPort,
+                CordaRPCClient(
+                        hostAndPort = configuration.hostAndPort,
                         configuration = CordaRPCClientConfiguration.DEFAULT.copy(
                                 maxReconnectAttempts = 1
                         ),
                         sslConfiguration = configuration.ssl,
-                        classLoader = classLoader)
-                val connection = client.start(username, password)
-                rpcConn = connection
-                connection.proxy as InternalCordaRPCOps
+                        classLoader = classLoader
+                ).start(username, password)
             }
+            rpcConn = connection
+            connection.proxy as InternalCordaRPCOps
         }
         _startShell(configuration, classLoader)
     }

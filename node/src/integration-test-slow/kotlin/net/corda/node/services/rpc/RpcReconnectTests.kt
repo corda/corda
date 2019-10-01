@@ -133,7 +133,8 @@ class RpcReconnectTests {
             }
             val reconnect = GracefulReconnect(onDisconnect = { numDisconnects++ }, onReconnect = onReconnect)
             val client = CordaRPCClient(addressesForRpc)
-            val bankAReconnectingRpc = client.start(demoUser.username, demoUser.password, gracefulReconnect = reconnect).proxy as ReconnectingCordaRPCOps
+            val bankAReconnectingRPCConnection = client.start(demoUser.username, demoUser.password, gracefulReconnect = reconnect)
+            val bankAReconnectingRpc = bankAReconnectingRPCConnection.proxy as ReconnectingCordaRPCOps
             // DOCEND rpcReconnectingRPC
 
             // Observe the vault and collect the observations.
@@ -330,7 +331,7 @@ class RpcReconnectTests {
             // Stop the observers.
             vaultSubscription.unsubscribe()
             stateMachineSubscription.unsubscribe()
-            bankAReconnectingRpc.close()
+            bankAReconnectingRPCConnection.close()
         }
 
         proxy.close()
