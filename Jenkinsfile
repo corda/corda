@@ -39,15 +39,15 @@ pipeline {
                                 " allParallelIntegrationTest"
                     }
                 }
-                stage('Unit Tests') {
-                    steps {
-                        sh "./gradlew " +
-                                "-DbuildId=\"\${BUILD_ID}\" " +
-                                "-Dkubenetize=true " +
-                                "-Ddocker.tag=\"\${DOCKER_TAG_TO_USE}\"" +
-                                " allParallelUnitTest"
-                    }
-                }
+//                stage('Unit Tests') {
+//                    steps {
+//                        sh "./gradlew " +
+//                                "-DbuildId=\"\${BUILD_ID}\" " +
+//                                "-Dkubenetize=true " +
+//                                "-Ddocker.tag=\"\${DOCKER_TAG_TO_USE}\"" +
+//                                " allParallelUnitTest"
+//                    }
+//                }
             }
 
         }
