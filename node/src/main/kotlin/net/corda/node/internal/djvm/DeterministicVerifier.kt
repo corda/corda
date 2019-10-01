@@ -88,10 +88,6 @@ class DeterministicVerifier(
             throw DeterministicVerificationException(ltx.id, sandboxEx.message ?: "", sandboxEx)
         }
     }
-
-    @Throws(Exception::class)
-    override fun close() {
-    }
 }
 
 class DeterministicVerificationException(id: SecureHash, message: String, cause: Throwable)

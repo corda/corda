@@ -29,7 +29,7 @@ fun LedgerTransaction.prepareVerify(extraAttachments: List<Attachment>) = this.i
  * Because we create a separate [LedgerTransaction] onto which we need to perform verification, it becomes important we don't verify the
  * wrong object instance. This class helps avoid that.
  */
-abstract class Verifier(val ltx: LedgerTransaction, protected val transactionClassLoader: ClassLoader) : AutoCloseable {
+abstract class Verifier(val ltx: LedgerTransaction, protected val transactionClassLoader: ClassLoader) {
     private val inputStates: List<TransactionState<*>> = ltx.inputs.map { it.state }
     private val allStates: List<TransactionState<*>> = inputStates + ltx.references.map { it.state } + ltx.outputs
 
@@ -348,12 +348,6 @@ abstract class Verifier(val ltx: LedgerTransaction, protected val transactionCla
      * Placeholder function for the contract verification logic.
      */
     abstract fun verifyContracts()
-
-    /**
-     * Placeholder function so that the [Verifier] can release any resources.
-     */
-    @Throws(Exception::class)
-    abstract override fun close()
 }
 
 class BasicVerifier(ltx: LedgerTransaction, transactionClassLoader: ClassLoader) : Verifier(ltx, transactionClassLoader) {
@@ -371,8 +365,6 @@ class BasicVerifier(ltx: LedgerTransaction, transactionClassLoader: ClassLoader)
             throw e
         }
     }
-
-    override fun close() {}
 }
 
 /**

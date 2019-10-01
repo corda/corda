@@ -187,9 +187,7 @@ private constructor(
      */
     @Throws(TransactionVerificationException::class)
     fun verify() {
-        internalPrepareVerify(emptyList()).use { v ->
-            v.verify()
-        }
+        internalPrepareVerify(emptyList()).verify()
     }
 
     /**
