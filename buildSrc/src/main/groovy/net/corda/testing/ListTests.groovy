@@ -70,7 +70,10 @@ class ListTests extends DefaultTask {
             def allTestsOnThisFork = partitioner.getAllTestsForPartition(fork)
             def projectOnlyTestsOnThisFork =  partitioner.getProjectOnlyTestsForPartition(fork, testsForThisProjectOnly)
 
-            project.logger.lifecycle('+ This project has {} of {} tests on this fork', projectOnlyTestsOnThisFork.size(), allTestsOnThisFork.size())
+            project.logger.lifecycle('+ This task({}) has {} of {} tests on this fork',
+                    this.getPath(),
+                    projectOnlyTestsOnThisFork.size(),
+                    allTestsOnThisFork.size())
             return projectOnlyTestsOnThisFork
         }
         catch (FileNotFoundException | IllegalArgumentException e) {
