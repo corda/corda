@@ -410,6 +410,7 @@ data class DriverParameters(
     fun withNotaryCustomOverrides(notaryCustomOverrides: Map<String, Any?>): DriverParameters = copy(notaryCustomOverrides = notaryCustomOverrides)
     fun withInMemoryDB(inMemoryDB: Boolean): DriverParameters = copy(inMemoryDB = inMemoryDB)
     fun withCordappsForAllNodes(cordappsForAllNodes: Collection<TestCordapp>?): DriverParameters = copy(cordappsForAllNodes = cordappsForAllNodes)
+    fun withEnvironmentVariables(variables : Map<String, String>): DriverParameters = copy(environmentVariables = variables)
 
     fun copy(
             isDebug: Boolean,
@@ -484,8 +485,9 @@ data class DriverParameters(
             extraCordappPackagesToScan: List<String>,
             jmxPolicy: JmxPolicy,
             networkParameters: NetworkParameters,
-            cordappsForAllNodes: Set<TestCordapp>?,
-            environmentVariables: Map<String, String>
+            notaryCustomOverrides: Map<String, Any?>,
+            inMemoryDB: Boolean,
+            cordappsForAllNodes: Set<TestCordapp>?
     ) = this.copy(
             isDebug = isDebug,
             driverDirectory = driverDirectory,
@@ -499,8 +501,9 @@ data class DriverParameters(
             extraCordappPackagesToScan = extraCordappPackagesToScan,
             jmxPolicy = jmxPolicy,
             networkParameters = networkParameters,
-            notaryCustomOverrides = emptyMap(),
+            notaryCustomOverrides = notaryCustomOverrides,
+            inMemoryDB = inMemoryDB,
             cordappsForAllNodes = cordappsForAllNodes,
-            environmentVariables = environmentVariables
+            environmentVariables = emptyMap()
     )
 }
