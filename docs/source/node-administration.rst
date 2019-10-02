@@ -26,9 +26,9 @@ by adding ``-DLog4jContextSelector=org.apache.logging.log4j.core.selector.ClassL
 command line or to the ``jvmArgs`` section of the node configuration (see :doc:`corda-configuration-file`).
 
 .. warning:: Ensure that ``shutdownHook="disable"`` is set if you are overriding the log4j2 configuration file
-   otherwise logs will not be flushed properly on shutdown and loss may occur. The option is set at the ``Configuration``
-   tag, for example ``<Configuration ... shutdownHook="disable">``. This has to be set as Corda is calling shutdown after
-   everything finishes instead of relying on the normal log4j2 shutdown logic.
+   otherwise logs will not be flushed properly on shutdown and loss may occur. The option is set in the ``Configuration``
+   tag of the log4j configuration file, for example ``<Configuration ... shutdownHook="disable">``. This is because
+   Corda overrides the default log4j2 shutdown logic in order to make sure it gets shut down correctly.
 
 Example
 +++++++
