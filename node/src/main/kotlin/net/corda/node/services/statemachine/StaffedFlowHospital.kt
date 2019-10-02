@@ -38,6 +38,12 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val 
             DatabaseEndocrinologist,
             TransitionErrorGeneralPractitioner
         )
+
+        @VisibleForTesting
+        val onFlowKeptForOvernightObservation = mutableListOf<(id: StateMachineRunId, by: List<String>) -> Unit>()
+
+        @VisibleForTesting
+        val onFlowAdmitted = mutableListOf<(id: StateMachineRunId) -> Unit>()
     }
 
     private val mutex = ThreadBox(object {
@@ -110,6 +116,7 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val 
     fun flowErrored(flowFiber: FlowFiber, currentState: StateMachineState, errors: List<Throwable>) {
         val time = Instant.now()
         log.info("Flow ${flowFiber.id} admitted to hospital in state $currentState")
+        onFlowAdmitted.forEach { it.invoke(flowFiber.id) }
 
         val (event, backOffForChronicCondition) = mutex.locked {
             val medicalHistory = flowPatients.computeIfAbsent(flowFiber.id) { FlowMedicalHistory() }
@@ -125,6 +132,7 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val 
                 Diagnosis.OVERNIGHT_OBSERVATION -> {
                     log.info("Flow error kept for overnight observation by ${report.by} (error was ${report.error.message})")
                     // We don't schedule a next event for the flow - it will automatically retry from its checkpoint on node restart
+                    onFlowKeptForOvernightObservation.forEach { hook -> hook.invoke(flowFiber.id, report.by.map{it.toString()}) }
                     Triple(Outcome.OVERNIGHT_OBSERVATION, null, 0.seconds)
                 }
                 Diagnosis.NOT_MY_SPECIALTY, Diagnosis.TERMINAL -> {

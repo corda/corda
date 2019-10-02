@@ -44,7 +44,7 @@ class HospitalisingInterceptor(
 
         val (continuation, nextState) = delegate.executeTransition(fiber, previousState, event, transition, actionExecutor)
 
-        if (nextState.checkpoint.errorState is ErrorState.Errored) {
+        if (nextState.checkpoint.errorState is ErrorState.Errored && previousState.checkpoint.errorState is ErrorState.Clean) {
             val exceptionsToHandle = nextState.checkpoint.errorState.errors.map { it.exception }
             if (hospitalisedFlows.putIfAbsent(fiber.id, fiber) == null) {
                 flowHospital.flowErrored(fiber, previousState, exceptionsToHandle)

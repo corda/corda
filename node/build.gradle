@@ -243,6 +243,8 @@ dependencies {
     slowIntegrationTestCompile configurations.testCompile
     slowIntegrationTestRuntime configurations.runtime
     slowIntegrationTestRuntime configurations.testRuntime
+
+    testCompile project(':testing:cordapps:dbfailure:dbfworkflows')
 }
 
 tasks.withType(JavaCompile) {
