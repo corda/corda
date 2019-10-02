@@ -100,4 +100,3 @@ include 'core-deterministic:testing:verifier'
 include 'serialization-deterministic'
 
 include 'tools:checkpoint-agent'
-findProject(':tools:checkpoint-agent')?.name = 'checkpoint-agent'
