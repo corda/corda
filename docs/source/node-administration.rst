@@ -109,7 +109,7 @@ Here are a few ways to build dashboards and extract monitoring data for a node:
 
 In order to ensure that a Jolokia agent is instrumented with the JVM run-time, you can choose one of these options:
 
-* Specify the Node configuration parameter ``jmxMonitoringHttpPort``.
+* Specify the Node configuration parameter ``jmxMonitoringHttpPort`` which will attempt loading the jolokia driver from the ``drivers`` folder.
 * Start the node with ``java -Dcapsule.jvm.args="-javaagent:drivers/jolokia-jvm-1.6.0-agent.jar=port=7777,host=localhost" -jar corda.jar``.
 
 
@@ -131,7 +131,6 @@ Several Jolokia policy based security configuration files (``jolokia-access.xml`
 environments under ``/config/<env>``.
 
 To pass a security policy use ``java -Dcapsule.jvm.args=-javaagent:./drivers/jolokia-jvm-1.6.0-agent.jar,policyLocation=file:./config-path/jolokia-access.xml -jar corda.jar``
-Note that this will **not** work if you are loading jolokia using the ``jmxMonitoringHttpPort`` config option.
 
 Notes for development use
 +++++++++++++++++++++++++
