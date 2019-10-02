@@ -102,7 +102,7 @@ class DistributedTesting implements Plugin<Project> {
                     memoryGbPerFork = testGrouping.gbOfMemory
                     numberOfCoresPerFork = testGrouping.coresToUse
                     doFirst {
-                        dockerTag = dockerTag = dockerTag ? ImageBuilding.registryName + ":" + dockerTag : (imageBuildingTask.imageName.get() + ":" + imageBuildingTask.tag.get())
+                        dockerTag = dockerTag ? ImageBuilding.registryName + ":" + dockerTag : (imageBuildingTask.imageName.get() + ":" + imageBuildingTask.tag.get())
                     }
                 }
                 def reportOnAllTask = project.rootProject.tasks.create("userDefinedReports${testGrouping.name.capitalize()}", KubesReporting) {
