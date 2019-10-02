@@ -19,8 +19,8 @@ function generateTestnetConfig() {
     MY_P2P_PORT=${MY_P2P_PORT} \
     MY_RPC_PORT=${MY_RPC_PORT} \
     MY_RPC_ADMIN_PORT=${MY_RPC_ADMIN_PORT} \
-    NETWORKMAP_URL='https://map.testnet.corda.network' \
-    DOORMAN_URL='https://doorman.testnet.corda.network' \
+    NETWORKMAP_URL='https://netmap.testnet.r3.com' \
+    DOORMAN_URL='https://doorman.testnet.r3.com/' \
     java -jar config-exporter.jar "TEST-NET-COMBINE" "node.conf" "/opt/corda/starting-node.conf" "${CONFIG_FOLDER}/node.conf"
 }
 
@@ -62,7 +62,7 @@ function downloadTestnetCerts() {
         : ${COUNTRY:? '$COUNTRY (the country used when registering for Testnet) must be set as environment variable'}
         curl -L -d "{\"x500Name\":{\"locality\":\"${LOCALITY}\", \"country\":\"${COUNTRY}\"}, \"configType\": \"INSTALLSCRIPT\", \"include\": { \"systemdServices\": false, \"cordapps\": false, \"cordaJar\": false, \"cordaWebserverJar\": false, \"scripts\": false} }" \
         -H 'Content-Type: application/json' \
-        -X POST "https://testnet.corda.network/api/user/node/generate/one-time-key/redeem/$ONE_TIME_DOWNLOAD_KEY" \
+        -X POST "https://onboarder.prod.ws.r3.com/api/user/node/generate/one-time-key/redeem/$ONE_TIME_DOWNLOAD_KEY" \
         -o "${CERTIFICATES_FOLDER}/certs.zip"
     fi
     rm -rf ${CERTIFICATES_FOLDER}/*.jks
