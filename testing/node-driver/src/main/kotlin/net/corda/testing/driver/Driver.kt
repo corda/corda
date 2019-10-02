@@ -487,7 +487,7 @@ data class DriverParameters(
             networkParameters: NetworkParameters,
             notaryCustomOverrides: Map<String, Any?>,
             inMemoryDB: Boolean,
-            cordappsForAllNodes: Set<TestCordapp>?
+            cordappsForAllNodes: Collection<TestCordapp>?
     ) = this.copy(
             isDebug = isDebug,
             driverDirectory = driverDirectory,
