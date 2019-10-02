@@ -10,7 +10,6 @@ import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-@Ignore
 class NodeRPCTests {
     private val CORDA_VERSION_REGEX = "\\d+(\\.\\d+)?(-\\w+)?".toRegex()
     private val CORDA_VENDOR = "Corda Open Source"
