@@ -3,6 +3,7 @@ package net.corda.node.services.messaging
 import co.paralleluniverse.fibers.Suspendable
 import com.codahale.metrics.MetricRegistry
 import net.corda.core.crypto.toStringShort
+import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.internal.ThreadBox
@@ -424,6 +425,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
     private inner class MessageDeduplicationHandler(val artemisMessage: ClientMessage, override val receivedMessage: ReceivedMessage) : DeduplicationHandler, ExternalEvent.ExternalMessageEvent {
         override val externalCause: ExternalEvent
             get() = this
+        override val flowId: StateMachineRunId = StateMachineRunId.createRandom()
         override val deduplicationHandler: MessageDeduplicationHandler
             get() = this
 

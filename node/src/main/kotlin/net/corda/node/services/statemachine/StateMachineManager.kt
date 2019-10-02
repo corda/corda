@@ -114,6 +114,7 @@ interface ExternalEvent {
      * An external P2P message event.
      */
     interface ExternalMessageEvent : ExternalEvent {
+        val flowId: StateMachineRunId
         val receivedMessage: ReceivedMessage
     }
 
