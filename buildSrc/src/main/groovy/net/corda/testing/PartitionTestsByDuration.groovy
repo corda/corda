@@ -33,6 +33,9 @@ class PartitionTestsByDuration {
 
     double defaultDuration = 0.0
 
+    // Penalty time value for 'zero duration' tests.
+    static double PENALTY = 1.0
+
     class Partition {
         List<String> names = new ArrayList<>()
 
@@ -56,6 +59,11 @@ class PartitionTestsByDuration {
         // Look up duration for all tests, and use default value otherwise
         allTests.forEach { testName ->
             def duration = durationByTest.getOrDefault(testName, this.defaultDuration)
+
+            // Zero time tests don't take zero time, and probably have unrecorded overhead (e.g. setup/teardown), so given them
+            // a penalty value so that they're equally distributed across all partitions.
+            if (duration < 1.0)  { duration = PENALTY }
+
             unsortedTests.add(new UnitTest(name: testName, duration: duration))
         }
 

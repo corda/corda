@@ -173,6 +173,22 @@ class PartitionTestsByDurationTests {
         println partitioner.summary()
     }
 
+    @Test
+    void testZeroDurationTestsAreGivenPenaltyValue() {
+        def allTestsByDuration = [
+                a: 0.0,
+                b: 0.0,
+                c: 0.0,
+        ]
+        def allTests = ["a", "b", "c"]
+        def partitioner = new PartitionTestsByDuration(3, allTests, allTestsByDuration)
+        Assert.assertEquals(partitioner.getAllTestsForPartition(0), ['a'])
+        Assert.assertEquals(partitioner.getDuration(0), PartitionTestsByDuration.PENALTY, delta)
+        Assert.assertEquals(partitioner.getAllTestsForPartition(1), ['b'])
+        Assert.assertEquals(partitioner.getDuration(1), PartitionTestsByDuration.PENALTY, delta)
+        Assert.assertEquals(partitioner.getAllTestsForPartition(2), ['c'])
+        Assert.assertEquals(partitioner.getDuration(2), PartitionTestsByDuration.PENALTY, delta)
+    }
 
     @Test
     void canReadTeamCityCsv() {
