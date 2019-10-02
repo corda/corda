@@ -40,7 +40,7 @@ class DistributedTesting implements Plugin<Project> {
             ensureImagePluginIsApplied(project)
             ImageBuilding imagePlugin = project.plugins.getPlugin(ImageBuilding)
             DockerPushImage imageBuildingTask = imagePlugin.pushTask
-            String dockerTag = getDockerTag()
+            String providedTag = getDockerTag()
 
             // This makes all tests depend on the compilation phase of every other test
             // so that we can inspect every jar for their tests, and then allocate tests
@@ -61,7 +61,7 @@ class DistributedTesting implements Plugin<Project> {
 
                         subproject.logger.info("Added dependency: {} -> {} -> {}", testTask, globalDependency, testListerTask)
                         configureTestTaskForParallelExecution(subproject, testTask, testListerTask)
-                        createParallelTestingTask(subproject, testTask, imageBuildingTask, dockerTag)
+                        createParallelTestingTask(subproject, testTask, imageBuildingTask, providedTag)
                     } else {
                         subproject.logger.info("Skipping core-deterministic tests")
                         subproject.logger.info("+ has {} dependencies", testTask.dependsOn.size())
@@ -92,7 +92,7 @@ class DistributedTesting implements Plugin<Project> {
                 String superListOfTasks = groups.collect { it.fullTaskToExecutePath }.join(" ")
 
                 def userDefinedParallelTask = project.rootProject.tasks.create("userDefined" + testGrouping.name.capitalize(), KubesTest) {
-                    if (!dockerTag) {
+                    if (!providedTag) {
                         dependsOn imageBuildingTask
                     }
                     numberOfPods = testGrouping.getShardCount()
@@ -102,7 +102,7 @@ class DistributedTesting implements Plugin<Project> {
                     memoryGbPerFork = testGrouping.gbOfMemory
                     numberOfCoresPerFork = testGrouping.coresToUse
                     doFirst {
-                        dockerTag = dockerTag ? ImageBuilding.registryName + ":" + dockerTag : (imageBuildingTask.imageName.get() + ":" + imageBuildingTask.tag.get())
+                        dockerTag = providedTag ? ImageBuilding.registryName + ":" + providedTag : (imageBuildingTask.imageName.get() + ":" + imageBuildingTask.tag.get())
                     }
                 }
                 def reportOnAllTask = project.rootProject.tasks.create("userDefinedReports${testGrouping.name.capitalize()}", KubesReporting) {
@@ -124,19 +124,19 @@ class DistributedTesting implements Plugin<Project> {
     private KubesTest createParallelTestingTask(Project projectContainingTask,
                                                 Test testTask,
                                                 DockerPushImage imageBuildingTask,
-                                                String dockerTag) {
+                                                String providedTag) {
         def taskName = testTask.getName()
         def capitalizedTaskName = testTask.getName().capitalize()
 
         KubesTest createdParallelTestTask = projectContainingTask.tasks.create("parallel" + capitalizedTaskName, KubesTest) {
-            if (!dockerTag) {
+            if (!providedTag) {
                 dependsOn imageBuildingTask
             }
             printOutput = true
             fullTaskToExecutePath = testTask.getPath()
             taskToExecuteName = taskName
             doFirst {
-                dockerTag = dockerTag ? ImageBuilding.registryName + ":" + dockerTag : (imageBuildingTask.imageName.get() + ":" + imageBuildingTask.tag.get())
+                dockerTag = providedTag ? ImageBuilding.registryName + ":" + providedTag : (imageBuildingTask.imageName.get() + ":" + imageBuildingTask.tag.get())
             }
         }
         projectContainingTask.logger.info "Created task: ${createdParallelTestTask.getPath()} to enable testing on kubenetes for task: ${testTask.getPath()}"
