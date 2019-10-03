@@ -4224,7 +4224,7 @@
     <ID>TooGenericExceptionCaught:InternalUtils.kt$ex: Exception</ID>
     <ID>TooGenericExceptionCaught:InternalUtils.kt$th: Throwable</ID>
     <ID>TooGenericExceptionCaught:IssueCash.kt$IssueCash$e: Exception</ID>
-    <ID>TooGenericExceptionCaught:JVMAgentUtil.kt$JVMAgentUtil$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:JVMAgentUtil.kt$JVMAgentUtil$e: Throwable</ID>
     <ID>TooGenericExceptionCaught:JacksonSupport.kt$JacksonSupport.PartyDeserializer$e: Exception</ID>
     <ID>TooGenericExceptionCaught:JacksonSupport.kt$JacksonSupport.PublicKeyDeserializer$e: Exception</ID>
     <ID>TooGenericExceptionCaught:JacksonSupport.kt$JacksonSupport.SecureHashDeserializer$e: Exception</ID>
