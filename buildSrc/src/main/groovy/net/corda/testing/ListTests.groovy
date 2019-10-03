@@ -42,16 +42,17 @@ class ListShufflerAndAllocator {
  * This task is called per-project, multiple times
  */
 class ListTests extends DefaultTask {
+    /// A reference to a list shared between all projects containing all the tests
+    private List<String> allTestsForAllProjects
 
-    List<String> allTestsInAllProjects
+    /// This task is called per-project, so this list will contain only the tests for the current project
+    private List<String> testsForThisProjectOnly
 
     FileCollection scanClassPath
 
-    List<String> testsForThisProjectOnly
-
     @Inject
-    ListTests(List<String> allTestsInAllProjects) {
-        this.allTestsInAllProjects = allTestsInAllProjects
+    ListTests(List<String> allTestsForAllProjects) {
+        this.allTestsForAllProjects = allTestsForAllProjects
     }
 
     /**
@@ -64,7 +65,7 @@ class ListTests extends DefaultTask {
     def getTestsForFork(int fork, int forks, Integer seed) {
         try {
             def testsByDuration = PartitionTestsByDuration.fromTeamCityCsv(new FileReader(project.rootProject.rootDir.path + '/testing/test-durations.csv'))
-            def partitioner = new PartitionTestsByDuration(forks, allTestsInAllProjects, testsByDuration)
+            def partitioner = new PartitionTestsByDuration(forks, allTestsForAllProjects, testsByDuration)
             project.logger.lifecycle(partitioner.summary(fork))
 
             def allTestsOnThisFork = partitioner.getAllTestsForPartition(fork)
@@ -111,6 +112,6 @@ class ListTests extends DefaultTask {
         this.testsForThisProjectOnly = results.stream().sorted().collect(Collectors.toList())
 
         // Also record the tests for this project/jar in the collection of tests for ALL projects/jars
-        this.allTestsInAllProjects.addAll(this.testsForThisProjectOnly)
+        this.allTestsForAllProjects.addAll(this.testsForThisProjectOnly)
     }
 }

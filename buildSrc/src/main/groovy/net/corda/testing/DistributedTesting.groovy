@@ -153,17 +153,17 @@ class DistributedTesting implements Plugin<Project> {
                     def forks = getForkCount(subProject)
                     def shuffleSeed = 42
                     subProject.logger.info("requesting tests to include in testing task ${testTask.getPath()} (${fork}, ${forks}, ${shuffleSeed})")
-                    List<String> includes = testListerTask.getTestsForFork(fork, forks, shuffleSeed)
-                    subProject.logger.info "got ${includes.size()} tests to include into testing task ${testTask.getPath()}"
+                    List<String> testsForThisProject = testListerTask.getTestsForFork(fork, forks, shuffleSeed)
+                    subProject.logger.info "got ${testsForThisProject.size()} tests to include into testing task ${testTask.getPath()}"
 
-                    if (includes.size() == 0) {
+                    if (testsForThisProject.isEmpty()) {
                         subProject.logger.info "Disabling test execution for testing task ${testTask.getPath()}"
                         excludeTestsMatching "*"
                     }
 
-                    includes.forEach { include ->
-                        subProject.logger.info "including: $include for testing task ${testTask.getPath()}"
-                        includeTestsMatching include + "*"
+                    testsForThisProject.forEach {
+                        subProject.logger.info "including: $it for testing task ${testTask.getPath()}"
+                        includeTestsMatching it + "*"
                     }
                     failOnNoMatchingTests false
                 }
