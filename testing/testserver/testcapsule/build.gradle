@@ -26,12 +26,12 @@ capsule {
 
 task buildWebserverJar(type: FatCapsule, dependsOn: project(':node').tasks.jar) {
     applicationClass 'net.corda.webserver.WebServer'
-    archiveName jdkClassifier == null ? "corda-webserver-${corda_release_version}.jar" : "corda-webserver-${corda_release_version}-${jdkClassifier}.jar"
+    archiveName jdkClassifier == null ? "corda-testserver-${corda_release_version}.jar" : "corda-testserver-${corda_release_version}-${jdkClassifier}.jar"
     applicationSource = files(
-        project(':webserver').configurations.runtimeClasspath,
-        project(':webserver').tasks.jar,
-        project(':webserver').sourceSets.main.java.outputDir.toString() + '/CordaWebserverCaplet.class',
-        project(':webserver').sourceSets.main.java.outputDir.toString() + '/CordaWebserverCaplet$1.class',
+        project(':testing:testserver').configurations.runtimeClasspath,
+        project(':testing:testserver').tasks.jar,
+        project(':testing:testserver').sourceSets.main.java.outputDir.toString() + '/CordaWebserverCaplet.class',
+        project(':testing:testserver').sourceSets.main.java.outputDir.toString() + '/CordaWebserverCaplet$1.class',
         project(':node').buildDir.toString() + '/resources/main/reference.conf',
         "$rootDir/config/dev/log4j2.xml",
         project(':node:capsule').projectDir.toString() + '/NOTICE' // Copy CDDL notice
@@ -66,5 +66,5 @@ artifacts {
 
 publish {
     disableDefaultJar = true
-    name 'corda-webserver'
+    name 'corda-testserver'
 }

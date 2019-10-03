@@ -393,7 +393,7 @@ dependencies {
 
     // Set to corda compile to ensure it exists now deploy nodes no longer relies on build
     compile project(path: ":node:capsule", configuration: 'runtimeArtifacts')
-    compile project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
+    compile project(path: ":testing:testserver:testcapsule:", configuration: 'runtimeArtifacts')
 
     // For the buildCordappDependenciesJar task
     runtime project(':client:jfx')
@@ -403,7 +403,7 @@ dependencies {
     runtime project(':confidential-identities')
     runtime project(':finance:workflows')
     runtime project(':finance:contracts')
-    runtime project(':webserver')
+    runtime project(':testing:testserver')
     testCompile project(':test-utils')
     detekt 'io.gitlab.arturbosch.detekt:detekt-cli:1.0.1'
 }
@@ -490,8 +490,8 @@ bintrayConfig {
             'corda-test-utils',
             'corda-test-db',
             'corda-jackson',
-            'corda-webserver-impl',
-            'corda-webserver',
+            'corda-testserver-impl',
+            'corda-testserver',
             'corda-node-driver',
             'corda-confidential-identities',
             'corda-shell',

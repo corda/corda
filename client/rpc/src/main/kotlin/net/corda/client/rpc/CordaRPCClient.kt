@@ -27,6 +27,9 @@ import net.corda.serialization.internal.amqp.SerializationFactoryCacheKey
 import net.corda.serialization.internal.amqp.SerializerFactory
 import java.time.Duration
 import java.util.*
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 /**
  * This class is essentially just a wrapper for an RPCConnection<CordaRPCOps> and can be treated identically.
@@ -35,9 +38,10 @@ import java.util.*
  */
 class CordaRPCConnection private constructor(
         private val oneTimeConnection: RPCConnection<CordaRPCOps>?,
+        private val observersPool: ExecutorService?,
         private val reconnectingCordaRPCOps: ReconnectingCordaRPCOps?
 ) : RPCConnection<CordaRPCOps> {
-    internal constructor(connection: RPCConnection<CordaRPCOps>?) : this(connection, null)
+    internal constructor(connection: RPCConnection<CordaRPCOps>?) : this(connection, null, null)
 
     companion object {
         @CordaInternal
@@ -46,14 +50,20 @@ class CordaRPCConnection private constructor(
                 password: String,
                 addresses: List<NetworkHostAndPort>,
                 rpcConfiguration: CordaRPCClientConfiguration,
-                gracefulReconnect: GracefulReconnect
+                gracefulReconnect: GracefulReconnect,
+                sslConfiguration: ClientRpcSslOptions? = null,
+                classLoader: ClassLoader? = null
         ): CordaRPCConnection {
-            return CordaRPCConnection(null, ReconnectingCordaRPCOps(
+            val observersPool: ExecutorService = Executors.newCachedThreadPool()
+            return CordaRPCConnection(null, observersPool, ReconnectingCordaRPCOps(
                     addresses,
                     username,
                     password,
                     rpcConfiguration,
-                    gracefulReconnect
+                    gracefulReconnect,
+                    sslConfiguration,
+                    classLoader,
+                    observersPool
             ))
         }
     }
@@ -69,7 +79,18 @@ class CordaRPCConnection private constructor(
 
     override fun forceClose() = actualConnection.forceClose()
 
-    override fun close() = actualConnection.close()
+    override fun close() {
+        try {
+            actualConnection.close()
+        } finally {
+            observersPool?.apply {
+                shutdown()
+                if (!awaitTermination(@Suppress("MagicNumber")30, TimeUnit.SECONDS)) {
+                    shutdownNow()
+                }
+            }
+        }
+    }
 }
 
 /**
@@ -322,19 +343,36 @@ class CordaRPCClient private constructor(
 ) {
 
     @JvmOverloads
-    constructor(hostAndPort: NetworkHostAndPort, configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT) : this(
-            hostAndPort = hostAndPort, haAddressPool = emptyList(), configuration = configuration
+    constructor(
+            hostAndPort: NetworkHostAndPort,
+            configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT
+    ) : this(
+            hostAndPort = hostAndPort,
+            haAddressPool = emptyList(),
+            configuration = configuration
     )
 
-    constructor(hostAndPort: NetworkHostAndPort,
-                configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
-                classLoader: ClassLoader): this(hostAndPort, configuration, null, classLoader = classLoader)
+    constructor(
+            hostAndPort: NetworkHostAndPort,
+            configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
+            classLoader: ClassLoader
+    ): this(
+            hostAndPort,
+            configuration,
+            null,
+            classLoader = classLoader
+    )
 
     constructor(
             hostAndPort: NetworkHostAndPort,
             sslConfiguration: ClientRpcSslOptions? = null,
             classLoader: ClassLoader? = null
-    ) : this(hostAndPort = hostAndPort, haAddressPool = emptyList(), sslConfiguration = sslConfiguration, classLoader = classLoader)
+    ) : this(
+            hostAndPort = hostAndPort,
+            haAddressPool = emptyList(),
+            sslConfiguration = sslConfiguration,
+            classLoader = classLoader
+    )
 
     @JvmOverloads
     constructor(
@@ -342,7 +380,13 @@ class CordaRPCClient private constructor(
             configuration: CordaRPCClientConfiguration,
             sslConfiguration: ClientRpcSslOptions?,
             classLoader: ClassLoader? = null
-    ) : this(hostAndPort = hostAndPort, haAddressPool = emptyList(), configuration = configuration, sslConfiguration = sslConfiguration, classLoader = classLoader)
+    ) : this(
+            hostAndPort = hostAndPort,
+            haAddressPool = emptyList(),
+            configuration = configuration,
+            sslConfiguration = sslConfiguration,
+            classLoader = classLoader
+    )
 
     @JvmOverloads
     constructor(
@@ -350,7 +394,13 @@ class CordaRPCClient private constructor(
             configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
             sslConfiguration: ClientRpcSslOptions? = null,
             classLoader: ClassLoader? = null
-    ) : this(hostAndPort = null, haAddressPool = haAddressPool, configuration = configuration, sslConfiguration = sslConfiguration, classLoader = classLoader)
+    ) : this(
+            hostAndPort = null,
+            haAddressPool = haAddressPool,
+            configuration = configuration,
+            sslConfiguration = sslConfiguration,
+            classLoader = classLoader
+    )
 
     // Here to keep the keep ABI compatibility happy
     companion object {}
@@ -362,11 +412,23 @@ class CordaRPCClient private constructor(
             try {
                 val cache = Caffeine.newBuilder().maximumSize(128).build<SerializationFactoryCacheKey, SerializerFactory>().asMap()
 
-                // If the client has explicitly provided a classloader use this one to scan for custom serializers, otherwise use the current one.
+                // If the client has explicitly provided a classloader use this one to scan for custom serializers,
+                // otherwise use the current one.
                 val serializationClassLoader = this.classLoader ?: this.javaClass.classLoader
-                val customSerializers = createInstancesOfClassesImplementing(serializationClassLoader, SerializationCustomSerializer::class.java)
-                val serializationWhitelists = ServiceLoader.load(SerializationWhitelist::class.java, serializationClassLoader).toSet()
-                AMQPClientSerializationScheme.initialiseSerialization(serializationClassLoader, customSerializers, serializationWhitelists, cache)
+                val customSerializers = createInstancesOfClassesImplementing(
+                        serializationClassLoader,
+                        SerializationCustomSerializer::class.java
+                )
+                val serializationWhitelists = ServiceLoader.load(
+                        SerializationWhitelist::class.java,
+                        serializationClassLoader
+                ).toSet()
+                AMQPClientSerializationScheme.initialiseSerialization(
+                        serializationClassLoader,
+                        customSerializers,
+                        serializationWhitelists,
+                        cache
+                )
             } catch (e: IllegalStateException) {
                 // Race e.g. two of these constructed in parallel, ignore.
             }
@@ -401,7 +463,11 @@ class CordaRPCClient private constructor(
      * @throws RPCException if the server version is too low or if the server isn't reachable within a reasonable timeout.
      */
     @JvmOverloads
-    fun start(username: String, password: String, gracefulReconnect: GracefulReconnect? = null): CordaRPCConnection {
+    fun start(
+            username: String,
+            password: String,
+            gracefulReconnect: GracefulReconnect? = null
+    ): CordaRPCConnection {
         return start(username, password, null, null, gracefulReconnect)
     }
 
@@ -418,7 +484,12 @@ class CordaRPCClient private constructor(
      * @throws RPCException if the server version is too low or if the server isn't reachable within a reasonable timeout.
      */
     @JvmOverloads
-    fun start(username: String, password: String, targetLegalIdentity: CordaX500Name, gracefulReconnect: GracefulReconnect? = null): CordaRPCConnection {
+    fun start(
+            username: String,
+            password: String,
+            targetLegalIdentity: CordaX500Name,
+            gracefulReconnect: GracefulReconnect? = null
+    ): CordaRPCConnection {
         return start(username, password, null, null, targetLegalIdentity, gracefulReconnect)
     }
 
@@ -436,7 +507,13 @@ class CordaRPCClient private constructor(
      * @throws RPCException if the server version is too low or if the server isn't reachable within a reasonable timeout.
      */
     @JvmOverloads
-    fun start(username: String, password: String, externalTrace: Trace?, impersonatedActor: Actor?, gracefulReconnect: GracefulReconnect? = null): CordaRPCConnection {
+    fun start(
+            username: String,
+            password: String,
+            externalTrace: Trace?,
+            impersonatedActor: Actor?,
+            gracefulReconnect: GracefulReconnect? = null
+    ): CordaRPCConnection {
         return start(username, password, externalTrace, impersonatedActor, null, gracefulReconnect)
     }
 
@@ -457,7 +534,14 @@ class CordaRPCClient private constructor(
      * @throws RPCException if the server version is too low or if the server isn't reachable within a reasonable timeout.
      */
     @JvmOverloads
-    fun start(username: String, password: String, externalTrace: Trace?, impersonatedActor: Actor?, targetLegalIdentity: CordaX500Name?, gracefulReconnect: GracefulReconnect? = null): CordaRPCConnection {
+    fun start(
+            username: String,
+            password: String,
+            externalTrace: Trace?,
+            impersonatedActor: Actor?,
+            targetLegalIdentity: CordaX500Name?,
+            gracefulReconnect: GracefulReconnect? = null
+    ): CordaRPCConnection {
         val addresses = if (haAddressPool.isEmpty()) {
             listOf(hostAndPort!!)
         } else {
@@ -465,9 +549,23 @@ class CordaRPCClient private constructor(
         }
 
         return if (gracefulReconnect != null) {
-            CordaRPCConnection.createWithGracefulReconnection(username, password, addresses, configuration, gracefulReconnect)
+            CordaRPCConnection.createWithGracefulReconnection(
+                    username,
+                    password,
+                    addresses,
+                    configuration,
+                    gracefulReconnect,
+                    sslConfiguration
+            )
         } else {
-            CordaRPCConnection(getRpcClient().start(InternalCordaRPCOps::class.java, username, password, externalTrace, impersonatedActor, targetLegalIdentity))
+            CordaRPCConnection(getRpcClient().start(
+                    InternalCordaRPCOps::class.java,
+                    username,
+                    password,
+                    externalTrace,
+                    impersonatedActor,
+                    targetLegalIdentity
+            ))
         }
     }
 

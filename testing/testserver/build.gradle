@@ -76,7 +76,7 @@ task integrationTest(type: Test) {
 }
 
 jar {
-    baseName 'corda-webserver-impl'
+    baseName 'corda-testserver-impl'
 }
 
 publish {
