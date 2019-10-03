@@ -30,7 +30,7 @@ open class SignatureConstraintMigrationFromWhitelistConstraintTests  : Signature
 
         val stateAndRef: StateAndRef<MessageState>? = internalDriver(
                 inMemoryDB = false,
-                startNodesInProcess = isQuasarAgentSpecified(),
+                startNodesInProcess = false,
                 networkParameters = testNetworkParameters(notaries = emptyList(), minimumPlatformVersion = 4)
         ) {
             val nodeName = {
@@ -142,7 +142,7 @@ open class SignatureConstraintMigrationFromWhitelistConstraintTests  : Signature
                         )
                 ),
                 systemProperties = emptyMap(),
-                startNodesInProcess = true,
+                startNodesInProcess = false,
                 specifyExistingConstraint = true,
                 addAnotherAutomaticConstraintState = true
         )

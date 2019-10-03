@@ -56,7 +56,7 @@ class AddressBindingFailureTests {
         ServerSocket(0).use { socket ->
 
             val address = InetSocketAddress("localhost", socket.localPort).toNetworkHostAndPort()
-            driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), inMemoryDB = false, portAllocation = portAllocation)) {
+            driver(DriverParameters(startNodesInProcess = false, notarySpecs = emptyList(), inMemoryDB = false, portAllocation = portAllocation)) {
 
                 assertThatThrownBy { startNode(customOverrides = overrides(address)).getOrThrow() }.isInstanceOfSatisfying(AddressBindingException::class.java) { exception ->
                     assertThat(exception.addresses).contains(address).withFailMessage("Expected addresses to contain $address but was ${exception.addresses}.")

@@ -25,10 +25,14 @@ object CordappResolver {
                 ?.single()
     }
 
-    /*
+    /**
      * Associates class names with CorDapps or logs a warning when a CorDapp is already registered for a given class.
      * This could happen when trying to run different versions of the same CorDapp on the same node.
+     *
+     * @throws IllegalStateException when multiple CorDapps are registered for the same contract class,
+     *          since this can lead to undefined behaviour.
      */
+    @Throws(IllegalStateException::class)
     @Synchronized
     fun register(cordapp: Cordapp) {
         val contractClasses = cordapp.contractClassNames.toSet()
@@ -40,9 +44,16 @@ object CordappResolver {
         notAlreadyRegisteredClasses.forEach { cordappClasses[it] = setOf(cordapp) }
 
         for ((className, registeredCordapps) in alreadyRegistered) {
-            if (registeredCordapps.any { it.jarHash == cordapp.jarHash }) continue
+            val duplicateCordapps = registeredCordapps.filter { it.jarHash == cordapp.jarHash }.toSet()
+
+            if (!duplicateCordapps.isEmpty()) {
+                logger.warnOnce("The CorDapp (name: ${cordapp.info.shortName}, file: ${cordapp.name}) " +
+                        "is installed multiple times on the node. The following files correspond to the exact same content: " +
+                        "${duplicateCordapps.map { it.name }}")
+                continue
+            }
             if (className in contractClasses) {
-                logger.error("ATTENTION: More than one CorDapp installed on the node for contract $className. Please remove the previous version when upgrading to a new version.")
+                throw IllegalStateException("More than one CorDapp installed on the node for contract $className. Please remove the previous version when upgrading to a new version.")
             }
             cordappClasses[className] = registeredCordapps + cordapp
         }
