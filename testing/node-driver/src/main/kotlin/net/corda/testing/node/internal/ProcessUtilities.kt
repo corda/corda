@@ -16,7 +16,16 @@ object ProcessUtilities {
             maximumHeapSize: String? = null,
             environmentVariables: Map<String, String> = emptyMap()
     ): Process {
-        return startJavaProcess(C::class.java.name, arguments, classPath, workingDirectory, jdwpPort, extraJvmArguments, maximumHeapSize, environmentVariables)
+        return startJavaProcess(
+                C::class.java.name,
+                arguments,
+                classPath,
+                workingDirectory,
+                jdwpPort,
+                extraJvmArguments,
+                maximumHeapSize,
+                environmentVariables
+        )
     }
 
     fun startJavaProcess(

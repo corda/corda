@@ -289,9 +289,11 @@ class DriverDSLImpl(
         } else {
             startOutOfProcessMiniNode(
                     config,
-                    "initial-registration",
-                    "--network-root-truststore=${rootTruststorePath.toAbsolutePath()}",
-                    "--network-root-truststore-password=$rootTruststorePassword"
+                    arrayOf(
+                        "initial-registration",
+                        "--network-root-truststore=${rootTruststorePath.toAbsolutePath()}",
+                        "--network-root-truststore-password=$rootTruststorePassword"
+                    )
             ).map { config }
         }
     }
@@ -451,7 +453,7 @@ class DriverDSLImpl(
             } else {
                 // TODO The config we use here is uses a hardocded p2p port which changes when the node is run proper
                 // This causes two node info files to be generated.
-                startOutOfProcessMiniNode(config, "generate-node-info").map {
+                startOutOfProcessMiniNode(config, arrayOf("generate-node-info")).map {
                     // Once done we have to read the signed node info file that's been generated
                     val nodeInfoFile = config.corda.baseDirectory.list { paths ->
                         paths.filter { it.fileName.toString().startsWith(NodeInfoFilesCopier.NODE_INFO_FILE_NAME_PREFIX) }.findFirst().get()
@@ -537,7 +539,7 @@ class DriverDSLImpl(
      * Start the node with the given flag which is expected to start the node for some function, which once complete will
      * terminate the node.
      */
-    private fun startOutOfProcessMiniNode(config: NodeConfig, vararg extraCmdLineFlag: String): CordaFuture<Unit> {
+    private fun startOutOfProcessMiniNode(config: NodeConfig, extraCmdLineFlag: Array<String> = emptyArray()): CordaFuture<Unit> {
         val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
         val process = startOutOfProcessNode(
                 config,
@@ -547,7 +549,7 @@ class DriverDSLImpl(
                 "512m",
                 null,
                 environmentVariables,
-                *extraCmdLineFlag
+                extraCmdLineFlag
         )
 
         return poll(executorService, "$extraCmdLineFlag (${config.corda.myLegalName})") {
@@ -744,9 +746,10 @@ class DriverDSLImpl(
                 maximumHeapSize: String,
                 logLevelOverride: String?,
                 environmentVariables : Map<String,String>,
-                vararg extraCmdLineFlag: String
+                extraCmdLineFlag: Array<String> = emptyArray()
         ): Process {
-            log.info("Starting out-of-process Node ${config.corda.myLegalName.organisation}, debug port is " + (debugPort ?: "not enabled"))
+            log.info("Starting out-of-process Node ${config.corda.myLegalName.organisation}, " +
+                     "debug port is " + (debugPort ?: "not enabled"))
             // Write node.conf
             writeConfig(config.corda.baseDirectory, "node.conf", config.typesafe.toNodeOnly())
 
@@ -785,7 +788,7 @@ class DriverDSLImpl(
                     "--base-directory=${config.corda.baseDirectory}",
                     "--logging-level=$loggingLevel",
                     "--no-local-shell").also {
-                it += extraCmdLineFlag
+                it.addAll(extraCmdLineFlag)
             }.toList()
 
             // The following dependencies are excluded from the classpath of the created JVM, so that the environment resembles a real one as close as possible.
