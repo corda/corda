@@ -14,11 +14,8 @@ class ListTestsTest {
 
     @Test
     void shouldAllocateTests() {
-
         for (int numberOfTests = 0; numberOfTests < 100; numberOfTests++) {
             for (int numberOfForks = 1; numberOfForks < 100; numberOfForks++) {
-
-
                 List<String> tests = IntStream.range(0, numberOfTests).collect { z -> "Test.method" + z }
                 ListShufflerAndAllocator testLister = new ListShufflerAndAllocator(tests);
 
@@ -32,7 +29,5 @@ class ListTestsTest {
                 Assert.assertThat(listOfLists.stream().sorted().collect(Collectors.toList()), is(equalTo(tests.stream().sorted().collect(Collectors.toList()))));
             }
         }
-
     }
-
 }

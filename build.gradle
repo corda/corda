@@ -198,16 +198,17 @@ apply plugin: 'com.jfrog.artifactory'
 // the resulting import. This fixes it.
 apply plugin: 'java'
 
-println "Java version: " + JavaVersion.current()
 sourceCompatibility = VERSION_1_8
 if (JavaVersion.current() == JavaVersion.VERSION_1_8)
     targetCompatibility = VERSION_1_8
 else
     targetCompatibility = VERSION_11
-println "Java source compatibility: " + sourceCompatibility
-println "Java target compatibility: " + targetCompatibility
-println "Quasar version: " + quasar_version
-println "Quasar classifier: " + quasar_classifier
+
+logger.quiet("Java version:              {}", JavaVersion.current())
+logger.quiet("Java source compatibility: {}", sourceCompatibility)
+logger.quiet("Java target compatibility: {}", targetCompatibility)
+logger.quiet("Quasar version:            {}", quasar_version)
+logger.quiet("Quasar classifier:         {}", quasar_classifier)
 
 allprojects {
     apply plugin: 'kotlin'
@@ -589,7 +590,7 @@ buildScan {
 task allParallelIntegrationTest(type: ParallelTestGroup) {
     testGroups "integrationTest"
     numberOfShards 15
-    streamOutput true
+    streamOutput false
     coresPerFork 6
     memoryInGbPerFork 10
 }

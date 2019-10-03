@@ -23,7 +23,6 @@ class PartitionTestsByDurationTests {
         def partitioner = new PartitionTestsByDuration(1, allTests, allTestsByDuration)
 
         Assert.assertFalse(partitioner.allTestsSortedByDuration.empty)
-
         Assert.assertEquals(partitioner.allTestsSortedByDuration.first().duration, 4.0, delta)
         Assert.assertEquals(partitioner.allTestsSortedByDuration.last().duration, 1.0, delta)
     }
@@ -82,6 +81,8 @@ class PartitionTestsByDurationTests {
 
         //  wikipedia says that the greedy algorithm approximately upto one third larger than
         //  the optimal solution, i.e. 30m optimal, but greedy can produce up to a 40m bucket.
+        //  This is true for well distributed tests.  Clearly if we have [10000, 1, 2, 3, 4, 5] etc.
+        //  We will have one partition of 10000, and the rest will be much smaller.
 
         double optimalDuration = (double) ((1 + testCount) * (testCount / 2)) / (double) partitionCount
         double tolerance = 0.3 * optimalDuration
@@ -109,7 +110,7 @@ class PartitionTestsByDurationTests {
 
         Assert.assertEquals(testsForPartition, testsForOtherPartition)
 
-        //Assert.fail("FAILED ON PURPOSE BY BARRY")
+        //Assert.fail("FAILED ON PURPOSE")
     }
 
     @Test
@@ -214,7 +215,7 @@ class PartitionTestsByDurationTests {
     }
 
     @Test
-    void failsWithBadFCsvFile() {
+    void failsWithBadCsv() {
         String snippet = "random nonsense that is not a csv file\nmore than one line\n"
 
         def reader = new StringReader(snippet)

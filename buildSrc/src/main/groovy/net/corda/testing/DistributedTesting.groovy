@@ -6,8 +6,6 @@ import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.tasks.testing.Test
 
-import java.util.stream.Collectors
-
 /**
  This plugin is responsible for wiring together the various components of test task modification
  */
@@ -37,7 +35,7 @@ class DistributedTesting implements Plugin<Project> {
     @Override
     void apply(Project project) {
         if (System.getProperty("kubenetize") != null) {
-            ensureImagePluginIsApplied(project)
+            project.plugins.apply(ImageBuilding)
             ImageBuilding imagePlugin = project.plugins.getPlugin(ImageBuilding)
             DockerPushImage imageBuildingTask = imagePlugin.pushTask
             String providedTag = getDockerTag()
@@ -53,8 +51,7 @@ class DistributedTesting implements Plugin<Project> {
             //3. KubesTest will invoke these test tasks in a parallel fashion on a remote k8s cluster
             project.subprojects { Project subproject ->
                 subproject.tasks.withType(Test) { Test testTask ->
-                    if (! testTask.path.contains("core-deterministic")) {
-
+                    if (!testTask.path.contains("core-deterministic")) {
                         testTask.dependsOn globalDependency
                         ListTests testListerTask = createTestListingTasks(testTask, subproject, allTestsInAllProjects, globalDependency)
                         globalDependency.dependsOn testListerTask
@@ -63,11 +60,8 @@ class DistributedTesting implements Plugin<Project> {
                         configureTestTaskForParallelExecution(subproject, testTask, testListerTask)
                         createParallelTestingTask(subproject, testTask, imageBuildingTask, providedTag)
                     } else {
-                        subproject.logger.info("Skipping core-deterministic tests")
-                        subproject.logger.info("+ has {} dependencies", testTask.dependsOn.size())
-                        testTask.dependsOn.forEach {
-                            subproject.logger.info("+  dependency:  {}", it.toString())
-                        }
+                        subproject.logger.info("Skipping core-deterministic tests, dependencies: {}", testTask.dependsOn.size())
+                        testTask.dependsOn.forEach { subproject.logger.info("+  dependency:  {}", it.toString()) }
                     }
                 }
             }
@@ -75,7 +69,8 @@ class DistributedTesting implements Plugin<Project> {
 
             //now we are going to create "super" groupings of these KubesTest tasks, so that it is possible to invoke all submodule tests with a single command
             //group all kubes tests by their underlying target task (test/integrationTest/smokeTest ... etc)
-            Map<String, List<KubesTest>> allKubesTestingTasksGroupedByType = project.subprojects.collect { prj -> prj.getAllTasks(false).values() }
+            Map<String, List<KubesTest>> allKubesTestingTasksGroupedByType = project.subprojects
+                    .collect { prj -> prj.getAllTasks(false).values() }
                     .flatten()
                     .findAll { task -> task instanceof KubesTest }
                     .groupBy { task -> task.taskToExecuteName }
@@ -86,9 +81,10 @@ class DistributedTesting implements Plugin<Project> {
             Set<ParallelTestGroup> userGroups = new HashSet<>(project.tasks.withType(ParallelTestGroup))
 
             Collection<ParallelTestGroup> userDefinedGroups = userGroups.forEach { testGrouping ->
-                List<KubesTest> groups = ((ParallelTestGroup) testGrouping).groups.collect {
-                    allKubesTestingTasksGroupedByType.get(it)
-                }.flatten()
+                List<KubesTest> groups = ((ParallelTestGroup) testGrouping).groups
+                        .collect { allKubesTestingTasksGroupedByType.get(it) }
+                        .flatten()
+
                 String superListOfTasks = groups.collect { it.fullTaskToExecutePath }.join(" ")
 
                 def userDefinedParallelTask = project.rootProject.tasks.create("userDefined" + testGrouping.name.capitalize(), KubesTest) {
@@ -177,10 +173,6 @@ class DistributedTesting implements Plugin<Project> {
         return testTask
     }
 
-    private static void ensureImagePluginIsApplied(Project project) {
-        project.plugins.apply(ImageBuilding)
-    }
-
     private ListTests createTestListingTasks(Test testTask,
                                              Project subProject,
                                              List<String> allTestsInAllProjects,
@@ -205,13 +197,19 @@ class DistributedTesting implements Plugin<Project> {
             dependsOn globalDependencyTask  // which will depend on createdListTask
 
             doLast {
-                createdListTask.getTestsForFork(getForkIdx(subProject), getForkCount(subProject), 42).forEach { println it }
-                println "+  (end of list of tests) for partition " + (getForkIdx(subProject) + 1) + " of " + getForkCount(subProject)
+                createdListTask.getTestsForFork(getForkIdx(subProject), getForkCount(subProject), 42).forEach {
+                    logger.lifecycle it
+                }
+                subProject.logger.quiet("+  (end of list of tests) for partition {} of {}",
+                        (getForkIdx(subProject) + 1),
+                        getForkCount(subProject))
             }
         }
 
-        subProject.logger.info("created task: " + createdListTask.getPath() + " in project: " + subProject + " it dependsOn: " + createdListTask.dependsOn)
-        subProject.logger.info("created task: " + createdPrintTask.getPath() + " in project: " + subProject + " it dependsOn: " + createdPrintTask.dependsOn)
+        subProject.logger.info("created task: {} in project: {} it dependsOn: {}",
+                createdListTask.getPath(), subProject, createdListTask.dependsOn)
+        subProject.logger.info("created task: {} in project: {} it dependsOn: {}",
+                createdPrintTask.getPath(), subProject, createdPrintTask.dependsOn)
 
         return createdListTask as ListTests
     }
