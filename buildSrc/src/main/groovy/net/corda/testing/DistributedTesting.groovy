@@ -54,7 +54,7 @@ class DistributedTesting implements Plugin<Project> {
                     if (!testTask.path.contains("core-deterministic")) {
 //                        testTask.dependsOn globalDependency
                         ListTests testListerTask = createTestListingTasks(testTask, subproject, allTestsInAllProjects, globalDependency)
-  //                      globalDependency.dependsOn testListerTask
+                        //                      globalDependency.dependsOn testListerTask
 
                         subproject.logger.info("Added dependency: {} -> {} -> {}", testTask, globalDependency, testListerTask)
                         configureTestTaskForParallelExecution(subproject, testTask, testListerTask)
@@ -198,12 +198,7 @@ class DistributedTesting implements Plugin<Project> {
 //            dependsOn globalDependencyTask  // which will depend on createdListTask
 
             doLast {
-                createdListTask.getTestsForFork(getForkIdx(subProject), getForkCount(subProject), 42).forEach {
-                    logger.lifecycle it
-                }
-                subProject.logger.quiet("+  (end of list of tests) for partition {} of {}",
-                        (getForkIdx(subProject) + 1),
-                        getForkCount(subProject))
+                createdListTask.getTestsForFork(getForkIdx(subProject), getForkCount(subProject), 42).forEach { logger.lifecycle it }
             }
         }
 

@@ -63,75 +63,85 @@ class ListTests extends DefaultTask {
      * @return
      */
     def getTestsForFork(int fork, int forks, Integer seed) {
-        List<String> tests = new ArrayList<>()
+        List<String> allocatedTestsOnThisFork = new ArrayList<>()
+        List<String> allUnallocatedTests = new ArrayList<>(this.testsForThisProjectOnly)
 
-        List<String> testsNotAllocated = new ArrayList<>(this.testsForThisProjectOnly)
+        // Allocated tests are removed from allUnallocatedTests
+        allocatedTestsOnThisFork.addAll(getTestsForForkAllocatedByDuration(fork, forks, allUnallocatedTests))
+        allocatedTestsOnThisFork.addAll(getTestsForForkAllocatedByShuffle(fork, forks, seed, allUnallocatedTests))
 
-        try {
-            def testsByDuration = PartitionTestsByDuration.fromTeamCityCsv(new FileReader(project.rootProject.rootDir.path + '/testing/test-durations.csv'))
+        return allocatedTestsOnThisFork
+    }
 
-            def allKnownTests = testsByDuration.keySet()
-            // Fill all partitions as if we're going to run all tests.
-            // We're going to 'assume' that we're going to run all the tests in the csv, so partition them.
-            // Any missing tests, we'll distribute using the original method to a random deterministic bucket.
-            def partitioner = new PartitionTestsByDuration(forks, allKnownTests, testsByDuration)
-            project.logger.quiet(partitioner.summary(fork))
-
-            def allTestsOnThisFork = partitioner.getAllTestsForPartition(fork)
-            def projectOnlyTestsOnThisFork =  partitioner.getProjectOnlyTestsForPartition(fork, testsForThisProjectOnly)
-
-            project.logger.quiet('+ This task({}) has {} of {} tests on this fork',
-                    this.getPath(),
-                    projectOnlyTestsOnThisFork.size(),
-                    allTestsOnThisFork.size())
-            tests.addAll(projectOnlyTestsOnThisFork)
-
-            // Remove all the tests we know about and have allocated.
-            // This then leaves 'new' tests in this project that we've never seen before.
-            testsNotAllocated.removeAll(allKnownTests)
-        }
-        catch (FileNotFoundException | IllegalArgumentException e) {
-            project.logger.warn('Unable to partition tests by duration:  {}', e.getMessage())
-        }
-
-        project.logger.quiet("Unallocated tests = {}, using shuffle allocator", testsNotAllocated.size())
-
+    /**
+     * The original method - allocate tests to a fork using a deterministic shuffle to even distribute them.
+     * This method guarantees to allocate all tests to a partition.
+     *
+     * @param fork index of the fork we want the tests for
+     * @param forks number of forks
+     * @param seed random number generator seed
+     * @param allUnallocatedTests collection of all unallocated tests.
+     * @return
+     */
+    private def getTestsForForkAllocatedByShuffle(int fork, int forks, int seed, List<String> allUnallocatedTests) {
         def gitSha = new BigInteger(project.hasProperty("corda_revision") ? project.property("corda_revision").toString() : "0", 36)
         if (fork >= forks) {
             throw new IllegalArgumentException("requested shard ${fork + 1} for total shards ${forks}")
         }
         def seedToUse = seed ? (seed + ((String) this.getPath()).hashCode() + gitSha.intValue()) : 0
-        tests.addAll(new ListShufflerAndAllocator(testsNotAllocated).getTestsForFork(fork, forks, seedToUse))
-        tests.sort()
+        def tests = new ListShufflerAndAllocator(allUnallocatedTests).getTestsForFork(fork, forks, seedToUse)
+
+        project.logger.quiet('+ This task({}) has {} tests allocated by shuffling on this fork', this.getPath(), tests.size())
+
+        // This method guarantees to allocate all tests to a partition.
+        allUnallocatedTests.clear()
 
         return tests
     }
 
-    def getTestsForForkOriginal(int fork, int forks, Integer seed) {
+    /**
+     * This method will allocated known tests loaded from a csv file that are present in `allUnallocatedTests` to a fork.
+     * When complete, the allocated tests (those in the csv) will be removed from `allUnallocatedTests`
+     * @param fork index of the fork we want the tests for
+     * @param forks number of forks
+     * @param allUnallocatedTests collection of all unallocated tests
+     * @return
+     */
+    private def getTestsForForkAllocatedByDuration(int fork, int forks, List<String> allUnallocatedTests) {
+        def projectOnlyTestsOnThisFork = new ArrayList<String>()
+
         try {
-            def testsByDuration = PartitionTestsByDuration.fromTeamCityCsv(new FileReader(project.rootProject.rootDir.path + '/testing/test-durations.csv'))
-            def partitioner = new PartitionTestsByDuration(forks, allTestsForAllProjects, testsByDuration)
-            project.logger.lifecycle(partitioner.summary(fork))
+            def testsByDuration = PartitionTestsByDuration.fromTeamCityCsv(
+                    new FileReader(project.rootProject.rootDir.path + '/testing/test-durations.csv')
+            )
+
+            // Use all known tests from a csv file.
+            def allKnownTests = testsByDuration.keySet() // = allTestsForAllProjects if we compiled the jars and inspected for @Test
+
+            // Fill all partitions as if we're going to run all tests.
+            // We're going to 'assume' that we're going to run all the tests in the csv, so partition them.
+            // Any missing tests, we'll distribute using the original method to a random deterministic bucket.
+            def partitioner = new PartitionTestsByDuration(forks, allKnownTests, testsByDuration)
+            project.logger.quiet("Tests per fork allocated by duration for {}", this.getPath())
+            project.logger.quiet(partitioner.summary(fork))
 
             def allTestsOnThisFork = partitioner.getAllTestsForPartition(fork)
-            def projectOnlyTestsOnThisFork =  partitioner.getProjectOnlyTestsForPartition(fork, testsForThisProjectOnly)
+            projectOnlyTestsOnThisFork.addAll(partitioner.getProjectOnlyTestsForPartition(fork, testsForThisProjectOnly))
 
-            project.logger.lifecycle('+ This task({}) has {} of {} tests on this fork',
+            project.logger.quiet('+ This task({}) has {} of {} tests allocated by duration on this fork',
                     this.getPath(),
                     projectOnlyTestsOnThisFork.size(),
                     allTestsOnThisFork.size())
-            return projectOnlyTestsOnThisFork
+
+            // Remove all the tests we know about and have allocated.
+            // This then leaves 'new' tests in this project that we've probably never seen before.
+            allUnallocatedTests.removeAll(allKnownTests)
         }
         catch (FileNotFoundException | IllegalArgumentException e) {
             project.logger.warn('Unable to partition tests by duration:  {}', e.getMessage())
         }
 
-        def gitSha = new BigInteger(project.hasProperty("corda_revision") ? project.property("corda_revision").toString() : "0", 36)
-        if (fork >= forks) {
-            throw new IllegalArgumentException("requested shard ${fork + 1} for total shards ${forks}")
-        }
-        def seedToUse = seed ? (seed + ((String) this.getPath()).hashCode() + gitSha.intValue()) : 0
-        return new ListShufflerAndAllocator(testsForThisProjectOnly).getTestsForFork(fork, forks, seedToUse)
+        return projectOnlyTestsOnThisFork
     }
 
     @TaskAction
