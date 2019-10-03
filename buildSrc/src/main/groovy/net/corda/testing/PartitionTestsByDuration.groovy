@@ -29,7 +29,7 @@ class PartitionTestsByDuration {
     List<UnitTest> allTestsSortedByDuration
 
     // We calculate these
-    List<Partition> partitions
+    private List<Partition> partitions
 
     double defaultDuration = 0.0
 
@@ -37,14 +37,27 @@ class PartitionTestsByDuration {
     static double PENALTY = 1.0
 
     class Partition {
-        List<String> names = new ArrayList<>()
+        List<String> testNames = new ArrayList<>()
 
         // time units from TeamCity are milliseconds
         double totalDuration = 0.0
 
         void add(String test, double duration) {
-            names.add(test)
+            testNames.add(test)
             totalDuration += duration
+        }
+    }
+
+/**
+ * Trivial class to hold the testName and the duration it took, typically loaded from a TeamCity csv file.
+ */
+    class UnitTest {
+        String name
+        double duration
+
+        @Override
+        String toString() {
+            return "UnitTest{" + "name='" + name + '\'' + ", duration=" + duration + '}'
         }
     }
 
@@ -53,7 +66,7 @@ class PartitionTestsByDuration {
         if (allTests.isEmpty()) throw new IllegalArgumentException("Expected at least some tests to partition")
 
         // Get the average test duration and use it for tests that we don't know about.
-        this.defaultDuration = durationByTest.values().stream().mapToDouble({ v -> v.doubleValue() }).average().orElse(0.0);
+        this.defaultDuration = durationByTest.values().stream().mapToDouble({ v -> v.doubleValue() }).average().orElse(0.0)
         def unsortedTests = new ArrayList<UnitTest>()
 
         // Look up duration for all tests, and use default value otherwise
@@ -62,7 +75,9 @@ class PartitionTestsByDuration {
 
             // Zero time tests don't take zero time, and probably have unrecorded overhead (e.g. setup/teardown), so given them
             // a penalty value so that they're equally distributed across all partitions.
-            if (duration < 1.0)  { duration = PENALTY }
+            if (duration < 1.0) {
+                duration = PENALTY
+            }
 
             unsortedTests.add(new UnitTest(name: testName, duration: duration))
         }
@@ -73,17 +88,25 @@ class PartitionTestsByDuration {
         fillPartitions(partitions)
     }
 
-    double durationOf(String testName) {
-        Optional<UnitTest> unitTest = this.allTestsSortedByDuration.stream()
-                .filter({ t -> t.name == testName })
-                .findFirst()
+    private void fillPartitions(int partitionCount) {
+        logger.debug('Allocating tests to {} partitions', partitionCount)
 
-        if (unitTest.present)
-            return unitTest.get().duration
+        partitions = new ArrayList<>()
+        for (int i = 0; i < partitionCount; ++i) {
+            partitions.add(new Partition())
+        }
 
-        return this.defaultDuration
+        // For each test, get its duration, and then add it to the smallest partition.
+        // This is the partition-problem greedy algorithm solution.
+        this.allTestsSortedByDuration.forEach { UnitTest unitTest ->
+            Collections.min(partitions, Comparator.comparing({ p -> p.totalDuration }))
+                    .add(unitTest.name, unitTest.duration)
+        }
+
+        partitions.forEach({ b -> logger.debug('Tests in this partition: {},  approx. runtime: {}ms', b.testNames.size(), b.totalDuration) })
     }
 
+    //<editor-fold desc="info">
     /**
      * Human readable info
      * @param partitionIdx
@@ -109,7 +132,7 @@ class PartitionTestsByDuration {
         builder.append("Total tests to be run:  ").append(this.allTestsSortedByDuration.size()).append("\n")
 
         String result = this.allTestsSortedByDuration.stream()
-                .map({ '"' + it.name + '"'})
+                .map({ '"' + it.name + '"' })
                 .collect(Collectors.joining(","))
 
         logger.debug("All detected tests: ")
@@ -129,6 +152,23 @@ class PartitionTestsByDuration {
 
         return builder.toString()
     }
+    //</editor-fold>
+
+    //<editor-fold desc="getters">
+    int getSize() {
+        return partitions.size()
+    }
+    
+    double getDuration(String testName) {
+        Optional<UnitTest> unitTest = this.allTestsSortedByDuration.stream()
+                .filter({ t -> t.name == testName })
+                .findFirst()
+
+        if (unitTest.present)
+            return unitTest.get().duration
+
+        return this.defaultDuration
+    }
 
     double getDuration(int partitionIdx) {
         if (partitionIdx >= partitions.size()) throw new IllegalArgumentException("Asked for partition greater than total partitions")
@@ -139,7 +179,7 @@ class PartitionTestsByDuration {
     List<String> getAllTestsForPartition(int partitionIdx) {
         if (partitionIdx >= partitions.size()) throw new IllegalArgumentException("Asked for partition greater than total partitions")
 
-        return partitions.get(partitionIdx).names
+        return partitions.get(partitionIdx).testNames
     }
 
     List<String> getProjectOnlyTestsForPartition(int partitionIdx, List<String> projectTests) {
@@ -149,41 +189,7 @@ class PartitionTestsByDuration {
         copy.retainAll(projectTests)
         return copy
     }
-
-    private void fillPartitions(int partitionCount) {
-        logger.debug('Allocating tests to {} partitions', partitionCount)
-
-        partitions = new ArrayList<>()
-        for (int i = 0; i < partitionCount; ++i) {
-            partitions.add(new Partition())
-        }
-
-        // For each test, get its duration, and then add it to the smallest partition.
-        // This is the partition-problem greedy algorithm solution.
-        this.allTestsSortedByDuration.forEach { UnitTest unitTest ->
-            Collections.min(partitions, Comparator.comparing({ p -> p.totalDuration }))
-                    .add(unitTest.name, unitTest.duration)
-        }
-
-        partitions.forEach({ b -> logger.debug('Tests in this partition: {},  approx. runtime: {}ms', b.names.size(), b.totalDuration) })
-    }
-}
-/**
- * Trivial class to hold the testName and the duration it took, typically loaded from a TeamCity csv file.
- */
-class UnitTest {
-    private static def logger = LoggerFactory.getLogger(Class.getSimpleName())
-
-    String name
-    double duration
-
-    @Override
-    String toString() {
-        return "UnitTest{" +
-                "name='" + name + '\'' +
-                ", duration=" + duration +
-                '}'
-    }
+    //</editor-fold >
 
     /**
      * Get the test durations from a TeamCity test file in csv format.
@@ -209,8 +215,8 @@ class UnitTest {
             tests.clear()
         }
 
-//        logger.debug("Tests in csv file:  {}", tests.toString())
         logger.info("Test count in csv:  {} tests", tests.size())
         return tests
     }
 }
+

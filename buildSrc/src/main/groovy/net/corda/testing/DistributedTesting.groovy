@@ -206,7 +206,7 @@ class DistributedTesting implements Plugin<Project> {
 
             doLast {
                 createdListTask.getTestsForFork(getForkIdx(subProject), getForkCount(subProject), 42).forEach { println it }
-                println "+  end of list of tests) for partition " + (getForkIdx(subProject) + 1) + " of " + getForkCount(subProject)
+                println "+  (end of list of tests) for partition " + (getForkIdx(subProject) + 1) + " of " + getForkCount(subProject)
             }
         }
 

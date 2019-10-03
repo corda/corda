@@ -52,8 +52,8 @@ class PartitionTestsByDurationTests {
                 one  : 1.0,
         ]
         def partitioner = new PartitionTestsByDuration(1, allTests, allTestsByDuration)
-        Assert.assertEquals(partitioner.durationOf("two"), 2.0, delta)
-        Assert.assertEquals(partitioner.durationOf("four"), 2.0, delta)
+        Assert.assertEquals(partitioner.getDuration("two"), 2.0, delta)
+        Assert.assertEquals(partitioner.getDuration("four"), 2.0, delta)
     }
 
     @Test
@@ -197,7 +197,7 @@ class PartitionTestsByDurationTests {
                 "2,net.corda.common.configuration.parsing.internal.PropertyTest.absent_value_of_list_type_with_whole_list_mapping,OK,8\n"
 
         def reader = new StringReader(snippet)
-        def tests = UnitTest.fromTeamCityCsv(reader)
+        def tests = PartitionTestsByDuration.fromTeamCityCsv(reader)
 
         Assert.assertTrue(!tests.empty)
         Assert.assertEquals(tests.size(), 2)
@@ -207,7 +207,7 @@ class PartitionTestsByDurationTests {
         int partitions = 10
         def partitioner = new PartitionTestsByDuration(partitions, allTests, tests)
 
-        Assert.assertEquals(partitioner.partitions.size(), partitions)
+        Assert.assertEquals(partitioner.getSize(), partitions)
         Assert.assertEquals(partitioner.getAllTestsForPartition(0).size(), 1)
         Assert.assertEquals(partitioner.getAllTestsForPartition(1).size(), 1)
         Assert.assertEquals(partitioner.getAllTestsForPartition(2).size(), 0)
@@ -218,7 +218,7 @@ class PartitionTestsByDurationTests {
         String snippet = "random nonsense that is not a csv file\nmore than one line\n"
 
         def reader = new StringReader(snippet)
-        def tests = UnitTest.fromTeamCityCsv(reader)
+        def tests = PartitionTestsByDuration.fromTeamCityCsv(reader)
 
         Assert.assertTrue(tests.isEmpty())
     }

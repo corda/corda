@@ -63,7 +63,7 @@ class ListTests extends DefaultTask {
      */
     def getTestsForFork(int fork, int forks, Integer seed) {
         try {
-            def testsByDuration = UnitTest.fromTeamCityCsv(new FileReader(project.rootProject.rootDir.path + '/testing/test-durations.csv'))
+            def testsByDuration = PartitionTestsByDuration.fromTeamCityCsv(new FileReader(project.rootProject.rootDir.path + '/testing/test-durations.csv'))
             def partitioner = new PartitionTestsByDuration(forks, allTestsInAllProjects, testsByDuration)
             project.logger.lifecycle(partitioner.summary(fork))
 
