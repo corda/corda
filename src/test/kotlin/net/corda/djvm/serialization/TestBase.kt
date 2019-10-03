@@ -7,7 +7,7 @@ import net.corda.djvm.SandboxConfiguration
 import net.corda.djvm.SandboxRuntimeContext
 import net.corda.djvm.analysis.AnalysisConfiguration
 import net.corda.djvm.analysis.Whitelist.Companion.MINIMAL
-import net.corda.djvm.execution.ExecutionProfile.*
+import net.corda.djvm.execution.ExecutionProfile.Companion.UNLIMITED
 import net.corda.djvm.messages.Severity
 import net.corda.djvm.messages.Severity.*
 import net.corda.djvm.source.BootstrapClassLoader
