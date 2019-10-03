@@ -75,12 +75,12 @@ class ListTests extends DefaultTask {
             // We're going to 'assume' that we're going to run all the tests in the csv, so partition them.
             // Any missing tests, we'll distribute using the original method to a random deterministic bucket.
             def partitioner = new PartitionTestsByDuration(forks, allKnownTests, testsByDuration)
-            project.logger.lifecycle(partitioner.summary(fork))
+            project.logger.quiet(partitioner.summary(fork))
 
             def allTestsOnThisFork = partitioner.getAllTestsForPartition(fork)
             def projectOnlyTestsOnThisFork =  partitioner.getProjectOnlyTestsForPartition(fork, testsForThisProjectOnly)
 
-            project.logger.lifecycle('+ This task({}) has {} of {} tests on this fork',
+            project.logger.quiet('+ This task({}) has {} of {} tests on this fork',
                     this.getPath(),
                     projectOnlyTestsOnThisFork.size(),
                     allTestsOnThisFork.size())
@@ -93,6 +93,8 @@ class ListTests extends DefaultTask {
         catch (FileNotFoundException | IllegalArgumentException e) {
             project.logger.warn('Unable to partition tests by duration:  {}', e.getMessage())
         }
+
+        project.logger.quiet("Unallocated tests = {}, using shuffle allocator", testsNotAllocated.size())
 
         def gitSha = new BigInteger(project.hasProperty("corda_revision") ? project.property("corda_revision").toString() : "0", 36)
         if (fork >= forks) {
