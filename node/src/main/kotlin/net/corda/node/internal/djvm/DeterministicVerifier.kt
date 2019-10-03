@@ -76,6 +76,11 @@ class DeterministicVerifier(
             verifier.apply(sandboxTx)
         }
 
+        with (result.costs) {
+            logger.info("Verify {} complete: allocations={}, invocations={}, jumps={}, throws={}",
+                        ltx.id, allocations, invocations, jumps, throws)
+        }
+
         result.exception?.run {
             val sandboxEx = SandboxException(
                 Message.getMessageFromException(this),

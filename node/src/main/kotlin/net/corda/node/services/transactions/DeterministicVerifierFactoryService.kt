@@ -38,8 +38,8 @@ class DeterministicVerifierFactoryService(
 
         baseSandboxConfiguration = SandboxConfiguration.createFor(
             analysisConfiguration = baseAnalysisConfiguration,
-            profile = ExecutionProfile.DEFAULT,
-            enableTracing = false
+            profile = NODE_PROFILE,
+            enableTracing = true
         )
     }
 
@@ -57,5 +57,14 @@ class DeterministicVerifierFactoryService(
         bootstrapSource.use {
             cordaSource?.close()
         }
+    }
+
+    private companion object {
+        private val NODE_PROFILE = ExecutionProfile(
+            allocationCostThreshold = 1024 * 1024 * 1024,
+            invocationCostThreshold = 100_000_000,
+            jumpCostThreshold = 500_000_000,
+            throwCostThreshold = 1_000_000
+        )
     }
 }
