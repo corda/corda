@@ -61,7 +61,7 @@ class PartitionTestsByDuration {
         }
     }
 
-    PartitionTestsByDuration(int partitions, List<String> allTests, Map<String, Double> durationByTest) {
+    PartitionTestsByDuration(int partitions, Collection<String> allTests, Map<String, Double> durationByTest) {
         if (durationByTest.empty) throw new IllegalArgumentException("Expected at least some tests with durations")
         if (allTests.isEmpty()) throw new IllegalArgumentException("Expected at least some tests to partition")
 
@@ -155,6 +155,7 @@ class PartitionTestsByDuration {
     //</editor-fold>
 
     //<editor-fold desc="getters">
+
     int getSize() {
         return partitions.size()
     }

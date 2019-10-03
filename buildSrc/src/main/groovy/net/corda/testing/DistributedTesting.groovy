@@ -52,9 +52,9 @@ class DistributedTesting implements Plugin<Project> {
             project.subprojects { Project subproject ->
                 subproject.tasks.withType(Test) { Test testTask ->
                     if (!testTask.path.contains("core-deterministic")) {
-                        testTask.dependsOn globalDependency
+//                        testTask.dependsOn globalDependency
                         ListTests testListerTask = createTestListingTasks(testTask, subproject, allTestsInAllProjects, globalDependency)
-                        globalDependency.dependsOn testListerTask
+  //                      globalDependency.dependsOn testListerTask
 
                         subproject.logger.info("Added dependency: {} -> {} -> {}", testTask, globalDependency, testListerTask)
                         configureTestTaskForParallelExecution(subproject, testTask, testListerTask)
@@ -194,7 +194,8 @@ class DistributedTesting implements Plugin<Project> {
 
         //convenience task to utilize the output of the test listing task to display to local console, useful for debugging missing tests
         def createdPrintTask = subProject.tasks.create("printTestsFor" + capitalizedTaskName) {
-            dependsOn globalDependencyTask  // which will depend on createdListTask
+            dependsOn createdListTask
+//            dependsOn globalDependencyTask  // which will depend on createdListTask
 
             doLast {
                 createdListTask.getTestsForFork(getForkIdx(subProject), getForkCount(subProject), 42).forEach {
