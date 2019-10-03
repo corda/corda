@@ -26,9 +26,9 @@ import java.util.function.Function
 class DeserializeCertificatesTest : TestBase(KOTLIN) {
     companion object {
         // The sandbox's localisation may not match that of the host.
-        // E.g. line separator characters and time zone format.
-        fun localise(str: String): String {
-            return str.replace("\n", System.lineSeparator())
+        // E.g. line separator characters.
+        fun String.toUNIX(): String {
+            return replace(System.lineSeparator(), "\n")
         }
 
         val factory: CertificateFactory = CertificateFactory.getInstance("X.509")
@@ -58,7 +58,7 @@ class DeserializeCertificatesTest : TestBase(KOTLIN) {
             val showCertPath = classLoader.createTaskFor(taskFactory, ShowCertPath::class.java)
             val result = showCertPath.apply(sandboxCertPath) ?: fail("Result cannot be null")
 
-            assertEquals(ShowCertPath().apply(certPath), localise(result.toString()))
+            assertEquals(ShowCertPath().apply(certPath).toUNIX(), result.toString())
             assertThat(result::class.java.name).startsWith("sandbox.")
         }
     }
@@ -82,7 +82,7 @@ class DeserializeCertificatesTest : TestBase(KOTLIN) {
             val showCertificate = classLoader.createTaskFor(taskFactory, ShowCertificate::class.java)
             val result = showCertificate.apply(sandboxCertificate) ?: fail("Result cannot be null")
 
-            assertEquals(ShowCertificate().apply(certificate), localise(result.toString()))
+            assertEquals(ShowCertificate().apply(certificate).toUNIX(), result.toString())
             assertThat(result::class.java.name).startsWith("sandbox.")
         }
     }
@@ -116,7 +116,7 @@ class DeserializeCertificatesTest : TestBase(KOTLIN) {
             val showCRL = classLoader.createTaskFor(taskFactory, ShowCRL::class.java)
             val result = showCRL.apply(sandboxCRL) ?: fail("Result cannot be null")
 
-            assertEquals(ShowCRL().apply(crl), localise(result.toString()))
+            assertEquals(ShowCRL().apply(crl).toUNIX(), result.toString())
             assertThat(result::class.java.name).startsWith("sandbox.")
         }
     }
