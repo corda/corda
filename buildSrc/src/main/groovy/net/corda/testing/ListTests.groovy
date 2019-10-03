@@ -62,7 +62,7 @@ class ListTests extends DefaultTask {
      * @param seed
      * @return
      */
-    def getTestsForFork(int fork, int forks, Integer seed) {
+    List<String> getTestsForFork(int fork, int forks, Integer seed) {
         List<String> allocatedTestsOnThisFork = new ArrayList<>()
         List<String> allUnallocatedTests = new ArrayList<>(this.testsForThisProjectOnly)
 
@@ -74,14 +74,14 @@ class ListTests extends DefaultTask {
     }
 
     /**
-     * The original method - allocate tests to a fork using a deterministic shuffle to even distribute them.
+     * The original method - allocate tests to a fork using a deterministic shuffle to evenly distribute them.
      * This method guarantees to allocate all tests to a partition.
      *
      * @param fork index of the fork we want the tests for
      * @param forks number of forks
      * @param seed random number generator seed
      * @param allUnallocatedTests collection of all unallocated tests.
-     * @return
+     * @return a collection of test names to be run on this fork
      */
     private def getTestsForForkAllocatedByShuffle(int fork, int forks, int seed, List<String> allUnallocatedTests) {
         def gitSha = new BigInteger(project.hasProperty("corda_revision") ? project.property("corda_revision").toString() : "0", 36)
@@ -105,7 +105,7 @@ class ListTests extends DefaultTask {
      * @param fork index of the fork we want the tests for
      * @param forks number of forks
      * @param allUnallocatedTests collection of all unallocated tests
-     * @return
+     * @return a collection of test names to be run on this fork
      */
     private def getTestsForForkAllocatedByDuration(int fork, int forks, List<String> allUnallocatedTests) {
         def projectOnlyTestsOnThisFork = new ArrayList<String>()
@@ -144,6 +144,10 @@ class ListTests extends DefaultTask {
         return projectOnlyTestsOnThisFork
     }
 
+    /**
+     * Inspect the compiled jar for unit test names.
+     * @return
+     */
     @TaskAction
     def discoverTests() {
         Collection<String> results = new ClassGraph()
