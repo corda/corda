@@ -252,7 +252,7 @@ class KubesTest extends DefaultTask {
 
                 .addNewVolume()
                 .withName("poddata")
-                .withNewHostPath().withPath(podData.path).withType("Directory").endHostPath()
+                .withNewHostPath().withType("Directory").withPath(podData.path).endHostPath()
                 .endVolume()
 
                 .addNewContainer()
@@ -271,7 +271,7 @@ class KubesTest extends DefaultTask {
                 .addToRequests("memory", new Quantity("${memoryGbPerFork}Gi"))
                 .endResources()
                 .addNewVolumeMount().withName("gradlecache").withMountPath("/tmp/gradle").endVolumeMount()
-                .addNewVolumeMount().withName("poddata").withMountPath("/poddata").endVolumeMount()
+                .addNewVolumeMount().withName("poddata").withMountPath("/shared-data").endVolumeMount()
                 .endContainer()
 
                 .withImagePullSecrets(new LocalObjectReference("regcred"))
