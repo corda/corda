@@ -93,8 +93,7 @@ class PartitionTestsByDurationTests {
     @Test
     void testParitioningIsDeterministic() {
         int partitionCount = 3
-        // 1000 tests with duration 1 to 1000.
-        int testCount = 10
+        int testCount = 300
 
         def tests = IntStream.range(0, testCount).collect { z -> "Test.method" + z }
 
@@ -170,8 +169,6 @@ class PartitionTestsByDurationTests {
         Assert.assertEquals(partitioner.getDuration(1), 89.0, delta)
         Assert.assertEquals(partitioner.getAllTestsForPartition(2), ['i', 'h', 'g', 'f', 'e', 'd', 'c', 'b', 'a'])
         Assert.assertEquals(partitioner.getDuration(2), 45.0, delta)
-
-        println partitioner.summary()
     }
 
     @Test
@@ -222,5 +219,87 @@ class PartitionTestsByDurationTests {
         def tests = PartitionTestsByDuration.fromTeamCityCsv(reader)
 
         Assert.assertTrue(tests.isEmpty())
+    }
+
+    /**
+     * Check that the distribution is 'unique', i.e. each test is only ever emitted once from a call to
+     * getAllTestsForPartition()
+     */
+    @Test
+    void ensureDistributionIsUnique() {
+        int partitionCount = 5
+        int testCount = 300
+
+        def tests = IntStream.range(0, testCount).collect { z -> "Test.method" + z }
+
+        //  Add one to the duration as we want non-zero
+        def testsWithDuration = new HashMap<String, Double>()
+        IntStream.range(0, testCount).forEach { testsWithDuration.put("Test.method" + it, (double) (it + 1)) }
+
+        def partitioner = new PartitionTestsByDuration(partitionCount, tests, testsWithDuration)
+
+        def expectedTests = testsWithDuration.keySet()
+        def actualTests = new ArrayList<String>()
+
+        List<Set<String>> partitions = new ArrayList<>()
+
+        for (int i = 0; i < partitionCount; ++i) {
+            def partition = partitioner.getAllTestsForPartition(i)
+            actualTests.addAll(partition)
+            partitions.add(new HashSet<String>(partition))
+        }
+
+        for (int i = 0 ; i < partitionCount ; ++i) {
+            for (int j = 0 ; j < partitionCount ; ++j) {
+                if (i == j) continue
+
+                def copy = new HashSet<String>(partitions.get(j))
+                copy.removeAll(partitions.get(i))
+
+                // i.e. no elements have been removed from j as it is unique from i.
+                Assert.assertEquals("Two partitions should not contain the same test ${i} and ${j}",
+                        copy.size(), partitions.get(j).size()
+                )
+            }
+        }
+
+        def setOfActualTests = new HashSet<String>(actualTests)
+        Assert.assertTrue("Duplicate tests on forks", actualTests.size() == setOfActualTests.size())
+
+        Assert.assertEquals("Expected all tests to be distributed", expectedTests, setOfActualTests)
+        Assert.fail("FAILED ON PURPOSE")
+    }
+
+    @Test
+    void ensureRandomDistributionIsUnique() {
+        // reusable seed for debugging so numbers are always the same
+        Random r = new Random(0x1abe11ed)
+        int idx = 0
+        int testCount = 10000
+        int partitionCount = 11
+
+        def testsWithDuration = new HashMap<String, Double>()
+
+        r.ints(testCount).forEach({
+            testsWithDuration.put("Test.method" + idx, (double) (it + 1))
+            ++idx
+        })
+
+        def tests = testsWithDuration.keySet()
+        def partitioner = new PartitionTestsByDuration(partitionCount, tests, testsWithDuration)
+
+        def expectedTests = testsWithDuration.keySet()
+        def actualTests = new ArrayList<String>()
+
+        for (int i = 0; i < partitionCount; ++i) {
+            actualTests.addAll(partitioner.getAllTestsForPartition(i))
+        }
+
+        def setOfActualTests = new HashSet<String>(actualTests)
+        Assert.assertTrue("Duplicate tests on forks", actualTests.size() == setOfActualTests.size())
+
+        // Could be massive output to screen if fails (value of testCount).
+        // Note, both expected and equals would be displayed.
+        Assert.assertEquals("Expected all tests to be distributed", expectedTests, setOfActualTests)
     }
 }
