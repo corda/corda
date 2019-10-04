@@ -53,9 +53,18 @@ object CordappResolver {
                 continue
             }
             if (className in contractClasses) {
-                throw IllegalStateException("More than one CorDapp installed on the node for contract $className. Please remove the previous version when upgrading to a new version.")
+                if (!insideInMemoryTest()) {
+                    throw IllegalStateException("More than one CorDapp installed on the node for contract $className. Please remove the previous version when upgrading to a new version.")
+                }
             }
             cordappClasses[className] = registeredCordapps + cordapp
+        }
+    }
+
+    private fun insideInMemoryTest(): Boolean {
+        return Exception().stackTrace.any{
+            it.className.contains("net.corda.testing.node.internal.InternalMockNetwork") ||
+                    it.className.contains("net.corda.testing.node.internal.InProcessNode")
         }
     }
 
