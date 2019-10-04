@@ -237,8 +237,11 @@ class KubesTest extends DefaultTask {
     }
 
     Pod buildPod(String podName) {
+        def podData = new File(project.buildDir, "k8s-pod-data/$podName")
+        podData.mkdirs()
         return new PodBuilder().withNewMetadata().withName(podName).endMetadata()
                 .withNewSpec()
+
                 .addNewVolume()
                 .withName("gradlecache")
                 .withNewHostPath()
@@ -246,6 +249,12 @@ class KubesTest extends DefaultTask {
                 .withType("DirectoryOrCreate")
                 .endHostPath()
                 .endVolume()
+
+                .addNewVolume()
+                .withName("poddata")
+                .withNewHostPath().withPath(podData.path).withType("Directory").endHostPath()
+                .endVolume()
+
                 .addNewContainer()
                 .withImage(dockerTag)
                 .withCommand("bash")
@@ -261,13 +270,13 @@ class KubesTest extends DefaultTask {
                 .addToRequests("cpu", new Quantity("${numberOfCoresPerFork}"))
                 .addToRequests("memory", new Quantity("${memoryGbPerFork}Gi"))
                 .endResources()
-                .addNewVolumeMount()
-                .withName("gradlecache")
-                .withMountPath("/tmp/gradle")
-                .endVolumeMount()
+                .addNewVolumeMount().withName("gradlecache").withMountPath("/tmp/gradle").endVolumeMount()
+                .addNewVolumeMount().withName("poddata").withMountPath("/poddata").endVolumeMount()
                 .endContainer()
+
                 .withImagePullSecrets(new LocalObjectReference("regcred"))
                 .withRestartPolicy("Never")
+
                 .endSpec()
                 .build()
     }
