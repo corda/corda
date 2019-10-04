@@ -14,7 +14,7 @@ class DbSchemaInitialisationTest {
 
     @Test
     fun `database is initialised`() {
-        driver(DriverParameters(startNodesInProcess = isQuasarAgentSpecified())) {
+        driver(DriverParameters(startNodesInProcess = isQuasarAgentSpecified(), extraCordappPackagesToScan = emptyList())) {
             val nodeHandle = {
                 startNode(NodeParameters(customOverrides = mapOf("database.initialiseSchema" to "true"))).getOrThrow()
             }()
@@ -24,7 +24,7 @@ class DbSchemaInitialisationTest {
 
     @Test
     fun `database is not initialised`() {
-        driver(DriverParameters(startNodesInProcess = isQuasarAgentSpecified())) {
+        driver(DriverParameters(startNodesInProcess = isQuasarAgentSpecified(), extraCordappPackagesToScan = emptyList())) {
             assertFailsWith(DatabaseIncompatibleException::class) {
                 startNode(NodeParameters(customOverrides = mapOf("database.initialiseSchema" to "false"))).getOrThrow()
             }
