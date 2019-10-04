@@ -27,7 +27,7 @@ open class SignatureConstraintMigrationFromHashConstraintsTests : SignatureConst
 
         val stateAndRef: StateAndRef<MessageState>? = internalDriver(
                 inMemoryDB = false,
-                startNodesInProcess = false,
+                startNodesInProcess = isQuasarAgentSpecified(),
                 networkParameters = testNetworkParameters(notaries = emptyList(), minimumPlatformVersion = 4)
         ) {
             val nodeName = {

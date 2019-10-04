@@ -53,8 +53,10 @@ object CordappResolver {
                 continue
             }
             if (className in contractClasses) {
+                 // During in-memory tests, the spawned nodes share the same CordappResolver, so detected conflicts can be spurious.
                 if (!insideInMemoryTest()) {
-                    throw IllegalStateException("More than one CorDapp installed on the node for contract $className. Please remove the previous version when upgrading to a new version.")
+                    throw IllegalStateException("More than one CorDapp installed on the node for contract $className. " +
+                            "Please remove the previous version when upgrading to a new version.")
                 }
             }
             cordappClasses[className] = registeredCordapps + cordapp
