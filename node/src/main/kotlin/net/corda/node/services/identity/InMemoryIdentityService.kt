@@ -93,7 +93,7 @@ class InMemoryIdentityService(
 
     private fun registerIdentity(identity: PartyAndCertificate, isNewRandomIdentity: Boolean): PartyAndCertificate? {
         val identityCertChain = identity.certPath.x509Certificates
-        log.trace { "Registering identity $identity" }
+        log.trace { "Registering identity $identity isNewRandomIdentity=${isNewRandomIdentity}" }
         keyToPartyAndCerts[identity.owningKey] = identity
         // Always keep the first party we registered, as that's the well known identity
         nameToKey.computeIfAbsent(identity.name) {identity.owningKey}
