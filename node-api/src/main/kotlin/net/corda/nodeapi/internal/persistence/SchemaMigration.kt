@@ -22,17 +22,19 @@ import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 
 // Migrate the database to the current version, using liquibase.
-//
-// A note on the ourName parameter: This is used by the vault state migration to establish what the node's legal identity is when setting up
-// its copy of the identity service. It is passed through using a system property. When multiple identity support is added, this will need
-// reworking so that multiple identities can be passed to the migration.
 class SchemaMigration(
         val schemas: Set<MappedSchema>,
         val dataSource: DataSource,
         private val databaseConfig: DatabaseConfig,
         cordappLoader: CordappLoader? = null,
         private val currentDirectory: Path?,
-        private val ourName: CordaX500Name) {
+        // This parameter is used by the vault state migration to establish what the node's legal identity is when setting up
+        // its copy of the identity service. It is passed through using a system property. When multiple identity support is added, this will need
+        // reworking so that multiple identities can be passed to the migration.
+        private val ourName: CordaX500Name,
+        // This parameter forces an error to be thrown if there are missing migrations. When using H2, Hibernate will automatically create schemas where they are
+        // missing, so no need to throw unless you're specifically testing whether all the migrations are present.
+        private val forceThrowOnMissingMigration: Boolean = false) {
 
     companion object {
         private val logger = contextLogger()
@@ -89,6 +91,14 @@ class SchemaMigration(
         }
     }
 
+    private fun reportMigrationError(mappedSchema: MappedSchema): String? =
+            if (forceThrowOnMissingMigration) {
+                throw MissingMigrationException(mappedSchema)
+            } else {
+                logger.warn(MissingMigrationException.errorMessageFor(mappedSchema))
+                null
+            }
+
     private fun doRunMigration(run: Boolean, check: Boolean, existingCheckpoints: Boolean? = null) {
 
         // Virtual file name of the changelog that includes all schemas.
@@ -96,15 +106,14 @@ class SchemaMigration(
 
         dataSource.connection.use { connection ->
 
-            // Collect all changelog file referenced in the included schemas.
-            // For backward compatibility reasons, when failOnMigrationMissing=false, we don't manage CorDapps via Liquibase but use the hibernate hbm2ddl=update.
+            // Collect all changelog files referenced in the included schemas.
             val changelogList = schemas.mapNotNull { mappedSchema ->
                 val resource = getMigrationResource(mappedSchema, classLoader)
                 when {
                     resource != null -> resource
                     // Corda OS FinanceApp in v3 has no Liquibase script, so no error is raised
                     (mappedSchema::class.qualifiedName == "net.corda.finance.schemas.CashSchemaV1" || mappedSchema::class.qualifiedName == "net.corda.finance.schemas.CommercialPaperSchemaV1") && mappedSchema.migrationResource == null -> null
-                    else -> throw MissingMigrationException(mappedSchema)
+                    else -> reportMigrationError(mappedSchema)
                 }
             }
 
@@ -163,7 +172,7 @@ class SchemaMigration(
             val isFinanceAppWithLiquibaseNotMigrated = isFinanceAppWithLiquibase // If Finance App is pre v4.0 then no need to migrate it so no need to check.
                     && existingDatabase
                     && (!hasLiquibase // Migrate as other tables.
-                         || (hasLiquibase && it.createStatement().use { noLiquibaseEntryLogForFinanceApp(it) })) // If Liquibase is already in the database check if Finance App schema log is missing.
+                    || (hasLiquibase && it.createStatement().use { noLiquibaseEntryLogForFinanceApp(it) })) // If Liquibase is already in the database check if Finance App schema log is missing.
 
             Pair(existingDatabase && !hasLiquibase, isFinanceAppWithLiquibaseNotMigrated)
         }
