@@ -67,7 +67,7 @@ class ListTests extends DefaultTask {
         List<String> allUnallocatedTests = new ArrayList<>(this.testsForThisProjectOnly)
 
         // Allocated tests are removed from allUnallocatedTests
-//        allocatedTestsOnThisFork.addAll(getTestsForForkAllocatedByDuration(fork, forks, allUnallocatedTests))
+        allocatedTestsOnThisFork.addAll(getTestsForForkAllocatedByDuration(fork, forks, allUnallocatedTests))
         allocatedTestsOnThisFork.addAll(getTestsForForkAllocatedByShuffle(fork, forks, seed, allUnallocatedTests))
 
         return allocatedTestsOnThisFork
