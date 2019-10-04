@@ -267,7 +267,6 @@ class PartitionTestsByDurationTests {
         Assert.assertTrue("Duplicate tests on forks", actualTests.size() == setOfActualTests.size())
 
         Assert.assertEquals("Expected all tests to be distributed", expectedTests, setOfActualTests)
-        Assert.fail("FAILED ON PURPOSE")
     }
 
     @Test
