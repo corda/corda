@@ -106,12 +106,12 @@ class KubesTest extends DefaultTask {
                     project.logger.lifecycle("scheduled pod: " + podName)
                     File outputFile = Files.createTempFile("container", ".log").toFile()
                     attachStatusListenerToPod(client, namespace, podName)
-                    schedulePodForDeleteOnShutdown(podName, client, createdPod)
+                    schedulePodForDeleteOnShutdown(client, createdPod)
                     waitForPodToStart(podName, client, namespace)
                     def stdOutOs = new PipedOutputStream()
                     def stdOutIs = new PipedInputStream(4096)
                     ByteArrayOutputStream errChannelStream = new ByteArrayOutputStream();
-                    KubePodResult result = new KubePodResult(createdPod, null, outputFile)
+                    KubePodResult result = new KubePodResult(createdPod, outputFile)
                     CompletableFuture<KubePodResult> waiter = new CompletableFuture<>()
                     ExecListener execListener = buildExecListenerForPod(podName, errChannelStream, waiter, result)
                     stdOutIs.connect(stdOutOs)
@@ -209,10 +209,10 @@ class KubesTest extends DefaultTask {
         }
     }
 
-    void schedulePodForDeleteOnShutdown(String podName, client, Pod createdPod) {
-        project.logger.info("attaching shutdown hook for pod ${podName}")
+    void schedulePodForDeleteOnShutdown(client, Pod createdPod) {
+        project.logger.info("attaching shutdown hook for pod ${createdPod.metadata.name}")
         Runtime.getRuntime().addShutdownHook({
-            println "Deleting pod: " + podName
+            println "Deleting pod: " + createdPod.metadata.name
             client.pods().delete(createdPod)
         })
     }
