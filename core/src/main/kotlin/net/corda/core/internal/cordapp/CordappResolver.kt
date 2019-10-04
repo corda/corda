@@ -64,7 +64,8 @@ object CordappResolver {
     private fun insideInMemoryTest(): Boolean {
         return Exception().stackTrace.any{
             it.className.contains("net.corda.testing.node.internal.InternalMockNetwork") ||
-                    it.className.contains("net.corda.testing.node.internal.InProcessNode")
+                    it.className.contains("net.corda.testing.node.internal.InProcessNode") ||
+                    it.className.contains("net.corda.testing.node.MockServices")
         }
     }
 
