@@ -11,7 +11,7 @@ class ComponentBuilder : Function<Array<Any?>, List<*>> {
     override fun apply(inputs: Array<Any?>): List<*> {
         val deserializer = inputs[0] as Function<in Any?, out Any?>
         val groupType = inputs[1] as ComponentGroupEnum
-        val components = (inputs[2] as Array<ByteArray>).map { OpaqueBytes(it) }
+        val components = (inputs[2] as Array<ByteArray>).map(::OpaqueBytes)
 
         return components.lazyMapped { component, index ->
             try {

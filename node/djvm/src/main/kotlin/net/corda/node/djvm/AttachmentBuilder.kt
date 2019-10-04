@@ -12,7 +12,7 @@ class AttachmentBuilder : Function<Array<Any>?, List<Attachment>?> {
     private val attachments = mutableListOf<Attachment>()
 
     private fun <T> unmodifiable(list: List<T>): List<T> {
-        return if(list.isEmpty()) {
+        return if (list.isEmpty()) {
             emptyList()
         } else {
             unmodifiableList(list)
@@ -25,11 +25,11 @@ class AttachmentBuilder : Function<Array<Any>?, List<Attachment>?> {
         } else {
             @Suppress("unchecked_cast")
             attachments.add(SandboxAttachment(
-                    signerKeys = inputs[0] as List<PublicKey>,
-                    size = inputs[1] as Int,
-                    id = inputs[2] as SecureHash,
-                    attachment = inputs[3],
-                    streamer = inputs[4] as Function<in Any, out InputStream>
+                signerKeys = inputs[0] as List<PublicKey>,
+                size = inputs[1] as Int,
+                id = inputs[2] as SecureHash,
+                attachment = inputs[3],
+                streamer = inputs[4] as Function<in Any, out InputStream>
             ))
             null
         }
