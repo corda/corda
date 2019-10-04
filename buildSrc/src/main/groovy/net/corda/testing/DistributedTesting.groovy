@@ -51,7 +51,7 @@ class DistributedTesting implements Plugin<Project> {
             //3. KubesTest will invoke these test tasks in a parallel fashion on a remote k8s cluster
             project.subprojects { Project subproject ->
                 subproject.tasks.withType(Test) { Test testTask ->
-                    if (!testTask.path.contains("core-deterministic")) {
+//                    if (!testTask.path.contains("core-deterministic")) {
                         // testTask.dependsOn globalDependency
                         ListTests testListerTask = createTestListingTasks(testTask, subproject, allTestsInAllProjects, globalDependency)
                         // globalDependency.dependsOn testListerTask
@@ -59,10 +59,10 @@ class DistributedTesting implements Plugin<Project> {
                         subproject.logger.info("Added dependency: {} -> {} -> {}", testTask, globalDependency, testListerTask)
                         configureTestTaskForParallelExecution(subproject, testTask, testListerTask)
                         createParallelTestingTask(subproject, testTask, imageBuildingTask, providedTag)
-                    } else {
-                        subproject.logger.info("Skipping core-deterministic tests, dependencies: {}", testTask.dependsOn.size())
-                        testTask.dependsOn.forEach { subproject.logger.info("+  dependency:  {}", it.toString()) }
-                    }
+//                    } else {
+//                        subproject.logger.info("Skipping core-deterministic tests, dependencies: {}", testTask.dependsOn.size())
+//                        testTask.dependsOn.forEach { subproject.logger.info("+  dependency:  {}", it.toString()) }
+//                    }
                 }
             }
 
