@@ -83,7 +83,7 @@ class AMQPBridgeManager(config: MutualSslConfiguration,
         }
 
         private fun withMDC(block: () -> Unit) {
-            val oldMDC = MDC.getCopyOfContextMap()
+            val oldMDC = MDC.getCopyOfContextMap() ?: emptyMap<String, String>()
             try {
                 MDC.put("queueName", queueName)
                 MDC.put("targets", targets.joinToString(separator = ";") { it.toString() })

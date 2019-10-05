@@ -3021,18 +3021,6 @@
     <ID>MaxLineLength:PersistentIdentityMigrationNewTable.kt$PersistentIdentityMigrationNewTable$throw PersistentIdentitiesMigrationException("Cannot migrate persistent identities as liquibase failed to provide a suitable database connection")</ID>
     <ID>MaxLineLength:PersistentIdentityMigrationNewTableTest.kt$PersistentIdentityMigrationNewTableTest$session.save(PersistentIdentityService.PersistentPublicKeyHashToCertificate(it.owningKey.hash.toString(), it.certPath.encoded))</ID>
     <ID>MaxLineLength:PersistentIdentityMigrationNewTableTest.kt$PersistentIdentityMigrationNewTableTest$val identityService = makeTestIdentityService(PersistentIdentityMigrationNewTableTest.dummyNotary.identity, BOB_IDENTITY, ALICE_IDENTITY)</ID>
-    <ID>MaxLineLength:PersistentIdentityService.kt$PersistentIdentityService$ @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class) private fun verifyAndRegisterIdentity(trustAnchor: TrustAnchor, identity: PartyAndCertificate): PartyAndCertificate?</ID>
-    <ID>MaxLineLength:PersistentIdentityService.kt$PersistentIdentityService$// Allows us to eliminate keys we know belong to others by using the cache contents that might have been seen during other identity activity. // Concentrating activity on the identity cache works better than spreading checking across identity and key management, because we cache misses too. fun stripNotOurKeys(keys: Iterable&lt;PublicKey&gt;): Iterable&lt;PublicKey&gt;</ID>
-    <ID>MaxLineLength:PersistentIdentityService.kt$PersistentIdentityService$@Throws(UnknownAnonymousPartyException::class) override</ID>
-    <ID>MaxLineLength:PersistentIdentityService.kt$PersistentIdentityService$fun loadIdentities(identities: Collection&lt;PartyAndCertificate&gt; = emptySet(), confidentialIdentities: Collection&lt;PartyAndCertificate&gt; = emptySet())</ID>
-    <ID>MaxLineLength:PersistentIdentityService.kt$PersistentIdentityService$log.warn("Certificate validation failed for ${identity.name} against trusted root ${trustAnchor.trustedCert.subjectX500Principal}.")</ID>
-    <ID>MaxLineLength:PersistentIdentityService.kt$PersistentIdentityService${ // If there is no entry in the legal keyToPartyAndCert table then the party must be a confidential identity so we perform // a lookup in the keyToName table. If an entry for that public key exists, then we attempt look up the associated node's // PartyAndCertificate. val name = keyToName[party.owningKey.toStringShort()] if (name != null) { // This should never return null as this node would not be able to communicate with the node providing a confidential // identity unless its NodeInfo/PartyAndCertificate were available. wellKnownPartyFromX500Name(name) } else { null } }</ID>
-    <ID>MaxLineLength:PersistentIdentityService.kt$PersistentIdentityService${ // This should never return null as this node would not be able to communicate with the node providing a confidential // identity unless its NodeInfo/PartyAndCertificate were available. wellKnownPartyFromX500Name(name) }</ID>
-    <ID>MaxLineLength:PersistentIdentityService.kt$PersistentIdentityService${ // Update the three tables as necessary. We definitely store the public key and map it to a party and we optionally update // the public key to external ID mapping table. This block will only ever be reached when registering keys generated on // other because when a node generates its own keys "registerKeyToParty" is automatically called by KeyManagementService.freshKey. registerKeyToParty(publicKey, party) hashToKey[publicKeyHash] = publicKey if (externalId != null) { registerKeyToExternalId(publicKey, externalId) } }</ID>
-    <ID>MaxLineLength:PersistentIdentityService.kt$PersistentIdentityService.Companion$fun createHashToKeyMap(cacheFactory: NamedCacheFactory): AppendOnlyPersistentMap&lt;String, PublicKey, PersistentHashToPublicKey, String&gt;</ID>
-    <ID>MaxLineLength:PersistentIdentityService.kt$PersistentIdentityService.Companion$fun createKeyToPartyAndCertMap(cacheFactory: NamedCacheFactory): AppendOnlyPersistentMap&lt;String, PartyAndCertificate, PersistentPublicKeyHashToCertificate, String&gt;</ID>
-    <ID>MaxLineLength:PersistentIdentityService.kt$PersistentIdentityService.Companion$fun createKeyToX500Map(cacheFactory: NamedCacheFactory): AppendOnlyPersistentMap&lt;String, CordaX500Name, PersistentPublicKeyHashToParty, String&gt;</ID>
-    <ID>MaxLineLength:PersistentIdentityService.kt$PersistentIdentityService.Companion$fun createX500ToKeyMap(cacheFactory: NamedCacheFactory): AppendOnlyPersistentMap&lt;CordaX500Name, String, PersistentPartyToPublicKeyHash, String&gt;</ID>
     <ID>MaxLineLength:PersistentIdentityServiceTests.kt$PersistentIdentityServiceTests$listOf("Organisation A", "Organisation B", "Organisation C") .map { getTestPartyAndCertificate(CordaX500Name(organisation = it, locality = "London", country = "GB"), generateKeyPair().public) }</ID>
     <ID>MaxLineLength:PersistentIdentityServiceTests.kt$PersistentIdentityServiceTests$val alicente = getTestPartyAndCertificate(CordaX500Name(organisation = "Alicente Worldwide", locality = "London", country = "GB"), generateKeyPair().public)</ID>
     <ID>MaxLineLength:PersistentMap.kt$PersistentMap$ExplicitRemoval&lt;K, V, E, EK&gt; : RemovalListener</ID>
@@ -4224,7 +4212,7 @@
     <ID>TooGenericExceptionCaught:InternalUtils.kt$ex: Exception</ID>
     <ID>TooGenericExceptionCaught:InternalUtils.kt$th: Throwable</ID>
     <ID>TooGenericExceptionCaught:IssueCash.kt$IssueCash$e: Exception</ID>
-    <ID>TooGenericExceptionCaught:JVMAgentUtil.kt$JVMAgentUtil$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:JVMAgentUtil.kt$JVMAgentUtil$e: Throwable</ID>
     <ID>TooGenericExceptionCaught:JacksonSupport.kt$JacksonSupport.PartyDeserializer$e: Exception</ID>
     <ID>TooGenericExceptionCaught:JacksonSupport.kt$JacksonSupport.PublicKeyDeserializer$e: Exception</ID>
     <ID>TooGenericExceptionCaught:JacksonSupport.kt$JacksonSupport.SecureHashDeserializer$e: Exception</ID>
@@ -4393,7 +4381,7 @@
     <ID>TooManyFunctions:P2PMessagingClient.kt$P2PMessagingClient : SingletonSerializeAsTokenMessagingServiceAddressToArtemisQueueResolver</ID>
     <ID>TooManyFunctions:PathUtils.kt$net.corda.core.internal.PathUtils.kt</ID>
     <ID>TooManyFunctions:Perceivable.kt$net.corda.finance.contracts.universal.Perceivable.kt</ID>
-    <ID>TooManyFunctions:PersistentIdentityService.kt$PersistentIdentityService : SingletonSerializeAsTokenIdentityService</ID>
+    <ID>TooManyFunctions:PersistentIdentityService.kt$PersistentIdentityService : SingletonSerializeAsTokenIdentityServiceInternal</ID>
     <ID>TooManyFunctions:PersistentNetworkMapCache.kt$PersistentNetworkMapCache : NetworkMapCacheInternalSingletonSerializeAsToken</ID>
     <ID>TooManyFunctions:PortfolioApi.kt$PortfolioApi</ID>
     <ID>TooManyFunctions:PropertyDescriptor.kt$net.corda.serialization.internal.amqp.PropertyDescriptor.kt</ID>

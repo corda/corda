@@ -246,7 +246,7 @@ allprojects {
 
     jacoco {
         // JDK11 official support (https://github.com/jacoco/jacoco/releases/tag/v0.8.3)
-        toolVersion = "0.8.3"    
+        toolVersion = "0.8.3"
     }
 
     tasks.withType(JavaCompile) {
@@ -497,7 +497,8 @@ bintrayConfig {
             'corda-common-configuration-parsing',
             'corda-common-validation',
             'corda-common-logging',
-            'corda-tools-network-builder'
+            'corda-tools-network-builder',
+            'corda-tools-checkpoint-agent'
     ]
     license {
         name = 'Apache-2.0'
