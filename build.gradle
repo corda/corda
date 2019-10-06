@@ -1,9 +1,9 @@
 import net.corda.testing.DistributedTesting
-import net.corda.testing.ParallelTestGroup
 import net.corda.testing.Distribution
+import net.corda.testing.ParallelTestGroup
 
-import static org.gradle.api.JavaVersion.VERSION_1_8
 import static org.gradle.api.JavaVersion.VERSION_11
+import static org.gradle.api.JavaVersion.VERSION_1_8
 
 buildscript {
     // For sharing constants between builds
@@ -26,8 +26,7 @@ buildscript {
     if (JavaVersion.current() == JavaVersion.VERSION_11) {
         ext.quasar_version = constants.getProperty("quasarVersion11")
         ext.quasar_classifier = constants.getProperty("quasarClassifier11")
-    }
-    else {
+    } else {
         ext.quasar_version = constants.getProperty("quasarVersion")
         ext.quasar_classifier = constants.getProperty("quasarClassifier")
     }
@@ -122,8 +121,7 @@ buildscript {
         // has been compiled by a more recent version of the Java Runtime (class file version 55.0)
         ext.fontawesomefx_commons_version = '11.0'
         ext.fontawesomefx_fontawesome_version = '4.7.0-11'
-    }
-    else {
+    } else {
         ext.fontawesomefx_commons_version = '8.15'
         ext.fontawesomefx_fontawesome_version = '4.7.0-5'
     }
@@ -590,8 +588,8 @@ buildScan {
 
 task allParallelIntegrationTest(type: ParallelTestGroup) {
     testGroups "integrationTest"
-    numberOfShards 15
-    streamOutput true
+    numberOfShards 10
+    streamOutput false
     coresPerFork 6
     memoryInGbPerFork 10
     distribute Distribution.METHOD
@@ -600,13 +598,13 @@ task allParallelUnitTest(type: ParallelTestGroup) {
     testGroups "test"
     numberOfShards 10
     streamOutput false
-    coresPerFork 3
+    coresPerFork 5
     memoryInGbPerFork 6
     distribute Distribution.CLASS
 }
 task allParallelUnitAndIntegrationTest(type: ParallelTestGroup) {
     testGroups "test", "integrationTest"
-    numberOfShards 20
+    numberOfShards 15
     streamOutput false
     coresPerFork 6
     memoryInGbPerFork 10

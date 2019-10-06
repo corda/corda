@@ -39,5 +39,7 @@ dependencies {
     compile 'commons-codec:commons-codec:1.13'
     compile "io.github.classgraph:classgraph:$class_graph_version"
     compile "com.bmuschko:gradle-docker-plugin:5.0.0"
+    compile 'org.apache.commons:commons-csv:1.1'
+
     testCompile "junit:junit:$junit_version"
 }

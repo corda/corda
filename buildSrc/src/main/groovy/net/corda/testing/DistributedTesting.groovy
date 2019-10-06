@@ -10,6 +10,7 @@ import org.gradle.api.tasks.testing.Test
  */
 class DistributedTesting implements Plugin<Project> {
 
+
     static def getPropertyAsInt(Project proj, String property, Integer defaultValue) {
         return proj.hasProperty(property) ? Integer.parseInt(proj.property(property).toString()) : defaultValue
     }
@@ -17,10 +18,16 @@ class DistributedTesting implements Plugin<Project> {
     @Override
     void apply(Project project) {
         if (System.getProperty("kubenetize") != null) {
+
+            def forks = getPropertyAsInt(project, "dockerForks", 1)
+
             ensureImagePluginIsApplied(project)
             ImageBuilding imagePlugin = project.plugins.getPlugin(ImageBuilding)
             DockerPushImage imageBuildingTask = imagePlugin.pushTask
             String providedTag = System.getProperty("docker.tag")
+            BucketingAllocator globalAllocator = project.tasks.create("bucketingAllocator", BucketingAllocator, forks)
+
+            def requestedTasks = project.gradle.startParameter.taskNames.collect { project.tasks.findByPath(it) }
 
             //in each subproject
             //1. add the task to determine all tests within the module
@@ -28,9 +35,19 @@ class DistributedTesting implements Plugin<Project> {
             //3. KubesTest will invoke these test tasks in a parallel fashion on a remote k8s cluster
             project.subprojects { Project subProject ->
                 subProject.tasks.withType(Test) { Test task ->
-                    ListTests testListerTask = createTestListingTasks(task, subProject)
-                    Test modifiedTestTask = modifyTestTaskForParallelExecution(subProject, task, testListerTask)
-                    KubesTest parallelTestTask = generateParallelTestingTask(subProject, task, imageBuildingTask, providedTag)
+                    println "Evaluating ${task.getPath()}"
+                    if (task in requestedTasks && !task.getPath().contains("core-deterministic")) {
+                        println "Modifying ${task.getPath()}"
+                        ListTests testListerTask = createTestListingTasks(task, subProject)
+                        globalAllocator.addSource(testListerTask, task)
+                        Test modifiedTestTask = modifyTestTaskForParallelExecution(subProject, task, globalAllocator)
+                    } else {
+                        println "Skipping modification of ${task.getPath()} as it's not scheduled for execution"
+                    }
+                    if (!task.getPath().contains("core-deterministic")) {
+                        KubesTest parallelTestTask = generateParallelTestingTask(subProject, task, imageBuildingTask, providedTag)
+                    }
+
                 }
             }
 
@@ -102,24 +119,21 @@ class DistributedTesting implements Plugin<Project> {
         return createdParallelTestTask as KubesTest
     }
 
-    private Test modifyTestTaskForParallelExecution(Project subProject, Test task, ListTests testListerTask) {
-        subProject.logger.info("modifying task: ${task.getPath()} to depend on task ${testListerTask.getPath()}")
+    private Test modifyTestTaskForParallelExecution(Project subProject, Test task, BucketingAllocator globalAllocator) {
+        subProject.logger.info("modifying task: ${task.getPath()} to depend on task ${globalAllocator.getPath()}")
         def reportsDir = new File(new File(subProject.rootProject.getBuildDir(), "test-reports"), subProject.name + "-" + task.name)
         task.configure {
-            dependsOn testListerTask
+            dependsOn globalAllocator
             binResultsDir new File(reportsDir, "binary")
             reports.junitXml.destination new File(reportsDir, "xml")
             maxHeapSize = "6g"
             doFirst {
                 filter {
                     def fork = getPropertyAsInt(subProject, "dockerFork", 0)
-                    def forks = getPropertyAsInt(subProject, "dockerForks", 1)
-                    def shuffleSeed = 42
-                    subProject.logger.info("requesting tests to include in testing task ${task.getPath()} (${fork}, ${forks}, ${shuffleSeed})")
-                    List<String> includes = testListerTask.getTestsForFork(
+                    subProject.logger.info("requesting tests to include in testing task ${task.getPath()} (idx: ${fork})")
+                    List<String> includes = globalAllocator.getTestsForForkAndTestTask(
                             fork,
-                            forks,
-                            shuffleSeed)
+                            task)
                     subProject.logger.info "got ${includes.size()} tests to include into testing task ${task.getPath()}"
 
                     if (includes.size() == 0) {

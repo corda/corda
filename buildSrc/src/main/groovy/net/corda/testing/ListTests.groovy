@@ -54,6 +54,10 @@ class ListTests extends DefaultTask {
         return new ListShufflerAndAllocator(allTests).getTestsForFork(fork, forks, seedToUse)
     }
 
+    def List<String> getAllTestsDiscovered(){
+        return new ArrayList<>(allTests)
+    }
+
     @TaskAction
     def discoverTests() {
         switch (distribution) {
