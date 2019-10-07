@@ -43,7 +43,8 @@ class AddressBindingFailureTests {
                 driver(DriverParameters(startNodesInProcess = false,
                     notarySpecs = listOf(NotarySpec(notaryName)),
                     notaryCustomOverrides = mapOf("p2pAddress" to address.toString()),
-                        portAllocation = portAllocation)
+                    portAllocation = portAllocation,
+                    cordappsForAllNodes = emptyList())
                 ) {} }.isInstanceOfSatisfying(IllegalStateException::class.java) { error ->
 
                 assertThat(error.message).contains("Unable to start notaries")
@@ -56,7 +57,11 @@ class AddressBindingFailureTests {
         ServerSocket(0).use { socket ->
 
             val address = InetSocketAddress("localhost", socket.localPort).toNetworkHostAndPort()
-            driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), inMemoryDB = false, portAllocation = portAllocation)) {
+            driver(DriverParameters(startNodesInProcess = true,
+                                         notarySpecs = emptyList(),
+                                         inMemoryDB = false,
+                                         portAllocation = portAllocation,
+                                         cordappsForAllNodes = emptyList())) {
 
                 assertThatThrownBy { startNode(customOverrides = overrides(address)).getOrThrow() }.isInstanceOfSatisfying(AddressBindingException::class.java) { exception ->
                     assertThat(exception.addresses).contains(address).withFailMessage("Expected addresses to contain $address but was ${exception.addresses}.")
