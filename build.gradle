@@ -1,4 +1,5 @@
 import net.corda.testing.DistributedTesting
+import net.corda.testing.ImageBuilding
 import net.corda.testing.Distribution
 import net.corda.testing.ParallelTestGroup
 
@@ -592,7 +593,7 @@ task allParallelIntegrationTest(type: ParallelTestGroup) {
     streamOutput false
     coresPerFork 6
     memoryInGbPerFork 10
-    distribute Distribution.METHOD
+    distribute Distribution.CLASS
 }
 task allParallelUnitTest(type: ParallelTestGroup) {
     testGroups "test"
@@ -610,6 +611,7 @@ task allParallelUnitAndIntegrationTest(type: ParallelTestGroup) {
     memoryInGbPerFork 10
     distribute Distribution.CLASS
 }
+apply plugin: ImageBuilding
 apply plugin: DistributedTesting
 
 

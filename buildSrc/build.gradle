@@ -40,6 +40,7 @@ dependencies {
     compile "io.github.classgraph:classgraph:$class_graph_version"
     compile "com.bmuschko:gradle-docker-plugin:5.0.0"
     compile 'org.apache.commons:commons-csv:1.1'
-
+    compile group: 'org.jetbrains', name: 'annotations', version: '13.0'
     testCompile "junit:junit:$junit_version"
+    testCompile group: 'org.hamcrest', name: 'hamcrest-all', version: '1.3'
 }

@@ -37,7 +37,11 @@ class ListShufflerAndAllocator {
     }
 }
 
-class ListTests extends DefaultTask {
+interface TestLister {
+    List<String> getAllTestsDiscovered()
+}
+
+class ListTests extends DefaultTask implements TestLister {
 
     public static final String DISTRIBUTION_PROPERTY = "distributeBy"
 
@@ -54,7 +58,8 @@ class ListTests extends DefaultTask {
         return new ListShufflerAndAllocator(allTests).getTestsForFork(fork, forks, seedToUse)
     }
 
-    def List<String> getAllTestsDiscovered(){
+    @Override
+    public List<String> getAllTestsDiscovered() {
         return new ArrayList<>(allTests)
     }
 

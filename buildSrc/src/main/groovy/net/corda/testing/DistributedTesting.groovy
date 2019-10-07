@@ -25,7 +25,7 @@ class DistributedTesting implements Plugin<Project> {
             ImageBuilding imagePlugin = project.plugins.getPlugin(ImageBuilding)
             DockerPushImage imageBuildingTask = imagePlugin.pushTask
             String providedTag = System.getProperty("docker.tag")
-            BucketingAllocator globalAllocator = project.tasks.create("bucketingAllocator", BucketingAllocator, forks)
+            BucketingAllocatorTask globalAllocator = project.tasks.create("bucketingAllocator", BucketingAllocatorTask, forks)
 
             def requestedTasks = project.gradle.startParameter.taskNames.collect { project.tasks.findByPath(it) }
 
@@ -36,7 +36,7 @@ class DistributedTesting implements Plugin<Project> {
             project.subprojects { Project subProject ->
                 subProject.tasks.withType(Test) { Test task ->
                     println "Evaluating ${task.getPath()}"
-                    if (task in requestedTasks && !task.getPath().contains("core-deterministic")) {
+                    if (task in requestedTasks && !task.hasProperty("ignoreForDistribution")) {
                         println "Modifying ${task.getPath()}"
                         ListTests testListerTask = createTestListingTasks(task, subProject)
                         globalAllocator.addSource(testListerTask, task)
@@ -44,7 +44,7 @@ class DistributedTesting implements Plugin<Project> {
                     } else {
                         println "Skipping modification of ${task.getPath()} as it's not scheduled for execution"
                     }
-                    if (!task.getPath().contains("core-deterministic")) {
+                    if (!task.hasProperty("ignoreForDistribution")) {
                         KubesTest parallelTestTask = generateParallelTestingTask(subProject, task, imageBuildingTask, providedTag)
                     }
 
@@ -119,7 +119,7 @@ class DistributedTesting implements Plugin<Project> {
         return createdParallelTestTask as KubesTest
     }
 
-    private Test modifyTestTaskForParallelExecution(Project subProject, Test task, BucketingAllocator globalAllocator) {
+    private Test modifyTestTaskForParallelExecution(Project subProject, Test task, BucketingAllocatorTask globalAllocator) {
         subProject.logger.info("modifying task: ${task.getPath()} to depend on task ${globalAllocator.getPath()}")
         def reportsDir = new File(new File(subProject.rootProject.getBuildDir(), "test-reports"), subProject.name + "-" + task.name)
         task.configure {

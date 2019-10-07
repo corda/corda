@@ -80,7 +80,8 @@ class KubesTest extends DefaultTask {
         }
 
         List<CompletableFuture<KubePodResult>> futures = IntStream.range(0, numberOfPods).mapToObj({ i ->
-            String podName = (taskToExecuteName + "-" + stableRunId + suffix + i).toLowerCase()
+            String potentialPodName = (taskToExecuteName + "-" + stableRunId + suffix + i).toLowerCase()
+            String podName = potentialPodName.substring(0, Math.min(potentialPodName.size(), 62))
             runBuild(client, namespace, numberOfPods, i, podName, printOutput, 3)
         }).collect(Collectors.toList())
         this.testOutput = Collections.synchronizedList(futures.collect { it -> it.get().binaryResults }.flatten())
