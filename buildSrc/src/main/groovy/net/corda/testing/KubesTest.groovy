@@ -37,7 +37,7 @@ class KubesTest extends DefaultTask {
     int k8sTimeout = 50 * 1_000
     int webSocketTimeout = k8sTimeout * 6
     int numberOfPods = 20
-    int timeoutInMinutesForPodToStart = 60
+    int timeoutInMinutesForPodToStart = 5
 
     @TaskAction
     void runTestsOnKubes() {
@@ -105,12 +105,12 @@ class KubesTest extends DefaultTask {
                     createdPod = client.pods().inNamespace(namespace).create(podRequest)
                     project.logger.lifecycle("scheduled pod: " + podName)
                     File outputFile = Files.createTempFile("container", ".log").toFile()
-                    attachStatusListenerToPod(client, namespace, podName)
+                    attachStatusListenerToPod(client, createdPod)
                     schedulePodForDeleteOnShutdown(client, createdPod)
-                    waitForPodToStart(podName, client, namespace)
+                    waitForPodToStart(client, createdPod)
                     def stdOutOs = new PipedOutputStream()
                     def stdOutIs = new PipedInputStream(4096)
-                    ByteArrayOutputStream errChannelStream = new ByteArrayOutputStream();
+                    ByteArrayOutputStream errChannelStream = new ByteArrayOutputStream()
                     KubePodResult result = new KubePodResult(createdPod, outputFile)
                     CompletableFuture<KubePodResult> waiter = new CompletableFuture<>()
                     ExecListener execListener = buildExecListenerForPod(podName, errChannelStream, waiter, result)
@@ -217,8 +217,8 @@ class KubesTest extends DefaultTask {
         })
     }
 
-    Watch attachStatusListenerToPod(KubernetesClient client, String namespace, String podName) {
-        client.pods().inNamespace(namespace).withName(podName).watch(new Watcher<Pod>() {
+    Watch attachStatusListenerToPod(KubernetesClient client, Pod pod) {
+        client.pods().inNamespace(pod.metadata.namespace).withName(pod.metadata.name).watch(new Watcher<Pod>() {
             @Override
             void eventReceived(Watcher.Action action, Pod resource) {
                 project.logger.lifecycle("[StatusChange]  pod ${resource.getMetadata().getName()}  ${action.name()} (${resource.status.phase})")
@@ -230,15 +230,13 @@ class KubesTest extends DefaultTask {
         })
     }
 
-    void waitForPodToStart(String podName, KubernetesClient client, String namespace) {
-        project.logger.lifecycle("Waiting for pod " + podName + " to start before executing build")
-        client.pods().inNamespace(namespace).withName(podName).waitUntilReady(timeoutInMinutesForPodToStart, TimeUnit.MINUTES)
-        project.logger.lifecycle("pod " + podName + " has started, executing build")
+    void waitForPodToStart(KubernetesClient client, Pod pod) {
+        project.logger.lifecycle("Waiting for pod " + pod.metadata.name + " to start before executing build")
+        client.pods().inNamespace(pod.metadata.namespace).withName(pod.metadata.name).waitUntilReady(timeoutInMinutesForPodToStart, TimeUnit.MINUTES)
+        project.logger.lifecycle("pod " + pod.metadata.name + " has started, executing build")
     }
 
     Pod buildPod(String podName) {
-        def podData = new File(project.buildDir, "k8s-pod-data/$podName")
-        podData.mkdirs()
         return new PodBuilder().withNewMetadata().withName(podName).endMetadata()
                 .withNewSpec()
 
@@ -251,8 +249,8 @@ class KubesTest extends DefaultTask {
                 .endVolume()
 
                 .addNewVolume()
-                .withName("poddata")
-                .withNewHostPath().withType("Directory").withPath(podData.path).endHostPath()
+                .withName("testruns")
+                .editEmptyDir().endEmptyDir()
                 .endVolume()
 
                 .addNewContainer()
@@ -271,7 +269,7 @@ class KubesTest extends DefaultTask {
                 .addToRequests("memory", new Quantity("${memoryGbPerFork}Gi"))
                 .endResources()
                 .addNewVolumeMount().withName("gradlecache").withMountPath("/tmp/gradle").endVolumeMount()
-                .addNewVolumeMount().withName("poddata").withMountPath("/shared-data").endVolumeMount()
+                .addNewVolumeMount().withName("testruns").withMountPath("/test-runs").endVolumeMount()
                 .endContainer()
 
                 .withImagePullSecrets(new LocalObjectReference("regcred"))
