@@ -185,48 +185,59 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
                             else -> logger.info("Previous node was identical to incoming one - doing nothing")
                         }
                     }
-
-            database.transaction {
-                updatedNodes.forEach { (node, previousNode) ->
-                    //updated
-                    updateInfoDB(node, session)
-                    changePublisher.onNext(MapChange.Modified(node, previousNode))
-                }
-            }
-
             /**
              * This algorithm protects against database failure (eg. attempt to persist a nodeInfo entry larger than permissible by the
              * database X500Name) without sacrificing performance incurred by attempting to flush nodeInfo's individually.
              * Upon database transaction failure, the list of new nodeInfo's is split in half, and then each half is persisted independently.
              * This continues recursively until all valid nodeInfo's are persisted, and failed ones reported as warnings.
              */
-            recursivelyPersistNewNodes(newNodes)
+            recursivelyUpdateNodes(newNodes, updatedNodes)
         }
     }
 
-    private fun recursivelyPersistNewNodes(newNodes: List<NodeInfo>) {
+    private fun recursivelyUpdateNodes(newNodes: List<NodeInfo>, updatedNodes: List<Pair<NodeInfo, NodeInfo>>) {
         try {
-            persistNewNodes(newNodes)
+            val allNodeUpdates = mutableListOf<Pair<NodeInfo, MapChange>>()
+            allNodeUpdates.addAll(newNodes.map { nodeInfo -> Pair(nodeInfo, MapChange.Added(nodeInfo)) })
+            allNodeUpdates.addAll(updatedNodes.map {
+                (nodeInfo, previousNodeInfo) ->  Pair(nodeInfo, MapChange.Modified(nodeInfo, previousNodeInfo))})
+            persistNodeUpdates(allNodeUpdates)
         }
         catch (e: PersistenceException) {
-            if (newNodes.size > 1) {
-                // persist first half
-                val newNodesLow = newNodes.subList(0, (newNodes.size / 2))
-                recursivelyPersistNewNodes(newNodesLow)
-                // persist second half
-                val newNodesHigh = newNodes.subList((newNodes.size / 2), newNodes.size)
-                recursivelyPersistNewNodes(newNodesHigh)
+            if (newNodes.isNotEmpty()) {
+                when {
+                    newNodes.size > 1 -> {
+                        // persist first half
+                        val newNodesLow = newNodes.subList(0, (newNodes.size / 2))
+                        recursivelyUpdateNodes(newNodesLow, emptyList())
+                        // persist second half
+                        val newNodesHigh = newNodes.subList((newNodes.size / 2), newNodes.size)
+                        recursivelyUpdateNodes(newNodesHigh, emptyList())
+                    }
+                    else -> logger.warn("Failed to add new node with info: ${newNodes.single()}")
+                }
             }
-            else logger.warn("Failed to add new node with info: ${newNodes.single()}")
+            if (updatedNodes.isNotEmpty()) {
+                when {
+                    updatedNodes.size > 1 -> {
+                        // persist first half
+                        val updatedNodesLow = updatedNodes.subList(0, (updatedNodes.size / 2))
+                        recursivelyUpdateNodes(emptyList(), updatedNodesLow)
+                        // persist second half
+                        val updatedNodesHigh = updatedNodes.subList((updatedNodes.size / 2), updatedNodes.size)
+                        recursivelyUpdateNodes(emptyList(), updatedNodesHigh)
+                    }
+                    else -> logger.warn("Failed to add new node with info: ${updatedNodes.single()}")
+                }
+            }
         }
     }
 
-    private fun persistNewNodes(newNodes: List<NodeInfo>) {
+    private fun persistNodeUpdates(nodeUpdates: MutableList<Pair<NodeInfo, MapChange>>) {
         database.transaction {
-            newNodes.forEach { node ->
-                //new
-                updateInfoDB(node, session)
-                changePublisher.onNext(MapChange.Added(node))
+            nodeUpdates.forEach { (nodeInfo, change) ->
+                updateInfoDB(nodeInfo, session)
+                changePublisher.onNext(change)
             }
         }
     }
