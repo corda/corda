@@ -64,11 +64,12 @@ class ListTests extends DefaultTask {
      */
     List<String> getTestsForFork(int fork, int forks, Integer seed) {
         List<String> allocatedTestsOnThisFork = new ArrayList<>()
-        List<String> allUnallocatedTests = new ArrayList<>(this.testsForThisProjectOnly)
+        List<String> allUnallocatedTests = new ArrayList<>(allTestsForAllProjects)
 
         // Allocated tests are removed from allUnallocatedTests
         allocatedTestsOnThisFork.addAll(getTestsForForkAllocatedByDuration(fork, forks, allUnallocatedTests))
-        allocatedTestsOnThisFork.addAll(getTestsForForkAllocatedByShuffle(fork, forks, seed, allUnallocatedTests))
+
+        //assert allUnallocatedTests.isEmpty() // this is true, but we don't need it.
 
         return allocatedTestsOnThisFork
     }
@@ -115,8 +116,7 @@ class ListTests extends DefaultTask {
                     new FileReader(project.rootProject.rootDir.path + '/testing/test-durations.csv')
             )
 
-            // Use all known tests from a csv file.
-            def allKnownTests = testsByDuration.keySet() // = allTestsForAllProjects if we compiled the jars and inspected for @Test
+            def allKnownTests =  allTestsForAllProjects // if we compiled the jars and inspected for @Test
 
             // Fill all partitions as if we're going to run all tests.
             // We're going to 'assume' that we're going to run all the tests in the csv, so partition them.

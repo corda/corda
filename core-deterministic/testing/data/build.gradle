@@ -29,6 +29,10 @@ test {
     // force execution of these tests to generate artifacts required by other module (eg. VerifyTransactionTest)
     // note: required by Gradle Build Cache.
     outputs.upToDateWhen { false }
+
+    ext {
+        ignoreK8s = true
+    }
 }
 assemble.finalizedBy test
 
