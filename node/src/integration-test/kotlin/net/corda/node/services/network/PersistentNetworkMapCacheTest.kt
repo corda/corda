@@ -119,6 +119,16 @@ class PersistentNetworkMapCacheTest {
     }
 
     @Test
+    fun `negative test - attempt to update existing node with invalid node info`() {
+        charlieNetMapCache.addNode(createNodeInfo(listOf(ALICE)))
+        val ALICE_UPDATE = TestIdentity(LONG_X500_NAME, ALICE.keyPair)
+        charlieNetMapCache.addNode(createNodeInfo(listOf(ALICE_UPDATE)))
+        assertThat(charlieNetMapCache.allNodes).hasSize(1)
+        assertThat(charlieNetMapCache.getNodeByLegalName(ALICE_NAME)).isNotNull
+        assertThat(charlieNetMapCache.getNodeByLegalName(LONG_X500_NAME)).isNull()
+    }
+
+    @Test
     fun `negative test - insert two valid node infos and one invalid one`() {
         charlieNetMapCache.addNodes(listOf(createNodeInfo(listOf(ALICE)),
                                            createNodeInfo(listOf(BOB)),
@@ -136,6 +146,16 @@ class PersistentNetworkMapCacheTest {
                 createNodeInfo(listOf(LONGER_PLC))))
         assertThat(charlieNetMapCache.allNodes).hasSize(3)
         assertThat(charlieNetMapCache.allNodes.flatMap { it.legalIdentities }).isEqualTo(listOf(ALICE.party, BOB.party, CHARLIE.party))
+    }
+
+    @Test
+    fun `negative test - insert one valid node info then attempt to add one invalid node info and update the existing valid nodeinfo`() {
+        charlieNetMapCache.addNode(createNodeInfo(listOf(ALICE)))
+        val ALICE_UPDATE = TestIdentity(LONG_X500_NAME, ALICE.keyPair)
+        charlieNetMapCache.addNodes(listOf(createNodeInfo(listOf(ALICE_UPDATE)), createNodeInfo(listOf(LONGER_PLC))))
+        assertThat(charlieNetMapCache.allNodes).hasSize(2)
+        assertThat(charlieNetMapCache.getNodeByLegalName(ALICE_NAME)).isNotNull
+        assertThat(charlieNetMapCache.getNodeByLegalName(LONG_X500_NAME)).isNotNull
     }
 
     private fun createNodeInfo(identities: List<TestIdentity>,
