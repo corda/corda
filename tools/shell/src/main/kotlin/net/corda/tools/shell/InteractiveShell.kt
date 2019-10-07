@@ -9,15 +9,17 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.dataformat.yaml.YAMLGenerator
 import net.corda.client.jackson.JacksonSupport
 import net.corda.client.jackson.StringToMethodCallParser
-import net.corda.client.rpc.*
+import net.corda.client.rpc.CordaRPCClient
+import net.corda.client.rpc.CordaRPCClientConfiguration
+import net.corda.client.rpc.GracefulReconnect
+import net.corda.client.rpc.PermissionException
+import net.corda.client.rpc.notUsed
 import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.*
-import net.corda.core.internal.concurrent.OpenFuture
-import net.corda.core.internal.concurrent.doOnError
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.messaging.InternalCordaRPCOps
@@ -69,6 +71,7 @@ import kotlin.concurrent.thread
 // TODO: Resurrect or reimplement the mail plugin.
 // TODO: Make it notice new shell commands added after the node started.
 
+@Suppress("MaxLineLength")
 object InteractiveShell {
     private val log = LoggerFactory.getLogger(javaClass)
     private lateinit var rpcOps: (username: String, password: String) -> InternalCordaRPCOps
@@ -624,7 +627,11 @@ object InteractiveShell {
         }
     }
 
-    private fun printAndFollowRPCResponse(response: Any?, out: PrintWriter, outputFormat: OutputFormat): Pair<PrintingSubscriber?, CordaFuture<Unit>> {
+    private fun printAndFollowRPCResponse(
+            response: Any?,
+            out: PrintWriter,
+            outputFormat: OutputFormat
+    ): Pair<PrintingSubscriber?, CordaFuture<Unit>> {
         val outputMapper = createOutputMapper(outputFormat)
 
         val mapElement: (Any?) -> String = { element -> outputMapper.writerWithDefaultPrettyPrinter().writeValueAsString(element) }
@@ -662,41 +669,51 @@ object InteractiveShell {
         }
     }
 
-    private fun maybeFollow(response: Any?, printerFun: (Any?) -> String, out: PrintWriter): Pair<PrintingSubscriber?, CordaFuture<Unit>> {
+    private fun maybeFollow(
+            response: Any?,
+            printerFun: (Any?) -> String,
+            out: PrintWriter
+    ): Pair<PrintingSubscriber?, CordaFuture<Unit>> {
         // Match on a couple of common patterns for "important" observables. It's tough to do this in a generic
         // way because observables can be embedded anywhere in the object graph, and can emit other arbitrary
         // object graphs that contain yet more observables. So we just look for top level responses that follow
         // the standard "track" pattern, and print them until the user presses Ctrl-C
-        if (response == null) return Pair(null, doneFuture(Unit))
+        var result = Pair<PrintingSubscriber?, CordaFuture<Unit>>(null, doneFuture(Unit))
 
-        if (response is DataFeed<*, *>) {
-            out.println("Snapshot:")
-            out.println(printerFun(response.snapshot))
-            out.flush()
-            out.println("Updates:")
 
-            val unsubscribeAndPrint = fun (resp : Any?) : String {
-                if (resp is StateMachineUpdate.Added) {
-                    //this prevents leaking observables to the deserialization collector.
-                    //should be investigated if it should be implemented instead.
-                    resp.stateMachineInfo.progressTrackerStepAndUpdates?.updates?.notUsed()
+        when {
+            response is DataFeed<*, *> -> {
+                out.println("Snapshot:")
+                out.println(printerFun(response.snapshot))
+                out.flush()
+                out.println("Updates:")
+
+                val unsubscribeAndPrint: (Any?) -> String = { resp ->
+                    if (resp is StateMachineUpdate.Added) {
+                        //this prevents leaking observables to the deserialization collector.
+                        //should be investigated if it should be implemented instead.
+                        resp.stateMachineInfo.progressTrackerStepAndUpdates?.updates?.notUsed()
+                    }
+                    printerFun(resp)
                 }
-                return printerFun(resp)
+
+                result = printNextElements(response.updates, unsubscribeAndPrint, out)
             }
-
-            return printNextElements(response.updates, unsubscribeAndPrint, out)
+            response is Observable<*> -> {
+                result = printNextElements(response, printerFun, out)
+            }
+            response != null -> {
+                out.println(printerFun(response))
+            }
         }
-        if (response is Observable<*>) {
-
-            return printNextElements(response, printerFun, out)
-        }
-
-        out.println(printerFun(response))
-        return Pair(null, doneFuture(Unit))
+        return result
     }
 
-    private fun printNextElements(elements: Observable<*>, printerFun: (Any?) -> String, out: PrintWriter): Pair<PrintingSubscriber?, CordaFuture<Unit>> {
-
+    private fun printNextElements(
+            elements: Observable<*>,
+            printerFun: (Any?) -> String,
+            out: PrintWriter
+    ): Pair<PrintingSubscriber?, CordaFuture<Unit>> {
         val subscriber = PrintingSubscriber(printerFun, out)
         uncheckedCast(elements).subscribe(subscriber)
         return Pair(subscriber, subscriber.future)
