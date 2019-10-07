@@ -3,6 +3,7 @@ package net.corda.testing
 import org.junit.Assert
 import org.junit.Test
 
+import java.util.stream.Collectors
 import java.util.stream.IntStream
 
 class PartitionTestsByDurationTests {
@@ -141,6 +142,38 @@ class PartitionTestsByDurationTests {
         Assert.assertEquals(partitioner.getDuration(2), 22.0, delta)
     }
 
+
+    @Test
+    void testsAreSortedByDecreasingDuration() {
+        def allTests = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m"]
+        def allTestsByDuration = [
+                a: 1.0,
+                b: 2.0,
+                c: 3.0,
+                d: 4.0,
+                e: 5.0,
+                f: 6.0,
+                g: 7.0,
+                h: 8.0,
+                i: 9.0,
+                j: 89.0,
+                k: 99.0,
+                l: 12.0,
+                m: 13.0,
+        ]
+
+        def expected = [99.0, 89.0, 13.0, 12.0, 9.0, 8.0, 7.0, 6.0, 5.0, 4.0, 3.0, 2.0, 1.0]
+
+        def partitioner = new PartitionTestsByDuration(3, allTests, allTestsByDuration)
+
+        def actual = partitioner.allTestsSortedByDuration.stream().map({it.duration}).collect(Collectors.toList())
+
+        Assert.assertEquals("Mismatched size", expected.size(), partitioner.allTestsSortedByDuration.size())
+
+        for (int i = 0 ; i < allTestsByDuration.size() ; ++i) {
+            Assert.assertEquals("Should be sorted by decreasing duration", expected.get(i), actual.get(i), delta)
+        }
+    }
 
     @Test
     void testPartitionDistributionForOutliers() {
@@ -300,5 +333,42 @@ class PartitionTestsByDurationTests {
         // Could be massive output to screen if fails (value of testCount).
         // Note, both expected and equals would be displayed.
         Assert.assertEquals("Expected all tests to be distributed", expectedTests, setOfActualTests)
+    }
+
+    @Test
+    void testMorePartitionsThanTests() {
+        def allTests = ["a", "b", "c"]
+        def allTestsByDuration = [
+                a: 1.0,
+                b: 2.0,
+                c: 3.0,
+                d: 4.0,
+                e: 5.0,
+                f: 6.0,
+                g: 7.0,
+                h: 8.0,
+                i: 9.0,
+                j: 89.0,
+                k: 99.0,
+                l: 12.0,
+                m: 13.0,
+        ]
+
+        int partitionCount = 100
+        def partitioner = new PartitionTestsByDuration(partitionCount, allTests, allTestsByDuration)
+
+        Assert.assertEquals(partitioner.getAllTestsForPartition(0), ['c'])
+        Assert.assertEquals(partitioner.getDuration(0), 3.0, delta)
+
+        Assert.assertEquals(partitioner.getAllTestsForPartition(1), ['b'])
+        Assert.assertEquals(partitioner.getDuration(1), 2.0, delta)
+
+        Assert.assertEquals(partitioner.getAllTestsForPartition(2), ['a'])
+        Assert.assertEquals(partitioner.getDuration(2), 1.0, delta)
+
+        for (int i = 3 ; i < partitionCount ; ++i) {
+            Assert.assertEquals("Should have no tests for partition $i", partitioner.getAllTestsForPartition(i), [])
+            Assert.assertEquals(partitioner.getDuration(i), 0.0, delta)
+        }
     }
 }

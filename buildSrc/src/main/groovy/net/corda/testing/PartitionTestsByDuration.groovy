@@ -26,6 +26,7 @@ class PartitionTestsByDuration {
 
     // We populate this - we take the input set of tests, and figure out their duration, and then
     // sort by decreasing value, if we don't find a test, we assign it the mean duration.
+    // Only populated with KNOWN tests specified in the constructor.
     List<UnitTest> allTestsSortedByDuration
 
     // We calculate these
