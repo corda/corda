@@ -1,6 +1,10 @@
 package net.corda.coretests.contracts
 
-import net.corda.core.contracts.*
+import net.corda.core.contracts.AlwaysAcceptAttachmentConstraint
+import net.corda.core.contracts.Contract
+import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.TransactionState
+import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.Party
@@ -17,9 +21,12 @@ import net.corda.serialization.internal.amqp.custom.InstantSerializer
 import net.corda.serialization.internal.amqp.custom.PublicKeySerializer
 import net.corda.serialization.internal.amqp.custom.ThrowableSerializer
 import net.corda.testing.common.internal.testNetworkParameters
-import net.corda.testing.core.*
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
+import net.corda.testing.core.DUMMY_BANK_A_NAME
+import net.corda.testing.core.DUMMY_NOTARY_NAME
+import net.corda.testing.core.TestIdentity
 import org.junit.Test
-import java.security.PublicKey
 import kotlin.test.assertEquals
 
 class TransactionVerificationExceptionSerialisationTests {
@@ -221,7 +228,8 @@ class TransactionVerificationExceptionSerialisationTests {
 
     @Test
     fun constraintPropagationRejectionTest() {
-        val exception = TransactionVerificationException.ConstraintPropagationRejection(txid, "com.test.Contract", AlwaysAcceptAttachmentConstraint, AlwaysAcceptAttachmentConstraint)
+        val exception = TransactionVerificationException.ConstraintPropagationRejection(txid, "com.test.Contract",
+                AlwaysAcceptAttachmentConstraint, AlwaysAcceptAttachmentConstraint)
         val exception2 = DeserializationInput(factory)
                 .deserialize(
                         SerializationOutput(factory)

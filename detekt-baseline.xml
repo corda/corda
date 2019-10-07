@@ -1227,6 +1227,7 @@
     <ID>MagicNumber:TransactionBuilder.kt$TransactionBuilder$4</ID>
     <ID>MagicNumber:TransactionDSLInterpreter.kt$TransactionDSL$30</ID>
     <ID>MagicNumber:TransactionUtils.kt$4</ID>
+    <ID>MagicNumber:TransactionVerificationException.kt$TransactionVerificationException.ConstraintPropagationRejection$3</ID>
     <ID>MagicNumber:TransactionVerifierServiceInternal.kt$Verifier$4</ID>
     <ID>MagicNumber:TransactionViewer.kt$TransactionViewer$15.0</ID>
     <ID>MagicNumber:TransactionViewer.kt$TransactionViewer$20.0</ID>
@@ -3581,17 +3582,14 @@
     <ID>MaxLineLength:TransactionVerificationException.kt$TransactionVerificationException$ContractCreationError : TransactionVerificationException</ID>
     <ID>MaxLineLength:TransactionVerificationException.kt$TransactionVerificationException$ContractRejection : TransactionVerificationException</ID>
     <ID>MaxLineLength:TransactionVerificationException.kt$TransactionVerificationException$InvalidAttachmentException : TransactionVerificationException</ID>
-    <ID>MaxLineLength:TransactionVerificationException.kt$TransactionVerificationException$MissingNetworkParametersException : TransactionVerificationException</ID>
     <ID>MaxLineLength:TransactionVerificationException.kt$TransactionVerificationException$NotaryChangeInWrongTransactionType : TransactionVerificationException</ID>
     <ID>MaxLineLength:TransactionVerificationException.kt$TransactionVerificationException$OverlappingAttachmentsException : TransactionVerificationException</ID>
     <ID>MaxLineLength:TransactionVerificationException.kt$TransactionVerificationException$PackageOwnershipException : TransactionVerificationException</ID>
     <ID>MaxLineLength:TransactionVerificationException.kt$TransactionVerificationException$SignersMissing : TransactionVerificationException</ID>
     <ID>MaxLineLength:TransactionVerificationException.kt$TransactionVerificationException$TransactionNetworkParameterOrderingException : TransactionVerificationException</ID>
-    <ID>MaxLineLength:TransactionVerificationException.kt$TransactionVerificationException$TransactionNotaryMismatchEncumbranceException : TransactionVerificationException</ID>
     <ID>MaxLineLength:TransactionVerificationException.kt$TransactionVerificationException.ContractCreationError$internal constructor(txId: SecureHash, contractClass: String, cause: Throwable) : this(txId, contractClass, cause, cause.message ?: "")</ID>
     <ID>MaxLineLength:TransactionVerificationException.kt$TransactionVerificationException.ContractRejection$internal constructor(txId: SecureHash, contract: Contract, cause: Throwable) : this(txId, contract.javaClass.name, cause, cause.message ?: "")</ID>
     <ID>MaxLineLength:TransactionVerificationException.kt$TransactionVerificationException.PackageOwnershipException$"""The attachment JAR: $attachmentHash containing the class: $invalidClassName is not signed by the owner of package $packageName specified in the network parameters. Please check the source of this attachment and if it is malicious contact your zone operator to report this incident. For details see: https://docs.corda.net/network-map.html#network-parameters"""</ID>
-    <ID>MaxLineLength:TransactionVerificationException.kt$TransactionVerificationException.TransactionNotaryMismatchEncumbranceException$"Output state with index $encumberedIndex is assigned to notary [$encumberedNotary], while its encumbrance with index $encumbranceIndex is assigned to notary [$encumbranceNotary]"</ID>
     <ID>MaxLineLength:TransactionVerificationException.kt$TransactionVerificationException.UntrustedAttachmentsException$"Please follow the operational steps outlined in https://docs.corda.net/cordapp-build-systems.html#cordapp-contract-attachments to learn more and continue."</ID>
     <ID>MaxLineLength:TransactionVerificationException.kt$net.corda.core.contracts.TransactionVerificationException.kt</ID>
     <ID>MaxLineLength:TransactionVerificationRequest.kt$TransactionVerificationRequest$@Suppress("MemberVisibilityCanBePrivate") //TODO the use of deprecated toLedgerTransaction need to be revisited as resolveContractAttachment requires attachments of the transactions which created input states... //TODO ...to check contract version non downgrade rule, curretly dummy Attachment if not fund is used which sets contract version to '1' @CordaSerializable</ID>

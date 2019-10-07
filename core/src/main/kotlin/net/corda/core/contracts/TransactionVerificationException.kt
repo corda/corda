@@ -71,10 +71,15 @@ abstract class TransactionVerificationException(val txId: SecureHash, message: S
      */
     @KeepForDJVM
     class ConstraintPropagationRejection(txId: SecureHash, message: String) : TransactionVerificationException(txId, message, null) {
-        constructor(txId: SecureHash, contractClass: String, inputConstraint: AttachmentConstraint, outputConstraint: AttachmentConstraint) :
+        constructor(txId: SecureHash,
+                    contractClass: String,
+                    inputConstraint: AttachmentConstraint,
+                    outputConstraint: AttachmentConstraint) :
                 this(txId, "Contract constraints for $contractClass are not propagated correctly. " +
                         "The outputConstraint: $outputConstraint is not a valid transition from the input constraint: $inputConstraint.")
-        val contractClass:String = message.split(" ")[3]
+
+        // This is only required for backwards compatibility. In case the message format changes, update the index.
+        val contractClass: String = message.split(" ")[3]
     }
 
     /**
@@ -228,8 +233,12 @@ abstract class TransactionVerificationException(val txId: SecureHash, message: S
      * If the network parameters associated with an input or reference state in a transaction are more recent than the network parameters of the new transaction itself.
      */
     @KeepForDJVM
-    class TransactionNetworkParameterOrderingException(txId: SecureHash, message: String) : TransactionVerificationException(txId, message, null) {
-        constructor(txId: SecureHash, inputStateRef: StateRef, txnNetworkParameters: NetworkParameters, inputNetworkParameters: NetworkParameters)
+    class TransactionNetworkParameterOrderingException(txId: SecureHash, message: String) :
+            TransactionVerificationException(txId, message, null) {
+        constructor(txId: SecureHash,
+                    inputStateRef: StateRef,
+                    txnNetworkParameters: NetworkParameters,
+                    inputNetworkParameters: NetworkParameters)
                 : this(txId, "The network parameters epoch (${txnNetworkParameters.epoch}) of this transaction " +
                 "is older than the epoch (${inputNetworkParameters.epoch}) of input state: $inputStateRef")
     }
