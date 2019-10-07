@@ -68,7 +68,7 @@ class CordappResolverTest {
     }
 
     @Test
-    fun `when different cordapps are registered for the same (contract) class, the resolver returns null`() {
+    fun `when different cordapps are registered for the same (contract) class, the resolver throws an exception`() {
         val firstCordapp = CordappImpl.TEST_INSTANCE.copy(
             contractClassNames = listOf(javaClass.name),
             minimumPlatformVersion = 3,
