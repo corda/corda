@@ -2,6 +2,7 @@ package net.corda.node.services.network
 
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.sha256
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.sign
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.seconds
@@ -69,6 +70,26 @@ class NetworkMapClientTest {
         assertThat(networkMapClient.getNetworkMap().payload.nodeInfoHashes).containsExactly(nodeInfoHash, nodeInfoHash2)
         assertEquals(cacheTimeout, networkMapClient.getNetworkMap().cacheMaxAge)
         assertEquals(nodeInfo2, networkMapClient.getNodeInfo(nodeInfoHash2))
+    }
+
+    @Test
+    fun `negative test - registered invalid node is added to the network map`() {
+        val invalidLongNodeName = CordaX500Name(
+                commonName = "AB123456789012345678901234567890123456789012345678901234567890",
+                organisationUnit = "AB123456789012345678901234567890123456789012345678901234567890",
+                organisation = "Long Plc",
+                locality = "AB123456789012345678901234567890123456789012345678901234567890",
+                state = "AB123456789012345678901234567890123456789012345678901234567890",
+                country= "IT")
+
+        val (nodeInfo, signedNodeInfo) = createNodeInfoAndSigned(invalidLongNodeName)
+
+        networkMapClient.publish(signedNodeInfo)
+
+        val nodeInfoHash = nodeInfo.serialize().sha256()
+
+        assertThat(networkMapClient.getNetworkMap().payload.nodeInfoHashes).containsExactly(nodeInfoHash)
+        assertEquals(nodeInfo, networkMapClient.getNodeInfo(nodeInfoHash))
     }
 
     @Test

@@ -191,49 +191,33 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
              * Upon database transaction failure, the list of new nodeInfo's is split in half, and then each half is persisted independently.
              * This continues recursively until all valid nodeInfo's are persisted, and failed ones reported as warnings.
              */
-            recursivelyUpdateNodes(newNodes, updatedNodes)
+            recursivelyUpdateNodes(newNodes.map { nodeInfo -> Pair(nodeInfo, MapChange.Added(nodeInfo)) } +
+                    updatedNodes.map { (nodeInfo, previousNodeInfo) -> Pair(nodeInfo, MapChange.Modified(nodeInfo, previousNodeInfo)) })
         }
     }
 
-    private fun recursivelyUpdateNodes(newNodes: List<NodeInfo>, updatedNodes: List<Pair<NodeInfo, NodeInfo>>) {
+    private fun recursivelyUpdateNodes(nodeUpdates: List<Pair<NodeInfo, MapChange>>) {
         try {
-            val allNodeUpdates = mutableListOf<Pair<NodeInfo, MapChange>>()
-            allNodeUpdates.addAll(newNodes.map { nodeInfo -> Pair(nodeInfo, MapChange.Added(nodeInfo)) })
-            allNodeUpdates.addAll(updatedNodes.map {
-                (nodeInfo, previousNodeInfo) ->  Pair(nodeInfo, MapChange.Modified(nodeInfo, previousNodeInfo))})
-            persistNodeUpdates(allNodeUpdates)
+            persistNodeUpdates(nodeUpdates)
         }
         catch (e: PersistenceException) {
-            if (newNodes.isNotEmpty()) {
+            if (nodeUpdates.isNotEmpty()) {
                 when {
-                    newNodes.size > 1 -> {
+                    nodeUpdates.size > 1 -> {
                         // persist first half
-                        val newNodesLow = newNodes.subList(0, (newNodes.size / 2))
-                        recursivelyUpdateNodes(newNodesLow, emptyList())
+                        val nodeUpdatesLow = nodeUpdates.subList(0, (nodeUpdates.size / 2))
+                        recursivelyUpdateNodes(nodeUpdatesLow)
                         // persist second half
-                        val newNodesHigh = newNodes.subList((newNodes.size / 2), newNodes.size)
-                        recursivelyUpdateNodes(newNodesHigh, emptyList())
+                        val nodeUpdatesHigh = nodeUpdates.subList((nodeUpdates.size / 2), nodeUpdates.size)
+                        recursivelyUpdateNodes(nodeUpdatesHigh)
                     }
-                    else -> logger.warn("Failed to add new node with info: ${newNodes.single()}")
-                }
-            }
-            if (updatedNodes.isNotEmpty()) {
-                when {
-                    updatedNodes.size > 1 -> {
-                        // persist first half
-                        val updatedNodesLow = updatedNodes.subList(0, (updatedNodes.size / 2))
-                        recursivelyUpdateNodes(emptyList(), updatedNodesLow)
-                        // persist second half
-                        val updatedNodesHigh = updatedNodes.subList((updatedNodes.size / 2), updatedNodes.size)
-                        recursivelyUpdateNodes(emptyList(), updatedNodesHigh)
-                    }
-                    else -> logger.warn("Failed to add new node with info: ${updatedNodes.single()}")
+                    else -> logger.warn("Failed to add or update node with info: ${nodeUpdates.single()}")
                 }
             }
         }
     }
 
-    private fun persistNodeUpdates(nodeUpdates: MutableList<Pair<NodeInfo, MapChange>>) {
+    private fun persistNodeUpdates(nodeUpdates: List<Pair<NodeInfo, MapChange>>) {
         database.transaction {
             nodeUpdates.forEach { (nodeInfo, change) ->
                 updateInfoDB(nodeInfo, session)
