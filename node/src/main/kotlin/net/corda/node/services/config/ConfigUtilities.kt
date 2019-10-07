@@ -86,7 +86,7 @@ object ConfigHelper {
 
     private fun Config.cordaEntriesOnly(): Config {
 
-        val codaPropOccurrences = mutableSetOf<String>()
+        val cordaPropOccurrences = mutableSetOf<String>()
 
         return ConfigFactory.parseMap(
                 toProperties()
@@ -95,13 +95,13 @@ object ConfigHelper {
                                 .replace("_", ".")
                                 .toLowerCase()
 
-                    if (newKey.contains(CORDA_PROPERTY_PREFIX) && codaPropOccurrences.contains(newKey)) {
+                    if (newKey.contains(CORDA_PROPERTY_PREFIX) && cordaPropOccurrences.contains(newKey)) {
                             val errMsg = "Environment variable ${it.key} is shadowing another property transformed to $newKey"
                             log.error(errMsg)
                             throw IllegalStateException(errMsg)
                     }
 
-                    codaPropOccurrences.add(newKey)
+                    cordaPropOccurrences.add(newKey)
                     newKey
                 }.filterKeys { it.startsWith(CORDA_PROPERTY_PREFIX) }
                 .mapKeys { it.key.removePrefix(CORDA_PROPERTY_PREFIX) }
