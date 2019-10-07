@@ -34,6 +34,7 @@ import rx.subjects.PublishSubject
 import java.security.PublicKey
 import java.util.*
 import javax.annotation.concurrent.ThreadSafe
+import javax.persistence.PersistenceException
 
 /** Database-based network map cache. */
 @ThreadSafe
@@ -191,13 +192,42 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
                     updateInfoDB(node, session)
                     changePublisher.onNext(MapChange.Modified(node, previousNode))
                 }
-                newNodes.forEach { node ->
-                    //new
-                    updateInfoDB(node, session)
-                    changePublisher.onNext(MapChange.Added(node))
-                }
             }
 
+            /**
+             * This algorithm protects against database failure (eg. attempt to persist a nodeInfo entry larger than permissible by the
+             * database X500Name) without sacrificing performance incurred by attempting to flush nodeInfo's individually.
+             * Upon database transaction failure, the list of new nodeInfo's is split in half, and then each half is persisted independently.
+             * This continues recursively until all valid nodeInfo's are persisted, and failed ones reported as warnings.
+             */
+            recursivelyPersistNewNodes(newNodes)
+        }
+    }
+
+    private fun recursivelyPersistNewNodes(newNodes: List<NodeInfo>) {
+        try {
+            persistNewNodes(newNodes)
+        }
+        catch (e: PersistenceException) {
+            if (newNodes.size > 1) {
+                // persist first half
+                val newNodesLow = newNodes.subList(0, (newNodes.size / 2))
+                recursivelyPersistNewNodes(newNodesLow)
+                // persist second half
+                val newNodesHigh = newNodes.subList((newNodes.size / 2), newNodes.size)
+                recursivelyPersistNewNodes(newNodesHigh)
+            }
+            else logger.warn("Failed to add new node with info: ${newNodes.single()}")
+        }
+    }
+
+    private fun persistNewNodes(newNodes: List<NodeInfo>) {
+        database.transaction {
+            newNodes.forEach { node ->
+                //new
+                updateInfoDB(node, session)
+                changePublisher.onNext(MapChange.Added(node))
+            }
         }
     }
 
