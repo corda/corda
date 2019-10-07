@@ -142,7 +142,7 @@ open class SignatureConstraintMigrationFromWhitelistConstraintTests  : Signature
                         )
                 ),
                 systemProperties = emptyMap(),
-                startNodesInProcess = isQuasarAgentSpecified(),
+                startNodesInProcess = true,
                 specifyExistingConstraint = true,
                 addAnotherAutomaticConstraintState = true
         )
