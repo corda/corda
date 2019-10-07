@@ -15,7 +15,7 @@ object CordappResolver {
     private val logger = loggerFor<CordappResolver>()
     private val cordappClasses: ConcurrentHashMap<String, Set<Cordapp>> = ConcurrentHashMap()
 
-    val insideInMemoryTest: Boolean by lazy { insideInMemoryTest() }
+    private val insideInMemoryTest: Boolean by lazy { insideInMemoryTest() }
 
     // TODO Use the StackWalker API once we migrate to Java 9+
     private var cordappResolver: () -> Cordapp? = {
