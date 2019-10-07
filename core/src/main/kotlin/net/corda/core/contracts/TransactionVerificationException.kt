@@ -57,7 +57,8 @@ abstract class TransactionVerificationException(val txId: SecureHash, message: S
      */
     @KeepForDJVM
     class ContractRejection internal constructor(txId: SecureHash, val contractClass: String, cause: Throwable?, message: String) : TransactionVerificationException(txId, "Contract verification failed: $message, contract: $contractClass", cause) {
-        internal constructor(txId: SecureHash, contract: Contract, cause: Throwable) : this(txId, contract.javaClass.name, cause, cause.message ?: "")
+        internal constructor(txId: SecureHash, contract: Contract, cause: Throwable) : this(txId, contract.javaClass.name, cause, cause.message
+                ?: "")
     }
 
     /**
@@ -122,7 +123,8 @@ abstract class TransactionVerificationException(val txId: SecureHash, message: S
     @KeepForDJVM
     class ContractCreationError internal constructor(txId: SecureHash, val contractClass: String, cause: Throwable?, message: String)
         : TransactionVerificationException(txId, "Contract verification failed: $message, could not create contract class: $contractClass", cause) {
-        internal constructor(txId: SecureHash, contractClass: String, cause: Throwable) : this(txId, contractClass, cause, cause.message ?: "")
+        internal constructor(txId: SecureHash, contractClass: String, cause: Throwable) : this(txId, contractClass, cause, cause.message
+                ?: "")
     }
 
     /**
@@ -207,12 +209,11 @@ abstract class TransactionVerificationException(val txId: SecureHash, message: S
             For details see: https://docs.corda.net/api-contract-constraints.html#contract-state-agreement
             """.trimIndent(), null)
 
-
     /**
      * If the network parameters associated with an input or reference state in a transaction are more recent than the network parameters of the new transaction itself.
      */
     @KeepForDJVM
-    class TransactionNetworkParameterOrderingException(txId: SecureHash, inputStateRef: StateRef, txnNetworkParameters: NetworkParameters, inputNetworkParameters: NetworkParameters)
+    class TransactionNetworkParameterOrderingException(txId: SecureHash, val inputStateRef: StateRef, val txnNetworkParameters: NetworkParameters, val inputNetworkParameters: NetworkParameters)
         : TransactionVerificationException(txId, "The network parameters epoch (${txnNetworkParameters.epoch}) of this transaction " +
             "is older than the epoch (${inputNetworkParameters.epoch}) of input state: $inputStateRef", null)
 
@@ -224,9 +225,8 @@ abstract class TransactionVerificationException(val txId: SecureHash, message: S
      * @param missingNetworkParametersHash Missing hash of the network parameters associated to this transaction
      */
     @KeepForDJVM
-    class MissingNetworkParametersException(txId: SecureHash, missingNetworkParametersHash: SecureHash)
+    class MissingNetworkParametersException(txId: SecureHash, val missingNetworkParametersHash: SecureHash)
         : TransactionVerificationException(txId, "Couldn't find network parameters with hash: $missingNetworkParametersHash related to this transaction: $txId", null)
-
 
     /** Whether the inputs or outputs list contains an encumbrance issue, see [TransactionMissingEncumbranceException]. */
     @CordaSerializable
