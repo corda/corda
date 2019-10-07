@@ -1,8 +1,8 @@
 package net.corda.client.jfx.model
 
 import javafx.beans.property.SimpleObjectProperty
-import net.corda.client.rpc.CordaRPCClientConfiguration
-import net.corda.client.rpc.internal.ReconnectingCordaRPCOps
+import net.corda.client.rpc.CordaRPCClient
+import net.corda.client.rpc.CordaRPCConnection
 import net.corda.core.contracts.ContractState
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.Party
@@ -48,7 +48,7 @@ class NodeMonitorModel : AutoCloseable {
     val progressTracking: Observable<ProgressTrackingEvent> = progressTrackingSubject
     val networkMap: Observable<MapChange> = networkMapSubject
 
-    private lateinit var rpc: CordaRPCOps
+    private lateinit var rpc: CordaRPCConnection
     val proxyObservable = SimpleObjectProperty<CordaRPCOps>()
     lateinit var notaryIdentities: List<Party>
 
@@ -61,7 +61,7 @@ class NodeMonitorModel : AutoCloseable {
      */
     override fun close() {
         try {
-            (rpc as ReconnectingCordaRPCOps).close()
+            rpc.close()
         } catch (e: Exception) {
             logger.error("Error closing RPC connection to node", e)
         }
@@ -72,35 +72,42 @@ class NodeMonitorModel : AutoCloseable {
      * TODO provide an unsubscribe mechanism
      */
     fun register(nodeHostAndPort: NetworkHostAndPort, username: String, password: String) {
-        rpc = ReconnectingCordaRPCOps(nodeHostAndPort, username, password, CordaRPCClientConfiguration.DEFAULT)
-
-        proxyObservable.value = rpc
+        rpc = CordaRPCClient(nodeHostAndPort).start(username, password)
+        proxyObservable.value = rpc.proxy
 
         // Vault snapshot (force single page load with MAX_PAGE_SIZE) + updates
-        val (statesSnapshot, vaultUpdates) = rpc.vaultTrackBy<ContractState>(QueryCriteria.VaultQueryCriteria(Vault.StateStatus.ALL),
-                PageSpecification(DEFAULT_PAGE_NUM, MAX_PAGE_SIZE))
-        val unconsumedStates = statesSnapshot.states.filterIndexed { index, _ ->
-            statesSnapshot.statesMetadata[index].status == Vault.StateStatus.UNCONSUMED
+        val (
+                statesSnapshot,
+                vaultUpdates
+        ) = rpc.proxy.vaultTrackBy<ContractState>(
+                QueryCriteria.VaultQueryCriteria(Vault.StateStatus.ALL),
+                PageSpecification(DEFAULT_PAGE_NUM, MAX_PAGE_SIZE)
+        )
+        val unconsumedStates =
+                statesSnapshot.states.filterIndexed { index, _ ->
+                    statesSnapshot.statesMetadata[index].status == Vault.StateStatus.UNCONSUMED
         }.toSet()
         val consumedStates = statesSnapshot.states.toSet() - unconsumedStates
         val initialVaultUpdate = Vault.Update(consumedStates, unconsumedStates, references = emptySet())
         vaultUpdates.startWith(initialVaultUpdate).subscribe(vaultUpdatesSubject::onNext)
 
         // Transactions
-        val (transactions, newTransactions) = @Suppress("DEPRECATION") rpc.internalVerifiedTransactionsFeed()
+        val (transactions, newTransactions) =
+                @Suppress("DEPRECATION") rpc.proxy.internalVerifiedTransactionsFeed()
         newTransactions.startWith(transactions).subscribe(transactionsSubject::onNext)
 
         // SM -> TX mapping
-        val (smTxMappings, futureSmTxMappings) = rpc.stateMachineRecordedTransactionMappingFeed()
+        val (smTxMappings, futureSmTxMappings) =
+                rpc.proxy.stateMachineRecordedTransactionMappingFeed()
         futureSmTxMappings.startWith(smTxMappings).subscribe(stateMachineTransactionMappingSubject::onNext)
 
         // Parties on network
-        val (parties, futurePartyUpdate) = rpc.networkMapFeed()
+        val (parties, futurePartyUpdate) = rpc.proxy.networkMapFeed()
         futurePartyUpdate.startWith(parties.map(MapChange::Added)).subscribe(networkMapSubject::onNext)
 
-        val stateMachines = rpc.stateMachinesSnapshot()
+        val stateMachines = rpc.proxy.stateMachinesSnapshot()
 
-        notaryIdentities = rpc.notaryIdentities()
+        notaryIdentities = rpc.proxy.notaryIdentities()
 
         // Extract the flow tracking stream
         // TODO is there a nicer way of doing this? Stream of streams in general results in code like this...

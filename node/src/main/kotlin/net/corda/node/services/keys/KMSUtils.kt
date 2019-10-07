@@ -5,6 +5,7 @@ import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.CertRole
 import net.corda.core.node.services.IdentityService
 import net.corda.core.utilities.days
+import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.ContentSignerBuilder
 import net.corda.nodeapi.internal.crypto.X509Utilities
@@ -44,7 +45,12 @@ fun freshCertificate(identityService: IdentityService,
             window)
     val ourCertPath = X509Utilities.buildCertPath(ourCertificate, issuer.certPath.x509Certificates)
     val anonymisedIdentity = PartyAndCertificate(ourCertPath)
-    identityService.verifyAndRegisterIdentity(anonymisedIdentity)
+    if (identityService is IdentityServiceInternal) {
+        identityService.justVerifyAndRegisterIdentity(anonymisedIdentity, true)
+    } else {
+        identityService.verifyAndRegisterIdentity(anonymisedIdentity)
+    }
+
     return anonymisedIdentity
 }
 

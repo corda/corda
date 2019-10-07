@@ -13,6 +13,8 @@
                 <constraints nullable="false"/>
             </column>
         </createTable>
+        <addPrimaryKey columnNames="pk_hash" constraintName="node_identities_no_cert_pkey"
+                       tableName="node_identities_no_cert"/>
     </changeSet>
 
 </databaseChangeLog>

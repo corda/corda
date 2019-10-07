@@ -17,6 +17,8 @@ import net.corda.core.context.Trace
 import net.corda.core.context.Trace.InvocationId
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.*
+import net.corda.core.internal.messaging.InternalCordaRPCOps
+import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.RPCOps
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.serialize
@@ -25,6 +27,7 @@ import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.getOrThrow
 import net.corda.nodeapi.RPCApi
+import net.corda.nodeapi.RPCApi.CLASS_METHOD_DIVIDER
 import net.corda.nodeapi.internal.DeduplicationChecker
 import org.apache.activemq.artemis.api.core.ActiveMQException
 import org.apache.activemq.artemis.api.core.ActiveMQNotConnectedException
@@ -252,12 +255,13 @@ class RPCClientProxyHandler(
             throw RPCException("RPC server is not available.")
 
         val replyId = InvocationId.newInstance()
-        callSiteMap?.set(replyId, CallSite(method.name))
+        val methodFqn = produceMethodFullyQualifiedName(method)
+        callSiteMap?.set(replyId, CallSite(methodFqn))
         try {
             val serialisedArguments = (arguments?.toList() ?: emptyList()).serialize(context = serializationContextWithObservableContext)
             val request = RPCApi.ClientToServer.RpcRequest(
                     clientAddress,
-                    method.name,
+                    methodFqn,
                     serialisedArguments,
                     replyId,
                     sessionId,
@@ -279,6 +283,19 @@ class RPCClientProxyHandler(
             throw RPCException(e.message ?: "", e)
         } finally {
             callSiteMap?.remove(replyId)
+        }
+    }
+
+    private fun produceMethodFullyQualifiedName(method: Method) : String {
+        /*
+         * Until version 4.3, rpc calls did not include class names.
+         * Up to this version, only CordaRPCOps and InternalCordaRPCOps were supported.
+         * So, for these classes only methods are sent across the wire to preserve backwards compatibility.
+         */
+        return if (CordaRPCOps::class.java == rpcOpsClass || InternalCordaRPCOps::class.java == rpcOpsClass) {
+            method.name
+        } else {
+            rpcOpsClass.name + CLASS_METHOD_DIVIDER + method.name
         }
     }
 

@@ -5,14 +5,21 @@ import org.slf4j.LoggerFactory
 import java.sql.SQLException
 
 /**
- * If a thread dies because it can't connect to the database, the node ends up in an inconsistent state.
+ *
+ * Cater for all type of unrecoverable [VirtualMachineError] in which the node may end up in an inconsistent state.
  * Fail fast and hard.
  */
-class DbExceptionHandler(private val parentHandler: Thread.UncaughtExceptionHandler? = null) : Thread.UncaughtExceptionHandler {
+class GeneralExceptionHandler(private val parentHandler: Thread.UncaughtExceptionHandler? = null) : Thread.UncaughtExceptionHandler {
+
     override fun uncaughtException(t: Thread?, e: Throwable?) {
 
+        // fail fast with minimal overhead and further processing
+        if (e is VirtualMachineError) {
+            System.err.println("${e.message}")
+            Runtime.getRuntime().halt(1)
+        }
         // the error is a database connection issue - pull the rug
-        if (e is Error && e.cause is SQLException) {
+        else if (e is Error && e.cause is SQLException) {
             errorAndTerminate("Thread ${t!!.name} failed due to database connection error. This is unrecoverable, terminating node.", e)
         }
 
