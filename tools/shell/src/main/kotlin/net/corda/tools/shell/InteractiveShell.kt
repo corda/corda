@@ -16,6 +16,8 @@ import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.*
+import net.corda.core.internal.concurrent.OpenFuture
+import net.corda.core.internal.concurrent.doOnError
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.messaging.InternalCordaRPCOps
@@ -518,8 +520,11 @@ object InteractiveShell {
             val parser = StringToMethodCallParser(CordaRPCOps::class.java, inputObjectMapper)
             val call = parser.parse(cordaRPCOps, cmd)
             result = call.call()
+            var subscription : Subscriber<*>? = null
             if (result != null && result !== kotlin.Unit && result !is Void) {
-                result = printAndFollowRPCResponse(result, out, outputFormat)
+                val (subs, future) = printAndFollowRPCResponse(result, out, outputFormat)
+                subscription = subs
+                result = future
             }
             if (result is Future<*>) {
                 if (!result.isDone) {
@@ -529,6 +534,7 @@ object InteractiveShell {
                 try {
                     result = result.get()
                 } catch (e: InterruptedException) {
+                    subscription?.unsubscribe()
                     Thread.currentThread().interrupt()
                 } catch (e: ExecutionException) {
                     throw e.rootCause
@@ -618,7 +624,7 @@ object InteractiveShell {
         }
     }
 
-    private fun printAndFollowRPCResponse(response: Any?, out: PrintWriter, outputFormat: OutputFormat): CordaFuture<Unit> {
+    private fun printAndFollowRPCResponse(response: Any?, out: PrintWriter, outputFormat: OutputFormat): Pair<PrintingSubscriber?, CordaFuture<Unit>> {
         val outputMapper = createOutputMapper(outputFormat)
 
         val mapElement: (Any?) -> String = { element -> outputMapper.writerWithDefaultPrettyPrinter().writeValueAsString(element) }
@@ -627,7 +633,7 @@ object InteractiveShell {
 
     private class PrintingSubscriber(private val printerFun: (Any?) -> String, private val toStream: PrintWriter) : Subscriber<Any>() {
         private var count = 0
-        val future = openFuture<Unit>()
+        var future = openFuture<Unit>()
 
         init {
             // The future is public and can be completed by something else to indicate we don't wish to follow
@@ -656,12 +662,12 @@ object InteractiveShell {
         }
     }
 
-    private fun maybeFollow(response: Any?, printerFun: (Any?) -> String, out: PrintWriter): CordaFuture<Unit> {
+    private fun maybeFollow(response: Any?, printerFun: (Any?) -> String, out: PrintWriter): Pair<PrintingSubscriber?, CordaFuture<Unit>> {
         // Match on a couple of common patterns for "important" observables. It's tough to do this in a generic
         // way because observables can be embedded anywhere in the object graph, and can emit other arbitrary
         // object graphs that contain yet more observables. So we just look for top level responses that follow
         // the standard "track" pattern, and print them until the user presses Ctrl-C
-        if (response == null) return doneFuture(Unit)
+        if (response == null) return Pair(null, doneFuture(Unit))
 
         if (response is DataFeed<*, *>) {
             out.println("Snapshot:")
@@ -686,14 +692,14 @@ object InteractiveShell {
         }
 
         out.println(printerFun(response))
-        return doneFuture(Unit)
+        return Pair(null, doneFuture(Unit))
     }
 
-    private fun printNextElements(elements: Observable<*>, printerFun: (Any?) -> String, out: PrintWriter): CordaFuture<Unit> {
+    private fun printNextElements(elements: Observable<*>, printerFun: (Any?) -> String, out: PrintWriter): Pair<PrintingSubscriber?, CordaFuture<Unit>> {
 
         val subscriber = PrintingSubscriber(printerFun, out)
         uncheckedCast(elements).subscribe(subscriber)
-        return subscriber.future
+        return Pair(subscriber, subscriber.future)
     }
 
 }
