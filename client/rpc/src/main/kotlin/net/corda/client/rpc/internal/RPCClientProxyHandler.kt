@@ -161,6 +161,7 @@ class RPCClientProxyHandler(
         val onObservableRemove = RemovalListener<InvocationId, UnicastSubject<Notification<*>>> { key, _, cause ->
             val observableId = key!!
             val rpcCallSite: CallSite? = callSiteMap?.remove(observableId)
+
             if (cause == RemovalCause.COLLECTED) {
                 log.warn(listOf(
                         "A hot observable returned from an RPC was never subscribed to.",
@@ -174,7 +175,13 @@ class RPCClientProxyHandler(
             }
             observablesToReap.locked { observables.add(observableId) }
         }
-        return cacheFactory.buildNamed(Caffeine.newBuilder().weakValues().removalListener(onObservableRemove).executor(SameThreadExecutor.getExecutor()), "RpcClientProxyHandler_rpcObservable")
+        return cacheFactory.buildNamed(
+                Caffeine.newBuilder()
+                        .weakValues()
+                        .removalListener(onObservableRemove)
+                        .executor(SameThreadExecutor.getExecutor()),
+                "RpcClientProxyHandler_rpcObservable"
+        )
     }
 
     private var sessionFactory: ClientSessionFactory? = null

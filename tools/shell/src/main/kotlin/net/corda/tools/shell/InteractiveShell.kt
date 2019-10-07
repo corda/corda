@@ -9,10 +9,7 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.dataformat.yaml.YAMLGenerator
 import net.corda.client.jackson.JacksonSupport
 import net.corda.client.jackson.StringToMethodCallParser
-import net.corda.client.rpc.CordaRPCClient
-import net.corda.client.rpc.CordaRPCClientConfiguration
-import net.corda.client.rpc.GracefulReconnect
-import net.corda.client.rpc.PermissionException
+import net.corda.client.rpc.*
 import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.UniqueIdentifier
@@ -671,7 +668,17 @@ object InteractiveShell {
             out.println(printerFun(response.snapshot))
             out.flush()
             out.println("Updates:")
-            return printNextElements(response.updates, printerFun, out)
+
+            val unsubscribeAndPrint = fun (resp : Any?) : String {
+                if (resp is StateMachineUpdate.Added) {
+                    //this prevents leaking observables to the deserialization collector.
+                    //should be investigated if it should be implemented instead.
+                    resp.stateMachineInfo.progressTrackerStepAndUpdates?.updates?.notUsed()
+                }
+                return printerFun(resp)
+            }
+
+            return printNextElements(response.updates, unsubscribeAndPrint, out)
         }
         if (response is Observable<*>) {
 
