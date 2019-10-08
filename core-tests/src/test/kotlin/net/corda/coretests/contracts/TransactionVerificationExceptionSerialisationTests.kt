@@ -16,8 +16,6 @@ import net.corda.serialization.internal.AllWhitelist
 import net.corda.serialization.internal.amqp.DeserializationInput
 import net.corda.serialization.internal.amqp.SerializationOutput
 import net.corda.serialization.internal.amqp.SerializerFactoryBuilder
-import net.corda.serialization.internal.amqp.custom.DurationSerializer
-import net.corda.serialization.internal.amqp.custom.InstantSerializer
 import net.corda.serialization.internal.amqp.custom.PublicKeySerializer
 import net.corda.serialization.internal.amqp.custom.ThrowableSerializer
 import net.corda.testing.common.internal.testNetworkParameters
@@ -35,8 +33,6 @@ class TransactionVerificationExceptionSerialisationTests {
             ClassLoader.getSystemClassLoader()
     ).apply {
         register(ThrowableSerializer(this))
-        register(DurationSerializer(this))
-        register(InstantSerializer(this))
     }
 
     private val context get() = AMQP_RPC_CLIENT_CONTEXT
