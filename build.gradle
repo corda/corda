@@ -597,7 +597,7 @@ task allParallelIntegrationTest(type: ParallelTestGroup) {
 }
 task allParallelSlowIntegrationTest(type: ParallelTestGroup) {
     testGroups "slowIntegrationTest"
-    numberOfShards 5
+    numberOfShards 4
     streamOutput false
     coresPerFork 6
     memoryInGbPerFork 10
@@ -614,7 +614,7 @@ task allParallelUnitTest(type: ParallelTestGroup) {
 task allParallelUnitAndIntegrationTest(type: ParallelTestGroup) {
     testGroups "test", "integrationTest"
     numberOfShards 15
-    streamOutput false
+    streamOutput true
     coresPerFork 6
     memoryInGbPerFork 10
     distribute Distribution.CLASS

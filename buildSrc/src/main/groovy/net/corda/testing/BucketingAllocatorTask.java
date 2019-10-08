@@ -12,8 +12,10 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.Reader;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -28,7 +30,7 @@ public class BucketingAllocatorTask extends DefaultTask {
                 FileReader csvSource = new FileReader(new File(BucketingAllocatorTask.this.getProject().getRootDir(), DEFAULT_TESTING_TEST_TIMES_CSV));
                 return fromCSV(csvSource);
             } catch (IOException e) {
-                throw new RuntimeException(e);
+                return Collections.emptyList();
             }
         };
         this.allocator = new BucketingAllocator(forkCount, defaultTestCSV);
@@ -44,7 +46,7 @@ public class BucketingAllocatorTask extends DefaultTask {
     }
 
     @TaskAction
-    public void allocate(){
+    public void allocate() {
         allocator.generateTestPlan();
     }
 
@@ -54,10 +56,14 @@ public class BucketingAllocatorTask extends DefaultTask {
         String duration = "Duration(ms)";
         List<CSVRecord> records = CSVFormat.DEFAULT.withHeader().parse(reader).getRecords();
         return records.stream().map(record -> {
-            String testName = record.get(name);
-            String testDuration = record.get(duration);
-            return new Tuple2<>(testName, Math.max(Double.parseDouble(testDuration), 10));
-        }).sorted(Comparator.comparing(Tuple2::getFirst)).collect(Collectors.toList());
+            try{
+                String testName = record.get(name);
+                String testDuration = record.get(duration);
+                return new Tuple2<>(testName, Math.max(Double.parseDouble(testDuration), 10));
+            }catch (IllegalArgumentException | IllegalStateException  e){
+                return null;
+            }
+        }).filter(Objects::nonNull).sorted(Comparator.comparing(Tuple2::getFirst)).collect(Collectors.toList());
     }
 
 }

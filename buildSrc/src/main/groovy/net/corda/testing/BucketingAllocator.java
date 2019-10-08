@@ -40,6 +40,21 @@ public class BucketingAllocator {
         //use greedy algo - for each testbucket find the currently smallest container and add to it
         allocateTestsToForks(matchedTests);
         forkContainers.forEach(TestsForForkContainer::freeze);
+
+        printSummary();
+    }
+
+    private void printSummary() {
+        forkContainers.forEach(container -> {
+            System.out.println("####### TEST PLAN SUMMARY ( " + container.forkIdx + " ) #######");
+            System.out.println("Duration: " + container.getCurrentDuration());
+            System.out.println("Number of tests: " + container.testsForFork.stream().mapToInt(b -> b.foundTests.size()).sum());
+            System.out.println("Tests to Run: ");
+            container.testsForFork.forEach(tb -> {
+                System.out.println(tb.nameWithAsterix);
+                tb.foundTests.forEach(ft -> System.out.println("\t" + ft.getFirst() + ", " + ft.getSecond()));
+            });
+        });
     }
 
 
@@ -128,6 +143,10 @@ public class BucketingAllocator {
 
         public List<String> getTestsForTask(Object task) {
             return frozenTests.getOrDefault(task, Collections.emptyList()).stream().map(it -> it.nameWithAsterix).collect(Collectors.toList());
+        }
+
+        public List<TestBucket> getBucketsForFork() {
+            return new ArrayList<>(testsForFork);
         }
 
         @Override

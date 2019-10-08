@@ -37,6 +37,12 @@ pipeline {
                             "-Dkubenetize=true " +
                             "-Ddocker.tag=\"\${DOCKER_TAG_TO_USE}\"" +
                             " allParallelUnitTest"
+                    if (env.CHANGE_ID) {
+                        pullRequest.createStatus(status: 'success',
+                                context: 'continuous-integration/jenkins/pr-merge/unitTest',
+                                description: 'Unit Tests Passed',
+                                targetUrl: "${env.JOB_URL}/testResults")
+                    }
                 }
             }
         }
