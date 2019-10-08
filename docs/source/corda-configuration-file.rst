@@ -51,7 +51,7 @@ JVM options
 
     java -Dcorda.rpcSettings.ssl.keyStorePassword=mypassword -jar node.jar
 
-.. note:: If you have the same field override as environment variable and system property, the system property
+.. note:: If the same field is overriden by both an environment variable and system property, the system property
    takes precedence.
 
 Configuration file fields
