@@ -1,8 +1,10 @@
 import net.corda.testing.DistributedTesting
+import net.corda.testing.ImageBuilding
+import net.corda.testing.Distribution
 import net.corda.testing.ParallelTestGroup
 
-import static org.gradle.api.JavaVersion.VERSION_1_8
 import static org.gradle.api.JavaVersion.VERSION_11
+import static org.gradle.api.JavaVersion.VERSION_1_8
 
 buildscript {
     // For sharing constants between builds
@@ -25,10 +27,12 @@ buildscript {
     if (JavaVersion.current() == JavaVersion.VERSION_11) {
         ext.quasar_version = constants.getProperty("quasarVersion11")
         ext.quasar_classifier = constants.getProperty("quasarClassifier11")
+        ext.jdkClassifier = constants.getProperty("jdkClassifier11")
     }
     else {
         ext.quasar_version = constants.getProperty("quasarVersion")
         ext.quasar_classifier = constants.getProperty("quasarClassifier")
+        ext.jdkClassifier = constants.getProperty("jdkClassifier")
     }
     ext.quasar_exclusions = [
             'co.paralleluniverse**',
@@ -121,8 +125,7 @@ buildscript {
         // has been compiled by a more recent version of the Java Runtime (class file version 55.0)
         ext.fontawesomefx_commons_version = '11.0'
         ext.fontawesomefx_fontawesome_version = '4.7.0-11'
-    }
-    else {
+    } else {
         ext.fontawesomefx_commons_version = '8.15'
         ext.fontawesomefx_fontawesome_version = '4.7.0-5'
     }
@@ -245,7 +248,7 @@ allprojects {
 
     jacoco {
         // JDK11 official support (https://github.com/jacoco/jacoco/releases/tag/v0.8.3)
-        toolVersion = "0.8.3"    
+        toolVersion = "0.8.3"
     }
 
     tasks.withType(JavaCompile) {
@@ -314,6 +317,12 @@ allprojects {
         if (name.contains("integrationTest")) {
             maxParallelForks = (System.env.CORDA_INT_TESTING_FORKS == null) ? 1 : "$System.env.CORDA_INT_TESTING_FORKS".toInteger()
         }
+    }
+
+    jar {
+        // JDK11 built and published artifacts to include classifier
+        if (jdkClassifier != null)
+            archiveClassifier = jdkClassifier
     }
 
     group 'net.corda'
@@ -496,7 +505,8 @@ bintrayConfig {
             'corda-common-configuration-parsing',
             'corda-common-validation',
             'corda-common-logging',
-            'corda-tools-network-builder'
+            'corda-tools-network-builder',
+            'corda-tools-checkpoint-agent'
     ]
     license {
         name = 'Apache-2.0'
@@ -588,25 +598,37 @@ buildScan {
 
 task allParallelIntegrationTest(type: ParallelTestGroup) {
     testGroups "integrationTest"
-    numberOfShards 15
+    numberOfShards 10
     streamOutput false
     coresPerFork 6
     memoryInGbPerFork 10
+    distribute Distribution.CLASS
+}
+task allParallelSlowIntegrationTest(type: ParallelTestGroup) {
+    testGroups "slowIntegrationTest"
+    numberOfShards 4
+    streamOutput false
+    coresPerFork 6
+    memoryInGbPerFork 10
+    distribute Distribution.CLASS
 }
 task allParallelUnitTest(type: ParallelTestGroup) {
     testGroups "test"
-    numberOfShards 15
+    numberOfShards 10
     streamOutput false
-    coresPerFork 3
+    coresPerFork 5
     memoryInGbPerFork 6
+    distribute Distribution.CLASS
 }
 task allParallelUnitAndIntegrationTest(type: ParallelTestGroup) {
     testGroups "test", "integrationTest"
-    numberOfShards 20
-    streamOutput false
+    numberOfShards 15
+    streamOutput true
     coresPerFork 6
     memoryInGbPerFork 10
+    distribute Distribution.CLASS
 }
+apply plugin: ImageBuilding
 apply plugin: DistributedTesting
 
 

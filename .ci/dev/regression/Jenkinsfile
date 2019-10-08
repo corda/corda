@@ -29,27 +29,24 @@ pipeline {
         }
 
         stage('Corda Pull Request - Run Tests') {
-            parallel {
-                stage('Integration Tests') {
-                    steps {
-                        sh "./gradlew " +
-                                "-DbuildId=\"\${BUILD_ID}\" " +
-                                "-Dkubenetize=true " +
-                                "-Ddocker.tag=\"\${DOCKER_TAG_TO_USE}\"" +
-                                " allParallelIntegrationTest"
-                    }
-                }
-                stage('Unit Tests') {
-                    steps {
-                        sh "./gradlew " +
-                                "-DbuildId=\"\${BUILD_ID}\" " +
-                                "-Dkubenetize=true " +
-                                "-Ddocker.tag=\"\${DOCKER_TAG_TO_USE}\"" +
-                                " allParallelUnitTest"
-                    }
+            stage('Unit and Integration Tests') {
+                steps {
+                    sh "./gradlew " +
+                            "-DbuildId=\"\${BUILD_ID}\" " +
+                            "-Dkubenetize=true " +
+                            "-Ddocker.tag=\"\${DOCKER_TAG_TO_USE}\"" +
+                            " allParallelUnitAndIntegrationTest"
                 }
             }
-
+            stage('Slow Integration Tests') {
+                steps {
+                    sh "./gradlew " +
+                            "-DbuildId=\"\${BUILD_ID}\" " +
+                            "-Dkubenetize=true " +
+                            "-Ddocker.tag=\"\${DOCKER_TAG_TO_USE}\"" +
+                            " allParallelSlowIntegrationTest"
+                }
+            }
         }
     }
 

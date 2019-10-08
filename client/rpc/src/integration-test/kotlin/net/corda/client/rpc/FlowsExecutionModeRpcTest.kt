@@ -14,7 +14,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.Before
 import org.junit.Test
 
-class FlowsExecutionModeTests : NodeBasedTest(listOf("net.corda.finance.contracts", CashSchemaV1::class.packageName)) {
+class FlowsExecutionModeTests : NodeBasedTest(emptyList()) {
 
     private val rpcUser = User("user1", "test", permissions = setOf(Permissions.all()))
     private lateinit var node: NodeWithInfo
