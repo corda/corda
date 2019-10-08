@@ -89,19 +89,19 @@ class KubesTest extends DefaultTask {
 
         List<Future<KubePodResult>> futures = IntStream.range(0, numberOfPods).mapToObj({ i ->
             String podName = "$taskToExecuteName-$stableRunId-$random-$i"
-            runBuild(client, namespace, numberOfPods, i, podName, printOutput, 3)
+            submitBuild(client, namespace, numberOfPods, i, podName, printOutput, 3)
         }).collect(Collectors.toList())
         this.testOutput = Collections.synchronizedList(futures.collect { it -> it.get().binaryResults }.flatten())
         this.containerResults = futures.collect { it -> it.get() }
     }
 
-    private static def rnd64Base36(Random rnd) {
+    static def rnd64Base36(Random rnd) {
         return new BigInteger(64, rnd)
                 .toString(36)
                 .toLowerCase()
     }
 
-    private Future<KubePodResult> runBuild(
+    Future<KubePodResult> submitBuild(
             KubernetesClient client,
             String namespace,
             int numberOfPods,
@@ -119,7 +119,7 @@ class KubesTest extends DefaultTask {
         })
     }
 
-    private def createPvc(KubernetesClient client, String name) {
+    def createPvc(KubernetesClient client, String name) {
         def pvc = client.persistentVolumeClaims()
                 .inNamespace(namespace)
                 .createNew()
@@ -140,7 +140,7 @@ class KubesTest extends DefaultTask {
         return pvc
     }
 
-    private KubePodResult buildRunPodWithRetriesOrThrow(
+    KubePodResult buildRunPodWithRetriesOrThrow(
             KubernetesClient client,
             String namespace,
             PersistentVolumeClaim pvc,
@@ -261,7 +261,7 @@ class KubesTest extends DefaultTask {
         }
     }
 
-    private Watch attachStatusListenerToPod(KubernetesClient client, Pod pod) {
+    Watch attachStatusListenerToPod(KubernetesClient client, Pod pod) {
         client.pods().inNamespace(pod.metadata.namespace).withName(pod.metadata.name).watch(new Watcher<Pod>() {
             @Override
             void eventReceived(Watcher.Action action, Pod resource) {
