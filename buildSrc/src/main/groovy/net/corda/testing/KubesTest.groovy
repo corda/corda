@@ -7,6 +7,7 @@ import io.fabric8.kubernetes.api.model.Pod
 import io.fabric8.kubernetes.api.model.PodBuilder
 import io.fabric8.kubernetes.api.model.Quantity
 import io.fabric8.kubernetes.api.model.Status
+import io.fabric8.kubernetes.client.ConfigBuilder
 import io.fabric8.kubernetes.client.DefaultKubernetesClient
 import io.fabric8.kubernetes.client.KubernetesClient
 import io.fabric8.kubernetes.client.KubernetesClientException
@@ -34,7 +35,6 @@ import java.util.stream.IntStream
 class KubesTest extends DefaultTask {
 
     static final ExecutorService executorService = Executors.newCachedThreadPool()
-    static final ExecutorService singleThreadedExecutor = Executors.newSingleThreadExecutor()
 
     String dockerTag
     String fullTaskToExecutePath
@@ -49,7 +49,7 @@ class KubesTest extends DefaultTask {
     int k8sTimeout = 50 * 1_000
     int webSocketTimeout = k8sTimeout * 6
     int numberOfPods = 20
-    int timeoutInMinutesForPodToStart = 5
+    int timeoutInMinutesForPodToStart = 60
 
     @TaskAction
     void runTestsOnKubes() {
@@ -65,18 +65,16 @@ class KubesTest extends DefaultTask {
 
         def currentUser = System.getProperty("user.name") ? System.getProperty("user.name") : "UNKNOWN_USER"
 
-        String stableRunId = new BigInteger(64, new Random(buildId.hashCode() + currentUser.hashCode() + taskToExecuteName.hashCode())).toString(36).toLowerCase()
-        String suffix = new BigInteger(64, new Random()).toString(36).toLowerCase()
+        String stableRunId = rnd64Base36(new Random(buildId.hashCode() + currentUser.hashCode() + taskToExecuteName.hashCode()))
+        String random = rnd64Base36(new Random())
 
-        io.fabric8.kubernetes.client.Config config = new io.fabric8.kubernetes.client.ConfigBuilder()
+        final KubernetesClient client = new DefaultKubernetesClient(new ConfigBuilder()
                 .withConnectionTimeout(k8sTimeout)
                 .withRequestTimeout(k8sTimeout)
                 .withRollingTimeout(k8sTimeout)
                 .withWebsocketTimeout(webSocketTimeout)
                 .withWebsocketPingInterval(webSocketTimeout)
-                .build()
-
-        final KubernetesClient client = new DefaultKubernetesClient(config)
+                .build())
 
         try {
             client.pods().inNamespace(namespace).list().getItems().forEach({ podToDelete ->
@@ -90,14 +88,20 @@ class KubesTest extends DefaultTask {
         }
 
         List<Future<KubePodResult>> futures = IntStream.range(0, numberOfPods).mapToObj({ i ->
-            String podName = "$taskToExecuteName-$stableRunId-$suffix-$i".toLowerCase()
+            String podName = "$taskToExecuteName-$stableRunId-$random-$i".toLowerCase()
             runBuild(client, namespace, numberOfPods, i, podName, printOutput, 3)
         }).collect(Collectors.toList())
         this.testOutput = Collections.synchronizedList(futures.collect { it -> it.get().binaryResults }.flatten())
         this.containerResults = futures.collect { it -> it.get() }
     }
 
-    Future<KubePodResult> runBuild(
+    private static def rnd64Base36(Random rnd) {
+        return new BigInteger(64, rnd)
+                .toString(36)
+                .toLowerCase()
+    }
+
+    private Future<KubePodResult> runBuild(
             KubernetesClient client,
             String namespace,
             int numberOfPods,
@@ -109,25 +113,31 @@ class KubesTest extends DefaultTask {
         return executorService.submit(new Callable<KubePodResult>() {
             @Override
             KubePodResult call() throws Exception {
-                def pvc = client.persistentVolumeClaims()
-                        .inNamespace(namespace)
-                        .createNew()
-                        .editOrNewMetadata().withName("$podName-pvc").endMetadata()
-
-                        .editOrNewSpec()
-                        .withAccessModes("ReadWriteOnce")
-                        .editOrNewResources().addToRequests("storage", new Quantity("1Gi")).endResources()
-                        .endSpec()
-
-                        .done()
-
-                try {
-                    return buildRunPodWithRetriesOrThrow(client, namespace, pvc, numberOfPods, podIdx, podName, printOutput, numberOfRetries)
-                } finally {
-                    client.resource(pvc).delete()
-                }
+                def pvc = createPvc(client, podName)
+                return buildRunPodWithRetriesOrThrow(client, namespace, pvc, numberOfPods, podIdx, podName, printOutput, numberOfRetries)
             }
         })
+    }
+
+    private def createPvc(KubernetesClient client, String name) {
+        def pvc = client.persistentVolumeClaims()
+                .inNamespace(namespace)
+                .createNew()
+
+                .editOrNewMetadata().withName(name).endMetadata()
+
+                .editOrNewSpec()
+                .withAccessModes("ReadWriteOnce")
+                .editOrNewResources().addToRequests("storage", new Quantity("100Mi")).endResources()
+                .endSpec()
+
+                .done()
+
+        addShutdownHook {
+            logger.info("Deleting PVC: $pvc.metadata.name")
+            client.persistentVolumeClaims().delete(pvc)
+        }
+        return pvc
     }
 
     private KubePodResult buildRunPodWithRetriesOrThrow(
@@ -140,6 +150,10 @@ class KubesTest extends DefaultTask {
             boolean printOutput,
             int numberOfRetries
     ) {
+        addShutdownHook {
+            logger.lifecycle("Deleting pod: $podName")
+            client.pods().inNamespace(namespace).withName(podName).delete()
+        }
         int tryCount = 0
         Pod createdPod = null
         while (tryCount < numberOfRetries) {
@@ -148,31 +162,30 @@ class KubesTest extends DefaultTask {
                 project.logger.lifecycle("requesting pod: " + podName)
                 createdPod = client.pods().inNamespace(namespace).create(podRequest)
                 project.logger.lifecycle("scheduled pod: " + podName)
+
                 File outputFile = Files.createTempFile("container", ".log").toFile()
                 attachStatusListenerToPod(client, createdPod)
-                schedulePodForDeleteOnShutdown(client, createdPod)
                 waitForPodToStart(client, createdPod)
                 def stdOutOs = new PipedOutputStream()
                 def stdOutIs = new PipedInputStream(4096)
                 ByteArrayOutputStream errChannelStream = new ByteArrayOutputStream()
-                KubePodResult result = new KubePodResult(createdPod, outputFile)
-                CompletableFuture<KubePodResult> waiter = new CompletableFuture<>()
-                ExecListener execListener = buildExecListenerForPod(podName, errChannelStream, waiter, result)
+
+                CompletableFuture<Integer> waiter = new CompletableFuture<>()
+                ExecListener execListener = buildExecListenerForPod(podName, errChannelStream, waiter)
                 stdOutIs.connect(stdOutOs)
                 ExecWatch execWatch = client.pods().inNamespace(namespace).withName(podName)
                         .writingOutput(stdOutOs)
                         .writingErrorChannel(errChannelStream)
-                        .usingListener(execListener).exec(getBuildCommand(numberOfPods, podIdx))
+                        .usingListener(execListener)
+                        .exec(getBuildCommand(numberOfPods, podIdx))
 
                 startLogPumping(outputFile, stdOutIs, podIdx, printOutput)
-                KubePodResult execResult = waiter.join()
-                project.logger.lifecycle("build has ended on on pod ${podName} (${podIdx}/${numberOfPods})")
-                project.logger.lifecycle "Gathering test results from ${execResult.createdPod.metadata.name}"
-                def binaryResults = downloadTestXmlFromPod(client, namespace, execResult.createdPod)
-                project.logger.lifecycle("deleting: " + execResult.createdPod.getMetadata().getName())
-                client.resource(execResult.createdPod).delete()
-                result.binaryResults = binaryResults
-                return result
+                int resCode = waiter.join()
+                project.logger.lifecycle("build has ended on on pod ${podName} (${podIdx}/${numberOfPods}), gathering results")
+                def binaryResults = downloadTestXmlFromPod(client, namespace, createdPod)
+                project.logger.lifecycle("deleting: " + createdPod.getMetadata().getName())
+                client.pods().delete(createdPod)
+                return new KubePodResult(resCode, outputFile, binaryResults)
             } catch (Exception e) {
                 logger.error("Encountered error during testing cycle on pod ${podName} (${podIdx}/${numberOfPods})", e)
                 try {
@@ -219,7 +232,7 @@ class KubesTest extends DefaultTask {
         loggingThread.start()
     }
 
-    ExecListener buildExecListenerForPod(podName, errChannelStream, CompletableFuture<KubePodResult> waitingFuture, KubePodResult result) {
+    ExecListener buildExecListenerForPod(podName, errChannelStream, CompletableFuture<Integer> waitingFuture) {
 
         new ExecListener() {
             @Override
@@ -238,9 +251,9 @@ class KubesTest extends DefaultTask {
                 project.logger.lifecycle("Received onClose() from pod " + podName + " with returnCode=" + code)
                 try {
                     def errChannelContents = errChannelStream.toString()
-                    Status status = Serialization.unmarshal(errChannelContents, Status.class);
-                    result.resultCode = status.details?.causes?.first()?.message?.toInteger() ? status.details?.causes?.first()?.message?.toInteger() : 0
-                    waitingFuture.complete(result)
+                    Status status = Serialization.unmarshal(errChannelContents, Status.class)
+                    Integer res = status.details?.causes?.first()?.message?.toInteger()
+                    waitingFuture.complete(res ? res : 0)
                 } catch (Exception e) {
                     waitingFuture.completeExceptionally(e)
                 }
@@ -248,15 +261,7 @@ class KubesTest extends DefaultTask {
         }
     }
 
-    void schedulePodForDeleteOnShutdown(client, Pod createdPod) {
-        project.logger.info("attaching shutdown hook for pod ${createdPod.metadata.name}")
-        Runtime.getRuntime().addShutdownHook({
-            println "Deleting pod: " + createdPod.metadata.name
-            client.pods().delete(createdPod)
-        })
-    }
-
-    Watch attachStatusListenerToPod(KubernetesClient client, Pod pod) {
+    private Watch attachStatusListenerToPod(KubernetesClient client, Pod pod) {
         client.pods().inNamespace(pod.metadata.namespace).withName(pod.metadata.name).watch(new Watcher<Pod>() {
             @Override
             void eventReceived(Watcher.Action action, Pod resource) {
@@ -282,14 +287,16 @@ class KubesTest extends DefaultTask {
                 .addNewVolume()
                 .withName("gradlecache")
                 .withNewHostPath()
-                .withPath("/tmp/gradle")
                 .withType("DirectoryOrCreate")
+                .withPath("/tmp/gradle")
                 .endHostPath()
                 .endVolume()
 
                 .addNewVolume()
                 .withName("testruns")
-                .withNewPersistentVolumeClaim().withClaimName(pvc.metadata.name).endPersistentVolumeClaim()
+                .withNewPersistentVolumeClaim()
+                .withClaimName(pvc.metadata.name)
+                .endPersistentVolumeClaim()
                 .endVolume()
 
                 .addNewContainer()
