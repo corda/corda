@@ -10,12 +10,16 @@ import kotlin.concurrent.thread
  */
 @Synchronized
 fun errorAndTerminate(message: String, e: Throwable?) {
-    thread {
-        val log = LoggerFactory.getLogger("errorAndTerminate")
-        log.error(message, e)
-    }
+    try {
+        thread {
+            val log = LoggerFactory.getLogger("errorAndTerminate")
+            log.error(message, e)
+        }
 
-    // give the logger a chance to flush the error message before killing the node
-    Thread.sleep(10.seconds.toMillis())
-    Runtime.getRuntime().halt(1)
+        // give the logger a chance to flush the error message before killing the node
+        Thread.sleep(10.seconds.toMillis())
+    }
+    finally {
+        Runtime.getRuntime().halt(1)
+    }
 }

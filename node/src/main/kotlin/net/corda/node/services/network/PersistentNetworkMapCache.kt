@@ -34,6 +34,7 @@ import rx.subjects.PublishSubject
 import java.security.PublicKey
 import java.util.*
 import javax.annotation.concurrent.ThreadSafe
+import javax.persistence.PersistenceException
 
 /** Database-based network map cache. */
 @ThreadSafe
@@ -184,20 +185,44 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
                             else -> logger.info("Previous node was identical to incoming one - doing nothing")
                         }
                     }
+            /**
+             * This algorithm protects against database failure (eg. attempt to persist a nodeInfo entry larger than permissible by the
+             * database X500Name) without sacrificing performance incurred by attempting to flush nodeInfo's individually.
+             * Upon database transaction failure, the list of new nodeInfo's is split in half, and then each half is persisted independently.
+             * This continues recursively until all valid nodeInfo's are persisted, and failed ones reported as warnings.
+             */
+            recursivelyUpdateNodes(newNodes.map { nodeInfo -> Pair(nodeInfo, MapChange.Added(nodeInfo)) } +
+                    updatedNodes.map { (nodeInfo, previousNodeInfo) -> Pair(nodeInfo, MapChange.Modified(nodeInfo, previousNodeInfo)) })
+        }
+    }
 
-            database.transaction {
-                updatedNodes.forEach { (node, previousNode) ->
-                    //updated
-                    updateInfoDB(node, session)
-                    changePublisher.onNext(MapChange.Modified(node, previousNode))
-                }
-                newNodes.forEach { node ->
-                    //new
-                    updateInfoDB(node, session)
-                    changePublisher.onNext(MapChange.Added(node))
+    private fun recursivelyUpdateNodes(nodeUpdates: List<Pair<NodeInfo, MapChange>>) {
+        try {
+            persistNodeUpdates(nodeUpdates)
+        }
+        catch (e: PersistenceException) {
+            if (nodeUpdates.isNotEmpty()) {
+                when {
+                    nodeUpdates.size > 1 -> {
+                        // persist first half
+                        val nodeUpdatesLow = nodeUpdates.subList(0, (nodeUpdates.size / 2))
+                        recursivelyUpdateNodes(nodeUpdatesLow)
+                        // persist second half
+                        val nodeUpdatesHigh = nodeUpdates.subList((nodeUpdates.size / 2), nodeUpdates.size)
+                        recursivelyUpdateNodes(nodeUpdatesHigh)
+                    }
+                    else -> logger.warn("Failed to add or update node with info: ${nodeUpdates.single()}")
                 }
             }
+        }
+    }
 
+    private fun persistNodeUpdates(nodeUpdates: List<Pair<NodeInfo, MapChange>>) {
+        database.transaction {
+            nodeUpdates.forEach { (nodeInfo, change) ->
+                updateInfoDB(nodeInfo, session)
+                changePublisher.onNext(change)
+            }
         }
     }
 

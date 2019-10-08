@@ -462,11 +462,10 @@ open class Node(configuration: NodeConfiguration,
     }
 
     /**
-     * Register a default exception handler for all threads that terminates the process if the database connection goes away and
-     * cannot be recovered.
+     * Register a default exception handler for all threads that terminate the process due to an unrecoverable Virtual Machine error.
      */
     private fun registerDefaultExceptionHandler() {
-        Thread.setDefaultUncaughtExceptionHandler(DbExceptionHandler(Thread.getDefaultUncaughtExceptionHandler()))
+        Thread.setDefaultUncaughtExceptionHandler(GeneralExceptionHandler(Thread.getDefaultUncaughtExceptionHandler()))
     }
 
     /**

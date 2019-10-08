@@ -48,6 +48,8 @@ class ImageBuilding implements Plugin<Project> {
                 if (!mavenDir.exists()) {
                     mavenDir.mkdirs()
                 }
+
+                logger.info("Will use: ${gradleDir.absolutePath} for caching gradle artifacts")
             }
 
             dependsOn buildDockerImageForSource

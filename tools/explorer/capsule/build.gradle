@@ -17,13 +17,15 @@ capsule {
 
 task buildExplorerJAR(type: FatCapsule, dependsOn: project(':tools:explorer').tasks.jar) {
     applicationClass 'net.corda.explorer.Main'
-    archiveName "node-explorer-${corda_release_version}.jar"
+    archiveBaseName = 'node-explorer'
+    archiveVersion = corda_release_version
+    archiveClassifier = jdkClassifier
+    archiveName = archiveFileName.get()
     applicationSource = files(
         project(':tools:explorer').configurations.runtimeClasspath,
         project(':tools:explorer').tasks.jar,
         project(':tools:explorer').sourceSets.main.java.outputDir.toString() + '/ExplorerCaplet.class'
     )
-    classifier 'fat'
 
     capsuleManifest {
         applicationVersion = corda_release_version

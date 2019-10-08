@@ -73,7 +73,7 @@ processResources {
 
 shadowJar {
     baseName = 'network-builder'
-    classifier = null
+    archiveClassifier = jdkClassifier
     version = null
     zip64 true
 }
@@ -83,12 +83,11 @@ assemble.dependsOn buildNetworkBuilder
 
 artifacts {
     publish shadowJar {
-        classifier = ""
+        archiveClassifier = jdkClassifier
     }
 }
 
 jar {
-    classifier "ignore"
     enabled = false
 }
 
