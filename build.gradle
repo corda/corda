@@ -595,6 +595,14 @@ task allParallelIntegrationTest(type: ParallelTestGroup) {
     memoryInGbPerFork 10
     distribute Distribution.CLASS
 }
+task allParallelSlowIntegrationTest(type: ParallelTestGroup) {
+    testGroups "slowIntegrationTest"
+    numberOfShards 5
+    streamOutput false
+    coresPerFork 6
+    memoryInGbPerFork 10
+    distribute Distribution.CLASS
+}
 task allParallelUnitTest(type: ParallelTestGroup) {
     testGroups "test"
     numberOfShards 10

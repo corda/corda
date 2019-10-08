@@ -1,0 +1,71 @@
+import static com.r3.build.BuildControl.killAllExistingBuildsForJob
+@Library('existing-build-control')
+import static com.r3.build.BuildControl.killAllExistingBuildsForJob
+
+killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
+
+pipeline {
+    agent { label 'k8s' }
+    options { timestamps() }
+
+    environment {
+        DOCKER_TAG_TO_USE = "${UUID.randomUUID().toString().toLowerCase().subSequence(0, 12)}"
+        EXECUTOR_NUMBER = "${env.EXECUTOR_NUMBER}"
+        BUILD_ID = "${env.BUILD_ID}-${env.JOB_NAME}"
+    }
+
+    stages {
+        stage('Corda Pull Request - Generate Build Image') {
+            steps {
+                withCredentials([string(credentialsId: 'container_reg_passwd', variable: 'DOCKER_PUSH_PWD')]) {
+                    sh "./gradlew " +
+                            "-Dkubenetize=true " +
+                            "-Ddocker.push.password=\"\${DOCKER_PUSH_PWD}\" " +
+                            "-Ddocker.work.dir=\"/tmp/\${EXECUTOR_NUMBER}\" " +
+                            "-Ddocker.provided.tag=\"\${DOCKER_TAG_TO_USE}\"" +
+                            " clean pushBuildImage"
+                }
+                sh "kubectl auth can-i get pods"
+            }
+        }
+
+        stage('Corda Pull Request - Run Tests') {
+            stage('Unit Tests') {
+                steps {
+                    sh "./gradlew " +
+                            "-DbuildId=\"\${BUILD_ID}\" " +
+                            "-Dkubenetize=true " +
+                            "-Ddocker.tag=\"\${DOCKER_TAG_TO_USE}\"" +
+                            " allParallelUnitTest"
+                }
+            }
+            stage('Integration Tests') {
+                steps {
+                    sh "./gradlew " +
+                            "-DbuildId=\"\${BUILD_ID}\" " +
+                            "-Dkubenetize=true " +
+                            "-Ddocker.tag=\"\${DOCKER_TAG_TO_USE}\"" +
+                            " allParallelIntegrationTest"
+                }
+            }
+            stage('Slow Integration Tests') {
+                steps {
+                    sh "./gradlew " +
+                            "-DbuildId=\"\${BUILD_ID}\" " +
+                            "-Dkubenetize=true " +
+                            "-Ddocker.tag=\"\${DOCKER_TAG_TO_USE}\"" +
+                            " allParallelSlowIntegrationTest"
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            junit '**/build/test-results-xml/**/*.xml'
+        }
+        cleanup {
+            deleteDir() /* clean up our workspace */
+        }
+    }
+}

@@ -53,7 +53,6 @@ public class BucketingAllocatorTask extends DefaultTask {
         String name = "Test Name";
         String duration = "Duration(ms)";
         List<CSVRecord> records = CSVFormat.DEFAULT.withHeader().parse(reader).getRecords();
-
         return records.stream().map(record -> {
             String testName = record.get(name);
             String testDuration = record.get(duration);
