@@ -23,15 +23,7 @@ allprojects {
     }
 }
 
-configurations {
-    runtime
-}
-
 dependencies {
-    // Add the top-level projects ONLY to the host project.
-    runtime project.childProjects.collect { n, p ->
-        project(p.path)
-    }
     compile gradleApi()
     compile "io.fabric8:kubernetes-client:4.4.1"
     compile 'org.apache.commons:commons-compress:1.19'
