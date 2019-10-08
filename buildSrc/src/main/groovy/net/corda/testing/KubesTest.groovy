@@ -13,7 +13,6 @@ import io.fabric8.kubernetes.client.KubernetesClientException
 import io.fabric8.kubernetes.client.Watch
 import io.fabric8.kubernetes.client.Watcher
 import io.fabric8.kubernetes.client.dsl.ExecListener
-import io.fabric8.kubernetes.client.dsl.ExecWatch
 import io.fabric8.kubernetes.client.utils.Serialization
 import net.corda.testing.retry.Retry
 import net.corda.testing.retry.Retry.RetryException
@@ -152,7 +151,7 @@ class KubesTest extends DefaultTask {
             int numberOfRetries
     ) {
         addShutdownHook {
-            logger.lifecycle("Deleting pod: $podName")
+            logger.lifecycle("deleting pod: $podName")
             client.pods().inNamespace(namespace).withName(podName).delete()
         }
 
@@ -170,15 +169,13 @@ class KubesTest extends DefaultTask {
                 }
 
                 // recreate and run
-                Pod podRequest = buildPod(podName, pvc)
                 project.logger.lifecycle("creating pod: $podName")
-                Pod createdPod = client.pods().inNamespace(namespace).create(podRequest)
+                Pod createdPod = client.pods().inNamespace(namespace).create(buildPodRequest(podName, pvc))
                 project.logger.lifecycle("scheduled pod: $podName")
 
                 attachStatusListenerToPod(client, createdPod)
                 waitForPodToStart(client, createdPod)
 
-                File outputFile = Files.createTempFile("container", ".log").toFile()
                 def stdOutOs = new PipedOutputStream()
                 def stdOutIs = new PipedInputStream(4096)
                 ByteArrayOutputStream errChannelStream = new ByteArrayOutputStream()
@@ -186,18 +183,16 @@ class KubesTest extends DefaultTask {
                 CompletableFuture<Integer> waiter = new CompletableFuture<>()
                 ExecListener execListener = buildExecListenerForPod(podName, errChannelStream, waiter)
                 stdOutIs.connect(stdOutOs)
-                ExecWatch execWatch = client.pods().inNamespace(namespace).withName(podName)
+                client.pods().inNamespace(namespace).withName(podName)
                         .writingOutput(stdOutOs)
                         .writingErrorChannel(errChannelStream)
                         .usingListener(execListener)
                         .exec(getBuildCommand(numberOfPods, podIdx))
 
-                startLogPumping(outputFile, stdOutIs, podIdx, printOutput)
+                File outputFile = startLogPumping(stdOutIs, podIdx, printOutput)
                 int resCode = waiter.join()
                 project.logger.lifecycle("build has ended on on pod ${podName} (${podIdx}/${numberOfPods}), gathering results")
                 def binaryResults = downloadTestXmlFromPod(client, namespace, createdPod)
-                project.logger.lifecycle("deleting: " + createdPod.getMetadata().getName())
-                client.pods().delete(createdPod)
                 return new KubePodResult(resCode, outputFile, binaryResults)
             }
         } catch (RetryException e) {
@@ -205,7 +200,8 @@ class KubesTest extends DefaultTask {
         }
     }
 
-    void startLogPumping(File outputFile, stdOutIs, podIdx, boolean printOutput) {
+    File startLogPumping(stdOutIs, podIdx, boolean printOutput) {
+        File outputFile = Files.createTempFile("container", ".log").toFile()
         Thread loggingThread = new Thread({ ->
             BufferedWriter out = null
             BufferedReader br = null
@@ -230,6 +226,7 @@ class KubesTest extends DefaultTask {
 
         loggingThread.setDaemon(true)
         loggingThread.start()
+        return outputFile
     }
 
     ExecListener buildExecListenerForPod(podName, errChannelStream, CompletableFuture<Integer> waitingFuture) {
@@ -280,7 +277,7 @@ class KubesTest extends DefaultTask {
         project.logger.lifecycle("pod " + pod.metadata.name + " has started, executing build")
     }
 
-    Pod buildPod(String podName, PersistentVolumeClaim pvc) {
+    Pod buildPodRequest(String podName, PersistentVolumeClaim pvc) {
         return new PodBuilder().withNewMetadata().withName(podName).endMetadata()
                 .withNewSpec()
 
