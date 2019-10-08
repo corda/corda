@@ -91,7 +91,7 @@ abstract class TestBase(type: SandboxType) {
         action: SandboxRuntimeContext.() -> Unit
     ) {
         var thrownException: Throwable? = null
-        thread {
+        thread(start = false) {
             try {
                 UserPathSource(classPaths).use { userSource ->
                     SandboxRuntimeContext(parentConfiguration.createChild(userSource, Consumer {
@@ -105,7 +105,13 @@ abstract class TestBase(type: SandboxType) {
             } catch (exception: Throwable) {
                 thrownException = exception
             }
-        }.join()
+        }.apply {
+            uncaughtExceptionHandler = Thread.UncaughtExceptionHandler { _, ex ->
+                thrownException = ex
+            }
+            start()
+            join()
+        }
         throw thrownException ?: return
     }
 }
