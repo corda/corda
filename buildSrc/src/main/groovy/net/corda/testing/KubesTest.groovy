@@ -1,6 +1,5 @@
 package net.corda.testing
 
-
 import io.fabric8.kubernetes.api.model.LocalObjectReference
 import io.fabric8.kubernetes.api.model.PersistentVolumeClaim
 import io.fabric8.kubernetes.api.model.Pod
@@ -16,6 +15,8 @@ import io.fabric8.kubernetes.client.Watcher
 import io.fabric8.kubernetes.client.dsl.ExecListener
 import io.fabric8.kubernetes.client.dsl.ExecWatch
 import io.fabric8.kubernetes.client.utils.Serialization
+import net.corda.testing.retry.Retry
+import net.corda.testing.retry.Retry.RetryException
 import okhttp3.Response
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
@@ -154,18 +155,30 @@ class KubesTest extends DefaultTask {
             logger.lifecycle("Deleting pod: $podName")
             client.pods().inNamespace(namespace).withName(podName).delete()
         }
-        int tryCount = 0
-        Pod createdPod = null
-        while (tryCount < numberOfRetries) {
-            try {
-                Pod podRequest = buildPod(podName, pvc)
-                project.logger.lifecycle("requesting pod: " + podName)
-                createdPod = client.pods().inNamespace(namespace).create(podRequest)
-                project.logger.lifecycle("scheduled pod: " + podName)
 
-                File outputFile = Files.createTempFile("container", ".log").toFile()
+        try {
+            Retry.fixed(numberOfRetries).run {
+                // remove pod if exists
+                def oldPod = client.pods().inNamespace(namespace).withName(podName)
+                if (oldPod) {
+                    logger.lifecycle("deleting pod: $podName")
+                    oldPod.delete()
+                    while (client.pods().inNamespace(namespace).withName(podName)) {
+                        logger.info("waiting for pod $podName to be removed")
+                        Thread.sleep(1000)
+                    }
+                }
+
+                // recreate and run
+                Pod podRequest = buildPod(podName, pvc)
+                project.logger.lifecycle("creating pod: $podName")
+                Pod createdPod = client.pods().inNamespace(namespace).create(podRequest)
+                project.logger.lifecycle("scheduled pod: $podName")
+
                 attachStatusListenerToPod(client, createdPod)
                 waitForPodToStart(client, createdPod)
+
+                File outputFile = Files.createTempFile("container", ".log").toFile()
                 def stdOutOs = new PipedOutputStream()
                 def stdOutIs = new PipedInputStream(4096)
                 ByteArrayOutputStream errChannelStream = new ByteArrayOutputStream()
@@ -186,23 +199,10 @@ class KubesTest extends DefaultTask {
                 project.logger.lifecycle("deleting: " + createdPod.getMetadata().getName())
                 client.pods().delete(createdPod)
                 return new KubePodResult(resCode, outputFile, binaryResults)
-            } catch (Exception e) {
-                logger.error("Encountered error during testing cycle on pod ${podName} (${podIdx}/${numberOfPods})", e)
-                try {
-                    if (createdPod) {
-                        client.pods().withName(podName).delete()
-                        while (client.pods().inNamespace(namespace).list().getItems().find { p -> p.metadata.name == podName }) {
-                            logger.warn("pod ${podName} has not been deleted, waiting 1s")
-                            Thread.sleep(1000)
-                        }
-                    }
-                } catch (Exception ignored) {
-                }
-                tryCount++
-                logger.lifecycle("will retry ${podName} another ${numberOfRetries - tryCount} times")
             }
+        } catch (RetryException e) {
+            throw new RuntimeException("Failed to build in pod ${podName} (${podIdx}/${numberOfPods}) in $numberOfRetries attempts", e)
         }
-        throw new RuntimeException("Failed to build in pod ${podName} (${podIdx}/${numberOfPods}) in $tryCount tries")
     }
 
     void startLogPumping(File outputFile, stdOutIs, podIdx, boolean printOutput) {
