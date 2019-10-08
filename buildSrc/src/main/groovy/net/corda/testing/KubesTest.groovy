@@ -159,10 +159,10 @@ class KubesTest extends DefaultTask {
             Retry.fixed(numberOfRetries).run {
                 // remove pod if exists
                 def oldPod = client.pods().inNamespace(namespace).withName(podName)
-                if (oldPod) {
+                if (oldPod.get()) {
                     logger.lifecycle("deleting pod: $podName")
                     oldPod.delete()
-                    while (client.pods().inNamespace(namespace).withName(podName)) {
+                    while (oldPod.get()) {
                         logger.info("waiting for pod $podName to be removed")
                         Thread.sleep(1000)
                     }
