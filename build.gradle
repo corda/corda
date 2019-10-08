@@ -27,9 +27,12 @@ buildscript {
     if (JavaVersion.current() == JavaVersion.VERSION_11) {
         ext.quasar_version = constants.getProperty("quasarVersion11")
         ext.quasar_classifier = constants.getProperty("quasarClassifier11")
-    } else {
+        ext.jdkClassifier = constants.getProperty("jdkClassifier11")
+    }
+    else {
         ext.quasar_version = constants.getProperty("quasarVersion")
         ext.quasar_classifier = constants.getProperty("quasarClassifier")
+        ext.jdkClassifier = constants.getProperty("jdkClassifier")
     }
     ext.quasar_exclusions = [
             'co.paralleluniverse**',
@@ -314,6 +317,12 @@ allprojects {
         if (name.contains("integrationTest")) {
             maxParallelForks = (System.env.CORDA_INT_TESTING_FORKS == null) ? 1 : "$System.env.CORDA_INT_TESTING_FORKS".toInteger()
         }
+    }
+
+    jar {
+        // JDK11 built and published artifacts to include classifier
+        if (jdkClassifier != null)
+            archiveClassifier = jdkClassifier
     }
 
     group 'net.corda'
