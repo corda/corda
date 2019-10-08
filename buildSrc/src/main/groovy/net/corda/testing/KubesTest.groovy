@@ -109,7 +109,9 @@ class KubesTest extends DefaultTask {
         return executorService.submit(new Callable<KubePodResult>() {
             @Override
             KubePodResult call() throws Exception {
-                def pvc = client.persistentVolumeClaims().createNew()
+                def pvc = client.persistentVolumeClaims()
+                        .inNamespace(namespace)
+                        .createNew()
                         .editOrNewMetadata().withName("$podName-pvc").endMetadata()
 
                         .editOrNewSpec()
