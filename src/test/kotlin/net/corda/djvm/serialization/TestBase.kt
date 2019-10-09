@@ -92,18 +92,14 @@ abstract class TestBase(type: SandboxType) {
     ) {
         var thrownException: Throwable? = null
         thread(start = false) {
-            try {
-                UserPathSource(classPaths).use { userSource ->
-                    SandboxRuntimeContext(parentConfiguration.createChild(userSource, Consumer {
-                        it.withNewMinimumSeverityLevel(minimumSeverityLevel)
-                            .withSandboxOnlyAnnotations(sandboxOnlyAnnotations)
-                            .withVisibleAnnotations(visibleAnnotations)
-                    })).use {
-                        action(this)
-                    }
+            UserPathSource(classPaths).use { userSource ->
+                SandboxRuntimeContext(parentConfiguration.createChild(userSource, Consumer {
+                    it.withNewMinimumSeverityLevel(minimumSeverityLevel)
+                        .withSandboxOnlyAnnotations(sandboxOnlyAnnotations)
+                        .withVisibleAnnotations(visibleAnnotations)
+                })).use {
+                    action(this)
                 }
-            } catch (exception: Throwable) {
-                thrownException = exception
             }
         }.apply {
             uncaughtExceptionHandler = Thread.UncaughtExceptionHandler { _, ex ->
