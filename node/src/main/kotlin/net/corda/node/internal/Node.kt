@@ -102,7 +102,9 @@ open class Node(configuration: NodeConfiguration,
                 versionInfo: VersionInfo,
                 private val initialiseSerialization: Boolean = true,
                 flowManager: FlowManager = NodeFlowManager(configuration.flowOverrides),
-                cacheFactoryPrototype: BindableNamedCacheFactory = DefaultNamedCacheFactory()
+                cacheFactoryPrototype: BindableNamedCacheFactory = DefaultNamedCacheFactory(),
+                djvmBootstrapSource: ApiSource = createBootstrapSource(configuration),
+                djvmCordaSource: UserSource? = createDeterministicClasspath(configuration)
 ) : AbstractNode<NodeInfo>(
         configuration,
         createClock(configuration),
@@ -111,8 +113,8 @@ open class Node(configuration: NodeConfiguration,
         flowManager,
         // Under normal (non-test execution) it will always be "1"
         AffinityExecutor.ServiceAffinityExecutor("Node thread-${sameVmNodeCounter.incrementAndGet()}", 1),
-        djvmBootstrapSource = createBootstrapSource(configuration),
-        djvmCordaSource = createDeterministicClasspath(configuration)
+        djvmBootstrapSource = djvmBootstrapSource,
+        djvmCordaSource = djvmCordaSource
 ) {
 
     override fun createStartedNode(nodeInfo: NodeInfo, rpcOps: CordaRPCOps, notaryService: NotaryService?): NodeInfo =
