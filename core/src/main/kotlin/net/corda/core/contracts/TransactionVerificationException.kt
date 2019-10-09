@@ -70,8 +70,17 @@ abstract class TransactionVerificationException(val txId: SecureHash, message: S
      * @property outputConstraint The constraint of the outputs state.
      */
     @KeepForDJVM
-    class ConstraintPropagationRejection(txId: SecureHash, val contractClass: String, inputConstraint: AttachmentConstraint, outputConstraint: AttachmentConstraint)
-        : TransactionVerificationException(txId, "Contract constraints for $contractClass are not propagated correctly. The outputConstraint: $outputConstraint is not a valid transition from the input constraint: $inputConstraint.", null)
+    class ConstraintPropagationRejection(txId: SecureHash, message: String) : TransactionVerificationException(txId, message, null) {
+        constructor(txId: SecureHash,
+                    contractClass: String,
+                    inputConstraint: AttachmentConstraint,
+                    outputConstraint: AttachmentConstraint) :
+                this(txId, "Contract constraints for $contractClass are not propagated correctly. " +
+                        "The outputConstraint: $outputConstraint is not a valid transition from the input constraint: $inputConstraint.")
+
+        // This is only required for backwards compatibility. In case the message format changes, update the index.
+        val contractClass: String = message.split(" ")[3]
+    }
 
     /**
      * The transaction attachment that contains the [contractClass] class didn't meet the constraints specified by
@@ -153,19 +162,24 @@ abstract class TransactionVerificationException(val txId: SecureHash, message: S
      * be satisfied.
      */
     @KeepForDJVM
-    class TransactionDuplicateEncumbranceException(txId: SecureHash, index: Int)
-        : TransactionVerificationException(txId, "The bi-directionality property of encumbered output states " +
-            "is not satisfied. Index $index is referenced more than once", null)
+    class TransactionDuplicateEncumbranceException(txId: SecureHash, message: String)
+        : TransactionVerificationException(txId, message, null) {
+        constructor(txId: SecureHash, index: Int) : this(txId, "The bi-directionality property of encumbered output states " +
+                "is not satisfied. Index $index is referenced more than once")
+    }
 
     /**
      * An encumbered state should also be referenced as the encumbrance of another state in order to satisfy the
      * bi-directionality property (a full cycle should be present).
      */
     @KeepForDJVM
-    class TransactionNonMatchingEncumbranceException(txId: SecureHash, nonMatching: Collection<Int>)
-        : TransactionVerificationException(txId, "The bi-directionality property of encumbered output states " +
-            "is not satisfied. Encumbered states should also be referenced as an encumbrance of another state to form " +
-            "a full cycle. Offending indices $nonMatching", null)
+    class TransactionNonMatchingEncumbranceException(txId: SecureHash, message: String)
+        : TransactionVerificationException(txId, message, null) {
+        constructor(txId: SecureHash, nonMatching: Collection<Int>) : this(txId,
+                "The bi-directionality property of encumbered output states " +
+                "is not satisfied. Encumbered states should also be referenced as an encumbrance of another state to form " +
+                "a full cycle. Offending indices $nonMatching")
+    }
 
     /**
      * All encumbered states should be assigned to the same notary. This is due to the fact that multi-notary
@@ -173,9 +187,13 @@ abstract class TransactionVerificationException(val txId: SecureHash, message: S
      * in the same transaction.
      */
     @KeepForDJVM
-    class TransactionNotaryMismatchEncumbranceException(txId: SecureHash, encumberedIndex: Int, encumbranceIndex: Int, encumberedNotary: Party, encumbranceNotary: Party)
-        : TransactionVerificationException(txId, "Encumbered output states assigned to different notaries found. " +
-            "Output state with index $encumberedIndex is assigned to notary [$encumberedNotary], while its encumbrance with index $encumbranceIndex is assigned to notary [$encumbranceNotary]", null)
+    class TransactionNotaryMismatchEncumbranceException(txId: SecureHash, message: String)
+        : TransactionVerificationException(txId, message, null) {
+        constructor(txId: SecureHash, encumberedIndex: Int, encumbranceIndex: Int, encumberedNotary: Party, encumbranceNotary: Party) :
+                this(txId, "Encumbered output states assigned to different notaries found. " +
+                        "Output state with index $encumberedIndex is assigned to notary [$encumberedNotary], " +
+                        "while its encumbrance with index $encumbranceIndex is assigned to notary [$encumbranceNotary]")
+    }
 
     /**
      * If a state is identified as belonging to a contract, either because the state class is defined as an inner class
@@ -186,35 +204,44 @@ abstract class TransactionVerificationException(val txId: SecureHash, message: S
      * @param requiredContractClassName The class name of the contract to which the state belongs.
      */
     @KeepForDJVM
-    class TransactionContractConflictException(txId: SecureHash, state: TransactionState<ContractState>, requiredContractClassName: String)
-        : TransactionVerificationException(txId,
-            """
-            State of class ${state.data::class.java.typeName} belongs to contract $requiredContractClassName, but
+    class TransactionContractConflictException(txId: SecureHash, message: String)
+        : TransactionVerificationException(txId, message, null) {
+        constructor(txId: SecureHash, state: TransactionState<ContractState>, requiredContractClassName: String): this(txId,
+        """
+            State of class ${state.data ::class.java.typeName} belongs to contract $requiredContractClassName, but
             is bundled in TransactionState with ${state.contract}.
 
             For details see: https://docs.corda.net/api-contract-constraints.html#contract-state-agreement
-            """.trimIndent().replace('\n', ' '), null)
+            """.trimIndent().replace('\n', ' '))
+    }
 
     // TODO: add reference to documentation
     @KeepForDJVM
-    class TransactionRequiredContractUnspecifiedException(txId: SecureHash, state: TransactionState<ContractState>)
-        : TransactionVerificationException(txId,
-            """
+    class TransactionRequiredContractUnspecifiedException(txId: SecureHash, message: String)
+        : TransactionVerificationException(txId, message, null) {
+        constructor(txId: SecureHash, state: TransactionState<ContractState>) : this(txId,
+                """
             State of class ${state.data::class.java.typeName} does not have a specified owning contract.
             Add the @BelongsToContract annotation to this class to ensure that it can only be bundled in a TransactionState
             with the correct contract.
 
             For details see: https://docs.corda.net/api-contract-constraints.html#contract-state-agreement
-            """.trimIndent(), null)
-
+            """.trimIndent())
+    }
 
     /**
      * If the network parameters associated with an input or reference state in a transaction are more recent than the network parameters of the new transaction itself.
      */
     @KeepForDJVM
-    class TransactionNetworkParameterOrderingException(txId: SecureHash, inputStateRef: StateRef, txnNetworkParameters: NetworkParameters, inputNetworkParameters: NetworkParameters)
-        : TransactionVerificationException(txId, "The network parameters epoch (${txnNetworkParameters.epoch}) of this transaction " +
-            "is older than the epoch (${inputNetworkParameters.epoch}) of input state: $inputStateRef", null)
+    class TransactionNetworkParameterOrderingException(txId: SecureHash, message: String) :
+            TransactionVerificationException(txId, message, null) {
+        constructor(txId: SecureHash,
+                    inputStateRef: StateRef,
+                    txnNetworkParameters: NetworkParameters,
+                    inputNetworkParameters: NetworkParameters)
+                : this(txId, "The network parameters epoch (${txnNetworkParameters.epoch}) of this transaction " +
+                "is older than the epoch (${inputNetworkParameters.epoch}) of input state: $inputStateRef")
+    }
 
     /**
      * Thrown when the network parameters with hash: missingNetworkParametersHash is not available at this node. Usually all the parameters
@@ -224,9 +251,11 @@ abstract class TransactionVerificationException(val txId: SecureHash, message: S
      * @param missingNetworkParametersHash Missing hash of the network parameters associated to this transaction
      */
     @KeepForDJVM
-    class MissingNetworkParametersException(txId: SecureHash, missingNetworkParametersHash: SecureHash)
-        : TransactionVerificationException(txId, "Couldn't find network parameters with hash: $missingNetworkParametersHash related to this transaction: $txId", null)
-
+    class MissingNetworkParametersException(txId: SecureHash, message: String)
+        : TransactionVerificationException(txId, message, null) {
+        constructor(txId: SecureHash, missingNetworkParametersHash: SecureHash) :
+                this(txId, "Couldn't find network parameters with hash: $missingNetworkParametersHash related to this transaction: $txId")
+    }
 
     /** Whether the inputs or outputs list contains an encumbrance issue, see [TransactionMissingEncumbranceException]. */
     @CordaSerializable

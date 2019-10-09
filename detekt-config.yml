@@ -10,29 +10,33 @@ complexity:
   active: true
   ComplexCondition:
     active: true
+    excludes: "**/buildSrc/**"
     threshold: 4
   ComplexMethod:
     active: true
+    excludes: "**/buildSrc/**"
     threshold: 10
     ignoreSingleWhenExpression: true
   LargeClass:
     active: true
-    excludes: "**/test/**,**/integration-test/**,**/integration-test-slow/**,**/*Test.kt,**/*Tests.kt"
+    excludes: "**/test/**,**/integration-test/**,**/integration-test-slow/**,**/*Test.kt,**/*Tests.kt,**/buildSrc/**"
     threshold: 600
   LongMethod:
     active: true
-    excludes: "**/test/**,**/integration-test/**,**/integration-test-slow/**,**/*Test.kt,**/*Tests.kt"
+    excludes: "**/test/**,**/integration-test/**,**/integration-test-slow/**,**/*Test.kt,**/*Tests.kt,**/buildSrc/**"
     threshold: 120
   LongParameterList:
     active: true
+    excludes: "**/buildSrc/**"
     threshold: 6
     ignoreDefaultParameters: false
   NestedBlockDepth:
     active: true
+    excludes: "**/buildSrc/**"
     threshold: 4
   TooManyFunctions:
     active: true
-    excludes: "**/test/**,**/integration-test/**,**/integration-test-slow/**,**/*Test.kt,**/*Tests.kt"
+    excludes: "**/test/**,**/integration-test/**,**/integration-test-slow/**,**/*Test.kt,**/*Tests.kt,**/buildSrc/**"
     thresholdInFiles: 15
     thresholdInClasses: 15
     thresholdInInterfaces: 15
@@ -41,6 +45,7 @@ complexity:
 
 empty-blocks:
   active: true
+  excludes: "**/buildSrc/**"
   EmptyCatchBlock:
     active: true
     allowedExceptionNameRegex: "^(_|(ignore|expected).*)"
@@ -71,6 +76,7 @@ empty-blocks:
 
 exceptions:
   active: true
+  excludes: "**/buildSrc/**"
   TooGenericExceptionCaught:
     active: true
     exceptionNames:
@@ -92,6 +98,7 @@ exceptions:
 
 naming:
   active: true
+  excludes: "**/buildSrc/**"
   ClassNaming:
     active: true
     classPattern: '[A-Z$][a-zA-Z0-9$]*'
@@ -127,6 +134,7 @@ naming:
 
 performance:
   active: true
+  excludes: "**/buildSrc/**"
   ForEachOnRange:
     active: true
   SpreadOperator:
@@ -136,6 +144,7 @@ performance:
 
 potential-bugs:
   active: true
+  excludes: "**/buildSrc/**"
   DuplicateCaseInWhenExpression:
     active: true
   EqualsWithHashCodeExist:
@@ -149,10 +158,11 @@ style:
   active: true
   ForbiddenComment:
     active: true
+    excludes: "**/buildSrc/**"
     values: 'TODO:,FIXME:,STOPSHIP:'
   MagicNumber:
     active: true
-    excludes: "**/test/**,**/integration-test/**,**/integration-test-slow/**,**/*Test.kt,**/*Tests.kt"
+    excludes: "**/test/**,**/integration-test/**,**/integration-test-slow/**,**/*Test.kt,**/*Tests.kt,**/buildSrc/**"
     ignoreNumbers: '-1,0,1,2'
     ignoreHashCodeFunction: true
     ignorePropertyDeclaration: false
@@ -163,23 +173,30 @@ style:
     ignoreEnums: false
   MaxLineLength:
     active: true
+    excludes: "**/buildSrc/**"
     maxLineLength: 140
     excludePackageStatements: true
     excludeImportStatements: true
   ModifierOrder:
     active: true
+    excludes: "**/buildSrc/**"
   OptionalAbstractKeyword:
     active: true
+    excludes: "**/buildSrc/**"
   ReturnCount:
     active: true
+    excludes: "**/buildSrc/**"
     max: 2
     excludedFunctions: "equals"
     excludeReturnFromLambda: true
   SafeCast:
     active: true
+    excludes: "**/buildSrc/**"
   ThrowsCount:
     active: true
+    excludes: "**/buildSrc/**"
     max: 2
   WildcardImport:
     active: true
+    excludes: "**/buildSrc/**"
     excludeImports: 'java.util.*,kotlinx.android.synthetic.*'
