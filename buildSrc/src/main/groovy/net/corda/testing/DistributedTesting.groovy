@@ -10,6 +10,7 @@ import org.gradle.api.tasks.testing.Test
  */
 class DistributedTesting implements Plugin<Project> {
 
+    List<String> finishedTests = [];
 
     static def getPropertyAsInt(Project proj, String property, Integer defaultValue) {
         return proj.hasProperty(property) ? Integer.parseInt(proj.property(property).toString()) : defaultValue
@@ -27,12 +28,22 @@ class DistributedTesting implements Plugin<Project> {
             String providedTag = System.getProperty("docker.tag")
             BucketingAllocatorTask globalAllocator = project.tasks.create("bucketingAllocator", BucketingAllocatorTask, forks)
 
+            //to be used once k8s persistant volumes are in place
+            //File executedTests = new File(KubesTest.mount + KubesTest.testRunsDir + "executedTests.txt")
+            File executedTests = new File("executedTests.txt")
+            try {
+                finishedTests = executedTests.readLines()
+            } catch (FileNotFoundException e) {
+                executedTests.createNewFile()
+            }
+
             def requestedTasks = project.gradle.startParameter.taskNames.collect { project.tasks.findByPath(it) }
 
             //in each subproject
             //1. add the task to determine all tests within the module
             //2. modify the underlying testing task to use the output of the listing task to include a subset of tests for each fork
             //3. KubesTest will invoke these test tasks in a parallel fashion on a remote k8s cluster
+            //4. after each completed test write its name to a file to keep track of what finished for restart purposes
             project.subprojects { Project subProject ->
                 subProject.tasks.withType(Test) { Test task ->
                     println "Evaluating ${task.getPath()}"
@@ -46,6 +57,10 @@ class DistributedTesting implements Plugin<Project> {
                     }
                     if (!task.hasProperty("ignoreForDistribution")) {
                         KubesTest parallelTestTask = generateParallelTestingTask(subProject, task, imageBuildingTask, providedTag)
+                    }
+
+                    task.afterTest { desc, result ->
+                        executedTests.append(desc.getClassName() + "." + desc.getName() + "\n")
                     }
 
                 }
@@ -139,6 +154,13 @@ class DistributedTesting implements Plugin<Project> {
                     if (includes.size() == 0) {
                         subProject.logger.info "Disabling test execution for testing task ${task.getPath()}"
                         excludeTestsMatching "*"
+                    }
+
+                    //filter out the finished tests
+                    includes = includes.findAll { String test ->
+                        !finishedTests.any {
+                            test.startsWith(it)
+                        }
                     }
 
                     includes.forEach { include ->
