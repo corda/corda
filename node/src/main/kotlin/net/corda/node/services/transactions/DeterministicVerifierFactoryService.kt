@@ -17,16 +17,19 @@ import net.corda.djvm.source.UserSource
 import net.corda.node.internal.djvm.DeterministicVerifier
 import java.net.URL
 import java.net.URLClassLoader
+import java.util.function.UnaryOperator
+
+interface VerifierFactoryService : UnaryOperator<LedgerTransaction>, AutoCloseable
 
 class DeterministicVerifierFactoryService(
     private val bootstrapSource: ApiSource,
-    private val cordaSource: UserSource?
-) : SingletonSerializeAsToken(), AutoCloseable {
+    private val cordaSource: UserSource
+) : SingletonSerializeAsToken(), VerifierFactoryService {
     private val baseSandboxConfiguration: SandboxConfiguration
 
     init {
         val baseAnalysisConfiguration = AnalysisConfiguration.createRoot(
-            userSource = cordaSource!!,
+            userSource = cordaSource,
             whitelist = Whitelist.MINIMAL,
             visibleAnnotations = setOf(
                 CordaSerializable::class.java,
@@ -43,7 +46,13 @@ class DeterministicVerifierFactoryService(
         )
     }
 
-    fun specialise(ltx: LedgerTransaction, classLoader: ClassLoader): Verifier {
+    override fun apply(ledgerTransaction: LedgerTransaction): LedgerTransaction {
+        // Specialise the LedgerTransaction here so that
+        // contracts are verified inside the DJVM!
+        return ledgerTransaction.specialise(::specialise)
+    }
+
+    private fun specialise(ltx: LedgerTransaction, classLoader: ClassLoader): Verifier {
         return (classLoader as? URLClassLoader)?.run {
             DeterministicVerifier(ltx, classLoader, createSandbox(classLoader.urLs))
         } ?: BasicVerifier(ltx, classLoader)
@@ -55,7 +64,7 @@ class DeterministicVerifierFactoryService(
 
     override fun close() {
         bootstrapSource.use {
-            cordaSource?.close()
+            cordaSource.close()
         }
     }
 
@@ -67,4 +76,9 @@ class DeterministicVerifierFactoryService(
             throwCostThreshold = 1_000_000
         )
     }
+}
+
+class BasicVerifierFactoryService : VerifierFactoryService {
+    override fun apply(ledgerTransaction: LedgerTransaction)= ledgerTransaction
+    override fun close() {}
 }

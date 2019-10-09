@@ -65,9 +65,7 @@ import net.corda.node.services.persistence.*
 import net.corda.node.services.rpc.CheckpointDumper
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.statemachine.*
-import net.corda.node.services.transactions.DeterministicVerifierFactoryService
-import net.corda.node.services.transactions.InMemoryTransactionVerifierService
-import net.corda.node.services.transactions.SimpleNotaryService
+import net.corda.node.services.transactions.*
 import net.corda.node.services.upgrade.ContractUpgradeServiceImpl
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.utilities.*
@@ -127,8 +125,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                                protected val flowManager: FlowManager,
                                val serverThread: AffinityExecutor.ServiceAffinityExecutor,
                                val busyNodeLatch: ReusableLatch = ReusableLatch(),
-                               private val djvmBootstrapSource: ApiSource = EmptyApi,
-                               private val djvmCordaSource: UserSource? = null) : SingletonSerializeAsToken() {
+                               djvmBootstrapSource: ApiSource = EmptyApi,
+                               djvmCordaSource: UserSource? = null) : SingletonSerializeAsToken() {
 
     protected abstract val log: Logger
     @Suppress("LeakingThis")
@@ -217,7 +215,11 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     ).closeOnStop()
     @Suppress("LeakingThis")
     val transactionVerifierService = InMemoryTransactionVerifierService(transactionVerifierWorkerCount).tokenize()
-    val deterministicVerifierFactoryService = DeterministicVerifierFactoryService(djvmBootstrapSource, djvmCordaSource).tokenize()
+    val verifierFactoryService: VerifierFactoryService = if (djvmCordaSource != null) {
+        DeterministicVerifierFactoryService(djvmBootstrapSource, djvmCordaSource).tokenize()
+    } else {
+        BasicVerifierFactoryService()
+    }
     val contractUpgradeService = ContractUpgradeServiceImpl(cacheFactory).tokenize()
     val auditService = DummyAuditService().tokenize()
     @Suppress("LeakingThis")
@@ -1076,13 +1078,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
         override fun specialise(ltx: LedgerTransaction): LedgerTransaction {
             val ledgerTransaction = servicesForResolution.specialise(ltx)
-
-            // Do nothing unless we have Corda's deterministic libraries.
-            djvmCordaSource ?: return ledgerTransaction
-
-            // Specialise the LedgerTransaction here so that
-            // contracts are verified inside the DJVM!
-            return ledgerTransaction.specialise(deterministicVerifierFactoryService::specialise)
+            return verifierFactoryService.apply(ledgerTransaction)
         }
     }
 }
