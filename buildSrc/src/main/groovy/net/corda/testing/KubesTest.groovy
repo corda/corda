@@ -158,6 +158,7 @@ class KubesTest extends DefaultTask {
         }
 
         try {
+            // pods might die, so we retry
             return Retry.fixed(numberOfRetries).run {
                 // remove pod if exists
                 def oldPod = client.pods().inNamespace(namespace).withName(podName)
