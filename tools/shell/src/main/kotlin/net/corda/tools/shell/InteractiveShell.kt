@@ -640,7 +640,7 @@ object InteractiveShell {
 
     private class PrintingSubscriber(private val printerFun: (Any?) -> String, private val toStream: PrintWriter) : Subscriber<Any>() {
         private var count = 0
-        var future = openFuture<Unit>()
+        val future = openFuture<Unit>()
 
         init {
             // The future is public and can be completed by something else to indicate we don't wish to follow
@@ -690,8 +690,6 @@ object InteractiveShell {
 
                 val unsubscribeAndPrint: (Any?) -> String = { resp ->
                     if (resp is StateMachineUpdate.Added) {
-                        //this prevents leaking observables to the deserialization collector.
-                        //should be investigated if it should be implemented instead.
                         resp.stateMachineInfo.progressTrackerStepAndUpdates?.updates?.notUsed()
                     }
                     printerFun(resp)
