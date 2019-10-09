@@ -1,10 +1,10 @@
 package net.corda.client.rpc.internal
 
-import co.paralleluniverse.common.util.SameThreadExecutor
 import com.github.benmanes.caffeine.cache.Cache
 import com.github.benmanes.caffeine.cache.Caffeine
 import com.github.benmanes.caffeine.cache.RemovalCause
 import com.github.benmanes.caffeine.cache.RemovalListener
+import com.google.common.util.concurrent.MoreExecutors
 import com.google.common.util.concurrent.SettableFuture
 import com.google.common.util.concurrent.ThreadFactoryBuilder
 import net.corda.client.rpc.ConnectionFailureException
@@ -131,7 +131,10 @@ class RPCClientProxyHandler(
     private var sendExecutor: ExecutorService? = null
 
     // A sticky pool for running Observable.onNext()s. We need the stickiness to preserve the observation ordering.
-    private val observationExecutorThreadFactory = ThreadFactoryBuilder().setNameFormat("rpc-client-observation-pool-%d").setDaemon(true).build()
+    private val observationExecutorThreadFactory = ThreadFactoryBuilder()
+            .setNameFormat("rpc-client-observation-pool-%d")
+            .setDaemon(true)
+            .build()
     private val observationExecutorPool = LazyStickyPool(rpcConfiguration.observationExecutorPoolSize) {
         Executors.newFixedThreadPool(1, observationExecutorThreadFactory)
     }
@@ -155,7 +158,8 @@ class RPCClientProxyHandler(
     private val observablesToReap = ThreadBox(object {
         var observables = ArrayList<InvocationId>()
     })
-    private val serializationContextWithObservableContext = RpcClientObservableDeSerializer.createContext(serializationContext, observableContext)
+    private val serializationContextWithObservableContext = RpcClientObservableDeSerializer
+            .createContext(serializationContext, observableContext)
 
     private fun createRpcObservableMap(): RpcObservableMap {
         val onObservableRemove = RemovalListener<InvocationId, UnicastSubject<Notification<*>>> { key, _, cause ->
@@ -174,7 +178,13 @@ class RPCClientProxyHandler(
             }
             observablesToReap.locked { observables.add(observableId) }
         }
-        return cacheFactory.buildNamed(Caffeine.newBuilder().weakValues().removalListener(onObservableRemove).executor(SameThreadExecutor.getExecutor()), "RpcClientProxyHandler_rpcObservable")
+        return cacheFactory.buildNamed(
+                Caffeine.newBuilder()
+                        .weakValues()
+                        .removalListener(onObservableRemove)
+                        .executor(MoreExecutors.directExecutor()),
+        "RpcClientProxyHandler_rpcObservable"
+        )
     }
 
     private var sessionFactory: ClientSessionFactory? = null
