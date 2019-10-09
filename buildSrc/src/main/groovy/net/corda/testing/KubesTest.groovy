@@ -158,7 +158,7 @@ class KubesTest extends DefaultTask {
         }
 
         try {
-            Retry.fixed(numberOfRetries).run {
+            return Retry.fixed(numberOfRetries).run {
                 // remove pod if exists
                 def oldPod = client.pods().inNamespace(namespace).withName(podName)
                 if (oldPod.get()) {
@@ -252,8 +252,7 @@ class KubesTest extends DefaultTask {
                 try {
                     def errChannelContents = errChannelStream.toString()
                     Status status = Serialization.unmarshal(errChannelContents, Status.class)
-                    Integer res = status.details?.causes?.first()?.message?.toInteger()
-                    waitingFuture.complete(res ? res : 0)
+                    waitingFuture.complete(status.details?.causes?.first()?.message?.toInteger() ?: 0)
                 } catch (Exception e) {
                     waitingFuture.completeExceptionally(e)
                 }

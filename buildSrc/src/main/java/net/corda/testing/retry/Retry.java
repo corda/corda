@@ -23,6 +23,7 @@ public final class Retry {
     }
 
     public static RetryStrategy fixed(int times) {
+        if (times < 1) throw new IllegalArgumentException();
         return new RetryStrategy() {
             @Override
             public <T> T run(Callable<T> op) {
