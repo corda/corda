@@ -10,7 +10,7 @@ import org.gradle.api.tasks.testing.Test
  */
 class DistributedTesting implements Plugin<Project> {
 
-    List<String> finishedTests = [];
+    List<String> executedTests = [];
 
     static def getPropertyAsInt(Project proj, String property, Integer defaultValue) {
         return proj.hasProperty(property) ? Integer.parseInt(proj.property(property).toString()) : defaultValue
@@ -30,11 +30,11 @@ class DistributedTesting implements Plugin<Project> {
 
             //to be used once k8s persistant volumes are in place
             //File executedTests = new File(KubesTest.mount + KubesTest.testRunsDir + "executedTests.txt")
-            File executedTests = new File("executedTests.txt")
+            File executedTestsFile = new File("executedTests.txt")
             try {
-                finishedTests = executedTests.readLines()
+                executedTests = executedTestsFile.readLines()
             } catch (FileNotFoundException e) {
-                executedTests.createNewFile()
+                executedTestsFile.createNewFile()
             }
 
             def requestedTasks = project.gradle.startParameter.taskNames.collect { project.tasks.findByPath(it) }
@@ -60,7 +60,7 @@ class DistributedTesting implements Plugin<Project> {
                     }
 
                     task.afterTest { desc, result ->
-                        executedTests.append(desc.getClassName() + "." + desc.getName() + "\n")
+                        executedTestsFile.append(desc.getClassName() + "." + desc.getName() + "\n")
                     }
 
                 }
@@ -158,8 +158,8 @@ class DistributedTesting implements Plugin<Project> {
 
                     //filter out the finished tests
                     includes = includes.findAll { String test ->
-                        !finishedTests.any {
-                            test.startsWith(it)
+                        !executedTests.any {
+                            test.contains(it)
                         }
                     }
 
