@@ -17,6 +17,7 @@ import net.corda.core.context.Trace
 import net.corda.core.context.Trace.InvocationId
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.*
+import net.corda.core.internal.messaging.InternalCordaRPCOps
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.RPCOps
 import net.corda.core.serialization.SerializationContext
@@ -286,8 +287,12 @@ class RPCClientProxyHandler(
     }
 
     private fun produceMethodFullyQualifiedName(method: Method) : String {
-        // For CordaRPCOps send method only - for backwards compatibility
-        return if (CordaRPCOps::class.java == rpcOpsClass) {
+        /*
+         * Until version 4.3, rpc calls did not include class names.
+         * Up to this version, only CordaRPCOps and InternalCordaRPCOps were supported.
+         * So, for these classes only methods are sent across the wire to preserve backwards compatibility.
+         */
+        return if (CordaRPCOps::class.java == rpcOpsClass || InternalCordaRPCOps::class.java == rpcOpsClass) {
             method.name
         } else {
             rpcOpsClass.name + CLASS_METHOD_DIVIDER + method.name

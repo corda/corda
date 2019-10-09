@@ -22,6 +22,9 @@ dependencies {
 jar.enabled = false
 
 test {
+    ext {
+        ignoreForDistribution = true
+    }
     filter {
         // Running this class is the whole point, so include it explicitly.
         includeTestsMatching "net.corda.deterministic.data.GenerateData"

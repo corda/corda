@@ -151,8 +151,9 @@ class CheckpointDumper(private val checkpointStorage: CheckpointStorage, private
 
     private fun checkpointAgentRunning(): Boolean {
         val agentProperties = getJvmAgentProperties(log)
+        val pattern = "(.+)?checkpoint-agent(-.+)?\\.jar.*".toRegex()
         return agentProperties.values.any { value ->
-            value is String && value.contains("checkpoint-agent.jar")
+            value is String && value.contains(pattern)
         }
     }
 
