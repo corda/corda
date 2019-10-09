@@ -7,6 +7,7 @@ import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 
 object ProcessUtilities {
+    @Suppress("LongParameterList")
     inline fun <reified C : Any> startJavaProcess(
             arguments: List<String>,
             classPath: List<String> = defaultClassPath,
@@ -28,6 +29,7 @@ object ProcessUtilities {
         )
     }
 
+    @Suppress("LongParameterList")
     fun startJavaProcess(
             className: String,
             arguments: List<String>,

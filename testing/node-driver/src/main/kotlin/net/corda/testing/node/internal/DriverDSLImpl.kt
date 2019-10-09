@@ -738,6 +738,7 @@ class DriverDSLImpl(
             }
         }
 
+        @Suppress("LongParameterList")
         private fun startOutOfProcessNode(
                 config: NodeConfig,
                 quasarJarPath: String,
@@ -747,7 +748,7 @@ class DriverDSLImpl(
                 logLevelOverride: String?,
                 environmentVariables : Map<String,String>,
                 extraCmdLineFlag: Array<String> = emptyArray()
-        ): Process {
+      ): Process {
             log.info("Starting out-of-process Node ${config.corda.myLegalName.organisation}, " +
                      "debug port is " + (debugPort ?: "not enabled"))
             // Write node.conf
@@ -1106,6 +1107,7 @@ class SplitCompatibilityZoneParams(
     override fun config() : NetworkServicesConfig = config
 }
 
+@Suppress("LongParameterList")
 fun <A> internalDriver(
         isDebug: Boolean = DriverParameters().isDebug,
         driverDirectory: Path = DriverParameters().driverDirectory,

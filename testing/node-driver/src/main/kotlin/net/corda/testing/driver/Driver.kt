@@ -472,6 +472,7 @@ data class DriverParameters(
             cordappsForAllNodes = cordappsForAllNodes
     )
 
+    @Suppress("LongParameterList")
     fun copy(
             isDebug: Boolean,
             driverDirectory: Path,
