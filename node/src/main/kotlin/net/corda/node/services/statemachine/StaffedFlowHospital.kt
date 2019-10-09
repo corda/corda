@@ -17,17 +17,21 @@ import org.hibernate.exception.ConstraintViolationException
 import rx.subjects.PublishSubject
 import java.sql.SQLException
 import java.sql.SQLTransientConnectionException
+import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 import javax.persistence.PersistenceException
 import kotlin.math.pow
 
 /**
  * This hospital consults "staff" to see if they can automatically diagnose and treat flows.
  */
-class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val ourSenderUUID: String) {
-    private companion object {
+class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
+                          private val clock: Clock,
+                          private val ourSenderUUID: String) {
+    companion object {
         private val log = contextLogger()
         private val staff = listOf(
             DeadlockNurse,
@@ -43,10 +47,27 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val 
         val onFlowKeptForOvernightObservation = mutableListOf<(id: StateMachineRunId, by: List<String>) -> Unit>()
 
         @VisibleForTesting
+        val onFlowDischarged = mutableListOf<(id: StateMachineRunId, by: List<String>) -> Unit>()
+
+        @VisibleForTesting
         val onFlowAdmitted = mutableListOf<(id: StateMachineRunId) -> Unit>()
     }
 
+    /**
+     * Represents the flows that have been admitted to the hospital for treatment.
+     * Flows should be removed from [flowsInHospital] when they have completed a successful transition.
+     */
+    private val flowsInHospital = ConcurrentHashMap<StateMachineRunId, FlowFiber>()
+
     private val mutex = ThreadBox(object {
+        /**
+         * Contains medical history of every flow (a patient) that has entered the hospital. A flow can leave the hospital,
+         * but their medical history will be retained.
+         *
+         * Flows should be removed from [flowPatients] when they have completed successfully. Upon successful completion,
+         * the medical history of a flow is no longer relevant as that flow has been completely removed from the
+         * statemachine.
+         */
         val flowPatients = HashMap<StateMachineRunId, FlowMedicalHistory>()
         val treatableSessionInits = HashMap<UUID, InternalSessionInitRecord>()
         val recordsPublisher = PublishSubject.create<MedicalRecord>()
@@ -58,7 +79,7 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val 
      * The node was unable to initiate the [InitialSessionMessage] from [sender].
      */
     fun sessionInitErrored(sessionMessage: InitialSessionMessage, sender: Party, event: ExternalEvent.ExternalMessageEvent, error: Throwable) {
-        val time = Instant.now()
+        val time = clock.instant()
         val id = UUID.randomUUID()
         val outcome = if (error is SessionRejectException.UnknownClass) {
             // We probably don't have the CorDapp installed so let's pause the message in the hopes that the CorDapp is
@@ -111,10 +132,18 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val 
     }
 
     /**
-     * The flow running in [flowFiber] has errored.
+     * Request treatment for the [flowFiber]. A flow can only be added to the hospital if they are not already being
+     * treated.
      */
-    fun flowErrored(flowFiber: FlowFiber, currentState: StateMachineState, errors: List<Throwable>) {
-        val time = Instant.now()
+    fun requestTreatment(flowFiber: FlowFiber, currentState: StateMachineState, errors: List<Throwable>) {
+        // Only treat flows that are not already in the hospital
+        if (flowsInHospital.putIfAbsent(flowFiber.id, flowFiber) == null) {
+            admit(flowFiber, currentState, errors)
+        }
+    }
+
+    private fun admit(flowFiber: FlowFiber, currentState: StateMachineState, errors: List<Throwable>) {
+        val time = clock.instant()
         log.info("Flow ${flowFiber.id} admitted to hospital in state $currentState")
         onFlowAdmitted.forEach { it.invoke(flowFiber.id) }
 
@@ -127,6 +156,7 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val 
                 Diagnosis.DISCHARGE -> {
                     val backOff = calculateBackOffForChronicCondition(report, medicalHistory, currentState)
                     log.info("Flow error discharged from hospital (delay ${backOff.seconds}s) by ${report.by} (error was ${report.error.message})")
+                    onFlowDischarged.forEach { hook -> hook.invoke(flowFiber.id, report.by.map{it.toString()}) }
                     Triple(Outcome.DISCHARGE, Event.RetryFlowFromSafePoint, backOff)
                 }
                 Diagnosis.OVERNIGHT_OBSERVATION -> {
@@ -194,10 +224,17 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val 
     private data class ConsultationReport(val error: Throwable, val diagnosis: Diagnosis, val by: List<Staff>)
 
     /**
-     * The flow has been removed from the state machine.
+     * Remove the flow's medical history from the hospital.
      */
-    fun flowRemoved(flowId: StateMachineRunId) {
+    fun removeMedicalHistory(flowId: StateMachineRunId) {
         mutex.locked { flowPatients.remove(flowId) }
+    }
+
+    /**
+     * Remove the flow from the hospital as it is not currently being treated.
+     */
+    fun leave(id: StateMachineRunId) {
+        flowsInHospital.remove(id)
     }
 
     // TODO MedicalRecord subtypes can expose the Staff class, something which we probably don't want when wiring this method to RPC
