@@ -33,6 +33,7 @@ import java.io.File
 import java.net.URL
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Path
+import java.nio.file.Paths
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import java.security.PublicKey
 import java.time.Duration
@@ -68,7 +69,7 @@ internal constructor(private val initSerEnv: Boolean,
     companion object {
         // TODO This will probably need to change once we start using a bundled JVM
         private val nodeInfoGenCmd = listOf(
-                "java",
+                Paths.get(System.getProperty("java.home"), "bin", "java").toString(),
                 "-jar",
                 "corda.jar",
                 "generate-node-info"
