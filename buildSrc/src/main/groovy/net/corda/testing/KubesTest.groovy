@@ -1,17 +1,7 @@
 package net.corda.testing
 
-import io.fabric8.kubernetes.api.model.LocalObjectReference
-import io.fabric8.kubernetes.api.model.PersistentVolumeClaim
-import io.fabric8.kubernetes.api.model.Pod
-import io.fabric8.kubernetes.api.model.PodBuilder
-import io.fabric8.kubernetes.api.model.Quantity
-import io.fabric8.kubernetes.api.model.Status
-import io.fabric8.kubernetes.client.ConfigBuilder
-import io.fabric8.kubernetes.client.DefaultKubernetesClient
-import io.fabric8.kubernetes.client.KubernetesClient
-import io.fabric8.kubernetes.client.KubernetesClientException
-import io.fabric8.kubernetes.client.Watch
-import io.fabric8.kubernetes.client.Watcher
+import io.fabric8.kubernetes.api.model.*
+import io.fabric8.kubernetes.client.*
 import io.fabric8.kubernetes.client.dsl.ExecListener
 import io.fabric8.kubernetes.client.utils.Serialization
 import net.corda.testing.retry.Retry
@@ -23,18 +13,17 @@ import org.gradle.api.tasks.TaskAction
 
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.concurrent.Callable
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.Executors
-import java.util.concurrent.Future
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.*
 import java.util.stream.Collectors
 import java.util.stream.IntStream
 
 class KubesTest extends DefaultTask {
 
     static final ExecutorService executorService = Executors.newCachedThreadPool()
+    /**
+     * Name of the k8s Secret object that holds the credentials to access the docker image registry
+     */
+    static final String REGISTRY_CREDENTIALS_SECRET_NAME = "regcred"
 
     String dockerTag
     String fullTaskToExecutePath
@@ -192,11 +181,11 @@ class KubesTest extends DefaultTask {
                         .usingListener(execListener)
                         .exec(getBuildCommand(numberOfPods, podIdx))
 
-                File outputFile = startLogPumping(stdOutIs, podIdx, printOutput)
+                File podOutput = startLogPumping(stdOutIs, podIdx, printOutput)
                 int resCode = waiter.join()
                 project.logger.lifecycle("build has ended on on pod ${podName} (${podIdx}/${numberOfPods}), gathering results")
                 def binaryResults = downloadTestXmlFromPod(client, namespace, createdPod)
-                return new KubePodResult(resCode, outputFile, binaryResults)
+                return new KubePodResult(resCode, podOutput, binaryResults)
             }
         } catch (RetryException e) {
             throw new RuntimeException("Failed to build in pod ${podName} (${podIdx}/${numberOfPods}) in $numberOfRetries attempts", e)
@@ -236,6 +225,7 @@ class KubesTest extends DefaultTask {
 
         new ExecListener() {
             final Long start = System.currentTimeMillis()
+
             @Override
             void onOpen(Response response) {
                 project.logger.lifecycle("Build started on pod $podName")
@@ -281,7 +271,9 @@ class KubesTest extends DefaultTask {
     }
 
     Pod buildPodRequest(String podName, PersistentVolumeClaim pvc) {
-        return new PodBuilder().withNewMetadata().withName(podName).endMetadata()
+        return new PodBuilder()
+                .withNewMetadata().withName(podName).endMetadata()
+
                 .withNewSpec()
 
                 .addNewVolume()
@@ -318,7 +310,7 @@ class KubesTest extends DefaultTask {
                 .addNewVolumeMount().withName("testruns").withMountPath("/test-runs").endVolumeMount()
                 .endContainer()
 
-                .withImagePullSecrets(new LocalObjectReference("regcred"))
+                .addNewImagePullSecret(REGISTRY_CREDENTIALS_SECRET_NAME)
                 .withRestartPolicy("Never")
 
                 .endSpec()
