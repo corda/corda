@@ -15,6 +15,8 @@ object CordappResolver {
     private val logger = loggerFor<CordappResolver>()
     private val cordappClasses: ConcurrentHashMap<String, Set<Cordapp>> = ConcurrentHashMap()
 
+    private val insideInMemoryTest: Boolean by lazy { insideInMemoryTest() }
+
     // TODO Use the StackWalker API once we migrate to Java 9+
     private var cordappResolver: () -> Cordapp? = {
         Exception().stackTrace
@@ -25,9 +27,12 @@ object CordappResolver {
                 ?.single()
     }
 
-    /*
+    /**
      * Associates class names with CorDapps or logs a warning when a CorDapp is already registered for a given class.
      * This could happen when trying to run different versions of the same CorDapp on the same node.
+     *
+     * @throws IllegalStateException when multiple CorDapps are registered for the same contract class,
+     *          since this can lead to undefined behaviour.
      */
     @Synchronized
     fun register(cordapp: Cordapp) {
@@ -39,12 +44,30 @@ object CordappResolver {
 
         notAlreadyRegisteredClasses.forEach { cordappClasses[it] = setOf(cordapp) }
 
-        for ((className, registeredCordapps) in alreadyRegistered) {
-            if (registeredCordapps.any { it.jarHash == cordapp.jarHash }) continue
-            if (className in contractClasses) {
-                logger.error("ATTENTION: More than one CorDapp installed on the node for contract $className. Please remove the previous version when upgrading to a new version.")
+        for ((registeredClassName, registeredCordapps) in alreadyRegistered) {
+            val duplicateCordapps = registeredCordapps.filter { it.jarHash == cordapp.jarHash }.toSet()
+
+            if (duplicateCordapps.isNotEmpty()) {
+                logger.warnOnce("The CorDapp (name: ${cordapp.info.shortName}, file: ${cordapp.name}) " +
+                        "is installed multiple times on the node. The following files correspond to the exact same content: " +
+                        "${duplicateCordapps.map { it.name }}")
+                continue
             }
-            cordappClasses[className] = registeredCordapps + cordapp
+            // During in-memory tests, the spawned nodes share the same CordappResolver, so detected conflicts can be spurious.
+            if (registeredClassName in contractClasses && !insideInMemoryTest) {
+                    throw IllegalStateException("More than one CorDapp installed on the node for contract $registeredClassName. " +
+                            "Please remove the previous version when upgrading to a new version.")
+            }
+
+            cordappClasses[registeredClassName] = registeredCordapps + cordapp
+        }
+    }
+
+    private fun insideInMemoryTest(): Boolean {
+        return Exception().stackTrace.any {
+            it.className.startsWith("net.corda.testing.node.internal.InternalMockNetwork") ||
+            it.className.startsWith("net.corda.testing.node.internal.InProcessNode") ||
+            it.className.startsWith("net.corda.testing.node.MockServices")
         }
     }
 

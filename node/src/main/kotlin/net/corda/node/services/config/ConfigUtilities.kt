@@ -65,12 +65,12 @@ object ConfigHelper {
         return finalConfig
     }
 
-    fun <T: Any> getCaseSensitivePropertyPath(target : KClass<T>, path : List<String>) : String {
-        if (path.size == 0)
-            throw java.lang.IllegalArgumentException("Path cannot be empty.")
+    fun <T: Any> getCaseSensitivePropertyPath(target : KClass<T>?, path : List<String>) : String {
+
+        require(path.isNotEmpty()) { "Path to config property cannot be empty." }
 
         val lookFor = path.first()
-        target.memberProperties.forEach {
+        target?.memberProperties?.forEach {
             if (it.name.toLowerCase() == lookFor.toLowerCase()) {
                 return if (path.size > 1)
                     "${it.name}." +

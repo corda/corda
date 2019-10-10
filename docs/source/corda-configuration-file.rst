@@ -28,6 +28,11 @@ This prevents configuration errors when mixing keys containing ``.`` wrapped wit
 ``"dataSourceProperties.dataSourceClassName" = "val"`` in `Reference.conf`_ would be not overwritten by the property
 ``dataSourceProperties.dataSourceClassName = "val2"`` in *node.conf*.
 
+.. warning:: If a property is defined twice the last one will take precedence. The library currently used for parsing HOCON
+   currently does not provide a way to catch duplicates when parsing files and will silently override values for the same key.
+   For example having ``key=initialValue`` defined first in node.conf and later on down the
+   lines ``key=overridingValue`` will result into the value being ``overridingValue``.
+
 By default the node will fail to start in presence of unknown property keys.
 To alter this behaviour, the ``on-unknown-config-keys`` command-line argument can be set to ``IGNORE`` (default is ``FAIL``).
 
@@ -45,6 +50,9 @@ JVM options
   .. sourcecode:: shell
 
     java -Dcorda.rpcSettings.ssl.keyStorePassword=mypassword -jar node.jar
+
+.. note:: If the same field is overriden by both an environment variable and system property, the system property
+   takes precedence.
 
 Configuration file fields
 -------------------------
