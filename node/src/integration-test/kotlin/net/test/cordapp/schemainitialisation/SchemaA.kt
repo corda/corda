@@ -1,6 +1,12 @@
-package net.test.cordapp.schemaInitialisation
+package net.test.cordapp.schemainitialisation
 
-import net.corda.core.contracts.*
+import net.corda.core.contracts.BelongsToContract
+import net.corda.core.contracts.Contract
+import net.corda.core.contracts.LinearState
+import net.corda.core.contracts.UniqueIdentifier
+import net.corda.core.contracts.CommandData
+import net.corda.core.contracts.requireSingleCommand
+import net.corda.core.contracts.requireThat
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.schemas.MappedSchema
@@ -34,7 +40,8 @@ object SchemaAV1 : MappedSchema(
 data class MessageA(val value: String)
 
 @BelongsToContract(MessageAContract::class)
-data class MessageAState(val message: MessageA, val by: Party, override val linearId: UniqueIdentifier = UniqueIdentifier()) : LinearState, QueryableState {
+data class MessageAState(val message: MessageA, val by: Party, override val linearId: UniqueIdentifier = UniqueIdentifier()) : LinearState,
+        QueryableState {
     override val participants: List<AbstractParty> = listOf(by)
 
     override fun generateMappedObject(schema: MappedSchema): PersistentState {
