@@ -150,6 +150,7 @@ internal class CordaRPCOpsImpl(
     override fun killFlow(id: StateMachineRunId): Boolean = if (smm.killFlow(id)) true else smm.flowHospital.dropSessionInit(id.uuid)
 
     override fun stateMachinesFeed(): DataFeed<List<StateMachineInfo>, StateMachineUpdate> {
+
         val (allStateMachines, changes) = smm.track()
         return DataFeed(
                 allStateMachines.map { stateMachineInfoFromFlowLogic(it) },
