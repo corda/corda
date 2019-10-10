@@ -5,10 +5,8 @@ import net.corda.core.flows.*
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SingletonSerializeAsToken
-import net.corda.core.utilities.debug
-import net.corda.core.utilities.trace
+import net.corda.core.utilities.contextLogger
 import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
 import java.lang.reflect.TypeVariable
@@ -17,6 +15,55 @@ import kotlin.reflect.KFunction
 import kotlin.reflect.KParameter
 import kotlin.reflect.jvm.javaConstructor
 import kotlin.reflect.jvm.javaType
+
+// Functions taken out for Detekt not to complain about excessive methods in FlowLogicRefImpl
+private fun matchConstructorArgs(ctorTypes: List<Class<out Any>>, optional: List<Boolean>,
+                                 argTypes: List<Class<Any>?>): Pair<Boolean, Int> {
+    // There must be at least as many constructor arguments as supplied arguments
+    if (argTypes.size > ctorTypes.size) {
+        return Pair(false, 0)
+    }
+
+    // Check if all constructor arguments are assignable for all supplied arguments, then for remaining arguments in constructor
+    // check that they are optional. If they are it's still a match. Return if matched and the number of default args consumed.
+    var numDefaultsUsed = 0
+    var returnVal = true // Note to reviewer: Detekt allows max of 2 returns per function so can't return within the loop below
+    var index = 0
+    for (conArg in ctorTypes) {
+        if (index < argTypes.size) {
+            val argType = argTypes[index]
+            if (argType != null && !conArg.isAssignableFrom(argType)) {
+                returnVal = false
+                break
+            }
+        } else {
+            if (index >= optional.size || !optional[index]) {
+                returnVal = false
+                break
+            }
+            numDefaultsUsed++
+        }
+        index++
+    }
+
+    val retNum = if (returnVal) { numDefaultsUsed } else { 0 }
+    return Pair(returnVal, retNum)
+}
+
+private fun handleNoMatchingConstructor(flowClass: Class<out FlowLogic<*>>, argTypes: List<Class<Any>?>): String {
+    val log = FlowLogicRefFactoryImpl.contextLogger()
+    var argSummary = ""
+    for (argt in argTypes) {
+        argSummary += (if (argSummary.length > 0) { ", " } else { "" }) + argt.toString()
+    }
+
+    log.error("Cannot find Constructor to match arguments: ${argSummary}")
+    log.info("Candidate constructors are:")
+    for (ctor in flowClass.kotlin.constructors) {
+        log.info("${ctor}")
+    }
+    return argSummary
+}
 
 /**
  * The internal concrete implementation of the FlowLogicRef marker interface.
@@ -38,7 +85,9 @@ data class FlowLogicRefImpl internal constructor(val flowLogicClassName: String,
  */
 // TODO: Replace with a per app classloader/cordapp provider/cordapp loader - this will do for now
 open class FlowLogicRefFactoryImpl(private val classloader: ClassLoader) : SingletonSerializeAsToken(), FlowLogicRefFactory {
-    private val log: Logger = LoggerFactory.getLogger("net.corda.flow")
+    companion object {
+        protected val log: Logger = contextLogger()
+    }
 
     override fun create(flowClass: Class<out FlowLogic<*>>, vararg args: Any?): FlowLogicRef {
         if (!flowClass.isAnnotationPresent(SchedulableFlow::class.java)) {
@@ -82,121 +131,46 @@ open class FlowLogicRefFactoryImpl(private val classloader: ClassLoader) : Singl
         return createKotlin(flowClass, argsMap)
     }
 
-    protected open fun findConstructorCheckDefaultParams(flowClass: Class<out FlowLogic<*>>, argTypes: List<Class<Any>?>):
+    private fun findConstructorCheckDefaultParams(flowClass: Class<out FlowLogic<*>>, argTypes: List<Class<Any>?>):
             KFunction<FlowLogic<*>> {
-        log.debug { "${javaClass.name}.findConstructorCheckDefaultParams() called for RPC parameter argument types:" }
-        for (argType in argTypes) {
-            log.debug { "  ARG-TYPE = '${argType}'" }
-        }
-
         // There may be multiple matches. If there are, we will use the one with the least number of default parameter matches.
-        log.trace { "Checking for matching constructors (${flowClass.kotlin.constructors.size} possible)..." }
-        var conInd = -1
         var ctorMatch: KFunction<FlowLogic<*>>? = null
         var matchNumDefArgs = 0
-        var matchCount = 0
-        var matchIndex = 0
         for (ctor in flowClass.kotlin.constructors) {
-            conInd++
-            log.trace { "[${conInd}]: Checking constructor '${ctor}'" }
-            val optional = ArrayList<Boolean>()
-            for (param in ctor.parameters) {
-                optional.add(param.isOptional)
-                log.trace { "  Constructor-Param [${param.index}]: pname='${param.name}', ptype='${param.type}', opt=${param.isOptional}" }
-            }
-
             // Get the types of the arguments, always boxed (as that's what we get in the invocation).
             val ctorTypes = ctor.javaConstructor!!.parameterTypes.map {
                 if (it == null) { it } else { Primitives.wrap(it) }
             }
 
-            // There must be at least as many constructor arguments as supplied arguments
-            if (argTypes.size > ctorTypes.size) {
-                log.trace { "  Failed to match constructor [${conInd}]: Not enough constructor arguments for supplied parameter list." }
-                continue
-            }
-
-            // Check if all constructor arguments are assignable for all supplied arguments, then for remaining arguments in constructor
-            // check that they are optional. If they are it's still a match.
-            var matched = true
-            var numDefaultsUsed = 0
-            var index = 0
-            for (conArg in ctorTypes) {
-                if (index < argTypes.size) {
-                    val argType = argTypes[index]
-                    if (argType != null) {
-                        log.trace { "  Comparing '$conArg' with '$argType': Assignable -> ${conArg.isAssignableFrom(argType)}" }
-                        if (!conArg.isAssignableFrom(argType)) {
-                            matched = false
-                            log.trace { "  Failed to match constructor argument: Parameter '${conArg}' not assignment compatible." }
-                            break // for conArg
-                        }
-                    }
-                } else {
-                    val opt = if (index < optional.size) { optional[index] } else { false }
-                    log.trace { "  Checking if arg [${index}] '$conArg' is optional: -> ${opt}" }
-                    if (!opt) {
-                        matched = false
-                        log.trace { "  Failed to match constructor argument: Non-optional parameter '${conArg}' is not supplied by client."}
-                        break // for conArg
-                    } else {
-                        numDefaultsUsed++
-                    }
-                }
-                index++
-            }
-
+            val optional = ctor.parameters.map { it.isOptional }
+            val (matched, numDefaultsUsed) = matchConstructorArgs(ctorTypes, optional, argTypes)
             if (matched) {
-                matchCount++
-                if (ctorMatch != null) {
-                    if (numDefaultsUsed < matchNumDefArgs) {
-                        log.trace { ("Choosing better constructor [inx=${conInd}]: '${ctor}' (num_default_args_used=${numDefaultsUsed}) "
-                                + "over [inx=${matchIndex}]: '${ctorMatch}' (num_default_args_used=${matchNumDefArgs})") }
-                        ctorMatch = ctor // Replace matched constructor with this one (having less default arguments)
-                        matchNumDefArgs = numDefaultsUsed
-                        matchIndex = conInd
-                    } else {
-                        log.trace { ("Sticking with constructor [inx=${matchIndex}] '${ctorMatch}' (num_default_args_used=${matchNumDefArgs}) "
-                                + "over [inx=${conInd}]: '${ctor}' (num_default_args_used=${numDefaultsUsed})") }
-                    }
-                } else {
-                    log.trace { "Selecting first matching constructor [inx=${conInd}]: '${ctor}' (num_default_args_used=${numDefaultsUsed})"}
+                if (ctorMatch == null || numDefaultsUsed < matchNumDefArgs) {
                     ctorMatch = ctor
                     matchNumDefArgs = numDefaultsUsed
-                    matchIndex = conInd
                 }
             }
         }
 
         if (ctorMatch == null) {
-            var argSummary = "" // Create a meaningful error message for the client
-            for (argt in argTypes) {
-                argSummary += if (argSummary.length > 0) { ", " } else { "" }
-                argSummary += argt.toString()
-            }
-            // Create message likely to be written to the log (info) with some details.
-            log.error("Cannot find Constructor to match arguments: ${argSummary}")
-            log.info("Candidate constructors are:")
-            var candInd = 0
-            for (ctor in flowClass.kotlin.constructors) {
-                log.info("[${candInd}]: '${ctor}'")
-                candInd++
-            }
-            throw Exception("No constructor found that matches arguments (${argSummary}), see log for more information.")
+            val args = handleNoMatchingConstructor(flowClass, argTypes)
+            // Must do the throw here, not in handleNoMatchingConstructor(added for Detekt) else we can't return ctorMatch as non-null
+            throw IllegalFlowLogicException(flowClass, "No constructor found that matches arguments (${args}), "
+                    + "see log for more information.")
         }
 
-        log.info("Matched constructor: ${ctorMatch} (num_default_args_used=$matchNumDefArgs, match_count=${matchCount})")
+        log.info("Matched constructor: ${ctorMatch} (num_default_args_used=$matchNumDefArgs)")
         return ctorMatch
     }
 
-    protected open fun findConstructorDirectMatch(flowClass: Class<out FlowLogic<*>>, argTypes: List<Class<Any>?>): KFunction<FlowLogic<*>> {
+    private fun findConstructorDirectMatch(flowClass: Class<out FlowLogic<*>>, argTypes: List<Class<Any>?>): KFunction<FlowLogic<*>> {
         return flowClass.kotlin.constructors.single { ctor ->
             // Get the types of the arguments, always boxed (as that's what we get in the invocation).
             val ctorTypes = ctor.javaConstructor!!.parameterTypes.map { Primitives.wrap(it) }
             if (argTypes.size != ctorTypes.size)
                 return@single false
             for ((argType, ctorType) in argTypes.zip(ctorTypes)) {
-                if (argType == null) continue   // Try and find a match based on the other arguments.
+                if (argType == null) continue // Try and find a match based on the other arguments.
                 if (!ctorType.isAssignableFrom(argType)) return@single false
             }
             true
@@ -205,13 +179,12 @@ open class FlowLogicRefFactoryImpl(private val classloader: ClassLoader) : Singl
 
     protected open fun findConstructor(flowClass: Class<out FlowLogic<*>>, argTypes: List<Class<Any>?>): KFunction<FlowLogic<*>> {
         try {
-            val ret = findConstructorDirectMatch(flowClass, argTypes)
-            log.debug { "Found constructor by direct match: '${ret}'" }
-            return ret
-        } catch (e: Exception) {
-            log.debug("Failed in findConstructorDirectMatch: ${e.message}")
+            return findConstructorDirectMatch(flowClass, argTypes)
+        } catch(e: java.lang.IllegalArgumentException) {
+            log.trace("findConstructorDirectMatch threw IllegalArgumentException (more than 1 matches).")
+        } catch (e: NoSuchElementException) {
+            log.trace("findConstructorDirectMatch threw NoSuchElementException (no matches).")
         }
-
         return findConstructorCheckDefaultParams(flowClass, argTypes)
     }
 
