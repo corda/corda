@@ -32,6 +32,7 @@ class DistributedTesting implements Plugin<Project> {
             File executedTestsFile = new File(KubesTest.testRunsDir + "executedTests.txt")
             try {
                 executedTests = executedTestsFile.readLines()
+                println("NUMBER OF LINES IN THE EXECUTED TESTS FILE !!!! -------->" + executedTests.size())
             } catch (FileNotFoundException e) {
                 executedTestsFile.createNewFile()
             }
@@ -157,11 +158,11 @@ class DistributedTesting implements Plugin<Project> {
                     }
 
 //                    includes = includes.removeAll(executedTests)
-//
-//                    executedTests.forEach { exclude ->
-//                        subProject.logger.info "excluding: $exclude for testing task ${task.getPath()}"
-//                        excludeTestsMatching exclude
-//                    }
+
+                    executedTests.forEach { exclude ->
+                        subProject.logger.info "excluding: $exclude for testing task ${task.getPath()}"
+                        excludeTestsMatching exclude
+                    }
 
                     includes.forEach { include ->
                         subProject.logger.info "including: $include for testing task ${task.getPath()}"

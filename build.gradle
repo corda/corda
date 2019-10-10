@@ -599,7 +599,7 @@ buildScan {
 task allParallelIntegrationTest(type: ParallelTestGroup) {
     testGroups "integrationTest"
     numberOfShards 10
-    streamOutput false
+    streamOutput true
     coresPerFork 6
     memoryInGbPerFork 10
     distribute Distribution.CLASS
@@ -615,7 +615,7 @@ task allParallelSlowIntegrationTest(type: ParallelTestGroup) {
 task allParallelUnitTest(type: ParallelTestGroup) {
     testGroups "test"
     numberOfShards 10
-    streamOutput false
+    streamOutput true
     coresPerFork 5
     memoryInGbPerFork 6
     distribute Distribution.CLASS
