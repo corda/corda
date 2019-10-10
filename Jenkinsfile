@@ -12,6 +12,7 @@ pipeline {
         DOCKER_TAG_TO_USE = "${env.GIT_COMMIT.subSequence(0, 8)}"
         EXECUTOR_NUMBER = "${env.EXECUTOR_NUMBER}"
         BUILD_ID = "${env.BUILD_ID}-${env.JOB_NAME}"
+        ARTIFACTORY_CREDENTIALS = credentials('artifactory-credentials')
     }
 
     stages {
@@ -22,7 +23,7 @@ pipeline {
                             "-Dkubenetize=true " +
                             "-Ddocker.push.password=\"\${DOCKER_PUSH_PWD}\" " +
                             "-Ddocker.work.dir=\"/tmp/\${EXECUTOR_NUMBER}\" " +
-                            "-Ddocker.provided.tag=\"\${DOCKER_TAG_TO_USE}\"" +
+                            "-Ddocker.provided.tag=\"\${DOCKER_TAG_TO_USE}\" " +
                             " clean pushBuildImage"
                 }
                 sh "kubectl auth can-i get pods"
@@ -36,7 +37,10 @@ pipeline {
                         sh "./gradlew " +
                                 "-DbuildId=\"\${BUILD_ID}\" " +
                                 "-Dkubenetize=true " +
-                                "-Ddocker.tag=\"\${DOCKER_TAG_TO_USE}\"" +
+                                "-Ddocker.tag=\"\${DOCKER_TAG_TO_USE}\" " +
+                                "-Dartifactory.username=\"\${ARTIFACTORY_CREDENTIALS_USR}\" " +
+                                "-Dartifactory.password=\"\${ARTIFACTORY_CREDENTIALS_PSW}\" " +
+                                "-Dgit.branch=\"\${GIT_BRANCH}\" " +
                                 " allParallelIntegrationTest"
                     }
                 }

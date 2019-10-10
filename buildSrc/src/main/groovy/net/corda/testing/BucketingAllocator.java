@@ -5,6 +5,8 @@ package net.corda.testing;
 import groovy.lang.Tuple2;
 import org.gradle.api.tasks.TaskAction;
 import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.util.function.Supplier;
@@ -12,7 +14,6 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 public class BucketingAllocator {
-
     private List<Tuple2<TestLister, Object>> sources = new ArrayList<>();
     private final List<TestsForForkContainer> forkContainers;
     private final Supplier<List<Tuple2<String, Double>>> timedTestsProvider;
@@ -33,9 +34,9 @@ public class BucketingAllocator {
 
     @TaskAction
     public void generateTestPlan() {
-        List<Tuple2<String, Double>> allTestsFromCSV = timedTestsProvider.get();
+        List<Tuple2<String, Double>> allTestsFromFile = timedTestsProvider.get();
         List<Tuple2<String, Object>> allDiscoveredTests = getTestsOnClasspathOfTestingTasks();
-        List<TestBucket> matchedTests = matchClasspathTestsToCSV(allTestsFromCSV, allDiscoveredTests);
+        List<TestBucket> matchedTests = matchClasspathTestsToFile(allTestsFromFile, allDiscoveredTests);
 
         //use greedy algo - for each testbucket find the currently smallest container and add to it
         allocateTestsToForks(matchedTests);
@@ -64,12 +65,12 @@ public class BucketingAllocator {
         });
     }
 
-    private List<TestBucket> matchClasspathTestsToCSV(List<Tuple2<String, Double>> allTestsFromCSV, @NotNull List<Tuple2<String, Object>> allDiscoveredTests) {
+    private List<TestBucket> matchClasspathTestsToFile(List<Tuple2<String, Double>> allTestsFromFile, @NotNull List<Tuple2<String, Object>> allDiscoveredTests) {
         return allDiscoveredTests.stream().map(tuple -> {
             String testName = tuple.getFirst();
             Object task = tuple.getSecond();
             //2DO [can this filtering algorithm be improved - the test names are sorted, it should be possible to do something using binary search]
-            List<Tuple2<String, Double>> matchingTests = allTestsFromCSV.stream().filter(testFromCSV -> testFromCSV.getFirst().startsWith(testName)).collect(Collectors.toList());
+            List<Tuple2<String, Double>> matchingTests = allTestsFromFile.stream().filter(testFromCSV -> testFromCSV.getFirst().startsWith(testName)).collect(Collectors.toList());
             return new TestBucket(task, testName, matchingTests);
         }).sorted(Comparator.comparing(TestBucket::getDuration).reversed()).collect(Collectors.toList());
     }

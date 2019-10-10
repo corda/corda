@@ -93,10 +93,18 @@ class DistributedTesting implements Plugin<Project> {
                         reportOn(userDefinedParallelTask.testOutput)
                     }
                 }
+
+                // Task to zip up junit xml files, and upload them to somewhere (Artifactory).
+                def zipTask = TestArtifacts.createZipTask(project.rootProject,
+                        "zipTestResultsFor" + testGrouping.name.capitalize());
+
+                userDefinedParallelTask.finalizedBy(zipTask)
                 userDefinedParallelTask.finalizedBy(reportOnAllTask)
                 testGrouping.dependsOn(userDefinedParallelTask)
             }
         }
+
+        TestArtifacts.createZipTask(project.rootProject, "zipTask");
     }
 
     private KubesTest generateParallelTestingTask(Project projectContainingTask, Test task, DockerPushImage imageBuildingTask, String providedTag) {

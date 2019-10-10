@@ -1,39 +1,26 @@
 package net.corda.testing;
 
 import groovy.lang.Tuple2;
-import org.apache.commons.csv.CSVFormat;
-import org.apache.commons.csv.CSVRecord;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.tasks.TaskAction;
 import org.gradle.api.tasks.testing.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
-import java.io.Reader;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
-import java.util.Objects;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 public class BucketingAllocatorTask extends DefaultTask {
-    private static final String DEFAULT_TESTING_TEST_TIMES_CSV = "testing/test-times.csv";
     private final BucketingAllocator allocator;
 
     @Inject
     public BucketingAllocatorTask(Integer forkCount) {
-        Supplier<List<Tuple2<String, Double>>> defaultTestCSV = () -> {
-            try {
-                FileReader csvSource = new FileReader(new File(BucketingAllocatorTask.this.getProject().getRootDir(), DEFAULT_TESTING_TEST_TIMES_CSV));
-                return fromCSV(csvSource);
-            } catch (IOException e) {
-                return Collections.emptyList();
-            }
-        };
-        this.allocator = new BucketingAllocator(forkCount, defaultTestCSV);
+        final Supplier<List<Tuple2<String, Double>>> defaultTestFromZip
+                = TestArtifacts.getTestsSupplier(BucketingAllocatorTask.this.getProject().getRootDir());
+
+        this.allocator = new BucketingAllocator(forkCount, defaultTestFromZip);
     }
 
     public void addSource(TestLister source, Test testTask) {
@@ -49,21 +36,4 @@ public class BucketingAllocatorTask extends DefaultTask {
     public void allocate() {
         allocator.generateTestPlan();
     }
-
-
-    public static List<Tuple2<String, Double>> fromCSV(Reader reader) throws IOException {
-        String name = "Test Name";
-        String duration = "Duration(ms)";
-        List<CSVRecord> records = CSVFormat.DEFAULT.withHeader().parse(reader).getRecords();
-        return records.stream().map(record -> {
-            try {
-                String testName = record.get(name);
-                String testDuration = record.get(duration);
-                return new Tuple2<>(testName, Math.max(Double.parseDouble(testDuration), 1));
-            } catch (IllegalArgumentException | IllegalStateException e) {
-                return null;
-            }
-        }).filter(Objects::nonNull).sorted(Comparator.comparing(Tuple2::getFirst)).collect(Collectors.toList());
-    }
-
 }
