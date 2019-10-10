@@ -289,7 +289,7 @@ class SchemaMigration(
             val isFinanceAppWithLiquibaseNotMigrated = isFinanceAppWithLiquibase // If Finance App is pre v4.0 then no need to migrate it so no need to check.
                     && existingDatabase
                     && (!hasLiquibase // Migrate as other tables.
-                    || (hasLiquibase && it.createStatement().use { noLiquibaseEntryLogForFinanceApp(it) })) // If Liquibase is already in the database check if Finance App schema log is missing.
+                         || (hasLiquibase && it.createStatement().use { noLiquibaseEntryLogForFinanceApp(it) })) // If Liquibase is already in the database check if Finance App schema log is missing.
 
             Pair(existingDatabase && !hasLiquibase, isFinanceAppWithLiquibaseNotMigrated)
         }
