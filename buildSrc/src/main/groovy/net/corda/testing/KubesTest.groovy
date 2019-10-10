@@ -23,8 +23,7 @@ class KubesTest extends DefaultTask {
 
     static final ExecutorService executorService = Executors.newCachedThreadPool()
     static final ExecutorService singleThreadedExecutor = Executors.newSingleThreadExecutor()
-    final static String testRunsDir = "test-runs/"
-    final static String mount = "testruns:/"
+    final static String testRunsDir = "./"
 
     String dockerTag
     String fullTaskToExecutePath

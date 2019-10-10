@@ -29,8 +29,7 @@ class DistributedTesting implements Plugin<Project> {
             BucketingAllocatorTask globalAllocator = project.tasks.create("bucketingAllocator", BucketingAllocatorTask, forks)
 
             //to be used once k8s persistant volumes are in place
-            //File executedTests = new File(KubesTest.mount + KubesTest.testRunsDir + "executedTests.txt")
-            File executedTestsFile = new File("executedTests.txt")
+            File executedTestsFile = new File(KubesTest.testRunsDir + "executedTests.txt")
             try {
                 executedTests = executedTestsFile.readLines()
             } catch (FileNotFoundException e) {
@@ -60,9 +59,10 @@ class DistributedTesting implements Plugin<Project> {
                     }
 
                     task.afterTest { desc, result ->
-                        executedTestsFile.append(desc.getClassName() + "." + desc.getName() + "\n")
+                        executedTestsFile.withWriterAppend { writer ->
+                            writer.writeLine(desc.getClassName() + "." + desc.getName())
+                        }
                     }
-
                 }
             }
 
@@ -156,12 +156,7 @@ class DistributedTesting implements Plugin<Project> {
                         excludeTestsMatching "*"
                     }
 
-                    //filter out the finished tests
-                    includes = includes.findAll { String test ->
-                        !executedTests.any {
-                            test.contains(it)
-                        }
-                    }
+                    includes = includes.removeAll(executedTests)
 
                     includes.forEach { include ->
                         subProject.logger.info "including: $include for testing task ${task.getPath()}"
