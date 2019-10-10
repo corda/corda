@@ -157,7 +157,7 @@ class DistributedTesting implements Plugin<Project> {
                         excludeTestsMatching "*"
                     }
 
-//                    includes = includes.removeAll(executedTests)
+                    includes.removeAll(executedTests)
 
                     executedTests.forEach { exclude ->
                         subProject.logger.info "excluding: $exclude for testing task ${task.getPath()}"
