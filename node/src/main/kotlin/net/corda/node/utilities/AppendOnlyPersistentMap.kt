@@ -7,6 +7,8 @@ import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.persistence.DatabaseTransaction
 import net.corda.nodeapi.internal.persistence.contextTransaction
 import net.corda.nodeapi.internal.persistence.currentDBSession
+import org.hibernate.Session
+import org.hibernate.internal.SessionImpl
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
@@ -191,14 +193,20 @@ abstract class AppendOnlyPersistentMapBase<K, V, E, out EK>(
 
     private fun loadValue(key: K): V? {
         val session = currentDBSession()
-        val flushing = contextTransaction.flushing
-        if (!flushing) {
+        val isSafeToDetach = isSafeToFlushAndDetach(session, contextTransaction)
+        if (isSafeToDetach) {
             // IMPORTANT: The flush is needed because detach() makes the queue of unflushed entries invalid w.r.t. Hibernate internal state if the found entity is unflushed.
             // We want the detach() so that we rely on our cache memory management and don't retain strong references in the Hibernate session.
             session.flush()
         }
         val result = session.find(persistentEntityClass, toPersistentEntityKey(key))
-        return result?.apply { if (!flushing) session.detach(result) }?.let(fromPersistentEntity)?.second
+        return result?.apply { if (isSafeToDetach) session.detach(result) }?.let(fromPersistentEntity)?.second
+    }
+
+    private fun isSafeToFlushAndDetach(session: Session, transaction: DatabaseTransaction): Boolean {
+        val flushInProgress = transaction.flushing
+        val cascadeInProgress = (session is SessionImpl) && (session.persistenceContext.cascadeLevel > 0)
+        return !flushInProgress && !cascadeInProgress
     }
 
     protected fun transactionalLoadValue(key: K): Transactional<V> {
