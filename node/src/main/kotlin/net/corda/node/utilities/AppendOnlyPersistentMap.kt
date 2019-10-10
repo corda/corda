@@ -193,7 +193,7 @@ abstract class AppendOnlyPersistentMapBase<K, V, E, out EK>(
 
     private fun loadValue(key: K): V? {
         val session = currentDBSession()
-        val isSafeToDetach = isSafeToFlushAndDetach(session, contextTransaction)
+        val isSafeToDetach = isSafeToFlushAndDetach(session)
         if (isSafeToDetach) {
             // IMPORTANT: The flush is needed because detach() makes the queue of unflushed entries invalid w.r.t. Hibernate internal state if the found entity is unflushed.
             // We want the detach() so that we rely on our cache memory management and don't retain strong references in the Hibernate session.
@@ -203,9 +203,12 @@ abstract class AppendOnlyPersistentMapBase<K, V, E, out EK>(
         return result?.apply { if (isSafeToDetach) session.detach(result) }?.let(fromPersistentEntity)?.second
     }
 
-    private fun isSafeToFlushAndDetach(session: Session, transaction: DatabaseTransaction): Boolean {
-        val flushInProgress = transaction.flushing
-        val cascadeInProgress = (session is SessionImpl) && (session.persistenceContext.cascadeLevel > 0)
+    private fun isSafeToFlushAndDetach(session: Session): Boolean {
+        if (session !is SessionImpl)
+            return true
+
+        val flushInProgress = session.persistenceContext.isFlushing
+        val cascadeInProgress = session.persistenceContext.cascadeLevel > 0
         return !flushInProgress && !cascadeInProgress
     }
 
