@@ -1,10 +1,10 @@
 package net.corda.client.rpc.internal
 
-import co.paralleluniverse.common.util.SameThreadExecutor
 import com.github.benmanes.caffeine.cache.Cache
 import com.github.benmanes.caffeine.cache.Caffeine
 import com.github.benmanes.caffeine.cache.RemovalCause
 import com.github.benmanes.caffeine.cache.RemovalListener
+import com.google.common.util.concurrent.MoreExecutors
 import com.google.common.util.concurrent.SettableFuture
 import com.google.common.util.concurrent.ThreadFactoryBuilder
 import net.corda.client.rpc.ConnectionFailureException
@@ -17,6 +17,7 @@ import net.corda.core.context.Trace
 import net.corda.core.context.Trace.InvocationId
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.*
+import net.corda.core.internal.messaging.InternalCordaRPCOps
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.RPCOps
 import net.corda.core.serialization.SerializationContext
@@ -131,7 +132,10 @@ class RPCClientProxyHandler(
     private var sendExecutor: ExecutorService? = null
 
     // A sticky pool for running Observable.onNext()s. We need the stickiness to preserve the observation ordering.
-    private val observationExecutorThreadFactory = ThreadFactoryBuilder().setNameFormat("rpc-client-observation-pool-%d").setDaemon(true).build()
+    private val observationExecutorThreadFactory = ThreadFactoryBuilder()
+            .setNameFormat("rpc-client-observation-pool-%d")
+            .setDaemon(true)
+            .build()
     private val observationExecutorPool = LazyStickyPool(rpcConfiguration.observationExecutorPoolSize) {
         Executors.newFixedThreadPool(1, observationExecutorThreadFactory)
     }
@@ -155,7 +159,8 @@ class RPCClientProxyHandler(
     private val observablesToReap = ThreadBox(object {
         var observables = ArrayList<InvocationId>()
     })
-    private val serializationContextWithObservableContext = RpcClientObservableDeSerializer.createContext(serializationContext, observableContext)
+    private val serializationContextWithObservableContext = RpcClientObservableDeSerializer
+            .createContext(serializationContext, observableContext)
 
     private fun createRpcObservableMap(): RpcObservableMap {
         val onObservableRemove = RemovalListener<InvocationId, UnicastSubject<Notification<*>>> { key, _, cause ->
@@ -179,8 +184,8 @@ class RPCClientProxyHandler(
                 Caffeine.newBuilder()
                         .weakValues()
                         .removalListener(onObservableRemove)
-                        .executor(SameThreadExecutor.getExecutor()),
-                "RpcClientProxyHandler_rpcObservable"
+                        .executor(MoreExecutors.directExecutor()),
+        "RpcClientProxyHandler_rpcObservable"
         )
     }
 
@@ -293,8 +298,12 @@ class RPCClientProxyHandler(
     }
 
     private fun produceMethodFullyQualifiedName(method: Method) : String {
-        // For CordaRPCOps send method only - for backwards compatibility
-        return if (CordaRPCOps::class.java == rpcOpsClass) {
+        /*
+         * Until version 4.3, rpc calls did not include class names.
+         * Up to this version, only CordaRPCOps and InternalCordaRPCOps were supported.
+         * So, for these classes only methods are sent across the wire to preserve backwards compatibility.
+         */
+        return if (CordaRPCOps::class.java == rpcOpsClass || InternalCordaRPCOps::class.java == rpcOpsClass) {
             method.name
         } else {
             rpcOpsClass.name + CLASS_METHOD_DIVIDER + method.name

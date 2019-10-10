@@ -1,3 +1,4 @@
+import static com.r3.build.BuildControl.killAllExistingBuildsForJob
 @Library('existing-build-control')
 import static com.r3.build.BuildControl.killAllExistingBuildsForJob
 
@@ -14,7 +15,7 @@ pipeline {
     }
 
     stages {
-        stage('Corda Pull Request - Generate Build Image') {
+        stage('Corda - Generate Build Image') {
             steps {
                 withCredentials([string(credentialsId: 'container_reg_passwd', variable: 'DOCKER_PUSH_PWD')]) {
                     sh "./gradlew " +
@@ -28,28 +29,22 @@ pipeline {
             }
         }
 
-        stage('Corda Pull Request - Run Tests') {
-            parallel {
-                stage('Integration Tests') {
-                    steps {
-                        sh "./gradlew " +
-                                "-DbuildId=\"\${BUILD_ID}\" " +
-                                "-Dkubenetize=true " +
-                                "-Ddocker.tag=\"\${DOCKER_TAG_TO_USE}\"" +
-                                " allParallelIntegrationTest"
-                    }
-                }
-                stage('Unit Tests') {
-                    steps {
-                        sh "./gradlew " +
-                                "-DbuildId=\"\${BUILD_ID}\" " +
-                                "-Dkubenetize=true " +
-                                "-Ddocker.tag=\"\${DOCKER_TAG_TO_USE}\"" +
-                                " allParallelUnitTest"
+        stage('Corda - Run Tests') {
+            stage('Integration Tests') {
+                steps {
+                    sh "./gradlew " +
+                            "-DbuildId=\"\${BUILD_ID}\" " +
+                            "-Dkubenetize=true " +
+                            "-Ddocker.tag=\"\${DOCKER_TAG_TO_USE}\"" +
+                            " allParallelIntegrationTest"
+                    if (env.CHANGE_ID) {
+                        pullRequest.createStatus(status: 'success',
+                                context: 'continuous-integration/jenkins/pr-merge/integrationTest',
+                                description: 'Integration Tests Passed',
+                                targetUrl: "${env.JOB_URL}/testResults")
                     }
                 }
             }
-
         }
     }
 

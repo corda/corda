@@ -23,15 +23,7 @@ allprojects {
     }
 }
 
-configurations {
-    runtime
-}
-
 dependencies {
-    // Add the top-level projects ONLY to the host project.
-    runtime project.childProjects.collect { n, p ->
-        project(p.path)
-    }
     compile gradleApi()
     compile "io.fabric8:kubernetes-client:4.4.1"
     compile 'org.apache.commons:commons-compress:1.19'
@@ -39,5 +31,8 @@ dependencies {
     compile 'commons-codec:commons-codec:1.13'
     compile "io.github.classgraph:classgraph:$class_graph_version"
     compile "com.bmuschko:gradle-docker-plugin:5.0.0"
+    compile 'org.apache.commons:commons-csv:1.1'
+    compile group: 'org.jetbrains', name: 'annotations', version: '13.0'
     testCompile "junit:junit:$junit_version"
+    testCompile group: 'org.hamcrest', name: 'hamcrest-all', version: '1.3'
 }
