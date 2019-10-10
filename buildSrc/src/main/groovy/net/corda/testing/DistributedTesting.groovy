@@ -32,7 +32,6 @@ class DistributedTesting implements Plugin<Project> {
             File executedTestsFile = new File(KubesTest.testRunsDir + "executedTests.txt")
             try {
                 executedTests = executedTestsFile.readLines()
-                println("NUMBER OF LINES IN THE EXECUTED TESTS FILE !!!! -------->" + executedTests.size())
             } catch (FileNotFoundException e) {
                 executedTestsFile.createNewFile()
             }
