@@ -63,10 +63,10 @@ Hash constraints migration
 
 .. note:: These instructions only apply to CorDapp Contract JARs (unless otherwise stated).
 
-Corda 4.3
+Corda |corda_version|
 ~~~~~~~~~
 
-Corda 4.3 requires some additional steps to consume and evolve pre-existing on-ledger **hash** constrained states:
+Corda |corda_version| requires some additional steps to consume and evolve pre-existing on-ledger **hash** constrained states:
 
 1. All Corda Nodes in the same CZ or business network that may encounter a transaction chain with a hash constrained state must be started using
    relaxed hash constraint checking mode as described in :ref:`relax_hash_constraints_checking_ref`.
@@ -113,10 +113,10 @@ CZ whitelisted constraints migration
 
 .. note:: These instructions only apply to CorDapp Contract JARs (unless otherwise stated).
 
-Corda 4.3
+Corda |corda_version|
 ~~~~~~~~~
 
-Corda 4.0 requires some additional steps to consume and evolve pre-existing on-ledger **CZ whitelisted** constrained states:
+Corda |corda_version| requires some additional steps to consume and evolve pre-existing on-ledger **CZ whitelisted** constrained states:
 
 1. As the original developer of the CorDapp, the first step is to sign the latest version of the JAR that was released (see :doc:`cordapp-build-systems`).
    The key used for signing will be used to sign all subsequent releases, so it should be stored appropriately. The JAR can be signed by multiple keys owned
