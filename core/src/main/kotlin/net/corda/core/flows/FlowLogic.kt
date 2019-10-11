@@ -6,7 +6,10 @@ import net.corda.core.CordaInternal
 import net.corda.core.DeleteForDJVM
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.SecureHash
-import net.corda.core.identity.*
+import net.corda.core.identity.AbstractParty
+import net.corda.core.identity.AnonymousParty
+import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.*
 import net.corda.core.messaging.DataFeed
 import net.corda.core.node.NodeInfo
@@ -121,7 +124,8 @@ abstract class FlowLogic<out T> {
     @Suspendable
     fun initiateFlow(destination: Destination): FlowSession {
         require(destination is Party || destination is AnonymousParty) { "Unsupported destination type ${destination.javaClass.name}" }
-        return stateMachine.initiateFlow(destination, serviceHub.identityService.wellKnownPartyFromAnonymous(destination as AbstractParty) ?: throw IllegalArgumentException("Could not resolve destination: $destination"))
+        return stateMachine.initiateFlow(destination, serviceHub.identityService.wellKnownPartyFromAnonymous(destination as AbstractParty)
+            ?: throw IllegalArgumentException("Could not resolve destination: $destination"))
     }
 
     /**
