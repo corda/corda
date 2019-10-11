@@ -21,7 +21,7 @@ In this example, the certificates are stored at ``/home/user/cordaBase/certifica
             -v /path/to/cordapps:/opt/corda/cordapps \
             -p 10200:10200 \
             -p 10201:10201 \
-            corda/corda-zulu-4.3-snapshot:latest
+            corda/corda-zulu-4.3-RC02:latest
 
 As the node runs within a container, several mount points are required:
 
@@ -59,7 +59,7 @@ In this example, we have previously generated a network-parameters file using th
             -v /home/user/sharedFolder/network-parameters:/opt/corda/network-parameters \
             -p 10200:10200 \
             -p 10201:10201 \
-            corda/corda-zulu-4.3-snapshot:latest
+            corda/corda-zulu-4.3-RC02:latest
 
 There is a new mount ``/home/user/sharedFolder/node-infos:/opt/corda/additional-node-infos`` which is used to hold the ``nodeInfo`` of all the nodes within the network.
 As the node within the container starts up, it will place it's own nodeInfo into this directory. This will allow other nodes also using this folder to see this new node.
@@ -83,7 +83,7 @@ Joining TestNet
             -e LOCALITY="London" -e COUNTRY="GB" \
             -v /home/user/docker/config:/etc/corda \
             -v /home/user/docker/certificates:/opt/corda/certificates \
-            corda/corda-zulu-4.3-snapshot:latest config-generator --testnet
+            corda/corda-zulu-4.3-RC02:latest config-generator --testnet
 
 ``$MY_PUBLIC_ADDRESS`` will be the public address that this node will be advertised on.
 ``$ONE_TIME_DOWNLOAD_KEY`` is the one-time code provided for joining TestNet.
@@ -108,7 +108,7 @@ It is now possible to start the node using the generated config and certificates
             -v /home/user/corda/samples/bank-of-corda-demo/build/nodes/BankOfCorda/cordapps:/opt/corda/cordapps \
             -p 10200:10200 \
             -p 10201:10201 \
-            corda/corda-zulu-4.3-snapshot:latest
+            corda/corda-zulu-4.3-RC02:latest
 
 
 Joining an existing Compatibility Zone
@@ -132,7 +132,7 @@ It is possible to configure the name of the Trust Root file by setting the ``TRU
             -e MY_EMAIL_ADDRESS="cordauser@r3.com"      \
             -v /home/user/docker/config:/etc/corda          \
             -v /home/user/docker/certificates:/opt/corda/certificates \
-            corda/corda-zulu-4.3-snapshot:latest config-generator --generic
+            corda/corda-zulu-4.3-RC02:latest config-generator --generic
 
 
 Several environment variables must also be passed to the container to allow it to register:
@@ -163,5 +163,5 @@ Once the container has finished performing the initial registration, the node ca
             -v /home/user/corda/samples/bank-of-corda-demo/build/nodes/BankOfCorda/cordapps:/opt/corda/cordapps \
             -p 10200:10200 \
             -p 10201:10201 \
-            corda/corda-zulu-4.3-snapshot:latest
+            corda/corda-zulu-4.3-RC02:latest
 
