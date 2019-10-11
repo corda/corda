@@ -104,7 +104,7 @@ open class Node(configuration: NodeConfiguration,
                 flowManager: FlowManager = NodeFlowManager(configuration.flowOverrides),
                 cacheFactoryPrototype: BindableNamedCacheFactory = DefaultNamedCacheFactory(),
                 djvmBootstrapSource: ApiSource = createBootstrapSource(configuration),
-                djvmCordaSource: UserSource? = createDeterministicClasspath(configuration)
+                djvmCordaSource: UserSource? = createCordaSource(configuration)
 ) : AbstractNode<NodeInfo>(
         configuration,
         createClock(configuration),
@@ -185,7 +185,7 @@ open class Node(configuration: NodeConfiguration,
 
         private fun manifestValue(attrName: String): String? = if (Manifests.exists(attrName)) Manifests.read(attrName) else null
 
-        fun createDeterministicClasspath(config: NodeConfiguration): UserSource? {
+        private fun createManifestCordaSource(config: NodeConfiguration): UserSource? {
             val classpathSource = config.baseDirectory.resolve("djvm")
             val djvmClasspath = manifestValue(CORDA_DETERMINISTIC_CLASSPATH_ATTR)
 
@@ -207,7 +207,7 @@ open class Node(configuration: NodeConfiguration,
             }
         }
 
-        fun createBootstrapSource(config: NodeConfiguration): ApiSource {
+        private fun createManifestBootstrapSource(config: NodeConfiguration): ApiSource {
             val deterministicRt = manifestValue(CORDA_DETERMINISTIC_RUNTIME_ATTR)
             if (deterministicRt == null) {
                 staticLog.warn("{} missing from MANIFEST.MF - will use host JVM for deterministic runtime.",
@@ -222,6 +222,28 @@ open class Node(configuration: NodeConfiguration,
             } else {
                 staticLog.warn("NO DETERMINISTIC RUNTIME FOUND - will use host JVM instead.")
                 EmptyApi
+            }
+        }
+
+        private fun createBootstrapSource(config: NodeConfiguration): ApiSource {
+            val djvm = config.devModeOptions?.djvm
+            return if (config.devMode && djvm != null) {
+                djvm.bootstrapSource?.let { BootstrapClassLoader(Paths.get(it)) } ?: EmptyApi
+            } else {
+                createManifestBootstrapSource(config)
+            }
+        }
+
+        private fun createCordaSource(config: NodeConfiguration): UserSource? {
+            val djvm = config.devModeOptions?.djvm
+            return if (config.devMode && djvm != null) {
+                if (djvm.cordaSource.isEmpty()) {
+                    null
+                } else {
+                    UserPathSource(djvm.cordaSource.map { Paths.get(it) })
+                }
+            } else {
+                createManifestCordaSource(config)
             }
         }
     }

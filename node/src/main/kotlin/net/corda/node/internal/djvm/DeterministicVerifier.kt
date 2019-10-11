@@ -95,5 +95,5 @@ class DeterministicVerifier(
     }
 }
 
-class DeterministicVerificationException(id: SecureHash, message: String, cause: Throwable)
-    : TransactionVerificationException(id, message, cause)
+class DeterministicVerificationException(txId: SecureHash, message: String, cause: Throwable)
+    : TransactionVerificationException(txId, message, cause)

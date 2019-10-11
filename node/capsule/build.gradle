@@ -108,8 +108,9 @@ task buildCordaJAR(type: FatCapsule, dependsOn: [
         //
         // If you change these flags, please also update Driver.kt
         jvmArgs = ['-Xmx512m', '-XX:+UseG1GC']
-        if (JavaVersion.current() == JavaVersion.VERSION_11)
+        if (JavaVersion.current() == JavaVersion.VERSION_11) {
             jvmArgs += ['-Djdk.attach.allowAttachSelf=true']
+        }
     }
 }
 

@@ -200,7 +200,9 @@ fun <A> driver(defaultParameters: DriverParameters = DriverParameters(), dsl: Dr
                     notaryCustomOverrides = defaultParameters.notaryCustomOverrides,
                     inMemoryDB = defaultParameters.inMemoryDB,
                     cordappsForAllNodes = uncheckedCast(defaultParameters.cordappsForAllNodes),
-                    environmentVariables = defaultParameters.environmentVariables
+                    environmentVariables = defaultParameters.environmentVariables,
+                    djvmBootstrapSource = defaultParameters.djvmBootstrapSource,
+                    djvmCordaSource = defaultParameters.djvmCordaSource
             ),
             coerce = { it },
             dsl = dsl
@@ -257,7 +259,9 @@ data class DriverParameters(
         val notaryCustomOverrides: Map<String, Any?> = emptyMap(),
         val inMemoryDB: Boolean = true,
         val cordappsForAllNodes: Collection<TestCordapp>? = null,
-        val environmentVariables : Map<String, String> = emptyMap()
+        val environmentVariables : Map<String, String> = emptyMap(),
+        val djvmBootstrapSource: Path? = null,
+        val djvmCordaSource: List<Path> = emptyList()
 ) {
     constructor(cordappsForAllNodes: Collection<TestCordapp>) : this(isDebug = false, cordappsForAllNodes = cordappsForAllNodes)
 
