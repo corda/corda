@@ -4,6 +4,4 @@ import com.typesafe.config.ConfigException
 
 class ShadowingException(definedProperty : String, convertedProperty : String)
     : ConfigException(
-        "Environment variable $definedProperty is shadowing another property transformed to $convertedProperty") {
-
-}
+        "Environment variable $definedProperty is shadowing another property transformed to $convertedProperty")
