@@ -42,7 +42,8 @@ class SchemaMigrationTest {
 
     private fun createSchemaMigration(schemasToMigrate: Set<MappedSchema>, forceThrowOnMissingMigration: Boolean): SchemaMigration {
         val databaseConfig = DatabaseConfig()
-        return SchemaMigration(schemasToMigrate, dataSource, databaseConfig, null, null, TestIdentity(ALICE_NAME, 70).name, forceThrowOnMissingMigration)
+        return SchemaMigration(schemasToMigrate, dataSource, databaseConfig, null, null,
+                TestIdentity(ALICE_NAME, 70).name, forceThrowOnMissingMigration)
     }
 
     @Test
@@ -63,8 +64,9 @@ class SchemaMigrationTest {
 
     @Test
     fun `test that there are no missing migrations for the node`() {
-        assertDoesNotThrow("This test failure indicates a new table has been added to the node without the appropriate migration scripts being present") {
-            createSchemaMigration(setOf(NodeSchemaService.NodeCoreV1), false)
+        assertDoesNotThrow("This test failure indicates " +
+                "a new table has been added to the node without the appropriate migration scripts being present") {
+            createSchemaMigration(NodeSchemaService().internalSchemas(), false)
                     .nodeStartup(dataSource.connection.use { DBCheckpointStorage().getCheckpointCount(it) != 0L })
         }
     }
