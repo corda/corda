@@ -21,7 +21,7 @@ class FlowSessionImpl(
         val sourceSessionId: SessionId
 ) : FlowSession() {
 
-    override val counterparty: Party get() = checkNotNull(wellKnownParty as? Party) { "$destination is not a Party" }
+    override val counterparty: Party get() = wellKnownParty
 
     override fun toString(): String = "FlowSessionImpl(destination=$destination, sourceSessionId=$sourceSessionId)"
 

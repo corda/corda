@@ -2758,7 +2758,7 @@ Order#,Test Name,Status,Duration(ms)
 2759,net.corda.finance.flows.CashSelectionTest.unconsumed cash states,OK,1204
 2760,net.corda.finance.flows.CashSelectionTest.cash selection sees states added in the same transaction,OK,1220
 2761,net.corda.finance.internal.CashConfigDataFlowTest.issuable currencies read in from cordapp config,OK,382
-2762,CordaCapletBaseDirectoryParsingFailureTest.testThatBaseDirectoryFallsBackToCurrentWhenBaseDirectoryIsNotSupplied[0],OK,1500
+2762,CordaCapletBaseDirectoryParsingFailureTest.testThatBaseDirectoryFallsBackToCurrentWhenBaseDirectoryIsNotSupplied[0],OK,46
 2763,CordaCapletBaseDirectoryParsingFailureTest.testThatBaseDirectoryFallsBackToCurrentWhenBaseDirectoryIsNotSupplied[1],OK,1
 2764,CordaCapletBaseDirectoryParsingFailureTest.testThatBaseDirectoryFallsBackToCurrentWhenBaseDirectoryIsNotSupplied[2],OK,1
 2765,CordaCapletBaseDirectoryParsingFailureTest.testThatBaseDirectoryFallsBackToCurrentWhenBaseDirectoryIsNotSupplied[3],OK,1
