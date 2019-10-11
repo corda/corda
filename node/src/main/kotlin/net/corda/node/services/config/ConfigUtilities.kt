@@ -1,6 +1,7 @@
 package net.corda.node.services.config
 
 import com.typesafe.config.Config
+import com.typesafe.config.ConfigException
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigParseOptions
 import net.corda.cliutils.CordaSystemUtils
@@ -8,6 +9,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.internal.exists
+import net.corda.node.internal.Node
 import net.corda.nodeapi.internal.DEV_CA_KEY_STORE_PASS
 import net.corda.nodeapi.internal.config.FileBasedCertificateStoreSupplier
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
@@ -65,7 +67,7 @@ object ConfigHelper {
         return finalConfig
     }
 
-    fun <T: Any> getCaseSensitivePropertyPath(target : KClass<T>?, path : List<String>) : String {
+    private fun <T: Any> getCaseSensitivePropertyPath(target : KClass<T>?, path : List<String>) : String {
 
         require(path.isNotEmpty()) { "Path to config property cannot be empty." }
 
@@ -81,12 +83,17 @@ object ConfigHelper {
                     it.name
             }
         }
+
         return ""
     }
 
+    /*
+     * Gets
+     */
     private fun Config.cordaEntriesOnly(): Config {
 
         val cordaPropOccurrences = mutableSetOf<String>()
+        val badKeyConversions = mutableSetOf<String>()
 
         return ConfigFactory.parseMap(
                 toProperties()
@@ -96,16 +103,32 @@ object ConfigHelper {
                                 .toLowerCase()
 
                     if (newKey.contains(CORDA_PROPERTY_PREFIX) && cordaPropOccurrences.contains(newKey)) {
-                            val errMsg = "Environment variable ${it.key} is shadowing another property transformed to $newKey"
-                            log.error(errMsg)
-                            throw IllegalStateException(errMsg)
+                            throw ShadowingException(it.key.toString(), newKey)
                     }
 
                     cordaPropOccurrences.add(newKey)
-                    newKey
+                    newKey.let { key ->
+                        if (!key.contains(CORDA_PROPERTY_PREFIX))
+                            return@let key
+
+                        val nodeConfKey = key.removePrefix(CORDA_PROPERTY_PREFIX)
+                        val configPath = getCaseSensitivePropertyPath(
+                                NodeConfigurationImpl::class,
+                                nodeConfKey.split(".")
+                        )
+
+                        if (nodeConfKey.length != configPath.length) {
+                            Node.printWarning(
+                                    "A property or environment variable <${it.key}> has changed size during config" +
+                                            " mapping! It won't be passed as a config override, but if that was the intention " +
+                                            " double check the spelling and ensure there is such config key.")
+                            badKeyConversions.add(configPath)
+                        }
+                        CORDA_PROPERTY_PREFIX + configPath
+                    }
                 }.filterKeys { it.startsWith(CORDA_PROPERTY_PREFIX) }
                 .mapKeys { it.key.removePrefix(CORDA_PROPERTY_PREFIX) }
-                .mapKeys { getCaseSensitivePropertyPath(NodeConfiguration::class, it.key.split(".")) })
+                .filterKeys { !badKeyConversions.contains(it) })
     }
 }
 
