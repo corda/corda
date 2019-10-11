@@ -224,15 +224,15 @@ class FlowFrameworkTests {
         mockNet.runNetwork()
 
         assertThatExceptionOfType(MyPeerFlowException::class.java)
-            .isThrownBy { receivingFiber.resultFuture.getOrThrow() }
-            .has(Condition(Predicate<MyPeerFlowException> { it.peer == alice }, "subclassed peer field has original value"))
-            .has(Condition(Predicate<MyPeerFlowException> {
-                DeclaredField<Party?>(
-                    FlowException::class.java,
-                    "peer",
-                    it
-                ).value == bob
-            }, "FlowException's private peer field has value set"))
+                .isThrownBy { receivingFiber.resultFuture.getOrThrow() }
+                .has(Condition(Predicate<MyPeerFlowException> { it.peer == alice }, "subclassed peer field has original value"))
+                .has(Condition(Predicate<MyPeerFlowException> {
+                    DeclaredField<Party?>(
+                            FlowException::class.java,
+                            "peer",
+                            it
+                    ).value == bob
+                }, "FlowException's private peer field has value set"))
     }
 
     private class ConditionalExceptionFlow(val otherPartySession: FlowSession, val sendPayload: Any) : FlowLogic<Unit>() {
@@ -472,7 +472,7 @@ class FlowFrameworkTests {
         mockNet.runNetwork()
         assertThatIllegalArgumentException()
                 .isThrownBy { result.getOrThrow() }
-                .withMessage("We do not know who $anonymousBob belongs to")
+                .withMessage("Could not resolve destination: Anonymous($anonymousBob)")
     }
 
     @Test

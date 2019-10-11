@@ -355,10 +355,10 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     }
 
     @Suspendable
-    override fun initiateFlow(destination: Destination): FlowSession {
+    override fun initiateFlow(destination: Destination, wellKnownParty: Party): FlowSession {
         require(destination is Party || destination is AnonymousParty) { "Unsupported destination type ${destination.javaClass.name}" }
         val resume = processEventImmediately(
-                Event.InitiateFlow(destination),
+                Event.InitiateFlow(destination, wellKnownParty),
                 isDbTransactionOpenOnEntry = true,
                 isDbTransactionOpenOnExit = true
         ) as FlowContinuation.Resume
