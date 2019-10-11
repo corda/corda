@@ -296,6 +296,10 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
         keyToPartyAndCert[owningKey.toStringShort()]
     }
 
+    override fun partyFromKey(key: PublicKey): Party? {
+        return certificateFromKey(key)?.party ?: keyToName[key.toStringShort()]?.let { wellKnownPartyFromX500Name(it) }
+    }
+
     private fun certificateFromCordaX500Name(name: CordaX500Name): PartyAndCertificate? {
         return database.transaction {
             val partyId = nameToKey[name]
