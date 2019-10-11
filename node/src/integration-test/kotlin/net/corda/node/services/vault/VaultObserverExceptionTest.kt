@@ -2,6 +2,7 @@ package net.corda.node.services.vault
 
 import com.r3.dbfailure.workflows.CreateStateFlow
 import com.r3.dbfailure.workflows.CreateStateFlow.Initiator
+import com.r3.dbfailure.workflows.CreateStateFlow.errorTargetsToNum
 import net.corda.core.CordaRuntimeException
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.startFlow
@@ -10,7 +11,6 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
 import net.corda.node.services.Permissions
 import net.corda.node.services.statemachine.StaffedFlowHospital
-import net.corda.node.services.statemachine.StateTransitionException
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.driver.DriverParameters
@@ -25,6 +25,9 @@ import org.junit.ClassRule
 import org.junit.Test
 import rx.exceptions.OnErrorNotImplementedException
 import java.sql.SQLException
+import java.time.Duration
+import java.time.temporal.ChronoUnit
+import java.util.concurrent.TimeoutException
 import javax.persistence.PersistenceException
 import kotlin.test.assertFailsWith
 
@@ -115,13 +118,21 @@ class VaultObserverExceptionTest : IntegrationTest() {
 
     /**
      * If the state we are trying to persist triggers a ConstraintViolation, the flow hospital will retry the flow
-     * and finally give up on it
+     * and keep it in for observation if errors persist.
      */
     @Test
-    fun constraintViolationOnCommitGetsRetriedAndFinallyFails() {
-        var counter = 0
+    fun constraintViolationOnCommitGetsRetriedAndThenGetsKeptForObservation() {
+        var admitted = 0
+        var discharged = 0
+        var observation = 0
         StaffedFlowHospital.onFlowAdmitted.add {
-            ++counter
+            ++admitted
+        }
+        StaffedFlowHospital.onFlowDischarged.add { _, _ ->
+            ++discharged
+        }
+        StaffedFlowHospital.onFlowKeptForOvernightObservation.add { _, _ ->
+            ++observation
         }
 
         driver(DriverParameters(
@@ -129,20 +140,25 @@ class VaultObserverExceptionTest : IntegrationTest() {
                 cordappsForAllNodes = listOf(findCordapp("com.r3.dbfailure.contracts"), findCordapp("com.r3.dbfailure.workflows"), findCordapp("com.r3.dbfailure.schemas")))) {
             val aliceUser = User("user", "foo", setOf(Permissions.all()))
             val aliceNode = startNode(providedName = ALICE_NAME, rpcUsers = listOf(aliceUser)).getOrThrow()
-            assertFailsWith(StateTransitionException::class, "could not execute statement") {
-                aliceNode.rpc.startFlow(::Initiator, "EntityManager", CreateStateFlow.errorTargetsToNum(CreateStateFlow.ErrorTarget.TxInvalidState))
-                        .returnValue.getOrThrow()
+            assertFailsWith<TimeoutException> {
+                aliceNode.rpc.startFlow(::Initiator, "EntityManager", errorTargetsToNum(CreateStateFlow.ErrorTarget.TxInvalidState))
+                        .returnValue.getOrThrow(Duration.of(30, ChronoUnit.SECONDS))
             }
         }
-        Assert.assertTrue("Exception from service has not been to Hospital", counter > 0)
+        Assert.assertTrue("Exception from service has not been to Hospital", admitted > 0)
+        Assert.assertEquals(3, discharged)
+        Assert.assertEquals(1, observation)
     }
 
     /**
      * If we have a state causing a ConstraintViolation lined up for persistence, calling jdbConnection() in
-     * the vault observer will trigger a flush that throws. This will be retried, and finally fail.
+     * the vault observer will trigger a flush that throws. This will be retried, and finally be kept in for observation.
+     *
+     * 4 discharges due to being handled once by [StaffedFlowHospital.DuplicateInsertSpecialist] and 3 times by
+     * [StaffedFlowHospital.TransitionErrorGeneralPractitioner]
      */
     @Test
-    fun constraintViolationOnFlushGetsRetriedAndFinallyFails() {
+    fun constraintViolationOnFlushGetsRetriedAndThenGetsKeptForObservation() {
         var counter = 0
         StaffedFlowHospital.DatabaseEndocrinologist.customConditions.add {
             when (it) {
@@ -154,18 +170,30 @@ class VaultObserverExceptionTest : IntegrationTest() {
             }
             false
         }
+        var discharged = 0
+        var observation = 0
+        StaffedFlowHospital.onFlowDischarged.add { _, _ ->
+            ++discharged
+        }
+        StaffedFlowHospital.onFlowKeptForOvernightObservation.add { _, _ ->
+            ++observation
+        }
 
         driver(DriverParameters(
                 startNodesInProcess = true,
                 cordappsForAllNodes = listOf(findCordapp("com.r3.dbfailure.contracts"), findCordapp("com.r3.dbfailure.workflows"), findCordapp("com.r3.dbfailure.schemas")))) {
             val aliceUser = User("user", "foo", setOf(Permissions.all()))
             val aliceNode = startNode(providedName = ALICE_NAME, rpcUsers = listOf(aliceUser)).getOrThrow()
-            assertFailsWith<StateTransitionException>("ConstraintViolationException") {
-                aliceNode.rpc.startFlow(::Initiator, "EntityManager", CreateStateFlow.errorTargetsToNum(CreateStateFlow.ErrorTarget.ServiceValidUpdate, CreateStateFlow.ErrorTarget.TxInvalidState))
+            assertFailsWith<TimeoutException>("ConstraintViolationException") {
+                aliceNode.rpc.startFlow(::Initiator, "EntityManager", errorTargetsToNum(
+                        CreateStateFlow.ErrorTarget.ServiceValidUpdate,
+                        CreateStateFlow.ErrorTarget.TxInvalidState))
                         .returnValue.getOrThrow(30.seconds)
             }
         }
         Assert.assertTrue("Flow has not been to hospital", counter > 0)
+        Assert.assertEquals(4, discharged)
+        Assert.assertEquals(1, observation)
     }
 
     /**
@@ -197,7 +225,7 @@ class VaultObserverExceptionTest : IntegrationTest() {
             val aliceNode = startNode(providedName = ALICE_NAME, rpcUsers = listOf(aliceUser)).getOrThrow()
             val flowHandle = aliceNode.rpc.startFlow(::Initiator, "EntityManager", CreateStateFlow.errorTargetsToNum(CreateStateFlow.ErrorTarget.ServiceValidUpdate, CreateStateFlow.ErrorTarget.TxInvalidState, CreateStateFlow.ErrorTarget.FlowSwallowErrors))
             val flowResult = flowHandle.returnValue
-            assertFailsWith<StateTransitionException>("ConstraintViolation") { flowResult.getOrThrow(30.seconds) }
+            assertFailsWith<TimeoutException>("ConstraintViolation") { flowResult.getOrThrow(30.seconds) }
             Assert.assertTrue("Flow has not been to hospital", counter > 0)
         }
     }
@@ -206,8 +234,7 @@ class VaultObserverExceptionTest : IntegrationTest() {
      * If we have a state causing a ConstraintViolation lined up for persistence, calling jdbConnection() in
      * the vault observer will trigger a flush that throws. This will be retried, and finally fail.
      * Trying to catch and suppress that exception inside the service does protect the service, but the new
-     * interceptor will fail the flow anyway. It will be retried and finally fail when the hospital gives
-     * up retrying.
+     * interceptor will fail the flow anyway. It will be retried and then be kept in for observation if errors persist.
      */
     @Test
     fun constraintViolationOnFlushInVaultObserverCannotBeSuppressedInService() {
@@ -233,7 +260,7 @@ class VaultObserverExceptionTest : IntegrationTest() {
                     CreateStateFlow.ErrorTarget.TxInvalidState,
                     CreateStateFlow.ErrorTarget.ServiceSwallowErrors))
             val flowResult = flowHandle.returnValue
-            assertFailsWith<CordaRuntimeException>("ConstraintViolation") { flowResult.getOrThrow(30.seconds) }
+            assertFailsWith<TimeoutException>("ConstraintViolation") { flowResult.getOrThrow(30.seconds) }
             Assert.assertTrue("Flow has not been to hospital", counter > 0)
         }
     }

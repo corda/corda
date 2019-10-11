@@ -356,12 +356,9 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
      */
     object DuplicateInsertSpecialist : Staff {
         override fun consult(flowFiber: FlowFiber, currentState: StateMachineState, newError: Throwable, history: FlowMedicalHistory): Diagnosis {
-            return if (newError.mentionsThrowable(ConstraintViolationException::class.java)) {
-                if(history.notDischargedForTheSameThingMoreThan(3, this, currentState)) {
-                    Diagnosis.DISCHARGE
-                } else {
-                    Diagnosis.TERMINAL
-                }
+            return if (newError.mentionsThrowable(ConstraintViolationException::class.java)
+                && history.notDischargedForTheSameThingMoreThan(2, this, currentState)) {
+                Diagnosis.DISCHARGE
             } else {
                 Diagnosis.NOT_MY_SPECIALTY
             }

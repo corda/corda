@@ -6,6 +6,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.node.services.queryBy
 import net.corda.core.transactions.TransactionBuilder
+import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.statemachine.StaffedFlowHospital
 import net.corda.testing.core.DummyCommandData
 import net.corda.testing.core.singleIdentity
@@ -21,7 +22,10 @@ import org.assertj.core.api.Assertions
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import java.time.Duration
+import java.time.temporal.ChronoUnit
 import java.util.concurrent.ExecutionException
+import java.util.concurrent.TimeoutException
 import kotlin.test.assertEquals
 
 class VaultFlowTest {
@@ -56,8 +60,8 @@ class VaultFlowTest {
     fun `Unique column constraint failing causes states to not persist to vaults`() {
         StaffedFlowHospital.DatabaseEndocrinologist.customConditions.add( { t: Throwable -> t is javax.persistence.PersistenceException })
         partyA.startFlow(Initiator(listOf(partyA.info.singleIdentity(), partyB.info.singleIdentity()))).get()
-        Assertions.assertThatExceptionOfType(ExecutionException::class.java).isThrownBy {
-            partyA.startFlow(Initiator(listOf(partyA.info.singleIdentity(), partyB.info.singleIdentity()))).get()
+        Assertions.assertThatExceptionOfType(TimeoutException::class.java).isThrownBy {
+            partyA.startFlow(Initiator(listOf(partyA.info.singleIdentity(), partyB.info.singleIdentity()))).getOrThrow(Duration.of(10, ChronoUnit.SECONDS))
         }
         assertEquals(1, partyA.transaction {
             partyA.services.vaultService.queryBy<UniqueDummyLinearContract.State>().states.size

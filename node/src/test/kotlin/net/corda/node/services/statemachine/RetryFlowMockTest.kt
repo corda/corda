@@ -2,14 +2,17 @@ package net.corda.node.services.statemachine
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.concurrent.CordaFuture
-import net.corda.core.flows.*
+import net.corda.core.flows.FlowInfo
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowSession
+import net.corda.core.flows.InitiatedBy
+import net.corda.core.flows.InitiatingFlow
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.concurrent.flatMap
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.utilities.UntrustworthyData
-import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
 import net.corda.node.services.FinalityHandler
 import net.corda.node.services.messaging.Message
@@ -17,11 +20,13 @@ import net.corda.node.services.persistence.DBTransactionStorage
 import net.corda.nodeapi.internal.persistence.contextTransaction
 import net.corda.testing.common.internal.eventually
 import net.corda.testing.core.TestIdentity
-import net.corda.testing.node.internal.*
+import net.corda.testing.node.internal.InternalMockNetwork
+import net.corda.testing.node.internal.MessagingServiceSpy
+import net.corda.testing.node.internal.TestStartedNode
+import net.corda.testing.node.internal.enclosedCordapp
+import net.corda.testing.node.internal.newContext
 import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.h2.util.Utils
-import org.hibernate.exception.ConstraintViolationException
 import org.junit.After
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -67,14 +72,6 @@ class RetryFlowMockTest {
     fun `Single retry`() {
         assertEquals(Unit, nodeA.startFlow(RetryFlow(1)).get())
         assertEquals(2, RetryFlow.count)
-    }
-
-    @Test
-    fun `Retry forever`() {
-        assertThatThrownBy {
-            nodeA.startFlow(RetryFlow(Int.MAX_VALUE)).getOrThrow()
-        }.isInstanceOf(LimitedRetryCausingError::class.java)
-        assertEquals(5, RetryFlow.count)
     }
 
     @Test
@@ -188,7 +185,7 @@ class RetryFlowMockTest {
     }
 
 
-    class LimitedRetryCausingError : ConstraintViolationException("Test message", SQLException(), "Test constraint")
+    class LimitedRetryCausingError : IllegalStateException("I am going to live forever")
 
     class RetryCausingError : SQLException("deadlock")
 
