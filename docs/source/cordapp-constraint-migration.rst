@@ -63,10 +63,10 @@ Hash constraints migration
 
 .. note:: These instructions only apply to CorDapp Contract JARs (unless otherwise stated).
 
-Corda 4.0
+Corda 4.3
 ~~~~~~~~~
 
-Corda 4.0 requires some additional steps to consume and evolve pre-existing on-ledger **hash** constrained states:
+Corda 4.3 requires some additional steps to consume and evolve pre-existing on-ledger **hash** constrained states:
 
 1. All Corda Nodes in the same CZ or business network that may encounter a transaction chain with a hash constrained state must be started using
    relaxed hash constraint checking mode as described in :ref:`relax_hash_constraints_checking_ref`.
@@ -106,13 +106,6 @@ Corda 4.0 requires some additional steps to consume and evolve pre-existing on-l
    Please also ensure that the original unsigned contracts CorDapp is removed from the ``/cordapps`` folder (this will already be present in the
    nodes attachments store) to ensure the lookup code in step 2 retrieves the correct signed contract CorDapp JAR.
 
-Later releases
-~~~~~~~~~~~~~~
-
-The next version of Corda will provide automatic transition of *hash constrained* states. This means that signed CorDapps running on a Corda 4.x node will
-automatically propagate any pre-existing on-ledger *hash-constrained* states (and generate *signature-constrained* outputs) when the system property
-to break constraints is set.
-
 .. _cz_whitelisted_constraint_migration:
 
 CZ whitelisted constraints migration
@@ -120,7 +113,7 @@ CZ whitelisted constraints migration
 
 .. note:: These instructions only apply to CorDapp Contract JARs (unless otherwise stated).
 
-Corda 4.0
+Corda 4.3
 ~~~~~~~~~
 
 Corda 4.0 requires some additional steps to consume and evolve pre-existing on-ledger **CZ whitelisted** constrained states:
@@ -143,8 +136,13 @@ Corda 4.0 requires some additional steps to consume and evolve pre-existing on-l
     - if using a local network created using the Network Bootstrapper tool, please follow the instructions in
       :ref:`Updating the contract whitelist for bootstrapped networks <bootstrapper_updating_whitelisted_contracts>` to can add both CorDapp Contract JAR hashes.
 
-3. Any flows that build transactions using this CorDapp will have the responsibility of transitioning states to the ``SignatureAttachmentConstraint``.
-   This is done explicitly in the code by setting the constraint of the output states to signers of the latest version of the whitelisted jar:
+3. Any flow that builds transactions using this CorDapp will automatically transition states to use the ``SignatureAttachmentConstraint`` if
+   no other constraint is specified and the CorDapp continues to be whitelisted. Therefore, there are two ways to alter the existing code.
+
+   * Do not specify a constraint
+   * Explicitly add a Signature Constraint
+
+The code below details how to explicitly add a Signature Constraint:
 
 .. container:: codeset
 
@@ -177,9 +175,3 @@ Corda 4.0 requires some additional steps to consume and evolve pre-existing on-l
 4. As a node operator you need to add the new signed version of the contracts CorDapp to the ``/cordapps`` folder together with the latest version of the flows jar.
    Please also ensure that the original unsigned contracts CorDapp is removed from the ``/cordapps`` folder (this will already be present in the
    nodes attachments store) to ensure the lookup code in step 3 retrieves the correct signed contract CorDapp JAR.
-
-Later releases
-~~~~~~~~~~~~~~
-
-The next version of Corda will provide automatic transition of *CZ whitelisted* constrained states. This means that signed CorDapps running on a Corda 4.x node will
-automatically propagate any pre-existing on-ledger *CZ whitelisted* constrained states (and generate *signature* constrained outputs).sn
