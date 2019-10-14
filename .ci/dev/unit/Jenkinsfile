@@ -22,7 +22,7 @@ pipeline {
                     pullRequest.createStatus(status: 'pending',
                             context: 'continuous-integration/jenkins/pr-merge/unitTest',
                             description: 'Unit Tests Building',
-                            targetUrl: "${env.JOB_URL}/testResults")
+                            targetUrl: "${env.JOB_URL}")
                 }
 
                 withCredentials([string(credentialsId: 'container_reg_passwd', variable: 'DOCKER_PUSH_PWD')]) {

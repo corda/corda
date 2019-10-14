@@ -33,7 +33,7 @@ public class KubesTest extends DefaultTask {
     public volatile List<File> testOutput = Collections.emptyList();
     public volatile List<KubePodResult> containerResults = Collections.emptyList();
 
-    String namespace = "thisisatest";
+    public static String NAMESPACE = "thisisatest";
     int k8sTimeout = 50 * 1_000;
     int webSocketTimeout = k8sTimeout * 6;
     int numberOfPods = 20;
@@ -53,7 +53,7 @@ public class KubesTest extends DefaultTask {
 
 
         try {
-            client.pods().inNamespace(namespace).list().getItems().forEach(podToDelete -> {
+            client.pods().inNamespace(NAMESPACE).list().getItems().forEach(podToDelete -> {
                 if (podToDelete.getMetadata().getName().contains(stableRunId)) {
                     getProject().getLogger().lifecycle("deleting: " + podToDelete.getMetadata().getName());
                     client.resource(podToDelete).delete();
@@ -66,7 +66,7 @@ public class KubesTest extends DefaultTask {
         List<CompletableFuture<KubePodResult>> futures = IntStream.range(0, numberOfPods).mapToObj(i -> {
             String potentialPodName = (taskToExecuteName + "-" + stableRunId + suffix + i).toLowerCase();
             String podName = potentialPodName.substring(0, Math.min(potentialPodName.length(), 62));
-            return runBuild(client, namespace, numberOfPods, i, podName, printOutput, 3);
+            return runBuild(client, NAMESPACE, numberOfPods, i, podName, printOutput, 3);
         }).collect(Collectors.toList());
 
         this.testOutput = Collections.synchronizedList(futures.stream().map(it -> {
