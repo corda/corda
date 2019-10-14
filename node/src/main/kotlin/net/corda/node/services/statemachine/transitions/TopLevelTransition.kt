@@ -235,7 +235,7 @@ class TopLevelTransition(
                 return@builder FlowContinuation.ProcessEvents
             }
             val sourceSessionId = SessionId.createRandom(context.secureRandom)
-            val sessionImpl = FlowSessionImpl(event.destination, sourceSessionId)
+            val sessionImpl = FlowSessionImpl(event.destination, event.wellKnownParty, sourceSessionId)
             val newSessions = checkpoint.sessions + (sourceSessionId to SessionState.Uninitiated(event.destination, initiatingSubFlow, sourceSessionId, context.secureRandom.nextLong()))
             currentState = currentState.copy(checkpoint = checkpoint.copy(sessions = newSessions))
             actions.add(Action.AddSessionBinding(context.id, sourceSessionId))

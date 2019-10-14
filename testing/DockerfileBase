@@ -3,8 +3,17 @@ ENV GRADLE_USER_HOME=/tmp/gradle
 RUN mkdir /tmp/gradle && mkdir -p /home/root/.m2/repository
 
 RUN apt-get update && apt-get install -y curl libatomic1 && \
-    curl -O https://d3pxv6yz143wms.cloudfront.net/8.222.10.1/java-1.8.0-amazon-corretto-jdk_8.222.10-1_amd64.deb && \
-    apt-get install -y java-common && dpkg -i java-1.8.0-amazon-corretto-jdk_8.222.10-1_amd64.deb && \
+    curl -O https://cdn.azul.com/zulu/bin/zulu8.40.0.25-ca-jdk8.0.222-linux_amd64.deb && \
+    apt-get install -y java-common && apt install -y ./zulu8.40.0.25-ca-jdk8.0.222-linux_amd64.deb && \
     apt-get clean && \
-    mkdir -p /tmp/source
+    rm -f zulu8.40.0.25-ca-jdk8.0.222-linux_amd64.deb && \
+    curl -O https://cdn.azul.com/zulu/bin/zulu8.40.0.25-ca-fx-jdk8.0.222-linux_x64.tar.gz && \
+    mv /zulu8.40.0.25-ca-fx-jdk8.0.222-linux_x64.tar.gz /usr/lib/jvm/ && \
+    cd /usr/lib/jvm/ && \
+    tar -zxvf zulu8.40.0.25-ca-fx-jdk8.0.222-linux_x64.tar.gz && \
+    rm -rf zulu-8-amd64 && \
+    mv zulu8.40.0.25-ca-fx-jdk8.0.222-linux_x64 zulu-8-amd64 && \
+    rm -f zulu8.40.0.25-ca-fx-jdk8.0.222-linux_x64.tar.gz && \
+    cd / && mkdir -p /tmp/source
+
 

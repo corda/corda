@@ -6,6 +6,7 @@ import net.corda.networkbuilder.nodes.FoundNode
 import net.corda.networkbuilder.nodes.NodeCopier
 import org.slf4j.LoggerFactory
 import java.io.File
+import java.nio.file.Paths
 
 class NotaryCopier(private val cacheDir: File) : NodeCopier(cacheDir) {
 
@@ -28,7 +29,9 @@ class NotaryCopier(private val cacheDir: File) : NodeCopier(cacheDir) {
 
     fun generateNodeInfo(dirToGenerateFrom: File): File {
         val nodeInfoGeneratorProcess = ProcessBuilder()
-                .command(listOf("java", "-jar", "corda.jar", "generate-node-info"))
+                .command(listOf(
+                        Paths.get(System.getProperty("java.home"), "bin", "java").toString(),
+                        "-jar", "corda.jar", "generate-node-info"))
                 .directory(dirToGenerateFrom)
                 .inheritIO()
                 .start()

@@ -139,10 +139,12 @@ open class MockServices private constructor(
          * Makes database and persistent services appropriate for unit tests which require persistence across the vault, identity service
          * and key managment service.
          *
-         * @param cordappPackages A [List] of cordapp packages to scan for any cordapp code, e.g. contract verification code, flows and services.
+         * @param cordappPackages A [List] of cordapp packages to scan for any cordapp code, e.g. contract verification code,
+         *        flows and services.
          * @param initialIdentity The first (typically sole) identity the services will represent.
          * @param moreKeys A list of additional [KeyPair] instances to be used by [MockServices].
          * @param moreIdentities A list of additional [KeyPair] instances to be used by [MockServices].
+         * @param cacheFactory A custom cache factory to be used by the created [IdentityService]
          * @return A pair where the first element is the instance of [CordaPersistence] and the second is [MockServices].
          */
         @JvmStatic
@@ -152,12 +154,13 @@ open class MockServices private constructor(
                 initialIdentity: TestIdentity,
                 networkParameters: NetworkParameters = testNetworkParameters(modifiedTime = Instant.MIN),
                 moreKeys: Set<KeyPair>,
-                moreIdentities: Set<PartyAndCertificate>
+                moreIdentities: Set<PartyAndCertificate>,
+                cacheFactory: TestingNamedCacheFactory = TestingNamedCacheFactory()
         ): Pair<CordaPersistence, MockServices> {
             val cordappLoader = cordappLoaderForPackages(cordappPackages)
             val dataSourceProps = makeTestDataSourceProperties()
             val schemaService = NodeSchemaService(cordappLoader.cordappSchemas)
-            val identityService = PersistentIdentityService(TestingNamedCacheFactory())
+            val identityService = PersistentIdentityService(cacheFactory)
             val persistence = configureDatabase(
                     hikariProperties = dataSourceProps,
                     databaseConfig = DatabaseConfig(),
@@ -167,7 +170,7 @@ open class MockServices private constructor(
                     internalSchemas = schemaService.internalSchemas()
             )
 
-            val pkToIdCache = PublicKeyToOwningIdentityCacheImpl(persistence, TestingNamedCacheFactory())
+            val pkToIdCache = PublicKeyToOwningIdentityCacheImpl(persistence, cacheFactory)
 
             // Create a persistent identity service and add all the supplied identities.
             identityService.apply {

@@ -25,7 +25,8 @@ corda_substitutions = {
     "|quasar_version|" : constants_properties_dict["quasarVersion"],
     "|platform_version|" : constants_properties_dict["platformVersion"],
     "|os_branch|" : constants_properties_dict["openSourceBranch"],
-    "|os_samples_branch|" : constants_properties_dict["openSourceSamplesBranch"]
+    "|os_samples_branch|" : constants_properties_dict["openSourceSamplesBranch"],
+    "|jolokia_version|" : constants_properties_dict["jolokiaAgentVersion"]
 }
 
 def setup(app):
