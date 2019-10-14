@@ -10,6 +10,13 @@ open class RPCException(message: String?, cause: Throwable?) : CordaRuntimeExcep
 }
 
 /**
+ * Thrown to indicate an RPC operation has been retried for the [maxNumberOfRetries] unsuccessfully.
+ * @param maxNumberOfRetries the number of retries that had been performed.
+ * @param cause the cause of the last failed attempt.
+ */
+class MaxRpcRetryException(maxNumberOfRetries: Int, cause: Throwable?): RPCException("Max number of retries ($maxNumberOfRetries) was reached.", cause)
+
+/**
  * Signals that the underlying [RPCConnection] dropped.
  */
 open class ConnectionFailureException(cause: Throwable? = null) : RPCException("Connection failure detected.", cause)

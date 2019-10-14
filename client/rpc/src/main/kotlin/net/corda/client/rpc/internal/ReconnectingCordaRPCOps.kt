@@ -20,6 +20,7 @@ import net.corda.nodeapi.exceptions.RejectedCommandException
 import org.apache.activemq.artemis.api.core.ActiveMQConnectionTimedOutException
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import org.apache.activemq.artemis.api.core.ActiveMQUnBlockedException
+import java.lang.RuntimeException
 import java.lang.reflect.InvocationHandler
 import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Method
@@ -55,7 +56,7 @@ class ReconnectingCordaRPCOps private constructor(
             username: String,
             password: String,
             rpcConfiguration: CordaRPCClientConfiguration,
-            gracefulReconnect: GracefulReconnect? = null,
+            gracefulReconnect: GracefulReconnect = GracefulReconnect(),
             sslConfiguration: ClientRpcSslOptions? = null,
             classLoader: ClassLoader? = null,
             observersPool: ExecutorService
@@ -117,7 +118,7 @@ class ReconnectingCordaRPCOps private constructor(
             val rpcConfiguration: CordaRPCClientConfiguration,
             val sslConfiguration: ClientRpcSslOptions? = null,
             val classLoader: ClassLoader?,
-            val gracefulReconnect: GracefulReconnect? = null,
+            val gracefulReconnect: GracefulReconnect = GracefulReconnect(),
             val observersPool: ExecutorService
     ) : RPCConnection<CordaRPCOps> {
         private var currentRPCConnection: CordaRPCConnection? = null
@@ -147,13 +148,13 @@ class ReconnectingCordaRPCOps private constructor(
             // First one to get here gets to do all the reconnect logic, including calling onDisconnect and onReconnect. This makes sure
             // that they're only called once per reconnect.
             currentState = DIED
-            gracefulReconnect?.onDisconnect?.invoke()
+            gracefulReconnect.onDisconnect.invoke()
             //TODO - handle error cases
             log.error("Reconnecting to ${this.nodeHostAndPorts} due to error: ${e.message}")
             log.debug("", e)
             connect()
             previousConnection?.forceClose()
-            gracefulReconnect?.onReconnect?.invoke()
+            gracefulReconnect.onReconnect.invoke()
         }
         /**
          * Called on external error.
@@ -249,9 +250,16 @@ class ReconnectingCordaRPCOps private constructor(
             }
         }
 
-        private fun doInvoke(method: Method, args: Array<out Any>?): Any? {
-            // will stop looping when [method.invoke] succeeds
-            while (true) {
+        /**
+         * This method retries the invoked operation in a loop by re-establishing the connection when there is a problem
+         * and checking if the [maxNumberOfRetries] has been exhausted.
+         *
+         * A negative number for [maxNumberOfRetries] means an unlimited number of retries will be performed.
+         */
+        private fun doInvoke(method: Method, args: Array<out Any>?, maxNumberOfRetries: Int): Any? {
+            var remainingRetries = maxNumberOfRetries
+            var lastException: Throwable? = null
+            while (remainingRetries != 0) {
                 try {
                     log.debug { "Invoking RPC $method..." }
                     return method.invoke(reconnectingRPCConnection.proxy, *(args ?: emptyArray())).also {
@@ -280,15 +288,19 @@ class ReconnectingCordaRPCOps private constructor(
                             checkIfIsStartFlow(method, e)
                         }
                     }
+                    lastException = e.targetException
+                    remainingRetries--
                 }
             }
+
+            throw MaxRpcRetryException(maxNumberOfRetries, lastException)
         }
 
         override fun invoke(proxy: Any, method: Method, args: Array<out Any>?): Any? {
             return when (method.returnType) {
                 DataFeed::class.java -> {
                     // Intercept the data feed methods and return a ReconnectingObservable instance
-                    val initialFeed: DataFeed<Any, Any?> = uncheckedCast(doInvoke(method, args))
+                    val initialFeed: DataFeed<Any, Any?> = uncheckedCast(doInvoke(method, args, reconnectingRPCConnection.gracefulReconnect.maxRetries))
                     val observable = ReconnectingObservable(reconnectingRPCConnection, initialFeed) {
                         // This handles reconnecting and creates new feeds.
                         uncheckedCast(this.invoke(reconnectingRPCConnection.proxy, method, args))
@@ -296,7 +308,7 @@ class ReconnectingCordaRPCOps private constructor(
                     initialFeed.copy(updates = observable)
                 }
                 // TODO - add handlers for Observable return types.
-                else -> doInvoke(method, args)
+                else -> doInvoke(method, args, reconnectingRPCConnection.gracefulReconnect.maxRetries)
             }
         }
     }
