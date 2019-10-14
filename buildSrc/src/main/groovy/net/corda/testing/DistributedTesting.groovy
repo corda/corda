@@ -1,5 +1,6 @@
 package net.corda.testing
 
+import com.bmuschko.gradle.docker.tasks.image.DockerBuildImage
 import com.bmuschko.gradle.docker.tasks.image.DockerPushImage
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -23,7 +24,8 @@ class DistributedTesting implements Plugin<Project> {
 
             ensureImagePluginIsApplied(project)
             ImageBuilding imagePlugin = project.plugins.getPlugin(ImageBuilding)
-            DockerPushImage imageBuildingTask = imagePlugin.pushTask
+            DockerPushImage imagePushTask = imagePlugin.pushTask
+            DockerBuildImage imageBuildTask = imagePlugin.buildTask
             String providedTag = System.getProperty("docker.tag")
             BucketingAllocatorTask globalAllocator = project.tasks.create("bucketingAllocator", BucketingAllocatorTask, forks)
 
@@ -45,7 +47,7 @@ class DistributedTesting implements Plugin<Project> {
                         println "Skipping modification of ${task.getPath()} as it's not scheduled for execution"
                     }
                     if (!task.hasProperty("ignoreForDistribution")) {
-                        KubesTest parallelTestTask = generateParallelTestingTask(subProject, task, imageBuildingTask, providedTag)
+                        KubesTest parallelTestTask = generateParallelTestingTask(subProject, task, imagePushTask, providedTag)
                     }
 
                 }
@@ -69,9 +71,27 @@ class DistributedTesting implements Plugin<Project> {
                 }.flatten()
                 String superListOfTasks = groups.collect { it.fullTaskToExecutePath }.join(" ")
 
+                if (testGrouping in requestedTasks && System.getProperty("preAllocatePods") != null) {
+                    //this testGroup is a task on the command line
+                    PodAllocator allocator = new PodAllocator()
+                    imageBuildTask.doFirst {
+                        //here we will pre-request the correct number of pods for this testGroup
+                        int numberOfPodsToRequest = testGrouping.getShardCount()
+                        int coresPerPod = testGrouping.getCoresToUse()
+                        int memoryGBPerPod = testGrouping.getGbOfMemory()
+                        allocator.allocatePods(numberOfPodsToRequest, coresPerPod, memoryGBPerPod)
+                    }
+
+                    imagePushTask.doLast {
+                        //the image has been pushed, we are ready to delete the existing pods and schedule the new ones
+                        allocator.tearDownPods()
+                    }
+                }
+
+
                 def userDefinedParallelTask = project.rootProject.tasks.create("userDefined" + testGrouping.name.capitalize(), KubesTest) {
                     if (!providedTag) {
-                        dependsOn imageBuildingTask
+                        dependsOn imagePushTask
                     }
                     numberOfPods = testGrouping.getShardCount()
                     printOutput = testGrouping.printToStdOut
@@ -81,7 +101,7 @@ class DistributedTesting implements Plugin<Project> {
                     numberOfCoresPerFork = testGrouping.coresToUse
                     distribution = testGrouping.distribution
                     doFirst {
-                        dockerTag = dockerTag = providedTag ? ImageBuilding.registryName + ":" + providedTag : (imageBuildingTask.imageName.get() + ":" + imageBuildingTask.tag.get())
+                        dockerTag = dockerTag = providedTag ? ImageBuilding.registryName + ":" + providedTag : (imagePushTask.imageName.get() + ":" + imagePushTask.tag.get())
                     }
                 }
                 def reportOnAllTask = project.rootProject.tasks.create("userDefinedReports${testGrouping.name.capitalize()}", KubesReporting) {

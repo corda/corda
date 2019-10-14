@@ -15,6 +15,7 @@ class ImageBuilding implements Plugin<Project> {
 
     public static final String registryName = "stefanotestingcr.azurecr.io/testing"
     DockerPushImage pushTask
+    DockerBuildImage buildTask
 
     @Override
     void apply(Project project) {
@@ -36,6 +37,8 @@ class ImageBuilding implements Plugin<Project> {
             inputDir.set(new File("."))
             dockerFile.set(new File(new File("testing"), "Dockerfile"))
         }
+
+        this.buildTask = buildDockerImageForSource;
 
         DockerCreateContainer createBuildContainer = project.tasks.create('createBuildContainer', DockerCreateContainer) {
             File baseWorkingDir = new File(System.getProperty("docker.work.dir") ? System.getProperty("docker.work.dir") : System.getProperty("java.io.tmpdir"))
