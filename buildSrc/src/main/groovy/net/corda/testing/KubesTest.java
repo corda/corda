@@ -67,8 +67,8 @@ public class KubesTest extends DefaultTask {
         }
 
         List<Future<KubePodResult>> futures = IntStream.range(0, numberOfPods).mapToObj(i -> {
-                String podName = taskToExecuteName.toLowerCase()+ "-" + stableRunId + "-" + suffix + "-" + i;
-                return submitBuild(client, namespace, numberOfPods, i, podName, printOutput, 3);
+            String podName = taskToExecuteName.toLowerCase() + "-" + stableRunId + "-" + suffix + "-" + i;
+            return submitBuild(client, namespace, numberOfPods, i, podName, printOutput, 3);
         }).collect(Collectors.toList());
 
         this.testOutput = Collections.synchronizedList(futures.stream().map(it -> {
@@ -166,7 +166,7 @@ public class KubesTest extends DefaultTask {
 
         try {
             // pods might die, so we retry
-            return Retry.fixed(numberOfRetries).run(()-> {
+            return Retry.fixed(numberOfRetries).run(() -> {
                 // remove pod if exists
                 PodResource<Pod, DoneablePod> oldPod = client.pods().inNamespace(namespace).withName(podName);
                 if (oldPod.get() != null) {
@@ -206,7 +206,7 @@ public class KubesTest extends DefaultTask {
                 return new KubePodResult(resCode, podOutput, binaryResults);
             });
         } catch (Retry.RetryException e) {
-            throw new RuntimeException("Failed to build in pod " + podName + " ("+podIdx+"/"+numberOfPods+") in " + numberOfRetries + " attempts", e);
+            throw new RuntimeException("Failed to build in pod " + podName + " (" + podIdx + "/" + numberOfPods + ") in " + numberOfRetries + " attempts", e);
         }
     }
 
