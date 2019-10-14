@@ -46,8 +46,8 @@ public class KubesTest extends DefaultTask {
         String buildId = System.getProperty("buildId", "0");
         String currentUser = System.getProperty("user.name", "UNKNOWN_USER");
 
-        String stableRunId = new BigInteger(64, new Random(buildId.hashCode() + currentUser.hashCode() + taskToExecuteName.hashCode())).toString(36).toLowerCase();
-        String suffix = new BigInteger(64, new Random()).toString(36).toLowerCase();
+        String stableRunId = rnd64Base36(new Random(buildId.hashCode() + currentUser.hashCode() + taskToExecuteName.hashCode()), 64).toLowerCase();
+        String suffix = rnd64Base36(new Random(), 64).toLowerCase();
 
         final KubernetesClient client = getKubernetesClient();
 
@@ -85,6 +85,12 @@ public class KubesTest extends DefaultTask {
         }).collect(Collectors.toList());
     }
 
+    static String rnd64Base36(Random random, int bits) {
+        return new BigInteger(64, random)
+                .toString(bits)
+                .toLowerCase();
+    }
+
     @NotNull
     KubernetesClient getKubernetesClient() {
         io.fabric8.kubernetes.client.Config config = new io.fabric8.kubernetes.client.ConfigBuilder()
@@ -98,6 +104,24 @@ public class KubesTest extends DefaultTask {
         return new DefaultKubernetesClient(config);
     }
 
+    PersistentVolumeClaim createPvc(KubernetesClient client, String name) {
+        PersistentVolumeClaim pvc = client.persistentVolumeClaims()
+                .inNamespace(namespace)
+                .createNew()
+                .editOrNewMetadata().withName(name).endMetadata()
+                .editOrNewSpec()
+                .withAccessModes("ReadWriteOnce")
+                .editOrNewResources().addToRequests("storage", new Quantity("100Mi")).endResources()
+                .endSpec()
+                .done();
+
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            getLogger().info("Deleting PVC: " + pvc.getMetadata().getName());
+            client.persistentVolumeClaims().delete(pvc);
+        }));
+        return pvc;
+    }
+
     CompletableFuture<KubePodResult> runBuild(KubernetesClient client,
                                               String namespace,
                                               int numberOfPods,
@@ -107,12 +131,13 @@ public class KubesTest extends DefaultTask {
                                               int numberOfRetries) {
 
         CompletableFuture<KubePodResult> toReturn = new CompletableFuture<>();
+        PersistentVolumeClaim pvc = createPvc(client, podName);
         executorService.submit(() -> {
             int tryCount = 0;
             Pod createdPod = null;
             while (tryCount < numberOfRetries) {
                 try {
-                    Pod podRequest = buildPod(podName);
+                    Pod podRequest = buildPod(podName, pvc);
                     getProject().getLogger().lifecycle("requesting pod: " + podName);
                     createdPod = client.pods().inNamespace(namespace).create(podRequest);
                     getProject().getLogger().lifecycle("scheduled pod: " + podName);
@@ -156,18 +181,18 @@ public class KubesTest extends DefaultTask {
                     } catch (Exception ignored) {
                     }
                     tryCount++;
-                    getLogger().lifecycle("will retry ${podName} another ${numberOfRetries - tryCount} times");
+                    getLogger().lifecycle("will retry " + podName + " another " + (numberOfRetries - tryCount) + " times");
                 }
             }
             if (tryCount >= numberOfRetries) {
-                toReturn.completeExceptionally(new RuntimeException("Failed to build in pod ${podName} (${podIdx}/${numberOfPods}) within retry limit"));
+                toReturn.completeExceptionally(new RuntimeException("Failed to build in pod " + podName + " (" + podIdx + "/" + numberOfPods + ") within retry limit"));
             }
         });
         return toReturn;
     }
 
 
-    Pod buildPod(String podName) {
+    Pod buildPod(String podName, PersistentVolumeClaim pvc) {
         return new PodBuilder().withNewMetadata().withName(podName).endMetadata()
                 .withNewSpec()
                 .addNewVolume()
@@ -176,6 +201,12 @@ public class KubesTest extends DefaultTask {
                 .withPath("/tmp/gradle")
                 .withType("DirectoryOrCreate")
                 .endHostPath()
+                .endVolume()
+                .addNewVolume()
+                .withName("testruns")
+                .withNewPersistentVolumeClaim()
+                .withClaimName(pvc.getMetadata().getName())
+                .endPersistentVolumeClaim()
                 .endVolume()
                 .addNewContainer()
                 .withImage(dockerTag)
