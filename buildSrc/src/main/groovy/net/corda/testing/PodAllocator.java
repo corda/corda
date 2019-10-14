@@ -3,8 +3,12 @@ package net.corda.testing;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodBuilder;
 import io.fabric8.kubernetes.api.model.Quantity;
+import io.fabric8.kubernetes.client.Config;
+import io.fabric8.kubernetes.client.ConfigBuilder;
 import io.fabric8.kubernetes.client.DefaultKubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClient;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.math.BigInteger;
 import java.util.Collections;
@@ -17,10 +21,11 @@ public class PodAllocator {
 
     private static final int CONNECTION_TIMEOUT = 60_1000;
     private volatile List<Pod> preAllocatedPods = Collections.emptyList();
+    private static final Logger logger = LoggerFactory.getLogger(PodAllocator.class);
 
     public void allocatePods(Integer number, Integer coresPerPod, Integer memoryPerPod) {
 
-        io.fabric8.kubernetes.client.Config config = new io.fabric8.kubernetes.client.ConfigBuilder()
+        Config config = new ConfigBuilder()
                 .withConnectionTimeout(CONNECTION_TIMEOUT)
                 .withRequestTimeout(CONNECTION_TIMEOUT)
                 .withRollingTimeout(CONNECTION_TIMEOUT)
@@ -31,16 +36,16 @@ public class PodAllocator {
         KubernetesClient client = new DefaultKubernetesClient(config);
 
         String preAllocatorPrefix = new BigInteger(256, new Random()).toString(36).substring(0, 8);
-        List<Pod> podsToRequest = IntStream.range(0, number).mapToObj(i -> buildPod(preAllocatorPrefix + i, coresPerPod, memoryPerPod)).collect(Collectors.toList());
+        List<Pod> podsToRequest = IntStream.range(0, number).mapToObj(i -> buildPod("pa-" + preAllocatorPrefix + i, coresPerPod, memoryPerPod)).collect(Collectors.toList());
 
         synchronized (this) {
             this.preAllocatedPods = podsToRequest.stream().map(requestedPod -> {
+                logger.info("Pre-allocating pod " + requestedPod.getMetadata().getName());
                 Pod createdPod = client.pods().inNamespace(KubesTest.NAMESPACE).create(requestedPod);
                 Runtime.getRuntime().addShutdownHook(new Thread(() -> client.pods().delete(createdPod)));
                 return createdPod;
             }).collect(Collectors.toList());
         }
-
     }
 
     public void tearDownPods() {
@@ -56,6 +61,7 @@ public class PodAllocator {
         KubernetesClient client = new DefaultKubernetesClient(config);
         synchronized (this) {
             this.preAllocatedPods.forEach(pod -> {
+                logger.info("deleting " + pod.getMetadata().getName());
                 client.pods().delete(pod);
             });
         }
@@ -67,7 +73,7 @@ public class PodAllocator {
                 .withNewSpec()
                 .addNewContainer()
                 .withImage("busybox:latest")
-                .withCommand("bash")
+                .withCommand("sh")
                 .withArgs("-c", "sleep 600")
                 .withName(podName)
                 .withNewResources()
