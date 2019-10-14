@@ -6,7 +6,8 @@ import net.corda.core.DeleteForDJVM
 import net.corda.core.KeepForDJVM
 import net.corda.core.StubOutForDJVM
 import net.corda.core.cordapp.Cordapp
-import net.corda.core.internal.*
+import net.corda.core.internal.toSynchronised
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.*
 import net.corda.core.utilities.ByteSequence
 import net.corda.serialization.internal.CordaSerializationMagic
@@ -46,14 +47,20 @@ abstract class AbstractAMQPSerializationScheme(
         val sff: SerializerFactoryFactory = createSerializerFactoryFactory()
 ) : SerializationScheme {
     @DeleteForDJVM
-    constructor(cordapps: List<Cordapp>) : this(cordapps.customSerializers, cordapps.serializationWhitelists, AccessOrderLinkedHashMap<SerializationFactoryCacheKey, SerializerFactory>(128).toSynchronised())
+    constructor(cordapps: List<Cordapp>) : this(
+            cordapps.customSerializers,
+            cordapps.serializationWhitelists,
+            AccessOrderLinkedHashMap<SerializationFactoryCacheKey, SerializerFactory>(128).toSynchronised()
+    )
 
     // This is a bit gross but a broader check for ConcurrentMap is not allowed inside DJVM.
-    private val serializerFactoriesForContexts: MutableMap<SerializationFactoryCacheKey, SerializerFactory> = if (maybeNotConcurrentSerializerFactoriesForContexts is AccessOrderLinkedHashMap<*, *>) {
-        Collections.synchronizedMap(maybeNotConcurrentSerializerFactoriesForContexts)
-    } else {
-        maybeNotConcurrentSerializerFactoriesForContexts
-    }
+    private val serializerFactoriesForContexts: MutableMap<SerializationFactoryCacheKey, SerializerFactory> =
+            if (maybeNotConcurrentSerializerFactoriesForContexts is
+                            AccessOrderLinkedHashMap<SerializationFactoryCacheKey, SerializerFactory>) {
+                Collections.synchronizedMap(maybeNotConcurrentSerializerFactoriesForContexts)
+            } else {
+                maybeNotConcurrentSerializerFactoriesForContexts
+            }
 
     companion object {
         private val serializationWhitelists: List<SerializationWhitelist> by lazy { listOf(DefaultWhitelist) }
@@ -68,45 +75,16 @@ abstract class AbstractAMQPSerializationScheme(
     }
 
     private fun registerCustomSerializers(context: SerializationContext, factory: SerializerFactory) {
-        with(factory) {
-            register(publicKeySerializer)
-            register(net.corda.serialization.internal.amqp.custom.PrivateKeySerializer)
-            register(net.corda.serialization.internal.amqp.custom.ThrowableSerializer(this))
-            register(net.corda.serialization.internal.amqp.custom.BigDecimalSerializer)
-            register(net.corda.serialization.internal.amqp.custom.BigIntegerSerializer)
-            register(net.corda.serialization.internal.amqp.custom.CurrencySerializer)
-            register(net.corda.serialization.internal.amqp.custom.OpaqueBytesSubSequenceSerializer(this))
-            register(net.corda.serialization.internal.amqp.custom.InstantSerializer(this))
-            register(net.corda.serialization.internal.amqp.custom.DurationSerializer(this))
-            register(net.corda.serialization.internal.amqp.custom.LocalDateSerializer(this))
-            register(net.corda.serialization.internal.amqp.custom.LocalDateTimeSerializer(this))
-            register(net.corda.serialization.internal.amqp.custom.LocalTimeSerializer(this))
-            register(net.corda.serialization.internal.amqp.custom.ZonedDateTimeSerializer(this))
-            register(net.corda.serialization.internal.amqp.custom.ZoneIdSerializer(this))
-            register(net.corda.serialization.internal.amqp.custom.OffsetTimeSerializer(this))
-            register(net.corda.serialization.internal.amqp.custom.OffsetDateTimeSerializer(this))
-            register(net.corda.serialization.internal.amqp.custom.OptionalSerializer(this))
-            register(net.corda.serialization.internal.amqp.custom.YearSerializer(this))
-            register(net.corda.serialization.internal.amqp.custom.YearMonthSerializer(this))
-            register(net.corda.serialization.internal.amqp.custom.MonthDaySerializer(this))
-            register(net.corda.serialization.internal.amqp.custom.PeriodSerializer(this))
-            register(net.corda.serialization.internal.amqp.custom.ClassSerializer(this))
-            register(net.corda.serialization.internal.amqp.custom.X509CertificateSerializer)
-            register(net.corda.serialization.internal.amqp.custom.X509CRLSerializer)
-            register(net.corda.serialization.internal.amqp.custom.CertPathSerializer(this))
-            register(net.corda.serialization.internal.amqp.custom.StringBufferSerializer)
-            register(net.corda.serialization.internal.amqp.custom.InputStreamSerializer)
-            register(net.corda.serialization.internal.amqp.custom.BitSetSerializer(this))
-            register(net.corda.serialization.internal.amqp.custom.EnumSetSerializer(this))
-            register(net.corda.serialization.internal.amqp.custom.ContractAttachmentSerializer(this))
-            registerNonDeterministicSerializers(factory)
-        }
+        factory.register(publicKeySerializer)
+        registerCustomSerializers(factory)
 
-        // This step is registering custom serializers, which have been added after node initialisation (i.e. via attachments during transaction verification).
-        // Note: the order between the registration of customSerializers and cordappCustomSerializers must be preserved as-is. The reason is the following:
-        // Currently, the serialization infrastructure does not support multiple versions of a class (the first one that is registered dominates).
-        // As a result, when inside a context with attachments class loader, we prioritize serializers loaded on-demand from attachments to serializers that had been
-        // loaded during node initialisation, by scanning the cordapps folder.
+        // This step is registering custom serializers, which have been added after node initialisation (i.e. via attachments during
+        // transaction verification).
+        // Note: the order between the registration of customSerializers and cordappCustomSerializers must be preserved as-is. The reason
+        // is the following:
+        // Currently, the serialization infrastructure does not support multiple versions of a class (the first one that is
+        // registered dominates). As a result, when inside a context with attachments class loader, we prioritize serializers loaded
+        // on-demand from attachments to serializers that had been loaded during node initialisation, by scanning the cordapps folder.
         context.customSerializers.forEach { customSerializer ->
             factory.registerExternal(CorDappCustomSerializer(customSerializer, factory))
         }
@@ -126,19 +104,9 @@ abstract class AbstractAMQPSerializationScheme(
             factory.addToWhitelist(*it.whitelist.toTypedArray())
         }
         cordappSerializationWhitelists.forEach {
-            it.whitelist.forEach {
-                clazz -> factory.addToWhitelist(clazz)
+            it.whitelist.forEach { clazz ->
+                factory.addToWhitelist(clazz)
             }
-        }
-    }
-
-    /*
-     * Register the serializers which will be excluded from the DJVM.
-     */
-    @StubOutForDJVM
-    private fun registerNonDeterministicSerializers(factory: SerializerFactory) {
-        with(factory) {
-            register(net.corda.serialization.internal.amqp.custom.SimpleStringSerializer)
         }
     }
 
@@ -189,3 +157,49 @@ abstract class AbstractAMQPSerializationScheme(
 
     protected fun canDeserializeVersion(magic: CordaSerializationMagic) = magic == amqpMagic
 }
+
+fun registerCustomSerializers(factory: SerializerFactory) {
+    with(factory) {
+        register(net.corda.serialization.internal.amqp.custom.PrivateKeySerializer)
+        register(net.corda.serialization.internal.amqp.custom.ThrowableSerializer(this))
+        register(net.corda.serialization.internal.amqp.custom.BigDecimalSerializer)
+        register(net.corda.serialization.internal.amqp.custom.BigIntegerSerializer)
+        register(net.corda.serialization.internal.amqp.custom.CurrencySerializer)
+        register(net.corda.serialization.internal.amqp.custom.OpaqueBytesSubSequenceSerializer(this))
+        register(net.corda.serialization.internal.amqp.custom.InstantSerializer(this))
+        register(net.corda.serialization.internal.amqp.custom.DurationSerializer(this))
+        register(net.corda.serialization.internal.amqp.custom.LocalDateSerializer(this))
+        register(net.corda.serialization.internal.amqp.custom.LocalDateTimeSerializer(this))
+        register(net.corda.serialization.internal.amqp.custom.LocalTimeSerializer(this))
+        register(net.corda.serialization.internal.amqp.custom.ZonedDateTimeSerializer(this))
+        register(net.corda.serialization.internal.amqp.custom.ZoneIdSerializer(this))
+        register(net.corda.serialization.internal.amqp.custom.OffsetTimeSerializer(this))
+        register(net.corda.serialization.internal.amqp.custom.OffsetDateTimeSerializer(this))
+        register(net.corda.serialization.internal.amqp.custom.OptionalSerializer(this))
+        register(net.corda.serialization.internal.amqp.custom.YearSerializer(this))
+        register(net.corda.serialization.internal.amqp.custom.YearMonthSerializer(this))
+        register(net.corda.serialization.internal.amqp.custom.MonthDaySerializer(this))
+        register(net.corda.serialization.internal.amqp.custom.PeriodSerializer(this))
+        register(net.corda.serialization.internal.amqp.custom.ClassSerializer(this))
+        register(net.corda.serialization.internal.amqp.custom.X509CertificateSerializer)
+        register(net.corda.serialization.internal.amqp.custom.X509CRLSerializer)
+        register(net.corda.serialization.internal.amqp.custom.CertPathSerializer(this))
+        register(net.corda.serialization.internal.amqp.custom.StringBufferSerializer)
+        register(net.corda.serialization.internal.amqp.custom.InputStreamSerializer)
+        register(net.corda.serialization.internal.amqp.custom.BitSetSerializer(this))
+        register(net.corda.serialization.internal.amqp.custom.EnumSetSerializer(this))
+        register(net.corda.serialization.internal.amqp.custom.ContractAttachmentSerializer(this))
+    }
+    registerNonDeterministicSerializers(factory)
+}
+
+/*
+ * Register the serializers which will be excluded from the DJVM.
+ */
+@StubOutForDJVM
+private fun registerNonDeterministicSerializers(factory: SerializerFactory) {
+    with(factory) {
+        register(net.corda.serialization.internal.amqp.custom.SimpleStringSerializer)
+    }
+}
+
