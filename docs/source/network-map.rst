@@ -208,7 +208,7 @@ to ``false``. For example:
 
 It is also possible to switch off this behaviour at a more granular parameter level. This can be achieved by specifying the set of
 ``@AutoAcceptable`` parameters that should not be auto-acceptable in the optional
-``betworkParameterAcceptanceSettings.excludedAutoAcceptableParameters`` node configuration property.
+``networkParameterAcceptanceSettings.excludedAutoAcceptableParameters`` node configuration property.
 
 For example, auto-acceptance can be switched off for any updates that change the ``packageOwnership`` map by adding the following to the
 node configuration:
