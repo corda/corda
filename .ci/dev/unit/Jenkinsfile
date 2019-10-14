@@ -1,4 +1,3 @@
-import static com.r3.build.BuildControl.killAllExistingBuildsForJob
 @Library('existing-build-control')
 import static com.r3.build.BuildControl.killAllExistingBuildsForJob
 
@@ -15,33 +14,15 @@ pipeline {
     }
 
     stages {
-        stage('Corda Pull Request - Generate Build Image') {
-            steps {
-                withCredentials([string(credentialsId: 'container_reg_passwd', variable: 'DOCKER_PUSH_PWD')]) {
-                    sh "./gradlew " +
-                            "-Dkubenetize=true " +
-                            "-Ddocker.push.password=\"\${DOCKER_PUSH_PWD}\" " +
-                            "-Ddocker.work.dir=\"/tmp/\${EXECUTOR_NUMBER}\" " +
-                            "-Ddocker.provided.tag=\"\${DOCKER_TAG_TO_USE}\"" +
-                            " clean pushBuildImage"
-                }
-                sh "kubectl auth can-i get pods"
-            }
-        }
-
         stage('Unit Tests') {
             steps {
                 sh "./gradlew " +
                         "-DbuildId=\"\${BUILD_ID}\" " +
                         "-Dkubenetize=true " +
-                        "-Ddocker.tag=\"\${DOCKER_TAG_TO_USE}\"" +
+                        "-Ddocker.push.password=\"\${DOCKER_PUSH_PWD}\" " +
+                        "-Ddocker.work.dir=\"/tmp/\${EXECUTOR_NUMBER}\" " +
+                        "-Ddocker.provided.tag=\"\${DOCKER_TAG_TO_USE}\"" +
                         " allParallelUnitTest"
-                if (env.CHANGE_ID) {
-                    pullRequest.createStatus(status: 'success',
-                            context: 'continuous-integration/jenkins/pr-merge/unitTest',
-                            description: 'Unit Tests Passed',
-                            targetUrl: "${env.JOB_URL}/testResults")
-                }
             }
         }
     }
@@ -50,6 +31,33 @@ pipeline {
         always {
             junit '**/build/test-results-xml/**/*.xml'
         }
+
+        success {
+            when {
+                allOf {
+                    expression { env.CHANGE_ID != null }
+                    expression { env.CHANGE_TARGET != null }
+                }
+            }
+            pullRequest.createStatus(status: 'success',
+                    context: 'continuous-integration/jenkins/pr-merge/unitTest',
+                    description: 'Unit Tests Passed',
+                    targetUrl: "${env.JOB_URL}/testResults")
+        }
+
+        failure {
+            when {
+                allOf {
+                    expression { env.CHANGE_ID != null }
+                    expression { env.CHANGE_TARGET != null }
+                }
+            }
+            pullRequest.createStatus(status: 'failure',
+                    context: 'continuous-integration/jenkins/pr-merge/unitTest',
+                    description: 'Unit Tests Failed',
+                    targetUrl: "${env.JOB_URL}/testResults")
+        }
+
         cleanup {
             deleteDir() /* clean up our workspace */
         }
