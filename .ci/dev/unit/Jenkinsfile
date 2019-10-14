@@ -1,4 +1,3 @@
-import static com.r3.build.BuildControl.killAllExistingBuildsForJob
 @Library('existing-build-control')
 import static com.r3.build.BuildControl.killAllExistingBuildsForJob
 
@@ -17,7 +16,6 @@ pipeline {
     stages {
         stage('Unit Tests') {
             steps {
-
                 script {
                     pullRequest.createStatus(status: 'pending',
                             context: 'continuous-integration/jenkins/pr-merge/unitTest',
@@ -34,7 +32,6 @@ pipeline {
                             "-Ddocker.provided.tag=\"\${DOCKER_TAG_TO_USE}\"" +
                             " allParallelUnitTest"
                 }
-                sh "echo hello"
             }
         }
     }
