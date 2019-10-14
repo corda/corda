@@ -17,14 +17,22 @@ pipeline {
     stages {
         stage('Unit Tests') {
             steps {
+
+                script {
+                    pullRequest.createStatus(status: 'pending',
+                            context: 'continuous-integration/jenkins/pr-merge/unitTest',
+                            description: 'Unit Tests Building',
+                            targetUrl: "${env.JOB_URL}/testResults")
+                }
+
                 withCredentials([string(credentialsId: 'container_reg_passwd', variable: 'DOCKER_PUSH_PWD')]) {
-//                    sh "./gradlew " +
-//                            "-DbuildId=\"\${BUILD_ID}\" " +
-//                            "-Dkubenetize=true " +
-//                            "-Ddocker.push.password=\"\${DOCKER_PUSH_PWD}\" " +
-//                            "-Ddocker.work.dir=\"/tmp/\${EXECUTOR_NUMBER}\" " +
-//                            "-Ddocker.provided.tag=\"\${DOCKER_TAG_TO_USE}\"" +
-//                            " allParallelUnitTest"
+                    sh "./gradlew " +
+                            "-DbuildId=\"\${BUILD_ID}\" " +
+                            "-Dkubenetize=true " +
+                            "-Ddocker.push.password=\"\${DOCKER_PUSH_PWD}\" " +
+                            "-Ddocker.work.dir=\"/tmp/\${EXECUTOR_NUMBER}\" " +
+                            "-Ddocker.provided.tag=\"\${DOCKER_TAG_TO_USE}\"" +
+                            " allParallelUnitTest"
                 }
                 sh "echo hello"
             }
@@ -32,10 +40,9 @@ pipeline {
     }
 
     post {
+
         always {
-            junit('**/build/test-results-xml/**/*.xml') {
-                allowEmptyResults true
-            }
+            junit testResults: '**/build/test-results-xml/**/*.xml', allowEmptyResults: true
         }
 
         success {
@@ -43,22 +50,18 @@ pipeline {
                 pullRequest.createStatus(status: 'success',
                         context: 'continuous-integration/jenkins/pr-merge/unitTest',
                         description: 'Unit Tests Passed',
-                        targetUrl: "${env.JOB_URL}/testResults")
+                        targetUrl: "${env.JOB_URL}testResults")
             }
         }
 
-//        failure {
-//            when {
-//                allOf {
-//                    expression { env.CHANGE_ID != null }
-//                    expression { env.CHANGE_TARGET != null }
-//                }
-//            }
-//            pullRequest.createStatus(status: 'failure',
-//                    context: 'continuous-integration/jenkins/pr-merge/unitTest',
-//                    description: 'Unit Tests Failed',
-//                    targetUrl: "${env.JOB_URL}/testResults")
-//        }
+        failure {
+            script {
+                pullRequest.createStatus(status: 'failure',
+                        context: 'continuous-integration/jenkins/pr-merge/unitTest',
+                        description: 'Unit Tests Failed',
+                        targetUrl: "${env.JOB_URL}testResults")
+            }
+        }
 
         cleanup {
             deleteDir() /* clean up our workspace */
