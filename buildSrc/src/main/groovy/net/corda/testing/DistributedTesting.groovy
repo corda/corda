@@ -131,7 +131,7 @@ class DistributedTesting implements Plugin<Project> {
                 filter {
                     def fork = getPropertyAsInt(subProject, "dockerFork", 0)
                     subProject.logger.info("requesting tests to include in testing task ${task.getPath()} (idx: ${fork})")
-                    List<String> includes = globalAllocator.getTestsForForkAndTestTask(
+                    List<String> includes = globalAllocator.getTestIncludesForForkAndTestTask(
                             fork,
                             task)
                     subProject.logger.info "got ${includes.size()} tests to include into testing task ${task.getPath()}"

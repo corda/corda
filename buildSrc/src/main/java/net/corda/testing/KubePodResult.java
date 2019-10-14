@@ -5,19 +5,16 @@ import io.fabric8.kubernetes.api.model.Pod;
 import java.io.File;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.concurrent.CompletableFuture;
 
 public class KubePodResult {
 
     private final Pod createdPod;
-    private final CompletableFuture<Void> waiter;
     private volatile Integer resultCode = 255;
     private final File output;
     private volatile Collection<File> binaryResults = Collections.emptyList();
 
-    KubePodResult(Pod createdPod, CompletableFuture<Void> waiter, File output) {
+    KubePodResult(Pod createdPod, File output) {
         this.createdPod = createdPod;
-        this.waiter = waiter;
         this.output = output;
     }
 
@@ -34,8 +31,22 @@ public class KubePodResult {
     }
 
     public File getOutput() {
+        return output;
+    }
+
+    public Pod getCreatedPod() {
+        return createdPod;
+    }
+
+    public Collection<File> getBinaryResults() {
         synchronized (createdPod) {
-            return output;
+            return binaryResults;
+        }
+    }
+
+    public void setBinaryResults(Collection<File> binaryResults) {
+        synchronized (createdPod) {
+            this.binaryResults = binaryResults;
         }
     }
 };

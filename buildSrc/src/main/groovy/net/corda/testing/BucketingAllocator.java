@@ -51,12 +51,11 @@ public class BucketingAllocator {
             System.out.println("Number of tests: " + container.testsForFork.stream().mapToInt(b -> b.foundTests.size()).sum());
             System.out.println("Tests to Run: ");
             container.testsForFork.forEach(tb -> {
-                System.out.println(tb.nameWithAsterix);
+                System.out.println(tb.testName);
                 tb.foundTests.forEach(ft -> System.out.println("\t" + ft.getFirst() + ", " + ft.getSecond()));
             });
         });
     }
-
 
     private void allocateTestsToForks(@NotNull List<TestBucket> matchedTests) {
         matchedTests.forEach(matchedTestBucket -> {
@@ -69,10 +68,9 @@ public class BucketingAllocator {
         return allDiscoveredTests.stream().map(tuple -> {
             String testName = tuple.getFirst();
             Object task = tuple.getSecond();
-            String noAsterixName = testName.substring(0, testName.length() - 1);
             //2DO [can this filtering algorithm be improved - the test names are sorted, it should be possible to do something using binary search]
-            List<Tuple2<String, Double>> matchingTests = allTestsFromCSV.stream().filter(testFromCSV -> testFromCSV.getFirst().startsWith(noAsterixName)).collect(Collectors.toList());
-            return new TestBucket(task, testName, noAsterixName, matchingTests);
+            List<Tuple2<String, Double>> matchingTests = allTestsFromCSV.stream().filter(testFromCSV -> testFromCSV.getFirst().startsWith(testName)).collect(Collectors.toList());
+            return new TestBucket(task, testName, matchingTests);
         }).sorted(Comparator.comparing(TestBucket::getDuration).reversed()).collect(Collectors.toList());
     }
 
@@ -81,22 +79,20 @@ public class BucketingAllocator {
             TestLister lister = source.getFirst();
             Object testTask = source.getSecond();
             return lister.getAllTestsDiscovered().stream().map(test -> new Tuple2<>(test, testTask)).collect(Collectors.toList());
-        }).flatMap(Collection::stream).collect(Collectors.toList());
+        }).flatMap(Collection::stream).sorted(Comparator.comparing(Tuple2::getFirst)).collect(Collectors.toList());
     }
 
     public static class TestBucket {
         final Object testTask;
-        final String nameWithAsterix;
-        final String nameWithoutAsterix;
+        final String testName;
         final List<Tuple2<String, Double>> foundTests;
         final Double duration;
 
-        public TestBucket(Object testTask, String nameWithAsterix, String nameWithoutAsterix, List<Tuple2<String, Double>> foundTests) {
+        public TestBucket(Object testTask, String testName, List<Tuple2<String, Double>> foundTests) {
             this.testTask = testTask;
-            this.nameWithAsterix = nameWithAsterix;
-            this.nameWithoutAsterix = nameWithoutAsterix;
+            this.testName = testName;
             this.foundTests = foundTests;
-            duration = Math.max(foundTests.stream().mapToDouble(tp -> Math.max(tp.getSecond(), 10)).sum(), 10);
+            duration = Math.max(foundTests.stream().mapToDouble(tp -> Math.max(tp.getSecond(), 1)).sum(), 1);
         }
 
         public Double getDuration() {
@@ -107,8 +103,7 @@ public class BucketingAllocator {
         public String toString() {
             return "TestBucket{" +
                     "testTask=" + testTask +
-                    ", nameWithAsterix='" + nameWithAsterix + '\'' +
-                    ", nameWithoutAsterix='" + nameWithoutAsterix + '\'' +
+                    ", nameWithAsterix='" + testName + '\'' +
                     ", foundTests=" + foundTests +
                     ", duration=" + duration +
                     '}';
@@ -142,7 +137,7 @@ public class BucketingAllocator {
         }
 
         public List<String> getTestsForTask(Object task) {
-            return frozenTests.getOrDefault(task, Collections.emptyList()).stream().map(it -> it.nameWithAsterix).collect(Collectors.toList());
+            return frozenTests.getOrDefault(task, Collections.emptyList()).stream().map(it -> it.testName).collect(Collectors.toList());
         }
 
         public List<TestBucket> getBucketsForFork() {
