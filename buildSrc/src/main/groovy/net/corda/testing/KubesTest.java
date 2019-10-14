@@ -170,10 +170,10 @@ public class KubesTest extends DefaultTask {
                 // remove pod if exists
                 PodResource<Pod, DoneablePod> oldPod = client.pods().inNamespace(namespace).withName(podName);
                 if (oldPod.get() != null) {
-                    getLogger().lifecycle("deleting pod: $podName");
+                    getLogger().lifecycle("deleting pod: {}", podName);
                     oldPod.delete();
                     while (oldPod.get() != null) {
-                        getLogger().info("waiting for pod $podName to be removed");
+                        getLogger().info("waiting for pod {} to be removed", podName);
                         Thread.sleep(1000);
                     }
                 }
