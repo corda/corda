@@ -51,7 +51,7 @@ public class KubesTest extends DefaultTask {
         String currentUser = System.getProperty("user.name", "UNKNOWN_USER");
 
         String stableRunId = rnd64Base36(new Random(buildId.hashCode() + currentUser.hashCode() + taskToExecuteName.hashCode()));
-        String suffix = rnd64Base36(new Random());
+        String random = rnd64Base36(new Random());
 
         final KubernetesClient client = getKubernetesClient();
 
@@ -67,7 +67,7 @@ public class KubesTest extends DefaultTask {
         }
 
         List<Future<KubePodResult>> futures = IntStream.range(0, numberOfPods).mapToObj(i -> {
-            String podName = taskToExecuteName.toLowerCase() + "-" + stableRunId + "-" + suffix + "-" + i;
+            String podName = taskToExecuteName.toLowerCase() + "-" + stableRunId + "-" + random + "-" + i;
             return submitBuild(client, namespace, numberOfPods, i, podName, printOutput, 3);
         }).collect(Collectors.toList());
 
