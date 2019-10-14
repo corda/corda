@@ -1,3 +1,4 @@
+import static com.r3.build.BuildControl.killAllExistingBuildsForJob
 @Library('existing-build-control')
 import static com.r3.build.BuildControl.killAllExistingBuildsForJob
 
@@ -33,30 +34,29 @@ pipeline {
         }
 
         success {
-            when {
-                allOf {
+            script {
+                when {
                     expression { env.CHANGE_ID != null }
-                    expression { env.CHANGE_TARGET != null }
                 }
+                pullRequest.createStatus(status: 'success',
+                        context: 'continuous-integration/jenkins/pr-merge/unitTest',
+                        description: 'Unit Tests Passed',
+                        targetUrl: "${env.JOB_URL}/testResults")
             }
-            pullRequest.createStatus(status: 'success',
-                    context: 'continuous-integration/jenkins/pr-merge/unitTest',
-                    description: 'Unit Tests Passed',
-                    targetUrl: "${env.JOB_URL}/testResults")
         }
 
-        failure {
-            when {
-                allOf {
-                    expression { env.CHANGE_ID != null }
-                    expression { env.CHANGE_TARGET != null }
-                }
-            }
-            pullRequest.createStatus(status: 'failure',
-                    context: 'continuous-integration/jenkins/pr-merge/unitTest',
-                    description: 'Unit Tests Failed',
-                    targetUrl: "${env.JOB_URL}/testResults")
-        }
+//        failure {
+//            when {
+//                allOf {
+//                    expression { env.CHANGE_ID != null }
+//                    expression { env.CHANGE_TARGET != null }
+//                }
+//            }
+//            pullRequest.createStatus(status: 'failure',
+//                    context: 'continuous-integration/jenkins/pr-merge/unitTest',
+//                    description: 'Unit Tests Failed',
+//                    targetUrl: "${env.JOB_URL}/testResults")
+//        }
 
         cleanup {
             deleteDir() /* clean up our workspace */
