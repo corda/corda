@@ -1,8 +1,13 @@
 package net.corda.coretests.contracts
 
+import net.corda.core.contracts.AlwaysAcceptAttachmentConstraint
 import net.corda.core.contracts.Contract
+import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.TransactionState
 import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.generateKeyPair
+import net.corda.core.identity.Party
 import net.corda.core.internal.createContractCreationError
 import net.corda.core.internal.createContractRejection
 import net.corda.core.transactions.LedgerTransaction
@@ -13,6 +18,9 @@ import net.corda.serialization.internal.amqp.SerializationOutput
 import net.corda.serialization.internal.amqp.SerializerFactoryBuilder
 import net.corda.serialization.internal.amqp.custom.PublicKeySerializer
 import net.corda.serialization.internal.amqp.custom.ThrowableSerializer
+import net.corda.testing.common.internal.testNetworkParameters
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.TestIdentity
@@ -23,7 +31,9 @@ class TransactionVerificationExceptionSerialisationTests {
     private fun defaultFactory() = SerializerFactoryBuilder.build(
             AllWhitelist,
             ClassLoader.getSystemClassLoader()
-    ).apply { register(ThrowableSerializer(this)) }
+    ).apply {
+        register(ThrowableSerializer(this))
+    }
 
     private val context get() = AMQP_RPC_CLIENT_CONTEXT
 
@@ -178,5 +188,126 @@ class TransactionVerificationExceptionSerialisationTests {
                 context)
 
         assertEquals(exc.message, exc2.message)
+    }
+
+    @Test
+    fun transactionNetworkParameterOrderingExceptionTest() {
+        val exception = TransactionVerificationException.TransactionNetworkParameterOrderingException(
+                txid,
+                StateRef(SecureHash.zeroHash, 1),
+                testNetworkParameters(),
+                testNetworkParameters())
+        val exception2 = DeserializationInput(factory)
+                .deserialize(
+                        SerializationOutput(factory)
+                                .serialize(exception, context),
+                        context)
+
+        assertEquals(exception.message, exception2.message)
+        assertEquals(exception.cause?.message, exception2.cause?.message)
+        assertEquals(exception.txId, exception2.txId)
+    }
+
+    @Test
+    fun missingNetworkParametersExceptionTest() {
+        val exception = TransactionVerificationException.MissingNetworkParametersException(txid, SecureHash.zeroHash)
+        val exception2 = DeserializationInput(factory)
+                .deserialize(
+                        SerializationOutput(factory)
+                                .serialize(exception, context),
+                        context)
+
+        assertEquals(exception.message, exception2.message)
+        assertEquals(exception.cause?.message, exception2.cause?.message)
+        assertEquals(exception.txId, exception2.txId)
+    }
+
+    @Test
+    fun constraintPropagationRejectionTest() {
+        val exception = TransactionVerificationException.ConstraintPropagationRejection(txid, "com.test.Contract",
+                AlwaysAcceptAttachmentConstraint, AlwaysAcceptAttachmentConstraint)
+        val exception2 = DeserializationInput(factory)
+                .deserialize(
+                        SerializationOutput(factory)
+                                .serialize(exception, context),
+                        context)
+
+        assertEquals(exception.message, exception2.message)
+        assertEquals(exception.cause?.message, exception2.cause?.message)
+        assertEquals(exception.txId, exception2.txId)
+        assertEquals("com.test.Contract", exception2.contractClass)
+    }
+
+    @Test
+    fun transactionDuplicateEncumbranceExceptionTest() {
+        val exception = TransactionVerificationException.TransactionDuplicateEncumbranceException(txid, 1)
+        val exception2 = DeserializationInput(factory)
+                .deserialize(
+                        SerializationOutput(factory)
+                                .serialize(exception, context),
+                        context)
+
+        assertEquals(exception.message, exception2.message)
+        assertEquals(exception.cause?.message, exception2.cause?.message)
+        assertEquals(exception.txId, exception2.txId)
+    }
+
+    @Test
+    fun transactionNonMatchingEncumbranceExceptionTest() {
+        val exception = TransactionVerificationException.TransactionNonMatchingEncumbranceException(txid, listOf(1, 2, 3))
+        val exception2 = DeserializationInput(factory)
+                .deserialize(
+                        SerializationOutput(factory)
+                                .serialize(exception, context),
+                        context)
+
+        assertEquals(exception.message, exception2.message)
+        assertEquals(exception.cause?.message, exception2.cause?.message)
+        assertEquals(exception.txId, exception2.txId)
+    }
+
+    @Test
+    fun transactionNotaryMismatchEncumbranceExceptionTest() {
+        val exception = TransactionVerificationException.TransactionNotaryMismatchEncumbranceException(
+                txid, 1, 2, Party(ALICE_NAME, generateKeyPair().public), Party(BOB_NAME, generateKeyPair().public))
+        val exception2 = DeserializationInput(factory)
+                .deserialize(
+                        SerializationOutput(factory)
+                                .serialize(exception, context),
+                        context)
+
+        assertEquals(exception.message, exception2.message)
+        assertEquals(exception.cause?.message, exception2.cause?.message)
+        assertEquals(exception.txId, exception2.txId)
+    }
+
+    @Test
+    fun transactionContractConflictExceptionTest() {
+        val exception = TransactionVerificationException.TransactionContractConflictException(
+                txid, TransactionState(DummyContractState(), notary = Party(BOB_NAME, generateKeyPair().public)), "aa")
+        val exception2 = DeserializationInput(factory)
+                .deserialize(
+                        SerializationOutput(factory)
+                                .serialize(exception, context),
+                        context)
+
+        assertEquals(exception.message, exception2.message)
+        assertEquals(exception.cause?.message, exception2.cause?.message)
+        assertEquals(exception.txId, exception2.txId)
+    }
+
+    @Test
+    fun transactionRequiredContractUnspecifiedExceptionTest() {
+        val exception = TransactionVerificationException.TransactionRequiredContractUnspecifiedException(
+                txid, TransactionState(DummyContractState(), notary = Party(BOB_NAME, generateKeyPair().public)))
+        val exception2 = DeserializationInput(factory)
+                .deserialize(
+                        SerializationOutput(factory)
+                                .serialize(exception, context),
+                        context)
+
+        assertEquals(exception.message, exception2.message)
+        assertEquals(exception.cause?.message, exception2.cause?.message)
+        assertEquals(exception.txId, exception2.txId)
     }
 }

@@ -262,6 +262,17 @@ class PersistentIdentityServiceTests {
     }
 
     @Test
+    fun `resolve key to party for key without certificate`() {
+        // Register Alice's PartyAndCert as if it was done so via the network map cache.
+        identityService.verifyAndRegisterIdentity(alice.identity)
+        // Use a key which is not tied to a cert.
+        val publicKey = Crypto.generateKeyPair().public
+        // Register the PublicKey to Alice's CordaX500Name.
+        identityService.registerKey(publicKey, alice.party)
+        assertEquals(alice.party, identityService.partyFromKey(publicKey))
+    }
+
+    @Test
     fun `register incorrect party to public key `(){
         database.transaction { identityService.verifyAndRegisterIdentity(ALICE_IDENTITY) }
         val (alice, anonymousAlice) = createConfidentialIdentity(ALICE.name)
