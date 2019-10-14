@@ -91,7 +91,7 @@ class SchemaMigration(
         }
     }
 
-    private fun reportMigrationError(mappedSchema: MappedSchema): String? =
+    private fun logOrThrowMigrationError(mappedSchema: MappedSchema): String? =
             if (forceThrowOnMissingMigration) {
                 throw MissingMigrationException(mappedSchema)
             } else {
