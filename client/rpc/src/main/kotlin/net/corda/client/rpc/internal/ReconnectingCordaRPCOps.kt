@@ -300,7 +300,8 @@ class ReconnectingCordaRPCOps private constructor(
             return when (method.returnType) {
                 DataFeed::class.java -> {
                     // Intercept the data feed methods and return a ReconnectingObservable instance
-                    val initialFeed: DataFeed<Any, Any?> = uncheckedCast(doInvoke(method, args, reconnectingRPCConnection.gracefulReconnect.maxRetries))
+                    val initialFeed: DataFeed<Any, Any?> = uncheckedCast(doInvoke(method, args,
+                            reconnectingRPCConnection.gracefulReconnect.maxRetries))
                     val observable = ReconnectingObservable(reconnectingRPCConnection, initialFeed) {
                         // This handles reconnecting and creates new feeds.
                         uncheckedCast(this.invoke(reconnectingRPCConnection.proxy, method, args))
