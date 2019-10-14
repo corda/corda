@@ -17,13 +17,15 @@ pipeline {
     stages {
         stage('Unit Tests') {
             steps {
-                sh "./gradlew " +
-                        "-DbuildId=\"\${BUILD_ID}\" " +
-                        "-Dkubenetize=true " +
-                        "-Ddocker.push.password=\"\${DOCKER_PUSH_PWD}\" " +
-                        "-Ddocker.work.dir=\"/tmp/\${EXECUTOR_NUMBER}\" " +
-                        "-Ddocker.provided.tag=\"\${DOCKER_TAG_TO_USE}\"" +
-                        " allParallelUnitTest"
+                withCredentials([string(credentialsId: 'container_reg_passwd', variable: 'DOCKER_PUSH_PWD')]) {
+                    sh "./gradlew " +
+                            "-DbuildId=\"\${BUILD_ID}\" " +
+                            "-Dkubenetize=true " +
+                            "-Ddocker.push.password=\"\${DOCKER_PUSH_PWD}\" " +
+                            "-Ddocker.work.dir=\"/tmp/\${EXECUTOR_NUMBER}\" " +
+                            "-Ddocker.provided.tag=\"\${DOCKER_TAG_TO_USE}\"" +
+                            " allParallelUnitTest"
+                }
             }
         }
     }
