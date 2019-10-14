@@ -41,8 +41,8 @@ public class BucketingAllocatorTask extends DefaultTask {
         this.dependsOn(source);
     }
 
-    public List<String> getTestsForForkAndTestTask(Integer fork, Test testTask) {
-        return allocator.getTestsForForkAndTestTask(fork, testTask);
+    public List<String> getTestIncludesForForkAndTestTask(Integer fork, Test testTask) {
+        return allocator.getTestsForForkAndTestTask(fork, testTask).stream().map(t -> t + "*").collect(Collectors.toList());
     }
 
     @TaskAction
@@ -56,11 +56,11 @@ public class BucketingAllocatorTask extends DefaultTask {
         String duration = "Duration(ms)";
         List<CSVRecord> records = CSVFormat.DEFAULT.withHeader().parse(reader).getRecords();
         return records.stream().map(record -> {
-            try{
+            try {
                 String testName = record.get(name);
                 String testDuration = record.get(duration);
-                return new Tuple2<>(testName, Math.max(Double.parseDouble(testDuration), 10));
-            }catch (IllegalArgumentException | IllegalStateException  e){
+                return new Tuple2<>(testName, Math.max(Double.parseDouble(testDuration), 1));
+            } catch (IllegalArgumentException | IllegalStateException e) {
                 return null;
             }
         }).filter(Objects::nonNull).sorted(Comparator.comparing(Tuple2::getFirst)).collect(Collectors.toList());
