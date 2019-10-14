@@ -13,6 +13,9 @@ import liquibase.database.DatabaseFactory
 import liquibase.database.jvm.JdbcConnection
 import liquibase.exception.ChangeLogParseException
 import liquibase.exception.MigrationFailedException
+import liquibase.logging.LogService
+import liquibase.logging.LoggerContext
+import liquibase.logging.core.*
 import liquibase.resource.ClassLoaderResourceAccessor
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.schemas.MappedSchema
@@ -111,6 +114,10 @@ class SchemaMigration(
 
     init {
         loader.set(cordappLoader)
+        //Disable Liquibase's MDC logging
+        LogService.setLoggerFactory(object : Slf4JLoggerFactory() {
+            override fun pushContext(key: String, `object`: Any): LoggerContext = NoOpLoggerContext()
+        })
     }
 
     private val classLoader = cordappLoader?.appClassLoader ?: Thread.currentThread().contextClassLoader
