@@ -19,12 +19,14 @@ This design proposes a solutions for 1. and a potential solution for 2. .
 
 ### Attachment types
  
-There are 3 classes of attachments:
+There are 4 classes of attachments:
  - attachments that are ``code`` - referred as ``CodeAttachment``. 
  - attachments that are ``consensus data`` - referred as ``DataAttachment`` 
- - attachments that are ``reference data`` - referred as ``ReferenceDataAttachment``
+ - attachments that are ``reference data``, small in size - referred as ``SmallReferenceDataAttachment``
+ - attachments that are ``reference data``, large in size - referred as ``LargeReferenceDataAttachment``
 
-#### Properties of these attachment types:
+
+### Properties of the attachment types:
 
 ##### ``CodeAttachment``
 - these attachments will contain class files and resources. 
@@ -38,60 +40,65 @@ There are 3 classes of attachments:
 ##### ``DataAttachment``
 - they contain no code. 
 - the data files in these attachments are needed by the contract. E.g.: holiday calendars.
-- these attachments can be unique per transaction. Given this property, they should not be part of the classloader caching mechanism.
+- these attachments should be treated like dependencies, because the result of transaction verification depends on them. This means that they must be signable or the contract must hardcode their hash.
+- these attachments are unlikely to be unique per transaction, given that they must be constrained.
 
-Question: Should these be available as classloader resources?
+
+##### ``SmallReferenceDataAttachment``
+- these are files that are not required by the contract. 
+- they are just files that are relevant to this transaction. 
+- these attachments are unique per transaction, and do naturally not obey the "no-overlap" rule. 
  
 
-##### ``ReferenceDataAttachment``
+##### ``LargeReferenceDataAttachment``
 - these are files that are not required by the contract. Mike described their properties in the ``Data streams`` section described in the refreshed TWP.
 - This design does not cover these. Any client who wants to use this type of attachments must use the described approach (tldr: add the document hashes to the output state, and upload the files to a CDN.) 
 
 
-### Decision 1: Given that there is no api, how can we differentiate between ``CodeAttachment``s and ``DataAttachment``s?
+Given that ``CodeAttachment``s and ``DataAttachment``s are similar in nature, there is no reason to differentiate between them.
+They will be referred to as ``ConsensusAttachment``s. 
+
+
+As a conclusion, we can classify the attachments in:
+  - Consensus Attachments :  ``CodeAttachment`` and ``DataAttachment``.
+  - Reference data attachments : ``SmallReferenceDataAttachment`` and ``LargeReferenceDataAttachment``.
+
+
+### Transaction verification and attachments
+
+Given that ``DataAttachment``s are unlikely to be unique per transaction they can be on the base ``AttachmentsClassloader`` and must obey the no-overlap rule.
+They can also be cached together with the ``CodeAttachment``s.
+
+``SmallReferenceDataAttachment``, on the other hand, cannot be on the base ``AttachmentsClassloader`` because they are unique per transaction, and also can't obey to the no-overlap rule. 
+
+
+### Given that there is no API, how can we differentiate between ``ConsensusAttachment``s and ``SmallReferenceDataAttachment``s ?
 
 They are added using the ``TransactionBuilder.addAttachment``, and at runtime the only thing available is the ``InpuStream`` of the attachment.
+When we add ``LargeReferenceDataAttachment``s , we'll add a new API.
 
-#### Option a.
-Just scan each archive, and if a ``.class`` file is found then it is a ``CodeAttachment``, otherwise a ``DataAttachment``.
+#### Solution:
 
-#### Option b.
 We create a rule that states:
-- ``CodeAttachment``s must always be JAR files. And all JAR files must have a manifest.
-- ``DataAttachment``s must always be ZIP files. ZIP files will not have a manifest.
+- ``ConsensusAttachment``s must always be JAR files. And all JAR files must have a manifest.
+- ``SmallReferenceDataAttachment``s must always be ZIP files. ZIP files will not have a manifest.
 
-Note: For the proposed solution of this design we choose Option b.
- 
+Note: It is not possible to just scan each archive, and look for ``.class`` files because ``DataAttachment`` will not contain any classes either.  
 
-### Decision 2: Should ``DataAttachment``s be available on the transaction Classloader?
 
-The drawback of having them in the transaction classloader is that they must obey the no-overlap rule. 
-This should not be a problem for ``DataAttachment``s.
-From client feedback it seems that duplicate file names is a problem for ``ReferenceDataAttachment``, for which an alternative mechanism must be used.
+### Should the ``SmallReferenceDataAttachment``s be on the transaction classloader?
 
-The drawback of not having them on the classloader is that we break backwards compatibility with Corda 4 - where they were available. 
-Note that this was not a feature we supported in version 3 either, and they can still be accessed from the ``LedgerTransaction.attachments`` 
+We know that they are ``ZIP`` files and that their content does not obey the no-overlap rule.
+Also, there is no reason for contract code to attempt to open them, because they are not consensus critical.
 
-Note: For the proposed solution of this design we choose to add the ``DataAttachment``s to the Transaction classloader.
+The answer is: ``No - they should *not* be on the transaction classloader``.
 
 
 ## Proposed solution
 
-Before creating the Transaction classloader we must split the attachments into the 2 categories.
+Before creating the Transaction classloader we must split the attachments into the 2 categories: ``ConsensusAttachment`` and ``SmallReferenceDataAttachment``.
 
-Then, create an ``AttachmentsClassloader`` from the ``CodeAttachment``s and scan for custom serializers and whitelisted classes.
-The above will be cached keyed on the set of ``CodeAttachment`` ids.
+Then, create an ``AttachmentsClassloader`` from the ``ConsensusAttachment``s and scan for custom serializers and whitelisted classes.
+The above will be cached keyed on the set of ``ConsensusAttachment`` ids.
 
-If there are any ``DataAttachment``s, create another ``AttachmentsClassloader`` that has the above as the parent and contains all data attachments.
-
-With this approach, if a resource from a  ``DataAttachment`` overlaps a resource from a ``CodeAttachment`` it will be ignored.
- 
-The transaction will be deserialized and verified in this child classloader, which will make the behaviour equivalent to Corda 4.
-
-Advantages:
-  - Caching the classloader and the scanned custom serializers will be efficient.
-  - No functional change from Corda 4.
-  
-Disadvantages:
-  - This doesn't solve the ``ReferenceDataAttachment`` issues. The size of the attachments must be low, and the names unique.    
-  - Based on the ``Decision 1``, we must formulate and document a new rule.
+This solves the problems that clients have if they just attach the small reference files as `ZIP`s.
