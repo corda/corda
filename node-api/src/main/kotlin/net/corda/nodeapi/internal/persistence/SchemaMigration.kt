@@ -15,7 +15,8 @@ import liquibase.exception.ChangeLogParseException
 import liquibase.exception.MigrationFailedException
 import liquibase.logging.LogService
 import liquibase.logging.LoggerContext
-import liquibase.logging.core.*
+import liquibase.logging.core.NoOpLoggerContext
+import liquibase.logging.core.Slf4JLoggerFactory
 import liquibase.resource.ClassLoaderResourceAccessor
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.schemas.MappedSchema
