@@ -20,7 +20,6 @@ import net.corda.nodeapi.exceptions.RejectedCommandException
 import org.apache.activemq.artemis.api.core.ActiveMQConnectionTimedOutException
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import org.apache.activemq.artemis.api.core.ActiveMQUnBlockedException
-import java.lang.RuntimeException
 import java.lang.reflect.InvocationHandler
 import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Method
@@ -252,14 +251,14 @@ class ReconnectingCordaRPCOps private constructor(
 
         /**
          * This method retries the invoked operation in a loop by re-establishing the connection when there is a problem
-         * and checking if the [maxNumberOfRetries] has been exhausted.
+         * and checking if the [maxNumberOfAttempts] has been exhausted.
          *
-         * A negative number for [maxNumberOfRetries] means an unlimited number of retries will be performed.
+         * A negative number for [maxNumberOfAttempts] means an unlimited number of retries will be performed.
          */
-        private fun doInvoke(method: Method, args: Array<out Any>?, maxNumberOfRetries: Int): Any? {
-            var remainingRetries = maxNumberOfRetries
+        private fun doInvoke(method: Method, args: Array<out Any>?, maxNumberOfAttempts: Int): Any? {
+            var remainingAttempts = maxNumberOfAttempts
             var lastException: Throwable? = null
-            while (remainingRetries != 0) {
+            while (remainingAttempts != 0) {
                 try {
                     log.debug { "Invoking RPC $method..." }
                     return method.invoke(reconnectingRPCConnection.proxy, *(args ?: emptyArray())).also {
@@ -289,11 +288,11 @@ class ReconnectingCordaRPCOps private constructor(
                         }
                     }
                     lastException = e.targetException
-                    remainingRetries--
+                    remainingAttempts--
                 }
             }
 
-            throw MaxRpcRetryException(maxNumberOfRetries, lastException)
+            throw MaxRpcRetryException(maxNumberOfAttempts, lastException)
         }
 
         override fun invoke(proxy: Any, method: Method, args: Array<out Any>?): Any? {
@@ -301,7 +300,7 @@ class ReconnectingCordaRPCOps private constructor(
                 DataFeed::class.java -> {
                     // Intercept the data feed methods and return a ReconnectingObservable instance
                     val initialFeed: DataFeed<Any, Any?> = uncheckedCast(doInvoke(method, args,
-                            reconnectingRPCConnection.gracefulReconnect.maxRetries))
+                            reconnectingRPCConnection.gracefulReconnect.maxAttempts))
                     val observable = ReconnectingObservable(reconnectingRPCConnection, initialFeed) {
                         // This handles reconnecting and creates new feeds.
                         uncheckedCast(this.invoke(reconnectingRPCConnection.proxy, method, args))
@@ -309,7 +308,7 @@ class ReconnectingCordaRPCOps private constructor(
                     initialFeed.copy(updates = observable)
                 }
                 // TODO - add handlers for Observable return types.
-                else -> doInvoke(method, args, reconnectingRPCConnection.gracefulReconnect.maxRetries)
+                else -> doInvoke(method, args, reconnectingRPCConnection.gracefulReconnect.maxAttempts)
             }
         }
     }
