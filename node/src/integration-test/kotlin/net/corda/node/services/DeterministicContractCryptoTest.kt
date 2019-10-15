@@ -15,7 +15,8 @@ import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.node.NotarySpec
-import net.corda.testing.node.internal.cordappsForPackages
+import net.corda.testing.node.internal.CustomCordapp
+import net.corda.testing.node.internal.cordappWithPackages
 import org.junit.ClassRule
 import org.junit.Test
 import org.junit.jupiter.api.assertDoesNotThrow
@@ -35,9 +36,13 @@ class DeterministicContractCryptoTest {
                 portAllocation = incrementalPortAllocation(),
                 startNodesInProcess = false,
                 notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, validating = true)),
-                cordappsForAllNodes = cordappsForPackages(
-                    "net.corda.contracts.djvm.crypto",
-                    "net.corda.flows.djvm.crypto"
+                cordappsForAllNodes = listOf(
+                    cordappWithPackages("net.corda.flows.djvm.crypto"),
+                    CustomCordapp(
+                        packages = setOf("net.corda.contracts.djvm.crypto"),
+                        name = "deterministic-crypto-contract",
+                        signingInfo = CustomCordapp.SigningInfo()
+                    )
                 ),
                 djvmBootstrapSource = djvmSources.bootstrap,
                 djvmCordaSource = djvmSources.corda

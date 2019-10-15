@@ -12,12 +12,12 @@ class SandboxAttachmentContract : Contract {
         val attachments = tx.attachments
         require(attachments.isNotEmpty()) { "Attachments are missing for TX=${tx.id}" }
 
-        require(attachments.size == 1) { "Did not expect to find ${attachments.size} attachments for TX${tx.id}" }
+        require(attachments.size == 1) { "Did not expect to find ${attachments.size} attachments for TX=${tx.id}" }
         val attachment = attachments[0]
         require(attachment.size > 0) { "Attachment ${attachment.id} has no contents for TX=${tx.id}" }
 
         val keyCount = attachment.signerKeys.size
-        require(keyCount == 1) { "Attachment ${attachment.id} has $keyCount signing keys for TX=${tx.id}" }
+        require(keyCount == 1) { "Did not expect to find $keyCount signing keys for attachment ${attachment.id}, TX=${tx.id}" }
 
         tx.commandsOfType(ExtractFile::class.java).forEach { extract ->
             val fileName = extract.value.fileName

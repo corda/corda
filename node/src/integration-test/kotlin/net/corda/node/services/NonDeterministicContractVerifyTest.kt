@@ -13,7 +13,8 @@ import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.node.NotarySpec
-import net.corda.testing.node.internal.cordappsForPackages
+import net.corda.testing.node.internal.CustomCordapp
+import net.corda.testing.node.internal.cordappWithPackages
 import org.assertj.core.api.AssertionsForInterfaceTypes.assertThat
 import org.junit.ClassRule
 import org.junit.Test
@@ -33,9 +34,13 @@ class NonDeterministicContractVerifyTest {
                 portAllocation = incrementalPortAllocation(),
                 startNodesInProcess =false,
                 notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, validating = true)),
-                cordappsForAllNodes = cordappsForPackages(
-                    "net.corda.contracts.djvm.broken",
-                    "net.corda.flows.djvm.broken"
+                cordappsForAllNodes = listOf(
+                    cordappWithPackages("net.corda.flows.djvm.broken"),
+                    CustomCordapp(
+                        packages = setOf("net.corda.contracts.djvm.broken"),
+                        name = "nondeterministic-contract",
+                        signingInfo = CustomCordapp.SigningInfo()
+                    )
                 ),
                 djvmBootstrapSource = djvmSources.bootstrap,
                 djvmCordaSource = djvmSources.corda
