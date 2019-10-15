@@ -29,7 +29,7 @@ class DistributedTesting implements Plugin<Project> {
             BucketingAllocatorTask globalAllocator = project.tasks.create("bucketingAllocator", BucketingAllocatorTask, forks)
 
             //to be used once k8s persistant volumes are in place
-            File executedTestsFile = new File(KubesTest.TEST_RUN_DIR + "executedTests.txt")
+            File executedTestsFile = new File(KubesTest.TEST_RUN_DIR + "/executedTests.txt")
             try {
                 executedTests = executedTestsFile.readLines()
             } catch (FileNotFoundException e) {
