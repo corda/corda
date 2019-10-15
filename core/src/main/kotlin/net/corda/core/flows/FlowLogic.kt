@@ -6,6 +6,8 @@ import net.corda.core.CordaInternal
 import net.corda.core.DeleteForDJVM
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.SecureHash
+import net.corda.core.identity.AbstractParty
+import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.*
@@ -120,14 +122,18 @@ abstract class FlowLogic<out T> {
      * is routed depends on the [Destination] type, including whether this call does any initial communication.
      */
     @Suspendable
-    fun initiateFlow(destination: Destination): FlowSession = stateMachine.initiateFlow(destination)
+    fun initiateFlow(destination: Destination): FlowSession {
+        require(destination is Party || destination is AnonymousParty) { "Unsupported destination type ${destination.javaClass.name}" }
+        return stateMachine.initiateFlow(destination, serviceHub.identityService.wellKnownPartyFromAnonymous(destination as AbstractParty)
+            ?: throw IllegalArgumentException("Could not resolve destination: $destination"))
+    }
 
     /**
      * Creates a communication session with [party]. Subsequently you may send/receive using this session object. Note
      * that this function does not communicate in itself, the counter-flow will be kicked off by the first send/receive.
      */
     @Suspendable
-    fun initiateFlow(party: Party): FlowSession = stateMachine.initiateFlow(party)
+    fun initiateFlow(party: Party): FlowSession = stateMachine.initiateFlow(party, party)
 
     /**
      * Specifies the identity, with certificate, to use for this flow. This will be one of the multiple identities that

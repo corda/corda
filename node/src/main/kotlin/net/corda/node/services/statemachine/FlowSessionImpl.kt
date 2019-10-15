@@ -17,10 +17,11 @@ import net.corda.core.utilities.UntrustworthyData
 
 class FlowSessionImpl(
         override val destination: Destination,
+        private val wellKnownParty: Party,
         val sourceSessionId: SessionId
 ) : FlowSession() {
 
-    override val counterparty: Party get() = checkNotNull(destination as? Party) { "$destination is not a Party" }
+    override val counterparty: Party get() = wellKnownParty
 
     override fun toString(): String = "FlowSessionImpl(destination=$destination, sourceSessionId=$sourceSessionId)"
 

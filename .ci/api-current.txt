@@ -2464,7 +2464,6 @@ public interface net.corda.core.flows.IdentifiableException
   @Nullable
   public Long getErrorId()
 ##
-@CordaSerializable
 public final class net.corda.core.flows.IllegalFlowLogicException extends java.lang.IllegalArgumentException
   public <init>(Class<?>, String)
   public <init>(String, String)

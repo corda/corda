@@ -1,3 +1,4 @@
+import static com.r3.build.BuildControl.killAllExistingBuildsForJob
 @Library('existing-build-control')
 import static com.r3.build.BuildControl.killAllExistingBuildsForJob
 
@@ -8,7 +9,7 @@ pipeline {
     options { timestamps() }
 
     environment {
-        DOCKER_TAG_TO_USE = "${UUID.randomUUID().toString().toLowerCase().subSequence(0, 12)}"
+        DOCKER_TAG_TO_USE = "${env.GIT_COMMIT.subSequence(0, 8)}"
         EXECUTOR_NUMBER = "${env.EXECUTOR_NUMBER}"
         BUILD_ID = "${env.BUILD_ID}-${env.JOB_NAME}"
     }
@@ -37,15 +38,6 @@ pipeline {
                                 "-Dkubenetize=true " +
                                 "-Ddocker.tag=\"\${DOCKER_TAG_TO_USE}\"" +
                                 " allParallelIntegrationTest"
-                    }
-                }
-                stage('Unit Tests') {
-                    steps {
-                        sh "./gradlew " +
-                                "-DbuildId=\"\${BUILD_ID}\" " +
-                                "-Dkubenetize=true " +
-                                "-Ddocker.tag=\"\${DOCKER_TAG_TO_USE}\"" +
-                                " allParallelUnitTest"
                     }
                 }
             }
