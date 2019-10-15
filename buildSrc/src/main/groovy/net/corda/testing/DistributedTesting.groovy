@@ -101,7 +101,7 @@ class DistributedTesting implements Plugin<Project> {
                     numberOfCoresPerFork = testGrouping.coresToUse
                     distribution = testGrouping.distribution
                     doFirst {
-                        dockerTag = dockerTag = providedTag ? ImageBuilding.registryName + ":" + providedTag : (imagePushTask.imageName.get() + ":" + imagePushTask.tag.get())
+                        dockerTag = providedTag ? ImageBuilding.registryName + ":" + providedTag : (imagePushTask.imageName.get() + ":" + imagePushTask.tag.get())
                     }
                 }
                 def reportOnAllTask = project.rootProject.tasks.create("userDefinedReports${testGrouping.name.capitalize()}", KubesReporting) {

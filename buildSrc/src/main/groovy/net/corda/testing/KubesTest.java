@@ -138,7 +138,7 @@ public class KubesTest extends DefaultTask {
                 .done();
 
         addShutdownHook(() -> {
-            System.out.println("Deleing PVC: " + pvc.getMetadata().getName());
+            System.out.println("Deleting PVC: " + pvc.getMetadata().getName());
             client.persistentVolumeClaims().delete(pvc);
         });
         return pvc;
@@ -198,6 +198,8 @@ public class KubesTest extends DefaultTask {
                 int resCode = waiter.join();
                 getProject().getLogger().lifecycle("build has ended on on pod " + podName + " (" + podIdx + "/" + numberOfPods + "), gathering results");
                 Collection<File> binaryResults = downloadTestXmlFromPod(client, namespace, createdPod);
+                getLogger().lifecycle("removing pod " + podName + " (" + podIdx + "/" + numberOfPods + ") after completed build");
+                client.pods().delete(createdPod);
                 return new KubePodResult(resCode, podOutput, binaryResults);
             });
         } catch (Retry.RetryException e) {

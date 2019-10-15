@@ -1,23 +1,31 @@
-import static com.r3.build.BuildControl.killAllExistingBuildsForJob
 @Library('existing-build-control')
 import static com.r3.build.BuildControl.killAllExistingBuildsForJob
 
 killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
 
 pipeline {
+    triggers {
+        issueCommentTrigger('.*smoke tests.*')
+    }
 
     agent { label 'k8s' }
     options { timestamps() }
 
     environment {
-        DOCKER_TAG_TO_USE = "${env.GIT_COMMIT.subSequence(0, 8)}rt"
+        DOCKER_TAG_TO_USE = "${env.GIT_COMMIT.subSequence(0, 8)}st"
         EXECUTOR_NUMBER = "${env.EXECUTOR_NUMBER}"
         BUILD_ID = "${env.BUILD_ID}-${env.JOB_NAME}"
     }
 
     stages {
-        stage('Regression Tests') {
+        stage('Smoke Tests') {
             steps {
+                script {
+                    pullRequest.createStatus(status: 'pending',
+                            context: 'continuous-integration/jenkins/pr-merge/smokeTest',
+                            description: 'Smoke Tests Building',
+                            targetUrl: "${env.JOB_URL}")
+                }
 
                 withCredentials([string(credentialsId: 'container_reg_passwd', variable: 'DOCKER_PUSH_PWD')]) {
                     sh "./gradlew " +
@@ -27,7 +35,7 @@ pipeline {
                             "-Ddocker.push.password=\"\${DOCKER_PUSH_PWD}\" " +
                             "-Ddocker.work.dir=\"/tmp/\${EXECUTOR_NUMBER}\" " +
                             "-Ddocker.provided.tag=\"\${DOCKER_TAG_TO_USE}\"" +
-                            " parallelRegressionTest"
+                            " allParallelSmokeTest"
                 }
             }
         }
@@ -39,6 +47,23 @@ pipeline {
             junit testResults: '**/build/test-results-xml/**/*.xml', allowEmptyResults: false
         }
 
+        success {
+            script {
+                pullRequest.createStatus(status: 'success',
+                        context: 'continuous-integration/jenkins/pr-merge/smokeTest',
+                        description: 'Smoke Tests Passed',
+                        targetUrl: "${env.JOB_URL}testResults")
+            }
+        }
+
+        failure {
+            script {
+                pullRequest.createStatus(status: 'failure',
+                        context: 'continuous-integration/jenkins/pr-merge/smokeTest',
+                        description: 'Smoke Tests Failed',
+                        targetUrl: "${env.JOB_URL}testResults")
+            }
+        }
 
         cleanup {
             deleteDir() /* clean up our workspace */

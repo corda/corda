@@ -1,4 +1,3 @@
-import static com.r3.build.BuildControl.killAllExistingBuildsForJob
 @Library('existing-build-control')
 import static com.r3.build.BuildControl.killAllExistingBuildsForJob
 
@@ -9,49 +8,59 @@ pipeline {
     options { timestamps() }
 
     environment {
-        DOCKER_TAG_TO_USE = "${UUID.randomUUID().toString().toLowerCase().subSequence(0, 12)}"
+        DOCKER_TAG_TO_USE = "${env.GIT_COMMIT.subSequence(0, 8)}it"
         EXECUTOR_NUMBER = "${env.EXECUTOR_NUMBER}"
         BUILD_ID = "${env.BUILD_ID}-${env.JOB_NAME}"
     }
 
     stages {
-        stage('Corda - Generate Build Image') {
+        stage('Integration Tests') {
             steps {
-                withCredentials([string(credentialsId: 'container_reg_passwd', variable: 'DOCKER_PUSH_PWD')]) {
-                    sh "./gradlew " +
-                            "-Dkubenetize=true " +
-                            "-Ddocker.push.password=\"\${DOCKER_PUSH_PWD}\" " +
-                            "-Ddocker.work.dir=\"/tmp/\${EXECUTOR_NUMBER}\" " +
-                            "-Ddocker.provided.tag=\"\${DOCKER_TAG_TO_USE}\"" +
-                            " clean pushBuildImage"
+                script {
+                    pullRequest.createStatus(status: 'pending',
+                            context: 'continuous-integration/jenkins/pr-merge/integrationTest',
+                            description: 'Integration Tests Building',
+                            targetUrl: "${env.JOB_URL}")
                 }
-                sh "kubectl auth can-i get pods"
-            }
-        }
 
-        stage('Corda - Run Tests') {
-            stage('Integration Tests') {
-                steps {
+                withCredentials([string(credentialsId: 'container_reg_passwd', variable: 'DOCKER_PUSH_PWD')]) {
                     sh "./gradlew " +
                             "-DbuildId=\"\${BUILD_ID}\" " +
                             "-Dkubenetize=true " +
-                            "-Ddocker.tag=\"\${DOCKER_TAG_TO_USE}\"" +
+                            "-DpreAllocatePods=true " +
+                            "-Ddocker.push.password=\"\${DOCKER_PUSH_PWD}\" " +
+                            "-Ddocker.work.dir=\"/tmp/\${EXECUTOR_NUMBER}\" " +
+                            "-Ddocker.provided.tag=\"\${DOCKER_TAG_TO_USE}\"" +
                             " allParallelIntegrationTest"
-                    if (env.CHANGE_ID) {
-                        pullRequest.createStatus(status: 'success',
-                                context: 'continuous-integration/jenkins/pr-merge/integrationTest',
-                                description: 'Integration Tests Passed',
-                                targetUrl: "${env.JOB_URL}/testResults")
-                    }
                 }
             }
         }
     }
 
     post {
+
         always {
-            junit '**/build/test-results-xml/**/*.xml'
+            junit testResults: '**/build/test-results-xml/**/*.xml', allowEmptyResults: false
         }
+
+        success {
+            script {
+                pullRequest.createStatus(status: 'success',
+                        context: 'continuous-integration/jenkins/pr-merge/integrationTest',
+                        description: 'Integration Tests Passed',
+                        targetUrl: "${env.JOB_URL}testResults")
+            }
+        }
+
+        failure {
+            script {
+                pullRequest.createStatus(status: 'failure',
+                        context: 'continuous-integration/jenkins/pr-merge/integrationTest',
+                        description: 'Integration Tests Failed',
+                        targetUrl: "${env.JOB_URL}testResults")
+            }
+        }
+
         cleanup {
             deleteDir() /* clean up our workspace */
         }

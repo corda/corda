@@ -28,8 +28,7 @@ buildscript {
         ext.quasar_version = constants.getProperty("quasarVersion11")
         ext.quasar_classifier = constants.getProperty("quasarClassifier11")
         ext.jdkClassifier = constants.getProperty("jdkClassifier11")
-    }
-    else {
+    } else {
         ext.quasar_version = constants.getProperty("quasarVersion")
         ext.quasar_classifier = constants.getProperty("quasarClassifier")
         ext.jdkClassifier = constants.getProperty("jdkClassifier")
@@ -604,22 +603,6 @@ task allParallelIntegrationTest(type: ParallelTestGroup) {
     memoryInGbPerFork 10
     distribute Distribution.CLASS
 }
-task allParallelSlowIntegrationTest(type: ParallelTestGroup) {
-    testGroups "slowIntegrationTest"
-    numberOfShards 4
-    streamOutput false
-    coresPerFork 6
-    memoryInGbPerFork 10
-    distribute Distribution.CLASS
-}
-task allParallelSmokeTest(type: ParallelTestGroup) {
-    testGroups "smokeTest"
-    numberOfShards 4
-    streamOutput true
-    coresPerFork 6
-    memoryInGbPerFork 10
-    distribute Distribution.METHOD
-}
 task allParallelUnitTest(type: ParallelTestGroup) {
     testGroups "test"
     numberOfShards 10
@@ -639,6 +622,14 @@ task allParallelUnitAndIntegrationTest(type: ParallelTestGroup) {
 task parallelRegressionTest(type: ParallelTestGroup) {
     testGroups "test", "integrationTest", "slowIntegrationTest", "smokeTest"
     numberOfShards 5
+    streamOutput false
+    coresPerFork 6
+    memoryInGbPerFork 10
+    distribute Distribution.CLASS
+}
+task allParallelSmokeTest(type: ParallelTestGroup) {
+    testGroups "slowIntegrationTest", "smokeTest"
+    numberOfShards 4
     streamOutput false
     coresPerFork 6
     memoryInGbPerFork 10
