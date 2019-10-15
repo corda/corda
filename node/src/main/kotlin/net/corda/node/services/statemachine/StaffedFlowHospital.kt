@@ -1,7 +1,11 @@
 package net.corda.node.services.statemachine
 
 import net.corda.core.crypto.newSecureRandom
-import net.corda.core.flows.*
+import net.corda.core.flows.FlowException
+import net.corda.core.flows.ReceiveFinalityFlow
+import net.corda.core.flows.ReceiveTransactionFlow
+import net.corda.core.flows.StateMachineRunId
+import net.corda.core.flows.UnexpectedFlowEndException
 import net.corda.core.identity.Party
 import net.corda.core.internal.DeclaredField
 import net.corda.core.internal.ThreadBox
@@ -354,7 +358,8 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val 
             val strippedStacktrace = error.stackTrace
                     .filterNot { it?.className?.contains("counter-flow exception from peer") ?: false }
                     .filterNot { it?.className?.startsWith("net.corda.node.services.statemachine.") ?: false }
-            return strippedStacktrace.isNotEmpty() && strippedStacktrace.first().className.startsWith(ReceiveTransactionFlow::class.qualifiedName!! )
+            return strippedStacktrace.isNotEmpty() &&
+                    strippedStacktrace.first().className.startsWith(ReceiveTransactionFlow::class.qualifiedName!! )
         }
 
     }

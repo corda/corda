@@ -4,7 +4,15 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.contracts.StateAndRef
-import net.corda.core.flows.*
+import net.corda.core.flows.FinalityFlow
+import net.corda.core.flows.FlowException
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowSession
+import net.corda.core.flows.InitiatedBy
+import net.corda.core.flows.InitiatingFlow
+import net.corda.core.flows.NotaryException
+import net.corda.core.flows.ReceiveFinalityFlow
+import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
 import net.corda.core.messaging.StateMachineUpdate
 import net.corda.core.messaging.startFlow
@@ -19,8 +27,8 @@ import net.corda.testing.driver.driver
 import net.corda.testing.node.User
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
-import org.junit.*
-import java.util.*
+import org.junit.Test
+import java.util.Random
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
@@ -121,7 +129,8 @@ class FlowHospitalTest {
 
     @StartableByRPC
     @InitiatingFlow
-    class SpendFlowWithCustomException(private val stateAndRef: StateAndRef<SingleOwnerState>, private val newOwner: Party): FlowLogic<Unit>() {
+    class SpendFlowWithCustomException(private val stateAndRef: StateAndRef<SingleOwnerState>, private val newOwner: Party):
+            FlowLogic<Unit>() {
 
         @Suspendable
         override fun call() {
