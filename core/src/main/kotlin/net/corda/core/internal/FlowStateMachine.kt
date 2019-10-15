@@ -18,7 +18,7 @@ interface FlowStateMachine<FLOWRETURN> {
     fun <SUSPENDRETURN : Any> suspend(ioRequest: FlowIORequest<SUSPENDRETURN>, maySkipCheckpoint: Boolean): SUSPENDRETURN
 
     @Suspendable
-    fun initiateFlow(destination: Destination): FlowSession
+    fun initiateFlow(destination: Destination, wellKnownParty: Party): FlowSession
 
     fun checkFlowPermission(permissionName: String, extraAuditData: Map<String, String>)
 

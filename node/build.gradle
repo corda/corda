@@ -3,7 +3,12 @@ buildscript {
     def properties = new Properties()
     file("$projectDir/src/main/resources/build.properties").withInputStream { properties.load(it) }
 
-    ext.jolokia_version = properties.getProperty('jolokiaAgentVersion')
+
+    Properties constants = new Properties()
+    file("$rootDir/constants.properties").withInputStream { constants.load(it) }
+
+
+    ext.jolokia_version = constants.getProperty('jolokiaAgentVersion')
 
     dependencies {
         classpath group: 'com.github.docker-java', name: 'docker-java', version: '3.1.5'
