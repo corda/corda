@@ -10,7 +10,6 @@ import org.gradle.api.tasks.testing.Test
  */
 class DistributedTesting implements Plugin<Project> {
 
-
     static def getPropertyAsInt(Project proj, String property, Integer defaultValue) {
         return proj.hasProperty(property) ? Integer.parseInt(proj.property(property).toString()) : defaultValue
     }
@@ -33,6 +32,7 @@ class DistributedTesting implements Plugin<Project> {
             //1. add the task to determine all tests within the module
             //2. modify the underlying testing task to use the output of the listing task to include a subset of tests for each fork
             //3. KubesTest will invoke these test tasks in a parallel fashion on a remote k8s cluster
+            //4. after each completed test write its name to a file to keep track of what finished for restart purposes
             project.subprojects { Project subProject ->
                 subProject.tasks.withType(Test) { Test task ->
                     println "Evaluating ${task.getPath()}"
@@ -47,7 +47,6 @@ class DistributedTesting implements Plugin<Project> {
                     if (!task.hasProperty("ignoreForDistribution")) {
                         KubesTest parallelTestTask = generateParallelTestingTask(subProject, task, imageBuildingTask, providedTag)
                     }
-
                 }
             }
 
@@ -129,6 +128,20 @@ class DistributedTesting implements Plugin<Project> {
             maxHeapSize = "6g"
             doFirst {
                 filter {
+                    List<String> executedTests = []
+                    File executedTestsFile = new File(KubesTest.TEST_RUN_DIR + "/executedTests.txt")
+                    try {
+                        executedTests = executedTestsFile.readLines()
+                    } catch (FileNotFoundException e) {
+                        executedTestsFile.createNewFile()
+                    }
+
+                    task.afterTest { desc, result ->
+                        executedTestsFile.withWriterAppend { writer ->
+                            writer.writeLine(desc.getClassName() + "." + desc.getName())
+                        }
+                    }
+
                     def fork = getPropertyAsInt(subProject, "dockerFork", 0)
                     subProject.logger.info("requesting tests to include in testing task ${task.getPath()} (idx: ${fork})")
                     List<String> includes = globalAllocator.getTestIncludesForForkAndTestTask(
@@ -141,10 +154,18 @@ class DistributedTesting implements Plugin<Project> {
                         excludeTestsMatching "*"
                     }
 
+                    includes.removeAll(executedTests)
+
+                    executedTests.forEach { exclude ->
+                        subProject.logger.info "excluding: $exclude for testing task ${task.getPath()}"
+                        excludeTestsMatching exclude
+                    }
+
                     includes.forEach { include ->
                         subProject.logger.info "including: $include for testing task ${task.getPath()}"
                         includeTestsMatching include
                     }
+
                     failOnNoMatchingTests false
                 }
             }
