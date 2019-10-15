@@ -1395,7 +1395,6 @@
     <ID>MaxLineLength:AddressBindingFailureTests.kt$AddressBindingFailureTests$@Test fun `rpc admin address`()</ID>
     <ID>MaxLineLength:AddressBindingFailureTests.kt$AddressBindingFailureTests$assertThat(exception.addresses).contains(address).withFailMessage("Expected addresses to contain $address but was ${exception.addresses}.")</ID>
     <ID>MaxLineLength:AddressBindingFailureTests.kt$AddressBindingFailureTests$assertThatThrownBy { startNode(customOverrides = overrides(address)).getOrThrow() }</ID>
-    <ID>MaxLineLength:AddressBindingFailureTests.kt$AddressBindingFailureTests$driver</ID>
     <ID>MaxLineLength:AliasPrivateKeyTest.kt$AliasPrivateKeyTest$signingCertStore.query { setPrivateKey(alias, aliasPrivateKey, listOf(NOT_YET_REGISTERED_MARKER_KEYS_AND_CERTS.ECDSAR1_CERT), "entrypassword") }</ID>
     <ID>MaxLineLength:AliasPrivateKeyTest.kt$AliasPrivateKeyTest$val signingCertStore = CertificateStoreStubs.Signing.withCertificatesDirectory(certificatesDirectory, "keystorepass").get(createNew = true)</ID>
     <ID>MaxLineLength:AliasPrivateKeyTest.kt$AliasPrivateKeyTest${ val alias = "01234567890" val aliasPrivateKey = AliasPrivateKey(alias) val certificatesDirectory = tempFolder.root.toPath() val signingCertStore = CertificateStoreStubs.Signing.withCertificatesDirectory(certificatesDirectory, "keystorepass").get(createNew = true) signingCertStore.query { setPrivateKey(alias, aliasPrivateKey, listOf(NOT_YET_REGISTERED_MARKER_KEYS_AND_CERTS.ECDSAR1_CERT), "entrypassword") } // We can retrieve the certificate. assertTrue { signingCertStore.contains(alias) } // We can retrieve the certificate. assertEquals(NOT_YET_REGISTERED_MARKER_KEYS_AND_CERTS.ECDSAR1_CERT, signingCertStore[alias]) // Although we can store an AliasPrivateKey, we cannot retrieve it. But, it's fine as we use certStore for storing/handling certs only. assertThatIllegalArgumentException().isThrownBy { signingCertStore.query { getPrivateKey(alias, "entrypassword") } }.withMessage("Unrecognised algorithm: 1.3.6.1.4.1.50530.1.2") }</ID>
@@ -2010,7 +2009,6 @@
     <ID>MaxLineLength:CordappContext.kt$CordappContext.EmptyCordappConfig$override fun getLong(path: String)</ID>
     <ID>MaxLineLength:CordappContext.kt$CordappContext.EmptyCordappConfig$override fun getNumber(path: String)</ID>
     <ID>MaxLineLength:CordappContext.kt$CordappContext.EmptyCordappConfig$override fun getString(path: String)</ID>
-    <ID>MaxLineLength:CordappResolver.kt$CordappResolver$logger.error("ATTENTION: More than one CorDapp installed on the node for contract $className. Please remove the previous version when upgrading to a new version.")</ID>
     <ID>MaxLineLength:CordappResolverTest.kt$CordappResolverTest$@Test fun `when the same cordapp is registered for the same class multiple times, the resolver deduplicates and returns it as the current one`()</ID>
     <ID>MaxLineLength:CordappSmokeTest.kt$CordappSmokeTest$(additionalNodeInfoDir / "nodeInfo-41408E093F95EAD51F6892C34DEB65AE1A3569A4B0E5744769A1B485AF8E04B5").write(signedNodeInfo.serialize().bytes)</ID>
     <ID>MaxLineLength:CordappSmokeTest.kt$CordappSmokeTest$val nodeInfo = createNodeInfoWithSingleIdentity(CordaX500Name(organisation = "Bob Corp", locality = "Madrid", country = "ES"), dummyKeyPair, dummyKeyPair.public)</ID>
@@ -3144,8 +3142,6 @@
     <ID>MaxLineLength:RPCApi.kt$private fun Trace.mapToExternal(message: ClientMessage)</ID>
     <ID>MaxLineLength:RPCApi.kt$return invocationId(RPC_ID_FIELD_NAME, RPC_ID_TIMESTAMP_FIELD_NAME) ?: throw IllegalStateException("Cannot extract reply id from client message.")</ID>
     <ID>MaxLineLength:RPCApi.kt$return sessionId(RPC_SESSION_ID_FIELD_NAME, RPC_SESSION_ID_TIMESTAMP_FIELD_NAME) ?: throw IllegalStateException("Cannot extract the session id from client message.")</ID>
-    <ID>MaxLineLength:RPCClientProxyHandler.kt$RPCClientProxyHandler$private</ID>
-    <ID>MaxLineLength:RPCClientProxyHandler.kt$RPCClientProxyHandler$private val serializationContextWithObservableContext = RpcClientObservableDeSerializer.createContext(serializationContext, observableContext)</ID>
     <ID>MaxLineLength:RPCClientProxyHandler.kt$RPCClientProxyHandler$throw UnsupportedOperationException("Method $calledMethod was added in RPC protocol version $sinceVersion but the server is running $serverProtocolVersion")</ID>
     <ID>MaxLineLength:RPCDriver.kt$RPCDriverDSL$val artemisConfig = createRpcServerArtemisConfig(maxFileSize, maxBufferedBytesPerClient, driverDSL.driverDirectory / serverName, hostAndPort)</ID>
     <ID>MaxLineLength:RPCDriver.kt$RPCDriverDSL.Companion$fun createRpcServerArtemisConfig(maxFileSize: Int, maxBufferedBytesPerClient: Long, baseDirectory: Path, hostAndPort: NetworkHostAndPort): Configuration</ID>
@@ -3875,64 +3871,6 @@
     <ID>NestedBlockDepth:StatusTransitions.kt$StatusTransitions$ fun verify(tx: LedgerTransaction)</ID>
     <ID>NestedBlockDepth:ThrowableSerializer.kt$ThrowableSerializer$override fun fromProxy(proxy: ThrowableProxy): Throwable</ID>
     <ID>NestedBlockDepth:TransactionVerifierServiceInternal.kt$Verifier$ private fun verifyConstraintsValidity(contractAttachmentsByContract: Map&lt;ContractClassName, ContractAttachment&gt;)</ID>
-    <ID>ReturnCount:AbstractPartyDescriptor.kt$AbstractPartyDescriptor$override fun &lt;X : Any&gt; unwrap(value: AbstractParty?, type: Class&lt;X&gt;, options: WrapperOptions): X?</ID>
-    <ID>ReturnCount:AbstractPartyDescriptor.kt$AbstractPartyDescriptor$override fun &lt;X : Any&gt; wrap(value: X?, options: WrapperOptions): AbstractParty?</ID>
-    <ID>ReturnCount:Address.kt$Address.Companion$fun &lt;ERROR&gt; validFromRawValue(rawValue: String, mapError: (String) -&gt; ERROR): Validated&lt;Address, ERROR&gt;</ID>
-    <ID>ReturnCount:Amount.kt$Amount.Companion$ @JvmStatic fun getDisplayTokenSize(token: Any): BigDecimal</ID>
-    <ID>ReturnCount:AttachmentVersionNumberMigration.kt$AttachmentVersionNumberMigration$override fun execute(database: Database?)</ID>
-    <ID>ReturnCount:AttachmentsClassLoader.kt$AttachmentsClassLoader$private fun containsClasses(attachment: Attachment): Boolean</ID>
-    <ID>ReturnCount:BankOfCordaWebApi.kt$BankOfCordaWebApi$ @POST @Path("issue-asset-request") @Consumes(MediaType.APPLICATION_JSON) fun issueAssetRequest(params: IssueRequestParams): Response</ID>
-    <ID>ReturnCount:BridgeControlListener.kt$BridgeControlListener$private fun processControlMessage(msg: ClientMessage)</ID>
-    <ID>ReturnCount:ByteArrays.kt$fun hexToBin(ch: Char): Int</ID>
-    <ID>ReturnCount:ByteBufferStreams.kt$ByteBufferInputStream$@Throws(IOException::class) override fun read(b: ByteArray, offset: Int, length: Int): Int</ID>
-    <ID>ReturnCount:CheckpointAgent.kt$CheckpointHook$private fun &lt;T&gt; getArrayValue(clazz: Class&lt;T&gt;, value: Any?): String?</ID>
-    <ID>ReturnCount:CheckpointAgent.kt$CheckpointHook$private fun instrumentClass(clazz: CtClass): CtClass?</ID>
-    <ID>ReturnCount:CloseableTab.kt$CloseableTab$fun requestClose()</ID>
-    <ID>ReturnCount:CordaAuthenticationPlugin.kt$CordaAuthenticationPlugin$override fun authenticate(username: String?, credential: String?): AuthInfo</ID>
-    <ID>ReturnCount:CordaClassResolver.kt$CordaClassResolver$private fun checkClass(type: Class&lt;*&gt;): Registration?</ID>
-    <ID>ReturnCount:Crypto.kt$Crypto$// Custom key pair generator from an entropy required for various tests. It is similar to deriveKeyPairECDSA, // but the accepted range of the input entropy is more relaxed: // 2 &lt;= entropy &lt; N, where N is the order of base-point G. private fun deriveECDSAKeyPairFromEntropy(signatureScheme: SignatureScheme, entropy: BigInteger): KeyPair</ID>
-    <ID>ReturnCount:Crypto.kt$Crypto$// Given the domain parameters, this routine deterministically generates an ECDSA key pair // in accordance with X9.62 section 5.2.1 pages 26, 27. private fun deriveKeyPairECDSA(parameterSpec: ECParameterSpec, privateKey: PrivateKey, seed: ByteArray): KeyPair</ID>
-    <ID>ReturnCount:DBRunnerExtension.kt$DBRunnerExtension$private fun getDatabaseContext(context: ExtensionContext?): TestDatabaseContext?</ID>
-    <ID>ReturnCount:Emoji.kt$Emoji$fun renderIfSupported(obj: Any): String</ID>
-    <ID>ReturnCount:FlowLogicRefFactoryImpl.kt$FlowLogicRefFactoryImpl$private fun buildParams(constructor: KFunction&lt;FlowLogic&lt;*&gt;&gt;, args: Map&lt;String, Any?&gt;): HashMap&lt;KParameter, Any?&gt;?</ID>
-    <ID>ReturnCount:FlowManager.kt$NodeFlowManager.FlowWeightComparator$override fun compare(o1: NodeFlowManager.RegisteredFlowContainer, o2: NodeFlowManager.RegisteredFlowContainer): Int</ID>
-    <ID>ReturnCount:InteractiveShell.kt$InteractiveShell$ @JvmStatic fun runFlowByNameFragment(nameFragment: String, inputData: String, output: RenderPrintWriter, rpcOps: CordaRPCOps, ansiProgressRenderer: ANSIProgressRenderer, inputObjectMapper: ObjectMapper = createYamlInputMapper(rpcOps))</ID>
-    <ID>ReturnCount:InteractiveShell.kt$InteractiveShell$@JvmStatic fun runRPCFromString(input: List&lt;String&gt;, out: RenderPrintWriter, context: InvocationContext&lt;out Any&gt;, cordaRPCOps: CordaRPCOps, inputObjectMapper: ObjectMapper): Any?</ID>
-    <ID>ReturnCount:Interpolators.kt$LinearInterpolator$override fun interpolate(x: Double): Double</ID>
-    <ID>ReturnCount:JarScanningCordappLoader.kt$JarScanningCordappLoader$private fun parseCordappInfo(manifest: Manifest?, defaultName: String): Cordapp.Info</ID>
-    <ID>ReturnCount:LocalSerializerFactory.kt$DefaultLocalSerializerFactory$override fun get(actualClass: Class&lt;*&gt;, declaredType: Type): AMQPSerializer&lt;Any&gt;</ID>
-    <ID>ReturnCount:LocalTypeInformationBuilder.kt$ private fun constructorForDeserialization(type: Type): KFunction&lt;Any&gt;?</ID>
-    <ID>ReturnCount:LocalTypeInformationBuilder.kt$LocalTypeInformationBuilder$ private fun buildNonAtomic(rawType: Class&lt;*&gt;, type: Type, typeIdentifier: TypeIdentifier, typeParameterInformation: List&lt;LocalTypeInformation&gt;): LocalTypeInformation</ID>
-    <ID>ReturnCount:LocalTypeInformationBuilder.kt$LocalTypeInformationBuilder$private fun makeConstructorPairedProperty(constructorIndex: Int, descriptor: PropertyDescriptor, constructorInformation: LocalConstructorInformation): LocalPropertyInformation?</ID>
-    <ID>ReturnCount:Main.kt$Node$fun isAccepted(tx: Transaction): Boolean</ID>
-    <ID>ReturnCount:MockNodeMessagingService.kt$MockNodeMessagingService$ private fun getNextQueue(q: LinkedBlockingQueue&lt;InMemoryMessagingNetwork.MessageTransfer&gt;, block: Boolean): Pair&lt;InMemoryMessagingNetwork.MessageTransfer, List&lt;Handler&gt;&gt;?</ID>
-    <ID>ReturnCount:NetworkRegistrationHelper.kt$NodeRegistrationHelper$override fun validateAndGetTlsCrlIssuerCert(): X509Certificate?</ID>
-    <ID>ReturnCount:NodeAttachmentTrustCalculator.kt$NodeAttachmentTrustCalculator$override fun calculate(attachment: Attachment): Boolean</ID>
-    <ID>ReturnCount:NodeConfigurationImpl.kt$NodeConfigurationImpl$private fun validateDevModeOptions(): List&lt;String&gt;</ID>
-    <ID>ReturnCount:NodeSchemaService.kt$NodeSchemaService$// Because schema is always one supported by the state, just delegate. override fun generateMappedObject(state: ContractState, schema: MappedSchema): PersistentState</ID>
-    <ID>ReturnCount:NodeStartup.kt$NodeStartup$fun initialiseAndRun(cmdLineOptions: SharedNodeCmdLineOptions, afterNodeInitialisation: RunAfterNodeInitialisation, requireCertificates: Boolean = false): Int</ID>
-    <ID>ReturnCount:NodeStartup.kt$NodeStartup$fun isNodeRunningAt(baseDirectory: Path): Boolean</ID>
-    <ID>ReturnCount:NodeStartup.kt$NodeStartup$private fun canReadCertificatesDirectory(certDirectory: Path, devMode: Boolean): Boolean</ID>
-    <ID>ReturnCount:NodeStartup.kt$fun CliWrapperBase.initLogging(baseDirectory: Path): Boolean</ID>
-    <ID>ReturnCount:NodeVaultService.kt$NodeVaultService$@Suspendable @Throws(StatesNotAvailableException::class) override fun &lt;T : FungibleState&lt;*&gt;&gt; tryLockFungibleStatesForSpending( lockId: UUID, eligibleStatesQuery: QueryCriteria, amount: Amount&lt;*&gt;, contractStateType: Class&lt;out T&gt; ): List&lt;StateAndRef&lt;T&gt;&gt;</ID>
-    <ID>ReturnCount:ObjectDiffer.kt$ObjectDiffer$fun diff(a: Any?, b: Any?): DiffTree?</ID>
-    <ID>ReturnCount:PartialMerkleTree.kt$PartialMerkleTree$// Helper function to compute the path. False means go to the left and True to the right. // Because the path is updated recursively, the path is returned in reverse order. private fun leafIndexHelper(leaf: SecureHash, node: PartialTree, path: MutableList&lt;Boolean&gt;): Boolean</ID>
-    <ID>ReturnCount:PersistentNetworkMapCache.kt$PersistentNetworkMapCache$override fun getPartyInfo(party: Party): PartyInfo?</ID>
-    <ID>ReturnCount:RPCClientProxyHandler.kt$RPCClientProxyHandler$// This is the general function that transforms a client side RPC to internal Artemis messages. override fun invoke(proxy: Any, method: Method, arguments: Array&lt;out Any?&gt;?): Any?</ID>
-    <ID>ReturnCount:RPCSecurityManagerImpl.kt$RPCPermissionResolver$override fun resolvePermission(representation: String): Permission</ID>
-    <ID>ReturnCount:RigorousMock.kt$SpectatorDefaultAnswer$override fun answerImpl(invocation: InvocationOnMock): Any?</ID>
-    <ID>ReturnCount:SerialFilter.kt$SerialFilter$internal fun applyPredicate(acceptClass: (Class&lt;*&gt;) -&gt; Boolean, serialClass: Class&lt;*&gt;?): Boolean</ID>
-    <ID>ReturnCount:ServicesForResolutionImpl.kt$ServicesForResolutionImpl$// We may need to recursively chase transactions if there are notary changes. fun inner(stateRef: StateRef, forContractClassName: String?): Attachment</ID>
-    <ID>ReturnCount:SingleThreadedStateMachineManager.kt$SingleThreadedStateMachineManager$override fun retryFlowFromSafePoint(currentState: StateMachineState)</ID>
-    <ID>ReturnCount:SingleThreadedStateMachineManager.kt$SingleThreadedStateMachineManager$private fun createFlowFromCheckpoint( id: StateMachineRunId, serializedCheckpoint: SerializedBytes&lt;Checkpoint&gt;, isAnyCheckpointPersisted: Boolean, isStartIdempotent: Boolean, initialDeduplicationHandler: DeduplicationHandler? ): Flow?</ID>
-    <ID>ReturnCount:SpecificationTest.kt$SpecificationTest$fun parseMax(elements: List&lt;Long&gt;): Valid&lt;Long&gt;</ID>
-    <ID>ReturnCount:StandaloneShell.kt$StandaloneShell$override fun runProgram(): Int</ID>
-    <ID>ReturnCount:TransactionBuilder.kt$TransactionBuilder$ private fun handleContract( contractClassName: ContractClassName, inputStates: List&lt;TransactionState&lt;ContractState&gt;&gt;?, outputStates: List&lt;TransactionState&lt;ContractState&gt;&gt;?, explicitContractAttachment: AttachmentId?, services: ServicesForResolution ): Pair&lt;AttachmentId, List&lt;TransactionState&lt;ContractState&gt;&gt;?&gt;</ID>
-    <ID>ReturnCount:TransactionUtils.kt$ fun &lt;T : Any&gt; deserialiseComponentGroup(componentGroups: List&lt;ComponentGroup&gt;, clazz: KClass&lt;T&gt;, groupEnum: ComponentGroupEnum, forceDeserialize: Boolean = false, factory: SerializationFactory = SerializationFactory.defaultFactory, context: SerializationContext = factory.defaultContext): List&lt;T&gt;</ID>
-    <ID>ReturnCount:TransitionExecutorImpl.kt$TransitionExecutorImpl$@Suspendable override fun executeTransition( fiber: FlowFiber, previousState: StateMachineState, event: Event, transition: TransitionResult, actionExecutor: ActionExecutor ): Pair&lt;FlowContinuation, StateMachineState&gt;</ID>
-    <ID>ReturnCount:TypeParameterUtils.kt$ private fun inferTypeVariables(actualClass: Class&lt;*&gt;, declaredClass: Class&lt;*&gt;, declaredType: ParameterizedType): Type?</ID>
-    <ID>ReturnCount:Util.kt$fun &lt;T&gt; debugCompare(perLeft: Perceivable&lt;T&gt;, perRight: Perceivable&lt;T&gt;)</ID>
-    <ID>ReturnCount:Util.kt$fun debugCompare(arrLeft: Arrangement, arrRight: Arrangement)</ID>
     <ID>SpreadOperator:AMQPSerializationScheme.kt$AbstractAMQPSerializationScheme$(*it.whitelist.toTypedArray())</ID>
     <ID>SpreadOperator:AbstractNode.kt$FlowStarterImpl$(logicType, *args)</ID>
     <ID>SpreadOperator:AbstractParty.kt$AbstractParty$(*bytes)</ID>
