@@ -183,12 +183,6 @@ style:
   OptionalAbstractKeyword:
     active: true
     excludes: "**/buildSrc/**"
-  ReturnCount:
-    active: true
-    excludes: "**/buildSrc/**"
-    max: 2
-    excludedFunctions: "equals"
-    excludeReturnFromLambda: true
   SafeCast:
     active: true
     excludes: "**/buildSrc/**"
