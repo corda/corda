@@ -47,12 +47,6 @@ class DistributedTesting implements Plugin<Project> {
                     if (!task.hasProperty("ignoreForDistribution")) {
                         KubesTest parallelTestTask = generateParallelTestingTask(subProject, task, imageBuildingTask, providedTag)
                     }
-
-                    task.afterTest { desc, result ->
-                        executedTestsFile.withWriterAppend { writer ->
-                            writer.writeLine(desc.getClassName() + "." + desc.getName())
-                        }
-                    }
                 }
             }
 
@@ -140,6 +134,12 @@ class DistributedTesting implements Plugin<Project> {
                         executedTests = executedTestsFile.readLines()
                     } catch (FileNotFoundException e) {
                         executedTestsFile.createNewFile()
+                    }
+
+                    task.afterTest { desc, result ->
+                        executedTestsFile.withWriterAppend { writer ->
+                            writer.writeLine(desc.getClassName() + "." + desc.getName())
+                        }
                     }
 
                     def fork = getPropertyAsInt(subProject, "dockerFork", 0)
