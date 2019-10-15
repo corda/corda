@@ -113,7 +113,7 @@ class SchemaMigration(
                     resource != null -> resource
                     // Corda OS FinanceApp in v3 has no Liquibase script, so no error is raised
                     (mappedSchema::class.qualifiedName == "net.corda.finance.schemas.CashSchemaV1" || mappedSchema::class.qualifiedName == "net.corda.finance.schemas.CommercialPaperSchemaV1") && mappedSchema.migrationResource == null -> null
-                    else -> reportMigrationError(mappedSchema)
+                    else -> logOrThrowMigrationError(mappedSchema)
                 }
             }
 
