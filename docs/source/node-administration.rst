@@ -81,6 +81,12 @@ Note that in production, exposing the database via the node is not recommended.
 Monitoring your node
 --------------------
 
+This section covers monitoring performance and health of a node in Corda Enterprise with Jolokia and Graphite. General best practices for monitoring (e.g. setting up TCP checks for the ports the node communicates on, database health checks etc.) are not covered here but should be followed.
+
+
+Monitoring via Jolokia
+++++++++++++++++++++++
+
 Like most Java servers, the node can be configured to export various useful metrics and management operations via the industry-standard
 `JMX infrastructure <https://en.wikipedia.org/wiki/Java_Management_Extensions>`_. JMX is a standard API
 for registering so-called *MBeans* ... objects whose properties and methods are intended for server management. As Java
@@ -106,8 +112,12 @@ Here are a few ways to build dashboards and extract monitoring data for a node:
   It can bridge any data input to any output using their plugin system, for example, Telegraf can
   be configured to collect data from Jolokia and write to DataDog web api.
 
-The Node configuration parameter `jmxMonitoringHttpPort` has to be present in order to ensure a Jolokia agent is instrumented with
-the JVM run-time.
+In order to ensure that a Jolokia agent is instrumented with the JVM run-time, you can choose one of these options:
+
+* Specify the Node configuration parameter ``jmxMonitoringHttpPort`` which will attempt to load the jolokia driver from the ``drivers`` folder.
+  The format of the driver name needs to be ``jolokia-jvm-{VERSION}-agent.jar`` where VERSION is the version required by Corda, currently |jolokia_version|.
+* Start the node with ``java -Dcapsule.jvm.args="-javaagent:drivers/jolokia-jvm-1.6.0-agent.jar=port=7777,host=localhost" -jar corda.jar``.
+
 
 The following JMX statistics are exported:
 
@@ -125,6 +135,8 @@ Also ensure to have restrictive Jolokia access policy in place for access to pro
 via a file called ``jolokia-access.xml``.
 Several Jolokia policy based security configuration files (``jolokia-access.xml``) are available for dev, test, and prod
 environments under ``/config/<env>``.
+
+To pass a security policy use ``java -Dcapsule.jvm.args=-javaagent:./drivers/jolokia-jvm-1.6.0-agent.jar,policyLocation=file:./config-path/jolokia-access.xml -jar corda.jar``
 
 Notes for development use
 +++++++++++++++++++++++++

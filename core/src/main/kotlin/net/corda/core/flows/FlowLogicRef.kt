@@ -45,7 +45,6 @@ interface FlowLogicRefFactory {
  *
  * @property type the fully qualified name of the class that failed checks.
  */
-@CordaSerializable
 class IllegalFlowLogicException(val type: String, msg: String) :
         IllegalArgumentException("A FlowLogicRef cannot be constructed for FlowLogic of type $type: $msg") {
     constructor(type: Class<*>, msg: String) : this(type.name, msg)

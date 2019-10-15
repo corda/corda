@@ -6,13 +6,10 @@ import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.identity.x500Matches
 import net.corda.core.internal.CertRole
-import net.corda.core.internal.hash
-import net.corda.core.node.services.IdentityService
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.trace
 import net.corda.node.services.api.IdentityServiceInternal
-import net.corda.node.services.persistence.WritablePublicKeyToOwningIdentityCache
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.x509Certificates
 import java.security.InvalidAlgorithmParameterException
@@ -99,6 +96,10 @@ class InMemoryIdentityService(
         nameToKey.computeIfAbsent(identity.name) {identity.owningKey}
         keyToName.putIfAbsent(identity.owningKey.toStringShort(), identity.name)
         return keyToPartyAndCerts[identityCertChain[1].publicKey]
+    }
+
+    override fun partyFromKey(key: PublicKey): Party? {
+        return certificateFromKey(key)?.party ?: keyToName[key.toStringShort()]?.let { wellKnownPartyFromX500Name(it) }
     }
 
     override fun certificateFromKey(owningKey: PublicKey): PartyAndCertificate? = keyToPartyAndCerts[owningKey]

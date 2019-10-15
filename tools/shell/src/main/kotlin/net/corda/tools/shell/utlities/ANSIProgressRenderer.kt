@@ -177,7 +177,7 @@ abstract class ANSIProgressRenderer {
                     ansi.fgRed()
                     ansi.a("${IntStream.range(indent, indent).mapToObj { "\t" }.toList().joinToString(separator = "") { s -> s }} $errorIcon ${error.message}")
                     ansi.reset()
-                    errorToPrint = error.cause
+                    errorToPrint = errorToPrint.cause
                     indent++
                 }
                 ansi.eraseLine(Ansi.Erase.FORWARD)
