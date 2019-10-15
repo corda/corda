@@ -23,6 +23,7 @@ public class KubesTest extends DefaultTask {
 
     static final ExecutorService executorService = Executors.newCachedThreadPool();
     static final ExecutorService singleThreadedExecutor = Executors.newSingleThreadExecutor();
+    static final String testRunsDir = "./";
 
     String dockerTag;
     String fullTaskToExecutePath;
