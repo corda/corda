@@ -10,7 +10,7 @@ import org.gradle.api.tasks.testing.Test
  */
 class DistributedTesting implements Plugin<Project> {
 
-    List<String> executedTests = [];
+    List<String> executedTests = []
 
     static def getPropertyAsInt(Project proj, String property, Integer defaultValue) {
         return proj.hasProperty(property) ? Integer.parseInt(proj.property(property).toString()) : defaultValue
@@ -29,7 +29,7 @@ class DistributedTesting implements Plugin<Project> {
             BucketingAllocatorTask globalAllocator = project.tasks.create("bucketingAllocator", BucketingAllocatorTask, forks)
 
             //to be used once k8s persistant volumes are in place
-            File executedTestsFile = new File(KubesTest.testRunsDir + "executedTests.txt")
+            File executedTestsFile = new File(KubesTest.TEST_RUN_DIR + "executedTests.txt")
             try {
                 executedTests = executedTestsFile.readLines()
             } catch (FileNotFoundException e) {

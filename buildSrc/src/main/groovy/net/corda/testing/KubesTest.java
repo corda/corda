@@ -22,7 +22,7 @@ import java.util.stream.IntStream;
 
 public class KubesTest extends DefaultTask {
 
-    static final String testRunsDir = "/test-runs";
+    static final String TEST_RUN_DIR = "/test-runs";
     private static final ExecutorService executorService = Executors.newCachedThreadPool();
     /**
      * Name of the k8s Secret object that holds the credentials to access the docker image registry
@@ -248,7 +248,7 @@ public class KubesTest extends DefaultTask {
                 .addToRequests("memory", new Quantity(memoryGbPerFork.toString() + "Gi"))
                 .endResources()
                 .addNewVolumeMount().withName("gradlecache").withMountPath("/tmp/gradle").endVolumeMount()
-                .addNewVolumeMount().withName("testruns").withMountPath(testRunsDir).endVolumeMount()
+                .addNewVolumeMount().withName("testruns").withMountPath(TEST_RUN_DIR).endVolumeMount()
                 .endContainer()
 
                 .addNewImagePullSecret(REGISTRY_CREDENTIALS_SECRET_NAME)
