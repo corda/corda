@@ -8,7 +8,7 @@ pipeline {
     options { timestamps() }
 
     environment {
-        DOCKER_TAG_TO_USE = "${UUID.randomUUID().toString().toLowerCase().subSequence(0, 12)}"
+        DOCKER_TAG_TO_USE = "${env.GIT_COMMIT.subSequence(0, 8)}" + "${env.JOB_NAME}".hashCode().toString(36).substring(0, 4)
         EXECUTOR_NUMBER = "${env.EXECUTOR_NUMBER}"
         BUILD_ID = "${env.BUILD_ID}-${env.JOB_NAME}"
     }
@@ -40,7 +40,7 @@ pipeline {
     post {
 
         always {
-            junit testResults: '**/build/test-results-xml/**/*.xml', allowEmptyResults: true
+            junit testResults: '**/build/test-results-xml/**/*.xml', allowEmptyResults: false
         }
 
         success {
