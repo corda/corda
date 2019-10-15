@@ -8,7 +8,7 @@ pipeline {
     options { timestamps() }
 
     environment {
-        DOCKER_TAG_TO_USE = "${env.GIT_COMMIT.subSequence(0, 8)}" + "${env.JOB_NAME}".hashCode().toString(36).substring(0, 4)
+        DOCKER_TAG_TO_USE = "${env.GIT_COMMIT.subSequence(0, 6)}${env.JOB_NAME.hashCode().toString(36).substring(0, 6)}"
         EXECUTOR_NUMBER = "${env.EXECUTOR_NUMBER}"
         BUILD_ID = "${env.BUILD_ID}-${env.JOB_NAME}"
     }
