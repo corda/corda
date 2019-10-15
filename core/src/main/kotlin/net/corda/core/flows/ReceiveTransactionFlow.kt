@@ -21,6 +21,9 @@ import java.security.SignatureException
  * Please note that it will *not* store the transaction to the vault unless that is explicitly requested and checkSufficientSignatures is true.
  * Setting statesToRecord to anything else when checkSufficientSignatures is false will *not* update the vault.
  *
+ * Attention: At the moment, this flow receives a [SignedTransaction] first thing and then proceeds by invoking a [ResolveTransactionsFlow] subflow.
+ *            This is used as a criterion to identify cases, where a counterparty has failed notarising a transact
+ *
  * @property otherSideSession session to the other side which is calling [SendTransactionFlow].
  * @property checkSufficientSignatures if true checks all required signatures are present. See [SignedTransaction.verify].
  * @property statesToRecord which transaction states should be recorded in the vault, if any.
