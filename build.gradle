@@ -448,7 +448,7 @@ task detektBaseline(type: JavaExec) {
     main = "io.gitlab.arturbosch.detekt.cli.Main"
     classpath = configurations.detekt
     def input = "$projectDir"
-    def config = "$projectDir/detekt-config.yml"
+    def config = "$projectDir/detekt-config.yml, $projectDir/detekt-baseline-config.yml"
     def baseline = "$projectDir/detekt-baseline.xml"
     def params = ['-i', input, '-c', config, '-b', baseline, '--create-baseline']
     args(params)
