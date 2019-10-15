@@ -22,11 +22,11 @@ import java.util.stream.IntStream;
 
 public class KubesTest extends DefaultTask {
 
-    static final ExecutorService executorService = Executors.newCachedThreadPool();
+    private static final ExecutorService executorService = Executors.newCachedThreadPool();
     /**
      * Name of the k8s Secret object that holds the credentials to access the docker image registry
      */
-    static final String REGISTRY_CREDENTIALS_SECRET_NAME = "regcred";
+    private static final String REGISTRY_CREDENTIALS_SECRET_NAME = "regcred";
 
     String dockerTag;
     String fullTaskToExecutePath;
@@ -88,7 +88,7 @@ public class KubesTest extends DefaultTask {
     }
 
     @NotNull
-    KubernetesClient getKubernetesClient() {
+    private KubernetesClient getKubernetesClient() {
         io.fabric8.kubernetes.client.Config config = new io.fabric8.kubernetes.client.ConfigBuilder()
                 .withConnectionTimeout(k8sTimeout)
                 .withRequestTimeout(k8sTimeout)
@@ -100,13 +100,13 @@ public class KubesTest extends DefaultTask {
         return new DefaultKubernetesClient(config);
     }
 
-    static String rnd64Base36(Random rnd) {
+    private static String rnd64Base36(Random rnd) {
         return new BigInteger(64, rnd)
                 .toString(36)
                 .toLowerCase();
     }
 
-    Future<KubePodResult> submitBuild(
+    private Future<KubePodResult> submitBuild(
             KubernetesClient client,
             String namespace,
             int numberOfPods,
@@ -128,7 +128,7 @@ public class KubesTest extends DefaultTask {
         Runtime.getRuntime().addShutdownHook(new Thread(hook));
     }
 
-    PersistentVolumeClaim createPvc(KubernetesClient client, String name) {
+    private PersistentVolumeClaim createPvc(KubernetesClient client, String name) {
         PersistentVolumeClaim pvc = client.persistentVolumeClaims()
                 .inNamespace(namespace)
                 .createNew()
@@ -149,7 +149,7 @@ public class KubesTest extends DefaultTask {
         return pvc;
     }
 
-    KubePodResult buildRunPodWithRetriesOrThrow(
+    private KubePodResult buildRunPodWithRetriesOrThrow(
             KubernetesClient client,
             String namespace,
             PersistentVolumeClaim pvc,
@@ -210,7 +210,7 @@ public class KubesTest extends DefaultTask {
         }
     }
 
-    Pod buildPodRequest(String podName, PersistentVolumeClaim pvc) {
+    private Pod buildPodRequest(String podName, PersistentVolumeClaim pvc) {
         return new PodBuilder()
                 .withNewMetadata().withName(podName).endMetadata()
 
@@ -257,7 +257,7 @@ public class KubesTest extends DefaultTask {
                 .build();
     }
 
-    File startLogPumping(InputStream stdOutIs, int podIdx, boolean printOutput) throws IOException {
+    private File startLogPumping(InputStream stdOutIs, int podIdx, boolean printOutput) throws IOException {
         File outputFile = Files.createTempFile("container", ".log").toFile();
         Thread loggingThread = new Thread(() -> {
             try (BufferedWriter out = new BufferedWriter(new FileWriter(outputFile));
@@ -280,7 +280,7 @@ public class KubesTest extends DefaultTask {
         return outputFile;
     }
 
-    Watch attachStatusListenerToPod(KubernetesClient client, Pod pod) {
+    private Watch attachStatusListenerToPod(KubernetesClient client, Pod pod) {
         return client.pods().inNamespace(pod.getMetadata().getNamespace()).withName(pod.getMetadata().getName()).watch(new Watcher<Pod>() {
             @Override
             public void eventReceived(Watcher.Action action, Pod resource) {
@@ -293,7 +293,7 @@ public class KubesTest extends DefaultTask {
         });
     }
 
-    void waitForPodToStart(KubernetesClient client, Pod pod) {
+    private void waitForPodToStart(KubernetesClient client, Pod pod) {
         getProject().getLogger().lifecycle("Waiting for pod " + pod.getMetadata().getName() + " to start before executing build");
         try {
             client.pods().inNamespace(pod.getMetadata().getNamespace()).withName(pod.getMetadata().getName()).waitUntilReady(timeoutInMinutesForPodToStart, TimeUnit.MINUTES);
@@ -303,7 +303,7 @@ public class KubesTest extends DefaultTask {
         getProject().getLogger().lifecycle("pod " + pod.getMetadata().getName() + " has started, executing build");
     }
 
-    Collection<File> downloadTestXmlFromPod(KubernetesClient client, String namespace, Pod cp) {
+    private Collection<File> downloadTestXmlFromPod(KubernetesClient client, String namespace, Pod cp) {
         String resultsInContainerPath = "/tmp/source/build/test-reports";
         String binaryResultsFile = "results.bin";
         String podName = cp.getMetadata().getName();
@@ -323,7 +323,7 @@ public class KubesTest extends DefaultTask {
         return findFolderContainingBinaryResultsFile(new File(tempDir.toFile().getAbsolutePath()), binaryResultsFile);
     }
 
-    String[] getBuildCommand(int numberOfPods, int podIdx) {
+    private String[] getBuildCommand(int numberOfPods, int podIdx) {
         String shellScript = "let x=1 ; while [ ${x} -ne 0 ] ; do echo \"Waiting for DNS\" ; curl services.gradle.org > /dev/null 2>&1 ; x=$? ; sleep 1 ; done ; " + "cd /tmp/source ; " +
                 "let y=1 ; while [ ${y} -ne 0 ] ; do echo \"Preparing build directory\" ; ./gradlew testClasses integrationTestClasses --parallel 2>&1 ; y=$? ; sleep 1 ; done ;" +
                 "./gradlew -D" + ListTests.DISTRIBUTION_PROPERTY + "=" + distribution.name() + " -Dkubenetize -PdockerFork=" + podIdx + " -PdockerForks=" + numberOfPods + " " + fullTaskToExecutePath + " --info 2>&1 ;" +
@@ -331,7 +331,7 @@ public class KubesTest extends DefaultTask {
         return new String[]{"bash", "-c", shellScript};
     }
 
-    List<File> findFolderContainingBinaryResultsFile(File start, String fileNameToFind) {
+    private List<File> findFolderContainingBinaryResultsFile(File start, String fileNameToFind) {
         Queue<File> filesToInspect = new LinkedList<>(Collections.singletonList(start));
         List<File> folders = new ArrayList<>();
         while (!filesToInspect.isEmpty()) {
@@ -347,7 +347,7 @@ public class KubesTest extends DefaultTask {
         return folders;
     }
 
-    ExecListener buildExecListenerForPod(String podName, ByteArrayOutputStream errChannelStream, CompletableFuture<Integer> waitingFuture) {
+    private ExecListener buildExecListenerForPod(String podName, ByteArrayOutputStream errChannelStream, CompletableFuture<Integer> waitingFuture) {
 
         return new ExecListener() {
             final Long start = System.currentTimeMillis();
