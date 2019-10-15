@@ -22,8 +22,8 @@ class DeterministicCryptoContract : Contract {
             }
         }
 
-        if (cryptoData.isEmpty() || validators.isEmpty() || !isValid) {
-            throw IllegalStateException("Failed to validate signatures in command data")
+        require(cryptoData.isNotEmpty() && validators.isNotEmpty() && isValid) {
+            "Failed to validate signatures in command data"
         }
     }
 
