@@ -7,6 +7,7 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.parseAsHex
 import net.corda.core.utilities.toHexString
+import java.nio.ByteBuffer
 import java.security.MessageDigest
 
 /**
@@ -21,6 +22,17 @@ sealed class SecureHash(bytes: ByteArray) : OpaqueBytes(bytes) {
         init {
             require(bytes.size == 32) { "Invalid hash size, must be 32 bytes" }
         }
+
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (javaClass != other?.javaClass) return false
+            if (!super.equals(other)) return false
+            return true
+        }
+
+        // This is an efficient hashCode, because there is no point in performing a hash calculation on a cryptographic hash.
+        // It just takes the first 4 bytes and transforms them into an Int.
+        override fun hashCode() = ByteBuffer.wrap(bytes).int
     }
 
     /**
