@@ -82,7 +82,7 @@ class DistributedTesting implements Plugin<Project> {
                         if (dockerTag == null) {
                             throw new GradleException("pre allocation cannot be used without a stable docker tag - please provide one")
                         }
-                        int seed = dockerTag.hashCode()
+                        int seed = (dockerTag.hashCode() + testGrouping.name.hashCode())
                         String podPrefix = new BigInteger(64, new Random(seed)).toString(36)
                         //here we will pre-request the correct number of pods for this testGroup
                         int numberOfPodsToRequest = testGrouping.getShardCount()
@@ -98,7 +98,7 @@ class DistributedTesting implements Plugin<Project> {
                         if (dockerTag == null) {
                             throw new GradleException("pre allocation cannot be used without a stable docker tag - please provide one")
                         }
-                        int seed = dockerTag.hashCode()
+                        int seed = (dockerTag.hashCode() + testGrouping.name.hashCode())
                         String podPrefix = new BigInteger(64, new Random(seed)).toString(36);
                         allocator.tearDownPods(podPrefix)
                     }
