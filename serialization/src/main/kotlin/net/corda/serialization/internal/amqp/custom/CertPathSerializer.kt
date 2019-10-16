@@ -8,8 +8,13 @@ import java.security.cert.CertPath
 import java.security.cert.CertificateException
 import java.security.cert.CertificateFactory
 
-class CertPathSerializer(factory: SerializerFactory)
-    : CustomSerializer.Proxy<CertPath, CertPathSerializer.CertPathProxy>(CertPath::class.java, CertPathProxy::class.java, factory) {
+class CertPathSerializer(
+        factory: SerializerFactory
+) : CustomSerializer.Proxy<CertPath, CertPathSerializer.CertPathProxy>(
+        CertPath::class.java,
+        CertPathProxy::class.java,
+        factory
+) {
     override fun toProxy(obj: CertPath): CertPathProxy = CertPathProxy(obj.type, obj.encoded)
 
     override fun fromProxy(proxy: CertPathProxy): CertPath {

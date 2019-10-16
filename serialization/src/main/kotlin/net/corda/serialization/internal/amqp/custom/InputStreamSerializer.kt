@@ -11,7 +11,10 @@ import java.lang.reflect.Type
 /**
  * A serializer that writes out the content of an input stream as bytes and deserializes into a [ByteArrayInputStream].
  */
-object InputStreamSerializer : CustomSerializer.Implements<InputStream>(InputStream::class.java) {
+object InputStreamSerializer
+    : CustomSerializer.Implements<InputStream>(
+        InputStream::class.java
+) {
     override val revealSubclassesInSchema: Boolean = true
 
     override val schemaForDocumentation = Schema(
