@@ -1,3 +1,4 @@
+import static com.r3.build.BuildControl.killAllExistingBuildsForJob
 @Library('existing-build-control')
 import static com.r3.build.BuildControl.killAllExistingBuildsForJob
 
@@ -8,59 +9,47 @@ pipeline {
     options { timestamps() }
 
     environment {
-        DOCKER_TAG_TO_USE = "${env.GIT_COMMIT.subSequence(0, 8)}ut"
+        DOCKER_TAG_TO_USE = "${UUID.randomUUID().toString().toLowerCase().subSequence(0, 12)}"
         EXECUTOR_NUMBER = "${env.EXECUTOR_NUMBER}"
         BUILD_ID = "${env.BUILD_ID}-${env.JOB_NAME}"
     }
 
     stages {
-        stage('Unit Tests') {
+        stage('Corda Pull Request - Generate Build Image') {
             steps {
-                script {
-                    pullRequest.createStatus(status: 'pending',
-                            context: 'continuous-integration/jenkins/pr-merge/unitTest',
-                            description: 'Unit Tests Building',
-                            targetUrl: "${env.JOB_URL}")
-                }
-
                 withCredentials([string(credentialsId: 'container_reg_passwd', variable: 'DOCKER_PUSH_PWD')]) {
                     sh "./gradlew " +
-                            "-DbuildId=\"\${BUILD_ID}\" " +
                             "-Dkubenetize=true " +
-                            "-DpreAllocatePods=true " +
                             "-Ddocker.push.password=\"\${DOCKER_PUSH_PWD}\" " +
                             "-Ddocker.work.dir=\"/tmp/\${EXECUTOR_NUMBER}\" " +
-                            "-Ddocker.build.tag=\"\${DOCKER_TAG_TO_USE}\"" +
-                            " allParallelUnitTest"
+                            "-Ddocker.provided.tag=\"\${DOCKER_TAG_TO_USE}\"" +
+                            " clean pushBuildImage"
+                }
+                sh "kubectl auth can-i get pods"
+            }
+        }
+
+        stage('Unit Tests') {
+            steps {
+                sh "./gradlew " +
+                        "-DbuildId=\"\${BUILD_ID}\" " +
+                        "-Dkubenetize=true " +
+                        "-Ddocker.tag=\"\${DOCKER_TAG_TO_USE}\"" +
+                        " allParallelUnitTest"
+                if (env.CHANGE_ID) {
+                    pullRequest.createStatus(status: 'success',
+                            context: 'continuous-integration/jenkins/pr-merge/unitTest',
+                            description: 'Unit Tests Passed',
+                            targetUrl: "${env.JOB_URL}/testResults")
                 }
             }
         }
     }
 
     post {
-
         always {
-            junit testResults: '**/build/test-results-xml/**/*.xml', allowEmptyResults: false
+            junit '**/build/test-results-xml/**/*.xml'
         }
-
-        success {
-            script {
-                pullRequest.createStatus(status: 'success',
-                        context: 'continuous-integration/jenkins/pr-merge/unitTest',
-                        description: 'Unit Tests Passed',
-                        targetUrl: "${env.JOB_URL}testResults")
-            }
-        }
-
-        failure {
-            script {
-                pullRequest.createStatus(status: 'failure',
-                        context: 'continuous-integration/jenkins/pr-merge/unitTest',
-                        description: 'Unit Tests Failed',
-                        targetUrl: "${env.JOB_URL}testResults")
-            }
-        }
-
         cleanup {
             deleteDir() /* clean up our workspace */
         }
