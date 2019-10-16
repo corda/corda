@@ -200,6 +200,7 @@ public class KubesTest extends DefaultTask {
                 Collection<File> binaryResults = downloadTestXmlFromPod(client, namespace, createdPod);
                 getLogger().lifecycle("removing pod " + podName + " (" + podIdx + "/" + numberOfPods + ") after completed build");
                 client.pods().delete(createdPod);
+                client.persistentVolumeClaims().delete(pvc);
                 return new KubePodResult(resCode, podOutput, binaryResults);
             });
         } catch (Retry.RetryException e) {

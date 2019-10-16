@@ -2,8 +2,10 @@ package net.corda.testing
 
 import com.bmuschko.gradle.docker.tasks.image.DockerBuildImage
 import com.bmuschko.gradle.docker.tasks.image.DockerPushImage
+import org.gradle.api.GradleException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.Task
 import org.gradle.api.tasks.testing.Test
 
 /**
@@ -26,10 +28,11 @@ class DistributedTesting implements Plugin<Project> {
             ImageBuilding imagePlugin = project.plugins.getPlugin(ImageBuilding)
             DockerPushImage imagePushTask = imagePlugin.pushTask
             DockerBuildImage imageBuildTask = imagePlugin.buildTask
-            String providedTag = System.getProperty("docker.tag")
+            String providedTag = System.getProperty("docker.run.tag")
             BucketingAllocatorTask globalAllocator = project.tasks.create("bucketingAllocator", BucketingAllocatorTask, forks)
 
-            def requestedTasks = project.gradle.startParameter.taskNames.collect { project.tasks.findByPath(it) }
+            Set<String> requestedTaskNames = project.gradle.startParameter.taskNames.toSet()
+            def requestedTasks = requestedTaskNames.collect { project.tasks.findByPath(it) }
 
             //in each subproject
             //1. add the task to determine all tests within the module
@@ -71,28 +74,45 @@ class DistributedTesting implements Plugin<Project> {
                 }.flatten()
                 String superListOfTasks = groups.collect { it.fullTaskToExecutePath }.join(" ")
 
-                if (testGrouping in requestedTasks && System.getProperty("preAllocatePods") != null) {
-                    //this testGroup is a task on the command line
-                    PodAllocator allocator = new PodAllocator()
-                    imageBuildTask.doFirst {
+                PodAllocator allocator = new PodAllocator()
+
+                Task preAllocateTask = project.rootProject.tasks.create("preAllocateFor" + testGrouping.name.capitalize()) {
+                    doFirst {
+                        String dockerTag = System.getProperty("docker.build.tag")
+                        if (dockerTag == null) {
+                            throw new GradleException("pre allocation cannot be used without a stable docker tag - please provide one")
+                        }
+                        int seed = dockerTag.hashCode()
+                        String podPrefix = new BigInteger(64, new Random(seed)).toString(36)
                         //here we will pre-request the correct number of pods for this testGroup
                         int numberOfPodsToRequest = testGrouping.getShardCount()
                         int coresPerPod = testGrouping.getCoresToUse()
                         int memoryGBPerPod = testGrouping.getGbOfMemory()
-                        allocator.allocatePods(numberOfPodsToRequest, coresPerPod, memoryGBPerPod)
-                    }
-
-                    imagePushTask.doLast {
-                        //the image has been pushed, we are ready to delete the existing pods and schedule the new ones
-                        allocator.tearDownPods()
+                        allocator.allocatePods(numberOfPodsToRequest, coresPerPod, memoryGBPerPod, podPrefix)
                     }
                 }
 
+                Task deAllocateTask = project.rootProject.tasks.create("deAllocateFor" + testGrouping.name.capitalize()) {
+                    doFirst {
+                        String dockerTag = System.getProperty("docker.run.tag")
+                        if (dockerTag == null) {
+                            throw new GradleException("pre allocation cannot be used without a stable docker tag - please provide one")
+                        }
+                        int seed = dockerTag.hashCode()
+                        String podPrefix = new BigInteger(64, new Random(seed)).toString(36);
+                        allocator.tearDownPods(podPrefix)
+                    }
+                }
+
+                if (preAllocateTask.name in requestedTaskNames) {
+                    imageBuildTask.dependsOn preAllocateTask
+                }
 
                 def userDefinedParallelTask = project.rootProject.tasks.create("userDefined" + testGrouping.name.capitalize(), KubesTest) {
                     if (!providedTag) {
                         dependsOn imagePushTask
                     }
+                    dependsOn deAllocateTask
                     numberOfPods = testGrouping.getShardCount()
                     printOutput = testGrouping.printToStdOut
                     fullTaskToExecutePath = superListOfTasks

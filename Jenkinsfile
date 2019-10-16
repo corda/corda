@@ -22,8 +22,8 @@ pipeline {
                             "-Dkubenetize=true " +
                             "-Ddocker.push.password=\"\${DOCKER_PUSH_PWD}\" " +
                             "-Ddocker.work.dir=\"/tmp/\${EXECUTOR_NUMBER}\" " +
-                            "-Ddocker.provided.tag=\"\${DOCKER_TAG_TO_USE}\"" +
-                            " clean pushBuildImage"
+                            "-Ddocker.build.tag=\"\${DOCKER_TAG_TO_USE}\"" +
+                            " clean pushBuildImage preAllocateForAllParallelIntegrationTest preAllocateForAllParallelUnitTest"
                 }
                 sh "kubectl auth can-i get pods"
             }
@@ -36,10 +36,20 @@ pipeline {
                         sh "./gradlew " +
                                 "-DbuildId=\"\${BUILD_ID}\" " +
                                 "-Dkubenetize=true " +
-                                "-Ddocker.tag=\"\${DOCKER_TAG_TO_USE}\"" +
-                                " allParallelIntegrationTest"
+                                "-Ddocker.run.tag=\"\${DOCKER_TAG_TO_USE}\"" +
+                                " deAllocateForAllParallelIntegrationTest allParallelIntegrationTest"
                     }
                 }
+                stage('Unit Tests') {
+                    steps {
+                        sh "./gradlew " +
+                                "-DbuildId=\"\${BUILD_ID}\" " +
+                                "-Dkubenetize=true " +
+                                "-Ddocker.run.tag=\"\${DOCKER_TAG_TO_USE}\"" +
+                                " deAllocateForAllParallelUnitTest allParallelUnitTest"
+                    }
+                }
+
             }
 
         }

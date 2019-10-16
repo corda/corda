@@ -90,7 +90,7 @@ class ImageBuilding implements Plugin<Project> {
         DockerTagImage tagBuildImageResult = project.tasks.create('tagBuildImageResult', DockerTagImage) {
             dependsOn commitBuildImageResult
             imageId = commitBuildImageResult.getImageId()
-            tag = System.getProperty("docker.provided.tag") ? System.getProperty("docker.provided.tag") : "${UUID.randomUUID().toString().toLowerCase().subSequence(0, 12)}"
+            tag = System.getProperty("docker.build.tag") ? System.getProperty("docker.build.tag") : "${UUID.randomUUID().toString().toLowerCase().subSequence(0, 12)}"
             repository = registryName
         }
 
