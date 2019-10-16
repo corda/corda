@@ -74,7 +74,7 @@ class DistributedTesting implements Plugin<Project> {
                 }.flatten()
                 String superListOfTasks = groups.collect { it.fullTaskToExecutePath }.join(" ")
 
-                PodAllocator allocator = new PodAllocator()
+                PodAllocator allocator = new PodAllocator(project.getLogger())
 
                 Task preAllocateTask = project.rootProject.tasks.create("preAllocateFor" + testGrouping.name.capitalize()) {
                     doFirst {
