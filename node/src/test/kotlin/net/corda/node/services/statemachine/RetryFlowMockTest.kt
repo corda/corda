@@ -34,6 +34,7 @@ import org.junit.Before
 import org.junit.Test
 import java.sql.SQLException
 import java.time.Duration
+import java.time.Instant
 import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.assertEquals
@@ -284,7 +285,8 @@ class RetryFlowMockTest {
         }
 
         private fun doInsert() {
-            val tx = DBTransactionStorage.DBTransaction("Foo", null, Utils.EMPTY_BYTES, DBTransactionStorage.TransactionStatus.VERIFIED)
+            val tx = DBTransactionStorage.DBTransaction("Foo", null, Utils.EMPTY_BYTES,
+                    DBTransactionStorage.TransactionStatus.VERIFIED, Instant.now())
             contextTransaction.session.save(tx)
         }
     }

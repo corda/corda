@@ -9,6 +9,9 @@ import net.corda.core.crypto.TransactionSignature
 import net.corda.core.toFuture
 import net.corda.core.transactions.SignedTransaction
 import net.corda.node.services.transactions.PersistentUniquenessProvider
+import net.corda.node.CordaClock
+import net.corda.node.MutableClock
+import net.corda.node.SimpleClock
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.core.*
@@ -22,6 +25,8 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import java.time.Clock
+import java.time.Instant
 import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
 
@@ -49,6 +54,116 @@ class DBTransactionStorageTests {
     fun cleanUp() {
         database.close()
         LogHelper.reset(PersistentUniquenessProvider::class)
+    }
+
+    private class TransactionClock(var timeNow: Instant,
+                                   override var delegateClock: Clock = systemUTC()) : MutableClock(delegateClock) {
+        override fun instant(): Instant = timeNow
+    }
+
+    @Test
+    fun `create verified transaction and validate timestamp in db`() {
+        val now = Instant.ofEpochSecond(111222333L)
+        val transactionClock = TransactionClock(now)
+        newTransactionStorage(clock = transactionClock)
+        val transaction = newTransaction()
+        transactionStorage.addTransaction(transaction)
+        assertEquals(now, readTransactionTimestampFromDB(transaction.id))
+    }
+
+    @Test
+    fun `create unverified transaction and validate timestamp in db`() {
+        val now = Instant.ofEpochSecond(333444555L)
+        val transactionClock = TransactionClock(now)
+        newTransactionStorage(clock = transactionClock)
+        val transaction = newTransaction()
+        transactionStorage.addUnverifiedTransaction(transaction)
+        assertEquals(now, readTransactionTimestampFromDB(transaction.id))
+    }
+
+    @Test
+    fun `create unverified then verified transaction and validate timestamps in db`() {
+        val unverifiedTime = Instant.ofEpochSecond(555666777L)
+        val verifiedTime = Instant.ofEpochSecond(888999111L)
+        val transactionClock = TransactionClock(unverifiedTime)
+        newTransactionStorage(clock = transactionClock)
+        val transaction = newTransaction()
+        transactionStorage.addUnverifiedTransaction(transaction)
+        assertEquals(unverifiedTime, readTransactionTimestampFromDB(transaction.id))
+        transactionClock.timeNow = verifiedTime
+        transactionStorage.addTransaction(transaction)
+        assertEquals(verifiedTime, readTransactionTimestampFromDB(transaction.id))
+    }
+
+    @Test
+    fun `check timestamp does not change when attempting to move transaction from verified to unverified`() {
+
+        val verifiedTime = Instant.ofEpochSecond(555666222L)
+        val differentTime = Instant.ofEpochSecond(888777666L)
+        val transactionClock = TransactionClock(verifiedTime)
+
+        newTransactionStorage(clock = transactionClock)
+        val transaction = newTransaction()
+        database.transaction {
+            transactionStorage.addTransaction(transaction)
+        }
+        assertEquals(verifiedTime, readTransactionTimestampFromDB(transaction.id))
+        transactionClock.timeNow = differentTime
+        database.transaction {
+            transactionStorage.addUnverifiedTransaction(transaction)
+        }
+        assertTransactionIsRetrievable(transaction)
+        assertEquals(verifiedTime, readTransactionTimestampFromDB(transaction.id))
+    }
+
+    @Test
+    fun `check timestamp does not change when transaction saved twice in same DB transaction scope`() {
+        val verifiedTime = Instant.ofEpochSecond(3333666222L)
+        val differentTime = Instant.ofEpochSecond(111777666L)
+        val transactionClock = TransactionClock(verifiedTime)
+        newTransactionStorage(clock = transactionClock)
+        val firstTransaction = newTransaction()
+        database.transaction {
+            transactionStorage.addTransaction(firstTransaction)
+            transactionClock.timeNow = differentTime
+            transactionStorage.addTransaction(firstTransaction)
+        }
+        assertTransactionIsRetrievable(firstTransaction)
+        assertThat(transactionStorage.transactions).containsOnly(firstTransaction)
+        assertEquals(verifiedTime, readTransactionTimestampFromDB(firstTransaction.id))
+    }
+
+    @Test
+    fun `check timestamp does not change when transaction saved twice in two DB transaction scopes`() {
+        val verifiedTime = Instant.ofEpochSecond(11119999222L)
+        val differentTime = Instant.ofEpochSecond(666333222L)
+        val transactionClock = TransactionClock(verifiedTime)
+        newTransactionStorage(clock = transactionClock)
+        val firstTransaction = newTransaction()
+        val secondTransaction = newTransaction()
+
+        transactionStorage.addTransaction(firstTransaction)
+        assertEquals(verifiedTime, readTransactionTimestampFromDB(firstTransaction.id))
+        transactionClock.timeNow = differentTime
+
+        database.transaction {
+            transactionStorage.addTransaction(secondTransaction)
+            transactionStorage.addTransaction(firstTransaction)
+        }
+        assertTransactionIsRetrievable(firstTransaction)
+        assertThat(transactionStorage.transactions).containsOnly(firstTransaction, secondTransaction)
+        assertEquals(verifiedTime, readTransactionTimestampFromDB(firstTransaction.id))
+    }
+
+    private fun readTransactionTimestampFromDB(id: SecureHash): Instant {
+        val fromDb = database.transaction {
+            session.createQuery(
+                    "from ${DBTransactionStorage.DBTransaction::class.java.name} where tx_id = :transactionId",
+                    DBTransactionStorage.DBTransaction::class.java
+            ).setParameter("transactionId", id.toString()).resultList.map { it }
+        }
+        assertEquals(1, fromDb.size)
+        return fromDb[0].timestamp
     }
 
     @Test
@@ -198,9 +313,9 @@ class DBTransactionStorageTests {
         assertTransactionIsRetrievable(secondTransaction)
     }
 
-    private fun newTransactionStorage(cacheSizeBytesOverride: Long? = null) {
+    private fun newTransactionStorage(cacheSizeBytesOverride: Long? = null, clock: CordaClock = SimpleClock(Clock.systemUTC())) {
         transactionStorage = DBTransactionStorage(database, TestingNamedCacheFactory(cacheSizeBytesOverride
-                ?: 1024))
+                ?: 1024), clock)
     }
 
     private fun assertTransactionIsRetrievable(transaction: SignedTransaction) {

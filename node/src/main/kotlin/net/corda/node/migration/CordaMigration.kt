@@ -8,6 +8,7 @@ import liquibase.exception.ValidationErrors
 import liquibase.resource.ResourceAccessor
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.schemas.MappedSchema
+import net.corda.node.SimpleClock
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.persistence.*
 import net.corda.nodeapi.internal.persistence.CordaPersistence
@@ -16,6 +17,7 @@ import net.corda.nodeapi.internal.persistence.SchemaMigration.Companion.NODE_X50
 import java.io.PrintWriter
 import java.sql.Connection
 import java.sql.SQLFeatureNotSupportedException
+import java.time.Clock
 import java.util.logging.Logger
 import javax.sql.DataSource
 
@@ -62,7 +64,7 @@ abstract class CordaMigration : CustomTaskChange {
 
         cordaDB.transaction {
             identityService.ourNames = setOf(ourName)
-             val dbTransactions = DBTransactionStorage(cordaDB, cacheFactory)
+             val dbTransactions = DBTransactionStorage(cordaDB, cacheFactory, SimpleClock(Clock.systemUTC()))
              val attachmentsService = NodeAttachmentService(metricRegistry, cacheFactory, cordaDB)
             _servicesForResolution = MigrationServicesForResolution(identityService, attachmentsService, dbTransactions, cordaDB, cacheFactory)
         }

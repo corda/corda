@@ -846,7 +846,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     }
 
     protected open fun makeTransactionStorage(transactionCacheSizeBytes: Long): WritableTransactionStorage {
-        return DBTransactionStorage(database, cacheFactory)
+        return DBTransactionStorage(database, cacheFactory, platformClock)
     }
 
     protected open fun makeNetworkParametersStorage(): NetworkParametersStorage {

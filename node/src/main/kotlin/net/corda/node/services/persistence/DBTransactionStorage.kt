@@ -16,6 +16,7 @@ import net.corda.core.transactions.CoreTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
+import net.corda.node.CordaClock
 import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.utilities.AppendOnlyPersistentMapBase
@@ -24,11 +25,13 @@ import net.corda.nodeapi.internal.persistence.*
 import net.corda.serialization.internal.CordaSerializationEncoding.SNAPPY
 import rx.Observable
 import rx.subjects.PublishSubject
+import java.time.Instant
 import java.util.*
 import javax.persistence.*
 import kotlin.streams.toList
 
-class DBTransactionStorage(private val database: CordaPersistence, cacheFactory: NamedCacheFactory) : WritableTransactionStorage, SingletonSerializeAsToken() {
+class DBTransactionStorage(private val database: CordaPersistence, cacheFactory: NamedCacheFactory,
+                           private val clock: CordaClock) : WritableTransactionStorage, SingletonSerializeAsToken() {
 
     @Suppress("MagicNumber") // database column width
     @Entity
@@ -47,8 +50,11 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
 
             @Column(name = "status", nullable = false, length = 1)
             @Convert(converter = TransactionStatusConverter::class)
-            val status: TransactionStatus
-    )
+            val status: TransactionStatus,
+
+            @Column(name = "timestamp", nullable = false)
+            val timestamp: Instant
+            )
 
     enum class TransactionStatus {
         UNVERIFIED,
@@ -105,7 +111,7 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
             }
         }
 
-        fun createTransactionsMap(cacheFactory: NamedCacheFactory)
+        fun createTransactionsMap(cacheFactory: NamedCacheFactory, clock: CordaClock)
                 : AppendOnlyPersistentMapBase<SecureHash, TxCacheValue, DBTransaction, String> {
             return WeightBasedAppendOnlyPersistentMap<SecureHash, TxCacheValue, DBTransaction, String>(
                     cacheFactory = cacheFactory,
@@ -121,7 +127,8 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
                                 txId = key.toString(),
                                 stateMachineRunId = FlowStateMachineImpl.currentStateMachine()?.id?.uuid?.toString(),
                                 transaction = value.toSignedTx().serialize(context = contextToUse().withEncoding(SNAPPY)).bytes,
-                                status = value.status
+                                status = value.status,
+                                timestamp = clock.instant()
                         )
                     },
                     persistentEntityClass = DBTransaction::class.java,
@@ -135,7 +142,7 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
         }
     }
 
-    private val txStorage = ThreadBox(createTransactionsMap(cacheFactory))
+    private val txStorage = ThreadBox(createTransactionsMap(cacheFactory, clock))
 
     private fun updateTransaction(txId: SecureHash): Boolean {
         val session = currentDBSession()
@@ -147,6 +154,7 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
                 criteriaBuilder.equal(updateRoot.get<String>(DBTransaction::txId.name), txId.toString()),
                 criteriaBuilder.equal(updateRoot.get<TransactionStatus>(DBTransaction::status.name), TransactionStatus.UNVERIFIED)
         ))
+        criteriaUpdate.set(updateRoot.get<Instant>(DBTransaction::timestamp.name), clock.instant())
         val update = session.createQuery(criteriaUpdate)
         val rowsUpdated = update.executeUpdate()
         return rowsUpdated != 0
