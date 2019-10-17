@@ -120,8 +120,8 @@ object ConfigHelper {
                         if (nodeConfKey.length != configPath.length) {
                             Node.printWarning(
                                     "${it.key} (property or environment variable) cannot be mapped to an existing Corda" +
-                                            " config property and thus cannot be used as a config override!" +
-                                            " It won't be passed as a config override, but if that was the intention " +
+                                            " config property and thus won't be used as a config override!" +
+                                            " It won't be passed as a config override! If that was the intention " +
                                             " double check the spelling and ensure there is such config key.")
                             badKeyConversions.add(configPath)
                         }
