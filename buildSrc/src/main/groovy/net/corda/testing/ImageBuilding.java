@@ -31,7 +31,7 @@ public class ImageBuilding implements Plugin<Project> {
         DockerPullImage pullTask = project.getTasks().create("pullBaseImage", DockerPullImage.class, dockerPullImage -> {
             dockerPullImage.getRepository().set("stefanotestingcr.azurecr.io/buildbase");
             dockerPullImage.getTag().set("latest");
-            dockerPullImage.doFirst(task -> dockerPullImage.setRegistryCredentials(registryCredentialsForPush));
+            dockerPullImage.setRegistryCredentials(registryCredentialsForPush);
         });
 
 
