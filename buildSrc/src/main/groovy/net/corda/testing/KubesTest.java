@@ -218,6 +218,15 @@ public class KubesTest extends DefaultTask {
                 .endHostPath()
                 .endVolume()
 
+                .addNewVolume()
+                .withName("testruns")
+                .withNewHostPath()
+                .withType("DirectoryOrCreate")
+                .withPath("/tmp/testruns")
+                .endHostPath()
+                .endVolume()
+
+
 //                .addNewVolume()
 //                .withName("testruns")
 //                .withNewPersistentVolumeClaim()
@@ -241,7 +250,7 @@ public class KubesTest extends DefaultTask {
                 .addToRequests("memory", new Quantity(memoryGbPerFork.toString() + "Gi"))
                 .endResources()
                 .addNewVolumeMount().withName("gradlecache").withMountPath("/tmp/gradle").endVolumeMount()
-//                .addNewVolumeMount().withName("testruns").withMountPath(TEST_RUN_DIR).endVolumeMount()
+                .addNewVolumeMount().withName("testruns").withMountPath(TEST_RUN_DIR).endVolumeMount()
                 .endContainer()
 
                 .addNewImagePullSecret(REGISTRY_CREDENTIALS_SECRET_NAME)
