@@ -371,13 +371,19 @@ More specifically, the behaviour in the second case is a bit more subtle:
 
 .. warning:: In this approach, some events might be lost during a reconnection and not sent from the subscribed ``Observable``\s.
 
-You can enable this graceful form of reconnection by using the ``gracefulReconnect`` parameter in the following way:
+You can enable this graceful form of reconnection by using the ``gracefulReconnect`` parameter, which is an object containing 3 optional fields:
+
+* ``onDisconnect``: A callback handler that will be invoked every time the connection is disconnected.
+* ``onReconnect``: A callback handler that will be invoked every time the connection is established again after a disconnection.
+* ``maxAttempts``: The maximum number of attempts that will be performed per RPC operation. A negative value implies infinite retries. The default value is 5.
+
+This can be used in the following way:
 
 .. container:: codeset
 
     .. sourcecode:: kotlin
 
-       val gracefulReconnect = GracefulReconnect(onDisconnect={/*insert disconnect handling*/}, onReconnect{/*insert reconnect handling*/})
+       val gracefulReconnect = GracefulReconnect(onDisconnect={/*insert disconnect handling*/}, onReconnect{/*insert reconnect handling*/}, maxAttempts = 3)
        val cordaClient = CordaRPCClient(nodeRpcAddress)
        val cordaRpcOps = cordaClient.start(rpcUserName, rpcUserPassword, gracefulReconnect = gracefulReconnect).proxy
 
@@ -392,7 +398,7 @@ You can enable this graceful form of reconnection by using the ``gracefulReconne
         }
 
         void method() {
-            GracefulReconnect gracefulReconnect = new GracefulReconnect(this::onDisconnect, this::onReconnect);
+            GracefulReconnect gracefulReconnect = new GracefulReconnect(this::onDisconnect, this::onReconnect, 3);
             CordaRPCClient cordaClient = new CordaRPCClient(nodeRpcAddress);
             CordaRPCConnection cordaRpcOps = cordaClient.start(rpcUserName, rpcUserPassword, gracefulReconnect);
         }

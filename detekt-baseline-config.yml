@@ -1,0 +1,6 @@
+#Detekt 1.0.1
+#Gradle task detektBaseline would always fail due to the fact that the existing baseline would not be taken into
+#account so existing issues flare up. We set the max issues allowed to a high number to force detekt to pass when
+#generating a baseline.
+build:
+  maxIssues: 9999999

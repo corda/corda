@@ -10,8 +10,17 @@ import java.time.ZoneOffset
 /**
  * A serializer for [OffsetTime] that uses a proxy object to write out the time and zone offset.
  */
-class OffsetTimeSerializer(factory: SerializerFactory) : CustomSerializer.Proxy<OffsetTime, OffsetTimeSerializer.OffsetTimeProxy>(OffsetTime::class.java, OffsetTimeProxy::class.java, factory) {
-    override val additionalSerializers: Iterable<CustomSerializer<out Any>> = listOf(LocalTimeSerializer(factory), ZoneIdSerializer(factory))
+class OffsetTimeSerializer(
+        factory: SerializerFactory
+) : CustomSerializer.Proxy<OffsetTime, OffsetTimeSerializer.OffsetTimeProxy>(
+        OffsetTime::class.java,
+        OffsetTimeProxy::class.java,
+        factory
+) {
+    override val additionalSerializers: Iterable<CustomSerializer<out Any>> = listOf(
+            LocalTimeSerializer(factory),
+            ZoneIdSerializer(factory)
+    )
 
     override fun toProxy(obj: OffsetTime): OffsetTimeProxy = OffsetTimeProxy(obj.toLocalTime(), obj.offset)
 

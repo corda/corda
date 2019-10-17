@@ -11,7 +11,13 @@ import net.corda.serialization.internal.model.LocalTypeInformation
 import java.io.NotSerializableException
 
 @KeepForDJVM
-class ThrowableSerializer(factory: LocalSerializerFactory) : CustomSerializer.Proxy<Throwable, ThrowableSerializer.ThrowableProxy>(Throwable::class.java, ThrowableProxy::class.java, factory) {
+class ThrowableSerializer(
+        factory: LocalSerializerFactory
+) : CustomSerializer.Proxy<Throwable, ThrowableSerializer.ThrowableProxy>(
+        Throwable::class.java,
+        ThrowableProxy::class.java,
+        factory
+) {
 
     companion object {
         private val logger = contextLogger()

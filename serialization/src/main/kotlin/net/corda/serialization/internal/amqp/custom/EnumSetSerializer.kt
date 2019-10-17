@@ -10,7 +10,13 @@ import java.util.*
 /**
  * A serializer that writes out an [EnumSet] as a type, plus list of instances in the set.
  */
-class EnumSetSerializer(factory: SerializerFactory) : CustomSerializer.Proxy<EnumSet<*>, EnumSetSerializer.EnumSetProxy>(EnumSet::class.java, EnumSetProxy::class.java, factory) {
+class EnumSetSerializer(
+        factory: SerializerFactory
+) : CustomSerializer.Proxy<EnumSet<*>, EnumSetSerializer.EnumSetProxy>(
+        EnumSet::class.java,
+        EnumSetProxy::class.java,
+        factory
+) {
     override val additionalSerializers: Iterable<CustomSerializer<out Any>> = listOf(ClassSerializer(factory))
 
     override fun toProxy(obj: EnumSet<*>): EnumSetProxy = EnumSetProxy(elementType(obj), obj.toList())
