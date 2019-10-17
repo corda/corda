@@ -160,7 +160,7 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
      */
     fun requestTreatment(flowFiber: FlowFiber, currentState: StateMachineState, errors: List<Throwable>) {
         // Only treat flows that are not already in the hospital
-        if (flowsInHospital.putIfAbsent(flowFiber.id, flowFiber) == null) {
+        if (!currentState.isRemoved && flowsInHospital.putIfAbsent(flowFiber.id, flowFiber) == null) {
             admit(flowFiber, currentState, errors)
         }
     }

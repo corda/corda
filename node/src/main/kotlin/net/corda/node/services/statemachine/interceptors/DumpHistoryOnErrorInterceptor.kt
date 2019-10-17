@@ -35,17 +35,21 @@ class DumpHistoryOnErrorInterceptor(val delegate: TransitionExecutor) : Transiti
             actionExecutor: ActionExecutor
     ): Pair<FlowContinuation, StateMachineState> {
         val (continuation, nextState) = delegate.executeTransition(fiber, previousState, event, transition, actionExecutor)
-        val transitionRecord = TransitionDiagnosticRecord(Instant.now(), fiber.id, previousState, nextState, event, transition, continuation)
-        val record = records.compute(fiber.id) { _, record ->
-            (record ?: ArrayList()).apply { add(transitionRecord) }
-        }
 
-        // Just if we decide to propagate, and not if just on the way to the hospital. Only log at debug level here - the flow transition
-        // information is often unhelpful in the logs, and the actual cause of the problem will be logged elsewhere.
-        if (nextState.checkpoint.errorState is ErrorState.Errored && nextState.checkpoint.errorState.propagating) {
-            log.warn("Flow ${fiber.id} errored, dumping all transitions:\n${record!!.joinToString("\n")}")
-            for (error in nextState.checkpoint.errorState.errors) {
-                log.warn("Flow ${fiber.id} error", error.exception)
+        if (!previousState.isRemoved) {
+            val transitionRecord =
+                TransitionDiagnosticRecord(Instant.now(), fiber.id, previousState, nextState, event, transition, continuation)
+            val record = records.compute(fiber.id) { _, record ->
+                (record ?: ArrayList()).apply { add(transitionRecord) }
+            }
+
+            // Just if we decide to propagate, and not if just on the way to the hospital. Only log at debug level here - the flow transition
+            // information is often unhelpful in the logs, and the actual cause of the problem will be logged elsewhere.
+            if (nextState.checkpoint.errorState is ErrorState.Errored && nextState.checkpoint.errorState.propagating) {
+                log.warn("Flow ${fiber.id} errored, dumping all transitions:\n${record!!.joinToString("\n")}")
+                for (error in nextState.checkpoint.errorState.errors) {
+                    log.warn("Flow ${fiber.id} error", error.exception)
+                }
             }
         }
 
