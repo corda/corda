@@ -29,9 +29,9 @@ public class ImageBuilding implements Plugin<Project> {
         registryCredentialsForPush.getPassword().set(password);
 
         DockerPullImage pullTask = project.getTasks().create("pullBaseImage", DockerPullImage.class, dockerPullImage -> {
+            dockerPullImage.doFirst(task -> dockerPullImage.setRegistryCredentials(registryCredentialsForPush));
             dockerPullImage.getRepository().set("stefanotestingcr.azurecr.io/buildbase");
             dockerPullImage.getTag().set("latest");
-            dockerPullImage.setRegistryCredentials(registryCredentialsForPush);
         });
 
 
