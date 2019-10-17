@@ -116,13 +116,7 @@ public class KubesTest extends DefaultTask {
             boolean printOutput,
             int numberOfRetries
     ) {
-        return executorService.submit(new Callable<KubePodResult>() {
-            @Override
-            public KubePodResult call() throws Exception {
-                PersistentVolumeClaim pvc = createPvc(client, podName);
-                return buildRunPodWithRetriesOrThrow(client, namespace, pvc, numberOfPods, podIdx, podName, printOutput, numberOfRetries);
-            }
-        });
+        return executorService.submit(() -> buildRunPodWithRetriesOrThrow(client, namespace, numberOfPods, podIdx, podName, printOutput, numberOfRetries));
     }
 
     private static void addShutdownHook(Runnable hook) {
@@ -153,7 +147,6 @@ public class KubesTest extends DefaultTask {
     private KubePodResult buildRunPodWithRetriesOrThrow(
             KubernetesClient client,
             String namespace,
-            PersistentVolumeClaim pvc,
             int numberOfPods,
             int podIdx,
             String podName,
@@ -181,7 +174,7 @@ public class KubesTest extends DefaultTask {
 
                 // recreate and run
                 getProject().getLogger().lifecycle("creating pod: " + podName);
-                Pod createdPod = client.pods().inNamespace(namespace).create(buildPodRequest(podName, pvc));
+                Pod createdPod = client.pods().inNamespace(namespace).create(buildPodRequest(podName));
                 getProject().getLogger().lifecycle("scheduled pod: " + podName);
 
                 attachStatusListenerToPod(client, createdPod);
@@ -211,7 +204,7 @@ public class KubesTest extends DefaultTask {
         }
     }
 
-    private Pod buildPodRequest(String podName, PersistentVolumeClaim pvc) {
+    private Pod buildPodRequest(String podName) {
         return new PodBuilder()
                 .withNewMetadata().withName(podName).endMetadata()
 
@@ -225,12 +218,12 @@ public class KubesTest extends DefaultTask {
                 .endHostPath()
                 .endVolume()
 
-                .addNewVolume()
-                .withName("testruns")
-                .withNewPersistentVolumeClaim()
-                .withClaimName(pvc.getMetadata().getName())
-                .endPersistentVolumeClaim()
-                .endVolume()
+//                .addNewVolume()
+//                .withName("testruns")
+//                .withNewPersistentVolumeClaim()
+//                .withClaimName(pvc.getMetadata().getName())
+//                .endPersistentVolumeClaim()
+//                .endVolume()
 
                 .addNewContainer()
                 .withImage(dockerTag)
@@ -248,7 +241,7 @@ public class KubesTest extends DefaultTask {
                 .addToRequests("memory", new Quantity(memoryGbPerFork.toString() + "Gi"))
                 .endResources()
                 .addNewVolumeMount().withName("gradlecache").withMountPath("/tmp/gradle").endVolumeMount()
-                .addNewVolumeMount().withName("testruns").withMountPath(TEST_RUN_DIR).endVolumeMount()
+//                .addNewVolumeMount().withName("testruns").withMountPath(TEST_RUN_DIR).endVolumeMount()
                 .endContainer()
 
                 .addNewImagePullSecret(REGISTRY_CREDENTIALS_SECRET_NAME)
