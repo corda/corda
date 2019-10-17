@@ -25,7 +25,7 @@ public class ImageBuilding implements Plugin<Project> {
 
         DockerRegistryCredentials registryCredentialsForPush = new DockerRegistryCredentials(project.getObjects());
         registryCredentialsForPush.getUsername().set("stefanotestingcr");
-        String password = System.getProperty("docker.push.password").isEmpty() ? System.getProperty("docker.push.password") : "";
+        String password = !System.getProperty("docker.push.password").isEmpty() ? System.getProperty("docker.push.password") : "";
         registryCredentialsForPush.getPassword().set(password);
 
         DockerPullImage pullTask = project.getTasks().create("pullBaseImage", DockerPullImage.class, dockerPullImage -> {
@@ -44,7 +44,7 @@ public class ImageBuilding implements Plugin<Project> {
 
         DockerCreateContainer createBuildContainer = project.getTasks().create("createBuildContainer", DockerCreateContainer.class,
                 dockerCreateContainer -> {
-                    File baseWorkingDir = new File(System.getProperty("docker.work.dir").isEmpty() ?
+                    File baseWorkingDir = new File(!System.getProperty("docker.work.dir").isEmpty() ?
                             System.getProperty("docker.work.dir") : System.getProperty("java.io.tmpdir"));
                     File gradleDir = new File(baseWorkingDir, "gradle");
                     File mavenDir = new File(baseWorkingDir, "maven");
@@ -101,7 +101,7 @@ public class ImageBuilding implements Plugin<Project> {
         DockerTagImage tagBuildImageResult = project.getTasks().create("tagBuildImageResult", DockerTagImage.class, dockerTagImage -> {
             dockerTagImage.dependsOn(commitBuildImageResult);
             dockerTagImage.getImageId().set(commitBuildImageResult.getImageId());
-            dockerTagImage.getTag().set(System.getProperty("docker.provided.tag").isEmpty() ? System.getProperty("docker.provided.tag") :
+            dockerTagImage.getTag().set(!System.getProperty("docker.provided.tag").isEmpty() ? System.getProperty("docker.provided.tag") :
                     "${UUID.randomUUID().toString().toLowerCase().subSequence(0, 12)}");
             dockerTagImage.getRepository().set(registryName);
         });
