@@ -11,6 +11,7 @@ import net.corda.client.jackson.JacksonSupport
 import net.corda.client.jackson.StringToMethodCallParser
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCClientConfiguration
+import net.corda.client.rpc.CordaRPCConnection
 import net.corda.client.rpc.GracefulReconnect
 import net.corda.client.rpc.PermissionException
 import net.corda.client.rpc.notUsed
@@ -19,11 +20,21 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
-import net.corda.core.internal.*
+import net.corda.core.internal.Emoji
+import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.concurrent.openFuture
+import net.corda.core.internal.createDirectories
+import net.corda.core.internal.div
 import net.corda.core.internal.messaging.InternalCordaRPCOps
-import net.corda.core.messaging.*
+import net.corda.core.internal.packageName_
+import net.corda.core.internal.rootCause
+import net.corda.core.internal.uncheckedCast
+import net.corda.core.messaging.CordaRPCOps
+import net.corda.core.messaging.DataFeed
+import net.corda.core.messaging.FlowProgressHandle
+import net.corda.core.messaging.StateMachineUpdate
+import net.corda.core.messaging.pendingFlowsCount
 import net.corda.tools.shell.utlities.ANSIProgressRenderer
 import net.corda.tools.shell.utlities.StdoutANSIProgressRenderer
 import org.crsh.command.InvocationContext
@@ -52,12 +63,17 @@ import java.io.FileDescriptor
 import java.io.FileInputStream
 import java.io.InputStream
 import java.io.PrintWriter
-import java.lang.reflect.*
+import java.lang.reflect.GenericArrayType
+import java.lang.reflect.InvocationTargetException
+import java.lang.reflect.ParameterizedType
+import java.lang.reflect.Type
+import java.lang.reflect.UndeclaredThrowableException
 import java.nio.file.Path
 import java.util.*
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.Future
+import kotlin.collections.ArrayList
 import kotlin.concurrent.thread
 
 // TODO: Add command history.
@@ -76,7 +92,7 @@ object InteractiveShell {
     private val log = LoggerFactory.getLogger(javaClass)
     private lateinit var rpcOps: (username: String, password: String) -> InternalCordaRPCOps
     private lateinit var ops: InternalCordaRPCOps
-    private lateinit var rpcConn: AutoCloseable
+    private lateinit var rpcConn: CordaRPCConnection
     private var shell: Shell? = null
     private var classLoader: ClassLoader? = null
     private lateinit var shellConfiguration: ShellConfiguration
@@ -131,13 +147,41 @@ object InteractiveShell {
             }
         }
 
-        ExternalResolver.INSTANCE.addCommand("output-format", "Commands to inspect and update the output format.", OutputFormatCommand::class.java)
-        ExternalResolver.INSTANCE.addCommand("run", "Runs a method from the CordaRPCOps interface on the node.", RunShellCommand::class.java)
-        ExternalResolver.INSTANCE.addCommand("flow", "Commands to work with flows. Flows are how you can change the ledger.", FlowShellCommand::class.java)
-        ExternalResolver.INSTANCE.addCommand("start", "An alias for 'flow start'", StartShellCommand::class.java)
-        ExternalResolver.INSTANCE.addCommand("hashLookup", "Checks if a transaction with matching Id hash exists.", HashLookupShellCommand::class.java)
-        ExternalResolver.INSTANCE.addCommand("attachments", "Commands to extract information about attachments stored within the node", AttachmentShellCommand::class.java)
-        ExternalResolver.INSTANCE.addCommand("checkpoints", "Commands to extract information about checkpoints stored within the node", CheckpointShellCommand::class.java)
+        ExternalResolver.INSTANCE.addCommand(
+                "output-format",
+                "Commands to inspect and update the output format.",
+                OutputFormatCommand::class.java
+        )
+        ExternalResolver.INSTANCE.addCommand(
+                "run",
+                "Runs a method from the CordaRPCOps interface on the node.",
+                RunShellCommand::class.java
+        )
+        ExternalResolver.INSTANCE.addCommand(
+                "flow",
+                "Commands to work with flows. Flows are how you can change the ledger.",
+                FlowShellCommand::class.java
+        )
+        ExternalResolver.INSTANCE.addCommand(
+                "start",
+                "An alias for 'flow start'",
+                StartShellCommand::class.java
+        )
+        ExternalResolver.INSTANCE.addCommand(
+                "hashLookup",
+                "Checks if a transaction with matching Id hash exists.",
+                HashLookupShellCommand::class.java
+        )
+        ExternalResolver.INSTANCE.addCommand(
+                "attachments",
+                "Commands to extract information about attachments stored within the node",
+                AttachmentShellCommand::class.java
+        )
+        ExternalResolver.INSTANCE.addCommand(
+                "checkpoints",
+                "Commands to extract information about checkpoints stored within the node",
+                CheckpointShellCommand::class.java
+        )
         shell = ShellLifecycle(configuration.commandsDirectory).start(config, configuration.user, configuration.password, runSshDaemon)
     }
 
@@ -294,7 +338,12 @@ object InteractiveShell {
         try {
             // Show the progress tracker on the console until the flow completes or is interrupted with a
             // Ctrl-C keypress.
-            val stateObservable = runFlowFromString({ clazz, args -> rpcOps.startTrackedFlowDynamic(clazz, *args) }, inputData, flowClazz, inputObjectMapper)
+            val stateObservable = runFlowFromString(
+                    { clazz, args -> rpcOps.startTrackedFlowDynamic(clazz, *args) },
+                    inputData,
+                    flowClazz,
+                    inputObjectMapper
+            )
 
             latch = CountDownLatch(1)
             ansiProgressRenderer.render(stateObservable, latch::countDown)
@@ -327,7 +376,8 @@ object InteractiveShell {
     }
 
     class NoApplicableConstructor(val errors: List<String>) : CordaException(this.toString()) {
-        override fun toString() = (listOf("No applicable constructor for flow. Problems were:") + errors).joinToString(System.lineSeparator())
+        override fun toString() =
+                (listOf("No applicable constructor for flow. Problems were:") + errors).joinToString(System.lineSeparator())
     }
 
     /**
@@ -386,7 +436,6 @@ object InteractiveShell {
         }
     }
 
-    // TODO: This utility is generally useful and might be better moved to the node class, or an RPC, if we can commit to making it stable API.
     /**
      * Given a [FlowLogic] class and a string in one-line Yaml form, finds an applicable constructor and starts
      * the flow, returning the created flow logic. Useful for lightweight invocation where text is preferable
@@ -515,7 +564,7 @@ object InteractiveShell {
             out.println("Please use the 'flow' command to interact with flows rather than the 'run' command.", Color.yellow)
             return null
         } else if (cmd.substringAfter(" ").trim().equals("gracefulShutdown", ignoreCase = true)) {
-            return InteractiveShell.gracefulShutdown(out, cordaRPCOps)
+            return gracefulShutdown(out, cordaRPCOps)
         }
 
         var result: Any? = null
@@ -525,7 +574,7 @@ object InteractiveShell {
             val call = parser.parse(cordaRPCOps, cmd)
             result = call.call()
             var subscription : Subscriber<*>? = null
-            if (result != null && result !== kotlin.Unit && result !is Void) {
+            if (result != null && result !== Unit && result !is Void) {
                 val (subs, future) = printAndFollowRPCResponse(result, out, outputFormat)
                 subscription = subs
                 result = future
@@ -568,60 +617,47 @@ object InteractiveShell {
             userSessionOut.flush()
         }
 
-        var isShuttingDown = false
         try {
-            display { println("Orchestrating a clean shutdown, press CTRL+C to cancel...") }
-            isShuttingDown = true
             display {
+                println("Orchestrating a clean shutdown, press CTRL+C to cancel...")
                 println("...enabling draining mode")
                 println("...waiting for in-flight flows to be completed")
             }
-            cordaRPCOps.terminate(true)
 
             val latch = CountDownLatch(1)
             @Suppress("DEPRECATION")
-            cordaRPCOps.pendingFlowsCount().updates.doOnError { error ->
-                log.error(error.message)
-                throw error
-            }.doAfterTerminate(latch::countDown).subscribe(
-                    // For each update.
-                    { (first, second) -> display { println("...remaining: $first / $second") } },
-                    // On error.
-                    { error ->
-                        if (!isShuttingDown) {
-                            display { println("RPC failed: ${error.rootCause}", Color.red) }
-                        }
-                    },
-                    // When completed.
-                    {
-                        rpcConn.close()
-                        // This will only show up in the standalone Shell, because the embedded one is killed as part of a node's shutdown.
-                        display { println("...done, quitting the shell now.") }
-                        onExit.invoke()
-                    })
-            while (!Thread.currentThread().isInterrupted) {
-                try {
-                    latch.await()
-                    break
-                } catch (e: InterruptedException) {
-                    try {
-                        cordaRPCOps.setFlowsDrainingModeEnabled(false)
-                        display { println("...cancelled clean shutdown.") }
-                    } finally {
-                        Thread.currentThread().interrupt()
-                        break
-                    }
-                }
-            }
-        } catch (e: StringToMethodCallParser.UnparseableCallException) {
-            display {
-                println(e.message, Color.red)
-                println("Please try 'man run' to learn what syntax is acceptable")
+            val subscription = cordaRPCOps.pendingFlowsCount().updates
+                    .doAfterTerminate(latch::countDown)
+                    .subscribe(
+                            // For each update.
+                            { (completed, total) -> display { println("...remaining: $completed / $total") } },
+                            // On error.
+                            {
+                                log.error(it.message)
+                                throw it
+                            },
+                            // When completed.
+                            {
+                                // This will only show up in the standalone Shell, because the embedded one
+                                // is killed as part of a node's shutdown.
+                                display { println("...done, quitting the shell now.") }
+                            }
+                    )
+            cordaRPCOps.terminate(true)
+
+            try {
+                latch.await()
+                // Unsubscribe or we hold up the shutdown
+                subscription.unsubscribe()
+                rpcConn.forceClose()
+                onExit.invoke()
+            } catch (e: InterruptedException) {
+                // Cancelled whilst draining flows.  So let's carry on from here
+                cordaRPCOps.setFlowsDrainingModeEnabled(false)
+                display { println("...cancelled clean shutdown.") }
             }
         } catch (e: Exception) {
-            if (!isShuttingDown) {
-                display { println("RPC failed: ${e.rootCause}", Color.red) }
-            }
+            display { println("RPC failed: ${e.rootCause}", Color.red) }
         } finally {
             InputStreamSerializer.invokeContext = null
             InputStreamDeserializer.closeAll()

@@ -161,7 +161,6 @@
     <ID>ComplexMethod:IRS.kt$InterestRateSwap.FloatingLeg$override fun equals(other: Any?): Boolean</ID>
     <ID>ComplexMethod:InteractiveShell.kt$InteractiveShell$ @JvmStatic fun runFlowByNameFragment(nameFragment: String, inputData: String, output: RenderPrintWriter, rpcOps: CordaRPCOps, ansiProgressRenderer: ANSIProgressRenderer, inputObjectMapper: ObjectMapper = createYamlInputMapper(rpcOps))</ID>
     <ID>ComplexMethod:InteractiveShell.kt$InteractiveShell$ private fun maybeAbbreviateGenericType(type: Type, extraRecognisedPackage: String): String</ID>
-    <ID>ComplexMethod:InteractiveShell.kt$InteractiveShell$@JvmStatic fun gracefulShutdown(userSessionOut: RenderPrintWriter, cordaRPCOps: CordaRPCOps)</ID>
     <ID>ComplexMethod:InteractiveShell.kt$InteractiveShell$@JvmStatic fun runRPCFromString(input: List&lt;String&gt;, out: RenderPrintWriter, context: InvocationContext&lt;out Any&gt;, cordaRPCOps: CordaRPCOps, inputObjectMapper: ObjectMapper): Any?</ID>
     <ID>ComplexMethod:Kryo.kt$ImmutableClassSerializer$override fun read(kryo: Kryo, input: Input, type: Class&lt;T&gt;): T</ID>
     <ID>ComplexMethod:Kryo.kt$ImmutableClassSerializer$override fun write(kryo: Kryo, output: Output, obj: T)</ID>
@@ -392,7 +391,6 @@
     <ID>ForbiddenComment:InteractiveShell.kt$// TODO: Resurrect or reimplement the mail plugin.</ID>
     <ID>ForbiddenComment:InteractiveShell.kt$// TODO: Review or fix the JVM commands which have bitrotted and some are useless.</ID>
     <ID>ForbiddenComment:InteractiveShell.kt$InteractiveShell$// TODO: A default renderer could be used, instead of an object mapper. See: http://www.crashub.org/1.3/reference.html#_renderers</ID>
-    <ID>ForbiddenComment:InteractiveShell.kt$InteractiveShell$// TODO: This utility is generally useful and might be better moved to the node class, or an RPC, if we can commit to making it stable API.</ID>
     <ID>ForbiddenComment:InternalUtils.kt$// TODO: Add inline back when a new Kotlin version is released and check if the java.lang.VerifyError</ID>
     <ID>ForbiddenComment:InternalUtils.kt$// TODO: Currently the certificate revocation status is not handled here. Nowhere in the code the second parameter is used. Consider adding the support in the future.</ID>
     <ID>ForbiddenComment:IrsDemoClientApi.kt$IRSDemoClientApi$// TODO: Add uploading of files to the HTTP API</ID>
@@ -1320,11 +1318,8 @@
     <ID>MaxLineLength:AMQPClientSerializationScheme.kt$AMQPClientSerializationScheme.Companion$fun createSerializationEnv(classLoader: ClassLoader? = null, customSerializers: Set&lt;SerializationCustomSerializer&lt;*, *&gt;&gt; = emptySet(), serializationWhitelists: Set&lt;SerializationWhitelist&gt; = emptySet(), serializerFactoriesForContexts: MutableMap&lt;SerializationFactoryCacheKey, SerializerFactory&gt; = AccessOrderLinkedHashMap&lt;SerializationFactoryCacheKey, SerializerFactory&gt;(128).toSynchronised()): SerializationEnvironment</ID>
     <ID>MaxLineLength:AMQPClientSerializationScheme.kt$AMQPClientSerializationScheme.Companion$nodeSerializationEnv = createSerializationEnv(classLoader, customSerializers, serializationWhitelists, serializerFactoriesForContexts)</ID>
     <ID>MaxLineLength:AMQPClientSerializationScheme.kt$AMQPClientSerializationScheme.Companion$registerScheme(AMQPClientSerializationScheme(customSerializers, serializationWhitelists, serializerFactoriesForContexts))</ID>
-    <ID>MaxLineLength:AMQPSerializationScheme.kt$AbstractAMQPSerializationScheme$@DeleteForDJVM constructor(cordapps: List&lt;Cordapp&gt;) : this(cordapps.customSerializers, cordapps.serializationWhitelists, AccessOrderLinkedHashMap&lt;SerializationFactoryCacheKey, SerializerFactory&gt;(128).toSynchronised())</ID>
-    <ID>MaxLineLength:AMQPSerializationScheme.kt$AbstractAMQPSerializationScheme$private</ID>
     <ID>MaxLineLength:AMQPSerializationScheme.kt$AbstractAMQPSerializationScheme$val key = SerializationFactoryCacheKey(context.whitelist, context.deserializationClassLoader, context.preventDataLoss, context.customSerializers)</ID>
     <ID>MaxLineLength:AMQPSerializationScheme.kt$AbstractAMQPSerializationScheme${ // This is a hack introduced in version 3 to fix a spring boot issue - CORDA-1747. // It breaks the shell because it overwrites the CordappClassloader with the system classloader that doesn't know about any CorDapps. // In case a spring boot serialization issue with generics is found, a better solution needs to be found to address it. // var contextToUse = context // if (context.useCase == SerializationContext.UseCase.RPCClient) { // contextToUse = context.withClassLoader(getContextClassLoader()) // } val serializerFactory = getSerializerFactory(context) return DeserializationInput(serializerFactory).deserialize(byteSequence, clazz, context) }</ID>
-    <ID>MaxLineLength:AMQPSerializationScheme.kt$AbstractAMQPSerializationScheme${ with(factory) { register(publicKeySerializer) register(net.corda.serialization.internal.amqp.custom.PrivateKeySerializer) register(net.corda.serialization.internal.amqp.custom.ThrowableSerializer(this)) register(net.corda.serialization.internal.amqp.custom.BigDecimalSerializer) register(net.corda.serialization.internal.amqp.custom.BigIntegerSerializer) register(net.corda.serialization.internal.amqp.custom.CurrencySerializer) register(net.corda.serialization.internal.amqp.custom.OpaqueBytesSubSequenceSerializer(this)) register(net.corda.serialization.internal.amqp.custom.InstantSerializer(this)) register(net.corda.serialization.internal.amqp.custom.DurationSerializer(this)) register(net.corda.serialization.internal.amqp.custom.LocalDateSerializer(this)) register(net.corda.serialization.internal.amqp.custom.LocalDateTimeSerializer(this)) register(net.corda.serialization.internal.amqp.custom.LocalTimeSerializer(this)) register(net.corda.serialization.internal.amqp.custom.ZonedDateTimeSerializer(this)) register(net.corda.serialization.internal.amqp.custom.ZoneIdSerializer(this)) register(net.corda.serialization.internal.amqp.custom.OffsetTimeSerializer(this)) register(net.corda.serialization.internal.amqp.custom.OffsetDateTimeSerializer(this)) register(net.corda.serialization.internal.amqp.custom.OptionalSerializer(this)) register(net.corda.serialization.internal.amqp.custom.YearSerializer(this)) register(net.corda.serialization.internal.amqp.custom.YearMonthSerializer(this)) register(net.corda.serialization.internal.amqp.custom.MonthDaySerializer(this)) register(net.corda.serialization.internal.amqp.custom.PeriodSerializer(this)) register(net.corda.serialization.internal.amqp.custom.ClassSerializer(this)) register(net.corda.serialization.internal.amqp.custom.X509CertificateSerializer) register(net.corda.serialization.internal.amqp.custom.X509CRLSerializer) register(net.corda.serialization.internal.amqp.custom.CertPathSerializer(this)) register(net.corda.serialization.internal.amqp.custom.StringBufferSerializer) register(net.corda.serialization.internal.amqp.custom.InputStreamSerializer) register(net.corda.serialization.internal.amqp.custom.BitSetSerializer(this)) register(net.corda.serialization.internal.amqp.custom.EnumSetSerializer(this)) register(net.corda.serialization.internal.amqp.custom.ContractAttachmentSerializer(this)) registerNonDeterministicSerializers(factory) } // This step is registering custom serializers, which have been added after node initialisation (i.e. via attachments during transaction verification). // Note: the order between the registration of customSerializers and cordappCustomSerializers must be preserved as-is. The reason is the following: // Currently, the serialization infrastructure does not support multiple versions of a class (the first one that is registered dominates). // As a result, when inside a context with attachments class loader, we prioritize serializers loaded on-demand from attachments to serializers that had been // loaded during node initialisation, by scanning the cordapps folder. context.customSerializers.forEach { customSerializer -&gt; factory.registerExternal(CorDappCustomSerializer(customSerializer, factory)) } cordappCustomSerializers.forEach { customSerializer -&gt; factory.registerExternal(CorDappCustomSerializer(customSerializer, factory)) } context.properties[ContextPropertyKeys.SERIALIZERS]?.apply { uncheckedCast&lt;Any, List&lt;CustomSerializer&lt;out Any&gt;&gt;&gt;(this).forEach { factory.register(it) } } }</ID>
     <ID>MaxLineLength:AMQPSerializerFactories.kt$ fun createClassCarpenter(context: SerializationContext): ClassCarpenter</ID>
     <ID>MaxLineLength:AMQPServer.kt$AMQPServer$server.group(bossGroup, workerGroup).channel(NioServerSocketChannel::class.java).option(ChannelOption.SO_BACKLOG, 100).handler(LoggingHandler(LogLevel.INFO)).childHandler(ServerChannelInitializer(this))</ID>
     <ID>MaxLineLength:AMQPServer.kt$AMQPServer$val channelFuture = server.bind(hostName, port).sync() // block/throw here as better to know we failed to claim port than carry on</ID>
@@ -1541,7 +1536,6 @@
     <ID>MaxLineLength:BaseTransactions.kt$FullTransaction$"Notary ($notaryParty) specified by the transaction is not on the network parameter whitelist: [${notaryWhitelist.joinToString()}]"</ID>
     <ID>MaxLineLength:BaseTransactions.kt$FullTransaction$/** * Network parameters that were in force when this transaction was created. Resolved from the hash of network parameters on the corresponding * wire transaction. */ abstract val networkParameters: NetworkParameters?</ID>
     <ID>MaxLineLength:BasicHSMKeyManagementService.kt$BasicHSMKeyManagementService$require(it.private is AliasPrivateKey) { "${this.javaClass.name} supports AliasPrivateKeys only, but ${it.private.algorithm} key was found" }</ID>
-    <ID>MaxLineLength:BitSetSerializer.kt$BitSetSerializer : Proxy</ID>
     <ID>MaxLineLength:BlobInspector.kt$BlobInspector$@Option(names = ["--input-format"], paramLabel = "type", description = ["Input format. If the file can't be decoded with the given value it's auto-detected, so you should never normally need to specify this. Possible values: [BINARY, HEX, BASE64]"])</ID>
     <ID>MaxLineLength:BootTests.kt$BootTests$val logFile = logFolder.list { it.filter { a -&gt; a.isRegularFile() &amp;&amp; a.fileName.toString().startsWith("node") }.findFirst().get() }</ID>
     <ID>MaxLineLength:BootstrapperView.kt$BootstrapperView$return Pair(mapOf(Constants.REGION_ARG_NAME to ChoiceDialog&lt;Region&gt;(Region.EUROPE_WEST, Region.values().toList().sortedBy { it.name() }).showAndWait().get().name()), networkName1)</ID>
@@ -1898,8 +1892,6 @@
     <ID>MaxLineLength:ConstraintsUtils.kt$input.isAutomaticHashConstraint() || output.isAutomaticHashConstraint() -&gt; throw IllegalArgumentException("Illegal constraint: AutomaticHashConstraint.")</ID>
     <ID>MaxLineLength:ConstraintsUtils.kt$when { // These branches should not happen, as this has been already checked. input is AutomaticPlaceholderConstraint || output is AutomaticPlaceholderConstraint -&gt; throw IllegalArgumentException("Illegal constraint: AutomaticPlaceholderConstraint.") input.isAutomaticHashConstraint() || output.isAutomaticHashConstraint() -&gt; throw IllegalArgumentException("Illegal constraint: AutomaticHashConstraint.") // Transition to the same constraint. input == output -&gt; true // You can't transition from the AlwaysAcceptAttachmentConstraint to anything else, as it could hide something illegal. input is AlwaysAcceptAttachmentConstraint &amp;&amp; output !is AlwaysAcceptAttachmentConstraint -&gt; false // Nothing can be migrated from the HashConstraint except a HashConstraint with the same Hash. (This check is redundant, but added for clarity) input is HashAttachmentConstraint &amp;&amp; output is HashAttachmentConstraint -&gt; input == output // Anything (except the AlwaysAcceptAttachmentConstraint) can be transformed to a HashAttachmentConstraint. input !is HashAttachmentConstraint &amp;&amp; output is HashAttachmentConstraint -&gt; true // The SignatureAttachmentConstraint allows migration from a Signature constraint with the same key. // TODO - we don't support currently third party signers. When we do, the output key will have to be stronger then the input key. input is SignatureAttachmentConstraint &amp;&amp; output is SignatureAttachmentConstraint -&gt; input.key == output.key // HashAttachmentConstraint can be transformed to a SignatureAttachmentConstraint when hash constraint verification checking disabled. HashAttachmentConstraint.disableHashConstraints &amp;&amp; input is HashAttachmentConstraint &amp;&amp; output is SignatureAttachmentConstraint -&gt; true // You can transition from the WhitelistConstraint to the SignatureConstraint only if all signers of the JAR are required to sign in the future. input is WhitelistedByZoneAttachmentConstraint &amp;&amp; output is SignatureAttachmentConstraint -&gt; attachment.signerKeys.isNotEmpty() &amp;&amp; output.key.keys.containsAll(attachment.signerKeys) else -&gt; false }</ID>
     <ID>MaxLineLength:ContractAttachment.kt$ContractAttachment$return "ContractAttachment(attachment=${attachment.id}, contracts='$allContracts', uploader='$uploader', signed='$isSigned', version='$version')"</ID>
-    <ID>MaxLineLength:ContractAttachmentSerializer.kt$ContractAttachmentSerializer$return ContractAttachmentProxy(GeneratedAttachment(bytes, obj.uploader), obj.contract, obj.additionalContracts, obj.uploader, obj.signerKeys, obj.version)</ID>
-    <ID>MaxLineLength:ContractAttachmentSerializer.kt$ContractAttachmentSerializer.ContractAttachmentProxy$@KeepForDJVM data</ID>
     <ID>MaxLineLength:ContractHierarchyTest.kt$ContractHierarchyTest$PrepareTransaction : FlowLogic</ID>
     <ID>MaxLineLength:ContractHierarchyTest.kt$ContractHierarchyTest$mockNet = InternalMockNetwork(networkSendManuallyPumped = false, threadPerNode = true, cordappsForAllNodes = listOf(enclosedCordapp()))</ID>
     <ID>MaxLineLength:ContractJarTestUtils.kt$ContractJarTestUtils$@JvmOverloads fun makeTestContractJar(workingDir: Path, contractNames: List&lt;String&gt;, signed: Boolean = false, version: Int = 1, generateManifest: Boolean = true, jarFileName : String? = null): Path</ID>
@@ -1961,7 +1953,6 @@
     <ID>MaxLineLength:CordaPersistence.kt$CordaPersistence$error("Was not expecting to find existing database transaction on current strand when setting database: ${Strand.currentStrand()}, $it")</ID>
     <ID>MaxLineLength:CordaPersistence.kt$CordaPersistence$is SchemaManagementException -&gt; throw HibernateSchemaChangeException("Incompatible schema change detected. Please run the node with database.initialiseSchema=true. Reason: ${e.message}", e)</ID>
     <ID>MaxLineLength:CordaPersistence.kt$CordaPersistence$val transaction = contextDatabase.currentOrNew(isolationLevel) // XXX: Does this code really support statement changing the contextDatabase?</ID>
-    <ID>MaxLineLength:CordaRPCClient.kt$CordaRPCClient</ID>
     <ID>MaxLineLength:CordaRPCClientReconnectionTest.kt$CordaRPCClientReconnectionTest$val addresses = listOf(NetworkHostAndPort("localhost", portAllocator.nextPort()), NetworkHostAndPort("localhost", portAllocator.nextPort()))</ID>
     <ID>MaxLineLength:CordaRPCClientTest.kt$CordaRPCClientTest$node.services.startFlow(CashIssueFlow(100.POUNDS, OpaqueBytes.of(1), identity), InvocationContext.shell()).flatMap { it.resultFuture }.getOrThrow()</ID>
     <ID>MaxLineLength:CordaRPCClientTest.kt$CordaRPCClientTest$node.services.startFlow(CashIssueFlow(2000.DOLLARS, OpaqueBytes.of(0), identity), InvocationContext.shell()).flatMap { it.resultFuture }.getOrThrow()</ID>
@@ -1977,11 +1968,6 @@
     <ID>MaxLineLength:CordaRPCOps.kt$CordaRPCOps$fun &lt;T : ContractState&gt; vaultTrackByWithSorting(contractStateType: Class&lt;out T&gt;, criteria: QueryCriteria, sorting: Sort): DataFeed&lt;Vault.Page&lt;T&gt;, Vault.Update&lt;T&gt;&gt;</ID>
     <ID>MaxLineLength:CordaRPCOps.kt$StateMachineInfo$return copy(id = id, flowLogicClassName = flowLogicClassName, initiator = initiator, progressTrackerStepAndUpdates = progressTrackerStepAndUpdates, invocationContext = invocationContext)</ID>
     <ID>MaxLineLength:CordaRPCOps.kt$sorting: Sort = Sort(emptySet())</ID>
-    <ID>MaxLineLength:CordaRPCOpsImpl.kt$CordaRPCOpsImpl$is ConnectException -&gt; throw CordaRuntimeException("There is connection problem to network map. The possible causes are incorrect configuration or network map service being down")</ID>
-    <ID>MaxLineLength:CordaRPCOpsImpl.kt$CordaRPCOpsImpl$override</ID>
-    <ID>MaxLineLength:CordaRPCOpsImpl.kt$CordaRPCOpsImpl$override fun internalFindVerifiedTransaction(txnId: SecureHash): SignedTransaction?</ID>
-    <ID>MaxLineLength:CordaRPCOpsImpl.kt$CordaRPCOpsImpl$return StateMachineInfo(flowLogic.runId, flowLogic.javaClass.name, flowLogic.stateMachine.context.toFlowInitiator(), flowLogic.track(), flowLogic.stateMachine.context)</ID>
-    <ID>MaxLineLength:CordaRPCOpsImpl.kt$CordaRPCOpsImpl${ error -&gt; logger.error("Error while waiting for pending flows to drain in preparation for shutdown. Cause was: ${error.message}", error) }</ID>
     <ID>MaxLineLength:CordaRPCOpsImplTest.kt$CordaRPCOpsImplTest$assertThatCode { rpc.startFlow(::SoftLock, cash.ref, Duration.ofSeconds(1)).returnValue.getOrThrow() }.doesNotThrowAnyException()</ID>
     <ID>MaxLineLength:CordaRPCOpsImplTest.kt$CordaRPCOpsImplTest$val cash = rpc.startFlow(::CashIssueFlow, 10.DOLLARS, issuerRef, notary).returnValue.getOrThrow().stx.tx.outRefsOfType&lt;Cash.State&gt;().single()</ID>
     <ID>MaxLineLength:CordaSSHAuthInfo.kt$CordaSSHAuthInfo : AuthInfo</ID>
@@ -2115,12 +2101,10 @@
     <ID>MaxLineLength:DummyLinearStateSchemaV1.kt$DummyLinearStateSchemaV1.PersistentDummyLinearState$@Table(name = "dummy_linear_states", indexes = [Index(name = "external_id_idx", columnList = "external_id"), Index(name = "uuid_idx", columnList = "uuid")])</ID>
     <ID>MaxLineLength:DummyLinearStateSchemaV2.kt$DummyLinearStateSchemaV2.PersistentDummyLinearState$@CollectionTable(name = "dummy_linear_states_v2_parts", joinColumns = [(JoinColumn(name = "output_index", referencedColumnName = "output_index")), (JoinColumn(name = "transaction_id", referencedColumnName = "transaction_id"))])</ID>
     <ID>MaxLineLength:DumpHistoryOnErrorInterceptor.kt$DumpHistoryOnErrorInterceptor$val transitionRecord = TransitionDiagnosticRecord(Instant.now(), fiber.id, previousState, nextState, event, transition, continuation)</ID>
-    <ID>MaxLineLength:DurationSerializer.kt$DurationSerializer : Proxy</ID>
     <ID>MaxLineLength:E2ETestKeyManagementService.kt$E2ETestKeyManagementService : SingletonSerializeAsTokenKeyManagementServiceInternal</ID>
     <ID>MaxLineLength:EdDSATests.kt$EdDSATests$assertNotEquals(testVectorEd25519ctx.signatureOutputHex, doSign(privateKey, testVectorEd25519ctx.messageToSignHex.hexToByteArray()).toHex().toLowerCase())</ID>
     <ID>MaxLineLength:EnumEvolutionSerializer.kt$EnumEvolutionSerializer$val converted = conversions[enumName] ?: throw AMQPNotSerializableException(type, "No rule to evolve enum constant $type::$enumName")</ID>
     <ID>MaxLineLength:EnumEvolvabilityTests.kt$EnumEvolvabilityTests$assertThatThrownBy { SerializationOutput(sf).serialize(C(RejectMultipleRenameFrom.A)) }.isInstanceOf(NotSerializableException::class.java) .hasToString("Unable to serialize/deserialize net.corda.serialization.internal.amqp.EnumEvolvabilityTests\$RejectMultipleRenameFrom: " + "There are multiple transformations from D, which is not allowed")</ID>
-    <ID>MaxLineLength:EnumSetSerializer.kt$EnumSetSerializer : Proxy</ID>
     <ID>MaxLineLength:ErrorCodeLoggingTests.kt$ErrorCodeLoggingTests$val linesWithErrorCode = logFile.useLines { lines -&gt; lines.filter { line -&gt; line.contains("[errorCode=") }.filter { line -&gt; line.contains("moreInformationAt=https://errors.corda.net/") }.toList() }</ID>
     <ID>MaxLineLength:ErrorCodeLoggingTests.kt$fun NodeHandle.logFile(): File</ID>
     <ID>MaxLineLength:ErrorFlowTransition.kt$ErrorFlowTransition$val (initiatedSessions, newSessions) = bufferErrorMessagesInInitiatingSessions(startingState.checkpoint.sessions, errorMessages)</ID>
@@ -2157,11 +2141,6 @@
     <ID>MaxLineLength:FlowFrameworkPersistenceTests.kt$FlowFrameworkPersistenceTests$assertEquals(payload + 1, secondFlow.getOrThrow().receivedPayload2, "Received payload does not match the expected second value on Node 2")</ID>
     <ID>MaxLineLength:FlowFrameworkPersistenceTests.kt$FlowFrameworkPersistenceTests$assertEquals(payload, secondFlow.getOrThrow().receivedPayload, "Received payload does not match the (restarted) first value on Node 2")</ID>
     <ID>MaxLineLength:FlowFrameworkTests.kt$FlowFrameworkTests$assertThat(receivedSessionMessages).hasSize(1)</ID>
-    <ID>MaxLineLength:FlowFrameworkTests.kt$PingPongFlow$@InitiatingFlow internal</ID>
-    <ID>MaxLineLength:FlowFrameworkTests.kt$SendAndReceiveFlow$@InitiatingFlow internal</ID>
-    <ID>MaxLineLength:FlowFrameworkTests.kt$internal fun errorMessage(errorResponse: FlowException? = null)</ID>
-    <ID>MaxLineLength:FlowFrameworkTests.kt$internal fun sessionConfirm(flowVersion: Int = 1)</ID>
-    <ID>MaxLineLength:FlowFrameworkTests.kt$internal infix fun Pair&lt;Int, SessionMessage&gt;.to(node: TestStartedNode): SessionTransfer</ID>
     <ID>MaxLineLength:FlowLogic.kt$FlowLogic$ @Suspendable @JvmOverloads open fun &lt;R : Any&gt; receiveAll(receiveType: Class&lt;R&gt;, sessions: List&lt;FlowSession&gt;, maySkipCheckpoint: Boolean = false): List&lt;UntrustworthyData&lt;R&gt;&gt;</ID>
     <ID>MaxLineLength:FlowLogic.kt$FlowLogic$ @Suspendable @JvmOverloads open fun receiveAllMap(sessions: Map&lt;FlowSession, Class&lt;out Any&gt;&gt;, maySkipCheckpoint: Boolean = false): Map&lt;FlowSession, UntrustworthyData&lt;Any&gt;&gt;</ID>
     <ID>MaxLineLength:FlowLogic.kt$FlowLogic$?:</ID>
@@ -2369,7 +2348,6 @@
     <ID>MaxLineLength:InstallShellExtensionsParser.kt$InstallShellExtensionsParser : CliWrapperBase</ID>
     <ID>MaxLineLength:InstallShellExtensionsParser.kt$ShellExtensionsGenerator$printWarning("Cannot install shell extension for bash major version earlier than $minSupportedBashVersion. Please upgrade your bash version. Aliases should still work.")</ID>
     <ID>MaxLineLength:InstallShellExtensionsParser.kt$ShellExtensionsGenerator$println("Installation complete, ${parent.alias} is available in bash, but autocompletion was not installed because of an old version of bash.")</ID>
-    <ID>MaxLineLength:InstantSerializer.kt$InstantSerializer : Proxy</ID>
     <ID>MaxLineLength:InteractiveShellIntegrationTest.kt$InteractiveShellIntegrationTest$private</ID>
     <ID>MaxLineLength:InterestSwapRestAPI.kt$InterestRateSwapAPI</ID>
     <ID>MaxLineLength:InternalAccessTestHelpers.kt$fun &lt;T&gt; ifThrowsAppend(strToAppendFn: () -&gt; String, block: () -&gt; T): T</ID>
@@ -2467,9 +2445,6 @@
     <ID>MaxLineLength:ListsSerializationTest.kt$ListsSerializationTest.Companion$val envelope = DeserializationInput(SerializerFactoryBuilder.build(context.whitelist, context.deserializationClassLoader)).getEnvelope(serBytes, context)</ID>
     <ID>MaxLineLength:ListsSerializationTest.kt$internal inline</ID>
     <ID>MaxLineLength:LoadTestConfiguration.kt$RemoteNode</ID>
-    <ID>MaxLineLength:LocalDateSerializer.kt$LocalDateSerializer : Proxy</ID>
-    <ID>MaxLineLength:LocalDateTimeSerializer.kt$LocalDateTimeSerializer : Proxy</ID>
-    <ID>MaxLineLength:LocalDateTimeSerializer.kt$LocalDateTimeSerializer$override val additionalSerializers: Iterable&lt;CustomSerializer&lt;out Any&gt;&gt; = listOf(LocalDateSerializer(factory), LocalTimeSerializer(factory))</ID>
     <ID>MaxLineLength:LocalPropertyInformation.kt$LocalPropertyInformation.CalculatedProperty$data</ID>
     <ID>MaxLineLength:LocalPropertyInformation.kt$LocalPropertyInformation.ConstructorPairedProperty$data</ID>
     <ID>MaxLineLength:LocalPropertyInformation.kt$LocalPropertyInformation.GetterSetterProperty$data</ID>
@@ -2479,9 +2454,6 @@
     <ID>MaxLineLength:LocalSerializerFactory.kt$DefaultLocalSerializerFactory$is LocalTypeInformation.AMap</ID>
     <ID>MaxLineLength:LocalSerializerFactory.kt$DefaultLocalSerializerFactory$private</ID>
     <ID>MaxLineLength:LocalSerializerFactory.kt$DefaultLocalSerializerFactory$private val serializersByActualAndDeclaredType: MutableMap&lt;ActualAndDeclaredType, AMQPSerializer&lt;Any&gt;&gt; = DefaultCacheProvider.createCache()</ID>
-    <ID>MaxLineLength:LocalTimeSerializer.kt$LocalTimeSerializer : Proxy</ID>
-    <ID>MaxLineLength:LocalTimeSerializer.kt$LocalTimeSerializer$override fun fromProxy(proxy: LocalTimeProxy): LocalTime</ID>
-    <ID>MaxLineLength:LocalTimeSerializer.kt$LocalTimeSerializer$override fun toProxy(obj: LocalTime): LocalTimeProxy</ID>
     <ID>MaxLineLength:LocalTypeInformation.kt$LocalTypeInformation.ACollection$data</ID>
     <ID>MaxLineLength:LocalTypeInformation.kt$LocalTypeInformation.AnArray$data</ID>
     <ID>MaxLineLength:LocalTypeInformation.kt$LocalTypeInformation.Singleton$data</ID>
@@ -2968,15 +2940,10 @@
     <ID>MaxLineLength:ObservableUtilities.kt$ @Suppress("UNCHECKED_CAST") fun &lt;K : Any, A : Any, B&gt; ObservableList&lt;out A&gt;.associateByAggregation(toKey: (A) -&gt; K, assemble: (K, A) -&gt; B): ObservableMap&lt;K, ObservableList&lt;B&gt;&gt;</ID>
     <ID>MaxLineLength:ObservableUtilities.kt${ //TODO This is a tactical work round for an issue with SAM conversion (https://youtrack.jetbrains.com/issue/ALL-1552) so that the M10 explorer works. return uncheckedCast(uncheckedCast&lt;Any, ObservableList&lt;A?&gt;&gt;(this).filtered { t -&gt; t != null }) }</ID>
     <ID>MaxLineLength:ObserverNodeTransactionTests.kt$ObserverNodeTransactionTests.StartMessageChainFlow$val txBuilder = TransactionBuilder(notary).withItems(StateAndContract(messageState, MESSAGE_CHAIN_CONTRACT_PROGRAM_ID), txCommand)</ID>
-    <ID>MaxLineLength:OffsetDateTimeSerializer.kt$OffsetDateTimeSerializer : Proxy</ID>
-    <ID>MaxLineLength:OffsetDateTimeSerializer.kt$OffsetDateTimeSerializer$override val additionalSerializers: Iterable&lt;CustomSerializer&lt;out Any&gt;&gt; = listOf(LocalDateTimeSerializer(factory), ZoneIdSerializer(factory))</ID>
-    <ID>MaxLineLength:OffsetTimeSerializer.kt$OffsetTimeSerializer : Proxy</ID>
-    <ID>MaxLineLength:OffsetTimeSerializer.kt$OffsetTimeSerializer$override val additionalSerializers: Iterable&lt;CustomSerializer&lt;out Any&gt;&gt; = listOf(LocalTimeSerializer(factory), ZoneIdSerializer(factory))</ID>
     <ID>MaxLineLength:OnLedgerAsset.kt$OnLedgerAsset.Companion$deriveState: (TransactionState&lt;S&gt;, Amount&lt;Issued&lt;T&gt;&gt;, AbstractParty) -&gt; TransactionState&lt;S&gt;</ID>
     <ID>MaxLineLength:OnLedgerAsset.kt$OnLedgerAsset.Companion$generateMoveCommand: () -&gt; CommandData</ID>
     <ID>MaxLineLength:OpenGammaCordaUtils.kt$ fun InitialMarginTriple.toCordaCompatible()</ID>
     <ID>MaxLineLength:OpenGammaCordaUtils.kt$return MultiCurrencyAmount.of(this.amounts.map { CurrencyAmount.of(Currency.of(it.currency.code).serialize().deserialize(), twoDecimalPlaces((it.amount))) })</ID>
-    <ID>MaxLineLength:OptionalSerializer.kt$OptionalSerializer : Proxy</ID>
     <ID>MaxLineLength:OracleNodeTearOffTests.kt$OracleNodeTearOffTests$TransactionBuilder(DUMMY_NOTARY) .withItems(TransactionState(1000.DOLLARS.CASH issuedBy dummyCashIssuer.party ownedBy alice.party, Cash.PROGRAM_ID, DUMMY_NOTARY))</ID>
     <ID>MaxLineLength:P2PFlowsDrainingModeTest.kt$P2PFlowsDrainingModeTest$nodeA.rpc.hasCancelledDrainingShutdown().doOnError(Throwable::printStackTrace).doOnError { successful = false }.doOnCompleted { successful = true }.doAfterTerminate(latch::countDown).subscribe()</ID>
     <ID>MaxLineLength:P2PFlowsDrainingModeTest.kt$P2PFlowsDrainingModeTest$nodeA.rpc.waitForShutdown().doOnError(Throwable::printStackTrace).doOnError { successful = false }.doOnCompleted(nodeA::stop)</ID>
@@ -3006,7 +2973,6 @@
     <ID>MaxLineLength:Perceivable.kt$fun interest(@Suppress("UNUSED_PARAMETER") amount: BigDecimal, @Suppress("UNUSED_PARAMETER") dayCountConvention: String, @Suppress("UNUSED_PARAMETER") interest: BigDecimal /* todo - appropriate type */, @Suppress("UNUSED_PARAMETER") start: String, @Suppress("UNUSED_PARAMETER") end: String): Perceivable&lt;BigDecimal&gt;</ID>
     <ID>MaxLineLength:Perceivable.kt$fun interest(@Suppress("UNUSED_PARAMETER") amount: BigDecimal, @Suppress("UNUSED_PARAMETER") dayCountConvention: String, @Suppress("UNUSED_PARAMETER") interest: Perceivable&lt;BigDecimal&gt; /* todo - appropriate type */, @Suppress("UNUSED_PARAMETER") start: Perceivable&lt;Instant&gt;, @Suppress("UNUSED_PARAMETER") end: Perceivable&lt;Instant&gt;): Perceivable&lt;BigDecimal&gt;</ID>
     <ID>MaxLineLength:Perceivable.kt$fun interest(@Suppress("UNUSED_PARAMETER") amount: BigDecimal, @Suppress("UNUSED_PARAMETER") dayCountConvention: String, @Suppress("UNUSED_PARAMETER") interest: Perceivable&lt;BigDecimal&gt; /* todo - appropriate type */, @Suppress("UNUSED_PARAMETER") start: String, @Suppress("UNUSED_PARAMETER") end: String): Perceivable&lt;BigDecimal&gt;</ID>
-    <ID>MaxLineLength:PeriodSerializer.kt$PeriodSerializer : Proxy</ID>
     <ID>MaxLineLength:PersistentIdentityMigrationNewTable.kt$PersistentIdentityMigrationNewTable : CordaMigration</ID>
     <ID>MaxLineLength:PersistentIdentityMigrationNewTable.kt$PersistentIdentityMigrationNewTable$throw PersistentIdentitiesMigrationException("Cannot migrate persistent identities as liquibase failed to provide a suitable database connection")</ID>
     <ID>MaxLineLength:PersistentIdentityMigrationNewTableTest.kt$PersistentIdentityMigrationNewTableTest$session.save(PersistentIdentityService.PersistentPublicKeyHashToCertificate(it.owningKey.hash.toString(), it.certPath.encoded))</ID>
@@ -3042,7 +3008,6 @@
     <ID>MaxLineLength:PortfolioApiUtils.kt$PortfolioApiUtils$val yieldCurveCurrenciesValues = marketData.filter { !it.key.contains("/") }.map { it -&gt; Triple(it.key.split("-")[0], it.key.split("-", limit = 2)[1], it.value) }</ID>
     <ID>MaxLineLength:PortfolioState.kt$PortfolioState$return TransactionBuilder(notary).withItems(StateAndContract(copy(), PORTFOLIO_SWAP_PROGRAM_ID), Command(PortfolioSwap.Commands.Agree(), participants.map { it.owningKey }))</ID>
     <ID>MaxLineLength:PrintingInterceptor.kt$PrintingInterceptor$val transitionRecord = TransitionDiagnosticRecord(Instant.now(), fiber.id, previousState, nextState, event, transition, continuation)</ID>
-    <ID>MaxLineLength:PrivateKeySerializer.kt$PrivateKeySerializer$override val schemaForDocumentation = Schema(listOf(RestrictedType(type.toString(), "", listOf(type.toString()), AMQPTypeIdentifiers.primitiveTypeName(ByteArray::class.java), descriptor, emptyList())))</ID>
     <ID>MaxLineLength:ProgressTracker.kt$ProgressTracker$log.warnOnce("Found ProgressTracker Step(s) with the same label: ${labels.groupBy { it }.filter { it.value.size &gt; 1 }.map { it.key }}")</ID>
     <ID>MaxLineLength:ProgressTracker.kt$ProgressTracker.Step$private fun definitionLocation(): String</ID>
     <ID>MaxLineLength:Properties.kt$DelegatedProperty$private abstract</ID>
@@ -3075,7 +3040,6 @@
     <ID>MaxLineLength:PropertyTest.kt$PropertyTest$val property = Configuration.Property.Definition.long(key).map(::AtomicLong).list().map { list -&gt; list.map(AtomicLong::get).max() }.optional()</ID>
     <ID>MaxLineLength:PropertyValidationTest.kt$PropertyValidationTest$return invalid(Configuration.Validation.Error.BadValue.of("Value must be of format \"host(String):port(Int &gt; 0)\" e.g., \"127.0.0.1:8080\""))</ID>
     <ID>MaxLineLength:ProviderMap.kt$// This registration is needed for reading back EdDSA key from java keystore. // TODO: Find a way to make JKS work with bouncy castle provider or implement our own provide so we don't have to register bouncy castle provider. Security.addProvider(it)</ID>
-    <ID>MaxLineLength:PublicKeySerializer.kt$PublicKeySerializer$override val schemaForDocumentation = Schema(listOf(RestrictedType(type.toString(), "", listOf(type.toString()), AMQPTypeIdentifiers.primitiveTypeName(ByteArray::class.java), descriptor, emptyList())))</ID>
     <ID>MaxLineLength:PublicKeyToOwningIdentityCacheImpl.kt$PublicKeyToOwningIdentityCacheImpl$criteriaBuilder.equal(queryRoot.get&lt;String&gt;(BasicHSMKeyManagementService.PersistentKey::publicKeyHash.name), key.toStringShort())</ID>
     <ID>MaxLineLength:PublicKeyToOwningIdentityCacheImpl.kt$PublicKeyToOwningIdentityCacheImpl$criteriaBuilder.equal(queryRoot.get&lt;String&gt;(PersistentIdentityService.PersistentPublicKeyHashToCertificate::publicKeyHash.name), key.toStringShort())</ID>
     <ID>MaxLineLength:PushedNode.kt$PushedNode$return NodeInstanceRequest(configFile, baseDirectory, copiedNodeConfig, copiedNodeDir, nodeConfig, localImageId, remoteImageName, nodeInstanceName, actualX500, expectedFqName)</ID>
@@ -3186,7 +3150,6 @@
     <ID>MaxLineLength:ReceiveTransactionFlow.kt$ReceiveStateAndRefFlow&lt;out T : ContractState&gt; : FlowLogic</ID>
     <ID>MaxLineLength:ReceiveTransactionFlow.kt$ReceiveTransactionFlow : FlowLogic</ID>
     <ID>MaxLineLength:ReceiveTransactionFlow.kt$ReceiveTransactionFlow$private val statesToRecord: StatesToRecord = StatesToRecord.NONE</ID>
-    <ID>MaxLineLength:ReconnectingCordaRPCOps.kt$ReconnectingCordaRPCOps$ fun runFlowWithLogicalRetry(runFlow: (CordaRPCOps) -&gt; StateMachineRunId, hasFlowStarted: (CordaRPCOps) -&gt; Boolean, onFlowConfirmed: () -&gt; Unit = {}, timeout: Duration = 4.seconds)</ID>
     <ID>MaxLineLength:ReferenceInputStateTests.kt$ReferenceStateTests$output(ExampleContract::class.java.typeName, "UPDATED REF DATA", "REF DATA".output&lt;ExampleState&gt;().copy(data = "NEW STUFF!"))</ID>
     <ID>MaxLineLength:ReferenceInputStateTests.kt$ReferenceStateTests$val stateAndRef = StateAndRef(TransactionState(state, CONTRACT_ID, DUMMY_NOTARY, constraint = AlwaysAcceptAttachmentConstraint), StateRef(SecureHash.zeroHash, 0))</ID>
     <ID>MaxLineLength:ReferencedStatesFlowTests.kt$ReferencedStatesFlowTests$assertEquals(2, nodes[2].services.vaultService.queryBy&lt;LinearState&gt;(QueryCriteria.VaultQueryCriteria(status = Vault.StateStatus.ALL)).states.size)</ID>
@@ -3281,8 +3244,6 @@
     <ID>MaxLineLength:SerializationAPI.kt$SerializationFactory$abstract</ID>
     <ID>MaxLineLength:SerializationAPI.kt$context: SerializationContext = serializationFactory.defaultContext</ID>
     <ID>MaxLineLength:SerializationAPI.kt$inline</ID>
-    <ID>MaxLineLength:SerializationEnvironment.kt$"Expected exactly 1 of {${serializationEnvFields.joinToString(", ") { it.name }}} but got: {${it.joinToString(", ") { it.first }}}"</ID>
-    <ID>MaxLineLength:SerializationEnvironment.kt$private val serializationEnvFields = listOf(_nodeSerializationEnv, _driverSerializationEnv, _contextSerializationEnv, _inheritableContextSerializationEnv)</ID>
     <ID>MaxLineLength:SerializationEnvironment.kt$val _inheritableContextSerializationEnv = InheritableThreadLocalToggleField&lt;SerializationEnvironment&gt;("inheritableContextSerializationEnv") { stack -&gt; stack.fold(false) { isAGlobalThreadBeingCreated, e -&gt; isAGlobalThreadBeingCreated || (e.className == "io.netty.util.concurrent.GlobalEventExecutor" &amp;&amp; e.methodName == "startThread") || (e.className == "java.util.concurrent.ForkJoinPool\$DefaultForkJoinWorkerThreadFactory" &amp;&amp; e.methodName == "newThread") } }</ID>
     <ID>MaxLineLength:SerializationFactory.kt$SerializationFactory$abstract</ID>
     <ID>MaxLineLength:SerializationOutputTests.kt$SerializationOutputTests$assertArrayEquals(data, DeserializationInput(factory).deserialize(compressed, testSerializationContext.withEncodingWhitelist(encodingWhitelist)))</ID>
@@ -3464,7 +3425,6 @@
     <ID>MaxLineLength:ThrowableSerializer.kt$StackTraceElementSerializer : Proxy</ID>
     <ID>MaxLineLength:ThrowableSerializer.kt$StackTraceElementSerializer$override fun fromProxy(proxy: StackTraceElementProxy): StackTraceElement</ID>
     <ID>MaxLineLength:ThrowableSerializer.kt$StackTraceElementSerializer$override fun toProxy(obj: StackTraceElement): StackTraceElementProxy</ID>
-    <ID>MaxLineLength:ThrowableSerializer.kt$ThrowableSerializer : Proxy</ID>
     <ID>MaxLineLength:ThrowableSerializer.kt$ThrowableSerializer${ try { // TODO: This will need reworking when we have multiple class loaders val clazz = Class.forName(proxy.exceptionClass, false, factory.classloader) // If it is CordaException or CordaRuntimeException, we can seek any constructor and then set the properties // Otherwise we just make a CordaRuntimeException if (CordaThrowable::class.java.isAssignableFrom(clazz) &amp;&amp; Throwable::class.java.isAssignableFrom(clazz)) { val typeInformation = factory.getTypeInformation(clazz) val constructor = typeInformation.constructor val params = constructor.parameters.map { parameter -&gt; proxy.additionalProperties[parameter.name] ?: proxy.additionalProperties[parameter.name.capitalize()] } val throwable = constructor.observedMethod.newInstance(*params.toTypedArray()) (throwable as CordaThrowable).apply { if (this.javaClass.name != proxy.exceptionClass) this.originalExceptionClassName = proxy.exceptionClass this.setMessage(proxy.message) this.setCause(proxy.cause) this.addSuppressed(proxy.suppressed) } return (throwable as Throwable).apply { this.stackTrace = proxy.stackTrace } } } catch (e: Exception) { logger.warn("Unexpected exception de-serializing throwable: ${proxy.exceptionClass}. Converting to CordaRuntimeException.", e) } // If the criteria are not met or we experience an exception constructing the exception, we fall back to our own unchecked exception. return CordaRuntimeException(proxy.exceptionClass, null, null).apply { this.setMessage(proxy.message) this.setCause(proxy.cause) this.stackTrace = proxy.stackTrace this.addSuppressed(proxy.suppressed) } }</ID>
     <ID>MaxLineLength:TimedFlowTests.kt$TimedFlowTests$addOutputState(DummyContract.SingleOwnerState(owner = info.singleIdentity()), DummyContract.PROGRAM_ID, AlwaysAcceptAttachmentConstraint)</ID>
     <ID>MaxLineLength:TimedFlowTests.kt$TimedFlowTests.Companion$defaultParameters = MockNetworkParameters().withServicePeerAllocationStrategy(InMemoryMessagingNetwork.ServicePeerAllocationStrategy.RoundRobin())</ID>
@@ -3816,13 +3776,6 @@
     <ID>MaxLineLength:X509UtilitiesTest.kt$X509UtilitiesTest$val certCaAuthorityKeyIdentifier = AuthorityKeyIdentifier.getInstance(getExtension(Extension.authorityKeyIdentifier).parsedValue)</ID>
     <ID>MaxLineLength:X509UtilitiesTest.kt$X509UtilitiesTest.Companion$Triple(ECDSA_SECP256K1_SHA256,java.security.interfaces.ECPrivateKey::class.java, org.bouncycastle.jce.interfaces.ECPrivateKey::class.java)</ID>
     <ID>MaxLineLength:X509UtilitiesTest.kt$X509UtilitiesTest.Companion$Triple(ECDSA_SECP256R1_SHA256,java.security.interfaces.ECPrivateKey::class.java, org.bouncycastle.jce.interfaces.ECPrivateKey::class.java)</ID>
-    <ID>MaxLineLength:YearMonthSerializer.kt$YearMonthSerializer : Proxy</ID>
-    <ID>MaxLineLength:YearSerializer.kt$YearSerializer : Proxy</ID>
-    <ID>MaxLineLength:ZoneIdSerializer.kt$ZoneIdSerializer : Proxy</ID>
-    <ID>MaxLineLength:ZonedDateTimeSerializer.kt$ZonedDateTimeSerializer : Proxy</ID>
-    <ID>MaxLineLength:ZonedDateTimeSerializer.kt$ZonedDateTimeSerializer$override fun fromProxy(proxy: ZonedDateTimeProxy): ZonedDateTime</ID>
-    <ID>MaxLineLength:ZonedDateTimeSerializer.kt$ZonedDateTimeSerializer$override val additionalSerializers: Iterable&lt;CustomSerializer&lt;out Any&gt;&gt; = listOf(LocalDateTimeSerializer(factory), ZoneIdSerializer(factory))</ID>
-    <ID>MaxLineLength:ZonedDateTimeSerializer.kt$ZonedDateTimeSerializer.Companion$val ofLenient: Method = ZonedDateTime::class.java.getDeclaredMethod("ofLenient", LocalDateTime::class.java, ZoneOffset::class.java, ZoneId::class.java)</ID>
     <ID>MaxLineLength:internalAccessTestHelpers.kt$( inputs: List&lt;StateAndRef&lt;ContractState&gt;&gt;, outputs: List&lt;TransactionState&lt;ContractState&gt;&gt;, commands: List&lt;CommandWithParties&lt;CommandData&gt;&gt;, attachments: List&lt;Attachment&gt;, id: SecureHash, notary: Party?, timeWindow: TimeWindow?, privacySalt: PrivacySalt, networkParameters: NetworkParameters, references: List&lt;StateAndRef&lt;ContractState&gt;&gt;, componentGroups: List&lt;ComponentGroup&gt;? = null, serializedInputs: List&lt;SerializedStateAndRef&gt;? = null, serializedReferences: List&lt;SerializedStateAndRef&gt;? = null, isAttachmentTrusted: (Attachment) -&gt; Boolean )</ID>
     <ID>MaxLineLength:internalAccessTestHelpers.kt$fun createContractCreationError(txId: SecureHash, contractClass: String, cause: Throwable)</ID>
     <ID>MaxLineLength:internalAccessTestHelpers.kt$fun createContractRejection(txId: SecureHash, contract: Contract, cause: Throwable)</ID>
@@ -3848,7 +3801,6 @@
     <ID>NestedBlockDepth:FetchDataFlow.kt$FetchAttachmentsFlow$override fun maybeWriteToDisk(downloaded: List&lt;Attachment&gt;)</ID>
     <ID>NestedBlockDepth:HibernateQueryCriteriaParser.kt$HibernateQueryCriteriaParser$override fun parseCriteria(criteria: CommonQueryCriteria): Collection&lt;Predicate&gt;</ID>
     <ID>NestedBlockDepth:InteractiveShell.kt$InteractiveShell$ @JvmStatic fun runFlowByNameFragment(nameFragment: String, inputData: String, output: RenderPrintWriter, rpcOps: CordaRPCOps, ansiProgressRenderer: ANSIProgressRenderer, inputObjectMapper: ObjectMapper = createYamlInputMapper(rpcOps))</ID>
-    <ID>NestedBlockDepth:InteractiveShell.kt$InteractiveShell$@JvmStatic fun gracefulShutdown(userSessionOut: RenderPrintWriter, cordaRPCOps: CordaRPCOps)</ID>
     <ID>NestedBlockDepth:InternalUtils.kt$ inline fun &lt;T&gt; Iterable&lt;T&gt;.noneOrSingle(predicate: (T) -&gt; Boolean): T?</ID>
     <ID>NestedBlockDepth:JarSignatureTestUtils.kt$JarSignatureTestUtils$fun Path.addManifest(fileName: String, vararg entries: Pair&lt;Attributes.Name, String&gt;)</ID>
     <ID>NestedBlockDepth:Main.kt$Node$fun avalancheLoop()</ID>
@@ -4466,7 +4418,6 @@
     <ID>WildcardImport:AMQPClientSerializationScheme.kt$import net.corda.serialization.internal.*</ID>
     <ID>WildcardImport:AMQPClientSerializationScheme.kt$import net.corda.serialization.internal.amqp.*</ID>
     <ID>WildcardImport:AMQPRemoteTypeModel.kt$import net.corda.serialization.internal.model.*</ID>
-    <ID>WildcardImport:AMQPSerializationScheme.kt$import net.corda.core.internal.*</ID>
     <ID>WildcardImport:AMQPSerializationScheme.kt$import net.corda.core.serialization.*</ID>
     <ID>WildcardImport:AMQPServerSerializationScheme.kt$import net.corda.serialization.internal.amqp.*</ID>
     <ID>WildcardImport:AMQPTestSerialiationScheme.kt$import net.corda.serialization.internal.amqp.*</ID>
@@ -4622,9 +4573,6 @@
     <ID>WildcardImport:CordaRPCClientTest.kt$import net.corda.core.messaging.*</ID>
     <ID>WildcardImport:CordaRPCClientTest.kt$import net.corda.testing.core.*</ID>
     <ID>WildcardImport:CordaRPCOps.kt$import net.corda.core.node.services.vault.*</ID>
-    <ID>WildcardImport:CordaRPCOpsImpl.kt$import net.corda.core.internal.*</ID>
-    <ID>WildcardImport:CordaRPCOpsImpl.kt$import net.corda.core.messaging.*</ID>
-    <ID>WildcardImport:CordaRPCOpsImpl.kt$import net.corda.core.node.services.vault.*</ID>
     <ID>WildcardImport:CordaRPCOpsImplTest.kt$import net.corda.core.messaging.*</ID>
     <ID>WildcardImport:CordaRPCOpsImplTest.kt$import org.assertj.core.api.Assertions.*</ID>
     <ID>WildcardImport:CordaServiceTest.kt$import kotlin.test.*</ID>
@@ -4770,9 +4718,6 @@
     <ID>WildcardImport:InputStreamSerializer.kt$import net.corda.serialization.internal.amqp.*</ID>
     <ID>WildcardImport:InstallFactory.kt$import tornadofx.*</ID>
     <ID>WildcardImport:InstallShellExtensionsParser.kt$import net.corda.core.internal.*</ID>
-    <ID>WildcardImport:InteractiveShell.kt$import java.lang.reflect.*</ID>
-    <ID>WildcardImport:InteractiveShell.kt$import net.corda.core.internal.*</ID>
-    <ID>WildcardImport:InteractiveShell.kt$import net.corda.core.messaging.*</ID>
     <ID>WildcardImport:InteractiveShellIntegrationTest.kt$import net.corda.core.contracts.*</ID>
     <ID>WildcardImport:InteractiveShellIntegrationTest.kt$import net.corda.core.flows.*</ID>
     <ID>WildcardImport:InterestRatesSwapDemoAPI.kt$import org.springframework.web.bind.annotation.*</ID>
@@ -5025,8 +4970,6 @@
     <ID>WildcardImport:ReceiveFinalityFlowTest.kt$import net.corda.node.services.statemachine.StaffedFlowHospital.*</ID>
     <ID>WildcardImport:ReceiveFinalityFlowTest.kt$import net.corda.testing.node.internal.*</ID>
     <ID>WildcardImport:ReceiveTransactionFlow.kt$import net.corda.core.contracts.*</ID>
-    <ID>WildcardImport:ReconnectingCordaRPCOps.kt$import net.corda.client.rpc.*</ID>
-    <ID>WildcardImport:ReconnectingCordaRPCOps.kt$import net.corda.client.rpc.internal.ReconnectingCordaRPCOps.ReconnectingRPCConnection.CurrentState.*</ID>
     <ID>WildcardImport:ReferenceInputStateTests.kt$import net.corda.core.contracts.*</ID>
     <ID>WildcardImport:ReferencedStatesFlowTests.kt$import net.corda.core.contracts.*</ID>
     <ID>WildcardImport:ReferencedStatesFlowTests.kt$import net.corda.core.flows.*</ID>

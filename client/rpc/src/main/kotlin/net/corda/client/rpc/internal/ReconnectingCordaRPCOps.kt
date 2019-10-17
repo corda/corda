@@ -1,7 +1,18 @@
 package net.corda.client.rpc.internal
 
-import net.corda.client.rpc.*
-import net.corda.client.rpc.internal.ReconnectingCordaRPCOps.ReconnectingRPCConnection.CurrentState.*
+import net.corda.client.rpc.ConnectionFailureException
+import net.corda.client.rpc.CordaRPCClient
+import net.corda.client.rpc.CordaRPCClientConfiguration
+import net.corda.client.rpc.CordaRPCConnection
+import net.corda.client.rpc.GracefulReconnect
+import net.corda.client.rpc.MaxRpcRetryException
+import net.corda.client.rpc.RPCConnection
+import net.corda.client.rpc.RPCException
+import net.corda.client.rpc.internal.ReconnectingCordaRPCOps.ReconnectingRPCConnection.CurrentState.CLOSED
+import net.corda.client.rpc.internal.ReconnectingCordaRPCOps.ReconnectingRPCConnection.CurrentState.CONNECTED
+import net.corda.client.rpc.internal.ReconnectingCordaRPCOps.ReconnectingRPCConnection.CurrentState.CONNECTING
+import net.corda.client.rpc.internal.ReconnectingCordaRPCOps.ReconnectingRPCConnection.CurrentState.DIED
+import net.corda.client.rpc.internal.ReconnectingCordaRPCOps.ReconnectingRPCConnection.CurrentState.UNCONNECTED
 import net.corda.client.rpc.reconnect.CouldNotStartFlowException
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.div
@@ -89,7 +100,12 @@ class ReconnectingCordaRPCOps private constructor(
      *
      * Note that this method does not guarantee 100% that the flow will not be started twice.
      */
-    fun runFlowWithLogicalRetry(runFlow: (CordaRPCOps) -> StateMachineRunId, hasFlowStarted: (CordaRPCOps) -> Boolean, onFlowConfirmed: () -> Unit = {}, timeout: Duration = 4.seconds) {
+    fun runFlowWithLogicalRetry(
+            runFlow: (CordaRPCOps) -> StateMachineRunId,
+            hasFlowStarted: (CordaRPCOps) -> Boolean,
+            onFlowConfirmed: () -> Unit = {},
+            timeout: Duration = 4.seconds
+    ) {
         try {
             runFlow(this)
             onFlowConfirmed()
@@ -149,7 +165,7 @@ class ReconnectingCordaRPCOps private constructor(
             currentState = DIED
             gracefulReconnect.onDisconnect.invoke()
             //TODO - handle error cases
-            log.error("Reconnecting to ${this.nodeHostAndPorts} due to error: ${e.message}")
+            log.warn("Reconnecting to ${this.nodeHostAndPorts} due to error: ${e.message}")
             log.debug("", e)
             connect()
             previousConnection?.forceClose()
@@ -233,11 +249,6 @@ class ReconnectingCordaRPCOps private constructor(
             currentState = CLOSED
             currentRPCConnection?.forceClose()
         }
-        @Synchronized
-        override fun close() {
-            currentState = CLOSED
-            currentRPCConnection?.close()
-        }
     }
     private class ErrorInterceptingHandler(val reconnectingRPCConnection: ReconnectingRPCConnection) : InvocationHandler {
         private fun Method.isStartFlow() = name.startsWith("startFlow") || name.startsWith("startTrackedFlow")
@@ -267,22 +278,22 @@ class ReconnectingCordaRPCOps private constructor(
                 } catch (e: InvocationTargetException) {
                     when (e.targetException) {
                         is RejectedCommandException -> {
-                            log.error("Node is being shutdown. Operation ${method.name} rejected. Retrying when node is up...", e)
+                            log.warn("Node is being shutdown. Operation ${method.name} rejected. Retrying when node is up...", e)
                             reconnectingRPCConnection.reconnectOnError(e)
                         }
                         is ConnectionFailureException -> {
-                            log.error("Failed to perform operation ${method.name}. Connection dropped. Retrying....", e)
+                            log.warn("Failed to perform operation ${method.name}. Connection dropped. Retrying....", e)
                             reconnectingRPCConnection.reconnectOnError(e)
                             checkIfIsStartFlow(method, e)
                         }
                         is RPCException -> {
-                            log.error("Failed to perform operation ${method.name}. RPCException. Retrying....", e)
+                            log.warn("Failed to perform operation ${method.name}. RPCException. Retrying....", e)
                             reconnectingRPCConnection.reconnectOnError(e)
                             Thread.sleep(1000) // TODO - explain why this sleep is necessary
                             checkIfIsStartFlow(method, e)
                         }
                         else -> {
-                            log.error("Failed to perform operation ${method.name}. Unknown error. Retrying....", e)
+                            log.warn("Failed to perform operation ${method.name}. Unknown error. Retrying....", e)
                             reconnectingRPCConnection.reconnectOnError(e)
                             checkIfIsStartFlow(method, e)
                         }
