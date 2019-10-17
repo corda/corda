@@ -3,20 +3,22 @@ package net.corda.testing;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodBuilder;
 import io.fabric8.kubernetes.api.model.Quantity;
-import io.fabric8.kubernetes.client.*;
-import org.gradle.api.GradleException;
+import io.fabric8.kubernetes.client.Config;
+import io.fabric8.kubernetes.client.ConfigBuilder;
+import io.fabric8.kubernetes.client.DefaultKubernetesClient;
+import io.fabric8.kubernetes.client.KubernetesClient;
+import io.fabric8.kubernetes.client.KubernetesClientException;
+import io.fabric8.kubernetes.client.Watch;
+import io.fabric8.kubernetes.client.Watcher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Comparator;
 import java.util.List;
-import java.util.Objects;
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -79,16 +81,23 @@ public class PodAllocator {
                     public void eventReceived(Action action, Pod resource) {
                         if (action == Action.DELETED) {
                             result.complete(resource);
+                            String msg = "Successfully deleted pod " + pod.getMetadata().getName();
                             if (logger instanceof org.gradle.api.logging.Logger) {
-                                ((org.gradle.api.logging.Logger) logger).lifecycle("Successfully deleted pod " + pod.getMetadata().getName());
+                                ((org.gradle.api.logging.Logger) logger).lifecycle(msg);
                             } else {
-                                logger.info("Successfully deleted pod " + pod.getMetadata().getName());
+                                logger.info(msg);
                             }
                         }
                     }
 
                     @Override
                     public void onClose(KubernetesClientException cause) {
+                        String message = "Failed to delete pod " + pod.getMetadata().getName();
+                        if (logger instanceof org.gradle.api.logging.Logger) {
+                            ((org.gradle.api.logging.Logger) logger).lifecycle(message);
+                        } else {
+                            logger.info(message);
+                        }
                         result.completeExceptionally(cause);
                     }
                 });
@@ -96,28 +105,10 @@ public class PodAllocator {
                 return result;
             }).collect(Collectors.toList());
 
-            AtomicLong fiveMinTimeout = new AtomicLong(TimeUnit.MINUTES.toMillis(5));
-
-            Set<String> deletedPods = deleteFutures.stream().map(f -> {
-                try {
-                    if (fiveMinTimeout.get() > 0) {
-                        long waitStartTime = System.currentTimeMillis();
-                        Pod pod = f.get(fiveMinTimeout.get(), TimeUnit.MILLISECONDS);
-                        //this might look odd, but we need to actually "decrement" the atomic long, which does not have subtract methods
-                        fiveMinTimeout.addAndGet(System.currentTimeMillis() - waitStartTime);
-                        return pod.getMetadata().getName();
-                    } else {
-                        return null;
-                    }
-                } catch (InterruptedException | ExecutionException | TimeoutException e) {
-                    return null;
-                }
-            }).filter(Objects::nonNull).collect(Collectors.toSet());
-
-            List<String> podsThatDidNotDelete = podsToDelete.map(pod -> pod.getMetadata().getName()).filter(deletedPods::contains).collect(Collectors.toList());
-
-            if (!podsThatDidNotDelete.isEmpty()) {
-                throw new GradleException("Failed to delete pods: " + podsThatDidNotDelete);
+            try {
+                CompletableFuture.allOf(deleteFutures.toArray(new CompletableFuture[0])).get(5, TimeUnit.MINUTES);
+            } catch (InterruptedException | ExecutionException | TimeoutException e) {
+                //ignore - there's nothing left to do
             }
         }
     }
