@@ -54,6 +54,7 @@ task patchSerialization(type: Zip, dependsOn: serializationJarTask) {
     archiveExtension = 'jar'
 
     from(compileKotlin)
+    from(processResources)
     from(zipTree(originalJar)) {
         exclude 'net/corda/serialization/internal/AttachmentsClassLoaderBuilder*'
         exclude 'net/corda/serialization/internal/ByteBufferStreams*'

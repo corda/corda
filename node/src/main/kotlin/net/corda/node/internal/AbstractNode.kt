@@ -216,7 +216,13 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     @Suppress("LeakingThis")
     val transactionVerifierService = InMemoryTransactionVerifierService(transactionVerifierWorkerCount).tokenize()
     val verifierFactoryService: VerifierFactoryService = if (djvmCordaSource != null) {
-        DeterministicVerifierFactoryService(djvmBootstrapSource, djvmCordaSource).tokenize()
+        DeterministicVerifierFactoryService(djvmBootstrapSource, djvmCordaSource).apply {
+            if (!configuration.devMode) {
+                log.info("Generating Corda classes for DJVM sandbox.")
+                generateSandbox()
+            }
+            tokenize()
+        }
     } else {
         BasicVerifierFactoryService()
     }

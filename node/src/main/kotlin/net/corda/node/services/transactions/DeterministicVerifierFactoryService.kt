@@ -46,6 +46,14 @@ class DeterministicVerifierFactoryService(
         )
     }
 
+    /**
+     * Generate sandbox classes for every Corda jar with META-INF/DJVM-preload.
+     */
+    fun generateSandbox(): DeterministicVerifierFactoryService {
+        baseSandboxConfiguration.preload()
+        return this
+    }
+
     override fun apply(ledgerTransaction: LedgerTransaction): LedgerTransaction {
         // Specialise the LedgerTransaction here so that
         // contracts are verified inside the DJVM!
