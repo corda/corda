@@ -116,13 +116,7 @@ public class KubesTest extends DefaultTask {
             boolean printOutput,
             int numberOfRetries
     ) {
-        return executorService.submit(new Callable<KubePodResult>() {
-            @Override
-            public KubePodResult call() throws Exception {
-                PersistentVolumeClaim pvc = createPvc(client, podName);
-                return buildRunPodWithRetriesOrThrow(client, namespace, pvc, numberOfPods, podIdx, podName, printOutput, numberOfRetries);
-            }
-        });
+        return executorService.submit(() -> buildRunPodWithRetriesOrThrow(client, namespace, numberOfPods, podIdx, podName, printOutput, numberOfRetries));
     }
 
     private static void addShutdownHook(Runnable hook) {
@@ -153,7 +147,6 @@ public class KubesTest extends DefaultTask {
     private KubePodResult buildRunPodWithRetriesOrThrow(
             KubernetesClient client,
             String namespace,
-            PersistentVolumeClaim pvc,
             int numberOfPods,
             int podIdx,
             String podName,
@@ -181,7 +174,7 @@ public class KubesTest extends DefaultTask {
 
                 // recreate and run
                 getProject().getLogger().lifecycle("creating pod: " + podName);
-                Pod createdPod = client.pods().inNamespace(namespace).create(buildPodRequest(podName, pvc));
+                Pod createdPod = client.pods().inNamespace(namespace).create(buildPodRequest(podName));
                 getProject().getLogger().lifecycle("scheduled pod: " + podName);
 
                 attachStatusListenerToPod(client, createdPod);
@@ -211,7 +204,7 @@ public class KubesTest extends DefaultTask {
         }
     }
 
-    private Pod buildPodRequest(String podName, PersistentVolumeClaim pvc) {
+    private Pod buildPodRequest(String podName) {
         return new PodBuilder()
                 .withNewMetadata().withName(podName).endMetadata()
 
@@ -227,10 +220,19 @@ public class KubesTest extends DefaultTask {
 
                 .addNewVolume()
                 .withName("testruns")
-                .withNewPersistentVolumeClaim()
-                .withClaimName(pvc.getMetadata().getName())
-                .endPersistentVolumeClaim()
+                .withNewHostPath()
+                .withType("DirectoryOrCreate")
+                .withPath("/tmp/testruns")
+                .endHostPath()
                 .endVolume()
+
+
+//                .addNewVolume()
+//                .withName("testruns")
+//                .withNewPersistentVolumeClaim()
+//                .withClaimName(pvc.getMetadata().getName())
+//                .endPersistentVolumeClaim()
+//                .endVolume()
 
                 .addNewContainer()
                 .withImage(dockerTag)
