@@ -24,9 +24,9 @@ public class ImageBuilding implements Plugin<Project> {
     public void apply(Project project) {
 
         DockerRegistryCredentials registryCredentialsForPush = new DockerRegistryCredentials(project.getObjects());
-        registryCredentialsForPush.setProperty("username", "stefanotestingcr");
+        registryCredentialsForPush.getUsername().set("stefanotestingcr");
         String password = System.getProperty("docker.push.password").isEmpty() ? System.getProperty("docker.push.password") : "";
-        registryCredentialsForPush.setProperty("password", password);
+        registryCredentialsForPush.getPassword().set(password);
 
         DockerPullImage pullTask = project.getTasks().create("pullBaseImage", DockerPullImage.class, dockerPullImage -> {
             dockerPullImage.getRepository().set("stefanotestingcr.azurecr.io/buildbase");
