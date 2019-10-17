@@ -23,7 +23,7 @@ pipeline {
                             "-Ddocker.push.password=\"\${DOCKER_PUSH_PWD}\" " +
                             "-Ddocker.work.dir=\"/tmp/\${EXECUTOR_NUMBER}\" " +
                             "-Ddocker.provided.tag=\"\${DOCKER_TAG_TO_USE}\"" +
-                            " clean pushBuildImage"
+                            " clean pushBuildImage --stacktrace"
                 }
                 sh "kubectl auth can-i get pods"
             }
