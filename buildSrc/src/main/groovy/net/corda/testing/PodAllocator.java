@@ -49,13 +49,15 @@ public class PodAllocator {
         KubernetesClient client = new DefaultKubernetesClient(config);
 
         List<Pod> podsToRequest = IntStream.range(0, number).mapToObj(i -> buildPod("pa-" + prefix + i, coresPerPod, memoryPerPod)).collect(Collectors.toList());
-
-        synchronized (this) {
-            podsToRequest.forEach(requestedPod -> {
-                logger.info("Pre-allocating pod " + requestedPod.getMetadata().getName());
-                client.pods().inNamespace(KubesTest.NAMESPACE).create(requestedPod);
-            });
-        }
+        podsToRequest.forEach(requestedPod -> {
+            String msg = "PreAllocating " + requestedPod.getMetadata().getName();
+            if (logger instanceof org.gradle.api.logging.Logger) {
+                ((org.gradle.api.logging.Logger) logger).lifecycle(msg);
+            } else {
+                logger.info(msg);
+            }
+            client.pods().inNamespace(KubesTest.NAMESPACE).create(requestedPod);
+        });
     }
 
     public void tearDownPods(String prefix) {
@@ -67,49 +69,47 @@ public class PodAllocator {
                 .withWebsocketPingInterval(CONNECTION_TIMEOUT)
                 .build();
         KubernetesClient client = new DefaultKubernetesClient(config);
-        synchronized (this) {
-            Stream<Pod> podsToDelete = client.pods().inNamespace(KubesTest.NAMESPACE).list()
-                    .getItems()
-                    .stream()
-                    .sorted(Comparator.comparing(p -> p.getMetadata().getName()))
-                    .filter(foundPod -> foundPod.getMetadata().getName().contains(prefix));
+        Stream<Pod> podsToDelete = client.pods().inNamespace(KubesTest.NAMESPACE).list()
+                .getItems()
+                .stream()
+                .sorted(Comparator.comparing(p -> p.getMetadata().getName()))
+                .filter(foundPod -> foundPod.getMetadata().getName().contains(prefix));
 
-            List<CompletableFuture<Pod>> deleteFutures = podsToDelete.map(pod -> {
-                CompletableFuture<Pod> result = new CompletableFuture<>();
-                Watch watch = client.pods().inNamespace(pod.getMetadata().getNamespace()).withName(pod.getMetadata().getName()).watch(new Watcher<Pod>() {
-                    @Override
-                    public void eventReceived(Action action, Pod resource) {
-                        if (action == Action.DELETED) {
-                            result.complete(resource);
-                            String msg = "Successfully deleted pod " + pod.getMetadata().getName();
-                            if (logger instanceof org.gradle.api.logging.Logger) {
-                                ((org.gradle.api.logging.Logger) logger).lifecycle(msg);
-                            } else {
-                                logger.info(msg);
-                            }
-                        }
-                    }
-
-                    @Override
-                    public void onClose(KubernetesClientException cause) {
-                        String message = "Failed to delete pod " + pod.getMetadata().getName();
+        List<CompletableFuture<Pod>> deleteFutures = podsToDelete.map(pod -> {
+            CompletableFuture<Pod> result = new CompletableFuture<>();
+            Watch watch = client.pods().inNamespace(pod.getMetadata().getNamespace()).withName(pod.getMetadata().getName()).watch(new Watcher<Pod>() {
+                @Override
+                public void eventReceived(Action action, Pod resource) {
+                    if (action == Action.DELETED) {
+                        result.complete(resource);
+                        String msg = "Successfully deleted pod " + pod.getMetadata().getName();
                         if (logger instanceof org.gradle.api.logging.Logger) {
-                            ((org.gradle.api.logging.Logger) logger).lifecycle(message);
+                            ((org.gradle.api.logging.Logger) logger).lifecycle(msg);
                         } else {
-                            logger.info(message);
+                            logger.info(msg);
                         }
-                        result.completeExceptionally(cause);
                     }
-                });
-                client.pods().delete(pod);
-                return result;
-            }).collect(Collectors.toList());
+                }
 
-            try {
-                CompletableFuture.allOf(deleteFutures.toArray(new CompletableFuture[0])).get(5, TimeUnit.MINUTES);
-            } catch (InterruptedException | ExecutionException | TimeoutException e) {
-                //ignore - there's nothing left to do
-            }
+                @Override
+                public void onClose(KubernetesClientException cause) {
+                    String message = "Failed to delete pod " + pod.getMetadata().getName();
+                    if (logger instanceof org.gradle.api.logging.Logger) {
+                        ((org.gradle.api.logging.Logger) logger).lifecycle(message);
+                    } else {
+                        logger.info(message);
+                    }
+                    result.completeExceptionally(cause);
+                }
+            });
+            client.pods().delete(pod);
+            return result;
+        }).collect(Collectors.toList());
+
+        try {
+            CompletableFuture.allOf(deleteFutures.toArray(new CompletableFuture[0])).get(5, TimeUnit.MINUTES);
+        } catch (InterruptedException | ExecutionException | TimeoutException e) {
+            //ignore - there's nothing left to do
         }
     }
 
