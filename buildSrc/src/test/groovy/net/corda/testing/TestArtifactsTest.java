@@ -10,16 +10,12 @@ import org.junit.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Supplier;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
-
-import static org.junit.Assert.*;
 
 public class TestArtifactsTest {
     final static String CLASSNAME = "FAKE";
@@ -162,4 +158,18 @@ public class TestArtifactsTest {
 //        System.out.println(results.toString());
 //    }
 
+    @Test
+    public void branchNamesDoNotHaveDirectoryDelimiters() {
+        // we use the branch name in file and artifact tagging, so '/' would confuse things,
+        // so make sure when we retrieve the property we strip them out.
+
+        final String expected = "release/os/4.3";
+        final String key = "git.branch";
+
+        System.setProperty(key, expected);
+
+        Assert.assertEquals(expected, System.getProperty(key));
+        Assert.assertNotEquals(expected, TestArtifacts.getGitBranch());
+        Assert.assertEquals("release-os-4.3", TestArtifacts.getGitBranch());
+    }
 }

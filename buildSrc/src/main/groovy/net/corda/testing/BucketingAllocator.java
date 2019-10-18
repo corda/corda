@@ -70,7 +70,10 @@ public class BucketingAllocator {
             String testName = tuple.getFirst();
             Object task = tuple.getSecond();
             //2DO [can this filtering algorithm be improved - the test names are sorted, it should be possible to do something using binary search]
-            List<Tuple2<String, Double>> matchingTests = allTestsFromFile.stream().filter(testFromCSV -> testFromCSV.getFirst().startsWith(testName)).collect(Collectors.toList());
+            List<Tuple2<String, Double>> matchingTests = allTestsFromFile.stream()
+                    .filter(testFromCSV -> testFromCSV.getFirst().startsWith(testName))
+                    .collect(Collectors.toList());
+
             return new TestBucket(task, testName, matchingTests);
         }).sorted(Comparator.comparing(TestBucket::getDuration).reversed()).collect(Collectors.toList());
     }

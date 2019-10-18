@@ -46,7 +46,7 @@ public class TestArtifacts {
      */
     @NotNull
     static String getGitBranch() {
-        return Artifactory.getProperty("git.branch");
+        return Artifactory.getProperty("git.branch").replace('/', '-');
     }
 
     /**
@@ -54,7 +54,7 @@ public class TestArtifacts {
      */
     @NotNull
     static String getTargetGitBranch() {
-        return Artifactory.getProperty("git.target.branch");
+        return Artifactory.getProperty("git.target.branch").replace('/', '-');
     }
 
     /**
