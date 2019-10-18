@@ -11,6 +11,7 @@ import org.jetbrains.annotations.NotNull;
 import java.io.File;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Map;
 
 /**
  * this plugin is responsible for setting up all the required docker image building tasks required for producing and pushing an
@@ -44,11 +45,11 @@ public class ImageBuilding implements Plugin<Project> {
 
         final DockerCreateContainer createBuildContainer = project.getTasks().create("createBuildContainer", DockerCreateContainer.class,
                 dockerCreateContainer -> {
-                    File baseWorkingDir = new File(System.getProperty("docker.work.dir") != null &&
+                    final File baseWorkingDir = new File(System.getProperty("docker.work.dir") != null &&
                             !System.getProperty("docker.work.dir").isEmpty() ?
                             System.getProperty("docker.work.dir") : System.getProperty("java.io.tmpdir"));
-                    File gradleDir = new File(baseWorkingDir, "gradle");
-                    File mavenDir = new File(baseWorkingDir, "maven");
+                    final File gradleDir = new File(baseWorkingDir, "gradle");
+                    final File mavenDir = new File(baseWorkingDir, "maven");
                     dockerCreateContainer.doFirst(task -> {
                         if (!gradleDir.exists()) {
                             gradleDir.mkdirs();
@@ -61,7 +62,7 @@ public class ImageBuilding implements Plugin<Project> {
                     });
                     dockerCreateContainer.dependsOn(buildDockerImageForSource);
                     dockerCreateContainer.targetImageId(buildDockerImageForSource.getImageId());
-                    HashMap<String, String> map = new HashMap<>();
+                    final Map<String, String> map = new HashMap<>();
                     map.put(gradleDir.getAbsolutePath(), "/tmp/gradle");
                     map.put(mavenDir.getAbsolutePath(), "/home/root/.m2");
                     dockerCreateContainer.getBinds().set(map);
