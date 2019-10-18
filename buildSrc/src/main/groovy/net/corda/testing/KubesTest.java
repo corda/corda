@@ -118,8 +118,7 @@ public class KubesTest extends DefaultTask {
             int numberOfRetries
     ) {
         return CompletableFuture.supplyAsync(() -> {
-            PersistentVolumeClaim pvc = createPvc(client, podName);
-            return buildRunPodWithRetriesOrThrow(client, namespace, pvc, numberOfPods, podIdx, podName, printOutput, numberOfRetries);
+            return buildRunPodWithRetriesOrThrow(client, namespace,  numberOfPods, podIdx, podName, printOutput, numberOfRetries);
         }, executorService);
     }
 
@@ -148,7 +147,6 @@ public class KubesTest extends DefaultTask {
     private KubePodResult buildRunPodWithRetriesOrThrow(
             KubernetesClient client,
             String namespace,
-            PersistentVolumeClaim pvc,
             int numberOfPods,
             int podIdx,
             String podName,
@@ -176,7 +174,7 @@ public class KubesTest extends DefaultTask {
 
                 // recreate and run
                 getProject().getLogger().lifecycle("creating pod: " + podName);
-                Pod createdPod = client.pods().inNamespace(namespace).create(buildPodRequest(podName, pvc));
+                Pod createdPod = client.pods().inNamespace(namespace).create(buildPodRequest(podName));
                 getProject().getLogger().lifecycle("scheduled pod: " + podName);
 
                 attachStatusListenerToPod(client, createdPod);
@@ -201,7 +199,6 @@ public class KubesTest extends DefaultTask {
                 Collection<File> binaryResults = downloadTestXmlFromPod(client, namespace, createdPod);
                 getLogger().lifecycle("removing pod " + podName + " (" + podIdx + "/" + numberOfPods + ") after completed build");
                 client.pods().delete(createdPod);
-                client.persistentVolumeClaims().delete(pvc);
                 return new KubePodResult(resCode, podOutput, binaryResults);
             });
         } catch (Retry.RetryException e) {
@@ -209,7 +206,7 @@ public class KubesTest extends DefaultTask {
         }
     }
 
-    private Pod buildPodRequest(String podName, PersistentVolumeClaim pvc) {
+    private Pod buildPodRequest(String podName) {
         return new PodBuilder()
                 .withNewMetadata().withName(podName).endMetadata()
 
@@ -225,10 +222,19 @@ public class KubesTest extends DefaultTask {
 
                 .addNewVolume()
                 .withName("testruns")
-                .withNewPersistentVolumeClaim()
-                .withClaimName(pvc.getMetadata().getName())
-                .endPersistentVolumeClaim()
+                .withNewHostPath()
+                .withType("DirectoryOrCreate")
+                .withPath("/tmp/testruns")
+                .endHostPath()
                 .endVolume()
+
+
+//                .addNewVolume()
+//                .withName("testruns")
+//                .withNewPersistentVolumeClaim()
+//                .withClaimName(pvc.getMetadata().getName())
+//                .endPersistentVolumeClaim()
+//                .endVolume()
 
                 .addNewContainer()
                 .withImage(dockerTag)
