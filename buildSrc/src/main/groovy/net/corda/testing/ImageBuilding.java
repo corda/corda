@@ -43,7 +43,8 @@ public class ImageBuilding implements Plugin<Project> {
 
         DockerCreateContainer createBuildContainer = project.getTasks().create("createBuildContainer", DockerCreateContainer.class,
                 dockerCreateContainer -> {
-                    File baseWorkingDir = new File(!System.getProperty("docker.work.dir").isEmpty() ?
+                    File baseWorkingDir = new File(System.getProperty("docker.work.dir") != null &&
+                            !System.getProperty("docker.work.dir").isEmpty() ?
                             System.getProperty("docker.work.dir") : System.getProperty("java.io.tmpdir"));
                     File gradleDir = new File(baseWorkingDir, "gradle");
                     File mavenDir = new File(baseWorkingDir, "maven");
@@ -108,9 +109,7 @@ public class ImageBuilding implements Plugin<Project> {
 
         DockerPushImage pushBuildImage = project.getTasks().create("pushBuildImage", DockerPushImage.class, dockerPushImage -> {
             dockerPushImage.dependsOn(tagBuildImageResult);
-            dockerPushImage.doFirst(task -> {
-                dockerPushImage.setRegistryCredentials(registryCredentialsForPush);
-            });
+            dockerPushImage.doFirst(task -> dockerPushImage.setRegistryCredentials(registryCredentialsForPush));
             dockerPushImage.getImageName().set(registryName);
             dockerPushImage.getTag().set(tagBuildImageResult.getTag());
         });
