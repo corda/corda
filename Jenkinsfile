@@ -41,6 +41,7 @@ pipeline {
                                 "-Dartifactory.username=\"\${ARTIFACTORY_CREDENTIALS_USR}\" " +
                                 "-Dartifactory.password=\"\${ARTIFACTORY_CREDENTIALS_PSW}\" " +
                                 "-Dgit.branch=\"\${GIT_BRANCH}\" " +
+                                "-Dgit.target.branch=\"\${CHANGE_TARGET}\" " +
                                 " allParallelIntegrationTest"
                     }
                 }

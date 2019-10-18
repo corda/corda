@@ -328,6 +328,7 @@ public class KubesTest extends DefaultTask {
 
     private String[] getBuildCommand(int numberOfPods, int podIdx) {
         final String gitBranch = " -Dgit.branch=" +TestArtifacts.getGitBranch();
+        final String gitTargetBranch = " -Dgit.target.branch=" +TestArtifacts.getTargetGitBranch();
         final String artifactoryUsername = " -Dartifactory.username=" + Artifactory.getUsername() +" ";
         final String artifactoryPassword = " -Dartifactory.password=" + Artifactory.getPassword() + " ";
 
@@ -335,6 +336,7 @@ public class KubesTest extends DefaultTask {
                 "let y=1 ; while [ ${y} -ne 0 ] ; do echo \"Preparing build directory\" ; ./gradlew testClasses integrationTestClasses --parallel 2>&1 ; y=$? ; sleep 1 ; done ;" +
                 "./gradlew -D" + ListTests.DISTRIBUTION_PROPERTY + "=" + distribution.name() +
                 gitBranch +
+                gitTargetBranch +
                 artifactoryUsername +
                 artifactoryPassword +
                 " -Dkubenetize -PdockerFork=" + podIdx + " -PdockerForks=" + numberOfPods + " " + fullTaskToExecutePath + " --info 2>&1 ;" +

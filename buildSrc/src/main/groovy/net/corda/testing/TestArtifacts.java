@@ -35,25 +35,26 @@ import java.util.function.Supplier;
  */
 public class TestArtifacts {
     private static final Logger LOG = LoggerFactory.getLogger(TestArtifacts.class);
-
+    private static final String ARTIFACT = "tests";
+    private static final String EXTENSION = "zip";
+    private static final String BASE_URL = "https://software.r3.com/artifactory/corda-test-results/net/corda";
     private final Artifactory artifactory = new Artifactory();
 
-    private final String baseUrl = "https://software.r3.com/artifactory/corda-test-results/net/corda";
-
-    public boolean get(@NotNull final String theTag, @NotNull final OutputStream outputStream) {
-        return artifactory.get(baseUrl, theTag, "tests", "zip", outputStream);
-    }
-
-    private File get(@NotNull final String theTag, @NotNull final File destDir) {
-        return artifactory.get(baseUrl, theTag, "tests", "zip", destDir);
-    }
-
-    private boolean put(@NotNull final String theTag, @NotNull final InputStream inputStream) {
-        return artifactory.put(baseUrl, theTag, "tests", "zip", inputStream);
-    }
-
+    /**
+     * The current branch/tag
+     * @return the current branch
+     */
+    @NotNull
     static String getGitBranch() {
         return Artifactory.getProperty("git.branch");
+    }
+
+    /**
+     * @return the branch that this branch was likely checked out from.
+     */
+    @NotNull
+    static String getTargetGitBranch() {
+        return Artifactory.getProperty("git.target.branch");
     }
 
     /**
@@ -63,21 +64,19 @@ public class TestArtifacts {
      * @param name    name of the task
      * @return a reference to the created task.
      */
+    @NotNull
     public static Task createZipTask(Project project, String name) {
-        Zip zipTask = project.getTasks().create(name, Zip.class, z -> {
-            z.getArchiveFileName().set("tests.zip");
+        return project.getTasks().create(name, Zip.class, z -> {
+            z.getArchiveFileName().set(Artifactory.getFileName(ARTIFACT, EXTENSION, getGitBranch()));
             z.getDestinationDirectory().set(project.getRootDir());
             z.from(project.getRootDir(), task -> {
                 task.include("**/build/test-results-xml/**/*.xml", "**/build/test-results/**/*.xml");
             });
             z.doFirst(task -> project.getLogger().warn("About to zip files"));
-            z.doLast(t -> {
+            z.doLast(task -> {
                 project.getLogger().warn("Attempting to upload {}", z.getArchiveFileName().get());
-                try {
-                    FileInputStream inputStream = new FileInputStream(new File(z.getArchiveFileName().get()));
-                    boolean ok = new TestArtifacts().put(getGitBranch(), inputStream);
-                    inputStream.close();
-                    if (!ok) {
+                try (FileInputStream inputStream = new FileInputStream(new File(z.getArchiveFileName().get()))) {
+                    if (!new TestArtifacts().put(getGitBranch(), inputStream)) {
                         project.getLogger().warn("Could not upload zip of tests");
                     }
                 } catch (Exception e) {
@@ -85,12 +84,10 @@ public class TestArtifacts {
                 }
             });
         });
-
-        return zipTask;
     }
 
     /**
-     * Unzip Junit XML test results and return test names and durations.
+     * Unzip Junit XML test results in memory and return test names and durations.
      *
      * @param inputStream stream containing zipped xml files.
      * @return list of test name and durations
@@ -177,7 +174,6 @@ public class TestArtifacts {
         return results;
     }
 
-
     /**
      * A supplier of tests.
      * <p>
@@ -186,16 +182,21 @@ public class TestArtifacts {
      * @param destDir destination that we will write the interim tests file to
      * @return a supplier of test results
      */
+    @NotNull
     public static Supplier<List<Tuple2<String, Double>>> getTestsSupplier(final File destDir) {
         return () -> {
             LOG.warn("Getting tests from Artifactory");
             try {
                 final TestArtifacts testArtifacts = new TestArtifacts();
-                final File tests = testArtifacts.get(getGitBranch(), destDir);
+                File tests = testArtifacts.get(getGitBranch(), destDir);
 
                 if (tests == null) {
-                    LOG.warn("Could not get tests from Artifactory");
-                    return Collections.emptyList();
+                    LOG.warn("Could not get tests from Artifactory for {}, trying {}", getGitBranch(), getTargetGitBranch());
+                    tests = testArtifacts.get(getTargetGitBranch(), destDir);
+                    if (tests == null) {
+                        LOG.warn("Could not get any tests from Artifactory");
+                        return Collections.emptyList();
+                    }
                 }
                 try (FileInputStream inputStream = new FileInputStream(tests)) {
                     return fromZippedXml(inputStream);
@@ -207,6 +208,37 @@ public class TestArtifacts {
                 return Collections.emptyList();
             }
         };
+    }
+
+    /**
+     * Get tests for the specified tag in the outputStream
+     * @param theTag tag for tests
+     * @param outputStream stream of zipped xml files
+     * @return false if we fail to get the tests
+     */
+    public boolean get(@NotNull final String theTag, @NotNull final OutputStream outputStream) {
+        return artifactory.get(BASE_URL, theTag, "tests", "zip", outputStream);
+    }
+
+    /**
+     * Get tests for the specified tag and save as a file
+     * @param theTag tag for tests
+     * @param destDir destination directory
+     * @return the file
+     */
+    @Nullable
+    private File get(@NotNull final String theTag, @NotNull final File destDir) {
+        return artifactory.get(BASE_URL, theTag, "tests", "zip", destDir);
+    }
+
+    /**
+     * Uplaod the supplied tests
+     * @param theTag tag for tests
+     * @param inputStream stream of zipped xml files.
+     * @return true if we succeed
+     */
+    private boolean put(@NotNull final String theTag, @NotNull final InputStream inputStream) {
+        return artifactory.put(BASE_URL, theTag, ARTIFACT, EXTENSION, inputStream);
     }
 }
 

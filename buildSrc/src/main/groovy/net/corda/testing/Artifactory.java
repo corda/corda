@@ -17,7 +17,12 @@ public class Artifactory {
     //<editor-fold desc="Statics">
     private static final Logger LOG = LoggerFactory.getLogger(Artifactory.class);
 
-
+    /**
+     * Get property with logging
+     * @param key property to get
+     * @return empty string, or trimmed value
+     */
+    @NotNull
     static String getProperty(@NotNull final String key) {
         final String value = System.getProperty(key, "").trim();
         if (value.isEmpty()) {
@@ -63,7 +68,7 @@ public class Artifactory {
      * @param theTag    e.g. 4.3
      * @return e.g. corda-4.3.jar
      */
-    private static String getFileName(@NotNull final String artifact,
+    static String getFileName(@NotNull final String artifact,
                                       @NotNull final String extension,
                                       @Nullable final String theTag) {
         StringBuilder sb = new StringBuilder().append(artifact);
