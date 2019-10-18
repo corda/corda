@@ -52,20 +52,19 @@ class NodeSchemaService(private val extraSchemas: Set<MappedSchema> = emptySet()
     }
 
     // Required schemas are those used by internal Corda services
-    private val requiredSchemas: Map<MappedSchema, SchemaService.SchemaOptions> =
-            mapOf(Pair(CommonSchemaV1, SchemaOptions()),
-                  Pair(VaultSchemaV1, SchemaOptions()),
-                  Pair(NodeInfoSchemaV1, SchemaOptions()),
-                  Pair(NodeCoreV1, SchemaOptions()))
+    private val requiredSchemas = listOf(CommonSchemaV1, VaultSchemaV1, NodeInfoSchemaV1, NodeCoreV1)
 
-    fun internalSchemas() = requiredSchemas.keys + extraSchemas.filter { schema -> // when mapped schemas from the finance module are present, they are considered as internal ones
-        schema::class.qualifiedName == "net.corda.finance.schemas.CashSchemaV1" ||
-                schema::class.qualifiedName == "net.corda.finance.schemas.CommercialPaperSchemaV1" ||
-                schema::class.qualifiedName == "net.corda.node.services.transactions.NodeNotarySchemaV1" ||
-                schema::class.qualifiedName?.startsWith("net.corda.notary.") ?: false
+    fun internalSchemas() = requiredSchemas + extraSchemas.filter {
+        // when mapped schemas from the finance module are present, they are considered as internal ones
+        it::class.qualifiedName == "net.corda.finance.schemas.CashSchemaV1" ||
+                it::class.qualifiedName == "net.corda.finance.schemas.CommercialPaperSchemaV1" ||
+                it::class.qualifiedName?.startsWith("net.corda.notary.") ?: false
+    }.toList()
+
+    override val schemaOptions = linkedMapOf<MappedSchema, SchemaOptions>().apply {
+        //ordered map (LinkedHashMap) to keep core schemas before CorDapps' schemas
+        (requiredSchemas + extraSchemas.minus(requiredSchemas)).forEach { this[it] = SchemaOptions() }
     }
-
-    override val schemaOptions: Map<MappedSchema, SchemaService.SchemaOptions> = requiredSchemas + extraSchemas.associateBy({ it }, { SchemaOptions() })
 
     // Currently returns all schemas supported by the state, with no filtering or enrichment.
     override fun selectSchemas(state: ContractState): Iterable<MappedSchema> {

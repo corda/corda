@@ -86,6 +86,9 @@ import net.corda.nodeapi.internal.cryptoservice.CryptoServiceFactory
 import net.corda.nodeapi.internal.cryptoservice.SupportedCryptoServices
 import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
 import net.corda.nodeapi.internal.persistence.*
+import net.corda.nodeapi.internal.persistence.SchemaMigration.Companion.logDatabaseErrorWithCode
+import net.corda.nodeapi.internal.persistence.SchemaMigration.Companion.logDatabaseMigrationStart
+import net.corda.nodeapi.internal.persistence.SchemaMigration.Companion.logDatabaseMigrationSuccessfulEnd
 import net.corda.tools.shell.InteractiveShell
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.jolokia.jvmagent.JolokiaServer
@@ -354,23 +357,24 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             "Node's platform version is lower than network's required minimumPlatformVersion"
         }
         networkMapCache.start(netParams.notaries)
-
-        startDatabase()
+        try {
+            logDatabaseMigrationStart()
+            startDatabase()
+            database.transaction { database.createSession() }
+            logDatabaseMigrationSuccessfulEnd()
+        } catch(e: Exception) {
+            logDatabaseErrorWithCode(e)
+            throw e
+        }
         val (identity, identityKeyPair) = obtainIdentity()
         X509Utilities.validateCertPath(trustRoot, identity.certPath)
 
         val nodeCa = configuration.signingCertificateStore.get()[CORDA_CLIENT_CA]
         identityService.start(trustRoot, listOf(identity.certificate, nodeCa), netParams.notaries.map { it.identity }, pkToIdCache)
 
-        val (keyPairs, nodeInfoAndSigned, myNotaryIdentity) =
-                try {
-                    database.transaction {
-                        updateNodeInfo(identity, identityKeyPair, publish = true)
-                    }
-                } catch (e: Exception) {
-                    logDatabaseErrorWithCode(e)
-                    throw e
-                }
+        val (keyPairs, nodeInfoAndSigned, myNotaryIdentity) = database.transaction {
+            updateNodeInfo(identity, identityKeyPair, publish = true)
+        }
 
         val (nodeInfo, signedNodeInfo) = nodeInfoAndSigned
         identityService.ourNames = nodeInfo.legalIdentities.map { it.name }.toSet()
@@ -825,7 +829,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     protected open fun startDatabase() {
         val props = configuration.dataSourceProperties
         if (props.isEmpty) throw DatabaseConfigurationException("There must be a database configured.")
-        database.startHikariPool(props, configuration.database, schemaService.internalSchemas(), metricRegistry, this.cordappLoader, configuration.baseDirectory, configuration.myLegalName)
+        database.startHikariPool(props, configuration.database, schemaService.internalSchemas().toSet(),
+                metricRegistry, cordappLoader, configuration.baseDirectory, configuration.myLegalName)
         // Now log the vendor string as this will also cause a connection to be tested eagerly.
         logVendorString(database, log)
     }
@@ -996,7 +1001,14 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                                         services: ServicesForResolution,
                                         database: CordaPersistence,
                                         cordappLoader: CordappLoader): VaultServiceInternal {
-        return NodeVaultService(platformClock, keyManagementService, services, database, schemaService, cordappLoader.appClassLoader)
+        return NodeVaultService(
+                platformClock,
+                keyManagementService,
+                services,
+                database,
+                schemaService,
+                cordappLoader.appClassLoader
+        )
     }
 
     // JDK 11: switch to directly instantiating jolokia server (rather than indirectly via dynamically self attaching Java Agents,
@@ -1149,7 +1161,9 @@ fun createCordaPersistence(databaseConfig: DatabaseConfig,
     return CordaPersistence(databaseConfig, schemaService.schemaOptions.keys, jdbcUrl, cacheFactory, attributeConverters, customClassLoader)
 }
 
-fun CordaPersistence.startHikariPool(hikariProperties: Properties, databaseConfig: DatabaseConfig, schemas: Set<MappedSchema>, metricRegistry: MetricRegistry? = null, cordappLoader: CordappLoader? = null, currentDir: Path? = null, ourName: CordaX500Name) {
+fun CordaPersistence.startHikariPool(hikariProperties: Properties, databaseConfig: DatabaseConfig, schemas: Set<MappedSchema>,
+                                     metricRegistry: MetricRegistry? = null, cordappLoader: CordappLoader? = null, currentDir: Path? = null,
+                                     ourName: CordaX500Name) {
     try {
         val dataSource = DataSourceFactory.createDataSource(hikariProperties, metricRegistry = metricRegistry)
         val schemaMigration = SchemaMigration(schemas, dataSource, databaseConfig, cordappLoader, currentDir, ourName)
@@ -1157,9 +1171,13 @@ fun CordaPersistence.startHikariPool(hikariProperties: Properties, databaseConfi
         start(dataSource)
     } catch (ex: Exception) {
         when {
-            ex is HikariPool.PoolInitializationException -> throw CouldNotCreateDataSourceException("Could not connect to the database. Please check your JDBC connection URL, or the connectivity to the database.", ex)
-            ex.cause is ClassNotFoundException -> throw CouldNotCreateDataSourceException("Could not find the database driver class. Please add it to the 'drivers' folder. See: https://docs.corda.net/corda-configuration-file.html", ex.cause)
+            ex is HikariPool.PoolInitializationException -> throw CouldNotCreateDataSourceException(
+                    "Could not connect to the database. Please check your JDBC connection URL, or the connectivity to the database.", ex)
+            ex.cause is ClassNotFoundException -> throw CouldNotCreateDataSourceException(
+                    "Could not find the database driver class. Please add it to the 'drivers' folder. " +
+                            "See: https://docs.corda.net/corda-configuration-file.html", ex.cause)
             ex is OutstandingDatabaseChangesException -> throw (DatabaseIncompatibleException(ex.message))
+            ex is DatabaseIncompatibleException -> throw ex
             else -> throw CouldNotCreateDataSourceException("Could not create the DataSource: ${ex.message}", ex)
         }
     }

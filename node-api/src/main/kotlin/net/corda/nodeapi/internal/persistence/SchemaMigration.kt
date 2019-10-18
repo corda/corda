@@ -5,17 +5,24 @@ import com.zaxxer.hikari.pool.HikariPool
 import liquibase.Contexts
 import liquibase.LabelExpression
 import liquibase.Liquibase
+import liquibase.changelog.ChangeSet
+import liquibase.changelog.DatabaseChangeLog
+import liquibase.changelog.visitor.AbstractChangeExecListener
 import liquibase.database.Database
 import liquibase.database.DatabaseFactory
 import liquibase.database.jvm.JdbcConnection
 import liquibase.exception.ChangeLogParseException
 import liquibase.exception.MigrationFailedException
+import liquibase.logging.LogService
+import liquibase.logging.LoggerContext
+import liquibase.logging.core.NoOpLoggerContext
+import liquibase.logging.core.Slf4JLoggerFactory
 import liquibase.resource.ClassLoaderResourceAccessor
 import net.corda.core.identity.CordaX500Name
-import net.corda.nodeapi.internal.MigrationHelpers.getMigrationResource
 import net.corda.core.schemas.MappedSchema
-import net.corda.core.utilities.info
+import net.corda.nodeapi.internal.MigrationHelpers.getMigrationResource
 import net.corda.nodeapi.internal.cordapp.CordappLoader
+import org.slf4j.Logger
 import net.corda.nodeapi.internal.logging.KeyValueFormatter
 import org.hibernate.tool.schema.spi.SchemaManagementException
 import org.slf4j.LoggerFactory
@@ -23,9 +30,11 @@ import java.io.ByteArrayInputStream
 import java.io.InputStream
 import java.nio.file.Path
 import java.sql.Statement
-import javax.sql.DataSource
 import java.util.concurrent.locks.ReentrantLock
+import javax.sql.DataSource
 import kotlin.concurrent.withLock
+import net.corda.core.internal.toPath
+import java.net.URL
 
 // Migrate the database to the current version, using liquibase.
 //
@@ -38,19 +47,78 @@ class SchemaMigration(
         private val databaseConfig: DatabaseConfig,
         cordappLoader: CordappLoader? = null,
         private val currentDirectory: Path?,
-        private val ourName: CordaX500Name) {
+        private val ourName: CordaX500Name? = null) {
+
+    private val jarToMappedSchemas: Map<URL?, Set<MappedSchema>> =
+            cordappLoader?.cordapps?.associate { it.jarPath as URL? to it.customSchemas } ?: emptyMap()
 
     companion object {
-        val logger = LoggerFactory.getLogger("databaseInitialisation")
+        val logger: Logger = LoggerFactory.getLogger("databaseInitialisation")
         const val NODE_BASE_DIR_KEY = "liquibase.nodeDaseDir"
         const val NODE_X500_NAME = "liquibase.nodeName"
         val loader = ThreadLocal<CordappLoader>()
         private val mutex = ReentrantLock()
-        val formatter = KeyValueFormatter(true, logger.name.capitalize() )
+        val formatter = KeyValueFormatter(logger.name.capitalize())
+
+        /** Log a INFO level message produced by evaluating the given lamdba, but only if INFO logging is enabled. */
+        private inline fun Logger.info(msg: () -> String) {
+            if (isInfoEnabled) info(msg())
+        }
+
+        private const val NO_JAR = "none"
+
+        fun logDatabaseErrorWithCode(t: Exception) {
+            val errorCode = SchemaMigrationError.fromThrowable(t)
+            logger.error(SchemaMigration.formatter.format("status", "error", "error_code", errorCode.code.toString(),
+                    "message", t.message ?: ""))
+        }
+
+        fun logDatabaseMigrationStart() {
+            logger.info(SchemaMigration.formatter.format("status", "start"))
+        }
+
+        fun logDatabaseMigrationSuccessfulEnd() {
+            logger.info(SchemaMigration.formatter.format("status", "successful"))
+        }
+
+        fun logDatabaseMigrationChangeSetStart(changeSet: String, cordapp: String?) {
+            logger.info {
+                SchemaMigration.formatter.format("changeset", changeSet, "cordapp", "${cordapp ?: NO_JAR}",
+                        "status", "started")
+            }
+        }
+
+        fun logDatabaseMigrationChangeSetEnd(changeSet: String, cordapp: String?) {
+            logger.info {
+                SchemaMigration.formatter.format("changeset", changeSet, "cordapp", "${cordapp ?: NO_JAR}",
+                        "status", "successful")
+            }
+        }
+
+        fun logDatabaseMigrationChangeSetError(t: Exception, changeSet: String, cordapp: String?) {
+            val errorCode = SchemaMigrationError.fromThrowable(t)
+            logger.error(SchemaMigration.formatter.format("changeset", changeSet, "cordapp", "${cordapp ?: NO_JAR}",
+                    "status", "error", "error_code", errorCode.code.toString(), "message", t.message ?: ""))
+        }
+
+        fun logDatabaseMigrationChangeSetToBeRun(changeSet: String, cordapp: String?) {
+            logger.info {
+                SchemaMigration.formatter.format("changeset", changeSet, "cordapp", "${cordapp ?: NO_JAR}",
+                        "status", "to be run")
+            }
+        }
+
+        fun logDatabaseMigrationCount(count: Int) {
+            logger.info { SchemaMigration.formatter.format("change_set_count", "$count") }
+        }
     }
 
     init {
         loader.set(cordappLoader)
+        //Disable Liquibase's MDC logging
+        LogService.setLoggerFactory(object : Slf4JLoggerFactory() {
+            override fun pushContext(key: String, `object`: Any): LoggerContext = NoOpLoggerContext()
+        })
     }
 
     private val classLoader = cordappLoader?.appClassLoader ?: Thread.currentThread().contextClassLoader
@@ -80,11 +148,13 @@ class SchemaMigration(
     private fun checkState() = doRunMigration(run = false, check = true)
 
     /**  Create a resource accessor that aggregates the changelogs included in the schemas into one dynamic stream. */
-    private class CustomResourceAccessor(val dynamicInclude: String, val changelogList: List<String?>, classLoader: ClassLoader) : ClassLoaderResourceAccessor(classLoader) {
+    private class CustomResourceAccessor(val dynamicInclude: String, val changelogList: List<String?>, classLoader: ClassLoader) :
+            ClassLoaderResourceAccessor(classLoader) {
         override fun getResourcesAsStream(path: String): Set<InputStream> {
             if (path == dynamicInclude) {
                 // Create a map in Liquibase format including all migration files.
-                val includeAllFiles = mapOf("databaseChangeLog" to changelogList.filter { it != null }.map { file -> mapOf("include" to mapOf("file" to file)) })
+                val includeAllFiles = mapOf("databaseChangeLog"
+                        to changelogList.filterNotNull().map { file -> mapOf("include" to mapOf("file" to file)) })
 
                 // Transform it to json.
                 val includeAllFilesJson = ObjectMapper().writeValueAsBytes(includeAllFiles)
@@ -96,63 +166,90 @@ class SchemaMigration(
         }
     }
 
-    private fun doRunMigration(run: Boolean, check: Boolean, existingCheckpoints: Boolean? = null) {
-
+    private fun doRunMigration(
+            run: Boolean,
+            check: Boolean,
+            existingCheckpoints: Boolean? = null
+    ) {
         // Virtual file name of the changelog that includes all schemas.
         val dynamicInclude = "master.changelog.json"
 
         dataSource.connection.use { connection ->
 
-            // Collect all changelog file referenced in the included schemas.
-            // For backward compatibility reasons, when failOnMigrationMissing=false, we don't manage CorDapps via Liquibase but use the hibernate hbm2ddl=update.
-            val changelogList = schemas.mapNotNull { mappedSchema ->
+            val schemasAndSourceJar: List<Pair<MappedSchema, String>> = schemas.map { mappedSchema ->
+                val jar = jarToMappedSchemas.filter { entry -> entry.value.contains(mappedSchema) }.keys.firstOrNull()
+                val name = jar?.let { it.toPath().fileName.toString() } ?: NO_JAR
+                Pair(mappedSchema, name)
+            }
+
+            var resourcesAndSourceInfo: List<Pair<CustomResourceAccessor, String>> = schemasAndSourceJar.mapNotNull { (mappedSchema, jar) ->
+                // Collect all changelog file referenced in the included schemas.
+                // For backward compatibility reasons, when failOnMigrationMissing=false,
+                // we don't manage CorDapps via Liquibase but use the hibernate hbm2ddl=update.
                 val resource = getMigrationResource(mappedSchema, classLoader)
-                when {
+                val changeLog = when {
                     resource != null -> resource
                     // Corda OS FinanceApp in v3 has no Liquibase script, so no error is raised
-                    (mappedSchema::class.qualifiedName == "net.corda.finance.schemas.CashSchemaV1" || mappedSchema::class.qualifiedName == "net.corda.finance.schemas.CommercialPaperSchemaV1") && mappedSchema.migrationResource == null -> null
+                    (mappedSchema::class.qualifiedName == "net.corda.finance.schemas.CashSchemaV1"
+                            || mappedSchema::class.qualifiedName == "net.corda.finance.schemas.CommercialPaperSchemaV1")
+                            && mappedSchema.migrationResource == null -> null
                     else -> throw MissingMigrationException(mappedSchema)
                 }
+                if (changeLog != null) {
+                    checkResourcesInClassPath(listOf(changeLog), jar)
+                    Pair(CustomResourceAccessor(dynamicInclude, listOf(changeLog), classLoader), jar)
+                } else null
             }
 
             val path = currentDirectory?.toString()
             if (path != null) {
                 System.setProperty(NODE_BASE_DIR_KEY, path) // base dir for any custom change set which may need to load a file (currently AttachmentVersionNumberMigration)
             }
-            System.setProperty(NODE_X500_NAME, ourName.toString())
-            logger.info(formatter.format( "status", "start"))
-            val customResourceAccessor = CustomResourceAccessor(dynamicInclude, changelogList, classLoader)
-            checkResourcesInClassPath(changelogList)
+            if (ourName != null) {
+                System.setProperty(NODE_X500_NAME, ourName.toString())
+            }
 
             // current version of Liquibase appears to be non-threadsafe
             // this is apparent when multiple in-process nodes are all running migrations simultaneously
             mutex.withLock {
-                val liquibase = Liquibase(dynamicInclude, customResourceAccessor, getLiquibaseDatabase(JdbcConnection(connection)))
-
-                val unRunChanges = liquibase.listUnrunChangeSets(Contexts(), LabelExpression())
-                logger.info{ formatter.format( "change_set_count", unRunChanges.size.toString()) }
-                for (elem in unRunChanges) {
-                    logger.info{ formatter.format("changeset", elem.toString(), "status", "to be run") }
+                val jarsToUnRunChanges: List<Pair<List<ChangeSet>, String>> = resourcesAndSourceInfo.map {
+                    Liquibase(dynamicInclude, it.first, getLiquibaseDatabase(JdbcConnection(connection))).let { runner ->
+                        Pair(runner.listUnrunChangeSets(Contexts(), LabelExpression()), it.second)
+                    }
                 }
-                when {
-                    (run && !check) && (unRunChanges.isNotEmpty() && existingCheckpoints!!) -> throw CheckpointsException() // Do not allow database migration when there are checkpoints
-                    run && !check -> for (elem in unRunChanges) {
-                        logger.info { formatter.format( "changeset", elem.toString(), "status", "started") }
-                        try {
-                            liquibase.update(1, Contexts().toString())
-                            logger.info { formatter.format( "changeset", elem.toString(), "status", "successful") }
-                        } catch (t: Throwable) {
-                            logDatabaseErrorWithCode(t, "changeset", elem.toString())
-                            throw t
+
+                val changeLog = DatabaseChangeLog()
+                jarsToUnRunChanges.map { it.first }.flatten().forEach { changeLog.addChangeSet(it) }
+
+                val changeToRunCount = changeLog.changeSets.size
+                logDatabaseMigrationCount(changeToRunCount)
+
+                if (logger.isInfoEnabled) {
+                    jarsToUnRunChanges.forEach { (unRunChanges, jar) ->
+                        unRunChanges.forEach {
+                            logDatabaseMigrationChangeSetToBeRun(it.toString(), jar)
                         }
                     }
-                    check && !run && unRunChanges.isNotEmpty() -> throw OutstandingDatabaseChangesException(unRunChanges.size)
+                }
+
+                val changesToJars: Map<ChangeSet, String> = jarsToUnRunChanges.flatMap { (changeSets, jar) ->
+                    changeSets.map { it to jar }
+                }.associate { it.first to it.second }
+                val runner = Liquibase(changeLog, null, getLiquibaseDatabase(JdbcConnection(connection))).apply {
+                    setChangeExecListener(CordaChangeExecListener(changesToJars))
+                }
+
+                when {
+                    (run && !check) && (changeToRunCount > 0 && existingCheckpoints!!) -> {
+                        throw CheckpointsException()
+                    } // Do not allow database migration when there are checkpoints
+                    run && !check -> runner.update(Contexts().toString())
+                    check && !run && changeToRunCount > 0 -> throw OutstandingDatabaseChangesException(changeToRunCount)
                     check && !run -> {
                     } // Do nothing will be interpreted as "check succeeded"
                     else -> throw IllegalStateException("Invalid usage.")
                 }
             }
-            logger.info { formatter.format( "status", "successful") }
         }
     }
 
@@ -160,7 +257,23 @@ class SchemaMigration(
         return DatabaseFactory.getInstance().findCorrectDatabaseImplementation(conn)
     }
 
-    /** For existing database created before verions 4.0 add Liquibase support - creates DATABASECHANGELOG and DATABASECHANGELOGLOCK tables and marks changesets as executed. */
+    class CordaChangeExecListener(private val changeLogToCordapp: Map<ChangeSet, String>) : AbstractChangeExecListener() {
+        override fun willRun(changeSet: ChangeSet, databaseChangeLog: DatabaseChangeLog, database: Database,
+                             runStatus: ChangeSet.RunStatus) {
+            logDatabaseMigrationChangeSetStart(changeSet.toString(), changeLogToCordapp[changeSet])
+        }
+
+        override fun ran(changeSet: ChangeSet, databaseChangeLog: DatabaseChangeLog, database: Database, execType: ChangeSet.ExecType) {
+            logDatabaseMigrationChangeSetEnd(changeSet.toString(), changeLogToCordapp[changeSet])
+        }
+
+        override fun runFailed(changeSet: ChangeSet, databaseChangeLog: DatabaseChangeLog, database: Database, exception: Exception) {
+            logDatabaseMigrationChangeSetError(exception, changeSet.toString(), changeLogToCordapp[changeSet])
+        }
+    }
+
+    /** For existing database created before verions 4.0 add Liquibase support
+     * - creates DATABASECHANGELOG and DATABASECHANGELOGLOCK tables and marks changesets as executed. */
     private fun migrateOlderDatabaseToUseLiquibase(existingCheckpoints: Boolean): Boolean {
         val isFinanceAppWithLiquibase = schemas.any { schema ->
             (schema::class.qualifiedName == "net.corda.finance.schemas.CashSchemaV1"
@@ -240,10 +353,12 @@ class SchemaMigration(
         return isExistingDBWithoutLiquibase || isFinanceAppWithLiquibaseNotMigrated
     }
 
-    private fun checkResourcesInClassPath(resources: List<String?>) {
+    private fun checkResourcesInClassPath(resources: List<String?>, jar: String? = null) {
         for (resource in resources) {
             if (resource != null && classLoader.getResource(resource) == null) {
-                throw DatabaseMigrationException("Could not find Liquibase database migration script $resource. Please ensure the jar file containing it is deployed in the cordapps directory.")
+                val error = DatabaseMigrationException("Could not find Liquibase database migration script $resource for $jar. " +
+                        "Please ensure the jar file containing it is deployed in the cordapps directory.")
+                logDatabaseMigrationChangeSetError(error, resource, jar)
             }
         }
     }
@@ -266,31 +381,30 @@ enum class SchemaMigrationError(val code: Int) {
     companion object {
         fun fromThrowable(t: Throwable): SchemaMigrationError {
             return when {
-                t.cause is ClassNotFoundException -> SchemaMigrationError.MISSING_DRIVER
-                t.cause is HikariPool.PoolInitializationException -> SchemaMigrationError.INITIALISATION_ERROR
+                t.cause is ClassNotFoundException -> MISSING_DRIVER
+                t.cause is HikariPool.PoolInitializationException -> INITIALISATION_ERROR
                 t is CouldNotCreateDataSourceException && t.cause !is MigrationFailedException -> when {
-                    t.cause is RuntimeException && ".+ Property \\S+ does not exist .+".toRegex().matches(t.message ?: "") -> SchemaMigrationError.INVALID_DATA_SOURCE_PROPERTY
-                    (t.cause is DatabaseMigrationException && (t.message?.contains("Could not find Liquibase database migration script") ?: false)) || t.cause is MissingMigrationException -> SchemaMigrationError.MISSING_SCRIPT
-                    t.cause is ChangeLogParseException -> SchemaMigrationError.SCRIPT_PARSING_ERROR
-                    else -> SchemaMigrationError.UNKNOWN_ERROR
+                    t.cause is RuntimeException && ".+ Property \\S+ does not exist .+".toRegex().matches(t.message ?: "") ->
+                        INVALID_DATA_SOURCE_PROPERTY
+                    (t.cause is DatabaseMigrationException
+                            && (t.message?.contains("Could not find Liquibase database migration script") ?: false))
+                            || t.cause is MissingMigrationException -> MISSING_SCRIPT
+                    t.cause is ChangeLogParseException -> SCRIPT_PARSING_ERROR
+                    else -> UNKNOWN_ERROR
                 }
                 t is MigrationFailedException || t.cause is MigrationFailedException -> when {
-                    t.message?.contains("syntax error") ?: false -> SchemaMigrationError.INVALID_SQL_STATEMENT
-                    t.message?.contains("DatabaseException: ERROR: type") ?: false -> SchemaMigrationError.INVALID_SQL_TYPE
-                    t.message?.contains("Failed SQL:") ?: false -> SchemaMigrationError.INCOMPATIBLE_CHANGE_SET
-                    else -> SchemaMigrationError.UNCATEGORISED_DATABASE_MIGRATION_ERROR
+                    t.message?.contains("syntax error") ?: false -> INVALID_SQL_STATEMENT
+                    t.message?.contains("DatabaseException: ERROR: type") ?: false -> INVALID_SQL_TYPE
+                    t.message?.contains("Failed SQL:") ?: false -> INCOMPATIBLE_CHANGE_SET
+                    else -> UNCATEGORISED_DATABASE_MIGRATION_ERROR
                 }
-                t is DatabaseIncompatibleException -> SchemaMigrationError.OUTSTANDING_CHANGE_SETS
-                t is HibernateSchemaChangeException && t.cause is SchemaManagementException -> SchemaMigrationError.MAPPED_SCHEMA_INCOMPATIBLE_WITH_DATABASE_MANAGEMENT_SCRIPT
-                else -> SchemaMigrationError.UNKNOWN_ERROR
+                t is DatabaseIncompatibleException -> OUTSTANDING_CHANGE_SETS
+                t is HibernateSchemaChangeException && t.cause is SchemaManagementException ->
+                    MAPPED_SCHEMA_INCOMPATIBLE_WITH_DATABASE_MANAGEMENT_SCRIPT
+                else -> UNKNOWN_ERROR
             }
         }
     }
-}
-
-fun logDatabaseErrorWithCode(t: Throwable, vararg prefixElements: String) {
-    val errorCode = SchemaMigrationError.fromThrowable(t)
-    SchemaMigration.logger.error(SchemaMigration.formatter.format(*prefixElements, "status", "error", "error_code", errorCode.code.toString(), "message", t?.message ?: ""))
 }
 
 open class DatabaseMigrationException(message: String) : IllegalArgumentException(message) {
