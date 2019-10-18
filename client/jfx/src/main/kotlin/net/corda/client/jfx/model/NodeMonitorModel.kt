@@ -3,10 +3,15 @@ package net.corda.client.jfx.model
 import javafx.beans.property.SimpleObjectProperty
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCConnection
+import net.corda.client.rpc.GracefulReconnect
 import net.corda.core.contracts.ContractState
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.Party
-import net.corda.core.messaging.*
+import net.corda.core.messaging.CordaRPCOps
+import net.corda.core.messaging.StateMachineInfo
+import net.corda.core.messaging.StateMachineTransactionMapping
+import net.corda.core.messaging.StateMachineUpdate
+import net.corda.core.messaging.vaultTrackBy
 import net.corda.core.node.services.NetworkMapCache.MapChange
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.vault.DEFAULT_PAGE_NUM
@@ -72,7 +77,7 @@ class NodeMonitorModel : AutoCloseable {
      * TODO provide an unsubscribe mechanism
      */
     fun register(nodeHostAndPort: NetworkHostAndPort, username: String, password: String) {
-        rpc = CordaRPCClient(nodeHostAndPort).start(username, password)
+        rpc = CordaRPCClient(nodeHostAndPort).start(username, password, GracefulReconnect())
         proxyObservable.value = rpc.proxy
 
         // Vault snapshot (force single page load with MAX_PAGE_SIZE) + updates
