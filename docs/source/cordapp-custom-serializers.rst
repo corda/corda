@@ -218,9 +218,12 @@ the serialization framework can reason about.
 .. important:: When composing a proxy object for a class be aware that everything within that structure will be written
     into the serialized byte stream.
 
-Whitelisting
-------------
-By writing a custom serializer for a class it has the effect of adding that class to the whitelist, meaning such
+Registration and Whitelisting
+-----------------------------
+Classes inheriting from ``net.corda.core.serialization.SerializationCustomSerializer`` are automatically detected and
+registered via classpath scanning during CorDapp loading.
+
+When a custom serializer is found for a class, this has the effect of adding that class to the whitelist, meaning that such
 classes don't need explicitly adding to the CorDapp's whitelist.
 
 
