@@ -6,6 +6,7 @@ import com.bmuschko.gradle.docker.tasks.image.*;
 import org.gradle.api.GradleException;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 import java.util.Arrays;
@@ -21,27 +22,27 @@ public class ImageBuilding implements Plugin<Project> {
     public DockerPushImage pushTask;
 
     @Override
-    public void apply(Project project) {
+    public void apply(@NotNull final Project project) {
 
-        DockerRegistryCredentials registryCredentialsForPush = new DockerRegistryCredentials(project.getObjects());
+        final DockerRegistryCredentials registryCredentialsForPush = new DockerRegistryCredentials(project.getObjects());
         registryCredentialsForPush.getUsername().set("stefanotestingcr");
         registryCredentialsForPush.getPassword().set(System.getProperty("docker.push.password", ""));
 
-        DockerPullImage pullTask = project.getTasks().create("pullBaseImage", DockerPullImage.class, dockerPullImage -> {
+        final DockerPullImage pullTask = project.getTasks().create("pullBaseImage", DockerPullImage.class, dockerPullImage -> {
             dockerPullImage.doFirst(task -> dockerPullImage.setRegistryCredentials(registryCredentialsForPush));
             dockerPullImage.getRepository().set("stefanotestingcr.azurecr.io/buildbase");
             dockerPullImage.getTag().set("latest");
         });
 
 
-        DockerBuildImage buildDockerImageForSource = project.getTasks().create("buildDockerImageForSource", DockerBuildImage.class,
+        final DockerBuildImage buildDockerImageForSource = project.getTasks().create("buildDockerImageForSource", DockerBuildImage.class,
                 dockerBuildImage -> {
                     dockerBuildImage.dependsOn(Arrays.asList(project.getRootProject().getTasksByName("clean", true), pullTask));
                     dockerBuildImage.getInputDir().set(new File("."));
                     dockerBuildImage.getDockerFile().set(new File(new File("testing"), "Dockerfile"));
                 });
 
-        DockerCreateContainer createBuildContainer = project.getTasks().create("createBuildContainer", DockerCreateContainer.class,
+        final DockerCreateContainer createBuildContainer = project.getTasks().create("createBuildContainer", DockerCreateContainer.class,
                 dockerCreateContainer -> {
                     File baseWorkingDir = new File(System.getProperty("docker.work.dir") != null &&
                             !System.getProperty("docker.work.dir").isEmpty() ?
@@ -67,20 +68,20 @@ public class ImageBuilding implements Plugin<Project> {
                 });
 
 
-        DockerStartContainer startBuildContainer = project.getTasks().create("startBuildContainer", DockerStartContainer.class,
+        final DockerStartContainer startBuildContainer = project.getTasks().create("startBuildContainer", DockerStartContainer.class,
                 dockerStartContainer -> {
                     dockerStartContainer.dependsOn(createBuildContainer);
                     dockerStartContainer.targetContainerId(createBuildContainer.getContainerId());
                 });
 
-        DockerLogsContainer logBuildContainer = project.getTasks().create("logBuildContainer", DockerLogsContainer.class,
+        final DockerLogsContainer logBuildContainer = project.getTasks().create("logBuildContainer", DockerLogsContainer.class,
                 dockerLogsContainer -> {
                     dockerLogsContainer.dependsOn(startBuildContainer);
                     dockerLogsContainer.targetContainerId(createBuildContainer.getContainerId());
                     dockerLogsContainer.getFollow().set(true);
                 });
 
-        DockerWaitContainer waitForBuildContainer = project.getTasks().create("waitForBuildContainer", DockerWaitContainer.class,
+        final DockerWaitContainer waitForBuildContainer = project.getTasks().create("waitForBuildContainer", DockerWaitContainer.class,
                 dockerWaitContainer -> {
                     dockerWaitContainer.dependsOn(logBuildContainer);
                     dockerWaitContainer.targetContainerId(createBuildContainer.getContainerId());
@@ -91,14 +92,14 @@ public class ImageBuilding implements Plugin<Project> {
                     });
                 });
 
-        DockerCommitImage commitBuildImageResult = project.getTasks().create("commitBuildImageResult", DockerCommitImage.class,
+        final DockerCommitImage commitBuildImageResult = project.getTasks().create("commitBuildImageResult", DockerCommitImage.class,
                 dockerCommitImage -> {
                     dockerCommitImage.dependsOn(waitForBuildContainer);
                     dockerCommitImage.targetContainerId(createBuildContainer.getContainerId());
                 });
 
 
-        DockerTagImage tagBuildImageResult = project.getTasks().create("tagBuildImageResult", DockerTagImage.class, dockerTagImage -> {
+        final DockerTagImage tagBuildImageResult = project.getTasks().create("tagBuildImageResult", DockerTagImage.class, dockerTagImage -> {
             dockerTagImage.dependsOn(commitBuildImageResult);
             dockerTagImage.getImageId().set(commitBuildImageResult.getImageId());
             dockerTagImage.getTag().set(System.getProperty("docker.provided.tag",
@@ -107,7 +108,7 @@ public class ImageBuilding implements Plugin<Project> {
         });
 
 
-        DockerPushImage pushBuildImage = project.getTasks().create("pushBuildImage", DockerPushImage.class, dockerPushImage -> {
+        final DockerPushImage pushBuildImage = project.getTasks().create("pushBuildImage", DockerPushImage.class, dockerPushImage -> {
             dockerPushImage.dependsOn(tagBuildImageResult);
             dockerPushImage.doFirst(task -> dockerPushImage.setRegistryCredentials(registryCredentialsForPush));
             dockerPushImage.getImageName().set(registryName);
@@ -117,24 +118,26 @@ public class ImageBuilding implements Plugin<Project> {
         this.pushTask = pushBuildImage;
 
 
-        DockerRemoveContainer deleteContainer = project.getTasks().create("deleteBuildContainer", DockerRemoveContainer.class,
+        final DockerRemoveContainer deleteContainer = project.getTasks().create("deleteBuildContainer", DockerRemoveContainer.class,
                 dockerRemoveContainer -> {
                     dockerRemoveContainer.dependsOn(pushBuildImage);
                     dockerRemoveContainer.targetContainerId(createBuildContainer.getContainerId());
                 });
 
 
-        DockerRemoveImage deleteTaggedImage = project.getTasks().create("deleteTaggedImage", DockerRemoveImage.class, dockerRemoveImage -> {
-            dockerRemoveImage.dependsOn(pushBuildImage);
-            dockerRemoveImage.getForce().set(true);
-            dockerRemoveImage.targetImageId(commitBuildImageResult.getImageId());
-        });
+        final DockerRemoveImage deleteTaggedImage = project.getTasks().create("deleteTaggedImage", DockerRemoveImage.class,
+                dockerRemoveImage -> {
+                    dockerRemoveImage.dependsOn(pushBuildImage);
+                    dockerRemoveImage.getForce().set(true);
+                    dockerRemoveImage.targetImageId(commitBuildImageResult.getImageId());
+                });
 
-        DockerRemoveImage deleteBuildImage = project.getTasks().create("deleteBuildImage", DockerRemoveImage.class, dockerRemoveImage -> {
-            dockerRemoveImage.dependsOn(deleteContainer, deleteTaggedImage);
-            dockerRemoveImage.getForce().set(true);
-            dockerRemoveImage.targetImageId(buildDockerImageForSource.getImageId());
-        });
+        final DockerRemoveImage deleteBuildImage = project.getTasks().create("deleteBuildImage", DockerRemoveImage.class,
+                dockerRemoveImage -> {
+                    dockerRemoveImage.dependsOn(deleteContainer, deleteTaggedImage);
+                    dockerRemoveImage.getForce().set(true);
+                    dockerRemoveImage.targetImageId(buildDockerImageForSource.getImageId());
+                });
 
         if (System.getProperty("docker.keep.image") == null) {
             pushBuildImage.finalizedBy(deleteContainer, deleteBuildImage, deleteTaggedImage);
