@@ -51,7 +51,7 @@ anything set earlier.
    .. code-block:: none
 
       custom = {
-         jvmArgs: [ '-Xmx1G', '-XX:+UseG1GC' ]
+         jvmArgs: [ "-Xmx1G", "-XX:+UseG1GC" ]
       }
 
    Note that this will completely replace any defaults set by capsule above, not just the flags that are set here, so if you use this
@@ -85,7 +85,7 @@ anything set earlier.
    .. code-block:: none
 
       custom = {
-         jvmArgs: [ '-Xmx1G', '-XX:+UseG1GC', '-XX:-HeapDumpOnOutOfMemoryError' ]
+         jvmArgs: [ "-Xmx1G", "-XX:+UseG1GC", "-XX:-HeapDumpOnOutOfMemoryError" ]
       }
 
 
