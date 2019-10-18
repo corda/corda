@@ -25,8 +25,7 @@ public class ImageBuilding implements Plugin<Project> {
 
         DockerRegistryCredentials registryCredentialsForPush = new DockerRegistryCredentials(project.getObjects());
         registryCredentialsForPush.getUsername().set("stefanotestingcr");
-        String password = !System.getProperty("docker.push.password").isEmpty() ? System.getProperty("docker.push.password") : "";
-        registryCredentialsForPush.getPassword().set(password);
+        registryCredentialsForPush.getPassword().set(System.getProperty("docker.push.password", ""));
 
         DockerPullImage pullTask = project.getTasks().create("pullBaseImage", DockerPullImage.class, dockerPullImage -> {
             dockerPullImage.doFirst(task -> dockerPullImage.setRegistryCredentials(registryCredentialsForPush));
@@ -101,8 +100,8 @@ public class ImageBuilding implements Plugin<Project> {
         DockerTagImage tagBuildImageResult = project.getTasks().create("tagBuildImageResult", DockerTagImage.class, dockerTagImage -> {
             dockerTagImage.dependsOn(commitBuildImageResult);
             dockerTagImage.getImageId().set(commitBuildImageResult.getImageId());
-            dockerTagImage.getTag().set(!System.getProperty("docker.provided.tag").isEmpty() ? System.getProperty("docker.provided.tag") :
-                    "${UUID.randomUUID().toString().toLowerCase().subSequence(0, 12)}");
+            dockerTagImage.getTag().set(System.getProperty("docker.provided.tag",
+                    "${UUID.randomUUID().toString().toLowerCase().subSequence(0, 12)}"));
             dockerTagImage.getRepository().set(registryName);
         });
 
