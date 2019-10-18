@@ -34,8 +34,8 @@ class DistributedTesting implements Plugin<Project> {
             def requestedTasks = requestedTaskNames.collect { project.tasks.findByPath(it) }
 
             //in each subproject
-            //1. add the task to determine all tests within the module
-            //2. modify the underlying testing task to use the output of the listing task to include a subset of tests for each fork
+            //1. add the task to determine all tests within the module and register this as a source to the global allocator
+            //2. modify the underlying testing task to use the output of the global allocator to include a subset of tests for each fork
             //3. KubesTest will invoke these test tasks in a parallel fashion on a remote k8s cluster
             //4. after each completed test write its name to a file to keep track of what finished for restart purposes
             project.subprojects { Project subProject ->
@@ -55,53 +55,26 @@ class DistributedTesting implements Plugin<Project> {
                 }
             }
 
-            //now we are going to create "super" groupings of these KubesTest tasks, so that it is possible to invoke all submodule tests with a single command
-            //group all kubes tests by their underlying target task (test/integrationTest/smokeTest ... etc)
-            Map<String, List<KubesTest>> allKubesTestingTasksGroupedByType = project.subprojects.collect { prj -> prj.getAllTasks(false).values() }
+            //now we are going to create "super" groupings of the Test tasks, so that it is possible to invoke all submodule tests with a single command
+            //group all test Tasks by their underlying target task (test/integrationTest/smokeTest ... etc)
+            Map<String, List<Test>> allTestTasksGroupedByType = project.subprojects.collect { prj -> prj.getAllTasks(false).values() }
                     .flatten()
-                    .findAll { task -> task instanceof KubesTest }
-                    .groupBy { task -> task.taskToExecuteName }
+                    .findAll { task -> task instanceof Test }
+                    .groupBy { Test task -> task.name }
 
             //first step is to create a single task which will invoke all the submodule tasks for each grouping
             //ie allParallelTest will invoke [node:test, core:test, client:rpc:test ... etc]
             //ie allIntegrationTest will invoke [node:integrationTest, core:integrationTest, client:rpc:integrationTest ... etc]
+            //ie allUnitAndIntegrationTest will invoke [node:integrationTest, node:test, core:integrationTest, core:test, client:rpc:test , client:rpc:integrationTest ... etc]
             Set<ParallelTestGroup> userGroups = new HashSet<>(project.tasks.withType(ParallelTestGroup))
 
             Collection<ParallelTestGroup> userDefinedGroups = userGroups.forEach { testGrouping ->
-                List<KubesTest> groups = ((ParallelTestGroup) testGrouping).groups.collect {
-                    allKubesTestingTasksGroupedByType.get(it)
+                List<Test> groups = ((ParallelTestGroup) testGrouping).groups.collect {
+                    allTestTasksGroupedByType.get(it)
                 }.flatten()
-                String superListOfTasks = groups.collect { it.fullTaskToExecutePath }.join(" ")
+                String superListOfTasks = groups.collect { it.path }.join(" ")
 
-                PodAllocator allocator = new PodAllocator(project.getLogger())
-
-                Task preAllocateTask = project.rootProject.tasks.create("preAllocateFor" + testGrouping.name.capitalize()) {
-                    doFirst {
-                        String dockerTag = System.getProperty("docker.build.tag")
-                        if (dockerTag == null) {
-                            throw new GradleException("pre allocation cannot be used without a stable docker tag - please provide one")
-                        }
-                        int seed = (dockerTag.hashCode() + testGrouping.name.hashCode())
-                        String podPrefix = new BigInteger(64, new Random(seed)).toString(36)
-                        //here we will pre-request the correct number of pods for this testGroup
-                        int numberOfPodsToRequest = testGrouping.getShardCount()
-                        int coresPerPod = testGrouping.getCoresToUse()
-                        int memoryGBPerPod = testGrouping.getGbOfMemory()
-                        allocator.allocatePods(numberOfPodsToRequest, coresPerPod, memoryGBPerPod, podPrefix)
-                    }
-                }
-
-                Task deAllocateTask = project.rootProject.tasks.create("deAllocateFor" + testGrouping.name.capitalize()) {
-                    doFirst {
-                        String dockerTag = System.getProperty("docker.run.tag")
-                        if (dockerTag == null) {
-                            throw new GradleException("pre allocation cannot be used without a stable docker tag - please provide one")
-                        }
-                        int seed = (dockerTag.hashCode() + testGrouping.name.hashCode())
-                        String podPrefix = new BigInteger(64, new Random(seed)).toString(36);
-                        allocator.tearDownPods(podPrefix)
-                    }
-                }
+                def (Task preAllocateTask, Task deAllocateTask) = generatePreAllocateAndDeAllocateTasksForGrouping(project, testGrouping)
 
                 if (preAllocateTask.name in requestedTaskNames) {
                     imageBuildTask.dependsOn preAllocateTask
@@ -137,6 +110,38 @@ class DistributedTesting implements Plugin<Project> {
                 testGrouping.dependsOn(userDefinedParallelTask)
             }
         }
+    }
+
+    private List<Task> generatePreAllocateAndDeAllocateTasksForGrouping(Project project, ParallelTestGroup testGrouping) {
+        PodAllocator allocator = new PodAllocator(project.getLogger())
+        Task preAllocateTask = project.rootProject.tasks.create("preAllocateFor" + testGrouping.name.capitalize()) {
+            doFirst {
+                String dockerTag = System.getProperty("docker.build.tag")
+                if (dockerTag == null) {
+                    throw new GradleException("pre allocation cannot be used without a stable docker tag - please provide one")
+                }
+                int seed = (dockerTag.hashCode() + testGrouping.name.hashCode())
+                String podPrefix = new BigInteger(64, new Random(seed)).toString(36)
+                //here we will pre-request the correct number of pods for this testGroup
+                int numberOfPodsToRequest = testGrouping.getShardCount()
+                int coresPerPod = testGrouping.getCoresToUse()
+                int memoryGBPerPod = testGrouping.getGbOfMemory()
+                allocator.allocatePods(numberOfPodsToRequest, coresPerPod, memoryGBPerPod, podPrefix)
+            }
+        }
+
+        Task deAllocateTask = project.rootProject.tasks.create("deAllocateFor" + testGrouping.name.capitalize()) {
+            doFirst {
+                String dockerTag = System.getProperty("docker.run.tag")
+                if (dockerTag == null) {
+                    throw new GradleException("pre allocation cannot be used without a stable docker tag - please provide one")
+                }
+                int seed = (dockerTag.hashCode() + testGrouping.name.hashCode())
+                String podPrefix = new BigInteger(64, new Random(seed)).toString(36);
+                allocator.tearDownPods(podPrefix)
+            }
+        }
+        return [preAllocateTask, deAllocateTask]
     }
 
     private KubesTest generateParallelTestingTask(Project projectContainingTask, Test task, DockerPushImage imageBuildingTask, String providedTag) {
