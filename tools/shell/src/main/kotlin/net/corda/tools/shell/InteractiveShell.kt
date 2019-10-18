@@ -81,6 +81,7 @@ object InteractiveShell {
     private var classLoader: ClassLoader? = null
     private lateinit var shellConfiguration: ShellConfiguration
     private var onExit: () -> Unit = {}
+    private const val uuidStringSize = 36
 
     @JvmStatic
     fun getCordappsClassloader() = classLoader
@@ -375,12 +376,12 @@ object InteractiveShell {
                 return
             }
             //auxiliary validation - workaround for JDK8 bug https://bugs.java.com/bugdatabase/view_bug.do?bug_id=8159339
-            val uuidStringSize = 36
             if (id.length < uuidStringSize) {
-                val msg = "Flow ID of '$id' seems to be malformed - a UUID should have $uuidStringSize characters. " +
+                val msg = "Can not kill the flow. Flow ID of '$id' seems to be malformed - a UUID should have $uuidStringSize characters. " +
                         "Expand the terminal window to see the full UUID value."
-                output.println(msg, Color.yellow)
+                output.println(msg, Color.red)
                 log.warn(msg)
+                return
             }
             if (rpcOps.killFlow(runId)) {
                 output.println("Killed flow $runId", Color.yellow)
