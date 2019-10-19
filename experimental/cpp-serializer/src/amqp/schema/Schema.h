@@ -20,9 +20,15 @@ namespace amqp::internal::schema {
 
     using SchemaMap = std::map<
             std::string,
-            const std::reference_wrapper<const uPtr<AMQPTypeNotation>>>;
+            const std::reference_wrapper<const uPtr <AMQPTypeNotation>>>;
 
     using ISchemaType = amqp::schema::ISchema<SchemaMap::const_iterator>;
+
+}
+
+/******************************************************************************/
+
+namespace amqp::internal::schema {
 
     class Schema
             : public amqp::schema::ISchema<SchemaMap::const_iterator>

@@ -25,11 +25,11 @@ namespace amqp::internal::schema {
 std::ostream &
 operator << (std::ostream & stream_, const AMQPTypeNotation & clazz_) {
     switch (clazz_.type()) {
-        case AMQPTypeNotation::Type::Composite : {
+        case AMQPTypeNotation::Type::composite_t : {
             stream_ << dynamic_cast<const Composite &>(clazz_);
             break;
         }
-        case AMQPTypeNotation::Type::Restricted : {
+        case AMQPTypeNotation::Type::restricted_t : {
             stream_ << dynamic_cast<const Restricted &>(clazz_);
             break;
         }

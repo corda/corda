@@ -4,14 +4,20 @@
 
 #include "Reader.h"
 
+/******************************************************************************/
+
 using namespace amqp::reader;
 using namespace amqp::internal::reader;
+
+/******************************************************************************/
 
 TEST (Single, string) { // NOLINT
     TypedSingle<std::string> str_test ("Hello");
 
     EXPECT_EQ("Hello", str_test.dump());
 }
+
+/******************************************************************************/
 
 TEST (Single, list) { // NOLINT
 
@@ -36,3 +42,4 @@ TEST (Single, list) { // NOLINT
 
     EXPECT_EQ("[ 1, 2, 3, 4, 5 ]", test->dump());
 }
+/******************************************************************************/

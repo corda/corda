@@ -14,8 +14,8 @@ namespace amqp::internal {
     public :
         RestrictedDescriptor() = delete;
 
-        RestrictedDescriptor(const std::string & symbol_, int val_)
-                : AMQPDescriptor(symbol_, val_)
+        RestrictedDescriptor(std::string symbol_, int val_)
+                : AMQPDescriptor (std::move (symbol_), val_)
         { }
 
         ~RestrictedDescriptor() final = default;

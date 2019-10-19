@@ -16,9 +16,9 @@
 
 amqp::internal::
 ObjectDescriptor::ObjectDescriptor (
-    const std::string & symbol_,
+    std::string symbol_,
     int val_
-) : AMQPDescriptor (symbol_, val_) {
+) : AMQPDescriptor (std::move (symbol_), val_) {
 }
 
 /******************************************************************************/
@@ -28,7 +28,7 @@ ObjectDescriptor::ObjectDescriptor (
  */
 uPtr<amqp::AMQPDescribed>
 amqp::internal::
-ObjectDescriptor::build(pn_data_t * data_) const {
+ObjectDescriptor::build (pn_data_t * data_) const {
     DBG ("DESCRIPTOR" << std::endl); // NOLINT
 
     validateAndNext (data_);

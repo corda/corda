@@ -8,7 +8,7 @@
 #include <string>
 #include <types.h>
 
-#include "Field.h"
+#include "field-types/Field.h"
 #include "Descriptor.h"
 #include "AMQPTypeNotation.h"
 
@@ -73,8 +73,8 @@ namespace amqp::internal::schema {
             Type type() const override;
 
             int dependsOn (const OrderedTypeNotation &) const override;
-            int dependsOn (const class Restricted &) const override;
-            int dependsOn (const Composite &) const override;
+            int dependsOnRHS (const class Restricted &) const override;
+            int dependsOnRHS (const Composite &) const override;
 
             decltype(m_fields)::const_iterator begin() const { return m_fields.cbegin();}
             decltype(m_fields)::const_iterator end() const { return m_fields.cend(); }

@@ -8,7 +8,7 @@
 #include "colours.h"
 
 #include "debug.h"
-#include "Field.h"
+#include "field-types/Field.h"
 #include "Schema.h"
 #include "Envelope.h"
 #include "Composite.h"

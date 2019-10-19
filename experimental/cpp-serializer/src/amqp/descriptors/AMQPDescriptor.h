@@ -26,19 +26,18 @@ struct pn_data_t;
 namespace amqp::internal {
 
     class AutoIndent {
-    private :
-        std::string indent;
-    public :
-        AutoIndent() : indent { "" } { }
+        private :
+            std::string indent;
+        public :
+            AutoIndent() : indent { "" } { }
 
-        AutoIndent (const AutoIndent & ai_)
-            : indent { ai_.indent + "  "}
-        { }
+            AutoIndent (const AutoIndent & ai_)
+                : indent { ai_.indent + "  "}
+            { }
 
-        friend std::ostream &
-        operator << (std::ostream & stream_, const AutoIndent & ai_);
-
-    };
+            friend std::ostream &
+            operator << (std::ostream & stream_, const AutoIndent & ai_);
+        };
 }
 
 /******************************************************************************

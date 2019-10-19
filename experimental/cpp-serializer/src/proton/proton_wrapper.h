@@ -77,6 +77,18 @@ namespace proton {
             size_t elements() const;
     };
 
+    class auto_map_enter {
+        private :
+            size_t      m_elements;
+            pn_data_t * m_data;
+
+        public :
+            explicit auto_map_enter (pn_data_t *, bool next_ = false);
+            ~auto_map_enter();
+
+            size_t elements() const;
+    };
+
 }
 
 /******************************************************************************/

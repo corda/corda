@@ -84,12 +84,20 @@ CompositeReader::_dump (
         pn_data_t * data_,
         const SchemaType & schema_
 ) const {
-    DBG ("Read Composite: " << m_name << " : " << type() << std::endl); // NOLINT
+    DBG ("Read Composite: "
+        << m_name
+        << " : "
+        << type()
+        << std::endl); // NOLINT
+
     proton::is_described (data_);
     proton::auto_enter ae (data_);
 
-    const auto & it = schema_.fromDescriptor (proton::get_symbol<std::string>(data_));
-    auto & fields = dynamic_cast<schema::Composite &>(*(it->second.get())).fields();
+    const auto & it = schema_.fromDescriptor (
+            proton::get_symbol<std::string>(data_));
+
+    auto & fields = dynamic_cast<schema::Composite &> (
+            *(it->second.get())).fields();
 
     assert (fields.size() == m_readers.size());
 
@@ -104,13 +112,14 @@ CompositeReader::_dump (
 
         for (int i (0) ; i < m_readers.size() ; ++i) {
             if (auto l =  m_readers[i].lock()) {
-                DBG (fields[i]->name() << " " << (l ? "true" : "false") << std::endl); // NOLINT
+                DBG (fields[i]->name() << " "
+                    << (l ? "true" : "false") << std::endl); // NOLINT
 
-                read.emplace_back(l->dump(fields[i]->name(), data_, schema_));
+                read.emplace_back (l->dump (fields[i]->name(), data_, schema_));
             } else {
                 std::stringstream s;
                 s << "null field reader: " << fields[i]->name();
-                throw std::runtime_error(s.str());
+                throw std::runtime_error (s.str());
             }
         }
     }
@@ -127,6 +136,8 @@ CompositeReader::dump (
     pn_data_t * data_,
     const SchemaType & schema_) const
 {
+    proton::auto_next an (data_);
+
     return std::make_unique<TypedPair<sVec<uPtr<amqp::reader::IValue>>>> (
         name_,
         _dump(data_, schema_));
@@ -143,6 +154,8 @@ CompositeReader::dump (
     pn_data_t * data_,
     const SchemaType & schema_) const
 {
+    proton::auto_next an (data_);
+
     return std::make_unique<TypedSingle<sVec<uPtr<amqp::reader::IValue>>>> (
         _dump (data_, schema_));
 }

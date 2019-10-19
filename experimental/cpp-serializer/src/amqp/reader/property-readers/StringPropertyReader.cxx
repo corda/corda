@@ -33,7 +33,7 @@ StringPropertyReader::m_name { // NOLINT
 std::any
 amqp::internal::reader::
 StringPropertyReader::read (pn_data_t * data_) const {
-    return std::any ("hello");
+    return std::any { proton::readAndNext<std::string> (data_) };
 }
 
 /******************************************************************************/
@@ -49,9 +49,9 @@ StringPropertyReader::readString (pn_data_t * data_) const {
 uPtr<amqp::reader::IValue>
 amqp::internal::reader::
 StringPropertyReader::dump (
-        const std::string & name_,
-        pn_data_t * data_,
-        const SchemaType & schema_) const
+    const std::string & name_,
+    pn_data_t * data_,
+    const SchemaType & schema_) const
 {
     return std::make_unique<TypedPair<std::string>> (
             name_,

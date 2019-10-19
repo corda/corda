@@ -9,6 +9,21 @@
 
 #include <sstream>
 
+/******************************************************************************/
+
+namespace {
+
+    std::string
+    makePrim (const std::string & name_) {
+        if (name_ == "java.lang.Integer[]") {
+            return "int[]";
+        }
+
+        return name_;
+    }
+
+}
+
 /******************************************************************************
  *
  * Restricted types represent lists and maps
@@ -34,7 +49,7 @@ RestrictedDescriptor::build (pn_data_t * data_) const {
 
     proton::auto_enter ae (data_);
 
-    auto name  = proton::readAndNext<std::string>(data_);
+    auto name  = makePrim (proton::readAndNext<std::string>(data_));
     auto label = proton::readAndNext<std::string>(data_, true);
 
     DBG ("  name: " << name << ", label: \"" << label << "\"" << std::endl);

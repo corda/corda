@@ -15,7 +15,11 @@ set (amqp_sources
         descriptors/corda-descriptors/EnvelopeDescriptor.cxx
         descriptors/corda-descriptors/CompositeDescriptor.cxx
         descriptors/corda-descriptors/RestrictedDescriptor.cxx
-        schema/Field.cxx
+        schema/field-types/Field.cxx
+        schema/field-types/PrimitiveField.cxx
+        schema/field-types/CompositeField.cxx
+        schema/field-types/RestrictedField.cxx
+        schema/field-types/ArrayField.cxx
         schema/Schema.cxx
         schema/Choice.cxx
         schema/Envelope.cxx
@@ -25,6 +29,8 @@ set (amqp_sources
         schema/restricted-types/Restricted.cxx
         schema/restricted-types/List.cxx
         schema/restricted-types/Enum.cxx
+        schema/restricted-types/Map.cxx
+        schema/restricted-types/Array.cxx
         reader/Reader.cxx
         reader/PropertyReader.cxx
         reader/CompositeReader.cxx
@@ -34,7 +40,9 @@ set (amqp_sources
         reader/property-readers/BoolPropertyReader.cxx
         reader/property-readers/DoublePropertyReader.cxx
         reader/property-readers/StringPropertyReader.cxx
+        reader/restricted-readers/MapReader.cxx
         reader/restricted-readers/ListReader.cxx
+        reader/restricted-readers/ArrayReader.cxx
         reader/restricted-readers/EnumReader.cxx
 )
 

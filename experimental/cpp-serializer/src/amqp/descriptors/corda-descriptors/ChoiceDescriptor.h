@@ -14,7 +14,7 @@ namespace amqp::internal {
         public :
             ChoiceDescriptor() = delete;
 
-            ChoiceDescriptor (const std::string &, int);
+            ChoiceDescriptor (std::string, int);
 
             ~ChoiceDescriptor() final = default;
 

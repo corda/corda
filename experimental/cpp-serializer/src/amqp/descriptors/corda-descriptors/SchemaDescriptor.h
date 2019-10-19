@@ -13,7 +13,7 @@ namespace amqp::internal {
     class SchemaDescriptor : public AMQPDescriptor {
     public :
         SchemaDescriptor() = delete;
-        SchemaDescriptor (const std::string &, int);
+        SchemaDescriptor (std::string, int);
         ~SchemaDescriptor() final = default;
 
         std::unique_ptr<AMQPDescribed> build (pn_data_t *) const override;

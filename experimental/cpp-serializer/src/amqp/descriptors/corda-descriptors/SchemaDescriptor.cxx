@@ -18,9 +18,9 @@
 
 amqp::internal::
 SchemaDescriptor::SchemaDescriptor (
-    const std::string & symbol_,
+    std::string symbol_,
     int val_
-) : AMQPDescriptor (symbol_, val_) {
+) : AMQPDescriptor (std::move (symbol_), val_) {
 }
 
 /******************************************************************************/
@@ -41,12 +41,14 @@ SchemaDescriptor::build (pn_data_t * data_) const {
         proton::auto_list_enter ale (data_);
 
         for (int i { 1 } ; pn_data_next(data_) ; ++i) {
-            DBG ("  " << i << "/" << ale.elements() <<  std::endl); // NOLINT
+            DBG ("  " << i << "/" << ale.elements() << std::endl); // NOLINT
             proton::auto_list_enter ale2 (data_);
             while (pn_data_next(data_)) {
                 schemas.insert (
                     descriptors::dispatchDescribed<schema::AMQPTypeNotation> (
                         data_));
+
+                DBG("=======" << std::endl << schemas << "======" << std::endl);
             }
         }
     }

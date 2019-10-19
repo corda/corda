@@ -1,0 +1,2 @@
+#!/bin/bash
+wc -l $(find -E . -regex ".*/*.(cxx|h)")

@@ -11,7 +11,7 @@
 
 #include "amqp/descriptors/AMQPDescriptors.h"
 
-#include "amqp/schema/Field.h"
+#include "amqp/schema/field-types/Field.h"
 #include "amqp/schema/Composite.h"
 #include "amqp/schema/Descriptor.h"
 
@@ -23,9 +23,9 @@
 
 amqp::internal::
 CompositeDescriptor::CompositeDescriptor (
-    const std::string & symbol_,
+    std::string symbol_,
     int val_
-) : AMQPDescriptor (symbol_, val_) {
+) : AMQPDescriptor (std::move (symbol_), val_) {
 
 }
 

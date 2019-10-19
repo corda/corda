@@ -4,7 +4,7 @@
 
 #include "Reader.h"
 
-#include "amqp/schema/Field.h"
+#include "amqp/schema/field-types/Field.h"
 
 /******************************************************************************/
 
@@ -18,6 +18,7 @@ namespace amqp::internal::reader {
             /**
              * Static Factory method for creating appropriate derived types
              */
+            static std::shared_ptr<PropertyReader> make (const internal::schema::Field &);
             static std::shared_ptr<PropertyReader> make (const FieldPtr &);
             static std::shared_ptr<PropertyReader> make (const std::string &);
 

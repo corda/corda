@@ -1,5 +1,16 @@
 #include "Choice.h"
 
+#include <iostream>
+
+/******************************************************************************/
+
+std::ostream &
+amqp::internal::schema::
+operator << (std::ostream & os_, const amqp::internal::schema::Choice & choice_) {
+    os_ << choice_.m_choice;
+    return os_;
+}
+
 /******************************************************************************/
 
 amqp::internal::schema::

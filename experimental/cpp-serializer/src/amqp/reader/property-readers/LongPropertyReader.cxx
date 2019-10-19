@@ -31,7 +31,7 @@ LongPropertyReader::m_type { // NOLINT
 std::any
 amqp::internal::reader::
 LongPropertyReader::read (pn_data_t * data_) const {
-    return std::any (10L);
+    return std::any { proton::readAndNext<long> (data_) };
 }
 
 /******************************************************************************/
@@ -47,9 +47,9 @@ LongPropertyReader::readString (pn_data_t * data_) const {
 uPtr<amqp::reader::IValue>
 amqp::internal::reader::
 LongPropertyReader::dump (
-        const std::string & name_,
-        pn_data_t * data_,
-        const SchemaType & schema_) const
+    const std::string & name_,
+    pn_data_t * data_,
+    const SchemaType & schema_) const
 {
     return std::make_unique<TypedPair<std::string>> (
             name_,
@@ -61,8 +61,8 @@ LongPropertyReader::dump (
 uPtr<amqp::reader::IValue>
 amqp::internal::reader::
 LongPropertyReader::dump (
-        pn_data_t * data_,
-        const SchemaType & schema_) const
+    pn_data_t * data_,
+    const SchemaType & schema_) const
 {
     return std::make_unique<TypedSingle<std::string>> (
             std::to_string (proton::readAndNext<long> (data_)));

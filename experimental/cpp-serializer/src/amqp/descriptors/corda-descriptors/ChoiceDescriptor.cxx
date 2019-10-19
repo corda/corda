@@ -9,9 +9,9 @@
 
 amqp::internal::
 ChoiceDescriptor::ChoiceDescriptor (
-    const std::string & symbol_,
+    std::string symbol_,
     int val_
-) : AMQPDescriptor (symbol_, val_) {
+) : AMQPDescriptor (std::move (symbol_), val_) {
 }
 
 /******************************************************************************/

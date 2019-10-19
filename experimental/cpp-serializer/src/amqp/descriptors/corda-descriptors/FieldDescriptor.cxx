@@ -5,7 +5,7 @@
 
 #include "proton/proton_wrapper.h"
 
-#include "amqp/schema/Field.h"
+#include "amqp/schema/field-types/Field.h"
 
 #include <sstream>
 
@@ -17,9 +17,9 @@
 
 amqp::internal::
 FieldDescriptor::FieldDescriptor (
-    const std::string & symbol_,
+    std::string symbol_,
     int val_
-) : AMQPDescriptor(symbol_, val_) {
+) : AMQPDescriptor (std::move (symbol_), val_) {
 
 }
 
@@ -27,7 +27,7 @@ FieldDescriptor::FieldDescriptor (
 
 uPtr<amqp::AMQPDescribed>
 amqp::internal::
-FieldDescriptor::build(pn_data_t * data_) const {
+FieldDescriptor::build (pn_data_t * data_) const {
     DBG ("FIELD" << std::endl); // NOLINT
 
     validateAndNext (data_);
@@ -37,10 +37,14 @@ FieldDescriptor::build(pn_data_t * data_) const {
     /* name: String */
     auto name = proton::get_string (data_);
 
+    DBG ("FIELD::name: \"" << name << "\"" << std::endl); // NOLINT
+
     pn_data_next (data_);
 
     /* type: String */
     auto type = proton::get_string (data_);
+
+    DBG ("FIELD::type: \"" << type << "\"" << std::endl); // NOLINT
 
     pn_data_next (data_);
 
@@ -74,7 +78,7 @@ FieldDescriptor::build(pn_data_t * data_) const {
     /* multiple: Boolean */
     auto multiple = proton::get_boolean(data_);
 
-    return std::make_unique<schema::Field> (
+    return schema::Field::make (
             name, type, requires, def, label, mandatory, multiple);
 }
 

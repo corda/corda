@@ -56,9 +56,11 @@ namespace {
         {
             Auto am (name_, rtn);
 
-            rtn << (*(begin_))->dump();
-            for (auto it(std::next(begin_)) ; it != end_; ++it) {
-                rtn << ", " << (*it)->dump();
+            if (begin_ != end_) {
+                rtn << (*(begin_))->dump();
+                for (auto it(std::next(begin_)); it != end_; ++it) {
+                    rtn << ", " << (*it)->dump();
+                }
             }
         }
 
@@ -72,9 +74,11 @@ namespace {
         {
             Auto am (rtn);
 
-            rtn << (*(begin_))->dump();
-            for (auto it (std::next(begin_)) ; it != end_; ++it) {
-                rtn << ", " << (*it)->dump();
+            if (begin_ != end_) {
+                rtn << (*(begin_))->dump();
+                for (auto it(std::next(begin_)); it != end_; ++it) {
+                    rtn << ", " << (*it)->dump();
+                }
             }
         }
 
@@ -85,7 +89,23 @@ namespace {
 
 /******************************************************************************
  *
+ * amqp::internal::reader::TypedValuePair
  *
+ ******************************************************************************/
+
+std::string
+amqp::internal::reader::
+ValuePair::dump() const {
+    std::stringstream ss;
+
+    ss << m_key->dump() << " : " << m_value->dump();
+
+    return ss.str();
+}
+
+/******************************************************************************
+ *
+ * amqp::internal::reader::TypedPair
  *
  ******************************************************************************/
 

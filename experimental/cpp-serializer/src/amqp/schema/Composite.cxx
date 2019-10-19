@@ -62,7 +62,7 @@ Composite::fields() const {
 amqp::internal::schema::AMQPTypeNotation::Type
 amqp::internal::schema::
 Composite::type() const {
-    return AMQPTypeNotation::Type::Composite;
+    return AMQPTypeNotation::Type::composite_t;
 }
 
 /******************************************************************************/
@@ -87,64 +87,66 @@ Composite::type() const {
 int
 amqp::internal::schema::
 Composite::dependsOn (const OrderedTypeNotation & rhs) const {
-    return dynamic_cast<const AMQPTypeNotation &>(rhs).dependsOn(*this);
+    return dynamic_cast<const AMQPTypeNotation &>(rhs).dependsOnRHS(*this);
 }
 
 /******************************************************************************/
 
 int
 amqp::internal::schema::
-Composite::dependsOn (const amqp::internal::schema::Restricted & lhs_) const {
-    // does the left hand side depend on us
-    auto rtn { 0 };
-
-    for (const auto i : lhs_) {
-        DBG ("  C/R a) " << i << " == " << name() << std::endl); // NOLINT
-        if (i == name()) {
-            rtn = 1;
-        }
-    }
-
+Composite::dependsOnRHS (
+        const amqp::internal::schema::Restricted & lhs_
+) const {
     // does this depend on the left hand side
     for (auto const & field : m_fields) {
         DBG ("  C/R b) " << field->resolvedType() << " == " << lhs_.name() << std::endl); // NOLINT
 
         if (field->resolvedType() == lhs_.name()) {
-            rtn = 2;
+            return 1;
         }
-
     }
 
-    return rtn;
+    // does the left hand side depend on us
+    for (const auto i : lhs_) {
+        DBG ("  C/R a) " << i << " == " << name() << std::endl); // NOLINT
+        if (i == name()) {
+            return 2;
+        }
+    }
+
+    return 0;
 }
 
 /*********************************************************o*********************/
 
 int
 amqp::internal::schema::
-Composite::dependsOn (const amqp::internal::schema::Composite & lhs_) const {
-    auto rtn { 0 };
+Composite::dependsOnRHS (
+        const amqp::internal::schema::Composite & lhs_
+) const {
+    DBG (name() << " ?Depends on " << lhs_.name() << std::endl);
 
-    // do we depend on the lhs, i.e. is one of our fields it
-    for (auto const & field : lhs_) {
-        DBG ("  C/C a) " << field->resolvedType() << " == " << name() << std::endl); // NOLINT
-        if (field->resolvedType() == name()) {
-            rtn = 1;
-        }
-    }
-
-    // does the left hand side depend on us. i.e. is one of it's fields
-    // us
+    // do we depend on the lhs
     for (const auto & field : m_fields) {
-        DBG ("  C/C b) " << field->resolvedType() << " == " << lhs_.name() << std::endl); // NOLINT
+        DBG ("FIELD - " << name() << "::" << type() << std::endl);
+        DBG ("  C/C a) " << field->resolvedType() << " == " << lhs_.name() << std::endl); // NOLINT
 
         if (field->resolvedType() == lhs_.name()) {
-            rtn = 2;
+            return 1;
+        }
+    }
+
+    // does it depend on us
+    for (auto const & field : lhs_) {
+        DBG ("FIELD - " << name() << "::" << type() << std::endl);
+        DBG ("  C/C b) " << field->resolvedType() << " == " << name() << std::endl); // NOLINT
+        if (field->resolvedType() == name()) {
+            return 2;
         }
     }
 
 
-    return rtn;
+    return 0;
 }
 
 /******************************************************************************/

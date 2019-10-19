@@ -24,7 +24,7 @@ namespace amqp::internal {
     class EnvelopeDescriptor : public AMQPDescriptor {
         public :
             EnvelopeDescriptor() = delete;
-            EnvelopeDescriptor (const std::string &, int);
+            EnvelopeDescriptor (std::string, int);
 
             ~EnvelopeDescriptor() final = default;
 

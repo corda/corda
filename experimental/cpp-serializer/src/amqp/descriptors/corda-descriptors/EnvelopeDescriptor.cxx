@@ -37,7 +37,9 @@ namespace {
 void
 amqp::internal::
 EnvelopeDescriptor::read (
-        pn_data_t * data_, std::stringstream & ss_, const AutoIndent & ai_
+    pn_data_t * data_,
+    std::stringstream & ss_,
+    const AutoIndent & ai_
 ) const {
     // lets just make sure we haven't entered this already
     proton::is_list (data_);
@@ -62,9 +64,9 @@ EnvelopeDescriptor::read (
 
 amqp::internal::
 EnvelopeDescriptor::EnvelopeDescriptor (
-    const std::string & symbol_,
+    std::string symbol_,
     int val_
-) : AMQPDescriptor (symbol_, val_) {
+) : AMQPDescriptor (std::move (symbol_), val_) {
 
 }
 

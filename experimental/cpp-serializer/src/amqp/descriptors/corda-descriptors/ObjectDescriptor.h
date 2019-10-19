@@ -16,7 +16,7 @@ namespace amqp::internal {
     public :
         ObjectDescriptor() = delete;
 
-        ObjectDescriptor(const std::string &, int);
+        ObjectDescriptor (std::string, int);
 
         ~ObjectDescriptor() final = default;
 
