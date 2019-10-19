@@ -33,7 +33,7 @@ StringPropertyReader::m_name { // NOLINT
 std::any
 amqp::internal::reader::
 StringPropertyReader::read (pn_data_t * data_) const {
-    return std::any ("hello");
+    return std::any { proton::readAndNext<std::string> (data_) };
 }
 
 /******************************************************************************/

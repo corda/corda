@@ -25,6 +25,7 @@ set (amqp_sources
         schema/restricted-types/Restricted.cxx
         schema/restricted-types/List.cxx
         schema/restricted-types/Enum.cxx
+        schema/restricted-types/Map.cxx
         reader/Reader.cxx
         reader/PropertyReader.cxx
         reader/CompositeReader.cxx
@@ -34,6 +35,7 @@ set (amqp_sources
         reader/property-readers/BoolPropertyReader.cxx
         reader/property-readers/DoublePropertyReader.cxx
         reader/property-readers/StringPropertyReader.cxx
+        reader/restricted-readers/MapReader.cxx
         reader/restricted-readers/ListReader.cxx
         reader/restricted-readers/EnumReader.cxx
 )

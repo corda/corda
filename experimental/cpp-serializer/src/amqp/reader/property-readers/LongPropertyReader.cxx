@@ -31,7 +31,7 @@ LongPropertyReader::m_type { // NOLINT
 std::any
 amqp::internal::reader::
 LongPropertyReader::read (pn_data_t * data_) const {
-    return std::any (10L);
+    return std::any { proton::readAndNext<long> (data_) };
 }
 
 /******************************************************************************/

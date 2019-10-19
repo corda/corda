@@ -12,7 +12,9 @@ operator << (std::ostream & stream_, const Field & field_) {
     std::stringstream ss;
     for (auto &i: field_.m_requires) { ss << i; }
 
-    stream_ << field_.m_name << " : " << field_.m_type.first << " : [" << ss.str() << "]" << std::endl;
+    stream_ << field_.m_name
+        << " : " << field_.m_type.first
+        << " : [" << ss.str() << "]" << std::endl;
 
     return stream_;
 }
@@ -38,11 +40,11 @@ Field::Field (
   , m_multiple (multiple_)
 {
     if (typeIsPrimitive(type_)) {
-        m_type = std::make_pair(type_, FieldType::PrimitiveProperty);
+        m_type = std::make_pair (type_, FieldType::PrimitiveProperty);
     } else if (type_ == "*") {
-        m_type = std::make_pair(type_, FieldType::RestrictedProperty);
+        m_type = std::make_pair (type_, FieldType::RestrictedProperty);
     } else {
-        m_type = std::make_pair(type_, FieldType::CompositeProperty);
+        m_type = std::make_pair (type_, FieldType::CompositeProperty);
     }
 }
 
@@ -50,7 +52,7 @@ Field::Field (
 
 bool
 amqp::internal::schema::
-Field::typeIsPrimitive(const std::string & type_) {
+Field::typeIsPrimitive (const std::string & type_) {
     return (type_ == "string" ||
             type_ == "long" ||
             type_ == "boolean" ||

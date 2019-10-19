@@ -98,18 +98,21 @@ TEST (OTNTest, singleInsert) { // NOLINT
 /******************************************************************************/
 
 TEST (OTNTest, twoInserts) { // NOLINT
-    std::cout << std::endl;
     amqp::internal::schema::OrderedTypeNotations<OTN> list;
 
     list.insert(std::make_unique<OTN>("A", std::vector<std::string>()));
     list.insert(std::make_unique<OTN>("B", std::vector<std::string>()));
-    ASSERT_EQ("A B", str (list));
+
+    // Inserting B after A with no dependencies between the two will force
+    // B to be recorded before A since elements added at the same
+    // level are always added to the front of the list to ensrue we can
+    // inspect the rest of that level
+    ASSERT_EQ ("B A", str (list));
 }
 
 /******************************************************************************/
 
 TEST (OTNTest, A_depends_on_B) { // NOLINT
-    std::cout << std::endl;
     amqp::internal::schema::OrderedTypeNotations<OTN> list;
 
     std::vector<std::string> aDeps = { "B" };
@@ -121,7 +124,6 @@ TEST (OTNTest, A_depends_on_B) { // NOLINT
 /******************************************************************************/
 
 TEST (OTNTest, B_depends_on_A) { // NOLINT
-    std::cout << std::endl;
     amqp::internal::schema::OrderedTypeNotations<OTN> list;
 
     std::vector<std::string> aDeps = { };
@@ -136,7 +138,6 @@ TEST (OTNTest, B_depends_on_A) { // NOLINT
 /******************************************************************************/
 
 TEST (OTNTest, three_1) { // NOLINT
-    std::cout << std::endl;
     amqp::internal::schema::OrderedTypeNotations<OTN> list;
 
     std::vector<std::string> aDeps = { };
@@ -153,7 +154,6 @@ TEST (OTNTest, three_1) { // NOLINT
 /******************************************************************************/
 
 TEST (OTNTest, three_2) { // NOLINT
-    std::cout << std::endl;
     amqp::internal::schema::OrderedTypeNotations<OTN> list;
 
     std::vector<std::string> aDeps = { "B" };
@@ -170,7 +170,6 @@ TEST (OTNTest, three_2) { // NOLINT
 /******************************************************************************/
 
 TEST (OTNTest, three_3) { // NOLINT
-    std::cout << std::endl;
     amqp::internal::schema::OrderedTypeNotations<OTN> list;
 
     std::vector<std::string> aDeps = { "B" };
@@ -187,7 +186,6 @@ TEST (OTNTest, three_3) { // NOLINT
 /******************************************************************************/
 
 TEST (OTNTest, three_4) { // NOLINT
-    std::cout << std::endl;
     amqp::internal::schema::OrderedTypeNotations<OTN> list;
 
     std::vector<std::string> aDeps = { "B" };
@@ -204,7 +202,6 @@ TEST (OTNTest, three_4) { // NOLINT
 /******************************************************************************/
 
 TEST (OTNTest, three_5) { // NOLINT
-    std::cout << std::endl;
     amqp::internal::schema::OrderedTypeNotations<OTN> list;
 
     std::vector<std::string> aDeps = { "B" };

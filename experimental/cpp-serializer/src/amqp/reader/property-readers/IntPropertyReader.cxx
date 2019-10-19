@@ -37,7 +37,7 @@ IntPropertyReader::m_type { // NOLINT
 std::any
 amqp::internal::reader::
 IntPropertyReader::read (pn_data_t * data_) const {
-    return std::any (1);
+    return std::any { proton::readAndNext<int> (data_) };
 }
 
 /******************************************************************************/

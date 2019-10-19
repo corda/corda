@@ -11,7 +11,7 @@
 amqp::internal::schema::Restricted::RestrictedTypes
 amqp::internal::reader::
 ListReader::restrictedType() const {
-    return internal::schema::Restricted::RestrictedTypes::List;
+    return internal::schema::Restricted::RestrictedTypes::list_t;
 }
 
 /******************************************************************************/
@@ -54,7 +54,7 @@ ListReader::dump_(
 ) const {
     proton::is_described (data_);
 
-    std::list<std::unique_ptr<amqp::reader::IValue>> read;
+    decltype (dump_(data_, schema_)) read;
 
     {
         proton::auto_enter ae (data_);

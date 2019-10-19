@@ -54,9 +54,7 @@ namespace {
              * here I'll forget its even a thing
              */
             // auto idx = proton::readAndNext<int>(data_);
-
         }
-
     }
 }
 
@@ -89,7 +87,6 @@ EnumReader::dump(
     proton::is_described (data_);
 
     return std::make_unique<TypedSingle<std::string>> (getValue(data_));
-
 }
 
 /******************************************************************************/

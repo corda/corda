@@ -16,6 +16,7 @@
 #include "reader/Reader.h"
 #include "reader/CompositeReader.h"
 #include "reader/RestrictedReader.h"
+#include "reader/restricted-readers/MapReader.h"
 #include "reader/restricted-readers/ListReader.h"
 #include "reader/restricted-readers/EnumReader.h"
 
@@ -70,10 +71,10 @@ namespace {
  *
  * Walk through the types in a Schema and produce readers for them.
  *
- * We are making the large assumption that the contents of [schema_]
+ * We are making the assumption that the contents of [schema_]
  * are strictly ordered by dependency so we can construct types
  * as we go without needing to provide look ahead for types
- * we haven't built yet
+ * we haven't built yet.
  *
  */
 void
@@ -81,7 +82,7 @@ amqp::internal::
 CompositeFactory::process (const SchemaType & schema_) {
     for (const auto & i : dynamic_cast<const schema::Schema &>(schema_)) {
         for (const auto & j : i) {
-            process(*j);
+            process (*j);
             m_readersByDescriptor[j->descriptor()] = m_readersByType[j->name()];
         }
     }
@@ -99,10 +100,10 @@ CompositeFactory::process (
         schema_.name(),
         [& schema_, this] () -> std::shared_ptr<reader::Reader> {
             switch (schema_.type()) {
-                case amqp::internal::schema::AMQPTypeNotation::Composite : {
+                case amqp::internal::schema::AMQPTypeNotation::composite_t : {
                     return processComposite (schema_);
                 }
-                case amqp::internal::schema::AMQPTypeNotation::Restricted : {
+                case amqp::internal::schema::AMQPTypeNotation::restricted_t : {
                     return processRestricted (schema_);
                 }
             }
@@ -121,43 +122,37 @@ CompositeFactory::processComposite (
     const auto & fields = dynamic_cast<const amqp::internal::schema::Composite &> (
             type_).fields();
 
-    readers.reserve(fields.size());
+    readers.reserve (fields.size());
 
     for (const auto & field : fields) {
         DBG ("  Field: " << field->name() << ": " << field->type() << std::endl); // NOLINT
 
+       decltype(m_readersByType)::mapped_type reader;
+
         switch (field->fieldType()) {
             case schema::FieldType::PrimitiveProperty : {
-                auto reader = computeIfAbsent<reader::Reader>(
+                reader = computeIfAbsent<reader::Reader>(
                         m_readersByType,
                         field->type(),
                         [&field]() -> std::shared_ptr<reader::PropertyReader> {
                             return reader::PropertyReader::make(field);
                         });
-
-                assert (reader);
-                readers.emplace_back(reader);
-                assert (readers.back().lock());
                 break;
             }
+            // Insertion sorting ensures any type we depend on will have
+            // already been created and thus exist in the map
             case amqp::internal::schema::FieldType::CompositeProperty : {
-                auto reader = m_readersByType[field->type()];
-
-                assert (reader);
-                readers.emplace_back(reader);
-                assert (readers.back().lock());
+                reader = m_readersByType[field->type()];
                 break;
             }
             case schema::FieldType::RestrictedProperty :  {
-                auto reader = m_readersByType[field->requires().front()];
-
-                assert (reader);
-                readers.emplace_back(reader);
-                assert (readers.back().lock());
+                reader = m_readersByType[field->requires().front()];
                 break;
             }
         }
 
+        assert (reader);
+        readers.emplace_back(reader);
         assert (readers.back().lock());
     }
 
@@ -174,8 +169,51 @@ CompositeFactory::processEnum (
     DBG ("Processing Enum - " << enum_.name() << std::endl); // NOLINT
 
     return std::make_shared<reader::EnumReader> (
-            enum_.name(),
-            enum_.makeChoices());
+        enum_.name(),
+        enum_.makeChoices());
+}
+
+/******************************************************************************/
+
+std::shared_ptr<amqp::internal::reader::Reader>
+amqp::internal::
+CompositeFactory::fetchReaderForRestricted (const std::string & type_) {
+    decltype(m_readersByType)::mapped_type rtn;
+
+    if (schema::Field::typeIsPrimitive(type_)) {
+        rtn = computeIfAbsent<reader::Reader>(
+                m_readersByType,
+                type_,
+                [& type_]() -> std::shared_ptr<reader::PropertyReader> {
+                    return reader::PropertyReader::make (type_);
+                });
+    } else {
+        rtn = m_readersByType[type_];
+    }
+
+    if (!rtn) {
+        throw std::runtime_error ("Missing type in map");
+    }
+    return rtn;
+}
+
+/******************************************************************************/
+
+std::shared_ptr<amqp::internal::reader::Reader>
+amqp::internal::
+CompositeFactory::processMap (
+        const amqp::internal::schema::Map & map_
+) {
+    DBG ("Processing Map - "
+        << map_.mapOf().first.get() << " "
+        << map_.mapOf().second.get() << std::endl); // NOLINT
+
+    const auto types = map_.mapOf();
+
+    return std::make_shared<reader::MapReader> (
+            map_.name(),
+            fetchReaderForRestricted (types.first),
+            fetchReaderForRestricted (types.second));
 }
 
 /******************************************************************************/
@@ -187,22 +225,9 @@ CompositeFactory::processList (
 ) {
     DBG ("Processing List - " << list_.listOf() << std::endl); // NOLINT
 
-    if (schema::Field::typeIsPrimitive (list_.listOf())) {
-        DBG ("  List of Primitives" << std::endl); // NOLINT
-        auto reader = computeIfAbsent<reader::Reader>(
-                m_readersByType,
-                list_.listOf(),
-                [& list_]() -> std::shared_ptr<reader::PropertyReader> {
-                    return reader::PropertyReader::make (list_.listOf());
-                });
-
-        return std::make_shared<reader::ListReader>(list_.name(), reader);
-    } else {
-        DBG ("  List of Composite - " << list_.listOf() << std::endl); // NOLINT
-        auto reader = m_readersByType[list_.listOf()];
-
-        return std::make_shared<reader::ListReader>(list_.name(), reader);
-    }
+    return std::make_shared<reader::ListReader> (
+            list_.name(),
+            fetchReaderForRestricted (list_.listOf()));
 }
 
 /******************************************************************************/
@@ -213,23 +238,23 @@ CompositeFactory::processRestricted (
         const amqp::internal::schema::AMQPTypeNotation & type_)
 {
     DBG ("processRestricted - " << type_.name() << std::endl); // NOLINT
-    const auto & restricted = dynamic_cast<const amqp::internal::schema::Restricted &> (
+    const auto & restricted = dynamic_cast<const schema::Restricted &> (
             type_);
 
     switch (restricted.restrictedType()) {
-        case schema::Restricted::RestrictedTypes::List : {
+        case schema::Restricted::RestrictedTypes::list_t : {
             return processList (
-                    dynamic_cast<const amqp::internal::schema::List &> (restricted));
+                dynamic_cast<const schema::List &> (restricted));
         }
-        case schema::Restricted::RestrictedTypes::Enum : {
+        case schema::Restricted::RestrictedTypes::enum_t : {
             return processEnum (
-                    dynamic_cast<const amqp::internal::schema::Enum &> (restricted));
+                dynamic_cast<const schema::Enum &> (restricted));
         }
-        case schema::Restricted::RestrictedTypes::Map :{
-            throw std::runtime_error ("Cannot process maps");
+        case schema::Restricted::RestrictedTypes::map_t : {
+            return processMap (
+                dynamic_cast<const schema::Map &> (restricted));
         }
     }
-
 
     DBG ("  ProcessRestricted: Returning nullptr"); // NOLINT
     return nullptr;

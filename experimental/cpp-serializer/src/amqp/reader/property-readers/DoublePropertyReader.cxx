@@ -29,7 +29,7 @@ DoublePropertyReader::m_type { // NOLINT
 std::any
 amqp::internal::reader::
 DoublePropertyReader::read (pn_data_t * data_) const {
-    return std::any (10.0);
+    return std::any { proton::readAndNext<double> (data_) };
 }
 
 /******************************************************************************/

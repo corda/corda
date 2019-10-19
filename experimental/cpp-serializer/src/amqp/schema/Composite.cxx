@@ -62,7 +62,7 @@ Composite::fields() const {
 amqp::internal::schema::AMQPTypeNotation::Type
 amqp::internal::schema::
 Composite::type() const {
-    return AMQPTypeNotation::Type::Composite;
+    return AMQPTypeNotation::Type::composite_t;
 }
 
 /******************************************************************************/
@@ -87,21 +87,22 @@ Composite::type() const {
 int
 amqp::internal::schema::
 Composite::dependsOn (const OrderedTypeNotation & rhs) const {
-    return dynamic_cast<const AMQPTypeNotation &>(rhs).dependsOn(*this);
+    return dynamic_cast<const AMQPTypeNotation &>(rhs).dependsOnRHS(*this);
 }
 
 /******************************************************************************/
 
 int
 amqp::internal::schema::
-Composite::dependsOn (const amqp::internal::schema::Restricted & lhs_) const {
+Composite::dependsOnRHS (
+        const amqp::internal::schema::Restricted & lhs_
+) const {
     // does the left hand side depend on us
-    auto rtn { 0 };
 
     for (const auto i : lhs_) {
         DBG ("  C/R a) " << i << " == " << name() << std::endl); // NOLINT
         if (i == name()) {
-            rtn = 1;
+            return 1;
         }
     }
 
@@ -110,19 +111,21 @@ Composite::dependsOn (const amqp::internal::schema::Restricted & lhs_) const {
         DBG ("  C/R b) " << field->resolvedType() << " == " << lhs_.name() << std::endl); // NOLINT
 
         if (field->resolvedType() == lhs_.name()) {
-            rtn = 2;
+            return 2;
         }
 
     }
 
-    return rtn;
+    return 0;
 }
 
 /*********************************************************o*********************/
 
 int
 amqp::internal::schema::
-Composite::dependsOn (const amqp::internal::schema::Composite & lhs_) const {
+Composite::dependsOnRHS (
+        const amqp::internal::schema::Composite & lhs_
+) const {
     auto rtn { 0 };
 
     // do we depend on the lhs, i.e. is one of our fields it
@@ -142,7 +145,6 @@ Composite::dependsOn (const amqp::internal::schema::Composite & lhs_) const {
             rtn = 2;
         }
     }
-
 
     return rtn;
 }
