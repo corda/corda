@@ -41,22 +41,6 @@ AMQPDescriptor::validateAndNext (pn_data_t * const data_) const {
     pn_data_next (data_);
 }
 
-/******************************************************************************
- *
- * Essentially, an enum.
- *
- ******************************************************************************/
-
-uPtr<amqp::AMQPDescribed>
-amqp::internal::
-ChoiceDescriptor::build (pn_data_t * data_) const {
-    validateAndNext(data_);
-
-    DBG ("CHOICE " << data_ << std::endl); // NOLINT
-
-    return uPtr<amqp::AMQPDescribed> (nullptr);
-}
-
 /******************************************************************************/
 
 uPtr<amqp::AMQPDescribed>

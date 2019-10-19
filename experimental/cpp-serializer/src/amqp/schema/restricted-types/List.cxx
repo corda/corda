@@ -16,7 +16,7 @@ namespace {
 
         return std::make_pair (
                std::string { list_.substr (0, pos) },
-                std::string { list_.substr(pos + 1, list_.size() - pos - 2) }
+               std::string { list_.substr(pos + 1, list_.size() - pos - 2) }
         );
     }
 }

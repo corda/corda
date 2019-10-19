@@ -1,15 +1,20 @@
-#pragma once
+#include "Choice.h"
 
 /******************************************************************************/
 
-#define AMQP_DEBUG 1
+amqp::internal::schema::
+Choice::Choice (std::string choice_)
+     : m_choice (std::move (choice_))
+{
+
+}
 
 /******************************************************************************/
 
-#if defined AMQP_DEBUG && AMQP_DEBUG >= 1
-    #define DBG(X) std::cout << X
-#else
-    #define DBG(X)
-#endif
+const std::string &
+amqp::internal::schema::
+Choice::choice() const {
+    return m_choice;
+}
 
 /******************************************************************************/
