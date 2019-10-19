@@ -41,7 +41,7 @@ namespace amqp::internal::schema {
      */
     class Composite : public AMQPTypeNotation {
         public :
-            friend std::ostream & operator << (std::ostream &, const Composite&);
+            friend std::ostream & operator << (std::ostream &, const Composite &);
 
         private :
             // could be null in the stream... not sure that information is

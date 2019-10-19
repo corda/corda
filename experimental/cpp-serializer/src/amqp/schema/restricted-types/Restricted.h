@@ -7,9 +7,10 @@
 #include <iosfwd>
 #include <string>
 
-#include "Field.h"
-#include "Descriptor.h"
-#include "AMQPTypeNotation.h"
+#include "schema/Field.h"
+#include "schema/Choice.h"
+#include "schema/Descriptor.h"
+#include "schema/AMQPTypeNotation.h"
 
 #include "amqp/AMQPDescribed.h"
 
@@ -34,7 +35,7 @@ namespace amqp::internal::schema {
         public :
             friend std::ostream & operator << (std::ostream &, const Restricted&);
 
-            enum RestrictedTypes { List, Map };
+            enum RestrictedTypes { List, Map, Enum };
 
         private :
             // could be null in the stream... not sure that information is
@@ -59,9 +60,9 @@ namespace amqp::internal::schema {
              */
             Restricted (
                 std::unique_ptr<Descriptor> & descriptor_,
-                const std::string &,
                 std::string,
-                const std::vector<std::string> &,
+                std::string,
+                std::vector<std::string>,
                 const RestrictedTypes &);
 
         public :
@@ -70,7 +71,8 @@ namespace amqp::internal::schema {
                     const std::string &,
                     const std::string &,
                     const std::vector<std::string> &,
-                    const std::string &);
+                    const std::string &,
+                    std::vector<uPtr<Choice>>);
 
             Restricted (Restricted&) = delete;
 

@@ -9,16 +9,16 @@
  ******************************************************************************/
 
 const std::string
-        amqp::internal::reader::
-        BoolPropertyReader::m_name { // NOLINT
+amqp::internal::reader::
+BoolPropertyReader::m_name { // NOLINT
         "Bool Reader"
 };
 
 /******************************************************************************/
 
 const std::string
-        amqp::internal::reader::
-        BoolPropertyReader::m_type { // NOLINT
+amqp::internal::reader::
+BoolPropertyReader::m_type { // NOLINT
         "bool"
 };
 

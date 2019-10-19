@@ -35,7 +35,7 @@ amqp::internal::
 FieldDescriptor::build(pn_data_t * data_) const {
     DBG ("FIELD" << std::endl); // NOLINT
 
-    validateAndNext(data_);
+    validateAndNext (data_);
 
     proton::auto_enter ae (data_);
 
