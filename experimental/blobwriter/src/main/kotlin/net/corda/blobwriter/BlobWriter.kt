@@ -52,6 +52,7 @@ enum class E {
     A, B, C
 }
 data class _e_ (val e: E)
+data class _Le_ (val listy: List<E>)
 
 fun main (args: Array<String>) {
     initialiseSerialization()
@@ -61,6 +62,8 @@ fun main (args: Array<String>) {
     File("../cpp-serializer/bin/blob-inspector/test/_Mis_").writeBytes(_Mis_(
             mapOf (1 to "two", 3 to "four", 5 to "six")).serialize().bytes)
     File("../cpp-serializer/bin/blob-inspector/test/_e_").writeBytes(_e_(E.A).serialize().bytes)
+    File("../cpp-serializer/bin/blob-inspector/test/_Le_").writeBytes(_Le_(listOf (E.A, E.B, E.C)).serialize().bytes)
+    File("../cpp-serializer/bin/blob-inspector/test/_Le_2").writeBytes(_Le_(listOf (E.A, E.B, E.C, E.B, E.A)).serialize().bytes)
 }
 
 
