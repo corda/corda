@@ -21,7 +21,6 @@ namespace amqp::internal {
             std::unique_ptr<AMQPDescribed> build (pn_data_t *) const override;
     };
 
-
 }
 
 /******************************************************************************/

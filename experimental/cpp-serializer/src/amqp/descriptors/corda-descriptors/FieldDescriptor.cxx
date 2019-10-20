@@ -16,11 +16,6 @@
  ******************************************************************************/
 
 amqp::internal::
-FieldDescriptor::FieldDescriptor() : AMQPDescriptor() { }
-
-/******************************************************************************/
-
-amqp::internal::
 FieldDescriptor::FieldDescriptor (
     const std::string & symbol_,
     int val_

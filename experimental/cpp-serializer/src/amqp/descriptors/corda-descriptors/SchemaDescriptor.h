@@ -12,7 +12,7 @@ namespace amqp::internal {
 
     class SchemaDescriptor : public AMQPDescriptor {
     public :
-        SchemaDescriptor() = default;
+        SchemaDescriptor() = delete;
         SchemaDescriptor (const std::string &, int);
         ~SchemaDescriptor() final = default;
 

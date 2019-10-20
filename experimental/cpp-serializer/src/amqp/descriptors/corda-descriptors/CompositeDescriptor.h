@@ -8,7 +8,7 @@ namespace amqp::internal {
 
     class CompositeDescriptor : public AMQPDescriptor {
         public :
-            CompositeDescriptor() = default;
+            CompositeDescriptor() = delete;
             CompositeDescriptor (const std::string &, int);
 
             ~CompositeDescriptor() final = default;
