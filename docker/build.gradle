@@ -37,6 +37,7 @@ shadowJar {
     classifier = null
     version = null
     zip64 true
+    exclude '**/Log4j2Plugins.dat'
 }
 
 docker{
