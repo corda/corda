@@ -79,12 +79,12 @@ public class BucketingAllocator {
 
             LOG.warn(">>> checking for tests starting with = '{}'", testName);
 
-            // Affected by 'distribute:' setting? 'matchingTests' may be empty if we've never run those tests before.
+            // Affected by 'distribute:' setting - 'matchingTests' may be empty if we've never run those tests before.
             final List<Tuple2<String, Long>> matchingTests = tests.startsWith(testName);
 
             LOG.warn(">>> matching tests = {} <<<<", matchingTests.size());
 
-            return new TestBucket(task, testName, matchingTests);
+            return new TestBucket(task, testName, matchingTests, tests.getMeanDurationForTests());
         }).sorted(Comparator.comparing(TestBucket::getDuration).reversed()).collect(Collectors.toList());
     }
 
@@ -104,11 +104,16 @@ public class BucketingAllocator {
         final List<Tuple2<String, Long>> foundTests;
         final long durationNanos;
 
-        public TestBucket(Object testTask, String testName, List<Tuple2<String, Long>> foundTests) {
+        public TestBucket(Object testTask,
+                          String testName,
+                          List<Tuple2<String, Long>> foundTests,
+                          long defaultBucketDuration) {
             this.testTask = testTask;
             this.testName = testName;
             this.foundTests = foundTests;
-            durationNanos = Math.max(foundTests.stream().mapToLong(tp -> Math.max(tp.getSecond(), 1)).sum(), 1_000_000_000L);
+            durationNanos = Math.max(
+                    foundTests.stream().mapToLong(tp -> Math.max(tp.getSecond(), 1)).sum(),
+                    defaultBucketDuration);
             LOG.warn(">>>>  test bucket has total duration of  {} ns", durationNanos);
         }
 

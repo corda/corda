@@ -6,6 +6,8 @@ import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
 import org.apache.commons.csv.CSVRecord;
 import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.Reader;
@@ -14,22 +16,30 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public class Tests {
     final static String TEST_NAME = "Test Name";
     final static String MEAN_DURATION_NANOS = "Mean Duration Nanos";
     final static String NUMBER_OF_RUNS = "Number of runs";
-
+    private static final Logger LOG = LoggerFactory.getLogger(Tests.class);
     // test name -> (mean duration, number of runs)
     private final Map<String, Tuple2<Long, Long>> tests = new HashMap<>();
-    private Tuple2<Long, Long> mean = new Tuple2<>(1L, 1L);
+    // mean, count
+    private Tuple2<Long, Long> meanForTests = new Tuple2<>(1L, 0L);
+
+    private long meanDurationForClasses = 1L;
+
+    private Set<String> classNames = new HashSet<>();
 
     /**
      * Read tests, mean duration and runs from a csv file.
+     *
      * @param reader a reader
      * @return list of tests, or an empty list if none or we have a problem.
      */
@@ -53,17 +63,15 @@ public class Tests {
         return Collections.emptyList();
     }
 
-    //  TODO - remove
-    public List<Tuple2<String, Long>> getAll() {
-        List<Tuple2<String, Long>> results = new ArrayList<>();
-        for (String s : tests.keySet()) {
-            results.add(new Tuple2<>(s, tests.get(s).getFirst().longValue()));
-        }
-        return results;
+    private static Tuple2<Long, Long> recalculateMean(@NotNull final Tuple2<Long, Long> previous, long nanos) {
+        final long total = previous.getFirst() * previous.getSecond() + nanos;
+        final long count = previous.getSecond() + 1;
+        return new Tuple2<>(total / count, count);
     }
 
     /**
      * Write a csv file of test name, duration, runs
+     *
      * @param writer a writer
      * @return true if no problems.
      */
@@ -74,6 +82,7 @@ public class Tests {
             printer = new CSVPrinter(writer,
                     CSVFormat.DEFAULT.withHeader(TEST_NAME, MEAN_DURATION_NANOS, NUMBER_OF_RUNS));
             for (String key : tests.keySet()) {
+                LOG.warn(">>>  csv:  {}  {}  {}", key, tests.get(key).getFirst(), tests.get(key).getSecond());
                 printer.printRecord(key, tests.get(key).getFirst(), tests.get(key).getSecond());
             }
 
@@ -84,6 +93,11 @@ public class Tests {
         return ok;
     }
 
+    private String getClassName(@NotNull final String testName) {
+        return testName.lastIndexOf('.') != -1 ?
+                testName.substring(0, testName.lastIndexOf('.')) : "";
+    }
+
     /**
      * Add tests, and also (re)calculate the mean test duration.
      * e.g. addTests(read(reader));
@@ -92,14 +106,18 @@ public class Tests {
      */
     public void addTests(@NotNull final List<Tuple3<String, Long, Long>> testsCollection) {
         for (Tuple3<String, Long, Long> test : testsCollection) {
-            this.tests.put(test.getFirst(), new Tuple2<>(test.getSecond(), test.getThird()));
+            final String testName = test.getFirst();
+            this.tests.put(testName, new Tuple2<>(test.getSecond(), test.getThird()));
+
+            classNames.add(getClassName(testName));
         }
 
         // Calculate the mean test time.
         if (tests.size() > 0) {
             long total = 0;
             for (String testName : this.tests.keySet()) total += tests.get(testName).getFirst();
-            mean = new Tuple2<>(total / this.tests.size(), 1L);
+            meanForTests = new Tuple2<>(total / this.tests.size(), 1L);
+            meanDurationForClasses = (meanForTests.getFirst() * tests.size()) / classNames.size();
         }
     }
 
@@ -110,25 +128,38 @@ public class Tests {
      * @return duration in nanos.
      */
     public long getDuration(@NotNull final String testName) {
-        return tests.getOrDefault(testName, mean).getFirst();
+        return tests.getOrDefault(testName, meanForTests).getFirst();
     }
 
     /**
      * Add test information.  Recalulates mean test duration if already exists.
      *
-     * @param testName name of the test
+     * @param testName      name of the test
      * @param durationNanos duration
      */
     public void addDuration(@NotNull final String testName, long durationNanos) {
         Tuple2<Long, Long> current = tests.getOrDefault(testName, new Tuple2<>(0L, 0L));
-        final long total = current.getFirst() * current.getSecond() + durationNanos;
-        final long count = current.getSecond() + 1;
+        tests.put(testName, recalculateMean(current, durationNanos));
+        meanForTests = recalculateMean(meanForTests, durationNanos);
 
-        tests.put(testName, new Tuple2<>(total / count, count));
+        classNames.add(getClassName(testName));
+
+        meanDurationForClasses = (meanForTests.getFirst() * tests.size()) / classNames.size();
+    }
+
+    /**
+     * Get the mean duration for a class of unit tests.
+     * This is simply (the mean test duration  *  the number of known tests)  /  number of classes
+     *
+     * @return mean duration for a class of unit tests to execute in nanos.
+     */
+    public long getMeanDurationForClasses() {
+        return meanDurationForClasses;
     }
 
     /**
      * Do we have any test information?
+     *
      * @return false if no tests info
      */
     public boolean isEmpty() {
@@ -137,6 +168,7 @@ public class Tests {
 
     /**
      * How many tests do we have?
+     *
      * @return the number of tests we have information for
      */
     public int size() {
@@ -145,9 +177,11 @@ public class Tests {
 
     /**
      * Return all tests (and their durations) that being with (or are equal to) `testPrefix`
+     *
      * @param testPrefix could be just the classname, or the entire classname + testname.
      * @return list of matching tests
      */
+    @NotNull
     List<Tuple2<String, Long>> startsWith(@NotNull final String testPrefix) {
         final List<Tuple2<String, Long>> results = new ArrayList<>();
 
@@ -161,10 +195,20 @@ public class Tests {
 
     /**
      * How many times has this function been run?  Every call to addDuration increments the current value.
+     *
      * @param testName the test name
      * @return the number of times the test name has been run.
      */
     public long getRunCount(@NotNull final String testName) {
         return tests.getOrDefault(testName, new Tuple2<>(0L, 0L)).getSecond();
+    }
+
+    /**
+     * Return the mean duration for a unit to run
+     *
+     * @return mean duration in nanos.
+     */
+    public long getMeanDurationForTests() {
+        return meanForTests.getFirst();
     }
 }

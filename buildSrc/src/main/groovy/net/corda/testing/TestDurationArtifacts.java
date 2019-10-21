@@ -63,7 +63,7 @@ public class TestDurationArtifacts {
     // The one and only set of tests information.  We load these at the start of a build, and update them and save them at the end.
     static Tests tests = new Tests();
 
-    // Artifatory API
+    // Artifactory API
     private final Artifactory artifactory = new Artifactory();
 
     /**
@@ -99,6 +99,7 @@ public class TestDurationArtifacts {
                 project.getLogger().warn("About to create CSV file and zip it");
 
                 //  Read test xml files for tests and duration and add them to the `Tests` object
+                //  This adjusts the runCount and over all average duration for existing tests.
                 for (Path testResult : getTestXmlFiles(project.getRootDir().toPath())) {
                     try {
                         final List<Tuple2<String, Long>> junitTests = fromJunitXml(new FileInputStream(testResult.toFile()));
@@ -111,7 +112,7 @@ public class TestDurationArtifacts {
 
                 //  Write the test file to disk.
                 try {
-                    FileWriter writer = new FileWriter(new File(project.getRootDir(), ARTIFACT + ".csv"));
+                    final FileWriter writer = new FileWriter(new File(project.getRootDir(), ARTIFACT + ".csv"));
                     tests.write(writer);
                     LOG.warn("Written tests csv file with {} tests", tests.size());
                 } catch (IOException ignored) {
@@ -123,11 +124,11 @@ public class TestDurationArtifacts {
             z.getArchiveFileName().set(Artifactory.getFileName(ARTIFACT, EXTENSION, getGitBranch()));
             z.getDestinationDirectory().set(project.getRootDir());
             z.setIncludeEmptyDirs(false);
+            z.dependsOn(createCsvTask); // we have to create the csv before we can zip it.
 
             z.from(project.getRootDir(), task -> {
                 task.include("**/" + ARTIFACT + ".csv");
             });
-            z.dependsOn(createCsvTask);
 
             // ...base class method zips the CSV...
 
@@ -215,6 +216,8 @@ public class TestDurationArtifacts {
 
                 // Read the tests from the (csv) stream
                 final InputStreamReader reader = new InputStreamReader(byteInputStream);
+
+                // Add the tests to the Tests object
                 tests.addTests(Tests.read(reader));
             }
         } catch (ArchiveException | IOException e) {
