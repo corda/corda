@@ -89,15 +89,9 @@ public class TestDurationArtifacts {
      */
     @NotNull
     public static Task createZipTask(Project project, String name) {
-        return project.getTasks().create(name, Zip.class, z -> {
-            z.getArchiveFileName().set(Artifactory.getFileName(ARTIFACT, EXTENSION, getGitBranch()));
-            z.getDestinationDirectory().set(project.getRootDir());
-            z.from(project.getRootDir(), task -> {
-                task.include("**/" + ARTIFACT + ".csv");
-            });
-
+        final Task createCsvTask = project.getTasks().create(name + "CreateCsvFile", Task.class, t -> {
             // Parse all the junit results and write them to a csv file.
-            z.doFirst(task -> {
+           t.doFirst(task -> {
                 project.getLogger().warn("About to create CSV file and zip it");
 
                 //  Read test xml files for tests and duration
@@ -119,6 +113,15 @@ public class TestDurationArtifacts {
                 } catch (IOException ignored) {
                 }
             });
+        });
+
+        return project.getTasks().create(name, Zip.class, z -> {
+            z.getArchiveFileName().set(Artifactory.getFileName(ARTIFACT, EXTENSION, getGitBranch()));
+            z.getDestinationDirectory().set(project.getRootDir());
+            z.from(project.getRootDir(), task -> {
+                task.include("**/" + ARTIFACT + ".csv");
+            });
+            z.dependsOn(createCsvTask);
 
             // ...base class method zips the CSV...
 
