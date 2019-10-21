@@ -70,14 +70,19 @@ class DistributedTesting implements Plugin<Project> {
             //ie allUnitAndIntegrationTest will invoke [node:integrationTest, node:test, core:integrationTest, core:test, client:rpc:test , client:rpc:integrationTest ... etc]
             Set<ParallelTestGroup> userGroups = new HashSet<>(project.tasks.withType(ParallelTestGroup))
 
-            Collection<ParallelTestGroup> userDefinedGroups = userGroups.forEach { testGrouping ->
-                List<Test> groups = ((ParallelTestGroup) testGrouping).groups.collect {
-                    allTestTasksGroupedByType.get(it)
-                }.flatten()
+            userGroups.forEach { testGrouping ->
+
+                //for each "group" (ie: test, integrationTest) within the grouping find all the Test tasks which have the same name.
+                List<Test> groups = ((ParallelTestGroup) testGrouping).groups.collect { allTestTasksGroupedByType.get(it) }.flatten()
+
+                //join up these test tasks into a single set of tasks to invoke (node:test, node:integrationTest...)
                 String superListOfTasks = groups.collect { it.path }.join(" ")
 
+                //generate a preAllocate / deAllocate task which allows you to "pre-book" a node during the image building phase
+                //this prevents time lost to cloud provider node spin up time (assuming image build time > provider spin up time)
                 def (Task preAllocateTask, Task deAllocateTask) = generatePreAllocateAndDeAllocateTasksForGrouping(project, testGrouping)
 
+                //modify the image building task to depend on the preAllocate task (if specified on the command line) - this prevents gradle running out of order
                 if (preAllocateTask.name in requestedTaskNames) {
                     imageBuildTask.dependsOn preAllocateTask
                 }
