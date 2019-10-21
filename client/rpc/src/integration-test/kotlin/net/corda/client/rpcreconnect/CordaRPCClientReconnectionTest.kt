@@ -4,6 +4,7 @@ import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.client.rpc.CordaRPCClientTest
 import net.corda.client.rpc.GracefulReconnect
+import net.corda.client.rpc.MaxRpcRetryException
 import net.corda.client.rpc.internal.ReconnectingCordaRPCOps
 import net.corda.core.messaging.startTrackedFlow
 import net.corda.core.utilities.NetworkHostAndPort
@@ -21,9 +22,11 @@ import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.FINANCE_CORDAPPS
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import kotlin.concurrent.thread
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -39,7 +42,7 @@ class CordaRPCClientReconnectionTest {
 
     @Test
     fun `rpc client calls and returned observables continue working when the server crashes and restarts`() {
-        driver(DriverParameters(cordappsForAllNodes = FINANCE_CORDAPPS, startNodesInProcess = false, inMemoryDB = false)) {
+        driver(DriverParameters(cordappsForAllNodes = FINANCE_CORDAPPS)) {
             val latch = CountDownLatch(2)
             val address = NetworkHostAndPort("localhost", portAllocator.nextPort())
 
@@ -52,9 +55,7 @@ class CordaRPCClientReconnectionTest {
             }
 
             val node = startNode()
-            val client = CordaRPCClient(node.rpcAddress, CordaRPCClientConfiguration.DEFAULT.copy(
-                    maxReconnectAttempts = 5
-            ))
+            val client = CordaRPCClient(node.rpcAddress)
 
             (client.start(rpcUser.username, rpcUser.password, gracefulReconnect = gracefulReconnect)).use {
                 val rpcOps = it.proxy as ReconnectingCordaRPCOps
@@ -79,7 +80,7 @@ class CordaRPCClientReconnectionTest {
 
     @Test
     fun `a client can successfully unsubscribe a reconnecting observable`() {
-        driver(DriverParameters(cordappsForAllNodes = FINANCE_CORDAPPS, startNodesInProcess = false, inMemoryDB = false)) {
+        driver(DriverParameters(cordappsForAllNodes = FINANCE_CORDAPPS)) {
             val latch = CountDownLatch(2)
             val address = NetworkHostAndPort("localhost", portAllocator.nextPort())
 
@@ -92,9 +93,7 @@ class CordaRPCClientReconnectionTest {
             }
 
             val node = startNode()
-            val client = CordaRPCClient(node.rpcAddress, CordaRPCClientConfiguration.DEFAULT.copy(
-                    maxReconnectAttempts = 5
-            ))
+            val client = CordaRPCClient(node.rpcAddress)
 
             (client.start(rpcUser.username, rpcUser.password, gracefulReconnect = gracefulReconnect)).use {
                 val rpcOps = it.proxy as ReconnectingCordaRPCOps
@@ -119,7 +118,7 @@ class CordaRPCClientReconnectionTest {
 
     @Test
     fun `rpc client calls and returned observables continue working when there is failover between servers`() {
-        driver(DriverParameters(cordappsForAllNodes = FINANCE_CORDAPPS, startNodesInProcess = false, inMemoryDB = false)) {
+        driver(DriverParameters(cordappsForAllNodes = FINANCE_CORDAPPS)) {
             val latch = CountDownLatch(2)
 
             fun startNode(address: NetworkHostAndPort): NodeHandle {
@@ -133,9 +132,7 @@ class CordaRPCClientReconnectionTest {
             val addresses = listOf(NetworkHostAndPort("localhost", portAllocator.nextPort()), NetworkHostAndPort("localhost", portAllocator.nextPort()))
 
             val node = startNode(addresses[0])
-            val client = CordaRPCClient(addresses, CordaRPCClientConfiguration.DEFAULT.copy(
-                    maxReconnectAttempts = 5
-            ))
+            val client = CordaRPCClient(addresses)
 
             (client.start(rpcUser.username, rpcUser.password, gracefulReconnect = gracefulReconnect)).use {
                 val rpcOps = it.proxy as ReconnectingCordaRPCOps
@@ -157,4 +154,33 @@ class CordaRPCClientReconnectionTest {
             }
         }
     }
+
+    @Test
+    fun `an RPC call fails, when the maximum number of attempts is exceeded`() {
+        driver(DriverParameters(cordappsForAllNodes = emptyList())) {
+            val address = NetworkHostAndPort("localhost", portAllocator.nextPort())
+
+            fun startNode(): NodeHandle {
+                return startNode(
+                        providedName = CHARLIE_NAME,
+                        rpcUsers = listOf(CordaRPCClientTest.rpcUser),
+                        customOverrides = mapOf("rpcSettings.address" to address.toString())
+                ).getOrThrow()
+            }
+
+            val node = startNode()
+            val client = CordaRPCClient(node.rpcAddress)
+
+            (client.start(rpcUser.username, rpcUser.password, gracefulReconnect = GracefulReconnect(maxAttempts = 1))).use {
+                val rpcOps = it.proxy as ReconnectingCordaRPCOps
+
+                node.stop()
+                thread { startNode() }
+                assertThatThrownBy { rpcOps.networkParameters }
+                        .isInstanceOf(MaxRpcRetryException::class.java)
+            }
+
+        }
+    }
+
 }
