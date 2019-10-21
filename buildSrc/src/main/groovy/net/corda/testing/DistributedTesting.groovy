@@ -99,6 +99,7 @@ class DistributedTesting implements Plugin<Project> {
                     memoryGbPerFork = testGrouping.gbOfMemory
                     numberOfCoresPerFork = testGrouping.coresToUse
                     distribution = testGrouping.distribution
+                    podLogLevel = testGrouping.logLevel
                     doFirst {
                         dockerTag = tagToUseForRunningTests ? (ImageBuilding.registryName + ":" + tagToUseForRunningTests) : (imagePushTask.imageName.get() + ":" + imagePushTask.tag.get())
                     }

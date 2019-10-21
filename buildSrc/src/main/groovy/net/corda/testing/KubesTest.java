@@ -1,7 +1,18 @@
 package net.corda.testing;
 
-import io.fabric8.kubernetes.api.model.*;
-import io.fabric8.kubernetes.client.*;
+import io.fabric8.kubernetes.api.model.DoneablePod;
+import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
+import io.fabric8.kubernetes.api.model.Pod;
+import io.fabric8.kubernetes.api.model.PodBuilder;
+import io.fabric8.kubernetes.api.model.Quantity;
+import io.fabric8.kubernetes.api.model.Status;
+import io.fabric8.kubernetes.api.model.StatusCause;
+import io.fabric8.kubernetes.api.model.StatusDetails;
+import io.fabric8.kubernetes.client.DefaultKubernetesClient;
+import io.fabric8.kubernetes.client.KubernetesClient;
+import io.fabric8.kubernetes.client.KubernetesClientException;
+import io.fabric8.kubernetes.client.Watch;
+import io.fabric8.kubernetes.client.Watcher;
 import io.fabric8.kubernetes.client.dsl.ExecListener;
 import io.fabric8.kubernetes.client.dsl.PodResource;
 import io.fabric8.kubernetes.client.utils.Serialization;
@@ -11,12 +22,34 @@ import org.gradle.api.DefaultTask;
 import org.gradle.api.tasks.TaskAction;
 import org.jetbrains.annotations.NotNull;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.PipedInputStream;
+import java.io.PipedOutputStream;
 import java.math.BigInteger;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.*;
-import java.util.concurrent.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Optional;
+import java.util.Queue;
+import java.util.Random;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -33,6 +66,7 @@ public class KubesTest extends DefaultTask {
     String fullTaskToExecutePath;
     String taskToExecuteName;
     Boolean printOutput = false;
+
     Integer numberOfCoresPerFork = 4;
     Integer memoryGbPerFork = 6;
     public volatile List<File> testOutput = Collections.emptyList();
@@ -45,6 +79,7 @@ public class KubesTest extends DefaultTask {
     int timeoutInMinutesForPodToStart = 60;
 
     Distribution distribution = Distribution.METHOD;
+    PodLogLevel podLogLevel = PodLogLevel.INFO;
 
     @TaskAction
     public void runDistributedTests() {
@@ -118,7 +153,7 @@ public class KubesTest extends DefaultTask {
             int numberOfRetries
     ) {
         return CompletableFuture.supplyAsync(() -> {
-            return buildRunPodWithRetriesOrThrow(client, namespace,  numberOfPods, podIdx, podName, printOutput, numberOfRetries);
+            return buildRunPodWithRetriesOrThrow(client, namespace, numberOfPods, podIdx, podName, printOutput, numberOfRetries);
         }, executorService);
     }
 
@@ -331,9 +366,26 @@ public class KubesTest extends DefaultTask {
     private String[] getBuildCommand(int numberOfPods, int podIdx) {
         String shellScript = "let x=1 ; while [ ${x} -ne 0 ] ; do echo \"Waiting for DNS\" ; curl services.gradle.org > /dev/null 2>&1 ; x=$? ; sleep 1 ; done ; " + "cd /tmp/source ; " +
                 "let y=1 ; while [ ${y} -ne 0 ] ; do echo \"Preparing build directory\" ; ./gradlew testClasses integrationTestClasses --parallel 2>&1 ; y=$? ; sleep 1 ; done ;" +
-                "./gradlew -D" + ListTests.DISTRIBUTION_PROPERTY + "=" + distribution.name() + " -Dkubenetize -PdockerFork=" + podIdx + " -PdockerForks=" + numberOfPods + " " + fullTaskToExecutePath + " --info 2>&1 ;" +
+                "./gradlew -D" + ListTests.DISTRIBUTION_PROPERTY + "=" + distribution.name() + " -Dkubenetize -PdockerFork=" + podIdx + " -PdockerForks=" + numberOfPods + " " + fullTaskToExecutePath + " " + getLoggingLevel() + " 2>&1 ;" +
                 "let rs=$? ; sleep 10 ; exit ${rs}";
         return new String[]{"bash", "-c", shellScript};
+    }
+
+    private String getLoggingLevel() {
+
+        switch (podLogLevel) {
+            case INFO:
+                return " --info";
+            case WARN:
+                return " --warn";
+            case QUIET:
+                return " --quiet";
+            case DEBUG:
+                return " --debug";
+            default:
+                throw new IllegalArgumentException("LogLevel: " + podLogLevel + " is unknown");
+        }
+
     }
 
     private List<File> findFolderContainingBinaryResultsFile(File start, String fileNameToFind) {
