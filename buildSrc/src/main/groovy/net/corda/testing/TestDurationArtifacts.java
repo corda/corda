@@ -118,6 +118,8 @@ public class TestDurationArtifacts {
         return project.getTasks().create(name, Zip.class, z -> {
             z.getArchiveFileName().set(Artifactory.getFileName(ARTIFACT, EXTENSION, getGitBranch()));
             z.getDestinationDirectory().set(project.getRootDir());
+            z.setIncludeEmptyDirs(false);
+
             z.from(project.getRootDir(), task -> {
                 task.include("**/" + ARTIFACT + ".csv");
             });
