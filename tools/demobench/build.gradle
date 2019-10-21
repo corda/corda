@@ -17,6 +17,8 @@ if (JavaVersion.current().isJava9Compatible()) {
 ext {
     tornadofx_version = '1.7.15'
     jna_version = '4.5.2'
+    jediterm_version = '2.22'
+    pty4j_version = '0.9.6'
 
     java_home = System.properties.'java.home'
     pkg_source = "$buildDir/packagesrc"
@@ -38,13 +40,6 @@ applicationDefaultJvmArgs = [
     '-Djava.util.logging.config.class=net.corda.demobench.config.LoggingConfig',
     '-Dorg.jboss.logging.provider=slf4j'
 ]
-
-repositories {
-    flatDir {
-        dirs 'libs'
-    }
-    jcenter()
-}
 
 configurations {
     compile {
@@ -79,10 +74,10 @@ dependencies {
     compile "de.jensd:fontawesomefx-fontawesome:$fontawesomefx_fontawesome_version"
     compile "de.jensd:fontawesomefx-commons:$fontawesomefx_commons_version"
 
-    // JediTerm: the terminal emulator used in IntelliJ. We have forked it and tweaked it, see https://github.com/corda/jediterm
-    compile ':terminal-331a005d6793e52cefc9e2cec6774e62d5a546b1'
-    compile ':pty4j-0.7.2'
-    compile ':purejavacomm-0.0.18'
+    compile "org.jetbrains.jediterm:jediterm-pty:$jediterm_version"
+    compile("org.jetbrains.pty4j:pty4j:$pty4j_version") {
+        exclude group: 'log4j'
+    }
 
     testCompile project(':test-utils')
     testCompile project(':testing:testserver')
@@ -117,18 +112,6 @@ test {
 distributions {
     main() {
         contents {
-            into('lib/linux') {
-                from 'libs/linux'
-                fileMode = 0555
-            }
-            into('lib/macosx') {
-                from 'libs/macosx'
-                fileMode = 0555
-            }
-            into('lib/win') {
-                from 'libs/win'
-                fileMode = 0555
-            }
             from(project(':tools:explorer:capsule').tasks.buildExplorerJAR) {
                 rename 'node-explorer-(.*)', 'node-explorer.jar'
                 into 'explorer'
@@ -214,13 +197,6 @@ task javapackage(dependsOn: distZip) {
             resources {
                 fileset(dir: "$dist_source/lib", type: 'jar') {
                     include(name: '*.jar')
-                }
-
-                fileset(dir: "$dist_source/lib", type: 'native') {
-                    include(name: "macosx/**/*.dylib")
-                    include(name: "win/**/*.dll")
-                    include(name: "win/**/*.exe")
-                    include(name: "linux/**/*.so")
                 }
 
                 fileset(dir: dist_source, type: 'data') {
