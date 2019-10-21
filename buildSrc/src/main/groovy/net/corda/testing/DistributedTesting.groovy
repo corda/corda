@@ -50,6 +50,7 @@ class DistributedTesting implements Plugin<Project> {
                         println "Skipping modification of ${task.getPath()} as it's not scheduled for execution"
                     }
                     if (!task.hasProperty("ignoreForDistribution")) {
+                        //this is what enables execution of a single test suite - for example node:parallelTest would execute all unit tests in node, node:parallelIntegrationTest would do the same for integration tests
                         KubesTest parallelTestTask = generateParallelTestingTask(subProject, task, imagePushTask, providedTag)
                     }
                 }

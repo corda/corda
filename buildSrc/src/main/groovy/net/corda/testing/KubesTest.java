@@ -41,7 +41,7 @@ public class KubesTest extends DefaultTask {
     public static String NAMESPACE = "thisisatest";
     int k8sTimeout = 50 * 1_000;
     int webSocketTimeout = k8sTimeout * 6;
-    int numberOfPods = 20;
+    int numberOfPods = 5;
     int timeoutInMinutesForPodToStart = 60;
 
     Distribution distribution = Distribution.METHOD;
