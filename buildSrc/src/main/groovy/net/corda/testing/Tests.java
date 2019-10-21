@@ -158,4 +158,13 @@ public class Tests {
         }
         return results;
     }
+
+    /**
+     * How many times has this function been run?  Every call to addDuration increments the current value.
+     * @param testName the test name
+     * @return the number of times the test name has been run.
+     */
+    public long getRunCount(@NotNull final String testName) {
+        return tests.getOrDefault(testName, new Tuple2<>(0L, 0L)).getSecond();
+    }
 }

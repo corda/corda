@@ -101,9 +101,9 @@ public class TestDurationArtifacts {
                 //  Read test xml files for tests and duration and add them to the `Tests` object
                 for (Path testResult : getTestXmlFiles(project.getRootDir().toPath())) {
                     try {
-                        List<Tuple2<String, Long>> junitTests = fromJunitXml(new FileInputStream(testResult.toFile()));
+                        final List<Tuple2<String, Long>> junitTests = fromJunitXml(new FileInputStream(testResult.toFile()));
                         for (Tuple2<String, Long> junitTest : junitTests) {
-                            tests.addDuration(junitTest.getFirst(), junitTest.getSecond().longValue());
+                            tests.addDuration(junitTest.getFirst(), junitTest.getSecond());
                         }
                     } catch (FileNotFoundException ignored) {
                     }
@@ -232,7 +232,7 @@ public class TestDurationArtifacts {
      * @param inputStream an InputStream, closed once parsed
      * @return a list of test names and their durations in nanos.
      */
-    @Nullable
+    @NotNull
     private static List<Tuple2<String, Long>> fromJunitXml(@NotNull final InputStream inputStream) {
         final DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
         final List<Tuple2<String, Long>> results = new ArrayList<>();

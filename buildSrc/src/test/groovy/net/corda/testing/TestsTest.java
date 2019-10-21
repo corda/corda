@@ -106,4 +106,40 @@ public class TestsTest {
         tests.addDuration("bar", 56);
         Assert.assertEquals(4, tests.size());
     }
+
+    @Test
+    public void addingNewDurationUpdatesRunCount() {
+
+        final Tests tests = new Tests();
+        Assert.assertTrue(tests.isEmpty());
+
+        final String s = Tests.TEST_NAME + "," + Tests.MEAN_DURATION_NANOS + "," + Tests.NUMBER_OF_RUNS + '\n'
+                + "hello,100,4\n"
+                + "goodbye,200,4\n";
+
+        tests.addTests(Tests.read(new StringReader(s)));
+        Assert.assertFalse(tests.isEmpty());
+        Assert.assertEquals(2, tests.size());
+
+        tests.addDuration("foo", 55);
+
+        Assert.assertEquals(0, tests.getRunCount("bar"));
+
+        tests.addDuration("bar", 33);
+        Assert.assertEquals(4, tests.size());
+
+        tests.addDuration("bar", 56);
+        Assert.assertEquals(2, tests.getRunCount("bar"));
+        Assert.assertEquals(4, tests.size());
+
+        tests.addDuration("bar", 56);
+        tests.addDuration("bar", 56);
+        Assert.assertEquals(4, tests.getRunCount("bar"));
+
+        Assert.assertEquals(4, tests.getRunCount("hello"));
+        tests.addDuration("hello", 22);
+        tests.addDuration("hello", 22);
+        tests.addDuration("hello", 22);
+        Assert.assertEquals(7, tests.getRunCount("hello"));
+    }
 }
