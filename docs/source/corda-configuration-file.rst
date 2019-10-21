@@ -56,9 +56,9 @@ JVM options
 .. note:: If the same field is overriden by both an environment variable and system property, the system property
    takes precedence.
 
-.. note:: Underscores can be used in instead of dots. For example overriding the p2pAddress with environment variable can be done
-   by specifying ``CORDA_P2PADDRESS=host:port``. Variables and properties are not case sensitive. Corda will warn you if a prefixed
-   with corda variable cannot be mapped to a config override and will refuse to start on shadowing! Shadowing occurs when two properties
+.. note:: Underscores can be used in instead of dots. For example overriding the ``p2pAddress`` with an environment variable can be done
+   by specifying ``CORDA_P2PADDRESS=host:port``. Variables and properties are not case sensitive. Corda will warn you if a variable
+   prefixed with ``CORDA`` cannot be mapped to a valid property. Shadowing occurs when two properties
    of the same type with the same key are defined. For example having ``CORDA_P2PADDRESS=host:port`` and ``corda_p2paddress=host1:port1``
    will raise an exception on startup. This is to prevent hard to spot mistakes.
 Configuration file fields

@@ -80,8 +80,8 @@ Unreleased
   Note that it's a responsibility of a client application to handle RPC reconnection in case this happens.
   See :ref:`setting_jvm_args` and :ref:`memory_usage_and_tuning` for further details.
 
-* Environment variables and system properties can now be provided with underscore separators instead of dots. Both are also not case sensitive
-  anymore. See :ref:`overriding config values <corda_configuration_file_overriding_config>` for more information.
+* Environment variables and system properties can now be provided with underscore separators instead of dots. Neither are case sensitive.
+  See :ref:`overriding config values <corda_configuration_file_overriding_config>` for more information.
 
 .. _changelog_v4.1:
 
