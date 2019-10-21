@@ -20,9 +20,10 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 public class BucketingAllocator {
-    private List<Tuple2<TestLister, Object>> sources = new ArrayList<>();
+    private static final Logger LOG = LoggerFactory.getLogger(BucketingAllocator.class);
     private final List<TestsForForkContainer> forkContainers;
     private final Supplier<Tests> timedTestsProvider;
+    private List<Tuple2<TestLister, Object>> sources = new ArrayList<>();
 
 
     public BucketingAllocator(Integer forkCount, Supplier<Tests> timedTestsProvider) {
@@ -70,20 +71,18 @@ public class BucketingAllocator {
             smallestContainer.addBucket(matchedTestBucket);
         });
     }
-    private static final Logger LOG = LoggerFactory.getLogger(BucketingAllocator.class);
-    private List<TestBucket> matchClasspathTestsToFile(Tests tests, @NotNull List<Tuple2<String, Object>> allDiscoveredTests) {
-        // TODO - remove
-        final List<Tuple2<String, Long>> allTestsFromFile = tests.getAll();
-        return allDiscoveredTests.stream().map(tuple -> {
-            String testName = tuple.getFirst();
-            Object task = tuple.getSecond();
-            //2DO [can this filtering algorithm be improved - the test names are sorted, it should be possible to do something using binary search]
-            List<Tuple2<String, Long>> matchingTests = allTestsFromFile.stream()
-                    .filter(testFromCSV -> testFromCSV.getFirst().startsWith(testName))
-                    .peek(s -> System.out.println("Test from csv  = " + s.getFirst() + " starts with testName = " + testName))
-                    .collect(Collectors.toList());
 
-            LOG.warn(">>> matching tests = {}", matchingTests.size());
+    private List<TestBucket> matchClasspathTestsToFile(Tests tests, @NotNull List<Tuple2<String, Object>> allDiscoveredTests) {
+        return allDiscoveredTests.stream().map(tuple -> {
+            final String testName = tuple.getFirst();
+            final Object task = tuple.getSecond();
+
+            LOG.warn(">>> checking for tests starting with = '{}'", testName);
+
+            // Affected by 'distribute:' setting? 'matchingTests' may be empty if we've never run those tests before.
+            final List<Tuple2<String, Long>> matchingTests = tests.startsWith(testName);
+
+            LOG.warn(">>> matching tests = {} <<<<", matchingTests.size());
 
             return new TestBucket(task, testName, matchingTests);
         }).sorted(Comparator.comparing(TestBucket::getDuration).reversed()).collect(Collectors.toList());
@@ -98,20 +97,23 @@ public class BucketingAllocator {
     }
 
     public static class TestBucket {
+        private static final Logger LOG = LoggerFactory.getLogger(TestBucket.class);
+
         final Object testTask;
         final String testName;
         final List<Tuple2<String, Long>> foundTests;
-        final long duration;
+        final long durationNanos;
 
         public TestBucket(Object testTask, String testName, List<Tuple2<String, Long>> foundTests) {
             this.testTask = testTask;
             this.testName = testName;
             this.foundTests = foundTests;
-            duration = Math.max(foundTests.stream().mapToLong(tp -> Math.max(tp.getSecond(), 1)).sum(), 1);
+            durationNanos = Math.max(foundTests.stream().mapToLong(tp -> Math.max(tp.getSecond(), 1)).sum(), 1_000_000_000L);
+            LOG.warn(">>>>  test bucket has total duration of  {} ns", durationNanos);
         }
 
         public long getDuration() {
-            return duration;
+            return durationNanos;
         }
 
         @Override
@@ -120,17 +122,16 @@ public class BucketingAllocator {
                     "testTask=" + testTask +
                     ", nameWithAsterix='" + testName + '\'' +
                     ", foundTests=" + foundTests +
-                    ", duration=" + duration +
+                    ", durationNanos=" + durationNanos +
                     '}';
         }
     }
 
     public static class TestsForForkContainer {
-        private long runningDuration = 0L;
         private final Integer forkIdx;
-
         private final List<TestBucket> testsForFork = Collections.synchronizedList(new ArrayList<>());
         private final Map<Object, List<TestBucket>> frozenTests = new HashMap<>();
+        private long runningDuration = 0L;
 
         public TestsForForkContainer(Integer forkIdx) {
             this.forkIdx = forkIdx;
@@ -138,7 +139,7 @@ public class BucketingAllocator {
 
         public void addBucket(TestBucket tb) {
             this.testsForFork.add(tb);
-            this.runningDuration = runningDuration + tb.duration;
+            this.runningDuration = runningDuration + tb.durationNanos;
         }
 
         public Long getCurrentDuration() {

@@ -191,15 +191,16 @@ public class TestDurationArtifacts {
     /**
      * Unzip test results in memory and return test names and durations.
      *
-     * @param inputStream stream containing zipped result file(s)
+     * @param zippedInputStream stream containing zipped result file(s)
      * @return list of test name and durations
      */
     @NotNull
-    private static void fromZippedFiles(@NotNull final Tests tests, @NotNull final InputStream inputStream) {
+    private static void addTestsFromZippedCsv(@NotNull final Tests tests,
+                                              @NotNull final InputStream zippedInputStream) {
         final List<Tuple2<String, Long>> results = new ArrayList<>();
 
         // We need this because ArchiveStream requires the `mark` functionality which is supported in buffered streams.
-        final BufferedInputStream bufferedInputStream = new BufferedInputStream(inputStream);
+        final BufferedInputStream bufferedInputStream = new BufferedInputStream(zippedInputStream);
         try (ArchiveInputStream archiveInputStream = new ArchiveStreamFactory().createArchiveInputStream(bufferedInputStream)) {
             ArchiveEntry e;
             while ((e = archiveInputStream.getNextEntry()) != null) {
@@ -278,7 +279,7 @@ public class TestDurationArtifacts {
      * @return a supplier of test results
      */
     @NotNull
-    public static Supplier<Tests> getTestsSupplier(final File destDir) {
+    static Supplier<Tests> getTestsSupplier(final File destDir) {
         return () -> {
             LOG.warn("LOADING tests from Artifactory");
             try {
@@ -294,7 +295,7 @@ public class TestDurationArtifacts {
                     }
                 }
                 try (FileInputStream inputStream = new FileInputStream(testsFile)) {
-                    fromZippedFiles(tests, inputStream);
+                    addTestsFromZippedCsv(tests, inputStream);
                     LOG.warn("Got {} tests from Artifactory", tests.size());
                     return tests;
                 }

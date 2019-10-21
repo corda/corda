@@ -142,4 +142,20 @@ public class Tests {
     public int size() {
         return tests.size();
     }
+
+    /**
+     * Return all tests (and their durations) that being with (or are equal to) `testPrefix`
+     * @param testPrefix could be just the classname, or the entire classname + testname.
+     * @return list of matching tests
+     */
+    List<Tuple2<String, Long>> startsWith(@NotNull final String testPrefix) {
+        final List<Tuple2<String, Long>> results = new ArrayList<>();
+
+        for (String test : this.tests.keySet()) {
+            if (test.startsWith(testPrefix)) {
+                results.add(new Tuple2<>(test, getDuration(test)));
+            }
+        }
+        return results;
+    }
 }
