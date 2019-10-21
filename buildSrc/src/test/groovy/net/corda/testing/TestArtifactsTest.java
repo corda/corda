@@ -20,7 +20,7 @@ import java.util.zip.ZipOutputStream;
 public class TestArtifactsTest {
     final static String CLASSNAME = "FAKE";
 
-    String getXml(List<Tuple2<String, Double>> tests) {
+    String getXml(List<Tuple2<String, Long>> tests) {
         StringBuilder sb = new StringBuilder();
         sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
                 "<testsuites disabled=\"\" errors=\"\" failures=\"\" name=\"\" tests=\"\" time=\"\">\n" +
@@ -30,9 +30,10 @@ public class TestArtifactsTest {
                 "            <property name=\"\" value=\"\"/>\n" +
                 "        </properties>\n");
 
-        for (Tuple2<String, Double> test : tests) {
+        for (Tuple2<String, Long> test : tests) {
+            Double d = ((double) test.getSecond()) / 1_000_000;
             sb.append("        <testcase assertions=\"\" classname=\"" + CLASSNAME + "\" name=\""
-                    + test.getFirst() + "\" status=\"\" time=\"" + test.getSecond().toString() + "\">\n" +
+                    + test.getFirst() + "\" status=\"\" time=\"" + d.toString() + "\">\n" +
                     "            <skipped/>\n" +
                     "            <error message=\"\" type=\"\"/>\n" +
                     "            <failure message=\"\" type=\"\"/>\n" +
@@ -50,12 +51,12 @@ public class TestArtifactsTest {
 
     @Test
     public void fromJunitXml() {
-        List<Tuple2<String, Double>> tests = new ArrayList<>();
-        tests.add(new Tuple2<>("TEST-A", 111.0));
-        tests.add(new Tuple2<>("TEST-B", 222.2));
+        List<Tuple2<String, Long>> tests = new ArrayList<>();
+        tests.add(new Tuple2<>("TEST-A", 111_000_000L));
+        tests.add(new Tuple2<>("TEST-B", 222_200_000L));
         final String xml = getXml(tests);
 
-        List<Tuple2<String, Double>> results
+        List<Tuple2<String, Long>> results
                 = TestArtifacts.fromJunitXml(new ByteArrayInputStream(xml.getBytes(StandardCharsets.UTF_8)));
 
         double delta = 0.001;
@@ -64,16 +65,16 @@ public class TestArtifactsTest {
         Assert.assertFalse("Should have results", results.isEmpty());
         Assert.assertEquals(results.size(), 2);
         Assert.assertEquals(results.get(0).getFirst(), CLASSNAME + "." + "TEST-A");
-        Assert.assertEquals(results.get(0).getSecond(), 111, delta);
+        Assert.assertEquals(results.get(0).getSecond(), 111_000_000L, delta);
         Assert.assertEquals(results.get(1).getFirst(), CLASSNAME + "." + "TEST-B");
-        Assert.assertEquals(results.get(1).getSecond(), 222.2, delta);
+        Assert.assertEquals(results.get(1).getSecond(), 222_200_000L, delta);
     }
 
     @Test
     public void canCreateZipFile() throws IOException, ArchiveException {
-        List<Tuple2<String, Double>> tests = new ArrayList<>();
-        tests.add(new Tuple2<>("TEST-A", 111.0));
-        tests.add(new Tuple2<>("TEST-B", 222.2));
+        List<Tuple2<String, Long>> tests = new ArrayList<>();
+        tests.add(new Tuple2<>("TEST-A", 111_000_000L));
+        tests.add(new Tuple2<>("TEST-B", 222_200_000L));
         final String xml = getXml(tests);
 
         ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
@@ -85,7 +86,7 @@ public class TestArtifactsTest {
         }
         Assert.assertNotEquals(0, byteStream.toByteArray().length);
         ByteArrayInputStream inputStream = new ByteArrayInputStream(byteStream.toByteArray());
-        List<Tuple2<String, Double>> results = TestArtifacts.fromZippedXml(inputStream);
+        List<Tuple2<String, Long>> results = TestArtifacts.fromZippedXml(inputStream);
 
         Assert.assertNotNull(results);
 
@@ -93,9 +94,9 @@ public class TestArtifactsTest {
         Assert.assertFalse("Should have results", results.isEmpty());
         Assert.assertEquals(results.size(), 2);
         Assert.assertEquals(results.get(0).getFirst(), CLASSNAME + "." + "TEST-A");
-        Assert.assertEquals(results.get(0).getSecond(), 111, delta);
+        Assert.assertEquals(results.get(0).getSecond().longValue(), 111_000_000L);
         Assert.assertEquals(results.get(1).getFirst(), CLASSNAME + "." + "TEST-B");
-        Assert.assertEquals(results.get(1).getSecond(), 222.2, delta);
+        Assert.assertEquals(results.get(1).getSecond().longValue(), 222_200_000L);
     }
 
     void putXml(ArchiveOutputStream outputStream, String fileName, String xml) throws IOException {
@@ -108,14 +109,14 @@ public class TestArtifactsTest {
     @Test
     public void canCreateZipFileContainingMultipleFiles() throws IOException, ArchiveException {
 
-        List<Tuple2<String, Double>> tests = new ArrayList<>();
-        tests.add(new Tuple2<>("TEST-A", 111.0));
-        tests.add(new Tuple2<>("TEST-B", 222.2));
+        List<Tuple2<String, Long>> tests = new ArrayList<>();
+        tests.add(new Tuple2<>("TEST-A", 111_000_000L));
+        tests.add(new Tuple2<>("TEST-B", 222_200_000L));
         final String xml = getXml(tests);
 
-        List<Tuple2<String, Double>> tests2 = new ArrayList<>();
-        tests2.add(new Tuple2<>("TEST-C", 333.333));
-        tests2.add(new Tuple2<>("TEST-D", 4444.4444));
+        List<Tuple2<String, Long>> tests2 = new ArrayList<>();
+        tests2.add(new Tuple2<>("TEST-C", 333_333_000L));
+        tests2.add(new Tuple2<>("TEST-D", 4_444_444_400L));
         final String xml2 = getXml(tests2);
 
         ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
@@ -129,7 +130,7 @@ public class TestArtifactsTest {
         Assert.assertNotEquals(0, byteStream.toByteArray().length);
         ByteArrayInputStream inputStream = new ByteArrayInputStream(byteStream.toByteArray());
 
-        List<Tuple2<String, Double>> results = TestArtifacts.fromZippedXml(inputStream);
+        List<Tuple2<String, Long>> results = TestArtifacts.fromZippedXml(inputStream);
 
         Assert.assertNotNull(results);
 
@@ -137,13 +138,13 @@ public class TestArtifactsTest {
         Assert.assertFalse("Should have results", results.isEmpty());
         Assert.assertEquals(4, results.size());
         Assert.assertEquals(results.get(0).getFirst(), CLASSNAME + "." + "TEST-A");
-        Assert.assertEquals(results.get(0).getSecond(), 111, delta);
+        Assert.assertEquals(results.get(0).getSecond().longValue(), 111_000_000L);
         Assert.assertEquals(results.get(1).getFirst(), CLASSNAME + "." + "TEST-B");
-        Assert.assertEquals(results.get(1).getSecond(), 222.2, delta);
+        Assert.assertEquals(results.get(1).getSecond().longValue(), 222_200_000L);
         Assert.assertEquals(results.get(2).getFirst(), CLASSNAME + "." + "TEST-C");
-        Assert.assertEquals(results.get(2).getSecond(), 333.333, delta);
+        Assert.assertEquals(results.get(2).getSecond().longValue(), 333_333_000L);
         Assert.assertEquals(results.get(3).getFirst(), CLASSNAME + "." + "TEST-D");
-        Assert.assertEquals(results.get(3).getSecond(), 4444.4444, delta);
+        Assert.assertEquals(results.get(3).getSecond().longValue(), 4_444_444_400L);
     }
 
     // Uncomment to test a file.
@@ -151,8 +152,8 @@ public class TestArtifactsTest {
     // zip ~/tests.zip  $(find . -name "*.xml" -type f | grep test-results)
 //    @Test
 //    public void testZipFile() throws FileNotFoundException {
-//        File f = new File("/Users/barrylapthorn/tests.zip");
-//        List<Tuple2<String, Double>> results = BucketingAllocatorTask.fromZippedXml(new BufferedInputStream(new FileInputStream(f)));
+//        File f = new File(System.getProperty("tests.zip", "/tests.zip");
+//        List<Tuple2<String, Long>> results = BucketingAllocatorTask.fromZippedXml(new BufferedInputStream(new FileInputStream(f)));
 //        Assert.assertFalse("Should have results", results.isEmpty());
 //        System.out.println("Results = " + results.size());
 //        System.out.println(results.toString());

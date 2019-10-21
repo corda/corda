@@ -10,6 +10,7 @@ import org.jetbrains.annotations.NotNull;
 import java.io.IOException;
 import java.io.Reader;
 import java.io.Writer;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -23,6 +24,7 @@ public class Tests {
     final static String MEAN_DURATION_NANOS = "Mean Duration Nanos";
     final static String NUMBER_OF_RUNS = "Number of runs";
 
+    // test name -> (mean duration, number of runs)
     private final Map<String, Tuple2<Long, Long>> tests = new HashMap<>();
     private Tuple2<Long, Long> mean = new Tuple2<>(1L, 1L);
 
@@ -49,6 +51,15 @@ public class Tests {
 
         }
         return Collections.emptyList();
+    }
+
+    //  TODO - remove
+    public List<Tuple2<String, Long>> getAll() {
+        List<Tuple2<String, Long>> results = new ArrayList<>();
+        for (String s : tests.keySet()) {
+            results.add(new Tuple2<>(s, tests.get(s).getFirst().longValue()));
+        }
+        return results;
     }
 
     /**
@@ -108,7 +119,7 @@ public class Tests {
      * @param testName name of the test
      * @param durationNanos duration
      */
-    public void addTestInfo(@NotNull final String testName, long durationNanos) {
+    public void addDuration(@NotNull final String testName, long durationNanos) {
         Tuple2<Long, Long> current = tests.getOrDefault(testName, new Tuple2<>(0L, 0L));
         final long total = current.getFirst() * current.getSecond() + durationNanos;
         final long count = current.getSecond() + 1;

@@ -18,7 +18,7 @@ public class BucketingAllocatorTest {
     @Test
     public void shouldAlwaysBucketTestsEvenIfNotInTimedFile() {
 
-        BucketingAllocator bucketingAllocator = new BucketingAllocator(1, Collections::emptyList);
+        BucketingAllocator bucketingAllocator = new BucketingAllocator(1, () -> new Tests());
 
         Object task = new Object();
         bucketingAllocator.addSource(() -> Arrays.asList("SomeTestingClass", "AnotherTestingClass"), task);
@@ -34,7 +34,7 @@ public class BucketingAllocatorTest {
     @Test
     public void shouldAllocateTestsAcrossForksEvenIfNoMatchingTestsFound() {
 
-        BucketingAllocator bucketingAllocator = new BucketingAllocator(2, Collections::emptyList);
+        BucketingAllocator bucketingAllocator = new BucketingAllocator(2, () -> new Tests());
 
         Object task = new Object();
         bucketingAllocator.addSource(() -> Arrays.asList("SomeTestingClass", "AnotherTestingClass"), task);

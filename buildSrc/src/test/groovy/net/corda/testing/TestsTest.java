@@ -25,7 +25,7 @@ public class TestsTest {
         final StringWriter writer = new StringWriter();
         final Tests tests = new Tests();
         Assert.assertTrue(tests.isEmpty());
-        tests.addTestInfo("hello", 100);
+        tests.addDuration("hello", 100);
         tests.write(writer);
         Assert.assertFalse(tests.isEmpty());
 
@@ -51,7 +51,7 @@ public class TestsTest {
         Assert.assertEquals((long) tests.getDuration("hello"), 100);
 
         // 1000 total for 5 tests = 200 mean
-        tests.addTestInfo("hello", 600);
+        tests.addDuration("hello", 600);
         Assert.assertEquals((long) tests.getDuration("hello"), 200);
     }
 
@@ -99,11 +99,11 @@ public class TestsTest {
         Assert.assertFalse(tests.isEmpty());
         Assert.assertEquals(2, tests.size());
 
-        tests.addTestInfo("foo", 55);
-        tests.addTestInfo("bar", 33);
+        tests.addDuration("foo", 55);
+        tests.addDuration("bar", 33);
         Assert.assertEquals(4, tests.size());
 
-        tests.addTestInfo("bar", 56);
+        tests.addDuration("bar", 56);
         Assert.assertEquals(4, tests.size());
     }
 }

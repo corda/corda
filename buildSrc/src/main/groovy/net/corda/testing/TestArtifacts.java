@@ -29,6 +29,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.function.Supplier;
 
+//TODO   DO NOT MODIFY - use TestDurationArtifacts
+
 /**
  * Get or put test artifacts to/from a REST endpoint.  The expected format is a zip file of junit XML files.
  * See https://www.jfrog.com/confluence/display/RTF/Artifactory+REST+API
@@ -93,8 +95,8 @@ public class TestArtifacts {
      * @return list of test name and durations
      */
     @NotNull
-    public static List<Tuple2<String, Double>> fromZippedXml(@NotNull InputStream inputStream) {
-        final List<Tuple2<String, Double>> results = new ArrayList<>();
+    public static List<Tuple2<String, Long>> fromZippedXml(@NotNull InputStream inputStream) {
+        final List<Tuple2<String, Long>> results = new ArrayList<>();
 
         // We need this because ArchiveStream requires the `mark` functionality which is supported in buffered streams.
         final BufferedInputStream bufferedInputStream = new BufferedInputStream(inputStream);
@@ -110,7 +112,7 @@ public class TestArtifacts {
                 IOUtils.copy(archiveInputStream, outputStream);
                 ByteArrayInputStream byteInputStream = new ByteArrayInputStream(outputStream.toByteArray());
 
-                List<Tuple2<String, Double>> entryResults = fromJunitXml(byteInputStream);
+                List<Tuple2<String, Long>> entryResults = fromJunitXml(byteInputStream);
                 if (entryResults != null) {
                     results.addAll(entryResults);
                 } else {
@@ -134,9 +136,9 @@ public class TestArtifacts {
      * @return a list of test names and their durations.
      */
     @Nullable
-    public static List<Tuple2<String, Double>> fromJunitXml(@NotNull InputStream inputStream) {
+    public static List<Tuple2<String, Long>> fromJunitXml(@NotNull InputStream inputStream) {
         final DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
-        final List<Tuple2<String, Double>> results = new ArrayList<>();
+        final List<Tuple2<String, Long>> results = new ArrayList<>();
 
         try {
             DocumentBuilder builder = dbFactory.newDocumentBuilder();
@@ -153,12 +155,12 @@ public class TestArtifacts {
                 String testName = attributes.getNamedItem("name") != null ?
                         attributes.getNamedItem("name").getNodeValue() : "";
                 String testDuration = attributes.getNamedItem("time") != null ?
-                        attributes.getNamedItem("time").getNodeValue() : "0";
+                        attributes.getNamedItem("time").getNodeValue() : "";
                 String testClassName = attributes.getNamedItem("classname") != null ?
                         attributes.getNamedItem("classname").getNodeValue() : "";
 
                 if (!testName.isEmpty() && !testDuration.isEmpty() && !testClassName.isEmpty()) {
-                    double d = Double.parseDouble(testDuration);
+                    long d = (long) (Double.parseDouble(testDuration) * 1000000);
                     // If a test duration is zero, then don't add it.  When we look up the test later, we'll return the mean test time
                     // instead.
                     if (d > 0.0) {
@@ -183,7 +185,7 @@ public class TestArtifacts {
      * @return a supplier of test results
      */
     @NotNull
-    public static Supplier<List<Tuple2<String, Double>>> getTestsSupplier(final File destDir) {
+    static Supplier<List<Tuple2<String, Long>>> getTestsSupplier(final File destDir) {
         return () -> {
             LOG.warn("Getting tests from Artifactory");
             try {

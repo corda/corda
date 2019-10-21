@@ -1,6 +1,7 @@
 package net.corda.testing;
 
 import groovy.lang.Tuple2;
+import groovy.lang.Tuple3;
 import org.apache.commons.compress.archivers.ArchiveEntry;
 import org.apache.commons.compress.archivers.ArchiveException;
 import org.apache.commons.compress.archivers.ArchiveInputStream;
@@ -36,6 +37,7 @@ import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.nio.file.FileSystems;
 import java.nio.file.FileVisitResult;
@@ -45,10 +47,8 @@ import java.nio.file.Path;
 import java.nio.file.PathMatcher;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.function.BiFunction;
-import java.util.function.Function;
 import java.util.function.Supplier;
 
 /**
@@ -101,25 +101,20 @@ public class TestDurationArtifacts {
                 project.getLogger().warn("About to zip");
 
                 //  Read test xml files for tests and duration
-                final List<Tuple2<String, Long>> allTestDurations = new ArrayList<>();
                 for (Path testResult : getTestXmlFiles(project.getRootDir().toPath())) {
                     try {
-                        allTestDurations.addAll(fromJunitXml(new FileInputStream(testResult.toFile())));
+                        List<Tuple2<String, Long>> junitTests = fromJunitXml(new FileInputStream(testResult.toFile()));
+                        for (Tuple2<String, Long> junitTest : junitTests) {
+                            tests.addDuration(junitTest.getFirst(), junitTest.getSecond().longValue());
+                        }
                     } catch (FileNotFoundException ignored) {
                     }
-                }
-
-                //  Update the test durations, appending any new tests.
-                //  Actually Tests t = Tests.instance();  // or similar - we want a static instance of this class.
-                Tests t = new Tests();
-                for (Tuple2<String, Long> test : allTestDurations) {
-                    t.addTestInfo(test.getFirst(), test.getSecond());
                 }
 
                 //  Write the test file to disk.
                 try {
                     FileWriter writer = new FileWriter(new File(project.getRootDir(), ARTIFACT + ".csv"));
-                    t.write(writer);
+                    tests.write(writer);
                 } catch (IOException ignored) {
                 }
             });
@@ -141,7 +136,7 @@ public class TestDurationArtifacts {
         });
     }
 
-    public static List<Path> getTestXmlFiles(@NotNull final Path rootDir)  {
+    private static List<Path> getTestXmlFiles(@NotNull final Path rootDir)  {
         List<Path> paths = new ArrayList<>();
         List<PathMatcher> matchers = new ArrayList<>();
         matchers.add(FileSystems.getDefault().getPathMatcher("glob:**/build/test-results-xml/**/*.xml"));
@@ -182,14 +177,14 @@ public class TestDurationArtifacts {
     }
 
     /**
-     * Unzip Junit XML test results in memory and return test names and durations.
+     * Unzip test results in memory and return test names and durations.
      *
-     * @param inputStream stream containing zipped xml files.
+     * @param inputStream stream containing zipped result file(s)
      * @return list of test name and durations
      */
     // TODO change the return type.
     @NotNull
-    public static List<Tuple2<String, Long>> fromZippedXml(@NotNull InputStream inputStream) {
+    public static Tests fromZippedFiles(@NotNull InputStream inputStream) {
         final List<Tuple2<String, Long>> results = new ArrayList<>();
 
         // We need this because ArchiveStream requires the `mark` functionality which is supported in buffered streams.
@@ -206,19 +201,16 @@ public class TestDurationArtifacts {
                 IOUtils.copy(archiveInputStream, outputStream);
                 ByteArrayInputStream byteInputStream = new ByteArrayInputStream(outputStream.toByteArray());
 
-                List<Tuple2<String, Long>> entryResults = fromJunitXml(byteInputStream);
-                if (entryResults != null) {
-                    results.addAll(entryResults);
-                } else {
-                    LOG.warn("Problem parsing xml in archive file: {}", e.getName());
-                }
+                // Read the tests from the (csv) stream
+                final InputStreamReader reader = new InputStreamReader(byteInputStream);
+                tests.addTests(Tests.read(reader));
             }
         } catch (ArchiveException | IOException e) {
             LOG.warn("Problem unzipping XML test results");
         }
 
         LOG.warn("Discovered {} tests", results.size());
-        return results;
+        return tests;
     }
 
     /**
@@ -230,7 +222,7 @@ public class TestDurationArtifacts {
      * @return a list of test names and their durations in nanos.
      */
     @Nullable
-    public static List<Tuple2<String, Long>> fromJunitXml(@NotNull InputStream inputStream) {
+    public static List<Tuple2<String, Long>> fromJunitXml(@NotNull final InputStream inputStream) {
         final DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
         final List<Tuple2<String, Long>> results = new ArrayList<>();
 
@@ -255,7 +247,7 @@ public class TestDurationArtifacts {
                 // When we look up the test later, we'll return the mean test time instead.
                 if (!testName.isEmpty() && !testClassName.isEmpty() && !testDuration.isEmpty()) {
                     final long nanos = (long) (Double.parseDouble(testDuration) * 1000000.0);
-                    results.add(new Tuple2<String, Long>(testClassName + "." + testName, nanos));
+                    results.add(new Tuple2<>(testClassName + "." + testName, nanos));
                 }
             }
         } catch (ParserConfigurationException | IOException | XPathExpressionException | SAXException e) {
@@ -266,6 +258,10 @@ public class TestDurationArtifacts {
         return results;
     }
 
+
+    // The one and only set of tests information.  We load these at the start of a build, and update them and save them at the end.
+    static Tests tests = new Tests();
+
     /**
      * A supplier of tests.
      * <p>
@@ -275,29 +271,29 @@ public class TestDurationArtifacts {
      * @return a supplier of test results
      */
     @NotNull
-    public static Supplier<List<Tuple2<String, Long>>> getTestsSupplier(final File destDir) {
+    public static Supplier<Tests> getTestsSupplier(final File destDir) {
         return () -> {
             LOG.warn("Getting tests from Artifactory");
             try {
                 final TestDurationArtifacts testArtifacts = new TestDurationArtifacts();
-                File tests = testArtifacts.get(getGitBranch(), destDir);
+                File testsFile = testArtifacts.get(getGitBranch(), destDir);
 
                 if (tests == null) {
                     LOG.warn("Could not get tests from Artifactory for {}, trying {}", getGitBranch(), getTargetGitBranch());
-                    tests = testArtifacts.get(getTargetGitBranch(), destDir);
+                    testsFile = testArtifacts.get(getTargetGitBranch(), destDir);
                     if (tests == null) {
                         LOG.warn("Could not get any tests from Artifactory");
-                        return Collections.emptyList();
+                        return tests;
                     }
                 }
-                try (FileInputStream inputStream = new FileInputStream(tests)) {
-                    return fromZippedXml(inputStream);
+                try (FileInputStream inputStream = new FileInputStream(testsFile)) {
+                    return fromZippedFiles(inputStream);
                 }
             } catch (Exception e) { // was IOException
                 LOG.warn(e.toString());
                 e.printStackTrace();
                 LOG.warn("Could not get tests from Artifactory");
-                return Collections.emptyList();
+                return tests;
             }
         };
     }

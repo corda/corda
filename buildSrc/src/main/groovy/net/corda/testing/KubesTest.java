@@ -327,8 +327,8 @@ public class KubesTest extends DefaultTask {
     }
 
     private String[] getBuildCommand(int numberOfPods, int podIdx) {
-        final String gitBranch = " -Dgit.branch=" +TestArtifacts.getGitBranch();
-        final String gitTargetBranch = " -Dgit.target.branch=" +TestArtifacts.getTargetGitBranch();
+        final String gitBranch = " -Dgit.branch=" +TestDurationArtifacts.getGitBranch();
+        final String gitTargetBranch = " -Dgit.target.branch=" +TestDurationArtifacts.getTargetGitBranch();
         final String artifactoryUsername = " -Dartifactory.username=" + Artifactory.getUsername() +" ";
         final String artifactoryPassword = " -Dartifactory.password=" + Artifactory.getPassword() + " ";
 
