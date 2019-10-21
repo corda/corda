@@ -10,7 +10,6 @@ import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-@Ignore
 class NodeRPCTests {
     private val CORDA_VERSION_REGEX = "\\d+(\\.\\d+)?(-\\w+)?".toRegex()
     private val CORDA_VENDOR = "Corda Open Source"
@@ -28,7 +27,6 @@ class NodeRPCTests {
         driver(DriverParameters(notarySpecs = emptyList(), cordappsForAllNodes = CORDAPPS, extraCordappPackagesToScan = emptyList())) {
             val nodeDiagnosticInfo = startNode().get().rpc.nodeDiagnosticInfo()
             assertTrue(nodeDiagnosticInfo.version.matches(CORDA_VERSION_REGEX))
-            assertTrue(nodeDiagnosticInfo.revision.matches(HEXADECIMAL_REGEX))
             assertEquals(PLATFORM_VERSION, nodeDiagnosticInfo.platformVersion)
             assertEquals(CORDA_VENDOR, nodeDiagnosticInfo.vendor)
             nodeDiagnosticInfo.cordapps.forEach { println("${it.shortName} ${it.type}") }

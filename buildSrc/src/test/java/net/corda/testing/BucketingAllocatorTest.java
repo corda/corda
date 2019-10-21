@@ -21,12 +21,12 @@ public class BucketingAllocatorTest {
         BucketingAllocator bucketingAllocator = new BucketingAllocator(1, Collections::emptyList);
 
         Object task = new Object();
-        bucketingAllocator.addSource(() -> Arrays.asList("SomeTestingClass*", "AnotherTestingClass*"), task);
+        bucketingAllocator.addSource(() -> Arrays.asList("SomeTestingClass", "AnotherTestingClass"), task);
 
         bucketingAllocator.generateTestPlan();
         List<String> testsForForkAndTestTask = bucketingAllocator.getTestsForForkAndTestTask(0, task);
 
-        Assert.assertThat(testsForForkAndTestTask, IsIterableContainingInAnyOrder.containsInAnyOrder("SomeTestingClass*", "AnotherTestingClass*"));
+        Assert.assertThat(testsForForkAndTestTask, IsIterableContainingInAnyOrder.containsInAnyOrder("SomeTestingClass", "AnotherTestingClass"));
 
     }
 
@@ -37,7 +37,7 @@ public class BucketingAllocatorTest {
         BucketingAllocator bucketingAllocator = new BucketingAllocator(2, Collections::emptyList);
 
         Object task = new Object();
-        bucketingAllocator.addSource(() -> Arrays.asList("SomeTestingClass*", "AnotherTestingClass*"), task);
+        bucketingAllocator.addSource(() -> Arrays.asList("SomeTestingClass", "AnotherTestingClass"), task);
 
         bucketingAllocator.generateTestPlan();
         List<String> testsForForkOneAndTestTask = bucketingAllocator.getTestsForForkAndTestTask(0, task);
@@ -48,7 +48,7 @@ public class BucketingAllocatorTest {
 
         List<String> allTests = Stream.of(testsForForkOneAndTestTask, testsForForkTwoAndTestTask).flatMap(Collection::stream).collect(Collectors.toList());
 
-        Assert.assertThat(allTests, IsIterableContainingInAnyOrder.containsInAnyOrder("SomeTestingClass*", "AnotherTestingClass*"));
+        Assert.assertThat(allTests, IsIterableContainingInAnyOrder.containsInAnyOrder("SomeTestingClass", "AnotherTestingClass"));
 
     }
 }

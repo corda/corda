@@ -152,10 +152,10 @@ public class KubesReporting extends DefaultTask {
                 if (!containersWithNonZeroReturnCodes.isEmpty()) {
                     String reportUrl = new ConsoleRenderer().asClickableFileUrl(new File(destinationDir, "index.html"));
                     if (shouldPrintOutput){
-                        containersWithNonZeroReturnCodes.forEach(container -> {
+                        containersWithNonZeroReturnCodes.forEach(podResult -> {
                             try {
                                 System.out.println("\n##### CONTAINER OUTPUT START #####");
-                                IOUtils.copy(new FileInputStream(container.getOutput()), System.out);
+                                IOUtils.copy(new FileInputStream(podResult.getOutput()), System.out);
                                 System.out.println("##### CONTAINER OUTPUT END #####\n");
                             } catch (IOException ignored) {
                             }

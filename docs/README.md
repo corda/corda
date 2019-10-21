@@ -27,6 +27,7 @@ We currently support the following placeholders; they get substituted with the c
 
 ```groovy
     "|corda_version|" 
+    "|corda_version_lower|" 
     "|java_version|" 
     "|kotlin_version|" 
     "|gradle_plugins_version|" 
@@ -34,6 +35,7 @@ We currently support the following placeholders; they get substituted with the c
 ```
 
 If you put one of these in an rst file anywhere (including in a code tag), it will be substituted with the value from `constants.properties` 
-(which is in the root of the project) at build time.
+(which is in the root of the project) at build time. `corda_version_lower` returns the current Corda version in lowercase which is useful
+for case sensitive artifacts such as docker images.
 
 The code for this can be found near the top of the conf.py file in the `docs/source` directory.

@@ -282,10 +282,13 @@ open class CordaRPCClientConfiguration @JvmOverloads constructor(
  *
  * @param onDisconnect implement this callback to perform logic when the RPC disconnects on connection disconnect
  * @param onReconnect implement this callback to perform logic when the RPC has reconnected after connection disconnect
+ * @param maxAttempts the maximum number of attempts per each individual RPC call. A negative number indicates infinite number of retries.
+ *                   The default value is 5.
  */
-class GracefulReconnect(val onDisconnect: () -> Unit = {}, val onReconnect: () -> Unit = {}) {
-    constructor(onDisconnect: Runnable, onReconnect: Runnable ) :
-        this(onDisconnect = { onDisconnect.run() }, onReconnect = { onReconnect.run() })
+class GracefulReconnect(val onDisconnect: () -> Unit = {}, val onReconnect: () -> Unit = {}, val maxAttempts: Int = 5) {
+    @JvmOverloads
+    constructor(onDisconnect: Runnable, onReconnect: Runnable, maxAttempts: Int = 5) :
+        this(onDisconnect = { onDisconnect.run() }, onReconnect = { onReconnect.run() }, maxAttempts = maxAttempts)
 }
 
 /**

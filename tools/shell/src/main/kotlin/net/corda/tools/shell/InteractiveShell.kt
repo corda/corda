@@ -138,7 +138,7 @@ object InteractiveShell {
         ExternalResolver.INSTANCE.addCommand("hashLookup", "Checks if a transaction with matching Id hash exists.", HashLookupShellCommand::class.java)
         ExternalResolver.INSTANCE.addCommand("attachments", "Commands to extract information about attachments stored within the node", AttachmentShellCommand::class.java)
         ExternalResolver.INSTANCE.addCommand("checkpoints", "Commands to extract information about checkpoints stored within the node", CheckpointShellCommand::class.java)
-        shell = ShellLifecycle(configuration.commandsDirectory).start(config, configuration.user, configuration.password)
+        shell = ShellLifecycle(configuration.commandsDirectory).start(config, configuration.user, configuration.password, runSshDaemon)
     }
 
     fun runLocalShell(onExit: () -> Unit = {}) {
@@ -166,7 +166,7 @@ object InteractiveShell {
     }
 
     class ShellLifecycle(private val shellCommands: Path) : PluginLifeCycle() {
-        fun start(config: Properties, localUserName: String = "", localUserPassword: String = ""): Shell {
+        fun start(config: Properties, localUserName: String = "", localUserPassword: String = "", runSshDaemon: Boolean): Shell {
             val classLoader = this.javaClass.classLoader
             val classpathDriver = ClassPathMountFactory(classLoader)
             val fileDriver = FileMountFactory(Utils.getCurrentDirectory())
@@ -192,7 +192,8 @@ object InteractiveShell {
                     return super.getPlugins().filterNot { it is JavaLanguage } + CordaAuthenticationPlugin(rpcOps)
                 }
             }
-            val attributes = emptyMap<String, Any>()
+            val attributes = mutableMapOf<String, Any>()
+            attributes["crash.localShell"] = runSshDaemon
             val context = PluginContext(discovery, attributes, commandsFS, confFS, classLoader)
             context.refresh()
             this.config = config
