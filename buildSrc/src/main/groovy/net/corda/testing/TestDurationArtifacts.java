@@ -98,7 +98,7 @@ public class TestDurationArtifacts {
 
             // Parse all the junit results and write them to a csv file.
             z.doFirst(task -> {
-                project.getLogger().warn("About to zip");
+                project.getLogger().warn("About to create CSV file and zip it");
 
                 //  Read test xml files for tests and duration
                 for (Path testResult : getTestXmlFiles(project.getRootDir().toPath())) {
@@ -115,6 +115,7 @@ public class TestDurationArtifacts {
                 try {
                     FileWriter writer = new FileWriter(new File(project.getRootDir(), ARTIFACT + ".csv"));
                     tests.write(writer);
+                    LOG.warn("Written tests csv file with {} tests", tests.size());
                 } catch (IOException ignored) {
                 }
             });
@@ -124,11 +125,13 @@ public class TestDurationArtifacts {
             z.doLast(task -> {
                 //  We've now created the one csv file containing the tests and their mean durations,
                 //  this task has zipped it, so we now just uploadd it.
+                project.getLogger().warn("SAVING tests");
                 project.getLogger().warn("Attempting to upload {}", z.getArchiveFileName().get());
                 try (FileInputStream inputStream = new FileInputStream(new File(z.getArchiveFileName().get()))) {
                     if (!new TestDurationArtifacts().put(getGitBranch(), inputStream)) {
                         project.getLogger().warn("Could not upload zip of tests");
                     }
+                    project.getLogger().warn("SAVED tests");
                 } catch (Exception e) {
                     project.getLogger().warn("Problem trying to upload: ", z.getArchiveFileName().get(), e);
                 }
@@ -184,7 +187,7 @@ public class TestDurationArtifacts {
      */
     // TODO change the return type.
     @NotNull
-    public static Tests fromZippedFiles(@NotNull InputStream inputStream) {
+    private static Tests fromZippedFiles(@NotNull final Tests tests, @NotNull final InputStream inputStream) {
         final List<Tuple2<String, Long>> results = new ArrayList<>();
 
         // We need this because ArchiveStream requires the `mark` functionality which is supported in buffered streams.
@@ -273,12 +276,12 @@ public class TestDurationArtifacts {
     @NotNull
     public static Supplier<Tests> getTestsSupplier(final File destDir) {
         return () -> {
-            LOG.warn("Getting tests from Artifactory");
+            LOG.warn("LOADING tests from Artifactory");
             try {
                 final TestDurationArtifacts testArtifacts = new TestDurationArtifacts();
                 File testsFile = testArtifacts.get(getGitBranch(), destDir);
 
-                if (tests == null) {
+                if (testsFile == null) {
                     LOG.warn("Could not get tests from Artifactory for {}, trying {}", getGitBranch(), getTargetGitBranch());
                     testsFile = testArtifacts.get(getTargetGitBranch(), destDir);
                     if (tests == null) {
@@ -287,7 +290,9 @@ public class TestDurationArtifacts {
                     }
                 }
                 try (FileInputStream inputStream = new FileInputStream(testsFile)) {
-                    return fromZippedFiles(inputStream);
+                    fromZippedFiles(tests, inputStream);
+                    LOG.warn("Got {} tests from Artifactory", tests.size());
+                    return tests;
                 }
             } catch (Exception e) { // was IOException
                 LOG.warn(e.toString());
