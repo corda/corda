@@ -128,7 +128,7 @@ class ActionExecutorImpl(
             } catch (e: Exception) {
                 // Catch all exceptions that occur in the [DeduplicationHandler]s (although errors should be unlikely)
                 // It is deemed safe for errors to occur here
-                // Therefore the current transition should not fail is something does go wrong
+                // Therefore the current transition should not fail if something does go wrong
                 log.info(
                     "An error occurred executing a deduplication post-database commit handler. Continuing, as it is safe to do so.",
                     e

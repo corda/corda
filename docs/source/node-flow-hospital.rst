@@ -51,7 +51,13 @@ Specifically, there are two main ways a flow is hospitalized:
 
    * **Database constraint violation** (``ConstraintViolationException``):
      This scenario may occur due to natural contention between racing flows as Corda delegates handling using the database's optimistic concurrency control.
-     As the likelihood of re-occurrence should be low, the flow will actually error and fail if it experiences this at the same point more than 3 times. No intervention required.
+     If this exception occurs, the flow will retry. After retrying a number of times, the errored flow is kept in for observation.
+
+   * ``SQLTransientConnectionException``:
+     Database connection pooling errors are dealt with. If this exception occurs, the flow will retry. After retrying a number of times, the errored flow is kept in for observation.
+
+   * All other instances of ``SQLException``:
+     Any ``SQLException`` that is thrown and not handled by any of the scenarios detailed above, will be kept in for observation after their first failure.
 
    * **Finality Flow handling** - Corda 3.x (old style) ``FinalityFlow`` and Corda 4.x ``ReceiveFinalityFlow`` handling:
      If on the receive side of the finality flow, any error will result in the flow being kept in for observation to allow the cause of the
@@ -64,7 +70,8 @@ Specifically, there are two main ways a flow is hospitalized:
      The time is hard to document as the notary members, if actually alive, will inform the requester of the ETA of a response.
      This can occur an infinite number of times.  i.e. we never give up notarising.  No intervention required.
 
-   * ``SQLTransientConnectionException``:
-     Database connection pooling errors are dealt with. If this exception occurs, the flow will retry. After retrying a number of times, the errored flow is kept in for observation.
+   * **Internal Corda errors**:
+     Flows that experience errors from inside the Corda statemachine, that are not handled by any of the scenarios details above, will be retried a number of times
+     and then kept in for observation if the error continues.
 
 .. note:: Flows that are kept in for observation are retried upon node restart.

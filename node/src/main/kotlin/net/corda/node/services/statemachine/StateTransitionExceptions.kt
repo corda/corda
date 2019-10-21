@@ -3,7 +3,8 @@ package net.corda.node.services.statemachine
 import net.corda.core.CordaException
 import net.corda.core.serialization.ConstructorForDeserialization
 
-// TODO This exception should not be propagated up to rpc as it suppresses the real exception
+// TODO These exceptions should not be propagated up to rpc as they suppress the real exceptions
+
 class StateTransitionException(
     val transitionAction: Action?,
     val transitionEvent: Event?,
@@ -14,4 +15,4 @@ class StateTransitionException(
     constructor(exception: Exception): this(null, null, exception)
 }
 
-internal class AsyncOperationTransitionException(exception: Exception) : CordaException(exception.message, exception)
+class AsyncOperationTransitionException(exception: Exception) : CordaException(exception.message, exception)
