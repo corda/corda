@@ -21,13 +21,14 @@ class DistributedTesting implements Plugin<Project> {
     void apply(Project project) {
         if (System.getProperty("kubenetize") != null) {
 
-            def forks = getPropertyAsInt(project, "dockerForks", 1)
+            Integer forks = getPropertyAsInt(project, "dockerForks", 1)
 
             ensureImagePluginIsApplied(project)
             ImageBuilding imagePlugin = project.plugins.getPlugin(ImageBuilding)
             DockerPushImage imagePushTask = imagePlugin.pushTask
             DockerBuildImage imageBuildTask = imagePlugin.buildTask
-            String providedTag = System.getProperty("docker.run.tag")
+            String tagToUseForRunningTests = System.getProperty(ImageBuilding.PROVIDE_TAG_FOR_RUNNING_PROPERTY)
+            String tagToUseForBuilding = System.getProperty(ImageBuilding.PROVIDE_TAG_FOR_RUNNING_PROPERTY)
             BucketingAllocatorTask globalAllocator = project.tasks.create("bucketingAllocator", BucketingAllocatorTask, forks)
 
             Set<String> requestedTaskNames = project.gradle.startParameter.taskNames.toSet()
@@ -51,7 +52,7 @@ class DistributedTesting implements Plugin<Project> {
                     }
                     if (!task.hasProperty("ignoreForDistribution")) {
                         //this is what enables execution of a single test suite - for example node:parallelTest would execute all unit tests in node, node:parallelIntegrationTest would do the same for integration tests
-                        KubesTest parallelTestTask = generateParallelTestingTask(subProject, task, imagePushTask, providedTag)
+                        KubesTest parallelTestTask = generateParallelTestingTask(subProject, task, imagePushTask, tagToUseForRunningTests)
                     }
                 }
             }
@@ -82,7 +83,7 @@ class DistributedTesting implements Plugin<Project> {
                 }
 
                 def userDefinedParallelTask = project.rootProject.tasks.create("userDefined" + testGrouping.name.capitalize(), KubesTest) {
-                    if (!providedTag) {
+                    if (!tagToUseForRunningTests) {
                         dependsOn imagePushTask
                     }
                     dependsOn deAllocateTask
@@ -94,7 +95,7 @@ class DistributedTesting implements Plugin<Project> {
                     numberOfCoresPerFork = testGrouping.coresToUse
                     distribution = testGrouping.distribution
                     doFirst {
-                        dockerTag = providedTag ? ImageBuilding.registryName + ":" + providedTag : (imagePushTask.imageName.get() + ":" + imagePushTask.tag.get())
+                        dockerTag = tagToUseForRunningTests ? (ImageBuilding.registryName + ":" + tagToUseForRunningTests) : (imagePushTask.imageName.get() + ":" + imagePushTask.tag.get())
                     }
                 }
                 def reportOnAllTask = project.rootProject.tasks.create("userDefinedReports${testGrouping.name.capitalize()}", KubesReporting) {
@@ -117,9 +118,9 @@ class DistributedTesting implements Plugin<Project> {
         PodAllocator allocator = new PodAllocator(project.getLogger())
         Task preAllocateTask = project.rootProject.tasks.create("preAllocateFor" + testGrouping.name.capitalize()) {
             doFirst {
-                String dockerTag = System.getProperty("docker.build.tag")
+                String dockerTag = System.getProperty(ImageBuilding.PROVIDE_TAG_FOR_BUILDING_PROPERTY)
                 if (dockerTag == null) {
-                    throw new GradleException("pre allocation cannot be used without a stable docker tag - please provide one")
+                    throw new GradleException("pre allocation cannot be used without a stable docker tag - please provide one  using -D" + ImageBuilding.PROVIDE_TAG_FOR_BUILDING_PROPERTY)
                 }
                 int seed = (dockerTag.hashCode() + testGrouping.name.hashCode())
                 String podPrefix = new BigInteger(64, new Random(seed)).toString(36)
@@ -133,9 +134,9 @@ class DistributedTesting implements Plugin<Project> {
 
         Task deAllocateTask = project.rootProject.tasks.create("deAllocateFor" + testGrouping.name.capitalize()) {
             doFirst {
-                String dockerTag = System.getProperty("docker.run.tag")
+                String dockerTag = System.getProperty(ImageBuilding.PROVIDE_TAG_FOR_RUNNING_PROPERTY)
                 if (dockerTag == null) {
-                    throw new GradleException("pre allocation cannot be used without a stable docker tag - please provide one")
+                    throw new GradleException("pre allocation cannot be used without a stable docker tag - please provide one using -D" + ImageBuilding.PROVIDE_TAG_FOR_RUNNING_PROPERTY)
                 }
                 int seed = (dockerTag.hashCode() + testGrouping.name.hashCode())
                 String podPrefix = new BigInteger(64, new Random(seed)).toString(36);

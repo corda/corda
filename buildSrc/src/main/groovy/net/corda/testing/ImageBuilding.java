@@ -30,6 +30,8 @@ import java.util.UUID;
 public class ImageBuilding implements Plugin<Project> {
 
     public static final String registryName = "stefanotestingcr.azurecr.io/testing";
+    public static final String PROVIDE_TAG_FOR_BUILDING_PROPERTY = "docker.build.tag";
+    public static final String PROVIDE_TAG_FOR_RUNNING_PROPERTY = "docker.run.tag";
     public DockerPushImage pushTask;
     public DockerBuildImage buildTask;
 
@@ -116,7 +118,7 @@ public class ImageBuilding implements Plugin<Project> {
         final DockerTagImage tagBuildImageResult = project.getTasks().create("tagBuildImageResult", DockerTagImage.class, dockerTagImage -> {
             dockerTagImage.dependsOn(commitBuildImageResult);
             dockerTagImage.getImageId().set(commitBuildImageResult.getImageId());
-            dockerTagImage.getTag().set(System.getProperty("docker.provided.tag", UUID.randomUUID().toString().toLowerCase().substring(0, 12)));
+            dockerTagImage.getTag().set(System.getProperty(PROVIDE_TAG_FOR_BUILDING_PROPERTY, UUID.randomUUID().toString().toLowerCase().substring(0, 12)));
             dockerTagImage.getRepository().set(registryName);
         });
 
