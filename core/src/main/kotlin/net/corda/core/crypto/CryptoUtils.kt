@@ -15,6 +15,7 @@ import net.corda.core.utilities.toSHA256Bytes
 import java.math.BigInteger
 import java.nio.ByteBuffer
 import java.security.*
+import java.util.*
 
 /**
  * Utility to simplify the act of signing a byte array.
@@ -117,7 +118,8 @@ val PublicKey.keys: Set<PublicKey> get() = (this as? CompositeKey)?.leafKeys ?: 
 /** Return true if [otherKey] fulfils the requirements of this [PublicKey]. */
 fun PublicKey.isFulfilledBy(otherKey: PublicKey): Boolean = isFulfilledBy(setOf(otherKey))
 /** Return true if [otherKeys] fulfil the requirements of this [PublicKey]. */
-fun PublicKey.isFulfilledBy(otherKeys: Iterable<PublicKey>): Boolean = (this as? CompositeKey)?.isFulfilledBy(otherKeys) ?: (this in otherKeys)
+fun PublicKey.isFulfilledBy(otherKeys: Iterable<PublicKey>): Boolean = (this as? CompositeKey)?.isFulfilledBy(otherKeys)
+        ?: otherKeys.any { Arrays.equals(this.encoded, it.encoded) }
 
 /**
  * Checks whether any of the given [keys] matches a leaf on the [CompositeKey] tree or a single [PublicKey].
