@@ -189,7 +189,7 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
                     Triple(Outcome.OVERNIGHT_OBSERVATION, null, 0.seconds)
                 }
                 Diagnosis.NOT_MY_SPECIALTY, Diagnosis.TERMINAL -> {
-                    // None of the staff care for these errors so we let them propagate
+                    // None of the staff care for these errors, or someone decided it is a terminal condition, so we let them propagate
                     log.info("Flow error allowed to propagate", report.error)
                     Triple(Outcome.UNTREATABLE, Event.StartErrorPropagation, 0.seconds)
                 }
@@ -454,12 +454,12 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
     }
 
     /**
-     * Hospitalise any database (SQL) exception that wasn't handled otherwise, unless on the configurable whitelist
+     * Hospitalise any database (SQL and Persistence) exception that wasn't handled otherwise, unless on the configurable whitelist
      * Note that retry decisions from other specialists will not be affected as retries take precedence over hospitalisation.
      */
     object DatabaseEndocrinologist : Staff {
         override fun consult(flowFiber: FlowFiber, currentState: StateMachineState, newError: Throwable, history: FlowMedicalHistory): Diagnosis {
-            return if (( newError is SQLException || newError is PersistenceException )&& !customConditions.any{it(newError)}) {
+            return if ((newError is SQLException || newError is PersistenceException) && !customConditions.any { it(newError) }) {
                 Diagnosis.OVERNIGHT_OBSERVATION
             } else {
                 Diagnosis.NOT_MY_SPECIALTY
