@@ -104,6 +104,7 @@ val fakeNodeLegalName = CordaX500Name(organisation = "Not:a:real:name", locality
 private val globalPortAllocation = incrementalPortAllocation()
 private val globalDebugPortAllocation = incrementalPortAllocation()
 
+@Suppress("LongParameterList")
 fun <A> rpcDriver(
         isDebug: Boolean = false,
         driverDirectory: Path = Paths.get("build") / "rpc-driver" /  getTimestampAsDirectoryName(),
@@ -121,6 +122,7 @@ fun <A> rpcDriver(
         notaryCustomOverrides: Map<String, Any?> = emptyMap(),
         inMemoryDB: Boolean = true,
         cordappsForAllNodes: Collection<TestCordappInternal>? = null,
+        environmentVariables: Map<String, String> = emptyMap(),
         dsl: RPCDriverDSL.() -> A
 ): A {
     return genericDriver(
@@ -141,7 +143,8 @@ fun <A> rpcDriver(
                             networkParameters = networkParameters,
                             notaryCustomOverrides = notaryCustomOverrides,
                             inMemoryDB = inMemoryDB,
-                            cordappsForAllNodes = cordappsForAllNodes
+                            cordappsForAllNodes = cordappsForAllNodes,
+                            environmentVariables = environmentVariables
                     ), externalTrace
             ),
             coerce = { it },
