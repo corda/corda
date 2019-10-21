@@ -1,7 +1,6 @@
 package net.corda.testing;
 
 import groovy.lang.Tuple2;
-import groovy.lang.Tuple3;
 import org.apache.commons.compress.archivers.ArchiveEntry;
 import org.apache.commons.compress.archivers.ArchiveException;
 import org.apache.commons.compress.archivers.ArchiveInputStream;
@@ -47,6 +46,7 @@ import java.nio.file.Path;
 import java.nio.file.PathMatcher;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.function.BiFunction;
 import java.util.function.Supplier;
@@ -60,6 +60,10 @@ public class TestDurationArtifacts {
     private static final String ARTIFACT = "tests-durations";
     private static final String EXTENSION = "zip";
     private static final String BASE_URL = "https://software.r3.com/artifactory/corda-test-results/net/corda";
+    // The one and only set of tests information.  We load these at the start of a build, and update them and save them at the end.
+    static Tests tests = new Tests();
+
+    // Artifatory API
     private final Artifactory artifactory = new Artifactory();
 
     /**
@@ -91,10 +95,10 @@ public class TestDurationArtifacts {
     public static Task createZipTask(Project project, String name) {
         final Task createCsvTask = project.getTasks().create(name + "CreateCsvFile", Task.class, t -> {
             // Parse all the junit results and write them to a csv file.
-           t.doFirst(task -> {
+            t.doFirst(task -> {
                 project.getLogger().warn("About to create CSV file and zip it");
 
-                //  Read test xml files for tests and duration
+                //  Read test xml files for tests and duration and add them to the `Tests` object
                 for (Path testResult : getTestXmlFiles(project.getRootDir().toPath())) {
                     try {
                         List<Tuple2<String, Long>> junitTests = fromJunitXml(new FileInputStream(testResult.toFile()));
@@ -144,7 +148,7 @@ public class TestDurationArtifacts {
         });
     }
 
-    private static List<Path> getTestXmlFiles(@NotNull final Path rootDir)  {
+    private static List<Path> getTestXmlFiles(@NotNull final Path rootDir) {
         List<Path> paths = new ArrayList<>();
         List<PathMatcher> matchers = new ArrayList<>();
         matchers.add(FileSystems.getDefault().getPathMatcher("glob:**/build/test-results-xml/**/*.xml"));
@@ -190,9 +194,8 @@ public class TestDurationArtifacts {
      * @param inputStream stream containing zipped result file(s)
      * @return list of test name and durations
      */
-    // TODO change the return type.
     @NotNull
-    private static Tests fromZippedFiles(@NotNull final Tests tests, @NotNull final InputStream inputStream) {
+    private static void fromZippedFiles(@NotNull final Tests tests, @NotNull final InputStream inputStream) {
         final List<Tuple2<String, Long>> results = new ArrayList<>();
 
         // We need this because ArchiveStream requires the `mark` functionality which is supported in buffered streams.
@@ -218,7 +221,6 @@ public class TestDurationArtifacts {
         }
 
         LOG.warn("Discovered {} tests", results.size());
-        return tests;
     }
 
     /**
@@ -230,7 +232,7 @@ public class TestDurationArtifacts {
      * @return a list of test names and their durations in nanos.
      */
     @Nullable
-    public static List<Tuple2<String, Long>> fromJunitXml(@NotNull final InputStream inputStream) {
+    private static List<Tuple2<String, Long>> fromJunitXml(@NotNull final InputStream inputStream) {
         final DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
         final List<Tuple2<String, Long>> results = new ArrayList<>();
 
@@ -247,28 +249,25 @@ public class TestDurationArtifacts {
             for (int i = 0; i < nodeList.getLength(); i++) {
                 final Node item = nodeList.item(i);
                 final NamedNodeMap attributes = item.getAttributes();
-                final String testName = get.apply(attributes,"name");
-                final String testDuration = get.apply(attributes,"time");
-                final String testClassName = get.apply(attributes,"classname");
+                final String testName = get.apply(attributes, "name");
+                final String testDuration = get.apply(attributes, "time");
+                final String testClassName = get.apply(attributes, "classname");
 
-                // If a test duration is zero, then don't add it.
+                // If a test duration is zero or not listed, then don't add it.
                 // When we look up the test later, we'll return the mean test time instead.
-                if (!testName.isEmpty() && !testClassName.isEmpty() && !testDuration.isEmpty()) {
+                if (!(testName.isEmpty() || testClassName.isEmpty() || testDuration.isEmpty())) {
                     final long nanos = (long) (Double.parseDouble(testDuration) * 1000000.0);
-                    results.add(new Tuple2<>(testClassName + "." + testName, nanos));
+                    if (nanos > 0) {
+                        results.add(new Tuple2<>(testClassName + "." + testName, nanos));
+                    }
                 }
             }
         } catch (ParserConfigurationException | IOException | XPathExpressionException | SAXException e) {
-            // Same behaviour as the original CSV reader code.
-            return null;
+            return Collections.emptyList();
         }
 
         return results;
     }
-
-
-    // The one and only set of tests information.  We load these at the start of a build, and update them and save them at the end.
-    static Tests tests = new Tests();
 
     /**
      * A supplier of tests.
@@ -316,7 +315,7 @@ public class TestDurationArtifacts {
      * @return false if we fail to get the tests
      */
     public boolean get(@NotNull final String theTag, @NotNull final OutputStream outputStream) {
-        return artifactory.get(BASE_URL, theTag, "tests", "zip", outputStream);
+        return artifactory.get(BASE_URL, theTag, ARTIFACT, "zip", outputStream);
     }
 
     /**
@@ -328,7 +327,7 @@ public class TestDurationArtifacts {
      */
     @Nullable
     private File get(@NotNull final String theTag, @NotNull final File destDir) {
-        return artifactory.get(BASE_URL, theTag, "tests", "zip", destDir);
+        return artifactory.get(BASE_URL, theTag, ARTIFACT, "zip", destDir);
     }
 
     /**
