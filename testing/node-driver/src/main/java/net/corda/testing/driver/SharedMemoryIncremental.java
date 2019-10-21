@@ -67,24 +67,26 @@ class SharedMemoryIncremental extends PortAllocation {
 
     @Override
     public int nextPort() {
-        Long oldValue;
-        Long newValue;
+        long oldValue;
+        long newValue;
         boolean loopSuccess = false;
         do {
             oldValue = UNSAFE.getLongVolatile(null, startingAddress);
             if (oldValue + 1 >= endPort || oldValue < startPort) {
-                newValue = Long.valueOf(startPort);
+                newValue = startPort;
             } else {
                 newValue = (oldValue + 1);
             }
-            loopSuccess = isLocalPortAvailable(newValue) && UNSAFE.compareAndSwapLong(null, startingAddress, oldValue, newValue);
+            boolean reserveSuccess = UNSAFE.compareAndSwapLong(null, startingAddress, oldValue, newValue);
+            boolean portAvailable = isLocalPortAvailable(newValue);
+            loopSuccess = reserveSuccess && portAvailable;
         } while (!loopSuccess);
 
-        return newValue.intValue();
+        return (int) newValue;
     }
 
 
-    Boolean isLocalPortAvailable(Long portToTest) {
+    private boolean isLocalPortAvailable(Long portToTest) {
         try {
             ServerSocket serverSocket = new ServerSocket(Math.toIntExact(portToTest));
         } catch (Exception e) {
