@@ -31,7 +31,7 @@ class SchemaMigration(
         // This parameter is used by the vault state migration to establish what the node's legal identity is when setting up
         // its copy of the identity service. It is passed through using a system property. When multiple identity support is added, this will need
         // reworking so that multiple identities can be passed to the migration.
-        private val ourName: CordaX500Name,
+        private val ourName: CordaX500Name? = null,
         // This parameter forces an error to be thrown if there are missing migrations. When using H2, Hibernate will automatically create schemas where they are
         // missing, so no need to throw unless you're specifically testing whether all the migrations are present.
         private val forceThrowOnMissingMigration: Boolean = false) {
