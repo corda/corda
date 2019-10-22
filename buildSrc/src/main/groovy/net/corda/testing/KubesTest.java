@@ -233,14 +233,6 @@ public class KubesTest extends DefaultTask {
                 .endPersistentVolumeClaim()
                 .endVolume()
 
-
-                .addNewVolume()
-                .withName("testruns")
-                .withNewPersistentVolumeClaim()
-                .withClaimName(pvc.getMetadata().getName())
-                .endPersistentVolumeClaim()
-                .endVolume()
-
                 .addNewContainer()
                 .withImage(dockerTag)
                 .withCommand("bash")
