@@ -15,6 +15,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -55,7 +56,7 @@ public class BucketingAllocator {
     private void printSummary() {
         forkContainers.forEach(container -> {
             System.out.println("####### TEST PLAN SUMMARY ( " + container.forkIdx + " ) #######");
-            System.out.println("Duration (secs): " + ((double) container.getCurrentDuration() / 1_000_000_000));
+            System.out.println("Duration (secs): " + TimeUnit.NANOSECONDS.toSeconds(container.getCurrentDuration()));
             System.out.println("Number of tests: " + container.testsForFork.stream().mapToInt(b -> b.foundTests.size()).sum());
             System.out.println("Tests to Run: ");
             container.testsForFork.forEach(tb -> {
@@ -72,18 +73,20 @@ public class BucketingAllocator {
         });
     }
 
-    private List<TestBucket> matchClasspathTestsToFile(Tests tests, @NotNull List<Tuple2<String, Object>> allDiscoveredTests) {
+    private List<TestBucket> matchClasspathTestsToFile(@NotNull final Tests tests,
+                                                       @NotNull final List<Tuple2<String, Object>> allDiscoveredTests) {
         return allDiscoveredTests.stream().map(tuple -> {
             final String testName = tuple.getFirst();
             final Object task = tuple.getSecond();
 
-            LOG.warn(">>> checking for tests starting with = '{}'", testName);
-
-            // Affected by 'distribute:' setting - 'matchingTests' may be empty if we've never run those tests before.
+            // If the gradle task is distributing by class rather than method, then 'testName' will be the className
+            // and not className.testName
             final List<Tuple2<String, Long>> matchingTests = tests.startsWith(testName);
 
-            LOG.warn(">>> matching tests = {} <<<<", matchingTests.size());
-
+            // 'matchingTests' may be empty if we've never run those tests before, so we give it a default
+            // size so that it is fairly allocated to a bucket.  The best we can do at the moment, is
+            // to try and use the individual mean test duration.  If we pass the 'distribute' type
+            // in here, we could use mean duration for classes if required.
             return new TestBucket(task, testName, matchingTests, tests.getMeanDurationForTests());
         }).sorted(Comparator.comparing(TestBucket::getDuration).reversed()).collect(Collectors.toList());
     }
@@ -97,16 +100,14 @@ public class BucketingAllocator {
     }
 
     public static class TestBucket {
-        private static final Logger LOG = LoggerFactory.getLogger(TestBucket.class);
-
         final Object testTask;
         final String testName;
         final List<Tuple2<String, Long>> foundTests;
         final long durationNanos;
 
-        public TestBucket(Object testTask,
-                          String testName,
-                          List<Tuple2<String, Long>> foundTests,
+        public TestBucket(@NotNull final Object testTask,
+                          @NotNull final String testName,
+                          @NotNull final List<Tuple2<String, Long>> foundTests,
                           long defaultBucketDuration) {
             this.testTask = testTask;
             this.testName = testName;
@@ -114,7 +115,6 @@ public class BucketingAllocator {
             durationNanos = Math.max(
                     foundTests.stream().mapToLong(tp -> Math.max(tp.getSecond(), 1)).sum(),
                     defaultBucketDuration);
-            LOG.warn(">>>>  test bucket has total duration of  {} ns", durationNanos);
         }
 
         public long getDuration() {

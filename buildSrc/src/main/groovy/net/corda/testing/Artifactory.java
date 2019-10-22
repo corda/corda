@@ -28,7 +28,7 @@ public class Artifactory {
         if (value.isEmpty()) {
             LOG.warn("Property '{}' not set", key);
         } else {
-            LOG.warn("Ok.  Property '{}' is set", key);
+            LOG.debug("Ok.  Property '{}' is set", key);
         }
         return value;
     }
@@ -42,7 +42,6 @@ public class Artifactory {
     }
 
     private static String authorization() {
-        LOG.warn("Artifactory username = '{}'", getUsername());
         return Credentials.basic(getUsername(), getPassword());
     }
 
@@ -102,7 +101,7 @@ public class Artifactory {
         try (FileOutputStream outputStream = new FileOutputStream(file)) {
             ok = get(baseUrl, theTag, artifact, extension, outputStream);
         } catch (IOException e) {
-            LOG.warn("Unable to get file from artifcatory:  {}", getFullUrl(baseUrl, theTag, artifact, extension));
+            LOG.warn("Unable to get file from Artifcatory:  {}", getFullUrl(baseUrl, theTag, artifact, extension));
         }
 
         return ok ? file : null;
@@ -164,7 +163,7 @@ public class Artifactory {
         try (FileInputStream inputStream = new FileInputStream(new File(localDir, getFileName(artifact, extension, theTag)))) {
             result = put(baseUrl, theTag, artifact, extension, inputStream);
         } catch (IOException e) {
-            LOG.warn("Failed to upload artifact:  {}", e);
+            LOG.warn("Failed to upload artifact:  {}", e.toString());
         }
 
         return result;
