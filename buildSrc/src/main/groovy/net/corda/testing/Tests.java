@@ -139,7 +139,12 @@ public class Tests {
      */
     public void addDuration(@NotNull final String testName, long durationNanos) {
         Tuple2<Long, Long> current = tests.getOrDefault(testName, new Tuple2<>(0L, 0L));
+        LOG.warn("Current test {} : {}ns {} runs", testName, current.getFirst(), current.getSecond());
         tests.put(testName, recalculateMean(current, durationNanos));
+
+        Tuple2<Long, Long> next = tests.get(testName);
+        LOG.warn("New current test {} : {}ns {} runs", testName, next.getFirst(), next.getSecond());
+
         meanForTests = recalculateMean(meanForTests, durationNanos);
 
         classNames.add(getClassName(testName));

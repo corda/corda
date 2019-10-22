@@ -98,9 +98,11 @@ public class TestDurationArtifacts {
             t.doFirst(task -> {
                 project.getLogger().warn("About to create CSV file and zip it");
 
+                final List<Path> testXmlFiles = getTestXmlFiles(project.getRootDir().toPath());
+                project.getLogger().warn("Found {} xml junit files", testXmlFiles.size());
                 //  Read test xml files for tests and duration and add them to the `Tests` object
                 //  This adjusts the runCount and over all average duration for existing tests.
-                for (Path testResult : getTestXmlFiles(project.getRootDir().toPath())) {
+                for (Path testResult : testXmlFiles) {
                     try {
                         final List<Tuple2<String, Long>> junitTests = fromJunitXml(new FileInputStream(testResult.toFile()));
                         for (Tuple2<String, Long> junitTest : junitTests) {
