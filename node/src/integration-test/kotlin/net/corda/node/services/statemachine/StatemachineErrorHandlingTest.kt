@@ -403,7 +403,7 @@ class StatemachineErrorHandlingTest : IntegrationTest() {
      * if an error transition moves into another error transition. The flow still recovers from this state. 5 exceptions were thrown to verify
      * that 3 retries are attempted before recovering.
      *
-     * TODO Fix this scenario - it is currently hanging after putting the flow in for observation
+     * CORDA-3352 - it is currently hanging after putting the flow in for observation
      */
     @Test
     @Ignore
@@ -874,7 +874,7 @@ class StatemachineErrorHandlingTest : IntegrationTest() {
      * The flow is discharged and replayed from the hospital once. After failing during the replay, the flow is forced into overnight
      * observation. It is not ran again after this point
      *
-     * TODO Fix this scenario - it is currently hanging after putting the flow in for observation
+     * CORDA-3352 - it is currently hanging after putting the flow in for observation
      *
      */
     @Test
