@@ -78,7 +78,7 @@ public class KubesTest extends DefaultTask {
     int numberOfPods = 5;
     int timeoutInMinutesForPodToStart = 60;
 
-    Distribution distribution = Distribution.METHOD;
+    DistributeTestsBy distribution = DistributeTestsBy.METHOD;
     PodLogLevel podLogLevel = PodLogLevel.INFO;
 
     @TaskAction
@@ -416,7 +416,7 @@ public class KubesTest extends DefaultTask {
 
             @Override
             public void onFailure(Throwable t, Response response) {
-                getProject().getLogger().lifecycle("Received error from rom pod  " + podName);
+                getProject().getLogger().lifecycle("Received error from pod  " + podName);
                 waitingFuture.completeExceptionally(t);
             }
 

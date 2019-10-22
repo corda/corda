@@ -23,7 +23,7 @@ pipeline {
                             "-Ddocker.push.password=\"\${DOCKER_PUSH_PWD}\" " +
                             "-Ddocker.work.dir=\"/tmp/\${EXECUTOR_NUMBER}\" " +
                             "-Ddocker.build.tag=\"\${DOCKER_TAG_TO_USE}\"" +
-                            " clean pushBuildImage preAllocateForAllParallelIntegrationTest preAllocateForAllParallelUnitTest --stacktrace"
+                            " clean pushBuildImage preAllocateForAllParallelUnitAndIntegrationTest --stacktrace"
                 }
                 sh "kubectl auth can-i get pods"
             }
@@ -31,24 +31,24 @@ pipeline {
 
         stage('Corda Pull Request - Run Tests') {
             parallel {
-                stage('Integration Tests') {
+                stage('Unit and Integration Tests') {
                     steps {
                         sh "./gradlew " +
                                 "-DbuildId=\"\${BUILD_ID}\" " +
                                 "-Dkubenetize=true " +
                                 "-Ddocker.run.tag=\"\${DOCKER_TAG_TO_USE}\"" +
-                                " deAllocateForAllParallelIntegrationTest allParallelIntegrationTest --stacktrace"
+                                " deAllocateForAllParallelUnitAndIntegrationTest  allParallelUnitAndIntegrationTest  --stacktrace"
                     }
                 }
-                stage('Unit Tests') {
-                    steps {
-                        sh "./gradlew " +
-                                "-DbuildId=\"\${BUILD_ID}\" " +
-                                "-Dkubenetize=true " +
-                                "-Ddocker.run.tag=\"\${DOCKER_TAG_TO_USE}\"" +
-                                " deAllocateForAllParallelUnitTest allParallelUnitTest --stacktrace"
-                    }
-                }
+//                stage('Unit Tests') {
+//                    steps {
+//                        sh "./gradlew " +
+//                                "-DbuildId=\"\${BUILD_ID}\" " +
+//                                "-Dkubenetize=true " +
+//                                "-Ddocker.run.tag=\"\${DOCKER_TAG_TO_USE}\"" +
+//                                " deAllocateForAllParallelUnitTest allParallelUnitTest --stacktrace"
+//                    }
+//                }
 
             }
 

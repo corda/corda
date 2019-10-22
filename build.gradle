@@ -1,5 +1,5 @@
 import net.corda.testing.DistributedTesting
-import net.corda.testing.Distribution
+import net.corda.testing.DistributeTestsBy
 import net.corda.testing.ImageBuilding
 import net.corda.testing.ParallelTestGroup
 import net.corda.testing.PodLogLevel
@@ -596,22 +596,22 @@ buildScan {
 }
 
 task allParallelIntegrationTest(type: ParallelTestGroup) {
-    podLogLevel PodLogLevel.QUIET
+    podLogLevel PodLogLevel.INFO
     testGroups "integrationTest"
     numberOfShards 10
-    streamOutput true
-    coresPerFork 6
+    streamOutput false
+    coresPerFork 5
     memoryInGbPerFork 10
-    distribute Distribution.CLASS
+    distribute DistributeTestsBy.CLASS
 }
 task allParallelUnitTest(type: ParallelTestGroup) {
-    podLogLevel PodLogLevel.QUIET
+    podLogLevel PodLogLevel.INFO
     testGroups "test"
     numberOfShards 10
-    streamOutput true
+    streamOutput false
     coresPerFork 5
     memoryInGbPerFork 6
-    distribute Distribution.CLASS
+    distribute DistributeTestsBy.CLASS
 }
 task allParallelUnitAndIntegrationTest(type: ParallelTestGroup) {
     testGroups "test", "integrationTest"
@@ -619,7 +619,7 @@ task allParallelUnitAndIntegrationTest(type: ParallelTestGroup) {
     streamOutput false
     coresPerFork 6
     memoryInGbPerFork 10
-    distribute Distribution.CLASS
+    distribute DistributeTestsBy.CLASS
 }
 task parallelRegressionTest(type: ParallelTestGroup) {
     testGroups "test", "integrationTest", "slowIntegrationTest", "smokeTest"
@@ -627,7 +627,7 @@ task parallelRegressionTest(type: ParallelTestGroup) {
     streamOutput false
     coresPerFork 6
     memoryInGbPerFork 10
-    distribute Distribution.CLASS
+    distribute DistributeTestsBy.CLASS
 }
 task allParallelSmokeTest(type: ParallelTestGroup) {
     testGroups "slowIntegrationTest", "smokeTest"
@@ -635,7 +635,7 @@ task allParallelSmokeTest(type: ParallelTestGroup) {
     streamOutput false
     coresPerFork 6
     memoryInGbPerFork 10
-    distribute Distribution.CLASS
+    distribute DistributeTestsBy.CLASS
 }
 apply plugin: ImageBuilding
 apply plugin: DistributedTesting

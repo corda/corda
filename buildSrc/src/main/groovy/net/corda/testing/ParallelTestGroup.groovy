@@ -4,7 +4,7 @@ import org.gradle.api.DefaultTask
 
 class ParallelTestGroup extends DefaultTask {
 
-    Distribution distribution = Distribution.METHOD
+    DistributeTestsBy distribution = DistributeTestsBy.METHOD
 
     List<String> groups = new ArrayList<>()
     int shardCount = 20
@@ -21,7 +21,7 @@ class ParallelTestGroup extends DefaultTask {
         this.logLevel = level
     }
 
-    void distribute(Distribution dist) {
+    void distribute(DistributeTestsBy dist) {
         this.distribution = dist
     }
 
