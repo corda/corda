@@ -79,7 +79,7 @@ class ListTests extends DefaultTask implements TestLister {
                         .collect { c -> (c.getSubclasses() + Collections.singletonList(c)) }
                         .flatten()
                         .collect { ClassInfo c ->
-                            c.getMethodInfo().filter { m -> m.hasAnnotation("org.junit.Test") }.collect { m -> c.name + "." + m.name + "*" }
+                            c.getMethodInfo().filter { m -> m.hasAnnotation("org.junit.Test") }.collect { m -> c.name + "." + m.name }
                         }.flatten()
                         .toSet()
 
@@ -97,7 +97,7 @@ class ListTests extends DefaultTask implements TestLister {
                         .getClassesWithMethodAnnotation("org.junit.Test")
                         .collect { c -> (c.getSubclasses() + Collections.singletonList(c)) }
                         .flatten()
-                        .collect { ClassInfo c -> c.name + "*" }.flatten()
+                        .collect { ClassInfo c -> c.name }.flatten()
                         .toSet()
                 this.allTests = results.stream().sorted().collect(Collectors.toList())
                 break

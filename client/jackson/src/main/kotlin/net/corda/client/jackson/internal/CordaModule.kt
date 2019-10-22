@@ -51,6 +51,7 @@ import net.corda.core.utilities.toHexString
 import net.corda.serialization.internal.AllWhitelist
 import net.corda.serialization.internal.amqp.SerializerFactoryBuilder
 import net.corda.serialization.internal.amqp.hasCordaSerializable
+import net.corda.serialization.internal.amqp.registerCustomSerializers
 import java.math.BigDecimal
 import java.security.PublicKey
 import java.security.cert.CertPath
@@ -116,8 +117,10 @@ private class CordaSerializableClassIntrospector(private val context: Module.Set
 }
 
 private class CordaSerializableBeanSerializerModifier : BeanSerializerModifier() {
-    // We need to pass in a SerializerFactory when scanning for properties, but don't actually do any serialisation so any will do.
-    private val serializerFactory = SerializerFactoryBuilder.build(AllWhitelist, javaClass.classLoader)
+        // We need to pass in a SerializerFactory when scanning for properties, but don't actually do any serialisation so any will do.
+    private val serializerFactory = SerializerFactoryBuilder.build(AllWhitelist, javaClass.classLoader).also {
+            registerCustomSerializers(it)
+    }
 
     override fun changeProperties(config: SerializationConfig,
                                   beanDesc: BeanDescription,
@@ -125,7 +128,9 @@ private class CordaSerializableBeanSerializerModifier : BeanSerializerModifier()
         val beanClass = beanDesc.beanClass
         if (hasCordaSerializable(beanClass) && !SerializeAsToken::class.java.isAssignableFrom(beanClass)) {
             val typeInformation = serializerFactory.getTypeInformation(beanClass)
-            val propertyNames = typeInformation.propertiesOrEmptyMap.mapNotNull { if (it.value.isCalculated) null else it.key }
+            val propertyNames = typeInformation.propertiesOrEmptyMap.mapNotNull {
+                if (it.value.isCalculated) null else it.key
+            }
             beanProperties.removeIf { it.name !in propertyNames }
         }
         return beanProperties

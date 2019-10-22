@@ -10,8 +10,13 @@ import net.corda.serialization.internal.amqp.SerializerFactory
  * to save on network bandwidth
  * Uses [OpaqueBytes] as a proxy
  */
-class OpaqueBytesSubSequenceSerializer(factory: SerializerFactory) :
-        CustomSerializer.Proxy<OpaqueBytesSubSequence, OpaqueBytes>(OpaqueBytesSubSequence::class.java, OpaqueBytes::class.java, factory) {
+class OpaqueBytesSubSequenceSerializer(
+        factory: SerializerFactory
+) : CustomSerializer.Proxy<OpaqueBytesSubSequence, OpaqueBytes>(
+                OpaqueBytesSubSequence::class.java,
+                OpaqueBytes::class.java,
+                factory
+) {
     override val additionalSerializers: Iterable<CustomSerializer<out Any>> = emptyList()
     override fun toProxy(obj: OpaqueBytesSubSequence): OpaqueBytes = OpaqueBytes(obj.copyBytes())
     override fun fromProxy(proxy: OpaqueBytes): OpaqueBytesSubSequence = OpaqueBytesSubSequence(proxy.bytes, proxy.offset, proxy.size)

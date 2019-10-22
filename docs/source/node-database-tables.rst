@@ -71,25 +71,41 @@ PARTY_NAME                          FK to NODE_INFO_PARTY_CERT
 Node identities
 ^^^^^^^^^^^^^^^
 
-The following two tables are used by the ``IdentityService`` and are created from the NodeInfos.
+The following four tables are used by the ``IdentityService`` and are created from the NodeInfos.
 They are append only tables used for persistent caching.
 They will also be cleared on ``rpc.clearNetworkMapCache()``.
 Read more in :doc:`api-identity` and :doc:`node-services`
 
 
 ==============================   ==========================================================================================
-NODE_IDENTITIES                     Maps public keys to identities
+NODE_IDENTITIES                     Maps a public key hash to an identity.
 ==============================   ==========================================================================================
-PK_HASH                             The public key.
+PK_HASH                             The public key hash.
 IDENTITY_VALUE                      The certificate chain.
 ==============================   ==========================================================================================
 
 
 ==============================   ==========================================================================================
-NODE_NAMED_IDENTITIES               Maps the X500 name of a participant to a public key.
+NODE_NAMED_IDENTITIES               Maps the X500 name of a participant to a public key hash.
 ==============================   ==========================================================================================
-NAME                                The x500 name
-PK_HASH                             The public key
+NAME                                The x500 name.
+PK_HASH                             The public key hash.
+==============================   ==========================================================================================
+
+
+==============================   ==========================================================================================
+NODE_IDENTITIES_NO_CERT             Maps a public key hash to the X500 name of a participant.
+==============================   ==========================================================================================
+PK_HASH                             The public key hash.
+NAME                                The x500 name.
+==============================   ==========================================================================================
+
+
+==============================   ==========================================================================================
+NODE_HASH_TO_KEY                    Maps a public key hash to a public key.
+==============================   ==========================================================================================
+PK_HASH                             The public key hash.
+PUBLIC_KEY                          The public key.
 ==============================   ==========================================================================================
 
 
@@ -173,6 +189,7 @@ NODE_TRANSACTIONS                   Corda transactions in a binary format
 TX_ID                             The hash of the transaction. Primary key.
 TRANSACTION_VALUE                 The binary representation of the transaction.
 STATE_MACHINE_RUN_ID              The flow id associated with this transaction.
+STATUS                            ``VERIFIED`` or ``UNVERIFIED``
 ==============================   ==========================================================================================
 
                                                                                      |
@@ -224,7 +241,6 @@ PUBLIC_KEY                          Binary public key
 ==============================   ==========================================================================================
 PK_HASH_TO_EXT_ID_MAP               Maps public keys to external ids. Mainly used by CorDapps that need to simulate accounts.
 ==============================   ==========================================================================================
-ID                                  Primary key
 EXTERNAL_ID                         External id
 PUBLIC_KEY_HASH                     Public key hash
 ==============================   ==========================================================================================

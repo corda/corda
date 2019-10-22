@@ -8,7 +8,13 @@ import java.time.ZoneId
 /**
  * A serializer for [ZoneId] that uses a proxy object to write out the string form.
  */
-class ZoneIdSerializer(factory: SerializerFactory) : CustomSerializer.Proxy<ZoneId, ZoneIdSerializer.ZoneIdProxy>(ZoneId::class.java, ZoneIdProxy::class.java, factory) {
+class ZoneIdSerializer(
+        factory: SerializerFactory
+) : CustomSerializer.Proxy<ZoneId, ZoneIdSerializer.ZoneIdProxy>(
+                ZoneId::class.java,
+                ZoneIdProxy::class.java,
+                factory
+) {
     override val revealSubclassesInSchema: Boolean = true
 
     override fun toProxy(obj: ZoneId): ZoneIdProxy = ZoneIdProxy(obj.id)

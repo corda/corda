@@ -85,7 +85,12 @@ val _inheritableContextSerializationEnv = InheritableThreadLocalToggleField<Seri
     }
 }
 
-private val serializationEnvFields = listOf(_nodeSerializationEnv, _driverSerializationEnv, _contextSerializationEnv, _inheritableContextSerializationEnv)
+private val serializationEnvFields = listOf(
+        _nodeSerializationEnv,
+        _driverSerializationEnv,
+        _contextSerializationEnv,
+        _inheritableContextSerializationEnv
+)
 
 val _allEnabledSerializationEnvs: List<Pair<String, SerializationEnvironment>>
     get() = serializationEnvFields.mapNotNull { it.get()?.let { env -> Pair(it.name, env) } }
@@ -94,7 +99,8 @@ val effectiveSerializationEnv: SerializationEnvironment
     get() {
         return _allEnabledSerializationEnvs.let {
             checkNotNull(it.singleOrNull()?.second) {
-                "Expected exactly 1 of {${serializationEnvFields.joinToString(", ") { it.name }}} but got: {${it.joinToString(", ") { it.first }}}"
+                "Expected exactly 1 of {${serializationEnvFields.joinToString(", ") { it.name }}} " +
+                        "but got: {${it.joinToString(", ") { it.first }}}"
             }
         }
     }
