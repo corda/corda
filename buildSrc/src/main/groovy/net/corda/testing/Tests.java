@@ -146,6 +146,9 @@ public class Tests {
         final Tuple2<Long, Long> current = tests.getOrDefault(testName, new Tuple2<>(0L, 0L));
 
         tests.put(testName, recalculateMean(current, durationNanos));
+
+        LOG.warn("Recorded test '{}', mean={} ns, runs={}", testName, tests.get(testName).getFirst(), tests.get(testName).getSecond());
+
         meanForTests = recalculateMean(meanForTests, durationNanos);
 
         classNames.add(getClassName(testName));
