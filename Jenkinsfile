@@ -37,7 +37,7 @@ pipeline {
                                 "-DbuildId=\"\${BUILD_ID}\" " +
                                 "-Dkubenetize=true " +
                                 "-Ddocker.tag=\"\${DOCKER_TAG_TO_USE}\"" +
-                                " allParallelIntegrationTest"
+                                " allParallelIntegrationTest --stacktrace"
                     }
                 }
             }
