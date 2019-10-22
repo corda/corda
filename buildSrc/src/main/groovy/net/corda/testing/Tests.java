@@ -32,9 +32,9 @@ public class Tests {
     private final Map<String, Tuple2<Long, Long>> tests = new HashMap<>();
     // mean, count
     private Tuple2<Long, Long> meanForTests = new Tuple2<>(1L, 0L);
-
+    // as we add more tests with the same className prefix, maintain the mean duration for classes.
     private long meanDurationForClasses = 1L;
-
+    // All the unique classNames of all the tests
     private Set<String> classNames = new HashSet<>();
 
     /**
@@ -82,7 +82,6 @@ public class Tests {
             printer = new CSVPrinter(writer,
                     CSVFormat.DEFAULT.withHeader(TEST_NAME, MEAN_DURATION_NANOS, NUMBER_OF_RUNS));
             for (String key : tests.keySet()) {
-                LOG.warn(">>>  csv:  {}  {}  {}", key, tests.get(key).getFirst(), tests.get(key).getSecond());
                 printer.printRecord(key, tests.get(key).getFirst(), tests.get(key).getSecond());
             }
 
@@ -93,6 +92,12 @@ public class Tests {
         return ok;
     }
 
+    /**
+     * Get the classname of a test, if it has one, otherwise return ""
+     *
+     * @param testName the testname with optional classname, e.g. com.foo.thisTest
+     * @return com.foo else ""
+     */
     private String getClassName(@NotNull final String testName) {
         return testName.lastIndexOf('.') != -1 ?
                 testName.substring(0, testName.lastIndexOf('.')) : "";
@@ -138,13 +143,9 @@ public class Tests {
      * @param durationNanos duration
      */
     public void addDuration(@NotNull final String testName, long durationNanos) {
-        Tuple2<Long, Long> current = tests.getOrDefault(testName, new Tuple2<>(0L, 0L));
-        LOG.warn("Current test {} : {}ns {} runs", testName, current.getFirst(), current.getSecond());
+        final Tuple2<Long, Long> current = tests.getOrDefault(testName, new Tuple2<>(0L, 0L));
+
         tests.put(testName, recalculateMean(current, durationNanos));
-
-        Tuple2<Long, Long> next = tests.get(testName);
-        LOG.warn("New current test {} : {}ns {} runs", testName, next.getFirst(), next.getSecond());
-
         meanForTests = recalculateMean(meanForTests, durationNanos);
 
         classNames.add(getClassName(testName));
@@ -222,5 +223,8 @@ public class Tests {
      */
     public void clear() {
         tests.clear();
+        classNames.clear();
+        meanForTests = new Tuple2<>(1L, 0L);
+        meanDurationForClasses = 1L;
     }
 }

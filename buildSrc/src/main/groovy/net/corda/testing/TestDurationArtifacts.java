@@ -84,6 +84,12 @@ public class TestDurationArtifacts {
         return Artifactory.getProperty("git.target.branch").replace('/', '-');
     }
 
+    /**
+     * Reload the tests from artifactory and update with the latest run.
+     * @param project project that we are attaching the test to.
+     * @param name basename for the test.
+     * @return the csv task
+     */
     private static Task createCsvTask(@NotNull final Project project, @NotNull final String name) {
         return project.getTasks().create(name + "CreateCsvFile", Task.class, t -> {
             // Parse all the junit results and write them to a csv file.
@@ -201,15 +207,13 @@ public class TestDurationArtifacts {
 
     /**
      * Unzip test results in memory and return test names and durations.
+     * Assumes the input stream contains only csv files of the correct format.
      *
      * @param zippedInputStream stream containing zipped result file(s)
      * @return list of test name and durations
      */
-    @NotNull
-    private static void addTestsFromZippedCsv(@NotNull final Tests tests,
-                                              @NotNull final InputStream zippedInputStream) {
-        final List<Tuple2<String, Long>> results = new ArrayList<>();
-
+    static void addTestsFromZippedCsv(@NotNull final Tests tests,
+                                      @NotNull final InputStream zippedInputStream) {
         // We need this because ArchiveStream requires the `mark` functionality which is supported in buffered streams.
         final BufferedInputStream bufferedInputStream = new BufferedInputStream(zippedInputStream);
         try (ArchiveInputStream archiveInputStream = new ArchiveStreamFactory().createArchiveInputStream(bufferedInputStream)) {
@@ -234,7 +238,7 @@ public class TestDurationArtifacts {
             LOG.warn("Problem unzipping XML test results");
         }
 
-        LOG.warn("Discovered {} tests", results.size());
+        LOG.warn("Discovered {} tests", tests.size());
     }
 
     /**
@@ -246,7 +250,7 @@ public class TestDurationArtifacts {
      * @return a list of test names and their durations in nanos.
      */
     @NotNull
-    private static List<Tuple2<String, Long>> fromJunitXml(@NotNull final InputStream inputStream) {
+    static List<Tuple2<String, Long>> fromJunitXml(@NotNull final InputStream inputStream) {
         final DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
         final List<Tuple2<String, Long>> results = new ArrayList<>();
 
