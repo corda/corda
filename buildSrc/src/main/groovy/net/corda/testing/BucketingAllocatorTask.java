@@ -13,8 +13,7 @@ public class BucketingAllocatorTask extends DefaultTask {
 
     @Inject
     public BucketingAllocatorTask(Integer forkCount) {
-        this.allocator = new BucketingAllocator(forkCount,
-                TestDurationArtifacts.getTestsSupplier(BucketingAllocatorTask.this.getProject().getRootDir()));
+        this.allocator = new BucketingAllocator(forkCount, TestDurationArtifacts.getTestsSupplier());
     }
 
     public void addSource(TestLister source, Test testTask) {

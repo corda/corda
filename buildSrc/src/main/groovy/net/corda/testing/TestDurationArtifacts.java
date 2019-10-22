@@ -86,8 +86,9 @@ public class TestDurationArtifacts {
 
     /**
      * Reload the tests from artifactory and update with the latest run.
+     *
      * @param project project that we are attaching the test to.
-     * @param name basename for the test.
+     * @param name    basename for the test.
      * @return the csv task
      */
     private static Task createCsvTask(@NotNull final Project project, @NotNull final String name) {
@@ -96,7 +97,7 @@ public class TestDurationArtifacts {
             t.doFirst(task -> {
                 project.getLogger().warn("About to create CSV file and zip it");
 
-                loadTests(project.getRootDir());
+                loadTests();
 
                 final List<Path> testXmlFiles = getTestXmlFiles(project.getRootDir().toPath());
                 project.getLogger().warn("Found {} xml junit files", testXmlFiles.size());
@@ -159,7 +160,8 @@ public class TestDurationArtifacts {
                     }
                     project.getLogger().warn("SAVED tests");
                 } catch (Exception e) {
-                    project.getLogger().warn("Problem trying to upload: ", z.getArchiveFileName().get(), e);
+                    project.getLogger().warn("Problem trying to upload: {} {}",
+                            z.getArchiveFileName().get(), e.toString());
                 }
             });
         });
@@ -209,8 +211,8 @@ public class TestDurationArtifacts {
      * Unzip test results in memory and return test names and durations.
      * Assumes the input stream contains only csv files of the correct format.
      *
+     * @param tests reference to the Tests object to be populated.
      * @param zippedInputStream stream containing zipped result file(s)
-     * @return list of test name and durations
      */
     static void addTestsFromZippedCsv(@NotNull final Tests tests,
                                       @NotNull final InputStream zippedInputStream) {
@@ -292,14 +294,19 @@ public class TestDurationArtifacts {
      * <p>
      * We get them from Artifactory and then parse the test xml files to get the duration.
      *
-     * @param destDir destination that we will write the interim tests file to
      * @return a supplier of test results
      */
     @NotNull
-    static Supplier<Tests> getTestsSupplier(final File destDir) {
-        return () -> loadTests(destDir);
+    static Supplier<Tests> getTestsSupplier() {
+        return TestDurationArtifacts::loadTests;
     }
 
+    /**
+     * Load the tests from Artifactory using interim file.  Existing test data is cleared.
+     *
+     * @param destDir location for interim file.
+     * @return a reference to the Tests object.
+     */
     static Tests loadTests(final File destDir) {
         LOG.warn("LOADING tests from Artifactory");
         tests.clear();
@@ -329,6 +336,39 @@ public class TestDurationArtifacts {
             return tests;
         }
     }
+
+    /** Load the tests from Artifactory, in-memory.  No temp file used.  Existing test data is cleared.
+     *
+     * @return a reference to the loaded tests.
+     */
+    static Tests loadTests() {
+        LOG.warn("LOADING tests from Artifactory");
+        tests.clear();
+        try {
+            final TestDurationArtifacts testArtifacts = new TestDurationArtifacts();
+            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+
+            //  Try getting artifacts for our branch, if not, try the target branch.
+            if (!testArtifacts.get(getGitBranch(), outputStream)) {
+                outputStream = new ByteArrayOutputStream();
+                LOG.warn("Could not get tests from Artifactory for {}, trying {}", getGitBranch(), getTargetGitBranch());
+                if (!testArtifacts.get(getTargetGitBranch(), outputStream)) {
+                    LOG.warn("Could not get any tests from Artifactory");
+                    return tests;
+                }
+            }
+
+            ByteArrayInputStream inputStream = new ByteArrayInputStream(outputStream.toByteArray());
+            addTestsFromZippedCsv(tests, inputStream);
+            LOG.warn("Got {} tests from Artifactory", tests.size());
+            return tests;
+        } catch (Exception e) { // was IOException
+            LOG.warn(e.toString());
+            LOG.warn("Could not get tests from Artifactory");
+            return tests;
+        }
+    }
+
     /**
      * Get tests for the specified tag in the outputStream
      *
@@ -336,7 +376,7 @@ public class TestDurationArtifacts {
      * @param outputStream stream of zipped xml files
      * @return false if we fail to get the tests
      */
-    public boolean get(@NotNull final String theTag, @NotNull final OutputStream outputStream) {
+    private boolean get(@NotNull final String theTag, @NotNull final OutputStream outputStream) {
         return artifactory.get(BASE_URL, theTag, ARTIFACT, "zip", outputStream);
     }
 
@@ -353,7 +393,7 @@ public class TestDurationArtifacts {
     }
 
     /**
-     * Uplaod the supplied tests
+     * Upload the supplied tests
      *
      * @param theTag      tag for tests
      * @param inputStream stream of zipped xml files.

@@ -160,7 +160,7 @@ public class TestDurationArtifactsTest {
 
         Assert.assertFalse(tests.isEmpty());
         Assert.assertEquals(3, tests.size());
-        Assert.assertEquals((55+33+22) / 3, tests.getMeanDurationForTests());
+        Assert.assertEquals((55 + 33 + 22) / 3, tests.getMeanDurationForTests());
     }
 
 //    // Uncomment to test a file.
@@ -200,5 +200,30 @@ public class TestDurationArtifactsTest {
         Assert.assertEquals(expected, System.getProperty(key));
         Assert.assertNotEquals(expected, TestDurationArtifacts.getGitBranch());
         Assert.assertEquals("release-os-4.3", TestDurationArtifacts.getGitBranch());
+    }
+
+    @Test
+    public void getTestsFromArtifactory() {
+        String artifactory_password = System.getenv("ARTIFACTORY_PASSWORD");
+        String artifactory_username = System.getenv("ARTIFACTORY_USERNAME");
+        String git_branch = System.getenv("CORDA_GIT_BRANCH");
+        String git_target_branch = System.getenv("CORDA_GIT_TARGET_BRANCH");
+
+        if (artifactory_password == null ||
+                artifactory_username == null ||
+                git_branch == null ||
+                git_target_branch == null
+        ) {
+            System.out.println("Skipping test - set env vars to run this test");
+            return;
+        }
+
+        System.setProperty("git.branch", git_branch);
+        System.setProperty("git.target.branch", git_target_branch);
+        System.setProperty("artifactory.password", artifactory_password);
+        System.setProperty("artifactory.username", artifactory_username);
+        Assert.assertTrue(TestDurationArtifacts.tests.isEmpty());
+        TestDurationArtifacts.loadTests();
+        Assert.assertFalse(TestDurationArtifacts.tests.isEmpty());
     }
 }
