@@ -99,7 +99,11 @@ class SchemaMigration(
                 null
             }
 
-    private fun doRunMigration(run: Boolean, check: Boolean, existingCheckpoints: Boolean? = null) {
+    private fun doRunMigration(
+            run: Boolean,
+            check: Boolean,
+            existingCheckpoints: Boolean? = null
+    ) {
 
         // Virtual file name of the changelog that includes all schemas.
         val dynamicInclude = "master.changelog.json"
@@ -121,7 +125,9 @@ class SchemaMigration(
             if (path != null) {
                 System.setProperty(NODE_BASE_DIR_KEY, path) // base dir for any custom change set which may need to load a file (currently AttachmentVersionNumberMigration)
             }
-            System.setProperty(NODE_X500_NAME, ourName.toString())
+            if (ourName != null) {
+                System.setProperty(NODE_X500_NAME, ourName.toString())
+            }
             val customResourceAccessor = CustomResourceAccessor(dynamicInclude, changelogList, classLoader)
             checkResourcesInClassPath(changelogList)
 
