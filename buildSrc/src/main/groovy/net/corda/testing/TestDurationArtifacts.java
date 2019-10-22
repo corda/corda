@@ -97,18 +97,31 @@ public class TestDurationArtifacts {
             t.doFirst(task -> {
                 project.getLogger().warn("About to create CSV file and zip it");
 
+                // Reload the test object from artifactory
                 loadTests();
-
+                // Get the list of junit xml artifacts
                 final List<Path> testXmlFiles = getTestXmlFiles(project.getRootDir().toPath());
                 project.getLogger().warn("Found {} xml junit files", testXmlFiles.size());
+
                 //  Read test xml files for tests and duration and add them to the `Tests` object
                 //  This adjusts the runCount and over all average duration for existing tests.
                 for (Path testResult : testXmlFiles) {
                     try {
-                        final List<Tuple2<String, Long>> junitTests = fromJunitXml(new FileInputStream(testResult.toFile()));
-                        for (Tuple2<String, Long> junitTest : junitTests) {
-                            tests.addDuration(junitTest.getFirst(), junitTest.getSecond());
-                        }
+                        final List<Tuple2<String, Long>> unitTests = fromJunitXml(new FileInputStream(testResult.toFile()));
+
+                        // Add the non-zero duration tests to build up an average.
+                        unitTests.stream()
+                                .filter(t2 -> t2.getSecond() > 0L)
+                                .forEach(unitTest -> tests.addDuration(unitTest.getFirst(), unitTest.getSecond()));
+
+                        final long meanDurationForTests = tests.getMeanDurationForTests();
+
+                        // Add the zero duration tests using the mean value so they are fairly distributed over the pods in the next run.
+                        // If we used 'zero' they would all be added to the smallest bucket.
+                        unitTests.stream()
+                                .filter(t2 -> t2.getSecond() <= 0L)
+                                .forEach(unitTest -> tests.addDuration(unitTest.getFirst(), meanDurationForTests));
+
                     } catch (FileNotFoundException ignored) {
                     }
                 }
@@ -211,7 +224,7 @@ public class TestDurationArtifacts {
      * Unzip test results in memory and return test names and durations.
      * Assumes the input stream contains only csv files of the correct format.
      *
-     * @param tests reference to the Tests object to be populated.
+     * @param tests             reference to the Tests object to be populated.
      * @param zippedInputStream stream containing zipped result file(s)
      */
     static void addTestsFromZippedCsv(@NotNull final Tests tests,
@@ -265,7 +278,9 @@ public class TestDurationArtifacts {
             final XPathExpression expression = xpath.compile("//testcase");
             final NodeList nodeList = (NodeList) expression.evaluate(document, XPathConstants.NODESET);
 
-            final BiFunction<NamedNodeMap, String, String> get = (a, k) -> a.getNamedItem(k) != null ? a.getNamedItem(k).getNodeValue() : "";
+            final BiFunction<NamedNodeMap, String, String> get =
+                    (a, k) -> a.getNamedItem(k) != null ? a.getNamedItem(k).getNodeValue() : "";
+
             for (int i = 0; i < nodeList.getLength(); i++) {
                 final Node item = nodeList.item(i);
                 final NamedNodeMap attributes = item.getAttributes();
@@ -273,13 +288,12 @@ public class TestDurationArtifacts {
                 final String testDuration = get.apply(attributes, "time");
                 final String testClassName = get.apply(attributes, "classname");
 
-                // If a test duration is zero or not listed, then don't add it.
-                // When we look up the test later, we'll return the mean test time instead.
-                if (!(testName.isEmpty() || testClassName.isEmpty() || testDuration.isEmpty())) {
-                    final long nanos = (long) (Double.parseDouble(testDuration) * 1000000.0);
-                    if (nanos > 0) {
-                        results.add(new Tuple2<>(testClassName + "." + testName, nanos));
-                    }
+                // If the test doesn't have a duration (it should), we return zero.
+                if (!(testName.isEmpty() || testClassName.isEmpty())) {
+                    final long nanos = !testDuration.isEmpty() ? (long) (Double.parseDouble(testDuration) * 1000000.0) : 0L;
+                    results.add(new Tuple2<>(testClassName + "." + testName, nanos));
+                } else {
+                    LOG.warn("Bad test in junit xml:  name={}  className={}", testName, testClassName);
                 }
             }
         } catch (ParserConfigurationException | IOException | XPathExpressionException | SAXException e) {
@@ -337,7 +351,8 @@ public class TestDurationArtifacts {
         }
     }
 
-    /** Load the tests from Artifactory, in-memory.  No temp file used.  Existing test data is cleared.
+    /**
+     * Load the tests from Artifactory, in-memory.  No temp file used.  Existing test data is cleared.
      *
      * @return a reference to the loaded tests.
      */

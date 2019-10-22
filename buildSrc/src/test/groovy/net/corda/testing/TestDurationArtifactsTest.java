@@ -51,6 +51,35 @@ public class TestDurationArtifactsTest {
         return sb.toString();
     }
 
+    String getXmlWithNoTime(List<Tuple2<String, Long>> tests) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
+                "<testsuites disabled=\"\" errors=\"\" failures=\"\" name=\"\" tests=\"\" time=\"\">\n" +
+                "    <testsuite disabled=\"\" errors=\"\" failures=\"\" hostname=\"\" id=\"\"\n" +
+                "               name=\"\" package=\"\" skipped=\"\" tests=\"\" time=\"\" timestamp=\"\">\n" +
+                "        <properties>\n" +
+                "            <property name=\"\" value=\"\"/>\n" +
+                "        </properties>\n");
+
+        for (Tuple2<String, Long> test : tests) {
+            Double d = ((double) test.getSecond()) / 1_000_000;
+            sb.append("        <testcase assertions=\"\" classname=\"" + CLASSNAME + "\" name=\""
+                    + test.getFirst() + "\" status=\"\" time=\"\">\n" +
+                    "            <skipped/>\n" +
+                    "            <error message=\"\" type=\"\"/>\n" +
+                    "            <failure message=\"\" type=\"\"/>\n" +
+                    "            <system-out/>\n" +
+                    "            <system-err/>\n" +
+                    "        </testcase>\n");
+        }
+
+        sb.append("        <system-out/>\n" +
+                "        <system-err/>\n" +
+                "    </testsuite>\n" +
+                "</testsuites>");
+        return sb.toString();
+    }
+
     @Test
     public void fromJunitXml() {
         List<Tuple2<String, Long>> tests = new ArrayList<>();
@@ -61,15 +90,57 @@ public class TestDurationArtifactsTest {
         List<Tuple2<String, Long>> results
                 = TestDurationArtifacts.fromJunitXml(new ByteArrayInputStream(xml.getBytes(StandardCharsets.UTF_8)));
 
-        double delta = 0.001;
         Assert.assertNotNull(results);
 
         Assert.assertFalse("Should have results", results.isEmpty());
         Assert.assertEquals(results.size(), 2);
-        Assert.assertEquals(results.get(0).getFirst(), CLASSNAME + "." + "TEST-A");
-        Assert.assertEquals(results.get(0).getSecond(), 111_000_000L, delta);
-        Assert.assertEquals(results.get(1).getFirst(), CLASSNAME + "." + "TEST-B");
-        Assert.assertEquals(results.get(1).getSecond(), 222_200_000L, delta);
+        Assert.assertEquals( CLASSNAME + "." + "TEST-A",results.get(0).getFirst());
+        Assert.assertEquals( 111_000_000L, results.get(0).getSecond().longValue());
+        Assert.assertEquals(CLASSNAME + "." + "TEST-B", results.get(1).getFirst());
+        Assert.assertEquals(222_200_000L, results.get(1).getSecond().longValue());
+    }
+
+    @Test
+    public void fromJunitXmlWithZeroDuration() {
+        // We do return zero values.
+        List<Tuple2<String, Long>> tests = new ArrayList<>();
+        tests.add(new Tuple2<>("TEST-A", 0L));
+        tests.add(new Tuple2<>("TEST-B", 0L));
+        final String xml = getXml(tests);
+
+        List<Tuple2<String, Long>> results
+                = TestDurationArtifacts.fromJunitXml(new ByteArrayInputStream(xml.getBytes(StandardCharsets.UTF_8)));
+
+        Assert.assertNotNull(results);
+
+        Assert.assertFalse("Should have results", results.isEmpty());
+        Assert.assertEquals(results.size(), 2);
+        Assert.assertEquals( CLASSNAME + "." + "TEST-A",results.get(0).getFirst());
+        Assert.assertEquals( 0L, results.get(0).getSecond().longValue());
+        Assert.assertEquals(CLASSNAME + "." + "TEST-B", results.get(1).getFirst());
+        Assert.assertEquals(0L, results.get(1).getSecond().longValue());
+    }
+
+    @Test
+    public void fromJunitXmlWithNoDuration() {
+        // We do return zero values.
+        List<Tuple2<String, Long>> tests = new ArrayList<>();
+        tests.add(new Tuple2<>("TEST-A", 0L));
+        tests.add(new Tuple2<>("TEST-B", 0L));
+        final String xml = getXmlWithNoTime(tests);
+        System.out.println(xml);
+
+        List<Tuple2<String, Long>> results
+                = TestDurationArtifacts.fromJunitXml(new ByteArrayInputStream(xml.getBytes(StandardCharsets.UTF_8)));
+
+        Assert.assertNotNull(results);
+
+        Assert.assertFalse("Should have results", results.isEmpty());
+        Assert.assertEquals(results.size(), 2);
+        Assert.assertEquals( CLASSNAME + "." + "TEST-A",results.get(0).getFirst());
+        Assert.assertEquals( 0L, results.get(0).getSecond().longValue());
+        Assert.assertEquals(CLASSNAME + "." + "TEST-B", results.get(1).getFirst());
+        Assert.assertEquals(0L, results.get(1).getSecond().longValue());
     }
 
     @Test
