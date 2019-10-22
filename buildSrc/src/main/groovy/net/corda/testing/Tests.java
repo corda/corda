@@ -216,4 +216,11 @@ public class Tests {
     public long getMeanDurationForTests() {
         return meanForTests.getFirst();
     }
+
+    /**
+     * Clear all tests
+     */
+    public void clear() {
+        tests.clear();
+    }
 }

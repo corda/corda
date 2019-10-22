@@ -84,19 +84,13 @@ public class TestDurationArtifacts {
         return Artifactory.getProperty("git.target.branch").replace('/', '-');
     }
 
-    /**
-     * Create the Gradle Zip task to gather test information
-     *
-     * @param project project to attach this task to
-     * @param name    name of the task
-     * @return a reference to the created task.
-     */
-    @NotNull
-    public static Task createZipTask(Project project, String name) {
-        final Task createCsvTask = project.getTasks().create(name + "CreateCsvFile", Task.class, t -> {
+    private static Task createCsvTask(@NotNull final Project project, @NotNull final String name) {
+        return project.getTasks().create(name + "CreateCsvFile", Task.class, t -> {
             // Parse all the junit results and write them to a csv file.
             t.doFirst(task -> {
                 project.getLogger().warn("About to create CSV file and zip it");
+
+                loadTests(project.getRootDir());
 
                 final List<Path> testXmlFiles = getTestXmlFiles(project.getRootDir().toPath());
                 project.getLogger().warn("Found {} xml junit files", testXmlFiles.size());
@@ -121,22 +115,36 @@ public class TestDurationArtifacts {
                 }
             });
         });
+    }
+
+    /**
+     * Create the Gradle Zip task to gather test information
+     *
+     * @param project project to attach this task to
+     * @param name    name of the task
+     * @return a reference to the created task.
+     */
+    @NotNull
+    public static Task createZipTask(Project project, String name) {
+        final Task csvTask = createCsvTask(project, name);
 
         return project.getTasks().create(name, Zip.class, z -> {
             z.getArchiveFileName().set(Artifactory.getFileName(ARTIFACT, EXTENSION, getGitBranch()));
             z.getDestinationDirectory().set(project.getRootDir());
             z.setIncludeEmptyDirs(false);
-            z.dependsOn(createCsvTask); // we have to create the csv before we can zip it.
 
-            z.from(project.getRootDir(), task -> {
-                task.include("**/" + ARTIFACT + ".csv");
-            });
+            //  This *might* be a problem we have a finalizedBy task that dependsOn this.
+            //  Can gradle choose to execute csvTask at an arbitrary time before the XML files are present?
+            z.dependsOn(csvTask); // we have to create the csv before we can zip it.
+
+            // There's only one csv, but glob it anyway.
+            z.from(project.getRootDir(), task -> task.include("**/" + ARTIFACT + ".csv"));
 
             // ...base class method zips the CSV...
 
             z.doLast(task -> {
                 //  We've now created the one csv file containing the tests and their mean durations,
-                //  this task has zipped it, so we now just uploadd it.
+                //  this task has zipped it, so we now just upload it.
                 project.getLogger().warn("SAVING tests");
                 project.getLogger().warn("Attempting to upload {}", z.getArchiveFileName().get());
                 try (FileInputStream inputStream = new FileInputStream(new File(z.getArchiveFileName().get()))) {
@@ -285,34 +293,38 @@ public class TestDurationArtifacts {
      */
     @NotNull
     static Supplier<Tests> getTestsSupplier(final File destDir) {
-        return () -> {
-            LOG.warn("LOADING tests from Artifactory");
-            try {
-                final TestDurationArtifacts testArtifacts = new TestDurationArtifacts();
-                File testsFile = testArtifacts.get(getGitBranch(), destDir);
-
-                if (testsFile == null) {
-                    LOG.warn("Could not get tests from Artifactory for {}, trying {}", getGitBranch(), getTargetGitBranch());
-                    testsFile = testArtifacts.get(getTargetGitBranch(), destDir);
-                    if (tests == null) {
-                        LOG.warn("Could not get any tests from Artifactory");
-                        return tests;
-                    }
-                }
-                try (FileInputStream inputStream = new FileInputStream(testsFile)) {
-                    addTestsFromZippedCsv(tests, inputStream);
-                    LOG.warn("Got {} tests from Artifactory", tests.size());
-                    return tests;
-                }
-            } catch (Exception e) { // was IOException
-                LOG.warn(e.toString());
-                e.printStackTrace();
-                LOG.warn("Could not get tests from Artifactory");
-                return tests;
-            }
-        };
+        return () -> loadTests(destDir);
     }
 
+    static Tests loadTests(final File destDir) {
+        LOG.warn("LOADING tests from Artifactory");
+        tests.clear();
+        try {
+            final TestDurationArtifacts testArtifacts = new TestDurationArtifacts();
+            File testsFile = testArtifacts.get(getGitBranch(), destDir);
+
+            //  Try getting artifacts for our branch, if not, try the target branch.
+            if (testsFile == null) {
+                LOG.warn("Could not get tests from Artifactory for {}, trying {}", getGitBranch(), getTargetGitBranch());
+                testsFile = testArtifacts.get(getTargetGitBranch(), destDir);
+                if (testsFile == null) {
+                    LOG.warn("Could not get any tests from Artifactory");
+                    return tests;
+                }
+            }
+
+            try (FileInputStream inputStream = new FileInputStream(testsFile)) {
+                addTestsFromZippedCsv(tests, inputStream);
+                LOG.warn("Got {} tests from Artifactory", tests.size());
+                return tests;
+            }
+        } catch (Exception e) { // was IOException
+            LOG.warn(e.toString());
+            e.printStackTrace();
+            LOG.warn("Could not get tests from Artifactory");
+            return tests;
+        }
+    }
     /**
      * Get tests for the specified tag in the outputStream
      *
