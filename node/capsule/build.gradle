@@ -8,6 +8,8 @@ apply plugin: 'com.jfrog.artifactory'
 
 description 'Corda standalone node'
 
+evaluationDependsOn(':node')
+
 configurations {
     runtimeArtifacts.extendsFrom runtimeClasspath
     capsuleRuntime
@@ -34,28 +36,64 @@ capsule {
     version capsule_version
 }
 
-task buildCordaJAR(type: FatCapsule, dependsOn: project(':node').tasks.jar) {
+def nodeProject = project(':node')
+
+task buildCordaJAR(type: FatCapsule, dependsOn: [
+        nodeProject.tasks.jar,
+        project(':core-deterministic').tasks.assemble,
+        project(':serialization-deterministic').tasks.assemble
+    ]) {
     applicationClass 'net.corda.node.Corda'
     archiveBaseName = 'corda'
     archiveVersion = corda_release_version
     archiveClassifier = jdkClassifier
     archiveName = archiveFileName.get()
     applicationSource = files(
-        project(':node').configurations.runtimeClasspath,
-        project(':node').tasks.jar,
-        project(':node').buildDir.toString() + '/resources/main/reference.conf',
+        nodeProject.configurations.runtimeClasspath,
+        nodeProject.tasks.jar,
+        nodeProject.buildDir.toString() + '/resources/main/reference.conf',
         "$rootDir/config/dev/log4j2.xml",
         'NOTICE' // Copy CDDL notice
     )
     from configurations.capsuleRuntime.files.collect { zipTree(it) }
     with jar
 
+    // The DJVM will share most of its dependencies with the node, but any extra ones that it needs
+    // are listed in the node's "deterministic" configuration and copied into a djvm subdirectory.
+    //
+    // Gradle may not resolve exactly rhe same transitive dependencies for both the runtimeClasspath
+    // and deterministic configurations - specifically, the artifacts' version numbers may differ slightly.
+    // And so we map the files by the resolved ModuleIdentifier objects instead, which just contain an
+    // artifact's group and name.
+    def cordaResolved = nodeProject.configurations['runtimeClasspath'].resolvedConfiguration.resolvedArtifacts.collectEntries {
+        [ (it.moduleVersion.id.module):it.file ]
+    }
+    def deterministicResolved = nodeProject.configurations['deterministic'].resolvedConfiguration.resolvedArtifacts.collectEntries {
+        [ (it.moduleVersion.id.module):it.file ]
+    }
+    def resolvedDifferences = deterministicResolved.keySet() - cordaResolved.keySet()
+
+    cordaResolved.keySet().retainAll(deterministicResolved.keySet() - resolvedDifferences)
+    deterministicResolved.keySet().retainAll(resolvedDifferences)
+
+    manifest {
+        // These are the dependencies that the deterministic Corda libraries share with Corda.
+        attributes('Corda-DJVM-Dependencies': cordaResolved.values().collect { it.name }.join(' '))
+    }
+
+    into('djvm') {
+        from nodeProject.configurations['jdkRt'].singleFile
+        from deterministicResolved.values()
+        fileMode = 0444
+    }
+
     capsuleManifest {
         applicationVersion = corda_release_version
         applicationId = "net.corda.node.Corda"
         // See experimental/quasar-hook/README.md for how to generate.
-        def quasarExcludeExpression = "x(antlr**;bftsmart**;co.paralleluniverse**;com.codahale**;com.esotericsoftware**;com.fasterxml**;com.google**;com.ibm**;com.intellij**;com.jcabi**;com.nhaarman**;com.opengamma**;com.typesafe**;com.zaxxer**;de.javakaffee**;groovy**;groovyjarjarantlr**;groovyjarjarasm**;io.atomix**;io.github**;io.netty**;jdk**;junit**;kotlin**;net.bytebuddy**;net.i2p**;org.apache**;org.assertj**;org.bouncycastle**;org.codehaus**;org.crsh**;org.dom4j**;org.fusesource**;org.h2**;org.hamcrest**;org.hibernate**;org.jboss**;org.jcp**;org.joda**;org.junit**;org.mockito**;org.objectweb**;org.objenesis**;org.slf4j**;org.w3c**;org.xml**;org.yaml**;reflectasm**;rx**;org.jolokia**;com.lmax**;picocli**;liquibase**;com.github.benmanes**;org.json**;org.postgresql**;nonapi.io.github.classgraph**)"
-        javaAgents = quasar_classifier == null ? ["quasar-core-${quasar_version}.jar=${quasarExcludeExpression}"] : ["quasar-core-${quasar_version}-${quasar_classifier}.jar=${quasarExcludeExpression}"]
+        def quasarExcludeExpression = "x(antlr**;bftsmart**;co.paralleluniverse**;com.codahale**;com.esotericsoftware**;com.fasterxml**;com.google**;com.ibm**;com.intellij**;com.jcabi**;com.nhaarman**;com.opengamma**;com.typesafe**;com.zaxxer**;de.javakaffee**;groovy**;groovyjarjarantlr**;groovyjarjarasm**;io.atomix**;io.github**;io.netty**;jdk**;kotlin**;net.corda.djvm**;djvm**;net.bytebuddy**;net.i2p**;org.apache**;org.bouncycastle**;org.codehaus**;org.crsh**;org.dom4j**;org.fusesource**;org.h2**;org.hibernate**;org.jboss**;org.jcp**;org.joda**;org.objectweb**;org.objenesis**;org.slf4j**;org.w3c**;org.xml**;org.yaml**;reflectasm**;rx**;org.jolokia**;com.lmax**;picocli**;liquibase**;com.github.benmanes**;org.json**;org.postgresql**;nonapi.io.github.classgraph**)"
+        def quasarClassLoaderExclusion = "l(net.corda.djvm.**)"
+        javaAgents = quasar_classifier == null ? ["quasar-core-${quasar_version}.jar=${quasarExcludeExpression}${quasarClassLoaderExclusion}"] : ["quasar-core-${quasar_version}-${quasar_classifier}.jar=${quasarExcludeExpression}${quasarClassLoaderExclusion}"]
         systemProperties['visualvm.display.name'] = 'Corda'
         if (JavaVersion.current() == JavaVersion.VERSION_1_8) {
             minJavaVersion = '1.8.0'
@@ -70,8 +108,9 @@ task buildCordaJAR(type: FatCapsule, dependsOn: project(':node').tasks.jar) {
         //
         // If you change these flags, please also update Driver.kt
         jvmArgs = ['-Xmx512m', '-XX:+UseG1GC']
-        if (JavaVersion.current() == JavaVersion.VERSION_11)
+        if (JavaVersion.current() == JavaVersion.VERSION_11) {
             jvmArgs += ['-Djdk.attach.allowAttachSelf=true']
+        }
     }
 }
 

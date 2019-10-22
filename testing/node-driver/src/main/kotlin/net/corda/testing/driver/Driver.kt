@@ -199,7 +199,9 @@ fun <A> driver(defaultParameters: DriverParameters = DriverParameters(), dsl: Dr
                     networkParameters = defaultParameters.networkParameters,
                     notaryCustomOverrides = defaultParameters.notaryCustomOverrides,
                     inMemoryDB = defaultParameters.inMemoryDB,
-                    cordappsForAllNodes = uncheckedCast(defaultParameters.cordappsForAllNodes)
+                    cordappsForAllNodes = uncheckedCast(defaultParameters.cordappsForAllNodes),
+                    djvmBootstrapSource = defaultParameters.djvmBootstrapSource,
+                    djvmCordaSource = defaultParameters.djvmCordaSource
             ),
             coerce = { it },
             dsl = dsl
@@ -236,6 +238,8 @@ fun <A> driver(defaultParameters: DriverParameters = DriverParameters(), dsl: Dr
  *     the data is not persisted between node restarts). Has no effect if node is configured
  *     in any way to use database other than H2.
  * @property cordappsForAllNodes [TestCordapp]s that will be added to each node started by the [DriverDSL].
+ * @property djvmBootstrapSource Location of a JAR containing the Java APIs for the DJVM to use.
+ * @property djvmCordaSource Locations of JARs of user-supplied classes to execute within the DJVM sandbox.
  */
 @Suppress("unused")
 data class DriverParameters(
@@ -255,7 +259,9 @@ data class DriverParameters(
         val networkParameters: NetworkParameters = testNetworkParameters(notaries = emptyList()),
         val notaryCustomOverrides: Map<String, Any?> = emptyMap(),
         val inMemoryDB: Boolean = true,
-        val cordappsForAllNodes: Collection<TestCordapp>? = null
+        val cordappsForAllNodes: Collection<TestCordapp>? = null,
+        val djvmBootstrapSource: Path? = null,
+        val djvmCordaSource: List<Path> = emptyList()
 ) {
     constructor(cordappsForAllNodes: Collection<TestCordapp>) : this(isDebug = false, cordappsForAllNodes = cordappsForAllNodes)
 

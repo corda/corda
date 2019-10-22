@@ -121,6 +121,8 @@ fun <A> rpcDriver(
         notaryCustomOverrides: Map<String, Any?> = emptyMap(),
         inMemoryDB: Boolean = true,
         cordappsForAllNodes: Collection<TestCordappInternal>? = null,
+        djvmBootstrapSource: Path? = null,
+        djvmCordaSource: List<Path> = emptyList(),
         dsl: RPCDriverDSL.() -> A
 ): A {
     return genericDriver(
@@ -141,7 +143,9 @@ fun <A> rpcDriver(
                             networkParameters = networkParameters,
                             notaryCustomOverrides = notaryCustomOverrides,
                             inMemoryDB = inMemoryDB,
-                            cordappsForAllNodes = cordappsForAllNodes
+                            cordappsForAllNodes = cordappsForAllNodes,
+                            djvmBootstrapSource = djvmBootstrapSource,
+                            djvmCordaSource = djvmCordaSource
                     ), externalTrace
             ),
             coerce = { it },

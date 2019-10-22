@@ -1,0 +1,43 @@
+@file:JvmName("LtxConstants")
+package net.corda.node.djvm
+
+import net.corda.core.contracts.*
+import net.corda.core.crypto.SecureHash
+import net.corda.core.identity.Party
+import net.corda.core.node.NetworkParameters
+import net.corda.core.transactions.LedgerTransaction
+import java.util.function.Function
+
+private const val TX_INPUTS = 0
+private const val TX_OUTPUTS = 1
+private const val TX_COMMANDS = 2
+private const val TX_ATTACHMENTS = 3
+private const val TX_ID = 4
+private const val TX_NOTARY = 5
+private const val TX_TIME_WINDOW = 6
+private const val TX_PRIVACY_SALT = 7
+private const val TX_NETWORK_PARAMETERS = 8
+private const val TX_REFERENCES = 9
+
+class LtxFactory : Function<Array<Any?>, LedgerTransaction> {
+
+    @Suppress("unchecked_cast")
+    override fun apply(txArgs: Array<Any?>): LedgerTransaction {
+        return LedgerTransaction.createForSandbox(
+            inputs = (txArgs[TX_INPUTS] as Array<Array<Any?>>).map { it.toStateAndRef() },
+            outputs = (txArgs[TX_OUTPUTS] as? List<TransactionState<ContractState>>) ?: emptyList(),
+            commands = (txArgs[TX_COMMANDS] as? List<CommandWithParties<CommandData>>) ?: emptyList(),
+            attachments = (txArgs[TX_ATTACHMENTS] as? List<Attachment>) ?: emptyList(),
+            id = txArgs[TX_ID] as SecureHash,
+            notary = txArgs[TX_NOTARY] as? Party,
+            timeWindow = txArgs[TX_TIME_WINDOW] as? TimeWindow,
+            privacySalt = txArgs[TX_PRIVACY_SALT] as PrivacySalt,
+            networkParameters = txArgs[TX_NETWORK_PARAMETERS] as NetworkParameters,
+            references = (txArgs[TX_REFERENCES] as Array<Array<Any?>>).map { it.toStateAndRef() }
+        )
+    }
+
+    private fun Array<*>.toStateAndRef(): StateAndRef<ContractState> {
+        return StateAndRef(this[0] as TransactionState<*>, this[1] as StateRef)
+    }
+}

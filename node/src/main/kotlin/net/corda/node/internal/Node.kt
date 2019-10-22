@@ -4,6 +4,7 @@ import com.codahale.metrics.MetricFilter
 import com.codahale.metrics.MetricRegistry
 import com.codahale.metrics.jmx.JmxReporter
 import com.github.benmanes.caffeine.cache.Caffeine
+import com.jcabi.manifests.Manifests
 import com.palominolabs.metrics.newrelic.AllEnabledMetricAttributeFilter
 import com.palominolabs.metrics.newrelic.NewRelicReporter
 import io.netty.util.NettyRuntime
@@ -19,6 +20,7 @@ import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.internal.div
 import net.corda.core.internal.errors.AddressBindingException
 import net.corda.core.internal.getJavaUpdateVersion
+import net.corda.core.internal.isRegularFile
 import net.corda.core.internal.notary.NotaryService
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.RPCOps
@@ -29,6 +31,7 @@ import net.corda.core.serialization.internal.SerializationEnvironment
 import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
+import net.corda.djvm.source.*
 import net.corda.node.CordaClock
 import net.corda.node.SimpleClock
 import net.corda.node.VersionInfo
@@ -75,6 +78,7 @@ import java.lang.Long.max
 import java.lang.Long.min
 import java.net.BindException
 import java.net.InetAddress
+import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.time.Clock
@@ -99,7 +103,9 @@ open class Node(configuration: NodeConfiguration,
                 versionInfo: VersionInfo,
                 private val initialiseSerialization: Boolean = true,
                 flowManager: FlowManager = NodeFlowManager(configuration.flowOverrides),
-                cacheFactoryPrototype: BindableNamedCacheFactory = DefaultNamedCacheFactory()
+                cacheFactoryPrototype: BindableNamedCacheFactory = DefaultNamedCacheFactory(),
+                djvmBootstrapSource: ApiSource = createBootstrapSource(configuration),
+                djvmCordaSource: UserSource? = createCordaSource(configuration)
 ) : AbstractNode<NodeInfo>(
         configuration,
         createClock(configuration),
@@ -107,13 +113,18 @@ open class Node(configuration: NodeConfiguration,
         versionInfo,
         flowManager,
         // Under normal (non-test execution) it will always be "1"
-        AffinityExecutor.ServiceAffinityExecutor("Node thread-${sameVmNodeCounter.incrementAndGet()}", 1)
+        AffinityExecutor.ServiceAffinityExecutor("Node thread-${sameVmNodeCounter.incrementAndGet()}", 1),
+        djvmBootstrapSource = djvmBootstrapSource,
+        djvmCordaSource = djvmCordaSource
 ) {
 
     override fun createStartedNode(nodeInfo: NodeInfo, rpcOps: CordaRPCOps, notaryService: NotaryService?): NodeInfo =
             nodeInfo
 
     companion object {
+        private const val CORDA_DETERMINISTIC_RUNTIME_ATTR = "Corda-Deterministic-Runtime"
+        private const val CORDA_DETERMINISTIC_CLASSPATH_ATTR = "Corda-Deterministic-Classpath"
+
         private val staticLog = contextLogger()
         var renderBasicInfoToConsole = true
 
@@ -170,6 +181,70 @@ open class Node(configuration: NodeConfiguration,
                 }
             } catch (e: NumberFormatException) { // custom JDKs may not have the update version (e.g. 1.8.0-adoptopenjdk)
                 false
+            }
+        }
+
+        private fun manifestValue(attrName: String): String? = if (Manifests.exists(attrName)) Manifests.read(attrName) else null
+
+        private fun createManifestCordaSource(config: NodeConfiguration): UserSource? {
+            val classpathSource = config.baseDirectory.resolve("djvm")
+            val djvmClasspath = manifestValue(CORDA_DETERMINISTIC_CLASSPATH_ATTR)
+
+            return if (djvmClasspath == null) {
+                staticLog.warn("{} missing from MANIFEST.MF - deterministic contract verification now impossible!",
+                                   CORDA_DETERMINISTIC_CLASSPATH_ATTR)
+                null
+            } else if (!Files.isDirectory(classpathSource)) {
+                staticLog.warn("{} directory does not exist - deterministic contract verification now impossible!",
+                                   classpathSource.toAbsolutePath())
+                null
+            } else {
+                val files = djvmClasspath.split("\\s++".toRegex(), 0).map { classpathSource.resolve(it) }
+                    .filter { Files.isRegularFile(it) || Files.isSymbolicLink(it) }
+                staticLog.info("Corda Deterministic Libraries: {}", files.map(Path::getFileName).joinToString())
+
+                val jars = files.map { it.toUri().toURL() }.toTypedArray()
+                UserPathSource(jars)
+            }
+        }
+
+        private fun createManifestBootstrapSource(config: NodeConfiguration): ApiSource {
+            val deterministicRt = manifestValue(CORDA_DETERMINISTIC_RUNTIME_ATTR)
+            if (deterministicRt == null) {
+                staticLog.warn("{} missing from MANIFEST.MF - will use host JVM for deterministic runtime.",
+                                   CORDA_DETERMINISTIC_RUNTIME_ATTR)
+                return EmptyApi
+            }
+
+            val bootstrapSource = config.baseDirectory.resolve("djvm").resolve(deterministicRt)
+            return if (bootstrapSource.isRegularFile()) {
+                staticLog.info("Deterministic Runtime: {}", bootstrapSource.fileName)
+                BootstrapClassLoader(bootstrapSource)
+            } else {
+                staticLog.warn("NO DETERMINISTIC RUNTIME FOUND - will use host JVM instead.")
+                EmptyApi
+            }
+        }
+
+        private fun createBootstrapSource(config: NodeConfiguration): ApiSource {
+            val djvm = config.devModeOptions?.djvm
+            return if (config.devMode && djvm != null) {
+                djvm.bootstrapSource?.let { BootstrapClassLoader(Paths.get(it)) } ?: EmptyApi
+            } else {
+                createManifestBootstrapSource(config)
+            }
+        }
+
+        private fun createCordaSource(config: NodeConfiguration): UserSource? {
+            val djvm = config.devModeOptions?.djvm
+            return if (config.devMode && djvm != null) {
+                if (djvm.cordaSource.isEmpty()) {
+                    null
+                } else {
+                    UserPathSource(djvm.cordaSource.map { Paths.get(it) })
+                }
+            } else {
+                createManifestCordaSource(config)
             }
         }
     }

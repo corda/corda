@@ -27,13 +27,13 @@ import net.corda.core.messaging.*
 import net.corda.core.node.*
 import net.corda.core.node.services.*
 import net.corda.core.schemas.MappedSchema
-import net.corda.core.serialization.SerializationWhitelist
-import net.corda.core.serialization.SerializeAsToken
-import net.corda.core.serialization.SingletonSerializeAsToken
+import net.corda.core.serialization.*
+import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.days
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.minutes
+import net.corda.djvm.source.*
 import net.corda.node.CordaClock
 import net.corda.node.VersionInfo
 import net.corda.node.internal.classloading.requireAnnotation
@@ -65,8 +65,7 @@ import net.corda.node.services.persistence.*
 import net.corda.node.services.rpc.CheckpointDumper
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.statemachine.*
-import net.corda.node.services.transactions.InMemoryTransactionVerifierService
-import net.corda.node.services.transactions.SimpleNotaryService
+import net.corda.node.services.transactions.*
 import net.corda.node.services.upgrade.ContractUpgradeServiceImpl
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.utilities.*
@@ -125,7 +124,9 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                                protected val versionInfo: VersionInfo,
                                protected val flowManager: FlowManager,
                                val serverThread: AffinityExecutor.ServiceAffinityExecutor,
-                               val busyNodeLatch: ReusableLatch = ReusableLatch()) : SingletonSerializeAsToken() {
+                               val busyNodeLatch: ReusableLatch = ReusableLatch(),
+                               djvmBootstrapSource: ApiSource = EmptyApi,
+                               djvmCordaSource: UserSource? = null) : SingletonSerializeAsToken() {
 
     protected abstract val log: Logger
     @Suppress("LeakingThis")
@@ -214,6 +215,17 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     ).closeOnStop()
     @Suppress("LeakingThis")
     val transactionVerifierService = InMemoryTransactionVerifierService(transactionVerifierWorkerCount).tokenize()
+    val verifierFactoryService: VerifierFactoryService = if (djvmCordaSource != null) {
+        DeterministicVerifierFactoryService(djvmBootstrapSource, djvmCordaSource).apply {
+            if (!configuration.devMode) {
+                log.info("Generating Corda classes for DJVM sandbox.")
+                generateSandbox()
+            }
+            tokenize()
+        }
+    } else {
+        BasicVerifierFactoryService()
+    }
     val contractUpgradeService = ContractUpgradeServiceImpl(cacheFactory).tokenize()
     val auditService = DummyAuditService().tokenize()
     @Suppress("LeakingThis")
@@ -1068,6 +1080,11 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         // allows services to register handlers to be informed when the node stop method is called
         override fun registerUnloadHandler(runOnStop: () -> Unit) {
             this@AbstractNode.runOnStop += runOnStop
+        }
+
+        override fun specialise(ltx: LedgerTransaction): LedgerTransaction {
+            val ledgerTransaction = servicesForResolution.specialise(ltx)
+            return verifierFactoryService.apply(ledgerTransaction)
         }
     }
 }
