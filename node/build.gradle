@@ -170,21 +170,15 @@ dependencies {
 
     // Sandbox for deterministic contract verification
     compile "net.corda.djvm:corda-djvm:$djvm_version"
-    compile("net.corda.djvm:corda-djvm-serialization:$djvm_version") {
-        exclude group: 'net.corda'
-    }
+    compile project(':serialization-djvm')
     compile(project(':node:djvm')) {
         transitive = false
     }
     jdkRt "net.corda:deterministic-rt:latest.integration"
     deterministic project(path: ':core-deterministic', configuration: 'deterministicArtifacts')
     deterministic project(path: ':serialization-deterministic', configuration: 'deterministicArtifacts')
-    deterministic("net.corda.djvm:corda-djvm-deserializers:$djvm_version") {
-        transitive = false
-    }
-    deterministic(project(':node:djvm')) {
-        transitive = false
-    }
+    deterministic project(':serialization-djvm:deserializers')
+    deterministic project(':node:djvm')
     deterministic "org.slf4j:slf4j-nop:$slf4j_version"
 
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"

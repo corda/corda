@@ -7,9 +7,9 @@ import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.ByteSequence
 import net.corda.djvm.rewiring.SandboxClassLoader
-import net.corda.djvm.serialization.createSandboxSerializationEnv
-import net.corda.djvm.serialization.deserializeTo
 import net.corda.node.djvm.ComponentBuilder
+import net.corda.serialization.djvm.createSandboxSerializationEnv
+import net.corda.serialization.djvm.deserializeTo
 import java.util.function.Function
 
 class Serializer(private val classLoader: SandboxClassLoader) {

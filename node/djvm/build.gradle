@@ -13,6 +13,10 @@ dependencies {
 
 jar {
     archiveBaseName = 'corda-node-djvm'
+    manifest {
+        attributes('Automatic-Module-Name': 'net.corda.node.djvm')
+        attributes('Sealed': true)
+    }
 }
 
 publish {
