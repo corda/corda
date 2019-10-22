@@ -52,7 +52,7 @@ public class PodAllocator {
         podsToRequest.forEach(requestedPod -> {
             String msg = "PreAllocating " + requestedPod.getMetadata().getName();
             if (logger instanceof org.gradle.api.logging.Logger) {
-                ((org.gradle.api.logging.Logger) logger).lifecycle(msg);
+                ((org.gradle.api.logging.Logger) logger).quiet(msg);
             } else {
                 logger.info(msg);
             }
@@ -95,7 +95,7 @@ public class PodAllocator {
                 public void onClose(KubernetesClientException cause) {
                     String message = "Failed to delete pod " + pod.getMetadata().getName();
                     if (logger instanceof org.gradle.api.logging.Logger) {
-                        ((org.gradle.api.logging.Logger) logger).lifecycle(message);
+                        ((org.gradle.api.logging.Logger) logger).quiet(message);
                     } else {
                         logger.info(message);
                     }
@@ -120,7 +120,7 @@ public class PodAllocator {
                 .addNewContainer()
                 .withImage("busybox:latest")
                 .withCommand("sh")
-                .withArgs("-c", "sleep 600")
+                .withArgs("-c", "sleep 300")
                 .withName(podName)
                 .withNewResources()
                 .addToRequests("cpu", new Quantity(coresPerPod.toString()))
