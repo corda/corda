@@ -43,27 +43,27 @@ fun initialiseSerialization() {
     )
 }
 
-data class _i_ (val a: Int)
-data class _is_ (val a: Int, val b: String)
-data class _i_is__ (val a: Int, val b: _is_)
-data class _Li_ (val a: List<Int>)
-data class _Mis_ (val a: Map<Int, String>)
+data class IntClass (val a: Int)
+data class IntStrClass (val a: Int, val b: String)
+data class IntIntStrClass (val a: Int, val b: IntStrClass)
+data class IntListClass (val a: List<Int>)
+data class IntStringMapClass (val a: Map<Int, String>)
 enum class E {
     A, B, C
 }
-data class _e_ (val e: E)
-data class _Le_ (val listy: List<E>)
+data class EnumClass (val e: E)
+data class EnumListClass (val listy: List<E>)
 
 fun main (args: Array<String>) {
     initialiseSerialization()
 
-    File("../cpp-serializer/bin/blob-inspector/test/_i_is__").writeBytes(_i_is__(1, _is_ (2, "three")).serialize().bytes)
-    File("../cpp-serializer/bin/blob-inspector/test/_Li_").writeBytes(_Li_(listOf (1, 2, 3, 4, 5, 6)).serialize().bytes)
-    File("../cpp-serializer/bin/blob-inspector/test/_Mis_").writeBytes(_Mis_(
+    File("../cpp-serializer/bin/blob-inspector/test/_i_is__").writeBytes(IntIntStrClass(1, IntStrClass (2, "three")).serialize().bytes)
+    File("../cpp-serializer/bin/blob-inspector/test/_Li_").writeBytes(IntListClass(listOf (1, 2, 3, 4, 5, 6)).serialize().bytes)
+    File("../cpp-serializer/bin/blob-inspector/test/_Mis_").writeBytes(IntStringMapClass(
             mapOf (1 to "two", 3 to "four", 5 to "six")).serialize().bytes)
-    File("../cpp-serializer/bin/blob-inspector/test/_e_").writeBytes(_e_(E.A).serialize().bytes)
-    File("../cpp-serializer/bin/blob-inspector/test/_Le_").writeBytes(_Le_(listOf (E.A, E.B, E.C)).serialize().bytes)
-    File("../cpp-serializer/bin/blob-inspector/test/_Le_2").writeBytes(_Le_(listOf (E.A, E.B, E.C, E.B, E.A)).serialize().bytes)
+    File("../cpp-serializer/bin/blob-inspector/test/_e_").writeBytes(EnumClass(E.A).serialize().bytes)
+    File("../cpp-serializer/bin/blob-inspector/test/_Le_").writeBytes(EnumListClass(listOf (E.A, E.B, E.C)).serialize().bytes)
+    File("../cpp-serializer/bin/blob-inspector/test/_Le_2").writeBytes(EnumListClass(listOf (E.A, E.B, E.C, E.B, E.A)).serialize().bytes)
 }
 
 
