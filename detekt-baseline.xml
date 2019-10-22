@@ -193,7 +193,7 @@
     <ID>ComplexMethod:RemoteTypeCarpenter.kt$SchemaBuildingRemoteTypeCarpenter$override fun carpent(typeInformation: RemoteTypeInformation): Type</ID>
     <ID>ComplexMethod:RpcReconnectTests.kt$RpcReconnectTests$ @Test fun `test that the RPC client is able to reconnect and proceed after node failure, restart, or connection reset`()</ID>
     <ID>ComplexMethod:SchemaMigration.kt$SchemaMigration$ private fun migrateOlderDatabaseToUseLiquibase(existingCheckpoints: Boolean): Boolean</ID>
-    <ID>ComplexMethod:SchemaMigration.kt$SchemaMigration$private fun doRunMigration(run: Boolean, check: Boolean, existingCheckpoints: Boolean? = null)</ID>
+    <ID>ComplexMethod:SchemaMigration.kt$SchemaMigration$private fun doRunMigration( run: Boolean, check: Boolean, existingCheckpoints: Boolean? = null )</ID>
     <ID>ComplexMethod:SendTransactionFlow.kt$DataVendingFlow$@Suspendable override fun call(): Void?</ID>
     <ID>ComplexMethod:ShellCmdLineOptions.kt$ShellCmdLineOptions$private fun toConfigFile(): Config</ID>
     <ID>ComplexMethod:ShellCmdLineOptions.kt$ShellConfigurationFile.ShellConfigFile$fun toShellConfiguration(): ShellConfiguration</ID>
@@ -4106,7 +4106,7 @@
     <ID>ThrowsCount:PropertyDescriptor.kt$PropertyDescriptor$ fun validate()</ID>
     <ID>ThrowsCount:RPCApi.kt$RPCApi.ServerToClient.Companion$fun fromClientMessage(context: SerializationContext, message: ClientMessage): ServerToClient</ID>
     <ID>ThrowsCount:RPCServer.kt$RPCServer$private fun invokeRpc(context: RpcAuthContext, inMethodName: String, arguments: List&lt;Any?&gt;): Try&lt;Any&gt;</ID>
-    <ID>ThrowsCount:SchemaMigration.kt$SchemaMigration$private fun doRunMigration(run: Boolean, check: Boolean, existingCheckpoints: Boolean? = null)</ID>
+    <ID>ThrowsCount:SchemaMigration.kt$SchemaMigration$private fun doRunMigration( run: Boolean, check: Boolean, existingCheckpoints: Boolean? = null )</ID>
     <ID>ThrowsCount:ServicesForResolutionImpl.kt$ServicesForResolutionImpl$// We may need to recursively chase transactions if there are notary changes. fun inner(stateRef: StateRef, forContractClassName: String?): Attachment</ID>
     <ID>ThrowsCount:SignedNodeInfo.kt$SignedNodeInfo$// TODO Add root cert param (or TrustAnchor) to make sure all the identities belong to the same root fun verified(): NodeInfo</ID>
     <ID>ThrowsCount:SignedTransaction.kt$SignedTransaction$// TODO: Verify contract constraints here as well as in LedgerTransaction to ensure that anything being deserialised // from the attachment is trusted. This will require some partial serialisation work to not load the ContractState // objects from the TransactionState. @DeleteForDJVM private fun verifyRegularTransaction(services: ServiceHub, checkSufficientSignatures: Boolean)</ID>
