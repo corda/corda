@@ -56,10 +56,10 @@ import java.util.function.Supplier;
  * See https://www.jfrog.com/confluence/display/RTF/Artifactory+REST+API
  */
 public class TestDurationArtifacts {
-    private static final Logger LOG = LoggerFactory.getLogger(TestDurationArtifacts.class);
-    private static final String ARTIFACT = "tests-durations";
     private static final String EXTENSION = "zip";
     private static final String BASE_URL = "https://software.r3.com/artifactory/corda-test-results/net/corda";
+    private static final Logger LOG = LoggerFactory.getLogger(TestDurationArtifacts.class);
+    private static final String ARTIFACT = "tests-durations";
     // The one and only set of tests information.  We load these at the start of a build, and update them and save them at the end.
     static Tests tests = new Tests();
 
@@ -146,7 +146,21 @@ public class TestDurationArtifacts {
      */
     @NotNull
     public static Task createZipTask(Project project, String name) {
+        final Task zipJunitTask = project.getTasks().create(name  + "Junit", Zip.class, z -> {
+
+            z.getArchiveFileName().set(Artifactory.getFileName("junit", EXTENSION, getGitBranch()));
+            z.getDestinationDirectory().set(project.getRootDir());
+            z.setIncludeEmptyDirs(false);
+            z.from(project.getRootDir(), task -> task.include("**/build/test-results-xml/**/*.xml", "**/build/test-results/**/*.xml"));
+            z.doLast(task -> {
+                try (FileInputStream inputStream = new FileInputStream(new File(z.getArchiveFileName().get()))) {
+                    new Artifactory().put(BASE_URL, getGitBranch(), "junit", EXTENSION, inputStream);
+                } catch (Exception ignored) {
+                }
+            });
+        });
         final Task csvTask = createCsvTask(project, name);
+        csvTask.dependsOn(zipJunitTask);
 
         return project.getTasks().create(name, Zip.class, z -> {
             z.getArchiveFileName().set(Artifactory.getFileName(ARTIFACT, EXTENSION, getGitBranch()));
