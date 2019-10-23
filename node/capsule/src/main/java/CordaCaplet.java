@@ -18,6 +18,7 @@ import java.util.jar.Manifest;
 import java.util.stream.Stream;
 
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
+import static java.util.stream.Collectors.toMap;
 
 public class CordaCaplet extends Capsule {
     private static final String DJVM_DIR ="djvm";
@@ -230,10 +231,13 @@ public class CordaCaplet extends Capsule {
             // Add system properties, if specified, from the config.
             Map<String, String> systemProps = new LinkedHashMap<>((Map<String, String>) super.attribute(attr));
             try {
-                Config overrideSystemProps = nodeConfig.getConfig("systemProperties");
+                Map<String, ?> overrideSystemProps = nodeConfig.getConfig("systemProperties").entrySet().stream()
+                    .map(Property::create)
+                    .filter(Property::isValid)
+                    .collect(toMap(Property::getKey, Property::getValue));
                 log(LOG_VERBOSE, "Configured system properties = " + overrideSystemProps);
-                for (Map.Entry<String, ConfigValue> entry : overrideSystemProps.entrySet()) {
-                    systemProps.put(entry.getKey(), entry.getValue().unwrapped().toString());
+                for (Map.Entry<String, ?> entry : overrideSystemProps.entrySet()) {
+                    systemProps.put(entry.getKey(), entry.getValue().toString());
                 }
             } catch (ConfigException.Missing e) {
                 // Ignore since it's ok to be Missing. Other errors would be unexpected.
@@ -311,5 +315,34 @@ public class CordaCaplet extends Capsule {
 
     private Boolean isJAR(File file) {
         return file.getName().toLowerCase().endsWith(".jar");
+    }
+
+    /**
+     * Helper class so that we can parse the "systemProperties" element of node.conf.
+     */
+    private static class Property {
+        private final List<String> path;
+        private final Object value;
+
+        Property(List<String> path, Object value) {
+            this.path = path;
+            this.value = value;
+        }
+
+        boolean isValid() {
+            return path.size() == 1;
+        }
+
+        String getKey() {
+            return path.get(0);
+        }
+
+        Object getValue() {
+            return value;
+        }
+
+        static Property create(Map.Entry<String, ConfigValue> entry) {
+            return new Property(ConfigUtil.splitPath(entry.getKey()), entry.getValue().unwrapped());
+        }
     }
 }

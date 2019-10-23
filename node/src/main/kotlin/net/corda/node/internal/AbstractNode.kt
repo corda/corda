@@ -70,13 +70,26 @@ import net.corda.djvm.source.UserSource
 import net.corda.node.CordaClock
 import net.corda.node.VersionInfo
 import net.corda.node.internal.classloading.requireAnnotation
-import net.corda.node.internal.cordapp.*
+import net.corda.node.internal.cordapp.CordappConfigFileProvider
+import net.corda.node.internal.cordapp.CordappProviderImpl
+import net.corda.node.internal.cordapp.CordappProviderInternal
+import net.corda.node.internal.cordapp.JarScanningCordappLoader
+import net.corda.node.internal.cordapp.VirtualCordapp
 import net.corda.node.internal.rpc.proxies.AuthenticatedRpcOpsProxy
 import net.corda.node.internal.rpc.proxies.ThreadContextAdjustingRpcOpsProxy
 import net.corda.node.services.ContractUpgradeHandler
 import net.corda.node.services.FinalityHandler
 import net.corda.node.services.NotaryChangeHandler
-import net.corda.node.services.api.*
+import net.corda.node.services.api.AuditService
+import net.corda.node.services.api.DummyAuditService
+import net.corda.node.services.api.FlowStarter
+import net.corda.node.services.api.MonitoringService
+import net.corda.node.services.api.NetworkMapCacheInternal
+import net.corda.node.services.api.NodePropertiesStore
+import net.corda.node.services.api.SchemaService
+import net.corda.node.services.api.ServiceHubInternal
+import net.corda.node.services.api.VaultServiceInternal
+import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.node.services.attachments.NodeAttachmentTrustCalculator
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
@@ -279,6 +292,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     val transactionVerifierService = InMemoryTransactionVerifierService(transactionVerifierWorkerCount).tokenize()
     val verifierFactoryService: VerifierFactoryService = if (djvmCordaSource != null) {
         DeterministicVerifierFactoryService(djvmBootstrapSource, djvmCordaSource).apply {
+            log.info("DJVM sandbox enabled for deterministic contract verification.")
             if (!configuration.devMode) {
                 log.info("Generating Corda classes for DJVM sandbox.")
                 generateSandbox()

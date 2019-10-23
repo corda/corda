@@ -142,7 +142,7 @@ open class Node(configuration: NodeConfiguration,
     companion object {
         private const val CORDA_DETERMINISTIC_RUNTIME_ATTR = "Corda-Deterministic-Runtime"
         private const val CORDA_DETERMINISTIC_CLASSPATH_ATTR = "Corda-Deterministic-Classpath"
-        private const val CORDA_DJVM = "corda.djvm"
+        private const val CORDA_DJVM = "net.corda.djvm"
 
         private val staticLog = contextLogger()
         var renderBasicInfoToConsole = true
