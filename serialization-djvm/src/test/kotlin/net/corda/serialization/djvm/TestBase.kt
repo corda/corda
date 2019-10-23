@@ -9,7 +9,7 @@ import net.corda.djvm.analysis.AnalysisConfiguration
 import net.corda.djvm.analysis.Whitelist.Companion.MINIMAL
 import net.corda.djvm.execution.ExecutionProfile.Companion.UNLIMITED
 import net.corda.djvm.messages.Severity
-import net.corda.djvm.messages.Severity.*
+import net.corda.djvm.messages.Severity.WARNING
 import net.corda.djvm.source.BootstrapClassLoader
 import net.corda.djvm.source.UserPathSource
 import org.junit.jupiter.api.AfterAll
@@ -33,8 +33,9 @@ abstract class TestBase(type: SandboxType) {
             System.getProperty("deterministic-rt.path") ?: fail("deterministic-rt.path property not set"))
 
         @JvmField
-        val TESTING_LIBRARIES: List<Path> = (System.getProperty("sandbox-libraries.path") ?: fail("sandbox-libraries.path property not set"))
-                .split(File.pathSeparator).map { Paths.get(it) }.filter { exists(it) }
+        val TESTING_LIBRARIES: List<Path> = (System.getProperty("sandbox-libraries.path")
+                ?: fail("sandbox-libraries.path property not set"))
+            .split(File.pathSeparator).map { Paths.get(it) }.filter { exists(it) }
 
         private lateinit var bootstrapClassLoader: BootstrapClassLoader
         private lateinit var parentConfiguration: SandboxConfiguration
@@ -80,7 +81,11 @@ abstract class TestBase(type: SandboxType) {
         return sandbox(WARNING, visibleAnnotations, emptySet(), action)
     }
 
-    fun sandbox(visibleAnnotations: Set<Class<out Annotation>>, sandboxOnlyAnnotations: Set<String>, action: SandboxRuntimeContext.() -> Unit) {
+    fun sandbox(
+        visibleAnnotations: Set<Class<out Annotation>>,
+        sandboxOnlyAnnotations: Set<String>,
+        action: SandboxRuntimeContext.() -> Unit
+    ) {
         return sandbox(WARNING, visibleAnnotations, sandboxOnlyAnnotations, action)
     }
 

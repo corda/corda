@@ -4,7 +4,14 @@ import net.corda.core.serialization.SerializationContext
 import net.corda.djvm.rewiring.SandboxClassLoader
 import net.corda.serialization.djvm.deserializers.DescribeEnum
 import net.corda.serialization.djvm.toSandboxAnyClass
-import net.corda.serialization.internal.amqp.*
+import net.corda.serialization.internal.amqp.AMQPNotSerializableException
+import net.corda.serialization.internal.amqp.AMQPSerializer
+import net.corda.serialization.internal.amqp.CustomSerializer
+import net.corda.serialization.internal.amqp.DeserializationInput
+import net.corda.serialization.internal.amqp.LocalSerializerFactory
+import net.corda.serialization.internal.amqp.Schema
+import net.corda.serialization.internal.amqp.SerializationOutput
+import net.corda.serialization.internal.amqp.SerializationSchemas
 import net.corda.serialization.internal.model.EnumTransforms
 import net.corda.serialization.internal.model.LocalTypeInformation
 import net.corda.serialization.internal.model.TypeIdentifier
@@ -32,11 +39,15 @@ class SandboxEnumSerializer(
         return ConcreteEnumSerializer(declaredType, members, localFactory)
     }
 
-    override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput, context: SerializationContext): Any {
+    override fun readObject(
+        obj: Any, schemas: SerializationSchemas, input: DeserializationInput, context: SerializationContext
+    ): Any {
         throw UnsupportedOperationException("Factory only")
     }
 
-    override fun writeDescribedObject(obj: Any, data: Data, type: Type, output: SerializationOutput, context: SerializationContext) {
+    override fun writeDescribedObject(
+         obj: Any, data: Data, type: Type, output: SerializationOutput, context: SerializationContext
+    ) {
         throw UnsupportedOperationException("Factory Only")
     }
 }
@@ -64,7 +75,9 @@ private class ConcreteEnumSerializer(
         )
     }
 
-    override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput, context: SerializationContext): Any {
+    override fun readObject(
+        obj: Any, schemas: SerializationSchemas, input: DeserializationInput, context: SerializationContext
+    ): Any {
         val enumName = (obj as List<*>)[0] as String
         val enumOrd = obj[1] as Int
         val fromOrd = members[enumOrd]
@@ -82,7 +95,9 @@ private class ConcreteEnumSerializer(
         abortReadOnly()
     }
 
-    override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput, context: SerializationContext, debugIndent: Int) {
+    override fun writeObject(
+        obj: Any, data: Data, type: Type, output: SerializationOutput, context: SerializationContext, debugIndent: Int
+    ) {
         abortReadOnly()
     }
 }

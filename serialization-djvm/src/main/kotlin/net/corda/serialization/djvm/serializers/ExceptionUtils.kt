@@ -8,6 +8,7 @@ import net.corda.serialization.internal.amqp.AMQPNotSerializableException
  * Since there might be a chain of nested calls it is useful to record which part of the graph caused an issue.
  * Path information is added to the message of the exception being thrown.
  */
+@Suppress("TooGenericExceptionCaught")
 internal inline fun <T> ifThrowsAppend(strToAppendFn: () -> String, block: () -> T): T {
     try {
         return block()

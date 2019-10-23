@@ -1,6 +1,11 @@
 package net.corda.node.services
 
-import net.corda.contracts.djvm.broken.NonDeterministicContract.*
+import net.corda.contracts.djvm.broken.NonDeterministicContract.CurrentTimeMillis
+import net.corda.contracts.djvm.broken.NonDeterministicContract.InstantNow
+import net.corda.contracts.djvm.broken.NonDeterministicContract.NanoTime
+import net.corda.contracts.djvm.broken.NonDeterministicContract.NoOperation
+import net.corda.contracts.djvm.broken.NonDeterministicContract.RandomUUID
+import net.corda.contracts.djvm.broken.NonDeterministicContract.WithReflection
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
@@ -108,8 +113,9 @@ class NonDeterministicContractVerifyTest {
                 alice.rpc.startFlow(::NonDeterministicFlow, WithReflection())
                         .returnValue.getOrThrow()
             }
-            assertThat(ex)
-                .hasMessageStartingWith("RuleViolationError: Disallowed reference to API; java.lang.Class.getDeclaredConstructor(Class[]), ")
+            assertThat(ex).hasMessageStartingWith(
+                "RuleViolationError: Disallowed reference to API; java.lang.Class.getDeclaredConstructor(Class[]), "
+            )
         }
     }
 

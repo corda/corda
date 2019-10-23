@@ -1,3 +1,4 @@
+@file:JvmName("AttachmentConstants")
 package net.corda.node.djvm
 
 import net.corda.core.contracts.Attachment
@@ -7,6 +8,12 @@ import java.io.InputStream
 import java.security.PublicKey
 import java.util.Collections.unmodifiableList
 import java.util.function.Function
+
+private const val SIGNER_KEYS_IDX = 0
+private const val SIZE_IDX = 1
+private const val ID_IDX = 2
+private const val ATTACHMENT_IDX = 3
+private const val STREAMER_IDX = 4
 
 class AttachmentBuilder : Function<Array<Any>?, List<Attachment>?> {
     private val attachments = mutableListOf<Attachment>()
@@ -25,11 +32,11 @@ class AttachmentBuilder : Function<Array<Any>?, List<Attachment>?> {
         } else {
             @Suppress("unchecked_cast")
             attachments.add(SandboxAttachment(
-                signerKeys = inputs[0] as List<PublicKey>,
-                size = inputs[1] as Int,
-                id = inputs[2] as SecureHash,
-                attachment = inputs[3],
-                streamer = inputs[4] as Function<in Any, out InputStream>
+                signerKeys = inputs[SIGNER_KEYS_IDX] as List<PublicKey>,
+                size = inputs[SIZE_IDX] as Int,
+                id = inputs[ID_IDX] as SecureHash,
+                attachment = inputs[ATTACHMENT_IDX],
+                streamer = inputs[STREAMER_IDX] as Function<in Any, out InputStream>
             ))
             null
         }

@@ -1,6 +1,10 @@
 package net.corda.serialization.djvm.deserializers
 
-import java.util.*
+import java.util.Collections
+import java.util.EnumMap
+import java.util.NavigableMap
+import java.util.SortedMap
+import java.util.TreeMap
 import java.util.function.Function
 
 class CreateMap : Function<Array<Any>, Map<Any?, Any?>> {

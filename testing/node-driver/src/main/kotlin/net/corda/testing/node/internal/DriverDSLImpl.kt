@@ -2,14 +2,33 @@ package net.corda.testing.node.internal
 
 import co.paralleluniverse.fibers.instrument.JavaAgent
 import com.google.common.util.concurrent.ThreadFactoryBuilder
-import com.typesafe.config.*
+import com.typesafe.config.Config
+import com.typesafe.config.ConfigFactory
+import com.typesafe.config.ConfigRenderOptions
+import com.typesafe.config.ConfigValue
+import com.typesafe.config.ConfigValueFactory
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.cliutils.CommonCliConstants.BASE_DIR
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.concurrent.firstOf
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.*
-import net.corda.core.internal.concurrent.*
+import net.corda.core.internal.PLATFORM_VERSION
+import net.corda.core.internal.ThreadBox
+import net.corda.core.internal.concurrent.doOnError
+import net.corda.core.internal.concurrent.doneFuture
+import net.corda.core.internal.concurrent.flatMap
+import net.corda.core.internal.concurrent.fork
+import net.corda.core.internal.concurrent.map
+import net.corda.core.internal.concurrent.openFuture
+import net.corda.core.internal.concurrent.transpose
+import net.corda.core.internal.createDirectories
+import net.corda.core.internal.div
+import net.corda.core.internal.list
+import net.corda.core.internal.packageName_
+import net.corda.core.internal.readObject
+import net.corda.core.internal.toPath
+import net.corda.core.internal.uncheckedCast
+import net.corda.core.internal.writeText
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NotaryInfo
@@ -24,7 +43,16 @@ import net.corda.node.internal.Node
 import net.corda.node.internal.NodeWithInfo
 import net.corda.node.internal.clientSslOptionsCompatibleWith
 import net.corda.node.services.Permissions
-import net.corda.node.services.config.*
+import net.corda.node.services.config.ConfigHelper
+import net.corda.node.services.config.FlowOverride
+import net.corda.node.services.config.FlowOverrideConfig
+import net.corda.node.services.config.NetworkServicesConfig
+import net.corda.node.services.config.NodeConfiguration
+import net.corda.node.services.config.NotaryConfig
+import net.corda.node.services.config.configOf
+import net.corda.node.services.config.configureDevKeyAndTrustStores
+import net.corda.node.services.config.parseAsNodeConfiguration
+import net.corda.node.services.config.plus
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
 import net.corda.node.utilities.registration.NodeRegistrationConfiguration
 import net.corda.node.utilities.registration.NodeRegistrationHelper
@@ -60,7 +88,8 @@ import java.time.Duration
 import java.time.Instant
 import java.time.ZoneOffset.UTC
 import java.time.format.DateTimeFormatter
-import java.util.*
+import java.util.Random
+import java.util.UUID
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
@@ -782,7 +811,8 @@ class DriverDSLImpl(
             val excludePackagePattern = "x(antlr**;bftsmart**;ch**;co.paralleluniverse**;com.codahale**;com.esotericsoftware**;" +
                     "com.fasterxml**;com.google**;com.ibm**;com.intellij**;com.jcabi**;com.nhaarman**;com.opengamma**;" +
                     "com.typesafe**;com.zaxxer**;de.javakaffee**;groovy**;groovyjarjarantlr**;groovyjarjarasm**;io.atomix**;" +
-                    "io.github**;io.netty**;jdk**;joptsimple**;junit**;kotlin**;net.corda.djvm**;djvm.**;net.bytebuddy**;net.i2p**;org.apache**;" +
+                    "io.github**;io.netty**;jdk**;joptsimple**;junit**;kotlin**;net.corda.djvm**;djvm.**;net.bytebuddy**;" +
+                    "net.i2p**;org.apache**;" +
                     "org.assertj**;org.bouncycastle**;org.codehaus**;org.crsh**;org.dom4j**;org.fusesource**;org.h2**;" +
                     "org.hamcrest**;org.hibernate**;org.jboss**;org.jcp**;org.joda**;org.junit**;org.mockito**;org.objectweb**;" +
                     "org.objenesis**;org.slf4j**;org.w3c**;org.xml**;org.yaml**;reflectasm**;rx**;org.jolokia**;" +
@@ -805,8 +835,10 @@ class DriverDSLImpl(
                 it += extraCmdLineFlag
             }.toList()
 
-            // The following dependencies are excluded from the classpath of the created JVM, so that the environment resembles a real one as close as possible.
-            // These are either classes that will be added as attachments to the node (i.e. samples, finance, opengamma etc.) or irrelevant testing libraries (test, corda-mock etc.).
+            // The following dependencies are excluded from the classpath of the created JVM,
+            // so that the environment resembles a real one as close as possible.
+            // These are either classes that will be added as attachments to the node (i.e. samples, finance, opengamma etc.)
+            // or irrelevant testing libraries (test, corda-mock etc.).
             // TODO: There is pending work to fix this issue without custom blacklisting. See: https://r3-cev.atlassian.net/browse/CORDA-2164.
             val exclude = listOf("samples", "finance", "integrationTest", "test", "corda-mock", "com.opengamma.strata")
             val cp = ProcessUtilities.defaultClassPath.filterNot { cpEntry ->
@@ -1120,6 +1152,7 @@ class SplitCompatibilityZoneParams(
     override fun config() : NetworkServicesConfig = config
 }
 
+@Suppress("LongParameterList")
 fun <A> internalDriver(
         isDebug: Boolean = DriverParameters().isDebug,
         driverDirectory: Path = DriverParameters().driverDirectory,

@@ -1,7 +1,7 @@
 package net.corda.node.services
 
 import net.corda.contracts.djvm.attachment.SandboxAttachmentContract
-import net.corda.contracts.djvm.attachment.SandboxAttachmentContract.*
+import net.corda.contracts.djvm.attachment.SandboxAttachmentContract.ExtractFile
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor

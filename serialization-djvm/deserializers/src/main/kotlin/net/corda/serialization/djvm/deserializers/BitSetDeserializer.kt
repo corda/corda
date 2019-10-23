@@ -1,7 +1,7 @@
 package net.corda.serialization.djvm.deserializers
 
 import net.corda.serialization.internal.amqp.custom.BitSetSerializer.BitSetProxy
-import java.util.*
+import java.util.BitSet
 import java.util.function.Function
 
 class BitSetDeserializer : Function<BitSetProxy, BitSet> {

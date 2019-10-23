@@ -4,9 +4,9 @@ import greymalkin.ExternalData
 import net.corda.core.serialization.internal._contextSerializationEnv
 import net.corda.core.serialization.serialize
 import net.corda.djvm.messages.Severity
-import net.corda.serialization.djvm.SandboxType.*
+import net.corda.serialization.djvm.SandboxType.KOTLIN
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.extension.ExtendWith

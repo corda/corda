@@ -1,7 +1,7 @@
 package net.corda.serialization.djvm.deserializers
 
 import net.corda.serialization.internal.amqp.custom.OptionalSerializer.OptionalProxy
-import java.util.*
+import java.util.Optional
 import java.util.function.Function
 
 class OptionalDeserializer : Function<OptionalProxy, Optional<Any>> {

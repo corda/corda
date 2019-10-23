@@ -7,7 +7,7 @@ import net.corda.core.utilities.OpaqueBytes
 import java.util.function.Function
 
 class ComponentBuilder : Function<Array<Any?>, List<*>> {
-    @Suppress("unchecked_cast")
+    @Suppress("unchecked_cast", "TooGenericExceptionCaught")
     override fun apply(inputs: Array<Any?>): List<*> {
         val deserializer = inputs[0] as Function<in Any?, out Any?>
         val groupType = inputs[1] as ComponentGroupEnum

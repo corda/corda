@@ -2,7 +2,7 @@ package net.corda.serialization.djvm.deserializers
 
 import net.corda.core.internal.uncheckedCast
 import net.corda.serialization.internal.amqp.custom.EnumSetSerializer.EnumSetProxy
-import java.util.*
+import java.util.EnumSet
 import java.util.function.Function
 
 class EnumSetDeserializer : Function<EnumSetProxy, EnumSet<*>> {

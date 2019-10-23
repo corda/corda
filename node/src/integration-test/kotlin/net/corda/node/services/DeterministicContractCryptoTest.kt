@@ -1,6 +1,6 @@
 package net.corda.node.services
 
-import net.corda.contracts.djvm.crypto.DeterministicCryptoContract.*
+import net.corda.contracts.djvm.crypto.DeterministicCryptoContract.Validate
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.Crypto.DEFAULT_SIGNATURE_SCHEME
 import net.corda.core.messaging.startFlow

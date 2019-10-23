@@ -370,6 +370,7 @@ class BasicVerifier(ltx: LedgerTransaction, transactionClassLoader: ClassLoader)
 /**
  * Verify all of the contracts on the given [LedgerTransaction].
  */
+@Suppress("TooGenericExceptionCaught")
 @KeepForDJVM
 class ContractVerifier(private val transactionClassLoader: ClassLoader) : Function<LedgerTransaction, Unit> {
     // This constructor is used inside the DJVM's sandbox.

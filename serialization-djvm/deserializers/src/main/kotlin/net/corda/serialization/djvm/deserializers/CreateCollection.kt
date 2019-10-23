@@ -1,7 +1,10 @@
 package net.corda.serialization.djvm.deserializers
 
 import net.corda.core.utilities.NonEmptySet
-import java.util.*
+import java.util.Collections
+import java.util.NavigableSet
+import java.util.SortedSet
+import java.util.TreeSet
 import java.util.function.Function
 
 class CreateCollection : Function<Array<Any?>, Collection<Any?>> {
@@ -15,27 +18,27 @@ class CreateCollection : Function<Array<Any?>, Collection<Any?>> {
     )
 
     private fun createList(values: Array<Any?>): List<Any?> {
-        return Collections.unmodifiableList(arrayListOf(*values))
+        return Collections.unmodifiableList(values.toCollection(ArrayList()))
     }
 
     private fun createSet(values: Array<Any?>): Set<Any?> {
-        return Collections.unmodifiableSet(linkedSetOf(*values))
+        return Collections.unmodifiableSet(values.toCollection(LinkedHashSet()))
     }
 
     private fun createSortedSet(values: Array<Any?>): SortedSet<Any?> {
-        return Collections.unmodifiableSortedSet(sortedSetOf(*values))
+        return Collections.unmodifiableSortedSet(values.toCollection(TreeSet()))
     }
 
     private fun createNavigableSet(values: Array<Any?>): NavigableSet<Any?> {
-        return Collections.unmodifiableNavigableSet(sortedSetOf(*values))
+        return Collections.unmodifiableNavigableSet(values.toCollection(TreeSet()))
     }
 
     private fun createCollection(values: Array<Any?>): Collection<Any?> {
-        return Collections.unmodifiableCollection(arrayListOf(*values))
+        return Collections.unmodifiableCollection(values.toCollection(ArrayList()))
     }
 
     private fun createNonEmptySet(values: Array<Any?>): NonEmptySet<Any?> {
-        return NonEmptySet.copyOf(arrayListOf(*values))
+        return NonEmptySet.copyOf(values.toCollection(ArrayList()))
     }
 
     @Suppress("unchecked_cast")

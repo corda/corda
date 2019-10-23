@@ -3,12 +3,12 @@ package net.corda.serialization.djvm
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.internal._contextSerializationEnv
 import net.corda.core.serialization.serialize
-import net.corda.serialization.djvm.SandboxType.*
-import org.junit.jupiter.api.Assertions.*
+import net.corda.serialization.djvm.SandboxType.KOTLIN
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.junit.jupiter.api.fail
-import java.util.*
+import java.util.UUID
 import java.util.function.Function
 
 @ExtendWith(LocalSerialization::class)

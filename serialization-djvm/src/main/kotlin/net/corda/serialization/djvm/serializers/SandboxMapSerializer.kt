@@ -4,14 +4,24 @@ import net.corda.core.serialization.SerializationContext
 import net.corda.djvm.rewiring.SandboxClassLoader
 import net.corda.serialization.djvm.deserializers.CreateMap
 import net.corda.serialization.djvm.toSandboxAnyClass
-import net.corda.serialization.internal.amqp.*
+import net.corda.serialization.internal.amqp.AMQPSerializer
+import net.corda.serialization.internal.amqp.CustomSerializer
+import net.corda.serialization.internal.amqp.DeserializationInput
+import net.corda.serialization.internal.amqp.LocalSerializerFactory
+import net.corda.serialization.internal.amqp.Schema
+import net.corda.serialization.internal.amqp.SerializationOutput
+import net.corda.serialization.internal.amqp.SerializationSchemas
+import net.corda.serialization.internal.amqp.redescribe
 import net.corda.serialization.internal.model.LocalTypeInformation
 import net.corda.serialization.internal.model.TypeIdentifier
 import org.apache.qpid.proton.amqp.Symbol
 import org.apache.qpid.proton.codec.Data
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
-import java.util.*
+import java.util.EnumMap
+import java.util.NavigableMap
+import java.util.SortedMap
+import java.util.TreeMap
 import java.util.function.Function
 
 class SandboxMapSerializer(
@@ -51,11 +61,15 @@ class SandboxMapSerializer(
         return ConcreteMapSerializer(declaredType, getBestMatchFor(rawType), creator, localFactory)
     }
 
-    override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput, context: SerializationContext): Any {
+    override fun readObject(
+        obj: Any, schemas: SerializationSchemas, input: DeserializationInput, context: SerializationContext
+    ): Any {
         throw UnsupportedOperationException("Factory only")
     }
 
-    override fun writeDescribedObject(obj: Any, data: Data, type: Type, output: SerializationOutput, context: SerializationContext) {
+    override fun writeDescribedObject(
+        obj: Any, data: Data, type: Type, output: SerializationOutput, context: SerializationContext
+    ) {
         throw UnsupportedOperationException("Factory Only")
     }
 }
@@ -102,7 +116,9 @@ private class ConcreteMapSerializer(
         abortReadOnly()
     }
 
-    override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput, context: SerializationContext, debugIndent: Int) {
+    override fun writeObject(
+        obj: Any, data: Data, type: Type, output: SerializationOutput, context: SerializationContext, debugIndent: Int
+    ) {
         abortReadOnly()
     }
 }

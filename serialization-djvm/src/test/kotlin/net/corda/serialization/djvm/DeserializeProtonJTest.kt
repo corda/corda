@@ -3,8 +3,15 @@ package net.corda.serialization.djvm
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.internal._contextSerializationEnv
 import net.corda.core.serialization.serialize
-import net.corda.serialization.djvm.SandboxType.*
-import org.apache.qpid.proton.amqp.*
+import net.corda.serialization.djvm.SandboxType.KOTLIN
+import org.apache.qpid.proton.amqp.Decimal128
+import org.apache.qpid.proton.amqp.Decimal32
+import org.apache.qpid.proton.amqp.Decimal64
+import org.apache.qpid.proton.amqp.Symbol
+import org.apache.qpid.proton.amqp.UnsignedByte
+import org.apache.qpid.proton.amqp.UnsignedInteger
+import org.apache.qpid.proton.amqp.UnsignedLong
+import org.apache.qpid.proton.amqp.UnsignedShort
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test

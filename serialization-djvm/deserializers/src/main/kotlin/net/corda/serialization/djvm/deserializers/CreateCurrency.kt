@@ -1,6 +1,6 @@
 package net.corda.serialization.djvm.deserializers
 
-import java.util.*
+import java.util.Currency
 import java.util.function.Function
 
 class CreateCurrency : Function<String, Currency> {

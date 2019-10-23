@@ -104,6 +104,7 @@ val fakeNodeLegalName = CordaX500Name(organisation = "Not:a:real:name", locality
 private val globalPortAllocation = incrementalPortAllocation()
 private val globalDebugPortAllocation = incrementalPortAllocation()
 
+@Suppress("LongParameterList")
 fun <A> rpcDriver(
         isDebug: Boolean = false,
         driverDirectory: Path = Paths.get("build") / "rpc-driver" /  getTimestampAsDirectoryName(),

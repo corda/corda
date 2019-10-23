@@ -4,11 +4,15 @@ import net.corda.core.serialization.SerializationContext
 import net.corda.djvm.rewiring.SandboxClassLoader
 import net.corda.serialization.djvm.deserializers.CreateCurrency
 import net.corda.serialization.djvm.toSandboxAnyClass
-import net.corda.serialization.internal.amqp.*
+import net.corda.serialization.internal.amqp.CustomSerializer
+import net.corda.serialization.internal.amqp.DeserializationInput
+import net.corda.serialization.internal.amqp.Schema
+import net.corda.serialization.internal.amqp.SerializationOutput
+import net.corda.serialization.internal.amqp.SerializationSchemas
 import org.apache.qpid.proton.codec.Data
 import java.lang.reflect.Type
-import java.util.*
 import java.util.Collections.singleton
+import java.util.Currency
 import java.util.function.Function
 
 class SandboxCurrencySerializer(

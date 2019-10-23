@@ -3,15 +3,31 @@ package net.corda.core.transactions
 import net.corda.core.CordaInternal
 import net.corda.core.KeepForDJVM
 import net.corda.core.StubOutForDJVM
-import net.corda.core.contracts.*
+import net.corda.core.contracts.Attachment
+import net.corda.core.contracts.Command
+import net.corda.core.contracts.CommandData
+import net.corda.core.contracts.CommandWithParties
+import net.corda.core.contracts.ComponentGroupEnum
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.PrivacySalt
+import net.corda.core.contracts.StateAndRef
+import net.corda.core.contracts.TimeWindow
+import net.corda.core.contracts.TransactionState
+import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.Party
-import net.corda.core.internal.*
+import net.corda.core.internal.BasicVerifier
+import net.corda.core.internal.SerializedStateAndRef
+import net.corda.core.internal.Verifier
+import net.corda.core.internal.castIfPossible
+import net.corda.core.internal.deserialiseCommands
+import net.corda.core.internal.deserialiseComponentGroup
+import net.corda.core.internal.isUploaderTrusted
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.node.NetworkParameters
 import net.corda.core.serialization.internal.AttachmentsClassLoaderBuilder
 import net.corda.core.utilities.contextLogger
-import java.util.*
 import java.util.Collections.unmodifiableList
 import java.util.function.Predicate
 
@@ -37,6 +53,7 @@ import java.util.function.Predicate
  *
  * [LedgerTransaction]s should never be instantiated directly from client code, but rather via WireTransaction.toLedgerTransaction
  */
+@Suppress("LongParameterList")
 @KeepForDJVM
 class LedgerTransaction
 private constructor(

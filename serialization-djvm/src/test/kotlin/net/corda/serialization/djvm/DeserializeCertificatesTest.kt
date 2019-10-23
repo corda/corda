@@ -2,7 +2,7 @@ package net.corda.serialization.djvm
 
 import net.corda.core.serialization.internal._contextSerializationEnv
 import net.corda.core.serialization.serialize
-import net.corda.serialization.djvm.SandboxType.*
+import net.corda.serialization.djvm.SandboxType.KOTLIN
 import org.assertj.core.api.Assertions.assertThat
 import org.bouncycastle.asn1.x509.CRLReason
 import org.bouncycastle.asn1.x500.X500Name

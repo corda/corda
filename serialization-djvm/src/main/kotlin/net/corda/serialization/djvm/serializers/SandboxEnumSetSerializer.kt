@@ -6,8 +6,8 @@ import net.corda.serialization.djvm.toSandboxAnyClass
 import net.corda.serialization.internal.amqp.CustomSerializer
 import net.corda.serialization.internal.amqp.SerializerFactory
 import net.corda.serialization.internal.amqp.custom.EnumSetSerializer.EnumSetProxy
-import java.util.*
 import java.util.Collections.singleton
+import java.util.EnumSet
 import java.util.function.Function
 
 class SandboxEnumSetSerializer(
