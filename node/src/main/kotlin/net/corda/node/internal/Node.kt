@@ -142,6 +142,7 @@ open class Node(configuration: NodeConfiguration,
     companion object {
         private const val CORDA_DETERMINISTIC_RUNTIME_ATTR = "Corda-Deterministic-Runtime"
         private const val CORDA_DETERMINISTIC_CLASSPATH_ATTR = "Corda-Deterministic-Classpath"
+        private const val CORDA_DJVM = "corda.djvm"
 
         private val staticLog = contextLogger()
         var renderBasicInfoToConsole = true
@@ -248,8 +249,10 @@ open class Node(configuration: NodeConfiguration,
             val djvm = config.devModeOptions?.djvm
             return if (config.devMode && djvm != null) {
                 djvm.bootstrapSource?.let { BootstrapClassLoader(Paths.get(it)) } ?: EmptyApi
-            } else {
+            } else if (java.lang.Boolean.getBoolean(CORDA_DJVM)) {
                 createManifestBootstrapSource(config)
+            } else {
+                EmptyApi
             }
         }
 
@@ -261,8 +264,10 @@ open class Node(configuration: NodeConfiguration,
                 } else {
                     UserPathSource(djvm.cordaSource.map { Paths.get(it) })
                 }
-            } else {
+            } else if (java.lang.Boolean.getBoolean(CORDA_DJVM)) {
                 createManifestCordaSource(config)
+            } else {
+                null
             }
         }
     }
