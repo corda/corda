@@ -1,12 +1,10 @@
-package net.corda.testing;
+package net.corda.testing.balancing;
 
 import org.hamcrest.collection.IsIterableContainingInAnyOrder;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -17,11 +15,10 @@ public class BucketingAllocatorTest {
 
     @Test
     public void shouldAlwaysBucketTestsEvenIfNotInTimedFile() {
-
-        BucketingAllocator bucketingAllocator = new BucketingAllocator(1, Collections::emptyList);
+        BucketingAllocator bucketingAllocator = BucketingAllocator.create(1, Stream::empty);
 
         Object task = new Object();
-        bucketingAllocator.addSource(() -> Arrays.asList("SomeTestingClass", "AnotherTestingClass"), task);
+        bucketingAllocator.addSource(() -> Stream.of("SomeTestingClass", "AnotherTestingClass"), task);
 
         bucketingAllocator.generateTestPlan();
         List<String> testsForForkAndTestTask = bucketingAllocator.getTestsForForkAndTestTask(0, task);
@@ -30,14 +27,12 @@ public class BucketingAllocatorTest {
 
     }
 
-
     @Test
     public void shouldAllocateTestsAcrossForksEvenIfNoMatchingTestsFound() {
-
-        BucketingAllocator bucketingAllocator = new BucketingAllocator(2, Collections::emptyList);
+        BucketingAllocator bucketingAllocator = BucketingAllocator.create(2, Stream::empty);
 
         Object task = new Object();
-        bucketingAllocator.addSource(() -> Arrays.asList("SomeTestingClass", "AnotherTestingClass"), task);
+        bucketingAllocator.addSource(() -> Stream.of("SomeTestingClass", "AnotherTestingClass"), task);
 
         bucketingAllocator.generateTestPlan();
         List<String> testsForForkOneAndTestTask = bucketingAllocator.getTestsForForkAndTestTask(0, task);

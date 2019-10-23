@@ -1,6 +1,8 @@
 package net.corda.testing
 
 import com.bmuschko.gradle.docker.tasks.image.DockerPushImage
+import net.corda.testing.balancing.BucketingAllocatorTask
+import net.corda.testing.listing.ListTests
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.tasks.testing.Test

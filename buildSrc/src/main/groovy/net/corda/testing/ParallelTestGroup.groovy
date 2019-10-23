@@ -1,5 +1,6 @@
 package net.corda.testing
 
+import net.corda.testing.listing.Distribution
 import org.gradle.api.DefaultTask
 
 class ParallelTestGroup extends DefaultTask {

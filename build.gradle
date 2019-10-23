@@ -1,6 +1,6 @@
 import net.corda.testing.DistributedTesting
 import net.corda.testing.ImageBuilding
-import net.corda.testing.Distribution
+import net.corda.testing.listing.Distribution
 import net.corda.testing.ParallelTestGroup
 
 import static org.gradle.api.JavaVersion.VERSION_11
