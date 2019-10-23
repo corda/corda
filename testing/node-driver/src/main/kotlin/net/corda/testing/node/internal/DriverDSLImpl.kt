@@ -707,8 +707,13 @@ class DriverDSLImpl(
          * These will all be ignored unless devMode is also true.
          */
         private fun Config.withDJVMConfig(bootstrapSource: Path?, cordaSource: List<Path>): Config {
-            return withOptionalValue("devModeOptions.djvm.bootstrapSource", bootstrapSource) { path -> valueFor(path.toString()) }
-                .withValue("devModeOptions.djvm.cordaSource", valueFor(cordaSource.map(Path::toString)))
+            return if (hasPath("devMode") && getBoolean("devMode")) {
+                withOptionalValue("devModeOptions.djvm.bootstrapSource", bootstrapSource) { path ->
+                    valueFor(path.toString())
+                }.withValue("devModeOptions.djvm.cordaSource", valueFor(cordaSource.map(Path::toString)))
+            } else {
+                this
+            }
         }
 
         private inline fun <T> Config.withOptionalValue(key: String, obj: T?, body: (T) -> ConfigValue): Config {
