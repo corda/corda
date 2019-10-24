@@ -11,11 +11,16 @@ import org.junit.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -94,8 +99,8 @@ public class TestDurationArtifactsTest {
 
         Assert.assertFalse("Should have results", results.isEmpty());
         Assert.assertEquals(results.size(), 2);
-        Assert.assertEquals( CLASSNAME + "." + "TEST-A",results.get(0).getFirst());
-        Assert.assertEquals( 111_000_000L, results.get(0).getSecond().longValue());
+        Assert.assertEquals(CLASSNAME + "." + "TEST-A", results.get(0).getFirst());
+        Assert.assertEquals(111_000_000L, results.get(0).getSecond().longValue());
         Assert.assertEquals(CLASSNAME + "." + "TEST-B", results.get(1).getFirst());
         Assert.assertEquals(222_200_000L, results.get(1).getSecond().longValue());
     }
@@ -115,8 +120,8 @@ public class TestDurationArtifactsTest {
 
         Assert.assertFalse("Should have results", results.isEmpty());
         Assert.assertEquals(results.size(), 2);
-        Assert.assertEquals( CLASSNAME + "." + "TEST-A",results.get(0).getFirst());
-        Assert.assertEquals( 0L, results.get(0).getSecond().longValue());
+        Assert.assertEquals(CLASSNAME + "." + "TEST-A", results.get(0).getFirst());
+        Assert.assertEquals(0L, results.get(0).getSecond().longValue());
         Assert.assertEquals(CLASSNAME + "." + "TEST-B", results.get(1).getFirst());
         Assert.assertEquals(0L, results.get(1).getSecond().longValue());
     }
@@ -137,8 +142,8 @@ public class TestDurationArtifactsTest {
 
         Assert.assertFalse("Should have results", results.isEmpty());
         Assert.assertEquals(results.size(), 2);
-        Assert.assertEquals( CLASSNAME + "." + "TEST-A",results.get(0).getFirst());
-        Assert.assertEquals( 0L, results.get(0).getSecond().longValue());
+        Assert.assertEquals(CLASSNAME + "." + "TEST-A", results.get(0).getFirst());
+        Assert.assertEquals(0L, results.get(0).getSecond().longValue());
         Assert.assertEquals(CLASSNAME + "." + "TEST-B", results.get(1).getFirst());
         Assert.assertEquals(0L, results.get(1).getSecond().longValue());
     }
@@ -246,17 +251,6 @@ public class TestDurationArtifactsTest {
 ////        System.out.println(results.toString());
 ////    }
 
-    //     Uncomment and change path to check the file code works ok.
-    @Test
-    public void tryAndWalkForTestXmlFiles() {
-//        List<Path> testXmlFiles = TestDurationArtifacts.getTestXmlFiles(
-//                Paths.get(System.getProperty("project.root"), "/corda-os"));
-//        Assert.assertFalse(testXmlFiles.isEmpty());
-//
-//        for (Path testXmlFile : testXmlFiles) {
-//            System.out.println(testXmlFile.toString());
-//        }
-    }
 
     @Test
     public void branchNamesDoNotHaveDirectoryDelimiters() {
@@ -296,5 +290,34 @@ public class TestDurationArtifactsTest {
         Assert.assertTrue(TestDurationArtifacts.tests.isEmpty());
         TestDurationArtifacts.loadTests();
         Assert.assertFalse(TestDurationArtifacts.tests.isEmpty());
+    }
+
+    @Test
+    public void tryAndWalkForTestXmlFiles() {
+        final String xmlRoot = System.getenv("JUNIT_XML_ROOT");
+        if (xmlRoot == null) {
+            System.out.println("Set JUNIT_XML_ROOT to run this test");
+            return;
+        }
+
+        List<Path> testXmlFiles = TestDurationArtifacts.getTestXmlFiles(Paths.get(xmlRoot));
+        Assert.assertFalse(testXmlFiles.isEmpty());
+
+        for (Path testXmlFile : testXmlFiles.stream().sorted().collect(Collectors.toList())) {
+            System.out.println(testXmlFile.toString());
+        }
+        System.out.println("\n\nTESTS\n\n");
+        for (Path testResult : testXmlFiles) {
+            try {
+                final List<Tuple2<String, Long>> unitTests = TestDurationArtifacts.fromJunitXml(new FileInputStream(testResult.toFile()));
+                for (Tuple2<String, Long> unitTest : unitTests) {
+                    System.out.println(unitTest.getFirst());
+                }
+
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+            }
+        }
+        Assert.fail();
     }
 }

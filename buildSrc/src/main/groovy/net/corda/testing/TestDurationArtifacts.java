@@ -194,7 +194,7 @@ public class TestDurationArtifacts {
         });
     }
 
-    private static List<Path> getTestXmlFiles(@NotNull final Path rootDir) {
+    static List<Path> getTestXmlFiles(@NotNull final Path rootDir) {
         List<Path> paths = new ArrayList<>();
         List<PathMatcher> matchers = new ArrayList<>();
         matchers.add(FileSystems.getDefault().getPathMatcher("glob:**/build/test-results-xml/**/*.xml"));

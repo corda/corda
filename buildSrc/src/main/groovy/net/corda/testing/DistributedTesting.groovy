@@ -98,9 +98,9 @@ class DistributedTesting implements Plugin<Project> {
                 def zipTask = TestDurationArtifacts.createZipTask(project.rootProject,
                         "zipTestDurationsResultsFor" + testGrouping.name.capitalize());
 
-                userDefinedParallelTask.finalizedBy(zipTask)
                 userDefinedParallelTask.finalizedBy(reportOnAllTask)
-                testGrouping.dependsOn(userDefinedParallelTask)
+                zipTask.dependsOn(userDefinedParallelTask)
+                testGrouping.dependsOn(zipTask)
             }
         }
 
