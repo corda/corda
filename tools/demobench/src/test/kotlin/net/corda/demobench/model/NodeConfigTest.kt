@@ -41,10 +41,12 @@ class NodeConfigTest {
                 .withFallback(ConfigFactory.parseMap(mapOf("devMode" to true)))
                 .resolve()
         val fullConfig = nodeConfig.parseAsNodeConfiguration().value()
+        val systemProperties = nodeConfig.getConfig("systemProperties").toProperties()
 
         // No custom configuration is created by default.
         assertFailsWith<ConfigException.Missing> { nodeConfig.getConfig("custom") }
-        assertEquals(true.toString(), nodeConfig.getConfig("systemProperties").toProperties().getProperty("net.corda.djvm"))
+        assertEquals(true.toString(), systemProperties.getProperty("net.corda.djvm"))
+        assertEquals(false.toString(), systemProperties.getProperty("co.paralleluniverse.fibers.verifyInstrumentation"))
 
         assertEquals(myLegalName, fullConfig.myLegalName)
         assertEquals(localPort(40002), fullConfig.rpcOptions.address)

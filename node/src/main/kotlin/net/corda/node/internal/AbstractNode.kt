@@ -414,7 +414,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     open fun start(): S {
         check(started == null) { "Node has already been started" }
 
-        if (configuration.devMode) {
+        if (configuration.devMode && System.getProperty("co.paralleluniverse.fibers.verifyInstrumentation") == null) {
             System.setProperty("co.paralleluniverse.fibers.verifyInstrumentation", "true")
         }
         log.info("Node starting up ...")

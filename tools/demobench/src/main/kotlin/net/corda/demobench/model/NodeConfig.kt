@@ -42,7 +42,10 @@ data class NodeConfig(
 ) {
     companion object {
         val renderOptions: ConfigRenderOptions = ConfigRenderOptions.defaults().setOriginComments(false)
-        val systemProperties: Map<String, Any> = mapOf("net.corda.djvm" to true)
+        val systemProperties: Map<String, Any> = mapOf(
+                "net.corda.djvm" to true,
+                "co.paralleluniverse.fibers.verifyInstrumentation" to false
+        )
         val defaultUser = user("guest")
         const val CORDAPP_DIR_NAME = "cordapps"
     }
