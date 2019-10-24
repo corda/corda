@@ -318,6 +318,5 @@ public class TestDurationArtifactsTest {
                 e.printStackTrace();
             }
         }
-        Assert.fail();
     }
 }
