@@ -31,7 +31,7 @@ class SchemaMigration(
         // This parameter is used by the vault state migration to establish what the node's legal identity is when setting up
         // its copy of the identity service. It is passed through using a system property. When multiple identity support is added, this will need
         // reworking so that multiple identities can be passed to the migration.
-        private val ourName: CordaX500Name,
+        private val ourName: CordaX500Name? = null,
         // This parameter forces an error to be thrown if there are missing migrations. When using H2, Hibernate will automatically create schemas where they are
         // missing, so no need to throw unless you're specifically testing whether all the migrations are present.
         private val forceThrowOnMissingMigration: Boolean = false) {
@@ -99,7 +99,11 @@ class SchemaMigration(
                 null
             }
 
-    private fun doRunMigration(run: Boolean, check: Boolean, existingCheckpoints: Boolean? = null) {
+    private fun doRunMigration(
+            run: Boolean,
+            check: Boolean,
+            existingCheckpoints: Boolean? = null
+    ) {
 
         // Virtual file name of the changelog that includes all schemas.
         val dynamicInclude = "master.changelog.json"
@@ -121,7 +125,9 @@ class SchemaMigration(
             if (path != null) {
                 System.setProperty(NODE_BASE_DIR_KEY, path) // base dir for any custom change set which may need to load a file (currently AttachmentVersionNumberMigration)
             }
-            System.setProperty(NODE_X500_NAME, ourName.toString())
+            if (ourName != null) {
+                System.setProperty(NODE_X500_NAME, ourName.toString())
+            }
             val customResourceAccessor = CustomResourceAccessor(dynamicInclude, changelogList, classLoader)
             checkResourcesInClassPath(changelogList)
 
