@@ -4,15 +4,28 @@ import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * A single class to hold some of the properties we need to get from the command line
+ * in order to store test results in Artifactory.
+ */
 public class Properties {
     private static final Logger LOG = LoggerFactory.getLogger(Properties.class);
 
     private static String CORDA_TYPE = "corda"; // corda or enterprise
 
+    /**
+     * Set the Corda (repo) type - either enterprise, or corda (open-source).
+     * Used in the tag names when we store in Artifactory.
+     * @param cordaType the corda repo type.
+     */
     static void setCordaType(@NotNull final String cordaType) {
         CORDA_TYPE = cordaType;
     }
 
+    /**
+     * Get the Corda type.  Used in the tag names when we store in Artifactory.
+     * @return either 'corda' or 'enterprise'
+     */
     static String getCordaType() { return CORDA_TYPE; }
 
     /**
@@ -31,10 +44,18 @@ public class Properties {
         return value;
     }
 
+    /**
+     * Get Artifactory username
+     * @return the username
+     */
     static String getUsername() {
         return getProperty("artifactory.username");
     }
 
+    /**
+     * Get Artifactory password
+     * @return the password
+     */
     static String getPassword() {
         return getProperty("artifactory.password");
     }

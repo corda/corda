@@ -32,10 +32,6 @@ public class Tests {
     private final Map<String, Tuple2<Long, Long>> tests = new HashMap<>();
     // mean, count
     private Tuple2<Long, Long> meanForTests = new Tuple2<>(1L, 0L);
-    // as we add more tests with the same className prefix, maintain the mean duration for classes.
-    private long meanDurationForClasses = 1L;
-    // All the unique classNames of all the tests
-    private Set<String> classNames = new HashSet<>();
 
     /**
      * Read tests, mean duration and runs from a csv file.
@@ -110,19 +106,13 @@ public class Tests {
      * @param testsCollection tests, typically from a csv file.
      */
     public void addTests(@NotNull final List<Tuple3<String, Long, Long>> testsCollection) {
-        for (Tuple3<String, Long, Long> test : testsCollection) {
-            final String testName = test.getFirst();
-            this.tests.put(testName, new Tuple2<>(test.getSecond(), test.getThird()));
-
-            classNames.add(getClassName(testName));
-        }
+        testsCollection.forEach(t -> this.tests.put(t.getFirst(), new Tuple2<>(t.getSecond(), t.getThird())));
 
         // Calculate the mean test time.
         if (tests.size() > 0) {
             long total = 0;
             for (String testName : this.tests.keySet()) total += tests.get(testName).getFirst();
             meanForTests = new Tuple2<>(total / this.tests.size(), 1L);
-            meanDurationForClasses = (meanForTests.getFirst() * tests.size()) / classNames.size();
         }
     }
 
@@ -150,20 +140,6 @@ public class Tests {
         LOG.debug("Recorded test '{}', mean={} ns, runs={}", testName, tests.get(testName).getFirst(), tests.get(testName).getSecond());
 
         meanForTests = recalculateMean(meanForTests, durationNanos);
-
-        classNames.add(getClassName(testName));
-
-        meanDurationForClasses = (meanForTests.getFirst() * tests.size()) / classNames.size();
-    }
-
-    /**
-     * Get the mean duration for a class of unit tests.
-     * This is simply (the mean test duration  *  the number of known tests)  /  number of classes
-     *
-     * @return mean duration for a class of unit tests to execute in nanos.
-     */
-    public long getMeanDurationForClasses() {
-        return meanDurationForClasses;
     }
 
     /**
@@ -224,10 +200,8 @@ public class Tests {
     /**
      * Clear all tests
      */
-    public void clear() {
+    void clear() {
         tests.clear();
-        classNames.clear();
         meanForTests = new Tuple2<>(1L, 0L);
-        meanDurationForClasses = 1L;
     }
 }
