@@ -85,7 +85,7 @@ class DistributedTesting implements Plugin<Project> {
                 }
                 def reportOnAllTask = project.rootProject.tasks.create("userDefinedReports${testGrouping.name.capitalize()}", KubesReporting) {
                     dependsOn userDefinedParallelTask
-                    destinationDir new File(KubesTest.TEST_RUN_DIR, "userDefinedReports${testGrouping.name.capitalize()}")
+                    destinationDir new File(project.rootProject.getBuildDir(), "userDefinedReports${testGrouping.name.capitalize()}")
                     doFirst {
                         destinationDir.deleteDir()
                         shouldPrintOutput = !testGrouping.printToStdOut
