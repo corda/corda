@@ -54,6 +54,7 @@ import net.corda.node.services.rpc.RPCServerConfiguration
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.utilities.*
 import net.corda.nodeapi.internal.ArtemisMessagingClient
+import net.corda.nodeapi.internal.ArtemisMessagingComponent
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.INTERNAL_SHELL_USER
 import net.corda.nodeapi.internal.ShutdownHook
 import net.corda.nodeapi.internal.addShutdownHook
@@ -253,7 +254,8 @@ open class Node(configuration: NodeConfiguration,
                 ?: SecurityConfiguration.AuthService.fromUsers(configuration.rpcUsers)
 
         val securityManager = with(RPCSecurityManagerImpl(securityManagerConfig, cacheFactory)) {
-            if (configuration.shouldStartLocalShell()) RPCSecurityManagerWithAdditionalUser(this, User(INTERNAL_SHELL_USER, INTERNAL_SHELL_USER, setOf(Permissions.all()))) else this
+            if (configuration.shouldStartLocalShell()) RPCSecurityManagerWithAdditionalUser(this,
+                User(INTERNAL_SHELL_USER, ArtemisMessagingComponent.internalShellPassword, setOf(Permissions.all()))) else this
         }
 
         val messageBroker = if (!configuration.messagingServerExternal) {
