@@ -50,9 +50,11 @@ task runtimeJar(type: Jar, dependsOn: makeJdk) {
     baseName 'deterministic-rt'
     inputs.dir "libs"
 
-    from(zipTree("libs/rt.jar"))
-    from(zipTree("libs/jce.jar"))
-    from(zipTree("libs/jsse.jar"))
+    from(zipTree('libs/rt.jar'))
+    from(zipTree('libs/jce.jar'))
+    from(zipTree('libs/jsse.jar'))
+    from 'libs/currency.data'
+    from 'libs/tzdb.dat'
 
     reproducibleFileOrder = true
     includeEmptyDirs = false
@@ -102,16 +104,37 @@ task apiJar(type: Jar, dependsOn: runtimeJar) {
         exclude 'java/io/FileReader*.class'
         exclude 'java/io/FileSystem*.class'
         exclude 'java/io/File*Stream*.class'
+        exclude 'java/io/ObjectInputStream*.class'
+        exclude 'java/io/ObjectOutputStream*.class'
+        exclude 'java/io/ObjectStreamClass.class'
+        exclude 'java/io/ObjectStreamConstants.class'
+        exclude 'java/io/ObjectStreamField.class'
         exclude 'java/net/*Content*.class'
         exclude 'java/net/Host*.class'
         exclude 'java/net/Inet*.class'
+        exclude 'java/nio/channels/FileChannel*.class'
+        exclude 'java/nio/channels/spi/'
         exclude 'java/nio/file/Path.class'
         exclude 'java/nio/file/attribute/'
         exclude 'java/util/SplittableRandom*.class'
         exclude 'java/util/Random.class'
         exclude 'java/util/Random$*.class'
         exclude 'java/util/WeakHashMap*.class'
-        exclude 'java/util/concurrent/*.class'
+        exclude 'java/util/concurrent/Blocking*.class'
+        exclude 'java/util/concurrent/CompletionService.class'
+        exclude 'java/util/concurrent/CompletionStage.class'
+        exclude 'java/util/concurrent/ConcurrentLinked*.class'
+        exclude 'java/util/concurrent/ConcurrentNavigable*.class'
+        exclude 'java/util/concurrent/CopyOnWrite*.class'
+        exclude 'java/util/concurrent/*Executor*.class'
+        exclude 'java/util/concurrent/Future*.class'
+        exclude 'java/util/concurrent/Linked*.class'
+        exclude 'java/util/concurrent/RejectedExecution*.class'
+        exclude 'java/util/concurrent/Runnable*.class'
+        exclude 'java/util/concurrent/Semaphore*.class'
+        exclude 'java/util/concurrent/Synchronous*.class'
+        exclude 'java/util/concurrent/Thread*.class'
+        exclude 'java/util/concurrent/TransferQueue.class'
         exclude 'java/util/concurrent/locks/'
         exclude 'javax/activation/'
     }
