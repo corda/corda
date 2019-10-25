@@ -89,9 +89,7 @@ public class KubesTest extends DefaultTask {
         String stableRunId = rnd64Base36(new Random(buildId.hashCode() + currentUser.hashCode() + taskToExecuteName.hashCode()));
         String random = rnd64Base36(new Random());
 
-        final KubernetesClient client = getKubernetesClient();
-
-        try {
+        try (KubernetesClient client = getKubernetesClient()) {
             client.pods().inNamespace(NAMESPACE).list().getItems().forEach(podToDelete -> {
                 if (podToDelete.getMetadata().getName().contains(stableRunId)) {
                     getProject().getLogger().lifecycle("deleting: " + podToDelete.getMetadata().getName());
@@ -105,7 +103,7 @@ public class KubesTest extends DefaultTask {
         List<Future<KubePodResult>> futures = IntStream.range(0, numberOfPods).mapToObj(i -> {
             String potentialPodName = (taskToExecuteName + "-" + stableRunId + random + i).toLowerCase();
             String podName = potentialPodName.substring(0, Math.min(potentialPodName.length(), 62));
-            return submitBuild(client, NAMESPACE, numberOfPods, i, podName, printOutput, 3);
+            return submitBuild(NAMESPACE, numberOfPods, i, podName, printOutput, 3);
         }).collect(Collectors.toList());
 
         this.testOutput = Collections.synchronizedList(futures.stream().map(it -> {
@@ -144,7 +142,6 @@ public class KubesTest extends DefaultTask {
     }
 
     private CompletableFuture<KubePodResult> submitBuild(
-            KubernetesClient client,
             String namespace,
             int numberOfPods,
             int podIdx,
@@ -153,7 +150,7 @@ public class KubesTest extends DefaultTask {
             int numberOfRetries
     ) {
         return CompletableFuture.supplyAsync(() -> {
-            return buildRunPodWithRetriesOrThrow(client, namespace, numberOfPods, podIdx, podName, printOutput, numberOfRetries);
+            return buildRunPodWithRetriesOrThrow(namespace, numberOfPods, podIdx, podName, printOutput, numberOfRetries);
         }, executorService);
     }
 
@@ -180,7 +177,6 @@ public class KubesTest extends DefaultTask {
     }
 
     private KubePodResult buildRunPodWithRetriesOrThrow(
-            KubernetesClient client,
             String namespace,
             int numberOfPods,
             int podIdx,
@@ -190,55 +186,76 @@ public class KubesTest extends DefaultTask {
     ) {
         addShutdownHook(() -> {
             System.out.println("deleting pod: " + podName);
-            client.pods().inNamespace(namespace).withName(podName).delete();
+            try (KubernetesClient client = getKubernetesClient()) {
+                client.pods().inNamespace(namespace).withName(podName).delete();
+            }
         });
 
         try {
             // pods might die, so we retry
             return Retry.fixed(numberOfRetries).run(() -> {
                 // remove pod if exists
-                PodResource<Pod, DoneablePod> oldPod = client.pods().inNamespace(namespace).withName(podName);
-                if (oldPod.get() != null) {
-                    getLogger().lifecycle("deleting pod: {}", podName);
-                    oldPod.delete();
-                    while (oldPod.get() != null) {
-                        getLogger().info("waiting for pod {} to be removed", podName);
-                        Thread.sleep(1000);
+                Pod createdPod;
+                try (KubernetesClient client = getKubernetesClient()) {
+                    PodResource<Pod, DoneablePod> oldPod = client.pods().inNamespace(namespace).withName(podName);
+                    if (oldPod.get() != null) {
+                        getLogger().lifecycle("deleting pod: {}", podName);
+                        oldPod.delete();
+                        while (oldPod.get() != null) {
+                            getLogger().info("waiting for pod {} to be removed", podName);
+                            Thread.sleep(1000);
+                        }
                     }
+                    getProject().getLogger().lifecycle("creating pod: " + podName);
+                    createdPod = client.pods().inNamespace(namespace).create(buildPodRequest(podName));
+                    getProject().getLogger().lifecycle("scheduled pod: " + podName);
                 }
 
-                // recreate and run
-                getProject().getLogger().lifecycle("creating pod: " + podName);
-                Pod createdPod = client.pods().inNamespace(namespace).create(buildPodRequest(podName));
-                getProject().getLogger().lifecycle("scheduled pod: " + podName);
-
-                attachStatusListenerToPod(client, createdPod);
-                waitForPodToStart(client, createdPod);
+                attachStatusListenerToPod(createdPod);
+                waitForPodToStart(createdPod);
 
                 PipedOutputStream stdOutOs = new PipedOutputStream();
                 PipedInputStream stdOutIs = new PipedInputStream(4096);
                 ByteArrayOutputStream errChannelStream = new ByteArrayOutputStream();
 
                 CompletableFuture<Integer> waiter = new CompletableFuture<>();
-                ExecListener execListener = buildExecListenerForPod(podName, errChannelStream, waiter);
-                stdOutIs.connect(stdOutOs);
-                client.pods().inNamespace(namespace).withName(podName)
-                        .writingOutput(stdOutOs)
-                        .writingErrorChannel(errChannelStream)
-                        .usingListener(execListener)
-                        .exec(getBuildCommand(numberOfPods, podIdx));
+                File podOutput = executeBuild(namespace, numberOfPods, podIdx, podName, printOutput, stdOutOs, stdOutIs, errChannelStream, waiter);
 
-                File podOutput = startLogPumping(stdOutIs, podIdx, printOutput);
                 int resCode = waiter.join();
                 getProject().getLogger().lifecycle("build has ended on on pod " + podName + " (" + podIdx + "/" + numberOfPods + "), gathering results");
-                Collection<File> binaryResults = downloadTestXmlFromPod(client, namespace, createdPod);
+                Collection<File> binaryResults = downloadTestXmlFromPod(namespace, createdPod);
                 getLogger().lifecycle("removing pod " + podName + " (" + podIdx + "/" + numberOfPods + ") after completed build");
-                client.pods().delete(createdPod);
+                try (KubernetesClient client = getKubernetesClient()) {
+                    client.pods().delete(createdPod);
+                }
                 return new KubePodResult(resCode, podOutput, binaryResults);
             });
         } catch (Retry.RetryException e) {
             throw new RuntimeException("Failed to build in pod " + podName + " (" + podIdx + "/" + numberOfPods + ") in " + numberOfRetries + " attempts", e);
         }
+    }
+
+    @NotNull
+    private File executeBuild(String namespace,
+                              int numberOfPods,
+                              int podIdx,
+                              String podName,
+                              boolean printOutput,
+                              PipedOutputStream stdOutOs,
+                              PipedInputStream stdOutIs,
+                              ByteArrayOutputStream errChannelStream,
+                              CompletableFuture<Integer> waiter) throws IOException {
+        KubernetesClient client = getKubernetesClient();
+        ExecListener execListener = buildExecListenerForPod(podName, errChannelStream, waiter);
+        stdOutIs.connect(stdOutOs);
+
+        client.pods().inNamespace(namespace).withName(podName)
+                .writingOutput(stdOutOs)
+                .writingErrorChannel(errChannelStream)
+                .usingListener(execListener)
+                .exec(getBuildCommand(numberOfPods, podIdx));
+
+        return startLogPumping(stdOutIs, podIdx, printOutput);
     }
 
     private Pod buildPodRequest(String podName) {
@@ -320,7 +337,8 @@ public class KubesTest extends DefaultTask {
         return outputFile;
     }
 
-    private Watch attachStatusListenerToPod(KubernetesClient client, Pod pod) {
+    private Watch attachStatusListenerToPod(Pod pod) {
+        KubernetesClient client = getKubernetesClient();
         return client.pods().inNamespace(pod.getMetadata().getNamespace()).withName(pod.getMetadata().getName()).watch(new Watcher<Pod>() {
             @Override
             public void eventReceived(Watcher.Action action, Pod resource) {
@@ -329,21 +347,24 @@ public class KubesTest extends DefaultTask {
 
             @Override
             public void onClose(KubernetesClientException cause) {
+                client.close();
             }
         });
     }
 
-    private void waitForPodToStart(KubernetesClient client, Pod pod) {
-        getProject().getLogger().lifecycle("Waiting for pod " + pod.getMetadata().getName() + " to start before executing build");
-        try {
-            client.pods().inNamespace(pod.getMetadata().getNamespace()).withName(pod.getMetadata().getName()).waitUntilReady(timeoutInMinutesForPodToStart, TimeUnit.MINUTES);
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
+    private void waitForPodToStart(Pod pod) {
+        try (KubernetesClient client = getKubernetesClient()) {
+            getProject().getLogger().lifecycle("Waiting for pod " + pod.getMetadata().getName() + " to start before executing build");
+            try {
+                client.pods().inNamespace(pod.getMetadata().getNamespace()).withName(pod.getMetadata().getName()).waitUntilReady(timeoutInMinutesForPodToStart, TimeUnit.MINUTES);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+            getProject().getLogger().lifecycle("pod " + pod.getMetadata().getName() + " has started, executing build");
         }
-        getProject().getLogger().lifecycle("pod " + pod.getMetadata().getName() + " has started, executing build");
     }
 
-    private Collection<File> downloadTestXmlFromPod(KubernetesClient client, String namespace, Pod cp) {
+    private Collection<File> downloadTestXmlFromPod(String namespace, Pod cp) {
         String resultsInContainerPath = "/tmp/source/build/test-reports";
         String binaryResultsFile = "results.bin";
         String podName = cp.getMetadata().getName();
@@ -352,14 +373,14 @@ public class KubesTest extends DefaultTask {
         if (!tempDir.toFile().exists()) {
             tempDir.toFile().mkdirs();
         }
-
         getProject().getLogger().lifecycle("Saving " + podName + " results to: " + tempDir.toAbsolutePath().toFile().getAbsolutePath());
-        client.pods()
-                .inNamespace(namespace)
-                .withName(podName)
-                .dir(resultsInContainerPath)
-                .copy(tempDir);
-
+        try (KubernetesClient client = getKubernetesClient()) {
+            client.pods()
+                    .inNamespace(namespace)
+                    .withName(podName)
+                    .dir(resultsInContainerPath)
+                    .copy(tempDir);
+        }
         return findFolderContainingBinaryResultsFile(new File(tempDir.toFile().getAbsolutePath()), binaryResultsFile);
     }
 

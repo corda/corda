@@ -91,7 +91,10 @@ class DistributedTesting implements Plugin<Project> {
                     if (!tagToUseForRunningTests) {
                         dependsOn imagePushTask
                     }
-                    dependsOn deAllocateTask
+
+                    if (deAllocateTask.name in requestedTaskNames) {
+                        dependsOn deAllocateTask
+                    }
                     numberOfPods = testGrouping.getShardCount()
                     printOutput = testGrouping.printToStdOut
                     fullTaskToExecutePath = superListOfTasks
