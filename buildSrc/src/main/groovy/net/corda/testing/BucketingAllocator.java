@@ -73,21 +73,24 @@ public class BucketingAllocator {
         });
     }
 
+    List<TestsForForkContainer> getForkContainers() {
+        return forkContainers;
+    }
+
     private List<TestBucket> matchClasspathTestsToFile(@NotNull final Tests tests,
                                                        @NotNull final List<Tuple2<String, Object>> allDiscoveredTests) {
+        // Note that this does not preserve the order of tests with known and unknown durations, as we
+        // always return a duration from 'tests.startsWith'.
         return allDiscoveredTests.stream().map(tuple -> {
             final String testName = tuple.getFirst();
             final Object task = tuple.getSecond();
 
             // If the gradle task is distributing by class rather than method, then 'testName' will be the className
             // and not className.testName
+            // No matter which it is, we return the mean test duration as the duration value if not found.
             final List<Tuple2<String, Long>> matchingTests = tests.startsWith(testName);
 
-            // 'matchingTests' may be empty if we've never run those tests before, so we give it a default
-            // size so that it is fairly allocated to a bucket.  The best we can do at the moment, is
-            // to try and use the individual mean test duration.  If we pass the 'distribute' type
-            // in here, we could use mean duration for classes if required.
-            return new TestBucket(task, testName, matchingTests, tests.getMeanDurationForTests());
+            return new TestBucket(task, testName, matchingTests);
         }).sorted(Comparator.comparing(TestBucket::getDuration).reversed()).collect(Collectors.toList());
     }
 
@@ -107,14 +110,11 @@ public class BucketingAllocator {
 
         public TestBucket(@NotNull final Object testTask,
                           @NotNull final String testName,
-                          @NotNull final List<Tuple2<String, Long>> foundTests,
-                          long defaultBucketDuration) {
+                          @NotNull final List<Tuple2<String, Long>> foundTests) {
             this.testTask = testTask;
             this.testName = testName;
             this.foundTests = foundTests;
-            durationNanos = Math.max(
-                    foundTests.stream().mapToLong(tp -> Math.max(tp.getSecond(), 1)).sum(),
-                    defaultBucketDuration);
+            durationNanos = foundTests.stream().mapToLong(tp -> Math.max(tp.getSecond(), 1)).sum();
         }
 
         public long getDuration() {

@@ -12,15 +12,13 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.Reader;
 import java.io.Writer;
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 public class Tests {
@@ -30,8 +28,12 @@ public class Tests {
     private static final Logger LOG = LoggerFactory.getLogger(Tests.class);
     // test name -> (mean duration, number of runs)
     private final Map<String, Tuple2<Long, Long>> tests = new HashMap<>();
+    // If we don't have any tests from which to get a mean, use this.
+    static long DEFAULT_MEAN_NANOS = 1000L;
+
+    private static Tuple2<Long, Long> DEFAULT_MEAN_TUPLE = new Tuple2<>(DEFAULT_MEAN_NANOS, 0L);
     // mean, count
-    private Tuple2<Long, Long> meanForTests = new Tuple2<>(1L, 0L);
+    private Tuple2<Long, Long> meanForTests = DEFAULT_MEAN_TUPLE;
 
     /**
      * Read tests, mean duration and runs from a csv file.
@@ -46,9 +48,8 @@ public class Tests {
                 try {
                     final String testName = record.get(TEST_NAME);
                     final long testDuration = Long.parseLong(record.get(MEAN_DURATION_NANOS));
-                    final long testRuns = Long.parseLong(record.get(NUMBER_OF_RUNS));
-                    // don't allow times of 'zero'.  Minimum of 1.
-                    return new Tuple3<>(testName, Math.max(testDuration, 1), Math.max(testRuns, 1));
+                    final long testRuns = Long.parseLong(record.get(NUMBER_OF_RUNS)); // can't see how we would have zero tbh.
+                    return new Tuple3<>(testName, testDuration, Math.max(testRuns, 1));
                 } catch (IllegalArgumentException | IllegalStateException e) {
                     return null;
                 }
@@ -86,17 +87,6 @@ public class Tests {
             ok = false;
         }
         return ok;
-    }
-
-    /**
-     * Get the classname of a test, if it has one, otherwise return ""
-     *
-     * @param testName the testname with optional classname, e.g. com.foo.thisTest
-     * @return com.foo else ""
-     */
-    private String getClassName(@NotNull final String testName) {
-        return testName.lastIndexOf('.') != -1 ?
-                testName.substring(0, testName.lastIndexOf('.')) : "";
     }
 
     /**
@@ -162,18 +152,19 @@ public class Tests {
 
     /**
      * Return all tests (and their durations) that being with (or are equal to) `testPrefix`
-     *
+     * If not present we just return the mean test duration so that the test is fairly distributed.
      * @param testPrefix could be just the classname, or the entire classname + testname.
      * @return list of matching tests
      */
     @NotNull
     List<Tuple2<String, Long>> startsWith(@NotNull final String testPrefix) {
-        final List<Tuple2<String, Long>> results = new ArrayList<>();
-
-        for (String test : this.tests.keySet()) {
-            if (test.startsWith(testPrefix)) {
-                results.add(new Tuple2<>(test, getDuration(test)));
-            }
+        List<Tuple2<String, Long>> results = this.tests.keySet().stream()
+                .filter(t -> t.startsWith(testPrefix))
+                .map(t -> new Tuple2<>(t, getDuration(t)))
+                .collect(Collectors.toList());
+        // We don't know if the testPrefix is a classname or classname.methodname (exact match).
+        if (results == null || results.isEmpty()) {
+            results = Arrays.asList(new Tuple2<>(testPrefix, getMeanDurationForTests()));
         }
         return results;
     }
@@ -202,6 +193,6 @@ public class Tests {
      */
     void clear() {
         tests.clear();
-        meanForTests = new Tuple2<>(1L, 0L);
+        meanForTests = DEFAULT_MEAN_TUPLE;
     }
 }

@@ -249,7 +249,7 @@ public class TestDurationArtifacts {
             LOG.warn("Problem unzipping XML test results");
         }
 
-        LOG.warn("Discovered {} tests", tests.size());
+        LOG.debug("Discovered {} tests", tests.size());
     }
 
     /**

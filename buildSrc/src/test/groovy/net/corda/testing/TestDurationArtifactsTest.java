@@ -133,7 +133,6 @@ public class TestDurationArtifactsTest {
         tests.add(new Tuple2<>("TEST-A", 0L));
         tests.add(new Tuple2<>("TEST-B", 0L));
         final String xml = getXmlWithNoTime(tests);
-        System.out.println(xml);
 
         List<Tuple2<String, Long>> results
                 = TestDurationArtifacts.fromJunitXml(new ByteArrayInputStream(xml.getBytes(StandardCharsets.UTF_8)));
@@ -141,7 +140,7 @@ public class TestDurationArtifactsTest {
         Assert.assertNotNull(results);
 
         Assert.assertFalse("Should have results", results.isEmpty());
-        Assert.assertEquals(results.size(), 2);
+        Assert.assertEquals(2, results.size());
         Assert.assertEquals(CLASSNAME + "." + "TEST-A", results.get(0).getFirst());
         Assert.assertEquals(0L, results.get(0).getSecond().longValue());
         Assert.assertEquals(CLASSNAME + "." + "TEST-B", results.get(1).getFirst());
