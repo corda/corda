@@ -249,6 +249,8 @@ public class KubesTest extends DefaultTask {
         ExecListener execListener = buildExecListenerForPod(podName, errChannelStream, waiter);
         stdOutIs.connect(stdOutOs);
 
+        String[] buildCommand = getBuildCommand(numberOfPods, podIdx);
+        getProject().getLogger().quiet("About to execute " + Arrays.stream(buildCommand).reduce("", (s, s2) -> s + " " + s2) + " on pod " + podName);
         client.pods().inNamespace(namespace).withName(podName)
                 .writingOutput(stdOutOs)
                 .writingErrorChannel(errChannelStream)
