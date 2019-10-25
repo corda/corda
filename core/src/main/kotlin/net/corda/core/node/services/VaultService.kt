@@ -256,9 +256,12 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
 
 /**
  * The maximum permissible size of contract constraint type data (for storage in vault states database table).
- * Maximum value equates to a CompositeKey with 10 EDDSA_ED25519_SHA512 keys stored in.
+ *
+ * This value establishes an upper limit of a CompositeKey with up to 10 keys stored in.
+ * However, note it is a rather conservative upper bound, since the size of the CompositeKey
+ * depends on other factors besides just the number of keys.
  */
-const val MAX_CONSTRAINT_DATA_SIZE = 563
+const val MAX_CONSTRAINT_DATA_SIZE = 10_000
 
 /**
  * A [VaultService] is responsible for securely and safely persisting the current state of a vault to storage. The

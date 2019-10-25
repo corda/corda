@@ -4,6 +4,7 @@ import net.corda.core.DeleteForDJVM
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.*
 import net.corda.core.contracts.TransactionVerificationException.TransactionContractConflictException
+import net.corda.core.crypto.CompositeKey
 import net.corda.core.internal.rules.StateContractValidationEnforcementRule
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.contextLogger
@@ -328,8 +329,13 @@ class Verifier(val ltx: LedgerTransaction, private val transactionClassLoader: C
     private fun verifyConstraints(contractAttachmentsByContract: Map<ContractClassName, ContractAttachment>) {
         // For each contract/constraint pair check that the relevant attachment is valid.
         allStates.map { it.contract to it.constraint }.toSet().forEach { (contract, constraint) ->
-            if (constraint is SignatureAttachmentConstraint)
+            if (constraint is SignatureAttachmentConstraint) {
                 checkMinimumPlatformVersion(ltx.networkParameters?.minimumPlatformVersion ?: 1, 4, "Signature constraints")
+                val constraintKey = constraint.key
+                if (constraintKey is CompositeKey && constraintKey.leafKeys.size > 1)
+                    checkMinimumPlatformVersion(ltx.networkParameters?.minimumPlatformVersion ?: 1, 5,
+                            "Composite keys for signature constraints")
+            }
 
             // We already checked that there is one and only one attachment.
             val contractAttachment = contractAttachmentsByContract[contract]!!

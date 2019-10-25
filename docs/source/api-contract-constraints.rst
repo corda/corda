@@ -100,6 +100,8 @@ Expanding on the previous section, for an app to use Signature Constraints, it m
 The signers of the app can consist of a single organisation or multiple organisations. Once the app has been signed, it can be distributed
 across the nodes that intend to use it.
 
+.. note:: In order to use signature constraints with a ``CompositeKey``, you must be at a network with a ``minimumPlatformVersion`` greater or equal to 5.
+
 Each transaction received by a node will then verify that the apps attached to it have the correct signers as specified by its
 Signature Constraints. This ensures that the version of each app is acceptable to the transaction's input states.
 
