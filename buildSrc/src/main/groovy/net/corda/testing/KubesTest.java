@@ -306,10 +306,10 @@ public class KubesTest extends DefaultTask {
     }
 
     private Collection<File> downloadTestXmlFromPod(KubernetesClient client, String namespace, Pod cp) {
-        String resultsInContainerPath = "/tmp/source/build/test-reports";
+        String resultsInContainerPath = TEST_RUN_DIR + "/test-reports";
         String binaryResultsFile = "results.bin";
         String podName = cp.getMetadata().getName();
-        Path tempDir = new File(new File(getProject().getBuildDir(), "test-results-xml"), podName).toPath();
+        Path tempDir = new File(new File(TEST_RUN_DIR, "test-results-xml"), podName).toPath();
 
         if (!tempDir.toFile().exists()) {
             tempDir.toFile().mkdirs();

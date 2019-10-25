@@ -85,7 +85,7 @@ class DistributedTesting implements Plugin<Project> {
                 }
                 def reportOnAllTask = project.rootProject.tasks.create("userDefinedReports${testGrouping.name.capitalize()}", KubesReporting) {
                     dependsOn userDefinedParallelTask
-                    destinationDir new File(project.rootProject.getBuildDir(), "userDefinedReports${testGrouping.name.capitalize()}")
+                    destinationDir new File(KubesTest.TEST_RUN_DIR, "userDefinedReports${testGrouping.name.capitalize()}")
                     doFirst {
                         destinationDir.deleteDir()
                         shouldPrintOutput = !testGrouping.printToStdOut
@@ -120,7 +120,7 @@ class DistributedTesting implements Plugin<Project> {
 
     private Test modifyTestTaskForParallelExecution(Project subProject, Test task, BucketingAllocatorTask globalAllocator) {
         subProject.logger.info("modifying task: ${task.getPath()} to depend on task ${globalAllocator.getPath()}")
-        def reportsDir = new File(new File(subProject.rootProject.getBuildDir(), "test-reports"), subProject.name + "-" + task.name)
+        def reportsDir = new File(new File(KubesTest.TEST_RUN_DIR, "test-reports"), subProject.name + "-" + task.name)
         task.configure {
             dependsOn globalAllocator
             binResultsDir new File(reportsDir, "binary")
