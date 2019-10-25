@@ -161,7 +161,6 @@
     <ID>ComplexMethod:IRS.kt$InterestRateSwap.FloatingLeg$override fun equals(other: Any?): Boolean</ID>
     <ID>ComplexMethod:InteractiveShell.kt$InteractiveShell$ @JvmStatic fun runFlowByNameFragment(nameFragment: String, inputData: String, output: RenderPrintWriter, rpcOps: CordaRPCOps, ansiProgressRenderer: ANSIProgressRenderer, inputObjectMapper: ObjectMapper = createYamlInputMapper(rpcOps))</ID>
     <ID>ComplexMethod:InteractiveShell.kt$InteractiveShell$ private fun maybeAbbreviateGenericType(type: Type, extraRecognisedPackage: String): String</ID>
-    <ID>ComplexMethod:InteractiveShell.kt$InteractiveShell$@JvmStatic fun gracefulShutdown(userSessionOut: RenderPrintWriter, cordaRPCOps: CordaRPCOps)</ID>
     <ID>ComplexMethod:InteractiveShell.kt$InteractiveShell$@JvmStatic fun runRPCFromString(input: List&lt;String&gt;, out: RenderPrintWriter, context: InvocationContext&lt;out Any&gt;, cordaRPCOps: CordaRPCOps, inputObjectMapper: ObjectMapper): Any?</ID>
     <ID>ComplexMethod:Kryo.kt$ImmutableClassSerializer$override fun read(kryo: Kryo, input: Input, type: Class&lt;T&gt;): T</ID>
     <ID>ComplexMethod:Kryo.kt$ImmutableClassSerializer$override fun write(kryo: Kryo, output: Output, obj: T)</ID>
@@ -392,7 +391,6 @@
     <ID>ForbiddenComment:InteractiveShell.kt$// TODO: Resurrect or reimplement the mail plugin.</ID>
     <ID>ForbiddenComment:InteractiveShell.kt$// TODO: Review or fix the JVM commands which have bitrotted and some are useless.</ID>
     <ID>ForbiddenComment:InteractiveShell.kt$InteractiveShell$// TODO: A default renderer could be used, instead of an object mapper. See: http://www.crashub.org/1.3/reference.html#_renderers</ID>
-    <ID>ForbiddenComment:InteractiveShell.kt$InteractiveShell$// TODO: This utility is generally useful and might be better moved to the node class, or an RPC, if we can commit to making it stable API.</ID>
     <ID>ForbiddenComment:InternalUtils.kt$// TODO: Add inline back when a new Kotlin version is released and check if the java.lang.VerifyError</ID>
     <ID>ForbiddenComment:InternalUtils.kt$// TODO: Currently the certificate revocation status is not handled here. Nowhere in the code the second parameter is used. Consider adding the support in the future.</ID>
     <ID>ForbiddenComment:IrsDemoClientApi.kt$IRSDemoClientApi$// TODO: Add uploading of files to the HTTP API</ID>
@@ -1949,7 +1947,6 @@
     <ID>MaxLineLength:CordaPersistence.kt$CordaPersistence$error("Was not expecting to find existing database transaction on current strand when setting database: ${Strand.currentStrand()}, $it")</ID>
     <ID>MaxLineLength:CordaPersistence.kt$CordaPersistence$is SchemaManagementException -&gt; throw HibernateSchemaChangeException("Incompatible schema change detected. Please run the node with database.initialiseSchema=true. Reason: ${e.message}", e)</ID>
     <ID>MaxLineLength:CordaPersistence.kt$CordaPersistence$val transaction = contextDatabase.currentOrNew(isolationLevel) // XXX: Does this code really support statement changing the contextDatabase?</ID>
-    <ID>MaxLineLength:CordaRPCClient.kt$CordaRPCClient</ID>
     <ID>MaxLineLength:CordaRPCClientReconnectionTest.kt$CordaRPCClientReconnectionTest$val addresses = listOf(NetworkHostAndPort("localhost", portAllocator.nextPort()), NetworkHostAndPort("localhost", portAllocator.nextPort()))</ID>
     <ID>MaxLineLength:CordaRPCClientTest.kt$CordaRPCClientTest$node.services.startFlow(CashIssueFlow(100.POUNDS, OpaqueBytes.of(1), identity), InvocationContext.shell()).flatMap { it.resultFuture }.getOrThrow()</ID>
     <ID>MaxLineLength:CordaRPCClientTest.kt$CordaRPCClientTest$node.services.startFlow(CashIssueFlow(2000.DOLLARS, OpaqueBytes.of(0), identity), InvocationContext.shell()).flatMap { it.resultFuture }.getOrThrow()</ID>
@@ -1965,11 +1962,6 @@
     <ID>MaxLineLength:CordaRPCOps.kt$CordaRPCOps$fun &lt;T : ContractState&gt; vaultTrackByWithSorting(contractStateType: Class&lt;out T&gt;, criteria: QueryCriteria, sorting: Sort): DataFeed&lt;Vault.Page&lt;T&gt;, Vault.Update&lt;T&gt;&gt;</ID>
     <ID>MaxLineLength:CordaRPCOps.kt$StateMachineInfo$return copy(id = id, flowLogicClassName = flowLogicClassName, initiator = initiator, progressTrackerStepAndUpdates = progressTrackerStepAndUpdates, invocationContext = invocationContext)</ID>
     <ID>MaxLineLength:CordaRPCOps.kt$sorting: Sort = Sort(emptySet())</ID>
-    <ID>MaxLineLength:CordaRPCOpsImpl.kt$CordaRPCOpsImpl$is ConnectException -&gt; throw CordaRuntimeException("There is connection problem to network map. The possible causes are incorrect configuration or network map service being down")</ID>
-    <ID>MaxLineLength:CordaRPCOpsImpl.kt$CordaRPCOpsImpl$override</ID>
-    <ID>MaxLineLength:CordaRPCOpsImpl.kt$CordaRPCOpsImpl$override fun internalFindVerifiedTransaction(txnId: SecureHash): SignedTransaction?</ID>
-    <ID>MaxLineLength:CordaRPCOpsImpl.kt$CordaRPCOpsImpl$return StateMachineInfo(flowLogic.runId, flowLogic.javaClass.name, flowLogic.stateMachine.context.toFlowInitiator(), flowLogic.track(), flowLogic.stateMachine.context)</ID>
-    <ID>MaxLineLength:CordaRPCOpsImpl.kt$CordaRPCOpsImpl${ error -&gt; logger.error("Error while waiting for pending flows to drain in preparation for shutdown. Cause was: ${error.message}", error) }</ID>
     <ID>MaxLineLength:CordaRPCOpsImplTest.kt$CordaRPCOpsImplTest$assertThatCode { rpc.startFlow(::SoftLock, cash.ref, Duration.ofSeconds(1)).returnValue.getOrThrow() }.doesNotThrowAnyException()</ID>
     <ID>MaxLineLength:CordaRPCOpsImplTest.kt$CordaRPCOpsImplTest$val cash = rpc.startFlow(::CashIssueFlow, 10.DOLLARS, issuerRef, notary).returnValue.getOrThrow().stx.tx.outRefsOfType&lt;Cash.State&gt;().single()</ID>
     <ID>MaxLineLength:CordaSSHAuthInfo.kt$CordaSSHAuthInfo : AuthInfo</ID>
@@ -3151,7 +3143,6 @@
     <ID>MaxLineLength:ReceiveTransactionFlow.kt$ReceiveStateAndRefFlow&lt;out T : ContractState&gt; : FlowLogic</ID>
     <ID>MaxLineLength:ReceiveTransactionFlow.kt$ReceiveTransactionFlow : FlowLogic</ID>
     <ID>MaxLineLength:ReceiveTransactionFlow.kt$ReceiveTransactionFlow$private val statesToRecord: StatesToRecord = StatesToRecord.NONE</ID>
-    <ID>MaxLineLength:ReconnectingCordaRPCOps.kt$ReconnectingCordaRPCOps$ fun runFlowWithLogicalRetry(runFlow: (CordaRPCOps) -&gt; StateMachineRunId, hasFlowStarted: (CordaRPCOps) -&gt; Boolean, onFlowConfirmed: () -&gt; Unit = {}, timeout: Duration = 4.seconds)</ID>
     <ID>MaxLineLength:ReferenceInputStateTests.kt$ReferenceStateTests$output(ExampleContract::class.java.typeName, "UPDATED REF DATA", "REF DATA".output&lt;ExampleState&gt;().copy(data = "NEW STUFF!"))</ID>
     <ID>MaxLineLength:ReferenceInputStateTests.kt$ReferenceStateTests$val stateAndRef = StateAndRef(TransactionState(state, CONTRACT_ID, DUMMY_NOTARY, constraint = AlwaysAcceptAttachmentConstraint), StateRef(SecureHash.zeroHash, 0))</ID>
     <ID>MaxLineLength:ReferencedStatesFlowTests.kt$ReferencedStatesFlowTests$assertEquals(2, nodes[2].services.vaultService.queryBy&lt;LinearState&gt;(QueryCriteria.VaultQueryCriteria(status = Vault.StateStatus.ALL)).states.size)</ID>
@@ -3803,7 +3794,6 @@
     <ID>NestedBlockDepth:FetchDataFlow.kt$FetchAttachmentsFlow$override fun maybeWriteToDisk(downloaded: List&lt;Attachment&gt;)</ID>
     <ID>NestedBlockDepth:HibernateQueryCriteriaParser.kt$HibernateQueryCriteriaParser$override fun parseCriteria(criteria: CommonQueryCriteria): Collection&lt;Predicate&gt;</ID>
     <ID>NestedBlockDepth:InteractiveShell.kt$InteractiveShell$ @JvmStatic fun runFlowByNameFragment(nameFragment: String, inputData: String, output: RenderPrintWriter, rpcOps: CordaRPCOps, ansiProgressRenderer: ANSIProgressRenderer, inputObjectMapper: ObjectMapper = createYamlInputMapper(rpcOps))</ID>
-    <ID>NestedBlockDepth:InteractiveShell.kt$InteractiveShell$@JvmStatic fun gracefulShutdown(userSessionOut: RenderPrintWriter, cordaRPCOps: CordaRPCOps)</ID>
     <ID>NestedBlockDepth:InternalUtils.kt$ inline fun &lt;T&gt; Iterable&lt;T&gt;.noneOrSingle(predicate: (T) -&gt; Boolean): T?</ID>
     <ID>NestedBlockDepth:JarSignatureTestUtils.kt$JarSignatureTestUtils$fun Path.addManifest(fileName: String, vararg entries: Pair&lt;Attributes.Name, String&gt;)</ID>
     <ID>NestedBlockDepth:Main.kt$Node$fun avalancheLoop()</ID>
@@ -4575,9 +4565,6 @@
     <ID>WildcardImport:CordaRPCClientTest.kt$import net.corda.core.messaging.*</ID>
     <ID>WildcardImport:CordaRPCClientTest.kt$import net.corda.testing.core.*</ID>
     <ID>WildcardImport:CordaRPCOps.kt$import net.corda.core.node.services.vault.*</ID>
-    <ID>WildcardImport:CordaRPCOpsImpl.kt$import net.corda.core.internal.*</ID>
-    <ID>WildcardImport:CordaRPCOpsImpl.kt$import net.corda.core.messaging.*</ID>
-    <ID>WildcardImport:CordaRPCOpsImpl.kt$import net.corda.core.node.services.vault.*</ID>
     <ID>WildcardImport:CordaRPCOpsImplTest.kt$import net.corda.core.messaging.*</ID>
     <ID>WildcardImport:CordaRPCOpsImplTest.kt$import org.assertj.core.api.Assertions.*</ID>
     <ID>WildcardImport:CordaServiceTest.kt$import kotlin.test.*</ID>
@@ -4723,9 +4710,6 @@
     <ID>WildcardImport:InputStreamSerializer.kt$import net.corda.serialization.internal.amqp.*</ID>
     <ID>WildcardImport:InstallFactory.kt$import tornadofx.*</ID>
     <ID>WildcardImport:InstallShellExtensionsParser.kt$import net.corda.core.internal.*</ID>
-    <ID>WildcardImport:InteractiveShell.kt$import java.lang.reflect.*</ID>
-    <ID>WildcardImport:InteractiveShell.kt$import net.corda.core.internal.*</ID>
-    <ID>WildcardImport:InteractiveShell.kt$import net.corda.core.messaging.*</ID>
     <ID>WildcardImport:InteractiveShellIntegrationTest.kt$import net.corda.core.contracts.*</ID>
     <ID>WildcardImport:InteractiveShellIntegrationTest.kt$import net.corda.core.flows.*</ID>
     <ID>WildcardImport:InterestRatesSwapDemoAPI.kt$import org.springframework.web.bind.annotation.*</ID>
@@ -4977,8 +4961,6 @@
     <ID>WildcardImport:ReceiveFinalityFlowTest.kt$import net.corda.node.services.statemachine.StaffedFlowHospital.*</ID>
     <ID>WildcardImport:ReceiveFinalityFlowTest.kt$import net.corda.testing.node.internal.*</ID>
     <ID>WildcardImport:ReceiveTransactionFlow.kt$import net.corda.core.contracts.*</ID>
-    <ID>WildcardImport:ReconnectingCordaRPCOps.kt$import net.corda.client.rpc.*</ID>
-    <ID>WildcardImport:ReconnectingCordaRPCOps.kt$import net.corda.client.rpc.internal.ReconnectingCordaRPCOps.ReconnectingRPCConnection.CurrentState.*</ID>
     <ID>WildcardImport:ReferenceInputStateTests.kt$import net.corda.core.contracts.*</ID>
     <ID>WildcardImport:ReferencedStatesFlowTests.kt$import net.corda.core.contracts.*</ID>
     <ID>WildcardImport:ReferencedStatesFlowTests.kt$import net.corda.core.flows.*</ID>

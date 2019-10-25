@@ -8,6 +8,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.lang.reflect.Field;
+import java.net.ServerSocket;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 
@@ -24,6 +25,19 @@ class SharedMemoryIncremental extends PortAllocation {
     private int startPort;
     private int endPort;
 
+    private MappedByteBuffer mb;
+    private Long startingAddress;
+
+    private File file = new File(System.getProperty("user.home"), "corda-" + startPort + "-to-" + endPort + "-port-allocator.bin");
+    private RandomAccessFile backingFile;
+    {
+        try {
+            backingFile = new RandomAccessFile(file, "rw");
+        } catch (FileNotFoundException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     private SharedMemoryIncremental(int startPort, int endPort) {
         this.startPort = startPort;
         this.endPort = endPort;
@@ -35,21 +49,9 @@ class SharedMemoryIncremental extends PortAllocation {
         }
     }
 
-    private File file = new File(System.getProperty("user.home"), "corda-" + startPort + "-to-" + endPort + "-port-allocator.bin");
-    private RandomAccessFile backingFile;
-    {
-        try {
-            backingFile = new RandomAccessFile(file, "rw");
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        }
-    }
-    private MappedByteBuffer mb;
-    private Long startingAddress;
-
     public static SharedMemoryIncremental INSTANCE = new SharedMemoryIncremental(DEFAULT_START_PORT, FIRST_EPHEMERAL_PORT);
-
     static private Unsafe UNSAFE = getUnsafe();
+
     static private Unsafe getUnsafe() {
         try {
             Field f = Unsafe.class.getDeclaredField("theUnsafe");
@@ -63,17 +65,31 @@ class SharedMemoryIncremental extends PortAllocation {
 
     @Override
     public int nextPort() {
-        Long oldValue;
-        Long newValue;
+        long oldValue;
+        long newValue;
+        boolean loopSuccess;
         do {
             oldValue = UNSAFE.getLongVolatile(null, startingAddress);
             if (oldValue + 1 >= endPort || oldValue < startPort) {
-                newValue = Long.valueOf(startPort);
+                newValue = startPort;
             } else {
                 newValue = (oldValue + 1);
             }
-        } while (!UNSAFE.compareAndSwapLong(null, startingAddress, oldValue, newValue));
+            boolean reserveSuccess = UNSAFE.compareAndSwapLong(null, startingAddress, oldValue, newValue);
+            boolean portAvailable = isLocalPortAvailable(newValue);
+            loopSuccess = reserveSuccess && portAvailable;
+        } while (!loopSuccess);
 
-        return newValue.intValue();
+        return (int) newValue;
     }
+
+
+    private boolean isLocalPortAvailable(Long portToTest) {
+        try (ServerSocket serverSocket = new ServerSocket(Math.toIntExact(portToTest))) {
+        } catch (Exception e) {
+            return false;
+        }
+        return true;
+    }
+
 }

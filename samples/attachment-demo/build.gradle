@@ -81,7 +81,8 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask, 
                                                                              "InvokeRpc.openAttachment",
                                                                              "InvokeRpc.uploadAttachment",
                                                                              "InvokeRpc.internalVerifiedTransactionsFeed",
-                                                                             "InvokeRpc.startTrackedFlowDynamic"]]]
+                                                                             "InvokeRpc.startTrackedFlowDynamic",
+                                                                             "InvokeRpc.nodeInfo"]]]
 
     nodeDefaults {
         projectCordapp {
