@@ -184,7 +184,6 @@ class RetryFlowMockTest {
         assertThat(nodeA.smm.flowHospital.track().snapshot).isEmpty()
     }
 
-
     class LimitedRetryCausingError : IllegalStateException("I am going to live forever")
 
     class RetryCausingError : SQLException("deadlock")
