@@ -17,6 +17,7 @@ class DistributedTesting implements Plugin<Project> {
     @Override
     void apply(Project project) {
         if (System.getProperty("kubenetize") != null) {
+            Properties.setCordaType(project.rootProject.name)
 
             def forks = getPropertyAsInt(project, "dockerForks", 1)
 

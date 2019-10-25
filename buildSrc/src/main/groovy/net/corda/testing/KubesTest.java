@@ -327,10 +327,10 @@ public class KubesTest extends DefaultTask {
     }
 
     private String[] getBuildCommand(int numberOfPods, int podIdx) {
-        final String gitBranch = " -Dgit.branch=" +TestDurationArtifacts.getGitBranch();
-        final String gitTargetBranch = " -Dgit.target.branch=" +TestDurationArtifacts.getTargetGitBranch();
-        final String artifactoryUsername = " -Dartifactory.username=" + Artifactory.getUsername() +" ";
-        final String artifactoryPassword = " -Dartifactory.password=" + Artifactory.getPassword() + " ";
+        final String gitBranch = " -Dgit.branch=" + Properties.getGitBranch();
+        final String gitTargetBranch = " -Dgit.target.branch=" + Properties.getTargetGitBranch();
+        final String artifactoryUsername = " -Dartifactory.username=" + Properties.getUsername() +" ";
+        final String artifactoryPassword = " -Dartifactory.password=" + Properties.getPassword() + " ";
 
         String shellScript = "let x=1 ; while [ ${x} -ne 0 ] ; do echo \"Waiting for DNS\" ; curl services.gradle.org > /dev/null 2>&1 ; x=$? ; sleep 1 ; done ; " + "cd /tmp/source ; " +
                 "let y=1 ; while [ ${y} -ne 0 ] ; do echo \"Preparing build directory\" ; ./gradlew testClasses integrationTestClasses --parallel 2>&1 ; y=$? ; sleep 1 ; done ;" +

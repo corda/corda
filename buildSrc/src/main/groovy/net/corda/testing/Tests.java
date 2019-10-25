@@ -147,7 +147,7 @@ public class Tests {
 
         tests.put(testName, recalculateMean(current, durationNanos));
 
-        LOG.warn("Recorded test '{}', mean={} ns, runs={}", testName, tests.get(testName).getFirst(), tests.get(testName).getSecond());
+        LOG.debug("Recorded test '{}', mean={} ns, runs={}", testName, tests.get(testName).getFirst(), tests.get(testName).getSecond());
 
         meanForTests = recalculateMean(meanForTests, durationNanos);
 

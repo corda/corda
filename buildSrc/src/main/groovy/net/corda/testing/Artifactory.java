@@ -17,32 +17,8 @@ public class Artifactory {
     //<editor-fold desc="Statics">
     private static final Logger LOG = LoggerFactory.getLogger(Artifactory.class);
 
-    /**
-     * Get property with logging
-     * @param key property to get
-     * @return empty string, or trimmed value
-     */
-    @NotNull
-    static String getProperty(@NotNull final String key) {
-        final String value = System.getProperty(key, "").trim();
-        if (value.isEmpty()) {
-            LOG.warn("Property '{}' not set", key);
-        } else {
-            LOG.debug("Ok.  Property '{}' is set", key);
-        }
-        return value;
-    }
-
-    static String getUsername() {
-        return getProperty("artifactory.username");
-    }
-
-    static String getPassword() {
-        return getProperty("artifactory.password");
-    }
-
     private static String authorization() {
-        return Credentials.basic(getUsername(), getPassword());
+        return Credentials.basic(Properties.getUsername(), Properties.getPassword());
     }
 
     /**

@@ -259,12 +259,13 @@ public class TestDurationArtifactsTest {
 
         final String expected = "release/os/4.3";
         final String key = "git.branch";
-
+        final String cordaType = "corda";
+        Properties.setCordaType(cordaType);
         System.setProperty(key, expected);
 
         Assert.assertEquals(expected, System.getProperty(key));
-        Assert.assertNotEquals(expected, TestDurationArtifacts.getGitBranch());
-        Assert.assertEquals("release-os-4.3", TestDurationArtifacts.getGitBranch());
+        Assert.assertNotEquals(cordaType + "-" + expected, Properties.getGitBranch());
+        Assert.assertEquals(cordaType + "-" + "release-os-4.3", Properties.getGitBranch());
     }
 
     @Test
