@@ -265,6 +265,45 @@ data class DriverParameters(
 ) {
     constructor(cordappsForAllNodes: Collection<TestCordapp>) : this(isDebug = false, cordappsForAllNodes = cordappsForAllNodes)
 
+    // Legacy constructor from v4.3
+    constructor(
+            isDebug: Boolean = false,
+            driverDirectory: Path = Paths.get("build") / "node-driver" / getTimestampAsDirectoryName(),
+            portAllocation: PortAllocation = incrementalPortAllocation(),
+            debugPortAllocation: PortAllocation = incrementalPortAllocation(),
+            systemProperties: Map<String, String> = emptyMap(),
+            useTestClock: Boolean = false,
+            startNodesInProcess: Boolean = false,
+            waitForAllNodesToFinish: Boolean = false,
+            notarySpecs: List<NotarySpec> = listOf(NotarySpec(DUMMY_NOTARY_NAME)),
+            extraCordappPackagesToScan: List<String> = emptyList(),
+            @Suppress("DEPRECATION") jmxPolicy: JmxPolicy = JmxPolicy(),
+            networkParameters: NetworkParameters = testNetworkParameters(notaries = emptyList()),
+            notaryCustomOverrides: Map<String, Any?> = emptyMap(),
+            inMemoryDB: Boolean = true,
+            cordappsForAllNodes: Collection<TestCordapp>? = null
+    ) : this(
+            isDebug,
+            driverDirectory,
+            portAllocation,
+            debugPortAllocation,
+            systemProperties,
+            useTestClock,
+            startNodesInProcess,
+            waitForAllNodesToFinish,
+            notarySpecs,
+            extraCordappPackagesToScan,
+            jmxPolicy,
+            networkParameters,
+            notaryCustomOverrides,
+            inMemoryDB,
+            cordappsForAllNodes,
+
+            // These fields have been added in v4.4
+            djvmBootstrapSource = null,
+            djvmCordaSource = emptyList()
+    )
+
     constructor(
             isDebug: Boolean = false,
             driverDirectory: Path = Paths.get("build") / "node-driver" / getTimestampAsDirectoryName(),
@@ -379,6 +418,8 @@ data class DriverParameters(
     fun withNotaryCustomOverrides(notaryCustomOverrides: Map<String, Any?>): DriverParameters = copy(notaryCustomOverrides = notaryCustomOverrides)
     fun withInMemoryDB(inMemoryDB: Boolean): DriverParameters = copy(inMemoryDB = inMemoryDB)
     fun withCordappsForAllNodes(cordappsForAllNodes: Collection<TestCordapp>?): DriverParameters = copy(cordappsForAllNodes = cordappsForAllNodes)
+    fun withDjvmBootstrapSource(djvmBootstrapSource: Path?): DriverParameters = copy(djvmBootstrapSource = djvmBootstrapSource)
+    fun withDjvmCordaSource(djvmCordaSource: List<Path>): DriverParameters = copy(djvmCordaSource = djvmCordaSource)
 
     fun copy(
             isDebug: Boolean,
@@ -438,5 +479,45 @@ data class DriverParameters(
             networkParameters = networkParameters,
             notaryCustomOverrides = emptyMap(),
             cordappsForAllNodes = cordappsForAllNodes
+    )
+
+    // Legacy copy() from v4.3
+    @Suppress("LongParameterList")
+    fun copy(
+            isDebug: Boolean,
+            driverDirectory: Path,
+            portAllocation: PortAllocation,
+            debugPortAllocation: PortAllocation,
+            systemProperties: Map<String, String>,
+            useTestClock: Boolean,
+            startNodesInProcess: Boolean,
+            waitForAllNodesToFinish: Boolean,
+            notarySpecs: List<NotarySpec>,
+            extraCordappPackagesToScan: List<String>,
+            jmxPolicy: JmxPolicy,
+            networkParameters: NetworkParameters,
+            notaryCustomOverrides: Map<String, Any?>,
+            inMemoryDB: Boolean,
+            cordappsForAllNodes: Collection<TestCordapp>?
+    ) = this.copy(
+            isDebug = isDebug,
+            driverDirectory = driverDirectory,
+            portAllocation = portAllocation,
+            debugPortAllocation = debugPortAllocation,
+            systemProperties = systemProperties,
+            useTestClock = useTestClock,
+            startNodesInProcess = startNodesInProcess,
+            waitForAllNodesToFinish = waitForAllNodesToFinish,
+            notarySpecs = notarySpecs,
+            extraCordappPackagesToScan = extraCordappPackagesToScan,
+            jmxPolicy = jmxPolicy,
+            networkParameters = networkParameters,
+            notaryCustomOverrides = notaryCustomOverrides,
+            inMemoryDB = inMemoryDB,
+            cordappsForAllNodes = cordappsForAllNodes,
+
+            // These fields have been added in v4.4
+            djvmBootstrapSource = djvmBootstrapSource,
+            djvmCordaSource = djvmCordaSource
     )
 }
