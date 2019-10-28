@@ -1,7 +1,8 @@
 import net.corda.testing.DistributedTesting
+import net.corda.testing.DistributeTestsBy
 import net.corda.testing.ImageBuilding
-import net.corda.testing.Distribution
 import net.corda.testing.ParallelTestGroup
+import net.corda.testing.PodLogLevel
 
 import static org.gradle.api.JavaVersion.VERSION_11
 import static org.gradle.api.JavaVersion.VERSION_1_8
@@ -28,8 +29,7 @@ buildscript {
         ext.quasar_version = constants.getProperty("quasarVersion11")
         ext.quasar_classifier = constants.getProperty("quasarClassifier11")
         ext.jdkClassifier = constants.getProperty("jdkClassifier11")
-    }
-    else {
+    } else {
         ext.quasar_version = constants.getProperty("quasarVersion")
         ext.quasar_classifier = constants.getProperty("quasarClassifier")
         ext.jdkClassifier = constants.getProperty("jdkClassifier")
@@ -333,7 +333,6 @@ allprojects {
         mavenCentral()
         jcenter()
         maven { url "$artifactory_contextUrl/corda-dependencies" }
-        maven { url 'https://jitpack.io' }
         maven { url 'https://repo.gradle.org/gradle/libs-releases' }
     }
 
@@ -597,36 +596,22 @@ buildScan {
 }
 
 task allParallelIntegrationTest(type: ParallelTestGroup) {
+    podLogLevel PodLogLevel.INFO
     testGroups "integrationTest"
     numberOfShards 10
     streamOutput true
-    coresPerFork 6
+    coresPerFork 5
     memoryInGbPerFork 10
-    distribute Distribution.CLASS
-}
-task allParallelSlowIntegrationTest(type: ParallelTestGroup) {
-    testGroups "slowIntegrationTest"
-    numberOfShards 4
-    streamOutput false
-    coresPerFork 6
-    memoryInGbPerFork 10
-    distribute Distribution.CLASS
-}
-task allParallelSmokeTest(type: ParallelTestGroup) {
-    testGroups "smokeTest"
-    numberOfShards 4
-    streamOutput true
-    coresPerFork 6
-    memoryInGbPerFork 10
-    distribute Distribution.METHOD
+    distribute DistributeTestsBy.CLASS
 }
 task allParallelUnitTest(type: ParallelTestGroup) {
+    podLogLevel PodLogLevel.INFO
     testGroups "test"
     numberOfShards 10
     streamOutput false
     coresPerFork 5
     memoryInGbPerFork 6
-    distribute Distribution.CLASS
+    distribute DistributeTestsBy.CLASS
 }
 task allParallelUnitAndIntegrationTest(type: ParallelTestGroup) {
     testGroups "test", "integrationTest"
@@ -634,7 +619,7 @@ task allParallelUnitAndIntegrationTest(type: ParallelTestGroup) {
     streamOutput false
     coresPerFork 6
     memoryInGbPerFork 10
-    distribute Distribution.CLASS
+    distribute DistributeTestsBy.CLASS
 }
 task parallelRegressionTest(type: ParallelTestGroup) {
     testGroups "test", "integrationTest", "slowIntegrationTest", "smokeTest"
@@ -642,7 +627,15 @@ task parallelRegressionTest(type: ParallelTestGroup) {
     streamOutput false
     coresPerFork 6
     memoryInGbPerFork 10
-    distribute Distribution.CLASS
+    distribute DistributeTestsBy.CLASS
+}
+task allParallelSmokeTest(type: ParallelTestGroup) {
+    testGroups "slowIntegrationTest", "smokeTest"
+    numberOfShards 4
+    streamOutput false
+    coresPerFork 6
+    memoryInGbPerFork 10
+    distribute DistributeTestsBy.CLASS
 }
 apply plugin: ImageBuilding
 apply plugin: DistributedTesting

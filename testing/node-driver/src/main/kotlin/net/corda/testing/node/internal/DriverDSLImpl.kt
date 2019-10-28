@@ -91,7 +91,8 @@ class DriverDSLImpl(
         val networkParameters: NetworkParameters,
         val notaryCustomOverrides: Map<String, Any?>,
         val inMemoryDB: Boolean,
-        val cordappsForAllNodes: Collection<TestCordappInternal>?
+        val cordappsForAllNodes: Collection<TestCordappInternal>?,
+        val environmentVariables : Map<String, String>
 ) : InternalDriverDSL {
 
     private var _executorService: ScheduledExecutorService? = null
@@ -288,9 +289,11 @@ class DriverDSLImpl(
         } else {
             startOutOfProcessMiniNode(
                     config,
-                    "initial-registration",
-                    "--network-root-truststore=${rootTruststorePath.toAbsolutePath()}",
-                    "--network-root-truststore-password=$rootTruststorePassword"
+                    arrayOf(
+                        "initial-registration",
+                        "--network-root-truststore=${rootTruststorePath.toAbsolutePath()}",
+                        "--network-root-truststore-password=$rootTruststorePassword"
+                    )
             ).map { config }
         }
     }
@@ -450,7 +453,7 @@ class DriverDSLImpl(
             } else {
                 // TODO The config we use here is uses a hardocded p2p port which changes when the node is run proper
                 // This causes two node info files to be generated.
-                startOutOfProcessMiniNode(config, "generate-node-info").map {
+                startOutOfProcessMiniNode(config, arrayOf("generate-node-info")).map {
                     // Once done we have to read the signed node info file that's been generated
                     val nodeInfoFile = config.corda.baseDirectory.list { paths ->
                         paths.filter { it.fileName.toString().startsWith(NodeInfoFilesCopier.NODE_INFO_FILE_NAME_PREFIX) }.findFirst().get()
@@ -536,7 +539,7 @@ class DriverDSLImpl(
      * Start the node with the given flag which is expected to start the node for some function, which once complete will
      * terminate the node.
      */
-    private fun startOutOfProcessMiniNode(config: NodeConfig, vararg extraCmdLineFlag: String): CordaFuture<Unit> {
+    private fun startOutOfProcessMiniNode(config: NodeConfig, extraCmdLineFlag: Array<String> = emptyArray()): CordaFuture<Unit> {
         val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
         val process = startOutOfProcessNode(
                 config,
@@ -545,7 +548,8 @@ class DriverDSLImpl(
                 systemProperties,
                 "512m",
                 null,
-                *extraCmdLineFlag
+                environmentVariables,
+                extraCmdLineFlag
         )
 
         return poll(executorService, "$extraCmdLineFlag (${config.corda.myLegalName})") {
@@ -602,7 +606,15 @@ class DriverDSLImpl(
             nodeFuture
         } else {
             val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
-            val process = startOutOfProcessNode(config, quasarJarPath, debugPort, systemProperties, parameters.maximumHeapSize, parameters.logLevelOverride)
+            val process = startOutOfProcessNode(
+                    config,
+                    quasarJarPath,
+                    debugPort,
+                    systemProperties,
+                    parameters.maximumHeapSize,
+                    parameters.logLevelOverride,
+                    environmentVariables
+            )
 
             // Destroy the child process when the parent exits.This is needed even when `waitForAllNodesToFinish` is
             // true because we don't want orphaned processes in the case that the parent process is terminated by the
@@ -726,6 +738,7 @@ class DriverDSLImpl(
             }
         }
 
+        @Suppress("LongParameterList")
         private fun startOutOfProcessNode(
                 config: NodeConfig,
                 quasarJarPath: String,
@@ -733,9 +746,11 @@ class DriverDSLImpl(
                 overriddenSystemProperties: Map<String, String>,
                 maximumHeapSize: String,
                 logLevelOverride: String?,
-                vararg extraCmdLineFlag: String
-        ): Process {
-            log.info("Starting out-of-process Node ${config.corda.myLegalName.organisation}, debug port is " + (debugPort ?: "not enabled"))
+                environmentVariables : Map<String,String>,
+                extraCmdLineFlag: Array<String> = emptyArray()
+      ): Process {
+            log.info("Starting out-of-process Node ${config.corda.myLegalName.organisation}, " +
+                     "debug port is " + (debugPort ?: "not enabled"))
             // Write node.conf
             writeConfig(config.corda.baseDirectory, "node.conf", config.typesafe.toNodeOnly())
 
@@ -774,7 +789,7 @@ class DriverDSLImpl(
                     "--base-directory=${config.corda.baseDirectory}",
                     "--logging-level=$loggingLevel",
                     "--no-local-shell").also {
-                it += extraCmdLineFlag
+                it.addAll(extraCmdLineFlag)
             }.toList()
 
             // The following dependencies are excluded from the classpath of the created JVM, so that the environment resembles a real one as close as possible.
@@ -792,7 +807,8 @@ class DriverDSLImpl(
                     extraJvmArguments = extraJvmArguments,
                     workingDirectory = config.corda.baseDirectory,
                     maximumHeapSize = maximumHeapSize,
-                    classPath = cp
+                    classPath = cp,
+                    environmentVariables = environmentVariables
             )
         }
 
@@ -1013,7 +1029,8 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
                     networkParameters = defaultParameters.networkParameters,
                     notaryCustomOverrides = defaultParameters.notaryCustomOverrides,
                     inMemoryDB = defaultParameters.inMemoryDB,
-                    cordappsForAllNodes = uncheckedCast(defaultParameters.cordappsForAllNodes)
+                    cordappsForAllNodes = uncheckedCast(defaultParameters.cordappsForAllNodes),
+                    environmentVariables = defaultParameters.environmentVariables
             )
     )
     val shutdownHook = addShutdownHook(driverDsl::shutdown)
@@ -1090,6 +1107,7 @@ class SplitCompatibilityZoneParams(
     override fun config() : NetworkServicesConfig = config
 }
 
+@Suppress("LongParameterList")
 fun <A> internalDriver(
         isDebug: Boolean = DriverParameters().isDebug,
         driverDirectory: Path = DriverParameters().driverDirectory,
@@ -1107,6 +1125,7 @@ fun <A> internalDriver(
         notaryCustomOverrides: Map<String, Any?> = DriverParameters().notaryCustomOverrides,
         inMemoryDB: Boolean = DriverParameters().inMemoryDB,
         cordappsForAllNodes: Collection<TestCordappInternal>? = null,
+        environmentVariables: Map<String, String> = emptyMap(),
         dsl: DriverDSLImpl.() -> A
 ): A {
     return genericDriver(
@@ -1126,7 +1145,8 @@ fun <A> internalDriver(
                     networkParameters = networkParameters,
                     notaryCustomOverrides = notaryCustomOverrides,
                     inMemoryDB = inMemoryDB,
-                    cordappsForAllNodes = cordappsForAllNodes
+                    cordappsForAllNodes = cordappsForAllNodes,
+                    environmentVariables = environmentVariables
             ),
             coerce = { it },
             dsl = dsl

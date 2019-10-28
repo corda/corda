@@ -47,7 +47,7 @@ class ListTests extends DefaultTask implements TestLister {
 
     FileCollection scanClassPath
     List<String> allTests
-    Distribution distribution = System.getProperty(DISTRIBUTION_PROPERTY) ? Distribution.valueOf(System.getProperty(DISTRIBUTION_PROPERTY)) : Distribution.METHOD
+    DistributeTestsBy distribution = System.getProperty(DISTRIBUTION_PROPERTY) ? DistributeTestsBy.valueOf(System.getProperty(DISTRIBUTION_PROPERTY)) : DistributeTestsBy.METHOD
 
     def getTestsForFork(int fork, int forks, Integer seed) {
         def gitSha = new BigInteger(project.hasProperty("corda_revision") ? project.property("corda_revision").toString() : "0", 36)
@@ -66,7 +66,7 @@ class ListTests extends DefaultTask implements TestLister {
     @TaskAction
     def discoverTests() {
         switch (distribution) {
-            case Distribution.METHOD:
+            case DistributeTestsBy.METHOD:
                 Collection<String> results = new ClassGraph()
                         .enableClassInfo()
                         .enableMethodInfo()
@@ -85,7 +85,7 @@ class ListTests extends DefaultTask implements TestLister {
 
                 this.allTests = results.stream().sorted().collect(Collectors.toList())
                 break
-            case Distribution.CLASS:
+            case DistributeTestsBy.CLASS:
                 Collection<String> results = new ClassGraph()
                         .enableClassInfo()
                         .enableMethodInfo()
@@ -105,6 +105,6 @@ class ListTests extends DefaultTask implements TestLister {
     }
 }
 
-public enum Distribution {
+public enum DistributeTestsBy {
     CLASS, METHOD
 }

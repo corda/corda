@@ -175,11 +175,13 @@ abstract class ANSIProgressRenderer {
                 var indent = 0
                 while (errorToPrint != null) {
                     ansi.fgRed()
-                    ansi.a("${IntStream.range(indent, indent).mapToObj { "\t" }.toList().joinToString(separator = "") { s -> s }} $errorIcon ${error.message}")
-                    ansi.reset()
+                    ansi.a("${"\t".repeat(indent)}$errorIcon ${errorToPrint.message}")
+                    ansi.newline()
                     errorToPrint = errorToPrint.cause
                     indent++
                 }
+                ansi.reset()
+
                 ansi.eraseLine(Ansi.Erase.FORWARD)
                 ansi.newline()
                 newLinesDrawn++

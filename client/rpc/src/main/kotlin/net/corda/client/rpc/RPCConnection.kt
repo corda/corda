@@ -25,6 +25,9 @@ interface RPCConnection<out I : RPCOps> : Closeable {
      * Closes this client gracefully by sending a notification to the server, so it can immediately clean up resources.
      * If the server is not available this method may block for a short period until it's clear the server is not
      * coming back.
+     *
+     * Note: this will also be the implementation of [close] so won't be needed when using [use] or `try-with-resources`
+     * blocks.
      */
     fun notifyServerAndClose()
 
@@ -37,4 +40,6 @@ interface RPCConnection<out I : RPCOps> : Closeable {
      * block waiting for it to come back, which typically happens in integration tests and demos rather than production.
      */
     fun forceClose()
+
+    override fun close() = notifyServerAndClose()
 }

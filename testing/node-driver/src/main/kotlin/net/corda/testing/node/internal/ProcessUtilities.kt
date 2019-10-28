@@ -7,17 +7,29 @@ import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 
 object ProcessUtilities {
+    @Suppress("LongParameterList")
     inline fun <reified C : Any> startJavaProcess(
             arguments: List<String>,
             classPath: List<String> = defaultClassPath,
             workingDirectory: Path? = null,
             jdwpPort: Int? = null,
             extraJvmArguments: List<String> = emptyList(),
-            maximumHeapSize: String? = null
+            maximumHeapSize: String? = null,
+            environmentVariables: Map<String, String> = emptyMap()
     ): Process {
-        return startJavaProcess(C::class.java.name, arguments, classPath, workingDirectory, jdwpPort, extraJvmArguments, maximumHeapSize)
+        return startJavaProcess(
+                C::class.java.name,
+                arguments,
+                classPath,
+                workingDirectory,
+                jdwpPort,
+                extraJvmArguments,
+                maximumHeapSize,
+                environmentVariables
+        )
     }
 
+    @Suppress("LongParameterList")
     fun startJavaProcess(
             className: String,
             arguments: List<String>,
@@ -25,7 +37,8 @@ object ProcessUtilities {
             workingDirectory: Path? = null,
             jdwpPort: Int? = null,
             extraJvmArguments: List<String> = emptyList(),
-            maximumHeapSize: String? = null
+            maximumHeapSize: String? = null,
+            environmentVariables: Map<String,String> = emptyMap()
     ): Process {
         val command = mutableListOf<String>().apply {
             add(javaPath)
@@ -38,6 +51,7 @@ object ProcessUtilities {
         }
         return ProcessBuilder(command).apply {
             inheritIO()
+            environment().putAll(environmentVariables)
             environment()["CLASSPATH"] = classPath.joinToString(File.pathSeparator)
             if (workingDirectory != null) {
                 // Timestamp may be handy if the same process started, killed and then re-started. Without timestamp
