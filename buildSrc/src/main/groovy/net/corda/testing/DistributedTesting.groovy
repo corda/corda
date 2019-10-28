@@ -44,14 +44,14 @@ class DistributedTesting implements Plugin<Project> {
             //4. after each completed test write its name to a file to keep track of what finished for restart purposes
             project.subprojects { Project subProject ->
                 subProject.tasks.withType(Test) { Test task ->
-                    println "Evaluating ${task.getPath()}"
+                    project.logger.info("Evaluating ${task.getPath()}")
                     if (task in requestedTasks && !task.hasProperty("ignoreForDistribution")) {
-                        println "Modifying ${task.getPath()}"
+                        project.logger.info "Modifying ${task.getPath()}"
                         ListTests testListerTask = createTestListingTasks(task, subProject)
                         globalAllocator.addSource(testListerTask, task)
                         Test modifiedTestTask = modifyTestTaskForParallelExecution(subProject, task, globalAllocator)
                     } else {
-                        println "Skipping modification of ${task.getPath()} as it's not scheduled for execution"
+                        project.logger.info "Skipping modification of ${task.getPath()} as it's not scheduled for execution"
                     }
                     if (!task.hasProperty("ignoreForDistribution")) {
                         //this is what enables execution of a single test suite - for example node:parallelTest would execute all unit tests in node, node:parallelIntegrationTest would do the same for integration tests
@@ -76,10 +76,10 @@ class DistributedTesting implements Plugin<Project> {
             userGroups.forEach { testGrouping ->
 
                 //for each "group" (ie: test, integrationTest) within the grouping find all the Test tasks which have the same name.
-                List<Test> groups = ((ParallelTestGroup) testGrouping).groups.collect { allTestTasksGroupedByType.get(it) }.flatten()
+                List<Test> testTasksToRunInGroup = ((ParallelTestGroup) testGrouping).groups.collect { allTestTasksGroupedByType.get(it) }.flatten()
 
                 //join up these test tasks into a single set of tasks to invoke (node:test, node:integrationTest...)
-                String superListOfTasks = groups.collect { it.path }.join(" ")
+                String superListOfTasks = testTasksToRunInGroup.collect { it.path }.join(" ")
 
                 //generate a preAllocate / deAllocate task which allows you to "pre-book" a node during the image building phase
                 //this prevents time lost to cloud provider node spin up time (assuming image build time > provider spin up time)
