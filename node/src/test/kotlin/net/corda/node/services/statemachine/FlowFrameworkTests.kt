@@ -121,7 +121,8 @@ class FlowFrameworkTests {
         val flow = ReceiveFlow(bob)
         val fiber = aliceNode.services.startFlow(flow) as FlowStateMachineImpl
         // Before the flow runs change the suspend action to throw an exception
-        val throwingActionExecutor = SuspendThrowingActionExecutor(Exception("Thrown during suspend"), fiber.transientValues!!.value.actionExecutor)
+        val throwingActionExecutor = SuspendThrowingActionExecutor(Exception("Thrown during suspend"),
+                fiber.transientValues!!.value.actionExecutor)
         fiber.transientValues = TransientReference(fiber.transientValues!!.value.copy(actionExecutor = throwingActionExecutor))
         mockNet.runNetwork()
         fiber.resultFuture.getOrThrow()
