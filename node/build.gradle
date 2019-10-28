@@ -202,6 +202,7 @@ dependencies {
     
     // BFT-Smart dependencies
     compile 'com.github.bft-smart:library:master-v1.1-beta-g6215ec8-87'
+    compile 'commons-codec:commons-codec:1.13'
 
     // Java Atomix: RAFT library
     compile 'io.atomix.copycat:copycat-client:1.2.3'
