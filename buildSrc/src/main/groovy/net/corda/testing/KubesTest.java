@@ -177,7 +177,7 @@ public class KubesTest extends DefaultTask {
         addShutdownHook(() -> {
             try (KubernetesClient client = getKubernetesClient()) {
                 System.out.println("Deleting PVC: " + pvc.getMetadata().getName());
-                client.persistentVolumeClaims().delete(pvc);
+//                client.persistentVolumeClaims().delete(pvc);
             }
         });
         return pvc;
@@ -234,7 +234,7 @@ public class KubesTest extends DefaultTask {
                 getLogger().lifecycle("removing pod " + podName + " (" + podIdx + "/" + numberOfPods + ") after completed build");
                 try (KubernetesClient client = getKubernetesClient()) {
                     client.pods().delete(createdPod);
-                    client.persistentVolumeClaims().delete(pvc);
+//                    client.persistentVolumeClaims().delete(pvc);
                 }
                 return new KubePodResult(resCode, podOutput, binaryResults);
             });
