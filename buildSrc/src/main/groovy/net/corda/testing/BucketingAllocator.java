@@ -62,8 +62,11 @@ public class BucketingAllocator {
         if (t > 0) {
             return t + " secs";
         }
-        t = TimeUnit.NANOSECONDS.toSeconds(nanos);
-        return t + " ms";
+        if (t > 0) {
+            t = TimeUnit.NANOSECONDS.toSeconds(nanos);
+            return t + " ms";
+        }
+        return nanos + " ns";
     }
 
     private void printSummary() {
@@ -127,7 +130,8 @@ public class BucketingAllocator {
             this.testTask = testTask;
             this.testName = testName;
             this.foundTests = foundTests;
-            durationNanos = foundTests.stream().mapToLong(tp -> Math.max(tp.getSecond(), 1)).sum();
+            this.durationNanos = foundTests.stream().mapToLong(tp -> Math.max(tp.getSecond(), 1)).sum();
+            LOG.warn(">> ADDED TestBucket with duration {} ns", this.durationNanos);
         }
 
         public long getDuration() {
@@ -157,7 +161,8 @@ public class BucketingAllocator {
 
         public void addBucket(TestBucket tb) {
             this.testsForFork.add(tb);
-            this.runningDuration = runningDuration + tb.durationNanos;
+            this.runningDuration = this.runningDuration + tb.durationNanos;
+            LOG.warn(">>> Added TestBucket {}ns to Container, now {}ns", tb.durationNanos, this.runningDuration);
         }
 
         public Long getCurrentDuration() {
