@@ -1224,6 +1224,7 @@
     <ID>MagicNumber:TransactionUtils.kt$4</ID>
     <ID>MagicNumber:TransactionVerificationException.kt$TransactionVerificationException.ConstraintPropagationRejection$3</ID>
     <ID>MagicNumber:TransactionVerifierServiceInternal.kt$Verifier$4</ID>
+    <ID>MagicNumber:TransactionVerifierServiceInternal.kt$Verifier$5</ID>
     <ID>MagicNumber:TransactionViewer.kt$TransactionViewer$15.0</ID>
     <ID>MagicNumber:TransactionViewer.kt$TransactionViewer$20.0</ID>
     <ID>MagicNumber:TransactionViewer.kt$TransactionViewer$200.0</ID>
@@ -1328,7 +1329,6 @@
     <ID>MaxLineLength:AMQPTypeIdentifierParser.kt$AMQPTypeIdentifierParser.ParseState.ParsingParameterList$data</ID>
     <ID>MaxLineLength:AMQPTypeIdentifierParser.kt$AMQPTypeIdentifierParser.ParseState.ParsingRawType$data</ID>
     <ID>MaxLineLength:AMQPTypeIdentifierParserTests.kt$AMQPTypeIdentifierParserTests$verify(" java.util.Map &lt; java.util.Map&lt; java.lang.String, java.lang.Integer &gt;, java.util.Map &lt; java.lang.Long , java.lang.String &gt; &gt;")</ID>
-    <ID>MaxLineLength:ANSIProgressRenderer.kt$ANSIProgressRenderer$ansi.a("${IntStream.range(indent, indent).mapToObj { "\t" }.toList().joinToString(separator = "") { s -&gt; s }} $errorIcon ${error.message}")</ID>
     <ID>MaxLineLength:ANSIProgressRenderer.kt$StdoutANSIProgressRenderer$val consoleAppender = manager.configuration.appenders.values.filterIsInstance&lt;ConsoleAppender&gt;().singleOrNull { it.name == "Console-Selector" }</ID>
     <ID>MaxLineLength:ANSIProgressRendererTest.kt$ANSIProgressRendererTest$checkTrackingState(captor, 5, listOf(stepSuccess(STEP_1_LABEL), stepSuccess(STEP_3_LABEL), stepSuccess(STEP_2_LABEL), stepActive(STEP_3_LABEL)))</ID>
     <ID>MaxLineLength:ANSIProgressRendererTest.kt$ANSIProgressRendererTest$checkTrackingState(captor, 6, listOf(stepSuccess(STEP_1_LABEL), stepSuccess(STEP_3_LABEL), stepSuccess(STEP_2_LABEL), stepActive(STEP_3_LABEL), stepNotRun(STEP_4_LABEL)))</ID>
