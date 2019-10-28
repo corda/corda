@@ -301,13 +301,13 @@ Alternatively, you can build it yourself from the source as follows.
 
 Open your terminial and clone the DJVM repository from GitHub:
 
-:: shell
+.. code-block:: shell
 
   $ git clone https://github.com/corda/djvm
 
 Navigate to this newly created ``djvm`` directory, and then issue the following command:
 
-:: shell
+.. code-block:: shell
 
   $ djvm/shell/install
 
@@ -315,7 +315,7 @@ Navigate to this newly created ``djvm`` directory, and then issue the following 
 This will build the DJVM tool and install a shortcut on Bash-enabled systems. It will also generate a Bash completion
 file and store it in the ``shell`` folder. This file can be sourced from your Bash initialisation script.
 
-:: shell
+.. code-block:: shell
 
   $ cd ~
   $ djvm
@@ -323,7 +323,7 @@ file and store it in the ``shell`` folder. This file can be sourced from your Ba
 Now, you can create a new Java file from a skeleton that ``djvm`` provides, compile the file, and consequently run it
 by issuing the following commands:
 
-:: shell
+.. code-block:: shell
 
   $ djvm new Hello
   $ vim tmp/net/corda/sandbox/Hello.java

@@ -342,7 +342,7 @@ It is also important that we capture the correct amount of contextual informatio
 - Flow id (runId, also referred to as `StateMachineRunId`), if logging within a flow
 - Other contextual Flow information (eg. counterparty), if logging within a flow
 - `FlowStackSnapshot` information for catastrophic flow failures.
-  Note: this information is not currently supposed to be used in production (???).
+  Note: this information is not currently supposed to be used in production.
 - Session id information for RPC calls
 - CorDapp name, if logging from within a CorDapp
 

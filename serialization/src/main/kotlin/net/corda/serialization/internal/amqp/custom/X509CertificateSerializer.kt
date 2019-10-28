@@ -7,7 +7,10 @@ import java.lang.reflect.Type
 import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
 
-object X509CertificateSerializer : CustomSerializer.Implements<X509Certificate>(X509Certificate::class.java) {
+object X509CertificateSerializer
+    : CustomSerializer.Implements<X509Certificate>(
+        X509Certificate::class.java
+) {
     override val schemaForDocumentation = Schema(listOf(RestrictedType(
             type.toString(),
             "",

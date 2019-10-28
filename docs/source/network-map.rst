@@ -195,20 +195,20 @@ parameters will be accepted without user input. The following parameters with th
     :start-after: DOCSTART 1
     :end-before: DOCEND 1
 
-This behaviour can be turned off by setting the optional node configuration property ``NetworkParameterAcceptanceSettings.autoAcceptEnabled``
+This behaviour can be turned off by setting the optional node configuration property ``networkParameterAcceptanceSettings.autoAcceptEnabled``
 to ``false``. For example:
 
 .. sourcecode:: guess
 
     ...
-    NetworkParameterAcceptanceSettings {
+    networkParameterAcceptanceSettings {
         autoAcceptEnabled = false
     }
     ...
 
 It is also possible to switch off this behaviour at a more granular parameter level. This can be achieved by specifying the set of
 ``@AutoAcceptable`` parameters that should not be auto-acceptable in the optional
-``NetworkParameterAcceptanceSettings.excludedAutoAcceptableParameters`` node configuration property.
+``networkParameterAcceptanceSettings.excludedAutoAcceptableParameters`` node configuration property.
 
 For example, auto-acceptance can be switched off for any updates that change the ``packageOwnership`` map by adding the following to the
 node configuration:
@@ -216,7 +216,7 @@ node configuration:
 .. sourcecode:: guess
 
     ...
-    NetworkParameterAcceptanceSettings {
+    networkParameterAcceptanceSettings {
         excludedAutoAcceptableParameters: ["packageOwnership"]
     }
     ...

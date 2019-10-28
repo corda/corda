@@ -60,8 +60,7 @@ function downloadTestnetCerts() {
         : ${ONE_TIME_DOWNLOAD_KEY:? '$ONE_TIME_DOWNLOAD_KEY must be set as environment variable'}
         : ${LOCALITY:? '$LOCALITY (the locality used when registering for Testnet) must be set as environment variable'}
         : ${COUNTRY:? '$COUNTRY (the country used when registering for Testnet) must be set as environment variable'}
-        curl -L -d "{\"x500Name\":{\"locality\":\"${LOCALITY}\", \"country\":\"${COUNTRY}\"}, \"configType\": \"INSTALLSCRIPT\", \"include\": { \"systemdServices\": false, \"cordapps\": false, \"cordaJar\": false, \"cordaWebserverJar\": false, \"scripts\": false} }" \
-        -H 'Content-Type: application/json' \
+        curl \
         -X POST "https://onboarder.prod.ws.r3.com/api/user/node/generate/one-time-key/redeem/$ONE_TIME_DOWNLOAD_KEY" \
         -o "${CERTIFICATES_FOLDER}/certs.zip"
     fi

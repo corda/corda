@@ -37,18 +37,20 @@ import net.corda.core.internal.toPath
 import java.net.URL
 
 // Migrate the database to the current version, using liquibase.
-//
-// A note on the ourName parameter: This is used by the vault state migration to establish what the node's legal identity is when setting up
-// its copy of the identity service. It is passed through using a system property. When multiple identity support is added, this will need
-// reworking so that multiple identities can be passed to the migration.
 class SchemaMigration(
         val schemas: Set<MappedSchema>,
         val dataSource: DataSource,
         private val databaseConfig: DatabaseConfig,
         cordappLoader: CordappLoader? = null,
         private val currentDirectory: Path?,
-        private val ourName: CordaX500Name? = null) {
-
+        // This parameter is used by the vault state migration to establish what the node's legal identity is when setting up
+        // its copy of the identity service. It is passed through using a system property. When multiple identity support is added, this will need
+        // reworking so that multiple identities can be passed to the migration.
+        private val ourName: CordaX500Name? = null,
+        // This parameter forces an error to be thrown if there are missing migrations. When using H2, Hibernate will automatically create schemas where they are
+        // missing, so no need to throw unless you're specifically testing whether all the migrations are present.
+        private val forceThrowOnMissingMigration: Boolean = false) {
+        
     private val jarToMappedSchemas: Map<URL?, Set<MappedSchema>> =
             cordappLoader?.cordapps?.associate { it.jarPath as URL? to it.customSchemas } ?: emptyMap()
 
@@ -166,6 +168,15 @@ class SchemaMigration(
         }
     }
 
+    private fun logOrThrowMigrationError(mappedSchema: MappedSchema): String? =
+            if (forceThrowOnMissingMigration) {
+                throw MissingMigrationException(mappedSchema)
+            } else {
+                logger.warn(MissingMigrationException.errorMessageFor(mappedSchema))
+                null
+            }
+
+
     private fun doRunMigration(
             run: Boolean,
             check: Boolean,
@@ -193,7 +204,9 @@ class SchemaMigration(
                     (mappedSchema::class.qualifiedName == "net.corda.finance.schemas.CashSchemaV1"
                             || mappedSchema::class.qualifiedName == "net.corda.finance.schemas.CommercialPaperSchemaV1")
                             && mappedSchema.migrationResource == null -> null
-                    else -> throw MissingMigrationException(mappedSchema)
+                    (mappedSchema::class.qualifiedName == "net.corda.finance.schemas.CashSchemaV1" || mappedSchema::class.qualifiedName == "net.corda.finance.schemas.CommercialPaperSchemaV1") && mappedSchema.migrationResource == null -> null
+                    else -> logOrThrowMigrationError(mappedSchema)
+
                 }
                 if (changeLog != null) {
                     checkResourcesInClassPath(listOf(changeLog), jar)
@@ -297,7 +310,7 @@ class SchemaMigration(
             val isFinanceAppWithLiquibaseNotMigrated = isFinanceAppWithLiquibase // If Finance App is pre v4.0 then no need to migrate it so no need to check.
                     && existingDatabase
                     && (!hasLiquibase // Migrate as other tables.
-                         || (hasLiquibase && it.createStatement().use { noLiquibaseEntryLogForFinanceApp(it) })) // If Liquibase is already in the database check if Finance App schema log is missing.
+                    || (hasLiquibase && it.createStatement().use { noLiquibaseEntryLogForFinanceApp(it) })) // If Liquibase is already in the database check if Finance App schema log is missing.
 
             Pair(existingDatabase && !hasLiquibase, isFinanceAppWithLiquibaseNotMigrated)
         }

@@ -167,7 +167,7 @@ class NotaryWhitelistTests(
     }
 
     private fun runNotaryClient(stx: SignedTransaction): CordaFuture<List<TransactionSignature>> {
-        val flow = NotaryFlow.Client(stx)
+        val flow = NotaryFlow.Client(stx, skipVerification = true)
         val future = aliceNode.services.startFlow(flow).resultFuture
         mockNet.runNetwork()
         return future

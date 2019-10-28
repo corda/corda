@@ -94,6 +94,8 @@ Below is a summary of what specific transaction components have to be revealed t
 +-----------------------------------+---------------+-----------------------+
 | Signatures                        | Fully visible | Hidden                |
 +-----------------------------------+---------------+-----------------------+
+| Network parameters                | Fully visible | Fully visible         |
++-----------------------------------+---------------+-----------------------+
 
 Both types of notaries record the calling party's identity: the public key and the X.500 Distinguished Name.
 

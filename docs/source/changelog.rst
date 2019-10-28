@@ -6,11 +6,15 @@ release, see :doc:`app-upgrade-notes`.
 
 Unreleased
 ----------
+
 * Moved and renamed the testing web server to the ``testing`` subproject. Also renamed the published artifact to ``corda-testserver.jar``.
 
 * New Vault Query criteria to specify exact matches for specified participants.
 
 * Support for Java 11 (compatibility mode). Please read https://github.com/corda/corda/pull/5356.
+
+* Updating FinalityFlow with functionality to indicate the appropriate StatesToRecord. This allows the initiating party to record states
+  from transactions which they are proposing, but are not necessarily participants of.
 
 * Removed the RPC exception privacy feature. Previously, in production mode, the exceptions thrown on the node were stripped of all content
   when rethrown on the RPC client.
@@ -32,6 +36,10 @@ Unreleased
 
 * Introduced a new low level flow diagnostics tool: checkpoint agent (that can be used standalone or in conjunction with the ``checkpoints dump`` shell command).
   See :doc:`checkpoint-tooling` for more information.
+  
+* ``NotaryFlow.Client`` now performs transaction verification by default to prevent accidentally sending an invalid transaction to a
+  non-validating notary. The behaviour can be controlled by passing a constructor parameter flag ``skipVerification``.
+  Note: this only affects flows that invoke ``NotaryFlow.Client`` directly – no behavioural change if using ``FinalityFlow``.
 
 * The MockNet now supports setting a custom Notary class name, as was already supported by normal node config. See :doc:`tutorial-custom-notary`.
 
@@ -79,6 +87,9 @@ Unreleased
   A node which is running out of memory is now expected to stop immediately to preserve ledger consistency and avoid flaws in operations.
   Note that it's a responsibility of a client application to handle RPC reconnection in case this happens.
   See :ref:`setting_jvm_args` and :ref:`memory_usage_and_tuning` for further details.
+
+* Environment variables and system properties can now be provided with underscore separators instead of dots. Neither are case sensitive.
+  See :ref:`overriding config values <corda_configuration_file_overriding_config>` for more information.
 
 .. _changelog_v4.1:
 

@@ -8,8 +8,9 @@ import java.time.MonthDay
 /**
  * A serializer for [MonthDay] that uses a proxy object to write out the integer form.
  */
-class MonthDaySerializer(factory: SerializerFactory)
-    : CustomSerializer.Proxy<MonthDay, MonthDaySerializer.MonthDayProxy>(
+class MonthDaySerializer(
+        factory: SerializerFactory
+) : CustomSerializer.Proxy<MonthDay, MonthDaySerializer.MonthDayProxy>(
         MonthDay::class.java, MonthDayProxy::class.java, factory
 ) {
     override fun toProxy(obj: MonthDay): MonthDayProxy = MonthDayProxy(obj.monthValue.toByte(), obj.dayOfMonth.toByte())
