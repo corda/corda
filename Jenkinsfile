@@ -37,7 +37,7 @@ pipeline {
                         sh "./gradlew " +
                                 "-DbuildId=\"\${BUILD_ID}\" " +
                                 "-Dkubenetize=true " +
-                                "-Ddocker.run.tag=\"\${DOCKER_TAG_TO_USE}\"" +
+                                "-Ddocker.run.tag=\"\${DOCKER_TAG_TO_USE}\" " +
                                 "-Dartifactory.username=\"\${ARTIFACTORY_CREDENTIALS_USR}\" " +
                                 "-Dartifactory.password=\"\${ARTIFACTORY_CREDENTIALS_PSW}\" " +
                                 "-Dgit.branch=\"\${GIT_BRANCH}\" " +
