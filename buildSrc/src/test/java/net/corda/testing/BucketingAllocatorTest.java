@@ -2,6 +2,7 @@ package net.corda.testing;
 
 import org.hamcrest.collection.IsIterableContainingInAnyOrder;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.Arrays;
@@ -111,7 +112,6 @@ public class BucketingAllocatorTest {
         Assert.assertEquals(TimeUnit.SECONDS.toNanos(3), forkContainers.get(1).getCurrentDuration().longValue());
     }
 
-
     @Test
     public void testBucketAllocationForSeveralTestsDistributedByClassName() {
         Tests tests = new Tests();
@@ -166,5 +166,13 @@ public class BucketingAllocatorTest {
         Assert.assertEquals(TimeUnit.SECONDS.toNanos(4), forkContainers.get(1).getCurrentDuration().longValue());
         Assert.assertEquals(TimeUnit.SECONDS.toNanos(4), forkContainers.get(2).getCurrentDuration().longValue());
         Assert.assertEquals(TimeUnit.SECONDS.toNanos(3), forkContainers.get(3).getCurrentDuration().longValue());
+    }
+
+    @Test
+    public void durationToString() {
+        Assert.assertEquals("1 mins", BucketingAllocator.getDuration(60_000_000_000L));
+        Assert.assertEquals("4 secs", BucketingAllocator.getDuration(4_000_000_000L));
+        Assert.assertEquals("400 ms", BucketingAllocator.getDuration(400_000_000L));
+        Assert.assertEquals("400000 ns", BucketingAllocator.getDuration(400_000L));
     }
 }

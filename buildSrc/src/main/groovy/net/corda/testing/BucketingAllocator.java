@@ -53,7 +53,7 @@ public class BucketingAllocator {
         printSummary();
     }
 
-    private static String getDuration(long nanos) {
+    static String getDuration(long nanos) {
         long t = TimeUnit.NANOSECONDS.toMinutes(nanos);
         if (t > 0) {
             return t + " mins";
@@ -62,8 +62,8 @@ public class BucketingAllocator {
         if (t > 0) {
             return t + " secs";
         }
+        t = TimeUnit.NANOSECONDS.toMillis(nanos);
         if (t > 0) {
-            t = TimeUnit.NANOSECONDS.toSeconds(nanos);
             return t + " ms";
         }
         return nanos + " ns";
@@ -77,7 +77,7 @@ public class BucketingAllocator {
             System.out.println("Tests to Run: ");
             container.testsForFork.forEach(tb -> {
                 System.out.println(tb.testName);
-                tb.foundTests.forEach(ft -> System.out.println("\t" + ft.getFirst() + ", " + ft.getSecond()));
+                tb.foundTests.forEach(ft -> System.out.println("\t" + ft.getFirst() + ", " + getDuration(ft.getSecond())));
             });
         });
     }
