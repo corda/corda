@@ -20,6 +20,7 @@ public class Properties {
      */
     static void setCordaType(@NotNull final String cordaType) {
         CORDA_TYPE = cordaType;
+        LOG.warn("Set CORDA_TYPE to {}", CORDA_TYPE);
     }
 
     /**
