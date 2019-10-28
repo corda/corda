@@ -3,19 +3,25 @@ package net.corda.testing
 import org.gradle.api.DefaultTask
 
 class ParallelTestGroup extends DefaultTask {
-    Distribution distribution = Distribution.METHOD
+
+    DistributeTestsBy distribution = DistributeTestsBy.METHOD
 
     List<String> groups = new ArrayList<>()
     int shardCount = 20
     int coresToUse = 4
     int gbOfMemory = 4
     boolean printToStdOut = true
+    PodLogLevel logLevel = PodLogLevel.INFO
 
     void numberOfShards(int shards) {
         this.shardCount = shards
     }
 
-    void distribute(Distribution dist){
+    void podLogLevel(PodLogLevel level) {
+        this.logLevel = level
+    }
+
+    void distribute(DistributeTestsBy dist) {
         this.distribution = dist
     }
 

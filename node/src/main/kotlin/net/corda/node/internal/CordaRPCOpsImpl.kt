@@ -17,16 +17,34 @@ import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
-import net.corda.core.internal.*
+import net.corda.core.internal.AttachmentTrustInfo
+import net.corda.core.internal.FlowStateMachine
+import net.corda.core.internal.RPC_UPLOADER
+import net.corda.core.internal.STRUCTURAL_STEP_PREFIX
 import net.corda.core.internal.messaging.InternalCordaRPCOps
-import net.corda.core.messaging.*
+import net.corda.core.internal.sign
+import net.corda.core.messaging.DataFeed
+import net.corda.core.messaging.FlowHandle
+import net.corda.core.messaging.FlowHandleImpl
+import net.corda.core.messaging.FlowProgressHandle
+import net.corda.core.messaging.FlowProgressHandleImpl
+import net.corda.core.messaging.ParametersUpdateInfo
+import net.corda.core.messaging.RPCReturnsObservables
+import net.corda.core.messaging.StateMachineInfo
+import net.corda.core.messaging.StateMachineTransactionMapping
+import net.corda.core.messaging.StateMachineUpdate
+import net.corda.core.messaging.pendingFlowsCount
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeDiagnosticInfo
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.Vault
-import net.corda.core.node.services.vault.*
+import net.corda.core.node.services.vault.AttachmentQueryCriteria
+import net.corda.core.node.services.vault.AttachmentSort
+import net.corda.core.node.services.vault.PageSpecification
+import net.corda.core.node.services.vault.QueryCriteria
+import net.corda.core.node.services.vault.Sort
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.getOrThrow
@@ -120,14 +138,16 @@ internal class CordaRPCOpsImpl(
         return services.vaultService._trackBy(criteria, paging, sorting, contractStateType)
     }
 
-    @Suppress("OverridingDeprecatedMember")
+    @Suppress("OverridingDeprecatedMember", "DEPRECATION")
     override fun internalVerifiedTransactionsSnapshot(): List<SignedTransaction> {
-        val (snapshot, updates) = @Suppress("DEPRECATION") internalVerifiedTransactionsFeed()
+        val (snapshot, updates) = internalVerifiedTransactionsFeed()
         updates.notUsed()
         return snapshot
     }
 
-    override fun internalFindVerifiedTransaction(txnId: SecureHash): SignedTransaction? = services.validatedTransactions.getTransaction(txnId)
+    @Suppress("OverridingDeprecatedMember")
+    override fun internalFindVerifiedTransaction(txnId: SecureHash): SignedTransaction? =
+            services.validatedTransactions.getTransaction(txnId)
 
     @Suppress("OverridingDeprecatedMember")
     override fun internalVerifiedTransactionsFeed(): DataFeed<List<SignedTransaction>, SignedTransaction> {
@@ -164,7 +184,8 @@ internal class CordaRPCOpsImpl(
         return snapshot
     }
 
-    override fun stateMachineRecordedTransactionMappingFeed(): DataFeed<List<StateMachineTransactionMapping>, StateMachineTransactionMapping> {
+    override fun stateMachineRecordedTransactionMappingFeed():
+            DataFeed<List<StateMachineTransactionMapping>, StateMachineTransactionMapping> {
         return services.stateMachineRecordedTransactionMapping.track()
     }
 
@@ -292,7 +313,8 @@ internal class CordaRPCOpsImpl(
             services.networkMapUpdater.updateNetworkMapCache()
         } catch (e: Exception) {
             when (e) {
-                is ConnectException -> throw CordaRuntimeException("There is connection problem to network map. The possible causes are incorrect configuration or network map service being down")
+                is ConnectException -> throw CordaRuntimeException("There is connection problem to network map. The possible causes " +
+                        "are incorrect configuration or network map service being down")
                 else -> throw e
             }
         }
@@ -302,15 +324,26 @@ internal class CordaRPCOpsImpl(
         return vaultQueryBy(QueryCriteria.VaultQueryCriteria(), PageSpecification(), Sort(emptySet()), contractStateType)
     }
 
-    override fun <T : ContractState> vaultQueryByCriteria(criteria: QueryCriteria, contractStateType: Class<out T>): Vault.Page<T> {
+    override fun <T : ContractState> vaultQueryByCriteria(
+            criteria: QueryCriteria,
+            contractStateType: Class<out T>
+    ): Vault.Page<T> {
         return vaultQueryBy(criteria, PageSpecification(), Sort(emptySet()), contractStateType)
     }
 
-    override fun <T : ContractState> vaultQueryByWithPagingSpec(contractStateType: Class<out T>, criteria: QueryCriteria, paging: PageSpecification): Vault.Page<T> {
+    override fun <T : ContractState> vaultQueryByWithPagingSpec(
+            contractStateType: Class<out T>,
+            criteria: QueryCriteria,
+            paging: PageSpecification
+    ): Vault.Page<T> {
         return vaultQueryBy(criteria, paging, Sort(emptySet()), contractStateType)
     }
 
-    override fun <T : ContractState> vaultQueryByWithSorting(contractStateType: Class<out T>, criteria: QueryCriteria, sorting: Sort): Vault.Page<T> {
+    override fun <T : ContractState> vaultQueryByWithSorting(
+            contractStateType: Class<out T>,
+            criteria: QueryCriteria,
+            sorting: Sort
+    ): Vault.Page<T> {
         return vaultQueryBy(criteria, PageSpecification(), sorting, contractStateType)
     }
 
@@ -318,15 +351,26 @@ internal class CordaRPCOpsImpl(
         return vaultTrackBy(QueryCriteria.VaultQueryCriteria(), PageSpecification(), Sort(emptySet()), contractStateType)
     }
 
-    override fun <T : ContractState> vaultTrackByCriteria(contractStateType: Class<out T>, criteria: QueryCriteria): DataFeed<Vault.Page<T>, Vault.Update<T>> {
+    override fun <T : ContractState> vaultTrackByCriteria(
+            contractStateType: Class<out T>,
+            criteria: QueryCriteria
+    ): DataFeed<Vault.Page<T>, Vault.Update<T>> {
         return vaultTrackBy(criteria, PageSpecification(), Sort(emptySet()), contractStateType)
     }
 
-    override fun <T : ContractState> vaultTrackByWithPagingSpec(contractStateType: Class<out T>, criteria: QueryCriteria, paging: PageSpecification): DataFeed<Vault.Page<T>, Vault.Update<T>> {
+    override fun <T : ContractState> vaultTrackByWithPagingSpec(
+            contractStateType: Class<out T>,
+            criteria: QueryCriteria,
+            paging: PageSpecification
+    ): DataFeed<Vault.Page<T>, Vault.Update<T>> {
         return vaultTrackBy(criteria, paging, Sort(emptySet()), contractStateType)
     }
 
-    override fun <T : ContractState> vaultTrackByWithSorting(contractStateType: Class<out T>, criteria: QueryCriteria, sorting: Sort): DataFeed<Vault.Page<T>, Vault.Update<T>> {
+    override fun <T : ContractState> vaultTrackByWithSorting(
+            contractStateType: Class<out T>,
+            criteria: QueryCriteria,
+            sorting: Sort
+    ): DataFeed<Vault.Page<T>, Vault.Update<T>> {
         return vaultTrackBy(criteria, PageSpecification(), sorting, contractStateType)
     }
 
@@ -349,7 +393,10 @@ internal class CordaRPCOpsImpl(
                     .doOnCompleted(shutdownNode::invoke)
                     .subscribe(
                             { }, // Nothing to do on each update here, only completion matters.
-                            { error -> logger.error("Error while waiting for pending flows to drain in preparation for shutdown. Cause was: ${error.message}", error) }
+                            { error ->
+                                logger.error("Error while waiting for pending flows to drain in preparation for shutdown. " +
+                                        "Cause was: ${error.message}", error)
+                            }
                     )
             drainingShutdownHook.set(subscription)
         } else {
@@ -375,7 +422,13 @@ internal class CordaRPCOpsImpl(
     }
 
     private fun stateMachineInfoFromFlowLogic(flowLogic: FlowLogic<*>): StateMachineInfo {
-        return StateMachineInfo(flowLogic.runId, flowLogic.javaClass.name, flowLogic.stateMachine.context.toFlowInitiator(), flowLogic.track(), flowLogic.stateMachine.context)
+        return StateMachineInfo(
+                flowLogic.runId,
+                flowLogic.javaClass.name,
+                flowLogic.stateMachine.context.toFlowInitiator(),
+                flowLogic.track(),
+                flowLogic.stateMachine.context
+        )
     }
 
     private fun stateMachineUpdateFromStateMachineChange(change: StateMachineManager.Change): StateMachineUpdate {
