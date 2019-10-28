@@ -164,7 +164,7 @@ public class Tests {
                 .collect(Collectors.toList());
         // We don't know if the testPrefix is a classname or classname.methodname (exact match).
         if (results == null || results.isEmpty()) {
-            LOG.warn("In {} tests, could not find any starting with {}", tests.size(), testPrefix);
+            LOG.warn("In {} previously executed tests, could not find any starting with {}", tests.size(), testPrefix);
             results = Arrays.asList(new Tuple2<>(testPrefix, getMeanDurationForTests()));
         }
         return results;

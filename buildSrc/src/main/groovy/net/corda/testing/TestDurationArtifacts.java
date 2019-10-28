@@ -319,41 +319,6 @@ public class TestDurationArtifacts {
     static String getTargetBranchTag() {
         return (Properties.getCordaType() + "-" + Properties.getTargetGitBranch()).replace('.', '-');
     }
-    /**
-     * Load the tests from Artifactory using interim file.  Existing test data is cleared.
-     *
-     * @param destDir location for interim file.
-     * @return a reference to the Tests object.
-     */
-    static Tests loadTests(final File destDir) {
-        LOG.warn("LOADING tests from Artifactory");
-        tests.clear();
-        try {
-            final TestDurationArtifacts testArtifacts = new TestDurationArtifacts();
-            File testsFile = testArtifacts.get(getBranchTag(), destDir);
-
-            //  Try getting artifacts for our branch, if not, try the target branch.
-            if (testsFile == null) {
-                LOG.warn("Could not get tests from Artifactory for tag {}, trying {}", getBranchTag(), getTargetBranchTag());
-                testsFile = testArtifacts.get(getTargetBranchTag(), destDir);
-                if (testsFile == null) {
-                    LOG.warn("Could not get any tests from Artifactory");
-                    return tests;
-                }
-            }
-
-            try (FileInputStream inputStream = new FileInputStream(testsFile)) {
-                addTestsFromZippedCsv(tests, inputStream);
-                LOG.warn("Got {} tests from Artifactory", tests.size());
-                return tests;
-            }
-        } catch (Exception e) { // was IOException
-            LOG.warn(e.toString());
-            e.printStackTrace();
-            LOG.warn("Could not get tests from Artifactory");
-            return tests;
-        }
-    }
 
     /**
      * Load the tests from Artifactory, in-memory.  No temp file used.  Existing test data is cleared.
@@ -397,18 +362,6 @@ public class TestDurationArtifacts {
      */
     private boolean get(@NotNull final String theTag, @NotNull final OutputStream outputStream) {
         return artifactory.get(BASE_URL, theTag, ARTIFACT, "zip", outputStream);
-    }
-
-    /**
-     * Get tests for the specified tag and save as a file
-     *
-     * @param theTag  tag for tests
-     * @param destDir destination directory
-     * @return the file
-     */
-    @Nullable
-    private File get(@NotNull final String theTag, @NotNull final File destDir) {
-        return artifactory.get(BASE_URL, theTag, ARTIFACT, "zip", destDir);
     }
 
     /**

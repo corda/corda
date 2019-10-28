@@ -56,34 +56,6 @@ public class Artifactory {
     //</editor-fold>
 
     /**
-     * Get the specified artifact from Artifactory.
-     *
-     * @param baseUrl   e.g. https://software.r3.com/artifactory/corda-releases/net/corda/corda/
-     * @param theTag    e.g. 4.3-RC0
-     * @param artifact  e.g. corda
-     * @param extension e.g. jar
-     * @param localDir  e.g. /home/someuser/downloads
-     * @return localDir/artifact.extension, otherwise null
-     */
-    @Nullable
-    File get(@NotNull final String baseUrl,
-             @NotNull final String theTag,
-             @NotNull final String artifact,
-             @NotNull final String extension,
-             @NotNull final File localDir) {
-        boolean ok = false;
-        File file = new File(localDir, getFileName(artifact, extension, theTag));
-
-        try (FileOutputStream outputStream = new FileOutputStream(file)) {
-            ok = get(baseUrl, theTag, artifact, extension, outputStream);
-        } catch (IOException e) {
-            LOG.warn("Unable to get file from Artifcatory:  {}", getFullUrl(baseUrl, theTag, artifact, extension));
-        }
-
-        return ok ? file : null;
-    }
-
-    /**
      * Get the unit tests, synchronous get.
      * See https://www.jfrog.com/confluence/display/RTF/Artifactory+REST+API#ArtifactoryRESTAPI-RetrieveLatestArtifact
      *
@@ -117,32 +89,6 @@ public class Artifactory {
         LOG.warn("Ok.  REST GET successful");
 
         return true;
-    }
-
-    /**
-     * Put localDir/artifact.extension into Artifactory.
-     *
-     * @param baseUrl   e.g. https://software.r3.com/artifactory/corda-releases/net/corda/corda/
-     * @param theTag    e.g. 4.3-RC0
-     * @param artifact  e.g. corda
-     * @param extension e.g. jar
-     * @param localDir  e.g. /home/someuser/downloads
-     * @return true if successful
-     */
-    public boolean put(@NotNull final String baseUrl,
-                       @NotNull final String theTag,
-                       @NotNull final String artifact,
-                       @NotNull final String extension,
-                       @NotNull final File localDir) {
-        boolean result = false;
-
-        try (FileInputStream inputStream = new FileInputStream(new File(localDir, getFileName(artifact, extension, theTag)))) {
-            result = put(baseUrl, theTag, artifact, extension, inputStream);
-        } catch (IOException e) {
-            LOG.warn("Failed to upload artifact:  {}", e.toString());
-        }
-
-        return result;
     }
 
     /**

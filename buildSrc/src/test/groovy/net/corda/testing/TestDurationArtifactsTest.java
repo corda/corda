@@ -304,14 +304,15 @@ public class TestDurationArtifactsTest {
         Assert.assertFalse(testXmlFiles.isEmpty());
 
         for (Path testXmlFile : testXmlFiles.stream().sorted().collect(Collectors.toList())) {
-            System.out.println(testXmlFile.toString());
+        //    System.out.println(testXmlFile.toString());
         }
+
         System.out.println("\n\nTESTS\n\n");
         for (Path testResult : testXmlFiles) {
             try {
                 final List<Tuple2<String, Long>> unitTests = TestDurationArtifacts.fromJunitXml(new FileInputStream(testResult.toFile()));
                 for (Tuple2<String, Long> unitTest : unitTests) {
-                    System.out.println(unitTest.getFirst());
+                    System.out.println(unitTest.getFirst() + "   -->  " +  BucketingAllocator.getDuration(unitTest.getSecond()));
                 }
 
             } catch (FileNotFoundException e) {
