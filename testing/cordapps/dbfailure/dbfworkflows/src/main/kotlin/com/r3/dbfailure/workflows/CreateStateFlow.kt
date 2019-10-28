@@ -9,8 +9,15 @@ import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.transactions.TransactionBuilder
 
+// There is a bit of number fiddling in this class to encode/decode the error target instructions
+@Suppress("MagicNumber")
 object CreateStateFlow {
 
+    // Encoding of error targets
+    // 1s are errors actions to be taken in the vault listener in the service
+    // 10s are errors caused in the flow
+    // 100s control exception handling in the flow
+    // 1000s control exception handlling in the service/vault listener
     enum class ErrorTarget(val targetNumber: Int) {
         NoError(0),
         ServiceSqlSyntaxError(1),
@@ -56,7 +63,11 @@ object CreateStateFlow {
             val notary = serviceHub.networkMapCache.notaryIdentities[0]
             val txTarget = getTxTarget(errorTarget)
             logger.info("Test flow: The tx error target is $txTarget")
-            val state = DbFailureContract.TestState(UniqueIdentifier(), ourIdentity, if (txTarget == CreateStateFlow.ErrorTarget.TxInvalidState) null else randomValue, errorTarget)
+            val state = DbFailureContract.TestState(
+                    UniqueIdentifier(),
+                    ourIdentity,
+                    if (txTarget == CreateStateFlow.ErrorTarget.TxInvalidState) null else randomValue,
+                    errorTarget)
             val txCommand = Command(DbFailureContract.Commands.Create(), ourIdentity.owningKey)
 
             logger.info("Test flow: tx builder")
@@ -69,6 +80,7 @@ object CreateStateFlow {
 
             val signedTx = serviceHub.signInitialTransaction(txBuilder)
 
+            @Suppress("TooGenericExceptionCaught") // this is fully intentional here, to allow twiddling with exceptions according to config
             try {
                 logger.info("Test flow: recording transaction")
                 serviceHub.recordTransactions(signedTx)

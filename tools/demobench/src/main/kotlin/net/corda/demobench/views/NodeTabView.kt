@@ -241,6 +241,7 @@ class NodeTabView : Fragment() {
         CityDatabase.cityMap.values.map { it.countryCode }.toSet().map { it to Image(resources["/net/corda/demobench/flags/$it.png"]) }.toMap()
     }
 
+    @Suppress("MagicNumber") // demobench UI magic
     private fun Pane.nearestCityField(): ComboBox<WorldMapLocation> {
         return combobox(model.nearestCity, CityDatabase.cityMap.values.toList().sortedBy { it.description }) {
             minWidth = textWidth

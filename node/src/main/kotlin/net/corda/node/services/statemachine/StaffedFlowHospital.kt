@@ -7,7 +7,11 @@ import net.corda.core.flows.ReceiveTransactionFlow
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.flows.UnexpectedFlowEndException
 import net.corda.core.identity.Party
-import net.corda.core.internal.*
+import net.corda.core.internal.DeclaredField
+import net.corda.core.internal.ThreadBox
+import net.corda.core.internal.TimedFlow
+import net.corda.core.internal.VisibleForTesting
+import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.messaging.DataFeed
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
@@ -165,6 +169,7 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
         }
     }
 
+    @Suppress("ComplexMethod")
     private fun admit(flowFiber: FlowFiber, currentState: StateMachineState, errors: List<Throwable>) {
         val time = clock.instant()
         log.info("Flow ${flowFiber.id} admitted to hospital in state $currentState")
@@ -427,8 +432,8 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
             val strippedStacktrace = error.stackTrace
                     .filterNot { it?.className?.contains("counter-flow exception from peer") ?: false }
                     .filterNot { it?.className?.startsWith("net.corda.node.services.statemachine.") ?: false }
-            return strippedStacktrace.isNotEmpty() &&
-                    strippedStacktrace.first().className.startsWith(ReceiveTransactionFlow::class.qualifiedName!! )
+            return strippedStacktrace.isNotEmpty()
+                    && strippedStacktrace.first().className.startsWith(ReceiveTransactionFlow::class.qualifiedName!!)
         }
     }
 
@@ -436,7 +441,12 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
      * [SQLTransientConnectionException] detection that arise from failing to connect the underlying database/datasource
      */
     object TransientConnectionCardiologist : Staff {
-        override fun consult(flowFiber: FlowFiber, currentState: StateMachineState, newError: Throwable, history: FlowMedicalHistory): Diagnosis {
+        override fun consult(
+                flowFiber: FlowFiber,
+                currentState: StateMachineState,
+                newError: Throwable,
+                history: FlowMedicalHistory
+        ): Diagnosis {
             return if (mentionsTransientConnection(newError)) {
                 if (history.notDischargedForTheSameThingMoreThan(2, this, currentState)) {
                     Diagnosis.DISCHARGE
@@ -458,7 +468,12 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
      * Note that retry decisions from other specialists will not be affected as retries take precedence over hospitalisation.
      */
     object DatabaseEndocrinologist : Staff {
-        override fun consult(flowFiber: FlowFiber, currentState: StateMachineState, newError: Throwable, history: FlowMedicalHistory): Diagnosis {
+        override fun consult(
+                flowFiber: FlowFiber,
+                currentState: StateMachineState,
+                newError: Throwable,
+                history: FlowMedicalHistory
+        ): Diagnosis {
             return if ((newError is SQLException || newError is PersistenceException) && !customConditions.any { it(newError) }) {
                 Diagnosis.OVERNIGHT_OBSERVATION
             } else {
@@ -475,8 +490,8 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
      *
      * [InterruptedException]s are diagnosed as [Diagnosis.TERMINAL] so they are never retried
      * (can occur when a flow is killed - `killFlow`).
-     * [AsyncOperationTransitionException]s ares ignored as the error is likely to have originated in user async code rather than inside of a
-     * transition.
+     * [AsyncOperationTransitionException]s ares ignored as the error is likely to have originated in user async code rather than inside
+     * of a transition.
      * All other exceptions are retried a maximum of 3 times before being kept in for observation.
      */
     object TransitionErrorGeneralPractitioner : Staff {
@@ -495,21 +510,24 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
                 }
             } else {
                 Diagnosis.NOT_MY_SPECIALTY
-            }.also { diagnosis ->
-                if (diagnosis != Diagnosis.NOT_MY_SPECIALTY) {
-                    log.debug {
-                        """
+            }.also { logDiagnosis(it, newError, flowFiber, history) }
+        }
+
+        private fun logDiagnosis(diagnosis: Diagnosis, newError: Throwable, flowFiber: FlowFiber, history: FlowMedicalHistory) {
+            if (diagnosis != Diagnosis.NOT_MY_SPECIALTY) {
+                log.debug {
+                    """
                         Flow ${flowFiber.id} given $diagnosis diagnosis due to a transition error
                         - Exception: ${newError.message}
                         - History: $history
                         ${(newError as? StateTransitionException)?.transitionAction?.let { "- Action: $it" }}
                         ${(newError as? StateTransitionException)?.transitionEvent?.let { "- Event: $it" }}
                         """.trimIndent()
-                    }
                 }
             }
         }
     }
+
 }
 
 private fun <T : Throwable> Throwable?.mentionsThrowable(exceptionType: Class<T>, errorMessage: String? = null): Boolean {

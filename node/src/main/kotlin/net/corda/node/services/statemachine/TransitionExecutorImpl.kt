@@ -28,6 +28,7 @@ class TransitionExecutorImpl(
         val log = contextLogger()
     }
 
+    @Suppress("NestedBlockDepth", "ReturnCount")
     @Suspendable
     override fun executeTransition(
             fiber: FlowFiber,

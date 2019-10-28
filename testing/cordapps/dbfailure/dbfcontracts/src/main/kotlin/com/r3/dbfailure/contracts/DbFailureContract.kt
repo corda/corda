@@ -19,7 +19,12 @@ class DbFailureContract : Contract {
         val ID = "com.r3.dbfailure.contracts.DbFailureContract"
     }
 
-    class TestState(override val linearId: UniqueIdentifier, val particpant: Party, val randomValue: String?, val errorTarget: Int = 0) : LinearState, QueryableState {
+    class TestState(
+            override val linearId: UniqueIdentifier,
+            val particpant: Party,
+            val randomValue: String?,
+            val errorTarget: Int = 0
+    ) : LinearState, QueryableState {
 
         override val participants: List<AbstractParty> = listOf(particpant)
 

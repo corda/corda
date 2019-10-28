@@ -58,6 +58,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
+@Suppress("MaxLineLength") // Byteman rules cannot be easily wrapped
 class StatemachineErrorHandlingTest : IntegrationTest() {
 
     companion object {
@@ -129,11 +130,11 @@ class StatemachineErrorHandlingTest : IntegrationTest() {
             submitBytemanRules(rules)
 
             val aliceClient =
-                CordaRPCClient(alice.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
+                    CordaRPCClient(alice.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
 
             assertFailsWith<TimeoutException> {
                 aliceClient.startFlow(::SendAMessageFlow, charlie.nodeInfo.singleIdentity()).returnValue.getOrThrow(
-                    30.seconds
+                        30.seconds
                 )
             }
 
@@ -209,10 +210,10 @@ class StatemachineErrorHandlingTest : IntegrationTest() {
             submitBytemanRules(rules)
 
             val aliceClient =
-                CordaRPCClient(alice.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
+                    CordaRPCClient(alice.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
 
             aliceClient.startFlow(::SendAMessageFlow, charlie.nodeInfo.singleIdentity()).returnValue.getOrThrow(
-                30.seconds
+                    30.seconds
             )
 
             val output = getBytemanOutput(alice)
@@ -230,8 +231,10 @@ class StatemachineErrorHandlingTest : IntegrationTest() {
     }
 
     /**
-     * Throws an exception when executing [DeduplicationHandler.afterDatabaseTransaction] from inside an [Action.AcknowledgeMessages] action.
-     * The exception is thrown every time [DeduplicationHandler.afterDatabaseTransaction] is executed inside of [ActionExecutorImpl.executeAcknowledgeMessages]
+     * Throws an exception when executing [DeduplicationHandler.afterDatabaseTransaction] from
+     * inside an [Action.AcknowledgeMessages] action.
+     * The exception is thrown every time [DeduplicationHandler.afterDatabaseTransaction] is executed
+     * inside of [ActionExecutorImpl.executeAcknowledgeMessages]
      *
      * The exceptions should be swallowed. Therefore there should be no trips to the hospital and no retries.
      * The flow should complete successfully as the error is swallowed.
@@ -287,10 +290,10 @@ class StatemachineErrorHandlingTest : IntegrationTest() {
             submitBytemanRules(rules)
 
             val aliceClient =
-                CordaRPCClient(alice.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
+                    CordaRPCClient(alice.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
 
             aliceClient.startFlow(::SendAMessageFlow, charlie.nodeInfo.singleIdentity()).returnValue.getOrThrow(
-                30.seconds
+                    30.seconds
             )
 
             val output = getBytemanOutput(alice)
@@ -308,7 +311,8 @@ class StatemachineErrorHandlingTest : IntegrationTest() {
     }
 
     /**
-     * Throws an exception when performing an [Action.CommitTransaction] event before the flow has suspended (remains in an unstarted state)..
+     * Throws an exception when performing an [Action.CommitTransaction] event before the flow has suspended (remains in an unstarted
+     * state).
      * The exception is thrown 5 times.
      *
      * This causes the transition to be discharged from the hospital 3 times (retries 3 times). On the final retry the transition
@@ -317,8 +321,8 @@ class StatemachineErrorHandlingTest : IntegrationTest() {
      * Each time the flow retries, it starts from the beginning of the flow (due to being in an unstarted state).
      *
      * 2 of the thrown exceptions are absorbed by the if statement in [TransitionExecutorImpl.executeTransition] that aborts the transition
-     * if an error transition moves into another error transition. The flow still recovers from this state. 5 exceptions were thrown to verify
-     * that 3 retries are attempted before recovering.
+     * if an error transition moves into another error transition. The flow still recovers from this state. 5 exceptions were thrown to
+     * verify that 3 retries are attempted before recovering.
      */
     @Test
     fun `error during transition with CommitTransaction action that occurs during the beginning of execution will retry and complete successfully`() {
@@ -371,10 +375,10 @@ class StatemachineErrorHandlingTest : IntegrationTest() {
             submitBytemanRules(rules)
 
             val aliceClient =
-                CordaRPCClient(alice.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
+                    CordaRPCClient(alice.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
 
             aliceClient.startFlow(::SendAMessageFlow, charlie.nodeInfo.singleIdentity()).returnValue.getOrThrow(
-                30.seconds
+                    30.seconds
             )
 
             val output = getBytemanOutput(alice)
@@ -392,7 +396,8 @@ class StatemachineErrorHandlingTest : IntegrationTest() {
     }
 
     /**
-     * Throws an exception when performing an [Action.CommitTransaction] event before the flow has suspended (remains in an unstarted state)..
+     * Throws an exception when performing an [Action.CommitTransaction] event before the flow has suspended (remains in an unstarted
+     * state).
      * The exception is thrown 7 times.
      *
      * This causes the transition to be discharged from the hospital 3 times (retries 3 times) and then be kept in for observation.
@@ -400,8 +405,8 @@ class StatemachineErrorHandlingTest : IntegrationTest() {
      * Each time the flow retries, it starts from the beginning of the flow (due to being in an unstarted state).
      *
      * 2 of the thrown exceptions are absorbed by the if statement in [TransitionExecutorImpl.executeTransition] that aborts the transition
-     * if an error transition moves into another error transition. The flow still recovers from this state. 5 exceptions were thrown to verify
-     * that 3 retries are attempted before recovering.
+     * if an error transition moves into another error transition. The flow still recovers from this state. 5 exceptions were thrown to
+     * verify that 3 retries are attempted before recovering.
      *
      * CORDA-3352 - it is currently hanging after putting the flow in for observation
      */
@@ -457,11 +462,11 @@ class StatemachineErrorHandlingTest : IntegrationTest() {
             submitBytemanRules(rules)
 
             val aliceClient =
-                CordaRPCClient(alice.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
+                    CordaRPCClient(alice.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
 
             assertFailsWith<TimeoutException> {
                 aliceClient.startFlow(::SendAMessageFlow, charlie.nodeInfo.singleIdentity()).returnValue.getOrThrow(
-                    30.seconds
+                        30.seconds
                 )
             }
 
@@ -489,8 +494,8 @@ class StatemachineErrorHandlingTest : IntegrationTest() {
      * Each time the flow retries, it begins from the previous checkpoint where it suspended before failing.
      *
      * 2 of the thrown exceptions are absorbed by the if statement in [TransitionExecutorImpl.executeTransition] that aborts the transition
-     * if an error transition moves into another error transition. The flow still recovers from this state. 5 exceptions were thrown to verify
-     * that 3 retries are attempted before recovering.
+     * if an error transition moves into another error transition. The flow still recovers from this state. 5 exceptions were thrown to
+     * verify that 3 retries are attempted before recovering.
      */
     @Test
     fun `error during transition with CommitTransaction action that occurs after the first suspend will retry and complete successfully`() {
@@ -560,10 +565,10 @@ class StatemachineErrorHandlingTest : IntegrationTest() {
             submitBytemanRules(rules)
 
             val aliceClient =
-                CordaRPCClient(alice.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
+                    CordaRPCClient(alice.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
 
             aliceClient.startFlow(::SendAMessageFlow, charlie.nodeInfo.singleIdentity()).returnValue.getOrThrow(
-                30.seconds
+                    30.seconds
             )
 
             val output = getBytemanOutput(alice)
@@ -649,10 +654,10 @@ class StatemachineErrorHandlingTest : IntegrationTest() {
             submitBytemanRules(rules)
 
             val aliceClient =
-                CordaRPCClient(alice.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
+                    CordaRPCClient(alice.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
 
             aliceClient.startFlow(::SendAMessageFlow, charlie.nodeInfo.singleIdentity()).returnValue.getOrThrow(
-                30.seconds
+                    30.seconds
             )
 
             val output = getBytemanOutput(alice)
@@ -745,11 +750,11 @@ class StatemachineErrorHandlingTest : IntegrationTest() {
             submitBytemanRules(rules)
 
             val aliceClient =
-                CordaRPCClient(alice.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
+                    CordaRPCClient(alice.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
 
             assertFailsWith<TimeoutException> {
                 aliceClient.startFlow(::SendAMessageFlow, charlie.nodeInfo.singleIdentity()).returnValue.getOrThrow(
-                    30.seconds
+                        30.seconds
                 )
             }
 
@@ -845,10 +850,10 @@ class StatemachineErrorHandlingTest : IntegrationTest() {
             submitBytemanRules(rules)
 
             val aliceClient =
-                CordaRPCClient(alice.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
+                    CordaRPCClient(alice.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
 
             aliceClient.startFlow(::SendAMessageFlow, charlie.nodeInfo.singleIdentity()).returnValue.getOrThrow(
-                30.seconds
+                    30.seconds
             )
 
             val output = getBytemanOutput(alice)
@@ -929,11 +934,11 @@ class StatemachineErrorHandlingTest : IntegrationTest() {
             submitBytemanRules(rules)
 
             val aliceClient =
-                CordaRPCClient(alice.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
+                    CordaRPCClient(alice.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
 
             assertFailsWith<TimeoutException> {
                 aliceClient.startFlow(::SendAMessageFlow, charlie.nodeInfo.singleIdentity()).returnValue.getOrThrow(
-                    30.seconds
+                        30.seconds
                 )
             }
 
@@ -1021,11 +1026,11 @@ class StatemachineErrorHandlingTest : IntegrationTest() {
             submitBytemanRules(rules)
 
             val aliceClient =
-                CordaRPCClient(alice.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
+                    CordaRPCClient(alice.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
 
             assertFailsWith<TimeoutException> {
                 aliceClient.startFlow(::SendAMessageFlow, charlie.nodeInfo.singleIdentity()).returnValue.getOrThrow(
-                    30.seconds
+                        30.seconds
                 )
             }
 
@@ -1109,12 +1114,12 @@ class StatemachineErrorHandlingTest : IntegrationTest() {
             submitBytemanRules(rules)
 
             val aliceClient =
-                CordaRPCClient(alice.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
+                    CordaRPCClient(alice.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
             val charlieClient =
-                CordaRPCClient(charlie.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
+                    CordaRPCClient(charlie.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
 
             aliceClient.startFlow(::SendAMessageFlow, charlie.nodeInfo.singleIdentity()).returnValue.getOrThrow(
-                30.seconds
+                    30.seconds
             )
 
             val output = getBytemanOutput(charlie)
@@ -1204,13 +1209,13 @@ class StatemachineErrorHandlingTest : IntegrationTest() {
             submitBytemanRules(rules)
 
             val aliceClient =
-                CordaRPCClient(alice.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
+                    CordaRPCClient(alice.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
             val charlieClient =
-                CordaRPCClient(charlie.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
+                    CordaRPCClient(charlie.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
 
             assertFailsWith<TimeoutException> {
                 aliceClient.startFlow(::SendAMessageFlow, charlie.nodeInfo.singleIdentity()).returnValue.getOrThrow(
-                    30.seconds
+                        30.seconds
                 )
             }
 
@@ -1303,12 +1308,12 @@ class StatemachineErrorHandlingTest : IntegrationTest() {
             submitBytemanRules(rules)
 
             val aliceClient =
-                CordaRPCClient(alice.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
+                    CordaRPCClient(alice.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
             val charlieClient =
-                CordaRPCClient(charlie.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
+                    CordaRPCClient(charlie.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
 
             aliceClient.startFlow(::SendAMessageFlow, charlie.nodeInfo.singleIdentity()).returnValue.getOrThrow(
-                30.seconds
+                    30.seconds
             )
 
             val output = getBytemanOutput(charlie)
@@ -1374,17 +1379,17 @@ class StatemachineErrorHandlingTest : IntegrationTest() {
             submitBytemanRules(rules)
 
             val aliceClient =
-                CordaRPCClient(alice.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
+                    CordaRPCClient(alice.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
             val charlieClient =
-                CordaRPCClient(charlie.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
+                    CordaRPCClient(charlie.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
 
             aliceClient.startFlow(
-                ::CashIssueAndPaymentFlow,
-                500.DOLLARS,
-                OpaqueBytes.of(0x01),
-                charlie.nodeInfo.singleIdentity(),
-                false,
-                defaultNotaryIdentity
+                    ::CashIssueAndPaymentFlow,
+                    500.DOLLARS,
+                    OpaqueBytes.of(0x01),
+                    charlie.nodeInfo.singleIdentity(),
+                    false,
+                    defaultNotaryIdentity
             ).returnValue.getOrThrow(30.seconds)
 
             val (discharge, observation) = charlieClient.startFlow(::GetHospitalCountersFlow).returnValue.get()
@@ -1445,17 +1450,17 @@ class StatemachineErrorHandlingTest : IntegrationTest() {
             submitBytemanRules(rules)
 
             val aliceClient =
-                CordaRPCClient(alice.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
+                    CordaRPCClient(alice.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
             val charlieClient =
-                CordaRPCClient(charlie.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
+                    CordaRPCClient(charlie.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
 
             aliceClient.startFlow(
-                ::CashIssueAndPaymentFlow,
-                500.DOLLARS,
-                OpaqueBytes.of(0x01),
-                charlie.nodeInfo.singleIdentity(),
-                false,
-                defaultNotaryIdentity
+                    ::CashIssueAndPaymentFlow,
+                    500.DOLLARS,
+                    OpaqueBytes.of(0x01),
+                    charlie.nodeInfo.singleIdentity(),
+                    false,
+                    defaultNotaryIdentity
             ).returnValue.getOrThrow(30.seconds)
 
             val (discharge, observation) = charlieClient.startFlow(::GetHospitalCountersFlow).returnValue.get()
@@ -1532,17 +1537,17 @@ class StatemachineErrorHandlingTest : IntegrationTest() {
             submitBytemanRules(rules)
 
             val aliceClient =
-                CordaRPCClient(alice.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
+                    CordaRPCClient(alice.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
             val charlieClient =
-                CordaRPCClient(charlie.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
+                    CordaRPCClient(charlie.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
 
             aliceClient.startFlow(
-                ::CashIssueAndPaymentFlow,
-                500.DOLLARS,
-                OpaqueBytes.of(0x01),
-                charlie.nodeInfo.singleIdentity(),
-                false,
-                defaultNotaryIdentity
+                    ::CashIssueAndPaymentFlow,
+                    500.DOLLARS,
+                    OpaqueBytes.of(0x01),
+                    charlie.nodeInfo.singleIdentity(),
+                    false,
+                    defaultNotaryIdentity
             ).returnValue.getOrThrow(30.seconds)
 
             val output = getBytemanOutput(charlie)
@@ -1627,18 +1632,18 @@ class StatemachineErrorHandlingTest : IntegrationTest() {
             submitBytemanRules(rules)
 
             val aliceClient =
-                CordaRPCClient(alice.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
+                    CordaRPCClient(alice.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
             val charlieClient =
-                CordaRPCClient(charlie.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
+                    CordaRPCClient(charlie.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
 
             assertFailsWith<TimeoutException> {
                 aliceClient.startFlow(
-                    ::CashIssueAndPaymentFlow,
-                    500.DOLLARS,
-                    OpaqueBytes.of(0x01),
-                    charlie.nodeInfo.singleIdentity(),
-                    false,
-                    defaultNotaryIdentity
+                        ::CashIssueAndPaymentFlow,
+                        500.DOLLARS,
+                        OpaqueBytes.of(0x01),
+                        charlie.nodeInfo.singleIdentity(),
+                        false,
+                        defaultNotaryIdentity
                 ).returnValue.getOrThrow(30.seconds)
             }
 
@@ -1708,7 +1713,7 @@ class StatemachineErrorHandlingTest : IntegrationTest() {
             submitBytemanRules(rules)
 
             val aliceClient =
-                CordaRPCClient(alice.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
+                    CordaRPCClient(alice.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
 
             val flow = aliceClient.startTrackedFlow(::SleepFlow)
 
@@ -1794,7 +1799,7 @@ class StatemachineErrorHandlingTest : IntegrationTest() {
             submitBytemanRules(rules)
 
             val aliceClient =
-                CordaRPCClient(alice.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
+                    CordaRPCClient(alice.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
 
             val flow = aliceClient.startTrackedFlow(::ThreadSleepFlow)
 
@@ -1894,7 +1899,7 @@ class StatemachineErrorHandlingTest : IntegrationTest() {
             submitBytemanRules(rules)
 
             val aliceClient =
-                CordaRPCClient(alice.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
+                    CordaRPCClient(alice.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
 
             val flow = aliceClient.startFlow(::SendAMessageFlow, charlie.nodeInfo.singleIdentity())
 
@@ -1920,38 +1925,38 @@ class StatemachineErrorHandlingTest : IntegrationTest() {
 
     private fun startDriver(notarySpec: NotarySpec = NotarySpec(DUMMY_NOTARY_NAME), dsl: DriverDSL.() -> Unit) {
         driver(
-            DriverParameters(
-                notarySpecs = listOf(notarySpec),
-                startNodesInProcess = false,
-                inMemoryDB = false,
-                systemProperties = mapOf("co.paralleluniverse.fibers.verifyInstrumentation" to "true")
-            )
+                DriverParameters(
+                        notarySpecs = listOf(notarySpec),
+                        startNodesInProcess = false,
+                        inMemoryDB = false,
+                        systemProperties = mapOf("co.paralleluniverse.fibers.verifyInstrumentation" to "true")
+                )
         ) {
             dsl()
         }
     }
 
     private fun DriverDSL.createBytemanNode(
-        providedName: CordaX500Name,
-        additionalCordapps: Collection<TestCordapp> = emptyList()
+            providedName: CordaX500Name,
+            additionalCordapps: Collection<TestCordapp> = emptyList()
     ): NodeHandle {
         return (this as InternalDriverDSL).startNode(
-            NodeParameters(
-                providedName = providedName,
-                rpcUsers = listOf(rpcUser),
-                additionalCordapps = additionalCordapps
-            ),
-            bytemanPort = 12000
+                NodeParameters(
+                        providedName = providedName,
+                        rpcUsers = listOf(rpcUser),
+                        additionalCordapps = additionalCordapps
+                ),
+                bytemanPort = 12000
         ).getOrThrow()
     }
 
     private fun DriverDSL.createNode(providedName: CordaX500Name, additionalCordapps: Collection<TestCordapp> = emptyList()): NodeHandle {
         return startNode(
-            NodeParameters(
-                providedName = providedName,
-                rpcUsers = listOf(rpcUser),
-                additionalCordapps = additionalCordapps
-            )
+                NodeParameters(
+                        providedName = providedName,
+                        rpcUsers = listOf(rpcUser),
+                        additionalCordapps = additionalCordapps
+                )
         ).getOrThrow()
     }
 
@@ -1962,9 +1967,9 @@ class StatemachineErrorHandlingTest : IntegrationTest() {
 
     private fun getBytemanOutput(nodeHandle: NodeHandle): List<String> {
         return nodeHandle.baseDirectory
-            .list()
-            .first { it.toString().contains("net.corda.node.Corda") && it.toString().contains("stdout.log") }
-            .readAllLines()
+                .list()
+                .first { it.toString().contains("net.corda.node.Corda") && it.toString().contains("stdout.log") }
+                .readAllLines()
     }
 }
 

@@ -394,7 +394,9 @@ class NodeVaultService(
                 try {
                     updatesPublisher.onNext(vaultUpdate)
                 } catch (e: OnErrorNotImplementedException) {
-                    log.warn("Caught an Rx.OnErrorNotImplementedException - caused by an exception in an RX observer that was unhandled - the observer has been unsubscribed! The underlying exception will be rethrown.", e)
+                    log.warn("Caught an Rx.OnErrorNotImplementedException " +
+                            "- caused by an exception in an RX observer that was unhandled " +
+                            "- the observer has been unsubscribed! The underlying exception will be rethrown.", e)
                     // if the observer code threw, unwrap their exception from the RX wrapper
                     throw e.cause ?: e
                 }

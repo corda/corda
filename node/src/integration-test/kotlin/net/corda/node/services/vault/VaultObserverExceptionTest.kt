@@ -38,6 +38,11 @@ class VaultObserverExceptionTest : IntegrationTest() {
         val databaseSchemas = IntegrationTestSchemas(ALICE_NAME, DUMMY_NOTARY_NAME)
 
         val log = contextLogger()
+
+        private fun testCordapps() = listOf(
+                findCordapp("com.r3.dbfailure.contracts"),
+                findCordapp("com.r3.dbfailure.workflows"),
+                findCordapp("com.r3.dbfailure.schemas"))
     }
 
     @After
@@ -68,11 +73,14 @@ class VaultObserverExceptionTest : IntegrationTest() {
 
         driver(DriverParameters(
                 startNodesInProcess = true,
-                cordappsForAllNodes = listOf(findCordapp("com.r3.dbfailure.contracts"), findCordapp("com.r3.dbfailure.workflows"), findCordapp("com.r3.dbfailure.schemas")))) {
+                cordappsForAllNodes = testCordapps())) {
             val aliceUser = User("user", "foo", setOf(Permissions.all()))
             val aliceNode = startNode(providedName = ALICE_NAME, rpcUsers = listOf(aliceUser)).getOrThrow()
-            aliceNode.rpc.startFlow(::Initiator, "Syntax Error in Custom SQL", CreateStateFlow.errorTargetsToNum(CreateStateFlow.ErrorTarget.ServiceSqlSyntaxError))
-                    .returnValue.then { testControlFuture.complete(false) }
+            aliceNode.rpc.startFlow(
+                    ::Initiator,
+                    "Syntax Error in Custom SQL",
+                    CreateStateFlow.errorTargetsToNum(CreateStateFlow.ErrorTarget.ServiceSqlSyntaxError)
+            ).returnValue.then { testControlFuture.complete(false) }
             val foundExpectedException = testControlFuture.getOrThrow(30.seconds)
 
             Assert.assertTrue(foundExpectedException)
@@ -87,12 +95,15 @@ class VaultObserverExceptionTest : IntegrationTest() {
     fun otherExceptionsFromVaultObserverBringFlowDown() {
         driver(DriverParameters(
                 startNodesInProcess = true,
-                cordappsForAllNodes = listOf(findCordapp("com.r3.dbfailure.contracts"), findCordapp("com.r3.dbfailure.workflows"), findCordapp("com.r3.dbfailure.schemas")))) {
+                cordappsForAllNodes = testCordapps())) {
             val aliceUser = User("user", "foo", setOf(Permissions.all()))
             val aliceNode = startNode(providedName = ALICE_NAME, rpcUsers = listOf(aliceUser)).getOrThrow()
             assertFailsWith(CordaRuntimeException::class, "Toys out of pram") {
-                aliceNode.rpc.startFlow(::Initiator, "InvalidParameterException", CreateStateFlow.errorTargetsToNum(CreateStateFlow.ErrorTarget.ServiceThrowInvalidParameter))
-                        .returnValue.getOrThrow(30.seconds)
+                aliceNode.rpc.startFlow(
+                        ::Initiator,
+                        "InvalidParameterException",
+                        CreateStateFlow.errorTargetsToNum(CreateStateFlow.ErrorTarget.ServiceThrowInvalidParameter)
+                ).returnValue.getOrThrow(30.seconds)
             }
         }
     }
@@ -105,7 +116,7 @@ class VaultObserverExceptionTest : IntegrationTest() {
     fun otherExceptionsFromVaultObserverCanBeSuppressedInFlow() {
         driver(DriverParameters(
                 startNodesInProcess = true,
-                cordappsForAllNodes = listOf(findCordapp("com.r3.dbfailure.contracts"), findCordapp("com.r3.dbfailure.workflows"), findCordapp("com.r3.dbfailure.schemas")))) {
+                cordappsForAllNodes = testCordapps())) {
             val aliceUser = User("user", "foo", setOf(Permissions.all()))
             val aliceNode = startNode(providedName = ALICE_NAME, rpcUsers = listOf(aliceUser)).getOrThrow()
             aliceNode.rpc.startFlow(::Initiator, "InvalidParameterException", CreateStateFlow.errorTargetsToNum(
@@ -137,7 +148,7 @@ class VaultObserverExceptionTest : IntegrationTest() {
 
         driver(DriverParameters(
                 startNodesInProcess = true,
-                cordappsForAllNodes = listOf(findCordapp("com.r3.dbfailure.contracts"), findCordapp("com.r3.dbfailure.workflows"), findCordapp("com.r3.dbfailure.schemas")))) {
+                cordappsForAllNodes = testCordapps())) {
             val aliceUser = User("user", "foo", setOf(Permissions.all()))
             val aliceNode = startNode(providedName = ALICE_NAME, rpcUsers = listOf(aliceUser)).getOrThrow()
             assertFailsWith<TimeoutException> {
@@ -181,7 +192,7 @@ class VaultObserverExceptionTest : IntegrationTest() {
 
         driver(DriverParameters(
                 startNodesInProcess = true,
-                cordappsForAllNodes = listOf(findCordapp("com.r3.dbfailure.contracts"), findCordapp("com.r3.dbfailure.workflows"), findCordapp("com.r3.dbfailure.schemas")))) {
+                cordappsForAllNodes = testCordapps())) {
             val aliceUser = User("user", "foo", setOf(Permissions.all()))
             val aliceNode = startNode(providedName = ALICE_NAME, rpcUsers = listOf(aliceUser)).getOrThrow()
             assertFailsWith<TimeoutException>("ConstraintViolationException") {
@@ -220,10 +231,16 @@ class VaultObserverExceptionTest : IntegrationTest() {
 
         driver(DriverParameters(
                 startNodesInProcess = true,
-                cordappsForAllNodes = listOf(findCordapp("com.r3.dbfailure.contracts"), findCordapp("com.r3.dbfailure.workflows"), findCordapp("com.r3.dbfailure.schemas")))) {
+                cordappsForAllNodes = testCordapps())) {
             val aliceUser = User("user", "foo", setOf(Permissions.all()))
             val aliceNode = startNode(providedName = ALICE_NAME, rpcUsers = listOf(aliceUser)).getOrThrow()
-            val flowHandle = aliceNode.rpc.startFlow(::Initiator, "EntityManager", CreateStateFlow.errorTargetsToNum(CreateStateFlow.ErrorTarget.ServiceValidUpdate, CreateStateFlow.ErrorTarget.TxInvalidState, CreateStateFlow.ErrorTarget.FlowSwallowErrors))
+            val flowHandle = aliceNode.rpc.startFlow(
+                    ::Initiator,
+                    "EntityManager",
+                    CreateStateFlow.errorTargetsToNum(
+                            CreateStateFlow.ErrorTarget.ServiceValidUpdate,
+                            CreateStateFlow.ErrorTarget.TxInvalidState,
+                            CreateStateFlow.ErrorTarget.FlowSwallowErrors))
             val flowResult = flowHandle.returnValue
             assertFailsWith<TimeoutException>("ConstraintViolation") { flowResult.getOrThrow(30.seconds) }
             Assert.assertTrue("Flow has not been to hospital", counter > 0)
@@ -252,13 +269,15 @@ class VaultObserverExceptionTest : IntegrationTest() {
 
         driver(DriverParameters(
                 startNodesInProcess = true,
-                cordappsForAllNodes = listOf(findCordapp("com.r3.dbfailure.contracts"), findCordapp("com.r3.dbfailure.workflows"), findCordapp("com.r3.dbfailure.schemas")))) {
+                cordappsForAllNodes = testCordapps())) {
             val aliceUser = User("user", "foo", setOf(Permissions.all()))
             val aliceNode = startNode(providedName = ALICE_NAME, rpcUsers = listOf(aliceUser)).getOrThrow()
-            val flowHandle = aliceNode.rpc.startFlow(::Initiator, "EntityManager", CreateStateFlow.errorTargetsToNum(
-                    CreateStateFlow.ErrorTarget.ServiceValidUpdate,
-                    CreateStateFlow.ErrorTarget.TxInvalidState,
-                    CreateStateFlow.ErrorTarget.ServiceSwallowErrors))
+            val flowHandle = aliceNode.rpc.startFlow(
+                    ::Initiator, "EntityManager",
+                    CreateStateFlow.errorTargetsToNum(
+                            CreateStateFlow.ErrorTarget.ServiceValidUpdate,
+                            CreateStateFlow.ErrorTarget.TxInvalidState,
+                            CreateStateFlow.ErrorTarget.ServiceSwallowErrors))
             val flowResult = flowHandle.returnValue
             assertFailsWith<TimeoutException>("ConstraintViolation") { flowResult.getOrThrow(30.seconds) }
             Assert.assertTrue("Flow has not been to hospital", counter > 0)
@@ -280,7 +299,7 @@ class VaultObserverExceptionTest : IntegrationTest() {
 
         driver(DriverParameters(
                 startNodesInProcess = true,
-                cordappsForAllNodes = listOf(findCordapp("com.r3.dbfailure.contracts"), findCordapp("com.r3.dbfailure.workflows"), findCordapp("com.r3.dbfailure.schemas")))) {
+                cordappsForAllNodes = testCordapps())) {
             val aliceUser = User("user", "foo", setOf(Permissions.all()))
             val aliceNode = startNode(providedName = ALICE_NAME, rpcUsers = listOf(aliceUser)).getOrThrow()
             val flowHandle = aliceNode.rpc.startFlow(::Initiator, "EntityManager", CreateStateFlow.errorTargetsToNum(
@@ -303,7 +322,7 @@ class VaultObserverExceptionTest : IntegrationTest() {
     fun constraintViolationInUserCodeInServiceCanBeSuppressedInService() {
         driver(DriverParameters(
                 startNodesInProcess = true,
-                cordappsForAllNodes = listOf(findCordapp("com.r3.dbfailure.contracts"), findCordapp("com.r3.dbfailure.workflows"), findCordapp("com.r3.dbfailure.schemas")))) {
+                cordappsForAllNodes = testCordapps())) {
             val aliceUser = User("user", "foo", setOf(Permissions.all()))
             val aliceNode = startNode(providedName = ALICE_NAME, rpcUsers = listOf(aliceUser)).getOrThrow()
             val flowHandle = aliceNode.rpc.startFlow(::Initiator, "EntityManager", CreateStateFlow.errorTargetsToNum(

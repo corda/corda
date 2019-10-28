@@ -120,6 +120,7 @@ class ActionExecutorImpl(
         }
     }
 
+    @Suppress("TooGenericExceptionCaught") // this is fully intentional here, see comment in the catch clause
     @Suspendable
     private fun executeAcknowledgeMessages(action: Action.AcknowledgeMessages) {
         action.deduplicationHandlers.forEach {
@@ -130,8 +131,8 @@ class ActionExecutorImpl(
                 // It is deemed safe for errors to occur here
                 // Therefore the current transition should not fail if something does go wrong
                 log.info(
-                    "An error occurred executing a deduplication post-database commit handler. Continuing, as it is safe to do so.",
-                    e
+                        "An error occurred executing a deduplication post-database commit handler. Continuing, as it is safe to do so.",
+                        e
                 )
             }
         }
@@ -228,17 +229,18 @@ class ActionExecutorImpl(
         }
     }
 
+    @Suppress("TooGenericExceptionCaught") // this is fully intentional here, see comment in the catch clause
     @Suspendable
     private fun executeAsyncOperation(fiber: FlowFiber, action: Action.ExecuteAsyncOperation) {
         try {
             val operationFuture = action.operation.execute(action.deduplicationId)
             operationFuture.thenMatch(
-                success = { result ->
-                    fiber.scheduleEvent(Event.AsyncOperationCompletion(result))
-                },
-                failure = { exception ->
-                    fiber.scheduleEvent(Event.Error(exception))
-                }
+                    success = { result ->
+                        fiber.scheduleEvent(Event.AsyncOperationCompletion(result))
+                    },
+                    failure = { exception ->
+                        fiber.scheduleEvent(Event.Error(exception))
+                    }
             )
         } catch (e: Exception) {
             // Catch and wrap any unexpected exceptions from the async operation

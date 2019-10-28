@@ -38,6 +38,7 @@ interface Volume {
             nodeInfoFile.readBytes().deserialize<SignedNodeInfo>().verified().let { NotaryInfo(it.legalIdentities.first(), validating) }
         }
 
+        @Suppress("MagicNumber") // default config constants
         return notaryInfos.let {
             NetworkParameters(
                     minimumPlatformVersion = 1,

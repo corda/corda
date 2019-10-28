@@ -92,6 +92,7 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
     /**
      * VaultQueryCriteria: provides query by attributes defined in [VaultSchema.VaultStates]
      */
+    @Suppress("MagicNumber") // need to list deprecation versions explicitly
     data class VaultQueryCriteria(
             override val status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
             override val contractStateTypes: Set<Class<out ContractState>>? = null,
@@ -264,6 +265,7 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
     /**
      * LinearStateQueryCriteria: provides query by attributes defined in [VaultSchema.VaultLinearState]
      */
+    @Suppress("MagicNumber") // need to list deprecation versions explicitly
     data class LinearStateQueryCriteria(
             override val participants: List<AbstractParty>? = null,
             val uuid: List<UUID>? = null,
@@ -545,6 +547,7 @@ sealed class AttachmentQueryCriteria : GenericQueryCriteria<AttachmentQueryCrite
     /**
      * AttachmentsQueryCriteria:
      */
+    @Suppress("MagicNumber") // need to list deprecation versions explicitly
     data class AttachmentsQueryCriteria(val uploaderCondition: ColumnPredicate<String>? = null,
                                         val filenameCondition: ColumnPredicate<String>? = null,
                                         val uploadDateCondition: ColumnPredicate<Instant>? = null,

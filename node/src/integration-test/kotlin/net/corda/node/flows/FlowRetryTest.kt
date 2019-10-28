@@ -398,7 +398,9 @@ class WrappedTransientConnectionFailureFlow(private val party: Party) : FlowLogi
         initiateFlow(party).send("hello there")
         // checkpoint will restart the flow after the send
         retryCount += 1
-        throw IllegalStateException("wrapped error message", IllegalStateException("another layer deep", SQLTransientConnectionException("Connection is not available")/*.fillInStackTrace()*/))
+        throw IllegalStateException(
+                "wrapped error message",
+                IllegalStateException("another layer deep", SQLTransientConnectionException("Connection is not available")))
     }
 }
 

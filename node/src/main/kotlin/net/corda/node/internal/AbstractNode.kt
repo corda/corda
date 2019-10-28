@@ -1140,9 +1140,16 @@ fun createCordaPersistence(databaseConfig: DatabaseConfig,
     @Suppress("DEPRECATION")
     org.hibernate.type.descriptor.java.JavaTypeDescriptorRegistry.INSTANCE.addDescriptor(AbstractPartyDescriptor(wellKnownPartyFromX500Name, wellKnownPartyFromAnonymous))
     val attributeConverters = listOf(PublicKeyToTextConverter(), AbstractPartyToX500NameAsStringConverter(wellKnownPartyFromX500Name, wellKnownPartyFromAnonymous))
+
     val jdbcUrl = hikariProperties.getProperty("dataSource.url", "")
-    return CordaPersistence(databaseConfig, schemaService.schemaOptions.keys, jdbcUrl, cacheFactory, attributeConverters, customClassLoader, errorHandler = {t ->
-        FlowStateMachineImpl.currentStateMachine()?.scheduleEvent(Event.Error(t))
+    return CordaPersistence(
+            databaseConfig,
+            schemaService.schemaOptions.keys,
+            jdbcUrl,
+            cacheFactory,
+            attributeConverters, customClassLoader,
+            errorHandler = { t ->
+                FlowStateMachineImpl.currentStateMachine()?.scheduleEvent(Event.Error(t))
     })
 }
 

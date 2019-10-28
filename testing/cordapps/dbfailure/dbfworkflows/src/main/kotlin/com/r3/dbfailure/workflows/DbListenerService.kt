@@ -18,6 +18,7 @@ class DbListenerService(services: AppServiceHub) : SingletonSerializeAsToken() {
         services.vaultService.rawUpdates.subscribe { (_, produced) ->
             produced.forEach {
                 val contractState = it.state.data as? DbFailureContract.TestState
+                @Suppress("TooGenericExceptionCaught") // this is fully intentional here, to allow twiddling with exceptions
                 try {
                     when (CreateStateFlow.getServiceTarget(contractState?.errorTarget)) {
                         CreateStateFlow.ErrorTarget.ServiceSqlSyntaxError -> {
@@ -72,7 +73,8 @@ class DbListenerService(services: AppServiceHub) : SingletonSerializeAsToken() {
                                             "WHERE transaction_id = '${it.ref.txhash}' AND output_index = ${it.ref.index};"
                             )
                             val numOfRows = if (rs.next()) rs.getInt("COUNT(*)") else 0
-                            log.info("Found a state with tx:ind ${it.ref.txhash}:${it.ref.index} in TEST_FAIL_STATES: ${if (numOfRows > 0) "Yes" else "No"}")
+                            log.info("Found a state with tx:ind ${it.ref.txhash}:${it.ref.index} in " +
+                                    "TEST_FAIL_STATES: ${if (numOfRows > 0) "Yes" else "No"}")
                         }
                         CreateStateFlow.ErrorTarget.ServiceThrowInvalidParameter -> {
                             log.info("Throw InvalidParameterException")
@@ -80,7 +82,8 @@ class DbListenerService(services: AppServiceHub) : SingletonSerializeAsToken() {
                         }
                     }
                 } catch (t: Throwable) {
-                    if (CreateStateFlow.getServiceExceptionHandlingTarget(contractState?.errorTarget) == CreateStateFlow.ErrorTarget.ServiceSwallowErrors) {
+                    if (CreateStateFlow.getServiceExceptionHandlingTarget(contractState?.errorTarget)
+                            == CreateStateFlow.ErrorTarget.ServiceSwallowErrors) {
                         log.warn("Service not letting errors escape", t)
                     } else {
                         throw t
