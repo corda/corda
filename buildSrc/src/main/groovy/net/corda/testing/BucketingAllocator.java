@@ -53,10 +53,23 @@ public class BucketingAllocator {
         printSummary();
     }
 
+    private static String getDuration(long nanos) {
+        long t = TimeUnit.NANOSECONDS.toMinutes(nanos);
+        if (t > 0) {
+            return t + " mins";
+        }
+        t = TimeUnit.NANOSECONDS.toSeconds(nanos);
+        if (t > 0) {
+            return t + " secs";
+        }
+        t = TimeUnit.NANOSECONDS.toSeconds(nanos);
+        return t + " ms";
+    }
+
     private void printSummary() {
         forkContainers.forEach(container -> {
             System.out.println("####### TEST PLAN SUMMARY ( " + container.forkIdx + " ) #######");
-            System.out.println("Duration (secs): " + TimeUnit.NANOSECONDS.toSeconds(container.getCurrentDuration()));
+            System.out.println("Duration: " + getDuration(container.getCurrentDuration()));
             System.out.println("Number of tests: " + container.testsForFork.stream().mapToInt(b -> b.foundTests.size()).sum());
             System.out.println("Tests to Run: ");
             container.testsForFork.forEach(tb -> {
