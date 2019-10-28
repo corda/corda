@@ -285,9 +285,7 @@ open class TransactionBuilder(
         // For each contract, resolve the AutomaticPlaceholderConstraint, and select the attachment.
         val contractAttachmentsAndResolvedOutputStates: List<Pair<AttachmentId, List<TransactionState<ContractState>>?>> = allContracts.toSet()
                 .map { ctr ->
-                    handleContract(ctr, inputContractGroups[ctr], outputContractGroups[ctr], explicitAttachmentContractsMap[ctr], services).also {
-                        it.second?.forEach { state -> checkForUnsupportedConstraints(state, services) }
-                    }
+                    handleContract(ctr, inputContractGroups[ctr], outputContractGroups[ctr], explicitAttachmentContractsMap[ctr], services)
                 }
 
         val resolvedStates: List<TransactionState<ContractState>> = contractAttachmentsAndResolvedOutputStates.mapNotNull { it.second }
@@ -433,15 +431,6 @@ open class TransactionBuilder(
         }
 
         return Pair(selectedAttachmentId, resolvedOutputStates)
-    }
-
-    private fun checkForUnsupportedConstraints(transactionState: TransactionState<ContractState>, services: ServicesForResolution) {
-        if (transactionState.constraint is SignatureAttachmentConstraint) {
-            val constraintKey = transactionState.constraint.key
-            if (constraintKey is CompositeKey && constraintKey.leafKeys.size > 1)
-                checkMinimumPlatformVersion(services.networkParameters.minimumPlatformVersion, 5,
-                        "Composite keys for signature constraints")
-        }
     }
 
     /**
