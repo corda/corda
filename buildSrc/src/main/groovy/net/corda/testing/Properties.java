@@ -14,8 +14,18 @@ public class Properties {
     private static String CORDA_TYPE = "corda"; // corda or enterprise
 
     /**
+     * Get the Corda type.  Used in the tag names when we store in Artifactory.
+     *
+     * @return either 'corda' or 'enterprise'
+     */
+    static String getCordaType() {
+        return CORDA_TYPE;
+    }
+
+    /**
      * Set the Corda (repo) type - either enterprise, or corda (open-source).
      * Used in the tag names when we store in Artifactory.
+     *
      * @param cordaType the corda repo type.
      */
     static void setCordaType(@NotNull final String cordaType) {
@@ -24,13 +34,8 @@ public class Properties {
     }
 
     /**
-     * Get the Corda type.  Used in the tag names when we store in Artifactory.
-     * @return either 'corda' or 'enterprise'
-     */
-    static String getCordaType() { return CORDA_TYPE; }
-
-    /**
      * Get property with logging
+     *
      * @param key property to get
      * @return empty string, or trimmed value
      */
@@ -47,6 +52,7 @@ public class Properties {
 
     /**
      * Get Artifactory username
+     *
      * @return the username
      */
     static String getUsername() {
@@ -55,6 +61,7 @@ public class Properties {
 
     /**
      * Get Artifactory password
+     *
      * @return the password
      */
     static String getPassword() {
@@ -68,8 +75,7 @@ public class Properties {
      */
     @NotNull
     static String getGitBranch() {
-        return (getCordaType() + "-" + getProperty("git.branch"))
-                .replace('/', '-');
+        return getProperty("git.branch").replace('/', '-');
     }
 
     /**
@@ -77,7 +83,6 @@ public class Properties {
      */
     @NotNull
     static String getTargetGitBranch() {
-        return (getCordaType() + "-" + getProperty("git.target.branch"))
-                .replace('/', '-');
+        return getProperty("git.target.branch").replace('/', '-');
     }
 }

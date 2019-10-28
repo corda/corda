@@ -263,8 +263,8 @@ public class TestDurationArtifactsTest {
         System.setProperty(key, expected);
 
         Assert.assertEquals(expected, System.getProperty(key));
-        Assert.assertNotEquals(cordaType + "-" + expected, Properties.getGitBranch());
-        Assert.assertEquals(cordaType + "-" + "release-os-4.3", Properties.getGitBranch());
+        Assert.assertNotEquals(expected, Properties.getGitBranch());
+        Assert.assertEquals("release-os-4.3", Properties.getGitBranch());
     }
 
     @Test

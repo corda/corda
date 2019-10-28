@@ -1,5 +1,6 @@
 package net.corda.testing;
 
+import com.fasterxml.jackson.databind.annotation.JsonAppend;
 import groovy.lang.Tuple2;
 import org.apache.commons.compress.archivers.ArchiveEntry;
 import org.apache.commons.compress.archivers.ArchiveException;
@@ -130,13 +131,13 @@ public class TestDurationArtifacts {
     public static Task createZipTask(Project project, String name) {
         final Task zipJunitTask = project.getTasks().create(name  + "Junit", Zip.class, z -> {
 
-            z.getArchiveFileName().set(Artifactory.getFileName("junit", EXTENSION, Properties.getGitBranch()));
+            z.getArchiveFileName().set(Artifactory.getFileName("junit", EXTENSION, getBranchTag()));
             z.getDestinationDirectory().set(project.getRootDir());
             z.setIncludeEmptyDirs(false);
             z.from(project.getRootDir(), task -> task.include("**/build/test-results-xml/**/*.xml", "**/build/test-results/**/*.xml"));
             z.doLast(task -> {
                 try (FileInputStream inputStream = new FileInputStream(new File(z.getArchiveFileName().get()))) {
-                    new Artifactory().put(BASE_URL, Properties.getGitBranch(), "junit", EXTENSION, inputStream);
+                    new Artifactory().put(BASE_URL, getBranchTag(), "junit", EXTENSION, inputStream);
                 } catch (Exception ignored) {
                 }
             });
@@ -145,7 +146,7 @@ public class TestDurationArtifacts {
         csvTask.dependsOn(zipJunitTask);
 
         return project.getTasks().create(name, Zip.class, z -> {
-            z.getArchiveFileName().set(Artifactory.getFileName(ARTIFACT, EXTENSION, Properties.getGitBranch()));
+            z.getArchiveFileName().set(Artifactory.getFileName(ARTIFACT, EXTENSION, getBranchTag()));
             z.getDestinationDirectory().set(project.getRootDir());
             z.setIncludeEmptyDirs(false);
 
@@ -164,7 +165,7 @@ public class TestDurationArtifacts {
                 project.getLogger().warn("SAVING tests");
                 project.getLogger().warn("Attempting to upload {}", z.getArchiveFileName().get());
                 try (FileInputStream inputStream = new FileInputStream(new File(z.getArchiveFileName().get()))) {
-                    if (!new TestDurationArtifacts().put(Properties.getGitBranch(), inputStream)) {
+                    if (!new TestDurationArtifacts().put(getBranchTag(), inputStream)) {
                         project.getLogger().warn("Could not upload zip of tests");
                     }
                     project.getLogger().warn("SAVED tests");
@@ -311,6 +312,13 @@ public class TestDurationArtifacts {
         return TestDurationArtifacts::loadTests;
     }
 
+    static String getBranchTag() {
+        return (Properties.getCordaType() + "-" + Properties.getGitBranch()).replace('.', '-');
+    }
+
+    static String getTargetBranchTag() {
+        return (Properties.getCordaType() + "-" + Properties.getTargetGitBranch()).replace('.', '-');
+    }
     /**
      * Load the tests from Artifactory using interim file.  Existing test data is cleared.
      *
@@ -322,12 +330,12 @@ public class TestDurationArtifacts {
         tests.clear();
         try {
             final TestDurationArtifacts testArtifacts = new TestDurationArtifacts();
-            File testsFile = testArtifacts.get(Properties.getGitBranch(), destDir);
+            File testsFile = testArtifacts.get(getBranchTag(), destDir);
 
             //  Try getting artifacts for our branch, if not, try the target branch.
             if (testsFile == null) {
-                LOG.warn("Could not get tests from Artifactory for {}, trying {}", Properties.getGitBranch(), Properties.getTargetGitBranch());
-                testsFile = testArtifacts.get(Properties.getTargetGitBranch(), destDir);
+                LOG.warn("Could not get tests from Artifactory for tag {}, trying {}", getBranchTag(), getTargetBranchTag());
+                testsFile = testArtifacts.get(getTargetBranchTag(), destDir);
                 if (testsFile == null) {
                     LOG.warn("Could not get any tests from Artifactory");
                     return tests;
@@ -360,10 +368,10 @@ public class TestDurationArtifacts {
             ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 
             //  Try getting artifacts for our branch, if not, try the target branch.
-            if (!testArtifacts.get(Properties.getGitBranch(), outputStream)) {
+            if (!testArtifacts.get(getBranchTag(), outputStream)) {
                 outputStream = new ByteArrayOutputStream();
-                LOG.warn("Could not get tests from Artifactory for {}, trying {}", Properties.getGitBranch(), Properties.getTargetGitBranch());
-                if (!testArtifacts.get(Properties.getTargetGitBranch(), outputStream)) {
+                LOG.warn("Could not get tests from Artifactory for tag {}, trying {}", getBranchTag(), getTargetBranchTag());
+                if (!testArtifacts.get(getTargetBranchTag(), outputStream)) {
                     LOG.warn("Could not get any tests from Artifactory");
                     return tests;
                 }
