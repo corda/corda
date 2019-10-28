@@ -169,6 +169,7 @@ public class KubesTest extends DefaultTask {
                     .editOrNewSpec()
                     .withAccessModes("ReadWriteOnce")
                     .editOrNewResources().addToRequests("storage", new Quantity("100Mi")).endResources()
+                    .withStorageClassName("testing-storage")
                     .endSpec()
                     .done();
         }
@@ -363,7 +364,7 @@ public class KubesTest extends DefaultTask {
     }
 
     private Collection<File> downloadTestXmlFromPod(String namespace, Pod cp) {
-        String resultsInContainerPath = "/tmp/source/build/test-reports";
+        String resultsInContainerPath = TEST_RUN_DIR + "/test-reports";
         String binaryResultsFile = "results.bin";
         String podName = cp.getMetadata().getName();
         Path tempDir = new File(new File(getProject().getBuildDir(), "test-results-xml"), podName).toPath();
