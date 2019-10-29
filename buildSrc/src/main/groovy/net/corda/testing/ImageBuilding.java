@@ -1,8 +1,17 @@
 package net.corda.testing;
 
 import com.bmuschko.gradle.docker.DockerRegistryCredentials;
-import com.bmuschko.gradle.docker.tasks.container.*;
-import com.bmuschko.gradle.docker.tasks.image.*;
+import com.bmuschko.gradle.docker.tasks.container.DockerCreateContainer;
+import com.bmuschko.gradle.docker.tasks.container.DockerLogsContainer;
+import com.bmuschko.gradle.docker.tasks.container.DockerRemoveContainer;
+import com.bmuschko.gradle.docker.tasks.container.DockerStartContainer;
+import com.bmuschko.gradle.docker.tasks.container.DockerWaitContainer;
+import com.bmuschko.gradle.docker.tasks.image.DockerBuildImage;
+import com.bmuschko.gradle.docker.tasks.image.DockerCommitImage;
+import com.bmuschko.gradle.docker.tasks.image.DockerPullImage;
+import com.bmuschko.gradle.docker.tasks.image.DockerPushImage;
+import com.bmuschko.gradle.docker.tasks.image.DockerRemoveImage;
+import com.bmuschko.gradle.docker.tasks.image.DockerTagImage;
 import org.gradle.api.GradleException;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
@@ -12,6 +21,7 @@ import java.io.File;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * this plugin is responsible for setting up all the required docker image building tasks required for producing and pushing an
@@ -20,7 +30,10 @@ import java.util.Map;
 public class ImageBuilding implements Plugin<Project> {
 
     public static final String registryName = "stefanotestingcr.azurecr.io/testing";
+    public static final String PROVIDE_TAG_FOR_BUILDING_PROPERTY = "docker.build.tag";
+    public static final String PROVIDE_TAG_FOR_RUNNING_PROPERTY = "docker.run.tag";
     public DockerPushImage pushTask;
+    public DockerBuildImage buildTask;
 
     @Override
     public void apply(@NotNull final Project project) {
@@ -43,6 +56,8 @@ public class ImageBuilding implements Plugin<Project> {
                     dockerBuildImage.getDockerFile().set(new File(new File("testing"), "Dockerfile"));
                 });
 
+        this.buildTask = buildDockerImageForSource;
+
         final DockerCreateContainer createBuildContainer = project.getTasks().create("createBuildContainer", DockerCreateContainer.class,
                 dockerCreateContainer -> {
                     final File baseWorkingDir = new File(System.getProperty("docker.work.dir") != null &&
@@ -58,7 +73,7 @@ public class ImageBuilding implements Plugin<Project> {
                             mavenDir.mkdirs();
                         }
 
-                        project.getLogger().info("Will use: ${gradleDir.absolutePath} for caching gradle artifacts");
+                        project.getLogger().info("Will use: " + gradleDir.getAbsolutePath() + " for caching gradle artifacts");
                     });
                     dockerCreateContainer.dependsOn(buildDockerImageForSource);
                     dockerCreateContainer.targetImageId(buildDockerImageForSource.getImageId());
@@ -103,8 +118,7 @@ public class ImageBuilding implements Plugin<Project> {
         final DockerTagImage tagBuildImageResult = project.getTasks().create("tagBuildImageResult", DockerTagImage.class, dockerTagImage -> {
             dockerTagImage.dependsOn(commitBuildImageResult);
             dockerTagImage.getImageId().set(commitBuildImageResult.getImageId());
-            dockerTagImage.getTag().set(System.getProperty("docker.provided.tag",
-                    "${UUID.randomUUID().toString().toLowerCase().subSequence(0, 12)}"));
+            dockerTagImage.getTag().set(System.getProperty(PROVIDE_TAG_FOR_BUILDING_PROPERTY, UUID.randomUUID().toString().toLowerCase().substring(0, 12)));
             dockerTagImage.getRepository().set(registryName);
         });
 

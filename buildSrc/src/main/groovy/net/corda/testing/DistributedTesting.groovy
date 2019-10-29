@@ -1,8 +1,11 @@
 package net.corda.testing
 
+import com.bmuschko.gradle.docker.tasks.image.DockerBuildImage
 import com.bmuschko.gradle.docker.tasks.image.DockerPushImage
+import org.gradle.api.GradleException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.Task
 import org.gradle.api.tasks.testing.Test
 
 /**
@@ -18,19 +21,22 @@ class DistributedTesting implements Plugin<Project> {
     void apply(Project project) {
         if (System.getProperty("kubenetize") != null) {
 
-            def forks = getPropertyAsInt(project, "dockerForks", 1)
+            Integer forks = getPropertyAsInt(project, "dockerForks", 1)
 
             ensureImagePluginIsApplied(project)
             ImageBuilding imagePlugin = project.plugins.getPlugin(ImageBuilding)
-            DockerPushImage imageBuildingTask = imagePlugin.pushTask
-            String providedTag = System.getProperty("docker.tag")
+            DockerPushImage imagePushTask = imagePlugin.pushTask
+            DockerBuildImage imageBuildTask = imagePlugin.buildTask
+            String tagToUseForRunningTests = System.getProperty(ImageBuilding.PROVIDE_TAG_FOR_RUNNING_PROPERTY)
+            String tagToUseForBuilding = System.getProperty(ImageBuilding.PROVIDE_TAG_FOR_RUNNING_PROPERTY)
             BucketingAllocatorTask globalAllocator = project.tasks.create("bucketingAllocator", BucketingAllocatorTask, forks)
 
-            def requestedTasks = project.gradle.startParameter.taskNames.collect { project.tasks.findByPath(it) }
+            Set<String> requestedTaskNames = project.gradle.startParameter.taskNames.toSet()
+            def requestedTasks = requestedTaskNames.collect { project.tasks.findByPath(it) }
 
             //in each subproject
-            //1. add the task to determine all tests within the module
-            //2. modify the underlying testing task to use the output of the listing task to include a subset of tests for each fork
+            //1. add the task to determine all tests within the module and register this as a source to the global allocator
+            //2. modify the underlying testing task to use the output of the global allocator to include a subset of tests for each fork
             //3. KubesTest will invoke these test tasks in a parallel fashion on a remote k8s cluster
             //4. after each completed test write its name to a file to keep track of what finished for restart purposes
             project.subprojects { Project subProject ->
@@ -45,32 +51,49 @@ class DistributedTesting implements Plugin<Project> {
                         println "Skipping modification of ${task.getPath()} as it's not scheduled for execution"
                     }
                     if (!task.hasProperty("ignoreForDistribution")) {
-                        KubesTest parallelTestTask = generateParallelTestingTask(subProject, task, imageBuildingTask, providedTag)
+                        //this is what enables execution of a single test suite - for example node:parallelTest would execute all unit tests in node, node:parallelIntegrationTest would do the same for integration tests
+                        KubesTest parallelTestTask = generateParallelTestingTask(subProject, task, imagePushTask, tagToUseForRunningTests)
                     }
                 }
             }
 
-            //now we are going to create "super" groupings of these KubesTest tasks, so that it is possible to invoke all submodule tests with a single command
-            //group all kubes tests by their underlying target task (test/integrationTest/smokeTest ... etc)
-            Map<String, List<KubesTest>> allKubesTestingTasksGroupedByType = project.subprojects.collect { prj -> prj.getAllTasks(false).values() }
+            //now we are going to create "super" groupings of the Test tasks, so that it is possible to invoke all submodule tests with a single command
+            //group all test Tasks by their underlying target task (test/integrationTest/smokeTest ... etc)
+            Map<String, List<Test>> allTestTasksGroupedByType = project.subprojects.collect { prj -> prj.getAllTasks(false).values() }
                     .flatten()
-                    .findAll { task -> task instanceof KubesTest }
-                    .groupBy { task -> task.taskToExecuteName }
+                    .findAll { task -> task instanceof Test }
+                    .groupBy { Test task -> task.name }
 
             //first step is to create a single task which will invoke all the submodule tasks for each grouping
             //ie allParallelTest will invoke [node:test, core:test, client:rpc:test ... etc]
             //ie allIntegrationTest will invoke [node:integrationTest, core:integrationTest, client:rpc:integrationTest ... etc]
+            //ie allUnitAndIntegrationTest will invoke [node:integrationTest, node:test, core:integrationTest, core:test, client:rpc:test , client:rpc:integrationTest ... etc]
             Set<ParallelTestGroup> userGroups = new HashSet<>(project.tasks.withType(ParallelTestGroup))
 
-            Collection<ParallelTestGroup> userDefinedGroups = userGroups.forEach { testGrouping ->
-                List<KubesTest> groups = ((ParallelTestGroup) testGrouping).groups.collect {
-                    allKubesTestingTasksGroupedByType.get(it)
-                }.flatten()
-                String superListOfTasks = groups.collect { it.fullTaskToExecutePath }.join(" ")
+            userGroups.forEach { testGrouping ->
+
+                //for each "group" (ie: test, integrationTest) within the grouping find all the Test tasks which have the same name.
+                List<Test> groups = ((ParallelTestGroup) testGrouping).groups.collect { allTestTasksGroupedByType.get(it) }.flatten()
+
+                //join up these test tasks into a single set of tasks to invoke (node:test, node:integrationTest...)
+                String superListOfTasks = groups.collect { it.path }.join(" ")
+
+                //generate a preAllocate / deAllocate task which allows you to "pre-book" a node during the image building phase
+                //this prevents time lost to cloud provider node spin up time (assuming image build time > provider spin up time)
+                def (Task preAllocateTask, Task deAllocateTask) = generatePreAllocateAndDeAllocateTasksForGrouping(project, testGrouping)
+
+                //modify the image building task to depend on the preAllocate task (if specified on the command line) - this prevents gradle running out of order
+                if (preAllocateTask.name in requestedTaskNames) {
+                    imageBuildTask.dependsOn preAllocateTask
+                }
 
                 def userDefinedParallelTask = project.rootProject.tasks.create("userDefined" + testGrouping.name.capitalize(), KubesTest) {
-                    if (!providedTag) {
-                        dependsOn imageBuildingTask
+                    if (!tagToUseForRunningTests) {
+                        dependsOn imagePushTask
+                    }
+
+                    if (deAllocateTask.name in requestedTaskNames) {
+                        dependsOn deAllocateTask
                     }
                     numberOfPods = testGrouping.getShardCount()
                     printOutput = testGrouping.printToStdOut
@@ -79,8 +102,9 @@ class DistributedTesting implements Plugin<Project> {
                     memoryGbPerFork = testGrouping.gbOfMemory
                     numberOfCoresPerFork = testGrouping.coresToUse
                     distribution = testGrouping.distribution
+                    podLogLevel = testGrouping.logLevel
                     doFirst {
-                        dockerTag = dockerTag = providedTag ? ImageBuilding.registryName + ":" + providedTag : (imageBuildingTask.imageName.get() + ":" + imageBuildingTask.tag.get())
+                        dockerTag = tagToUseForRunningTests ? (ImageBuilding.registryName + ":" + tagToUseForRunningTests) : (imagePushTask.imageName.get() + ":" + imagePushTask.tag.get())
                     }
                 }
                 def reportOnAllTask = project.rootProject.tasks.create("userDefinedReports${testGrouping.name.capitalize()}", KubesReporting) {
@@ -97,6 +121,38 @@ class DistributedTesting implements Plugin<Project> {
                 testGrouping.dependsOn(userDefinedParallelTask)
             }
         }
+    }
+
+    private List<Task> generatePreAllocateAndDeAllocateTasksForGrouping(Project project, ParallelTestGroup testGrouping) {
+        PodAllocator allocator = new PodAllocator(project.getLogger())
+        Task preAllocateTask = project.rootProject.tasks.create("preAllocateFor" + testGrouping.name.capitalize()) {
+            doFirst {
+                String dockerTag = System.getProperty(ImageBuilding.PROVIDE_TAG_FOR_BUILDING_PROPERTY)
+                if (dockerTag == null) {
+                    throw new GradleException("pre allocation cannot be used without a stable docker tag - please provide one  using -D" + ImageBuilding.PROVIDE_TAG_FOR_BUILDING_PROPERTY)
+                }
+                int seed = (dockerTag.hashCode() + testGrouping.name.hashCode())
+                String podPrefix = new BigInteger(64, new Random(seed)).toString(36)
+                //here we will pre-request the correct number of pods for this testGroup
+                int numberOfPodsToRequest = testGrouping.getShardCount()
+                int coresPerPod = testGrouping.getCoresToUse()
+                int memoryGBPerPod = testGrouping.getGbOfMemory()
+                allocator.allocatePods(numberOfPodsToRequest, coresPerPod, memoryGBPerPod, podPrefix)
+            }
+        }
+
+        Task deAllocateTask = project.rootProject.tasks.create("deAllocateFor" + testGrouping.name.capitalize()) {
+            doFirst {
+                String dockerTag = System.getProperty(ImageBuilding.PROVIDE_TAG_FOR_RUNNING_PROPERTY)
+                if (dockerTag == null) {
+                    throw new GradleException("pre allocation cannot be used without a stable docker tag - please provide one using -D" + ImageBuilding.PROVIDE_TAG_FOR_RUNNING_PROPERTY)
+                }
+                int seed = (dockerTag.hashCode() + testGrouping.name.hashCode())
+                String podPrefix = new BigInteger(64, new Random(seed)).toString(36);
+                allocator.tearDownPods(podPrefix)
+            }
+        }
+        return [preAllocateTask, deAllocateTask]
     }
 
     private KubesTest generateParallelTestingTask(Project projectContainingTask, Test task, DockerPushImage imageBuildingTask, String providedTag) {
@@ -120,53 +176,45 @@ class DistributedTesting implements Plugin<Project> {
 
     private Test modifyTestTaskForParallelExecution(Project subProject, Test task, BucketingAllocatorTask globalAllocator) {
         subProject.logger.info("modifying task: ${task.getPath()} to depend on task ${globalAllocator.getPath()}")
-        def reportsDir = new File(new File(subProject.rootProject.getBuildDir(), "test-reports"), subProject.name + "-" + task.name)
+        def reportsDir = new File(new File(KubesTest.TEST_RUN_DIR, "test-reports"), subProject.name + "-" + task.name)
+        reportsDir.mkdirs()
+        File executedTestsFile = new File(KubesTest.TEST_RUN_DIR + "/executedTests.txt")
         task.configure {
             dependsOn globalAllocator
             binResultsDir new File(reportsDir, "binary")
             reports.junitXml.destination new File(reportsDir, "xml")
-            maxHeapSize = "6g"
+            maxHeapSize = "10g"
+
             doFirst {
+                executedTestsFile.createNewFile()
                 filter {
-                    List<String> executedTests = []
-                    File executedTestsFile = new File(KubesTest.TEST_RUN_DIR + "/executedTests.txt")
-                    try {
-                        executedTests = executedTestsFile.readLines()
-                    } catch (FileNotFoundException e) {
-                        executedTestsFile.createNewFile()
-                    }
-
-                    task.afterTest { desc, result ->
-                        executedTestsFile.withWriterAppend { writer ->
-                            writer.writeLine(desc.getClassName() + "." + desc.getName())
-                        }
-                    }
-
+                    List<String> executedTests = executedTestsFile.readLines()
                     def fork = getPropertyAsInt(subProject, "dockerFork", 0)
                     subProject.logger.info("requesting tests to include in testing task ${task.getPath()} (idx: ${fork})")
                     List<String> includes = globalAllocator.getTestIncludesForForkAndTestTask(
                             fork,
                             task)
                     subProject.logger.info "got ${includes.size()} tests to include into testing task ${task.getPath()}"
-
                     if (includes.size() == 0) {
                         subProject.logger.info "Disabling test execution for testing task ${task.getPath()}"
                         excludeTestsMatching "*"
                     }
-
                     includes.removeAll(executedTests)
-
                     executedTests.forEach { exclude ->
                         subProject.logger.info "excluding: $exclude for testing task ${task.getPath()}"
                         excludeTestsMatching exclude
                     }
-
                     includes.forEach { include ->
                         subProject.logger.info "including: $include for testing task ${task.getPath()}"
                         includeTestsMatching include
                     }
-
                     failOnNoMatchingTests false
+                }
+            }
+
+            afterTest { desc, result ->
+                executedTestsFile.withWriterAppend { writer ->
+                    writer.writeLine(desc.getClassName() + "." + desc.getName())
                 }
             }
         }

@@ -75,13 +75,13 @@ class CordaRPCConnection private constructor(
 
     override val serverProtocolVersion: Int get() = actualConnection.serverProtocolVersion
 
-    override fun notifyServerAndClose() = actualConnection.notifyServerAndClose()
+    override fun notifyServerAndClose() = doCloseLogic { actualConnection.notifyServerAndClose() }
 
-    override fun forceClose() = actualConnection.forceClose()
+    override fun forceClose() = doCloseLogic { actualConnection.forceClose() }
 
-    override fun close() {
+    private inline fun doCloseLogic(close: () -> Unit) {
         try {
-            actualConnection.close()
+            close.invoke()
         } finally {
             observersPool?.apply {
                 shutdown()
@@ -286,6 +286,7 @@ open class CordaRPCClientConfiguration @JvmOverloads constructor(
  *                   The default value is 5.
  */
 class GracefulReconnect(val onDisconnect: () -> Unit = {}, val onReconnect: () -> Unit = {}, val maxAttempts: Int = 5) {
+    @Suppress("unused") // constructor for java
     @JvmOverloads
     constructor(onDisconnect: Runnable, onReconnect: Runnable, maxAttempts: Int = 5) :
         this(onDisconnect = { onDisconnect.run() }, onReconnect = { onReconnect.run() }, maxAttempts = maxAttempts)
@@ -321,11 +322,15 @@ class GracefulReconnect(val onDisconnect: () -> Unit = {}, val onReconnect: () -
  *
  * If you want to enable a more graceful form of reconnection, you can make use of the gracefulReconnect argument of the [start] method.
  * If this is set to true, then:
- * - The client will automatically reconnect, when the connection is broken regardless of whether you provided a single or multiple addresses.
- * - Simple RPC calls that return data (e.g. [CordaRPCOps.networkParameters]) will **block** and return after the connection has been re-established and the node is up.
- * - RPC calls that return [rx.Observable]s (e.g. [CordaRPCOps.vaultTrack]) will automatically reconnect and keep sending events for the subscribed [rx.Observable]s.
+ * - The client will automatically reconnect, when the connection is broken regardless of whether you provided a single or
+ *   multiple addresses.
+ * - Simple RPC calls that return data (e.g. [CordaRPCOps.networkParameters]) will **block** and return after the connection has been
+ *   re-established and the node is up.
+ * - RPC calls that return [rx.Observable]s (e.g. [CordaRPCOps.vaultTrack]) will automatically reconnect and keep sending events for
+ *   the subscribed [rx.Observable]s.
  *   Note: In this approach, some events might be lost during a re-connection and not sent in the subscribed [rx.Observable]s.
- * - RPC calls that invoke flows (e.g. [CordaRPCOps.startFlowDynamic]) will fail during a disconnection throwing a [CouldNotStartFlowException].
+ * - RPC calls that invoke flows (e.g. [CordaRPCOps.startFlowDynamic]) will fail during a disconnection throwing
+ *   a [CouldNotStartFlowException].
  *
  * @param hostAndPort The network address to connect to.
  * @param configuration An optional configuration used to tweak client behaviour.
@@ -333,7 +338,8 @@ class GracefulReconnect(val onDisconnect: () -> Unit = {}, val onReconnect: () -
  * @param haAddressPool A list of [NetworkHostAndPort] representing the addresses of servers in HA mode.
  *  The client will attempt to connect to a live server by trying each address in the list. If the servers are not in
  *  HA mode, the client will round-robin from the beginning of the list and try all servers.
- * @param classLoader a classloader, which will be used (if provided) to discover available [SerializationCustomSerializer]s and [SerializationWhitelist]s
+ * @param classLoader a classloader, which will be used (if provided) to discover available [SerializationCustomSerializer]s
+ *  and [SerializationWhitelist]s
  *  If the created RPC client is intended to use types with custom serializers / whitelists,
  *  a classloader will need to be provided that contains the associated CorDapp jars.
  */

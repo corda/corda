@@ -1,0 +1,45 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd">
+    <changeSet author="R3.Corda" id="hibernate-interaction-tests-changeset">
+        <createTable tableName="parentstates">
+            <column name="transaction_id" type="NVARCHAR(64)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="output_index" type="INT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addPrimaryKey columnNames="output_index, transaction_id" constraintName="parents_pkey" tableName="parentstates"/>
+
+        <createTable tableName="childstates">
+            <column name="identifier" type="INT" autoIncrement="true">
+                <constraints nullable="false"/>
+            </column>
+            <column name="member" type="NVARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addPrimaryKey columnNames="identifier" constraintName="children_pkey" tableName="childstates"/>
+
+        <createTable tableName="parentstates_childstates">
+            <column name="parentstates_output_index" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="parentstates_transaction_id" type="NVARCHAR(64)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="children_identifier" type="INT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addPrimaryKey columnNames="parentstates_output_index, parentstates_transaction_id, children_identifier" constraintName="parents_children_pkey" tableName="parentstates_childstates"/>
+        <addForeignKeyConstraint baseColumnNames="children_identifier" baseTableName="parentstates_childstates"
+                                 constraintName="FK_to_child"
+                                 referencedColumnNames="identifier" referencedTableName="childstates"/>
+        <addForeignKeyConstraint baseColumnNames="parentstates_output_index, parentstates_transaction_id" baseTableName="parentstates_childstates"
+                                 constraintName="FK_to_parent"
+                                 referencedColumnNames="output_index, transaction_id" referencedTableName="parentstates"/>
+    </changeSet>
+</databaseChangeLog>

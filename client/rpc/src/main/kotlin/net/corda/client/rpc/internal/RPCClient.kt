@@ -120,10 +120,6 @@ class RPCClient<I : RPCOps>(
                     override fun forceClose() {
                         close(false)
                     }
-
-                    override fun close() {
-                        close(true)
-                    }
                 }
             } catch (exception: Throwable) {
                 proxyHandler.notifyServerAndClose()
