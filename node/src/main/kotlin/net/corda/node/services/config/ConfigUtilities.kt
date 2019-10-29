@@ -1,7 +1,6 @@
 package net.corda.node.services.config
 
 import com.typesafe.config.Config
-import com.typesafe.config.ConfigException
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigParseOptions
 import net.corda.cliutils.CordaSystemUtils
@@ -9,7 +8,6 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.internal.exists
-import net.corda.node.internal.Node
 import net.corda.nodeapi.internal.DEV_CA_KEY_STORE_PASS
 import net.corda.nodeapi.internal.config.FileBasedCertificateStoreSupplier
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
@@ -21,10 +19,7 @@ import net.corda.nodeapi.internal.installDevNodeCaCertPath
 import net.corda.nodeapi.internal.loadDevCaTrustStore
 import net.corda.nodeapi.internal.registerDevP2pCertificates
 import org.slf4j.LoggerFactory
-import java.lang.IllegalStateException
 import java.nio.file.Path
-import kotlin.reflect.KClass
-import kotlin.reflect.full.memberProperties
 
 fun configOf(vararg pairs: Pair<String, Any?>): Config = ConfigFactory.parseMap(mapOf(*pairs))
 operator fun Config.plus(overrides: Map<String, Any?>): Config = ConfigFactory.parseMap(overrides).withFallback(this)
@@ -67,69 +62,9 @@ object ConfigHelper {
         return finalConfig
     }
 
-    private fun <T: Any> getCaseSensitivePropertyPath(target : KClass<T>?, path : List<String>) : String {
-
-        require(path.isNotEmpty()) { "Path to config property cannot be empty." }
-
-        val lookFor = path.first()
-        target?.memberProperties?.forEach {
-            if (it.name.toLowerCase() == lookFor.toLowerCase()) {
-                return if (path.size > 1)
-                    "${it.name}." +
-                            getCaseSensitivePropertyPath(
-                                    (it.getter.returnType.classifier as KClass<*>),
-                                    path.subList(1, path.size))
-                else
-                    it.name
-            }
-        }
-
-        return ""
-    }
-
-    /*
-     * Gets
-     */
     private fun Config.cordaEntriesOnly(): Config {
 
-        val cordaPropOccurrences = mutableSetOf<String>()
-        val badKeyConversions = mutableSetOf<String>()
-
-        return ConfigFactory.parseMap(
-                toProperties()
-                .mapKeys {
-                    val newKey = (it.key as String)
-                                .replace("_", ".")
-                                .toLowerCase()
-
-                    if (newKey.contains(CORDA_PROPERTY_PREFIX) && cordaPropOccurrences.contains(newKey)) {
-                            throw ShadowingException(it.key.toString(), newKey)
-                    }
-
-                    cordaPropOccurrences.add(newKey)
-                    newKey.let { key ->
-                        if (!key.contains(CORDA_PROPERTY_PREFIX))
-                            return@let key
-
-                        val nodeConfKey = key.removePrefix(CORDA_PROPERTY_PREFIX)
-                        val configPath = getCaseSensitivePropertyPath(
-                                NodeConfigurationImpl::class,
-                                nodeConfKey.split(".")
-                        )
-
-                        if (nodeConfKey.length != configPath.length) {
-                            Node.printWarning(
-                                    "${it.key} (property or environment variable) cannot be mapped to an existing Corda" +
-                                            " config property and thus won't be used as a config override!" +
-                                            " It won't be passed as a config override! If that was the intention " +
-                                            " double check the spelling and ensure there is such config key.")
-                            badKeyConversions.add(configPath)
-                        }
-                        CORDA_PROPERTY_PREFIX + configPath
-                    }
-                }.filterKeys { it.startsWith(CORDA_PROPERTY_PREFIX) }
-                .mapKeys { it.key.removePrefix(CORDA_PROPERTY_PREFIX) }
-                .filterKeys { !badKeyConversions.contains(it) })
+        return ConfigFactory.parseMap(toProperties().filterKeys { (it as String).startsWith(CORDA_PROPERTY_PREFIX) }.mapKeys { (it.key as String).removePrefix(CORDA_PROPERTY_PREFIX) })
     }
 }
 
