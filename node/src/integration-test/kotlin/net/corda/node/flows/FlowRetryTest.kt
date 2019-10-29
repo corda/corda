@@ -48,7 +48,7 @@ class FlowRetryTest {
         TransientConnectionFailureFlow.retryCount = -1
         WrappedTransientConnectionFailureFlow.retryCount = -1
         GeneralExternalFailureFlow.retryCount = -1
-        StaffedFlowHospital.DatabaseEndocrinologist.customConditions.add { t -> true }
+        StaffedFlowHospital.DatabaseEndocrinologist.customConditions.add { true }
     }
 
     @After

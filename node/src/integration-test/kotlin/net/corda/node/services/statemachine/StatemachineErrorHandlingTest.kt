@@ -2053,6 +2053,7 @@ class GetHospitalCountersFlow : FlowLogic<HospitalCounts>() {
 @CordaSerializable
 data class HospitalCounts(val discharge: Int, val observation: Int)
 
+@Suppress("UNUSED_PARAMETER")
 @CordaService
 class HospitalCounter(services: AppServiceHub) : SingletonSerializeAsToken() {
     var observationCounter: Int = 0
