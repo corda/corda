@@ -332,9 +332,17 @@ class Verifier(val ltx: LedgerTransaction, private val transactionClassLoader: C
             if (constraint is SignatureAttachmentConstraint) {
                 checkMinimumPlatformVersion(ltx.networkParameters?.minimumPlatformVersion ?: 1, 4, "Signature constraints")
                 val constraintKey = constraint.key
-                if (constraintKey is CompositeKey && constraintKey.leafKeys.size > 1)
+                if (constraintKey is CompositeKey && constraintKey.leafKeys.size > 1) {
                     checkMinimumPlatformVersion(ltx.networkParameters?.minimumPlatformVersion ?: 1, 5,
                             "Composite keys for signature constraints")
+                    val leafKeysNumber = constraintKey.leafKeys.size
+                    if (leafKeysNumber > MAX_NUMBER_OF_KEYS_IN_SIGNATURE_CONSTRAINT)
+                        throw TransactionVerificationException.InvalidConstraintRejection(ltx.id, contract,
+                            "Signature constraint contains composite key with $leafKeysNumber leaf keys, " +
+                                    "which is more than the maximum allowed number of keys " +
+                                    "($MAX_NUMBER_OF_KEYS_IN_SIGNATURE_CONSTRAINT).")
+                }
+
             }
 
             // We already checked that there is one and only one attachment.

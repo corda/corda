@@ -10,6 +10,11 @@ import net.corda.core.utilities.loggerFor
  */
 typealias Version = Int
 
+/**
+ * The maximum number of keys in a signature constraint that the platform supports.
+ */
+const val MAX_NUMBER_OF_KEYS_IN_SIGNATURE_CONSTRAINT = 20
+
 private val log = loggerFor<AttachmentConstraint>()
 
 val Attachment.contractVersion: Version get() = if (this is ContractAttachment) version else CordappImpl.DEFAULT_CORDAPP_VERSION

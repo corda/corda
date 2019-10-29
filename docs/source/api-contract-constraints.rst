@@ -102,6 +102,8 @@ across the nodes that intend to use it.
 
 .. note:: In order to use signature constraints with a ``CompositeKey``, you must be at a network with a ``minimumPlatformVersion`` greater or equal to 5.
 
+.. note:: The platform currently supports ``CompositeKey``\s with up to 20 keys maximum.
+
 Each transaction received by a node will then verify that the apps attached to it have the correct signers as specified by its
 Signature Constraints. This ensures that the version of each app is acceptable to the transaction's input states.
 

@@ -3825,6 +3825,7 @@
     <ID>NestedBlockDepth:StartedFlowTransition.kt$StartedFlowTransition$private fun TransitionBuilder.sendToSessionsTransition(sourceSessionIdToMessage: Map&lt;SessionId, SerializedBytes&lt;Any&gt;&gt;)</ID>
     <ID>NestedBlockDepth:StatusTransitions.kt$StatusTransitions$ fun verify(tx: LedgerTransaction)</ID>
     <ID>NestedBlockDepth:ThrowableSerializer.kt$ThrowableSerializer$override fun fromProxy(proxy: ThrowableProxy): Throwable</ID>
+    <ID>NestedBlockDepth:TransactionVerifierServiceInternal.kt$Verifier$ private fun verifyConstraints(contractAttachmentsByContract: Map&lt;ContractClassName, ContractAttachment&gt;)</ID>
     <ID>NestedBlockDepth:TransactionVerifierServiceInternal.kt$Verifier$ private fun verifyConstraintsValidity(contractAttachmentsByContract: Map&lt;ContractClassName, ContractAttachment&gt;)</ID>
     <ID>SpreadOperator:AMQPSerializationScheme.kt$AbstractAMQPSerializationScheme$(*it.whitelist.toTypedArray())</ID>
     <ID>SpreadOperator:AbstractNode.kt$FlowStarterImpl$(logicType, *args)</ID>
