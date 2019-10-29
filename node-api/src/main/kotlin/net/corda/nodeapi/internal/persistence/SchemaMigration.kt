@@ -172,8 +172,12 @@ class SchemaMigration(
         val (isExistingDBWithoutLiquibase, isFinanceAppWithLiquibaseNotMigrated) = dataSource.connection.use {
 
             val existingDatabase = it.metaData.getTables(null, null, "NODE%", null).next()
+                    // Lower case names for PostgreSQL
+                    || it.metaData.getTables(null, null, "node%", null).next()
 
             val hasLiquibase = it.metaData.getTables(null, null, "DATABASECHANGELOG%", null).next()
+                    // Lower case names for PostgreSQL
+                    || it.metaData.getTables(null, null, "databasechangelog%", null).next()
 
             val isFinanceAppWithLiquibaseNotMigrated = isFinanceAppWithLiquibase // If Finance App is pre v4.0 then no need to migrate it so no need to check.
                     && existingDatabase
