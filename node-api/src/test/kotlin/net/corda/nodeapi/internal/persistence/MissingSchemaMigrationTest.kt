@@ -63,7 +63,7 @@ class MissingSchemaMigrationTest {
     fun `test that there are no missing migrations for the node`() {
         assertDoesNotThrow("This test failure indicates " +
                 "a new table has been added to the node without the appropriate migration scripts being present") {
-            createSchemaMigration(NodeSchemaService().internalSchemas(), false)
+            createSchemaMigration(NodeSchemaService().internalSchemas().toSet(), false)
                     .nodeStartup(dataSource.connection.use { DBCheckpointStorage().getCheckpointCount(it) != 0L })
         }
     }
