@@ -177,7 +177,7 @@ public class KubesTest extends DefaultTask {
         addShutdownHook(() -> {
             try (KubernetesClient client = getKubernetesClient()) {
                 System.out.println("Deleting PVC: " + pvc.getMetadata().getName());
-//                client.persistentVolumeClaims().delete(pvc);
+                client.persistentVolumeClaims().delete(pvc);
             }
         });
         return pvc;
@@ -229,12 +229,12 @@ public class KubesTest extends DefaultTask {
                 File podOutput = executeBuild(namespace, numberOfPods, podIdx, podName, printOutput, stdOutOs, stdOutIs, errChannelStream, waiter);
 
                 int resCode = waiter.join();
-                getProject().getLogger().lifecycle("build has ended on on pod " + podName + " (" + podIdx + "/" + numberOfPods + "), gathering results");
+                getProject().getLogger().lifecycle("build has ended on on pod " + podName + " (" + podIdx + "/" + numberOfPods + ") with result " + resCode + " , gathering results");
                 Collection<File> binaryResults = downloadTestXmlFromPod(namespace, createdPod);
                 getLogger().lifecycle("removing pod " + podName + " (" + podIdx + "/" + numberOfPods + ") after completed build");
                 try (KubernetesClient client = getKubernetesClient()) {
                     client.pods().delete(createdPod);
-//                    client.persistentVolumeClaims().delete(pvc);
+                    client.persistentVolumeClaims().delete(pvc);
                 }
                 return new KubePodResult(resCode, podOutput, binaryResults);
             });
@@ -450,7 +450,7 @@ public class KubesTest extends DefaultTask {
                             .map(StatusDetails::getCauses)
                             .flatMap(c -> c.stream().findFirst())
                             .map(StatusCause::getMessage)
-                            .map(Integer::parseInt).orElse(0);
+                            .map(Integer::parseInt).orElse(1);
                     waitingFuture.complete(resultCode);
                 } catch (Exception e) {
                     waitingFuture.completeExceptionally(e);

@@ -177,6 +177,8 @@ class DistributedTesting implements Plugin<Project> {
     private Test modifyTestTaskForParallelExecution(Project subProject, Test task, BucketingAllocatorTask globalAllocator) {
         subProject.logger.info("modifying task: ${task.getPath()} to depend on task ${globalAllocator.getPath()}")
         def reportsDir = new File(new File(KubesTest.TEST_RUN_DIR, "test-reports"), subProject.name + "-" + task.name)
+        reportsDir.mkdirs()
+        File executedTestsFile = new File(KubesTest.TEST_RUN_DIR + "/executedTests.txt")
         task.configure {
             dependsOn globalAllocator
             binResultsDir new File(reportsDir, "binary")
@@ -185,7 +187,6 @@ class DistributedTesting implements Plugin<Project> {
             doFirst {
                 filter {
                     List<String> executedTests = []
-                    File executedTestsFile = new File(KubesTest.TEST_RUN_DIR + "/executedTests.txt")
                     try {
                         executedTests = executedTestsFile.readLines()
                     } catch (FileNotFoundException e) {
