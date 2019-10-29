@@ -80,6 +80,9 @@ class DbListenerService(services: AppServiceHub) : SingletonSerializeAsToken() {
                             log.info("Throw InvalidParameterException")
                             throw InvalidParameterException("Toys out of pram")
                         }
+                        else -> {
+                            // do nothing, everything else must be handled elsewhere
+                        }
                     }
                 } catch (t: Throwable) {
                     if (CreateStateFlow.getServiceExceptionHandlingTarget(contractState?.errorTarget)
