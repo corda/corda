@@ -183,47 +183,38 @@ class DistributedTesting implements Plugin<Project> {
             dependsOn globalAllocator
             binResultsDir new File(reportsDir, "binary")
             reports.junitXml.destination new File(reportsDir, "xml")
-            maxHeapSize = "6g"
+            maxHeapSize = "10g"
+
             doFirst {
+                executedTestsFile.createNewFile()
                 filter {
-                    List<String> executedTests = []
-                    try {
-                        executedTests = executedTestsFile.readLines()
-                    } catch (FileNotFoundException e) {
-                        executedTestsFile.createNewFile()
-                    }
-
-                    task.afterTest { desc, result ->
-                        executedTestsFile.withWriterAppend { writer ->
-                            writer.writeLine(desc.getClassName() + "." + desc.getName())
-                        }
-                    }
-
+                    List<String> executedTests = executedTestsFile.readLines()
                     def fork = getPropertyAsInt(subProject, "dockerFork", 0)
                     subProject.logger.info("requesting tests to include in testing task ${task.getPath()} (idx: ${fork})")
                     List<String> includes = globalAllocator.getTestIncludesForForkAndTestTask(
                             fork,
                             task)
                     subProject.logger.info "got ${includes.size()} tests to include into testing task ${task.getPath()}"
-
                     if (includes.size() == 0) {
                         subProject.logger.info "Disabling test execution for testing task ${task.getPath()}"
                         excludeTestsMatching "*"
                     }
-
                     includes.removeAll(executedTests)
-
                     executedTests.forEach { exclude ->
                         subProject.logger.info "excluding: $exclude for testing task ${task.getPath()}"
                         excludeTestsMatching exclude
                     }
-
                     includes.forEach { include ->
                         subProject.logger.info "including: $include for testing task ${task.getPath()}"
                         includeTestsMatching include
                     }
-
                     failOnNoMatchingTests false
+                }
+            }
+
+            afterTest { desc, result ->
+                executedTestsFile.withWriterAppend { writer ->
+                    writer.writeLine(desc.getClassName() + "." + desc.getName())
                 }
             }
         }

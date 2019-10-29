@@ -18,6 +18,7 @@ import io.fabric8.kubernetes.client.dsl.PodResource;
 import io.fabric8.kubernetes.client.utils.Serialization;
 import net.corda.testing.retry.Retry;
 import okhttp3.Response;
+import org.apache.commons.compress.utils.IOUtils;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.tasks.TaskAction;
 import org.jetbrains.annotations.NotNull;
@@ -26,6 +27,8 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
@@ -228,10 +231,19 @@ public class KubesTest extends DefaultTask {
                 CompletableFuture<Integer> waiter = new CompletableFuture<>();
                 File podOutput = executeBuild(namespace, numberOfPods, podIdx, podName, printOutput, stdOutOs, stdOutIs, errChannelStream, waiter);
 
+
                 int resCode = waiter.join();
                 getProject().getLogger().lifecycle("build has ended on on pod " + podName + " (" + podIdx + "/" + numberOfPods + ") with result " + resCode + " , gathering results");
                 Collection<File> binaryResults = downloadTestXmlFromPod(namespace, createdPod);
                 getLogger().lifecycle("removing pod " + podName + " (" + podIdx + "/" + numberOfPods + ") after completed build");
+                File podLogsDirectory = new File(getProject().getBuildDir(), "pod-logs");
+                if (!podLogsDirectory.exists()) {
+                    podLogsDirectory.mkdirs();
+                }
+                File logFileToArchive = new File(podLogsDirectory, podName + ".log");
+                try (FileInputStream logIn = new FileInputStream(podOutput); FileOutputStream logOut = new FileOutputStream(logFileToArchive)) {
+                    IOUtils.copy(logIn, logOut);
+                }
                 try (KubernetesClient client = getKubernetesClient()) {
                     client.pods().delete(createdPod);
                     client.persistentVolumeClaims().delete(pvc);
@@ -385,7 +397,7 @@ public class KubesTest extends DefaultTask {
 
     private String[] getBuildCommand(int numberOfPods, int podIdx) {
         String shellScript = "(let x=1 ; while [ ${x} -ne 0 ] ; do echo \"Waiting for DNS\" ; curl services.gradle.org > /dev/null 2>&1 ; x=$? ; sleep 1 ; done ) && "
-                + "cd /tmp/source && " +
+                + " cd /tmp/source && " +
                 "(let y=1 ; while [ ${y} -ne 0 ] ; do echo \"Preparing build directory\" ; ./gradlew testClasses integrationTestClasses --parallel 2>&1 ; y=$? ; sleep 1 ; done ) && " +
                 "(./gradlew -D" + ListTests.DISTRIBUTION_PROPERTY + "=" + distribution.name() + " -Dkubenetize -PdockerFork=" + podIdx + " -PdockerForks=" + numberOfPods + " " + fullTaskToExecutePath + " " + getLoggingLevel() + " 2>&1 ) && " +
                 "(let rs=$? ; sleep 10 ; exit ${rs})";
@@ -451,7 +463,7 @@ public class KubesTest extends DefaultTask {
                             .map(StatusDetails::getCauses)
                             .flatMap(c -> c.stream().findFirst())
                             .map(StatusCause::getMessage)
-                            .map(Integer::parseInt).orElse(1);
+                            .map(Integer::parseInt).orElse(0);
                     waitingFuture.complete(resultCode);
                 } catch (Exception e) {
                     waitingFuture.completeExceptionally(e);
