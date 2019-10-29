@@ -98,35 +98,8 @@ object ConfigHelper {
         return ConfigFactory.parseMap(
                 toProperties()
                 .mapKeys {
-                    val newKey = (it.key as String)
-                                .replace("_", ".")
-                                .toLowerCase()
-
-                    if (newKey.contains(CORDA_PROPERTY_PREFIX) && cordaPropOccurrences.contains(newKey)) {
-                            throw ShadowingException(it.key.toString(), newKey)
-                    }
-
-                    cordaPropOccurrences.add(newKey)
-                    newKey.let { key ->
-                        if (!key.contains(CORDA_PROPERTY_PREFIX))
-                            return@let key
-
-                        val nodeConfKey = key.removePrefix(CORDA_PROPERTY_PREFIX)
-                        val configPath = getCaseSensitivePropertyPath(
-                                NodeConfigurationImpl::class,
-                                nodeConfKey.split(".")
-                        )
-
-                        if (nodeConfKey.length != configPath.length) {
-                            Node.printWarning(
-                                    "${it.key} (property or environment variable) cannot be mapped to an existing Corda" +
-                                            " config property and thus won't be used as a config override!" +
-                                            " It won't be passed as a config override! If that was the intention " +
-                                            " double check the spelling and ensure there is such config key.")
-                            badKeyConversions.add(configPath)
-                        }
-                        CORDA_PROPERTY_PREFIX + configPath
-                    }
+                    (it.key as String)
+                        .replace("_", ".")
                 }.filterKeys { it.startsWith(CORDA_PROPERTY_PREFIX) }
                 .mapKeys { it.key.removePrefix(CORDA_PROPERTY_PREFIX) }
                 .filterKeys { !badKeyConversions.contains(it) })

@@ -7,6 +7,7 @@ import net.corda.testing.driver.NodeParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.driver.internal.incrementalPortAllocation
 import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.junit.Ignore
 import org.junit.Test
 import org.junit.jupiter.api.assertThrows
 
@@ -31,6 +32,7 @@ class NodeConfigParsingTests {
     }
 
     @Test
+    @Ignore
     fun `config is overriden by case insensitive underscore variable`() {
         val portAllocator = incrementalPortAllocation()
         val sshPort = portAllocator.nextPort()
@@ -49,6 +51,7 @@ class NodeConfigParsingTests {
     }
 
     @Test
+    @Ignore
     fun `config is overriden by case insensitive dot variable`() {
         val portAllocator = incrementalPortAllocation()
         val sshPort = portAllocator.nextPort()
@@ -67,6 +70,7 @@ class NodeConfigParsingTests {
     }
 
     @Test
+    @Ignore
     fun `shadowing is forbidden`() {
         val portAllocator = incrementalPortAllocation()
         val sshPort = portAllocator.nextPort()
