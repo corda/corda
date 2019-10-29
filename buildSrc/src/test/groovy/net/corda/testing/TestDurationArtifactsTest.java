@@ -259,7 +259,7 @@ public class TestDurationArtifactsTest {
         final String expected = "release/os/4.3";
         final String key = "git.branch";
         final String cordaType = "corda";
-        Properties.setCordaType(cordaType);
+        Properties.setRootProjectType(cordaType);
         System.setProperty(key, expected);
 
         Assert.assertEquals(expected, System.getProperty(key));

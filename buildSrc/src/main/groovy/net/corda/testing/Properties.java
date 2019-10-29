@@ -11,26 +11,25 @@ import org.slf4j.LoggerFactory;
 public class Properties {
     private static final Logger LOG = LoggerFactory.getLogger(Properties.class);
 
-    private static String CORDA_TYPE = "corda"; // corda or enterprise
+    private static String ROOT_PROJECT_TYPE = "corda"; // corda or enterprise
 
     /**
      * Get the Corda type.  Used in the tag names when we store in Artifactory.
      *
      * @return either 'corda' or 'enterprise'
      */
-    static String getCordaType() {
-        return CORDA_TYPE;
+    static String getRootProjectType() {
+        return ROOT_PROJECT_TYPE;
     }
 
     /**
      * Set the Corda (repo) type - either enterprise, or corda (open-source).
      * Used in the tag names when we store in Artifactory.
      *
-     * @param cordaType the corda repo type.
+     * @param rootProjectType the corda repo type.
      */
-    static void setCordaType(@NotNull final String cordaType) {
-        CORDA_TYPE = cordaType;
-        LOG.warn("Set CORDA_TYPE to {}", CORDA_TYPE);
+    static void setRootProjectType(@NotNull final String rootProjectType) {
+        ROOT_PROJECT_TYPE = rootProjectType;
     }
 
     /**
@@ -43,7 +42,7 @@ public class Properties {
     static String getProperty(@NotNull final String key) {
         final String value = System.getProperty(key, "").trim();
         if (value.isEmpty()) {
-            LOG.warn("Property '{}' not set", key);
+            LOG.debug("Property '{}' not set", key);
         } else {
             LOG.debug("Ok.  Property '{}' is set", key);
         }

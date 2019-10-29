@@ -1,6 +1,5 @@
 package net.corda.testing;
 
-import com.fasterxml.jackson.databind.annotation.JsonAppend;
 import groovy.lang.Tuple2;
 import org.apache.commons.compress.archivers.ArchiveEntry;
 import org.apache.commons.compress.archivers.ArchiveException;
@@ -11,7 +10,6 @@ import org.gradle.api.Project;
 import org.gradle.api.Task;
 import org.gradle.api.tasks.bundling.Zip;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
@@ -68,6 +66,7 @@ public class TestDurationArtifacts {
     private final Artifactory artifactory = new Artifactory();
 
     /**
+     * Write out the test durations as a CSV file.
      * Reload the tests from artifactory and update with the latest run.
      *
      * @param project project that we are attaching the test to.
@@ -75,7 +74,10 @@ public class TestDurationArtifacts {
      * @return the csv task
      */
     private static Task createCsvTask(@NotNull final Project project, @NotNull final String name) {
-        return project.getTasks().create(name + "CreateCsvFile", Task.class, t -> {
+        return project.getTasks().create("createCsvFromXmlFor" + capitalize(name), Task.class, t -> {
+            t.setGroup(DistributedTesting.GRADLE_GROUP);
+            t.setDescription("Create csv from all discovered junit xml files");
+
             // Parse all the junit results and write them to a csv file.
             t.doFirst(task -> {
                 project.getLogger().warn("About to create CSV file and zip it");
@@ -120,16 +122,23 @@ public class TestDurationArtifacts {
         });
     }
 
+    @NotNull
+    static String capitalize(@NotNull final String str) {
+        return str.substring(0, 1).toUpperCase() + str.substring(1); // groovy has this as an extension method
+    }
+
     /**
-     * Create the Gradle Zip task to gather test information
+     * Discover junit xml files, zip them, and upload to artifactory.
      *
-     * @param project project to attach this task to
-     * @param name    name of the task
-     * @return a reference to the created task.
+     * @param project root project
+     * @param name    task name that we're 'extending'
+     * @return gradle task
      */
     @NotNull
-    public static Task createZipTask(Project project, String name) {
-        final Task zipJunitTask = project.getTasks().create(name  + "Junit", Zip.class, z -> {
+    private static Task createJunitZipTask(@NotNull final Project project, @NotNull final String name) {
+        return project.getTasks().create("zipJunitXmlFilesAndUploadFor" + capitalize(name), Zip.class, z -> {
+            z.setGroup(DistributedTesting.GRADLE_GROUP);
+            z.setDescription("Zip junit files and upload to artifactory");
 
             z.getArchiveFileName().set(Artifactory.getFileName("junit", EXTENSION, getBranchTag()));
             z.getDestinationDirectory().set(project.getRootDir());
@@ -142,17 +151,24 @@ public class TestDurationArtifacts {
                 }
             });
         });
-        final Task csvTask = createCsvTask(project, name);
-        csvTask.dependsOn(zipJunitTask);
+    }
 
-        return project.getTasks().create(name, Zip.class, z -> {
+    /**
+     * Zip and upload test-duration csv files to artifactory
+     *
+     * @param project root project that we're attaching the task to
+     * @param name    the task name we're 'extending'
+     * @return gradle task
+     */
+    @NotNull
+    private static Task createCsvZipAndUploadTask(@NotNull final Project project, @NotNull final String name) {
+        return project.getTasks().create("zipCsvFilesAndUploadFor" + capitalize(name), Zip.class, z -> {
+            z.setGroup(DistributedTesting.GRADLE_GROUP);
+            z.setDescription("Zips test duration csv and uploads to artifactory");
+
             z.getArchiveFileName().set(Artifactory.getFileName(ARTIFACT, EXTENSION, getBranchTag()));
             z.getDestinationDirectory().set(project.getRootDir());
             z.setIncludeEmptyDirs(false);
-
-            //  This *might* be a problem we have a finalizedBy task that dependsOn this.
-            //  Can gradle choose to execute csvTask at an arbitrary time before the XML files are present?
-            z.dependsOn(csvTask); // we have to create the csv before we can zip it.
 
             // There's only one csv, but glob it anyway.
             z.from(project.getRootDir(), task -> task.include("**/" + ARTIFACT + ".csv"));
@@ -175,6 +191,27 @@ public class TestDurationArtifacts {
                 }
             });
         });
+    }
+
+    /**
+     * Create the Gradle Zip task to gather test information
+     *
+     * @param project project to attach this task to
+     * @param name    name of the task
+     * @return a reference to the created task.
+     */
+    @NotNull
+    public static Task createZipTask(@NotNull final Project project, @NotNull final String name) {
+        final Task zipJunitTask = createJunitZipTask(project, name);
+        final Task csvTask = createCsvTask(project, name);
+        csvTask.dependsOn(zipJunitTask);
+        // For debugging - can be removed - this simply gathers junit xml and uploads them to artifactory
+        // so that we can inspect them.
+
+        final Task zipCsvTask = createCsvZipAndUploadTask(project, name);
+        zipCsvTask.dependsOn(csvTask); // we have to create the csv before we can zip it.
+
+        return zipCsvTask;
     }
 
     static List<Path> getTestXmlFiles(@NotNull final Path rootDir) {
@@ -312,12 +349,22 @@ public class TestDurationArtifacts {
         return TestDurationArtifacts::loadTests;
     }
 
+    /**
+     * we need to prepend the project type so that we have a unique tag for artifactory
+     *
+     * @return
+     */
     static String getBranchTag() {
-        return (Properties.getCordaType() + "-" + Properties.getGitBranch()).replace('.', '-');
+        return (Properties.getRootProjectType() + "-" + Properties.getGitBranch()).replace('.', '-');
     }
 
+    /**
+     * we need to prepend the project type so that we have a unique tag artifactory
+     *
+     * @return
+     */
     static String getTargetBranchTag() {
-        return (Properties.getCordaType() + "-" + Properties.getTargetGitBranch()).replace('.', '-');
+        return (Properties.getRootProjectType() + "-" + Properties.getTargetGitBranch()).replace('.', '-');
     }
 
     /**

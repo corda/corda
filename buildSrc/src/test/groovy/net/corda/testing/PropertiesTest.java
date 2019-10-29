@@ -1,12 +1,9 @@
 package net.corda.testing;
 
-import com.fasterxml.jackson.databind.annotation.JsonAppend;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-
-import static org.junit.Assert.*;
 
 public class PropertiesTest {
     private static String username = "me";
@@ -33,8 +30,8 @@ public class PropertiesTest {
 
     @Test
     public void cordaType() {
-    Properties.setCordaType(cordaType);
-        Assert.assertEquals(cordaType, Properties.getCordaType());
+    Properties.setRootProjectType(cordaType);
+        Assert.assertEquals(cordaType, Properties.getRootProjectType());
     }
 
     @Test
