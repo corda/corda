@@ -135,6 +135,7 @@ class InitFlow(private val party: Party) : FlowLogic<String>() {
     }
 }
 
+@Suppress("TooGenericExceptionThrown")
 @InitiatedBy(InitFlow::class)
 class InitiatedFlow(private val initiatingSession: FlowSession) : FlowLogic<Unit>() {
     @Suspendable
