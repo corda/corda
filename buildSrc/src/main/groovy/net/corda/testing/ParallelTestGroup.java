@@ -8,14 +8,41 @@ import java.util.List;
 
 public class ParallelTestGroup extends DefaultTask {
 
-    DistributeTestsBy distribution = DistributeTestsBy.METHOD;
+    private DistributeTestsBy distribution = DistributeTestsBy.METHOD;
+    private List<String> groups = new ArrayList<>();
+    private int shardCount = 20;
+    private int coresToUse = 4;
+    private int gbOfMemory = 4;
+    private boolean printToStdOut = true;
+    private PodLogLevel logLevel = PodLogLevel.INFO;
 
-    List<String> groups = new ArrayList<>();
-    int shardCount = 20;
-    int coresToUse = 4;
-    int gbOfMemory = 4;
-    boolean printToStdOut = true;
-    PodLogLevel logLevel = PodLogLevel.INFO;
+    public DistributeTestsBy getDistribution() {
+        return distribution;
+    }
+
+    public List<String> getGroups() {
+        return groups;
+    }
+
+    public int getShardCount() {
+        return shardCount;
+    }
+
+    public int getCoresToUse() {
+        return coresToUse;
+    }
+
+    public int getGbOfMemory() {
+        return gbOfMemory;
+    }
+
+    public boolean getPrintToStdOut() {
+        return printToStdOut;
+    }
+
+    public PodLogLevel getLogLevel() {
+        return logLevel;
+    }
 
     public void numberOfShards(int shards) {
         this.shardCount = shards;
@@ -46,7 +73,7 @@ public class ParallelTestGroup extends DefaultTask {
         testGroups(Arrays.asList(group));
     }
 
-    public void testGroups(List<String> group) {
+    private void testGroups(List<String> group) {
         groups.addAll(group);
     }
 

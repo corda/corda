@@ -73,7 +73,7 @@ class DistributedTesting implements Plugin<Project> {
             userGroups.forEach { testGrouping ->
 
                 //for each "group" (ie: test, integrationTest) within the grouping find all the Test tasks which have the same name.
-                List<Test> groups = ((ParallelTestGroup) testGrouping).groups.collect { allTestTasksGroupedByType.get(it) }.flatten()
+                List<Test> groups = ((ParallelTestGroup) testGrouping).getGroups().collect { allTestTasksGroupedByType.get(it) }.flatten()
 
                 //join up these test tasks into a single set of tasks to invoke (node:test, node:integrationTest...)
                 String superListOfTasks = groups.collect { it.path }.join(" ")
@@ -87,7 +87,7 @@ class DistributedTesting implements Plugin<Project> {
                     imageBuildTask.dependsOn preAllocateTask
                 }
 
-                def userDefinedParallelTask = project.rootProject.tasks.create("userDefined" + testGrouping.name.capitalize(), KubesTest) {
+                def userDefinedParallelTask = project.rootProject.tasks.create("userDefined" + testGrouping.getName().capitalize(), KubesTest) {
                     if (!tagToUseForRunningTests) {
                         dependsOn imagePushTask
                     }
@@ -96,23 +96,23 @@ class DistributedTesting implements Plugin<Project> {
                         dependsOn deAllocateTask
                     }
                     numberOfPods = testGrouping.getShardCount()
-                    printOutput = testGrouping.printToStdOut
+                    printOutput = testGrouping.getPrintToStdOut()
                     fullTaskToExecutePath = superListOfTasks
-                    taskToExecuteName = testGrouping.groups.join("And")
-                    memoryGbPerFork = testGrouping.gbOfMemory
-                    numberOfCoresPerFork = testGrouping.coresToUse
-                    distribution = testGrouping.distribution
-                    podLogLevel = testGrouping.logLevel
+                    taskToExecuteName = testGrouping.getGroups().join("And")
+                    memoryGbPerFork = testGrouping.getGbOfMemory()
+                    numberOfCoresPerFork = testGrouping.getCoresToUse()
+                    distribution = testGrouping.getDistribution()
+                    podLogLevel = testGrouping.getLogLevel()
                     doFirst {
                         dockerTag = tagToUseForRunningTests ? (ImageBuilding.registryName + ":" + tagToUseForRunningTests) : (imagePushTask.imageName.get() + ":" + imagePushTask.tag.get())
                     }
                 }
-                def reportOnAllTask = project.rootProject.tasks.create("userDefinedReports${testGrouping.name.capitalize()}", KubesReporting) {
+                def reportOnAllTask = project.rootProject.tasks.create("userDefinedReports${testGrouping.getName().capitalize()}", KubesReporting) {
                     dependsOn userDefinedParallelTask
-                    destinationDir new File(project.rootProject.getBuildDir(), "userDefinedReports${testGrouping.name.capitalize()}")
+                    destinationDir new File(project.rootProject.getBuildDir(), "userDefinedReports${testGrouping.getName().capitalize()}")
                     doFirst {
                         destinationDir.deleteDir()
-                        shouldPrintOutput = !testGrouping.printToStdOut
+                        shouldPrintOutput = !testGrouping.getPrintToStdOut()
                         podResults = userDefinedParallelTask.containerResults
                         reportOn(userDefinedParallelTask.testOutput)
                     }
@@ -125,13 +125,13 @@ class DistributedTesting implements Plugin<Project> {
 
     private List<Task> generatePreAllocateAndDeAllocateTasksForGrouping(Project project, ParallelTestGroup testGrouping) {
         PodAllocator allocator = new PodAllocator(project.getLogger())
-        Task preAllocateTask = project.rootProject.tasks.create("preAllocateFor" + testGrouping.name.capitalize()) {
+        Task preAllocateTask = project.rootProject.tasks.create("preAllocateFor" + testGrouping.getName().capitalize()) {
             doFirst {
                 String dockerTag = System.getProperty(ImageBuilding.PROVIDE_TAG_FOR_BUILDING_PROPERTY)
                 if (dockerTag == null) {
                     throw new GradleException("pre allocation cannot be used without a stable docker tag - please provide one  using -D" + ImageBuilding.PROVIDE_TAG_FOR_BUILDING_PROPERTY)
                 }
-                int seed = (dockerTag.hashCode() + testGrouping.name.hashCode())
+                int seed = (dockerTag.hashCode() + testGrouping.getName().hashCode())
                 String podPrefix = new BigInteger(64, new Random(seed)).toString(36)
                 //here we will pre-request the correct number of pods for this testGroup
                 int numberOfPodsToRequest = testGrouping.getShardCount()
@@ -141,13 +141,13 @@ class DistributedTesting implements Plugin<Project> {
             }
         }
 
-        Task deAllocateTask = project.rootProject.tasks.create("deAllocateFor" + testGrouping.name.capitalize()) {
+        Task deAllocateTask = project.rootProject.tasks.create("deAllocateFor" + testGrouping.getName().capitalize()) {
             doFirst {
                 String dockerTag = System.getProperty(ImageBuilding.PROVIDE_TAG_FOR_RUNNING_PROPERTY)
                 if (dockerTag == null) {
                     throw new GradleException("pre allocation cannot be used without a stable docker tag - please provide one using -D" + ImageBuilding.PROVIDE_TAG_FOR_RUNNING_PROPERTY)
                 }
-                int seed = (dockerTag.hashCode() + testGrouping.name.hashCode())
+                int seed = (dockerTag.hashCode() + testGrouping.getName().hashCode())
                 String podPrefix = new BigInteger(64, new Random(seed)).toString(36);
                 allocator.tearDownPods(podPrefix)
             }
