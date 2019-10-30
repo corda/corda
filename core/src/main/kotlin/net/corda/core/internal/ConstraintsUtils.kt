@@ -12,6 +12,8 @@ typealias Version = Int
 
 /**
  * The maximum number of keys in a signature constraint that the platform supports.
+ *
+ * Attention: this value affects consensus, so it requires a minimum platform version bump in order to be changed.
  */
 const val MAX_NUMBER_OF_KEYS_IN_SIGNATURE_CONSTRAINT = 20
 

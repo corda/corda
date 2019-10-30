@@ -330,6 +330,10 @@ class Verifier(val ltx: LedgerTransaction, private val transactionClassLoader: C
         // For each contract/constraint pair check that the relevant attachment is valid.
         allStates.map { it.contract to it.constraint }.toSet().forEach { (contract, constraint) ->
             if (constraint is SignatureAttachmentConstraint) {
+                /**
+                 * Signature constraints are supported on min. platform version >= 4, but this only includes support for a single key per constraint.
+                 * Signature contstraints with composite keys containing more than 1 leaf key are supported on min. platform version >= 5.
+                 */
                 checkMinimumPlatformVersion(ltx.networkParameters?.minimumPlatformVersion ?: 1, 4, "Signature constraints")
                 val constraintKey = constraint.key
                 if (constraintKey is CompositeKey && constraintKey.leafKeys.size > 1) {
