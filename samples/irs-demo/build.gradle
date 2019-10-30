@@ -57,7 +57,6 @@ repositories {
     maven {
         url 'https://dl.bintray.com/palantir/releases' // docker-compose-rule is published on bintray
     }
-    maven { url 'https://jitpack.io' }
 }
 
 dependencies {

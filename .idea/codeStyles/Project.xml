@@ -3,14 +3,14 @@
     <option name="LINE_SEPARATOR" value="&#10;" />
     <option name="RIGHT_MARGIN" value="140" />
     <option name="SOFT_MARGINS" value="140" />
-    <JavaCodeStyleSettings>
-      <option name="CLASS_COUNT_TO_USE_IMPORT_ON_DEMAND" value="999" />
-      <option name="NAMES_COUNT_TO_USE_IMPORT_ON_DEMAND" value="999" />
-    </JavaCodeStyleSettings>
     <GroovyCodeStyleSettings>
       <option name="CLASS_COUNT_TO_USE_IMPORT_ON_DEMAND" value="100" />
       <option name="NAMES_COUNT_TO_USE_IMPORT_ON_DEMAND" value="100" />
     </GroovyCodeStyleSettings>
+    <JavaCodeStyleSettings>
+      <option name="CLASS_COUNT_TO_USE_IMPORT_ON_DEMAND" value="999" />
+      <option name="NAMES_COUNT_TO_USE_IMPORT_ON_DEMAND" value="999" />
+    </JavaCodeStyleSettings>
     <JetCodeStyleSettings>
       <option name="PACKAGES_TO_USE_STAR_IMPORTS">
         <value>

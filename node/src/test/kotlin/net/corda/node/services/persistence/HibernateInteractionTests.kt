@@ -109,7 +109,10 @@ class HibernateInteractionTests {
 
     object PersistenceSchema: MappedSchema(PersistenceSchema::class.java, 1, listOf(Parent::class.java, Child::class.java)) {
 
-        @Entity(name = "parents")
+        override val migrationResource: String?
+            get() = "hibernate-interactions-tests-schema"
+
+        @Entity(name = "parentstates")
         @Table
         class Parent: PersistentState() {
 
@@ -122,7 +125,7 @@ class HibernateInteractionTests {
             }
         }
 
-        @Entity(name = "children")
+        @Entity(name = "childstates")
         class Child(
                 @Id
                 // Do not change this: this generation type is required in order to trigger the proper cascade ordering.
