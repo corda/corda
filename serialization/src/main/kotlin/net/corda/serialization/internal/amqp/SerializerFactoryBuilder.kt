@@ -27,7 +27,8 @@ object SerializerFactoryBuilder {
         Float::class,
         Int::class,
         Long::class,
-        Short::class
+        Short::class,
+        Void::class
     ).associate {
         klazz -> klazz.javaObjectType to klazz.javaPrimitiveType
     }) as Map<Class<*>, Class<*>>
