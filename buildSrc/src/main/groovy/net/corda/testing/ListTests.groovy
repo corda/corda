@@ -8,35 +8,6 @@ import org.gradle.api.tasks.TaskAction
 
 import java.util.stream.Collectors
 
-class ListShufflerAndAllocator {
-
-    private final List<String> tests
-
-    public ListShufflerAndAllocator(List<String> tests) {
-        this.tests = new ArrayList<>(tests)
-    }
-
-    List<String> getTestsForFork(int fork, int forks, Integer seed) {
-        Random shuffler = new Random(seed);
-        List<String> copy = new ArrayList<>(tests);
-        while (copy.size() < forks) {
-            //pad the list
-            copy.add(null);
-        }
-        Collections.shuffle(copy, shuffler);
-        int numberOfTestsPerFork = Math.max((copy.size() / forks).intValue(), 1);
-        int consumedTests = numberOfTestsPerFork * forks;
-        int ourStartIdx = numberOfTestsPerFork * fork;
-        int ourEndIdx = ourStartIdx + numberOfTestsPerFork;
-        int ourSupplementaryIdx = consumedTests + fork;
-        ArrayList<String> toReturn = new ArrayList<>(copy.subList(ourStartIdx, ourEndIdx));
-        if (ourSupplementaryIdx < copy.size()) {
-            toReturn.add(copy.get(ourSupplementaryIdx));
-        }
-        return toReturn.stream().filter { it -> it != null }.collect(Collectors.toList());
-    }
-}
-
 interface TestLister {
     List<String> getAllTestsDiscovered()
 }
@@ -103,8 +74,4 @@ class ListTests extends DefaultTask implements TestLister {
                 break
         }
     }
-}
-
-public enum DistributeTestsBy {
-    CLASS, METHOD
 }
