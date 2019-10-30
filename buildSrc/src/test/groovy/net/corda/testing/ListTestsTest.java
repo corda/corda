@@ -1,25 +1,30 @@
-package net.corda.testing
+package net.corda.testing;
 
-import org.hamcrest.CoreMatchers
-import org.junit.Assert
-import org.junit.Test
+import org.hamcrest.CoreMatchers;
+import org.junit.Assert;
+import org.junit.Test;
 
-import java.util.stream.Collectors
-import java.util.stream.IntStream
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
-import static org.hamcrest.core.Is.is
-import static org.hamcrest.core.IsEqual.equalTo
+import static org.hamcrest.core.Is.is;
+import static org.hamcrest.core.IsEqual.equalTo;
 
-class ListTestsTest {
+public class ListTestsTest {
 
     @Test
-    void shouldAllocateTests() {
+    public void shouldAllocateTests() {
 
         for (int numberOfTests = 0; numberOfTests < 100; numberOfTests++) {
             for (int numberOfForks = 1; numberOfForks < 100; numberOfForks++) {
 
 
-                List<String> tests = IntStream.range(0, numberOfTests).collect { z -> "Test.method" + z }
+                List<String> tests = IntStream.range(0, numberOfTests).boxed()
+                        .map(integer -> "Test.method" + integer.toString())
+                        .collect(Collectors.toList());
                 ListShufflerAndAllocator testLister = new ListShufflerAndAllocator(tests);
 
                 List<String> listOfLists = new ArrayList<>();
