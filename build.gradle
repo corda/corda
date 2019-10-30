@@ -34,6 +34,7 @@ buildscript {
         ext.quasar_classifier = constants.getProperty("quasarClassifier")
         ext.jdkClassifier = constants.getProperty("jdkClassifier")
     }
+    ext.cordaScanApiClassifier = jdkClassifier
     ext.quasar_exclusions = [
             'co.paralleluniverse**',
             'groovy**',
@@ -186,9 +187,6 @@ plugins {
     id 'com.bmuschko.docker-remote-api'
 }
 
-ext {
-}
-
 apply plugin: 'project-report'
 apply plugin: 'com.github.ben-manes.versions'
 apply plugin: 'net.corda.plugins.publish-utils'
@@ -201,16 +199,17 @@ apply plugin: 'com.jfrog.artifactory'
 // the resulting import. This fixes it.
 apply plugin: 'java'
 
-println "Java version: " + JavaVersion.current()
+logger.lifecycle("Java version: {}", JavaVersion.current())
 sourceCompatibility = VERSION_1_8
-if (JavaVersion.current() == JavaVersion.VERSION_1_8)
+if (JavaVersion.current() == JavaVersion.VERSION_1_8) {
     targetCompatibility = VERSION_1_8
-else
+} else {
     targetCompatibility = VERSION_11
-println "Java source compatibility: " + sourceCompatibility
-println "Java target compatibility: " + targetCompatibility
-println "Quasar version: " + quasar_version
-println "Quasar classifier: " + quasar_classifier
+}
+logger.lifecycle("Java source compatibility: {}", sourceCompatibility)
+logger.lifecycle("Java target compatibility: {}", targetCompatibility)
+logger.lifecycle("Quasar version: {}", quasar_version)
+logger.lifecycle("Quasar classifier: {}", quasar_classifier.toString())
 
 allprojects {
     apply plugin: 'kotlin'
@@ -241,10 +240,11 @@ allprojects {
         }
     }
     sourceCompatibility = VERSION_1_8
-    if (JavaVersion.current() == JavaVersion.VERSION_1_8)
+    if (JavaVersion.current() == JavaVersion.VERSION_1_8) {
         targetCompatibility = VERSION_1_8
-    else
+    } else {
         targetCompatibility = VERSION_11
+    }
 
     jacoco {
         // JDK11 official support (https://github.com/jacoco/jacoco/releases/tag/v0.8.3)
@@ -319,10 +319,11 @@ allprojects {
         }
     }
 
-    jar {
-        // JDK11 built and published artifacts to include classifier
-        if (jdkClassifier != null)
+    if (jdkClassifier) {
+        jar {
+            // JDK11 built and published artifacts to include classifier
             archiveClassifier = jdkClassifier
+        }
     }
 
     group 'net.corda'
