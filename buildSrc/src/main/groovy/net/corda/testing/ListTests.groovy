@@ -22,7 +22,8 @@
 //            DistributeTestsBy.valueOf(System.getProperty(DISTRIBUTION_PROPERTY)) : DistributeTestsBy.METHOD
 //
 //    def getTestsForFork(int fork, int forks, Integer seed) {
-//        def gitSha = new BigInteger(project.hasProperty("corda_revision") ? project.property("corda_revision").toString() : "0", 36)
+//        def gitSha = new BigInteger(project.hasProperty("corda_revision") ?
+//                project.property("corda_revision").toString() : "0", 36)
 //        if (fork >= forks) {
 //            throw new IllegalArgumentException("requested shard ${fork + 1} for total shards ${forks}")
 //        }

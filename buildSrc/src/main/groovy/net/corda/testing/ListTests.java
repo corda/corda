@@ -22,9 +22,9 @@ class ListTests extends DefaultTask implements TestLister {
 
     public static final String DISTRIBUTION_PROPERTY = "distributeBy";
 
-    FileCollection scanClassPath;
-    List<String> allTests;
-    DistributeTestsBy distribution = System.getProperty(DISTRIBUTION_PROPERTY) != null && !System.getProperty(DISTRIBUTION_PROPERTY).isEmpty() ?
+    public FileCollection scanClassPath;
+    private List<String> allTests;
+    private DistributeTestsBy distribution = System.getProperty(DISTRIBUTION_PROPERTY) != null && !System.getProperty(DISTRIBUTION_PROPERTY).isEmpty() ?
             DistributeTestsBy.valueOf(System.getProperty(DISTRIBUTION_PROPERTY)) : DistributeTestsBy.METHOD;
 
     public List<String> getTestsForFork(int fork, int forks, Integer seed) {
@@ -33,7 +33,7 @@ class ListTests extends DefaultTask implements TestLister {
         if (fork >= forks) {
             throw new IllegalArgumentException("requested shard ${fork + 1} for total shards ${forks}");
         }
-        Integer seedToUse = seed != null ? (seed + ((String) this.getPath()).hashCode() + gitSha.intValue()) : 0;
+        int seedToUse = seed != null ? (seed + (this.getPath()).hashCode() + gitSha.intValue()) : 0;
         return new ListShufflerAndAllocator(allTests).getTestsForFork(fork, forks, seedToUse);
     }
 
