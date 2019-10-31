@@ -8,6 +8,7 @@ import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.QueryableState
 import net.corda.node.services.api.SchemaService
+import net.corda.node.services.schema.NodeSchemaServiceTest.TestSchema
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.currentDBSession
 import net.corda.testing.contracts.DummyContract
