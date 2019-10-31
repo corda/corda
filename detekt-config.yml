@@ -52,7 +52,12 @@ empty-blocks:
   EmptyClassBlock:
     active: true
   EmptyDefaultConstructor:
-
+    active: true
+  EmptyDoWhileBlock:
+    active: true
+  EmptyElseBlock:
+    active: true
+  EmptyFinallyBlock:
     active: true
   EmptyForBlock:
     active: true
