@@ -16,19 +16,19 @@ class ListShufflerAndAllocator {
     }
 
     public List<String> getTestsForFork(int fork, int forks, Integer seed) {
-        Random shuffler = new Random(seed);
-        List<String> copy = new ArrayList<>(tests);
+        final Random shuffler = new Random(seed);
+        final List<String> copy = new ArrayList<>(tests);
         while (copy.size() < forks) {
             //pad the list
             copy.add(null);
         }
         Collections.shuffle(copy, shuffler);
-        int numberOfTestsPerFork = Math.max((copy.size() / forks), 1);
-        int consumedTests = numberOfTestsPerFork * forks;
-        int ourStartIdx = numberOfTestsPerFork * fork;
-        int ourEndIdx = ourStartIdx + numberOfTestsPerFork;
-        int ourSupplementaryIdx = consumedTests + fork;
-        ArrayList<String> toReturn = new ArrayList<>(copy.subList(ourStartIdx, ourEndIdx));
+        final int numberOfTestsPerFork = Math.max((copy.size() / forks), 1);
+        final int consumedTests = numberOfTestsPerFork * forks;
+        final int ourStartIdx = numberOfTestsPerFork * fork;
+        final int ourEndIdx = ourStartIdx + numberOfTestsPerFork;
+        final int ourSupplementaryIdx = consumedTests + fork;
+        final ArrayList<String> toReturn = new ArrayList<>(copy.subList(ourStartIdx, ourEndIdx));
         if (ourSupplementaryIdx < copy.size()) {
             toReturn.add(copy.get(ourSupplementaryIdx));
         }

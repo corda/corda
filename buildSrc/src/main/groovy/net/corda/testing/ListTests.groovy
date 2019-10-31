@@ -52,7 +52,8 @@
 //                        .collect { c -> (c.getSubclasses() + Collections.singletonList(c)) }
 //                        .flatten()
 //                        .collect { ClassInfo c ->
-//                            c.getMethodInfo().filter { m -> m.hasAnnotation("org.junit.Test") }.collect { m -> c.name + "." + m.name }
+//                            c.getMethodInfo().filter { m -> m.hasAnnotation("org.junit.Test") }
+//                                    .collect { m -> c.name + "." + m.name }
 //                        }.flatten()
 //                        .toSet()
 //

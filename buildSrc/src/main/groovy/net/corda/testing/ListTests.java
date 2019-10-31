@@ -18,7 +18,7 @@ interface TestLister {
     List<String> getAllTestsDiscovered();
 }
 
-class ListTests extends DefaultTask implements TestLister {
+public class ListTests extends DefaultTask implements TestLister {
 
     public static final String DISTRIBUTION_PROPERTY = "distributeBy";
 
@@ -56,20 +56,21 @@ class ListTests extends DefaultTask implements TestLister {
                         .overrideClasspath(scanClassPath)
                         .scan()
                         .getClassesWithMethodAnnotation("org.junit.Test")
-                        .stream().map(classInfo -> {
+                        .stream()
+                        .map(classInfo -> {
                             ClassInfoList returnList = ClassInfoList.emptyList();
                             returnList.add(classInfo);
                             returnList.addAll(classInfo.getSubclasses());
                             return returnList;
-                        }).flatMap(ClassInfoList::stream)
-                        .map(classInfo ->
-                            classInfo.getMethodInfo()
-                                    .filter(methodInfo -> methodInfo.hasAnnotation("org.junit.Test"))
-                                    .stream().map(methodInfo -> classInfo.getName() + "." + methodInfo.getName()))
-                        .flatMap(Function.identity()).collect(Collectors.toSet());
+                        })
+                        .flatMap(ClassInfoList::stream)
+                        .map(classInfo -> classInfo.getMethodInfo().filter(methodInfo -> methodInfo.hasAnnotation("org.junit.Test"))
+                                .stream().map(methodInfo -> classInfo.getName() + "." + methodInfo.getName()))
+                        .flatMap(Function.identity())
+                        .collect(Collectors.toSet());
 
-            this.allTests = results.stream().sorted().collect(Collectors.toList());
-            break;
+                this.allTests = results.stream().sorted().collect(Collectors.toList());
+                break;
             case CLASS:
                 results = new ClassGraph()
                         .enableClassInfo()
@@ -80,15 +81,18 @@ class ListTests extends DefaultTask implements TestLister {
                         .overrideClasspath(scanClassPath)
                         .scan()
                         .getClassesWithMethodAnnotation("org.junit.Test")
-                        .stream().map(classInfo -> {
+                        .stream()
+                        .map(classInfo -> {
                             ClassInfoList returnList = ClassInfoList.emptyList();
                             returnList.add(classInfo);
                             returnList.addAll(classInfo.getSubclasses());
                             return returnList;
-                        }).flatMap(ClassInfoList::stream)
-                        .map(ClassInfo::getName).collect(Collectors.toSet());
-            this.allTests = results.stream().sorted().collect(Collectors.toList());
-            break;
+                        })
+                        .flatMap(ClassInfoList::stream)
+                        .map(ClassInfo::getName)
+                        .collect(Collectors.toSet());
+                this.allTests = results.stream().sorted().collect(Collectors.toList());
+                break;
         }
     }
 }
