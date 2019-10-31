@@ -24,7 +24,7 @@ class ListTests extends DefaultTask implements TestLister {
 
     FileCollection scanClassPath;
     List<String> allTests;
-    DistributeTestsBy distribution = !System.getProperty(DISTRIBUTION_PROPERTY).isEmpty() ?
+    DistributeTestsBy distribution = System.getProperty(DISTRIBUTION_PROPERTY) != null && !System.getProperty(DISTRIBUTION_PROPERTY).isEmpty() ?
             DistributeTestsBy.valueOf(System.getProperty(DISTRIBUTION_PROPERTY)) : DistributeTestsBy.METHOD;
 
     public List<String> getTestsForFork(int fork, int forks, Integer seed) {

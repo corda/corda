@@ -18,7 +18,8 @@
 //
 //    FileCollection scanClassPath
 //    List<String> allTests
-//    DistributeTestsBy distribution = System.getProperty(DISTRIBUTION_PROPERTY) ? DistributeTestsBy.valueOf(System.getProperty(DISTRIBUTION_PROPERTY)) : DistributeTestsBy.METHOD
+//    DistributeTestsBy distribution = System.getProperty(DISTRIBUTION_PROPERTY) ?
+//            DistributeTestsBy.valueOf(System.getProperty(DISTRIBUTION_PROPERTY)) : DistributeTestsBy.METHOD
 //
 //    def getTestsForFork(int fork, int forks, Integer seed) {
 //        def gitSha = new BigInteger(project.hasProperty("corda_revision") ? project.property("corda_revision").toString() : "0", 36)
