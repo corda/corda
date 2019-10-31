@@ -76,11 +76,11 @@ public class PodAllocator {
                 .sorted(Comparator.comparing(p -> p.getMetadata().getName()))
                 .filter(foundPod -> foundPod.getMetadata().getName().contains(prefix));
 
-        List<CompletableFuture<Pod>> deleteFutures = jobsToDelete.map(job -> {
-            CompletableFuture<Pod> result = new CompletableFuture<>();
-            Watch watch = client.pods().inNamespace(job.getMetadata().getNamespace()).withName(job.getMetadata().getName()).watch(new Watcher<Pod>() {
+        List<CompletableFuture<Job>> deleteFutures = jobsToDelete.map(job -> {
+            CompletableFuture<Job> result = new CompletableFuture<>();
+            Watch watch = client.batch().jobs().inNamespace(job.getMetadata().getNamespace()).withName(job.getMetadata().getName()).watch(new Watcher<Job>() {
                 @Override
-                public void eventReceived(Action action, Pod resource) {
+                public void eventReceived(Action action, Job resource) {
                     if (action == Action.DELETED) {
                         result.complete(resource);
                         String msg = "Successfully deleted job " + job.getMetadata().getName();
