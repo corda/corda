@@ -84,11 +84,7 @@ public class PodAllocator {
                     if (action == Action.DELETED) {
                         result.complete(resource);
                         String msg = "Successfully deleted job " + job.getMetadata().getName();
-                        if (logger instanceof org.gradle.api.logging.Logger) {
-                            ((org.gradle.api.logging.Logger) logger).lifecycle(msg);
-                        } else {
-                            logger.info(msg);
-                        }
+                        logger.info(msg);
                     }
                 }
 
@@ -96,7 +92,7 @@ public class PodAllocator {
                 public void onClose(KubernetesClientException cause) {
                     String message = "Failed to delete job " + job.getMetadata().getName();
                     if (logger instanceof org.gradle.api.logging.Logger) {
-                        ((org.gradle.api.logging.Logger) logger).quiet(message);
+                        ((org.gradle.api.logging.Logger) logger).error(message);
                     } else {
                         logger.info(message);
                     }
