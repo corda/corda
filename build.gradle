@@ -1,7 +1,6 @@
 import net.corda.testing.DistributedTesting
 import net.corda.testing.DistributeTestsBy
 import net.corda.testing.ImageBuilding
-import net.corda.testing.ListTests
 import net.corda.testing.ParallelTestGroup
 import net.corda.testing.PodLogLevel
 
@@ -640,3 +639,4 @@ task allParallelSmokeTest(type: ParallelTestGroup) {
 }
 apply plugin: ImageBuilding
 apply plugin: DistributedTesting
+
