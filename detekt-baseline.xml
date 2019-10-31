@@ -414,7 +414,6 @@
     <ID>ForbiddenComment:NodeInfoWatcher.kt$NodeInfoWatcher$// TODO: Use NIO watch service instead?</ID>
     <ID>ForbiddenComment:NodeInterestRates.kt$NodeInterestRates.FixContainer$// TODO: the calendar data needs to be specified for every fix type in the input string</ID>
     <ID>ForbiddenComment:NodeInterestRates.kt$NodeInterestRates.UnknownFix$// TODO: can we split into two? Fix not available (retryable/transient) and unknown (permanent)</ID>
-    <ID>ForbiddenComment:NodeSchemaServiceTest.kt$NodeSchemaServiceTest$// TODO: driver limitation: cannot restrict CorDapps that get automatically created by default,</ID>
     <ID>ForbiddenComment:NodeTerminalView.kt$NodeTerminalView$// TODO: Remove this special case once Rick's serialisation work means we can deserialise states that weren't on our own classpath.</ID>
     <ID>ForbiddenComment:NodeVaultService.kt$NodeVaultService$// TODO: Optimise this.</ID>
     <ID>ForbiddenComment:NodeVaultService.kt$NodeVaultService$// TODO: Perhaps these can be stored in a batch?</ID>
@@ -429,7 +428,6 @@
     <ID>ForbiddenComment:NotaryChangeTests.kt$NotaryChangeTests$// TODO: Re-enable the test when parameter currentness checks are in place, ENT-2666.</ID>
     <ID>ForbiddenComment:NotaryError.kt$StateConsumptionDetails$// TODO: include notary timestamp?</ID>
     <ID>ForbiddenComment:NotaryFlow.kt$NotaryFlow.Client$// TODO: This is not required any more once our AMQP serialization supports turning off object referencing.</ID>
-    <ID>ForbiddenComment:NotaryFlow.kt$NotaryFlow.Client$// TODO: [CORDA-2274] Perform full transaction verification once verification caching is enabled.</ID>
     <ID>ForbiddenComment:NotaryServiceFlow.kt$NotaryServiceFlow.Companion$// TODO: Determine an appropriate limit and also enforce in the network parameters and the transaction builder.</ID>
     <ID>ForbiddenComment:NotaryUtils.kt$// TODO: if requestSignature was generated over an old version of NotarisationRequest, we need to be able to</ID>
     <ID>ForbiddenComment:OGUtils.kt$// TODO: Do this correctly</ID>
@@ -770,15 +768,6 @@
     <ID>LongParameterList:internalAccessTestHelpers.kt$( inputs: List&lt;StateAndRef&lt;ContractState&gt;&gt;, outputs: List&lt;TransactionState&lt;ContractState&gt;&gt;, commands: List&lt;CommandWithParties&lt;CommandData&gt;&gt;, attachments: List&lt;Attachment&gt;, id: SecureHash, notary: Party?, timeWindow: TimeWindow?, privacySalt: PrivacySalt, networkParameters: NetworkParameters, references: List&lt;StateAndRef&lt;ContractState&gt;&gt;, componentGroups: List&lt;ComponentGroup&gt;? = null, serializedInputs: List&lt;SerializedStateAndRef&gt;? = null, serializedReferences: List&lt;SerializedStateAndRef&gt;? = null, isAttachmentTrusted: (Attachment) -&gt; Boolean )</ID>
     <ID>MagicNumber:AMQPClientSerializationScheme.kt$AMQPClientSerializationScheme$128</ID>
     <ID>MagicNumber:AMQPClientSerializationScheme.kt$AMQPClientSerializationScheme.Companion$128</ID>
-    <ID>MagicNumber:AMQPDescriptorRegistry.kt$AMQPDescriptorRegistry.CHOICE$7</ID>
-    <ID>MagicNumber:AMQPDescriptorRegistry.kt$AMQPDescriptorRegistry.COMPOSITE_TYPE$5</ID>
-    <ID>MagicNumber:AMQPDescriptorRegistry.kt$AMQPDescriptorRegistry.FIELD$4</ID>
-    <ID>MagicNumber:AMQPDescriptorRegistry.kt$AMQPDescriptorRegistry.OBJECT_DESCRIPTOR$3</ID>
-    <ID>MagicNumber:AMQPDescriptorRegistry.kt$AMQPDescriptorRegistry.REFERENCED_OBJECT$8</ID>
-    <ID>MagicNumber:AMQPDescriptorRegistry.kt$AMQPDescriptorRegistry.RESTRICTED_TYPE$6</ID>
-    <ID>MagicNumber:AMQPDescriptorRegistry.kt$AMQPDescriptorRegistry.TRANSFORM_ELEMENT$10</ID>
-    <ID>MagicNumber:AMQPDescriptorRegistry.kt$AMQPDescriptorRegistry.TRANSFORM_ELEMENT_KEY$11</ID>
-    <ID>MagicNumber:AMQPDescriptorRegistry.kt$AMQPDescriptorRegistry.TRANSFORM_SCHEMA$9</ID>
     <ID>MagicNumber:AMQPSerializationScheme.kt$AbstractAMQPSerializationScheme$128</ID>
     <ID>MagicNumber:AMQPServer.kt$AMQPServer$100</ID>
     <ID>MagicNumber:AMQPServerSerializationScheme.kt$AMQPServerSerializationScheme$128</ID>
@@ -894,13 +883,6 @@
     <ID>MagicNumber:ExchangeRateModel.kt$1.01</ID>
     <ID>MagicNumber:ExchangeRateModel.kt$1.18</ID>
     <ID>MagicNumber:ExchangeRateModel.kt$1.31</ID>
-    <ID>MagicNumber:FinanceTypes.kt$Frequency.BiWeekly$26</ID>
-    <ID>MagicNumber:FinanceTypes.kt$Frequency.Daily$365</ID>
-    <ID>MagicNumber:FinanceTypes.kt$Frequency.Monthly$12</ID>
-    <ID>MagicNumber:FinanceTypes.kt$Frequency.Quarterly$3</ID>
-    <ID>MagicNumber:FinanceTypes.kt$Frequency.Quarterly$4</ID>
-    <ID>MagicNumber:FinanceTypes.kt$Frequency.SemiAnnual$6</ID>
-    <ID>MagicNumber:FinanceTypes.kt$Frequency.Weekly$52</ID>
     <ID>MagicNumber:FixingFlow.kt$FixingFlow.Fixer.&lt;no name provided&gt;$30</ID>
     <ID>MagicNumber:FlowCookbook.kt$InitiatorFlow$30</ID>
     <ID>MagicNumber:FlowCookbook.kt$InitiatorFlow$45</ID>
@@ -1326,7 +1308,6 @@
     <ID>MaxLineLength:AMQPTypeIdentifierParser.kt$AMQPTypeIdentifierParser.ParseState.ParsingParameterList$data</ID>
     <ID>MaxLineLength:AMQPTypeIdentifierParser.kt$AMQPTypeIdentifierParser.ParseState.ParsingRawType$data</ID>
     <ID>MaxLineLength:AMQPTypeIdentifierParserTests.kt$AMQPTypeIdentifierParserTests$verify(" java.util.Map &lt; java.util.Map&lt; java.lang.String, java.lang.Integer &gt;, java.util.Map &lt; java.lang.Long , java.lang.String &gt; &gt;")</ID>
-    <ID>MaxLineLength:ANSIProgressRenderer.kt$ANSIProgressRenderer$ansi.a("${IntStream.range(indent, indent).mapToObj { "\t" }.toList().joinToString(separator = "") { s -&gt; s }} $errorIcon ${error.message}")</ID>
     <ID>MaxLineLength:ANSIProgressRenderer.kt$StdoutANSIProgressRenderer$val consoleAppender = manager.configuration.appenders.values.filterIsInstance&lt;ConsoleAppender&gt;().singleOrNull { it.name == "Console-Selector" }</ID>
     <ID>MaxLineLength:ANSIProgressRendererTest.kt$ANSIProgressRendererTest$checkTrackingState(captor, 5, listOf(stepSuccess(STEP_1_LABEL), stepSuccess(STEP_3_LABEL), stepSuccess(STEP_2_LABEL), stepActive(STEP_3_LABEL)))</ID>
     <ID>MaxLineLength:ANSIProgressRendererTest.kt$ANSIProgressRendererTest$checkTrackingState(captor, 6, listOf(stepSuccess(STEP_1_LABEL), stepSuccess(STEP_3_LABEL), stepSuccess(STEP_2_LABEL), stepActive(STEP_3_LABEL), stepNotRun(STEP_4_LABEL)))</ID>
@@ -1533,6 +1514,7 @@
     <ID>MaxLineLength:BasicHSMKeyManagementService.kt$BasicHSMKeyManagementService$require(it.private is AliasPrivateKey) { "${this.javaClass.name} supports AliasPrivateKeys only, but ${it.private.algorithm} key was found" }</ID>
     <ID>MaxLineLength:BlobInspector.kt$BlobInspector$@Option(names = ["--input-format"], paramLabel = "type", description = ["Input format. If the file can't be decoded with the given value it's auto-detected, so you should never normally need to specify this. Possible values: [BINARY, HEX, BASE64]"])</ID>
     <ID>MaxLineLength:BootTests.kt$BootTests$val logFile = logFolder.list { it.filter { a -&gt; a.isRegularFile() &amp;&amp; a.fileName.toString().startsWith("node") }.findFirst().get() }</ID>
+    <ID>MaxLineLength:BootTests.kt$BootTests.ObjectInputStreamFlow$val data = ByteArrayOutputStream().apply { ObjectOutputStream(this).use { it.writeObject(object : Serializable {}) } }.toByteArray()</ID>
     <ID>MaxLineLength:BootstrapperView.kt$BootstrapperView$return Pair(mapOf(Constants.REGION_ARG_NAME to ChoiceDialog&lt;Region&gt;(Region.EUROPE_WEST, Region.values().toList().sortedBy { it.name() }).showAndWait().get().name()), networkName1)</ID>
     <ID>MaxLineLength:BridgeControlListener.kt$BridgeControlListener$bridgeManager.deployBridge(controlMessage.bridgeInfo.queueName, controlMessage.bridgeInfo.targets, controlMessage.bridgeInfo.legalNames.toSet())</ID>
     <ID>MaxLineLength:BridgeControlListener.kt$BridgeControlListener$val startupMessage = BridgeControl.BridgeToNodeSnapshotRequest(bridgeId).serialize(context = SerializationDefaults.P2P_CONTEXT).bytes</ID>
@@ -2646,7 +2628,6 @@
     <ID>MaxLineLength:Node.kt$Node$ArtemisRpcBroker.withSsl(configuration.p2pSslOptions, this.address, adminAddress, sslConfig!!, securityManager, MAX_RPC_MESSAGE_SIZE, jmxMonitoringHttpPort != null, rpcBrokerDirectory, shouldStartLocalShell())</ID>
     <ID>MaxLineLength:Node.kt$Node$ArtemisRpcBroker.withoutSsl(configuration.p2pSslOptions, this.address, adminAddress, securityManager, MAX_RPC_MESSAGE_SIZE, jmxMonitoringHttpPort != null, rpcBrokerDirectory, shouldStartLocalShell())</ID>
     <ID>MaxLineLength:Node.kt$Node$System.setProperty("h2.allowedClasses", "org.h2.mvstore.db.MVTableEngine,org.locationtech.jts.geom.Geometry,org.h2.server.TcpServer")</ID>
-    <ID>MaxLineLength:Node.kt$Node$if (configuration.shouldStartLocalShell()) RPCSecurityManagerWithAdditionalUser(this, User(INTERNAL_SHELL_USER, INTERNAL_SHELL_USER, setOf(Permissions.all()))) else this</ID>
     <ID>MaxLineLength:Node.kt$Node$internalRpcMessagingClient = InternalRPCMessagingClient(configuration.p2pSslOptions, it.admin, MAX_RPC_MESSAGE_SIZE, CordaX500Name.build(configuration.p2pSslOptions.keyStore.get()[X509Utilities.CORDA_CLIENT_TLS].subjectX500Principal), rpcServerConfiguration)</ID>
     <ID>MaxLineLength:Node.kt$Node$log.info("Detected public IP: ${foundPublicIP.hostAddress}. This will be used instead of the provided \"$host\" as the advertised address.")</ID>
     <ID>MaxLineLength:Node.kt$Node$log.info("Retrieved public IP from Network Map Service: $this. This will be used instead of the provided \"$host\" as the advertised address.")</ID>
@@ -2739,8 +2720,8 @@
     <ID>MaxLineLength:NodeSchemaService.kt$NodeSchemaService$fun internalSchemas()</ID>
     <ID>MaxLineLength:NodeSchemaService.kt$NodeSchemaService$override val schemaOptions: Map&lt;MappedSchema, SchemaService.SchemaOptions&gt; = requiredSchemas + extraSchemas.associateBy({ it }, { SchemaOptions() })</ID>
     <ID>MaxLineLength:NodeSchemaService.kt$NodeSchemaService$return VaultSchemaV1.VaultFungibleStates(state.owner, state.amount.quantity, state.amount.token.issuer.party, state.amount.token.issuer.reference)</ID>
-    <ID>MaxLineLength:NodeSchemaServiceTest.kt$TestSchema.Child$@JoinColumns(JoinColumn(name = "transaction_id", referencedColumnName = "transaction_id"), JoinColumn(name = "output_index", referencedColumnName = "output_index"))</ID>
-    <ID>MaxLineLength:NodeSchemaServiceTest.kt$TestSchema.Parent$@JoinColumns(JoinColumn(name = "transaction_id", referencedColumnName = "transaction_id"), JoinColumn(name = "output_index", referencedColumnName = "output_index"))</ID>
+    <ID>MaxLineLength:NodeSchemaServiceTest.kt$NodeSchemaServiceTest.TestSchema.Child$@JoinColumns(JoinColumn(name = "transaction_id", referencedColumnName = "transaction_id"), JoinColumn(name = "output_index", referencedColumnName = "output_index"))</ID>
+    <ID>MaxLineLength:NodeSchemaServiceTest.kt$NodeSchemaServiceTest.TestSchema.Parent$@JoinColumns(JoinColumn(name = "transaction_id", referencedColumnName = "transaction_id"), JoinColumn(name = "output_index", referencedColumnName = "output_index"))</ID>
     <ID>MaxLineLength:NodeStartup.kt$NodeCliCommand$abstract</ID>
     <ID>MaxLineLength:NodeStartup.kt$NodeStartup$"""\____/ /_/ \__,_/\__,_/"""</ID>
     <ID>MaxLineLength:NodeStartup.kt$NodeStartup$"Your computer took over a second to resolve localhost due an incorrect configuration. Corda will work but start very slowly until this is fixed. "</ID>
@@ -3550,6 +3531,7 @@
     <ID>MaxLineLength:TransactionViewer.kt$TransactionViewer.ContractStatesView$label</ID>
     <ID>MaxLineLength:TransactionViewer.kt$outputs.mapNotNull { it as? Cash.State } .filter { it.amount.token.issuer.party.owningKey.toKnownParty().value == myIdentity &amp;&amp; it.owner.owningKey.toKnownParty().value != myIdentity }</ID>
     <ID>MaxLineLength:TransactionWithSignatures.kt$TransactionWithSignatures${ val sigKeys = sigs.map { it.by }.toSet() // TODO Problem is that we can get single PublicKey wrapped as CompositeKey in allowedToBeMissing/mustSign // equals on CompositeKey won't catch this case (do we want to single PublicKey be equal to the same key wrapped in CompositeKey with threshold 1?) return requiredSigningKeys.filter { !it.isFulfilledBy(sigKeys) }.toSet() }</ID>
+    <ID>MaxLineLength:TutorialFlowAsyncOperationTest.kt$TutorialFlowAsyncOperationTest$driver</ID>
     <ID>MaxLineLength:TwoPartyDealFlow.kt$TwoPartyDealFlow</ID>
     <ID>MaxLineLength:TwoPartyDealFlow.kt$TwoPartyDealFlow.Acceptor$override</ID>
     <ID>MaxLineLength:TwoPartyDealFlow.kt$TwoPartyDealFlow.Acceptor$return Triple(ptx, arrayListOf(deal.participants.single { it is Party &amp;&amp; serviceHub.myInfo.isLegalIdentity(it) }.owningKey), emptyList())</ID>
@@ -4194,7 +4176,7 @@
     <ID>TooGenericExceptionThrown:NodeConnection.kt$NodeConnection.ShellCommandOutput$throw Exception(diagnostic)</ID>
     <ID>TooGenericExceptionThrown:PhysicalLocationStructures.kt$CityDatabase$throw Exception("Could not parse line: $line")</ID>
     <ID>TooGenericExceptionThrown:RPCDriver.kt$RandomRpcUser.Companion$throw Exception("No generator for ${it.type}")</ID>
-    <ID>TooGenericExceptionThrown:RpcExceptionHandlingTest.kt$ClientRelevantErrorFlow$throw Exception(message, SQLException("Oops!"))</ID>
+    <ID>TooGenericExceptionThrown:RpcExceptionHandlingTest.kt$RpcExceptionHandlingTest.ClientRelevantErrorFlow$throw Exception(message, SQLException("Oops!"))</ID>
     <ID>TooGenericExceptionThrown:RpcServerObservableSerializerTests.kt$RpcServerObservableSerializerTests$throw Error("Observable serializer must be registerable with factory, unexpected exception - ${e.message}")</ID>
     <ID>TooGenericExceptionThrown:RpcServerObservableSerializerTests.kt$RpcServerObservableSerializerTests$throw Error("Serialization of observable should not throw - ${e.message}")</ID>
     <ID>TooGenericExceptionThrown:SelfIssueTest.kt$throw Exception( "Simulated state diverged from actual state" + "\nSimulated state:\n${previousState.vaultsSelfIssued}" + "\nActual state:\n$selfIssueVaults" + "\nDiff:\n$diffString" )</ID>
@@ -4887,7 +4869,6 @@
     <ID>WildcardImport:NotaryChangeTests.kt$import net.corda.testing.node.*</ID>
     <ID>WildcardImport:NotaryChangeTransactions.kt$import net.corda.core.contracts.*</ID>
     <ID>WildcardImport:NotaryChangeTransactions.kt$import net.corda.core.transactions.NotaryChangeWireTransaction.Component.*</ID>
-    <ID>WildcardImport:NotaryFlow.kt$import net.corda.core.internal.*</ID>
     <ID>WildcardImport:NotaryFlow.kt$import net.corda.core.transactions.*</ID>
     <ID>WildcardImport:NotaryServiceFlow.kt$import net.corda.core.flows.*</ID>
     <ID>WildcardImport:NotaryServiceTests.kt$import net.corda.core.crypto.*</ID>

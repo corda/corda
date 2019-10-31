@@ -20,6 +20,7 @@ import net.corda.testing.driver.NodeParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.internal.stubs.CertificateStoreStubs
 import net.corda.testing.node.User
+import net.corda.testing.node.internal.enclosedCordapp
 import net.corda.testing.node.internal.startNode
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
@@ -43,7 +44,7 @@ class BootTests {
                 rpc.startFlow(::ObjectInputStreamFlow).returnValue.getOrThrow()
             }
         }
-        driver {
+        driver(DriverParameters(cordappsForAllNodes = listOf(enclosedCordapp()))) {
             val devModeNode = startNode(devParams).getOrThrow()
             val node = startNode(ALICE_NAME, devMode = false, parameters = params).getOrThrow()
 
@@ -54,7 +55,7 @@ class BootTests {
 
     @Test
     fun `double node start doesn't write into log file`() {
-        driver(DriverParameters(notarySpecs = emptyList())) {
+        driver(DriverParameters(notarySpecs = emptyList(), cordappsForAllNodes = emptyList())) {
             val alice = startNode(providedName = ALICE_NAME).get()
             val logFolder = alice.baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME
             val logFile = logFolder.list { it.filter { a -> a.isRegularFile() && a.fileName.toString().startsWith("node") }.findFirst().get() }
@@ -70,7 +71,12 @@ class BootTests {
 
     @Test
     fun `node fails to start if legal identity is lost`() {
-        driver(DriverParameters(notarySpecs = emptyList(), inMemoryDB = false, startNodesInProcess = false)) {
+        driver(DriverParameters(
+                notarySpecs = emptyList(),
+                inMemoryDB = false,
+                startNodesInProcess = false,
+                cordappsForAllNodes = emptyList()
+        )) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val aliceCertDir = alice.baseDirectory / "certificates"
             (aliceCertDir / "nodekeystore.jks").delete()
@@ -90,13 +96,15 @@ class BootTests {
             assertTrue(lines.count() > 0)
         }
     }
-}
 
-@StartableByRPC
-class ObjectInputStreamFlow : FlowLogic<Unit>() {
-    @Suspendable
-    override fun call() {
-        val data = ByteArrayOutputStream().apply { ObjectOutputStream(this).use { it.writeObject(object : Serializable {}) } }.toByteArray()
-        ObjectInputStream(data.inputStream()).use { it.readObject() }
+    @StartableByRPC
+    class ObjectInputStreamFlow : FlowLogic<Unit>() {
+        @Suspendable
+        override fun call() {
+            val data = ByteArrayOutputStream().apply { ObjectOutputStream(this).use { it.writeObject(object : Serializable {}) } }.toByteArray()
+            ObjectInputStream(data.inputStream()).use { it.readObject() }
+        }
     }
+
+
 }

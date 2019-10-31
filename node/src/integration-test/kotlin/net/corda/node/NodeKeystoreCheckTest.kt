@@ -17,7 +17,7 @@ import javax.security.auth.x500.X500Principal
 class NodeKeystoreCheckTest {
     @Test
     fun `starting node in non-dev mode with no key store`() {
-        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
+        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), cordappsForAllNodes = emptyList())) {
             assertThatThrownBy {
                 startNode(customOverrides = mapOf("devMode" to false)).getOrThrow()
             }.hasMessageContaining("One or more keyStores (identity or TLS) or trustStore not found.")
@@ -26,7 +26,7 @@ class NodeKeystoreCheckTest {
 
     @Test
     fun `node should throw exception if cert path does not chain to the trust root`() {
-        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
+        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), cordappsForAllNodes = emptyList())) {
             // Create keystores.
             val keystorePassword = "password"
             val certificatesDirectory = baseDirectory(ALICE_NAME) / "certificates"

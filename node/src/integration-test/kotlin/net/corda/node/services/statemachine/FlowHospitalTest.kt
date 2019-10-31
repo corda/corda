@@ -23,8 +23,11 @@ import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyContract.SingleOwnerState
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.CHARLIE_NAME
+import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.node.User
+import net.corda.testing.node.internal.enclosedCordapp
+import net.corda.testing.node.internal.findCordapp
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
@@ -38,7 +41,7 @@ class FlowHospitalTest {
 
     @Test
     fun `when double spend occurs, the flow is successfully deleted on the counterparty`() {
-        driver {
+        driver(DriverParameters(cordappsForAllNodes = listOf(enclosedCordapp(), findCordapp("net.corda.testing.contracts")))) {
             val charlie = startNode(providedName = CHARLIE_NAME, rpcUsers = listOf(rpcUser)).getOrThrow()
             val alice = startNode(providedName = ALICE_NAME, rpcUsers = listOf(rpcUser)).getOrThrow()
 

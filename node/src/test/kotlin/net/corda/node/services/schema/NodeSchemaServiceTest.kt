@@ -16,6 +16,7 @@ import net.corda.testing.driver.internal.InProcessImpl
 import net.corda.testing.internal.vault.DummyLinearStateSchemaV1
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.cordappsForPackages
+import net.corda.testing.node.internal.enclosedCordapp
 import org.hibernate.annotations.Cascade
 import org.hibernate.annotations.CascadeType
 import org.junit.Ignore
@@ -64,7 +65,7 @@ class NodeSchemaServiceTest {
      */
     @Test
     fun `auto scanning of custom schemas for testing with Driver`() {
-        driver(DriverParameters(startNodesInProcess = true)) {
+        driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = listOf(enclosedCordapp()))) {
             val result = defaultNotaryNode.getOrThrow().rpc.startFlow(::MappedSchemasFlow)
             val mappedSchemas = result.returnValue.getOrThrow()
             assertTrue(mappedSchemas.contains(TestSchema.name))
@@ -74,7 +75,7 @@ class NodeSchemaServiceTest {
     @Test
     fun `custom schemas are loaded eagerly`() {
         val expected = setOf("PARENTS", "CHILDREN")
-        val tables = driver(DriverParameters(startNodesInProcess = true)) {
+        val tables = driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = listOf(enclosedCordapp()))) {
             (defaultNotaryNode.getOrThrow() as InProcessImpl).database.transaction {
                 session.createNativeQuery("SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES").list()
             }
@@ -85,9 +86,7 @@ class NodeSchemaServiceTest {
     @Ignore
     @Test
     fun `check node runs with minimal core schema set using driverDSL`() {
-        // TODO: driver limitation: cannot restrict CorDapps that get automatically created by default,
-        //       can ONLY specify additional ones using `extraCordappPackagesToScan` constructor argument.
-        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
+        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), cordappsForAllNodes = listOf(enclosedCordapp()))) {
             val node = startNode().getOrThrow()
             val result = node.rpc.startFlow(::MappedSchemasFlow)
             val mappedSchemas = result.returnValue.getOrThrow()
@@ -99,7 +98,7 @@ class NodeSchemaServiceTest {
 
     @Test
     fun `check node runs inclusive of notary node schema set using driverDSL`() {
-        driver(DriverParameters(startNodesInProcess = true)) {
+        driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = listOf(enclosedCordapp()))) {
             val notary = defaultNotaryNode.getOrThrow()
             val mappedSchemas = notary.rpc.startFlow(::MappedSchemasFlow).returnValue.getOrThrow()
             // check against NodeCore Schema
@@ -116,32 +115,34 @@ class NodeSchemaServiceTest {
             return (this.serviceHub as ServiceHubInternal).schemaService.schemaOptions.keys.map { it.name }
         }
     }
-}
 
-class SchemaFamily
+    class SchemaFamily
 
-object TestSchema : MappedSchema(SchemaFamily::class.java, 1, setOf(Parent::class.java, Child::class.java)) {
-    @Entity
-    @Table(name = "Parents")
-    class Parent : PersistentState() {
-        @OneToMany(fetch = FetchType.LAZY)
-        @JoinColumns(JoinColumn(name = "transaction_id", referencedColumnName = "transaction_id"), JoinColumn(name = "output_index", referencedColumnName = "output_index"))
-        @OrderColumn
-        @Cascade(CascadeType.PERSIST)
-        var children: MutableSet<Child> = mutableSetOf()
+    object TestSchema : MappedSchema(SchemaFamily::class.java, 1, setOf(Parent::class.java, Child::class.java)) {
+        @Entity
+        @Table(name = "Parents")
+        class Parent : PersistentState() {
+            @OneToMany(fetch = FetchType.LAZY)
+            @JoinColumns(JoinColumn(name = "transaction_id", referencedColumnName = "transaction_id"), JoinColumn(name = "output_index", referencedColumnName = "output_index"))
+            @OrderColumn
+            @Cascade(CascadeType.PERSIST)
+            var children: MutableSet<Child> = mutableSetOf()
+        }
+
+        @Suppress("unused")
+        @Entity
+        @Table(name = "Children")
+        class Child {
+            @Id
+            @GeneratedValue
+            @Column(name = "child_id", unique = true, nullable = false)
+            var childId: Int? = null
+
+            @ManyToOne(fetch = FetchType.LAZY)
+            @JoinColumns(JoinColumn(name = "transaction_id", referencedColumnName = "transaction_id"), JoinColumn(name = "output_index", referencedColumnName = "output_index"))
+            var parent: Parent? = null
+        }
     }
 
-    @Suppress("unused")
-    @Entity
-    @Table(name = "Children")
-    class Child {
-        @Id
-        @GeneratedValue
-        @Column(name = "child_id", unique = true, nullable = false)
-        var childId: Int? = null
-
-        @ManyToOne(fetch = FetchType.LAZY)
-        @JoinColumns(JoinColumn(name = "transaction_id", referencedColumnName = "transaction_id"), JoinColumn(name = "output_index", referencedColumnName = "output_index"))
-        var parent: Parent? = null
-    }
 }
+

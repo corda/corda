@@ -11,13 +11,14 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
+import net.corda.testing.node.internal.enclosedCordapp
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 
 class CordaServiceFlowTests {
     @Test
     fun `corda service can start a flow and wait for it`() {
-        driver(DriverParameters(startNodesInProcess = true)) {
+        driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = listOf(enclosedCordapp()))) {
             val node = startNode().getOrThrow()
             val text = "191ejodaimadc8i"
 

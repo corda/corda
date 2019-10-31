@@ -32,6 +32,7 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.NodeStartup
 import net.corda.node.services.Permissions
 import net.corda.node.services.Permissions.Companion.all
+import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.node.services.config.shell.toShellConfig
 import net.corda.node.utilities.createKeyPairAndSelfSignedTLSCertificate
 import net.corda.node.utilities.saveToKeyStore
@@ -46,6 +47,8 @@ import net.corda.testing.driver.driver
 import net.corda.testing.driver.internal.NodeHandleInternal
 import net.corda.testing.internal.useSslRpcOverrides
 import net.corda.testing.node.User
+import net.corda.testing.node.internal.enclosedCordapp
+import net.corda.tools.shell.SSHServerTest.FlowICanRun
 import net.corda.tools.shell.utlities.ANSIProgressRenderer
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import org.assertj.core.api.Assertions.assertThat
@@ -81,7 +84,7 @@ class InteractiveShellIntegrationTest {
     @Test
     fun `shell should not log in with invalid credentials`() {
         val user = User("u", "p", setOf())
-        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
+        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), cordappsForAllNodes = emptyList())) {
             val node = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
             startShell("fake", "fake", node.rpcAddress)
             assertThatThrownBy { InteractiveShell.nodeInfo() }.isInstanceOf(ActiveMQSecurityException::class.java)
@@ -91,7 +94,7 @@ class InteractiveShellIntegrationTest {
     @Test
     fun `shell should log in with valid credentials`() {
         val user = User("u", "p", setOf())
-        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
+        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), cordappsForAllNodes = emptyList())) {
             val node = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
             startShell(node)
             InteractiveShell.nodeInfo()
@@ -109,7 +112,7 @@ class InteractiveShellIntegrationTest {
         val trustStorePath = saveToTrustStore(tempFolder.root.toPath() / "truststore.jks", cert)
         val clientSslOptions = ClientRpcSslOptions(trustStorePath, "password")
 
-        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
+        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), cordappsForAllNodes = emptyList())) {
             val node = startNode(rpcUsers = listOf(user), customOverrides = brokerSslOptions.useSslRpcOverrides()).getOrThrow()
             startShell(node, clientSslOptions)
             InteractiveShell.nodeInfo()
@@ -127,7 +130,7 @@ class InteractiveShellIntegrationTest {
         val trustStorePath = saveToTrustStore(tempFolder.root.toPath() / "truststore.jks", cert1)
         val clientSslOptions = ClientRpcSslOptions(trustStorePath, "password")
 
-        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
+        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), cordappsForAllNodes = emptyList())) {
             val node = startNode(rpcUsers = listOf(user), customOverrides = brokerSslOptions.useSslRpcOverrides()).getOrThrow()
             startShell(node, clientSslOptions)
             assertThatThrownBy { InteractiveShell.nodeInfo() }.isInstanceOf(RPCException::class.java)
@@ -136,7 +139,7 @@ class InteractiveShellIntegrationTest {
 
     @Test
     fun `internal shell user should not be able to connect if node started with devMode=false`() {
-        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
+        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), cordappsForAllNodes = emptyList())) {
             val node = startNode().getOrThrow()
             val conf = (node as NodeHandleInternal).configuration.toShellConfig()
             InteractiveShell.startShell(conf)
@@ -148,11 +151,11 @@ class InteractiveShellIntegrationTest {
     @Test
     fun `ssh runs flows via standalone shell`() {
         val user = User("u", "p", setOf(
-                Permissions.startFlow<FlowICanRun>(),
+                startFlow<FlowICanRun>(),
                 Permissions.invokeRpc(CordaRPCOps::registeredFlows),
                 Permissions.invokeRpc(CordaRPCOps::nodeInfo)
         ))
-        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
+        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), cordappsForAllNodes = listOf(enclosedCordapp()))) {
             val node = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
             startShell(node, sshdPort = 2224)
             InteractiveShell.nodeInfo()
@@ -186,7 +189,7 @@ class InteractiveShellIntegrationTest {
     @Test
     fun `ssh run flows via standalone shell over ssl to node`() {
         val user = User("mark", "dadada", setOf(
-                Permissions.startFlow<FlowICanRun>(),
+                startFlow<FlowICanRun>(),
                 Permissions.invokeRpc(CordaRPCOps::registeredFlows),
                 Permissions.invokeRpc(CordaRPCOps::nodeInfo)/*all()*/
         ))
@@ -198,7 +201,7 @@ class InteractiveShellIntegrationTest {
         val clientSslOptions = ClientRpcSslOptions(trustStorePath, "password")
 
         var successful = false
-        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
+        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), cordappsForAllNodes = listOf(enclosedCordapp()))) {
             startNode(rpcUsers = listOf(user), customOverrides = brokerSslOptions.useSslRpcOverrides()).getOrThrow().use { node ->
                 startShell(node, clientSslOptions, sshdPort = 2223)
                 InteractiveShell.nodeInfo()
@@ -236,7 +239,7 @@ class InteractiveShellIntegrationTest {
     @Test
     fun `shell should start flow with fully qualified class name`() {
         val user = User("u", "p", setOf(all()))
-        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
+        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), cordappsForAllNodes = listOf(enclosedCordapp()))) {
             val node = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
             startShell(node)
             val (output, lines) = mockRenderPrintWriter()
@@ -248,7 +251,7 @@ class InteractiveShellIntegrationTest {
     @Test
     fun `shell should start flow with unique un-qualified class name`() {
         val user = User("u", "p", setOf(all()))
-        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
+        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), cordappsForAllNodes = listOf(enclosedCordapp()))) {
             val node = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
             startShell(node)
             val (output, lines) = mockRenderPrintWriter()
@@ -260,7 +263,7 @@ class InteractiveShellIntegrationTest {
     @Test
     fun `shell should fail to start flow with ambiguous class name`() {
         val user = User("u", "p", setOf(all()))
-        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
+        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), cordappsForAllNodes = listOf(enclosedCordapp()))) {
             val node = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
             startShell(node)
             val (output, lines) = mockRenderPrintWriter()
@@ -272,7 +275,7 @@ class InteractiveShellIntegrationTest {
     @Test
     fun `shell should start flow with partially matching class name`() {
         val user = User("u", "p", setOf(all()))
-        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
+        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), cordappsForAllNodes = listOf(enclosedCordapp()))) {
             val node = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
             startShell(node)
             val (output, lines) = mockRenderPrintWriter()
@@ -284,7 +287,7 @@ class InteractiveShellIntegrationTest {
     @Test
     fun `dumpCheckpoints creates zip with json file for suspended flow`() {
         val user = User("u", "p", setOf(all()))
-        driver(DriverParameters(startNodesInProcess = true)) {
+        driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = listOf(enclosedCordapp()))) {
             val aliceNode = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
             val bobNode = startNode(providedName = BOB_NAME, rpcUsers = listOf(user)).getOrThrow()
             bobNode.stop()
@@ -369,76 +372,78 @@ class InteractiveShellIntegrationTest {
         objectMapper.typeFactory = tf
         return objectMapper
     }
-}
 
-@Suppress("UNUSED")
-@StartableByRPC
-class NoOpFlow : FlowLogic<Unit>() {
-    override val progressTracker = ProgressTracker()
-    override fun call() {
-        println("NO OP!")
-    }
-}
-
-@Suppress("UNUSED")
-@StartableByRPC
-class NoOpFlowA : FlowLogic<Unit>() {
-    override val progressTracker = ProgressTracker()
-    override fun call() {
-        println("NO OP! (A)")
-    }
-}
-
-@Suppress("UNUSED")
-@StartableByRPC
-class BurbleFlow : FlowLogic<Unit>() {
-    override val progressTracker = ProgressTracker()
-    override fun call() {
-        println("NO OP! (Burble)")
-    }
-}
-
-@InitiatingFlow
-@StartableByRPC
-class FlowForCheckpointDumping(private val myState: MyState, private val party: Party): FlowLogic<Unit>() {
-    // Make sure any SerializeAsToken instances are not serialised
-    private var services: ServiceHub? = null
-
-    @Suspendable
-    override fun call() {
-        services = serviceHub
-        val tx = TransactionBuilder(serviceHub.networkMapCache.notaryIdentities.first()).apply {
-            addOutputState(myState)
-            addCommand(MyContract.Create(), listOf(ourIdentity, party).map(Party::owningKey))
+    @Suppress("UNUSED")
+    @StartableByRPC
+    class NoOpFlow : FlowLogic<Unit>() {
+        override val progressTracker = ProgressTracker()
+        override fun call() {
+            println("NO OP!")
         }
-        val sessions = listOf(initiateFlow(party))
-        val stx = serviceHub.signInitialTransaction(tx)
-        subFlow(CollectSignaturesFlow(stx, sessions))
-        throw IllegalStateException("The test should not get here")
     }
-}
 
-@InitiatedBy(FlowForCheckpointDumping::class)
-class FlowForCheckpointDumpingResponder(private val session: FlowSession): FlowLogic<Unit>() {
-    override fun call() {
-        val signTxFlow = object : SignTransactionFlow(session) {
-            override fun checkTransaction(stx: SignedTransaction) {
+    @Suppress("UNUSED")
+    @StartableByRPC
+    class NoOpFlowA : FlowLogic<Unit>() {
+        override val progressTracker = ProgressTracker()
+        override fun call() {
+            println("NO OP! (A)")
+        }
+    }
 
+    @Suppress("UNUSED")
+    @StartableByRPC
+    class BurbleFlow : FlowLogic<Unit>() {
+        override val progressTracker = ProgressTracker()
+        override fun call() {
+            println("NO OP! (Burble)")
+        }
+    }
+
+    @InitiatingFlow
+    @StartableByRPC
+    class FlowForCheckpointDumping(private val myState: MyState, private val party: Party): FlowLogic<Unit>() {
+        // Make sure any SerializeAsToken instances are not serialised
+        private var services: ServiceHub? = null
+
+        @Suspendable
+        override fun call() {
+            services = serviceHub
+            val tx = TransactionBuilder(serviceHub.networkMapCache.notaryIdentities.first()).apply {
+                addOutputState(myState)
+                addCommand(MyContract.Create(), listOf(ourIdentity, party).map(Party::owningKey))
             }
+            val sessions = listOf(initiateFlow(party))
+            val stx = serviceHub.signInitialTransaction(tx)
+            subFlow(CollectSignaturesFlow(stx, sessions))
+            throw IllegalStateException("The test should not get here")
         }
-        subFlow(signTxFlow)
-        throw IllegalStateException("The test should not get here")
     }
-}
 
-class MyContract : Contract {
-    class Create : CommandData
-    override fun verify(tx: LedgerTransaction) {}
-}
+    @InitiatedBy(FlowForCheckpointDumping::class)
+    class FlowForCheckpointDumpingResponder(private val session: FlowSession): FlowLogic<Unit>() {
+        override fun call() {
+            val signTxFlow = object : SignTransactionFlow(session) {
+                override fun checkTransaction(stx: SignedTransaction) {
 
-@BelongsToContract(MyContract::class)
-data class MyState(
-        val data: String,
-        override val linearId: UniqueIdentifier,
-        override val participants: List<AbstractParty>
-) : LinearState
+                }
+            }
+            subFlow(signTxFlow)
+            throw IllegalStateException("The test should not get here")
+        }
+    }
+
+    class MyContract : Contract {
+        class Create : CommandData
+        override fun verify(tx: LedgerTransaction) {}
+    }
+
+    @BelongsToContract(MyContract::class)
+    data class MyState(
+            val data: String,
+            override val linearId: UniqueIdentifier,
+            override val participants: List<AbstractParty>
+    ) : LinearState
+
+
+}

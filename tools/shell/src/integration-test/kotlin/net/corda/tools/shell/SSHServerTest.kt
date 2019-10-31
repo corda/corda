@@ -18,6 +18,7 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.node.User
+import net.corda.testing.node.internal.enclosedCordapp
 import org.assertj.core.api.Assertions.assertThat
 import org.bouncycastle.util.io.Streams
 import org.junit.Ignore
@@ -31,7 +32,7 @@ class SSHServerTest {
     fun `ssh server does not start be default`() {
         val user = User("u", "p", setOf())
         // The driver will automatically pick up the annotated flows below
-        driver(DriverParameters(notarySpecs = emptyList())) {
+        driver(DriverParameters(notarySpecs = emptyList(), cordappsForAllNodes = emptyList())) {
             val node = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user))
             node.getOrThrow()
 
@@ -52,7 +53,7 @@ class SSHServerTest {
     fun `ssh server starts when configured`() {
         val user = User("u", "p", setOf())
         // The driver will automatically pick up the annotated flows below
-        driver(DriverParameters(notarySpecs = emptyList())) {
+        driver(DriverParameters(notarySpecs = emptyList(), cordappsForAllNodes = emptyList())) {
             val node = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user),
                     customOverrides = mapOf("sshd" to mapOf("port" to 2222)) /*, startInSameProcess = true */)
             node.getOrThrow()
@@ -71,7 +72,7 @@ class SSHServerTest {
     fun `ssh server verify credentials`() {
         val user = User("u", "p", setOf())
         // The driver will automatically pick up the annotated flows below
-        driver(DriverParameters(notarySpecs = emptyList())) {
+        driver(DriverParameters(notarySpecs = emptyList(), cordappsForAllNodes = emptyList())) {
             val node = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user),
                     customOverrides = mapOf("sshd" to mapOf("port" to 2222)))
             node.getOrThrow()
@@ -95,7 +96,7 @@ class SSHServerTest {
         val user = User("u", "p", setOf(startFlow<FlowICanRun>(),
                 invokeRpc(CordaRPCOps::wellKnownPartyFromX500Name)))
         // The driver will automatically pick up the annotated flows below
-        driver(DriverParameters(notarySpecs = emptyList())) {
+        driver(DriverParameters(notarySpecs = emptyList(), cordappsForAllNodes = listOf(enclosedCordapp()))) {
             val node = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user),
                     customOverrides = mapOf("sshd" to mapOf("port" to 2222)))
             node.getOrThrow()
@@ -124,7 +125,7 @@ class SSHServerTest {
     fun `ssh runs flows`() {
         val user = User("u", "p", setOf(startFlow<FlowICanRun>()))
         // The driver will automatically pick up the annotated flows below
-        driver(DriverParameters(notarySpecs = emptyList())) {
+        driver(DriverParameters(notarySpecs = emptyList(), cordappsForAllNodes = listOf(enclosedCordapp()))) {
             val node = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user),
                     customOverrides = mapOf("sshd" to mapOf("port" to 2222)))
             node.getOrThrow()
@@ -154,29 +155,30 @@ class SSHServerTest {
         }
     }
 
-}
+    @StartableByRPC
+    @InitiatingFlow
+    class FlowICanRun : FlowLogic<String>() {
 
-@StartableByRPC
-@InitiatingFlow
-class FlowICanRun : FlowLogic<String>() {
+        private val HELLO_STEP = ProgressTracker.Step("Hello")
 
-    private val HELLO_STEP = ProgressTracker.Step("Hello")
+        @Suspendable
+        override fun call(): String {
+            progressTracker?.currentStep = HELLO_STEP
+            return "bambam"
+        }
 
-    @Suspendable
-    override fun call(): String {
-        progressTracker?.currentStep = HELLO_STEP
-        return "bambam"
+        override val progressTracker: ProgressTracker? = ProgressTracker(HELLO_STEP)
     }
 
-    override val progressTracker: ProgressTracker? = ProgressTracker(HELLO_STEP)
-}
+    @Suppress("unused")
+    @StartableByRPC
+    @InitiatingFlow
+    class FlowICannotRun(private val otherParty: Party) : FlowLogic<String>() {
+        @Suspendable
+        override fun call(): String = initiateFlow(otherParty).receive<String>().unwrap { it }
 
-@Suppress("unused")
-@StartableByRPC
-@InitiatingFlow
-class FlowICannotRun(private val otherParty: Party) : FlowLogic<String>() {
-    @Suspendable
-    override fun call(): String = initiateFlow(otherParty).receive<String>().unwrap { it }
+        override val progressTracker: ProgressTracker? = ProgressTracker()
+    }
 
-    override val progressTracker: ProgressTracker? = ProgressTracker()
+
 }
