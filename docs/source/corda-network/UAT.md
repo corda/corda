@@ -35,6 +35,6 @@ Corda Network UAT is governed by an [independent Foundation](https://corda.netwo
 Steps to join UAT environment
 -----------------------------
 
-Steps to join are outlined on the [Corda Network UAT microsite](http://uat.network.r3.com/pages/joining/joining.html)
+Steps to join are outlined on the [Corda Network site](https://corda.network/participation/index.html).
 
 For further questions on this process, please contact us - preferably on the mailing list: https://groups.io/g/corda-network
