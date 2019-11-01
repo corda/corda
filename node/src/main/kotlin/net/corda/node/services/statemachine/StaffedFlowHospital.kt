@@ -159,6 +159,33 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
     }
 
     /**
+     * Forces the flow to be kept in for overnight observation by the hospital. A flow must already exist inside the hospital
+     * and have existing medical records for it to be moved to overnight observation. If it does not meet these criteria then
+     * an [IllegalArgumentException] will be thrown.
+     *
+     * @param id The [StateMachineRunId] of the flow that you are trying to force into observation
+     * @param errors The errors to include in the new medical record
+     */
+    fun forceIntoOvernightObservation(id: StateMachineRunId, errors: List<Throwable>) {
+        mutex.locked {
+            // If a flow does not meet the criteria below, then it has moved into an invalid state or the function is being
+            // called from an incorrect location. The assertions below should error out the flow if they are not true.
+            requireNotNull(flowsInHospital[id]) { "Flow must already be in the hospital before forcing into overnight observation" }
+            val history = requireNotNull(flowPatients[id]) { "Flow must already have history before forcing into overnight observation" }
+            // Use the last staff member that last discharged the flow as the current staff member
+            val record = history.records.last().copy(
+                time = clock.instant(),
+                errors = errors,
+                outcome = Outcome.OVERNIGHT_OBSERVATION
+            )
+            onFlowKeptForOvernightObservation.forEach { hook -> hook.invoke(id, record.by.map { it.toString() }) }
+            history.records += record
+            recordsPublisher.onNext(record)
+        }
+    }
+
+
+    /**
      * Request treatment for the [flowFiber]. A flow can only be added to the hospital if they are not already being
      * treated.
      */

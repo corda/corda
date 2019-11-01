@@ -39,8 +39,6 @@ import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.NodeParameters
 import net.corda.testing.driver.driver
-import net.corda.testing.internal.IntegrationTest
-import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.TestCordapp
 import net.corda.testing.node.User
@@ -59,10 +57,9 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 @Suppress("MaxLineLength") // Byteman rules cannot be easily wrapped
-class StatemachineErrorHandlingTest : IntegrationTest() {
+class StatemachineErrorHandlingTest {
 
     companion object {
-        val databaseSchemas = IntegrationTestSchemas(CHARLIE_NAME, ALICE_NAME, DUMMY_NOTARY_NAME)
         val rpcUser = User("user1", "test", permissions = setOf(Permissions.all()))
         var counter = 0
     }
@@ -715,7 +712,7 @@ class StatemachineErrorHandlingTest : IntegrationTest() {
                 ENDRULE
                 
                 RULE Throw exception on retry
-                CLASS ${MultiThreadedStateMachineManager::class.java.name}
+                CLASS ${SingleThreadedStateMachineManager::class.java.name}
                 METHOD addAndStartFlow
                 AT ENTRY
                 IF flagged("suspend_flag") && flagged("commit_flag") && !flagged("retry_exception_flag")
@@ -899,7 +896,7 @@ class StatemachineErrorHandlingTest : IntegrationTest() {
                 ENDRULE
                 
                 RULE Throw exception on retry
-                CLASS ${MultiThreadedStateMachineManager::class.java.name}
+                CLASS ${SingleThreadedStateMachineManager::class.java.name}
                 METHOD onExternalStartFlow
                 AT ENTRY
                 IF flagged("commit_exception_flag") && !flagged("retry_exception_flag")

@@ -2,6 +2,7 @@ package net.corda.node.services.statemachine
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.concurrent.CordaFuture
+import net.corda.core.flows.Destination
 import net.corda.core.flows.FlowInfo
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
