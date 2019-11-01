@@ -753,7 +753,7 @@ class DriverDSLImpl(
             }
         }
 
-        @Suppress("ComplexMethod")
+        @Suppress("ComplexMethod", "MaxLineLength")
         private fun startOutOfProcessNode(
                 config: NodeConfig,
                 quasarJarPath: String,

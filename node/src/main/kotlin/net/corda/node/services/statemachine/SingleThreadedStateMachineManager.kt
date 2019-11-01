@@ -349,7 +349,7 @@ class SingleThreadedStateMachineManager(
         }
     }
 
-    @Suppress("TooGenericExceptionCaught", "ComplexMethod") // this is fully intentional here, see comment in the catch clause
+    @Suppress("TooGenericExceptionCaught", "ComplexMethod", "MaxLineLength") // this is fully intentional here, see comment in the catch clause
     override fun retryFlowFromSafePoint(currentState: StateMachineState) {
         // Get set of external events
         val flowId = currentState.flowLogic.runId
