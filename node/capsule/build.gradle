@@ -61,7 +61,7 @@ task buildCordaJAR(type: FatCapsule, dependsOn: [
     // The DJVM will share most of its dependencies with the node, but any extra ones that it needs
     // are listed in the node's "deterministic" configuration and copied into a djvm subdirectory.
     //
-    // Gradle may not resolve exactly rhe same transitive dependencies for both the runtimeClasspath
+    // Gradle may not resolve exactly the same transitive dependencies for both the runtimeClasspath
     // and deterministic configurations - specifically, the artifacts' version numbers may differ slightly.
     // And so we map the files by the resolved ModuleIdentifier objects instead, which just contain an
     // artifact's group and name.

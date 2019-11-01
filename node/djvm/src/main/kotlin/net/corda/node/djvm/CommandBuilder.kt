@@ -13,6 +13,9 @@ class CommandBuilder : Function<Array<Any?>, List<CommandWithParties<CommandData
         val commandsData = inputs[1] as? List<CommandData> ?: emptyList()
         val partialMerkleLeafIndices = inputs[2] as? IntArray
 
+        /**
+         * This logic has been lovingly reproduced from [net.corda.core.internal.deserialiseCommands].
+         */
         return if (partialMerkleLeafIndices != null) {
             check(commandsData.size <= signers.size) {
                 "Invalid Transaction. Fewer Signers (${signers.size}) than CommandData (${commandsData.size}) objects"
