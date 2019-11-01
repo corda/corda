@@ -1,8 +1,9 @@
 package net.corda.testing;
 
 import io.fabric8.kubernetes.api.model.Pod;
-import io.fabric8.kubernetes.api.model.PodBuilder;
 import io.fabric8.kubernetes.api.model.Quantity;
+import io.fabric8.kubernetes.api.model.batch.Job;
+import io.fabric8.kubernetes.api.model.batch.JobBuilder;
 import io.fabric8.kubernetes.client.Config;
 import io.fabric8.kubernetes.client.ConfigBuilder;
 import io.fabric8.kubernetes.client.DefaultKubernetesClient;
@@ -48,15 +49,15 @@ public class PodAllocator {
 
         KubernetesClient client = new DefaultKubernetesClient(config);
 
-        List<Pod> podsToRequest = IntStream.range(0, number).mapToObj(i -> buildPod("pa-" + prefix + i, coresPerPod, memoryPerPod)).collect(Collectors.toList());
-        podsToRequest.forEach(requestedPod -> {
-            String msg = "PreAllocating " + requestedPod.getMetadata().getName();
+        List<Job> podsToRequest = IntStream.range(0, number).mapToObj(i -> buildJob("pa-" + prefix + i, coresPerPod, memoryPerPod)).collect(Collectors.toList());
+        podsToRequest.forEach(requestedJob -> {
+            String msg = "PreAllocating " + requestedJob.getMetadata().getName();
             if (logger instanceof org.gradle.api.logging.Logger) {
                 ((org.gradle.api.logging.Logger) logger).quiet(msg);
             } else {
                 logger.info(msg);
             }
-            client.pods().inNamespace(KubesTest.NAMESPACE).create(requestedPod);
+            client.batch().jobs().inNamespace(KubesTest.NAMESPACE).create(requestedJob);
         });
     }
 
@@ -69,40 +70,36 @@ public class PodAllocator {
                 .withWebsocketPingInterval(CONNECTION_TIMEOUT)
                 .build();
         KubernetesClient client = new DefaultKubernetesClient(config);
-        Stream<Pod> podsToDelete = client.pods().inNamespace(KubesTest.NAMESPACE).list()
+        Stream<Job> jobsToDelete = client.batch().jobs().inNamespace(KubesTest.NAMESPACE).list()
                 .getItems()
                 .stream()
                 .sorted(Comparator.comparing(p -> p.getMetadata().getName()))
                 .filter(foundPod -> foundPod.getMetadata().getName().contains(prefix));
 
-        List<CompletableFuture<Pod>> deleteFutures = podsToDelete.map(pod -> {
-            CompletableFuture<Pod> result = new CompletableFuture<>();
-            Watch watch = client.pods().inNamespace(pod.getMetadata().getNamespace()).withName(pod.getMetadata().getName()).watch(new Watcher<Pod>() {
+        List<CompletableFuture<Job>> deleteFutures = jobsToDelete.map(job -> {
+            CompletableFuture<Job> result = new CompletableFuture<>();
+            Watch watch = client.batch().jobs().inNamespace(job.getMetadata().getNamespace()).withName(job.getMetadata().getName()).watch(new Watcher<Job>() {
                 @Override
-                public void eventReceived(Action action, Pod resource) {
+                public void eventReceived(Action action, Job resource) {
                     if (action == Action.DELETED) {
                         result.complete(resource);
-                        String msg = "Successfully deleted pod " + pod.getMetadata().getName();
-                        if (logger instanceof org.gradle.api.logging.Logger) {
-                            ((org.gradle.api.logging.Logger) logger).lifecycle(msg);
-                        } else {
-                            logger.info(msg);
-                        }
+                        String msg = "Successfully deleted job " + job.getMetadata().getName();
+                        logger.info(msg);
                     }
                 }
 
                 @Override
                 public void onClose(KubernetesClientException cause) {
-                    String message = "Failed to delete pod " + pod.getMetadata().getName();
+                    String message = "Failed to delete job " + job.getMetadata().getName();
                     if (logger instanceof org.gradle.api.logging.Logger) {
-                        ((org.gradle.api.logging.Logger) logger).quiet(message);
+                        ((org.gradle.api.logging.Logger) logger).error(message);
                     } else {
                         logger.info(message);
                     }
                     result.completeExceptionally(cause);
                 }
             });
-            client.pods().delete(pod);
+            client.batch().jobs().delete(job);
             return result;
         }).collect(Collectors.toList());
 
@@ -114,8 +111,14 @@ public class PodAllocator {
     }
 
 
-    Pod buildPod(String podName, Integer coresPerPod, Integer memoryPerPod) {
-        return new PodBuilder().withNewMetadata().withName(podName).endMetadata()
+    Job buildJob(String podName, Integer coresPerPod, Integer memoryPerPod) {
+        return new JobBuilder().withNewMetadata().withName(podName).endMetadata()
+                .withNewSpec()
+                .withTtlSecondsAfterFinished(10)
+                .withNewTemplate()
+                .withNewMetadata()
+                .withName(podName + "-pod")
+                .endMetadata()
                 .withNewSpec()
                 .addNewContainer()
                 .withImage("busybox:latest")
@@ -128,6 +131,8 @@ public class PodAllocator {
                 .endResources()
                 .endContainer()
                 .withRestartPolicy("Never")
+                .endSpec()
+                .endTemplate()
                 .endSpec()
                 .build();
     }
