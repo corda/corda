@@ -18,7 +18,6 @@ import net.corda.testing.node.User
 import net.corda.testing.node.internal.findCordapp
 import org.junit.After
 import org.junit.Assert
-import org.junit.ClassRule
 import org.junit.Test
 import rx.exceptions.OnErrorNotImplementedException
 import java.sql.SQLException
@@ -30,8 +29,6 @@ import kotlin.test.assertFailsWith
 
 class VaultObserverExceptionTest {
     companion object {
-        @ClassRule
-        @JvmField
 
         val log = contextLogger()
 
