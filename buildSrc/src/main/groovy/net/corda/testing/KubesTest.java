@@ -104,8 +104,7 @@ public class KubesTest extends DefaultTask {
         }
 
         List<Future<KubePodResult>> futures = IntStream.range(0, numberOfPods).mapToObj(i -> {
-            String potentialPodName = (taskToExecuteName + "-" + stableRunId + random + i).toLowerCase();
-            String podName = potentialPodName.substring(0, Math.min(potentialPodName.length(), 62));
+            String podName = generatePodName(stableRunId, random, i);
             return submitBuild(NAMESPACE, numberOfPods, i, podName, printOutput, 3);
         }).collect(Collectors.toList());
 
@@ -123,6 +122,16 @@ public class KubesTest extends DefaultTask {
                 throw new RuntimeException(e);
             }
         }).collect(Collectors.toList());
+    }
+
+    @NotNull
+    private String generatePodName(String stableRunId, String random, int i) {
+        int magicMaxLength = 63;
+        String provisionalName = taskToExecuteName.toLowerCase() + "-" + stableRunId + "-" + random + "-" + i;
+        //length = 100
+        //100-63 = 37
+        //subString(37, 100) -? string of 63 characters
+        return provisionalName.substring(Math.max(provisionalName.length() - magicMaxLength, 0));
     }
 
     @NotNull
