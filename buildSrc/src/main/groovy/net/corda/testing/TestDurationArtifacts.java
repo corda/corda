@@ -10,6 +10,7 @@ import org.gradle.api.Project;
 import org.gradle.api.Task;
 import org.gradle.api.tasks.bundling.Zip;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
@@ -183,11 +184,11 @@ public class TestDurationArtifacts {
                 try (FileInputStream inputStream = new FileInputStream(new File(z.getArchiveFileName().get()))) {
                     if (!new TestDurationArtifacts().put(getBranchTag(), inputStream)) {
                         project.getLogger().warn("Could not upload zip of tests");
+                    } else {
+                        project.getLogger().warn("SAVED tests");
                     }
-                    project.getLogger().warn("SAVED tests");
                 } catch (Exception e) {
-                    project.getLogger().warn("Problem trying to upload: {} {}",
-                            z.getArchiveFileName().get(), e.toString());
+                    project.getLogger().warn("Problem trying to upload: {} {}", z.getArchiveFileName().get(), e.toString());
                 }
             });
         });
@@ -198,16 +199,20 @@ public class TestDurationArtifacts {
      *
      * @param project project to attach this task to
      * @param name    name of the task
+     * @param task    a task that we depend on when creating the csv so Gradle produces the correct task graph.
      * @return a reference to the created task.
      */
     @NotNull
-    public static Task createZipTask(@NotNull final Project project, @NotNull final String name) {
+    public static Task createZipTask(@NotNull final Project project, @NotNull final String name, @Nullable final Task task) {
         final Task zipJunitTask = createJunitZipTask(project, name);
         final Task csvTask = createCsvTask(project, name);
         csvTask.dependsOn(zipJunitTask);
         // For debugging - can be removed - this simply gathers junit xml and uploads them to artifactory
         // so that we can inspect them.
 
+        if (task != null) {
+            csvTask.dependsOn(task);
+        }
         final Task zipCsvTask = createCsvZipAndUploadTask(project, name);
         zipCsvTask.dependsOn(csvTask); // we have to create the csv before we can zip it.
 
@@ -372,7 +377,7 @@ public class TestDurationArtifacts {
      * @return a reference to the loaded tests.
      */
     static Tests loadTests() {
-        LOG.warn("LOADING tests from Artifactory");
+        LOG.warn("LOADING previous test runs from Artifactory");
         tests.clear();
         try {
             final TestDurationArtifacts testArtifacts = new TestDurationArtifacts();

@@ -130,7 +130,7 @@ class DistributedTesting implements Plugin<Project> {
                 }
 
                 // Task to zip up test results, and upload them to somewhere (Artifactory).
-                def zipTask = TestDurationArtifacts.createZipTask(project.rootProject, testGrouping.name)
+                def zipTask = TestDurationArtifacts.createZipTask(project.rootProject, testGrouping.name, userDefinedParallelTask)
 
                 userDefinedParallelTask.finalizedBy(reportOnAllTask)
                 zipTask.dependsOn(userDefinedParallelTask)
@@ -139,7 +139,7 @@ class DistributedTesting implements Plugin<Project> {
         }
 
         //  Added only so that we can manually run zipTask on the command line as a test.
-        TestDurationArtifacts.createZipTask(project.rootProject, "zipTask")
+        TestDurationArtifacts.createZipTask(project.rootProject, "zipTask", null)
                 .setDescription("Zip task that can be run locally for testing");
     }
 
