@@ -1,4 +1,4 @@
-@Library('existing-build-control')
+@org.gradle.platform.base.Library('existing-build-control')
 import static com.r3.build.BuildControl.killAllExistingBuildsForJob
 
 killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
@@ -8,7 +8,7 @@ pipeline {
     options { timestamps() }
 
     environment {
-        DOCKER_TAG_TO_USE = "${UUID.randomUUID().toString().toLowerCase().subSequence(0, 12)}"
+        DOCKER_TAG_TO_USE = "${env.GIT_COMMIT.subSequence(0, 8)}"
         EXECUTOR_NUMBER = "${env.EXECUTOR_NUMBER}"
         BUILD_ID = "${env.BUILD_ID}-${env.JOB_NAME}"
     }
@@ -21,37 +21,28 @@ pipeline {
                             "-Dkubenetize=true " +
                             "-Ddocker.push.password=\"\${DOCKER_PUSH_PWD}\" " +
                             "-Ddocker.work.dir=\"/tmp/\${EXECUTOR_NUMBER}\" " +
-                            "-Ddocker.provided.tag=\"\${DOCKER_TAG_TO_USE}\"" +
-                            " clean pushBuildImage"
+                            "-Ddocker.build.tag=\"\${DOCKER_TAG_TO_USE}\"" +
+                            " clean pushBuildImage preAllocateForParallelRegressionTest --stacktrace"
                 }
                 sh "kubectl auth can-i get pods"
             }
         }
 
-        stage('Corda Pull Request - Run Tests') {
-            stage('Unit and Integration Tests') {
-                steps {
-                    sh "./gradlew " +
-                            "-DbuildId=\"\${BUILD_ID}\" " +
-                            "-Dkubenetize=true " +
-                            "-Ddocker.tag=\"\${DOCKER_TAG_TO_USE}\"" +
-                            " allParallelUnitAndIntegrationTest"
-                }
-            }
-            stage('Slow Integration Tests') {
-                steps {
-                    sh "./gradlew " +
-                            "-DbuildId=\"\${BUILD_ID}\" " +
-                            "-Dkubenetize=true " +
-                            "-Ddocker.tag=\"\${DOCKER_TAG_TO_USE}\"" +
-                            " allParallelSlowIntegrationTest"
-                }
+        stage('Regression Test') {
+            steps {
+                sh "./gradlew " +
+                        "-DbuildId=\"\${BUILD_ID}\" " +
+                        "-Dkubenetize=true " +
+                        "-Ddocker.run.tag=\"\${DOCKER_TAG_TO_USE}\"" +
+                        " deAllocateForParallelRegressionTest parallelRegressionTest --stacktrace"
             }
         }
     }
 
+
     post {
         always {
+            archiveArtifacts artifacts: '**/pod-logs/**/*.log', fingerprint: false
             junit '**/build/test-results-xml/**/*.xml'
         }
         cleanup {
