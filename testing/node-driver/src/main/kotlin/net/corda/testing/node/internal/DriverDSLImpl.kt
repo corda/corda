@@ -210,6 +210,7 @@ class DriverDSLImpl(
         }
     }
 
+    @Suppress("ComplexMethod")
     private fun startRegisteredNode(name: CordaX500Name,
                                     localNetworkMap: LocalNetworkMap?,
                                     parameters: NodeParameters,
@@ -568,6 +569,7 @@ class DriverDSLImpl(
         }
     }
 
+    @Suppress("ComplexMethod")
     private fun startNodeInternal(config: NodeConfig,
                                   webAddress: NetworkHostAndPort,
                                   localNetworkMap: LocalNetworkMap?,
@@ -751,6 +753,7 @@ class DriverDSLImpl(
             }
         }
 
+        @Suppress("ComplexMethod")
         private fun startOutOfProcessNode(
                 config: NodeConfig,
                 quasarJarPath: String,
@@ -813,7 +816,10 @@ class DriverDSLImpl(
                     }
                 }
                 listOfNotNull(bytemanAgent) +
-                        if (bytemanAgent != null && debugPort != null) listOf("-Dorg.jboss.byteman.verbose=true", "-Dorg.jboss.byteman.debug=true")
+                        if (bytemanAgent != null && debugPort != null) listOf(
+                            "-Dorg.jboss.byteman.verbose=true",
+                            "-Dorg.jboss.byteman.debug=true"
+                        )
                         else emptyList()
             }.invoke()
 
