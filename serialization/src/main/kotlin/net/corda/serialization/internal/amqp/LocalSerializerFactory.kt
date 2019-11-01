@@ -152,7 +152,7 @@ class DefaultLocalSerializerFactory(
         }
 
     private fun get(declaredType: Type, localTypeInformation: LocalTypeInformation): AMQPSerializer<Any> =
-        serializersByTypeId.getOrPut(localTypeInformation.typeIdentifier) {
+        serializersByTypeId.getOrElse(localTypeInformation.typeIdentifier) {
             val declaredClass = declaredType.asClass()
 
             // Any Custom Serializer cached for a ParameterizedType can only be
@@ -170,7 +170,7 @@ class DefaultLocalSerializerFactory(
             logger.trace { "Get Serializer for $declaredClass ${declaredGenericType.typeName}" }
             customSerializerRegistry.findCustomSerializer(declaredClass, declaredGenericType)?.apply { return@get this }
 
-            return when (localTypeInformation) {
+            when (localTypeInformation) {
                 is LocalTypeInformation.ACollection -> makeDeclaredCollection(localTypeInformation)
                 is LocalTypeInformation.AMap -> makeDeclaredMap(localTypeInformation)
                 is LocalTypeInformation.AnEnum -> makeDeclaredEnum(localTypeInformation, declaredType, declaredClass)
@@ -216,7 +216,7 @@ class DefaultLocalSerializerFactory(
             val declaredTypeInformation = typeModel.inspect(declaredType)
             val actualTypeInformation = typeModel.inspect(actualType)
 
-            return when (actualTypeInformation) {
+            when (actualTypeInformation) {
                 is LocalTypeInformation.ACollection -> makeActualCollection(actualClass, declaredTypeInformation as? LocalTypeInformation.ACollection
                         ?: actualTypeInformation)
                 is LocalTypeInformation.AMap -> makeActualMap(declaredType, actualClass, declaredTypeInformation as? LocalTypeInformation.AMap
