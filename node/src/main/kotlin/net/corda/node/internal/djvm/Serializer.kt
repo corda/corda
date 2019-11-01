@@ -9,7 +9,6 @@ import net.corda.core.utilities.ByteSequence
 import net.corda.djvm.rewiring.SandboxClassLoader
 import net.corda.node.djvm.ComponentBuilder
 import net.corda.serialization.djvm.createSandboxSerializationEnv
-import net.corda.serialization.djvm.deserializeTo
 import java.util.function.Function
 
 class Serializer(private val classLoader: SandboxClassLoader) {
@@ -43,14 +42,14 @@ class Serializer(private val classLoader: SandboxClassLoader) {
         val sandboxClass = classLoader.toSandboxClass(clazz)
         return Function { bytes ->
             bytes?.run {
-                ByteSequence.of(this).deserializeTo(sandboxClass, classLoader, factory, context)
+                factory.deserialize(ByteSequence.of(this), sandboxClass, context)
             }
         }
     }
 
     fun deserializeTo(clazz: Class<*>, bytes: ByteSequence): Any {
         val sandboxClass = classLoader.toSandboxClass(clazz)
-        return bytes.deserializeTo(sandboxClass, classLoader, factory, context)
+        return factory.deserialize(bytes, sandboxClass, context)
     }
 
     inline fun <reified T : Any> deserialize(bytes: SerializedBytes<T>?): Any? {

@@ -52,25 +52,23 @@ fun createSandboxSerializationEnv(classLoader: SandboxClassLoader): Serializatio
     return SerializationEnvironment.with(factory, p2pContext = p2pContext)
 }
 
-inline fun <reified T : Any> SerializedBytes<T>.deserializeFor(classLoader: SandboxClassLoader): Any {
-    val clazz = classLoader.toSandboxClass(T::class.java)
-    return deserializeTo(clazz, classLoader, SerializationFactory.defaultFactory)
+inline fun <reified T: Any> SerializedBytes<T>.deserializeFor(classLoader: SandboxClassLoader): Any {
+    return deserializeTo(T::class.java, classLoader)
 }
 
-fun ByteSequence.deserializeTo(clazz: Class<*>, classLoader: SandboxClassLoader, factory: SerializationFactory): Any {
-    return deserializeTo(clazz, classLoader, factory, factory.defaultContext)
+inline fun <reified T: Any> ByteSequence.deserializeTypeFor(classLoader: SandboxClassLoader): Any {
+    return deserializeTo(T::class.java, classLoader)
 }
 
-fun ByteSequence.deserializeTo(
-    clazz: Class<*>,
-    classLoader: SandboxClassLoader,
-    factory: SerializationFactory,
-    context: SerializationContext
-): Any {
-    val obj = factory.deserialize(this, Any::class.java, context)
-    return if (clazz.isInstance(obj)) {
-        obj
-    } else {
-        classLoader.createBasicInput().apply(obj)!!
-    }
+fun <T: Any> ByteSequence.deserializeTo(clazz: Class<T>, classLoader: SandboxClassLoader): Any {
+    val sandboxClazz = classLoader.toSandboxClass(clazz)
+    return deserializeTo(sandboxClazz)
+}
+
+fun ByteSequence.deserializeTo(clazz: Class<*>): Any {
+    return deserializeTo(clazz, SerializationFactory.defaultFactory)
+}
+
+fun ByteSequence.deserializeTo(clazz: Class<*>, factory: SerializationFactory): Any {
+    return factory.deserialize(this, clazz, factory.defaultContext)
 }

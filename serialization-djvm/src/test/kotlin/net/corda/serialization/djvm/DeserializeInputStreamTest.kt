@@ -24,7 +24,7 @@ class DeserializeInputStreamTest : TestBase(KOTLIN) {
         sandbox {
             _contextSerializationEnv.set(createSandboxSerializationEnv(classLoader))
 
-            val sandboxStream = data.deserializeFor(classLoader)
+            val sandboxStream = data.deserializeTypeFor<InputStream>(classLoader)
 
             val taskFactory = classLoader.createRawTaskFactory()
             val showInputStream = classLoader.createTaskFor(taskFactory, ShowInputStream::class.java)
