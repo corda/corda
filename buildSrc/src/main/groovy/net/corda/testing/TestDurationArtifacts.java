@@ -85,7 +85,7 @@ public class TestDurationArtifacts {
                 // Reload the test object from artifactory
                 loadTests();
                 // Get the list of junit xml artifacts
-                final List<Path> testXmlFiles = getTestXmlFiles(project.getRootDir().toPath());
+                final List<Path> testXmlFiles = getTestXmlFiles(project.getBuildDir().getAbsoluteFile().toPath());
                 project.getLogger().warn("Found {} xml junit files", testXmlFiles.size());
 
                 //  Read test xml files for tests and duration and add them to the `Tests` object
@@ -217,8 +217,7 @@ public class TestDurationArtifacts {
     static List<Path> getTestXmlFiles(@NotNull final Path rootDir) {
         List<Path> paths = new ArrayList<>();
         List<PathMatcher> matchers = new ArrayList<>();
-        matchers.add(FileSystems.getDefault().getPathMatcher("glob:**/build/test-results-xml/**/*.xml"));
-        matchers.add(FileSystems.getDefault().getPathMatcher("glob:**/build/test-results/**/*.xml"));
+        matchers.add(FileSystems.getDefault().getPathMatcher("glob:**/test-results-xml/**/*.xml"));
         try {
             Files.walkFileTree(rootDir, new FileVisitor<Path>() {
                 @Override
