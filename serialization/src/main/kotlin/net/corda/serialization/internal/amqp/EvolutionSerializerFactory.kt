@@ -105,7 +105,13 @@ class DefaultEvolutionSerializerFactory(
             evolverProperties.all { (name, evolverProperty) ->
                 val propertyType = propertyTypes[name]
                 if (propertyType == null) !evolverProperty.isMandatory
-                else evolverProperty.type.observedType.asClass().isAssignableFrom(propertyType)
+                else {
+                    // Check that we can assign the remote property value to its local equivalent.
+                    // This includes assigning a primitive type to its equivalent "boxed" type.
+                    val evolverPropertyType = evolverProperty.type.observedType.asClass()
+                    evolverPropertyType.isAssignableFrom(propertyType)
+                        || (propertyType.isPrimitive && evolverPropertyType.isAssignableFrom(propertyType.kotlin.javaObjectType))
+                }
             }
         }
     }
