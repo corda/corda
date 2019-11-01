@@ -10,6 +10,7 @@ import net.corda.core.internal.FlowIORequest
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.utilities.Try
 import net.corda.node.services.messaging.DeduplicationHandler
+import java.time.Instant
 
 /**
  * The state of the state machine, capturing the state of a flow. It consists of two parts, an *immutable* part that is
@@ -62,6 +63,9 @@ data class Checkpoint(
         val errorState: ErrorState,
         val numberOfSuspends: Int
 ) {
+
+    val timestamp: Instant = Instant.now()
+
     companion object {
 
         fun create(

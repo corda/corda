@@ -53,14 +53,18 @@ internal class FlowMonitor constructor(private val retrieveFlows: () -> Set<Flow
         val now = Instant.now()
         val flows = retrieveFlows()
         for (flow in flows) {
-            if (flow.isStarted() && flow.ongoingDuration(now) >= suspensionLoggingThreshold) {
-                flow.ioRequest()?.let { request -> warningMessageForFlowWaitingOnIo(request, flow, now) }?.let(logger::info)
+            if (flow.isStarted() && flow.isSuspended()) {
+                val suspensionDuration = flow.ongoingDuration(now)
+                if (suspensionDuration >= suspensionLoggingThreshold)
+                    flow.ioRequest()?.let {
+                        request -> warningMessageForFlowWaitingOnIo(request, flow, suspensionDuration)
+                    }?.let(logger::info)
             }
         }
     }
 
-    private fun warningMessageForFlowWaitingOnIo(request: FlowIORequest<*>, flow: FlowStateMachineImpl<*>, now: Instant): String {
-        val message = StringBuilder("Flow with id ${flow.id.uuid} has been waiting for ${flow.ongoingDuration(now).toMillis() / 1000} seconds ")
+    private fun warningMessageForFlowWaitingOnIo(request: FlowIORequest<*>, flow: FlowStateMachineImpl<*>, suspensionDuration: Duration): String {
+        val message = StringBuilder("Flow with id ${flow.id.uuid} has been waiting for ${suspensionDuration.toMillis() / 1000} seconds ")
         message.append(
                 when (request) {
                     is FlowIORequest.Send -> "to send a message to parties ${request.sessionToMessage.keys.partiesInvolved()}"
@@ -82,9 +86,12 @@ internal class FlowMonitor constructor(private val retrieveFlows: () -> Set<Flow
 
     private fun FlowStateMachineImpl<*>.ioRequest() = (snapshot().checkpoint.flowState as? FlowState.Started)?.flowIORequest
 
-    private fun FlowStateMachineImpl<*>.ongoingDuration(now: Instant) = Duration.between(createdAt(), now)
+    private fun FlowStateMachineImpl<*>.ongoingDuration(now: Instant): Duration {
+        val lastCheckpointTimestamp = transientState?.value?.checkpoint?.timestamp ?: return Duration.ZERO
+        return Duration.between(lastCheckpointTimestamp, now)
+    }
 
-    private fun FlowStateMachineImpl<*>.createdAt() = context.trace.invocationId.timestamp
+    private fun FlowStateMachineImpl<*>.isSuspended() = !snapshot().isFlowResumed
 
     private fun FlowStateMachineImpl<*>.isStarted() = transientState?.value?.checkpoint?.flowState is FlowState.Started
 }

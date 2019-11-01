@@ -791,7 +791,10 @@ class SingleThreadedStateMachineManager(
             is FlowState.Started -> {
                 val fiber = tryCheckpointDeserialize(flowState.frozenFiber, id) ?: return null
                 val state = StateMachineState(
-                        checkpoint = checkpoint,
+                        // Do a trivial checkpoint copy below, to update the Checkpoint#timestamp value. This is for FlowMonitor.
+                        // We need to refresh the suspension starting time of a to be re-executed from checkpoint flow.
+                        // This applies in case of an e.g. Node startUp after a long period, and for 'Started' flows only (Please check FlowMonitor's flow logging criteria).
+                        checkpoint = checkpoint.copy(),
                         pendingDeduplicationHandlers = initialDeduplicationHandler?.let { listOf(it) } ?: emptyList(),
                         isFlowResumed = false,
                         isTransactionTracked = false,
