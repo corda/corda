@@ -13,6 +13,8 @@ import org.gradle.api.tasks.testing.Test
  */
 class DistributedTesting implements Plugin<Project> {
 
+    public static final String GRADLE_GROUP = "Distributed Testing";
+
     static def getPropertyAsInt(Project proj, String property, Integer defaultValue) {
         return proj.hasProperty(property) ? Integer.parseInt(proj.property(property).toString()) : defaultValue
     }
@@ -20,6 +22,7 @@ class DistributedTesting implements Plugin<Project> {
     @Override
     void apply(Project project) {
         if (System.getProperty("kubenetize") != null) {
+            Properties.setRootProjectType(project.rootProject.name)
 
             Integer forks = getPropertyAsInt(project, "dockerForks", 1)
 
@@ -30,6 +33,9 @@ class DistributedTesting implements Plugin<Project> {
             String tagToUseForRunningTests = System.getProperty(ImageBuilding.PROVIDE_TAG_FOR_RUNNING_PROPERTY)
             String tagToUseForBuilding = System.getProperty(ImageBuilding.PROVIDE_TAG_FOR_RUNNING_PROPERTY)
             BucketingAllocatorTask globalAllocator = project.tasks.create("bucketingAllocator", BucketingAllocatorTask, forks)
+            globalAllocator.group = GRADLE_GROUP
+            globalAllocator.description = "Allocates tests to buckets"
+
 
             Set<String> requestedTaskNames = project.gradle.startParameter.taskNames.toSet()
             def requestedTasks = requestedTaskNames.collect { project.tasks.findByPath(it) }
@@ -41,14 +47,14 @@ class DistributedTesting implements Plugin<Project> {
             //4. after each completed test write its name to a file to keep track of what finished for restart purposes
             project.subprojects { Project subProject ->
                 subProject.tasks.withType(Test) { Test task ->
-                    println "Evaluating ${task.getPath()}"
+                    project.logger.info("Evaluating ${task.getPath()}")
                     if (task in requestedTasks && !task.hasProperty("ignoreForDistribution")) {
-                        println "Modifying ${task.getPath()}"
+                        project.logger.info "Modifying ${task.getPath()}"
                         ListTests testListerTask = createTestListingTasks(task, subProject)
                         globalAllocator.addSource(testListerTask, task)
                         Test modifiedTestTask = modifyTestTaskForParallelExecution(subProject, task, globalAllocator)
                     } else {
-                        println "Skipping modification of ${task.getPath()} as it's not scheduled for execution"
+                        project.logger.info "Skipping modification of ${task.getPath()} as it's not scheduled for execution"
                     }
                     if (!task.hasProperty("ignoreForDistribution")) {
                         //this is what enables execution of a single test suite - for example node:parallelTest would execute all unit tests in node, node:parallelIntegrationTest would do the same for integration tests
@@ -73,10 +79,12 @@ class DistributedTesting implements Plugin<Project> {
             userGroups.forEach { testGrouping ->
 
                 //for each "group" (ie: test, integrationTest) within the grouping find all the Test tasks which have the same name.
-                List<Test> groups = ((ParallelTestGroup) testGrouping).groups.collect { allTestTasksGroupedByType.get(it) }.flatten()
+                List<Test> testTasksToRunInGroup = ((ParallelTestGroup) testGrouping).groups.collect {
+                    allTestTasksGroupedByType.get(it)
+                }.flatten()
 
                 //join up these test tasks into a single set of tasks to invoke (node:test, node:integrationTest...)
-                String superListOfTasks = groups.collect { it.path }.join(" ")
+                String superListOfTasks = testTasksToRunInGroup.collect { it.path }.join(" ")
 
                 //generate a preAllocate / deAllocate task which allows you to "pre-book" a node during the image building phase
                 //this prevents time lost to cloud provider node spin up time (assuming image build time > provider spin up time)
@@ -88,6 +96,8 @@ class DistributedTesting implements Plugin<Project> {
                 }
 
                 def userDefinedParallelTask = project.rootProject.tasks.create("userDefined" + testGrouping.name.capitalize(), KubesTest) {
+                    group = GRADLE_GROUP
+
                     if (!tagToUseForRunningTests) {
                         dependsOn imagePushTask
                     }
@@ -108,6 +118,7 @@ class DistributedTesting implements Plugin<Project> {
                     }
                 }
                 def reportOnAllTask = project.rootProject.tasks.create("userDefinedReports${testGrouping.name.capitalize()}", KubesReporting) {
+                    group = GRADLE_GROUP
                     dependsOn userDefinedParallelTask
                     destinationDir new File(project.rootProject.getBuildDir(), "userDefinedReports${testGrouping.name.capitalize()}")
                     doFirst {
@@ -117,15 +128,25 @@ class DistributedTesting implements Plugin<Project> {
                         reportOn(userDefinedParallelTask.testOutput)
                     }
                 }
+
+                // Task to zip up test results, and upload them to somewhere (Artifactory).
+                def zipTask = TestDurationArtifacts.createZipTask(project.rootProject, testGrouping.name, userDefinedParallelTask)
+
                 userDefinedParallelTask.finalizedBy(reportOnAllTask)
-                testGrouping.dependsOn(userDefinedParallelTask)
+                zipTask.dependsOn(userDefinedParallelTask)
+                testGrouping.dependsOn(zipTask)
             }
         }
+
+        //  Added only so that we can manually run zipTask on the command line as a test.
+        TestDurationArtifacts.createZipTask(project.rootProject, "zipTask", null)
+                .setDescription("Zip task that can be run locally for testing");
     }
 
     private List<Task> generatePreAllocateAndDeAllocateTasksForGrouping(Project project, ParallelTestGroup testGrouping) {
         PodAllocator allocator = new PodAllocator(project.getLogger())
         Task preAllocateTask = project.rootProject.tasks.create("preAllocateFor" + testGrouping.name.capitalize()) {
+            group = GRADLE_GROUP
             doFirst {
                 String dockerTag = System.getProperty(ImageBuilding.PROVIDE_TAG_FOR_BUILDING_PROPERTY)
                 if (dockerTag == null) {
@@ -142,6 +163,7 @@ class DistributedTesting implements Plugin<Project> {
         }
 
         Task deAllocateTask = project.rootProject.tasks.create("deAllocateFor" + testGrouping.name.capitalize()) {
+            group = GRADLE_GROUP
             doFirst {
                 String dockerTag = System.getProperty(ImageBuilding.PROVIDE_TAG_FOR_RUNNING_PROPERTY)
                 if (dockerTag == null) {
@@ -160,6 +182,7 @@ class DistributedTesting implements Plugin<Project> {
         def capitalizedTaskName = task.getName().capitalize()
 
         KubesTest createdParallelTestTask = projectContainingTask.tasks.create("parallel" + capitalizedTaskName, KubesTest) {
+            group = GRADLE_GROUP + " Parallel Test Tasks"
             if (!providedTag) {
                 dependsOn imageBuildingTask
             }
@@ -232,6 +255,7 @@ class DistributedTesting implements Plugin<Project> {
         //determine all the tests which are present in this test task.
         //this list will then be shared between the various worker forks
         def createdListTask = subProject.tasks.create("listTestsFor" + capitalizedTaskName, ListTests) {
+            group = GRADLE_GROUP
             //the convention is that a testing task is backed by a sourceSet with the same name
             dependsOn subProject.getTasks().getByName("${taskName}Classes")
             doFirst {
@@ -242,6 +266,7 @@ class DistributedTesting implements Plugin<Project> {
 
         //convenience task to utilize the output of the test listing task to display to local console, useful for debugging missing tests
         def createdPrintTask = subProject.tasks.create("printTestsFor" + capitalizedTaskName) {
+            group = GRADLE_GROUP
             dependsOn createdListTask
             doLast {
                 createdListTask.getTestsForFork(
