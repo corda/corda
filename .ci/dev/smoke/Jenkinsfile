@@ -19,96 +19,74 @@ pipeline {
     }
 
     stages {
-        stage('Corda Smoke Tests - Generate Build Image') {
+        stage('Corda Smoke Tests') {
             steps {
-
                 script {
-                    pullRequest.createStatus(status: 'pending',
-                            context: 'continuous-integration/jenkins/pr-merge/smokeTest',
-                            description: 'Smoke Tests Building',
-                            targetUrl: "${env.JOB_URL}")
+                    if (currentBuildTriggeredByComment()) {
+                        stage('Run Smoke Tests') {
+                            script {
+                                pullRequest.createStatus(status: 'pending',
+                                        context: 'continuous-integration/jenkins/pr-merge/smokeTest',
+                                        description: 'Smoke Tests Building',
+                                        targetUrl: "${env.JOB_URL}")
+                            }
+
+                            withCredentials([string(credentialsId: 'container_reg_passwd', variable: 'DOCKER_PUSH_PWD')]) {
+                                sh "./gradlew " +
+                                        "-Dkubenetize=true " +
+                                        "-Ddocker.push.password=\"\${DOCKER_PUSH_PWD}\" " +
+                                        "-Ddocker.work.dir=\"/tmp/\${EXECUTOR_NUMBER}\" " +
+                                        " clean allParallelSmokeTest --stacktrace"
+                            }
+                        }
+
+                    }
                 }
-
-                withCredentials([string(credentialsId: 'container_reg_passwd', variable: 'DOCKER_PUSH_PWD')]) {
-                    sh "./gradlew " +
-                            "-Dkubenetize=true " +
-                            "-Ddocker.push.password=\"\${DOCKER_PUSH_PWD}\" " +
-                            "-Ddocker.work.dir=\"/tmp/\${EXECUTOR_NUMBER}\" " +
-                            "-Ddocker.build.tag=\"\${DOCKER_TAG_TO_USE}\"" +
-                            " clean pushBuildImage --stacktrace"
-                }
-
-
-                sh "kubectl auth can-i get pods"
             }
         }
 
-        stage('Smoke Tests') {
+        post {
+            always {
+                archiveArtifacts artifacts: '**/pod-logs/**/*.log', fingerprint: false
+                junit '**/build/test-results-xml/**/*.xml'
+            }
 
-            steps {
 
+            success {
                 script {
-                    pullRequest.createStatus(status: 'pending',
+                    pullRequest.createStatus(status: 'success',
                             context: 'continuous-integration/jenkins/pr-merge/smokeTest',
-                            description: 'Smoke Tests Running',
-                            targetUrl: "${env.JOB_URL}")
+                            description: 'Smoke Tests Passed',
+                            targetUrl: "${env.JOB_URL}testResults")
                 }
-
-                sh "./gradlew " +
-                        "-DbuildId=\"\${BUILD_ID}\" " +
-                        "-Dkubenetize=true " +
-                        "-Ddocker.run.tag=\"\${DOCKER_TAG_TO_USE}\" " +
-                        "-Dartifactory.username=\"\${ARTIFACTORY_CREDENTIALS_USR}\" " +
-                        "-Dartifactory.password=\"\${ARTIFACTORY_CREDENTIALS_PSW}\" " +
-                        "-Dgit.branch=\"\${GIT_BRANCH}\" " +
-                        "-Dgit.target.branch=\"\${GIT_BRANCH}\" " +
-                        " allParallelSmokeTest --stacktrace"
             }
-        }
-    }
 
-
-    post {
-        always {
-            archiveArtifacts artifacts: '**/pod-logs/**/*.log', fingerprint: false
-            junit '**/build/test-results-xml/**/*.xml'
-        }
-
-
-        success {
-            script {
-                pullRequest.createStatus(status: 'success',
-                        context: 'continuous-integration/jenkins/pr-merge/smokeTest',
-                        description: 'Smoke Tests Passed',
-                        targetUrl: "${env.JOB_URL}testResults")
+            failure {
+                script {
+                    pullRequest.createStatus(status: 'failure',
+                            context: 'continuous-integration/jenkins/pr-merge/smokeTest',
+                            description: 'Smoke Tests Failed',
+                            targetUrl: "${env.JOB_URL}testResults")
+                }
             }
-        }
 
-        failure {
-            script {
-                pullRequest.createStatus(status: 'failure',
-                        context: 'continuous-integration/jenkins/pr-merge/smokeTest',
-                        description: 'Smoke Tests Failed',
-                        targetUrl: "${env.JOB_URL}testResults")
+            cleanup {
+                deleteDir() /* clean up our workspace */
             }
-        }
-
-        cleanup {
-            deleteDir() /* clean up our workspace */
         }
     }
 }
 
-//@NonCPS
-//static def currentBuildTriggeredByComment(){
-//    def triggerCause = currentBuild.rawBuild.getCause(org.jenkinsci.plugins.pipeline.github.trigger.IssueCommentCause)
-//    if (triggerCause) {
-//        echo("Build was started by ${triggerCause.userLogin}, who wrote: " +
-//                "\"${triggerCause.comment}\", which matches the " +
-//                "\"${triggerCause.triggerPattern}\" trigger pattern.")
-//    } else {
-//        echo('Build was not started by a trigger')
-//    }
-//
-//    return triggerCause == null
-//}
+@NonCPS
+def currentBuildTriggeredByComment() {
+    def triggerCause = currentBuild.rawBuild.getCause(org.jenkinsci.plugins.pipeline.github.trigger.IssueCommentCause)
+    if (triggerCause) {
+        echo("Build was started by ${triggerCause.userLogin}, who wrote: " +
+                "\"${triggerCause.comment}\", which matches the " +
+                "\"${triggerCause.triggerPattern}\" trigger pattern.")
+    } else {
+        echo('Build was not started by a trigger')
+    }
+
+    return triggerCause == null
+}
