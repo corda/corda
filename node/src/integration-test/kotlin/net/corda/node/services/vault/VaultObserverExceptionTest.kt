@@ -120,19 +120,15 @@ class VaultObserverExceptionTest {
     }
 
     /**
-     * If the state we are trying to persist triggers a ConstraintViolation, the flow hospital will retry the flow
+     * If the state we are trying to persist triggers a persistence exception, the flow hospital will retry the flow
      * and keep it in for observation if errors persist.
      */
     @Test
-    fun constraintViolationOnCommitGetsRetriedAndThenGetsKeptForObservation() {
+    fun persistenceExceptionOnCommitGetsRetriedAndThenGetsKeptForObservation() {
         var admitted = 0
-        var discharged = 0
         var observation = 0
         StaffedFlowHospital.onFlowAdmitted.add {
             ++admitted
-        }
-        StaffedFlowHospital.onFlowDischarged.add { _, _ ->
-            ++discharged
         }
         StaffedFlowHospital.onFlowKeptForOvernightObservation.add { _, _ ->
             ++observation
@@ -149,19 +145,15 @@ class VaultObserverExceptionTest {
             }
         }
         Assert.assertTrue("Exception from service has not been to Hospital", admitted > 0)
-        Assert.assertEquals(3, discharged)
         Assert.assertEquals(1, observation)
     }
 
     /**
-     * If we have a state causing a ConstraintViolation lined up for persistence, calling jdbConnection() in
-     * the vault observer will trigger a flush that throws. This will be retried, and finally be kept in for observation.
-     *
-     * 4 discharges due to being handled once by [StaffedFlowHospital.DuplicateInsertSpecialist] and 3 times by
-     * [StaffedFlowHospital.TransitionErrorGeneralPractitioner]
+     * If we have a state causing a database error lined up for persistence, calling jdbConnection() in
+     * the vault observer will trigger a flush that throws. This will be kept in for observation.
      */
     @Test
-    fun constraintViolationOnFlushGetsRetriedAndThenGetsKeptForObservation() {
+    fun persistenceExceptionOnFlushGetsRetriedAndThenGetsKeptForObservation() {
         var counter = 0
         StaffedFlowHospital.DatabaseEndocrinologist.customConditions.add {
             when (it) {
@@ -173,11 +165,7 @@ class VaultObserverExceptionTest {
             }
             false
         }
-        var discharged = 0
         var observation = 0
-        StaffedFlowHospital.onFlowDischarged.add { _, _ ->
-            ++discharged
-        }
         StaffedFlowHospital.onFlowKeptForOvernightObservation.add { _, _ ->
             ++observation
         }
@@ -187,7 +175,7 @@ class VaultObserverExceptionTest {
                 cordappsForAllNodes = testCordapps())) {
             val aliceUser = User("user", "foo", setOf(Permissions.all()))
             val aliceNode = startNode(providedName = ALICE_NAME, rpcUsers = listOf(aliceUser)).getOrThrow()
-            assertFailsWith<TimeoutException>("ConstraintViolationException") {
+            assertFailsWith<TimeoutException>("PersistenceException") {
                 aliceNode.rpc.startFlow(::Initiator, "EntityManager", errorTargetsToNum(
                         CreateStateFlow.ErrorTarget.ServiceValidUpdate,
                         CreateStateFlow.ErrorTarget.TxInvalidState))
@@ -195,20 +183,18 @@ class VaultObserverExceptionTest {
             }
         }
         Assert.assertTrue("Flow has not been to hospital", counter > 0)
-        Assert.assertEquals(4, discharged)
         Assert.assertEquals(1, observation)
     }
 
     /**
-     * If we have a state causing a ConstraintViolation lined up for persistence, calling jdbConnection() in
-     * the vault observer will trigger a flush that throws. This will be retried, and finally fail.
+     * If we have a state causing a database error lined up for persistence, calling jdbConnection() in
+     * the vault observer will trigger a flush that throws.
      * Trying to catch and suppress that exception in the flow around the code triggering the vault observer
      * does not change the outcome - the first exception in the service will bring the service down and will
      * be caught by the flow, but the state machine will error the flow anyway as Corda code threw.
-     * On retry, the error will hit the commit, as the observer is dead, and fail as above.
      */
     @Test
-    fun constraintViolationOnFlushInVaultObserverCannotBeSuppressedInFlow() {
+    fun persistenceExceptionOnFlushInVaultObserverCannotBeSuppressedInFlow() {
         var counter = 0
         StaffedFlowHospital.DatabaseEndocrinologist.customConditions.add {
             when (it) {
@@ -234,19 +220,19 @@ class VaultObserverExceptionTest {
                             CreateStateFlow.ErrorTarget.TxInvalidState,
                             CreateStateFlow.ErrorTarget.FlowSwallowErrors))
             val flowResult = flowHandle.returnValue
-            assertFailsWith<TimeoutException>("ConstraintViolation") { flowResult.getOrThrow(30.seconds) }
+            assertFailsWith<TimeoutException>("PersistenceException") { flowResult.getOrThrow(30.seconds) }
             Assert.assertTrue("Flow has not been to hospital", counter > 0)
         }
     }
 
     /**
-     * If we have a state causing a ConstraintViolation lined up for persistence, calling jdbConnection() in
-     * the vault observer will trigger a flush that throws. This will be retried, and finally fail.
+     * If we have a state causing a persistence exception lined up for persistence, calling jdbConnection() in
+     * the vault observer will trigger a flush that throws.
      * Trying to catch and suppress that exception inside the service does protect the service, but the new
-     * interceptor will fail the flow anyway. It will be retried and then be kept in for observation if errors persist.
+     * interceptor will fail the flow anyway. The flow will be kept in for observation if errors persist.
      */
     @Test
-    fun constraintViolationOnFlushInVaultObserverCannotBeSuppressedInService() {
+    fun persistenceExceptionOnFlushInVaultObserverCannotBeSuppressedInService() {
         var counter = 0
         StaffedFlowHospital.DatabaseEndocrinologist.customConditions.add {
             when (it) {
@@ -271,18 +257,18 @@ class VaultObserverExceptionTest {
                             CreateStateFlow.ErrorTarget.TxInvalidState,
                             CreateStateFlow.ErrorTarget.ServiceSwallowErrors))
             val flowResult = flowHandle.returnValue
-            assertFailsWith<TimeoutException>("ConstraintViolation") { flowResult.getOrThrow(30.seconds) }
+            assertFailsWith<TimeoutException>("PersistenceException") { flowResult.getOrThrow(30.seconds) }
             Assert.assertTrue("Flow has not been to hospital", counter > 0)
         }
     }
 
     /**
-     * User code throwing a constraint violation in a raw vault observer will break the recordTransaction call,
+     * User code throwing a syntax error in a raw vault observer will break the recordTransaction call,
      * therefore handling it in flow code is no good, and the error will be passed to the flow hospital via the
      * interceptor.
      */
     @Test
-    fun constraintViolationInUserCodeInServiceCannotBeSuppressedInFlow() {
+    fun syntaxErrorInUserCodeInServiceCannotBeSuppressedInFlow() {
         val testControlFuture = openFuture<Boolean>()
         StaffedFlowHospital.onFlowKeptForOvernightObservation.add { _, _ ->
             log.info("Flow has been kept for overnight observation")
@@ -295,7 +281,7 @@ class VaultObserverExceptionTest {
             val aliceUser = User("user", "foo", setOf(Permissions.all()))
             val aliceNode = startNode(providedName = ALICE_NAME, rpcUsers = listOf(aliceUser)).getOrThrow()
             val flowHandle = aliceNode.rpc.startFlow(::Initiator, "EntityManager", CreateStateFlow.errorTargetsToNum(
-                    CreateStateFlow.ErrorTarget.ServiceNullConstraintViolation,
+                    CreateStateFlow.ErrorTarget.ServiceSqlSyntaxError,
                     CreateStateFlow.ErrorTarget.FlowSwallowErrors))
             val flowResult = flowHandle.returnValue
             flowResult.then {
@@ -307,18 +293,18 @@ class VaultObserverExceptionTest {
     }
 
     /**
-     * User code throwing a constraint violation and catching suppressing that within the observer code is fine
+     * User code throwing a syntax error and catching suppressing that within the observer code is fine
      * and should not have any impact on the rest of the flow
      */
     @Test
-    fun constraintViolationInUserCodeInServiceCanBeSuppressedInService() {
+    fun syntaxErrorInUserCodeInServiceCanBeSuppressedInService() {
         driver(DriverParameters(
                 startNodesInProcess = true,
                 cordappsForAllNodes = testCordapps())) {
             val aliceUser = User("user", "foo", setOf(Permissions.all()))
             val aliceNode = startNode(providedName = ALICE_NAME, rpcUsers = listOf(aliceUser)).getOrThrow()
             val flowHandle = aliceNode.rpc.startFlow(::Initiator, "EntityManager", CreateStateFlow.errorTargetsToNum(
-                    CreateStateFlow.ErrorTarget.ServiceNullConstraintViolation,
+                    CreateStateFlow.ErrorTarget.ServiceSqlSyntaxError,
                     CreateStateFlow.ErrorTarget.ServiceSwallowErrors))
             val flowResult = flowHandle.returnValue
             flowResult.getOrThrow(30.seconds)

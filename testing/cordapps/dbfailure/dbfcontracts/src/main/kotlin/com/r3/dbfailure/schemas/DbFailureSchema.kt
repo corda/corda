@@ -21,7 +21,7 @@ object DbFailureSchemaV1 : MappedSchema(
         @Column( name = "participant")
         var participantName: String,
 
-        @Column( name = "random_value")
+        @Column( name = "random_value", nullable = false)
         var randomValue: String?,
 
         @Column( name = "error_target")
