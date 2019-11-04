@@ -245,6 +245,7 @@ class SingleThreadedStateMachineManager(
                 } finally {
                     database.transaction {
                         checkpointStorage.removeCheckpoint(id)
+                        serviceHub.vaultService.softLockRelease(id.uuid)
                     }
                     transitionExecutor.forceRemoveFlow(id)
                     unfinishedFibers.countDown()
