@@ -53,4 +53,11 @@ public class PropertiesTest {
     public void getTargetGitBranch() {
         Assert.assertEquals(targetBranch, Properties.getTargetGitBranch());
     }
+
+    @Test
+    public void getPublishJunitTests() {
+        Assert.assertFalse(Properties.getPublishJunitTests());
+        System.setProperty("publish.junit", "true");
+        Assert.assertTrue(Properties.getPublishJunitTests());
+    }
 }
