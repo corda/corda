@@ -44,8 +44,8 @@ data class CustomCordapp(
 
     override fun withOnlyJarContents(): CustomCordapp = CustomCordapp(packages = packages, classes = classes)
 
-    fun signed(keyStorePath: Path? = null, numberOfSignatures: Int = 1): CustomCordapp =
-            copy(signingInfo = SigningInfo(keyStorePath, numberOfSignatures))
+    fun signed(keyStorePath: Path? = null, numberOfSignatures: Int = 1, keyAlgorithm: String = "RSA"): CustomCordapp =
+            copy(signingInfo = SigningInfo(keyStorePath, numberOfSignatures, keyAlgorithm))
 
     @VisibleForTesting
     internal fun packageAsJar(file: Path) {
@@ -86,7 +86,7 @@ data class CustomCordapp(
                 val alias = "alias$i"
                 val pwd = "secret!"
                 if (!keyStorePathToUse.containsKey(alias, pwd))
-                    keyStorePathToUse.generateKey(alias, pwd, "O=Test Company Ltd $i,OU=Test,L=London,C=GB")
+                    keyStorePathToUse.generateKey(alias, pwd, "O=Test Company Ltd $i,OU=Test,L=London,C=GB", signingInfo.keyAlgorithm)
                 val pk = keyStorePathToUse.signJar(jarFile.toString(), alias, pwd)
                 logger.debug { "Signed Jar: $jarFile with public key $pk" }
             }
@@ -114,7 +114,7 @@ data class CustomCordapp(
         return ZipEntry(name).setCreationTime(epochFileTime).setLastAccessTime(epochFileTime).setLastModifiedTime(epochFileTime)
     }
 
-    data class SigningInfo(val keyStorePath: Path?, val numberOfSignatures: Int)
+    data class SigningInfo(val keyStorePath: Path?, val numberOfSignatures: Int, val keyAlgorithm: String)
 
     companion object {
         private val logger = contextLogger()

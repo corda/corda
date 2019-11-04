@@ -331,22 +331,20 @@ class Verifier(val ltx: LedgerTransaction, private val transactionClassLoader: C
         allStates.map { it.contract to it.constraint }.toSet().forEach { (contract, constraint) ->
             if (constraint is SignatureAttachmentConstraint) {
                 /**
-                 * Signature constraints are supported on min. platform version >= 4, but this only includes support for a single key per constraint.
-                 * Signature contstraints with composite keys containing more than 1 leaf key are supported on min. platform version >= 5.
+                 * Support for signature constraints has been added on min. platform version >= 4.
+                 * On minimum platform version >= 5, an explicit check has been introduced on the supported number of leaf keys
+                 * in composite keys of signature constraints in order to harden consensus.
                  */
                 checkMinimumPlatformVersion(ltx.networkParameters?.minimumPlatformVersion ?: 1, 4, "Signature constraints")
                 val constraintKey = constraint.key
-                if (constraintKey is CompositeKey && constraintKey.leafKeys.size > 1) {
-                    checkMinimumPlatformVersion(ltx.networkParameters?.minimumPlatformVersion ?: 1, 5,
-                            "Composite keys for signature constraints")
-                    val leafKeysNumber = constraintKey.leafKeys.size
-                    if (leafKeysNumber > MAX_NUMBER_OF_KEYS_IN_SIGNATURE_CONSTRAINT)
+                if (ltx.networkParameters?.minimumPlatformVersion ?: 1 >= 5) {
+                    if (constraintKey is CompositeKey && constraintKey.leafKeys.size > MAX_NUMBER_OF_KEYS_IN_SIGNATURE_CONSTRAINT) {
                         throw TransactionVerificationException.InvalidConstraintRejection(ltx.id, contract,
-                            "Signature constraint contains composite key with $leafKeysNumber leaf keys, " +
-                                    "which is more than the maximum allowed number of keys " +
-                                    "($MAX_NUMBER_OF_KEYS_IN_SIGNATURE_CONSTRAINT).")
+                                "Signature constraint contains composite key with ${constraintKey.leafKeys.size} leaf keys, " +
+                                        "which is more than the maximum allowed number of keys " +
+                                        "($MAX_NUMBER_OF_KEYS_IN_SIGNATURE_CONSTRAINT).")
+                    }
                 }
-
             }
 
             // We already checked that there is one and only one attachment.
