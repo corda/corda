@@ -257,7 +257,7 @@ public class KubesTest extends DefaultTask {
                     client.pods().delete(createdPod);
                     client.persistentVolumeClaims().delete(pvc);
                 }
-                return new KubePodResult(resCode, podOutput, binaryResults);
+                return new KubePodResult(podIdx, resCode, podOutput, binaryResults);
             });
         } catch (Retry.RetryException e) {
             throw new RuntimeException("Failed to build in pod " + podName + " (" + podIdx + "/" + numberOfPods + ") in " + numberOfRetries + " attempts", e);
