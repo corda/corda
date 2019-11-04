@@ -89,5 +89,5 @@ def currentBuildTriggeredByComment() {
         echo('Build was not started by a trigger')
     }
 
-    return triggerCause == null
+    return triggerCause != null
 }
