@@ -328,7 +328,7 @@ public class TestDurationArtifacts {
 
                 // If the test doesn't have a duration (it should), we return zero.
                 if (!(testName.isEmpty() || testClassName.isEmpty())) {
-                    final long nanos = !testDuration.isEmpty() ? (long) (Double.parseDouble(testDuration) * 1000000.0) : 0L;
+                    final long nanos = !testDuration.isEmpty() ? (long) (Double.parseDouble(testDuration) * 1_000_000_000.0) : 0L;
                     results.add(new Tuple2<>(testClassName + "." + testName, nanos));
                 } else {
                     LOG.warn("Bad test in junit xml:  name={}  className={}", testName, testClassName);
