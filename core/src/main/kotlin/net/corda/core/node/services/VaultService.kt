@@ -259,7 +259,8 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
  * The maximum permissible size of contract constraint type data (for storage in vault states database table).
  *
  * This value establishes an upper limit of a CompositeKey with up to [MAX_NUMBER_OF_KEYS_IN_SIGNATURE_CONSTRAINT] keys stored in.
- * However, note this assumes a rather conservative upper bound per key. For reference, measurements have shown the following numbers for each algorithm:
+ * However, note this assumes a rather conservative upper bound per key.
+ * For reference, measurements have shown the following numbers for each algorithm:
  * - 2048-bit RSA keys: 1 key -> 294 bytes, 2 keys -> 655 bytes, 3 keys -> 961 bytes
  * - 256-bit ECDSA (k1) keys: 1 key -> 88 bytes, 2 keys -> 231 bytes, 3 keys -> 331 bytes
  * - 256-bit EDDSA keys: 1 key -> 44 bytes, 2 keys -> 140 bytes, 3 keys -> 195 bytes
