@@ -49,26 +49,34 @@ pipeline {
 
     post {
         always {
-            archiveArtifacts artifacts: '**/pod-logs/**/*.log', fingerprint: false
-            junit '**/build/test-results-xml/**/*.xml'
+            script {
+                if (currentBuildTriggeredByComment()) {
+                    archiveArtifacts artifacts: '**/pod-logs/**/*.log', fingerprint: false
+                    junit '**/build/test-results-xml/**/*.xml'
+                }
+            }
         }
 
 
         success {
             script {
-                pullRequest.createStatus(status: 'success',
-                        context: 'continuous-integration/jenkins/pr-merge/smokeTest',
-                        description: 'Smoke Tests Passed',
-                        targetUrl: "${env.JOB_URL}testResults")
+                if (currentBuildTriggeredByComment()) {
+                    pullRequest.createStatus(status: 'success',
+                            context: 'continuous-integration/jenkins/pr-merge/smokeTest',
+                            description: 'Smoke Tests Passed',
+                            targetUrl: "${env.JOB_URL}testResults")
+                }
             }
         }
 
         failure {
             script {
-                pullRequest.createStatus(status: 'failure',
-                        context: 'continuous-integration/jenkins/pr-merge/smokeTest',
-                        description: 'Smoke Tests Failed',
-                        targetUrl: "${env.JOB_URL}testResults")
+                if (currentBuildTriggeredByComment()) {
+                    pullRequest.createStatus(status: 'failure',
+                            context: 'continuous-integration/jenkins/pr-merge/smokeTest',
+                            description: 'Smoke Tests Failed',
+                            targetUrl: "${env.JOB_URL}testResults")
+                }
             }
         }
 
