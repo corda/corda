@@ -96,6 +96,6 @@ public class ListTests extends DefaultTask implements TestLister {
                 this.allTests = results.stream().sorted().collect(Collectors.toList());
                 break;
         }
-        getProject().getLogger().info("THESE ARE ALL THE TESTSSS!!!!!!!!: " + allTests.toString());
+        getProject().getLogger().lifecycle("THESE ARE ALL THE TESTSSS!!!!!!!!: " + allTests.toString());
     }
 }
