@@ -6,6 +6,6 @@
     <changeSet author="R3.Corda" id="expand_constraint_data_size">
         <modifyDataType tableName="vault_states"
                         columnName="constraint_data"
-                        newDataType="varbinary(10000)"/>
+                        newDataType="varbinary(20000)"/>
     </changeSet>
 </databaseChangeLog>
