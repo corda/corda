@@ -1,4 +1,3 @@
-import static com.r3.build.BuildControl.killAllExistingBuildsForJob
 @Library('existing-build-control')
 import static com.r3.build.BuildControl.killAllExistingBuildsForJob
 
@@ -12,6 +11,7 @@ pipeline {
         DOCKER_TAG_TO_USE = "${env.GIT_COMMIT.subSequence(0, 8)}"
         EXECUTOR_NUMBER = "${env.EXECUTOR_NUMBER}"
         BUILD_ID = "${env.BUILD_ID}-${env.JOB_NAME}"
+        ARTIFACTORY_CREDENTIALS = credentials('artifactory-credentials')
     }
 
     stages {
@@ -36,7 +36,11 @@ pipeline {
                         sh "./gradlew " +
                                 "-DbuildId=\"\${BUILD_ID}\" " +
                                 "-Dkubenetize=true " +
-                                "-Ddocker.run.tag=\"\${DOCKER_TAG_TO_USE}\"" +
+                                "-Ddocker.run.tag=\"\${DOCKER_TAG_TO_USE}\" " +
+                                "-Dartifactory.username=\"\${ARTIFACTORY_CREDENTIALS_USR}\" " +
+                                "-Dartifactory.password=\"\${ARTIFACTORY_CREDENTIALS_PSW}\" " +
+                                "-Dgit.branch=\"\${GIT_BRANCH}\" " +
+                                "-Dgit.target.branch=\"\${CHANGE_TARGET}\" " +
                                 " deAllocateForAllParallelIntegrationTest  allParallelIntegrationTest  --stacktrace"
                     }
                 }
