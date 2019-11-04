@@ -1,3 +1,4 @@
+import static com.r3.build.BuildControl.killAllExistingBuildsForJob
 @Library('existing-build-control')
 import static com.r3.build.BuildControl.killAllExistingBuildsForJob
 
@@ -27,7 +28,7 @@ pipeline {
                             script {
                                 pullRequest.createStatus(status: 'pending',
                                         context: 'continuous-integration/jenkins/pr-merge/smokeTest',
-                                        description: 'Smoke Tests Building',
+                                        description: 'Smoke Tests Running',
                                         targetUrl: "${env.JOB_URL}")
                             }
 
@@ -44,35 +45,35 @@ pipeline {
                 }
             }
         }
+    }
 
-        post {
-            always {
-                archiveArtifacts artifacts: '**/pod-logs/**/*.log', fingerprint: false
-                junit '**/build/test-results-xml/**/*.xml'
+    post {
+        always {
+            archiveArtifacts artifacts: '**/pod-logs/**/*.log', fingerprint: false
+            junit '**/build/test-results-xml/**/*.xml'
+        }
+
+
+        success {
+            script {
+                pullRequest.createStatus(status: 'success',
+                        context: 'continuous-integration/jenkins/pr-merge/smokeTest',
+                        description: 'Smoke Tests Passed',
+                        targetUrl: "${env.JOB_URL}testResults")
             }
+        }
 
-
-            success {
-                script {
-                    pullRequest.createStatus(status: 'success',
-                            context: 'continuous-integration/jenkins/pr-merge/smokeTest',
-                            description: 'Smoke Tests Passed',
-                            targetUrl: "${env.JOB_URL}testResults")
-                }
+        failure {
+            script {
+                pullRequest.createStatus(status: 'failure',
+                        context: 'continuous-integration/jenkins/pr-merge/smokeTest',
+                        description: 'Smoke Tests Failed',
+                        targetUrl: "${env.JOB_URL}testResults")
             }
+        }
 
-            failure {
-                script {
-                    pullRequest.createStatus(status: 'failure',
-                            context: 'continuous-integration/jenkins/pr-merge/smokeTest',
-                            description: 'Smoke Tests Failed',
-                            targetUrl: "${env.JOB_URL}testResults")
-                }
-            }
-
-            cleanup {
-                deleteDir() /* clean up our workspace */
-            }
+        cleanup {
+            deleteDir() /* clean up our workspace */
         }
     }
 }
