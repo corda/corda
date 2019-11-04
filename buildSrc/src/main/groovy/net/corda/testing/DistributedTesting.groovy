@@ -50,7 +50,9 @@ class DistributedTesting implements Plugin<Project> {
                     project.logger.info("Evaluating ${task.getPath()}")
                     if (task in requestedTasks && !task.hasProperty("ignoreForDistribution")) {
                         project.logger.info "Modifying ${task.getPath()}"
+                        project.logger.lifecycle("BEFOREEEEEEE")
                         ListTests testListerTask = createTestListingTasks(task, subProject)
+                        project.logger.lifecycle("AFTERRRRRRRR")
                         globalAllocator.addSource(testListerTask, task)
                         Test modifiedTestTask = modifyTestTaskForParallelExecution(subProject, task, globalAllocator)
                     } else {
