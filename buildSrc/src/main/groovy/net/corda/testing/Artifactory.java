@@ -82,7 +82,8 @@ public class Artifactory {
                 LOG.warn("Response body was empty");
             }
         } catch (IOException e) {
-            LOG.warn("Unable to execute GET via REST: ", e);
+            LOG.warn("Unable to execute GET via REST");
+            LOG.debug("Exception", e);
             return false;
         }
 
