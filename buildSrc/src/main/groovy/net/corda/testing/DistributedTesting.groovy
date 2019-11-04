@@ -254,7 +254,7 @@ class DistributedTesting implements Plugin<Project> {
         def capitalizedTaskName = task.getName().capitalize()
         //determine all the tests which are present in this test task.
         //this list will then be shared between the various worker forks
-        def createdListTask = subProject.tasks.create("listTestsFor" + capitalizedTaskName, ListTests) {
+        ListTests createdListTask = subProject.tasks.create("listTestsFor" + capitalizedTaskName, ListTests) {
             group = GRADLE_GROUP
             //the convention is that a testing task is backed by a sourceSet with the same name
             dependsOn subProject.getTasks().getByName("${taskName}Classes")
@@ -281,7 +281,7 @@ class DistributedTesting implements Plugin<Project> {
         subProject.logger.info("created task: " + createdListTask.getPath() + " in project: " + subProject + " it dependsOn: " + createdListTask.dependsOn)
         subProject.logger.info("created task: " + createdPrintTask.getPath() + " in project: " + subProject + " it dependsOn: " + createdPrintTask.dependsOn)
 
-        return createdListTask as ListTests
+        return createdListTask
     }
 
 }
