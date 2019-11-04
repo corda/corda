@@ -5,20 +5,29 @@ package net.corda.testing;
 import groovy.lang.Tuple2;
 import org.gradle.api.tasks.TaskAction;
 import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 public class BucketingAllocator {
-
-    private List<Tuple2<TestLister, Object>> sources = new ArrayList<>();
+    private static final Logger LOG = LoggerFactory.getLogger(BucketingAllocator.class);
     private final List<TestsForForkContainer> forkContainers;
-    private final Supplier<List<Tuple2<String, Double>>> timedTestsProvider;
+    private final Supplier<Tests> timedTestsProvider;
+    private List<Tuple2<TestLister, Object>> sources = new ArrayList<>();
 
 
-    public BucketingAllocator(Integer forkCount, Supplier<List<Tuple2<String, Double>>> timedTestsProvider) {
+    public BucketingAllocator(Integer forkCount, Supplier<Tests> timedTestsProvider) {
         this.forkContainers = IntStream.range(0, forkCount).mapToObj(TestsForForkContainer::new).collect(Collectors.toList());
         this.timedTestsProvider = timedTestsProvider;
     }
@@ -33,9 +42,9 @@ public class BucketingAllocator {
 
     @TaskAction
     public void generateTestPlan() {
-        List<Tuple2<String, Double>> allTestsFromCSV = timedTestsProvider.get();
+        Tests allTestsFromFile = timedTestsProvider.get();
         List<Tuple2<String, Object>> allDiscoveredTests = getTestsOnClasspathOfTestingTasks();
-        List<TestBucket> matchedTests = matchClasspathTestsToCSV(allTestsFromCSV, allDiscoveredTests);
+        List<TestBucket> matchedTests = matchClasspathTestsToFile(allTestsFromFile, allDiscoveredTests);
 
         //use greedy algo - for each testbucket find the currently smallest container and add to it
         allocateTestsToForks(matchedTests);
@@ -44,15 +53,31 @@ public class BucketingAllocator {
         printSummary();
     }
 
+    static String getDuration(long nanos) {
+        long t = TimeUnit.NANOSECONDS.toMinutes(nanos);
+        if (t > 0) {
+            return t + " mins";
+        }
+        t = TimeUnit.NANOSECONDS.toSeconds(nanos);
+        if (t > 0) {
+            return t + " secs";
+        }
+        t = TimeUnit.NANOSECONDS.toMillis(nanos);
+        if (t > 0) {
+            return t + " ms";
+        }
+        return nanos + " ns";
+    }
+
     private void printSummary() {
         forkContainers.forEach(container -> {
             System.out.println("####### TEST PLAN SUMMARY ( " + container.forkIdx + " ) #######");
-            System.out.println("Duration: " + container.getCurrentDuration());
+            System.out.println("Duration: " + getDuration(container.getCurrentDuration()));
             System.out.println("Number of tests: " + container.testsForFork.stream().mapToInt(b -> b.foundTests.size()).sum());
             System.out.println("Tests to Run: ");
             container.testsForFork.forEach(tb -> {
                 System.out.println(tb.testName);
-                tb.foundTests.forEach(ft -> System.out.println("\t" + ft.getFirst() + ", " + ft.getSecond()));
+                tb.foundTests.forEach(ft -> System.out.println("\t" + ft.getFirst() + ", " + getDuration(ft.getSecond())));
             });
         });
     }
@@ -64,12 +89,23 @@ public class BucketingAllocator {
         });
     }
 
-    private List<TestBucket> matchClasspathTestsToCSV(List<Tuple2<String, Double>> allTestsFromCSV, @NotNull List<Tuple2<String, Object>> allDiscoveredTests) {
+    List<TestsForForkContainer> getForkContainers() {
+        return forkContainers;
+    }
+
+    private List<TestBucket> matchClasspathTestsToFile(@NotNull final Tests tests,
+                                                       @NotNull final List<Tuple2<String, Object>> allDiscoveredTests) {
+        // Note that this does not preserve the order of tests with known and unknown durations, as we
+        // always return a duration from 'tests.startsWith'.
         return allDiscoveredTests.stream().map(tuple -> {
-            String testName = tuple.getFirst();
-            Object task = tuple.getSecond();
-            //2DO [can this filtering algorithm be improved - the test names are sorted, it should be possible to do something using binary search]
-            List<Tuple2<String, Double>> matchingTests = allTestsFromCSV.stream().filter(testFromCSV -> testFromCSV.getFirst().startsWith(testName)).collect(Collectors.toList());
+            final String testName = tuple.getFirst();
+            final Object task = tuple.getSecond();
+
+            // If the gradle task is distributing by class rather than method, then 'testName' will be the className
+            // and not className.testName
+            // No matter which it is, we return the mean test duration as the duration value if not found.
+            final List<Tuple2<String, Long>> matchingTests = tests.startsWith(testName);
+
             return new TestBucket(task, testName, matchingTests);
         }).sorted(Comparator.comparing(TestBucket::getDuration).reversed()).collect(Collectors.toList());
     }
@@ -85,18 +121,20 @@ public class BucketingAllocator {
     public static class TestBucket {
         final Object testTask;
         final String testName;
-        final List<Tuple2<String, Double>> foundTests;
-        final Double duration;
+        final List<Tuple2<String, Long>> foundTests;
+        final long durationNanos;
 
-        public TestBucket(Object testTask, String testName, List<Tuple2<String, Double>> foundTests) {
+        public TestBucket(@NotNull final Object testTask,
+                          @NotNull final String testName,
+                          @NotNull final List<Tuple2<String, Long>> foundTests) {
             this.testTask = testTask;
             this.testName = testName;
             this.foundTests = foundTests;
-            duration = Math.max(foundTests.stream().mapToDouble(tp -> Math.max(tp.getSecond(), 1)).sum(), 1);
+            this.durationNanos = foundTests.stream().mapToLong(tp -> Math.max(tp.getSecond(), 1)).sum();
         }
 
-        public Double getDuration() {
-            return duration;
+        public long getDuration() {
+            return durationNanos;
         }
 
         @Override
@@ -105,17 +143,16 @@ public class BucketingAllocator {
                     "testTask=" + testTask +
                     ", nameWithAsterix='" + testName + '\'' +
                     ", foundTests=" + foundTests +
-                    ", duration=" + duration +
+                    ", durationNanos=" + durationNanos +
                     '}';
         }
     }
 
     public static class TestsForForkContainer {
-        private Double runningDuration = 0.0;
         private final Integer forkIdx;
-
         private final List<TestBucket> testsForFork = Collections.synchronizedList(new ArrayList<>());
         private final Map<Object, List<TestBucket>> frozenTests = new HashMap<>();
+        private long runningDuration = 0L;
 
         public TestsForForkContainer(Integer forkIdx) {
             this.forkIdx = forkIdx;
@@ -123,10 +160,10 @@ public class BucketingAllocator {
 
         public void addBucket(TestBucket tb) {
             this.testsForFork.add(tb);
-            this.runningDuration = runningDuration + tb.duration;
+            this.runningDuration = this.runningDuration + tb.durationNanos;
         }
 
-        public Double getCurrentDuration() {
+        public Long getCurrentDuration() {
             return runningDuration;
         }
 
@@ -154,6 +191,4 @@ public class BucketingAllocator {
                     '}';
         }
     }
-
-
 }

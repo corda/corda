@@ -18,6 +18,7 @@ import io.fabric8.kubernetes.client.dsl.PodResource;
 import io.fabric8.kubernetes.client.utils.Serialization;
 import net.corda.testing.retry.Retry;
 import okhttp3.Response;
+import org.apache.commons.compress.utils.IOUtils;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.tasks.TaskAction;
 import org.jetbrains.annotations.NotNull;
@@ -26,6 +27,8 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
@@ -101,8 +104,7 @@ public class KubesTest extends DefaultTask {
         }
 
         List<Future<KubePodResult>> futures = IntStream.range(0, numberOfPods).mapToObj(i -> {
-            String potentialPodName = (taskToExecuteName + "-" + stableRunId + random + i).toLowerCase();
-            String podName = potentialPodName.substring(0, Math.min(potentialPodName.length(), 62));
+            String podName = generatePodName(stableRunId, random, i);
             return submitBuild(NAMESPACE, numberOfPods, i, podName, printOutput, 3);
         }).collect(Collectors.toList());
 
@@ -120,6 +122,16 @@ public class KubesTest extends DefaultTask {
                 throw new RuntimeException(e);
             }
         }).collect(Collectors.toList());
+    }
+
+    @NotNull
+    private String generatePodName(String stableRunId, String random, int i) {
+        int magicMaxLength = 63;
+        String provisionalName = taskToExecuteName.toLowerCase() + "-" + stableRunId + "-" + random + "-" + i;
+        //length = 100
+        //100-63 = 37
+        //subString(37, 100) -? string of 63 characters
+        return provisionalName.substring(Math.max(provisionalName.length() - magicMaxLength, 0));
     }
 
     @NotNull
@@ -150,7 +162,8 @@ public class KubesTest extends DefaultTask {
             int numberOfRetries
     ) {
         return CompletableFuture.supplyAsync(() -> {
-            return buildRunPodWithRetriesOrThrow(namespace, numberOfPods, podIdx, podName, printOutput, numberOfRetries);
+            PersistentVolumeClaim pvc = createPvc(podName);
+            return buildRunPodWithRetriesOrThrow(namespace, numberOfPods, podIdx, podName, printOutput, numberOfRetries, pvc);
         }, executorService);
     }
 
@@ -158,20 +171,26 @@ public class KubesTest extends DefaultTask {
         Runtime.getRuntime().addShutdownHook(new Thread(hook));
     }
 
-    private PersistentVolumeClaim createPvc(KubernetesClient client, String name) {
-        PersistentVolumeClaim pvc = client.persistentVolumeClaims()
-                .inNamespace(NAMESPACE)
-                .createNew()
-                .editOrNewMetadata().withName(name).endMetadata()
-                .editOrNewSpec()
-                .withAccessModes("ReadWriteOnce")
-                .editOrNewResources().addToRequests("storage", new Quantity("100Mi")).endResources()
-                .endSpec()
-                .done();
+    private PersistentVolumeClaim createPvc(String name) {
+        PersistentVolumeClaim pvc;
+        try (KubernetesClient client = getKubernetesClient()) {
+            pvc = client.persistentVolumeClaims()
+                    .inNamespace(NAMESPACE)
+                    .createNew()
+                    .editOrNewMetadata().withName(name).endMetadata()
+                    .editOrNewSpec()
+                    .withAccessModes("ReadWriteOnce")
+                    .editOrNewResources().addToRequests("storage", new Quantity("100Mi")).endResources()
+                    .withStorageClassName("testing-storage")
+                    .endSpec()
+                    .done();
+        }
 
         addShutdownHook(() -> {
-            System.out.println("Deleting PVC: " + pvc.getMetadata().getName());
-            client.persistentVolumeClaims().delete(pvc);
+            try (KubernetesClient client = getKubernetesClient()) {
+                System.out.println("Deleting PVC: " + pvc.getMetadata().getName());
+                client.persistentVolumeClaims().delete(pvc);
+            }
         });
         return pvc;
     }
@@ -182,8 +201,8 @@ public class KubesTest extends DefaultTask {
             int podIdx,
             String podName,
             boolean printOutput,
-            int numberOfRetries
-    ) {
+            int numberOfRetries,
+            PersistentVolumeClaim pvc) {
         addShutdownHook(() -> {
             System.out.println("deleting pod: " + podName);
             try (KubernetesClient client = getKubernetesClient()) {
@@ -207,7 +226,7 @@ public class KubesTest extends DefaultTask {
                         }
                     }
                     getProject().getLogger().lifecycle("creating pod: " + podName);
-                    createdPod = client.pods().inNamespace(namespace).create(buildPodRequest(podName));
+                    createdPod = client.pods().inNamespace(namespace).create(buildPodRequest(podName, pvc));
                     getProject().getLogger().lifecycle("scheduled pod: " + podName);
                 }
 
@@ -221,12 +240,22 @@ public class KubesTest extends DefaultTask {
                 CompletableFuture<Integer> waiter = new CompletableFuture<>();
                 File podOutput = executeBuild(namespace, numberOfPods, podIdx, podName, printOutput, stdOutOs, stdOutIs, errChannelStream, waiter);
 
+
                 int resCode = waiter.join();
-                getProject().getLogger().lifecycle("build has ended on on pod " + podName + " (" + podIdx + "/" + numberOfPods + "), gathering results");
+                getProject().getLogger().lifecycle("build has ended on on pod " + podName + " (" + podIdx + "/" + numberOfPods + ") with result " + resCode + " , gathering results");
                 Collection<File> binaryResults = downloadTestXmlFromPod(namespace, createdPod);
                 getLogger().lifecycle("removing pod " + podName + " (" + podIdx + "/" + numberOfPods + ") after completed build");
+                File podLogsDirectory = new File(getProject().getBuildDir(), "pod-logs");
+                if (!podLogsDirectory.exists()) {
+                    podLogsDirectory.mkdirs();
+                }
+                File logFileToArchive = new File(podLogsDirectory, podName + ".log");
+                try (FileInputStream logIn = new FileInputStream(podOutput); FileOutputStream logOut = new FileOutputStream(logFileToArchive)) {
+                    IOUtils.copy(logIn, logOut);
+                }
                 try (KubernetesClient client = getKubernetesClient()) {
                     client.pods().delete(createdPod);
+                    client.persistentVolumeClaims().delete(pvc);
                 }
                 return new KubePodResult(resCode, podOutput, binaryResults);
             });
@@ -246,7 +275,7 @@ public class KubesTest extends DefaultTask {
                               ByteArrayOutputStream errChannelStream,
                               CompletableFuture<Integer> waiter) throws IOException {
         KubernetesClient client = getKubernetesClient();
-        ExecListener execListener = buildExecListenerForPod(podName, errChannelStream, waiter);
+        ExecListener execListener = buildExecListenerForPod(podName, errChannelStream, waiter, client);
         stdOutIs.connect(stdOutOs);
 
         String[] buildCommand = getBuildCommand(numberOfPods, podIdx);
@@ -260,7 +289,7 @@ public class KubesTest extends DefaultTask {
         return startLogPumping(stdOutIs, podIdx, printOutput);
     }
 
-    private Pod buildPodRequest(String podName) {
+    private Pod buildPodRequest(String podName, PersistentVolumeClaim pvc) {
         return new PodBuilder()
                 .withNewMetadata().withName(podName).endMetadata()
 
@@ -273,23 +302,12 @@ public class KubesTest extends DefaultTask {
                 .withPath("/tmp/gradle")
                 .endHostPath()
                 .endVolume()
-
                 .addNewVolume()
                 .withName("testruns")
-                .withNewHostPath()
-                .withType("DirectoryOrCreate")
-                .withPath("/tmp/testruns")
-                .endHostPath()
+                .withNewPersistentVolumeClaim()
+                .withClaimName(pvc.getMetadata().getName())
+                .endPersistentVolumeClaim()
                 .endVolume()
-
-
-//                .addNewVolume()
-//                .withName("testruns")
-//                .withNewPersistentVolumeClaim()
-//                .withClaimName(pvc.getMetadata().getName())
-//                .endPersistentVolumeClaim()
-//                .endVolume()
-
                 .addNewContainer()
                 .withImage(dockerTag)
                 .withCommand("bash")
@@ -367,7 +385,7 @@ public class KubesTest extends DefaultTask {
     }
 
     private Collection<File> downloadTestXmlFromPod(String namespace, Pod cp) {
-        String resultsInContainerPath = "/tmp/source/build/test-reports";
+        String resultsInContainerPath = TEST_RUN_DIR + "/test-reports";
         String binaryResultsFile = "results.bin";
         String podName = cp.getMetadata().getName();
         Path tempDir = new File(new File(getProject().getBuildDir(), "test-results-xml"), podName).toPath();
@@ -387,9 +405,20 @@ public class KubesTest extends DefaultTask {
     }
 
     private String[] getBuildCommand(int numberOfPods, int podIdx) {
-        String shellScript = "let x=1 ; while [ ${x} -ne 0 ] ; do echo \"Waiting for DNS\" ; curl services.gradle.org > /dev/null 2>&1 ; x=$? ; sleep 1 ; done ; " + "cd /tmp/source ; " +
-                "let y=1 ; while [ ${y} -ne 0 ] ; do echo \"Preparing build directory\" ; ./gradlew testClasses integrationTestClasses --parallel 2>&1 ; y=$? ; sleep 1 ; done ;" +
-                "./gradlew -D" + ListTests.DISTRIBUTION_PROPERTY + "=" + distribution.name() + " -Dkubenetize -PdockerFork=" + podIdx + " -PdockerForks=" + numberOfPods + " " + fullTaskToExecutePath + " " + getLoggingLevel() + " 2>&1 ;" +
+        final String gitBranch = " -Dgit.branch=" + Properties.getGitBranch();
+        final String gitTargetBranch = " -Dgit.target.branch=" + Properties.getTargetGitBranch();
+        final String artifactoryUsername = " -Dartifactory.username=" + Properties.getUsername() + " ";
+        final String artifactoryPassword = " -Dartifactory.password=" + Properties.getPassword() + " ";
+
+        String shellScript = "(let x=1 ; while [ ${x} -ne 0 ] ; do echo \"Waiting for DNS\" ; curl services.gradle.org > /dev/null 2>&1 ; x=$? ; sleep 1 ; done ) && "
+                + " cd /tmp/source && " +
+                "(let y=1 ; while [ ${y} -ne 0 ] ; do echo \"Preparing build directory\" ; ./gradlew testClasses integrationTestClasses --parallel 2>&1 ; y=$? ; sleep 1 ; done ) && " +
+                "(./gradlew -D" + ListTests.DISTRIBUTION_PROPERTY + "=" + distribution.name() +
+                gitBranch +
+                gitTargetBranch +
+                artifactoryUsername +
+                artifactoryPassword +
+                "-Dkubenetize -PdockerFork=" + podIdx + " -PdockerForks=" + numberOfPods + " " + fullTaskToExecutePath + " " + getLoggingLevel() + " 2>&1) ; " +
                 "let rs=$? ; sleep 10 ; exit ${rs}";
         return new String[]{"bash", "-c", shellScript};
     }
@@ -421,13 +450,13 @@ public class KubesTest extends DefaultTask {
             }
 
             if (fileToInspect.isDirectory()) {
-                filesToInspect.addAll(Arrays.stream(fileToInspect.listFiles()).collect(Collectors.toList()));
+                filesToInspect.addAll(Arrays.stream(Optional.ofNullable(fileToInspect.listFiles()).orElse(new File[]{})).collect(Collectors.toList()));
             }
         }
         return folders;
     }
 
-    private ExecListener buildExecListenerForPod(String podName, ByteArrayOutputStream errChannelStream, CompletableFuture<Integer> waitingFuture) {
+    private ExecListener buildExecListenerForPod(String podName, ByteArrayOutputStream errChannelStream, CompletableFuture<Integer> waitingFuture, KubernetesClient client) {
 
         return new ExecListener() {
             final Long start = System.currentTimeMillis();
@@ -457,6 +486,8 @@ public class KubesTest extends DefaultTask {
                     waitingFuture.complete(resultCode);
                 } catch (Exception e) {
                     waitingFuture.completeExceptionally(e);
+                } finally {
+                    client.close();
                 }
             }
         };
