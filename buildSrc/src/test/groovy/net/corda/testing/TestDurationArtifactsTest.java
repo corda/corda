@@ -38,7 +38,7 @@ public class TestDurationArtifactsTest {
                 "        </properties>\n");
 
         for (Tuple2<String, Long> test : tests) {
-            Double d = ((double) test.getSecond()) / 1_000_000;
+            Double d = ((double) test.getSecond()) / 1_000_000_000.0;
             sb.append("        <testcase assertions=\"\" classname=\"" + CLASSNAME + "\" name=\""
                     + test.getFirst() + "\" status=\"\" time=\"" + d.toString() + "\">\n" +
                     "            <skipped/>\n" +
@@ -67,7 +67,7 @@ public class TestDurationArtifactsTest {
                 "        </properties>\n");
 
         for (Tuple2<String, Long> test : tests) {
-            Double d = ((double) test.getSecond()) / 1_000_000;
+            Double d = ((double) test.getSecond()) / 1_000_000_000.0;
             sb.append("        <testcase assertions=\"\" classname=\"" + CLASSNAME + "\" name=\""
                     + test.getFirst() + "\" status=\"\" time=\"\">\n" +
                     "            <skipped/>\n" +
@@ -88,8 +88,8 @@ public class TestDurationArtifactsTest {
     @Test
     public void fromJunitXml() {
         List<Tuple2<String, Long>> tests = new ArrayList<>();
-        tests.add(new Tuple2<>("TEST-A", 111_000_000L));
-        tests.add(new Tuple2<>("TEST-B", 222_200_000L));
+        tests.add(new Tuple2<>("TEST-A", 111_000_000_000L));
+        tests.add(new Tuple2<>("TEST-B", 222_200_000_000L));
         final String xml = getXml(tests);
 
         List<Tuple2<String, Long>> results
@@ -100,9 +100,9 @@ public class TestDurationArtifactsTest {
         Assert.assertFalse("Should have results", results.isEmpty());
         Assert.assertEquals(results.size(), 2);
         Assert.assertEquals(CLASSNAME + "." + "TEST-A", results.get(0).getFirst());
-        Assert.assertEquals(111_000_000L, results.get(0).getSecond().longValue());
+        Assert.assertEquals(111_000_000_000L, results.get(0).getSecond().longValue());
         Assert.assertEquals(CLASSNAME + "." + "TEST-B", results.get(1).getFirst());
-        Assert.assertEquals(222_200_000L, results.get(1).getSecond().longValue());
+        Assert.assertEquals(222_200_000_000L, results.get(1).getSecond().longValue());
     }
 
     @Test
