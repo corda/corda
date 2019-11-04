@@ -23,6 +23,7 @@ import kotlin.test.assertEquals
 import net.corda.serialization.internal.amqp.custom.InstantSerializer
 import net.corda.serialization.internal.amqp.testutils.ProjectStructure.projectRootDir
 import java.math.BigInteger
+import kotlin.test.fail
 
 // To regenerate any of the binary test files do the following
 //
@@ -36,7 +37,7 @@ class EvolvabilityTests {
     // When regenerating the test files this needs to be set to the file system location of the resource files
     @Suppress("UNUSED")
     var localPath: URI = projectRootDir.toUri().resolve(
-            "serialization-test/src/test/resources/net/corda/serialization/internal/amqp")
+            "serialization/src/test/resources/net/corda/serialization/internal/amqp")
 
     companion object {
         private val DUMMY_NOTARY_NAME = CordaX500Name("Notary Service", "Zurich", "CH")
@@ -743,5 +744,28 @@ class EvolvabilityTests {
         val deserialized = DeserializationInput(sf).deserialize(SerializedBytes<ParameterizedContainer>(sc2))
 
         assertEquals(10, deserialized.parameterized?.a)
+    }
+
+    @Test
+    fun addMandatoryFieldWithAltConstructorAndMakeExistingIntFieldNullable() {
+        val sf = testDefaultFactory()
+        val resource = "EvolvabilityTests.addMandatoryFieldWithAltConstructorAndMakeExistingIntFieldNullable"
+
+        // Original version of the class as it was serialised
+        // data class CC(val a: Int)
+        // File(URI("$localPath/$resource")).writeBytes(SerializationOutput(sf).serialize(CC(1)).bytes)
+
+        data class CC(val a: Int?, val b: Int) {
+            @DeprecatedConstructorForDeserialization(1)
+            @Suppress("unused")
+            constructor(a: Int) : this(a,  42)
+        }
+
+        val url = EvolvabilityTests::class.java.getResource(resource) ?: fail("Not found!")
+        val sc2 = url.readBytes()
+        val deserializedCC = DeserializationInput(sf).deserialize(SerializedBytes<CC>(sc2))
+
+        assertEquals(1, deserializedCC.a)
+        assertEquals(42, deserializedCC.b)
     }
 }
