@@ -264,7 +264,7 @@ class DistributedTesting implements Plugin<Project> {
                 //we want to set the test scanning classpath to only the output of the sourceSet - this prevents dependencies polluting the list
                 scanClassPath = task.getTestClassesDirs() ? task.getTestClassesDirs() : Collections.emptyList()
             }
-        }
+        } as ListTests
 
         //convenience task to utilize the output of the test listing task to display to local console, useful for debugging missing tests
         def createdPrintTask = subProject.tasks.create("printTestsFor" + capitalizedTaskName) {
