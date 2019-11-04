@@ -84,4 +84,8 @@ public class Properties {
     static String getTargetGitBranch() {
         return getProperty("git.target.branch").replace('/', '-');
     }
+
+    static boolean getPublishJunitTests() {
+        return ! getProperty("publish.junit").isEmpty();
+    }
 }

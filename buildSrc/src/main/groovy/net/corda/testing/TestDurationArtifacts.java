@@ -204,11 +204,12 @@ public class TestDurationArtifacts {
      */
     @NotNull
     public static Task createZipTask(@NotNull final Project project, @NotNull final String name, @Nullable final Task task) {
-        final Task zipJunitTask = createJunitZipTask(project, name);
         final Task csvTask = createCsvTask(project, name);
-        csvTask.dependsOn(zipJunitTask);
-        // For debugging - can be removed - this simply gathers junit xml and uploads them to artifactory
-        // so that we can inspect them.
+
+        if (Properties.getPublishJunitTests()) {
+            final Task zipJunitTask = createJunitZipTask(project, name);
+            csvTask.dependsOn(zipJunitTask);
+        }
 
         if (task != null) {
             csvTask.dependsOn(task);
