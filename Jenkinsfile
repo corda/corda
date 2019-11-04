@@ -1,4 +1,3 @@
-import static com.r3.build.BuildControl.killAllExistingBuildsForJob
 @Library('existing-build-control')
 import static com.r3.build.BuildControl.killAllExistingBuildsForJob
 
