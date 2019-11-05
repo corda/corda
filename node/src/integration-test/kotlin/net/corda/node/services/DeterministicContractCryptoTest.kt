@@ -18,7 +18,6 @@ import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.internal.CustomCordapp
 import net.corda.testing.node.internal.cordappWithPackages
 import org.junit.ClassRule
-import org.junit.Rule
 import org.junit.Test
 import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.rules.TemporaryFolder
@@ -33,7 +32,7 @@ class DeterministicContractCryptoTest {
         @JvmField
         val djvmSources = DeterministicSourcesRule()
 
-        @Rule
+        @ClassRule
         @JvmField
         val tempFolder = TemporaryFolder()
 
@@ -48,7 +47,7 @@ class DeterministicContractCryptoTest {
                                 CustomCordapp(
                                         packages = setOf("net.corda.contracts.djvm.crypto"),
                                         name = "deterministic-crypto-contract",
-                                        signingInfo = CustomCordapp.SigningInfo(path, 10, "RSA")
+                                        signingInfo = CustomCordapp.SigningInfo(path, 1, "RSA")
                                 )
                         ),
                         djvmBootstrapSource = djvmSources.bootstrap,

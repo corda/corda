@@ -22,13 +22,15 @@ import net.corda.testing.node.internal.CustomCordapp
 import net.corda.testing.node.internal.cordappWithPackages
 import org.assertj.core.api.AssertionsForInterfaceTypes.assertThat
 import org.junit.ClassRule
-import org.junit.Rule
 import org.junit.Test
 import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.api.assertThrows
 import org.junit.rules.TemporaryFolder
 
 class NonDeterministicContractVerifyTest {
+
+
+
     companion object {
         val logger = loggerFor<NonDeterministicContractVerifyTest>()
 
@@ -36,7 +38,7 @@ class NonDeterministicContractVerifyTest {
         @JvmField
         val djvmSources = DeterministicSourcesRule()
 
-        @Rule
+        @ClassRule
         @JvmField
         val tempFolder = TemporaryFolder()
 
@@ -51,7 +53,7 @@ class NonDeterministicContractVerifyTest {
                                 CustomCordapp(
                                         packages = setOf("net.corda.contracts.djvm.broken"),
                                         name = "nondeterministic-contract",
-                                        signingInfo = CustomCordapp.SigningInfo(path, 10, "RSA")
+                                        signingInfo = CustomCordapp.SigningInfo(path, 1, "RSA")
                                 )
                         ),
                         djvmBootstrapSource = djvmSources.bootstrap,

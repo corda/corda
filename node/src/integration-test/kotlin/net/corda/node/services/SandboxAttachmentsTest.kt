@@ -19,7 +19,6 @@ import net.corda.testing.node.internal.CustomCordapp
 import net.corda.testing.node.internal.cordappWithPackages
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.ClassRule
-import org.junit.Rule
 import org.junit.Test
 import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.api.assertThrows
@@ -33,7 +32,7 @@ class SandboxAttachmentsTest {
         @JvmField
         val djvmSources = DeterministicSourcesRule()
 
-        @Rule
+        @ClassRule
         @JvmField
         val tempFolder = TemporaryFolder()
 
@@ -48,7 +47,7 @@ class SandboxAttachmentsTest {
                                 CustomCordapp(
                                         packages = setOf("net.corda.contracts.djvm.attachment"),
                                         name = "sandbox-attachment-contract",
-                                        signingInfo = CustomCordapp.SigningInfo(path, 10, "RSA")
+                                        signingInfo = CustomCordapp.SigningInfo(path, 1, "RSA")
                                 )
                         ),
                         djvmBootstrapSource = djvmSources.bootstrap,
