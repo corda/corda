@@ -50,9 +50,7 @@ class DistributedTesting implements Plugin<Project> {
                     project.logger.info("Evaluating ${task.getPath()}")
                     if (task in requestedTasks && !task.hasProperty("ignoreForDistribution")) {
                         project.logger.info "Modifying ${task.getPath()}"
-                        project.logger.lifecycle("BEFOREEEEEEE")
-                        ListTests testListerTask = createTestListingTasks(task, subProject)
-                        project.logger.lifecycle("AFTERRRRRRRR")
+                        Task testListerTask = createTestListingTasks(task, subProject)
                         globalAllocator.addSource(testListerTask, task)
                         Test modifiedTestTask = modifyTestTaskForParallelExecution(subProject, task, globalAllocator)
                     } else {
@@ -251,12 +249,12 @@ class DistributedTesting implements Plugin<Project> {
         project.plugins.apply(ImageBuilding)
     }
 
-    private ListTests createTestListingTasks(Test task, Project subProject) {
+    private Task createTestListingTasks(Test task, Project subProject) {
         def taskName = task.getName()
         def capitalizedTaskName = task.getName().capitalize()
         //determine all the tests which are present in this test task.
         //this list will then be shared between the various worker forks
-        ListTests createdListTask = subProject.tasks.create("listTestsFor" + capitalizedTaskName, ListTests) {
+        Task createdListTask = subProject.tasks.create("listTestsFor" + capitalizedTaskName, ListTests) {
             group = GRADLE_GROUP
             //the convention is that a testing task is backed by a sourceSet with the same name
             dependsOn subProject.getTasks().getByName("${taskName}Classes")
@@ -264,7 +262,7 @@ class DistributedTesting implements Plugin<Project> {
                 //we want to set the test scanning classpath to only the output of the sourceSet - this prevents dependencies polluting the list
                 scanClassPath = task.getTestClassesDirs() ? task.getTestClassesDirs() : Collections.emptyList()
             }
-        } as ListTests
+        }
 
         //convenience task to utilize the output of the test listing task to display to local console, useful for debugging missing tests
         def createdPrintTask = subProject.tasks.create("printTestsFor" + capitalizedTaskName) {
