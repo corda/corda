@@ -602,7 +602,7 @@ task allParallelIntegrationTest(type: ParallelTestGroup) {
     streamOutput false
     coresPerFork 5
     memoryInGbPerFork 10
-    distribute DistributeTestsBy.CLASS
+    distribute DistributeTestsBy.METHOD
 }
 task allParallelUnitTest(type: ParallelTestGroup) {
     podLogLevel PodLogLevel.INFO
