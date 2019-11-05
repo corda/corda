@@ -418,7 +418,7 @@ public class KubesTest extends DefaultTask {
                 gitTargetBranch +
                 artifactoryUsername +
                 artifactoryPassword +
-                "-Dkubenetize -PdockerFork=" + podIdx + " -PdockerForks=" + numberOfPods + " " + fullTaskToExecutePath + " " + getLoggingLevel() + " 2>&1 --stacktrace) ; " +
+                "-Dkubenetize -PdockerFork=" + podIdx + " -PdockerForks=" + numberOfPods + " " + fullTaskToExecutePath + " " + getLoggingLevel() + " --stacktrace 2>&1) ; " +
                 "let rs=$? ; sleep 10 ; exit ${rs}";
         return new String[]{"bash", "-c", shellScript};
     }
