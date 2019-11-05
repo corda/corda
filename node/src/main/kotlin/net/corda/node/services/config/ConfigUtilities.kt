@@ -54,8 +54,13 @@ object ConfigHelper {
                 .withFallback(defaultConfig)
                 .resolve()
 
-        val entrySet = finalConfig.entrySet().filter { entry -> entry.key.contains("\"") }
-        for ((key) in entrySet) {
+        val entrySet = finalConfig.entrySet().filter { entry ->
+            // System properties can reasonably be expected to contain '.'. However, only
+            // entries that match this pattern are allowed to contain a '"' character:
+            //           systemProperties."text-without-any-quotes-in"
+            with(entry.key) { contains("\"") && !matches("^systemProperties\\.\"[^\"]++\"\$".toRegex()) }
+        }
+        for (key in entrySet) {
             log.error("Config files should not contain \" in property names. Please fix: $key")
         }
 
@@ -63,8 +68,10 @@ object ConfigHelper {
     }
 
     private fun Config.cordaEntriesOnly(): Config {
-
-        return ConfigFactory.parseMap(toProperties().filterKeys { (it as String).startsWith(CORDA_PROPERTY_PREFIX) }.mapKeys { (it.key as String).removePrefix(CORDA_PROPERTY_PREFIX) })
+        return ConfigFactory.parseMap(toProperties()
+            .filterKeys { (it as String).startsWith(CORDA_PROPERTY_PREFIX) }
+            .mapKeys { (it.key as String).removePrefix(CORDA_PROPERTY_PREFIX) }
+        )
     }
 }
 

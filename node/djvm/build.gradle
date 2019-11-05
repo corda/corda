@@ -1,0 +1,24 @@
+apply from: '../../deterministic.gradle'
+apply plugin: 'com.jfrog.artifactory'
+apply plugin: 'net.corda.plugins.publish-utils'
+apply plugin: 'java-library'
+
+description 'Internal Corda Node modules for deterministic contract verification.'
+
+dependencies {
+    api 'org.jetbrains.kotlin:kotlin-stdlib-jdk8'
+    api project(path: ':core-deterministic', configuration: 'deterministicArtifacts')
+    api project(path: ':serialization-deterministic', configuration: 'deterministicArtifacts')
+}
+
+jar {
+    archiveBaseName = 'corda-node-djvm'
+    manifest {
+        attributes('Automatic-Module-Name': 'net.corda.node.djvm')
+        attributes('Sealed': true)
+    }
+}
+
+publish {
+    name jar.archiveBaseName.get()
+}

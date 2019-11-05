@@ -99,7 +99,8 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
     @Throws(AttachmentResolutionException::class, TransactionResolutionException::class)
     @DeleteForDJVM
     fun toLedgerTransaction(services: ServicesForResolution): LedgerTransaction {
-        return toLedgerTransactionInternal(
+        return services.specialise(
+            toLedgerTransactionInternal(
                 resolveIdentity = { services.identityService.partyFromKey(it) },
                 resolveAttachment = { services.attachments.openAttachment(it) },
                 resolveStateRefAsSerialized = { resolveStateRefBinaryComponent(it, services) },
@@ -109,6 +110,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                 },
                 // `as?` is used due to [MockServices] not implementing [ServiceHubCoreInternal]
                 isAttachmentTrusted = { (services as? ServiceHubCoreInternal)?.attachmentTrustCalculator?.calculate(it) ?: true }
+            )
         )
     }
 
@@ -129,7 +131,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
      * @throws AttachmentResolutionException if a required attachment was not found using [resolveAttachment].
      * @throws TransactionResolutionException if an input was not found not using [resolveStateRef].
      */
-    @Deprecated("Use toLedgerTransaction(ServicesForTransaction) instead")
+    @Deprecated("Use toLedgerTransaction(ServicesForResolution) instead")
     @Throws(AttachmentResolutionException::class, TransactionResolutionException::class)
     fun toLedgerTransaction(
             resolveIdentity: (PublicKey) -> Party?,

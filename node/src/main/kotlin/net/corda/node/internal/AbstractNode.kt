@@ -12,38 +12,84 @@ import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.internal.AliasPrivateKey
 import net.corda.core.crypto.newSecureRandom
-import net.corda.core.flows.*
+import net.corda.core.flows.ContractUpgradeFlow
+import net.corda.core.flows.FinalityFlow
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowLogicRefFactory
+import net.corda.core.flows.InitiatedBy
+import net.corda.core.flows.NotaryChangeFlow
+import net.corda.core.flows.NotaryFlow
+import net.corda.core.flows.StartableByService
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.internal.*
+import net.corda.core.internal.AttachmentTrustCalculator
+import net.corda.core.internal.FlowStateMachine
+import net.corda.core.internal.NODE_INFO_DIRECTORY
+import net.corda.core.internal.NamedCacheFactory
+import net.corda.core.internal.NetworkParametersStorage
+import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.concurrent.openFuture
+import net.corda.core.internal.div
 import net.corda.core.internal.messaging.InternalCordaRPCOps
 import net.corda.core.internal.notary.NotaryService
-import net.corda.core.messaging.*
-import net.corda.core.node.*
-import net.corda.core.node.services.*
+import net.corda.core.internal.rootMessage
+import net.corda.core.internal.uncheckedCast
+import net.corda.core.messaging.ClientRpcSslOptions
+import net.corda.core.messaging.CordaRPCOps
+import net.corda.core.messaging.FlowHandle
+import net.corda.core.messaging.FlowHandleImpl
+import net.corda.core.messaging.FlowProgressHandle
+import net.corda.core.messaging.FlowProgressHandleImpl
+import net.corda.core.messaging.RPCOps
+import net.corda.core.node.AppServiceHub
+import net.corda.core.node.NetworkParameters
+import net.corda.core.node.NodeInfo
+import net.corda.core.node.ServiceHub
+import net.corda.core.node.ServicesForResolution
+import net.corda.core.node.services.ContractUpgradeService
+import net.corda.core.node.services.CordaService
+import net.corda.core.node.services.IdentityService
+import net.corda.core.node.services.KeyManagementService
+import net.corda.core.node.services.TransactionVerifierService
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SingletonSerializeAsToken
+import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.days
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.minutes
+import net.corda.djvm.source.ApiSource
+import net.corda.djvm.source.EmptyApi
+import net.corda.djvm.source.UserSource
 import net.corda.node.CordaClock
 import net.corda.node.VersionInfo
 import net.corda.node.internal.classloading.requireAnnotation
-import net.corda.node.internal.cordapp.*
+import net.corda.node.internal.cordapp.CordappConfigFileProvider
+import net.corda.node.internal.cordapp.CordappProviderImpl
+import net.corda.node.internal.cordapp.CordappProviderInternal
+import net.corda.node.internal.cordapp.JarScanningCordappLoader
+import net.corda.node.internal.cordapp.VirtualCordapp
 import net.corda.node.internal.rpc.proxies.AuthenticatedRpcOpsProxy
 import net.corda.node.internal.rpc.proxies.ThreadContextAdjustingRpcOpsProxy
 import net.corda.node.services.ContractUpgradeHandler
 import net.corda.node.services.FinalityHandler
 import net.corda.node.services.NotaryChangeHandler
-import net.corda.node.services.api.*
+import net.corda.node.services.api.AuditService
+import net.corda.node.services.api.DummyAuditService
+import net.corda.node.services.api.FlowStarter
+import net.corda.node.services.api.MonitoringService
+import net.corda.node.services.api.NetworkMapCacheInternal
+import net.corda.node.services.api.NodePropertiesStore
+import net.corda.node.services.api.SchemaService
+import net.corda.node.services.api.ServiceHubInternal
+import net.corda.node.services.api.VaultServiceInternal
+import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.node.services.attachments.NodeAttachmentTrustCalculator
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
@@ -61,15 +107,36 @@ import net.corda.node.services.network.NetworkMapClient
 import net.corda.node.services.network.NetworkMapUpdater
 import net.corda.node.services.network.NodeInfoWatcher
 import net.corda.node.services.network.PersistentNetworkMapCache
-import net.corda.node.services.persistence.*
+import net.corda.node.services.persistence.AbstractPartyDescriptor
+import net.corda.node.services.persistence.AbstractPartyToX500NameAsStringConverter
+import net.corda.node.services.persistence.AttachmentStorageInternal
+import net.corda.node.services.persistence.DBCheckpointStorage
+import net.corda.node.services.persistence.DBTransactionMappingStorage
+import net.corda.node.services.persistence.DBTransactionStorage
+import net.corda.node.services.persistence.NodeAttachmentService
+import net.corda.node.services.persistence.NodePropertiesPersistentStore
+import net.corda.node.services.persistence.PublicKeyToOwningIdentityCacheImpl
+import net.corda.node.services.persistence.PublicKeyToTextConverter
 import net.corda.node.services.rpc.CheckpointDumper
 import net.corda.node.services.schema.NodeSchemaService
-import net.corda.node.services.statemachine.*
+import net.corda.node.services.statemachine.ExternalEvent
+import net.corda.node.services.statemachine.FlowLogicRefFactoryImpl
+import net.corda.node.services.statemachine.FlowMonitor
+import net.corda.node.services.statemachine.SingleThreadedStateMachineManager
+import net.corda.node.services.statemachine.StaffedFlowHospital
+import net.corda.node.services.statemachine.StateMachineManager
+import net.corda.node.services.statemachine.StateMachineManagerInternal
+import net.corda.node.services.transactions.BasicVerifierFactoryService
+import net.corda.node.services.transactions.DeterministicVerifierFactoryService
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
 import net.corda.node.services.transactions.SimpleNotaryService
+import net.corda.node.services.transactions.VerifierFactoryService
 import net.corda.node.services.upgrade.ContractUpgradeServiceImpl
 import net.corda.node.services.vault.NodeVaultService
-import net.corda.node.utilities.*
+import net.corda.node.utilities.AffinityExecutor
+import net.corda.node.utilities.BindableNamedCacheFactory
+import net.corda.node.utilities.NamedThreadFactory
+import net.corda.node.utilities.NotaryLoader
 import net.corda.nodeapi.internal.NodeInfoAndSigned
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.config.CertificateStore
@@ -85,7 +152,12 @@ import net.corda.nodeapi.internal.crypto.X509Utilities.NODE_IDENTITY_ALIAS_PREFI
 import net.corda.nodeapi.internal.cryptoservice.CryptoServiceFactory
 import net.corda.nodeapi.internal.cryptoservice.SupportedCryptoServices
 import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
-import net.corda.nodeapi.internal.persistence.*
+import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.persistence.CouldNotCreateDataSourceException
+import net.corda.nodeapi.internal.persistence.DatabaseConfig
+import net.corda.nodeapi.internal.persistence.DatabaseIncompatibleException
+import net.corda.nodeapi.internal.persistence.OutstandingDatabaseChangesException
+import net.corda.nodeapi.internal.persistence.SchemaMigration
 import net.corda.tools.shell.InteractiveShell
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.jolokia.jvmagent.JolokiaServer
@@ -103,13 +175,15 @@ import java.sql.Connection
 import java.time.Clock
 import java.time.Duration
 import java.time.format.DateTimeParseException
-import java.util.*
+import java.util.Objects
+import java.util.Properties
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit.MINUTES
 import java.util.concurrent.TimeUnit.SECONDS
 import java.util.function.Consumer
 import javax.persistence.EntityManager
+import kotlin.collections.ArrayList
 
 /**
  * A base node implementation that can be customised either for production (with real implementations that do real
@@ -125,7 +199,9 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                                protected val versionInfo: VersionInfo,
                                protected val flowManager: FlowManager,
                                val serverThread: AffinityExecutor.ServiceAffinityExecutor,
-                               val busyNodeLatch: ReusableLatch = ReusableLatch()) : SingletonSerializeAsToken() {
+                               val busyNodeLatch: ReusableLatch = ReusableLatch(),
+                               djvmBootstrapSource: ApiSource = EmptyApi,
+                               djvmCordaSource: UserSource? = null) : SingletonSerializeAsToken() {
 
     protected abstract val log: Logger
     @Suppress("LeakingThis")
@@ -214,6 +290,18 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     ).closeOnStop()
     @Suppress("LeakingThis")
     val transactionVerifierService = InMemoryTransactionVerifierService(transactionVerifierWorkerCount).tokenize()
+    val verifierFactoryService: VerifierFactoryService = if (djvmCordaSource != null) {
+        DeterministicVerifierFactoryService(djvmBootstrapSource, djvmCordaSource).apply {
+            log.info("DJVM sandbox enabled for deterministic contract verification.")
+            if (!configuration.devMode) {
+                log.info("Generating Corda classes for DJVM sandbox.")
+                generateSandbox()
+            }
+            tokenize()
+        }
+    } else {
+        BasicVerifierFactoryService()
+    }
     val contractUpgradeService = ContractUpgradeServiceImpl(cacheFactory).tokenize()
     val auditService = DummyAuditService().tokenize()
     @Suppress("LeakingThis")
@@ -326,7 +414,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     open fun start(): S {
         check(started == null) { "Node has already been started" }
 
-        if (configuration.devMode) {
+        if (configuration.devMode && System.getProperty("co.paralleluniverse.fibers.verifyInstrumentation") == null) {
             System.setProperty("co.paralleluniverse.fibers.verifyInstrumentation", "true")
         }
         log.info("Node starting up ...")
@@ -1068,6 +1156,11 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         // allows services to register handlers to be informed when the node stop method is called
         override fun registerUnloadHandler(runOnStop: () -> Unit) {
             this@AbstractNode.runOnStop += runOnStop
+        }
+
+        override fun specialise(ltx: LedgerTransaction): LedgerTransaction {
+            val ledgerTransaction = servicesForResolution.specialise(ltx)
+            return verifierFactoryService.apply(ledgerTransaction)
         }
     }
 }

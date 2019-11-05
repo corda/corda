@@ -1,6 +1,7 @@
 package net.corda.core.crypto
 
 import net.corda.core.CordaException
+import net.corda.core.CordaInternal
 import net.corda.core.KeepForDJVM
 import net.corda.core.crypto.SecureHash.Companion.zeroHash
 import net.corda.core.serialization.CordaSerializable
@@ -169,8 +170,9 @@ class PartialMerkleTree(val root: PartialTree) {
      * @return leaf-index of this component (starting from zero).
      * @throws MerkleTreeException if the provided hash is not in the tree.
      */
+    @CordaInternal
     @Throws(MerkleTreeException::class)
-    internal fun leafIndex(leaf: SecureHash): Int {
+    fun leafIndex(leaf: SecureHash): Int {
         // Special handling if the tree consists of one node only.
         if (root is PartialTree.IncludedLeaf && root.hash == leaf) return 0
         val flagPath = mutableListOf<Boolean>()

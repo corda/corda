@@ -3,18 +3,32 @@ package net.corda.core.transactions
 import net.corda.core.CordaInternal
 import net.corda.core.KeepForDJVM
 import net.corda.core.StubOutForDJVM
-import net.corda.core.contracts.*
+import net.corda.core.contracts.Attachment
+import net.corda.core.contracts.Command
+import net.corda.core.contracts.CommandData
+import net.corda.core.contracts.CommandWithParties
+import net.corda.core.contracts.ComponentGroupEnum
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.PrivacySalt
+import net.corda.core.contracts.StateAndRef
+import net.corda.core.contracts.TimeWindow
+import net.corda.core.contracts.TransactionState
+import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.Party
-import net.corda.core.internal.*
+import net.corda.core.internal.BasicVerifier
+import net.corda.core.internal.SerializedStateAndRef
+import net.corda.core.internal.Verifier
+import net.corda.core.internal.castIfPossible
+import net.corda.core.internal.deserialiseCommands
+import net.corda.core.internal.deserialiseComponentGroup
+import net.corda.core.internal.isUploaderTrusted
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.node.NetworkParameters
-import net.corda.core.serialization.ConstructorForDeserialization
-import net.corda.core.serialization.CordaSerializable
-import net.corda.core.serialization.DeprecatedConstructorForDeserialization
 import net.corda.core.serialization.internal.AttachmentsClassLoaderBuilder
 import net.corda.core.utilities.contextLogger
-import java.util.*
+import java.util.Collections.unmodifiableList
 import java.util.function.Predicate
 
 /**
@@ -39,10 +53,9 @@ import java.util.function.Predicate
  *
  * [LedgerTransaction]s should never be instantiated directly from client code, but rather via WireTransaction.toLedgerTransaction
  */
+@Suppress("LongParameterList")
 @KeepForDJVM
-@CordaSerializable
 class LedgerTransaction
-@ConstructorForDeserialization
 private constructor(
         // DOCSTART 1
         /** The resolved input states which will be consumed/invalidated by the execution of this transaction. */
@@ -67,22 +80,34 @@ private constructor(
          */
         override val networkParameters: NetworkParameters?,
         /** Referenced states, which are like inputs but won't be consumed. */
-        override val references: List<StateAndRef<ContractState>>
+        override val references: List<StateAndRef<ContractState>>,
         //DOCEND 1
+
+        private val componentGroups: List<ComponentGroup>?,
+        private val serializedInputs: List<SerializedStateAndRef>?,
+        private val serializedReferences: List<SerializedStateAndRef>?,
+        private val isAttachmentTrusted: (Attachment) -> Boolean,
+        private val verifierFactory: (LedgerTransaction, ClassLoader) -> Verifier
 ) : FullTransaction() {
-    // These are not part of the c'tor above as that defines LedgerTransaction's serialisation format
-    private var componentGroups: List<ComponentGroup>? = null
-    private var serializedInputs: List<SerializedStateAndRef>? = null
-    private var serializedReferences: List<SerializedStateAndRef>? = null
-    private var isAttachmentTrusted: (Attachment) -> Boolean = { it.isUploaderTrusted() }
 
     init {
         if (timeWindow != null) check(notary != null) { "Transactions with time-windows must be notarised" }
         checkNotaryWhitelisted()
     }
 
+    @KeepForDJVM
     companion object {
         private val logger = contextLogger()
+
+        private fun <T> protect(list: List<T>?): List<T>? {
+            return list?.run {
+                if (isEmpty()) {
+                    emptyList()
+                } else {
+                    unmodifiableList(this)
+                }
+            }
+        }
 
         @CordaInternal
         internal fun create(
@@ -101,12 +126,58 @@ private constructor(
                 serializedReferences: List<SerializedStateAndRef>? = null,
                 isAttachmentTrusted: (Attachment) -> Boolean
         ): LedgerTransaction {
-            return LedgerTransaction(inputs, outputs, commands, attachments, id, notary, timeWindow, privacySalt, networkParameters, references).apply {
-                this.componentGroups = componentGroups
-                this.serializedInputs = serializedInputs
-                this.serializedReferences = serializedReferences
-                this.isAttachmentTrusted = isAttachmentTrusted
-            }
+            return LedgerTransaction(
+                inputs = inputs,
+                outputs = outputs,
+                commands = commands,
+                attachments = attachments,
+                id = id,
+                notary = notary,
+                timeWindow = timeWindow,
+                privacySalt = privacySalt,
+                networkParameters = networkParameters,
+                references = references,
+                componentGroups = protect(componentGroups),
+                serializedInputs = protect(serializedInputs),
+                serializedReferences = protect(serializedReferences),
+                isAttachmentTrusted = isAttachmentTrusted,
+                verifierFactory = ::BasicVerifier
+            )
+        }
+
+        /**
+         * This factory function will create an instance of [LedgerTransaction]
+         * that will be used inside the DJVM sandbox.
+         */
+        @CordaInternal
+        fun createForSandbox(
+                inputs: List<StateAndRef<ContractState>>,
+                outputs: List<TransactionState<ContractState>>,
+                commands: List<CommandWithParties<CommandData>>,
+                attachments: List<Attachment>,
+                id: SecureHash,
+                notary: Party?,
+                timeWindow: TimeWindow?,
+                privacySalt: PrivacySalt,
+                networkParameters: NetworkParameters,
+                references: List<StateAndRef<ContractState>>): LedgerTransaction {
+            return LedgerTransaction(
+                inputs = inputs,
+                outputs = outputs,
+                commands = commands,
+                attachments = attachments,
+                id = id,
+                notary = notary,
+                timeWindow = timeWindow,
+                privacySalt = privacySalt,
+                networkParameters = networkParameters,
+                references = references,
+                componentGroups = null,
+                serializedInputs = null,
+                serializedReferences = null,
+                isAttachmentTrusted = { true },
+                verifierFactory = ::BasicVerifier
+            )
         }
     }
 
@@ -144,16 +215,47 @@ private constructor(
         // Switch thread local deserialization context to using a cached attachments classloader. This classloader enforces various rules
         // like no-overlap, package namespace ownership and (in future) deterministic Java.
         return AttachmentsClassLoaderBuilder.withAttachmentsClassloaderContext(
-                this.attachments + extraAttachments,
+                attachments + extraAttachments,
                 getParamsWithGoo(),
                 id,
                 isAttachmentTrusted = isAttachmentTrusted) { transactionClassLoader ->
             // Create a copy of the outer LedgerTransaction which deserializes all fields inside the [transactionClassLoader].
             // Only the copy will be used for verification, and the outer shell will be discarded.
             // This artifice is required to preserve backwards compatibility.
-            Verifier(createLtxForVerification(), transactionClassLoader)
+            verifierFactory(createLtxForVerification(), transactionClassLoader)
         }
     }
+
+    /**
+     * Pass all of this [LedgerTransaction] object's serialized state to a [transformer] function.
+     */
+    @CordaInternal
+    fun <T> transform(transformer: (List<ComponentGroup>, List<SerializedStateAndRef>, List<SerializedStateAndRef>) -> T): T {
+        return transformer(componentGroups ?: emptyList(), serializedInputs ?: emptyList(), serializedReferences ?: emptyList())
+    }
+
+    /**
+     * We need a way to customise transaction verification inside the
+     * Node without changing either the wire format or any public APIs.
+     */
+    @CordaInternal
+    fun specialise(alternateVerifier: (LedgerTransaction, ClassLoader) -> Verifier): LedgerTransaction = LedgerTransaction(
+        inputs = inputs,
+        outputs = outputs,
+        commands = commands,
+        attachments = attachments,
+        id = id,
+        notary = notary,
+        timeWindow = timeWindow,
+        privacySalt = privacySalt,
+        networkParameters = networkParameters,
+        references = references,
+        componentGroups = componentGroups,
+        serializedInputs = serializedInputs,
+        serializedReferences = serializedReferences,
+        isAttachmentTrusted = isAttachmentTrusted,
+        verifierFactory = alternateVerifier
+    )
 
     // Read network parameters with backwards compatibility goo.
     private fun getParamsWithGoo(): NetworkParameters {
@@ -213,7 +315,12 @@ private constructor(
                     timeWindow = this.timeWindow,
                     privacySalt = this.privacySalt,
                     networkParameters = this.networkParameters,
-                    references = deserializedReferences
+                    references = deserializedReferences,
+                    componentGroups = componentGroups,
+                    serializedInputs = serializedInputs,
+                    serializedReferences = serializedReferences,
+                    isAttachmentTrusted = isAttachmentTrusted,
+                    verifierFactory = verifierFactory
             )
         } else {
             // This branch is only present for backwards compatibility.
@@ -582,10 +689,25 @@ private constructor(
             notary: Party?,
             timeWindow: TimeWindow?,
             privacySalt: PrivacySalt
-    ) : this(inputs, outputs, commands, attachments, id, notary, timeWindow, privacySalt, null, emptyList())
+    ) : this(
+            inputs = inputs,
+            outputs = outputs,
+            commands = commands,
+            attachments = attachments,
+            id = id,
+            notary = notary,
+            timeWindow = timeWindow,
+            privacySalt = privacySalt,
+            networkParameters = null,
+            references = emptyList(),
+            componentGroups = null,
+            serializedInputs = null,
+            serializedReferences = null,
+            isAttachmentTrusted = { it.isUploaderTrusted() },
+            verifierFactory = ::BasicVerifier
+    )
 
     @Deprecated("LedgerTransaction should not be created directly, use WireTransaction.toLedgerTransaction instead.")
-    @DeprecatedConstructorForDeserialization(1)
     constructor(
             inputs: List<StateAndRef<ContractState>>,
             outputs: List<TransactionState<ContractState>>,
@@ -596,7 +718,23 @@ private constructor(
             timeWindow: TimeWindow?,
             privacySalt: PrivacySalt,
             networkParameters: NetworkParameters
-    ) : this(inputs, outputs, commands, attachments, id, notary, timeWindow, privacySalt, networkParameters, emptyList())
+    ) : this(
+            inputs = inputs,
+            outputs = outputs,
+            commands = commands,
+            attachments = attachments,
+            id = id,
+            notary = notary,
+            timeWindow = timeWindow,
+            privacySalt = privacySalt,
+            networkParameters = networkParameters,
+            references = emptyList(),
+            componentGroups = null,
+            serializedInputs = null,
+            serializedReferences = null,
+            isAttachmentTrusted = { it.isUploaderTrusted() },
+            verifierFactory = ::BasicVerifier
+    )
 
     @Deprecated("LedgerTransactions should not be created directly, use WireTransaction.toLedgerTransaction instead.")
     fun copy(inputs: List<StateAndRef<ContractState>>,
@@ -618,7 +756,12 @@ private constructor(
                 timeWindow = timeWindow,
                 privacySalt = privacySalt,
                 networkParameters = networkParameters,
-                references = references
+                references = references,
+                componentGroups = componentGroups,
+                serializedInputs = serializedInputs,
+                serializedReferences = serializedReferences,
+                isAttachmentTrusted = isAttachmentTrusted,
+                verifierFactory = verifierFactory
         )
     }
 
@@ -643,7 +786,12 @@ private constructor(
                 timeWindow = timeWindow,
                 privacySalt = privacySalt,
                 networkParameters = networkParameters,
-                references = references
+                references = references,
+                componentGroups = componentGroups,
+                serializedInputs = serializedInputs,
+                serializedReferences = serializedReferences,
+                isAttachmentTrusted = isAttachmentTrusted,
+                verifierFactory = verifierFactory
         )
     }
 }

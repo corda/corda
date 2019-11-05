@@ -5,14 +5,30 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigRenderOptions
+import com.typesafe.config.ConfigValue
 import com.typesafe.config.ConfigValueFactory
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.cliutils.CommonCliConstants.BASE_DIR
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.concurrent.firstOf
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.*
-import net.corda.core.internal.concurrent.*
+import net.corda.core.internal.PLATFORM_VERSION
+import net.corda.core.internal.ThreadBox
+import net.corda.core.internal.concurrent.doOnError
+import net.corda.core.internal.concurrent.doneFuture
+import net.corda.core.internal.concurrent.flatMap
+import net.corda.core.internal.concurrent.fork
+import net.corda.core.internal.concurrent.map
+import net.corda.core.internal.concurrent.openFuture
+import net.corda.core.internal.concurrent.transpose
+import net.corda.core.internal.createDirectories
+import net.corda.core.internal.div
+import net.corda.core.internal.list
+import net.corda.core.internal.packageName_
+import net.corda.core.internal.readObject
+import net.corda.core.internal.toPath
+import net.corda.core.internal.uncheckedCast
+import net.corda.core.internal.writeText
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NotaryInfo
@@ -27,7 +43,16 @@ import net.corda.node.internal.Node
 import net.corda.node.internal.NodeWithInfo
 import net.corda.node.internal.clientSslOptionsCompatibleWith
 import net.corda.node.services.Permissions
-import net.corda.node.services.config.*
+import net.corda.node.services.config.ConfigHelper
+import net.corda.node.services.config.FlowOverride
+import net.corda.node.services.config.FlowOverrideConfig
+import net.corda.node.services.config.NetworkServicesConfig
+import net.corda.node.services.config.NodeConfiguration
+import net.corda.node.services.config.NotaryConfig
+import net.corda.node.services.config.configOf
+import net.corda.node.services.config.configureDevKeyAndTrustStores
+import net.corda.node.services.config.parseAsNodeConfiguration
+import net.corda.node.services.config.plus
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
 import net.corda.node.utilities.registration.NodeRegistrationConfiguration
 import net.corda.node.utilities.registration.NodeRegistrationHelper
@@ -63,7 +88,8 @@ import java.time.Duration
 import java.time.Instant
 import java.time.ZoneOffset.UTC
 import java.time.format.DateTimeFormatter
-import java.util.*
+import java.util.Random
+import java.util.UUID
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
@@ -91,7 +117,9 @@ class DriverDSLImpl(
         val networkParameters: NetworkParameters,
         val notaryCustomOverrides: Map<String, Any?>,
         val inMemoryDB: Boolean,
-        val cordappsForAllNodes: Collection<TestCordappInternal>?
+        val cordappsForAllNodes: Collection<TestCordappInternal>?,
+        val djvmBootstrapSource: Path?,
+        val djvmCordaSource: List<Path>
 ) : InternalDriverDSL {
 
     private var _executorService: ScheduledExecutorService? = null
@@ -128,7 +156,7 @@ class DriverDSLImpl(
         if (inMemoryDB && corda.dataSourceProperties.getProperty("dataSource.url").startsWith("jdbc:h2:")) {
             val jdbcUrl = "jdbc:h2:mem:persistence${inMemoryCounter.getAndIncrement()};DB_CLOSE_ON_EXIT=FALSE;LOCK_TIMEOUT=10000;WRITE_DELAY=100"
             corda.dataSourceProperties.setProperty("dataSource.url", jdbcUrl)
-            NodeConfig(typesafe = typesafe + mapOf("dataSourceProperties" to mapOf("dataSource.url" to jdbcUrl)))
+            NodeConfig(typesafe + mapOf("dataSourceProperties" to mapOf("dataSource.url" to jdbcUrl)))
         } else {
             this
         }
@@ -235,11 +263,13 @@ class DriverDSLImpl(
                 NodeConfiguration::flowOverrides.name to flowOverrideConfig.toConfig().root().unwrapped(),
                 NodeConfiguration::additionalNodeInfoPollingFrequencyMsec.name to 1000
         ) + czUrlConfig + jmxConfig + parameters.customOverrides
-        val config = NodeConfig(ConfigHelper.loadConfig(
+        val config = NodeConfig(
+            ConfigHelper.loadConfig(
                 baseDirectory = baseDirectory(name),
                 allowMissingConfig = true,
                 configOverrides = if (overrides.hasPath("devMode")) overrides else overrides + mapOf("devMode" to true)
-        )).checkAndOverrideForInMemoryDB()
+            ).withDJVMConfig(djvmBootstrapSource, djvmCordaSource)
+        ).checkAndOverrideForInMemoryDB()
         return startNodeInternal(config, webAddress, localNetworkMap, parameters)
     }
 
@@ -260,11 +290,13 @@ class DriverDSLImpl(
                 ),
                 "additionalNodeInfoPollingFrequencyMsec" to 1000,
                 "devMode" to false) + customOverrides
-        val config = NodeConfig(ConfigHelper.loadConfig(
+        val config = NodeConfig(
+            ConfigHelper.loadConfig(
                 baseDirectory = baseDirectory,
                 allowMissingConfig = true,
                 configOverrides = overrides
-        )).checkAndOverrideForInMemoryDB()
+            ).withDJVMConfig(djvmBootstrapSource, djvmCordaSource)
+        ).checkAndOverrideForInMemoryDB()
 
         val versionInfo = VersionInfo(PLATFORM_VERSION, "1", "1", "1")
         config.corda.certificatesDirectory.createDirectories()
@@ -699,6 +731,30 @@ class DriverDSLImpl(
                 Permissions.invokeRpc(CordaRPCOps::killFlow)
         )
 
+        /**
+         * Add the DJVM's sources to the node's configuration file.
+         * These will all be ignored unless devMode is also true.
+         */
+        private fun Config.withDJVMConfig(bootstrapSource: Path?, cordaSource: List<Path>): Config {
+            return if (hasPath("devMode") && getBoolean("devMode")) {
+                withOptionalValue("devModeOptions.djvm.bootstrapSource", bootstrapSource) { path ->
+                    valueFor(path.toString())
+                }.withValue("devModeOptions.djvm.cordaSource", valueFor(cordaSource.map(Path::toString)))
+            } else {
+                this
+            }
+        }
+
+        private inline fun <T> Config.withOptionalValue(key: String, obj: T?, body: (T) -> ConfigValue): Config {
+            return if (obj == null) {
+                this
+            } else {
+                withValue(key, body(obj))
+            }
+        }
+
+        private fun <T> valueFor(any: T): ConfigValue = ConfigValueFactory.fromAnyRef(any)
+
         private fun <A> oneOf(array: Array<A>) = array[Random().nextInt(array.size)]
 
         private fun startInProcessNode(
@@ -752,16 +808,18 @@ class DriverDSLImpl(
             systemProperties += overriddenSystemProperties
 
             // See experimental/quasar-hook/README.md for how to generate.
-            val excludePattern = "x(antlr**;bftsmart**;ch**;co.paralleluniverse**;com.codahale**;com.esotericsoftware**;" +
+            val excludePackagePattern = "x(antlr**;bftsmart**;ch**;co.paralleluniverse**;com.codahale**;com.esotericsoftware**;" +
                     "com.fasterxml**;com.google**;com.ibm**;com.intellij**;com.jcabi**;com.nhaarman**;com.opengamma**;" +
                     "com.typesafe**;com.zaxxer**;de.javakaffee**;groovy**;groovyjarjarantlr**;groovyjarjarasm**;io.atomix**;" +
-                    "io.github**;io.netty**;jdk**;joptsimple**;junit**;kotlin**;net.bytebuddy**;net.i2p**;org.apache**;" +
+                    "io.github**;io.netty**;jdk**;joptsimple**;junit**;kotlin**;net.corda.djvm**;djvm.**;net.bytebuddy**;" +
+                    "net.i2p**;org.apache**;" +
                     "org.assertj**;org.bouncycastle**;org.codehaus**;org.crsh**;org.dom4j**;org.fusesource**;org.h2**;" +
                     "org.hamcrest**;org.hibernate**;org.jboss**;org.jcp**;org.joda**;org.junit**;org.mockito**;org.objectweb**;" +
                     "org.objenesis**;org.slf4j**;org.w3c**;org.xml**;org.yaml**;reflectasm**;rx**;org.jolokia**;" +
                     "com.lmax**;picocli**;liquibase**;com.github.benmanes**;org.json**;org.postgresql**;nonapi.io.github.classgraph**;)"
+            val excludeClassloaderPattern = "l(net.corda.djvm.**)"
             val extraJvmArguments = systemProperties.removeResolvedClasspath().map { "-D${it.key}=${it.value}" } +
-                    "-javaagent:$quasarJarPath=$excludePattern"
+                    "-javaagent:$quasarJarPath=$excludePackagePattern$excludeClassloaderPattern"
 
             val loggingLevel = when {
                 logLevelOverride != null -> logLevelOverride
@@ -777,8 +835,10 @@ class DriverDSLImpl(
                 it += extraCmdLineFlag
             }.toList()
 
-            // The following dependencies are excluded from the classpath of the created JVM, so that the environment resembles a real one as close as possible.
-            // These are either classes that will be added as attachments to the node (i.e. samples, finance, opengamma etc.) or irrelevant testing libraries (test, corda-mock etc.).
+            // The following dependencies are excluded from the classpath of the created JVM,
+            // so that the environment resembles a real one as close as possible.
+            // These are either classes that will be added as attachments to the node (i.e. samples, finance, opengamma etc.)
+            // or irrelevant testing libraries (test, corda-mock etc.).
             // TODO: There is pending work to fix this issue without custom blacklisting. See: https://r3-cev.atlassian.net/browse/CORDA-2164.
             val exclude = listOf("samples", "finance", "integrationTest", "test", "corda-mock", "com.opengamma.strata")
             val cp = ProcessUtilities.defaultClassPath.filterNot { cpEntry ->
@@ -1013,7 +1073,9 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
                     networkParameters = defaultParameters.networkParameters,
                     notaryCustomOverrides = defaultParameters.notaryCustomOverrides,
                     inMemoryDB = defaultParameters.inMemoryDB,
-                    cordappsForAllNodes = uncheckedCast(defaultParameters.cordappsForAllNodes)
+                    cordappsForAllNodes = uncheckedCast(defaultParameters.cordappsForAllNodes),
+                    djvmBootstrapSource = defaultParameters.djvmBootstrapSource,
+                    djvmCordaSource = defaultParameters.djvmCordaSource
             )
     )
     val shutdownHook = addShutdownHook(driverDsl::shutdown)
@@ -1090,6 +1152,7 @@ class SplitCompatibilityZoneParams(
     override fun config() : NetworkServicesConfig = config
 }
 
+@Suppress("LongParameterList")
 fun <A> internalDriver(
         isDebug: Boolean = DriverParameters().isDebug,
         driverDirectory: Path = DriverParameters().driverDirectory,
@@ -1107,6 +1170,8 @@ fun <A> internalDriver(
         notaryCustomOverrides: Map<String, Any?> = DriverParameters().notaryCustomOverrides,
         inMemoryDB: Boolean = DriverParameters().inMemoryDB,
         cordappsForAllNodes: Collection<TestCordappInternal>? = null,
+        djvmBootstrapSource: Path? = null,
+        djvmCordaSource: List<Path> = emptyList(),
         dsl: DriverDSLImpl.() -> A
 ): A {
     return genericDriver(
@@ -1126,7 +1191,9 @@ fun <A> internalDriver(
                     networkParameters = networkParameters,
                     notaryCustomOverrides = notaryCustomOverrides,
                     inMemoryDB = inMemoryDB,
-                    cordappsForAllNodes = cordappsForAllNodes
+                    cordappsForAllNodes = cordappsForAllNodes,
+                    djvmBootstrapSource = djvmBootstrapSource,
+                    djvmCordaSource = djvmCordaSource
             ),
             coerce = { it },
             dsl = dsl
