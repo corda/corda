@@ -22,6 +22,7 @@ object CommercialPaperSchema
  * as it stood at the time of writing.
  */
 @CordaSerializable
+@Suppress("MagicNumber") // SQL column length
 object CommercialPaperSchemaV1 : MappedSchema(schemaFamily = CommercialPaperSchema.javaClass, version = 1, mappedTypes = listOf(PersistentCommercialPaperState::class.java)) {
 
     override val migrationResource = "commercial-paper.changelog-master"

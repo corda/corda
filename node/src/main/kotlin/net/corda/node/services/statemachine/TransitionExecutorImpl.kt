@@ -9,6 +9,7 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.contextDatabase
 import net.corda.nodeapi.internal.persistence.contextTransactionOrNull
 import java.security.SecureRandom
+import javax.persistence.OptimisticLockException
 
 /**
  * This [TransitionExecutor] runs the transition actions using the passed in [ActionExecutor] and manually dirties the
@@ -27,6 +28,7 @@ class TransitionExecutorImpl(
         val log = contextLogger()
     }
 
+    @Suppress("NestedBlockDepth", "ReturnCount")
     @Suspendable
     override fun executeTransition(
             fiber: FlowFiber,
@@ -47,15 +49,24 @@ class TransitionExecutorImpl(
                     // Instead we just keep around the old error state and wait for a new schedule, perhaps
                     // triggered from a flow hospital
                     log.warn("Error while executing $action during transition to errored state, aborting transition", exception)
+                    // CORDA-3354 - Go to the hospital with the new error that has occurred
+                    // while already in a error state (as this error could be for a different reason)
                     return Pair(FlowContinuation.Abort, previousState.copy(isFlowResumed = false))
                 } else {
                     // Otherwise error the state manually keeping the old flow state and schedule a DoRemainingWork
                     // to trigger error propagation
-                    log.info("Error while executing $action, erroring state", exception)
+                    log.info("Error while executing $action, with event $event, erroring state", exception)
+                    if(previousState.isRemoved && exception is OptimisticLockException) {
+                        log.debug("Flow has been killed and the following error is likely due to the flow's checkpoint being deleted. " +
+                                "Occurred while executing $action, with event $event", exception)
+                    } else {
+                        log.info("Error while executing $action, with event $event, erroring state", exception)
+                    }
                     val newState = previousState.copy(
                             checkpoint = previousState.checkpoint.copy(
                                     errorState = previousState.checkpoint.errorState.addErrors(
-                                            listOf(FlowError(secureRandom.nextLong(), exception))
+                                            // Wrap the exception with [StateTransitionException] for handling by the flow hospital
+                                            listOf(FlowError(secureRandom.nextLong(), StateTransitionException(action, event, exception)))
                                     )
                             ),
                             isFlowResumed = false

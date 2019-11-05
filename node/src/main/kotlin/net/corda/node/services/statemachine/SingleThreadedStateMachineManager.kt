@@ -16,6 +16,7 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.internal.concurrent.map
+import net.corda.core.internal.concurrent.mapError
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.DataFeed
 import net.corda.core.serialization.SerializedBytes
@@ -113,7 +114,7 @@ class SingleThreadedStateMachineManager(
     private var checkpointSerializationContext: CheckpointSerializationContext? = null
     private var actionExecutor: ActionExecutor? = null
 
-    override val flowHospital: StaffedFlowHospital = StaffedFlowHospital(flowMessaging, ourSenderUUID)
+    override val flowHospital: StaffedFlowHospital = makeFlowHospital()
     private val transitionExecutor = makeTransitionExecutor()
 
     override val allStateMachines: List<FlowLogic<*>>
@@ -210,12 +211,14 @@ class SingleThreadedStateMachineManager(
     }
 
     private fun <A> startFlow(
+            flowId: StateMachineRunId,
             flowLogic: FlowLogic<A>,
             context: InvocationContext,
             ourIdentity: Party?,
             deduplicationHandler: DeduplicationHandler?
     ): CordaFuture<FlowStateMachine<A>> {
         return startFlowInternal(
+                flowId,
                 invocationContext = context,
                 flowLogic = flowLogic,
                 flowStart = FlowStart.Explicit,
@@ -230,7 +233,10 @@ class SingleThreadedStateMachineManager(
             cancelTimeoutIfScheduled(id)
             val flow = flows.remove(id)
             if (flow != null) {
-                logger.debug("Killing flow known to physical node.")
+                flow.fiber.transientState?.let {
+                    flow.fiber.transientState = TransientReference(it.value.copy(isRemoved = true))
+                }
+                logger.info("Killing flow $id known to this node.")
                 decrementLiveFibers()
                 totalFinishedFlows.inc()
                 try {
@@ -239,6 +245,7 @@ class SingleThreadedStateMachineManager(
                 } finally {
                     database.transaction {
                         checkpointStorage.removeCheckpoint(id)
+                        serviceHub.vaultService.softLockRelease(id.uuid)
                     }
                     transitionExecutor.forceRemoveFlow(id)
                     unfinishedFibers.countDown()
@@ -343,58 +350,71 @@ class SingleThreadedStateMachineManager(
         }
     }
 
+    @Suppress("TooGenericExceptionCaught", "ComplexMethod", "MaxLineLength") // this is fully intentional here, see comment in the catch clause
     override fun retryFlowFromSafePoint(currentState: StateMachineState) {
         // Get set of external events
         val flowId = currentState.flowLogic.runId
-        val oldFlowLeftOver = mutex.locked { flows[flowId] }?.fiber?.transientValues?.value?.eventQueue
-        if (oldFlowLeftOver == null) {
-            logger.error("Unable to find flow for flow $flowId. Something is very wrong. The flow will not retry.")
-            return
-        }
-        val flow = if (currentState.isAnyCheckpointPersisted) {
-            // We intentionally grab the checkpoint from storage rather than relying on the one referenced by currentState. This is so that
-            // we mirror exactly what happens when restarting the node.
-            val serializedCheckpoint = checkpointStorage.getCheckpoint(flowId)
-            if (serializedCheckpoint == null) {
-                logger.error("Unable to find database checkpoint for flow $flowId. Something is very wrong. The flow will not retry.")
+        try {
+            val oldFlowLeftOver = mutex.locked { flows[flowId] }?.fiber?.transientValues?.value?.eventQueue
+            if (oldFlowLeftOver == null) {
+                logger.error("Unable to find flow for flow $flowId. Something is very wrong. The flow will not retry.")
                 return
             }
-            // Resurrect flow
-            createFlowFromCheckpoint(
+            val flow = if (currentState.isAnyCheckpointPersisted) {
+                // We intentionally grab the checkpoint from storage rather than relying on the one referenced by currentState. This is so that
+                // we mirror exactly what happens when restarting the node.
+                val serializedCheckpoint = checkpointStorage.getCheckpoint(flowId)
+                if (serializedCheckpoint == null) {
+                    logger.error("Unable to find database checkpoint for flow $flowId. Something is very wrong. The flow will not retry.")
+                    return
+                }
+                // Resurrect flow
+                createFlowFromCheckpoint(
                     id = flowId,
                     serializedCheckpoint = serializedCheckpoint,
                     initialDeduplicationHandler = null,
                     isAnyCheckpointPersisted = true,
                     isStartIdempotent = false
-            ) ?: return
-        } else {
-            // Just flow initiation message
-            null
-        }
-        mutex.locked {
-            if (stopping) {
-                return
+                ) ?: return
+            } else {
+                // Just flow initiation message
+                null
             }
-            // Remove any sessions the old flow has.
-            for (sessionId in getFlowSessionIds(currentState.checkpoint)) {
-                sessionToFlow.remove(sessionId)
-            }
-            if (flow != null) {
-                injectOldProgressTracker(currentState.flowLogic.progressTracker, flow.fiber.logic)
-                addAndStartFlow(flowId, flow)
-            }
-            // Deliver all the external events from the old flow instance.
-            val unprocessedExternalEvents = mutableListOf<ExternalEvent>()
-            do {
-                val event = oldFlowLeftOver.tryReceive()
-                if (event is Event.GeneratedByExternalEvent) {
-                    unprocessedExternalEvents += event.deduplicationHandler.externalCause
+            mutex.locked {
+                if (stopping) {
+                    return
                 }
-            } while (event != null)
-            val externalEvents = currentState.pendingDeduplicationHandlers.map { it.externalCause } + unprocessedExternalEvents
-            for (externalEvent in externalEvents) {
-                deliverExternalEvent(externalEvent)
+                // Remove any sessions the old flow has.
+                for (sessionId in getFlowSessionIds(currentState.checkpoint)) {
+                    sessionToFlow.remove(sessionId)
+                }
+                if (flow != null) {
+                    injectOldProgressTracker(currentState.flowLogic.progressTracker, flow.fiber.logic)
+                    addAndStartFlow(flowId, flow)
+                }
+                // Deliver all the external events from the old flow instance.
+                val unprocessedExternalEvents = mutableListOf<ExternalEvent>()
+                do {
+                    val event = oldFlowLeftOver.tryReceive()
+                    if (event is Event.GeneratedByExternalEvent) {
+                        unprocessedExternalEvents += event.deduplicationHandler.externalCause
+                    }
+                } while (event != null)
+                val externalEvents = currentState.pendingDeduplicationHandlers.map { it.externalCause } + unprocessedExternalEvents
+                for (externalEvent in externalEvents) {
+                    deliverExternalEvent(externalEvent)
+                }
             }
+        } catch (e: Exception) {
+            // Failed to retry - manually put the flow in for observation rather than
+            // relying on the [HospitalisingInterceptor] to do so
+            val exceptions = (currentState.checkpoint.errorState as? ErrorState.Errored)
+                ?.errors
+                ?.map { it.exception }
+                ?.plus(e) ?: emptyList()
+            logger.info("Failed to retry flow $flowId, keeping in for observation and aborting")
+            flowHospital.forceIntoOvernightObservation(flowId, exceptions)
+            throw e
         }
     }
 
@@ -410,7 +430,13 @@ class SingleThreadedStateMachineManager(
     }
 
     private fun <T> onExternalStartFlow(event: ExternalEvent.ExternalStartFlowEvent<T>) {
-        val future = startFlow(event.flowLogic, event.context, ourIdentity = null, deduplicationHandler = event.deduplicationHandler)
+        val future = startFlow(
+            event.flowId,
+            event.flowLogic,
+            event.context,
+            ourIdentity = null,
+            deduplicationHandler = event.deduplicationHandler
+        )
         event.wireUpFuture(future)
     }
 
@@ -476,7 +502,16 @@ class SingleThreadedStateMachineManager(
                 is InitiatedFlowFactory.Core -> event.receivedMessage.platformVersion
                 is InitiatedFlowFactory.CorDapp -> null
             }
-            startInitiatedFlow(flowLogic, event.deduplicationHandler, senderSession, initiatedSessionId, sessionMessage, senderCoreFlowVersion, initiatedFlowInfo)
+            startInitiatedFlow(
+                event.flowId,
+                flowLogic,
+                event.deduplicationHandler,
+                senderSession,
+                initiatedSessionId,
+                sessionMessage,
+                senderCoreFlowVersion,
+                initiatedFlowInfo
+            )
         } catch (t: Throwable) {
             logger.warn("Unable to initiate flow from $sender (appName=${sessionMessage.appName} " +
                     "flowVersion=${sessionMessage.flowVersion}), sending to the flow hospital", t)
@@ -503,7 +538,9 @@ class SingleThreadedStateMachineManager(
         return serviceHub.getFlowFactory(initiatorFlowClass) ?: throw SessionRejectException.NotRegistered(initiatorFlowClass)
     }
 
+    @Suppress("LongParameterList")
     private fun <A> startInitiatedFlow(
+            flowId: StateMachineRunId,
             flowLogic: FlowLogic<A>,
             initiatingMessageDeduplicationHandler: DeduplicationHandler,
             peerSession: FlowSessionImpl,
@@ -515,13 +552,19 @@ class SingleThreadedStateMachineManager(
         val flowStart = FlowStart.Initiated(peerSession, initiatedSessionId, initiatingMessage, senderCoreFlowVersion, initiatedFlowInfo)
         val ourIdentity = ourFirstIdentity
         startFlowInternal(
-                InvocationContext.peer(peerSession.counterparty.name), flowLogic, flowStart, ourIdentity,
+                flowId,
+                InvocationContext.peer(peerSession.counterparty.name),
+                flowLogic,
+                flowStart,
+                ourIdentity,
                 initiatingMessageDeduplicationHandler,
                 isStartIdempotent = false
         )
     }
 
+    @Suppress("LongParameterList")
     private fun <A> startFlowInternal(
+            flowId: StateMachineRunId,
             invocationContext: InvocationContext,
             flowLogic: FlowLogic<A>,
             flowStart: FlowStart,
@@ -529,7 +572,6 @@ class SingleThreadedStateMachineManager(
             deduplicationHandler: DeduplicationHandler?,
             isStartIdempotent: Boolean
     ): CordaFuture<FlowStateMachine<A>> {
-        val flowId = StateMachineRunId.createRandom()
 
         // Before we construct the state machine state by freezing the FlowLogic we need to make sure that lazy properties
         // have access to the fiber (and thereby the service hub)
@@ -541,22 +583,44 @@ class SingleThreadedStateMachineManager(
 
         val flowCorDappVersion = createSubFlowVersion(serviceHub.cordappProvider.getCordappForFlow(flowLogic), serviceHub.myInfo.platformVersion)
 
-        val initialCheckpoint = Checkpoint.create(
-                invocationContext,
-                flowStart,
-                flowLogic.javaClass,
-                frozenFlowLogic,
-                ourIdentity,
-                flowCorDappVersion,
-                flowLogic.isEnabledTimedFlow()
+        val flowAlreadyExists = mutex.locked { flows[flowId] != null }
+
+        val existingCheckpoint = if (flowAlreadyExists) {
+            // Load the flow's checkpoint
+            // The checkpoint will be missing if the flow failed before persisting the original checkpoint
+            // CORDA-3359 - Do not start/retry a flow that failed after deleting its checkpoint (the whole of the flow might replay)
+            checkpointStorage.getCheckpoint(flowId)?.let { serializedCheckpoint ->
+                val checkpoint = tryCheckpointDeserialize(serializedCheckpoint, flowId)
+                if (checkpoint == null) {
+                    return openFuture<FlowStateMachine<A>>().mapError {
+                        IllegalStateException("Unable to deserialize database checkpoint for flow $flowId. " +
+                                "Something is very wrong. The flow will not retry.")
+                    }
+                } else {
+                    checkpoint
+                }
+            }
+        } else {
+            // This is a brand new flow
+            null
+        }
+        val checkpoint = existingCheckpoint ?: Checkpoint.create(
+            invocationContext,
+            flowStart,
+            flowLogic.javaClass,
+            frozenFlowLogic,
+            ourIdentity,
+            flowCorDappVersion,
+            flowLogic.isEnabledTimedFlow()
         ).getOrThrow()
+
         val startedFuture = openFuture<Unit>()
         val initialState = StateMachineState(
-                checkpoint = initialCheckpoint,
+                checkpoint = checkpoint,
                 pendingDeduplicationHandlers = deduplicationHandler?.let { listOf(it) } ?: emptyList(),
                 isFlowResumed = false,
                 isTransactionTracked = false,
-                isAnyCheckpointPersisted = false,
+                isAnyCheckpointPersisted = existingCheckpoint != null,
                 isStartIdempotent = isStartIdempotent,
                 isRemoved = false,
                 flowLogic = flowLogic,
@@ -815,6 +879,12 @@ class SingleThreadedStateMachineManager(
         }
         val transitionExecutor: TransitionExecutor = TransitionExecutorImpl(secureRandom, database)
         return interceptors.fold(transitionExecutor) { executor, interceptor -> interceptor(executor) }
+    }
+
+    private fun makeFlowHospital() : StaffedFlowHospital {
+        // If the node is running as a notary service, we don't retain errored session initiation requests in case of missing Cordapps
+        // to avoid memory leaks if the notary is under heavy load.
+        return StaffedFlowHospital(flowMessaging, serviceHub.clock, ourSenderUUID)
     }
 
     private fun InnerState.removeFlowOrderly(

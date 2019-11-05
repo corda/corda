@@ -114,6 +114,7 @@ interface ExternalEvent {
      * An external P2P message event.
      */
     interface ExternalMessageEvent : ExternalEvent {
+        val flowId: StateMachineRunId
         val receivedMessage: ReceivedMessage
     }
 
@@ -121,6 +122,7 @@ interface ExternalEvent {
      * An external request to start a flow, from the scheduler for example.
      */
     interface ExternalStartFlowEvent<T> : ExternalEvent {
+        val flowId: StateMachineRunId
         val flowLogic: FlowLogic<T>
         val context: InvocationContext
 

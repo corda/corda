@@ -72,6 +72,7 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
             var requestDate: Instant
     )
 
+    @Suppress("MagicNumber") // database column length
     @Entity
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}notary_committed_txs")
     class CommittedTransaction(

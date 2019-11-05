@@ -135,6 +135,7 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
         }
     }
 
+    @Suppress("MagicNumber") // initialising to max value
     private fun makeNetworkParametersCopier(config: NodeConfigWrapper): NetworkParametersCopier {
         val identity = getNotaryIdentity(config)
         val parametersCopier = NetworkParametersCopier(NetworkParameters(

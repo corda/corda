@@ -100,6 +100,9 @@ Expanding on the previous section, for an app to use Signature Constraints, it m
 The signers of the app can consist of a single organisation or multiple organisations. Once the app has been signed, it can be distributed
 across the nodes that intend to use it.
 
+.. note:: The platform currently supports ``CompositeKey``\s with up to 20 keys maximum.
+          This maximum limit is assuming keys that are either 2048-bit ``RSA`` keys or  256-bit elliptic curve (``EC``) keys.
+
 Each transaction received by a node will then verify that the apps attached to it have the correct signers as specified by its
 Signature Constraints. This ensures that the version of each app is acceptable to the transaction's input states.
 
