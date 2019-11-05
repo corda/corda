@@ -19,9 +19,11 @@ import net.corda.testing.node.internal.CustomCordapp
 import net.corda.testing.node.internal.cordappWithPackages
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.ClassRule
+import org.junit.Rule
 import org.junit.Test
 import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.api.assertThrows
+import org.junit.rules.TemporaryFolder
 
 class SandboxAttachmentsTest {
     companion object {
@@ -31,22 +33,28 @@ class SandboxAttachmentsTest {
         @JvmField
         val djvmSources = DeterministicSourcesRule()
 
+        @Rule
+        @JvmField
+        val tempFolder = TemporaryFolder()
+
         fun parametersFor(djvmSources: DeterministicSourcesRule): DriverParameters {
-            return DriverParameters(
-                portAllocation = incrementalPortAllocation(),
-                startNodesInProcess = false,
-                notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, validating = true)),
-                cordappsForAllNodes = listOf(
-                    cordappWithPackages("net.corda.flows.djvm.attachment"),
-                    CustomCordapp(
-                        packages = setOf("net.corda.contracts.djvm.attachment"),
-                        name = "sandbox-attachment-contract",
-                        signingInfo = CustomCordapp.SigningInfo()
-                    )
-                ),
-                djvmBootstrapSource = djvmSources.bootstrap,
-                djvmCordaSource = djvmSources.corda
-            )
+            tempFolder.root.toPath().let { path ->
+                return DriverParameters(
+                        portAllocation = incrementalPortAllocation(),
+                        startNodesInProcess = false,
+                        notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, validating = true)),
+                        cordappsForAllNodes = listOf(
+                                cordappWithPackages("net.corda.flows.djvm.attachment"),
+                                CustomCordapp(
+                                        packages = setOf("net.corda.contracts.djvm.attachment"),
+                                        name = "sandbox-attachment-contract",
+                                        signingInfo = CustomCordapp.SigningInfo(path, 10, "RSA")
+                                )
+                        ),
+                        djvmBootstrapSource = djvmSources.bootstrap,
+                        djvmCordaSource = djvmSources.corda
+                )
+            }
         }
     }
 
@@ -73,9 +81,9 @@ class SandboxAttachmentsTest {
                         .returnValue.getOrThrow()
             }
             assertThat(ex)
-                .hasMessageStartingWith("sandbox.net.corda.core.contracts.TransactionVerificationException\$ContractRejection -> ")
-                .hasMessageContaining(" Contract verification failed: does/not/Exist.class, " )
-                .hasMessageContaining(" contract: sandbox.net.corda.contracts.djvm.attachment.SandboxAttachmentContract, ")
+                    .hasMessageStartingWith("sandbox.net.corda.core.contracts.TransactionVerificationException\$ContractRejection -> ")
+                    .hasMessageContaining(" Contract verification failed: does/not/Exist.class, ")
+                    .hasMessageContaining(" contract: sandbox.net.corda.contracts.djvm.attachment.SandboxAttachmentContract, ")
         }
     }
 }
