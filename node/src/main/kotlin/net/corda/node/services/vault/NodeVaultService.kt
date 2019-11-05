@@ -23,6 +23,7 @@ import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.nodeapi.internal.persistence.*
 import org.hibernate.Session
 import rx.Observable
+import rx.exceptions.OnErrorNotImplementedException
 import rx.subjects.PublishSubject
 import java.security.PublicKey
 import java.time.Clock
@@ -390,7 +391,15 @@ class NodeVaultService(
                     }
                 }
                 persistentStateService.persist(vaultUpdate.produced + vaultUpdate.references)
-                updatesPublisher.onNext(vaultUpdate)
+                try {
+                    updatesPublisher.onNext(vaultUpdate)
+                } catch (e: OnErrorNotImplementedException) {
+                    log.warn("Caught an Rx.OnErrorNotImplementedException " +
+                            "- caused by an exception in an RX observer that was unhandled " +
+                            "- the observer has been unsubscribed! The underlying exception will be rethrown.", e)
+                    // if the observer code threw, unwrap their exception from the RX wrapper
+                    throw e.cause ?: e
+                }
             }
         }
     }

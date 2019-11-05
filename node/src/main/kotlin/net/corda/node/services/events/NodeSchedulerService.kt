@@ -11,6 +11,7 @@ import net.corda.core.contracts.ScheduledStateRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowLogicRefFactory
+import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.flatMap
 import net.corda.core.internal.concurrent.openFuture
@@ -239,6 +240,7 @@ class NodeSchedulerService(private val clock: CordaClock,
     }
 
     private inner class FlowStartDeduplicationHandler(val scheduledState: ScheduledStateRef, override val flowLogic: FlowLogic<Any?>, override val context: InvocationContext) : DeduplicationHandler, ExternalEvent.ExternalStartFlowEvent<Any?> {
+        override val flowId: StateMachineRunId = StateMachineRunId.createRandom()
         override val externalCause: ExternalEvent
             get() = this
         override val deduplicationHandler: FlowStartDeduplicationHandler

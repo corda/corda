@@ -37,7 +37,8 @@ import net.corda.testing.internal.LogHelper
 import net.corda.testing.node.InMemoryMessagingNetwork.MessageTransfer
 import net.corda.testing.node.InMemoryMessagingNetwork.ServicePeerAllocationStrategy.RoundRobin
 import net.corda.testing.node.internal.*
-import org.assertj.core.api.Assertions.*
+import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import org.assertj.core.api.AssertionsForClassTypes.assertThatExceptionOfType
 import org.assertj.core.api.Condition
 import org.junit.After
@@ -115,18 +116,16 @@ class FlowFrameworkTests {
     }
 
     @Test
-    fun `exception while fiber suspended`() {
+    fun `exception while fiber suspended is retried and completes successfully`() {
         bobNode.registerCordappFlowFactory(ReceiveFlow::class) { InitiatedSendFlow("Hello", it) }
         val flow = ReceiveFlow(bob)
         val fiber = aliceNode.services.startFlow(flow) as FlowStateMachineImpl
         // Before the flow runs change the suspend action to throw an exception
-        val exceptionDuringSuspend = Exception("Thrown during suspend")
-        val throwingActionExecutor = SuspendThrowingActionExecutor(exceptionDuringSuspend, fiber.transientValues!!.value.actionExecutor)
+        val throwingActionExecutor = SuspendThrowingActionExecutor(Exception("Thrown during suspend"),
+                fiber.transientValues!!.value.actionExecutor)
         fiber.transientValues = TransientReference(fiber.transientValues!!.value.copy(actionExecutor = throwingActionExecutor))
         mockNet.runNetwork()
-        assertThatThrownBy {
-            fiber.resultFuture.getOrThrow()
-        }.isSameAs(exceptionDuringSuspend)
+        fiber.resultFuture.getOrThrow()
         assertThat(aliceNode.smm.allStateMachines).isEmpty()
         // Make sure the fiber does actually terminate
         assertThat(fiber.state).isEqualTo(Strand.State.WAITING)

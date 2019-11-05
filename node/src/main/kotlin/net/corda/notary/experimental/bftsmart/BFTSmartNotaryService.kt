@@ -127,6 +127,7 @@ class BFTSmartNotaryService(
         }
     }
 
+    @Suppress("MagicNumber") // database column length
     @Entity
     @Table(name = "${NODE_DATABASE_PREFIX}bft_committed_txs")
     class CommittedTransaction(

@@ -30,6 +30,7 @@ import kotlin.streams.toList
 
 class DBTransactionStorage(private val database: CordaPersistence, cacheFactory: NamedCacheFactory) : WritableTransactionStorage, SingletonSerializeAsToken() {
 
+    @Suppress("MagicNumber") // database column width
     @Entity
     @Table(name = "${NODE_DATABASE_PREFIX}transactions")
     class DBTransaction(

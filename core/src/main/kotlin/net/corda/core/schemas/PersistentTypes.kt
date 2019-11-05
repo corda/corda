@@ -90,7 +90,9 @@ class PersistentState(@EmbeddedId override var stateRef: PersistentStateRef? = n
 @KeepForDJVM
 @Embeddable
 @Immutable
+
 data class PersistentStateRef(
+        @Suppress("MagicNumber") // column width
         @Column(name = "transaction_id", length = 64, nullable = false)
         var txId: String,
 

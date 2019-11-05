@@ -85,6 +85,7 @@ class P2PMessageDeduplicator(cacheFactory: NamedCacheFactory, private val databa
     }
 
     @Entity
+    @Suppress("MagicNumber") // database column width
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}message_ids")
     class ProcessedMessage(
             @Id

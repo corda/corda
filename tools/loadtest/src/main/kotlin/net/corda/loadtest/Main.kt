@@ -70,6 +70,7 @@ fun main(args: Array<String>) {
     }
 }
 
+@Suppress("MagicNumber") // test constants
 private fun runLoadTest(loadTestConfiguration: LoadTestConfiguration) {
     runLoadTests(loadTestConfiguration, listOf(
             selfIssueTest to LoadTest.RunParameters(
@@ -131,6 +132,7 @@ private fun runLoadTest(loadTestConfiguration: LoadTestConfiguration) {
     ))
 }
 
+@Suppress("MagicNumber") // test constants
 private fun runStabilityTest(loadTestConfiguration: LoadTestConfiguration) {
     runLoadTests(loadTestConfiguration, listOf(
             // Self issue cash. This is a pre test step to make sure vault have enough cash to work with.
