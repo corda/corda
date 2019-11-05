@@ -104,8 +104,7 @@ public class KubesTest extends DefaultTask {
         }
 
         List<Future<KubePodResult>> futures = IntStream.range(0, numberOfPods).mapToObj(i -> {
-            String potentialPodName = (taskToExecuteName + "-" + stableRunId + random + i).toLowerCase();
-            String podName = potentialPodName.substring(0, Math.min(potentialPodName.length(), 62));
+            String podName = generatePodName(stableRunId, random, i);
             return submitBuild(NAMESPACE, numberOfPods, i, podName, printOutput, 3);
         }).collect(Collectors.toList());
 
@@ -123,6 +122,16 @@ public class KubesTest extends DefaultTask {
                 throw new RuntimeException(e);
             }
         }).collect(Collectors.toList());
+    }
+
+    @NotNull
+    private String generatePodName(String stableRunId, String random, int i) {
+        int magicMaxLength = 63;
+        String provisionalName = taskToExecuteName.toLowerCase() + "-" + stableRunId + "-" + random + "-" + i;
+        //length = 100
+        //100-63 = 37
+        //subString(37, 100) -? string of 63 characters
+        return provisionalName.substring(Math.max(provisionalName.length() - magicMaxLength, 0));
     }
 
     @NotNull
@@ -396,10 +405,20 @@ public class KubesTest extends DefaultTask {
     }
 
     private String[] getBuildCommand(int numberOfPods, int podIdx) {
+        final String gitBranch = " -Dgit.branch=" + Properties.getGitBranch();
+        final String gitTargetBranch = " -Dgit.target.branch=" + Properties.getTargetGitBranch();
+        final String artifactoryUsername = " -Dartifactory.username=" + Properties.getUsername() + " ";
+        final String artifactoryPassword = " -Dartifactory.password=" + Properties.getPassword() + " ";
+
         String shellScript = "(let x=1 ; while [ ${x} -ne 0 ] ; do echo \"Waiting for DNS\" ; curl services.gradle.org > /dev/null 2>&1 ; x=$? ; sleep 1 ; done ) && "
                 + " cd /tmp/source && " +
                 "(let y=1 ; while [ ${y} -ne 0 ] ; do echo \"Preparing build directory\" ; ./gradlew testClasses integrationTestClasses --parallel 2>&1 ; y=$? ; sleep 1 ; done ) && " +
-                "(./gradlew -D" + ListTests.DISTRIBUTION_PROPERTY + "=" + distribution.name() + " -Dkubenetize -PdockerFork=" + podIdx + " -PdockerForks=" + numberOfPods + " " + fullTaskToExecutePath + " " + getLoggingLevel() + " 2>&1) ; " +
+                "(./gradlew -D" + ListTests.DISTRIBUTION_PROPERTY + "=" + distribution.name() +
+                gitBranch +
+                gitTargetBranch +
+                artifactoryUsername +
+                artifactoryPassword +
+                "-Dkubenetize -PdockerFork=" + podIdx + " -PdockerForks=" + numberOfPods + " " + fullTaskToExecutePath + " " + getLoggingLevel() + " 2>&1) ; " +
                 "let rs=$? ; sleep 10 ; exit ${rs}";
         return new String[]{"bash", "-c", shellScript};
     }
