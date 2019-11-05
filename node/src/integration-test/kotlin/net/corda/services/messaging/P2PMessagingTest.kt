@@ -21,6 +21,7 @@ import net.corda.testing.driver.internal.internalServices
 import net.corda.testing.node.ClusterSpec
 import net.corda.testing.node.NotarySpec
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.Ignore
 import org.junit.Test
 import java.util.*
 import java.util.concurrent.atomic.AtomicBoolean
@@ -31,6 +32,7 @@ class P2PMessagingTest {
     }
 
     @Test
+    @Ignore
     fun `communicating with a distributed service which we're part of`() {
         startDriverWithDistributedService { distributedService ->
             assertAllNodesAreUsed(distributedService, DISTRIBUTED_SERVICE_NAME, distributedService[0])
