@@ -58,7 +58,7 @@ public class ListTests extends DefaultTask implements TestLister {
                         .getClassesWithMethodAnnotation("org.junit.Test")
                         .stream()
                         .map(classInfo -> {
-                            ClassInfoList returnList = ClassInfoList.emptyList();
+                            ClassInfoList returnList = new ClassInfoList();
                             returnList.add(classInfo);
                             returnList.addAll(classInfo.getSubclasses());
                             return returnList;
@@ -83,7 +83,7 @@ public class ListTests extends DefaultTask implements TestLister {
                         .getClassesWithMethodAnnotation("org.junit.Test")
                         .stream()
                         .map(classInfo -> {
-                            ClassInfoList returnList = ClassInfoList.emptyList();
+                            ClassInfoList returnList = new ClassInfoList();
                             returnList.add(classInfo);
                             returnList.addAll(classInfo.getSubclasses());
                             return returnList;
