@@ -50,7 +50,7 @@ class DistributedTesting implements Plugin<Project> {
                     project.logger.info("Evaluating ${task.getPath()}")
                     if (task in requestedTasks && !task.hasProperty("ignoreForDistribution")) {
                         project.logger.info "Modifying ${task.getPath()}"
-                        Task testListerTask = createTestListingTasks(task, subProject)
+                        ListTests testListerTask = createTestListingTasks(task, subProject)
                         globalAllocator.addSource(testListerTask, task)
                         Test modifiedTestTask = modifyTestTaskForParallelExecution(subProject, task, globalAllocator)
                     } else {
@@ -249,12 +249,12 @@ class DistributedTesting implements Plugin<Project> {
         project.plugins.apply(ImageBuilding)
     }
 
-    private Task createTestListingTasks(Test task, Project subProject) {
+    private ListTests createTestListingTasks(Test task, Project subProject) {
         def taskName = task.getName()
         def capitalizedTaskName = task.getName().capitalize()
         //determine all the tests which are present in this test task.
         //this list will then be shared between the various worker forks
-        Task createdListTask = subProject.tasks.create("listTestsFor" + capitalizedTaskName, ListTests) {
+        def createdListTask = subProject.tasks.create("listTestsFor" + capitalizedTaskName, ListTests) {
             group = GRADLE_GROUP
             //the convention is that a testing task is backed by a sourceSet with the same name
             dependsOn subProject.getTasks().getByName("${taskName}Classes")
@@ -281,7 +281,7 @@ class DistributedTesting implements Plugin<Project> {
         subProject.logger.info("created task: " + createdListTask.getPath() + " in project: " + subProject + " it dependsOn: " + createdListTask.dependsOn)
         subProject.logger.info("created task: " + createdPrintTask.getPath() + " in project: " + subProject + " it dependsOn: " + createdPrintTask.dependsOn)
 
-        return createdListTask
+        return createdListTask as ListTests
     }
 
 }
