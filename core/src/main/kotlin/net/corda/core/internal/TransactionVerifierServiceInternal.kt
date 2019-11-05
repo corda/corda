@@ -4,6 +4,7 @@ import net.corda.core.DeleteForDJVM
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.*
 import net.corda.core.contracts.TransactionVerificationException.TransactionContractConflictException
+import net.corda.core.crypto.CompositeKey
 import net.corda.core.internal.rules.StateContractValidationEnforcementRule
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.contextLogger
@@ -328,8 +329,23 @@ class Verifier(val ltx: LedgerTransaction, private val transactionClassLoader: C
     private fun verifyConstraints(contractAttachmentsByContract: Map<ContractClassName, ContractAttachment>) {
         // For each contract/constraint pair check that the relevant attachment is valid.
         allStates.map { it.contract to it.constraint }.toSet().forEach { (contract, constraint) ->
-            if (constraint is SignatureAttachmentConstraint)
+            if (constraint is SignatureAttachmentConstraint) {
+                /**
+                 * Support for signature constraints has been added on min. platform version >= 4.
+                 * On minimum platform version >= 5, an explicit check has been introduced on the supported number of leaf keys
+                 * in composite keys of signature constraints in order to harden consensus.
+                 */
                 checkMinimumPlatformVersion(ltx.networkParameters?.minimumPlatformVersion ?: 1, 4, "Signature constraints")
+                val constraintKey = constraint.key
+                if (ltx.networkParameters?.minimumPlatformVersion ?: 1 >= 5) {
+                    if (constraintKey is CompositeKey && constraintKey.leafKeys.size > MAX_NUMBER_OF_KEYS_IN_SIGNATURE_CONSTRAINT) {
+                        throw TransactionVerificationException.InvalidConstraintRejection(ltx.id, contract,
+                                "Signature constraint contains composite key with ${constraintKey.leafKeys.size} leaf keys, " +
+                                        "which is more than the maximum allowed number of keys " +
+                                        "($MAX_NUMBER_OF_KEYS_IN_SIGNATURE_CONSTRAINT).")
+                    }
+                }
+            }
 
             // We already checked that there is one and only one attachment.
             val contractAttachment = contractAttachmentsByContract[contract]!!

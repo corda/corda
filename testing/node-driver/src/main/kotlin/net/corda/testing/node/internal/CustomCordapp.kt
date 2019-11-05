@@ -7,6 +7,7 @@ import net.corda.core.internal.cordapp.set
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.testing.core.internal.JarSignatureTestUtils.generateKey
+import net.corda.testing.core.internal.JarSignatureTestUtils.containsKey
 import net.corda.testing.core.internal.JarSignatureTestUtils.signJar
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -43,7 +44,8 @@ data class CustomCordapp(
 
     override fun withOnlyJarContents(): CustomCordapp = CustomCordapp(packages = packages, classes = classes)
 
-    fun signed(keyStorePath: Path? = null): CustomCordapp = copy(signingInfo = SigningInfo(keyStorePath))
+    fun signed(keyStorePath: Path? = null, numberOfSignatures: Int = 1, keyAlgorithm: String = "RSA"): CustomCordapp =
+            copy(signingInfo = SigningInfo(keyStorePath, numberOfSignatures, keyAlgorithm))
 
     @VisibleForTesting
     internal fun packageAsJar(file: Path) {
@@ -73,20 +75,21 @@ data class CustomCordapp(
 
     private fun signJar(jarFile: Path) {
         if (signingInfo != null) {
-            val testKeystore = "_teststore"
-            val alias = "Test"
-            val pwd = "secret!"
             val keyStorePathToUse = if (signingInfo.keyStorePath != null) {
                 signingInfo.keyStorePath
             } else {
                 defaultJarSignerDirectory.createDirectories()
-                if (!(defaultJarSignerDirectory / testKeystore).exists()) {
-                    defaultJarSignerDirectory.generateKey(alias, pwd, "O=Test Company Ltd,OU=Test,L=London,C=GB")
-                }
                 defaultJarSignerDirectory
             }
-            val pk = keyStorePathToUse.signJar(jarFile.toString(), alias, pwd)
-            logger.debug { "Signed Jar: $jarFile with public key $pk" }
+
+            for (i in 1 .. signingInfo.numberOfSignatures) {
+                val alias = "alias$i"
+                val pwd = "secret!"
+                if (!keyStorePathToUse.containsKey(alias, pwd))
+                    keyStorePathToUse.generateKey(alias, pwd, "O=Test Company Ltd $i,OU=Test,L=London,C=GB", signingInfo.keyAlgorithm)
+                val pk = keyStorePathToUse.signJar(jarFile.toString(), alias, pwd)
+                logger.debug { "Signed Jar: $jarFile with public key $pk" }
+            }
         } else {
             logger.debug { "Unsigned Jar: $jarFile" }
         }
@@ -111,7 +114,7 @@ data class CustomCordapp(
         return ZipEntry(name).setCreationTime(epochFileTime).setLastAccessTime(epochFileTime).setLastModifiedTime(epochFileTime)
     }
 
-    data class SigningInfo(val keyStorePath: Path? = null)
+    data class SigningInfo(val keyStorePath: Path?, val numberOfSignatures: Int, val keyAlgorithm: String)
 
     companion object {
         private val logger = contextLogger()

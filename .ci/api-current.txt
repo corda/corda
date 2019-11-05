@@ -4034,7 +4034,7 @@ public interface net.corda.core.node.services.VaultService
   public abstract net.corda.core.concurrent.CordaFuture<net.corda.core.node.services.Vault$Update<net.corda.core.contracts.ContractState>> whenConsumed(net.corda.core.contracts.StateRef)
 ##
 public final class net.corda.core.node.services.VaultServiceKt extends java.lang.Object
-  public static final int MAX_CONSTRAINT_DATA_SIZE = 563
+  public static final int MAX_CONSTRAINT_DATA_SIZE = 20000
 ##
 @CordaSerializable
 public final class net.corda.core.node.services.vault.AggregateFunctionType extends java.lang.Enum

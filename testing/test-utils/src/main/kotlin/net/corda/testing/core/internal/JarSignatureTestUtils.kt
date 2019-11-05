@@ -9,6 +9,7 @@ import java.io.Closeable
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.nio.file.Files
+import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.security.PublicKey
@@ -70,6 +71,15 @@ object JarSignatureTestUtils {
     fun Path.getPublicKey(alias: String, storeName: String, storePassword: String) : PublicKey {
         val ks = loadKeyStore(this.resolve(storeName), storePassword)
         return ks.getCertificate(alias).publicKey
+    }
+
+    fun Path.containsKey(alias: String, storePassword: String, storeName: String = "_teststore"): Boolean {
+        return try {
+            val ks = loadKeyStore(this.resolve(storeName), storePassword)
+            ks.containsAlias(alias)
+        } catch (e: NoSuchFileException) {
+            false
+        }
     }
 
     fun Path.getPublicKey(alias: String, storePassword: String) = getPublicKey(alias, "_teststore", storePassword)
