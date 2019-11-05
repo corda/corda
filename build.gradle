@@ -1,5 +1,5 @@
-import net.corda.testing.DistributedTesting
 import net.corda.testing.DistributeTestsBy
+import net.corda.testing.DistributedTesting
 import net.corda.testing.ImageBuilding
 import net.corda.testing.ParallelTestGroup
 import net.corda.testing.PodLogLevel
@@ -602,7 +602,7 @@ task allParallelIntegrationTest(type: ParallelTestGroup) {
     streamOutput false
     coresPerFork 5
     memoryInGbPerFork 10
-    distribute DistributeTestsBy.CLASS
+    distribute DistributeTestsBy.METHOD
 }
 task allParallelUnitTest(type: ParallelTestGroup) {
     podLogLevel PodLogLevel.INFO
@@ -639,5 +639,3 @@ task allParallelSmokeTest(type: ParallelTestGroup) {
 }
 apply plugin: ImageBuilding
 apply plugin: DistributedTesting
-
-
