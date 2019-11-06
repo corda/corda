@@ -20,6 +20,8 @@ dependencies {
     api project(':core')
     api project(':serialization')
     api "net.corda.djvm:corda-djvm:$djvm_version"
+    api 'org.jetbrains.kotlin:kotlin-stdlib-jdk8'
+    implementation 'org.jetbrains.kotlin:kotlin-reflect'
     implementation(project(':serialization-djvm:deserializers')) {
         transitive = false
     }

@@ -30,13 +30,13 @@ dependencies {
     api "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
     api "javax.persistence:javax.persistence-api:2.2"
     api "com.google.code.findbugs:jsr305:$jsr305_version"
+    api "org.slf4j:slf4j-api:$slf4j_version"
 
     // These dependencies will become "runtime" scoped in our published POM.
     // See publish.dependenciesFrom.defaultScope.
     deterministicLibraries "org.bouncycastle:bcprov-jdk15on:$bouncycastle_version"
     deterministicLibraries "org.bouncycastle:bcpkix-jdk15on:$bouncycastle_version"
     deterministicLibraries "net.i2p.crypto:eddsa:$eddsa_version"
-    deterministicLibraries "org.slf4j:slf4j-api:$slf4j_version"
 }
 
 jar {
