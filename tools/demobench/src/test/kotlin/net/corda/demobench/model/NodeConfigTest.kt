@@ -41,12 +41,9 @@ class NodeConfigTest {
                 .withFallback(ConfigFactory.parseMap(mapOf("devMode" to true)))
                 .resolve()
         val fullConfig = nodeConfig.parseAsNodeConfiguration().value()
-        val systemProperties = nodeConfig.getConfig("systemProperties").toProperties()
 
         // No custom configuration is created by default.
         assertFailsWith<ConfigException.Missing> { nodeConfig.getConfig("custom") }
-        assertEquals(true.toString(), systemProperties.getProperty("net.corda.djvm"))
-        assertEquals(false.toString(), systemProperties.getProperty("co.paralleluniverse.fibers.verifyInstrumentation"))
 
         assertEquals(myLegalName, fullConfig.myLegalName)
         assertEquals(localPort(40002), fullConfig.rpcOptions.address)
@@ -133,6 +130,7 @@ class NodeConfigTest {
         assertEquals("cordacadevpass", webConfig.keyStorePassword)
     }
 
+    @Suppress("LongParameterList")
     private fun createConfig(
             legalName: CordaX500Name = CordaX500Name(organisation = "Unknown", locality = "Nowhere", country = "GB"),
             p2pPort: Int = -1,
@@ -142,7 +140,8 @@ class NodeConfigTest {
             h2port: Int = -1,
             notary: NotaryService?,
             users: List<User> = listOf(user("guest")),
-            issuableCurrencies: List<String> = emptyList()
+            issuableCurrencies: List<String> = emptyList(),
+            systemProperties: Map<String, Any?> = emptyMap()
     ): NodeConfig {
         return NodeConfig(
                 myLegalName = legalName,
@@ -155,7 +154,8 @@ class NodeConfigTest {
                 h2port = h2port,
                 notary = notary,
                 rpcUsers = users,
-                issuableCurrencies = issuableCurrencies
+                issuableCurrencies = issuableCurrencies,
+                systemProperties = systemProperties
         )
     }
 

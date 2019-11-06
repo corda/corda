@@ -1,6 +1,8 @@
 package net.corda.demobench.model
 
+import javafx.application.Application.Parameters
 import javafx.beans.binding.IntegerExpression
+import javafx.beans.property.SimpleBooleanProperty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
@@ -20,13 +22,36 @@ import java.time.Instant
 import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.logging.Level
+import kotlin.math.max
 
-class NodeController(check: atRuntime = ::checkExists) : Controller() {
+class NodeController(
+    djvmEnabled: Boolean = readDJVMEnabled(),
+    check: atRuntime = ::checkExists
+) : Controller() {
     companion object {
         const val firstPort = 10000
         const val minPort = 1024
         const val maxPort = 65535
+
+        private const val MB = 1024 * 1024
+        const val maxMessageSize = 10 * MB
+        const val maxTransactionSize = 10 * MB
+
+        private fun readDJVMEnabled(): Boolean {
+            return FX.application.parameters?.let(::parseDJVMEnabled) ?: false
+        }
+
+        private fun parseDJVMEnabled(parameters: Parameters): Boolean {
+            val isEnabled = parameters.named["djvm"]
+            return if (isEnabled == null) {
+                parameters.unnamed.contains("--djvm")
+            } else {
+                java.lang.Boolean.parseBoolean(isEnabled)
+            }
+        }
     }
+
+    val djvmEnabled = SimpleBooleanProperty(djvmEnabled)
 
     private val jvm by inject<JVMConfig>()
     private val cordappController by inject<CordappController>()
@@ -77,7 +102,11 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
                 webAddress = nodeData.webPort.toLocalAddress(),
                 notary = notary,
                 h2port = nodeData.h2Port.value,
-                issuableCurrencies = nodeData.extraServices.filterIsInstance<CurrencyIssuer>().map { it.currency.toString() }
+                issuableCurrencies = nodeData.extraServices.filterIsInstance<CurrencyIssuer>().map { it.currency.toString() },
+                systemProperties = mapOf(
+                    "net.corda.djvm" to djvmEnabled.value,
+                    "co.paralleluniverse.fibers.verifyInstrumentation" to false
+                )
         )
 
         val wrapper = NodeConfigWrapper(baseDir, nodeConfig)
@@ -135,15 +164,14 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
         }
     }
 
-    @Suppress("MagicNumber") // initialising to max value
     private fun makeNetworkParametersCopier(config: NodeConfigWrapper): NetworkParametersCopier {
         val identity = getNotaryIdentity(config)
         val parametersCopier = NetworkParametersCopier(NetworkParameters(
                 minimumPlatformVersion = 1,
                 notaries = listOf(NotaryInfo(identity, config.nodeConfig.notary!!.validating)),
                 modifiedTime = Instant.now(),
-                maxMessageSize = 10485760,
-                maxTransactionSize = 10485760,
+                maxMessageSize = maxMessageSize,
+                maxTransactionSize = maxTransactionSize,
                 epoch = 1,
                 whitelistedContractImplementations = emptyMap()
         ))
@@ -203,7 +231,7 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
 
     private fun updatePort(config: NodeConfig) {
         val nextPort = 1 + arrayOf(config.p2pAddress.port, config.rpcSettings.address.port, config.webAddress.port, config.h2port).max() as Int
-        port.getAndUpdate { Math.max(nextPort, it) }
+        port.getAndUpdate { max(nextPort, it) }
     }
 
     private fun baseDirFor(time: Long): Path = jvm.dataHome.resolve(localFor(time))
