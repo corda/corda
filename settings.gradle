@@ -81,6 +81,8 @@ include 'serialization'
 include 'serialization-djvm'
 include 'serialization-djvm:deserializers'
 include 'serialization-tests'
+include 'testing:cordapps:dbfailure:dbfcontracts'
+include 'testing:cordapps:dbfailure:dbfworkflows'
 
 // Common libraries - start
 include 'common-validation'

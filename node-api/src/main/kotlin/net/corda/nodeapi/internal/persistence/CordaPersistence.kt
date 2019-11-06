@@ -20,6 +20,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicInteger
 import javax.persistence.AttributeConverter
+import javax.persistence.PersistenceException
 import javax.sql.DataSource
 
 /**
@@ -98,7 +99,8 @@ class CordaPersistence(
         cacheFactory: NamedCacheFactory,
         attributeConverters: Collection<AttributeConverter<*, *>> = emptySet(),
         customClassLoader: ClassLoader? = null,
-        val closeConnection: Boolean = true
+        val closeConnection: Boolean = true,
+        val errorHandler: (t: Throwable) -> Unit = {}
 ) : Closeable {
     companion object {
         private val log = contextLogger()
@@ -189,10 +191,18 @@ class CordaPersistence(
     }
 
     fun createSession(): Connection {
-        // We need to set the database for the current [Thread] or [Fiber] here as some tests share threads across databases.
-        _contextDatabase.set(this)
-        currentDBSession().flush()
-        return contextTransaction.connection
+        try {
+            // We need to set the database for the current [Thread] or [Fiber] here as some tests share threads across databases.
+            _contextDatabase.set(this)
+            currentDBSession().flush()
+            return contextTransaction.connection
+        } catch (sqlException: SQLException) {
+            errorHandler(sqlException)
+            throw sqlException
+        } catch (persistenceException: PersistenceException) {
+            errorHandler(persistenceException)
+            throw persistenceException
+        }
     }
 
     /**
@@ -220,10 +230,18 @@ class CordaPersistence(
                         recoverAnyNestedSQLException: Boolean, statement: DatabaseTransaction.() -> T): T {
         _contextDatabase.set(this)
         val outer = contextTransactionOrNull
-        return if (outer != null) {
-            outer.statement()
-        } else {
-            inTopLevelTransaction(isolationLevel, recoverableFailureTolerance, recoverAnyNestedSQLException, statement)
+        try {
+            return if (outer != null) {
+                outer.statement()
+            } else {
+                inTopLevelTransaction(isolationLevel, recoverableFailureTolerance, recoverAnyNestedSQLException, statement)
+            }
+        } catch (sqlException: SQLException) {
+            errorHandler(sqlException)
+            throw sqlException
+        } catch (persistenceException: PersistenceException) {
+            errorHandler(persistenceException)
+            throw persistenceException
         }
     }
 

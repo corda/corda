@@ -1,5 +1,6 @@
 package net.corda.testing.node.internal
 
+import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.PLATFORM_VERSION
@@ -268,6 +269,7 @@ class MockNodeMessagingService(private val configuration: NodeConfiguration,
     private inner class InMemoryDeduplicationHandler(override val receivedMessage: ReceivedMessage, val transfer: InMemoryMessagingNetwork.MessageTransfer) : DeduplicationHandler, ExternalEvent.ExternalMessageEvent {
         override val externalCause: ExternalEvent
             get() = this
+        override val flowId: StateMachineRunId = StateMachineRunId.createRandom()
         override val deduplicationHandler: DeduplicationHandler
             get() = this
 

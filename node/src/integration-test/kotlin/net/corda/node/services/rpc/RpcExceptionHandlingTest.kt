@@ -135,12 +135,13 @@ class RpcExceptionHandlingTest {
         }
     }
 
+    @Suppress("TooGenericExceptionThrown")
     @InitiatedBy(InitFlow::class)
     class InitiatedFlow(private val initiatingSession: FlowSession) : FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
             initiatingSession.receive<String>().unwrap { it }
-            throw GenericJDBCException("Something went wrong!", SQLException("Oops!"))
+            throw Exception("Something went wrong!", SQLException("Oops!"))
         }
     }
 

@@ -10,6 +10,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.AbstractParty
+import net.corda.core.internal.MAX_NUMBER_OF_KEYS_IN_SIGNATURE_CONSTRAINT
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.messaging.DataFeed
 import net.corda.core.node.services.Vault.RelevancyStatus.*
@@ -256,9 +257,15 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
 
 /**
  * The maximum permissible size of contract constraint type data (for storage in vault states database table).
- * Maximum value equates to a CompositeKey with 10 EDDSA_ED25519_SHA512 keys stored in.
+ *
+ * This value establishes an upper limit of a CompositeKey with up to [MAX_NUMBER_OF_KEYS_IN_SIGNATURE_CONSTRAINT] keys stored in.
+ * However, note this assumes a rather conservative upper bound per key.
+ * For reference, measurements have shown the following numbers for each algorithm:
+ * - 2048-bit RSA keys: 1 key -> 294 bytes, 2 keys -> 655 bytes, 3 keys -> 961 bytes
+ * - 256-bit ECDSA (k1) keys: 1 key -> 88 bytes, 2 keys -> 231 bytes, 3 keys -> 331 bytes
+ * - 256-bit EDDSA keys: 1 key -> 44 bytes, 2 keys -> 140 bytes, 3 keys -> 195 bytes
  */
-const val MAX_CONSTRAINT_DATA_SIZE = 563
+const val MAX_CONSTRAINT_DATA_SIZE = 1_000 * MAX_NUMBER_OF_KEYS_IN_SIGNATURE_CONSTRAINT
 
 /**
  * A [VaultService] is responsible for securely and safely persisting the current state of a vault to storage. The

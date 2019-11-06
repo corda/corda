@@ -97,6 +97,20 @@ class TransactionVerificationExceptionSerialisationTests {
     }
 
     @Test
+    fun invalidConstraintRejectionError() {
+        val exception = TransactionVerificationException.InvalidConstraintRejection(txid, "Some contract class", "for being too funny")
+        val exceptionAfterSerialisation = DeserializationInput(factory).deserialize(
+                SerializationOutput(factory).serialize(exception, context),
+                context
+        )
+
+        assertEquals(exception.message, exceptionAfterSerialisation.message)
+        assertEquals(exception.cause?.message, exceptionAfterSerialisation.cause?.message)
+        assertEquals(exception.contractClass, exceptionAfterSerialisation.contractClass)
+        assertEquals(exception.reason, exceptionAfterSerialisation.reason)
+    }
+
+    @Test
     fun contractCreationErrorTest() {
         val cause = Throwable("wibble")
         val exception = createContractCreationError(txid, "Some contract class", cause)

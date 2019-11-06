@@ -104,6 +104,7 @@ class RaftUniquenessProvider(
             var index: Long = 0
     )
 
+    @Suppress("MagicNumber") // database column length
     @Entity
     @Table(name = "${NODE_DATABASE_PREFIX}raft_committed_txs")
     class CommittedTransaction(

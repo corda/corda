@@ -266,6 +266,7 @@ class InitiatorFlow(val arg1: Boolean, val arg2: Int, private val counterparty: 
         val ourOutputState: DummyState = DummyState()
         // DOCEND 22
         // Or as copies of other states with some properties changed.
+        @Suppress("MagicNumber") // literally a magic number
         // DOCSTART 23
         val ourOtherOutputState: DummyState = ourOutputState.copy(magicNumber = 77)
         // DOCEND 23
