@@ -35,6 +35,7 @@ import org.slf4j.bridge.SLF4JBridgeHandler
 import picocli.CommandLine.Mixin
 import java.io.IOException
 import java.io.RandomAccessFile
+import java.lang.NullPointerException
 import java.lang.management.ManagementFactory
 import java.net.InetAddress
 import java.nio.channels.UnresolvedAddressException
@@ -440,13 +441,30 @@ interface NodeStartupLogging {
     companion object {
         val logger by lazy { contextLogger() }
         val startupErrors = setOf(MultipleCordappsForFlowException::class, CheckpointIncompatibleException::class, AddressBindingException::class, NetworkParametersReader::class, DatabaseIncompatibleException::class)
+        val PRINT_ERRORS_TO_STD_ERR = try {
+            System.getProperty("net.corda.node.printErrorsToStdErr") == "true"
+        } catch (e: NullPointerException) {
+            false
+        } catch (e: IllegalArgumentException) {
+            false
+        }
     }
 
     fun <RESULT> attempt(action: () -> RESULT): Try<RESULT> = Try.on(action).throwError()
 
     fun Throwable.logAsExpected(message: String? = this.message, print: (String?) -> Unit = logger::error) = print(message)
 
-    fun Throwable.logAsUnexpected(message: String? = this.message, error: Throwable = this, print: (String?, Throwable) -> Unit = logger::error) {
+    fun Throwable.logAsUnexpected(
+        message: String? = this.message,
+        error: Throwable = this,
+        print: (String?, Throwable) -> Unit = { s, e ->
+            logger.error(s, e)
+            if (PRINT_ERRORS_TO_STD_ERR) {
+                System.err.println(s)
+                e.printStackTrace()
+            }
+        }
+    ) {
         print("$message${this.message?.let { ": $it" } ?: ""}", error)
     }
 

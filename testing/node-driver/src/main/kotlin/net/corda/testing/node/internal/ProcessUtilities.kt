@@ -3,8 +3,6 @@ package net.corda.testing.node.internal
 import net.corda.core.internal.div
 import java.io.File
 import java.nio.file.Path
-import java.time.ZonedDateTime
-import java.time.format.DateTimeFormatter
 
 object ProcessUtilities {
     inline fun <reified C : Any> startJavaProcess(
@@ -25,7 +23,8 @@ object ProcessUtilities {
             workingDirectory: Path? = null,
             jdwpPort: Int? = null,
             extraJvmArguments: List<String> = emptyList(),
-            maximumHeapSize: String? = null
+            maximumHeapSize: String? = null,
+            identifier: String = ""
     ): Process {
         val command = mutableListOf<String>().apply {
             add(javaPath)
@@ -40,11 +39,10 @@ object ProcessUtilities {
             inheritIO()
             environment()["CLASSPATH"] = classPath.joinToString(File.pathSeparator)
             if (workingDirectory != null) {
-                // Timestamp may be handy if the same process started, killed and then re-started. Without timestamp
-                // StdOut and StdErr will be overwritten.
-                val timestamp = ZonedDateTime.now().format(DateTimeFormatter.ofPattern("HHmmss.SSS"))
-                redirectError((workingDirectory / "$className.$timestamp.stderr.log").toFile())
-                redirectOutput((workingDirectory / "$className.$timestamp.stdout.log").toFile())
+                // An identifier may be handy if the same process started, killed and then re-started. Without the identifier
+                // StdOut and StdErr will be overwritten. By default the identifier is a timestamp passed down to here.
+                redirectError((workingDirectory / "$className.$identifier.stderr.log").toFile())
+                redirectOutput((workingDirectory / "$className.$identifier.stdout.log").toFile())
                 directory(workingDirectory.toFile())
             }
         }.start()
