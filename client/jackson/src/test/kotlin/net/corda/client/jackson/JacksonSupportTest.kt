@@ -12,6 +12,7 @@ import com.nhaarman.mockito_kotlin.any
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.whenever
+import com.nhaarman.mockito_kotlin.spy
 import net.corda.client.jackson.internal.childrenAs
 import net.corda.client.jackson.internal.valueAs
 import net.corda.core.contracts.*
