@@ -16,6 +16,7 @@ object ProcessUtilities {
         return startJavaProcess(C::class.java.name, arguments, classPath, workingDirectory, jdwpPort, extraJvmArguments, maximumHeapSize)
     }
 
+    @Suppress("LongParameterList")
     fun startJavaProcess(
             className: String,
             arguments: List<String>,

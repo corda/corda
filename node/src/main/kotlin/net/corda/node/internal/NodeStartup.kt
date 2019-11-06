@@ -441,6 +441,7 @@ interface NodeStartupLogging {
     companion object {
         val logger by lazy { contextLogger() }
         val startupErrors = setOf(MultipleCordappsForFlowException::class, CheckpointIncompatibleException::class, AddressBindingException::class, NetworkParametersReader::class, DatabaseIncompatibleException::class)
+        @Suppress("TooGenericExceptionCaught")
         val PRINT_ERRORS_TO_STD_ERR = try {
             System.getProperty("net.corda.node.printErrorsToStdErr") == "true"
         } catch (e: NullPointerException) {

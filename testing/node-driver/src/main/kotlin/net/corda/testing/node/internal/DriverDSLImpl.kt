@@ -557,6 +557,7 @@ class DriverDSLImpl(
      * Start the node with the given flag which is expected to start the node for some function, which once complete will
      * terminate the node.
      */
+    @Suppress("SpreadOperator")
     private fun startOutOfProcessMiniNode(config: NodeConfig, vararg extraCmdLineFlag: String): CordaFuture<Unit> {
         val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
         val process = startOutOfProcessNode(
@@ -774,7 +775,7 @@ class DriverDSLImpl(
             }
         }
 
-        @Suppress("ComplexMethod", "MaxLineLength")
+        @Suppress("ComplexMethod", "MaxLineLength", "LongParameterList")
         private fun startOutOfProcessNode(
             config: NodeConfig,
             quasarJarPath: String,
