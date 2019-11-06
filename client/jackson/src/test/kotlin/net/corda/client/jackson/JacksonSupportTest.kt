@@ -8,10 +8,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.databind.node.TextNode
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.convertValue
-import com.nhaarman.mockito_kotlin.any
-import com.nhaarman.mockito_kotlin.doReturn
-import com.nhaarman.mockito_kotlin.mock
-import com.nhaarman.mockito_kotlin.whenever
+import com.nhaarman.mockito_kotlin.*
 import net.corda.client.jackson.internal.childrenAs
 import net.corda.client.jackson.internal.valueAs
 import net.corda.core.contracts.*
@@ -626,6 +623,22 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
     @Test
     fun `X509Certificate serialization`() {
         val cert: X509Certificate = MINI_CORP.identity.certificate
+        val json = mapper.valueToTree<ObjectNode>(cert)
+        println(mapper.writeValueAsString(json))
+        assertThat(json["serialNumber"].bigIntegerValue()).isEqualTo(cert.serialNumber)
+        assertThat(json["issuer"].valueAs<X500Principal>(mapper)).isEqualTo(cert.issuerX500Principal)
+        assertThat(json["subject"].valueAs<X500Principal>(mapper)).isEqualTo(cert.subjectX500Principal)
+        // cert.publicKey should be converted to a supported format (this is required because [Certificate] returns keys as SUN EC keys, not BC).
+        assertThat(json["publicKey"].valueAs<PublicKey>(mapper)).isEqualTo(Crypto.toSupportedPublicKey(cert.publicKey))
+        assertThat(json["notAfter"].valueAs<Date>(mapper)).isEqualTo(cert.notAfter)
+        assertThat(json["notBefore"].valueAs<Date>(mapper)).isEqualTo(cert.notBefore)
+        assertThat(json["encoded"].binaryValue()).isEqualTo(cert.encoded)
+    }
+
+    @Test
+    fun `X509Certificate serialization with extendedKeyUsage is null`() {
+        val cert: X509Certificate = spy(MINI_CORP.identity.certificate)
+        whenever(cert.extendedKeyUsage).thenReturn(null)
         val json = mapper.valueToTree<ObjectNode>(cert)
         println(mapper.writeValueAsString(json))
         assertThat(json["serialNumber"].bigIntegerValue()).isEqualTo(cert.serialNumber)

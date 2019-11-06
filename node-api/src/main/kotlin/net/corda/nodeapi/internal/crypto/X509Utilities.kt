@@ -177,7 +177,6 @@ object X509Utilities {
                 .addExtension(Extension.keyUsage, false, certificateType.keyUsage)
                 .addExtension(Extension.extendedKeyUsage, false, keyPurposes)
                 .addExtension(Extension.authorityKeyIdentifier, false, JcaX509ExtensionUtils().createAuthorityKeyIdentifier(issuerPublicKey))
-
         if (role != null) {
             builder.addExtension(ASN1ObjectIdentifier(CordaOID.X509_EXTENSION_CORDA_ROLE), false, role)
         }

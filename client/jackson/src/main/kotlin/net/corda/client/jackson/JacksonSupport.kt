@@ -252,7 +252,7 @@ object JacksonSupport {
                 writeObjectField("issuerUniqueID", value.issuerUniqueID)
                 writeObjectField("subjectUniqueID", value.subjectUniqueID)
                 writeObjectField("keyUsage", value.keyUsage?.asList()?.mapIndexedNotNull { i, flag -> if (flag) keyUsages[i] else null })
-                writeObjectField("extendedKeyUsage", value.extendedKeyUsage.map { keyPurposeIds[it] ?: it })
+                writeObjectField("extendedKeyUsage", value.extendedKeyUsage?.map { keyPurposeIds[it] ?: it })
                 jsonObject("basicConstraints") {
                     val isCa = value.basicConstraints != -1
                     writeBooleanField("isCA", isCa)
