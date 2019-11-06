@@ -121,8 +121,7 @@ class DeserializationInput constructor(
 
                 logger.trace("deserialize blob scheme=\"${envelope.schema}\"")
 
-                clazz.cast(readObjectOrNull(envelope.obj, SerializationSchemas(envelope.schema, envelope.transformsSchema),
-                        clazz, context))
+                doReadObject(envelope, clazz, context)
             }
 
     @Throws(NotSerializableException::class)
@@ -133,13 +132,16 @@ class DeserializationInput constructor(
     ): ObjectAndEnvelope<T> = des {
         val envelope = getEnvelope(bytes, context.encodingWhitelist)
         // Now pick out the obj and schema from the envelope.
-        ObjectAndEnvelope(
-                clazz.cast(readObjectOrNull(
-                        envelope.obj,
-                        SerializationSchemas(envelope.schema, envelope.transformsSchema),
-                        clazz,
-                        context)),
-                envelope)
+        ObjectAndEnvelope(doReadObject(envelope, clazz, context), envelope)
+    }
+
+    private fun <T: Any> doReadObject(envelope: Envelope, clazz: Class<T>, context: SerializationContext): T {
+        return clazz.cast(readObjectOrNull(
+            obj = redescribe(envelope.obj, clazz),
+            schema = SerializationSchemas(envelope.schema, envelope.transformsSchema),
+            type = clazz,
+            context = context
+        ))
     }
 
     fun readObjectOrNull(obj: Any?, schema: SerializationSchemas, type: Type, context: SerializationContext
@@ -182,7 +184,13 @@ class DeserializationInput constructor(
                         serializer.readObject(obj.described, schemas, this, context)
                     }
                     is Binary -> obj.array
-                    else -> obj // this will be the case for primitive types like [boolean] et al.
+                    else -> if ((type is Class<*>) && type.isPrimitive) {
+                        // this will be the case for primitive types like [boolean] et al.
+                        obj
+                    } else {
+                        // these will be boxed primitive types
+                        serializerFactory.get(obj::class.java, type).readObject(obj, schemas, this, context)
+                    }
                 }
 
                 // Store the reference in case we need it later on.

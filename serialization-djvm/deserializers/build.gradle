@@ -1,0 +1,34 @@
+plugins {
+    id 'org.jetbrains.kotlin.jvm'
+    id 'net.corda.plugins.publish-utils'
+    id 'com.jfrog.artifactory'
+    id 'java-library'
+    id 'idea'
+}
+apply from: '../../deterministic.gradle'
+
+description 'Deserializers for the DJVM'
+
+dependencies {
+    api project(path: ':core-deterministic', configuration: 'deterministicArtifacts')
+    api project(path: ':serialization-deterministic', configuration: 'deterministicArtifacts')
+}
+
+jar {
+    archiveBaseName = 'corda-deserializers-djvm'
+    manifest {
+        attributes('Automatic-Module-Name': 'net.corda.serialization.djvm.deserializers')
+        attributes('Sealed': true)
+    }
+}
+
+publish {
+    name jar.archiveBaseName.get()
+}
+
+idea {
+    module {
+        downloadJavadoc = true
+        downloadSources = true
+    }
+}

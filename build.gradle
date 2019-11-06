@@ -76,6 +76,7 @@ buildscript {
     ext.disruptor_version = constants.getProperty("disruptorVersion")
     ext.metrics_version = constants.getProperty("metricsVersion")
     ext.metrics_new_relic_version = constants.getProperty("metricsNewRelicVersion")
+    ext.djvm_version = constants.getProperty("djvmVersion")
     ext.okhttp_version = '3.14.2'
     ext.netty_version = '4.1.22.Final'
     ext.typesafe_config_version = constants.getProperty("typesafeConfigVersion")
@@ -335,6 +336,7 @@ allprojects {
         jcenter()
         maven { url "$artifactory_contextUrl/corda-dependencies" }
         maven { url 'https://repo.gradle.org/gradle/libs-releases' }
+        maven { url "$artifactory_contextUrl/corda-dev" }
     }
 
     configurations {
@@ -481,11 +483,13 @@ bintrayConfig {
             'corda-core',
             'corda-core-deterministic',
             'corda-deterministic-verifier',
+            'corda-deserializers-djvm',
             'corda',
             'corda-finance-workflows',
             'corda-finance-contracts',
             'corda-node',
             'corda-node-api',
+            'corda-node-djvm',
             'corda-test-common',
             'corda-test-utils',
             'corda-test-db',
@@ -498,6 +502,7 @@ bintrayConfig {
             'corda-tools-shell-cli',
             'corda-serialization',
             'corda-serialization-deterministic',
+            'corda-serialization-djvm',
             'corda-tools-blob-inspector',
             'corda-tools-explorer',
             'corda-tools-network-bootstrapper',

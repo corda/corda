@@ -200,6 +200,8 @@ fun <A> driver(defaultParameters: DriverParameters = DriverParameters(), dsl: Dr
                     notaryCustomOverrides = defaultParameters.notaryCustomOverrides,
                     inMemoryDB = defaultParameters.inMemoryDB,
                     cordappsForAllNodes = uncheckedCast(defaultParameters.cordappsForAllNodes),
+                    djvmBootstrapSource = defaultParameters.djvmBootstrapSource,
+                    djvmCordaSource = defaultParameters.djvmCordaSource,
                     environmentVariables = defaultParameters.environmentVariables
             ),
             coerce = { it },
@@ -237,6 +239,8 @@ fun <A> driver(defaultParameters: DriverParameters = DriverParameters(), dsl: Dr
  *     the data is not persisted between node restarts). Has no effect if node is configured
  *     in any way to use database other than H2.
  * @property cordappsForAllNodes [TestCordapp]s that will be added to each node started by the [DriverDSL].
+ * @property djvmBootstrapSource Location of a JAR containing the Java APIs for the DJVM to use.
+ * @property djvmCordaSource Locations of JARs of user-supplied classes to execute within the DJVM sandbox.
  */
 @Suppress("unused")
 data class DriverParameters(
@@ -257,10 +261,13 @@ data class DriverParameters(
         val notaryCustomOverrides: Map<String, Any?> = emptyMap(),
         val inMemoryDB: Boolean = true,
         val cordappsForAllNodes: Collection<TestCordapp>? = null,
+        val djvmBootstrapSource: Path? = null,
+        val djvmCordaSource: List<Path> = emptyList(),
         val environmentVariables : Map<String, String> = emptyMap()
 ) {
     constructor(cordappsForAllNodes: Collection<TestCordapp>) : this(isDebug = false, cordappsForAllNodes = cordappsForAllNodes)
 
+    // Legacy constructor from v4.3
     constructor(
             isDebug: Boolean = false,
             driverDirectory: Path = Paths.get("build") / "node-driver" / getTimestampAsDirectoryName(),
@@ -293,6 +300,10 @@ data class DriverParameters(
             notaryCustomOverrides,
             inMemoryDB,
             cordappsForAllNodes,
+
+            // These fields have been added in v4.4
+            djvmBootstrapSource = null,
+            djvmCordaSource = emptyList(),
             environmentVariables = emptyMap()
     )
 
@@ -410,6 +421,8 @@ data class DriverParameters(
     fun withNotaryCustomOverrides(notaryCustomOverrides: Map<String, Any?>): DriverParameters = copy(notaryCustomOverrides = notaryCustomOverrides)
     fun withInMemoryDB(inMemoryDB: Boolean): DriverParameters = copy(inMemoryDB = inMemoryDB)
     fun withCordappsForAllNodes(cordappsForAllNodes: Collection<TestCordapp>?): DriverParameters = copy(cordappsForAllNodes = cordappsForAllNodes)
+    fun withDjvmBootstrapSource(djvmBootstrapSource: Path?): DriverParameters = copy(djvmBootstrapSource = djvmBootstrapSource)
+    fun withDjvmCordaSource(djvmCordaSource: List<Path>): DriverParameters = copy(djvmCordaSource = djvmCordaSource)
     fun withEnvironmentVariables(variables : Map<String, String>): DriverParameters = copy(environmentVariables = variables)
 
     fun copy(
@@ -472,6 +485,7 @@ data class DriverParameters(
             cordappsForAllNodes = cordappsForAllNodes
     )
 
+    // Legacy copy() from v4.3
     @Suppress("LongParameterList")
     fun copy(
             isDebug: Boolean,
@@ -505,6 +519,9 @@ data class DriverParameters(
             notaryCustomOverrides = notaryCustomOverrides,
             inMemoryDB = inMemoryDB,
             cordappsForAllNodes = cordappsForAllNodes,
+            // These fields have been added in v4.4
+            djvmBootstrapSource = djvmBootstrapSource,
+            djvmCordaSource = djvmCordaSource,
             environmentVariables = emptyMap()
     )
 }

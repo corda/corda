@@ -5895,10 +5895,8 @@ public abstract class net.corda.core.transactions.FullTransaction extends net.co
   public abstract java.util.List<net.corda.core.contracts.StateAndRef<net.corda.core.contracts.ContractState>> getReferences()
 ##
 @DoNotImplement
-@CordaSerializable
 public final class net.corda.core.transactions.LedgerTransaction extends net.corda.core.transactions.FullTransaction
   public <init>(java.util.List<? extends net.corda.core.contracts.StateAndRef<? extends net.corda.core.contracts.ContractState>>, java.util.List<? extends net.corda.core.contracts.TransactionState<? extends net.corda.core.contracts.ContractState>>, java.util.List<? extends net.corda.core.contracts.CommandWithParties<? extends net.corda.core.contracts.CommandData>>, java.util.List<? extends net.corda.core.contracts.Attachment>, net.corda.core.crypto.SecureHash, net.corda.core.identity.Party, net.corda.core.contracts.TimeWindow, net.corda.core.contracts.PrivacySalt)
-  @DeprecatedConstructorForDeserialization
   public <init>(java.util.List<? extends net.corda.core.contracts.StateAndRef<? extends net.corda.core.contracts.ContractState>>, java.util.List<? extends net.corda.core.contracts.TransactionState<? extends net.corda.core.contracts.ContractState>>, java.util.List<? extends net.corda.core.contracts.CommandWithParties<? extends net.corda.core.contracts.CommandData>>, java.util.List<? extends net.corda.core.contracts.Attachment>, net.corda.core.crypto.SecureHash, net.corda.core.identity.Party, net.corda.core.contracts.TimeWindow, net.corda.core.contracts.PrivacySalt, net.corda.core.node.NetworkParameters)
   @NotNull
   public final java.util.List<net.corda.core.contracts.Command<T>> commandsOfType(Class<T>)

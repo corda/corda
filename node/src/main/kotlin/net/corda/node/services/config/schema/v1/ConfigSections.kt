@@ -17,6 +17,7 @@ import net.corda.core.internal.notary.NotaryServiceFlow
 import net.corda.node.services.config.AuthDataSourceType
 import net.corda.node.services.config.CertChainPolicyConfig
 import net.corda.node.services.config.CertChainPolicyType
+import net.corda.node.services.config.DJVMOptions
 import net.corda.node.services.config.DevModeOptions
 import net.corda.node.services.config.FlowOverride
 import net.corda.node.services.config.FlowOverrideConfig
@@ -127,9 +128,19 @@ internal object SecurityConfigurationSpec : Configuration.Specification<Security
 internal object DevModeOptionsSpec : Configuration.Specification<DevModeOptions>("DevModeOptions") {
     private val disableCheckpointChecker by boolean().optional().withDefaultValue(DevModeOptions.Defaults.disableCheckpointChecker)
     private val allowCompatibilityZone by boolean().optional().withDefaultValue(DevModeOptions.Defaults.allowCompatibilityZone)
+    private val djvm by nested(DJVMOptionsSpec).optional()
+
+    private object DJVMOptionsSpec : Configuration.Specification<DJVMOptions>("DJVMOptions") {
+        private val bootstrapSource by string().optional()
+        private val cordaSource by string().list()
+
+        override fun parseValid(configuration: Config): Valid<DJVMOptions> {
+            return valid(DJVMOptions(configuration[bootstrapSource], configuration[cordaSource]))
+        }
+    }
 
     override fun parseValid(configuration: Config): Valid<DevModeOptions> {
-        return valid(DevModeOptions(configuration[disableCheckpointChecker], configuration[allowCompatibilityZone]))
+        return valid(DevModeOptions(configuration[disableCheckpointChecker], configuration[allowCompatibilityZone], configuration[djvm]))
     }
 }
 
