@@ -1,15 +1,16 @@
 package net.corda.node.services.config
 
 import com.typesafe.config.Config
-import com.typesafe.config.ConfigException
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigParseOptions
 import net.corda.cliutils.CordaSystemUtils
+import net.corda.common.configuration.parsing.internal.Configuration
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.internal.exists
 import net.corda.node.internal.Node
+import net.corda.node.services.config.schema.v1.V1NodeConfigurationSpec
 import net.corda.nodeapi.internal.DEV_CA_KEY_STORE_PASS
 import net.corda.nodeapi.internal.config.FileBasedCertificateStoreSupplier
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
@@ -21,7 +22,6 @@ import net.corda.nodeapi.internal.installDevNodeCaCertPath
 import net.corda.nodeapi.internal.loadDevCaTrustStore
 import net.corda.nodeapi.internal.registerDevP2pCertificates
 import org.slf4j.LoggerFactory
-import java.lang.IllegalStateException
 import java.nio.file.Path
 import kotlin.reflect.KClass
 import kotlin.reflect.full.memberProperties
@@ -67,29 +67,6 @@ object ConfigHelper {
         return finalConfig
     }
 
-    private fun <T: Any> getCaseSensitivePropertyPath(target : KClass<T>?, path : List<String>) : String {
-
-        require(path.isNotEmpty()) { "Path to config property cannot be empty." }
-
-        val lookFor = path.first()
-        target?.memberProperties?.forEach {
-            if (it.name.toLowerCase() == lookFor.toLowerCase()) {
-                return if (path.size > 1)
-                    "${it.name}." +
-                            getCaseSensitivePropertyPath(
-                                    (it.getter.returnType.classifier as KClass<*>),
-                                    path.subList(1, path.size))
-                else
-                    it.name
-            }
-        }
-
-        return ""
-    }
-
-    /*
-     * Gets
-     */
     private fun Config.cordaEntriesOnly(): Config {
 
         val cordaPropOccurrences = mutableSetOf<String>()
@@ -100,35 +77,38 @@ object ConfigHelper {
                 .mapKeys {
                     val newKey = (it.key as String)
                                 .replace("_", ".")
-                                .toLowerCase()
 
-                    if (newKey.contains(CORDA_PROPERTY_PREFIX) && cordaPropOccurrences.contains(newKey)) {
+                    if (newKey.ignoreCase().startsWith(CORDA_PROPERTY_PREFIX)
+                            && cordaPropOccurrences.contains(newKey.ignoreCase()
+                                    .removePrefix(CORDA_PROPERTY_PREFIX)))
+                    {
                             throw ShadowingException(it.key.toString(), newKey)
                     }
 
-                    cordaPropOccurrences.add(newKey)
+                    cordaPropOccurrences.add(newKey.ignoreCase().removePrefix(CORDA_PROPERTY_PREFIX))
                     newKey.let { key ->
-                        if (!key.contains(CORDA_PROPERTY_PREFIX))
+                        if (!key.ignoreCase().startsWith(CORDA_PROPERTY_PREFIX))
                             return@let key
 
-                        val nodeConfKey = key.removePrefix(CORDA_PROPERTY_PREFIX)
-                        val configPath = getCaseSensitivePropertyPath(
-                                NodeConfigurationImpl::class,
-                                nodeConfKey.split(".")
-                        )
+                        val nodeConfKey = key.ignoreCase().removePrefix(CORDA_PROPERTY_PREFIX)
 
-                        if (nodeConfKey.length != configPath.length) {
+                        val cfg = ConfigFactory.parseString("$nodeConfKey=${it.value}")
+                        val result = V1NodeConfigurationSpec.validate(cfg, Configuration.Validation.Options(strict = true))
+
+                        val isInvalidProperty = result.errors.any { err -> err is Configuration.Validation.Error.Unknown }
+                        if (isInvalidProperty) {
                             Node.printWarning(
                                     "${it.key} (property or environment variable) cannot be mapped to an existing Corda" +
                                             " config property and thus won't be used as a config override!" +
                                             " It won't be passed as a config override! If that was the intention " +
                                             " double check the spelling and ensure there is such config key.")
-                            badKeyConversions.add(configPath)
+                            badKeyConversions.add(nodeConfKey)
                         }
-                        CORDA_PROPERTY_PREFIX + configPath
+
+                        CORDA_PROPERTY_PREFIX + nodeConfKey
                     }
-                }.filterKeys { it.startsWith(CORDA_PROPERTY_PREFIX) }
-                .mapKeys { it.key.removePrefix(CORDA_PROPERTY_PREFIX) }
+                }.filterKeys { it.ignoreCase().startsWith(CORDA_PROPERTY_PREFIX) }
+                .mapKeys { it.key.ignoreCase().removePrefix(CORDA_PROPERTY_PREFIX) }
                 .filterKeys { !badKeyConversions.contains(it) })
     }
 }
@@ -182,3 +162,12 @@ fun MutualSslConfiguration.configureDevKeyAndTrustStores(myLegalName: CordaX500N
         }
     }
 }
+
+class CaseInsensitiveUtils(val target: String) {
+    fun startsWith(prefix: String) =
+            org.apache.commons.lang3.StringUtils.startsWithIgnoreCase(target, prefix)
+
+    fun removePrefix(toRemove: String) =
+            org.apache.commons.lang3.StringUtils.removeStartIgnoreCase(target, toRemove)!!
+}
+fun String.ignoreCase() = CaseInsensitiveUtils(this)

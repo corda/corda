@@ -36,7 +36,7 @@ class NodeConfigParsingTests {
         val sshPort = portAllocator.nextPort()
 
         driver(DriverParameters(
-                environmentVariables = mapOf("cORDa_sShD_pOrt" to sshPort.toString()),
+                environmentVariables = mapOf("corda_sshd_port" to sshPort.toString()),
                 startNodesInProcess = false,
                 portAllocation = portAllocator)) {
             val hasSsh = startNode().get()
@@ -54,7 +54,8 @@ class NodeConfigParsingTests {
         val sshPort = portAllocator.nextPort()
 
         driver(DriverParameters(
-                environmentVariables = mapOf("cOrda.sShD.pOrt" to sshPort.toString()),
+                environmentVariables = mapOf("cOrda.sshd.port" to sshPort.toString(),
+                                             "coRda.devMode" to true.toString()),
                 startNodesInProcess = false,
                 portAllocation = portAllocator)) {
             val hasSsh = startNode(NodeParameters()).get()
@@ -73,8 +74,8 @@ class NodeConfigParsingTests {
 
         driver(DriverParameters(
                 environmentVariables = mapOf(
-                        "cOrda_sShD_POrt" to sshPort.toString(),
-                        "cOrda.sShD.pOrt" to sshPort.toString()),
+                        "cOrda_sshd_port" to sshPort.toString(),
+                        "cORda.sshd.port" to sshPort.toString()),
                 startNodesInProcess = false,
                 portAllocation = portAllocator,
                 notarySpecs = emptyList())) {
@@ -82,6 +83,27 @@ class NodeConfigParsingTests {
             assertThatThrownBy {
                 startNode().getOrThrow()
             }
+        }
+    }
+
+    @Test
+    fun `bad keys are ignored and warned for`() {
+        val portAllocator = incrementalPortAllocation()
+        driver(DriverParameters(
+                environmentVariables = mapOf(
+                        "cOrda_bad_key" to "2077"),
+                startNodesInProcess = false,
+                portAllocation = portAllocator,
+                notarySpecs = emptyList())) {
+
+                val hasWarning = startNode()
+                        .getOrThrow()
+                        .logFile()
+                        .readLines()
+                        .any {
+                            it.contains("(property or environment variable) cannot be mapped to an existing Corda")
+                        }
+                assert(hasWarning)
         }
     }
 }
