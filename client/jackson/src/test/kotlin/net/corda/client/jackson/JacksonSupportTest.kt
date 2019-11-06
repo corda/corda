@@ -639,16 +639,8 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
     fun `X509Certificate serialization with extendedKeyUsage is null`() {
         val cert: X509Certificate = spy(MINI_CORP.identity.certificate)
         whenever(cert.extendedKeyUsage).thenReturn(null)
-        val json = mapper.valueToTree<ObjectNode>(cert)
-        println(mapper.writeValueAsString(json))
-        assertThat(json["serialNumber"].bigIntegerValue()).isEqualTo(cert.serialNumber)
-        assertThat(json["issuer"].valueAs<X500Principal>(mapper)).isEqualTo(cert.issuerX500Principal)
-        assertThat(json["subject"].valueAs<X500Principal>(mapper)).isEqualTo(cert.subjectX500Principal)
-        // cert.publicKey should be converted to a supported format (this is required because [Certificate] returns keys as SUN EC keys, not BC).
-        assertThat(json["publicKey"].valueAs<PublicKey>(mapper)).isEqualTo(Crypto.toSupportedPublicKey(cert.publicKey))
-        assertThat(json["notAfter"].valueAs<Date>(mapper)).isEqualTo(cert.notAfter)
-        assertThat(json["notBefore"].valueAs<Date>(mapper)).isEqualTo(cert.notBefore)
-        assertThat(json["encoded"].binaryValue()).isEqualTo(cert.encoded)
+        // should not fail if extendedKeyUsage is null
+        mapper.valueToTree<ObjectNode>(cert)
     }
 
     @Test
