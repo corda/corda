@@ -96,11 +96,11 @@ Classpath
 ~~~~~~~~~
 
 If you run the blob inspector without any JAR files on the classpath, then it will deserialize objects using the Class Carpenter (see :doc:`serialization` for details).
-The reason for this is that the types are not on the available, so the serialization framework has to synthesise them.
-This mechanism works fine in most situations, but there is one known issue when the serialized blob contains an ``enum``.
-In this case you will get this exception ``java.lang.NoClassDefFoundError: Could not initialize class _YourEnum_``.
+The reason for this is that the types are not available, so the serialization framework has to synthesise them.
 
-To solve this problem, you must add the JAR file that contains the ``enum`` to the classpath of the blob inspector.
+.. note:: This mechanism works fine in most situations, but there is one known issue when the serialized blob contains an ``enum``.
+          In this case you will get this exception ``java.lang.NoClassDefFoundError: Could not initialize class _YourEnum_``.
+          To solve this problem, you must add the JAR file that contains the ``enum`` to the classpath of the blob inspector.
 
 Command-line options
 ~~~~~~~~~~~~~~~~~~~~
