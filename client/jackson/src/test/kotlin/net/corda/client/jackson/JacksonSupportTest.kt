@@ -8,10 +8,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.databind.node.TextNode
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.convertValue
-import com.nhaarman.mockito_kotlin.any
-import com.nhaarman.mockito_kotlin.doReturn
-import com.nhaarman.mockito_kotlin.mock
-import com.nhaarman.mockito_kotlin.whenever
+import com.nhaarman.mockito_kotlin.*
 import net.corda.client.jackson.internal.childrenAs
 import net.corda.client.jackson.internal.valueAs
 import net.corda.core.contracts.*
@@ -636,6 +633,14 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
         assertThat(json["notAfter"].valueAs<Date>(mapper)).isEqualTo(cert.notAfter)
         assertThat(json["notBefore"].valueAs<Date>(mapper)).isEqualTo(cert.notBefore)
         assertThat(json["encoded"].binaryValue()).isEqualTo(cert.encoded)
+    }
+
+    @Test
+    fun `X509Certificate serialization when extendedKeyUsage is null`() {
+        val cert: X509Certificate = spy(MINI_CORP.identity.certificate)
+        whenever(cert.extendedKeyUsage).thenReturn(null)
+        // should work even if extendedKeyUsage is null
+        mapper.valueToTree<ObjectNode>(cert)
     }
 
     @Test
