@@ -8,6 +8,8 @@ import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.tasks.testing.Test
 
+import java.util.stream.Collectors
+
 /**
  This plugin is responsible for wiring together the various components of test task modification
  */
@@ -222,8 +224,13 @@ class DistributedTesting implements Plugin<Project> {
                         subProject.logger.info "Disabling test execution for testing task ${task.getPath()}"
                         excludeTestsMatching "*"
                     }
-                    includes.removeAll(executedTests)
-                    executedTests.forEach { exclude ->
+
+                    List<String> intersection = new ArrayList()
+                    Collections.copy(intersection, includes)
+                    intersection.retainAll(executedTests)
+                    includes.removeAll(intersection)
+
+                    intersection.forEach { exclude ->
                         subProject.logger.info "excluding: $exclude for testing task ${task.getPath()}"
                         excludeTestsMatching exclude
                     }
