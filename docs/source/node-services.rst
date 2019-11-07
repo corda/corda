@@ -53,7 +53,7 @@ signing to internal ``PrivateKeys`` from the ``KeyManagementService``. The
 ``KeyManagementService`` interface also allows other keys to be 
 generated if anonymous keys are needed in a flow. Note that this 
 interface works at the level of individual ``PublicKey`` and internally
-matched ``PrivateKey` pairs, but the signing authority may be represented by a 
+matched ``PrivateKey`` pairs, but the signing authority may be represented by a
 ``CompositeKey`` on the ``NodeInfo`` to allow key clustering and 
 threshold schemes. 
 
