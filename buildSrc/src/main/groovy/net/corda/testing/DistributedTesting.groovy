@@ -225,12 +225,12 @@ class DistributedTesting implements Plugin<Project> {
                         excludeTestsMatching "*"
                     }
 
-                    List<String> intersection = new ArrayList()
-                    intersection.addAll(includes)
-                    intersection.retainAll(executedTests)
-                    includes.removeAll(intersection)
+//                    List<String> intersection = new ArrayList()
+//                    intersection.addAll(includes)
+//                    intersection.retainAll(executedTests)
+                    includes.removeAll(executedTests)
 
-                    intersection.forEach { exclude ->
+                    executedTests.forEach { exclude ->
                         subProject.logger.info "excluding: $exclude for testing task ${task.getPath()}"
                         excludeTestsMatching exclude
                     }
