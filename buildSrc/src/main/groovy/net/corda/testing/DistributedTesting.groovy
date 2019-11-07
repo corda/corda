@@ -226,7 +226,7 @@ class DistributedTesting implements Plugin<Project> {
                     }
 
                     List<String> intersection = new ArrayList()
-                    Collections.copy(intersection, includes)
+                    intersection.addAll(includes)
                     intersection.retainAll(executedTests)
                     includes.removeAll(intersection)
 
