@@ -425,7 +425,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
     private inner class MessageDeduplicationHandler(val artemisMessage: ClientMessage, override val receivedMessage: ReceivedMessage) : DeduplicationHandler, ExternalEvent.ExternalMessageEvent {
         override val externalCause: ExternalEvent
             get() = this
-        override val flowId: StateMachineRunId = StateMachineRunId.createRandom()
+        override val flowId: StateMachineRunId by lazy { StateMachineRunId.createRandom() }
         override val deduplicationHandler: MessageDeduplicationHandler
             get() = this
 
