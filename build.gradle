@@ -254,6 +254,7 @@ allprojects {
 
     tasks.withType(JavaCompile) {
         options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation" << "-Xlint:-options" << "-parameters"
+        options.compilerArgs << '-XDenableSunApiLintControl'
         if (warnings_as_errors) {
             // We cannot fail the build on compiler warnings because we have java warnings that you cannot disable:
             // Signal is internal proprietary API and may be removed in a future release

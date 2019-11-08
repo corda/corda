@@ -28,7 +28,7 @@ object SuggestedDetails {
     private var cursor = 0
 
     fun nextBank(exists: (String) -> Boolean): Pair<String, String> {
-        for (i in 0 until banks.size) {
+        for (i in banks.indices) {
             val bank = banks[cursor]
             if (!exists(bank.first)) {
                 return bank

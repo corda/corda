@@ -150,6 +150,11 @@ class NodeTabView : Fragment() {
                             val toggle = radiobutton(notaryType.toString(), notaryTypeToggleGroup, notaryType)
                             toggle.isSelected = index == 0
                         }
+
+                        separator()
+                        checkbox("Deterministic Contract Verification", nodeController.djvmEnabled).apply {
+                            styleClass += "djvm"
+                        }
                     }
                 }
             }
