@@ -32,7 +32,6 @@ class P2PMessagingTest {
     }
 
     @Test
-    @Ignore
     fun `communicating with a distributed service which we're part of`() {
         startDriverWithDistributedService { distributedService ->
             assertAllNodesAreUsed(distributedService, DISTRIBUTED_SERVICE_NAME, distributedService[0])
