@@ -10,6 +10,11 @@ open class RPCException(message: String?, cause: Throwable?) : CordaRuntimeExcep
 }
 
 /**
+ * Thrown to indicate a fatal error in the RPC system which cannot be recovered from and so needs some manual support.
+ */
+open class UnrecoverableRPCException(message: String?, cause: Throwable? = null) : RPCException(message, cause)
+
+/**
  * Thrown to indicate an RPC operation has been retried for the [maxNumberOfRetries] unsuccessfully.
  * @param maxNumberOfRetries the number of retries that had been performed.
  * @param cause the cause of the last failed attempt.

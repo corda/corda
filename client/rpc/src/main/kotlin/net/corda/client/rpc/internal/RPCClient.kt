@@ -2,7 +2,7 @@ package net.corda.client.rpc.internal
 
 import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.client.rpc.RPCConnection
-import net.corda.client.rpc.RPCException
+import net.corda.client.rpc.UnrecoverableRPCException
 import net.corda.core.context.Actor
 import net.corda.core.context.Trace
 import net.corda.core.crypto.random63BitValue
@@ -94,7 +94,8 @@ class RPCClient<I : RPCOps>(
                 val ops: I = uncheckedCast(Proxy.newProxyInstance(rpcOpsClass.classLoader, arrayOf(rpcOpsClass), proxyHandler))
                 val serverProtocolVersion = ops.protocolVersion
                 if (serverProtocolVersion < rpcConfiguration.minimumServerProtocolVersion) {
-                    throw RPCException("Requested minimum protocol version (${rpcConfiguration.minimumServerProtocolVersion}) is higher" +
+                    throw UnrecoverableRPCException("Requested minimum protocol version " +
+                            "(${rpcConfiguration.minimumServerProtocolVersion}) is higher" +
                             " than the server's supported protocol version ($serverProtocolVersion)")
                 }
                 proxyHandler.setServerProtocolVersion(serverProtocolVersion)
@@ -129,3 +130,4 @@ class RPCClient<I : RPCOps>(
         }
     }
 }
+

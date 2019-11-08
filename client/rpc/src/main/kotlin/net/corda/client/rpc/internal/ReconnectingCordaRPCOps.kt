@@ -123,6 +123,7 @@ class ReconnectingCordaRPCOps private constructor(
             )
         }
     }
+
     /**
      * Helper class useful for reconnecting to a Node.
      */
@@ -216,10 +217,7 @@ class ReconnectingCordaRPCOps private constructor(
                         // Deliberately not logging full stack trace as it will be full of internal stacktraces.
                         log.debug { "Exception upon establishing connection: ${ex.message}" }
                     }
-                    is ActiveMQConnectionTimedOutException -> {
-                        // Deliberately not logging full stack trace as it will be full of internal stacktraces.
-                        log.debug { "Exception upon establishing connection: ${ex.message}" }
-                    }
+                    is ActiveMQConnectionTimedOutException,
                     is ActiveMQUnBlockedException -> {
                         // Deliberately not logging full stack trace as it will be full of internal stacktraces.
                         log.debug { "Exception upon establishing connection: ${ex.message}" }
