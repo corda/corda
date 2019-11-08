@@ -228,7 +228,10 @@ class DistributedTesting implements Plugin<Project> {
                         excludeTestsMatching "*"
                     }
 
-                    List<String> intersection = executedTests.map{ test -> test + "*" }.filter{includes.&contains}
+                    List<String> intersection = executedTests.stream()
+                            .map({ test -> test + "*" })
+                            .filter(includes.&contains)
+                            .collect(Collectors.toList())
                     subProject.logger.info "got ${intersection.size()} tests in intersection"
                     subProject.logger.info "INTERSECTION: ${intersection.toString()} "
                     includes.removeAll(intersection)
