@@ -214,6 +214,8 @@ class DistributedTesting implements Plugin<Project> {
                 executedTestsFile.createNewFile()
                 filter {
                     List<String> executedTests = executedTestsFile.readLines()
+                    //adding wildcard to each test so they match the ones in the includes list
+                    executedTests.forEach{test -> test + "*"}
                     def fork = getPropertyAsInt(subProject, "dockerFork", 0)
                     subProject.logger.info("requesting tests to include in testing task ${task.getPath()} (idx: ${fork})")
                     List<String> includes = globalAllocator.getTestIncludesForForkAndTestTask(
@@ -227,9 +229,6 @@ class DistributedTesting implements Plugin<Project> {
                         subProject.logger.info "Disabling test execution for testing task ${task.getPath()}"
                         excludeTestsMatching "*"
                     }
-
-                    //adding wildcard to each test so they match the ones in the includes list
-                    executedTests.forEach{test -> test + "*"}
 
                     List<String> intersection = executedTests.stream()
                             .filter(includes.&contains)
