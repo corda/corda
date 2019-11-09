@@ -1,4 +1,4 @@
-FROM python:2-stretch
+FROM python:3-stretch
 
 RUN apt-get update \
     && apt-get --no-install-recommends install -y texlive preview-latex-style texlive-generic-extra texlive-latex-extra latexmk dos2unix \
