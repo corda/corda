@@ -2,7 +2,7 @@ alabaster==0.7.8
 Babel==2.3.4
 certifi==2018.4.16
 chardet==3.0.4
-CommonMark==0.5.5
+CommonMark==0.7.3
 docutils==0.12
 future==0.16.0
 idna==2.6
