@@ -60,7 +60,7 @@ pdf_fit_background_mode = "shrink"
 
 #Hover tooltips configuration
 hoverxref_auto_ref = True
-hoverxref_tooltip_side = 'top'
+hoverxref_tooltip_side = ['right', 'left', 'top', 'bottom' ]
 
 
 # Add any paths that contain templates here, relative to this directory.

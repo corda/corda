@@ -27,4 +27,4 @@ sphinx-rtd-theme==0.1.9
 sphinxcontrib-websupport==1.0.1
 typing==3.6.4
 urllib3==1.24.2
-sphinx-hoverxref==0.1b1
+git+https://github.com/StefanIliev545/sphinx-hoverxref@master
