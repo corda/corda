@@ -58,6 +58,9 @@ pdf_compressed = True
 pdf_fit_mode = "shrink"
 pdf_fit_background_mode = "shrink"
 
+hoverxref_auto_ref = True
+
+
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 
