@@ -238,17 +238,17 @@ public class KubesTest extends DefaultTask {
                 ByteArrayOutputStream errChannelStream = new ByteArrayOutputStream();
 
                 CompletableFuture<Integer> waiter = new CompletableFuture<>();
-                File podOutput = executeBuild(namespace, numberOfPods, podIdx, podName, printOutput, stdOutOs, stdOutIs, errChannelStream, waiter);
-
+                File podLogsDirectory = new File(getProject().getBuildDir(), "pod-logs");
+                if (!podLogsDirectory.exists()) {
+                    podLogsDirectory.mkdirs();
+                }
+                File podOutput = executeBuild(namespace, numberOfPods, podIdx, podName, podLogsDirectory, printOutput, stdOutOs, stdOutIs, errChannelStream, waiter);
 
                 int resCode = waiter.join();
                 getProject().getLogger().lifecycle("build has ended on on pod " + podName + " (" + podIdx + "/" + numberOfPods + ") with result " + resCode + " , gathering results");
                 Collection<File> binaryResults = downloadTestXmlFromPod(namespace, createdPod);
                 getLogger().lifecycle("removing pod " + podName + " (" + podIdx + "/" + numberOfPods + ") after completed build");
-                File podLogsDirectory = new File(getProject().getBuildDir(), "pod-logs");
-                if (!podLogsDirectory.exists()) {
-                    podLogsDirectory.mkdirs();
-                }
+
                 File logFileToArchive = new File(podLogsDirectory, podName + ".log");
                 try (FileInputStream logIn = new FileInputStream(podOutput); FileOutputStream logOut = new FileOutputStream(logFileToArchive)) {
                     IOUtils.copy(logIn, logOut);
@@ -269,7 +269,7 @@ public class KubesTest extends DefaultTask {
                               int numberOfPods,
                               int podIdx,
                               String podName,
-                              boolean printOutput,
+                              File podLogsDirectory, boolean printOutput,
                               PipedOutputStream stdOutOs,
                               PipedInputStream stdOutIs,
                               ByteArrayOutputStream errChannelStream,
@@ -286,7 +286,7 @@ public class KubesTest extends DefaultTask {
                 .usingListener(execListener)
                 .exec(getBuildCommand(numberOfPods, podIdx));
 
-        return startLogPumping(stdOutIs, podIdx, printOutput);
+        return startLogPumping(stdOutIs, podIdx, podLogsDirectory, printOutput);
     }
 
     private Pod buildPodRequest(String podName, PersistentVolumeClaim pvc) {
@@ -334,10 +334,11 @@ public class KubesTest extends DefaultTask {
                 .build();
     }
 
-    private File startLogPumping(InputStream stdOutIs, int podIdx, boolean printOutput) throws IOException {
-        File outputFile = Files.createTempFile("container", ".log").toFile();
+    private File startLogPumping(InputStream stdOutIs, int podIdx, File podLogsDirectory, boolean printOutput) throws IOException {
+        File outputFile = new File(podLogsDirectory, "container-" + podIdx + ".log");
+        outputFile.createNewFile();
         Thread loggingThread = new Thread(() -> {
-            try (BufferedWriter out = new BufferedWriter(new FileWriter(outputFile));
+            try (BufferedWriter out = new BufferedWriter(new FileWriter(outputFile, true));
                  BufferedReader br = new BufferedReader(new InputStreamReader(stdOutIs))) {
                 String line;
                 while ((line = br.readLine()) != null) {

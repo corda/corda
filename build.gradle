@@ -599,7 +599,7 @@ task allParallelIntegrationTest(type: ParallelTestGroup) {
     podLogLevel PodLogLevel.INFO
     testGroups "integrationTest"
     numberOfShards 10
-    streamOutput false
+    streamOutput true
     coresPerFork 5
     memoryInGbPerFork 10
     distribute DistributeTestsBy.METHOD
