@@ -46,11 +46,14 @@ import org.junit.Before
 import org.junit.Test
 import rx.Notification
 import rx.Observable
+import java.time.Duration
 import java.time.Instant
 import java.util.*
 import java.util.function.Predicate
 import kotlin.reflect.KClass
+import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
 
 class FlowFrameworkTests {
     companion object {
@@ -156,6 +159,54 @@ class FlowFrameworkTests {
         assertThatExceptionOfType(UnexpectedFlowEndException::class.java).isThrownBy {
             resultFuture.getOrThrow()
         }
+    }
+
+    @Test
+    fun `FlowMonitor flow suspends on a FlowIORequest`() { // alice flow only, suspends on a FlowIORequest
+        monitorFlows { aliceFlowMonitor, bobFlowMonitor ->
+            val terminationSignal = Semaphore(0)
+            // bob's flow need to wait otherwise it could end the session prematurely
+            bobNode.registerCordappFlowFactory(ReceiveFlow::class) { NoOpFlow( terminateUponSignal = terminationSignal) }
+            aliceNode.services.startFlow(ReceiveFlow(bob))
+            mockNet.runNetwork()
+            assertEquals(1, aliceFlowMonitor.waitingFlowsToDurations(Duration.ZERO).size)
+            assertEquals(0, bobFlowMonitor.waitingFlowsToDurations(Duration.ZERO).size)
+            // continue bob's NoOpFlow, it will send an EndSessionMessage to alice
+            terminationSignal.release()
+            mockNet.runNetwork()
+            // alice's ReceiveFlow is not finished because bob sent an EndSessionMessage, check that flow is no longer waiting
+            assertEquals(0, aliceFlowMonitor.waitingFlowsToDurations(Duration.ZERO).size)
+        }
+    }
+
+    @Test
+    fun `FlowMonitor flows suspend on a FlowIORequest`() { // alice and bob's flows, both suspend on a FlowIORequest
+        monitorFlows { aliceFlowMonitor, bobFlowMonitor ->
+            bobNode.registerCordappFlowFactory(ReceiveFlow::class) { InitiatedReceiveFlow(it) }
+            aliceNode.services.startFlow(ReceiveFlow(bob)) // infinite recursion, needs to be stopped at some point
+            mockNet.runNetwork()
+            // both flows are suspened on a receive from the counter party
+            assertEquals(1, aliceFlowMonitor.waitingFlowsToDurations(Duration.ZERO).size)
+            assertEquals(1, bobFlowMonitor.waitingFlowsToDurations(Duration.ZERO).size)
+        }
+    }
+
+    @Test
+    fun `FlowMonitor flow is running`() { // flow is running a "take a long time" task
+        monitorFlows { aliceFlowMonitor, _ ->
+            val terminationSignal = Semaphore(0)
+            // "take a long time" task, implemented by a NoOpFlow stuck in call method
+            aliceNode.services.startFlow(NoOpFlow( terminateUponSignal = terminationSignal))
+            mockNet.waitQuiescent() // current thread needs to wait fiber running on a different thread, has reached the blocking point
+            assertEquals(0, aliceFlowMonitor.waitingFlowsToDurations(Duration.ZERO).size)
+            // "take a long time" flow continues ...
+            terminationSignal.release()
+            assertEquals(0, aliceFlowMonitor.waitingFlowsToDurations(Duration.ZERO).size)
+        }
+    }
+
+    private fun monitorFlows(script: (FlowMonitor, FlowMonitor) -> Unit) {
+        script(FlowMonitor(aliceNode.smm, Duration.ZERO, Duration.ZERO), FlowMonitor(bobNode.smm, Duration.ZERO, Duration.ZERO))
     }
 
     @Test
@@ -709,7 +760,10 @@ internal open class SendFlow(private val payload: Any, private vararg val otherP
     }
 }
 
-internal class NoOpFlow(val nonTerminating: Boolean = false) : FlowLogic<Unit>() {
+internal class NoOpFlow(
+        val nonTerminating: Boolean = false,
+        @Transient val terminateUponSignal: Semaphore? = null
+) : FlowLogic<Unit>() {
     @Transient
     var flowStarted = false
 
@@ -719,6 +773,8 @@ internal class NoOpFlow(val nonTerminating: Boolean = false) : FlowLogic<Unit>()
         if (nonTerminating) {
             Fiber.park()
         }
+
+        terminateUponSignal?.acquire() // block at Semaphore and resume upon external signaling
     }
 }
 
