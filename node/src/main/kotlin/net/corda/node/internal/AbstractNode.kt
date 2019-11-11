@@ -500,21 +500,16 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             smm.start(frozenTokenizableServices)
             // Shut down the SMM so no Fibers are scheduled.
             runOnStop += { smm.stop(acceptableLiveFiberCountOnStop()) }
-            (smm as? StateMachineManagerInternal)?.let {
-                val flowMonitor = FlowMonitor({
-                    smm.snapshot().filter { flow -> flow !in smm.flowHospital }.toSet()
-                }, configuration.flowMonitorPeriodMillis, configuration.flowMonitorSuspensionLoggingThresholdMillis)
-                runOnStop += flowMonitor::stop
-                flowMonitor.start()
-            }
-
+            val flowMonitor = FlowMonitor(smm,
+                    configuration.flowMonitorPeriodMillis,
+                    configuration.flowMonitorSuspensionLoggingThresholdMillis)
+            runOnStop += flowMonitor::stop
+            flowMonitor.start()
             schedulerService.start()
 
             createStartedNode(nodeInfo, rpcOps, notaryService).also { _started = it }
         }
     }
-
-    private operator fun StaffedFlowHospital.contains(flow: FlowStateMachine<*>) = contains(flow.id)
 
     /** Subclasses must override this to create a "started" node of the desired type, using the provided machinery. */
     abstract fun createStartedNode(nodeInfo: NodeInfo, rpcOps: CordaRPCOps, notaryService: NotaryService?): S

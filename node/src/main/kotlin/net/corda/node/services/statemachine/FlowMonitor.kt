@@ -2,6 +2,8 @@ package net.corda.node.services.statemachine
 
 import net.corda.core.flows.FlowSession
 import net.corda.core.internal.FlowIORequest
+import net.corda.core.internal.FlowStateMachine
+import net.corda.core.internal.VisibleForTesting
 import net.corda.core.utilities.loggerFor
 import net.corda.node.internal.LifecycleSupport
 import java.time.Duration
@@ -12,7 +14,7 @@ import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 
-internal class FlowMonitor constructor(private val retrieveFlows: () -> Set<FlowStateMachineImpl<*>>,
+internal class FlowMonitor constructor(private val smm: StateMachineManager,
                                        private val monitoringPeriod: Duration,
                                        private val suspensionLoggingThreshold: Duration,
                                        private var scheduler: ScheduledExecutorService? = null) : LifecycleSupport {
@@ -35,7 +37,7 @@ internal class FlowMonitor constructor(private val retrieveFlows: () -> Set<Flow
                 scheduler = defaultScheduler()
                 shutdownScheduler = true
             }
-            scheduler!!.scheduleAtFixedRate({ logFlowsWaitingForParty(suspensionLoggingThreshold) }, 0, monitoringPeriod.toMillis(), TimeUnit.MILLISECONDS)
+            scheduler!!.scheduleAtFixedRate({ logFlowsWaitingForParty() }, 0, monitoringPeriod.toMillis(), TimeUnit.MILLISECONDS)
             started = true
         }
     }
@@ -49,21 +51,24 @@ internal class FlowMonitor constructor(private val retrieveFlows: () -> Set<Flow
         }
     }
 
-    private fun logFlowsWaitingForParty(suspensionLoggingThreshold: Duration) {
-        val now = Instant.now()
-        val flows = retrieveFlows()
-        for (flow in flows) {
-            if (flow.isStarted() && flow.isSuspended()) {
-                val suspensionDuration = flow.ongoingDuration(now)
-                if (suspensionDuration >= suspensionLoggingThreshold)
-                    flow.ioRequest()?.let {
-                        request -> warningMessageForFlowWaitingOnIo(request, flow, suspensionDuration)
-                    }?.let(logger::info)
-            }
+    private fun logFlowsWaitingForParty() {
+        for ((flow, suspensionDuration) in waitingFlowsToDurations(suspensionLoggingThreshold)) {
+            flow.ioRequest()?.let { request -> warningMessageForFlowWaitingOnIo(request, flow, suspensionDuration) }?.let(logger::info)
         }
     }
 
-    private fun warningMessageForFlowWaitingOnIo(request: FlowIORequest<*>, flow: FlowStateMachineImpl<*>, suspensionDuration: Duration): String {
+    @VisibleForTesting
+    fun waitingFlowsToDurations(suspensionLoggingThreshold: Duration): Set<Pair<FlowStateMachineImpl<*>, Duration>> {
+        val now = Instant.now()
+        return smm.snapshot()
+                .asSequence()
+                .filter { flow -> flow !in smm.flowHospital && flow.isStarted() && flow.isSuspended() }
+                .map { flow -> flow to flow.ongoingDuration(now) }
+                .filter { (_, suspensionDuration) -> suspensionDuration >= suspensionLoggingThreshold }.toSet()
+    }
+
+    private fun warningMessageForFlowWaitingOnIo(request: FlowIORequest<*>, flow: FlowStateMachineImpl<*>,
+                                                 suspensionDuration: Duration): String {
         val message = StringBuilder("Flow with id ${flow.id.uuid} has been waiting for ${suspensionDuration.toMillis() / 1000} seconds ")
         message.append(
                 when (request) {
@@ -94,4 +99,6 @@ internal class FlowMonitor constructor(private val retrieveFlows: () -> Set<Flow
     private fun FlowStateMachineImpl<*>.isSuspended() = !snapshot().isFlowResumed
 
     private fun FlowStateMachineImpl<*>.isStarted() = transientState?.value?.checkpoint?.flowState is FlowState.Started
+
+    private operator fun StaffedFlowHospital.contains(flow: FlowStateMachine<*>) = contains(flow.id)
 }
