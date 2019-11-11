@@ -183,7 +183,7 @@ class FlowFrameworkTests {
     fun `FlowMonitor flows suspend on a FlowIORequest`() { // alice and bob's flows, both suspend on a FlowIORequest
         monitorFlows { aliceFlowMonitor, bobFlowMonitor ->
             bobNode.registerCordappFlowFactory(ReceiveFlow::class) { InitiatedReceiveFlow(it) }
-            aliceNode.services.startFlow(ReceiveFlow(bob)) // infinite recursion, needs to be stopped at some point
+            aliceNode.services.startFlow(ReceiveFlow(bob))
             mockNet.runNetwork()
             // both flows are suspened on a receive from the counter party
             assertEquals(1, aliceFlowMonitor.waitingFlowsToDurations(Duration.ZERO).size)
