@@ -42,6 +42,8 @@ This removes the requirement to serialize and store the certificate chain for ea
 
 In addition, confidential identities can now be shared without needing a transaction.
 
+Please note: Confidential Identities generated using the API available in Corda 4.1 and earlier are not compatible with the new Confidential Identities API functions in Corda 4.3.
+
 Improved RPC client connectivity 
 ++++++++++++++++++++++++++++++++
 
