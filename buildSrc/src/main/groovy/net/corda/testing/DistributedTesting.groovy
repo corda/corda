@@ -224,7 +224,7 @@ class DistributedTesting implements Plugin<Project> {
                     subProject.logger.info "got ${includes.size()} tests to include into testing task ${task.getPath()}"
                     subProject.logger.info "INCLUDE: ${includes.toString()} "
                     subProject.logger.info "got ${executedTests.size()} tests to exclude from testing task ${task.getPath()}"
-                    subProject.logger.info "EXCLUDE: ${executedTests.toString()} "
+                    subProject.logger.debug "EXCLUDE: ${executedTests.toString()} "
                     if (includes.size() == 0) {
                         subProject.logger.info "Disabling test execution for testing task ${task.getPath()}"
                         excludeTestsMatching "*"
