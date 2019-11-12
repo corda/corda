@@ -20,9 +20,9 @@ import net.corda.testing.node.internal.cordappWithPackages
 import org.junit.ClassRule
 import org.junit.Test
 import org.junit.jupiter.api.assertDoesNotThrow
-import org.junit.rules.TemporaryFolder
 import java.security.KeyPairGenerator
 
+@Suppress("FunctionName")
 class DeterministicContractCryptoTest {
     companion object {
         const val MESSAGE = "Very Important Data! Do Not Change!"
@@ -32,28 +32,21 @@ class DeterministicContractCryptoTest {
         @JvmField
         val djvmSources = DeterministicSourcesRule()
 
-        @ClassRule
-        @JvmField
-        val tempFolder = TemporaryFolder()
-
         fun parametersFor(djvmSources: DeterministicSourcesRule): DriverParameters {
-            tempFolder.root.toPath().let { path ->
-                return DriverParameters(
-                        portAllocation = incrementalPortAllocation(),
-                        startNodesInProcess = false,
-                        notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, validating = true)),
-                        cordappsForAllNodes = listOf(
-                                cordappWithPackages("net.corda.flows.djvm.crypto"),
-                                CustomCordapp(
-                                        packages = setOf("net.corda.contracts.djvm.crypto"),
-                                        name = "deterministic-crypto-contract",
-                                        signingInfo = CustomCordapp.SigningInfo(path, 1, "RSA")
-                                )
-                        ),
-                        djvmBootstrapSource = djvmSources.bootstrap,
-                        djvmCordaSource = djvmSources.corda
-                )
-            }
+            return DriverParameters(
+                portAllocation = incrementalPortAllocation(),
+                startNodesInProcess = false,
+                notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, validating = true)),
+                cordappsForAllNodes = listOf(
+                    cordappWithPackages("net.corda.flows.djvm.crypto"),
+                    CustomCordapp(
+                        packages = setOf("net.corda.contracts.djvm.crypto"),
+                        name = "deterministic-crypto-contract"
+                    ).signed()
+                ),
+                djvmBootstrapSource = djvmSources.bootstrap,
+                djvmCordaSource = djvmSources.corda
+            )
         }
     }
 
