@@ -56,7 +56,7 @@ The improved library provides the following enhancements:
 * Reconnects any observables that have been created
 * Retries all operations on failure, except for flow start operations that die before receiving a valid `FlowHandle`, in which case a `CouldNotStartFlowException` is thrown
 
-We're confident in the improvements made to RPC client connectivity but would remind you that applications should be developed with contingencies in the event of an RPC connection failure.
+We're confident in the improvements made to RPC client connectivity but would remind you that applications should be developed with contingencies in the event of an RPC connection failure. See :doc:`clientrpc` for details.
 
 Additional flexibility in recording transactions
 ++++++++++++++++++++++++++++++++++++++++++++++++
