@@ -43,7 +43,7 @@ This removes the requirement to serialize and store the certificate chain for ea
 
 In addition, confidential identities can now be shared without needing a transaction.
 
-It is worth noting that any confidential identities registered using the old API will not be reflected in the new tables after migration to Corda 4.3. However, the standard APIs work with both old and new confidential identities tables. For this reason, we do not recommend the use of both old and new confidential identities APIs in the same deployment. Note that this will be addressed in a subsequent release.
+It is worth noting that any confidential identities registered using the old API will not be reflected in the new tables after migration to Corda 4.3. However, the standard APIs work with both old and new confidential identities tables. For this reason, we do not recommend the use of both old and new confidential identities APIs in the same deployment. The old confidential identities API will be deprecated in a future release.
 
 Improved RPC client connectivity 
 ++++++++++++++++++++++++++++++++
