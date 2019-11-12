@@ -14,9 +14,6 @@ Version 4.2
   of a contract without having to manually install that version, provided a newer version is installed. Similarly, non-contract attachments
   are whitelisted if another attachment is present on the node that is signed by the same public key.
 
-* :doc:`design/data-model-upgrades/package-namespace-ownership` configurations can be now be set as described in
-  :ref:`node_package_namespace_ownership`, when using the Cordformation plugin version 4.0.43.
-
 .. _changelog_v4.0:
 
 Version 4.0

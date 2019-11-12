@@ -343,8 +343,6 @@ Package namespace ownership is a Corda security feature that allows a compatibil
 namespace to registered users (e.g. a CorDapp development organisation). The exact mechanism used to claim a namespace is up to the zone
 operator. A typical approach would be to accept an SSL certificate with the domain in it as proof of domain ownership, or to accept an email from that domain.
 
-.. note:: Read more about *Package ownership* :doc:`here<design/data-model-upgrades/package-namespace-ownership>`.
-
 A Java package namespace is case insensitive and cannot be a sub-package of an existing registered namespace.
 See `Naming a Package <https://docs.oracle.com/javase/tutorial/java/package/namingpkgs.html>`_ and `Naming Conventions <https://www.oracle.com/technetwork/java/javase/documentation/codeconventions-135099.html#28840 for guidelines and conventions>`_ for guidelines on naming conventions.
 

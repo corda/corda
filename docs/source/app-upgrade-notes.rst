@@ -463,8 +463,7 @@ packages, they could call package-private methods, which may not be expected by 
 and request ownership of your root package namespaces (e.g. ``com.megacorp.*``), with the signing keys you will be using to sign your app JARs.
 The zone operator can then add your signing key to the network parameters, and prevent attackers defining types in your own package namespaces.
 Whilst this feature is optional and not strictly required, it may be helpful to block attacks at the boundaries of a Corda based application
-where type names may be taken "as read". You can learn more about this feature and the motivation for it by reading
-":doc:`design/data-model-upgrades/package-namespace-ownership`".
+where type names may be taken "as read".
 
 Step 11. Consider adding extension points to your flows
 -------------------------------------------------------
