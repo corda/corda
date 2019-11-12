@@ -90,6 +90,11 @@ There have been several security upgrades, including changes to the Corda webser
 * Enhancements to attachment whitelisting: Transactions referencing contracts that are not installed on a node can still be accepted if the contract is signed by a trusted party.
 * Updated vulnerable dependency: Jolokia 1.2 to 1.6.0 are vulnerable to system-wide cross-site-request-forgery attacks. Updated to Jolokia 1.6.1 
 
+Deprecations
+~~~~~~~~~~~~
+
+The Corda Finance library is now deprecated and has been superseded by the Corda Tokens SDK. While the finance library is not yet being removed, we are no longer improving or updating it. We strongly encourage users to transition from the Corda Finance library to the Corda Tokens SDK. Find more information and begin using the tokens SDK in the GitHub repository `here <https://github.com/corda/token-sdk>`_
+
 Issued Fixed
 ~~~~~~~~~~~~
 
