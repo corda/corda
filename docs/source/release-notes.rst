@@ -43,8 +43,6 @@ This removes the requirement to serialize and store the certificate chain for ea
 
 In addition, confidential identities can now be shared without needing a transaction.
 
-It is worth noting that any confidential identities registered using the old API will not be reflected in the new tables after migration to Corda 4.3. However, the standard APIs work with both old and new confidential identities tables. For this reason, we do not recommend the use of both old and new confidential identities APIs in the same deployment. The old confidential identities API will be deprecated in a future release.
-
 Improved RPC client connectivity 
 ++++++++++++++++++++++++++++++++
 
@@ -94,6 +92,8 @@ Deprecations
 ~~~~~~~~~~~~
 
 The Corda Finance library is now deprecated and has been superseded by the Corda Tokens SDK. While the finance library is not yet being removed, we are no longer improving or updating it. We strongly encourage users to transition from the Corda Finance library to the Corda Tokens SDK. Find more information and begin using the tokens SDK in the GitHub repository `here <https://github.com/corda/token-sdk>`_
+
+Any confidential identities registered using the old API will not be reflected in the new tables after migration to Corda 4.3. However, the standard APIs work with both old and new confidential identities tables. For this reason, we do not recommend the use of both old and new confidential identities APIs in the same deployment. The old confidential identities API will be deprecated in a future release.
 
 Issued Fixed
 ~~~~~~~~~~~~
