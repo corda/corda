@@ -11,8 +11,7 @@ Welcome to the Corda 4.3 release notes. Please read these carefully to understan
 Corda 4.3
 =========
 
-
-It’s been a little under 5 months since the release of Corda 4.1 added to the powerful suite of tools that Corda offers. Now, we are proud to release Corda 4.3, bringing over 400 fixes and documentation updates to bring additional stability and quality of life improvements to those developing on the Corda platform.
+Corda 4.1 was released with a great suite of new features to build on top of the success of Corda 4. Now, Corda 4.3 extends upon that with some powerful new capabilities. Corda 4.3 over 400 fixes and documentation updates to bring additional stability and quality of life improvements to those developing on the Corda platform.
 
 We recommend you upgrade from Corda 4.1 to Corda 4.3 as soon as possible.
 
