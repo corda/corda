@@ -33,7 +33,7 @@ This is advantageous for several reasons:
 
 This new functionality allows hosts to take a custodial role over their nodes, supporting a broader range of use-cases.
 
-Please find more information on Accounts functionality in the [`documentatation <https://github.com/corda/accounts/blob/master/docs.md> `_].
+Please find more information on Accounts functionality in the `documentatation <https://github.com/corda/accounts/blob/master/docs.md>`_
 
 Confidential Identities
 +++++++++++++++++++++++
@@ -44,8 +44,7 @@ This removes the requirement to serialize and store the certificate chain for ea
 
 In addition, confidential identities can now be shared without needing a transaction.
 
-It is worth noting that any confidential identities registered using the old API will not be reflected in the new tables after migration to Corda 4.3. However, the standard APIs work with both old and new confidential identities
- tables. For this reason, we do not recommend the use of both old and new confidential identities APIs in the same deployment. Note that this will be addressed in a subsequent release.
+It is worth noting that any confidential identities registered using the old API will not be reflected in the new tables after migration to Corda 4.3. However, the standard APIs work with both old and new confidential identities tables. For this reason, we do not recommend the use of both old and new confidential identities APIs in the same deployment. Note that this will be addressed in a subsequent release.
 
 Improved RPC client connectivity 
 ++++++++++++++++++++++++++++++++
@@ -71,7 +70,8 @@ In Corda 4.3, nodes can choose to record a transaction with three different leve
 
 Previously, there was a limitation in that if a node initially records a transaction with a specific level of visibility, they cannot later record it with a different level of visibility.
 
-Corda 4.3 allows nodes to record transactions at different points in time with different levels of visibility.
+In Corda 4.3, an enhancement has been made to observer node functionality to allow observers to re-record transactions that have already been recorded at a lower visibility. 
+See :doc:`tutorial-observer-nodes` for details of how to work with observer nodes
 
 Changes for operators in Corda 4.3
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
