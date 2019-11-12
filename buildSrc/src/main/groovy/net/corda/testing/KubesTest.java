@@ -210,6 +210,8 @@ public class KubesTest extends DefaultTask {
             }
         });
 
+        int podNumber = podIdx + 1;
+
         try {
             // pods might die, so we retry
             return Retry.fixed(numberOfRetries).run(() -> {
@@ -245,14 +247,10 @@ public class KubesTest extends DefaultTask {
                 File podOutput = executeBuild(namespace, numberOfPods, podIdx, podName, podLogsDirectory, printOutput, stdOutOs, stdOutIs, errChannelStream, waiter);
 
                 int resCode = waiter.join();
-                getProject().getLogger().lifecycle("build has ended on on pod " + podName + " (" + podIdx + "/" + numberOfPods + ") with result " + resCode + " , gathering results");
+                getProject().getLogger().lifecycle("build has ended on on pod " + podName + " (" + podNumber + "/" + numberOfPods + ") with result " + resCode + " , gathering results");
                 Collection<File> binaryResults = downloadTestXmlFromPod(namespace, createdPod);
-                getLogger().lifecycle("removing pod " + podName + " (" + podIdx + "/" + numberOfPods + ") after completed build");
+                getLogger().lifecycle("removing pod " + podName + " (" + podNumber + "/" + numberOfPods + ") after completed build");
 
-                File logFileToArchive = new File(podLogsDirectory, podName + ".log");
-                try (FileInputStream logIn = new FileInputStream(podOutput); FileOutputStream logOut = new FileOutputStream(logFileToArchive)) {
-                    IOUtils.copy(logIn, logOut);
-                }
                 try (KubernetesClient client = getKubernetesClient()) {
                     client.pods().delete(createdPod);
                     client.persistentVolumeClaims().delete(pvc);
@@ -260,7 +258,7 @@ public class KubesTest extends DefaultTask {
                 return new KubePodResult(podIdx, resCode, podOutput, binaryResults);
             });
         } catch (Retry.RetryException e) {
-            throw new RuntimeException("Failed to build in pod " + podName + " (" + podIdx + "/" + numberOfPods + ") in " + numberOfRetries + " attempts", e);
+            throw new RuntimeException("Failed to build in pod " + podName + " (" + podNumber + "/" + numberOfPods + ") in " + numberOfRetries + " attempts", e);
         }
     }
 
