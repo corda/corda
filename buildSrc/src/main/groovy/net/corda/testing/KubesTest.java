@@ -259,7 +259,7 @@ public class KubesTest extends DefaultTask {
                     client.pods().delete(createdPod);
                     client.persistentVolumeClaims().delete(pvc);
                     remainingPods.remove(podName);
-                    getLogger().lifecycle("Remaining Pods:  ");
+                    getLogger().lifecycle("Remaining Pods: ");
                     remainingPods.forEach(pod -> getLogger().lifecycle(pod));
                 }
                 return new KubePodResult(podIdx, resCode, podOutput, binaryResults);
