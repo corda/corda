@@ -95,6 +95,7 @@ class DistributedTesting implements Plugin<Project> {
                 //modify the image building task to depend on the preAllocate task (if specified on the command line) - this prevents gradle running out of order
                 if (preAllocateTask.name in requestedTaskNames) {
                     imageBuildTask.dependsOn preAllocateTask
+                    imagePushTask.finalizedBy(deAllocateTask)
                 }
 
                 def userDefinedParallelTask = project.rootProject.tasks.create("userDefined" + testGrouping.getName().capitalize(), KubesTest) {
@@ -167,7 +168,8 @@ class DistributedTesting implements Plugin<Project> {
         Task deAllocateTask = project.rootProject.tasks.create("deAllocateFor" + testGrouping.getName().capitalize()) {
             group = GRADLE_GROUP
             doFirst {
-                String dockerTag = System.getProperty(ImageBuilding.PROVIDE_TAG_FOR_RUNNING_PROPERTY)
+                String dockerTag = System.getProperty(ImageBuilding.PROVIDE_TAG_FOR_RUNNING_PROPERTY) ?:
+                        System.getProperty(ImageBuilding.PROVIDE_TAG_FOR_BUILDING_PROPERTY)
                 if (dockerTag == null) {
                     throw new GradleException("pre allocation cannot be used without a stable docker tag - please provide one using -D" + ImageBuilding.PROVIDE_TAG_FOR_RUNNING_PROPERTY)
                 }
